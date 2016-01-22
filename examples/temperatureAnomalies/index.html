@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LumaGL - World temperature changes from 1880 to 2011</title>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="text/javascript" src="../../build/LumaGL.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+  </head>
+  <body onload="init();">
+    <div id="log-panel" style="display:none;">
+      <span id="log-message"></span>
+    </div>
+
+    <div id="fallback" class="fallback"></div>
+
+    <div id="container">
+
+      <div id="title">
+        <h1>World temperature changes from 1880 to 2011</h1>
+
+        <div class="description">Visualize world temperature changes by clicking on the date ranges on the right.
+        Scroll to zoom in/out and drag and drop to move the earth.</div>
+      </div>
+
+      <div id="map">
+
+        <div id="controls">
+          <div class="title">Changes <span id="year">1880 - 1884</span></div>
+
+          <img id="current-map" src="./img/1880temperatureAnomaly.0137.jpg" width="190" style="width:190px; margin: 5px auto;" />
+
+          <div class="list">
+            <ul>
+              <li class="selected"><div class="square">&nbsp;</div>1880 - 1884</li>
+              <li><div class="square">&nbsp;</div>1890 - 1894</li>
+              <li><div class="square">&nbsp;</div>1900 - 1904</li>
+              <li><div class="square">&nbsp;</div>1910 - 1914</li>
+              <li><div class="square">&nbsp;</div>1920 - 1924</li>
+              <li><div class="square">&nbsp;</div>1930 - 1934</li>
+              <li><div class="square">&nbsp;</div>1940 - 1944</li>
+              <li><div class="square">&nbsp;</div>1950 - 1954</li>
+              <li><div class="square">&nbsp;</div>1960 - 1964</li>
+              <li><div class="square">&nbsp;</div>1970 - 1974</li>
+              <li><div class="square">&nbsp;</div>1980 - 1984</li>
+              <li><div class="square">&nbsp;</div>1990 - 1994</li>
+              <li><div class="square">&nbsp;</div>2000 - 2004</li>
+            </ul>
+          </div>
+
+          <img class="legend" src="img/giss_navy_anomaly_celsius.png" />
+
+        </div>
+        <canvas id="map-canvas" width="800" height="575"></canvas>
+
+    </div>
+  </div>
+
+  <canvas id="image-data" width="1024" height="576" style="display:none;"></canvas>
+
+  <div class="footer">
+    Copyright &copy; <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a> - Imagery by <a href="http://svs.gsfc.nasa.gov/vis/a000000/a003800/a003817/">NASA</a>.
+  </div>
+  <script>
+    if (!LumaGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +   '<iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/NzDA2Rj3_uE" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+</body>
+</html>

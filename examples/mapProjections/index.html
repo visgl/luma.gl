@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LumaGL - Map Projections</title>
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="text/javascript" src="../../build/LumaGL.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+  </head>
+  <body onload="init();">
+    <div id="loading-panel">
+      <span id="perc-loaded"></span>
+    </div>
+  
+    <div id="fallback" class="fallback"></div>
+
+    <div id="container">
+      
+      <div id="title">
+        <h1>Map Projections</h1>
+        
+        <div class="description">Visualize different map projections of
+          the world. Work based on <a href="#">Myriahedral Projections</a> by
+          <a href="#">Jack van Wijk</a></div>
+      </div>
+      
+      <canvas id="map-canvas" width="1024" height="512"></canvas>
+
+      <ul>
+        <li><a id="tetra-link" href="#">Tetrahedron</a></li>
+        <li><a id="hexa-link" href="#">Hexahedron</a></li>
+        <li><a id="octa-link" href="#">Octahedron</a></li>
+        <li><a id="dode-link" href="#">Dodecahedron</a></li>
+        <li><a id="ico-link" href="#">Icosahedron</a></li>
+      </ul>
+
+    </div>
+  </div>
+  
+  <div class="footer">
+    Copyright &copy; <a href="http://blog.thejit.org/">Nicolas Garcia
+      Belmonte</a>.
+  </div>
+  <script>
+    if (!LumaGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +   '<iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/NzDA2Rj3_uE" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+</body>
+</html>

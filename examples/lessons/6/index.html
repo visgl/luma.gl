@@ -1,0 +1,55 @@
+<html>
+
+<head>
+<title>Learning WebGL &mdash; lesson 6</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<link href="../lessons.css" type="text/css" rel="stylesheet" media="screen" />
+<script type="text/javascript" src="../../../build/LumaGL.js"></script>
+<script type="text/javascript" src="index.js"></script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  varying vec2 vTextureCoord;
+
+  uniform sampler2D uSampler;
+
+  void main(void) {
+    gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+  }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+  attribute vec3 aVertexPosition;
+  attribute vec2 aTextureCoord;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  varying vec2 vTextureCoord;
+
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    vTextureCoord = aTextureCoord;
+  }
+</script>
+</head>
+
+<body onload="webGLStart();">
+  <canvas id="lesson06-canvas" style="border: none;" width="500" height="500"></canvas>
+  <script src="https://gist.github.com/817958.js"> </script>
+  <h2>Controls:</h2>
+
+  <ul>
+    <li><code>Page Up</code>/<code>Page Down</code> to zoom out/in
+    <li>Cursor keys: make the cube rotate (the longer you hold down a cursor key, the more it accelerates)
+    <li><code>F</code> to toggle through three different kinds of texture filters
+  </ul>
+</body>
+
+</html>
+

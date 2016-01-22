@@ -1,0 +1,42 @@
+//routes with airline name, city and country names, and number of stops
+
+select air.name as airline,
+	   a1.city as source_city,
+       a1.country as source_country, 
+       a2.city as destination_city,
+       a2.country as destination_country,
+       r.stops as stops
+
+from routes as r, 
+	 airports as a1, 
+	 airports as a2,
+	 airlines as air
+	 
+where r.source_airport_id = a1.airport_id 
+and   r.destination_airport_id = a2.airport_id
+and r.airline_id = air.airline_id;
+
+
+//airline name sorted by number of routes
+
+select air.name as airline, 
+	   COUNT(*) as number_of_flights
+	   
+from routes as r, 
+	 airlines as air
+	 
+where r.airline_id = air.airline_id
+group by air.name
+order by number_of_flights desc;
+
+
+
+//country names and cities with latitude and longitude
+
+select country, 
+	   city, 
+	   avg(latitude) as latitude, 
+	   avg(longitude) as longitude
+
+from airports
+group by country, city;

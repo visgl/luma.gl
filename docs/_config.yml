@@ -1,0 +1,3 @@
+source: ./
+destination: ../_docs
+pygments: true

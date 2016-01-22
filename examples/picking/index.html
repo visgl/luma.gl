@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LumaGL - Picking Test</title>
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="application/javascript" src="../../build/LumaGL.js"></script>
+    <script type="application/javascript" src="balls.js"></script>
+  </head>
+  <body onload="setTimeout(init, 200);">
+    <div id="container">
+
+      <div id="title">
+        <h1>Picking Test</h1>
+      </div>
+
+      <div class="controls">
+        Shapes, picking and fog test. (Because of the configuration, not a lib limitation!) Cones and Spheres are pickable only.
+      </div>
+
+      <div id="canvas-container">
+        <canvas id="surface-explorer-canvas" width="900" height="500"></canvas>
+      </div>
+
+      <div class="footer">
+        Copyright &copy; <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a>.
+      </div>
+
+    </div>
+
+    <div id="fallback" class="fallback"></div>
+
+  <script>
+    if (!LumaGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +  ' <iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/J6IM1QS2l10" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+  </body>
+</html>

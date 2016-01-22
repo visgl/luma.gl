@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Waving water</title>
+  <!--<link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>-->
+  <link rel="stylesheet" media="all" type="text/css" href="style.css"/>
+  <style type="text/css">
+    canvas {
+      background: black;
+    }
+  </style>
+
+  <script src="../../build/LumaGL.js"></script>
+  <script src="CameraControl.js"></script>
+  <script src="SwapTexture.js"></script>
+  <script src="index.js"></script>
+
+</head>
+<body>
+<div id="container">
+  <div id="title">
+    <h1>WebGL Wave Demo</h1>
+    <div class="description">
+    This example demonstrates the ability to calculate an simple physical model using GPU. As well as several
+    very common rendering features such as Fresnel reflection/refraction, geometric ray tracing and HDRI.
+    </div>
+  </div>
+
+  <canvas id="wave" width="1024" height="550"></canvas>
+  <div class="controls">
+    <table style="width: 100%">
+      <tr>
+        <td style="width: 70px"><label for="speed">Speed:</label></td>
+        <td><input id="speed" type="range" value="1" min="-.05" max="3" step="0.001" style="width: 100%"/></td>
+        <td rowspan="3" style="width: 270px; padding-left: 12px; text-align: right;"><div class="footer">
+          Background texture from: <a href="http://www.hdrmill.com/Freebies.htm">HDRMill</a><br/>
+          Rocks texture from: <a href="http://hhh316.deviantart.com/art/Seamless-ground-texture-183190001">deviantart</a><br/>
+          Author: <a href="http://zhangbei.github.com">Bei ZHANG</a>
+        </div></td>
+      </tr>
+      <tr>
+        <td><label for="drops">Drops:</label></td>
+        <td><input id="drops" type="range" value="5" min="0" max="100" step="0.5" style="width: 100%"/></td>
+      </tr>
+      <tr>
+        <td><label for="ior"><a href="http://en.wikipedia.org/wiki/Refractive_index">IOR</a>:</label></td>
+        <td><input id="ior" type="range" value="1" min="0" max="4" step="0.005" style="width: 100%"/></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<script>
+  if (!LumaGL.hasWebGL()) {
+    document.body.className = 'no-webgl';
+    document.getElementById('fallback').innerHTML = ''
+        + '<div style="margin:10px;">'
+        + 'Your browser does not support WebGL. Try downloading <a href="http://google.com/chrome/">Google Chrome</a> to see the example.'
+        + '</div>'
+        + '<iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/NzDA2Rj3_uE" frameborder="0" allowfullscreen></iframe>';
+  }
+</script>
+</body>
+</html>
+
+

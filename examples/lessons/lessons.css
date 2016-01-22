@@ -1,0 +1,21 @@
+.gist {
+  position: absolute;
+  left: 550px;
+  top: 10px;
+  width: 550px;
+  height: 500px;
+  font-size: 12px;
+  overflow: auto;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 10px #000;
+  -webkit-box-shadow: 0 0 10px #000;
+  -moz-box-shadow: 0 0 10px #000;
+  -o-box-shadow: 0 0 10px #000;
+}
+
+canvas {
+  box-shadow: 0 0 10px #000;
+  -webkit-box-shadow: 0 0 10px #000;
+  -moz-box-shadow: 0 0 10px #000;
+  -o-box-shadow: 0 0 10px #000;
+}
