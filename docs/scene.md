@@ -26,7 +26,7 @@ objects with a default scene.
 
 ### Syntax:
 
-    PhiloGL.Scene.PICKING_RES = 1;
+    LumaGL.Scene.PICKING_RES = 1;
 
 
 Scene Method: constructor {#Scene:constructor}
@@ -36,7 +36,7 @@ Creates a new [Scene](scene.html) instance.
 
 ### Syntax:
 
-	var scene = new PhiloGL.Scene(program, camera, options);
+	var scene = new LumaGL.Scene(program, camera, options);
 
 ### Arguments:
 
@@ -65,10 +65,10 @@ Creates a new [Scene](scene.html) instance.
 
 ### Examples:
 
-Create a new Scene instance. Taken from [lesson 16](http://philogb.github.com/philogl/PhiloGL/examples/lessons/16/).
+Create a new Scene instance. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
 
 {% highlight js %}
-var innerScene = new PhiloGL.Scene(program, innerCamera, {
+var innerScene = new LumaGL.Scene(program, innerCamera, {
   lights: {
     enable: true,
     points: {
@@ -89,7 +89,7 @@ var innerScene = new PhiloGL.Scene(program, innerCamera, {
 Create a new Scene instance and add some fog to it.
 
 {% highlight js %}
-var scene = new PhiloGL.Scene(program, camera, {
+var scene = new LumaGL.Scene(program, camera, {
   //Setup lighting.
   lights: {
     enable: true,
@@ -136,7 +136,7 @@ A variable argument list of [O3D](o3d.html) instances.
 
 ### Examples:
 
-Add a moon and a box models to the scene. Taken from [lesson 12](http://philogb.github.com/philogl/PhiloGL/examples/lessons/12/).
+Add a moon and a box models to the scene. Taken from [lesson 12](http://philogb.github.com/philogl/LumaGL/examples/lessons/12/).
 
 {% highlight js %}
 //Add objects to the scene
@@ -204,7 +204,7 @@ buffer.
 ### Examples:
 
 Bind a framebuffer, render the scene to a texture, and unbind the framebuffer. This is the procedure done
-to render the inner scene in the laptop example on [lesson 16](http://philogb.github.com/philogl/PhiloGL/examples/lessons/16/).
+to render the inner scene in the laptop example on [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
 
 {% highlight js %}
 function drawInnerScene() {
@@ -244,7 +244,7 @@ coordinates. The object must have `pickable` set to `true`.
 
 ### About the picking algorithm
 
-The picking algorithm used in PhiloGL is a color picking
+The picking algorithm used in LumaGL is a color picking
 algorithm. Each model is assigned a different color and the scene is
 rendered to a texture. Then, the pixel pointed by the mouse
 position is retrieved from the texture and the color of that pixel is

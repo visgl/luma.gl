@@ -24,7 +24,7 @@ Initializes a new XHR instance.
 
 ### Syntax:
 
-	var xhr = new PhiloGL.IO.XHR(options);
+	var xhr = new LumaGL.IO.XHR(options);
 
 ### Arguments:
 
@@ -50,7 +50,7 @@ Default's `false`.
 Creating a request object to a specific url.
 
 {% highlight js %}
-  var req = new PhiloGL.IO.XHR({
+  var req = new LumaGL.IO.XHR({
     url: '/mydomain/somethingelse/',
     
     onSuccess: function(text) {
@@ -79,7 +79,7 @@ Creating a request object to a specific url and making the request.
 Note the `send` call at the end of the instanciation.
 
 {% highlight js %}
-  var req = new PhiloGL.IO.XHR({
+  var req = new LumaGL.IO.XHR({
     url: '/mydomain/somethingelse/',
     
     onSuccess: function(text) {
@@ -108,7 +108,7 @@ Initializes a new XHR Group instance.
 
 ### Syntax:
 
-	var xhr = new PhiloGL.IO.XHR.Group(options);
+	var xhr = new LumaGL.IO.XHR.Group(options);
 
 ### Arguments:
 
@@ -137,7 +137,7 @@ answers for each request.
 Creating a request object to a specific url.
 
 {% highlight js %}
-  var req = new PhiloGL.IO.XHR.Group({
+  var req = new LumaGL.IO.XHR.Group({
     urls: ['/mydomain/1/' '/mydomain/2/'],
 
     onError: function() {
@@ -166,7 +166,7 @@ Creating a request object to a specific url and making the request.
 Note the `send` call at the end of the instanciation.
 
 {% highlight js %}
-  var req = new PhiloGL.IO.XHR({
+  var req = new LumaGL.IO.XHR({
     urls: ['/mydomain/1/', '/mydomain/2/'],
     
     onSuccess: function(text) {
@@ -198,7 +198,7 @@ Creates and sends a JSONP request. Can be called without the `new` keyword.
 
 ### Syntax:
 
-	PhiloGL.IO.JSONP(options);
+	LumaGL.IO.JSONP(options);
 
 ### Arguments:
 
@@ -218,7 +218,7 @@ Default's `false`.
 Creating a request object to a specific url.
 
 {% highlight js %}
-  PhiloGL.IO.JSONP({
+  LumaGL.IO.JSONP({
     url: '/anotherdomain/somethingelse/',
     callbackKey: 'callbackName',
     data: {
@@ -243,7 +243,7 @@ Creates a request to Images providing an array that will be asynchonously filled
 
 ### Syntax:
 
-	var images = new PhiloGL.IO.Images(options);
+	var images = new LumaGL.IO.Images(options);
 
 ### Arguments:
 
@@ -264,7 +264,7 @@ Creating a request to load images.
 {% highlight js %}
   var imageUrls = ['image1.png', 'image2.png', 'image3.png'];
 
-  var images = new PhiloGL.IO.Images({
+  var images = new LumaGL.IO.Images({
     src: imageUrls,
     onProgress: function(perc) {
       console.log(perc + ' loaded');
@@ -288,7 +288,7 @@ Can be called without the `new` keyword.
 
 ### Syntax:
 
-	PhiloGL.IO.Textures(options);
+	LumaGL.IO.Textures(options);
 
 ### Arguments:
 
@@ -308,7 +308,7 @@ Creating a request to load images and set them as textures for a specific progra
 {% highlight js %}
   var imageUrls = ['image1.png', 'image2.png', 'image3.png'];
 
-  PhiloGL.IO.Textures({
+  LumaGL.IO.Textures({
     src: imageUrls,
     onComplete: function() {
       alert("All images and textures loaded!");

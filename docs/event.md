@@ -31,11 +31,11 @@ Creates a set of events for the given domElement that can be handled through a c
 
 ### Syntax:
 
-    PhiloGL.Events.create(app, options);
+    LumaGL.Events.create(app, options);
 
 ### Arguments:
 
-1. app  - (*element*) A [PhiloGL application](core.html#PhiloGL:constructor).
+1. app  - (*element*) A [LumaGL application](core.html#LumaGL:constructor).
 5. options - (*object*) An object containing the following options:
 
 ### Options:
@@ -82,8 +82,8 @@ following callbacks are:
 
 ### Notes:
 
-Even though the *Events* object is accessible via the PhiloGL function
-the events should be set in the [PhiloGL constructor](core.html#PhiloGL:constructor).
+Even though the *Events* object is accessible via the LumaGL function
+the events should be set in the [LumaGL constructor](core.html#LumaGL:constructor).
 
 ### Examples:
 
@@ -94,7 +94,7 @@ Setting rotation and zoom to a moon object with drag and drop and mousewheel eve
 
     //create and assign variables to objects...
 
-    PhiloGL.Events.create(app, {
+    LumaGL.Events.create(app, {
       onDragStart: function(e) {
         pos = {
           x: e.x,

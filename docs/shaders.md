@@ -96,7 +96,7 @@ In order to get familiar with the attributes and uniforms used by the [Scene](sc
 
 ### Syntax:
 
-	PhiloGL.Shaders.Vertex.MyName = shaderCode;
+	LumaGL.Shaders.Vertex.MyName = shaderCode;
 
 ### Examples:
 
@@ -176,15 +176,15 @@ In order to get familiar with the attributes and uniforms used by the [Scene](sc
 
 ### Syntax:
 
-	PhiloGL.Shaders.Fragment.MyName = shaderCode;
+	LumaGL.Shaders.Fragment.MyName = shaderCode;
 
 ### Examples:
 
-Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://philogb.github.com/philogl/PhiloGL/examples/lessons/8/).
+Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://philogb.github.com/philogl/LumaGL/examples/lessons/8/).
 
 {% highlight js %}
 //Add Blend Fragment Shader
-PhiloGL.Shaders.Fragment.Blend = [
+LumaGL.Shaders.Fragment.Blend = [
 
     "#ifdef GL_ES",
     "precision highp float;",

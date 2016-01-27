@@ -68,7 +68,7 @@ Create a new `Vec3` instance from the `x`, `y`, `z` coordinates of a [Quat](#Qua
 
 ### Syntax:
 
-    PhiloGL.Vec3.fromQuat(q);
+    LumaGL.Vec3.fromQuat(q);
 
 ### Arguments:
 
@@ -79,8 +79,8 @@ Create a new `Vec3` instance from the `x`, `y`, `z` coordinates of a [Quat](#Qua
 Create a vector from a Quaternion.
 
 {% highlight js %}
-  var q = new PhiloGL.Quat(1, 2, 3, 4),
-      v = PhiloGL.Vec3.fromQuat(q); //Vec3(1, 2, 3)
+  var q = new LumaGL.Quat(1, 2, 3, 4),
+      v = LumaGL.Vec3.fromQuat(q); //Vec3(1, 2, 3)
 {% endhighlight %}
 
 
@@ -91,7 +91,7 @@ Creates a new `Vec3` instance.
 
 ### Syntax:
 
-	var v = new PhiloGL.Vec3(x, y, z);
+	var v = new LumaGL.Vec3(x, y, z);
 
 ### Arguments:
 
@@ -104,13 +104,13 @@ Creates a new `Vec3` instance.
 Create a (0, 0, 0) vector.
 
 {% highlight js %}
-  var v = new PhiloGL.Vec3();
+  var v = new LumaGL.Vec3();
 {% endhighlight %}
 
 Create a (1, 2, 3) vector.
 
 {% highlight js %}
-  var v = new PhiloGL.Vec3(1, 2, 3);
+  var v = new LumaGL.Vec3(1, 2, 3);
 {% endhighlight %}
 
 
@@ -123,7 +123,7 @@ Set `x`, `y`, `z` coordinates of one `Vec3` into another `Vec3`.
 
 	v1.setVec3(v2);
 
-    PhiloGL.Vec3.setVec3(v1, v2);
+    LumaGL.Vec3.setVec3(v1, v2);
 
 ### Arguments:
 
@@ -134,8 +134,8 @@ Set `x`, `y`, `z` coordinates of one `Vec3` into another `Vec3`.
 Create two vectors and assign one vectors components to the other one.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.setVec3(v2); //v1 now contains (x=4, y=5, z=6)
 {% endhighlight %}
@@ -146,7 +146,7 @@ Set an object's `x`, `y`, `z` components to another object.
   var v1 = [],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.setVec3(v1, v2); //v1 now has [4, 5, 6]
+  LumaGL.Vec3.setVec3(v1, v2); //v1 now has [4, 5, 6]
 {% endhighlight %}
 
 
@@ -159,7 +159,7 @@ Set `x`, `y`, `z` coordinates.
 
 	v1.set(x, y, z);
 
-    PhiloGL.Vec3.set(v1, x, y, z);
+    LumaGL.Vec3.set(v1, x, y, z);
 
 ### Arguments:
 
@@ -172,8 +172,8 @@ Set `x`, `y`, `z` coordinates.
 Create two vectors and assign one vectors components to the other one.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.set(v2.x, v2.y, v2.z); //v1 now contains (x=4, y=5, z=6)
 {% endhighlight %}
@@ -184,7 +184,7 @@ Set an object's `x`, `y`, `z` components to another object.
   var v1 = [],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.set(v1, v2.x, v2.y, v2.z); //v1 now has [4, 5, 6]
+  LumaGL.Vec3.set(v1, v2.x, v2.y, v2.z); //v1 now has [4, 5, 6]
 {% endhighlight %}
 
 Vec3 Method: add {#Vec3:add}
@@ -196,7 +196,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Vec3` in
 
 	v1.add(v2);
 
-    PhiloGL.Vec3.add(v1, v2);
+    LumaGL.Vec3.add(v1, v2);
 
 ### Arguments:
 
@@ -207,8 +207,8 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Vec3` in
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.add(v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
 {% endhighlight %}
@@ -219,7 +219,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.add(v1, v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
+  LumaGL.Vec3.add(v1, v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
 {% endhighlight %}
 
 
@@ -232,7 +232,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Modifies the original o
 
 	v1.$add(v2);
 
-    PhiloGL.Vec3.$add(v1, v2);
+    LumaGL.Vec3.$add(v1, v2);
 
 ### Arguments:
 
@@ -243,8 +243,8 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Modifies the original o
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.$add(v2); //v1 is now Vec3(5, 7, 9).
 {% endhighlight %}
@@ -255,7 +255,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.$add(v1, v2); //v1 is now [ 5, 7, 9 ].
+  LumaGL.Vec3.$add(v1, v2); //v1 is now [ 5, 7, 9 ].
 {% endhighlight %}
 
 
@@ -268,7 +268,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects and stores the result in
 
 	v1.add2(v2, v3);
 
-    PhiloGL.Vec3.add2(v1, v2, v3);
+    LumaGL.Vec3.add2(v1, v2, v3);
 
 ### Arguments:
 
@@ -280,9 +280,9 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects and stores the result in
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(),
-      v2 = new PhiloGL.Vec3(1, 2, 3),
-      v3 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(),
+      v2 = new LumaGL.Vec3(1, 2, 3),
+      v3 = new LumaGL.Vec3(4, 5, 6);
 
   v1.add2(v2, v3); //v1 is now Vec3(5, 7, 9), v2 and v3 are unchanged.
 {% endhighlight %}
@@ -294,7 +294,7 @@ Create two `x`, `y`, `z` objects and add them.
       v2 = [ 1, 2, 3 ],
       v3 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.add2(v1, v2, v3); //v2 and v3 are still the same but v1 is [ 5, 7, 9 ].
+  LumaGL.Vec3.add2(v1, v2, v3); //v2 and v3 are still the same but v1 is [ 5, 7, 9 ].
 {% endhighlight %}
 
 
@@ -307,7 +307,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Ve
 
 	v1.sub(v2);
 
-    PhiloGL.Vec3.sub(v1, v2);
+    LumaGL.Vec3.sub(v1, v2);
 
 ### Arguments:
 
@@ -318,8 +318,8 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Ve
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.sub(v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
 {% endhighlight %}
@@ -330,7 +330,7 @@ Create two `x`, `y`, `z` objects and substract them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.sub(v1, v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
+  LumaGL.Vec3.sub(v1, v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
 {% endhighlight %}
 
 
@@ -343,7 +343,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Modifies the orig
 
 	v1.$sub(v2);
 
-    PhiloGL.Vec3.$sub(v1, v2);
+    LumaGL.Vec3.$sub(v1, v2);
 
 ### Arguments:
 
@@ -354,8 +354,8 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Modifies the orig
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.$sub(v2); //v1 is now Vec3(-3, -3, -3).
 {% endhighlight %}
@@ -366,7 +366,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.$sub(v1, v2); //v1 is now [ -3, -3, -3 ].
+  LumaGL.Vec3.$sub(v1, v2); //v1 is now [ -3, -3, -3 ].
 {% endhighlight %}
 
 
@@ -379,7 +379,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects and stores the res
 
 	v1.sub2(v2, v3);
 
-    PhiloGL.Vec3.sub2(v1, v2, v3);
+    LumaGL.Vec3.sub2(v1, v2, v3);
 
 ### Arguments:
 
@@ -391,9 +391,9 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects and stores the res
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(),
-      v2 = new PhiloGL.Vec3(1, 2, 3),
-      v3 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(),
+      v2 = new LumaGL.Vec3(1, 2, 3),
+      v3 = new LumaGL.Vec3(4, 5, 6);
 
   v1.sub2(v2, v3); //v1 is now Vec3(-3, -3, -3), v2 and v3 are unchanged.
 {% endhighlight %}
@@ -405,7 +405,7 @@ Create two `x`, `y`, `z` objects and substract them.
       v2 = [ 1, 2, 3 ],
       v3 = [ 4, 5, 6 ];
 
-  PhiloGL.Vec3.sub2(v1, v2, v3); //v2 and v3 are still the same but v1 is { x: -3, y: -3, z: -3 }.
+  LumaGL.Vec3.sub2(v1, v2, v3); //v2 and v3 are still the same but v1 is { x: -3, y: -3, z: -3 }.
 {% endhighlight %}
 
 
@@ -418,7 +418,7 @@ Scales the Vec3 vector by a real number. Creates a new Vec3 with the scaled comp
 
 	v1.scale(s);
 
-    PhiloGL.Vec3.scale(v1, s);
+    LumaGL.Vec3.scale(v1, s);
 
 ### Arguments:
 
@@ -429,7 +429,7 @@ Scales the Vec3 vector by a real number. Creates a new Vec3 with the scaled comp
 Create a vector and scale it by 2.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.scale(2); //v1 is unchanged but a new Vec3(2, 4, 6) is created.
 {% endhighlight %}
@@ -439,7 +439,7 @@ Create an `x`, `y`, `z` object and scale it by 2.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.scale(v1, 2); //v1 is still the same but a new Vec3(2, 4, 6) was created.
+  LumaGL.Vec3.scale(v1, 2); //v1 is still the same but a new Vec3(2, 4, 6) was created.
 {% endhighlight %}
 
 
@@ -452,7 +452,7 @@ Scales the Vec3 vector by a real number. Changes the original object.
 
 	v1.$scale(s);
 
-    PhiloGL.Vec3.$scale(v1, s);
+    LumaGL.Vec3.$scale(v1, s);
 
 ### Arguments:
 
@@ -463,7 +463,7 @@ Scales the Vec3 vector by a real number. Changes the original object.
 Create a vector and scale it by 2.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.$scale(2); //v1 is now Vec3(2, 4, 6).
 {% endhighlight %}
@@ -473,7 +473,7 @@ Create an `x`, `y`, `z` object and scale it by 2.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.$scale(v1, 2); //v1 is now [ 2, 4, 6 ].
+  LumaGL.Vec3.$scale(v1, 2); //v1 is now [ 2, 4, 6 ].
 {% endhighlight %}
 
 
@@ -486,14 +486,14 @@ Negates a `Vec3`. Returns a new instance.
 
 	v1.neg();
 
-    PhiloGL.Vec3.neg(v1);
+    LumaGL.Vec3.neg(v1);
 
 ### Examples:
 
 Create a vector and negate it.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.neg(); //v1 is unchanged but a new Vec3(-1, -2, -3) is created.
 {% endhighlight %}
@@ -503,7 +503,7 @@ Create an `x`, `y`, `z` object and negate it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.neg(v1); //v1 is still the same but a new Vec3(-1, -2, -3).
+  LumaGL.Vec3.neg(v1); //v1 is still the same but a new Vec3(-1, -2, -3).
 {% endhighlight %}
 
 
@@ -516,14 +516,14 @@ Negates a `Vec3`. Changes the original object.
 
 	v1.$neg();
 
-    PhiloGL.Vec3.$neg(v1);
+    LumaGL.Vec3.$neg(v1);
 
 ### Examples:
 
 Create a vector and negate it.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.$neg(); //v1 is now Vec3(-1, -2, -3).
 {% endhighlight %}
@@ -533,7 +533,7 @@ Create an `x`, `y`, `z` object and negate it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.neg(v1); //v1 is now [ -1, -2, -3 ].
+  LumaGL.Vec3.neg(v1); //v1 is now [ -1, -2, -3 ].
 {% endhighlight %}
 
 
@@ -546,14 +546,14 @@ Creates a unit vector from the coordinates of `Vec3`.
 
 	v1.unit();
 
-    PhiloGL.Vec3.unit(v1);
+    LumaGL.Vec3.unit(v1);
 
 ### Examples:
 
 Create a vector and make a unit vector from it.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.unit(); //v1 is unchanged but a new unit vector Vec3 is created.
 {% endhighlight %}
@@ -563,7 +563,7 @@ Create an `x`, `y`, `z` object and make a unit vector from it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.unit(v1); //v1 is still the same but a new Vec3 that is a unit vector is created.
+  LumaGL.Vec3.unit(v1); //v1 is still the same but a new Vec3 that is a unit vector is created.
 {% endhighlight %}
 
 
@@ -576,14 +576,14 @@ Creates a unit vector from the `Vec3` coordinates. Changes the original object.
 
 	v1.$unit();
 
-    PhiloGL.Vec3.$unit(v1);
+    LumaGL.Vec3.$unit(v1);
 
 ### Examples:
 
 Create a vector and make a unit vector from it.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   v1.$unit(); //v1 is now a unit vector.
 {% endhighlight %}
@@ -593,7 +593,7 @@ Create an `x`, `y`, `z` object make a unit vector from it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  PhiloGL.Vec3.$unit(v1); //v1 is now a unit vector object.
+  LumaGL.Vec3.$unit(v1); //v1 is now a unit vector object.
 {% endhighlight %}
 
 
@@ -607,7 +607,7 @@ You can find more information about the cross product [here](http://en.wikipedia
 
 	v1.cross(v2);
 
-    PhiloGL.Vec3.cross(v1, v2);
+    LumaGL.Vec3.cross(v1, v2);
 
 ### Arguments:
 
@@ -618,8 +618,8 @@ You can find more information about the cross product [here](http://en.wikipedia
 Create two vectors and make a cross product.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.cross(v2); //v1 and v2 are still the same but a new Vec3 was created with the result.
 {% endhighlight %}
@@ -631,7 +631,7 @@ Create two `x`, `y`, `z` objects and make a cross product.
       v2 = [ 4, 5, 6 ];
 
   //v1 and v2 are still the same but a new Vec3 with the result was created.
-  var ans = PhiloGL.Vec3.cross(v1, v2);
+  var ans = LumaGL.Vec3.cross(v1, v2);
 {% endhighlight %}
 
 
@@ -645,7 +645,7 @@ You can find more information about the cross product [here](http://en.wikipedia
 
 	v1.$cross(v2);
 
-    PhiloGL.Vec3.$cross(v1, v2);
+    LumaGL.Vec3.$cross(v1, v2);
 
 ### Arguments:
 
@@ -656,8 +656,8 @@ You can find more information about the cross product [here](http://en.wikipedia
 Create two vectors and make a cross product.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.$cross(v2); //v1 contains now the result.
 {% endhighlight %}
@@ -669,7 +669,7 @@ Create two `x`, `y`, `z` objects and make a cross product.
       v2 = [ 4, 5, 6 ];
 
   //v1 contains now the result.
-  var ans = PhiloGL.Vec3.$cross(v1, v2);
+  var ans = LumaGL.Vec3.$cross(v1, v2);
 {% endhighlight %}
 
 
@@ -682,7 +682,7 @@ Calculates the distance between two `Vec3`.
 
 	v1.distTo(v2);
 
-    PhiloGL.Vec3.distTo(v1, v2);
+    LumaGL.Vec3.distTo(v1, v2);
 
 ### Arguments:
 
@@ -693,8 +693,8 @@ Calculates the distance between two `Vec3`.
 Create two vectors and calculate the distance.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.distTo(v2); //a real value with the distance is returned.
 {% endhighlight %}
@@ -706,7 +706,7 @@ Create two `x`, `y`, `z` objects and calculate their distance.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the distance is returned.
-  var ans = PhiloGL.Vec3.distTo(v1, v2);
+  var ans = LumaGL.Vec3.distTo(v1, v2);
 {% endhighlight %}
 
 
@@ -719,7 +719,7 @@ Calculates the squared distance between two `Vec3`.
 
 	v1.distToSq(v2);
 
-    PhiloGL.Vec3.distToSq(v1, v2);
+    LumaGL.Vec3.distToSq(v1, v2);
 
 ### Arguments:
 
@@ -730,8 +730,8 @@ Calculates the squared distance between two `Vec3`.
 Create two vectors and calculate the squared distance.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.distToSq(v2); //a real value with the squared distance is returned.
 {% endhighlight %}
@@ -743,7 +743,7 @@ Create two `x`, `y`, `z` objects and calculate their squared distance.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the squared distance is returned.
-  var ans = PhiloGL.Vec3.distToSq(v1, v2);
+  var ans = LumaGL.Vec3.distToSq(v1, v2);
 {% endhighlight %}
 
 
@@ -756,14 +756,14 @@ Calculates the norm of `Vec3`.
 
 	v1.norm();
 
-    PhiloGL.Vec3.norm(v1);
+    LumaGL.Vec3.norm(v1);
 
 ### Examples:
 
 Create a vector and calculate its norm.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   vi.norm(); //returns the real valued norm.
 {% endhighlight %}
@@ -774,7 +774,7 @@ Create an `x`, `y`, `z` object and calculate its norm.
   var v1 = [ 1, 2, 3 ];
 
   //A real number with the norm is returned.
-  var ans = PhiloGL.Vec3.norm(v1);
+  var ans = LumaGL.Vec3.norm(v1);
 {% endhighlight %}
 
 
@@ -787,14 +787,14 @@ Calculates the squared norm of `Vec3`.
 
 	v1.normSq();
 
-    PhiloGL.Vec3.normSq(v1);
+    LumaGL.Vec3.normSq(v1);
 
 ### Examples:
 
 Create a vector and calculate its squared norm.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3);
+  var v1 = new LumaGL.Vec3(1, 2, 3);
 
   vi.normSq(); //returns the real valued norm.
 {% endhighlight %}
@@ -805,7 +805,7 @@ Create an `x`, `y`, `z` object and calculate its squared norm.
   var v1 = [ 1, 2, 3 ];
 
   //A real number with the squared norm is returned.
-  var ans = PhiloGL.Vec3.normSq(v1);
+  var ans = LumaGL.Vec3.normSq(v1);
 {% endhighlight %}
 
 
@@ -819,7 +819,7 @@ dot product [here](http://en.wikipedia.org/wiki/Dot_product).
 
 	v1.dot(v2);
 
-    PhiloGL.Vec3.dot(v1, v2);
+    LumaGL.Vec3.dot(v1, v2);
 
 ### Arguments:
 
@@ -830,8 +830,8 @@ dot product [here](http://en.wikipedia.org/wiki/Dot_product).
 Create two vectors and calculate the dot product.
 
 {% highlight js %}
-  var v1 = new PhiloGL.Vec3(1, 2, 3),
-      v2 = new PhiloGL.Vec3(4, 5, 6);
+  var v1 = new LumaGL.Vec3(1, 2, 3),
+      v2 = new LumaGL.Vec3(4, 5, 6);
 
   v1.dot(v2); //a real value with the dot product is returned.
 {% endhighlight %}
@@ -843,7 +843,7 @@ Create two `x`, `y`, `z` objects and calculate the dot product.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the dot product is returned.
-  var ans = PhiloGL.Vec3.dot(v1, v2);
+  var ans = LumaGL.Vec3.dot(v1, v2);
 {% endhighlight %}
 
 
@@ -856,7 +856,7 @@ Clones a vector.
 
 	v1.clone();
 
-    PhiloGL.Vec3.clone(v1);
+    LumaGL.Vec3.clone(v1);
 
 
 Class: Mat4 {#Mat4}
@@ -873,7 +873,7 @@ Quaternion must be a unit quaternion.
 
 ### Syntax:
 
-    PhiloGL.Mat4.fromQuat(q);
+    LumaGL.Mat4.fromQuat(q);
 
 ### Arguments:
 
@@ -884,8 +884,8 @@ Quaternion must be a unit quaternion.
 Create a matrix from a Quaternion.
 
 {% highlight js %}
-  var q = new PhiloGL.Quat(1, 2, 3, 4).$unit(),
-      m = PhiloGL.Mat4.fromQuat(q); //a new Mat4 instance
+  var q = new LumaGL.Quat(1, 2, 3, 4).$unit(),
+      m = LumaGL.Mat4.fromQuat(q); //a new Mat4 instance
 {% endhighlight %}
 
 
@@ -896,9 +896,9 @@ Creates a new `Mat4` instance. If no arguments are set then an Identity matrix i
 
 ### Syntax:
 
-	var m = new PhiloGL.Mat4();
+	var m = new LumaGL.Mat4();
 	
-    var m = new PhiloGL.Mat4(n11, n12, n13, n14,
+    var m = new LumaGL.Mat4(n11, n12, n13, n14,
                              n21, n22, n23, n24,
                              n31, n32, n33, n34,
                              n41, n42, n43, n44);
@@ -912,13 +912,13 @@ Creates a new `Mat4` instance. If no arguments are set then an Identity matrix i
 Create an identity matrix.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 {% endhighlight %}
 
 Create a null matrix.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4( 0, 0, 0, 0,
+  var m = new LumaGL.Mat4( 0, 0, 0, 0,
                             0, 0, 0, 0,
                             0, 0, 0, 0,
                             0, 0, 0, 0 );
@@ -934,14 +934,14 @@ Modifies the matrix to be an Identity matrix.
 
 	m.id();
 
-    PhiloGL.Mat4.id(m);
+    LumaGL.Mat4.id(m);
 
 ### Examples:
 
 Create an identity matrix from some random matrix.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4( 1, 2, 3, 4,
+  var m = new LumaGL.Mat4( 1, 2, 3, 4,
                             1, 2, 3, 4,
                             1, 2, 3, 4,
                             1, 2, 3, 4);
@@ -954,7 +954,7 @@ Create an identity matrix object.
 {% highlight js %}
   var m = [];
 
-  PhiloGL.Mat4.id(m); //m object components are the Identity matrix ones.
+  LumaGL.Mat4.id(m); //m object components are the Identity matrix ones.
 {% endhighlight %}
 
 
@@ -970,7 +970,7 @@ Set all matrix coordinates.
           n31, n32, n33, n34,
           n41, n42, n43, n44);
 
-    PhiloGL.Mat4.set(m, n11, n12, n13, n14,
+    LumaGL.Mat4.set(m, n11, n12, n13, n14,
                         n21, n22, n23, n24,
                         n31, n32, n33, n34,
                         n41, n42, n43, n44);
@@ -984,7 +984,7 @@ Set all matrix coordinates.
 Create a matrix and set some values to it.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.set(1, 2, 3, 4,
         1, 2, 3, 4,
@@ -997,7 +997,7 @@ Set an empty object matrix coordinates onto some values.
 {% highlight js %}
   var m = [];
 
-  PhiloGL.Mat4.set(m, 1, 2, 3, 4,
+  LumaGL.Mat4.set(m, 1, 2, 3, 4,
                       1, 2, 3, 4,
                       1, 2, 3, 4,
                       1, 2, 3, 4);
@@ -1014,7 +1014,7 @@ Multiplies a `Mat4` by a `Vec3`. Returns a new `Vec3` without modifying the pass
 
 	m.mulVec3(v);
     
-    PhiloGL.Mat4.mulVec3(m, v);
+    LumaGL.Mat4.mulVec3(m, v);
 
 ### Arguments:
 
@@ -1025,8 +1025,8 @@ Multiplies a `Mat4` by a `Vec3`. Returns a new `Vec3` without modifying the pass
 Create a matrix and a vector and multiply them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      v = new PhiloGL.Vec3(1, 1, 1);
+  var m = new LumaGL.Mat4(),
+      v = new LumaGL.Vec3(1, 1, 1);
 
   m.mulVec3(v);
 {% endhighlight %}
@@ -1037,10 +1037,10 @@ Create a matrix object and a vector object and multiply them.
   var m = [],
       v = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Vec3.set(v, 1, 1, 1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Vec3.set(v, 1, 1, 1);
 
-  PhiloGL.Mat4.mulVec3(m, v);
+  LumaGL.Mat4.mulVec3(m, v);
 {% endhighlight %}
 
 
@@ -1053,7 +1053,7 @@ Multiplies a `Mat4` by a `Vec3`. Modifies the receiver.
 
 	m.$mulVec3(v);
     
-    PhiloGL.Mat4.$mulVec3(m, v);
+    LumaGL.Mat4.$mulVec3(m, v);
 
 ### Arguments:
 
@@ -1064,8 +1064,8 @@ Multiplies a `Mat4` by a `Vec3`. Modifies the receiver.
 Create a matrix and a vector and multiply them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      v = new PhiloGL.Vec3(1, 1, 1);
+  var m = new LumaGL.Mat4(),
+      v = new LumaGL.Vec3(1, 1, 1);
 
   m.$mulVec3(v);
 {% endhighlight %}
@@ -1076,10 +1076,10 @@ Create a matrix object and a vector object and multiply them.
   var m = [],
       v = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Vec3.set(v, 1, 1, 1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Vec3.set(v, 1, 1, 1);
 
-  PhiloGL.Mat4.$mulVec3(m, v);
+  LumaGL.Mat4.$mulVec3(m, v);
 {% endhighlight %}
 
 
@@ -1092,7 +1092,7 @@ Multiplies two `Mat4`. Creates a new `Mat4` with the result and does not modify 
 
 	m.mulMat4(m1);
     
-    PhiloGL.Mat4.mulMat4(m, m1);
+    LumaGL.Mat4.mulMat4(m, m1);
 
 ### Arguments:
 
@@ -1103,8 +1103,8 @@ Multiplies two `Mat4`. Creates a new `Mat4` with the result and does not modify 
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      m1 = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4(),
+      m1 = new LumaGL.Mat4();
 
   m.mulMat4(m1); //the result is a new Identity matrix
 {% endhighlight %}
@@ -1115,9 +1115,9 @@ Create a two matrices objects and multiply them.
   var m = [],
       m1 = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.id(m1);
-  PhiloGL.Mat4.mulMat4(m, m1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.id(m1);
+  LumaGL.Mat4.mulMat4(m, m1);
 {% endhighlight %}
 
 
@@ -1130,7 +1130,7 @@ Multiplies two `Mat4`, storing the result in the receiver.
 
 	m.$mulMat4(m1);
     
-    PhiloGL.Mat4.$mulMat4(m, m1);
+    LumaGL.Mat4.$mulMat4(m, m1);
 
 ### Arguments:
 
@@ -1141,8 +1141,8 @@ Multiplies two `Mat4`, storing the result in the receiver.
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      m1 = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4(),
+      m1 = new LumaGL.Mat4();
 
   m.$mulMat4(m1); //the result is stored in m.
 {% endhighlight %}
@@ -1153,9 +1153,9 @@ Create a two matrices objects and multiply them.
   var m = [],
       m1 = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.id(m1);
-  PhiloGL.Mat4.$mulMat4(m, m1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.id(m1);
+  LumaGL.Mat4.$mulMat4(m, m1);
 {% endhighlight %}
 
 
@@ -1168,7 +1168,7 @@ Multiplies two `Mat4`, storing the result in the receiver.
 
 	m.mulMat42(m1, m2);
     
-    PhiloGL.Mat4.mulMat42(m, m1, m2);
+    LumaGL.Mat4.mulMat42(m, m1, m2);
 
 ### Arguments:
 
@@ -1180,9 +1180,9 @@ Multiplies two `Mat4`, storing the result in the receiver.
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      m1 = new PhiloGL.Mat4(),
-      m2 = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4(),
+      m1 = new LumaGL.Mat4(),
+      m2 = new LumaGL.Mat4();
 
   m.mulMat42(m1, m2); //the result is stored in m.
 {% endhighlight %}
@@ -1194,9 +1194,9 @@ Create a two matrices objects and multiply them.
       m1 = [],
       m2 = [];
 
-  PhiloGL.Mat4.id(m1);
-  PhiloGL.Mat4.id(m2);
-  PhiloGL.Mat4.mulMat42(m, m1, m2);
+  LumaGL.Mat4.id(m1);
+  LumaGL.Mat4.id(m2);
+  LumaGL.Mat4.mulMat42(m, m1, m2);
 {% endhighlight %}
 
 
@@ -1209,7 +1209,7 @@ Adds two `Mat4`. Creates a new `Mat4` with the result and does not modify the or
 
 	m.add(m1);
     
-    PhiloGL.Mat4.add(m, m1);
+    LumaGL.Mat4.add(m, m1);
 
 ### Arguments:
 
@@ -1220,8 +1220,8 @@ Adds two `Mat4`. Creates a new `Mat4` with the result and does not modify the or
 Create two matrices and add them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      m1 = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4(),
+      m1 = new LumaGL.Mat4();
 
   m.add(m1); //the result is a new matrix
 {% endhighlight %}
@@ -1232,9 +1232,9 @@ Create a two matrices objects and add them.
   var m = [],
       m1 = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.id(m1);
-  PhiloGL.Mat4.add(m, m1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.id(m1);
+  LumaGL.Mat4.add(m, m1);
 {% endhighlight %}
 
 
@@ -1247,7 +1247,7 @@ Adds two `Mat4`, storing the result in the receiver.
 
 	m.$add(m1);
     
-    PhiloGL.Mat4.$add(m, m1);
+    LumaGL.Mat4.$add(m, m1);
 
 ### Arguments:
 
@@ -1258,8 +1258,8 @@ Adds two `Mat4`, storing the result in the receiver.
 Create two matrices and add them.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      m1 = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4(),
+      m1 = new LumaGL.Mat4();
 
   m.$add(m1); //the result is stored in m.
 {% endhighlight %}
@@ -1270,9 +1270,9 @@ Create a two matrices objects and add them.
   var m = [],
       m1 = [];
 
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.id(m1);
-  PhiloGL.Mat4.$add(m, m1);
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.id(m1);
+  LumaGL.Mat4.$add(m, m1);
 {% endhighlight %}
 
 
@@ -1286,14 +1286,14 @@ Creates a new `Mat4` with the result.
 
 	m.transpose();
     
-    PhiloGL.Mat4.transpose(m);
+    LumaGL.Mat4.transpose(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and transpose it.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.transpose(); //the result is a new Identity matrix
 {% endhighlight %}
@@ -1309,14 +1309,14 @@ Modifies the current matrix.
 
 	m.$transpose();
     
-    PhiloGL.Mat4.$transpose(m);
+    LumaGL.Mat4.$transpose(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and transpose it.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.$transpose(); //the result is stored in m
 {% endhighlight %}
@@ -1331,7 +1331,7 @@ Applies a rotation of `theta` by `vec` to a `Mat4` matrix returning the result i
 
 	m.rotateAxis(theta, vec);
     
-    PhiloGL.Mat4.rotateAxis(m, theta, vec);
+    LumaGL.Mat4.rotateAxis(m, theta, vec);
 
 ### Arguments:
 
@@ -1343,8 +1343,8 @@ Applies a rotation of `theta` by `vec` to a `Mat4` matrix returning the result i
 Create a rotation by `theta` and `v`.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      v = new PhiloGL.Vec3(1, 1, 1);
+  var m = new LumaGL.Mat4(),
+      v = new LumaGL.Vec3(1, 1, 1);
   
   m.rotateAxis(Math.PI, v); //the result is a new matrix
 {% endhighlight %}
@@ -1352,7 +1352,7 @@ Create a rotation by `theta` and `v`.
 Another way of doing the same thing without creating a `Vec3`.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
+  var m = new LumaGL.Mat4(),
       v = [ 1, 1, 1 ];
   
   m.rotateAxis(Math.PI, v); //the result is a new matrix
@@ -1368,7 +1368,7 @@ Applies a rotation of angle `theta` by vector `vec` to a `Mat4` altering the cur
 
 	m.$rotateAxis(theta, vec);
     
-    PhiloGL.Mat4.$rotateAxis(m, theta, vec);
+    LumaGL.Mat4.$rotateAxis(m, theta, vec);
 
 ### Arguments:
 
@@ -1380,8 +1380,8 @@ Applies a rotation of angle `theta` by vector `vec` to a `Mat4` altering the cur
 Create a rotation by `theta` and `v`.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      v = new PhiloGL.Vec3(1, 1, 1);
+  var m = new LumaGL.Mat4(),
+      v = new LumaGL.Vec3(1, 1, 1);
   
   m.$rotateAxis(Math.PI, v); //the result is in m
 {% endhighlight %}
@@ -1389,7 +1389,7 @@ Create a rotation by `theta` and `v`.
 Another way of doing the same thing without creating a `Vec3`.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
+  var m = new LumaGL.Mat4(),
       v = [ 1, 1, 1 ];
   
   m.$rotateAxis(Math.PI, v); //the result is in m
@@ -1406,7 +1406,7 @@ Creates a new `Mat4` with the result.
 
 	m.rotateXYZ(rx, ry, rz);
     
-    PhiloGL.Mat4.rotateXYZ(m, rx, ry, rz);
+    LumaGL.Mat4.rotateXYZ(m, rx, ry, rz);
 
 ### Arguments:
 
@@ -1419,7 +1419,7 @@ Creates a new `Mat4` with the result.
 Create a rotation on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.rotateXYZ(Math.PI, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1429,8 +1429,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.rotateXYZ(m, Math.PI, 0, 0); //creates a new Mat4 with the result.
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.rotateXYZ(m, Math.PI, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
@@ -1444,7 +1444,7 @@ Alters the matrix.
 
 	m.$rotateXYZ(rx, ry, rz);
     
-    PhiloGL.Mat4.$rotateXYZ(m, rx, ry, rz);
+    LumaGL.Mat4.$rotateXYZ(m, rx, ry, rz);
 
 ### Arguments:
 
@@ -1457,7 +1457,7 @@ Alters the matrix.
 Create a rotation on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.$rotateXYZ(Math.PI, 0, 0); //alters m
 {% endhighlight %}
@@ -1467,8 +1467,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.$rotateXYZ(m, Math.PI, 0, 0); //alters m
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.$rotateXYZ(m, Math.PI, 0, 0); //alters m
 {% endhighlight %}
 
 
@@ -1482,7 +1482,7 @@ Stores the result in a new `Mat4` instance.
 
 	m.translate(x, y, z);
     
-    PhiloGL.Mat4.translate(m, x, y, z);
+    LumaGL.Mat4.translate(m, x, y, z);
 
 ### Arguments:
 
@@ -1495,7 +1495,7 @@ Stores the result in a new `Mat4` instance.
 Create a translation on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.translate(10, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1505,8 +1505,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.translate(m, 10, 0, 0); //creates a new Mat4 with the result.
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.translate(m, 10, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
@@ -1520,7 +1520,7 @@ Alters the original matrix.
 
 	m.$translate(x, y, z);
     
-    PhiloGL.Mat4.$translate(m, x, y, z);
+    LumaGL.Mat4.$translate(m, x, y, z);
 
 ### Arguments:
 
@@ -1533,7 +1533,7 @@ Alters the original matrix.
 Create a translation on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.$translate(10, 0, 0); //the result is in m
 {% endhighlight %}
@@ -1543,8 +1543,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.$translate(m, 10, 0, 0); //the result is in m
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.$translate(m, 10, 0, 0); //the result is in m
 {% endhighlight %}
 
 
@@ -1558,7 +1558,7 @@ Stores the result in a new `Mat4` instance.
 
 	m.scale(x, y, z);
     
-    PhiloGL.Mat4.scale(m, x, y, z);
+    LumaGL.Mat4.scale(m, x, y, z);
 
 ### Arguments:
 
@@ -1571,7 +1571,7 @@ Stores the result in a new `Mat4` instance.
 Create a scaling on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.scale(10, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1581,8 +1581,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.scale(m, 10, 0, 0); //creates a new Mat4 with the result.
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.scale(m, 10, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
@@ -1596,7 +1596,7 @@ Alters the original matrix.
 
 	m.$scale(x, y, z);
     
-    PhiloGL.Mat4.$scale(m, x, y, z);
+    LumaGL.Mat4.$scale(m, x, y, z);
 
 ### Arguments:
 
@@ -1609,7 +1609,7 @@ Alters the original matrix.
 Create a scaling on the x-axis.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.$scale(10, 0, 0); //the result is in m
 {% endhighlight %}
@@ -1619,8 +1619,8 @@ Another way of doing it with generics:
 {% highlight js %}
   var m = [];
   
-  PhiloGL.Mat4.id(m);
-  PhiloGL.Mat4.$scale(m, 10, 0, 0); //the result is in m
+  LumaGL.Mat4.id(m);
+  LumaGL.Mat4.$scale(m, 10, 0, 0); //the result is in m
 {% endhighlight %}
 
 
@@ -1634,14 +1634,14 @@ Creates a new `Mat4` with the result.
 
 	m.invert();
     
-    PhiloGL.Mat4.invert(m);
+    LumaGL.Mat4.invert(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and invert it.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.invert(); //the result is a new matrix
 {% endhighlight %}
@@ -1657,14 +1657,14 @@ Modifies the current matrix.
 
 	m.$invert();
     
-    PhiloGL.Mat4.$invert(m);
+    LumaGL.Mat4.$invert(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and invert it.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4();
+  var m = new LumaGL.Mat4();
 
   m.$invert(); //the result is stored in m
 {% endhighlight %}
@@ -1681,7 +1681,7 @@ For more information about the `lookAt` operation look [here](http://www.euclide
 
 	m.lookAt(eye, center, up);
     
-    PhiloGL.Mat4.lookAt(m, eye, center, up);
+    LumaGL.Mat4.lookAt(m, eye, center, up);
 
 ### Arguments:
 
@@ -1694,7 +1694,7 @@ For more information about the `lookAt` operation look [here](http://www.euclide
 Create a lookAt matrix. The eye is looking at the origin.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
+  var m = new LumaGL.Mat4(),
       eye = [ 1, 0, 1 ],
       center = [ 0, 0, 0 ],
       up = [ 0, 1, 0 ];
@@ -1710,7 +1710,7 @@ Another way of doing it with generics:
       center = [ 0, 0, 0 ],
       up = [ 0, 1, 0 ];
 
-  PhiloGL.Mat4.lookAt(m, eye, center, up); //the original object is modified.
+  LumaGL.Mat4.lookAt(m, eye, center, up); //the original object is modified.
 {% endhighlight %}
 
 
@@ -1725,7 +1725,7 @@ For more information about the `frustum` geometry look [here](http://en.wikipedi
 
 	  m.frustum(left, right, bottom, top, near, far);
     
-    PhiloGL.Mat4.frustum(m, left, right, bottom, top, near, far);
+    LumaGL.Mat4.frustum(m, left, right, bottom, top, near, far);
 
 ### Arguments:
 
@@ -1747,7 +1747,7 @@ For more information about the `orthographic projection` geometry look [here](ht
 
 	  m.ortho(left, right, bottom, top, near, far);
     
-    PhiloGL.Mat4.ortho(m, left, right, bottom, top, near, far);
+    LumaGL.Mat4.ortho(m, left, right, bottom, top, near, far);
 
 ### Arguments:
 
@@ -1769,7 +1769,7 @@ This method is useful when setting a camera projection matrix class.
 
 	m.perspective(fov, aspect, near, far);
     
-    PhiloGL.Mat4.perspective(m, fov, aspect, near, far);
+    LumaGL.Mat4.perspective(m, fov, aspect, near, far);
 
 ### Arguments:
 
@@ -1798,7 +1798,7 @@ Clones a matrix.
 
 	m.clone();
 
-    PhiloGL.Mat4.clone(m);
+    LumaGL.Mat4.clone(m);
 
 
 Class: Quat {#Quat}
@@ -1817,7 +1817,7 @@ Create a new `Quat` instance from the `x`, `y`, `z` coordinates of a [Vec3](#Vec
 
 ### Syntax:
 
-    PhiloGL.Quat.fromVec3(v[, r]);
+    LumaGL.Quat.fromVec3(v[, r]);
 
 ### Arguments:
 
@@ -1829,8 +1829,8 @@ Create a new `Quat` instance from the `x`, `y`, `z` coordinates of a [Vec3](#Vec
 Create a Quaternion from a Vec3.
 
 {% highlight js %}
-  var v = new PhiloGL.Vec3(1, 2, 3),
-      q = PhiloGL.Quat.fromVec3(v, 7); //Quat(1, 2, 3, 7)
+  var v = new LumaGL.Vec3(1, 2, 3),
+      q = LumaGL.Quat.fromVec3(v, 7); //Quat(1, 2, 3, 7)
 {% endhighlight %}
 
 
@@ -1842,7 +1842,7 @@ must be an orthogonal matrix.
 
 ### Syntax:
 
-    PhiloGL.Quat.fromMat4(m);
+    LumaGL.Quat.fromMat4(m);
 
 ### Arguments:
 
@@ -1853,8 +1853,8 @@ must be an orthogonal matrix.
 Create a Quaternion from a `Mat4`.
 
 {% highlight js %}
-  var m = new PhiloGL.Mat4(),
-      q = PhiloGL.Quat.fromMat4(m); //Quat
+  var m = new LumaGL.Mat4(),
+      q = LumaGL.Quat.fromMat4(m); //Quat
 {% endhighlight %}
 
 
@@ -1866,7 +1866,7 @@ radians.
 
 ### Syntax:
 
-    PhiloGL.Quat.fromXRotation(angle);
+    LumaGL.Quat.fromXRotation(angle);
 
 ### Arguments:
 
@@ -1877,7 +1877,7 @@ radians.
 Create a Quaternion from an x-axis rotation.
 
 {% highlight js %}
-  var q = PhiloGL.Quat.fromXRotation(Math.PI); //Quat(1, 0, 0, 0)
+  var q = LumaGL.Quat.fromXRotation(Math.PI); //Quat(1, 0, 0, 0)
 {% endhighlight %}
 
 
@@ -1889,7 +1889,7 @@ radians.
 
 ### Syntax:
 
-    PhiloGL.Quat.fromYRotation(angle);
+    LumaGL.Quat.fromYRotation(angle);
 
 ### Arguments:
 
@@ -1900,7 +1900,7 @@ radians.
 Create a Quaternion from an y-axis rotation.
 
 {% highlight js %}
-  var q = PhiloGL.Quat.fromYRotation(Math.PI); //Quat(0, 1, 0, 0)
+  var q = LumaGL.Quat.fromYRotation(Math.PI); //Quat(0, 1, 0, 0)
 {% endhighlight %}
 
 
@@ -1912,7 +1912,7 @@ radians.
 
 ### Syntax:
 
-    PhiloGL.Quat.fromZRotation(angle);
+    LumaGL.Quat.fromZRotation(angle);
 
 ### Arguments:
 
@@ -1923,7 +1923,7 @@ radians.
 Create a Quaternion from an z-axis rotation.
 
 {% highlight js %}
-  var q = PhiloGL.Quat.fromZRotation(Math.PI); //Quat(0, 0, 1, 0)
+  var q = LumaGL.Quat.fromZRotation(Math.PI); //Quat(0, 0, 1, 0)
 {% endhighlight %}
 
 
@@ -1934,7 +1934,7 @@ Create a new `Quat` instance from a rotation around an axis.
 
 ### Syntax:
 
-    PhiloGL.Quat.fromAxisRotation(v, angle);
+    LumaGL.Quat.fromAxisRotation(v, angle);
 
 ### Arguments:
 
@@ -1946,8 +1946,8 @@ Create a new `Quat` instance from a rotation around an axis.
 Create a Quaternion from an z-axis rotation.
 
 {% highlight js %}
-  var v = new PhiloGL.Vec3(0, 0, 1),
-      q = PhiloGL.Quat.fromAxisRotation(v, Math.PI); //Quat(0, 0, 1, 0)
+  var v = new LumaGL.Vec3(0, 0, 1),
+      q = LumaGL.Quat.fromAxisRotation(v, Math.PI); //Quat(0, 0, 1, 0)
 {% endhighlight %}
 
 
@@ -1958,7 +1958,7 @@ Creates a new `Quat` instance.
 
 ### Syntax:
 
-	var q = new PhiloGL.Quat(x, y, z, w);
+	var q = new LumaGL.Quat(x, y, z, w);
 
 ### Arguments:
 
@@ -1973,13 +1973,13 @@ Creates a new `Quat` instance.
 Create a (0, 0, 0, 0) quaternion.
 
 {% highlight js %}
-  var q = new PhiloGL.Quat();
+  var q = new LumaGL.Quat();
 {% endhighlight %}
 
 Create a (1, 2, 3, 4) quaternion.
 
 {% highlight js %}
-  var q = new PhiloGL.Quat(1, 2, 3, 4);
+  var q = new LumaGL.Quat(1, 2, 3, 4);
 {% endhighlight %}
 
 
@@ -1992,7 +1992,7 @@ Set `x`, `y`, `z`, `w` coordinates of one `Quat` into another `Quat`.
 
 	  q1.setQuat(q2);
 
-    PhiloGL.Quat.setQuat(q1, q2);
+    LumaGL.Quat.setQuat(q1, q2);
 
 ### Arguments:
 
@@ -2003,8 +2003,8 @@ Set `x`, `y`, `z`, `w` coordinates of one `Quat` into another `Quat`.
 Create two quaternions and assign one quaternions components to the other one.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.setQuat(q2); //v1 now contains [ 4, 5, 6, 7 ]
 {% endhighlight %}
@@ -2015,7 +2015,7 @@ Set an object's `x`, `y`, `z`, `w` components to another object.
   var q1 = [],
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.setQuat(q1, q2); //q1 now has [ 4, 5, 6, 7 ]
+  LumaGL.Quat.setQuat(q1, q2); //q1 now has [ 4, 5, 6, 7 ]
 {% endhighlight %}
 
 
@@ -2028,7 +2028,7 @@ Set `x`, `y`, `z`, `w` coordinates.
 
 	  q1.set(x, y, z, w);
 
-    PhiloGL.Quat.set(q1, x, y, z, w);
+    LumaGL.Quat.set(q1, x, y, z, w);
 
 ### Arguments:
 
@@ -2042,8 +2042,8 @@ Set `x`, `y`, `z`, `w` coordinates.
 Create two quaternions and assign one quaternions components to the other one.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.set(q2.x, q2.y, q2.z, q2.w); //q1 now contains [ 4, 5, 6, 7 ]
 {% endhighlight %}
@@ -2054,7 +2054,7 @@ Set an object's `x`, `y`, `z`, `w` components to another object.
   var q1 = [],
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.set(q1, q2.x, q2.y, q2.z, q2.w); //q1 now has [ 4, 5, 6, 7 ]
+  LumaGL.Quat.set(q1, q2.x, q2.y, q2.z, q2.w); //q1 now has [ 4, 5, 6, 7 ]
 {% endhighlight %}
 
 
@@ -2067,7 +2067,7 @@ Adds the `x`, `y`, `z` components of two `Quat` objects. Creates a new `Quat` in
 
 	  q1.add(q2);
 
-    PhiloGL.Quat.add(q1, q2);
+    LumaGL.Quat.add(q1, q2);
 
 ### Arguments:
 
@@ -2078,8 +2078,8 @@ Adds the `x`, `y`, `z` components of two `Quat` objects. Creates a new `Quat` in
 Create two quaternions and add them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.add(q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
 {% endhighlight %}
@@ -2090,7 +2090,7 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.add(q1, q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
+  LumaGL.Quat.add(q1, q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
 {% endhighlight %}
 
 
@@ -2103,7 +2103,7 @@ Adds the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the origi
 
 	  q1.$add(q2);
 
-    PhiloGL.Quat.$add(q1, q2);
+    LumaGL.Quat.$add(q1, q2);
 
 ### Arguments:
 
@@ -2114,8 +2114,8 @@ Adds the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the origi
 Create two quaternions and add them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.$add(q2); //q1 is now Quat(5, 7, 9, 11).
 {% endhighlight %}
@@ -2126,7 +2126,7 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.$add(q1, q2); //q1 is now [ 5, 7, 9, 11 ].
+  LumaGL.Quat.$add(q1, q2); //q1 is now [ 5, 7, 9, 11 ].
 {% endhighlight %}
 
 
@@ -2139,7 +2139,7 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Creates a ne
 
 	  q1.sub(q2);
 
-    PhiloGL.Quat.sub(q1, q2);
+    LumaGL.Quat.sub(q1, q2);
 
 ### Arguments:
 
@@ -2150,8 +2150,8 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Creates a ne
 Create two quaternions and substract them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.sub(q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
 {% endhighlight %}
@@ -2167,7 +2167,7 @@ Create two `x`, `y`, `z`, `w` objects and substract them.
       },
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.sub(q1, q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
+  LumaGL.Quat.sub(q1, q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
 {% endhighlight %}
 
 
@@ -2180,7 +2180,7 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the
 
 	  q1.$sub(q2);
 
-    PhiloGL.Quat.$sub(q1, q2);
+    LumaGL.Quat.$sub(q1, q2);
 
 ### Arguments:
 
@@ -2191,8 +2191,8 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the
 Create two quaternions and substract them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4),
-      q2 = new PhiloGL.Quat(4, 5, 6, 7);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4),
+      q2 = new LumaGL.Quat(4, 5, 6, 7);
 
   q1.$sub(q2); //q1 is now Quat(-3, -3, -3, -3).
 {% endhighlight %}
@@ -2203,7 +2203,7 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  PhiloGL.Quat.$sub(q1, q2); //q1 is now [ -3, -3, -3, -3 ].
+  LumaGL.Quat.$sub(q1, q2); //q1 is now [ -3, -3, -3, -3 ].
 {% endhighlight %}
 
 
@@ -2217,7 +2217,7 @@ The original object is not modified.
 
 	  q1.mulQuat(q2);
 
-    PhiloGL.Quat.mulQuat(q1, q2);
+    LumaGL.Quat.mulQuat(q1, q2);
 
 ### Arguments:
 
@@ -2228,8 +2228,8 @@ The original object is not modified.
 Create two Quaternions and multiply them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 0, 0, 0),
-      q2 = new PhiloGL.Quat(1, 0, 0, 0);
+  var q1 = new LumaGL.Quat(1, 0, 0, 0),
+      q2 = new LumaGL.Quat(1, 0, 0, 0);
 
   q1.mulQuat(q2); //q1 is unchanged but a new Quat(-1, 0, 0, 0) is created.
 {% endhighlight %}
@@ -2244,7 +2244,7 @@ Multiplies two quaternions returning and modifies the receiver with the result.
 
 	  q1.$mulQuat(q2);
 
-    PhiloGL.Quat.$mulQuat(q1, q2);
+    LumaGL.Quat.$mulQuat(q1, q2);
 
 ### Arguments:
 
@@ -2255,8 +2255,8 @@ Multiplies two quaternions returning and modifies the receiver with the result.
 Create two Quaternions and multiply them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 0, 0, 0),
-      q2 = new PhiloGL.Quat(1, 0, 0, 0);
+  var q1 = new LumaGL.Quat(1, 0, 0, 0),
+      q2 = new LumaGL.Quat(1, 0, 0, 0);
 
   q1.$mulQuat(q2); //q1 is now Quat(-1, 0, 0, 0).
 {% endhighlight %}
@@ -2272,7 +2272,7 @@ The original object is not modified.
 
 	  q1.divQuat(q2);
 
-    PhiloGL.Quat.divQuat(q1, q2);
+    LumaGL.Quat.divQuat(q1, q2);
 
 ### Arguments:
 
@@ -2283,8 +2283,8 @@ The original object is not modified.
 Create two Quaternions and divide them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 0, 0, 0),
-      q2 = new PhiloGL.Quat(1, 0, 0, 0);
+  var q1 = new LumaGL.Quat(1, 0, 0, 0),
+      q2 = new LumaGL.Quat(1, 0, 0, 0);
 
   q1.divQuat(q2); //q1 is unchanged but a new Quat(1, 0, 0, 0) is created.
 {% endhighlight %}
@@ -2299,7 +2299,7 @@ Divides two quaternions returning and modifies the receiver with the result.
 
 	  q1.$divQuat(q2);
 
-    PhiloGL.Quat.$divQuat(q1, q2);
+    LumaGL.Quat.$divQuat(q1, q2);
 
 ### Arguments:
 
@@ -2310,8 +2310,8 @@ Divides two quaternions returning and modifies the receiver with the result.
 Create two Quaternions and divide them.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 0, 0, 0),
-      q2 = new PhiloGL.Quat(1, 0, 0, 0);
+  var q1 = new LumaGL.Quat(1, 0, 0, 0),
+      q2 = new LumaGL.Quat(1, 0, 0, 0);
 
   q1.$divQuat(q2); //q1 is now Quat(1, 0, 0, 0).
 {% endhighlight %}
@@ -2326,7 +2326,7 @@ Scales the Quat quaternion by a real number. Creates a new Quat with the scaled 
 
 	  q1.scale(s);
 
-    PhiloGL.Quat.scale(q1, s);
+    LumaGL.Quat.scale(q1, s);
 
 ### Arguments:
 
@@ -2337,7 +2337,7 @@ Scales the Quat quaternion by a real number. Creates a new Quat with the scaled 
 Create a quaternion and scale it by 2.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.scale(2); //q1 is unchanged but a new Quat(2, 4, 6, 8) is created.
 {% endhighlight %}
@@ -2347,7 +2347,7 @@ Create an `x`, `y`, `z`, `w` object and scale it by 2.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.scale(q1, 2); //q1 is still the same but a new Quat(2, 4, 6, 8) was created.
+  LumaGL.Quat.scale(q1, 2); //q1 is still the same but a new Quat(2, 4, 6, 8) was created.
 {% endhighlight %}
 
 
@@ -2360,7 +2360,7 @@ Scales the Quat quaternion by a real number. Changes the original object.
 
 	  q1.$scale(s);
 
-    PhiloGL.Quat.$scale(q1, s);
+    LumaGL.Quat.$scale(q1, s);
 
 ### Arguments:
 
@@ -2371,7 +2371,7 @@ Scales the Quat quaternion by a real number. Changes the original object.
 Create a quaternion and scale it by 2.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.$scale(2); //q1 is now Quat(2, 4, 6, 8).
 {% endhighlight %}
@@ -2381,7 +2381,7 @@ Create an `x`, `y`, `z`, `w` object and scale it by 2.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.$scale(q1, 2); //q1 is now [ 2, 4, 6, 8 ].
+  LumaGL.Quat.$scale(q1, 2); //q1 is now [ 2, 4, 6, 8 ].
 {% endhighlight %}
 
 
@@ -2394,14 +2394,14 @@ Conjugates a `Quat`. Returns a new instance.
 
 	  q1.conjugate();
 
-    PhiloGL.Quat.conjugate(q1);
+    LumaGL.Quat.conjugate(q1);
 
 ### Examples:
 
 Create a quaternion and conjugate it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.conjugate(); //q1 is unchanged but a new Quat(-1, -2, -3, 4) is created.
 {% endhighlight %}
@@ -2411,7 +2411,7 @@ Create an `x`, `y`, `z`, `w` object and conjugate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.conjugate(q1); //q1 is still the same but a new Quat(-1, -2, -3, 4).
+  LumaGL.Quat.conjugate(q1); //q1 is still the same but a new Quat(-1, -2, -3, 4).
 {% endhighlight %}
 
 
@@ -2424,14 +2424,14 @@ conjugates a `Quat`. Changes the original object.
 
 	  q1.$conjugate();
 
-    PhiloGL.Quat.$conjugate(q1);
+    LumaGL.Quat.$conjugate(q1);
 
 ### Examples:
 
 Create a quaternion and conjugate it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.$conjugate(); //q1 is now Quat(-1, -2, -3, 4).
 {% endhighlight %}
@@ -2441,7 +2441,7 @@ Create an `x`, `y`, `z`, `w` object and conjugate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.conjugate(q1); //q1 is now [ -1, -2, -3, 4 ].
+  LumaGL.Quat.conjugate(q1); //q1 is now [ -1, -2, -3, 4 ].
 {% endhighlight %}
 
 
@@ -2454,14 +2454,14 @@ Negates a `Quat`. Returns a new instance.
 
 	  q1.neg();
 
-    PhiloGL.Quat.neg(q1);
+    LumaGL.Quat.neg(q1);
 
 ### Examples:
 
 Create a quaternion and negate it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.neg(); //q1 is unchanged but a new Quat(-1, -2, -3, -4) is created.
 {% endhighlight %}
@@ -2471,7 +2471,7 @@ Create an `x`, `y`, `z`, `w` object and negate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.neg(q1); //q1 is still the same but a new Quat(-1, -2, -3, -4).
+  LumaGL.Quat.neg(q1); //q1 is still the same but a new Quat(-1, -2, -3, -4).
 {% endhighlight %}
 
 
@@ -2484,14 +2484,14 @@ Negates a `Quat`. Changes the original object.
 
 	  q1.$neg();
 
-    PhiloGL.Quat.$neg(q1);
+    LumaGL.Quat.$neg(q1);
 
 ### Examples:
 
 Create a quaternion and negate it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.$neg(); //q1 is now Quat(-1, -2, -3, -4).
 {% endhighlight %}
@@ -2501,7 +2501,7 @@ Create an `x`, `y`, `z`, `w` object and negate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.neg(q1); //q1 is now [ -1, -2, -3, -4 ].
+  LumaGL.Quat.neg(q1); //q1 is now [ -1, -2, -3, -4 ].
 {% endhighlight %}
 
 
@@ -2515,14 +2515,14 @@ object is not modified.
 
 	  q1.unit();
 
-    PhiloGL.Quat.unit(q1);
+    LumaGL.Quat.unit(q1);
 
 ### Examples:
 
 Create a quaternion and make a unit quaternion from it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.unit(); //q1 is unchanged but a new unit quaternion Quat is created.
 {% endhighlight %}
@@ -2532,7 +2532,7 @@ Create an `x`, `y`, `z`, `w` object and make a unit quaternion from it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.unit(q1); //q1 is still the same but a new Quat that is a unit quaternion is created.
+  LumaGL.Quat.unit(q1); //q1 is still the same but a new Quat that is a unit quaternion is created.
 {% endhighlight %}
 
 
@@ -2545,14 +2545,14 @@ Creates a unit quaternion from the `Quat` coordinates. Changes the original obje
 
 	  q1.$unit();
 
-    PhiloGL.Quat.$unit(q1);
+    LumaGL.Quat.$unit(q1);
 
 ### Examples:
 
 Create a quaternion and make a unit quaternion from it.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   q1.$unit(); //q1 is now a unit quaternion.
 {% endhighlight %}
@@ -2562,7 +2562,7 @@ Create an `x`, `y`, `z`, `w` object and make a unit quaternion from it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  PhiloGL.Quat.$unit(q1); //q1 is now a unit quaternion vector.
+  LumaGL.Quat.$unit(q1); //q1 is now a unit quaternion vector.
 {% endhighlight %}
 
 
@@ -2575,14 +2575,14 @@ Calculates the norm of `Quat`.
 
 	  q1.norm();
 
-    PhiloGL.Quat.norm(q1);
+    LumaGL.Quat.norm(q1);
 
 ### Examples:
 
 Create a quaternion and calculate its norm.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   vi.norm(); //returns the real valued norm.
 {% endhighlight %}
@@ -2593,7 +2593,7 @@ Create an `x`, `y`, `z`, `w` object and calculate its norm.
   var q1 = [ 1, 2, 3, 4 ];
 
   //A real number with the norm is returned.
-  var ans = PhiloGL.Quat.norm(q1);
+  var ans = LumaGL.Quat.norm(q1);
 {% endhighlight %}
 
 
@@ -2606,14 +2606,14 @@ Calculates the squared norm of `Quat`.
 
 	  q1.normSq();
 
-    PhiloGL.Quat.normSq(q1);
+    LumaGL.Quat.normSq(q1);
 
 ### Examples:
 
 Create a quaternion and calculate its squared norm.
 
 {% highlight js %}
-  var q1 = new PhiloGL.Quat(1, 2, 3, 4);
+  var q1 = new LumaGL.Quat(1, 2, 3, 4);
 
   vi.normSq(); //returns the real valued norm.
 {% endhighlight %}
@@ -2624,7 +2624,7 @@ Create an `x`, `y`, `z`, `w` object and calculate its squared norm.
   var q1 = [ 1, 2, 3, 4 ];
 
   //A real number with the squared norm is returned.
-  var ans = PhiloGL.Quat.normSq(q1);
+  var ans = LumaGL.Quat.normSq(q1);
 {% endhighlight %}
 
 
@@ -2637,6 +2637,6 @@ Clones a quaternion.
 
 	  q1.clone();
 
-    PhiloGL.Quat.clone(q1);
+    LumaGL.Quat.clone(q1);
 
 

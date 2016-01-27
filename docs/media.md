@@ -48,7 +48,7 @@ job to other texture(s) or to the main screen.
 
 ### Examples:
 
-In the [World Flights](http://senchalabs.github.com/philogl/PhiloGL/examples/worldFlights/) example we use image post-processing to create a pseudo bloom filter.
+In the [World Flights](http://senchalabs.github.com/philogl/LumaGL/examples/worldFlights/) example we use image post-processing to create a pseudo bloom filter.
 
 {% highlight js %}
   //create two framebuffers that will store an image to a texture.

@@ -31,7 +31,7 @@ project organized.
 
 ### Syntax:
 
-	PhiloGL.Program.fromShaderURIs(options);
+	LumaGL.Program.fromShaderURIs(options);
 
 ### Arguments:
 
@@ -76,7 +76,7 @@ In `shaders/vertex.glsl`
 JavaScript code:
 
 {% highlight js %}
-PhiloGL.Program.fromShaderURIs({
+LumaGL.Program.fromShaderURIs({
   path: 'shaders/',
   vs: 'vertex.glsl',
   fs: 'fragment.glsl',
@@ -97,7 +97,7 @@ Creates a new program by fetching the source contained into the DOM scripts with
 
 ### Syntax:
 
-	var program = PhiloGL.Program.fromShaderIds(vertexShaderId, fragmentShaderId);
+	var program = LumaGL.Program.fromShaderIds(vertexShaderId, fragmentShaderId);
 
 ### Arguments:
 
@@ -136,7 +136,7 @@ HTML code:
 JavaScript code:
 
 {% highlight js %}
-var program = PhiloGL.Program.fromShaderIds('shader-vs', 'shader-fs');
+var program = LumaGL.Program.fromShaderIds('shader-vs', 'shader-fs');
 {% endhighlight %}
 
 
@@ -147,7 +147,7 @@ Creates a new program by using the strings passed as arguments as source for the
 
 ### Syntax:
 
-	var program = PhiloGL.Program.fromShaderIds(vertexShaderSource, fragmentShaderSource);
+	var program = LumaGL.Program.fromShaderIds(vertexShaderSource, fragmentShaderSource);
 
 ### Arguments:
 
@@ -159,7 +159,7 @@ Creates a new program by using the strings passed as arguments as source for the
 Create a Program from the given sources.
 
 {% highlight js %}
-var program = PhiloGL.Program.fromShaderSources([
+var program = LumaGL.Program.fromShaderSources([
   "attribute vec3 aVertexPosition;",
 
   "uniform mat4 uMVMatrix;",
@@ -188,7 +188,7 @@ Creates a new program by using the sources taken from [Shaders.Vertex](http://ph
 
 ### Syntax:
 
-	var program = PhiloGL.Program.fromShaderIds(vertexDefaultShaderId, fragmentDefaultShaderId);
+	var program = LumaGL.Program.fromShaderIds(vertexDefaultShaderId, fragmentDefaultShaderId);
 
 ### Arguments:
 
@@ -198,11 +198,11 @@ Creates a new program by using the sources taken from [Shaders.Vertex](http://ph
 ### Examples:
 
 Extend [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment) with a default shader and create a Program from defaults. 
-Taken from [lesson 8](http://philogb.github.com/philogl/PhiloGL/examples/lessons/8/) example.
+Taken from [lesson 8](http://philogb.github.com/philogl/LumaGL/examples/lessons/8/) example.
 
 {% highlight js %}
 //Add Blend Fragment Shader
-PhiloGL.Shaders.Fragment.Blend = [
+LumaGL.Shaders.Fragment.Blend = [
 
     "#ifdef GL_ES",
     "precision highp float;",
@@ -228,7 +228,7 @@ PhiloGL.Shaders.Fragment.Blend = [
 
 ].join("\n");
 
-var program = PhiloGL.Program.fromDefaultShaders('Default', 'Blend');
+var program = LumaGL.Program.fromDefaultShaders('Default', 'Blend');
 
 {% endhighlight %}
 
@@ -255,7 +255,7 @@ The name of the uniform matches the name of the uniform declared in the shader.
 ### Examples:
 
 Set matrix information for the projection matrix and element matrix of the camera and world. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/PhiloGL/examples/lessons/3/).
+The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniform('uMVMatrix', view);
@@ -279,7 +279,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 ### Examples:
 
 Set matrix information for the projection matrix and element matrix of the camera and world. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/PhiloGL/examples/lessons/3/).
+The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({
@@ -318,7 +318,7 @@ be the buffer name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/PhiloGL/examples/lessons/1/).
+The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {
@@ -345,7 +345,7 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 ### Examples:
 
 Set buffer values for the vertices of a triangle and a square. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/PhiloGL/examples/lessons/1/).
+The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffers({
@@ -392,7 +392,7 @@ with the same options as in `setTexture`.
 
 ### Examples:
 
-Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://philogb.github.com/philogl/PhiloGL/examples/lessons/16/).
+Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
 
 {% highlight js %}
 //create framebuffer
@@ -496,7 +496,7 @@ set the width and height of the texture.
 
 ### Examples:
 
-Setting a texture for a box. Adapted from [lesson 6](http://philogb.github.com/philogl/PhiloGL/examples/lessons/6/).
+Setting a texture for a box. Adapted from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -528,7 +528,7 @@ For each `key, value` of the object passed in it executes `setTexture(key, value
 
 ### Examples:
 
-Set multiple type of textures from the same image. Taken from [lesson 6](http://philogb.github.com/philogl/PhiloGL/examples/lessons/6/).
+Set multiple type of textures from the same image. Taken from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
 
 {% highlight js %}
 //load textures from image
