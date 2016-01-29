@@ -37,8 +37,20 @@ npm install luma.gl --save
 Luma.gl comes with 16 lessons, a number of examples, and a full set of
 reference documenation.
 
+To run examples:
+```
+git clone git@github.com:uber-common/luma.gl.git
+cd luma.gl
+npm install
+npm run start
+```
+This builds the LumaGL bundle and starts a small local server. 
+You should now be able to access the examples using your browser, at http://127.0.0.1:3000
+e.g. http://127.0.0.1:3000/examples/lessons/1/
+
 ## Quickstart
 
+The following code sample illustrates the "flavor" of the LumaGL API.
 ```
 import {createGLContext, Program, Buffer, PerspectiveCamera} from 'luma.gl';
 
