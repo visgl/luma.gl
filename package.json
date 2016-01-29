@@ -1,16 +1,16 @@
 {
   "name": "lumagl",
-  "version": "1.6.8",
+  "version": "0.0.0",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
-  "homepage": "http://lumagl.org/",
-  "author": "Nicolas Belomonte <nico@uber.com>",
+  "author": "Ib Green <ib@uber.com>",
   "contributors": [
-    "Ib Green <ib@uber.com>"
+    "Nicolas Belomonte <nico@uber.com>",
+    "Rye Terrell",
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/philogb/lumagl.git"
+    "url": "https://github.com/uber-common/luma.gl"
   },
   "keywords": [
     "webgl",
