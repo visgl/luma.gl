@@ -1,7 +1,7 @@
 LumaGL: A JavaScript WebGL Framework for Data Visualization
 ===========================================================
 
-**Note** LumaGL has just been made public and is still in the process of being published on npm.
+**Note** LumaGL has just been made public. Some examples are currently not working and documentation is in the process of being updated to correspond with the latest API changes.
 
 ## Overview
 
