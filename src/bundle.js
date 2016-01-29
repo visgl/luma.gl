@@ -30,8 +30,8 @@ if (typeof window !== 'undefined') {
     Texture2D: LumaGL.Texture2D,
     Buffer: LumaGL.Buffer,
     Events: LumaGL.Events,
-    Mat4: LumaGL.math.Mat4,
-    Vec3: LumaGL.math.Vec3,
+    Mat4: LumaGL.Mat4,
+    Vec3: LumaGL.Vec3,
     Shaders: LumaGL.Shaders,
     IO: LumaGL.IO,
     PerspectiveCamera: LumaGL.PerspectiveCamera,
@@ -41,6 +41,17 @@ if (typeof window !== 'undefined') {
     Media: {
       Image: LumaGL.Img
     },
+    O3D: {
+      Model: LumaGL.Model,
+      Cone: LumaGL.Cone,
+      Cube: LumaGL.Cube,
+      Cylinder: LumaGL.Cylinder,
+      IcoSphere: LumaGL.IcoSphere,
+      Plane: LumaGL.Plane,
+      Sphere: LumaGL.Sphere,
+      TruncatedCone: LumaGL.TruncatedCone,
+    },
+
     // Add-ons
     WorkerGroup: WorkerGroup,
     Fx: Fx

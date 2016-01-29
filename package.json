@@ -50,7 +50,7 @@
   "scripts": {
     "build": "browserify --extension=js -o build/LumaGL.js src/bundle.js src .",
     "build-minified": "",
-    "watch": "watchify -o build/LumaGL.js src/index.js -v",
+    "watch": "watchify -o build/LumaGL.js src/bundle.js -v",
     "server": "http-server . -p 3000",
     "start": "npm run watch & npm run server",
     "test": "babel-node --ignore='' test/index.js"
