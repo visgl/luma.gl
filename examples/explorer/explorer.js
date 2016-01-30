@@ -55,7 +55,7 @@
   })(Grid);
 
   //Surface Model
-  var surface = new LumaGL.O3D.Model({
+  var surface = new PhiloGL.O3D.Model({
     indices: meshIndices,
     uniforms: {
       shininess: 10,
@@ -67,7 +67,7 @@
 
   function init() {
     //Create App
-    LumaGL('surface-explorer-canvas', {
+    PhiloGL('surface-explorer-canvas', {
       program: {
         from: 'uris',
         path: './',
@@ -177,7 +177,7 @@
             fnUpdated = true,
             currentTime = false,
             currentTimeStep = false,
-            workerGroup = new LumaGL.WorkerGroup('graph-compute.js', 1),
+            workerGroup = new PhiloGL.WorkerGroup('graph-compute.js', 1),
             fps = 70;
 
         //Add event listeners to controls
@@ -270,7 +270,7 @@
           }
           gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
           scene.render();
-          LumaGL.Fx.requestAnimationFrame(loop);
+          PhiloGL.Fx.requestAnimationFrame(loop);
         }
         
         //Sample the function

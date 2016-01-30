@@ -1,8 +1,8 @@
-LumaGL.unpack();
+PhiloGL.unpack();
 window.addEventListener('DOMContentLoaded', webGLStart, false);
 function webGLStart() {
 
-  if (!LumaGL.hasWebGL() || !LumaGL.hasExtension('OES_texture_float')) {
+  if (!PhiloGL.hasWebGL() || !PhiloGL.hasExtension('OES_texture_float')) {
     alert('Your browser does not support floating point textures');
     return;
   }
@@ -28,7 +28,7 @@ function webGLStart() {
 
   window.addEventListener('resize', resize);
 
-  LumaGL('smoke', {
+  PhiloGL('smoke', {
     events: {
       onDragStart: function(e) {
         cameraControl.onDragStart(e);
@@ -163,8 +163,8 @@ function webGLStart() {
     onLoad: function(app) {
 
       var RESOLUTION = 32, SHADOW_RESO = 512, mult = 2, N = 1;
-      var light = new LumaGL.Vec3(.5, .75, 1.2);
-      LumaGL.unpack();
+      var light = new PhiloGL.Vec3(.5, .75, 1.2);
+      PhiloGL.unpack();
       gl = app.gl;
       var velocityField = new SwapTexture(app, {width: RESOLUTION, height: RESOLUTION * RESOLUTION});
       var particleBuffers = [];
@@ -251,7 +251,7 @@ function webGLStart() {
       shadowConfig.bindToTexture.parameters[1].value = gl.NEAREST;
       app.setFrameBuffer('shadowMap', shadowConfig);
 
-      var plane = new LumaGL.O3D.Plane({
+      var plane = new PhiloGL.O3D.Plane({
         type: 'x,y',
         xlen: 3,
         ylen: 3,
@@ -267,7 +267,7 @@ function webGLStart() {
       });
       app.scene.add(plane);
 
-      var sphere = new LumaGL.O3D.Sphere({
+      var sphere = new PhiloGL.O3D.Sphere({
         nlat: 30,
         nlong: 30,
         radius: 0.02,
@@ -279,7 +279,7 @@ function webGLStart() {
       sphere.position.z = light.z;
       sphere.update();
 
-      var particleModel = new LumaGL.O3D.Model({
+      var particleModel = new PhiloGL.O3D.Model({
         program: 'particles',
         textures: [velocityField.getResult(), particleBuffers[0].getResult(), 'shadowMap-texture'],
         uniforms: {

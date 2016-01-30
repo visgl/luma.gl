@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>LumaGL - US Wind Patterns</title>
+    <title>PhiloGL - US Wind Patterns</title>
     <link rel="stylesheet" media="all" type="text/css" href="style.css" />
-    <script src="../../build/LumaGL.js"></script>
+    <script src="../../build/PhiloGL.js"></script>
     <script src="models.js"></script>
     <script src="controls.js"></script>
     <script src="index.js"></script>
@@ -76,7 +76,7 @@
   <div class="tooltip hide" id="tooltip" style="width:auto;"></div>
 
   <script>
-    if (!LumaGL.hasWebGL()) {
+    if (!PhiloGL.hasWebGL()) {
       document.body.className = 'no-webgl';
       document.getElementById('fallback').innerHTML = ''
         +  '<div style="margin:10px;">'

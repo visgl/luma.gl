@@ -4,7 +4,7 @@
 import {Vec3} from './math';
 import Program from './program';
 import assert from 'assert';
-import {merge, uid, type} from './utils';
+import {merge, uid} from './utils';
 
 function noop() {}
 
@@ -35,12 +35,6 @@ export default class Scene {
     assert(camera);
 
     this.gl = gl;
-
-    // This isn't a deep merge.
-    // opt = {
-    //   ...DEFAULT_SCENE_OPTS,
-    //   ...opt
-    // };
 
     opt = merge(DEFAULT_SCENE_OPTS, opt);
 
@@ -186,8 +180,7 @@ export default class Scene {
   render(opt = {}) {
     const camera = this.camera;
     const {renderProgram} = opt;
-    const pType = type(this.program);
-    const multiplePrograms = !renderProgram && pType === 'object';
+    const multiplePrograms = !renderProgram && this.program.constructor.name === 'Object';
     const options = {
       onBeforeRender: noop,
       onAfterRender: noop,

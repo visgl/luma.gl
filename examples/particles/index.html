@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>LumaGL - Surface Explorer</title>
+    <title>PhiloGL - Surface Explorer</title>
     <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" media="all" type="text/css" href="style.css" />
-    <script type="text/javascript" src="../../build/LumaGL.js"></script>
+    <script type="text/javascript" src="../../build/PhiloGL.js"></script>
     <script type="text/javascript" src="explorer.js"></script>
   </head>
   <body>
@@ -32,7 +32,7 @@
     <div id="fallback" class="fallback"></div>
 
   <script>
-    if (!LumaGL.hasWebGL()) {
+    if (!PhiloGL.hasWebGL()) {
       document.body.className = 'no-webgl';
       document.getElementById('fallback').innerHTML = ''
         +  '<div style="margin:10px;">'

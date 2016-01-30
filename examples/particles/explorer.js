@@ -1,8 +1,8 @@
-/*global Float32Array, LumaGL, O3D, Media*/
+/*global Float32Array, PhiloGL, O3D, Media*/
 
 (function() {
-  //Unpack LumaGL modules
-  LumaGL.unpack();
+  //Unpack PhiloGL modules
+  PhiloGL.unpack();
 
   //Utility fn to getElementById
   function $id(d) {
@@ -32,7 +32,7 @@
   function init() {
     var object;
     //Create App
-    LumaGL('surface-explorer-canvas', {
+    PhiloGL('surface-explorer-canvas', {
       program: [{
         id: 'surface',
         from: 'uris',

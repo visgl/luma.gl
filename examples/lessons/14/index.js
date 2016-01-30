@@ -1,15 +1,15 @@
 var webGLStart = function() {
   var $id = function(d) { return document.getElementById(d); };
 
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var IO = LumaGL.IO;
-  var Model = LumaGL.Model;
+  var createGLContext = PhiloGL.createGLContext;
+  var loadTextures = PhiloGL.loadTextures;
+  var Program = PhiloGL.Program;
+  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
+  var Scene = PhiloGL.Scene;
+  var Fx = PhiloGL.Fx;
+  var Vec3 = PhiloGL.Vec3;
+  var IO = PhiloGL.IO;
+  var Model = PhiloGL.Model;
 
   //Get Model
   new IO.XHR({
@@ -21,7 +21,9 @@ var webGLStart = function() {
   }).send();
 
   var canvas = document.getElementById('lesson14-canvas');
-
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  
   var gl = createGLContext(canvas);
 
   gl.clearColor(0.0, 0.0, 0.0, 1.0);

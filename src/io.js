@@ -3,28 +3,26 @@
 /* eslint-disable guard-for-in */
 /* global XMLHttpRequest */
 /* global document */
-import {uid, splat, merge, empty}  from './utils';
+import {uid, splat, merge, noop}  from './utils';
 import Img from './media';
 import {Texture2D} from './texture.js';
-
-function noop() {};
 
 export class XHR {
 
   constructor(opt = {}) {
     opt = {
-      url: 'http:// lumagljs.org/',
+      url: 'http:// philogljs.org/',
       method: 'GET',
       async: true,
       noCache: false,
       // body: null,
       sendAsBinary: false,
       responseType: false,
-      onProgress: empty,
-      onSuccess: empty,
-      onError: empty,
-      onAbort: empty,
-      onComplete: empty,
+      onProgress: noop,
+      onSuccess: noop,
+      onError: noop,
+      onAbort: noop,
+      onComplete: noop,
       ...opt
     };
 
@@ -201,10 +199,10 @@ export class XHRGroup {
 
 export function JSONP(opt) {
   opt = merge({
-    url: 'http:// lumagljs.org/',
+    url: 'http:// philogljs.org/',
     data: {},
     noCache: false,
-    onComplete: empty,
+    onComplete: noop,
     callbackKey: 'callback'
   }, opt || {});
 
@@ -222,7 +220,7 @@ export function JSONP(opt) {
   // create source url
   var src = opt.url +
     (opt.url.indexOf('?') > -1 ? '&' : '?') +
-    opt.callbackKey + '=LumaGL IO.JSONP.requests.request_' + index +
+    opt.callbackKey + '=PhiloGL IO.JSONP.requests.request_' + index +
     (data.length > 0 ? '&' + data : '');
 
   // create script
@@ -280,8 +278,8 @@ async function loadImages(srcs) {
 //   opt = merge({
 //     src: [],
 //     noCache: false,
-//     onProgress: empty,
-//     onComplete: empty
+//     onProgress: noop,
+//     onComplete: noop
 //   }, opt || {});
 //
 //   let count = 0;
@@ -343,7 +341,7 @@ export async function loadTextures(gl, opt) {
 //   opt = {
 //     src: [],
 //     noCache: false,
-//     onComplete: empty,
+//     onComplete: noop,
 //     ...opt
 //   };
 //

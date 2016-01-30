@@ -1,5 +1,5 @@
 //Unpack modules
-LumaGL.unpack();
+PhiloGL.unpack();
 Scene.PICKING_RES = 1;
 
 //some locals
@@ -17,7 +17,7 @@ var $ = function(id) { return document.getElementById(id); },
 
 //Get handles when document is ready
 document.onreadystatechange = function() {
-  if (document.readyState == 'complete' && LumaGL.hasWebGL()) {
+  if (document.readyState == 'complete' && PhiloGL.hasWebGL()) {
 
     airlineList = $('airline-list');
     tooltip = $('tooltip');
@@ -71,7 +71,7 @@ models.earth = new O3D.Sphere({
 models.earth.rotation.set(Math.PI, 0,  0);
 models.earth.update();
 
-//Create cities layer model and create LumaGL app.
+//Create cities layer model and create PhiloGL app.
 citiesWorker.onmessage = function(e) {
   var modelInfo = e.data;
 
@@ -270,7 +270,7 @@ function rotateXY(phi, theta) {
 
 function createApp() {
   //Create application
-  LumaGL('map-canvas', {
+  PhiloGL('map-canvas', {
     program: [{
       //to render cities and routes
       id: 'airline_layer',

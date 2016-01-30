@@ -1,4 +1,5 @@
 import Model from './model';
+import {Vec3} from '../math';
 
 export default class IcoSphere extends Model {
   constructor(opt = {}) {

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>LumaGL - Picking Test</title>
+    <title>PhiloGL - Picking Test</title>
     <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" media="all" type="text/css" href="style.css" />
-    <script type="application/javascript" src="../../build/LumaGL.js"></script>
+    <script type="application/javascript" src="../../build/PhiloGL.js"></script>
     <script type="application/javascript" src="balls.js"></script>
   </head>
   <body onload="setTimeout(init, 200);">
@@ -31,7 +31,7 @@
     <div id="fallback" class="fallback"></div>
 
   <script>
-    if (!LumaGL.hasWebGL()) {
+    if (!PhiloGL.hasWebGL()) {
       document.body.className = 'no-webgl';
       document.getElementById('fallback').innerHTML = ''
         +  '<div style="margin:10px;">'

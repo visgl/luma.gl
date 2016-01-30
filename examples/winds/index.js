@@ -1,4 +1,4 @@
-LumaGL.unpack();
+PhiloGL.unpack();
 
 var $ = function(d) { return document.getElementById(d); };
 
@@ -43,7 +43,7 @@ function init() {
       tooltip = $('tooltip');
 
   //Create application
-  LumaGL('map', {
+  PhiloGL('map', {
     program: [{
       id: 'elevation',
       from: 'uris',

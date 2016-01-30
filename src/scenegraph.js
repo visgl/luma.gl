@@ -10,7 +10,7 @@ export default class Node {
       if (model instanceof Model) {
         this.model = opt.model;
       } else {
-        this.model = new LumaGL.O3D.Model(opt.model);
+        this.model = new PhiloGL.O3D.Model(opt.model);
       }
     }
 

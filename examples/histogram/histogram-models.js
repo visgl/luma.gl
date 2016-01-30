@@ -1,9 +1,9 @@
-// rye: TODO- Defining window so that the window detection in the root LumaGL
+// rye: TODO- Defining window so that the window detection in the root PhiloGL
 //            index.js doesn't blow up. This ickiness will go away when we 
 //            implement the two build paths.
 window = this;
 
-importScripts('../../build/LumaGL.js');
+importScripts('../../build/PhiloGL.js');
 
 var dim = 8,
     cube = dim * dim * dim,
@@ -24,7 +24,7 @@ var dim = 8,
 
 function createSpheres() {
   var cube = dim * dim * dim,
-      sphere = new LumaGL.O3D.Sphere({
+      sphere = new PhiloGL.O3D.Sphere({
         nlat: nlat,
         nlong: nlong,
         radius: 0.1

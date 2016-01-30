@@ -1,6 +1,6 @@
 function init() {
   //unpack modules
-  LumaGL.unpack();
+  PhiloGL.unpack();
   
   //Shortcut for getElementById
   var $ = function(d) { return document.getElementById(d); };
@@ -43,7 +43,7 @@ function init() {
   };
   
   //Create earth
-  var earth = new LumaGL.O3D.Sphere({
+  var earth = new PhiloGL.O3D.Sphere({
     nlat: 30,
     nlong: 30,
     radius: 2,
@@ -57,7 +57,7 @@ function init() {
   //Create Temperature Maps
   var imageCanvas = $('image-data').getContext('2d'),
       tempMaps = [],
-      currentTempMap = new LumaGL.O3D.Sphere({
+      currentTempMap = new PhiloGL.O3D.Sphere({
         nlat: 60,
         nlong: 60,
         radius: 2,
@@ -209,7 +209,7 @@ function init() {
     var theta = 0;
 
     //Create application
-    LumaGL('map-canvas', {
+    PhiloGL('map-canvas', {
       program: {
         from: 'uris',
         path: './',

@@ -10,7 +10,7 @@ document.onreadystatechange = function() {
 };
 
 //load data
-new LumaGL.IO.XHR({
+new PhiloGL.IO.XHR({
   url: 'surf_reg_model_both_normal.json.bin',
   responseType: 'arraybuffer',
   noCache: true,
@@ -54,7 +54,7 @@ new LumaGL.IO.XHR({
 
     // console.log('n', n, 'vertices', verticesLeft.length, 'indices', indices.length);
 
-    modelLeft = new LumaGL.O3D.Model({
+    modelLeft = new PhiloGL.O3D.Model({
       vertices: unpackedVerticesLeft,
       normals: unpackedNormalsLeft,
       program: 'brain',
@@ -64,7 +64,7 @@ new LumaGL.IO.XHR({
       }
     });
     
-    modelRight = new LumaGL.O3D.Model({
+    modelRight = new PhiloGL.O3D.Model({
       vertices: unpackedVerticesRight,
       normals: unpackedNormalsRight,
       program: 'brain',
@@ -88,7 +88,7 @@ new LumaGL.IO.XHR({
 
 function init() {
   //Create application
-  LumaGL('brain-canvas', {
+  PhiloGL('brain-canvas', {
     program: [{
         id: 'brain',
         from: 'uris',
@@ -183,7 +183,7 @@ function init() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         //render model
         scene.render();
-        LumaGL.Fx.requestAnimationFrame(draw);
+        PhiloGL.Fx.requestAnimationFrame(draw);
       }
     }
   });

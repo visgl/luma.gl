@@ -6,7 +6,7 @@
 import {Vec3, Mat4} from '../math';
 import Scene from '../scene';
 import Buffer from '../buffer';
-import {uid, splat, empty, type} from '../utils';
+import {uid, splat, noop} from '../utils';
 
 const slice = Array.prototype.slice;
 
@@ -84,8 +84,8 @@ export default class Model {
     // whether to display the object at all
     this.display = 'display' in opt ? opt.display : true;
     // before and after render callbacks
-    this.onBeforeRender = opt.onBeforeRender || empty;
-    this.onAfterRender = opt.onAfterRender || empty;
+    this.onBeforeRender = opt.onBeforeRender || noop;
+    this.onAfterRender = opt.onAfterRender || noop;
     // set a custom program per o3d
     if (opt.program) {
       this.program = opt.program;
@@ -212,7 +212,7 @@ export default class Model {
       delete this.$texCoordsLength;
       return;
     }
-    if (type(val) === 'object') {
+    if (val.constructor.name === 'Object') {
       var ans = {};
       for (var prop in val) {
         var texCoordArray = val[prop];
@@ -448,7 +448,7 @@ export default class Model {
     }
 
     const gl = program.gl;
-    const multi = type(this.$texCoords) === 'object';
+    const multi = this.$texCoords.constructor.name === 'Object';
     let i, txs, l, tex;
 
     if (!this.buffers.texCoords) {

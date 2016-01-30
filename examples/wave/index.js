@@ -1,4 +1,4 @@
-LumaGL.unpack();
+PhiloGL.unpack();
 window.addEventListener('DOMContentLoaded', webGLStart, false);
 var width, height;
 function resize() {
@@ -41,7 +41,7 @@ function webGLStart() {
 
   matStart.id();
 
-  LumaGL('wave', {
+  PhiloGL('wave', {
     program: [
       {
         id: 'shore',
@@ -174,7 +174,7 @@ function webGLStart() {
     },
 
     onLoad: function(app) {
-      LumaGL.unpack();
+      PhiloGL.unpack();
       window.app = app;
       var start = +new Date();
       // Install controls
