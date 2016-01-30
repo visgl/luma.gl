@@ -1,6 +1,6 @@
 (function() {
-  //Unpack LumaGL modules
-  LumaGL.unpack();
+  //Unpack PhiloGL modules
+  PhiloGL.unpack();
 
   var plane = new O3D.Plane({
       type: 'x,y',
@@ -22,7 +22,7 @@
     var pos;
 
     //Create App
-    LumaGL('canvas', {
+    PhiloGL('canvas', {
       program: [{
         id: 'quat',
         from: 'uris',

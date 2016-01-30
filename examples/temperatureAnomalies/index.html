@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>LumaGL - World temperature changes from 1880 to 2011</title>
+    <title>PhiloGL - World temperature changes from 1880 to 2011</title>
     <link rel="stylesheet" media="all" type="text/css" href="style.css" />
-    <script type="text/javascript" src="../../build/LumaGL.js"></script>
+    <script type="text/javascript" src="../../build/PhiloGL.js"></script>
     <script type="text/javascript" src="index.js"></script>
   </head>
   <body onload="init();">
@@ -61,7 +61,7 @@
     Copyright &copy; <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a> - Imagery by <a href="http://svs.gsfc.nasa.gov/vis/a000000/a003800/a003817/">NASA</a>.
   </div>
   <script>
-    if (!LumaGL.hasWebGL()) {
+    if (!PhiloGL.hasWebGL()) {
       document.body.className = 'no-webgl';
       document.getElementById('fallback').innerHTML = ''
         +  '<div style="margin:10px;">'

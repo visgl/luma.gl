@@ -14,12 +14,12 @@ var c;
 window.addEventListener('DOMContentLoaded', load, false);
 
 function load() {
-  if (!LumaGL.hasWebGL()) {
+  if (!PhiloGL.hasWebGL()) {
     alert("Your browser does not support WebGL");
     return;
   }
 
-  LumaGL('c', {
+  PhiloGL('c', {
     program: [{
       id: 'advance',
       from: 'ids',
@@ -87,7 +87,7 @@ function load() {
 
       function draw() {
         var uniform = getUniforms();
-        LumaGL.Media.Image.postProcess({
+        PhiloGL.Media.Image.postProcess({
           width: sizeX,
           height: sizeY,
           fromTexture: 'main-texture',
@@ -138,7 +138,7 @@ function load() {
         }
         switch (animation) {
         case "animate":
-          setTimeout(function() { LumaGL.Fx.requestAnimationFrame(anim); }, 25);
+          setTimeout(function() { PhiloGL.Fx.requestAnimationFrame(anim); }, 25);
           break;
         case "reset":
           load();

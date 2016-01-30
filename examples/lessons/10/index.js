@@ -1,15 +1,15 @@
 
 var webGLStart = function() {
 
-  var createGLContext = LumaGL.createGLContext;
-  var IO = LumaGL.IO;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
-  var Model = LumaGL.Model;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
-  var Fx = LumaGL.Fx;
+  var createGLContext = PhiloGL.createGLContext;
+  var IO = PhiloGL.IO;
+  var loadTextures = PhiloGL.loadTextures;
+  var Program = PhiloGL.Program;
+  var Model = PhiloGL.Model;
+  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
+  var Scene = PhiloGL.Scene;
+  var Events = PhiloGL.Events;
+  var Fx = PhiloGL.Fx;
 
   var pitch = 0,
       pitchRate = 0,
@@ -25,6 +25,8 @@ var webGLStart = function() {
   var world;
 
   var canvas = document.getElementById('lesson10-canvas');
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
 
   var gl = createGLContext(canvas);
 

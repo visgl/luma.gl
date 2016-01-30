@@ -39,8 +39,8 @@
 
   //color histogram elements, models
   var dim = 8, histogram, photos, video,
-      worker = new LumaGL.WorkerGroup('histogram-models.js', 1),
-      histogramModel = new LumaGL.O3D.Model({
+      worker = new PhiloGL.WorkerGroup('histogram-models.js', 1),
+      histogramModel = new PhiloGL.O3D.Model({
         uniforms: {
           shininess: 20
         },
@@ -107,7 +107,7 @@
     function initApp() {
       var theta = Math.PI / 4;
       //Create App
-      LumaGL('histogram-canvas', {
+      PhiloGL('histogram-canvas', {
         program: {
           from: 'uris',
           path: './',
@@ -339,8 +339,8 @@
           histogramModel.update();
 
           //Create animation object for transitioning color schemes.
-          var fx = new LumaGL.Fx({
-            transition: LumaGL.Fx.Transition.Quart.easeInOut,
+          var fx = new PhiloGL.Fx({
+            transition: PhiloGL.Fx.Transition.Quart.easeInOut,
             duration: 1500,
             onCompute: function(delta) {
               var from = fx.opt.from,
@@ -362,8 +362,8 @@
             }
           });
 
-          var fxSize = new LumaGL.Fx({
-            transition: LumaGL.Fx.Transition.Quart.easeInOut,
+          var fxSize = new PhiloGL.Fx({
+            transition: PhiloGL.Fx.Transition.Quart.easeInOut,
             duration: 1000,
             onCompute: function(delta) {
               var from = fxSize.opt.from,
@@ -400,7 +400,7 @@
             gl.clearColor(color, color, color, 1);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             scene.render();
-            LumaGL.Fx.requestAnimationFrame(loop);
+            PhiloGL.Fx.requestAnimationFrame(loop);
           }
         }
       });

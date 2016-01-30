@@ -1,6 +1,6 @@
-importScripts('../../build/LumaGL.js');
+importScripts('../../build/PhiloGL.js');
 
-LumaGL.unpack(self);
+PhiloGL.unpack(self);
 
 onmessage = function(e) {
   var cities = e.data,

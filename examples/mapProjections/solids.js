@@ -1,6 +1,6 @@
-importScripts('../../build/LumaGL.js');
+importScripts('../../build/PhiloGL.js');
 
-LumaGL.unpack(self);
+PhiloGL.unpack(self);
 
 //Pairing Heap
 function PHeap(elem, subheaps) {

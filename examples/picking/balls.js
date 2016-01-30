@@ -1,5 +1,5 @@
 /* global window, requestAnimationFrame */
-import {LumaGL, O3D, hasWebGL} from '../../src';
+import {PhiloGL, O3D, hasWebGL} from '../../src';
 
 const fragmentShader = `
 #ifdef GL_ES
@@ -87,7 +87,7 @@ window.initializeApp = () => {
     return false;
   }
   // Create App
-  LumaGL('surface-explorer-canvas', {
+  PhiloGL('surface-explorer-canvas', {
 
     program: {
       fs: fragmentShader

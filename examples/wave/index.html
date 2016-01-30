@@ -10,7 +10,7 @@
     }
   </style>
 
-  <script src="../../build/LumaGL.js"></script>
+  <script src="../../build/PhiloGL.js"></script>
   <script src="CameraControl.js"></script>
   <script src="SwapTexture.js"></script>
   <script src="index.js"></script>
@@ -51,7 +51,7 @@
 </div>
 
 <script>
-  if (!LumaGL.hasWebGL()) {
+  if (!PhiloGL.hasWebGL()) {
     document.body.className = 'no-webgl';
     document.getElementById('fallback').innerHTML = ''
         + '<div style="margin:10px;">'

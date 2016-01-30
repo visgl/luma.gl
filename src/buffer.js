@@ -1,6 +1,4 @@
 
-import {extend} from './utils';
-
 export default class Buffer {
 
   constructor(gl, opts = {}) {
@@ -16,7 +14,7 @@ export default class Buffer {
   }
 
   _setOpts(opts) {
-    opts = extend({
+    opts = {
       data: this.data,
       attribute: this.attribute,
       bufferType: this.bufferType === undefined ? this.gl.ARRAY_BUFFER : this.bufferType,
@@ -25,8 +23,9 @@ export default class Buffer {
       stride: this.stride === undefined ? 0 : this.stride,
       offset: this.offset === undefined ? 0 : this.offset,
       drawType: this.drawType === undefined ? this.gl.STATIC_DRAW : this.drawType,
-      instanced: this.instanced === undefined ? 0 : this.instanced
-    }, opts);
+      instanced: this.instanced === undefined ? 0 : this.instanced,
+      ...opts
+    };
     this.data = opts.data;
     this.attribute = opts.attribute;
     this.bufferType = opts.bufferType;

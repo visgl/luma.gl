@@ -23,10 +23,6 @@ export class Vec3 extends Array {
     return new Vec3(3);
   }
 
-  get $$family() {
-    return {value: 'Vec3'};
-  }
-
   get x() {
     return this[0];
   }
@@ -214,7 +210,7 @@ var generics = {
   },
 
   clone(dest) {
-    if (dest.$$family) {
+    if (dest instanceof Vec3) {
       return new Vec3(dest[0], dest[1], dest[2]);
     } else {
       return Vec3.setVec3(new typedArray(3), dest);
@@ -258,7 +254,6 @@ export class Mat4 extends Array {
 
     super(16);
 
-    this.$$family = {value: 'Mat4'};
     this.length = 16;
 
 
@@ -341,7 +336,7 @@ generics = {
   },
 
   clone(dest) {
-    if (dest.$$family) {
+    if (dest instanceof Mat4) {
       return new Mat4(dest[0], dest[4], dest[8], dest[12],
                       dest[1], dest[5], dest[9], dest[13],
                       dest[2], dest[6], dest[10], dest[14],
@@ -886,7 +881,7 @@ generics = {
   },
 
   clone(dest) {
-    if (dest.$$family) {
+    if (dest instanceof Quat) {
       return new Quat(dest[0], dest[1], dest[2], dest[3]);
     } else {
       return Quat.setQuat(new typedArray(4), dest);

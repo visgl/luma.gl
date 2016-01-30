@@ -40,7 +40,7 @@ var options = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-  if (!LumaGL.hasWebGL()) {
+  if (!PhiloGL.hasWebGL()) {
     alert("Your browser does not support WebGL");
     return;
   }
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initGroupOptions(options);
   initDrawOptions($('canvas'), options);
 
-  LumaGL('surface', {
+  PhiloGL('surface', {
     context: {
       preserveDrawingBuffer: true
     },
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // advance
-        LumaGL.Media.Image.postProcess({
+        PhiloGL.Media.Image.postProcess({
           width: glCanvas.width,
           height: glCanvas.height,
           toScreen: true,
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
 
-        LumaGL.Fx.requestAnimationFrame(draw);
+        PhiloGL.Fx.requestAnimationFrame(draw);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, null);

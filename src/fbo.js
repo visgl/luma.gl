@@ -8,7 +8,7 @@ export default class Framebuffer {
 
     this.width = opts.width ? opts.width : 1;
     this.height = opts.height ? opts.height : 1;
-    this.depth = opts.depth === undefined ? true : this.depth;
+    this.depth = opts.depth === undefined ? true : opts.depth;
     this.minFilter = opts.minFilter || gl.NEAREST;
     this.magFilter = opts.magFilter || gl.NEAREST;
 
@@ -41,11 +41,6 @@ export default class Framebuffer {
   bind() {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-  }
-
-  unbind() {
-    const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
 }

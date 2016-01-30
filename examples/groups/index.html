@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>LumaGL - Wallpaper Groups</title>
+    <title>PhiloGL - Wallpaper Groups</title>
     <meta charset='utf-8'>
     <link rel="stylesheet" media="all" type="text/css" href="css/style.css" />
     <link rel="stylesheet" media="all" type="text/css" href="css/spectrum.css" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
     <script src="js/spectrum.js"></script>
     <script src="js/range.js"></script>
-    <script src="../../build/LumaGL.js"></script>
+    <script src="../../build/PhiloGL.js"></script>
     <script src="js/controls.js"></script>
     <script src="js/index.js"></script>
   </head>
@@ -260,7 +260,7 @@ This group applies for symmetrically staggered rows (i.e. there is a shift per r
     <canvas id='bck-canvas' style='display:none'></canvas>
 
   <script>
-    if (!LumaGL.hasWebGL()) {
+    if (!PhiloGL.hasWebGL()) {
       document.body.className = 'no-webgl';
       document.getElementById('fallback').innerHTML = ''
         +  '<div style="margin:10px;">'

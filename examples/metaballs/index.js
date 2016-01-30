@@ -1,6 +1,6 @@
 (function() {
-  //Unpack LumaGL modules
-  LumaGL.unpack();
+  //Unpack PhiloGL modules
+  PhiloGL.unpack();
 
   //paralelization index
   var n = 1,
@@ -145,7 +145,7 @@
   //init a WebGL application.
   function initApp() {
     //Create App
-    LumaGL('canvas', {
+    PhiloGL('canvas', {
       program: [{
         id: 'default',
         from: 'uris',

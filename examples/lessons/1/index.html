@@ -4,9 +4,12 @@
 <title>Learning WebGL &mdash; lesson 1</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <link href="../lessons.css" type="text/css" rel="stylesheet" media="screen" />
-<script type="text/javascript" src="../../../build/LumaGL.js"></script>
+<script type="text/javascript" src="../../../build/PhiloGL.js"></script>
 <script type="text/javascript" src="index.js"></script>
+<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript" src="../lessons.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
   #ifdef GL_ES
@@ -33,8 +36,7 @@
 
 <body onload="webGLStart();">
   <canvas id="lesson01-canvas" style="border: none;" width="500" height="500"></canvas>
-  <script src="https://gist.github.com/817925.js"> </script>
+  <div id="controls"></div>
 </body>
 
 </html>
-

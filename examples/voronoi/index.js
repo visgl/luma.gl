@@ -12,7 +12,7 @@ function webGLStart() {
     fullscreen = false,
     dragStart = [],
     matStart = null,
-    mat = new LumaGL.Mat4(),
+    mat = new PhiloGL.Mat4(),
     imat = mat.clone(),
     weighted = false;
 
@@ -60,12 +60,12 @@ function webGLStart() {
     } else {
       z = Math.sqrt(z);
     }
-    var v3 = new LumaGL.Vec3(x, y, z, 1);
+    var v3 = new PhiloGL.Vec3(x, y, z, 1);
     imat.$mulVec3(v3);
     return v3;
   }
 
-  LumaGL('voronoi', {
+  PhiloGL('voronoi', {
     program: {
       id: 'voronoi',
       from: 'uris',
@@ -82,7 +82,7 @@ function webGLStart() {
         dragStart = [e.x, e.y];
       },
       onMouseWheel: function (e) {
-        var id = new LumaGL.Mat4();
+        var id = new PhiloGL.Mat4();
         id.id();
         id.$rotateAxis(('wheelDeltaX' in e.event ? e.event.wheelDeltaX : 0) / 5 / R, [0, 1, 0])
           .$rotateAxis(('wheelDeltaY' in e.event ? e.event.wheelDeltaY : e.wheel * 120) / 5 / R, [1, 0, 0]);
@@ -97,7 +97,7 @@ function webGLStart() {
         e.event.stopPropagation();
       },
       onDragMove: function (e) {
-        var id = new LumaGL.Mat4();
+        var id = new PhiloGL.Mat4();
         id.id();
         id.$rotateAxis((e.x - dragStart[0]) / R, [0, 1, 0])
           .$rotateAxis((e.y - dragStart[1]) / R, [-1, 0, 0]);
@@ -110,7 +110,7 @@ function webGLStart() {
         this.update();
       },
       onDragEnd: function (e) {
-        var id = new LumaGL.Mat4();
+        var id = new PhiloGL.Mat4();
         id.id();
         id.$rotateAxis((e.x - dragStart[0]) / R, [0, 1, 0])
           .$rotateAxis((e.y - dragStart[1]) / R, [-1, 0, 0]);
@@ -151,7 +151,7 @@ function webGLStart() {
         gl.clearDepth(1);
         gl.viewport(0, 0, width, height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        LumaGL.Media.Image.postProcess({
+        PhiloGL.Media.Image.postProcess({
           program: 'voronoi',
           width: width,
           height: height,

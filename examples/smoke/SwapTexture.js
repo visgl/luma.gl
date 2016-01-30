@@ -57,7 +57,7 @@ SwapTexture.prototype = {
     for (i = 0; i < ln; i++) {
       textures.push(this.from[i] + '-texture');
     }
-    LumaGL.Media.Image.postProcess(
+    PhiloGL.Media.Image.postProcess(
         Utils.merge({
           width: me.width,
           height: me.height,

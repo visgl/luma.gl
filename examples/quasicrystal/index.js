@@ -1,4 +1,4 @@
-LumaGL.unpack();
+PhiloGL.unpack();
 var time;
 var t;
 var mouseX = 0.5;
@@ -10,7 +10,7 @@ var $ = function(d) { return document.getElementById(d); };
 
 function load() {
 
-  if (!LumaGL.hasWebGL()) {
+  if (!PhiloGL.hasWebGL()) {
     alert("Your browser does not support WebGL");
     return;
   }
@@ -52,7 +52,7 @@ function load() {
 
   });
 
-  LumaGL('c', {
+  PhiloGL('c', {
     program: [{
       id: 'quasip',
       from: 'ids',

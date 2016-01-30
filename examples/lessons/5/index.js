@@ -1,16 +1,18 @@
 
 var webGLStart = function() {
 
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Fx = LumaGL.Fx;
-  var Mat4 = LumaGL.Mat4;
-  var Model = LumaGL.Model;
-  var Buffer = LumaGL.Buffer;
+  var createGLContext = PhiloGL.createGLContext;
+  var loadTextures = PhiloGL.loadTextures;
+  var Program = PhiloGL.Program;
+  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
+  var Fx = PhiloGL.Fx;
+  var Mat4 = PhiloGL.Mat4;
+  var Model = PhiloGL.Model;
+  var Buffer = PhiloGL.Buffer;
 
   var canvas = document.getElementById('lesson05-canvas');
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
 
   var gl = createGLContext(canvas);
 
@@ -139,7 +141,7 @@ var webGLStart = function() {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       //draw Cube
       rCube += 0.01;
-      cube.position.set(0, 0, -8);
+      cube.position.set(0, 0, -5);
       cube.rotation.set(rCube, rCube, rCube);
       //update element matrix
       cube.update();

@@ -12,7 +12,7 @@ var $ = function(d) {
 };
 
 function load() {
-	if (!LumaGL.hasWebGL()) {
+	if (!PhiloGL.hasWebGL()) {
 		alert("Your browser does not support WebGL");
 		return;
 	}
@@ -52,7 +52,7 @@ function load() {
 					});
 	mouseX = 0;
 	mouseY = 0;
-	LumaGL('c', {
+	PhiloGL('c', {
 		program : [ {
 			id : 'advance',
 			from : 'ids',
@@ -142,7 +142,7 @@ function load() {
 			}
 
 			function advance(source, target) {
-				LumaGL.Media.Image.postProcess({
+				PhiloGL.Media.Image.postProcess({
 					width : sizeX,
 					height : sizeY,
 					fromTexture : [ source + '-texture', 'blur1-texture',
@@ -155,7 +155,7 @@ function load() {
 			}
 
 			function composite(source) {
-				LumaGL.Media.Image.postProcess({
+				PhiloGL.Media.Image.postProcess({
 					width : viewX,
 					height : viewY,
 					fromTexture : [ source + '-texture', 'blur1-texture',
@@ -177,7 +177,7 @@ function load() {
 			}
 
 			function calculateBlurTexture(source, target, helper, scale) {
-				LumaGL.Media.Image.postProcess({
+				PhiloGL.Media.Image.postProcess({
 					width : sizeX / scale,
 					height : sizeY / scale,
 					fromTexture : source + '-texture',
@@ -212,7 +212,7 @@ function load() {
 				if (!halted) {
 					draw();
 				}
-				LumaGL.Fx.requestAnimationFrame(anim);
+				PhiloGL.Fx.requestAnimationFrame(anim);
 			}
 		}
 	});

@@ -14,7 +14,7 @@ import Fx from './addons/fx';
 import WorkerGroup from './addons/workers';
 
 if (typeof window !== 'undefined') {
-  window.LumaGL = {
+  window.PhiloGL = {
     hasWebGL: LumaGL.hasWebGL,
     createGLContext: LumaGL.createGLContext,
     loadTextures: LumaGL.loadTextures,
@@ -28,12 +28,12 @@ if (typeof window !== 'undefined') {
     TruncatedCone: LumaGL.TruncatedCone,
     Framebuffer: LumaGL.Framebuffer,
     Texture2D: LumaGL.Texture2D,
+    TextureCube: LumaGL.TextureCube,
     Buffer: LumaGL.Buffer,
     Events: LumaGL.Events,
     Mat4: LumaGL.Mat4,
     Vec3: LumaGL.Vec3,
     Shaders: LumaGL.Shaders,
-    IO: LumaGL.IO,
     PerspectiveCamera: LumaGL.PerspectiveCamera,
     OrthoCamera: LumaGL.OrthoCamera,
     Scene: LumaGL.Scene,
@@ -41,17 +41,9 @@ if (typeof window !== 'undefined') {
     Media: {
       Image: LumaGL.Img
     },
-    O3D: {
-      Model: LumaGL.Model,
-      Cone: LumaGL.Cone,
-      Cube: LumaGL.Cube,
-      Cylinder: LumaGL.Cylinder,
-      IcoSphere: LumaGL.IcoSphere,
-      Plane: LumaGL.Plane,
-      Sphere: LumaGL.Sphere,
-      TruncatedCone: LumaGL.TruncatedCone,
+    IO: {
+      XHR: LumaGL.XHR
     },
-
     // Add-ons
     WorkerGroup: WorkerGroup,
     Fx: Fx
