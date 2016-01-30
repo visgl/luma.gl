@@ -14,7 +14,7 @@ import Fx from './addons/fx';
 import WorkerGroup from './addons/workers';
 
 if (typeof window !== 'undefined') {
-  window.PhiloGL = {
+  window.LumaGL = {
     hasWebGL: LumaGL.hasWebGL,
     createGLContext: LumaGL.createGLContext,
     loadTextures: LumaGL.loadTextures,

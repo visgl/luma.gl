@@ -2,18 +2,18 @@ var webGLStart = function() {
 
   var $id = function(d) { return document.getElementById(d); };
 
-  var createGLContext = PhiloGL.createGLContext;
-  var loadTextures = PhiloGL.loadTextures;
-  var Program = PhiloGL.Program;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Scene = PhiloGL.Scene;
-  var Fx = PhiloGL.Fx;
-  var Vec3 = PhiloGL.Vec3;
-  var Sphere = PhiloGL.Sphere;
-  var Cube = PhiloGL.Cube;
-  var IO = PhiloGL.IO;
-  var Model = PhiloGL.Model;
-  var Framebuffer = PhiloGL.Framebuffer;
+  var createGLContext = LumaGL.createGLContext;
+  var loadTextures = LumaGL.loadTextures;
+  var Program = LumaGL.Program;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Scene = LumaGL.Scene;
+  var Fx = LumaGL.Fx;
+  var Vec3 = LumaGL.Vec3;
+  var Sphere = LumaGL.Sphere;
+  var Cube = LumaGL.Cube;
+  var IO = LumaGL.IO;
+  var Model = LumaGL.Model;
+  var Framebuffer = LumaGL.Framebuffer;
 
   new IO.XHR({
     url: 'macbook.json',

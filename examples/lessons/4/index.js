@@ -1,13 +1,13 @@
 var webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var Program = PhiloGL.Program;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Fx = PhiloGL.Fx;
-  var Mat4 = PhiloGL.Mat4;
-  var IO = PhiloGL.IO;
-  var Model = PhiloGL.Model;
-  var Buffer = PhiloGL.Buffer;
+  var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.Program;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Fx = LumaGL.Fx;
+  var Mat4 = LumaGL.Mat4;
+  var IO = LumaGL.IO;
+  var Model = LumaGL.Model;
+  var Buffer = LumaGL.Buffer;
 
   var pyramid = new Model({
     vertices: [ 0,  1,  0,

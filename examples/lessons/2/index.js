@@ -1,9 +1,9 @@
 window.webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var Program = PhiloGL.Program;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Buffer = PhiloGL.Buffer;
+  var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.Program;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Buffer = LumaGL.Buffer;
 
   var canvas = document.getElementById('lesson02-canvas');
   canvas.width = canvas.clientWidth;
