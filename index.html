@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous"> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+    <style>
+      .carouselImage {
+        /*background-size: cover;*/
+        height: 384px;
+      }
+
+    </style>
+
+  </head>
+
+  <body>
+
+    <div class='container'>
+      <h1 id="lumagl-a-javascript-webgl-framework-for-data-visualization">LumaGL: A JavaScript WebGL Framework for Data Visualization</h1>
+
+      <div id="carousel" class="carousel slide" data-ride="carousel">
+        <ol class="carousel-indicators">
+          <li data-target="#carousel" data-slide-to="0" class="active"></li>
+          <li data-target="#carousel" data-slide-to="1"></li>
+          <li data-target="#carousel" data-slide-to="2"></li>
+          <li data-target="#carousel" data-slide-to="3"></li>
+        </ol>
+        <div class="carousel-inner" role="listbox">
+          <div class="item active">
+            <div style="background:url(static/lesson16.png) no-repeat center center/cover transparent" class="carouselImage"></div>
+          </div>
+          <div class="item">
+            <div style="background:url(static/cubemap-example.png) no-repeat center center/cover transparent" class="carouselImage"></div>
+          </div>
+          <div class="item">
+            <div style="background:url(static/persistence-example.png) no-repeat center center/cover transparent" class="carouselImage"></div>
+          </div>
+          <div class="item">
+            <div style="background:url(static/multicontext-example.png) no-repeat center center/cover transparent" class="carouselImage"></div>
+          </div>
+        </div>
+        <a class="left carousel-control" href="#carousel" role="button" data-slide="prev">
+          <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+          <span class="sr-only">Previous</span>
+        </a>
+        <a class="right carousel-control" href="#carousel" role="button" data-slide="next">
+          <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+          <span class="sr-only">Next</span>
+        </a>
+      </div>
+
+      <p><strong>Note</strong> LumaGL has just been made public. Some examples are currently not working and documentation is in the process of being updated to correspond with the latest API changes.</p>
+      <h2 id="overview">Overview</h2>
+      <p>LumaGL&#39;s primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.</p>
+      <h2 id="lumagl-design-goals">LumaGL Design Goals</h2>
+      <ul>
+      <li>Focused on data visualization. While generic in nature, LumaGL will prioritize features that enable efficient rendering of large sets of data or that support improved visualization techniques.</li>
+      <li>Modular: a set of small collaborating classes that can used together with components from other frameworks (e.g. stackgl).</li>
+      <li>No &quot;magic&quot; global state. All components work with a standard WebGLRenderingContext.</li>
+      <li>A modern, compact codebase leveraging the latest JavaScript standards (ES6+)</li>
+      <li>Use modern JavaScript build technologies (browserify/babel/npm etc).</li>
+      </ul>
+      <h2 id="history">History</h2>
+      <p>LumaGL started as a fork of PhiloGL (<a href="https://github.com/philogb/philogl">https://github.com/philogb/philogl</a>) however no effort has been made to maintain compatibility with PhiloGL-based applications.</p>
+      <h1 id="installation">Installation</h1>
+
+<pre><code class="lang-sh">npm install luma.gl --save</code></pre>
+
+      <h1 id="documentation-lessons-and-examples">Documentation, Lessons and Examples</h1>
+      <p>Luma.gl comes with 16 lessons, a number of examples, and a full set of reference documenation.</p>
+      <p>To run examples:</p>
+
+<pre><code>git clone git@github.com:uber-common/luma.gl.git
+cd luma.gl
+npm install
+npm run start</code></pre>
+
+      <p>This builds the LumaGL bundle and starts a small local server. You should now be able to access the examples using your browser, at e.g. <a href="http://127.0.0.1:3000/examples/lessons/16/">http://127.0.0.1:3000/examples/lessons/16/</a></p>
+
+      <h2 id="quickstart">Quickstart</h2>
+      <p>The following code sample illustrates the &quot;flavor&quot; of the LumaGL API.</p>
+
+<pre><code>import {createGLContext, Program, Buffer, PerspectiveCamera} from &#39;luma.gl&#39;;
+
+// Initialize WebGL context
+const canvas = document.getElementById(&#39;lesson01-canvas&#39;);
+
+const gl = createGLContext(canvas, {initialize: true});
+const camera = new PerspectiveCamera({aspect: canvas.width/canvas.height});
+
+const program = Program.fromDefaultShaders(gl);
+program.use();
+program.setBuffer(new Buffer(gl, {
+  attribute: &#39;aVertexPosition&#39;,
+  data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
+  size: 3
+}));
+
+camera.view.$translate(-1.5, 0, -7);
+program.setUniform(&#39;uMVMatrix&#39;, camera.view);
+program.setUniform(&#39;uPMatrix&#39;, camera.projection);
+
+// Draw Triangle
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+gl.drawArrays(gl.TRIANGLES, 0, 3);</code></pre>
+
+    </div>
+  </body>
+
+</html>
