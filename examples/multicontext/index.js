@@ -1,15 +1,15 @@
 
 window.webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var Program = PhiloGL.Program;
-  var Buffer = PhiloGL.Buffer;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var TextureCube = PhiloGL.TextureCube;
-  var Cube = PhiloGL.Cube;
-  var Mat4 = PhiloGL.Mat4;
-  var Vec3 = PhiloGL.Vec3;
-  var Fx = PhiloGL.Fx;
+  var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.Program;
+  var Buffer = LumaGL.Buffer;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var TextureCube = LumaGL.TextureCube;
+  var Cube = LumaGL.Cube;
+  var Mat4 = LumaGL.Mat4;
+  var Vec3 = LumaGL.Vec3;
+  var Fx = LumaGL.Fx;
 
   var positions = [
     -1, -1,

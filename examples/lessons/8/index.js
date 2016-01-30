@@ -4,15 +4,15 @@ var $id = function(d) { return document.getElementById(d); };
 
 var webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var loadTextures = PhiloGL.loadTextures;
-  var Program = PhiloGL.Program;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Scene = PhiloGL.Scene;
-  var Events = PhiloGL.Events;
-  var Fx = PhiloGL.Fx;
-  var Model = PhiloGL.Model;
-  var Shaders = PhiloGL.Shaders;
+  var createGLContext = LumaGL.createGLContext;
+  var loadTextures = LumaGL.loadTextures;
+  var Program = LumaGL.Program;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Scene = LumaGL.Scene;
+  var Events = LumaGL.Events;
+  var Fx = LumaGL.Fx;
+  var Model = LumaGL.Model;
+  var Shaders = LumaGL.Shaders;
 
   var canvas = document.getElementById('lesson08-canvas');
   canvas.width = canvas.clientWidth;

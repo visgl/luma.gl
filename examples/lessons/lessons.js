@@ -1,6 +1,6 @@
 (function() {
 
-  var IO = PhiloGL.IO;
+  var IO = LumaGL.IO;
 
   function onSuccess(data) {
     // Add the editor div.

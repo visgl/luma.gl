@@ -1,15 +1,15 @@
 
 var webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var IO = PhiloGL.IO;
-  var loadTextures = PhiloGL.loadTextures;
-  var Program = PhiloGL.Program;
-  var Model = PhiloGL.Model;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Scene = PhiloGL.Scene;
-  var Events = PhiloGL.Events;
-  var Fx = PhiloGL.Fx;
+  var createGLContext = LumaGL.createGLContext;
+  var IO = LumaGL.IO;
+  var loadTextures = LumaGL.loadTextures;
+  var Program = LumaGL.Program;
+  var Model = LumaGL.Model;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Scene = LumaGL.Scene;
+  var Events = LumaGL.Events;
+  var Fx = LumaGL.Fx;
 
   var pitch = 0,
       pitchRate = 0,

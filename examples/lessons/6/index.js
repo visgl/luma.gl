@@ -1,14 +1,14 @@
 var webGLStart = function() {
 
-  var createGLContext = PhiloGL.createGLContext;
-  var Program = PhiloGL.Program;
-  var PerspectiveCamera = PhiloGL.PerspectiveCamera;
-  var Fx = PhiloGL.Fx;
-  var Mat4 = PhiloGL.Mat4;
-  var Model = PhiloGL.Model;
-  var Buffer = PhiloGL.Buffer;
-  var Texture2D = PhiloGL.Texture2D;
-  var Events = PhiloGL.Events;
+  var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.Program;
+  var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Fx = LumaGL.Fx;
+  var Mat4 = LumaGL.Mat4;
+  var Model = LumaGL.Model;
+  var Buffer = LumaGL.Buffer;
+  var Texture2D = LumaGL.Texture2D;
+  var Events = LumaGL.Events;
 
   var canvas = document.getElementById('lesson06-canvas');
   canvas.width = canvas.clientWidth;
