@@ -64,7 +64,7 @@
 
     // Add the prev/next buttons.
     var split = window.location.pathname.split('/');
-    var baseurl = split.slice(0,3).join('/') + '/';
+    var baseurl = split.slice(0,split.length - 2).join('/') + '/';
     var current = parseInt(split[split.length - 2]);
     var prev = current - 1;
     var next = current + 1;
