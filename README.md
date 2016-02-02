@@ -42,9 +42,9 @@ To run examples:
 git clone git@github.com:uber-common/luma.gl.git
 cd luma.gl
 npm install
-npm run start
+npm start
 ```
-This builds the LumaGL bundle and starts a small local server. 
+This builds the LumaGL bundle and starts a small local server.
 You should now be able to access the examples using your browser, at http://127.0.0.1:3000
 e.g. http://127.0.0.1:3000/examples/lessons/1/
 

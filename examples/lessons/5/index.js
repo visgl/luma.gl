@@ -16,6 +16,13 @@ var webGLStart = function() {
 
   var gl = createGLContext(canvas);
 
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(0, 0, 0, 1);
+  gl.clearDepth(1);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+
   loadTextures(gl, {
 
     src: ['nehe.gif']
@@ -23,12 +30,6 @@ var webGLStart = function() {
   }).then(function(textures) {
 
       var nehe = textures[0];
-
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clearColor(0, 0, 0, 1);
-      gl.clearDepth(1);
-      gl.enable(gl.DEPTH_TEST);
-      gl.depthFunc(gl.LEQUAL);
 
       var program = Program.fromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
 

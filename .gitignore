@@ -7,5 +7,4 @@ TODO
 _docs
 examples/winds/data/*.html
 node_modules
-dist
 npm-debug.log
