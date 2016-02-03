@@ -280,7 +280,7 @@ export default class Program {
       if (!ext) {
         console.warn('ANGLE_instanced_arrays not supported!');
       } else {
-        ext.vertexAttribDivisorANGLE(loc, buf.instanced === true ? 1 : instanced);
+        ext.vertexAttribDivisorANGLE(loc, buf.instanced === true ? 1 : buf.instanced);
       }
     }
     return this;
