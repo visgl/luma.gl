@@ -50,7 +50,7 @@
     "build": "npm run build-dev && npm run build-min",
     "build-min": "browserify src/bundle.js | uglifyjs > dist/LumaGL.min.js",
     "build-dev": "browserify src/bundle.js -o dist/LumaGL.js",
-    "start": "budo src/bundle.js:dist/LumaGL.js --live --open --port 3000",
+    "start": "budo src/bundle.js:dist/LumaGL.js --live --open --port 3000 --watch-glob '**/*.{html,css,js}'",
     "test": "babel-node --ignore='' test/index.js"
   }
 }
