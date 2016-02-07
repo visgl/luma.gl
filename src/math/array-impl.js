@@ -213,7 +213,7 @@ var generics = {
     if (dest instanceof Vec3) {
       return new Vec3(dest[0], dest[1], dest[2]);
     } else {
-      return Vec3.setVec3(new typedArray(3), dest);
+      return Vec3.setVec3(new Float32Array(3), dest);
     }
   },
 

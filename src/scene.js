@@ -5,6 +5,7 @@ import {Vec3} from './math';
 import Program from './program';
 import assert from 'assert';
 import {merge, uid} from './utils';
+import {default as Framebuffer} from './fbo';
 
 function noop() {}
 
@@ -252,207 +253,65 @@ export default class Scene {
     object.unsetState(program);
   }
 
-  unproject(pt, camera) {
-    return camera.view.invert().mulMat4(camera.projection.invert()).mulVec3(pt);
-  }
-
-  // setup picking framebuffer
-  setupPicking(opt) {
-    // create picking program
-    const program = Program.fromDefaultShaders();
-
-    // create framebuffer
-    // rye TODO: use the new FBO
-    this.app.setFrameBuffer('$picking', {
-      width: 5,
-      height: 1,
-      bindToTexture: {
-        parameters: [{
-          name: 'TEXTURE_MAG_FILTER',
-          value: 'NEAREST'
-        }, {
-          name: 'TEXTURE_MIN_FILTER',
-          value: 'NEAREST'
-        }, {
-          name: 'TEXTURE_WRAP_S',
-          value: 'CLAMP_TO_EDGE'
-        }, {
-          name: 'TEXTURE_WRAP_T',
-          value: 'CLAMP_TO_EDGE'
-        }]
-      },
-      bindToRenderBuffer: true
-    });
-
-    // rye TODO; use the new FBO
-    this.app.setFrameBuffer('$picking', false);
-    this.pickingProgram = opt.pickingProgram || program;
-  }
-
   pick(x, y, opt = {}) {
     const gl = this.gl;
 
-    // setup the picking program if this is
-    // the first time we enter the method.
-    if (!this.pickingProgram) {
-      this.setupPicking(opt);
+    if (this.pickingFBO === undefined) {
+      this.pickingFBO = new Framebuffer(gl, {
+        width: gl.canvas.width,
+        height: gl.canvas.height,
+      });
     }
 
-    const o3dHash = {};
-    const o3dList = [];
-    // rye TODO: figure out a non-global way to get the current program
-    const program = this.app.usedProgram;
-    const pickingProgram = this.pickingProgram;
-    const camera = this.camera;
-    const oldtarget = camera.target;
-    const oldaspect = camera.aspect;
-    const config = this.config;
-    const memoLightEnable = config.lights.enable;
-    const memoFog = config.effects.fog;
-    const canvas = gl.canvas;
-    const viewport = opt.viewport || {};
-    const pixelRatio = opt.pixelRatio || 1;
-    const width = (viewport.width || canvas.offsetWidth || canvas.width);
-    const height = (viewport.height || canvas.offsetHeight || canvas.height);
-    const resWidth = 5;
-    const resHeight = 1;
-    const xp = (x * pixelRatio - (viewport.x || 0));
-    const yp = (y * pixelRatio - (viewport.y || 0));
-    const ndcx = xp * 2 / width - 1;
-    const ndcy = 1 - yp * 2 / height;
-    const target = this.unproject([ndcx, ndcy, 1.0], camera);
-    const hash = [];
-    const pixel = new Uint8Array(1 * 1 * 4);
-    let backgroundColor;
-    let capture;
+    if (this.pickingProgram === undefined) {
+      this.pickingProgram = opt.pickingProgram || Program.fromDefaultShaders(gl);
+    }
 
-    this.camera.target = target;
-    this.camera.update();
-    // setup the scene for picking
-    config.lights.enable = false;
-    config.effects.fog = false;
+    let pickingProgram = this.pickingProgram;
 
-    // enable picking and render to texture
-    // rye TODO: use the new FBO
-    this.app.setFrameBuffer('$picking', true);
     pickingProgram.use();
     pickingProgram.setUniform('enablePicking', true);
 
-    // render the scene to a texture
-    gl.disable(gl.BLEND);
-    gl.viewport(0, 0, resWidth, resHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // read the background color so we don't step on it
-    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-    backgroundColor = pixel[0] + pixel[1] * 256 + pixel[2] * 256 * 256;
+    this.pickingFBO.bind();
 
-    // render picking scene
-    this.renderPickingScene({
-      background: backgroundColor,
-      o3dHash: o3dHash,
-      o3dList: o3dList,
-      hash: hash
-    });
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(0,0,0,1);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 
-    // the target point is in the center of the screen,
-    // so it should be the center point.
-    gl.readPixels(2, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    pickingProgram.setUniform('hasPickingColors', false);
 
-    const stringColor = [pixel[0], pixel[1], pixel[2]].join();
-    let elem = o3dHash[stringColor];
-    let pick;
+    let hash = {};
 
-   // console.log('o3dHash', stringColor, x, y, width, height);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(x,gl.canvas.height-y,1,1);
 
-    if (!elem) {
-      for (elem of o3dList) {
-        pick = elem.pick(pixel);
-        if (pick !== false) {
-          elem.$pickingIndex = pick;
-        } else {
-          elem = false;
-        }
-      }
-    }
-
-    // restore all values and unbind buffers
-    // rye TODO: use the new FBO
-    this.app.setFrameBuffer('$picking', false);
-    // rye TODO: use the new Texture2D class
-    this.app.setTexture('$picking-texture', false);
-    pickingProgram.setUniform('enablePicking', false);
-    config.lights.enable = memoLightEnable;
-    config.effects.fog = memoFog;
-
-    // restore previous program
-    if (program) {
-      program.use();
-    }
-
-    // restore the viewport size to original size
-    gl.viewport(
-      viewport.x || 0,
-      viewport.y || 0,
-      width,
-      height
-    );
-    // restore camera properties
-    camera.target = oldtarget;
-    camera.aspect = oldaspect;
-    camera.update();
-
-    // store model hash and pixel array
-    this.o3dHash = o3dHash;
-    this.o3dList = o3dList;
-    this.pixel = pixel;
-    this.capture = capture;
-
-    return elem && elem.pickable && elem;
-  }
-
-  renderPickingScene(opt) {
-    // if set through the config, render a custom scene.
-    if (this.config.renderPickingScene) {
-      this.config.renderPickingScene.call(this, opt);
-      return;
-    }
-
-    const pickingProgram = this.pickingProgram;
-    let o3dHash = opt.o3dHash;
-    let o3dList = opt.o3dList;
-    let background = opt.background;
-    let hash = opt.hash;
-    let index = 0;
-
-    // render to texture
-    this.renderToTexture('$picking', {
+    this.render({
       renderProgram: pickingProgram,
-      onBeforeRender(elem, i) {
-        if (i === background) {
-          index = 1;
-        }
-        const suc = i + index;
-        const hasPickingColors = Boolean(elem.pickingColors);
-
-        pickingProgram.setUniform('hasPickingColors', hasPickingColors);
-
-        if (!hasPickingColors) {
-          hash[0] = suc % 256;
-          hash[1] = ((suc / 256) >> 0) % 256;
-          hash[2] = ((suc / (256 * 256)) >> 0) % 256;
-          pickingProgram.setUniform('pickColor',
-            [hash[0] / 255, hash[1] / 255, hash[2] / 255]);
-          o3dHash[hash.join()] = elem;
-        } else {
-          o3dList.push(elem);
-        }
+      onBeforeRender: function(elem, i) {
+        i++;
+        let r = i % 256;
+        let g = ((i / 256) >> 0) % 256;
+        let b = ((i / (256 * 256)) >> 0) % 256;
+        hash[[r,g,b]] = elem;
+        pickingProgram.setUniform('pickColor', [r/255, g/255, b/255]);
       }
     });
+
+    gl.disable(gl.SCISSOR_TEST);
+
+    const pixel = new Uint8Array(4);
+
+    gl.readPixels(x, gl.canvas.height-y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    let r = pixel[0];
+    let g = pixel[1];
+    let b = pixel[2];
+
+    return hash[[r,g,b]];
   }
 
-  resetPicking() {
-    // empty
-  }
 }
 
 Scene.MAX_TEXTURES = 10;

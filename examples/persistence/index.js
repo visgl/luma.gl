@@ -19,7 +19,7 @@ window.webGLStart = function() {
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0,0,0,0);
-  gl.clearDepth(10);
+  gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.enable(gl.CULL_FACE);

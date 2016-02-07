@@ -7450,7 +7450,7 @@ var generics = {
     if (dest instanceof Vec3) {
       return new Vec3(dest[0], dest[1], dest[2]);
     } else {
-      return Vec3.setVec3(new typedArray(3), dest);
+      return Vec3.setVec3(new Float32Array(3), dest);
     }
   },
 
@@ -10294,7 +10294,7 @@ var Program = (function () {
         if (!ext) {
           console.warn('ANGLE_instanced_arrays not supported!');
         } else {
-          ext.vertexAttribDivisorANGLE(loc, buf.instanced === true ? 1 : instanced);
+          ext.vertexAttribDivisorANGLE(loc, buf.instanced === true ? 1 : buf.instanced);
         }
       }
       return this;
@@ -10452,6 +10452,10 @@ var _assert = require('assert');
 var _assert2 = _interopRequireDefault(_assert);
 
 var _utils = require('./utils');
+
+var _fbo = require('./fbo');
+
+var _fbo2 = _interopRequireDefault(_fbo);
 
 function noop() {}
 
@@ -10746,229 +10750,66 @@ var Scene = (function () {
       object.unsetState(program);
     }
   }, {
-    key: 'unproject',
-    value: function unproject(pt, camera) {
-      return camera.view.invert().mulMat4(camera.projection.invert()).mulVec3(pt);
-    }
-
-    // setup picking framebuffer
-  }, {
-    key: 'setupPicking',
-    value: function setupPicking(opt) {
-      // create picking program
-      var program = _program2['default'].fromDefaultShaders();
-
-      // create framebuffer
-      // rye TODO: use the new FBO
-      this.app.setFrameBuffer('$picking', {
-        width: 5,
-        height: 1,
-        bindToTexture: {
-          parameters: [{
-            name: 'TEXTURE_MAG_FILTER',
-            value: 'NEAREST'
-          }, {
-            name: 'TEXTURE_MIN_FILTER',
-            value: 'NEAREST'
-          }, {
-            name: 'TEXTURE_WRAP_S',
-            value: 'CLAMP_TO_EDGE'
-          }, {
-            name: 'TEXTURE_WRAP_T',
-            value: 'CLAMP_TO_EDGE'
-          }]
-        },
-        bindToRenderBuffer: true
-      });
-
-      // rye TODO; use the new FBO
-      this.app.setFrameBuffer('$picking', false);
-      this.pickingProgram = opt.pickingProgram || program;
-    }
-  }, {
     key: 'pick',
     value: function pick(x, y) {
       var opt = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
 
       var gl = this.gl;
 
-      // setup the picking program if this is
-      // the first time we enter the method.
-      if (!this.pickingProgram) {
-        this.setupPicking(opt);
+      if (this.pickingFBO === undefined) {
+        this.pickingFBO = new _fbo2['default'](gl, {
+          width: gl.canvas.width,
+          height: gl.canvas.height
+        });
       }
 
-      var o3dHash = {};
-      var o3dList = [];
-      // rye TODO: figure out a non-global way to get the current program
-      var program = this.app.usedProgram;
+      if (this.pickingProgram === undefined) {
+        this.pickingProgram = opt.pickingProgram || _program2['default'].fromDefaultShaders(gl);
+      }
+
       var pickingProgram = this.pickingProgram;
-      var camera = this.camera;
-      var oldtarget = camera.target;
-      var oldaspect = camera.aspect;
-      var config = this.config;
-      var memoLightEnable = config.lights.enable;
-      var memoFog = config.effects.fog;
-      var canvas = gl.canvas;
-      var viewport = opt.viewport || {};
-      var pixelRatio = opt.pixelRatio || 1;
-      var width = viewport.width || canvas.offsetWidth || canvas.width;
-      var height = viewport.height || canvas.offsetHeight || canvas.height;
-      var resWidth = 5;
-      var resHeight = 1;
-      var xp = x * pixelRatio - (viewport.x || 0);
-      var yp = y * pixelRatio - (viewport.y || 0);
-      var ndcx = xp * 2 / width - 1;
-      var ndcy = 1 - yp * 2 / height;
-      var target = this.unproject([ndcx, ndcy, 1.0], camera);
-      var hash = [];
-      var pixel = new Uint8Array(1 * 1 * 4);
-      var backgroundColor = undefined;
-      var capture = undefined;
 
-      this.camera.target = target;
-      this.camera.update();
-      // setup the scene for picking
-      config.lights.enable = false;
-      config.effects.fog = false;
-
-      // enable picking and render to texture
-      // rye TODO: use the new FBO
-      this.app.setFrameBuffer('$picking', true);
       pickingProgram.use();
       pickingProgram.setUniform('enablePicking', true);
 
-      // render the scene to a texture
-      gl.disable(gl.BLEND);
-      gl.viewport(0, 0, resWidth, resHeight);
+      this.pickingFBO.bind();
+
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      // read the background color so we don't step on it
-      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-      backgroundColor = pixel[0] + pixel[1] * 256 + pixel[2] * 256 * 256;
 
-      // render picking scene
-      this.renderPickingScene({
-        background: backgroundColor,
-        o3dHash: o3dHash,
-        o3dList: o3dList,
-        hash: hash
-      });
+      pickingProgram.setUniform('hasPickingColors', false);
 
-      // the target point is in the center of the screen,
-      // so it should be the center point.
-      gl.readPixels(2, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      var hash = {};
 
-      var stringColor = [pixel[0], pixel[1], pixel[2]].join();
-      var elem = o3dHash[stringColor];
-      var pick = undefined;
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(x, gl.canvas.height - y, 1, 1);
 
-      // console.log('o3dHash', stringColor, x, y, width, height);
-
-      if (!elem) {
-        var _iteratorNormalCompletion2 = true;
-        var _didIteratorError2 = false;
-        var _iteratorError2 = undefined;
-
-        try {
-          for (var _iterator2 = o3dList[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-            elem = _step2.value;
-
-            pick = elem.pick(pixel);
-            if (pick !== false) {
-              elem.$pickingIndex = pick;
-            } else {
-              elem = false;
-            }
-          }
-        } catch (err) {
-          _didIteratorError2 = true;
-          _iteratorError2 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-              _iterator2['return']();
-            }
-          } finally {
-            if (_didIteratorError2) {
-              throw _iteratorError2;
-            }
-          }
-        }
-      }
-
-      // restore all values and unbind buffers
-      // rye TODO: use the new FBO
-      this.app.setFrameBuffer('$picking', false);
-      // rye TODO: use the new Texture2D class
-      this.app.setTexture('$picking-texture', false);
-      pickingProgram.setUniform('enablePicking', false);
-      config.lights.enable = memoLightEnable;
-      config.effects.fog = memoFog;
-
-      // restore previous program
-      if (program) {
-        program.use();
-      }
-
-      // restore the viewport size to original size
-      gl.viewport(viewport.x || 0, viewport.y || 0, width, height);
-      // restore camera properties
-      camera.target = oldtarget;
-      camera.aspect = oldaspect;
-      camera.update();
-
-      // store model hash and pixel array
-      this.o3dHash = o3dHash;
-      this.o3dList = o3dList;
-      this.pixel = pixel;
-      this.capture = capture;
-
-      return elem && elem.pickable && elem;
-    }
-  }, {
-    key: 'renderPickingScene',
-    value: function renderPickingScene(opt) {
-      // if set through the config, render a custom scene.
-      if (this.config.renderPickingScene) {
-        this.config.renderPickingScene.call(this, opt);
-        return;
-      }
-
-      var pickingProgram = this.pickingProgram;
-      var o3dHash = opt.o3dHash;
-      var o3dList = opt.o3dList;
-      var background = opt.background;
-      var hash = opt.hash;
-      var index = 0;
-
-      // render to texture
-      this.renderToTexture('$picking', {
+      this.render({
         renderProgram: pickingProgram,
         onBeforeRender: function onBeforeRender(elem, i) {
-          if (i === background) {
-            index = 1;
-          }
-          var suc = i + index;
-          var hasPickingColors = Boolean(elem.pickingColors);
-
-          pickingProgram.setUniform('hasPickingColors', hasPickingColors);
-
-          if (!hasPickingColors) {
-            hash[0] = suc % 256;
-            hash[1] = (suc / 256 >> 0) % 256;
-            hash[2] = (suc / (256 * 256) >> 0) % 256;
-            pickingProgram.setUniform('pickColor', [hash[0] / 255, hash[1] / 255, hash[2] / 255]);
-            o3dHash[hash.join()] = elem;
-          } else {
-            o3dList.push(elem);
-          }
+          i++;
+          var r = i % 256;
+          var g = (i / 256 >> 0) % 256;
+          var b = (i / (256 * 256) >> 0) % 256;
+          hash[[r, g, b]] = elem;
+          pickingProgram.setUniform('pickColor', [r / 255, g / 255, b / 255]);
         }
       });
-    }
-  }, {
-    key: 'resetPicking',
-    value: function resetPicking() {
-      // empty
+
+      gl.disable(gl.SCISSOR_TEST);
+
+      var pixel = new Uint8Array(4);
+
+      gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      var r = pixel[0];
+      var g = pixel[1];
+      var b = pixel[2];
+
+      return hash[[r, g, b]];
     }
   }]);
 
@@ -10982,7 +10823,7 @@ Scene.MAX_POINT_LIGHTS = 4;
 Scene.PICKING_RES = 4;
 module.exports = exports['default'];
 
-},{"./math":205,"./program":215,"./utils":219,"assert":1}],217:[function(require,module,exports){
+},{"./fbo":201,"./math":205,"./program":215,"./utils":219,"assert":1}],217:[function(require,module,exports){
 // shaders.js
 // Default Shaders
 
