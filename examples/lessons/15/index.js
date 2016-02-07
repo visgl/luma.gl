@@ -13,11 +13,9 @@ var webGLStart = function() {
   var canvas = document.getElementById('lesson15-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
-  
+
   var gl = createGLContext(canvas);
 
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
@@ -101,7 +99,6 @@ var webGLStart = function() {
 
     //Draw the scene
     function draw() {
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       //Setup lighting
       var lights = scene.config.lights;
       lights.enable = lighting.checked;

@@ -230,8 +230,6 @@ var webGLStart = function() {
     });
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
@@ -249,7 +247,6 @@ var webGLStart = function() {
     }
 
     function drawScene() {
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       //Update Cube position
       cube.position.set(0, 0, z);
       cube.rotation.set(xRot, yRot, 0);

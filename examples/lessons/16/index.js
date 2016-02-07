@@ -40,8 +40,6 @@ var webGLStart = function() {
 
   var gl = createGLContext(canvas);
 
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
@@ -234,14 +232,12 @@ var webGLStart = function() {
         gl.viewport(0, 0, screenWidth, screenHeight);
 
         fb.bind();
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         innerScene.render();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
 
       function drawOuterScene() {
         gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         laptopTheta += 0.005;
 
