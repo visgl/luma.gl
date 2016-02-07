@@ -43,7 +43,8 @@ var webGLStart = function() {
         r: 0.25, g: 0.25, b: 0.25
       },
       enable: true
-    }
+    },
+    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
 
   var pick = {x: 0, y: 0};
