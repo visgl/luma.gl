@@ -6569,6 +6569,9 @@ var Framebuffer = (function () {
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error('Framebuffer creation failed.');
     }
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   _createClass(Framebuffer, [{
@@ -9308,7 +9311,7 @@ var Model = (function () {
         this.buffers.colors = new _buffer2['default'](program.gl, {
           attribute: 'color',
           data: this.$colors,
-          size: 3
+          size: 4
         });
       } else if (this.dynamic) {
         this.buffers.colors.update({
@@ -10475,7 +10478,11 @@ var DEFAULT_SCENE_OPTS = {
   effects: {
     fog: false
     // { near, far, color }
-  }
+  },
+  clearColor: true,
+  clearDepth: true,
+  backgroundColor: { r: 0, g: 0, b: 0, a: 1 },
+  backgroundDepth: 1
 };
 
 // Scene class
@@ -10669,6 +10676,25 @@ var Scene = (function () {
         program.setUniform('hasFog', false);
       }
     }
+  }, {
+    key: 'clear',
+    value: function clear() {
+      var gl = this.gl;
+      if (this.config.clearColor) {
+        var bg = this.config.backgroundColor;
+        gl.clearColor(bg.r, bg.g, bg.b, bg.a);
+      }
+      if (this.config.clearDepth) {
+        gl.clearDepth(this.config.backgroundDepth);
+      }
+      if (this.config.clearColor && this.config.clearDepth) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      } else if (this.config.clearColor) {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      } else if (this.config.clearDepth) {
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+      }
+    }
 
     // Renders all objects in the scene.
   }, {
@@ -10684,6 +10710,8 @@ var Scene = (function () {
         onBeforeRender: noop,
         onAfterRender: noop
       }, opt);
+
+      this.clear();
 
       // If we're just using one program then
       // execute the beforeRender method once.
@@ -10771,19 +10799,19 @@ var Scene = (function () {
 
       pickingProgram.use();
       pickingProgram.setUniform('enablePicking', true);
+      pickingProgram.setUniform('hasPickingColors', false);
 
       this.pickingFBO.bind();
-
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-      pickingProgram.setUniform('hasPickingColors', false);
 
       var hash = {};
 
       gl.enable(gl.SCISSOR_TEST);
       gl.scissor(x, gl.canvas.height - y, 1, 1);
+
+      var oldClearColor = this.clearColor;
+      var oldBackgroundColor = this.backgroundColor;
+      this.clearColor = true;
+      this.backgroundColor = { r: 0, g: 0, b: 0, a: 0 };
 
       this.render({
         renderProgram: pickingProgram,
@@ -10804,12 +10832,69 @@ var Scene = (function () {
       gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      this.clearColor = oldClearColor;
+      this.backgroundColor = oldBackgroundColor;
 
       var r = pixel[0];
       var g = pixel[1];
       var b = pixel[2];
 
       return hash[[r, g, b]];
+    }
+  }, {
+    key: 'pickCustom',
+    value: function pickCustom(x, y) {
+      var opt = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
+
+      var gl = this.gl;
+
+      if (this.pickingFBO === undefined) {
+        this.pickingFBO = new _fbo2['default'](gl, {
+          width: gl.canvas.width,
+          height: gl.canvas.height
+        });
+      }
+
+      if (this.pickingProgram === undefined) {
+        this.pickingProgram = opt.pickingProgram || _program2['default'].fromDefaultShaders(gl);
+      }
+
+      var pickingProgram = this.pickingProgram;
+
+      pickingProgram.use();
+      pickingProgram.setUniform('enablePicking', true);
+      pickingProgram.setUniform('hasPickingColors', true);
+
+      this.pickingFBO.bind();
+
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(x, gl.canvas.height - y, 1, 1);
+
+      var oldClearColor = this.clearColor;
+      var oldBackgroundColor = this.backgroundColor;
+      this.clearColor = true;
+      this.backgroundColor = { r: 255, g: 0, b: 0, a: 255 };
+
+      this.render({
+        renderProgram: pickingProgram
+      });
+
+      gl.disable(gl.SCISSOR_TEST);
+
+      var pixel = new Uint8Array(4);
+
+      gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      this.clearColor = oldClearColor;
+      this.backgroundColor = oldBackgroundColor;
+
+      var r = pixel[0];
+      var g = pixel[1];
+      var b = pixel[2];
+      var a = pixel[3];
+
+      return [r, g, b, a];
     }
   }]);
 
@@ -10946,6 +11031,7 @@ var Texture2D = (function (_Texture) {
       if (this.generateMipmap) {
         gl.generateMipmap(gl.TEXTURE_2D);
       }
+      gl.bindTexture(gl.TEXTURE_2D, null);
     }
   }]);
 
@@ -11009,6 +11095,7 @@ var TextureCube = (function (_Texture2) {
       if (this.generateMipmap) {
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
       }
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
     }
   }]);
 
