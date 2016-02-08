@@ -295,14 +295,9 @@ export default class Scene {
 
     pickingProgram.use();
     pickingProgram.setUniform('enablePicking', true);
+    pickingProgram.setUniform('hasPickingColors', false);
 
     this.pickingFBO.bind();
-
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(0,0,0,1);
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-
-    pickingProgram.setUniform('hasPickingColors', false);
 
     let hash = {};
 
@@ -341,6 +336,58 @@ export default class Scene {
     let b = pixel[2];
 
     return hash[[r,g,b]];
+  }
+
+  pickCustom(x, y, opt = {}) {
+    const gl = this.gl;
+
+    if (this.pickingFBO === undefined) {
+      this.pickingFBO = new Framebuffer(gl, {
+        width: gl.canvas.width,
+        height: gl.canvas.height,
+      });
+    }
+
+    if (this.pickingProgram === undefined) {
+      this.pickingProgram = opt.pickingProgram || Program.fromDefaultShaders(gl);
+    }
+
+    let pickingProgram = this.pickingProgram;
+
+    pickingProgram.use();
+    pickingProgram.setUniform('enablePicking', true);
+    pickingProgram.setUniform('hasPickingColors', true);
+
+    this.pickingFBO.bind();
+
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(x,gl.canvas.height-y,1,1);
+
+    const oldClearColor = this.clearColor;
+    const oldBackgroundColor = this.backgroundColor;
+    this.clearColor = true;
+    this.backgroundColor = {r:255, g: 0, b:0, a: 255};
+
+    this.render({
+      renderProgram: pickingProgram,
+    });
+
+    gl.disable(gl.SCISSOR_TEST);
+
+    const pixel = new Uint8Array(4);
+
+    gl.readPixels(x, gl.canvas.height-y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.clearColor = oldClearColor;
+    this.backgroundColor = oldBackgroundColor;
+
+    let r = pixel[0];
+    let g = pixel[1];
+    let b = pixel[2];
+    let a = pixel[3];
+
+    return [r,g,b,a];
   }
 
 }

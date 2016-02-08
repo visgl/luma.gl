@@ -36,6 +36,9 @@ export default class Framebuffer {
       throw new Error('Framebuffer creation failed.');
     }
 
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
   }
 
   bind() {
