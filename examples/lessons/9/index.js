@@ -16,7 +16,7 @@ var webGLStart = function() {
   var canvas = document.getElementById('lesson09-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
-  
+
   var gl = createGLContext(canvas);
 
   var tStar;
@@ -103,8 +103,6 @@ var webGLStart = function() {
       twinkle = $id('twinkle');
 
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clearDepth(1);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   gl.enable(gl.BLEND);
 
@@ -185,7 +183,6 @@ var webGLStart = function() {
     }
 
     function drawScene() {
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       //Update Camera Position
       var radTilt = tilt / 180 * Math.PI;
       camera.position.set(0, Math.cos(radTilt) * zoom,

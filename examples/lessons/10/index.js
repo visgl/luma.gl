@@ -81,8 +81,6 @@ var webGLStart = function() {
   function startApp() {
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
@@ -148,8 +146,6 @@ var webGLStart = function() {
     }
 
     function drawScene() {
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
       //Update Camera Position
       camera.view.id()
                       .$rotateXYZ(-pitch, -yaw, 0)

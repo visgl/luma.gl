@@ -25,7 +25,11 @@ const DEFAULT_SCENE_OPTS = {
   effects: {
     fog: false
     // { near, far, color }
-  }
+  },
+  clearColor: true,
+  clearDepth: true,
+  backgroundColor: {r: 0, g: 0, b: 0, a: 1},
+  backgroundDepth: 1
 };
 
 // Scene class
@@ -177,6 +181,24 @@ export default class Scene {
     }
   }
 
+  clear() {
+    const gl = this.gl;
+    if (this.config.clearColor) {
+      const bg = this.config.backgroundColor;
+      gl.clearColor(bg.r, bg.g, bg.b, bg.a);
+    }
+    if (this.config.clearDepth) {
+      gl.clearDepth(this.config.backgroundDepth);
+    }
+    if (this.config.clearColor && this.config.clearDepth) {
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    } else if (this.config.clearColor) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    } else if (this.config.clearDepth) {
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+    }
+  }
+
   // Renders all objects in the scene.
   render(opt = {}) {
     const camera = this.camera;
@@ -187,6 +209,8 @@ export default class Scene {
       onAfterRender: noop,
       ...opt
     };
+
+    this.clear();
 
     // If we're just using one program then
     // execute the beforeRender method once.
@@ -285,6 +309,11 @@ export default class Scene {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(x,gl.canvas.height-y,1,1);
 
+    const oldClearColor = this.clearColor;
+    const oldBackgroundColor = this.backgroundColor;
+    this.clearColor = true;
+    this.backgroundColor = {r:0, g: 0, b:0, a: 0};
+
     this.render({
       renderProgram: pickingProgram,
       onBeforeRender: function(elem, i) {
@@ -304,6 +333,8 @@ export default class Scene {
     gl.readPixels(x, gl.canvas.height-y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.clearColor = oldClearColor;
+    this.backgroundColor = oldBackgroundColor;
 
     let r = pixel[0];
     let g = pixel[1];
