@@ -81,6 +81,7 @@ export class Texture2D extends Texture {
     if (this.generateMipmap) {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
 }
@@ -135,6 +136,7 @@ export class TextureCube extends Texture {
     if (this.generateMipmap) {
       gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
     }
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
   }
 
 }

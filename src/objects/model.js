@@ -120,7 +120,7 @@ export default class Model {
       delete this.$verticesLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$vertices = val;
     } else if (this.$verticesLength === vlen) {
@@ -141,7 +141,7 @@ export default class Model {
       delete this.$normalsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$normals = val;
     } else if (this.$normalsLength === vlen) {
@@ -162,7 +162,7 @@ export default class Model {
       delete this.$colorsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$colors = val;
     } else if (this.$colorsLength === vlen) {
@@ -187,7 +187,7 @@ export default class Model {
       delete this.$pickingColorsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$pickingColors = val;
     } else if (this.$pickingColorsLength === vlen) {
@@ -431,7 +431,7 @@ export default class Model {
       this.buffers.colors = new Buffer(program.gl, {
         attribute: 'color',
         data: this.$colors,
-        size: 3
+        size: 4
       })
     } else if (this.dynamic) {
       this.buffers.colors.update({
