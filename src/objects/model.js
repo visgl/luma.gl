@@ -54,7 +54,7 @@ export default class Model {
     this.id = opt.id || uid();
     // picking options
     this.pickable = Boolean(opt.pickable);
-    this.pick = opt.pick || () => false;
+    this.pick = opt.pick || function() {return false};
 
     this.vertices = opt.vertices;
     this.normals = opt.normals;
