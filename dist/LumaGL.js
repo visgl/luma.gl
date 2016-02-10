@@ -5487,22 +5487,22 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":193,"_process":4,"inherits":192}],195:[function(require,module,exports){
-// Timer based animation
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // Timer based animation
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _utils = require('../utils');
 
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var Queue = [];
 
-var Fx = (function () {
+var Fx = function () {
   function Fx() {
     var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
@@ -5514,6 +5514,7 @@ var Fx = (function () {
       transition: function transition(x) {
         return x;
       },
+
       onCompute: _utils.noop,
       onComplete: _utils.noop
     }, options);
@@ -5529,6 +5530,7 @@ var Fx = (function () {
     }
 
     //perform a step in the animation
+
   }, {
     key: 'step',
     value: function step() {
@@ -5563,9 +5565,10 @@ var Fx = (function () {
   }]);
 
   return Fx;
-})();
+}();
 
-exports['default'] = Fx;
+exports.default = Fx;
+
 
 Fx.Queue = Queue;
 
@@ -5596,28 +5599,22 @@ function makeTrans(transition, params) {
 };
 
 var transitions = {
-
   Pow: function Pow(p, x) {
     return Math.pow(p, x[0] || 6);
   },
-
   Expo: function Expo(p) {
     return Math.pow(2, 8 * (p - 1));
   },
-
   Circ: function Circ(p) {
     return 1 - Math.sin(Math.acos(p));
   },
-
   Sine: function Sine(p) {
     return 1 - Math.sin((1 - p) * Math.PI / 2);
   },
-
   Back: function Back(p, x) {
     x = x[0] || 1.618;
     return Math.pow(p, 2) * ((x + 1) * p - x);
   },
-
   Bounce: function Bounce(p) {
     var value;
     for (var a = 0, b = 1; 1; a += b, b /= 2) {
@@ -5628,11 +5625,9 @@ var transitions = {
     }
     return value;
   },
-
   Elastic: function Elastic(p, x) {
     return Math.pow(2, 10 * --p) * Math.cos(20 * p * Math.PI * (x[0] || 1) / 3);
   }
-
 };
 
 for (var t in transitions) {
@@ -5706,23 +5701,22 @@ if (global) {
     };
   }
 }
-module.exports = exports['default'];
 
 },{"../utils":219}],196:[function(require,module,exports){
-// workers.js
-//
-
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var WorkerGroup = (function () {
+// workers.js
+//
+
+var WorkerGroup = function () {
   function WorkerGroup(fileName, n) {
     _classCallCheck(this, WorkerGroup);
 
@@ -5774,10 +5768,9 @@ var WorkerGroup = (function () {
   }]);
 
   return WorkerGroup;
-})();
+}();
 
-exports["default"] = WorkerGroup;
-module.exports = exports["default"];
+exports.default = WorkerGroup;
 
 },{}],197:[function(require,module,exports){
 "use strict";
@@ -5788,11 +5781,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Buffer = (function () {
+var Buffer = function () {
   function Buffer(gl) {
     var opts = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
@@ -5847,40 +5840,37 @@ var Buffer = (function () {
   }]);
 
   return Buffer;
-})();
+}();
 
-exports["default"] = Buffer;
-module.exports = exports["default"];
+exports.default = Buffer;
 
 },{}],198:[function(require,module,exports){
-/* Generate script that can be used in browser without browserify */
-
-/* eslint-disable no-try-catch */
-/* eslint-disable no-console */
-/* global window, console */
 'use strict';
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+require('babel-polyfill');
 
 var _index = require('./index');
 
 var LumaGL = _interopRequireWildcard(_index);
 
-var _addonsFx = require('./addons/fx');
+var _fx = require('./addons/fx');
 
-var _addonsFx2 = _interopRequireDefault(_addonsFx);
+var _fx2 = _interopRequireDefault(_fx);
 
-var _addonsWorkers = require('./addons/workers');
+var _workers = require('./addons/workers');
 
-var _addonsWorkers2 = _interopRequireDefault(_addonsWorkers);
+var _workers2 = _interopRequireDefault(_workers);
 
-try {
-  require('babel-polyfill');
-} catch (e) {
-  console.warn('Already have an instance of babel-polyfill.');
-}
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+/* Generate script that can be used in browser without browserify */
+
+/* eslint-disable no-try-catch */
+/* eslint-disable no-console */
+/* global window, console */
+
 
 if (typeof window !== 'undefined') {
   window.LumaGL = {
@@ -5914,34 +5904,33 @@ if (typeof window !== 'undefined') {
       XHR: LumaGL.XHR
     },
     // Add-ons
-    WorkerGroup: _addonsWorkers2['default'],
-    Fx: _addonsFx2['default']
+    WorkerGroup: _workers2.default,
+    Fx: _fx2.default
   };
 }
 
 },{"./addons/fx":195,"./addons/workers":196,"./index":202,"babel-polyfill":2}],199:[function(require,module,exports){
-// camera.js
-// Provides a Camera with ModelView and Projection matrices
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.OrthoCamera = exports.PerspectiveCamera = undefined;
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // camera.js
+// Provides a Camera with ModelView and Projection matrices
 
 var _math = require('./math');
 
 var _utils = require('./utils');
 
-var Camera = (function () {
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Camera = function () {
   function Camera(opts) {
     _classCallCheck(this, Camera);
 
@@ -5983,15 +5972,15 @@ var Camera = (function () {
   }]);
 
   return Camera;
-})();
+}();
 
-var PerspectiveCamera = (function (_Camera) {
+var PerspectiveCamera = exports.PerspectiveCamera = function (_Camera) {
   _inherits(PerspectiveCamera, _Camera);
 
   function PerspectiveCamera() {
     _classCallCheck(this, PerspectiveCamera);
 
-    _get(Object.getPrototypeOf(PerspectiveCamera.prototype), 'constructor', this).apply(this, arguments);
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(PerspectiveCamera).apply(this, arguments));
   }
 
   _createClass(PerspectiveCamera, [{
@@ -6003,11 +5992,9 @@ var PerspectiveCamera = (function (_Camera) {
   }]);
 
   return PerspectiveCamera;
-})(Camera);
+}(Camera);
 
-exports.PerspectiveCamera = PerspectiveCamera;
-
-var OrthoCamera = (function () {
+var OrthoCamera = exports.OrthoCamera = function () {
   function OrthoCamera() {
     _classCallCheck(this, OrthoCamera);
   }
@@ -6025,37 +6012,33 @@ var OrthoCamera = (function () {
   }]);
 
   return OrthoCamera;
-})();
-
-exports.OrthoCamera = OrthoCamera;
+}();
 
 },{"./math":205,"./utils":219}],200:[function(require,module,exports){
-// event.js
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Events = exports.EventsProxy = exports.stop = undefined;
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // event.js
 // Handle keyboard/mouse/touch events in the Canvas
 // TODO - this will not work under node
 /* global window */
 /* global document */
-
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 exports.get = get;
 exports.getWheel = getWheel;
 exports.getKey = getKey;
 exports.isRightClick = isRightClick;
 exports.getPos = getPos;
-exports.stop = _stop;
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _utils = require('./utils');
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // returns an O3D object or false otherwise.
 function toO3D(n) {
@@ -6073,7 +6056,6 @@ function _getPos(elem) {
 }
 
 // event object wrapper
-
 function get(e, win) {
   win = win || window;
   return e || win.event;
@@ -6144,7 +6126,9 @@ function _stop(e) {
   }
 }
 
-var EventsProxy = (function () {
+exports.stop = _stop;
+
+var EventsProxy = exports.EventsProxy = function () {
   function EventsProxy(domElem, opt) {
     _classCallCheck(this, EventsProxy);
 
@@ -6270,6 +6254,7 @@ var EventsProxy = (function () {
         stop: function stop() {
           _stop(ge);
         },
+
         // get the target element of the event
         getTarget: function getTarget() {
           if (cacheTarget) {
@@ -6425,9 +6410,7 @@ var EventsProxy = (function () {
   }]);
 
   return EventsProxy;
-})();
-
-exports.EventsProxy = EventsProxy;
+}();
 
 Object.assign(EventsProxy.prototype, {
   hovered: false,
@@ -6438,8 +6421,7 @@ Object.assign(EventsProxy.prototype, {
   moved: false
 });
 
-var Events = {
-
+var Events = exports.Events = {
   create: function create(gl) {
     var opt = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
@@ -6478,13 +6460,13 @@ var Events = {
 
     var bind = opt.bind;
     if (bind) {
-      for (var _name in opt) {
-        if (_name.match(/^on[a-zA-Z0-9]+$/)) {
+      for (var name in opt) {
+        if (name.match(/^on[a-zA-Z0-9]+$/)) {
           (function (name, fn) {
             opt[name] = function () {
               fn.apply(bind, Array.prototype.slice.call(arguments));
             };
-          })(_name, opt[_name]);
+          })(name, opt[name]);
         }
       }
     }
@@ -6493,10 +6475,8 @@ var Events = {
     // assign event handler to app.
     // app.events = opt;
   }
-
 };
 
-exports.Events = Events;
 Events.Keys = {
   'enter': 13,
   'up': 38,
@@ -6522,17 +6502,17 @@ function keyOf(code) {
 },{"./utils":219}],201:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _texture = require('./texture');
 
-var Framebuffer = (function () {
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Framebuffer = function () {
   function Framebuffer(gl) {
     var opts = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
@@ -6583,33 +6563,52 @@ var Framebuffer = (function () {
   }]);
 
   return Framebuffer;
-})();
+}();
 
-exports['default'] = Framebuffer;
-module.exports = exports['default'];
+exports.default = Framebuffer;
 
 },{"./texture":218}],202:[function(require,module,exports){
-// Export all symbols for LumaGL
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-function _interopRequire(obj) { return obj && obj.__esModule ? obj['default'] : obj; }
-
-function _interopExportWildcard(obj, defaults) { var newObj = defaults({}, obj); delete newObj['default']; return newObj; }
-
-function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
-
 var _webgl = require('./webgl');
 
-_defaults(exports, _interopExportWildcard(_webgl, _defaults));
+var _loop = function _loop(_key6) {
+  if (_key6 === "default") return 'continue';
+  Object.defineProperty(exports, _key6, {
+    enumerable: true,
+    get: function get() {
+      return _webgl[_key6];
+    }
+  });
+};
+
+for (var _key6 in _webgl) {
+  var _ret = _loop(_key6);
+
+  if (_ret === 'continue') continue;
+}
 
 var _math = require('./math');
 
-_defaults(exports, _interopExportWildcard(_math, _defaults));
+var _loop2 = function _loop2(_key7) {
+  if (_key7 === "default") return 'continue';
+  Object.defineProperty(exports, _key7, {
+    enumerable: true,
+    get: function get() {
+      return _math[_key7];
+    }
+  });
+};
+
+for (var _key7 in _math) {
+  var _ret2 = _loop2(_key7);
+
+  if (_ret2 === 'continue') continue;
+}
 
 var _event = require('./event');
 
@@ -6622,64 +6621,171 @@ Object.defineProperty(exports, 'Events', {
 
 var _program = require('./program');
 
-exports.Program = _interopRequire(_program);
+Object.defineProperty(exports, 'Program', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_program).default;
+  }
+});
 
 var _io = require('./io');
 
-_defaults(exports, _interopExportWildcard(_io, _defaults));
+var _loop3 = function _loop3(_key8) {
+  if (_key8 === "default") return 'continue';
+  Object.defineProperty(exports, _key8, {
+    enumerable: true,
+    get: function get() {
+      return _io[_key8];
+    }
+  });
+};
+
+for (var _key8 in _io) {
+  var _ret3 = _loop3(_key8);
+
+  if (_ret3 === 'continue') continue;
+}
 
 var _camera = require('./camera');
 
-_defaults(exports, _interopExportWildcard(_camera, _defaults));
+var _loop4 = function _loop4(_key9) {
+  if (_key9 === "default") return 'continue';
+  Object.defineProperty(exports, _key9, {
+    enumerable: true,
+    get: function get() {
+      return _camera[_key9];
+    }
+  });
+};
 
-var _objectsModel = require('./objects/model');
+for (var _key9 in _camera) {
+  var _ret4 = _loop4(_key9);
 
-exports.Model = _interopRequire(_objectsModel);
+  if (_ret4 === 'continue') continue;
+}
 
-var _objectsCone = require('./objects/cone');
+var _model = require('./objects/model');
 
-exports.Cone = _interopRequire(_objectsCone);
+Object.defineProperty(exports, 'Model', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_model).default;
+  }
+});
 
-var _objectsCube = require('./objects/cube');
+var _cone = require('./objects/cone');
 
-exports.Cube = _interopRequire(_objectsCube);
+Object.defineProperty(exports, 'Cone', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_cone).default;
+  }
+});
 
-var _objectsCylinder = require('./objects/cylinder');
+var _cube = require('./objects/cube');
 
-exports.Cylinder = _interopRequire(_objectsCylinder);
+Object.defineProperty(exports, 'Cube', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_cube).default;
+  }
+});
 
-var _objectsIcoSphere = require('./objects/ico-sphere');
+var _cylinder = require('./objects/cylinder');
 
-exports.IcoSphere = _interopRequire(_objectsIcoSphere);
+Object.defineProperty(exports, 'Cylinder', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_cylinder).default;
+  }
+});
 
-var _objectsPlane = require('./objects/plane');
+var _icoSphere = require('./objects/ico-sphere');
 
-exports.Plane = _interopRequire(_objectsPlane);
+Object.defineProperty(exports, 'IcoSphere', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_icoSphere).default;
+  }
+});
 
-var _objectsSphere = require('./objects/sphere');
+var _plane = require('./objects/plane');
 
-exports.Sphere = _interopRequire(_objectsSphere);
-exports.TruncatedCone = _interopRequire(_objectsCone);
+Object.defineProperty(exports, 'Plane', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_plane).default;
+  }
+});
+
+var _sphere = require('./objects/sphere');
+
+Object.defineProperty(exports, 'Sphere', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_sphere).default;
+  }
+});
+Object.defineProperty(exports, 'TruncatedCone', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_cone).default;
+  }
+});
 
 var _shaders = require('./shaders');
 
-exports.Shaders = _interopRequire(_shaders);
+Object.defineProperty(exports, 'Shaders', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_shaders).default;
+  }
+});
 
 var _scene = require('./scene');
 
-exports.Scene = _interopRequire(_scene);
+Object.defineProperty(exports, 'Scene', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_scene).default;
+  }
+});
 
 var _media = require('./media');
 
-_defaults(exports, _interopExportWildcard(_media, _defaults));
+var _loop5 = function _loop5(_key10) {
+  if (_key10 === "default") return 'continue';
+  Object.defineProperty(exports, _key10, {
+    enumerable: true,
+    get: function get() {
+      return _media[_key10];
+    }
+  });
+};
+
+for (var _key10 in _media) {
+  var _ret5 = _loop5(_key10);
+
+  if (_ret5 === 'continue') continue;
+}
 
 var _buffer = require('./buffer');
 
-exports.Buffer = _interopRequire(_buffer);
+Object.defineProperty(exports, 'Buffer', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_buffer).default;
+  }
+});
 
 var _fbo = require('./fbo');
 
-exports.Framebuffer = _interopRequire(_fbo);
+Object.defineProperty(exports, 'Framebuffer', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_fbo).default;
+  }
+});
 
 var _texture = require('./texture');
 
@@ -6696,28 +6802,235 @@ Object.defineProperty(exports, 'TextureCube', {
   }
 });
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 },{"./buffer":197,"./camera":199,"./event":200,"./fbo":201,"./io":203,"./math":205,"./media":206,"./objects/cone":207,"./objects/cube":208,"./objects/cylinder":209,"./objects/ico-sphere":210,"./objects/model":211,"./objects/plane":212,"./objects/sphere":213,"./program":215,"./scene":216,"./shaders":217,"./texture":218,"./webgl":220}],203:[function(require,module,exports){
-// io.js
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.loadTextures = exports.XHRGroup = exports.XHR = undefined;
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // io.js
 // Provides loading of assets with XHR and JSONP methods.
 /* eslint-disable guard-for-in */
 /* global XMLHttpRequest */
 /* global document */
-'use strict';
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+// Load multiple images async.
+// rye: TODO this needs to implement functionality from the
+//           original Images function.
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var loadImages = function () {
+  var ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(srcs) {
+    var imagePromises, results, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, imagePromise;
+
+    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            imagePromises = srcs.map(function (src) {
+              return loadImage(src);
+            });
+            results = [];
+            _iteratorNormalCompletion = true;
+            _didIteratorError = false;
+            _iteratorError = undefined;
+            _context2.prev = 5;
+            _iterator = imagePromises[Symbol.iterator]();
+
+          case 7:
+            if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
+              _context2.next = 17;
+              break;
+            }
+
+            imagePromise = _step.value;
+            _context2.t0 = results;
+            _context2.next = 12;
+            return imagePromise;
+
+          case 12:
+            _context2.t1 = _context2.sent;
+
+            _context2.t0.push.call(_context2.t0, _context2.t1);
+
+          case 14:
+            _iteratorNormalCompletion = true;
+            _context2.next = 7;
+            break;
+
+          case 17:
+            _context2.next = 23;
+            break;
+
+          case 19:
+            _context2.prev = 19;
+            _context2.t2 = _context2['catch'](5);
+            _didIteratorError = true;
+            _iteratorError = _context2.t2;
+
+          case 23:
+            _context2.prev = 23;
+            _context2.prev = 24;
+
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+
+          case 26:
+            _context2.prev = 26;
+
+            if (!_didIteratorError) {
+              _context2.next = 29;
+              break;
+            }
+
+            throw _iteratorError;
+
+          case 29:
+            return _context2.finish(26);
+
+          case 30:
+            return _context2.finish(23);
+
+          case 31:
+            return _context2.abrupt('return', results);
+
+          case 32:
+          case 'end':
+            return _context2.stop();
+        }
+      }
+    }, _callee2, this, [[5, 19, 23, 31], [24,, 26, 30]]);
+  }));
+
+  return function loadImages(_x3) {
+    return ref.apply(this, arguments);
+  };
+}();
+
+// // Load multiple Image assets async
+// export function Images(opt) {
+//   opt = merge({
+//     src: [],
+//     noCache: false,
+//     onProgress: noop,
+//     onComplete: noop
+//   }, opt || {});
+//
+//   let count = 0;
+//   let l = opt.src.length;
+//
+//   let images;
+//   // Image onload handler
+//   var load = () => {
+//     opt.onProgress(Math.round(++count / l * 100));
+//     if (count === l) {
+//       opt.onComplete(images);
+//     }
+//   };
+//   // Image error handler
+//   var error = () => {
+//     if (++count === l) {
+//       opt.onComplete(images);
+//     }
+//   };
+//
+//   // uid for image sources
+//   const noCache = opt.noCache;
+//   const uid = uid();
+//   function getSuffix(s) {
+//     return (s.indexOf('?') >= 0 ? '&' : '?') + uid;
+//   }
+//
+//   // Create image array
+//   images = opt.src.map((src, i) => {
+//     const img = new Image();
+//     img.index = i;
+//     img.onload = load;
+//     img.onerror = error;
+//     img.src = src + (noCache ? getSuffix(src) : '');
+//     return img;
+//   });
+//
+//   return images;
+// }
+
+// Load multiple textures from images
+// rye: TODO this needs to implement functionality from
+//           the original loadTextures function.
+
+
+var loadTextures = exports.loadTextures = function () {
+  var ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee3(gl, opt) {
+    var images, textures;
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+      while (1) {
+        switch (_context3.prev = _context3.next) {
+          case 0:
+            _context3.next = 2;
+            return loadImages(opt.src);
+
+          case 2:
+            images = _context3.sent;
+            textures = [];
+
+            images.forEach(function (img, i) {
+              var params = Array.isArray(opt.parameters) ? opt.parameters[i] : opt.parameters;
+              params = params === undefined ? {} : params;
+              textures.push(new _texture.Texture2D(gl, (0, _utils.merge)({
+                data: img
+              }, params)));
+            });
+            return _context3.abrupt('return', textures);
+
+          case 6:
+          case 'end':
+            return _context3.stop();
+        }
+      }
+    }, _callee3, this);
+  }));
+
+  return function loadTextures(_x4, _x5) {
+    return ref.apply(this, arguments);
+  };
+}();
+
+// // Load multiple textures from images
+// export function loadTextures(opt = {}) {
+//   opt = {
+//     src: [],
+//     noCache: false,
+//     onComplete: noop,
+//     ...opt
+//   };
+//
+//   Images({
+//     src: opt.src,
+//     noCache: opt.noCache,
+//     onComplete(images) {
+//       var textures = {};
+//       images.forEach((img, i) => {
+//         textures[opt.id && opt.id[i] || opt.src && opt.src[i]] = merge({
+//           data: {
+//             value: img
+//           }
+//         }, opt);
+//       });
+//       app.setTextures(textures);
+//       opt.onComplete();
+//     }
+//   });
+// }
+
 
 exports.JSONP = JSONP;
-exports.loadTextures = loadTextures;
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _utils = require('./utils');
 
@@ -6725,9 +7038,15 @@ var _media = require('./media');
 
 var _media2 = _interopRequireDefault(_media);
 
-var _textureJs = require('./texture.js');
+var _texture = require('./texture.js');
 
-var XHR = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { return step("next", value); }, function (err) { return step("throw", err); }); } } return step("next"); }); }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var XHR = exports.XHR = function () {
   function XHR() {
     var opt = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
@@ -6779,6 +7098,7 @@ var XHR = (function () {
         var req = _this.req;
         var opt = _this.opt;
         var async = opt.async;
+
 
         if (opt.noCache) {
           opt.url += (opt.url.indexOf('?') >= 0 ? '&' : '?') + (0, _utils.uid)();
@@ -6894,9 +7214,7 @@ var XHR = (function () {
   }]);
 
   return XHR;
-})();
-
-exports.XHR = XHR;
+}();
 
 XHR.State = {};
 ['UNINITIALIZED', 'LOADING', 'LOADED', 'INTERACTIVE', 'COMPLETED'].forEach(function (stateName, i) {
@@ -6905,7 +7223,7 @@ XHR.State = {};
 
 // Make parallel requests and group the responses.
 
-var XHRGroup = (function () {
+var XHRGroup = exports.XHRGroup = function () {
   function XHRGroup() {
     var opt = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
@@ -6938,30 +7256,37 @@ var XHRGroup = (function () {
 
   _createClass(XHRGroup, [{
     key: 'sendAsync',
-    value: function sendAsync() {
-      return regeneratorRuntime.async(function sendAsync$(context$2$0) {
-        while (1) switch (context$2$0.prev = context$2$0.next) {
-          case 0:
-            context$2$0.next = 2;
-            return regeneratorRuntime.awrap(Promise.all(this.reqs.map(function (req) {
-              return req.sendAsync();
-            })));
+    value: function () {
+      var ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee() {
+        return regeneratorRuntime.wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                _context.next = 2;
+                return Promise.all(this.reqs.map(function (req) {
+                  return req.sendAsync();
+                }));
 
-          case 2:
-            return context$2$0.abrupt('return', context$2$0.sent);
+              case 2:
+                return _context.abrupt('return', _context.sent);
 
-          case 3:
-          case 'end':
-            return context$2$0.stop();
-        }
-      }, null, this);
-    }
+              case 3:
+              case 'end':
+                return _context.stop();
+            }
+          }
+        }, _callee, this);
+      }));
+
+      return function sendAsync() {
+        return ref.apply(this, arguments);
+      };
+    }()
   }]);
 
   return XHRGroup;
-})();
+}();
 
-exports.XHRGroup = XHRGroup;
 ;
 
 function JSONP(opt) {
@@ -7025,213 +7350,99 @@ function loadImage(src) {
   });
 }
 
-// Load multiple images async.
-// rye: TODO this needs to implement functionality from the
-//           original Images function.
-function loadImages(srcs) {
-  var imagePromises, results, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, imagePromise;
-
-  return regeneratorRuntime.async(function loadImages$(context$1$0) {
-    while (1) switch (context$1$0.prev = context$1$0.next) {
-      case 0:
-        imagePromises = srcs.map(function (src) {
-          return loadImage(src);
-        });
-        results = [];
-        _iteratorNormalCompletion = true;
-        _didIteratorError = false;
-        _iteratorError = undefined;
-        context$1$0.prev = 5;
-        _iterator = imagePromises[Symbol.iterator]();
-
-      case 7:
-        if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-          context$1$0.next = 17;
-          break;
-        }
-
-        imagePromise = _step.value;
-        context$1$0.t0 = results;
-        context$1$0.next = 12;
-        return regeneratorRuntime.awrap(imagePromise);
-
-      case 12:
-        context$1$0.t1 = context$1$0.sent;
-        context$1$0.t0.push.call(context$1$0.t0, context$1$0.t1);
-
-      case 14:
-        _iteratorNormalCompletion = true;
-        context$1$0.next = 7;
-        break;
-
-      case 17:
-        context$1$0.next = 23;
-        break;
-
-      case 19:
-        context$1$0.prev = 19;
-        context$1$0.t2 = context$1$0['catch'](5);
-        _didIteratorError = true;
-        _iteratorError = context$1$0.t2;
-
-      case 23:
-        context$1$0.prev = 23;
-        context$1$0.prev = 24;
-
-        if (!_iteratorNormalCompletion && _iterator['return']) {
-          _iterator['return']();
-        }
-
-      case 26:
-        context$1$0.prev = 26;
-
-        if (!_didIteratorError) {
-          context$1$0.next = 29;
-          break;
-        }
-
-        throw _iteratorError;
-
-      case 29:
-        return context$1$0.finish(26);
-
-      case 30:
-        return context$1$0.finish(23);
-
-      case 31:
-        return context$1$0.abrupt('return', results);
-
-      case 32:
-      case 'end':
-        return context$1$0.stop();
-    }
-  }, null, this, [[5, 19, 23, 31], [24,, 26, 30]]);
-}
-
-// // Load multiple Image assets async
-// export function Images(opt) {
-//   opt = merge({
-//     src: [],
-//     noCache: false,
-//     onProgress: noop,
-//     onComplete: noop
-//   }, opt || {});
-//
-//   let count = 0;
-//   let l = opt.src.length;
-//
-//   let images;
-//   // Image onload handler
-//   var load = () => {
-//     opt.onProgress(Math.round(++count / l * 100));
-//     if (count === l) {
-//       opt.onComplete(images);
-//     }
-//   };
-//   // Image error handler
-//   var error = () => {
-//     if (++count === l) {
-//       opt.onComplete(images);
-//     }
-//   };
-//
-//   // uid for image sources
-//   const noCache = opt.noCache;
-//   const uid = uid();
-//   function getSuffix(s) {
-//     return (s.indexOf('?') >= 0 ? '&' : '?') + uid;
-//   }
-//
-//   // Create image array
-//   images = opt.src.map((src, i) => {
-//     const img = new Image();
-//     img.index = i;
-//     img.onload = load;
-//     img.onerror = error;
-//     img.src = src + (noCache ? getSuffix(src) : '');
-//     return img;
-//   });
-//
-//   return images;
-// }
-
-// Load multiple textures from images
-// rye: TODO this needs to implement functionality from
-//           the original loadTextures function.
-
-function loadTextures(gl, opt) {
-  var images, textures;
-  return regeneratorRuntime.async(function loadTextures$(context$1$0) {
-    while (1) switch (context$1$0.prev = context$1$0.next) {
-      case 0:
-        context$1$0.next = 2;
-        return regeneratorRuntime.awrap(loadImages(opt.src));
-
-      case 2:
-        images = context$1$0.sent;
-        textures = [];
-
-        images.forEach(function (img, i) {
-          var params = Array.isArray(opt.parameters) ? opt.parameters[i] : opt.parameters;
-          params = params === undefined ? {} : params;
-          textures.push(new _textureJs.Texture2D(gl, (0, _utils.merge)({
-            data: img
-          }, params)));
-        });
-        return context$1$0.abrupt('return', textures);
-
-      case 6:
-      case 'end':
-        return context$1$0.stop();
-    }
-  }, null, this);
-}
-
-// // Load multiple textures from images
-// export function loadTextures(opt = {}) {
-//   opt = {
-//     src: [],
-//     noCache: false,
-//     onComplete: noop,
-//     ...opt
-//   };
-//
-//   Images({
-//     src: opt.src,
-//     noCache: opt.noCache,
-//     onComplete(images) {
-//       var textures = {};
-//       images.forEach((img, i) => {
-//         textures[opt.id && opt.id[i] || opt.src && opt.src[i]] = merge({
-//           data: {
-//             value: img
-//           }
-//         }, opt);
-//       });
-//       app.setTextures(textures);
-//       opt.onComplete();
-//     }
-//   });
-// }
-
 },{"./media":206,"./texture.js":218,"./utils":219}],204:[function(require,module,exports){
-// math.js
-// Vec3, Mat4 and Quat classes
-/* eslint-disable computed-property-spacing */
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _get = function get(_x4, _x5, _x6) { var _again = true; _function: while (_again) { var object = _x4, property = _x5, receiver = _x6; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x4 = parent; _x5 = property; _x6 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+function _extendableBuiltin5(cls) {
+  function ExtendableBuiltin() {
+    var instance = Reflect.construct(cls, Array.from(arguments));
+    Object.setPrototypeOf(instance, Object.getPrototypeOf(this));
+    return instance;
+  }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+  ExtendableBuiltin.prototype = Object.create(cls.prototype, {
+    constructor: {
+      value: cls,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
 
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+  if (Object.setPrototypeOf) {
+    Object.setPrototypeOf(ExtendableBuiltin, cls);
+  } else {
+    ExtendableBuiltin.__proto__ = cls;
+  }
+
+  return ExtendableBuiltin;
+}
+
+function _extendableBuiltin3(cls) {
+  function ExtendableBuiltin() {
+    var instance = Reflect.construct(cls, Array.from(arguments));
+    Object.setPrototypeOf(instance, Object.getPrototypeOf(this));
+    return instance;
+  }
+
+  ExtendableBuiltin.prototype = Object.create(cls.prototype, {
+    constructor: {
+      value: cls,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
+
+  if (Object.setPrototypeOf) {
+    Object.setPrototypeOf(ExtendableBuiltin, cls);
+  } else {
+    ExtendableBuiltin.__proto__ = cls;
+  }
+
+  return ExtendableBuiltin;
+}
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _extendableBuiltin(cls) {
+  function ExtendableBuiltin() {
+    var instance = Reflect.construct(cls, Array.from(arguments));
+    Object.setPrototypeOf(instance, Object.getPrototypeOf(this));
+    return instance;
+  }
+
+  ExtendableBuiltin.prototype = Object.create(cls.prototype, {
+    constructor: {
+      value: cls,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
+
+  if (Object.setPrototypeOf) {
+    Object.setPrototypeOf(ExtendableBuiltin, cls);
+  } else {
+    ExtendableBuiltin.__proto__ = cls;
+  }
+
+  return ExtendableBuiltin;
+}
+
+// math.js
+// Vec3, Mat4 and Quat classes
+/* eslint-disable computed-property-spacing */
 
 var sqrt = Math.sqrt;
 var sin = Math.sin;
@@ -7242,8 +7453,8 @@ var slice = Array.prototype.slice;
 
 // Vec3 Class
 
-var Vec3 = (function (_Array) {
-  _inherits(Vec3, _Array);
+var Vec3 = exports.Vec3 = function (_extendableBuiltin2) {
+  _inherits(Vec3, _extendableBuiltin2);
 
   function Vec3() {
     var x = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
@@ -7252,13 +7463,16 @@ var Vec3 = (function (_Array) {
 
     _classCallCheck(this, Vec3);
 
-    _get(Object.getPrototypeOf(Vec3.prototype), 'constructor', this).call(this, 3);
-    this[0] = x;
-    this[1] = y;
-    this[2] = z;
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Vec3).call(this, 3));
+
+    _this[0] = x;
+    _this[1] = y;
+    _this[2] = z;
+    return _this;
   }
 
   // fast Vec3 create.
+
 
   _createClass(Vec3, [{
     key: 'x',
@@ -7292,84 +7506,69 @@ var Vec3 = (function (_Array) {
   }]);
 
   return Vec3;
-})(Array);
-
-exports.Vec3 = Vec3;
+}(_extendableBuiltin(Array));
 
 var generics = {
-
   setVec3: function setVec3(dest, vec) {
     dest[0] = vec[0];
     dest[1] = vec[1];
     dest[2] = vec[2];
     return dest;
   },
-
   set: function set(dest, x, y, z) {
     dest[0] = x;
     dest[1] = y;
     dest[2] = z;
     return dest;
   },
-
   add: function add(dest, vec) {
     return new Vec3(dest[0] + vec[0], dest[1] + vec[1], dest[2] + vec[2]);
   },
-
   $add: function $add(dest, vec) {
     dest[0] += vec[0];
     dest[1] += vec[1];
     dest[2] += vec[2];
     return dest;
   },
-
   add2: function add2(dest, a, b) {
     dest[0] = a[0] + b[0];
     dest[1] = a[1] + b[1];
     dest[2] = a[2] + b[2];
     return dest;
   },
-
   sub: function sub(dest, vec) {
     return new Vec3(dest[0] - vec[0], dest[1] - vec[1], dest[2] - vec[2]);
   },
-
   $sub: function $sub(dest, vec) {
     dest[0] -= vec[0];
     dest[1] -= vec[1];
     dest[2] -= vec[2];
     return dest;
   },
-
   sub2: function sub2(dest, a, b) {
     dest[0] = a[0] - b[0];
     dest[1] = a[1] - b[1];
     dest[2] = a[2] - b[2];
     return dest;
   },
-
   scale: function scale(dest, s) {
     return new Vec3(dest[0] * s, dest[1] * s, dest[2] * s);
   },
-
   $scale: function $scale(dest, s) {
     dest[0] *= s;
     dest[1] *= s;
     dest[2] *= s;
     return dest;
   },
-
   neg: function neg(dest) {
     return new Vec3(-dest[0], -dest[1], -dest[2]);
   },
-
   $neg: function $neg(dest) {
     dest[0] = -dest[0];
     dest[1] = -dest[1];
     dest[2] = -dest[2];
     return dest;
   },
-
   unit: function unit(dest) {
     var len = Vec3.norm(dest);
 
@@ -7378,7 +7577,6 @@ var generics = {
     }
     return Vec3.clone(dest);
   },
-
   $unit: function $unit(dest) {
     var len = Vec3.norm(dest);
 
@@ -7387,7 +7585,6 @@ var generics = {
     }
     return dest;
   },
-
   cross: function cross(dest, vec) {
     var dx = dest[0],
         dy = dest[1],
@@ -7398,7 +7595,6 @@ var generics = {
 
     return new Vec3(dy * vz - dz * vy, dz * vx - dx * vz, dx * vy - dy * vx);
   },
-
   $cross: function $cross(dest, vec) {
     var dx = dest[0],
         dy = dest[1],
@@ -7412,7 +7608,6 @@ var generics = {
     dest[2] = dx * vy - dy * vx;
     return dest;
   },
-
   distTo: function distTo(dest, vec) {
     var dx = dest[0] - vec[0],
         dy = dest[1] - vec[1],
@@ -7420,7 +7615,6 @@ var generics = {
 
     return sqrt(dx * dx + dy * dy + dz * dz);
   },
-
   distToSq: function distToSq(dest, vec) {
     var dx = dest[0] - vec[0],
         dy = dest[1] - vec[1],
@@ -7428,7 +7622,6 @@ var generics = {
 
     return dx * dx + dy * dy + dz * dz;
   },
-
   norm: function norm(dest) {
     var dx = dest[0],
         dy = dest[1],
@@ -7436,7 +7629,6 @@ var generics = {
 
     return sqrt(dx * dx + dy * dy + dz * dz);
   },
-
   normSq: function normSq(dest) {
     var dx = dest[0],
         dy = dest[1],
@@ -7444,11 +7636,9 @@ var generics = {
 
     return dx * dx + dy * dy + dz * dz;
   },
-
   dot: function dot(dest, vec) {
     return dest[0] * vec[0] + dest[1] * vec[1] + dest[2] * vec[2];
   },
-
   clone: function clone(dest) {
     if (dest instanceof Vec3) {
       return new Vec3(dest[0], dest[1], dest[2]);
@@ -7456,7 +7646,6 @@ var generics = {
       return Vec3.setVec3(new Float32Array(3), dest);
     }
   },
-
   toFloat32Array: function toFloat32Array(dest) {
     var ans = dest.typedContainer;
 
@@ -7474,36 +7663,38 @@ var generics = {
 var proto = Vec3.prototype;
 for (var method in generics) {
   Vec3[method] = generics[method];
-  proto[method] = (function (m) {
+  proto[method] = function (m) {
     return function () {
       var args = slice.call(arguments);
 
       args.unshift(this);
       return Vec3[m].apply(Vec3, args);
     };
-  })(method);
+  }(method);
 }
 
 // Mat4 Class
 
-var Mat4 = (function (_Array2) {
-  _inherits(Mat4, _Array2);
+var Mat4 = exports.Mat4 = function (_extendableBuiltin4) {
+  _inherits(Mat4, _extendableBuiltin4);
 
   function Mat4(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44) {
     _classCallCheck(this, Mat4);
 
-    _get(Object.getPrototypeOf(Mat4.prototype), 'constructor', this).call(this, 16);
+    var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(Mat4).call(this, 16));
 
-    this.length = 16;
+    _this2.length = 16;
 
     if (typeof n11 === 'number') {
 
-      this.set(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44);
+      _this2.set(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44);
     } else {
-      this.id();
+      console.log(_this2);
+      _this2.id();
     }
 
-    this.typedContainer = new Float32Array(16);
+    _this2.typedContainer = new Float32Array(16);
+    return _this2;
   }
 
   _createClass(Mat4, [{
@@ -7642,12 +7833,9 @@ var Mat4 = (function (_Array2) {
   }]);
 
   return Mat4;
-})(Array);
-
-exports.Mat4 = Mat4;
+}(_extendableBuiltin3(Array));
 
 generics = {
-
   id: function id(dest) {
 
     dest[0] = 1;
@@ -7669,7 +7857,6 @@ generics = {
 
     return dest;
   },
-
   clone: function clone(dest) {
     if (dest instanceof Mat4) {
       return new Mat4(dest[0], dest[4], dest[8], dest[12], dest[1], dest[5], dest[9], dest[13], dest[2], dest[6], dest[10], dest[14], dest[3], dest[7], dest[11], dest[15]);
@@ -7677,7 +7864,6 @@ generics = {
       return new typedArray(dest);
     }
   },
-
   set: function set(dest, n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44) {
 
     dest[0] = n11;
@@ -7699,12 +7885,10 @@ generics = {
 
     return dest;
   },
-
   mulVec3: function mulVec3(dest, vec) {
     var ans = Vec3.clone(vec);
     return Mat4.$mulVec3(dest, ans);
   },
-
   $mulVec3: function $mulVec3(dest, vec) {
     var vx = vec[0],
         vy = vec[1],
@@ -7717,7 +7901,6 @@ generics = {
 
     return vec;
   },
-
   mulMat42: function mulMat42(dest, a, b) {
     var a11 = a[0],
         a12 = a[1],
@@ -7773,21 +7956,17 @@ generics = {
     dest[15] = b41 * a14 + b42 * a24 + b43 * a34 + b44 * a44;
     return dest;
   },
-
   mulMat4: function mulMat4(a, b) {
     var m = Mat4.clone(a);
     return Mat4.mulMat42(m, a, b);
   },
-
   $mulMat4: function $mulMat4(a, b) {
     return Mat4.mulMat42(a, a, b);
   },
-
   add: function add(dest, m) {
     var copy = Mat4.clone(dest);
     return Mat4.$add(copy, m);
   },
-
   $add: function $add(dest, m) {
     dest[0] += m[0];
     dest[1] += m[1];
@@ -7808,12 +7987,10 @@ generics = {
 
     return dest;
   },
-
   transpose: function transpose(dest) {
     var m = Mat4.clone(dest);
     return Mat4.$transpose(m);
   },
-
   $transpose: function $transpose(dest) {
     var n4 = dest[4],
         n8 = dest[8],
@@ -7843,12 +8020,10 @@ generics = {
 
     return dest;
   },
-
   rotateAxis: function rotateAxis(dest, theta, vec) {
     var m = Mat4.clone(dest);
     return Mat4.$rotateAxis(m, theta, vec);
   },
-
   $rotateAxis: function $rotateAxis(dest, theta, vec) {
     var s = sin(theta),
         c = cos(theta),
@@ -7899,12 +8074,10 @@ generics = {
 
     return dest;
   },
-
   rotateXYZ: function rotateXYZ(dest, rx, ry, rz) {
     var ans = Mat4.clone(dest);
     return Mat4.$rotateXYZ(ans, rx, ry, rz);
   },
-
   $rotateXYZ: function $rotateXYZ(dest, rx, ry, rz) {
     var d11 = dest[0],
         d12 = dest[1],
@@ -7951,12 +8124,10 @@ generics = {
 
     return dest;
   },
-
   translate: function translate(dest, x, y, z) {
     var m = Mat4.clone(dest);
     return Mat4.$translate(m, x, y, z);
   },
-
   $translate: function $translate(dest, x, y, z) {
     dest[12] = dest[0] * x + dest[4] * y + dest[8] * z + dest[12];
     dest[13] = dest[1] * x + dest[5] * y + dest[9] * z + dest[13];
@@ -7965,12 +8136,10 @@ generics = {
 
     return dest;
   },
-
   scale: function scale(dest, x, y, z) {
     var m = Mat4.clone(dest);
     return Mat4.$scale(m, x, y, z);
   },
-
   $scale: function $scale(dest, x, y, z) {
     dest[0] *= x;
     dest[1] *= x;
@@ -7988,12 +8157,12 @@ generics = {
     return dest;
   },
 
+
   // Method based on PreGL https:// github.com/deanm/pregl/ (c) Dean McNamee.
   invert: function invert(dest) {
     var m = Mat4.clone(dest);
     return Mat4.$invert(m);
   },
-
   $invert: function $invert(dest) {
     var x0 = dest[0],
         x1 = dest[1],
@@ -8046,6 +8215,7 @@ generics = {
 
     return dest;
   },
+
   // TODO(nico) breaking convention here...
   // because I don't think it's useful to add
   // two methods for each of these.
@@ -8058,7 +8228,6 @@ generics = {
     y.$unit();
     return Mat4.set(dest, x[0], x[1], x[2], -x.dot(eye), y[0], y[1], y[2], -y.dot(eye), z[0], z[1], z[2], -z.dot(eye), 0, 0, 0, 1);
   },
-
   frustum: function frustum(dest, left, right, bottom, top, near, far) {
     var rl = right - left,
         tb = top - bottom,
@@ -8083,7 +8252,6 @@ generics = {
 
     return dest;
   },
-
   perspective: function perspective(dest, fov, aspect, near, far) {
     var ymax = near * tan(fov * pi / 360),
         ymin = -ymax,
@@ -8092,7 +8260,6 @@ generics = {
 
     return Mat4.frustum(dest, xmin, xmax, ymin, ymax, near, far);
   },
-
   ortho: function ortho(dest, left, right, top, bottom, near, far) {
     var te = this.elements,
         w = right - left,
@@ -8109,7 +8276,6 @@ generics = {
 
     return dest;
   },
-
   toFloat32Array: function toFloat32Array(dest) {
     var ans = dest.typedContainer;
 
@@ -8140,31 +8306,33 @@ generics = {
 proto = Mat4.prototype;
 for (method in generics) {
   Mat4[method] = generics[method];
-  proto[method] = (function (m) {
+  proto[method] = function (m) {
     return function () {
       var args = slice.call(arguments);
 
       args.unshift(this);
       return Mat4[m].apply(Mat4, args);
     };
-  })(method);
+  }(method);
 }
 
 // Quaternion class
 
-var Quat = (function (_Array3) {
-  _inherits(Quat, _Array3);
+var Quat = exports.Quat = function (_extendableBuiltin6) {
+  _inherits(Quat, _extendableBuiltin6);
 
   function Quat(x, y, z, w) {
     _classCallCheck(this, Quat);
 
-    _get(Object.getPrototypeOf(Quat.prototype), 'constructor', this).call(this, 4);
-    this[0] = x || 0;
-    this[1] = y || 0;
-    this[2] = z || 0;
-    this[3] = w || 0;
+    var _this3 = _possibleConstructorReturn(this, Object.getPrototypeOf(Quat).call(this, 4));
 
-    this.typedContainer = new Float32Array(4);
+    _this3[0] = x || 0;
+    _this3[1] = y || 0;
+    _this3[2] = z || 0;
+    _this3[3] = w || 0;
+
+    _this3.typedContainer = new Float32Array(4);
+    return _this3;
   }
 
   _createClass(Quat, null, [{
@@ -8240,12 +8408,9 @@ var Quat = (function (_Array3) {
   }]);
 
   return Quat;
-})(Array);
-
-exports.Quat = Quat;
+}(_extendableBuiltin5(Array));
 
 generics = {
-
   setQuat: function setQuat(dest, q) {
     dest[0] = q[0];
     dest[1] = q[1];
@@ -8254,7 +8419,6 @@ generics = {
 
     return dest;
   },
-
   set: function set(dest, x, y, z, w) {
     dest[0] = x || 0;
     dest[1] = y || 0;
@@ -8263,7 +8427,6 @@ generics = {
 
     return dest;
   },
-
   clone: function clone(dest) {
     if (dest instanceof Quat) {
       return new Quat(dest[0], dest[1], dest[2], dest[3]);
@@ -8271,11 +8434,9 @@ generics = {
       return Quat.setQuat(new typedArray(4), dest);
     }
   },
-
   neg: function neg(dest) {
     return new Quat(-dest[0], -dest[1], -dest[2], -dest[3]);
   },
-
   $neg: function $neg(dest) {
     dest[0] = -dest[0];
     dest[1] = -dest[1];
@@ -8284,11 +8445,9 @@ generics = {
 
     return dest;
   },
-
   add: function add(dest, q) {
     return new Quat(dest[0] + q[0], dest[1] + q[1], dest[2] + q[2], dest[3] + q[3]);
   },
-
   $add: function $add(dest, q) {
     dest[0] += q[0];
     dest[1] += q[1];
@@ -8297,11 +8456,9 @@ generics = {
 
     return dest;
   },
-
   sub: function sub(dest, q) {
     return new Quat(dest[0] - q[0], dest[1] - q[1], dest[2] - q[2], dest[3] - q[3]);
   },
-
   $sub: function $sub(dest, q) {
     dest[0] -= q[0];
     dest[1] -= q[1];
@@ -8310,11 +8467,9 @@ generics = {
 
     return dest;
   },
-
   scale: function scale(dest, s) {
     return new Quat(dest[0] * s, dest[1] * s, dest[2] * s, dest[3] * s);
   },
-
   $scale: function $scale(dest, s) {
     dest[0] *= s;
     dest[1] *= s;
@@ -8323,7 +8478,6 @@ generics = {
 
     return dest;
   },
-
   mulQuat: function mulQuat(dest, q) {
     var aX = dest[0],
         aY = dest[1],
@@ -8336,7 +8490,6 @@ generics = {
 
     return new Quat(aW * bX + aX * bW + aY * bZ - aZ * bY, aW * bY + aY * bW + aZ * bX - aX * bZ, aW * bZ + aZ * bW + aX * bY - aY * bX, aW * bW - aX * bX - aY * bY - aZ * bZ);
   },
-
   $mulQuat: function $mulQuat(dest, q) {
     var aX = dest[0],
         aY = dest[1],
@@ -8354,7 +8507,6 @@ generics = {
 
     return dest;
   },
-
   divQuat: function divQuat(dest, q) {
     var aX = dest[0],
         aY = dest[1],
@@ -8369,7 +8521,6 @@ generics = {
 
     return new Quat((aX * bW - aW * bX - aY * bZ + aZ * bY) * d, (aX * bZ - aW * bY + aY * bW - aZ * bX) * d, (aY * bX + aZ * bW - aW * bZ - aX * bY) * d, (aW * bW + aX * bX + aY * bY + aZ * bZ) * d);
   },
-
   $divQuat: function $divQuat(dest, q) {
     var aX = dest[0],
         aY = dest[1],
@@ -8389,7 +8540,6 @@ generics = {
 
     return dest;
   },
-
   invert: function invert(dest) {
     var q0 = dest[0],
         q1 = dest[1],
@@ -8400,7 +8550,6 @@ generics = {
 
     return new Quat(-q0 * d, -q1 * d, -q2 * d, q3 * d);
   },
-
   $invert: function $invert(dest) {
     var q0 = dest[0],
         q1 = dest[1],
@@ -8416,7 +8565,6 @@ generics = {
 
     return dest;
   },
-
   norm: function norm(dest) {
     var a = dest[0],
         b = dest[1],
@@ -8425,7 +8573,6 @@ generics = {
 
     return sqrt(a * a + b * b + c * c + d * d);
   },
-
   normSq: function normSq(dest) {
     var a = dest[0],
         b = dest[1],
@@ -8434,19 +8581,15 @@ generics = {
 
     return a * a + b * b + c * c + d * d;
   },
-
   unit: function unit(dest) {
     return Quat.scale(dest, 1 / Quat.norm(dest));
   },
-
   $unit: function $unit(dest) {
     return Quat.$scale(dest, 1 / Quat.norm(dest));
   },
-
   conjugate: function conjugate(dest) {
     return new Quat(-dest[0], -dest[1], -dest[2], dest[3]);
   },
-
   $conjugate: function $conjugate(dest) {
     dest[0] = -dest[0];
     dest[1] = -dest[1];
@@ -8461,14 +8604,14 @@ proto = Quat.prototype = {};
 
 for (method in generics) {
   Quat[method] = generics[method];
-  proto[method] = (function (m) {
+  proto[method] = function (m) {
     return function () {
       var args = slice.call(arguments);
 
       args.unshift(this);
       return Quat[m].apply(Quat, args);
     };
-  })(method);
+  }(method);
 }
 
 //Add static methods
@@ -8486,38 +8629,41 @@ Mat4.fromQuat = function (q) {
 };
 
 },{}],205:[function(require,module,exports){
-// export {default as Vec3} from './vec3';
-// export {default as Mat4} from './mat4';
-// export {default as Quat} from './quat';
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-function _interopExportWildcard(obj, defaults) { var newObj = defaults({}, obj); delete newObj['default']; return newObj; }
-
-function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
 
 var _arrayImpl = require('./array-impl');
 
-_defaults(exports, _interopExportWildcard(_arrayImpl, _defaults));
+var _loop = function _loop(_key2) {
+  if (_key2 === "default") return 'continue';
+  Object.defineProperty(exports, _key2, {
+    enumerable: true,
+    get: function get() {
+      return _arrayImpl[_key2];
+    }
+  });
+};
+
+for (var _key2 in _arrayImpl) {
+  var _ret = _loop(_key2);
+
+  if (_ret === 'continue') continue;
+}
 
 },{"./array-impl":204}],206:[function(require,module,exports){
-// media.js
-// media has utility functions for image, video and audio manipulation (and
-// maybe others like device, etc).
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // media.js
+// media has utility functions for image, video and audio manipulation (and
+// maybe others like device, etc).
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _camera = require('./camera');
 
@@ -8529,15 +8675,19 @@ var _program = require('./program');
 
 var _program2 = _interopRequireDefault(_program);
 
-var _objectsPlane = require('./objects/plane');
+var _plane = require('./objects/plane');
 
-var _objectsPlane2 = _interopRequireDefault(_objectsPlane);
+var _plane2 = _interopRequireDefault(_plane);
 
 var _utils = require('./utils');
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 // length given a 45 fov angle, and 0.2 distance to camera
 var length = 0.16568542494923805;
-var plane = new _objectsPlane2['default']({ type: 'x,y', xlen: length, ylen: length, offset: 0 });
+var plane = new _plane2.default({ type: 'x,y', xlen: length, ylen: length, offset: 0 });
 var camera = new _camera.PerspectiveCamera({
   fov: 45,
   aspect: 1,
@@ -8549,7 +8699,7 @@ var camera = new _camera.PerspectiveCamera({
 // rye: temporarily renaming this Img until we decide on a name that doesn't shadow
 //      the builtin Image class.
 
-var Img = (function () {
+var Img = function () {
   function Img() {
     _classCallCheck(this, Img);
   }
@@ -8557,10 +8707,11 @@ var Img = (function () {
   _createClass(Img, null, [{
     key: 'postProcess',
 
+
     // post process an image by setting it to a texture with a specified fragment
     // and vertex shader.
     value: function postProcess(opt) {
-      var program = app.program instanceof _program2['default'] ? app.program : app.program[opt.program];
+      var program = app.program instanceof _program2.default ? app.program : app.program[opt.program];
       var textures = opt.fromTexture ? (0, _utils.splat)(opt.fromTexture) : [],
           framebuffer = opt.toFrameBuffer,
           screen = !!opt.toScreen,
@@ -8572,7 +8723,7 @@ var Img = (function () {
       camera.aspect = opt.aspectRatio ? opt.aspectRatio : Math.max(height / width, width / height);
       camera.update();
 
-      var scene = new _scene2['default'](app, program, camera);
+      var scene = new _scene2.default(app, program, camera);
 
       scene.program = program;
 
@@ -8624,33 +8775,32 @@ var Img = (function () {
   }]);
 
   return Img;
-})();
+}();
 
-exports['default'] = Img;
-module.exports = exports['default'];
+exports.default = Img;
 
 },{"./camera":199,"./objects/plane":212,"./program":215,"./scene":216,"./utils":219}],207:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _truncatedCone = require('./truncated-cone');
 
 var _truncatedCone2 = _interopRequireDefault(_truncatedCone);
 
-var Cone = (function (_TruncatedCone) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Cone = function (_TruncatedCone) {
   _inherits(Cone, _TruncatedCone);
 
   function Cone() {
@@ -8658,42 +8808,41 @@ var Cone = (function (_TruncatedCone) {
 
     _classCallCheck(this, Cone);
 
-    _get(Object.getPrototypeOf(Cone.prototype), 'constructor', this).call(this, _extends({}, config, {
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(Cone).call(this, _extends({}, config, {
       topRadius: 0,
       topCap: Boolean(config.cap),
       bottomCap: Boolean(config.cap),
       bottomRadius: config.radius || 3
-    }));
+    })));
   }
 
   return Cone;
-})(_truncatedCone2['default']);
+}(_truncatedCone2.default);
 
-exports['default'] = Cone;
-module.exports = exports['default'];
+exports.default = Cone;
 
 },{"./truncated-cone":214}],208:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _model = require('./model');
 
 var _model2 = _interopRequireDefault(_model);
 
-var Cube = (function (_Model) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Cube = function (_Model) {
   _inherits(Cube, _Model);
 
   function Cube() {
@@ -8701,7 +8850,7 @@ var Cube = (function (_Model) {
 
     _classCallCheck(this, Cube);
 
-    _get(Object.getPrototypeOf(Cube.prototype), 'constructor', this).call(this, _extends({
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(Cube).call(this, _extends({
       vertices: [-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, -1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, -1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1],
       texCoords: [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
 
@@ -8741,37 +8890,36 @@ var Cube = (function (_Model) {
 
       indices: [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23]
 
-    }, config));
+    }, config)));
   }
 
   return Cube;
-})(_model2['default']);
+}(_model2.default);
 
-exports['default'] = Cube;
-module.exports = exports['default'];
+exports.default = Cube;
 
 },{"./model":211}],209:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _truncatedCone = require('./truncated-cone');
 
 var _truncatedCone2 = _interopRequireDefault(_truncatedCone);
 
-var Cylinder = (function (_TruncatedCone) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Cylinder = function (_TruncatedCone) {
   _inherits(Cylinder, _TruncatedCone);
 
   function Cylinder() {
@@ -8779,34 +8927,25 @@ var Cylinder = (function (_TruncatedCone) {
 
     _classCallCheck(this, Cylinder);
 
-    _get(Object.getPrototypeOf(Cylinder.prototype), 'constructor', this).call(this, _extends({}, config, {
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(Cylinder).call(this, _extends({}, config, {
       bottomRadius: config.radius,
       topRadius: config.radius
-    }));
+    })));
   }
 
   return Cylinder;
-})(_truncatedCone2['default']);
+}(_truncatedCone2.default);
 
-exports['default'] = Cylinder;
-module.exports = exports['default'];
+exports.default = Cylinder;
 
 },{"./truncated-cone":214}],210:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _model = require('./model');
 
@@ -8814,7 +8953,15 @@ var _model2 = _interopRequireDefault(_model);
 
 var _math = require('../math');
 
-var IcoSphere = (function (_Model) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var IcoSphere = function (_Model) {
   _inherits(IcoSphere, _Model);
 
   function IcoSphere() {
@@ -8841,7 +8988,7 @@ var IcoSphere = (function (_Model) {
     vertices.push(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, -1, 0, 1, 0, 0);
     indices.push(3, 4, 5, 3, 5, 1, 3, 1, 0, 3, 0, 4, 4, 0, 2, 4, 2, 5, 2, 0, 1, 5, 2, 1);
 
-    var getMiddlePoint = (function () {
+    var getMiddlePoint = function () {
       var pointMemo = {};
 
       return function (i1, i2) {
@@ -8874,7 +9021,7 @@ var IcoSphere = (function (_Model) {
 
         return pointMemo[key] = vertices.length / 3 - 1;
       };
-    })();
+    }();
 
     for (var i = 0; i < iterations; i++) {
       var indices2 = [];
@@ -8973,37 +9120,32 @@ var IcoSphere = (function (_Model) {
       texCoords[iu3 + 1] = v3;
     }
 
-    _get(Object.getPrototypeOf(IcoSphere.prototype), 'constructor', this).call(this, _extends({
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(IcoSphere).call(this, _extends({
       vertices: vertices,
       indices: indices,
       normals: normals,
       texCoords: texCoords
-    }, opt));
+    }, opt)));
   }
 
   return IcoSphere;
-})(_model2['default']);
+}(_model2.default);
 
-exports['default'] = IcoSphere;
-module.exports = exports['default'];
+exports.default = IcoSphere;
 
 },{"../math":205,"./model":211}],211:[function(require,module,exports){
-// o3d.js
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // o3d.js
 // Scene Objects
 /* eslint-disable guard-for-in */
 
 // Define some locals
-'use strict';
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _math = require('../math');
 
@@ -9016,6 +9158,10 @@ var _buffer = require('../buffer');
 var _buffer2 = _interopRequireDefault(_buffer);
 
 var _utils = require('../utils');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var slice = Array.prototype.slice;
 
@@ -9056,7 +9202,7 @@ const attributeMap = {
 
 // Model abstract O3D Class
 
-var Model = (function () {
+var Model = function () {
 
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
@@ -9122,7 +9268,6 @@ var Model = (function () {
       this.computeNormals();
     }
   }
-
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
 
@@ -9221,7 +9366,7 @@ var Model = (function () {
       }
 
       if (!this.buffers.position) {
-        this.buffers.position = new _buffer2['default'](program.gl, {
+        this.buffers.position = new _buffer2.default(program.gl, {
           attribute: 'position',
           data: this.$vertices,
           size: 3
@@ -9242,7 +9387,7 @@ var Model = (function () {
       }
 
       if (!this.buffers.normal) {
-        this.buffers.normal = new _buffer2['default'](program.gl, {
+        this.buffers.normal = new _buffer2.default(program.gl, {
           attribute: 'normal',
           data: this.$normals,
           size: 3
@@ -9265,7 +9410,7 @@ var Model = (function () {
       var gl = program.gl;
 
       if (!this.buffers.indices) {
-        this.buffers.indices = new _buffer2['default'](program.gl, {
+        this.buffers.indices = new _buffer2.default(program.gl, {
           bufferType: gl.ELEMENT_ARRAY_BUFFER,
           drawType: gl.STATIC_DRAW,
           data: this.$indices,
@@ -9287,7 +9432,7 @@ var Model = (function () {
       }
 
       if (!this.buffers.pickingColors) {
-        this.buffers.pickingColors = new _buffer2['default'](program.gl, {
+        this.buffers.pickingColors = new _buffer2.default(program.gl, {
           attribute: 'pickingColor',
           data: this.$pickingColors,
           size: 4
@@ -9308,7 +9453,7 @@ var Model = (function () {
       }
 
       if (!this.buffers.colors) {
-        this.buffers.colors = new _buffer2['default'](program.gl, {
+        this.buffers.colors = new _buffer2.default(program.gl, {
           attribute: 'color',
           data: this.$colors,
           size: 4
@@ -9340,14 +9485,14 @@ var Model = (function () {
           this.buffers.texCoords = {};
           for (i = 0, txs = this.textures, l = txs.length; i < l; i++) {
             tex = txs[i];
-            this.buffers.texCoords['texCoord' + (i + 1)] = new _buffer2['default'](gl, {
+            this.buffers.texCoords['texCoord' + (i + 1)] = new _buffer2.default(gl, {
               attribute: 'texCoord' + (i + 1),
               data: this.$texCoords[tex],
               size: 2
             });
           }
         } else {
-          this.buffers.texCoords = new _buffer2['default'](gl, {
+          this.buffers.texCoords = new _buffer2.default(gl, {
             attribute: 'texCoord1',
             data: this.$texCoords,
             size: 2
@@ -9384,7 +9529,7 @@ var Model = (function () {
       this.textures = this.textures ? (0, _utils.splat)(this.textures) : [];
       var tex2D = 0;
       var texCube = 0;
-      var mtexs = _scene2['default'].MAX_TEXTURES;
+      var mtexs = _scene2.default.MAX_TEXTURES;
       for (var i = 0, texs = this.textures, l = texs.length; i < mtexs; i++) {
         if (i < l) {
           // rye TODO: update this when TextureCube is implemented.
@@ -9584,33 +9729,32 @@ var Model = (function () {
   }]);
 
   return Model;
-})();
+}();
 
-exports['default'] = Model;
-module.exports = exports['default'];
+exports.default = Model;
 
 },{"../buffer":197,"../math":205,"../scene":216,"../utils":219}],212:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _model = require('./model');
 
 var _model2 = _interopRequireDefault(_model);
 
-var Plane = (function (_Model) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Plane = function (_Model) {
   _inherits(Plane, _Model);
 
   function Plane() {
@@ -9748,41 +9892,40 @@ var Plane = (function (_Model) {
       }, config);
     }
 
-    _get(Object.getPrototypeOf(Plane.prototype), 'constructor', this).call(this, config);
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(Plane).call(this, config));
   }
 
   return Plane;
-})(_model2['default']);
+}(_model2.default);
 
-exports['default'] = Plane;
-module.exports = exports['default'];
+exports.default = Plane;
 
 },{"./model":211}],213:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _model = require('./model');
 
 var _model2 = _interopRequireDefault(_model);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
 // copyright 2011 Google Inc. new BSD License
 // (http://www.opensource.org/licenses/bsd-license.php).
 
-var Sphere = (function (_Model) {
+var Sphere = function (_Model) {
   _inherits(Sphere, _Model);
 
   function Sphere() {
@@ -9807,7 +9950,7 @@ var Sphere = (function (_Model) {
 
     if (typeof radius === 'number') {
       var value = radius;
-      radius = function (n1, n2, n3, u, v) {
+      radius = function radius(n1, n2, n3, u, v) {
         return value;
       };
     }
@@ -9860,42 +10003,41 @@ var Sphere = (function (_Model) {
       }
     }
 
-    _get(Object.getPrototypeOf(Sphere.prototype), 'constructor', this).call(this, _extends({
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(Sphere).call(this, _extends({
       vertices: vertices,
       indices: indices,
       normals: normals,
       texCoords: texCoords
-    }, opt));
+    }, opt)));
   }
 
   return Sphere;
-})(_model2['default']);
+}(_model2.default);
 
-exports['default'] = Sphere;
-module.exports = exports['default'];
+exports.default = Sphere;
 
 },{"./model":211}],214:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 var _model = require('./model');
 
 var _model2 = _interopRequireDefault(_model);
 
-var TruncatedCone = (function (_Model) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var TruncatedCone = function (_Model) {
   _inherits(TruncatedCone, _Model);
 
   function TruncatedCone() {
@@ -9982,38 +10124,31 @@ var TruncatedCone = (function (_Model) {
       }
     }
 
-    _get(Object.getPrototypeOf(TruncatedCone.prototype), 'constructor', this).call(this, _extends({
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(TruncatedCone).call(this, _extends({
       vertices: vertices,
       normals: normals,
       texCoords: texCoords,
       indices: indices
-    }, config));
+    }, config)));
   }
 
   return TruncatedCone;
-})(_model2['default']);
+}(_model2.default);
 
-exports['default'] = TruncatedCone;
-module.exports = exports['default'];
+exports.default = TruncatedCone;
 
 },{"./model":211}],215:[function(require,module,exports){
-// program.js
-// Creates programs out of shaders and provides convenient methods for loading
-// buffers attributes and uniforms
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // program.js
+// Creates programs out of shaders and provides convenient methods for loading
+// buffers attributes and uniforms
 
 var _shaders = require('./shaders');
 
@@ -10022,6 +10157,12 @@ var _shaders2 = _interopRequireDefault(_shaders);
 var _io = require('./io');
 
 var _utils = require('./utils');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { return step("next", value); }, function (err) { return step("throw", err); }); } } return step("next"); }); }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Creates a shader from a string source.
 function createShader(gl, shaderSource, shaderType) {
@@ -10187,7 +10328,7 @@ function getUniformSetter(gl, glProgram, info, isArray) {
   throw new Error('Unknown type: ' + type);
 }
 
-var Program = (function () {
+var Program = function () {
 
   /**
    * @classdesc Handles loading of programs, mapping of attributes and uniforms
@@ -10239,6 +10380,7 @@ var Program = (function () {
   // Alternate constructor
   // Create a program from vertex and fragment shader node ids
 
+
   _createClass(Program, [{
     key: 'setUniform',
     value: function setUniform(name, value) {
@@ -10256,10 +10398,10 @@ var Program = (function () {
 
       try {
         for (var _iterator = Object.keys(forms)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var _name = _step.value;
+          var name = _step.value;
 
-          if (_name in this.uniforms) {
-            this.uniforms[_name](forms[_name]);
+          if (name in this.uniforms) {
+            this.uniforms[name](forms[name]);
           }
         }
       } catch (err) {
@@ -10267,8 +10409,8 @@ var Program = (function () {
         _iteratorError = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator['return']) {
-            _iterator['return']();
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
           }
         } finally {
           if (_didIteratorError) {
@@ -10324,8 +10466,8 @@ var Program = (function () {
         _iteratorError2 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-            _iterator2['return']();
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
           }
         } finally {
           if (_didIteratorError2) {
@@ -10350,6 +10492,7 @@ var Program = (function () {
     }
 
     // Get options object or make options object from 2 arguments
+
   }], [{
     key: 'fromHTMLTemplates',
     value: function fromHTMLTemplates(gl, vs, fs) {
@@ -10360,89 +10503,87 @@ var Program = (function () {
 
     // Alternate constructor
     // Build program from default shaders (requires Shaders)
+
   }, {
     key: 'fromDefaultShaders',
     value: function fromDefaultShaders(gl) {
-      return new Program(gl, _shaders2['default'].Vertex['Default'], _shaders2['default'].Fragment['Default']);
+      return new Program(gl, _shaders2.default.Vertex['Default'], _shaders2.default.Fragment['Default']);
     }
 
     // Alternate constructor
     // Implement Program.fromShaderURIs (requires IO)
+
   }, {
     key: 'fromShaderURIs',
-    value: function fromShaderURIs(gl, vs, fs, opts) {
-      var vertexShaderURI, fragmentShaderURI, responses;
-      return regeneratorRuntime.async(function fromShaderURIs$(context$2$0) {
-        while (1) switch (context$2$0.prev = context$2$0.next) {
-          case 0:
-            opts = (0, _utils.merge)({
-              path: '/',
-              noCache: false
-            }, opts);
+    value: function () {
+      var ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee(gl, vs, fs, opts) {
+        var vertexShaderURI, fragmentShaderURI, responses;
+        return regeneratorRuntime.wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                opts = (0, _utils.merge)({
+                  path: '/',
+                  noCache: false
+                }, opts);
 
-            vertexShaderURI = opts.path + vs;
-            fragmentShaderURI = opts.path + fs;
-            context$2$0.next = 5;
-            return regeneratorRuntime.awrap(new _io.XHRGroup({
-              urls: [vertexShaderURI, fragmentShaderURI],
-              noCache: opts.noCache
-            }).sendAsync());
+                vertexShaderURI = opts.path + vs;
+                fragmentShaderURI = opts.path + fs;
+                _context.next = 5;
+                return new _io.XHRGroup({
+                  urls: [vertexShaderURI, fragmentShaderURI],
+                  noCache: opts.noCache
+                }).sendAsync();
 
-          case 5:
-            responses = context$2$0.sent;
-            return context$2$0.abrupt('return', new Program(gl, responses[0], responses[1]));
+              case 5:
+                responses = _context.sent;
+                return _context.abrupt('return', new Program(gl, responses[0], responses[1]));
 
-          case 7:
-          case 'end':
-            return context$2$0.stop();
-        }
-      }, null, this);
-    }
+              case 7:
+              case 'end':
+                return _context.stop();
+            }
+          }
+        }, _callee, this);
+      }));
+
+      return function fromShaderURIs(_x, _x2, _x3, _x4) {
+        return ref.apply(this, arguments);
+      };
+    }()
   }, {
     key: '_getOptions',
     value: function _getOptions() {
       var base = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
       var opt = undefined;
-
-      for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        args[_key - 1] = arguments[_key];
-      }
-
-      if (args.length === 2) {
+      if (arguments.length - 1 === 2) {
         return _extends({}, base, {
-          vs: args[0],
-          fs: args[1]
+          vs: arguments.length <= 1 ? undefined : arguments[1],
+          fs: arguments.length <= 2 ? undefined : arguments[2]
         });
       } else {
-        return _extends({}, base, args[0] || {});
+        return _extends({}, base, (arguments.length <= 1 ? undefined : arguments[1]) || {});
       }
     }
   }]);
 
   return Program;
-})();
+}();
 
-exports['default'] = Program;
-module.exports = exports['default'];
+exports.default = Program;
 
 },{"./io":203,"./shaders":217,"./utils":219}],216:[function(require,module,exports){
-// scene.js
-// Scene Object management and rendering
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // scene.js
+// Scene Object management and rendering
 
 var _math = require('./math');
 
@@ -10459,6 +10600,10 @@ var _utils = require('./utils');
 var _fbo = require('./fbo');
 
 var _fbo2 = _interopRequireDefault(_fbo);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function noop() {}
 
@@ -10487,14 +10632,14 @@ var DEFAULT_SCENE_OPTS = {
 
 // Scene class
 
-var Scene = (function () {
+var Scene = function () {
   function Scene(gl, program, camera) {
     var opt = arguments.length <= 3 || arguments[3] === undefined ? {} : arguments[3];
 
     _classCallCheck(this, Scene);
 
-    (0, _assert2['default'])(gl);
-    (0, _assert2['default'])(camera);
+    (0, _assert2.default)(gl);
+    (0, _assert2.default)(camera);
 
     this.gl = gl;
 
@@ -10536,7 +10681,7 @@ var Scene = (function () {
     key: 'getProgram',
     value: function getProgram(obj) {
       var program = this.program;
-      if (!(program instanceof _program2['default']) && obj && obj.program) {
+      if (!(program instanceof _program2.default) && obj && obj.program) {
         program = program[obj.program];
         program.use();
         return program;
@@ -10555,6 +10700,7 @@ var Scene = (function () {
     }
 
     // Setup lighting and scene effects like fog, etc.
+
   }, {
     key: 'beforeRender',
     value: function beforeRender(program) {
@@ -10566,6 +10712,7 @@ var Scene = (function () {
     }
 
     // Setup the lighting system: ambient, directional, point lights.
+
   }, {
     key: 'setupLighting',
     value: function setupLighting(program) {
@@ -10573,11 +10720,12 @@ var Scene = (function () {
       var _config$lights = this.config.lights;
       var enable = _config$lights.enable;
       var ambient = _config$lights.ambient;
-      var _config$lights$directional = _config$lights.directional;
-      var color = _config$lights$directional.color;
-      var direction = _config$lights$directional.direction;
+      var _config$lights$direct = _config$lights.directional;
+      var color = _config$lights$direct.color;
+      var direction = _config$lights$direct.direction;
       var _config$lights$points = _config$lights.points;
       var points = _config$lights$points === undefined ? [] : _config$lights$points;
+
 
       points = points instanceof Array ? points : [points];
 
@@ -10635,8 +10783,8 @@ var Scene = (function () {
         _iteratorError = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator['return']) {
-            _iterator['return']();
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
           }
         } finally {
           if (_didIteratorError) {
@@ -10658,12 +10806,14 @@ var Scene = (function () {
     }
 
     // Setup effects like fog, etc.
+
   }, {
     key: 'setupEffects',
     value: function setupEffects(program) {
       var fog = this.config.effects.fog;
       var _fog$color = fog.color;
       var color = _fog$color === undefined ? { r: 0.5, g: 0.5, b: 0.5 } : _fog$color;
+
 
       if (fog) {
         program.setUniforms({
@@ -10697,6 +10847,7 @@ var Scene = (function () {
     }
 
     // Renders all objects in the scene.
+
   }, {
     key: 'render',
     value: function render() {
@@ -10785,14 +10936,14 @@ var Scene = (function () {
       var gl = this.gl;
 
       if (this.pickingFBO === undefined) {
-        this.pickingFBO = new _fbo2['default'](gl, {
+        this.pickingFBO = new _fbo2.default(gl, {
           width: gl.canvas.width,
           height: gl.canvas.height
         });
       }
 
       if (this.pickingProgram === undefined) {
-        this.pickingProgram = opt.pickingProgram || _program2['default'].fromDefaultShaders(gl);
+        this.pickingProgram = opt.pickingProgram || _program2.default.fromDefaultShaders(gl);
       }
 
       var pickingProgram = this.pickingProgram;
@@ -10849,14 +11000,14 @@ var Scene = (function () {
       var gl = this.gl;
 
       if (this.pickingFBO === undefined) {
-        this.pickingFBO = new _fbo2['default'](gl, {
+        this.pickingFBO = new _fbo2.default(gl, {
           width: gl.canvas.width,
           height: gl.canvas.height
         });
       }
 
       if (this.pickingProgram === undefined) {
-        this.pickingProgram = opt.pickingProgram || _program2['default'].fromDefaultShaders(gl);
+        this.pickingProgram = opt.pickingProgram || _program2.default.fromDefaultShaders(gl);
       }
 
       var pickingProgram = this.pickingProgram;
@@ -10899,24 +11050,24 @@ var Scene = (function () {
   }]);
 
   return Scene;
-})();
+}();
 
-exports['default'] = Scene;
+exports.default = Scene;
+
 
 Scene.MAX_TEXTURES = 10;
 Scene.MAX_POINT_LIGHTS = 4;
 Scene.PICKING_RES = 4;
-module.exports = exports['default'];
 
 },{"./fbo":201,"./math":205,"./program":215,"./utils":219,"assert":1}],217:[function(require,module,exports){
-// shaders.js
-// Default Shaders
-
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+// shaders.js
+// Default Shaders
+
 var Shaders = {
   Vertex: {},
   Fragment: {}
@@ -10926,25 +11077,25 @@ Shaders.Vertex.Default = "\n#define LIGHT_MAX 4\n\n// object attributes\nattribu
 
 Shaders.Fragment.Default = "\n\n#ifdef GL_ES\nprecision highp float;\n#endif\n\n// varyings\nvarying vec4 vColor;\nvarying vec4 vPickingColor;\nvarying vec2 vTexCoord;\nvarying vec3 lightWeighting;\nvarying vec3 vReflection;\nvarying vec4 vNormal;\n\n// texture configs\nuniform bool hasTexture1;\nuniform sampler2D sampler1;\nuniform bool hasTextureCube1;\nuniform samplerCube samplerCube1;\n\n// picking configs\nuniform bool enablePicking;\nuniform bool hasPickingColors;\nuniform vec3 pickColor;\n\n// reflection / refraction configs\nuniform float reflection;\nuniform float refraction;\n\n// fog configuration\nuniform bool hasFog;\nuniform vec3 fogColor;\nuniform float fogNear;\nuniform float fogFar;\n\nvoid main(){\n  // set color from texture\n  if (!hasTexture1) {\n    gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);\n  } else {\n    gl_FragColor =\n      vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb *\n      lightWeighting, 1.0);\n  }\n\n  // has cube texture then apply reflection\n  if (hasTextureCube1) {\n    vec3 nReflection = normalize(vReflection);\n    vec3 reflectionValue;\n    if (refraction > 0.0) {\n     reflectionValue = refract(nReflection, vNormal.xyz, refraction);\n    } else {\n     reflectionValue = -reflect(nReflection, vNormal.xyz);\n    }\n\n    // TODO(nico): check whether this is right.\n    vec4 cubeColor = textureCube(samplerCube1,\n        vec3(-reflectionValue.x, -reflectionValue.y, reflectionValue.z));\n    gl_FragColor = vec4(mix(gl_FragColor.xyz, cubeColor.xyz, reflection), 1.0);\n  }\n\n  // set picking\n  if (enablePicking) {\n    if (hasPickingColors) {\n      gl_FragColor = vPickingColor;\n    } else {\n      gl_FragColor = vec4(pickColor, 1.0);\n    }\n  }\n\n  // handle fog\n  if (hasFog) {\n    float depth = gl_FragCoord.z / gl_FragCoord.w;\n    float fogFactor = smoothstep(fogNear, fogFar, depth);\n    gl_FragColor =\n      mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);\n   }\n }\n";
 
-exports["default"] = Shaders;
-module.exports = exports["default"];
+exports.default = Shaders;
 
 },{}],218:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.TextureCube = exports.Texture2D = undefined;
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _utils = require('./utils');
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Texture = function Texture(gl) {
   var opts = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
@@ -10986,15 +11137,17 @@ var Texture = function Texture(gl) {
   this.texture = gl.createTexture();
 };
 
-var Texture2D = (function (_Texture) {
+var Texture2D = exports.Texture2D = function (_Texture) {
   _inherits(Texture2D, _Texture);
 
   function Texture2D(gl, opts) {
     _classCallCheck(this, Texture2D);
 
-    _get(Object.getPrototypeOf(Texture2D.prototype), 'constructor', this).call(this, gl, opts);
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Texture2D).call(this, gl, opts));
+
     opts.data = opts.data || null;
-    this.update(opts);
+    _this.update(opts);
+    return _this;
   }
 
   _createClass(Texture2D, [{
@@ -11036,19 +11189,19 @@ var Texture2D = (function (_Texture) {
   }]);
 
   return Texture2D;
-})(Texture);
+}(Texture);
 
-exports.Texture2D = Texture2D;
-
-var TextureCube = (function (_Texture2) {
+var TextureCube = exports.TextureCube = function (_Texture2) {
   _inherits(TextureCube, _Texture2);
 
   function TextureCube(gl, opts) {
     _classCallCheck(this, TextureCube);
 
-    _get(Object.getPrototypeOf(TextureCube.prototype), 'constructor', this).call(this, gl, opts);
+    var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(TextureCube).call(this, gl, opts));
+
     opts.data = opts.data || null;
-    this.update(opts);
+    _this2.update(opts);
+    return _this2;
   }
 
   _createClass(TextureCube, [{
@@ -11100,26 +11253,23 @@ var TextureCube = (function (_Texture2) {
   }]);
 
   return TextureCube;
-})(Texture);
-
-exports.TextureCube = TextureCube;
+}(Texture);
 
 },{"./utils":219}],219:[function(require,module,exports){
-/**
-* Merge multiple objects into one.
-* @param {...object} objects - The objects to merge.
-* @returns {object}
-**/
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.merge = merge;
 exports.splat = splat;
 exports.noop = noop;
 exports.uid = uid;
-
+/**
+* Merge multiple objects into one.
+* @param {...object} objects - The objects to merge.
+* @returns {object}
+**/
 function merge(objects) {
   var mix = {};
   for (var i = 0, l = arguments.length; i < l; i++) {
@@ -11136,26 +11286,20 @@ function merge(objects) {
     }
   }
   return mix;
-}
-
-;
+};
 
 /**
 * Wraps the argument in an array if it is not one.
 * @param {object} a - The object to wrap.
 * @returns {Array}
 **/
-
 function splat(a) {
   return Array.isArray(a) && a || [a];
-}
-
-;
+};
 
 /**
 * Provides a standard noop function.
 **/
-
 function noop() {}
 
 var _uid = Date.now();
@@ -11164,7 +11308,6 @@ var _uid = Date.now();
 * Returns a UID.
 * @returns {int}
 **/
-
 function uid() {
   return _uid++;
 }
@@ -11195,18 +11338,17 @@ function detach(elem) {
 }
 
 },{}],220:[function(require,module,exports){
-// webgl.js
-// Checks if WebGL is enabled and creates a context for using WebGL.
-/* global window */
-
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.createGLContext = createGLContext;
 exports.hasWebGL = hasWebGL;
 exports.hasExtension = hasExtension;
+// webgl.js
+// Checks if WebGL is enabled and creates a context for using WebGL.
+/* global window */
 
 function createGLContext(canvas, opt) {
   var _arguments = arguments;
@@ -11224,7 +11366,7 @@ function createGLContext(canvas, opt) {
     for (var m in ctx) {
       var f = ctx[m];
       if (typeof f === 'function') {
-        gl[m] = (function (k, v) {
+        gl[m] = function (k, v) {
           return function () {
             console.log(k, Array.prototype.join.call(_arguments), Array.prototype.slice.call(_arguments));
             try {
@@ -11242,7 +11384,7 @@ function createGLContext(canvas, opt) {
             }
             return ans;
           };
-        })(m, f);
+        }(m, f);
       } else {
         gl[m] = f;
       }

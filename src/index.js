@@ -1,5 +1,4 @@
 // Export all symbols for LumaGL
-
 export * from './webgl';
 export * from './math';
 export {Events} from './event';

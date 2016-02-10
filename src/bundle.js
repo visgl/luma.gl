@@ -3,12 +3,7 @@
 /* eslint-disable no-try-catch */
 /* eslint-disable no-console */
 /* global window, console */
-try {
-  require('babel-polyfill');
-} catch (e) {
-  console.warn('Already have an instance of babel-polyfill.');
-}
-
+import 'babel-polyfill';
 import * as LumaGL from './index';
 import Fx from './addons/fx';
 import WorkerGroup from './addons/workers';
