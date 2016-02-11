@@ -6022,8 +6022,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.Events = exports.EventsProxy = exports.stop = undefined;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // event.js
 // Handle keyboard/mouse/touch events in the Canvas
 // TODO - this will not work under node
@@ -6425,7 +6423,7 @@ var Events = exports.Events = {
   create: function create(gl) {
     var opt = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-    opt = _extends({
+    opt = {
       cachePosition: true,
       cacheSize: true,
       relative: true,
@@ -6456,8 +6454,9 @@ var Events = exports.Events = {
       onMouseWheel: _utils.noop,
       onKeyDown: _utils.noop,
       onKeyUp: _utils.noop
-    }, opt);
+    };
 
+    // ...opt
     var bind = opt.bind;
     if (bind) {
       for (var name in opt) {
@@ -7689,7 +7688,6 @@ var Mat4 = exports.Mat4 = function (_extendableBuiltin4) {
 
       _this2.set(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44);
     } else {
-      console.log(_this2);
       _this2.id();
     }
 
