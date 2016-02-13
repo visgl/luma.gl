@@ -6022,6 +6022,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.Events = exports.EventsProxy = exports.stop = undefined;
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // event.js
 // Handle keyboard/mouse/touch events in the Canvas
 // TODO - this will not work under node
@@ -6423,7 +6425,7 @@ var Events = exports.Events = {
   create: function create(gl) {
     var opt = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-    opt = {
+    opt = _extends({
       cachePosition: true,
       cacheSize: true,
       relative: true,
@@ -6454,9 +6456,8 @@ var Events = exports.Events = {
       onMouseWheel: _utils.noop,
       onKeyDown: _utils.noop,
       onKeyUp: _utils.noop
-    };
+    }, opt);
 
-    // ...opt
     var bind = opt.bind;
     if (bind) {
       for (var name in opt) {
@@ -6801,9 +6802,18 @@ Object.defineProperty(exports, 'TextureCube', {
   }
 });
 
+var _fx = require('./addons/fx');
+
+Object.defineProperty(exports, 'Fx', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_fx).default;
+  }
+});
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"./buffer":197,"./camera":199,"./event":200,"./fbo":201,"./io":203,"./math":205,"./media":206,"./objects/cone":207,"./objects/cube":208,"./objects/cylinder":209,"./objects/ico-sphere":210,"./objects/model":211,"./objects/plane":212,"./objects/sphere":213,"./program":215,"./scene":216,"./shaders":217,"./texture":218,"./webgl":220}],203:[function(require,module,exports){
+},{"./addons/fx":195,"./buffer":197,"./camera":199,"./event":200,"./fbo":201,"./io":203,"./math":205,"./media":206,"./objects/cone":207,"./objects/cube":208,"./objects/cylinder":209,"./objects/ico-sphere":210,"./objects/model":211,"./objects/plane":212,"./objects/sphere":213,"./program":215,"./scene":216,"./shaders":217,"./texture":218,"./webgl":220}],203:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8691,7 +8701,7 @@ var camera = new _camera.PerspectiveCamera({
   aspect: 1,
   near: 0.1,
   far: 500,
-  position: { x: 0, y: 0, z: 0.2 }
+  position: [0, 0, 0.2]
 });
 
 // rye: temporarily renaming this Img until we decide on a name that doesn't shadow
@@ -9251,6 +9261,7 @@ var Model = function () {
     if (opt.program) {
       this.program = opt.program;
     }
+
     // model position, rotation, scale and all in all matrix
     this.position = new _math.Vec3();
     this.rotation = new _math.Vec3();
@@ -9352,9 +9363,22 @@ var Model = function () {
   }, {
     key: 'setAttributes',
     value: function setAttributes(program) {
-      for (var key in Object.keys(this.attributes)) {
-        program.setBuffer(this.attributes[key]);
-      }
+      var _this = this;
+
+      Object.keys(this.attributes).forEach(function (key) {
+        if (!_this.buffers[key]) {
+          var attr = _this.attributes[key];
+          _this.buffers[key] = new _buffer2.default(program.gl, {
+            attribute: key,
+            data: attr.value,
+            size: attr.size,
+            instanced: attr.instanced,
+            bufferType: attr.bufferType || program.gl.ARRAY_BUFFER,
+            drawType: attr.drawType || program.gl.STATIC_DRAW
+          });
+        }
+        program.setBuffer(_this.buffers[key]);
+      });
     }
   }, {
     key: 'setVertices',
@@ -9362,7 +9386,6 @@ var Model = function () {
       if (!this.$vertices) {
         return;
       }
-
       if (!this.buffers.position) {
         this.buffers.position = new _buffer2.default(program.gl, {
           attribute: 'position',
