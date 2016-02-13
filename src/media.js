@@ -15,7 +15,7 @@ const camera = new PerspectiveCamera({
   aspect: 1,
   near: 0.1,
   far: 500,
-  position: {x: 0, y: 0, z: 0.2}
+  position: [0,0,0.2]
 });
 
 // rye: temporarily renaming this Img until we decide on a name that doesn't shadow

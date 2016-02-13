@@ -90,6 +90,7 @@ export default class Model {
     if (opt.program) {
       this.program = opt.program;
     }
+
     // model position, rotation, scale and all in all matrix
     this.position = new Vec3();
     this.rotation = new Vec3();
@@ -333,16 +334,26 @@ export default class Model {
   }
 
   setAttributes(program) {
-    for (const key in Object.keys(this.attributes)) {
-        program.setBuffer(this.attributes[key]);
-    }
+    Object.keys(this.attributes).forEach((key) => {
+      if (!this.buffers[key]) {
+        const attr = this.attributes[key];
+        this.buffers[key] = new Buffer(program.gl, {
+          attribute: key,
+          data: attr.value,
+          size: attr.size,
+          instanced: attr.instanced,
+          bufferType: attr.bufferType || program.gl.ARRAY_BUFFER,
+          drawType: attr.drawType || program.gl.STATIC_DRAW
+        });
+      }
+      program.setBuffer(this.buffers[key]);
+    })
   }
 
   setVertices(program) {
     if (!this.$vertices) {
       return;
     }
-
     if (!this.buffers.position) {
       this.buffers.position = new Buffer(program.gl, {
         attribute: 'position',
