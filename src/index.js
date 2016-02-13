@@ -1,5 +1,4 @@
 // Export all symbols for LumaGL
-
 export * from './webgl';
 export * from './math';
 export {Events} from './event';
@@ -20,3 +19,4 @@ export * from './media';
 export {default as Buffer} from './buffer';
 export {default as Framebuffer} from './fbo';
 export {Texture2D, TextureCube} from './texture';
+export {default as Fx} from './addons/fx';

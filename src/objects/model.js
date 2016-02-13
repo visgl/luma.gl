@@ -54,7 +54,7 @@ export default class Model {
     this.id = opt.id || uid();
     // picking options
     this.pickable = Boolean(opt.pickable);
-    this.pick = opt.pick || () => false;
+    this.pick = opt.pick || function() {return false};
 
     this.vertices = opt.vertices;
     this.normals = opt.normals;
@@ -90,6 +90,7 @@ export default class Model {
     if (opt.program) {
       this.program = opt.program;
     }
+
     // model position, rotation, scale and all in all matrix
     this.position = new Vec3();
     this.rotation = new Vec3();
@@ -120,7 +121,7 @@ export default class Model {
       delete this.$verticesLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$vertices = val;
     } else if (this.$verticesLength === vlen) {
@@ -141,7 +142,7 @@ export default class Model {
       delete this.$normalsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$normals = val;
     } else if (this.$normalsLength === vlen) {
@@ -162,7 +163,7 @@ export default class Model {
       delete this.$colorsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$colors = val;
     } else if (this.$colorsLength === vlen) {
@@ -187,7 +188,7 @@ export default class Model {
       delete this.$pickingColorsLength;
       return;
     }
-    var vlen = val.length;
+    const vlen = val.length;
     if (val.BYTES_PER_ELEMENT) {
       this.$pickingColors = val;
     } else if (this.$pickingColorsLength === vlen) {
@@ -333,16 +334,26 @@ export default class Model {
   }
 
   setAttributes(program) {
-    for (const key in Object.keys(this.attributes)) {
-        program.setBuffer(this.attributes[key]);
-    }
+    Object.keys(this.attributes).forEach((key) => {
+      if (!this.buffers[key]) {
+        const attr = this.attributes[key];
+        this.buffers[key] = new Buffer(program.gl, {
+          attribute: key,
+          data: attr.value,
+          size: attr.size,
+          instanced: attr.instanced,
+          bufferType: attr.bufferType || program.gl.ARRAY_BUFFER,
+          drawType: attr.drawType || program.gl.STATIC_DRAW
+        });
+      }
+      program.setBuffer(this.buffers[key]);
+    })
   }
 
   setVertices(program) {
     if (!this.$vertices) {
       return;
     }
-
     if (!this.buffers.position) {
       this.buffers.position = new Buffer(program.gl, {
         attribute: 'position',
@@ -431,7 +442,7 @@ export default class Model {
       this.buffers.colors = new Buffer(program.gl, {
         attribute: 'color',
         data: this.$colors,
-        size: 3
+        size: 4
       })
     } else if (this.dynamic) {
       this.buffers.colors.update({
