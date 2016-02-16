@@ -23,7 +23,7 @@ export function merge(objects) {
 /**
 * Wraps the argument in an array if it is not one.
 * @param {object} a - The object to wrap.
-* @returns {Array}
+* @return {Array}
 **/
 export function splat(a) {
   return Array.isArray(a) && a || [a];
@@ -37,9 +37,9 @@ export function noop() {}
 var _uid = Date.now();
 
 /**
-* Returns a UID.
-* @returns {int}
-**/
+ * Returns a UID.
+ * @return {number} uid
+ **/
 export function uid() {
   return _uid++;
 }
@@ -47,7 +47,7 @@ export function uid() {
 /**
 * Internal function for duplicating an object.
 * @param {object} elem - The object to recursively duplicate.
-* @returns {object}
+* @return {object}
 **/
 function detach(elem) {
   var t = elem.constructor.name, ans;

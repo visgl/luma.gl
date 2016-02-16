@@ -41,7 +41,10 @@ export default class Scene {
 
     this.gl = gl;
 
-    opt = merge(DEFAULT_SCENE_OPTS, opt);
+    opt = {
+      ...DEFAULT_SCENE_OPTS,
+      ...opt
+    };
 
     this.program = opt.program ? program[opt.program] : program;
     this.camera = camera;
@@ -49,12 +52,11 @@ export default class Scene {
     this.config = opt;
   }
 
-  add() {
-    for (var i = 0, models = this.models, l = arguments.length; i < l; i++) {
-      var model = arguments[i];
+  add(...models) {
+    for (const model of models) {
       // Generate unique id for model
       model.id = model.id || uid();
-      models.push(model);
+      this.models.push(model);
       // Create and load Buffers
       this.defineBuffers(model);
     }
@@ -74,11 +76,13 @@ export default class Scene {
 
   getProgram(obj) {
     let program = this.program;
-    if (!(program instanceof Program) && obj && obj.program) {
-      program = program[obj.program];
-      program.use();
-      return program;
+    if (obj && obj.program instanceof Program) {
+      program = obj.program;
+    } else if (obj && obj.program) {
+      program = this.program[obj.program];
     }
+    assert(program instanceof Program, 'Scene failed to find valid program');
+    program.use();
     return program;
   }
 
@@ -103,11 +107,7 @@ export default class Scene {
   // Setup the lighting system: ambient, directional, point lights.
   setupLighting(program) {
     // Setup Lighting
-    let {
-      enable, ambient, directional: {color, direction}, points = []
-    } = this.config.lights;
-
-    points = points instanceof Array ? points : [points];
+    let {enable, ambient, directional, points} = this.config.lights;
 
     // Set light uniforms. Ambient and directional lights.
     program.setUniform('enableLights', enable);
@@ -116,18 +116,42 @@ export default class Scene {
       return;
     }
 
+    if (ambient) {
+      this.setupAmbientLighting(program, ambient);
+    }
+
+    if (directional) {
+      this.setupDirectionalLighting(program, directional);
+    }
+
+    // Set point lights
+    if (points) {
+      this.setupPointLighting(program, points);
+    }
+  }
+
+  setupAmbientLighting(program, ambient) {
+    program.setUniforms({
+      'ambientColor': [ambient.r, ambient.g, ambient.b]
+    });
+  }
+
+  setupDirectionalLighting(program, directional) {
+    let {color, direction} = directional;
+
     // Normalize lighting direction vector
     const dir = new Vec3(direction.x, direction.y, direction.z)
       .$unit()
       .$scale(-1);
 
     program.setUniforms({
-      'ambientColor': [ambient.r, ambient.g, ambient.b],
       'directionalColor': [color.r, color.g, color.b],
       'lightingDirection': [dir.x, dir.y, dir.z]
     });
+  }
 
-    // Set point lights
+  setupPointLighting(program, points) {
+    points = points instanceof Array ? points : [points];
     const numberPoints = points.length;
     program.setUniform('numberPoints', numberPoints);
 
@@ -161,15 +185,14 @@ export default class Scene {
         'pointSpecularColor': pointSpecularColors
       });
     }
-
   }
 
   // Setup effects like fog, etc.
   setupEffects(program) {
     const {fog} = this.config.effects;
-    const {color = {r: 0.5, g: 0.5, b: 0.5}} = fog;
 
     if (fog) {
+      const {color = {r: 0.5, g: 0.5, b: 0.5}} = fog;
       program.setUniforms({
         'hasFog': true,
         'fogNear': fog.near,
@@ -203,7 +226,9 @@ export default class Scene {
   render(opt = {}) {
     const camera = this.camera;
     const {renderProgram} = opt;
-    const multiplePrograms = !renderProgram && this.program.constructor.name === 'Object';
+    const multiplePrograms = !renderProgram &&
+      this.program &&
+      this.program.constructor.name === 'Object';
     const options = {
       onBeforeRender: noop,
       onAfterRender: noop,
@@ -214,31 +239,34 @@ export default class Scene {
 
     // If we're just using one program then
     // execute the beforeRender method once.
-    if (!multiplePrograms) {
-      this.beforeRender(renderProgram || this.program);
+    if (!multiplePrograms && (renderProgram || this.program)) {
+      // this.beforeRender(renderProgram || this.program);
     }
 
     // Go through each model and render it.
-    for (let i = 0, models = this.models, l = models.length; i < l; ++i) {
-      const elem = models[i];
-      if (elem.display) {
-        const program = renderProgram || this.getProgram(elem);
+    let i = 0;
+    for (const model of this.models) {
+      if (model.display) {
+        const program = renderProgram || this.getProgram(model);
         // Setup the beforeRender method for each object
         // when there are multiple programs to be used.
-        if (multiplePrograms) {
-          this.beforeRender(program);
-        }
-        elem.onBeforeRender(program, camera);
-        options.onBeforeRender(elem, i);
-        this.renderObject(elem, program);
-        options.onAfterRender(elem, i);
-        elem.onAfterRender(program, camera);
+        // if (multiplePrograms) {
+        this.beforeRender(program);
+        //}
+        model.onBeforeRender(program, camera);
+        options.onBeforeRender(model, i);
+        this.renderObject(model, program);
+        options.onAfterRender(model, i);
+        model.onAfterRender(program, camera);
+        i++;
       }
     }
   }
 
   renderObject(object, program) {
     const gl = this.gl;
+
+    assert(object.program === program, 'object has wrong program');
 
     const {view} = this.camera;
     const {matrix} = object;

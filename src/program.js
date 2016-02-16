@@ -2,9 +2,10 @@
 // Creates programs out of shaders and provides convenient methods for loading
 // buffers attributes and uniforms
 
+/* global document */
 import Shaders from './shaders';
-import {XHR, XHRGroup} from './io';
-import {merge} from './utils';
+import {XHRGroup} from './io';
+import {merge, uid} from './utils';
 
 // Creates a shader from a string source.
 function createShader(gl, shaderSource, shaderType) {
@@ -68,7 +69,7 @@ function getUniformSetter(gl, glProgram, info, isArray) {
 
     case gl.FLOAT_MAT4:
       glFunction = gl.uniformMatrix4fv;
-      typedArray = float32Array;
+      typedArray = Float32Array;
       vector = true;
       break;
 
@@ -171,7 +172,7 @@ export default class Program {
   /**
    * @classdesc Handles loading of programs, mapping of attributes and uniforms
    */
-  constructor(gl, vertexShader, fragmentShader) {
+  constructor(gl, vertexShader, fragmentShader, id) {
     this.gl = gl;
     const glProgram = createProgram(gl, vertexShader, fragmentShader);
     if (!glProgram) {
@@ -212,6 +213,7 @@ export default class Program {
     this.attributes = attributes;
     this.attributeEnabled = attributeEnabled;
     this.uniforms = uniforms;
+    this.id = id || uid();
   }
 
   // Alternate constructor
@@ -225,7 +227,10 @@ export default class Program {
   // Alternate constructor
   // Build program from default shaders (requires Shaders)
   static fromDefaultShaders(gl) {
-    return new Program(gl, Shaders.Vertex['Default'], Shaders.Fragment['Default']);
+    return new Program(gl,
+      Shaders.Vertex.Default,
+      Shaders.Fragment.Default
+    );
   }
 
   // Alternate constructor
