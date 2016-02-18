@@ -31,8 +31,6 @@ var webGLStart = function() {
         yRot = 0, ySpeed = 0.013,
         z = -5.0;
 
-    var program = Program.fromDefaultShaders(gl);
-
     //Create object
     var cube = new Model({
       program: Program.fromDefaultShaders(gl),
