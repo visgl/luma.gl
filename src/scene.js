@@ -41,10 +41,7 @@ export default class Scene {
 
     this.gl = gl;
 
-    opt = {
-      ...DEFAULT_SCENE_OPTS,
-      ...opt
-    };
+    opt = merge(DEFAULT_SCENE_OPTS, opt);
 
     this.program = opt.program ? program[opt.program] : program;
     this.camera = camera;
