@@ -263,8 +263,6 @@ export default class Scene {
   renderObject(object, program) {
     const gl = this.gl;
 
-    assert(object.program === program, 'object has wrong program');
-
     const {view} = this.camera;
     const {matrix} = object;
     const worldMatrix = view.mulMat4(matrix);
