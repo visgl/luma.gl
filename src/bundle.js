@@ -1,13 +1,12 @@
 /* Generate script that can be used in browser without browserify */
 
-/* eslint-disable no-try-catch */
-/* eslint-disable no-console */
-/* global window, console */
+/* global window */
 import 'babel-polyfill';
 import * as LumaGL from './index';
 import Fx from './addons/fx';
 import WorkerGroup from './addons/workers';
 
+// Export all LumaGL objects as members of global LumaGL variable
 if (typeof window !== 'undefined') {
   window.LumaGL = {
     hasWebGL: LumaGL.hasWebGL,

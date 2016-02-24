@@ -5865,13 +5865,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
+// Export all LumaGL objects as members of global LumaGL variable
 /* Generate script that can be used in browser without browserify */
 
-/* eslint-disable no-try-catch */
-/* eslint-disable no-console */
-/* global window, console */
-
-
+/* global window */
 if (typeof window !== 'undefined') {
   window.LumaGL = {
     hasWebGL: LumaGL.hasWebGL,
@@ -10171,6 +10168,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 // Creates programs out of shaders and provides convenient methods for loading
 // buffers attributes and uniforms
 
+/* global document */
+
+
 var _shaders = require('./shaders');
 
 var _shaders2 = _interopRequireDefault(_shaders);
@@ -10249,7 +10249,7 @@ function getUniformSetter(gl, glProgram, info, isArray) {
 
       case gl.FLOAT_MAT4:
         glFunction = gl.uniformMatrix4fv;
-        typedArray = float32Array;
+        typedArray = Float32Array;
         vector = true;
         break;
 
@@ -10355,7 +10355,7 @@ var Program = function () {
    * @classdesc Handles loading of programs, mapping of attributes and uniforms
    */
 
-  function Program(gl, vertexShader, fragmentShader) {
+  function Program(gl, vertexShader, fragmentShader, id) {
     _classCallCheck(this, Program);
 
     this.gl = gl;
@@ -10396,6 +10396,7 @@ var Program = function () {
     this.attributes = attributes;
     this.attributeEnabled = attributeEnabled;
     this.uniforms = uniforms;
+    this.id = id || (0, _utils.uid)();
   }
 
   // Alternate constructor
@@ -10500,6 +10501,60 @@ var Program = function () {
       return this;
     }
   }, {
+    key: 'unsetBuffer',
+    value: function unsetBuffer(buf) {
+      var gl = this.gl;
+      var loc = this.attributes[buf.attribute];
+      var isAttribute = loc !== undefined;
+      if (isAttribute) {
+        gl.disableVertexAttribArray(loc);
+      }
+      gl.bindBuffer(buf.bufferType, null);
+      if (buf.instanced) {
+        var ext = gl.getExtension('ANGLE_instanced_arrays');
+        if (!ext) {
+          console.warn('ANGLE_instanced_arrays not supported!');
+        } else {
+          ext.vertexAttribDivisorANGLE(loc, 0);
+        }
+      }
+      return this;
+    }
+  }, {
+    key: 'unsetBuffers',
+    value: function unsetBuffers() {
+      var args = arguments;
+      if (Array.isArray(args[0])) {
+        args = args[0];
+      }
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = args[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var buf = _step3.value;
+
+          this.unsetBuffer(buf);
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+
+      return this;
+    }
+  }, {
     key: 'use',
     value: function use() {
       this.gl.useProgram(this.program);
@@ -10528,7 +10583,7 @@ var Program = function () {
   }, {
     key: 'fromDefaultShaders',
     value: function fromDefaultShaders(gl) {
-      return new Program(gl, _shaders2.default.Vertex['Default'], _shaders2.default.Fragment['Default']);
+      return new Program(gl, _shaders2.default.Vertex.Default, _shaders2.default.Fragment.Default);
     }
 
     // Alternate constructor
@@ -10675,13 +10730,37 @@ var Scene = function () {
   _createClass(Scene, [{
     key: 'add',
     value: function add() {
-      for (var i = 0, models = this.models, l = arguments.length; i < l; i++) {
-        var model = arguments[i];
-        // Generate unique id for model
-        model.id = model.id || (0, _utils.uid)();
-        models.push(model);
-        // Create and load Buffers
-        this.defineBuffers(model);
+      for (var _len = arguments.length, models = Array(_len), _key = 0; _key < _len; _key++) {
+        models[_key] = arguments[_key];
+      }
+
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = models[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var model = _step.value;
+
+          // Generate unique id for model
+          model.id = model.id || (0, _utils.uid)();
+          this.models.push(model);
+          // Create and load Buffers
+          this.defineBuffers(model);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
       }
     }
   }, {
@@ -10702,11 +10781,13 @@ var Scene = function () {
     key: 'getProgram',
     value: function getProgram(obj) {
       var program = this.program;
-      if (!(program instanceof _program2.default) && obj && obj.program) {
-        program = program[obj.program];
-        program.use();
-        return program;
+      if (obj && obj.program instanceof _program2.default) {
+        program = obj.program;
+      } else if (obj && obj.program) {
+        program = this.program[obj.program];
       }
+      (0, _assert2.default)(program instanceof _program2.default, 'Scene failed to find valid program');
+      program.use();
       return program;
     }
   }, {
@@ -10741,32 +10822,56 @@ var Scene = function () {
       var _config$lights = this.config.lights;
       var enable = _config$lights.enable;
       var ambient = _config$lights.ambient;
-      var _config$lights$direct = _config$lights.directional;
-      var color = _config$lights$direct.color;
-      var direction = _config$lights$direct.direction;
-      var _config$lights$points = _config$lights.points;
-      var points = _config$lights$points === undefined ? [] : _config$lights$points;
-
-
-      points = points instanceof Array ? points : [points];
+      var directional = _config$lights.directional;
+      var points = _config$lights.points;
 
       // Set light uniforms. Ambient and directional lights.
+
       program.setUniform('enableLights', enable);
 
       if (!enable) {
         return;
       }
 
+      if (ambient) {
+        this.setupAmbientLighting(program, ambient);
+      }
+
+      if (directional) {
+        this.setupDirectionalLighting(program, directional);
+      }
+
+      // Set point lights
+      if (points) {
+        this.setupPointLighting(program, points);
+      }
+    }
+  }, {
+    key: 'setupAmbientLighting',
+    value: function setupAmbientLighting(program, ambient) {
+      program.setUniforms({
+        'ambientColor': [ambient.r, ambient.g, ambient.b]
+      });
+    }
+  }, {
+    key: 'setupDirectionalLighting',
+    value: function setupDirectionalLighting(program, directional) {
+      var color = directional.color;
+      var direction = directional.direction;
+
       // Normalize lighting direction vector
+
       var dir = new _math.Vec3(direction.x, direction.y, direction.z).$unit().$scale(-1);
 
       program.setUniforms({
-        'ambientColor': [ambient.r, ambient.g, ambient.b],
         'directionalColor': [color.r, color.g, color.b],
         'lightingDirection': [dir.x, dir.y, dir.z]
       });
-
-      // Set point lights
+    }
+  }, {
+    key: 'setupPointLighting',
+    value: function setupPointLighting(program, points) {
+      points = points instanceof Array ? points : [points];
       var numberPoints = points.length;
       program.setUniform('numberPoints', numberPoints);
 
@@ -10774,19 +10879,19 @@ var Scene = function () {
       var pointColors = [];
       var enableSpecular = [];
       var pointSpecularColors = [];
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
 
       try {
-        for (var _iterator = points[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var point = _step.value;
+        for (var _iterator2 = points[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var point = _step2.value;
           var position = point.position;
-          var _color = point.color;
+          var color = point.color;
           var diffuse = point.diffuse;
           var specular = point.specular;
 
-          var pointColor = _color || diffuse;
+          var pointColor = color || diffuse;
 
           pointLocations.push(position.x, position.y, position.z);
           pointColors.push(pointColor.r, pointColor.g, pointColor.b);
@@ -10800,16 +10905,16 @@ var Scene = function () {
           }
         }
       } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
           }
         } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
+          if (_didIteratorError2) {
+            throw _iteratorError2;
           }
         }
       }
@@ -10832,11 +10937,12 @@ var Scene = function () {
     key: 'setupEffects',
     value: function setupEffects(program) {
       var fog = this.config.effects.fog;
-      var _fog$color = fog.color;
-      var color = _fog$color === undefined ? { r: 0.5, g: 0.5, b: 0.5 } : _fog$color;
 
 
       if (fog) {
+        var _fog$color = fog.color;
+        var color = _fog$color === undefined ? { r: 0.5, g: 0.5, b: 0.5 } : _fog$color;
+
         program.setUniforms({
           'hasFog': true,
           'fogNear': fog.near,
@@ -10877,7 +10983,7 @@ var Scene = function () {
       var camera = this.camera;
       var renderProgram = opt.renderProgram;
 
-      var multiplePrograms = !renderProgram && this.program.constructor.name === 'Object';
+      var multiplePrograms = !renderProgram && this.program && this.program.constructor.name === 'Object';
       var options = _extends({
         onBeforeRender: noop,
         onAfterRender: noop
@@ -10887,25 +10993,47 @@ var Scene = function () {
 
       // If we're just using one program then
       // execute the beforeRender method once.
-      if (!multiplePrograms) {
-        this.beforeRender(renderProgram || this.program);
-      }
+      if (!multiplePrograms && (renderProgram || this.program)) {}
+      // this.beforeRender(renderProgram || this.program);
+
 
       // Go through each model and render it.
-      for (var i = 0, models = this.models, l = models.length; i < l; ++i) {
-        var elem = models[i];
-        if (elem.display) {
-          var program = renderProgram || this.getProgram(elem);
-          // Setup the beforeRender method for each object
-          // when there are multiple programs to be used.
-          if (multiplePrograms) {
+      var i = 0;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = this.models[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var model = _step3.value;
+
+          if (model.display) {
+            var program = renderProgram || this.getProgram(model);
+            // Setup the beforeRender method for each object
+            // when there are multiple programs to be used.
+            // if (multiplePrograms) {
             this.beforeRender(program);
+            //}
+            model.onBeforeRender(program, camera);
+            options.onBeforeRender(model, i);
+            this.renderObject(model, program);
+            options.onAfterRender(model, i);
+            model.onAfterRender(program, camera);
+            i++;
           }
-          elem.onBeforeRender(program, camera);
-          options.onBeforeRender(elem, i);
-          this.renderObject(elem, program);
-          options.onAfterRender(elem, i);
-          elem.onAfterRender(program, camera);
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
         }
       }
     }
@@ -11312,7 +11440,7 @@ function merge(objects) {
 /**
 * Wraps the argument in an array if it is not one.
 * @param {object} a - The object to wrap.
-* @returns {Array}
+* @return {Array}
 **/
 function splat(a) {
   return Array.isArray(a) && a || [a];
@@ -11326,9 +11454,9 @@ function noop() {}
 var _uid = Date.now();
 
 /**
-* Returns a UID.
-* @returns {int}
-**/
+ * Returns a UID.
+ * @return {number} uid
+ **/
 function uid() {
   return _uid++;
 }
@@ -11336,7 +11464,7 @@ function uid() {
 /**
 * Internal function for duplicating an object.
 * @param {object} elem - The object to recursively duplicate.
-* @returns {object}
+* @return {object}
 **/
 function detach(elem) {
   var t = elem.constructor.name,
