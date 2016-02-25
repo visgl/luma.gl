@@ -1,48 +1,127 @@
+// Encapsulates a WebGLBuffer object
+import assert from 'assert';
 
 export default class Buffer {
 
-  constructor(gl, opts = {}) {
-    this.gl = gl;
-    this._setOpts(opts);
-    this.buffer = gl.createBuffer();
-    this._bufferData();
-  }
-
-  update(opts = {}) {
-    this._setOpts(opts);
-    this._bufferData();
-  }
-
-  _setOpts(opts) {
-    opts = {
-      data: this.data,
-      attribute: this.attribute,
-      bufferType: this.bufferType === undefined ? this.gl.ARRAY_BUFFER : this.bufferType,
-      size: this.size === undefined ? 1 : this.size,
-      dataType: this.dataType === undefined ? this.gl.FLOAT : this.dataType,
-      stride: this.stride === undefined ? 0 : this.stride,
-      offset: this.offset === undefined ? 0 : this.offset,
-      drawType: this.drawType === undefined ? this.gl.STATIC_DRAW : this.drawType,
-      instanced: this.instanced === undefined ? 0 : this.instanced,
-      ...opts
+  static getDefaultOpts(gl) {
+    return {
+      bufferType: gl.ARRAY_BUFFER,
+      size: 1,
+      dataType: gl.FLOAT,
+      stride: 0,
+      offset: 0,
+      drawType: gl.STATIC_DRAW,
+      instanced: 0
     };
-    this.data = opts.data;
-    this.attribute = opts.attribute;
-    this.bufferType = opts.bufferType;
-    this.size = opts.size,
-    this.dataType = opts.dataType;
-    this.stride = opts.stride;
-    this.offset = opts.offset;
-    this.drawType = opts.drawType;
-    this.instanced = opts.instanced;
   }
 
-  _bufferData() {
+  /*
+   * @classdesc
+   * Set up a gl buffer once and repeatedly bind and unbind it.
+   * Holds an attribute name as a convenience...
+   *
+   * @param{} opts.data - native array
+   * @param{string} opts.attribute - name of attribute for matching
+   * @param{} opts.bufferType - buffer type (called "target" in GL docs)
+   */
+  constructor(gl, opts) {
+    assert(gl, 'Buffer needs WebGLRenderingContext');
+    this.gl = gl;
+    this.glBuffer = gl.createBuffer();
+    opts = {...Buffer.getDefaultOpts(gl), ...opts};
+    this.update(opts);
+  }
+
+  /* Updates data in the buffer */
+  update(opts = {}) {
+    this.attribute = opts.attribute || this.attribute;
+    this.bufferType = opts.bufferType || this.bufferType;
+    this.size = opts.size || this.size;
+    this.dataType = opts.dataType || this.dataType;
+    this.stride = opts.stride || this.stride;
+    this.offset = opts.offset || this.offset;
+    this.drawType = opts.drawType || this.drawType;
+    this.instanced = opts.instanced || this.instanced;
+
+    this.data = opts.data || this.data;
     if (this.data !== undefined) {
-      this.gl.bindBuffer(this.bufferType, this.buffer);
-      this.gl.bufferData(this.bufferType, this.data, this.drawType);
-      this.gl.bindBuffer(this.bufferType, null);
+      this.bufferData(this.data);
     }
+    return this;
   }
 
+  /* Updates data in the buffer */
+  bufferData(data) {
+    assert(data, 'Buffer.bufferData needs data');
+    this.data = data;
+    this.gl.bindBuffer(this.bufferType, this.glBuffer);
+    this.gl.bufferData(this.bufferType, this.data, this.drawType);
+    this.gl.bindBuffer(this.bufferType, null);
+    return this;
+  }
+
+  attachToLocation(location) {
+    const {gl} = this;
+    // Bind the buffer so that we can operate on it
+    gl.bindBuffer(this.bufferType, this.glBuffer);
+    if (location === undefined) {
+      return this;
+    }
+    // Enable the attribute
+    gl.enableVertexAttribArray(location);
+    // Specify buffer format
+    gl.vertexAttribPointer(
+      location,
+      this.size, this.dataType, false, this.stride, this.offset
+    );
+    if (this.instanced) {
+      const extension = getExtension(gl, 'ANGLE_instanced_arrays');
+      // This makes it an instanced attribute
+      extension.vertexAttribDivisorANGLE(location, 1);
+    }
+    return this;
+  }
+
+  detachFromLocation(location) {
+    const {gl} = this;
+    if (location === undefined) {
+      if (this.instanced) {
+        const extension = getExtension(gl, 'ANGLE_instanced_arrays');
+        // Clear instanced flag
+        extension.vertexAttribDivisorANGLE(location, 0);
+      }
+      // Disable the attribute
+      gl.disableVertexAttribArray(location);
+    }
+    // Unbind the buffer per webgl recommendations
+    gl.bindBuffer(this.bufferType, null);
+    return this;
+  }
+
+  bind() {
+    const {gl} = this;
+    gl.bindBuffer(this.bufferType, this.glBuffer);
+    return this;
+  }
+
+  unbind() {
+    const {gl} = this;
+    gl.bindBuffer(this.bufferType, null);
+    return this;
+  }
+
+  destroy() {
+    const {gl} = this;
+    gl.deleteBuffer(this.glBuffer);
+    this.glBuffer = null;
+    return this;
+  }
+
+}
+
+function getExtension(gl, extensionName) {
+  const extension = gl.getExtension(extensionName);
+  if (!extension) {
+    throw new Error(`${extensionName} not supported!`);
+  }
 }

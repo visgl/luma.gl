@@ -347,7 +347,7 @@ export default class Model {
         });
       }
       program.setBuffer(this.buffers[key]);
-    })
+    });
   }
 
   setVertices(program) {
@@ -359,11 +359,11 @@ export default class Model {
         attribute: 'position',
         data: this.$vertices,
         size: 3
-      })
+      });
     } else if (this.dynamic) {
       this.buffers.position.update({
         data: this.$vertices
-      })
+      });
     }
 
     program.setBuffer(this.buffers.position);
@@ -379,11 +379,11 @@ export default class Model {
         attribute: 'normal',
         data: this.$normals,
         size: 3
-      })
+      });
     } else if (this.dynamic) {
       this.buffers.normal.update({
         data: this.$normals
-      })
+      });
     }
 
     program.setBuffer(this.buffers.normal);
@@ -402,11 +402,11 @@ export default class Model {
         drawType: gl.STATIC_DRAW,
         data: this.$indices,
         size: 1
-      })
+      });
     } else if (this.dynamic) {
       this.buffers.indices.update({
         data: this.$indices
-      })
+      });
     }
 
     program.setBuffer(this.buffers.indices);
@@ -417,17 +417,16 @@ export default class Model {
       return;
     }
 
-
     if (!this.buffers.pickingColors) {
       this.buffers.pickingColors = new Buffer(program.gl, {
         attribute: 'pickingColor',
         data: this.$pickingColors,
         size: 4
-      })
+      });
     } else if (this.dynamic) {
       this.buffers.pickingColors.update({
         data: this.$pickingColors
-      })
+      });
     }
 
     program.setBuffer(this.buffers.pickingColors);
@@ -443,11 +442,11 @@ export default class Model {
         attribute: 'color',
         data: this.$colors,
         size: 4
-      })
+      });
     } else if (this.dynamic) {
       this.buffers.colors.update({
         data: this.$colors
-      })
+      });
     }
 
     program.setBuffer(this.buffers.colors);
@@ -471,21 +470,21 @@ export default class Model {
             attribute: 'texCoord' + (i + 1),
             data: this.$texCoords[tex],
             size: 2
-          })
+          });
         }
       } else {
         this.buffers.texCoords = new Buffer(gl, {
           attribute: 'texCoord1',
           data: this.$texCoords,
           size: 2
-        })
+        });
       }
     } else if (this.dynamic) {
       if (multi) {
         for (i = 0, txs = this.textures, l = txs.length; i < l; i++) {
           tex = txs[i];
           this.buffers.texCoords['texCoord' + (i + 1)].update({
-            data: this.$texCoords[tex],
+            data: this.$texCoords[tex]
           });
         }
       } else {
