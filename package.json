@@ -31,6 +31,13 @@
       "glslify"
     ]
   },
+  "standard": {
+    "ignore": [
+      "**/dist/**",
+      "**/examples/**",
+      "**/Documents/**"
+    ]
+  },
   "devDependencies": {
     "babel-cli": "6.5.1",
     "babel-core": "6.5.1",

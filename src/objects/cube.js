@@ -2,6 +2,7 @@ import Model from './model';
 
 export default class Cube extends Model {
   constructor(config = {}) {
+    /* eslint-disable no-multi-spaces, indent */
     super({
       vertices: [
         -1, -1,  1,
@@ -120,5 +121,6 @@ export default class Cube extends Model {
 
       ...config
     });
+    /* eslint-enable no-multi-spaces, indent */
   }
 }

@@ -84,7 +84,7 @@ export default class Model {
     // whether to display the object at all
     this.display = 'display' in opt ? opt.display : true;
     // before and after render callbacks
-    this.onBeforeRender = opt.onBeforeRender || noop;
+    this.onBeforeRender = opt.onBeforeRender || this.onBeforeRender;
     this.onAfterRender = opt.onAfterRender || noop;
     // set a custom program per o3d
     if (opt.program) {
@@ -110,6 +110,16 @@ export default class Model {
   /* eslint-enable complexity */
 
   // ensure known attributes use typed arrays
+
+  onBeforeRender() {
+    const {program, attributes} = this;
+    if (program) {
+      program.use();
+    }
+    if (attributes) {
+      this.setAttributes(program);
+    }
+  }
 
   get hash() {
     return this.id + ' ' + this.$pickingIndex;

@@ -98,7 +98,9 @@ export default class Program {
     return this;
   }
 
-  setBuffers(buffers) {
+  setBuffers(...buffers) {
+    buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
+      buffers[0] : buffers;
     for (const buffer of buffers) {
       this.setBuffer(buffer);
     }
@@ -111,7 +113,9 @@ export default class Program {
     return this;
   }
 
-  unsetBuffers(buffers) {
+  unsetBuffers(...buffers) {
+    buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
+      buffers[0] : buffers;
     for (const buffer of buffers) {
       this.unsetBuffer(buffer);
     }
