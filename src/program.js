@@ -7,6 +7,123 @@ import formatCompilerError from 'gl-format-compiler-error';
 import Shaders from './shaders';
 import {XHRGroup} from './io';
 import {merge, uid} from './utils';
+export default class Program {
+
+  /**
+   * @classdesc Handles loading of programs, mapping of attributes and uniforms
+   */
+  constructor(gl, vertexShader, fragmentShader, id) {
+    const glProgram = createProgram(gl, vertexShader, fragmentShader);
+    if (!glProgram) {
+      throw new Error('Failed to create program');
+    }
+
+    this.gl = gl;
+    this.program = glProgram;
+    this.id = id || uid();
+
+    // determine attribute locations (i.e. indices)
+    this.attributeLocations = getAttributeLocations(gl, glProgram);
+    // prepare uniform setters
+    this.uniformSetters = getUniformSetters(gl, glProgram);
+    // no attributes enabled yet
+    this.attributeEnabled = {};
+  }
+
+  // Alternate constructor
+  // Create a program from vertex and fragment shader node ids
+  static fromHTMLTemplates(gl, vs, fs) {
+    const vertexShader = document.getElementById(vs).innerHTML;
+    const fragmentShader = document.getElementById(fs).innerHTML;
+    return new Program(gl, vertexShader, fragmentShader);
+  }
+
+  // Alternate constructor
+  // Build program from default shaders (requires Shaders)
+  static fromDefaultShaders(gl) {
+    return new Program(gl,
+      Shaders.Vertex.Default,
+      Shaders.Fragment.Default
+    );
+  }
+
+  // Alternate constructor
+  // Implement Program.fromShaderURIs (requires IO)
+  static async fromShaderURIs(gl, vs, fs, opts) {
+    opts = merge({
+      path: '/',
+      noCache: false
+    }, opts);
+
+    const vertexShaderURI = opts.path + vs;
+    const fragmentShaderURI = opts.path + fs;
+
+    const responses = await new XHRGroup({
+      urls: [vertexShaderURI, fragmentShaderURI],
+      noCache: opts.noCache
+    }).sendAsync();
+
+    return new Program(gl, responses[0], responses[1]);
+
+  }
+
+  use() {
+    this.gl.useProgram(this.program);
+    return this;
+  }
+
+  setTexture(texture, index) {
+    texture.bind(index);
+    return this;
+  }
+
+  setUniform(name, value) {
+    if (name in this.uniformSetters) {
+      this.uniformSetters[name](value);
+    }
+    return this;
+  }
+
+  setUniforms(uniformMap) {
+    for (const name of Object.keys(uniformMap)) {
+      if (name in this.uniformSetters) {
+        this.uniformSetters[name](uniformMap[name]);
+      }
+    }
+    return this;
+  }
+
+  setBuffer(buffer) {
+    const location = this.attributeLocations[buffer.attribute];
+    buffer.attachToLocation(location);
+    return this;
+  }
+
+  setBuffers(...buffers) {
+    buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
+      buffers[0] : buffers;
+    for (const buffer of buffers) {
+      this.setBuffer(buffer);
+    }
+    return this;
+  }
+
+  unsetBuffer(buffer) {
+    const location = this.attributeLocations[buffer.attribute];
+    buffer.detachFromLocation(location);
+    return this;
+  }
+
+  unsetBuffers(...buffers) {
+    buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
+      buffers[0] : buffers;
+    for (const buffer of buffers) {
+      this.unsetBuffer(buffer);
+    }
+    return this;
+  }
+
+}
 
 // Creates a shader from a string source.
 function createShader(gl, shaderSource, shaderType) {
@@ -48,6 +165,17 @@ function createProgram(gl, vertexShader, fragmentShader) {
 
   return glProgram;
 }
+
+// TODO - use tables to reduce complexity of method below
+const glUniformSetter = {
+  FLOAT: {function: 'uniform1fv', type: Float32Array},
+  FLOAT_VEC3: {function: 'uniform3fv', type: Float32Array},
+  FLOAT_MAT4: {function: 'uniformMatrix4fv', type: Float32Array},
+  INT: {function: 'uniform1iv', type: Uint16Array},
+  BOOL: {function: 'uniform1iv', type: Uint16Array},
+  SAMPLER_2D: {function: 'uniform1iv', type: Uint16Array},
+  SAMPLER_CUBE: {function: 'uniform1iv', type: Uint16Array}
+};
 
 // Returns a Magic Uniform Setter
 function getUniformSetter(gl, glProgram, info, isArray) {
@@ -174,196 +302,31 @@ function getUniformSetter(gl, glProgram, info, isArray) {
   throw new Error(`Unknown type: ${type}`);
 }
 
-export default class Program {
-
-  /**
-   * @classdesc Handles loading of programs, mapping of attributes and uniforms
-   */
-  constructor(gl, vertexShader, fragmentShader, id) {
-    this.gl = gl;
-    const glProgram = createProgram(gl, vertexShader, fragmentShader);
-    if (!glProgram) {
-      throw new Error('Failed to create program');
-    }
-
-    const attributes = {};
-    const attributeEnabled = {};
-    const uniforms = {};
-    let info;
-    let name;
-    let index;
-
-    // fill attribute locations
-    let len = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
-    for (let i = 0; i < len; i++) {
-      info = gl.getActiveAttrib(glProgram, i);
-      name = info.name;
-      index = gl.getAttribLocation(glProgram, info.name);
-      attributes[name] = index;
-    }
-
-    // create uniform setters
-    len = gl.getProgramParameter(glProgram, gl.ACTIVE_UNIFORMS);
-    for (let i = 0; i < len; i++) {
-      info = gl.getActiveUniform(glProgram, i);
-      name = info.name;
-      // if array name then clean the array brackets
-      name = name[name.length - 1] === ']' ?
-        name.substr(0, name.length - 3) : name;
-      uniforms[name] =
-        getUniformSetter(gl, glProgram, info, info.name !== name);
-    }
-
-    this.program = glProgram;
-
-    // handle attributes and uniforms
-    this.attributes = attributes;
-    this.attributeEnabled = attributeEnabled;
-    this.uniforms = uniforms;
-    this.id = id || uid();
+// create uniform setters
+// Map of uniform names to setter functions
+function getUniformSetters(gl, glProgram) {
+  const uniformSetters = {};
+  const length = gl.getProgramParameter(glProgram, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < length; i++) {
+    const info = gl.getActiveUniform(glProgram, i);
+    let name = info.name;
+    // if array name then clean the array brackets
+    name = name[name.length - 1] === ']' ?
+      name.substr(0, name.length - 3) : name;
+    uniformSetters[name] =
+      getUniformSetter(gl, glProgram, info, info.name !== name);
   }
+  return uniformSetters;
+}
 
-  // Alternate constructor
-  // Create a program from vertex and fragment shader node ids
-  static fromHTMLTemplates(gl, vs, fs) {
-    const vertexShader = document.getElementById(vs).innerHTML;
-    const fragmentShader = document.getElementById(fs).innerHTML;
-    return new Program(gl, vertexShader, fragmentShader);
+// determine attribute locations (maps attribute name to index)
+function getAttributeLocations(gl, glProgram) {
+  const attributeLocations = {};
+  const length = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
+  for (let i = 0; i < length; i++) {
+    const info = gl.getActiveAttrib(glProgram, i);
+    const index = gl.getAttribLocation(glProgram, info.name);
+    attributeLocations[info.name] = index;
   }
-
-  // Alternate constructor
-  // Build program from default shaders (requires Shaders)
-  static fromDefaultShaders(gl) {
-    return new Program(gl,
-      Shaders.Vertex.Default,
-      Shaders.Fragment.Default
-    );
-  }
-
-  // Alternate constructor
-  // Implement Program.fromShaderURIs (requires IO)
-  static async fromShaderURIs(gl, vs, fs, opts) {
-    opts = merge({
-      path: '/',
-      noCache: false
-    }, opts);
-
-    const vertexShaderURI = opts.path + vs;
-    const fragmentShaderURI = opts.path + fs;
-
-    const responses = await new XHRGroup({
-      urls: [vertexShaderURI, fragmentShaderURI],
-      noCache: opts.noCache,
-    }).sendAsync();
-
-    return new Program(gl, responses[0], responses[1]);
-
-  }
-
-  setUniform(name, value) {
-    if (name in this.uniforms) {
-      this.uniforms[name](value);
-    }
-    return this;
-  }
-
-  setUniforms(forms) {
-    for (const name of Object.keys(forms)) {
-      if (name in this.uniforms) {
-        this.uniforms[name](forms[name]);
-      }
-    }
-    return this;
-  }
-
-  setBuffer(buf) {
-    const gl = this.gl;
-    const loc = this.attributes[buf.attribute];
-    const isAttribute = loc !== undefined;
-    if (isAttribute) {
-      gl.enableVertexAttribArray(loc);
-    }
-    gl.bindBuffer(buf.bufferType, buf.buffer);
-    if (isAttribute) {
-      gl.vertexAttribPointer(loc, buf.size, buf.dataType, false, buf.stride, buf.offset);
-    }
-    if (buf.instanced) {
-      const ext = gl.getExtension('ANGLE_instanced_arrays');
-      if (!ext) {
-        console.warn('ANGLE_instanced_arrays not supported!');
-      } else {
-        ext.vertexAttribDivisorANGLE(loc, buf.instanced === true ? 1 : buf.instanced);
-      }
-    }
-    return this;
-  }
-
-  setBuffers() {
-    let args = arguments;
-    if (Array.isArray(args[0])) {
-      args = args[0];
-    }
-    for (const buf of args) {
-      this.setBuffer(buf);
-    }
-    return this;
-  }
-
-  unsetBuffer(buf) {
-    const gl = this.gl;
-    const loc = this.attributes[buf.attribute];
-    const isAttribute = loc !== undefined;
-    if (isAttribute) {
-      gl.disableVertexAttribArray(loc);
-    }
-    gl.bindBuffer(buf.bufferType, null);
-    if (buf.instanced) {
-      const ext = gl.getExtension('ANGLE_instanced_arrays');
-      if (!ext) {
-        console.warn('ANGLE_instanced_arrays not supported!');
-      } else {
-        ext.vertexAttribDivisorANGLE(loc, 0);
-      }
-    }
-    return this;
-  }
-
-  unsetBuffers() {
-    let args = arguments;
-    if (Array.isArray(args[0])) {
-      args = args[0];
-    }
-    for (const buf of args) {
-      this.unsetBuffer(buf);
-    }
-    return this;
-  }
-
-  use() {
-    this.gl.useProgram(this.program);
-    return this;
-  }
-
-  setTexture(texture, index) {
-    texture.bind(index);
-    return this;
-  }
-
-  // Get options object or make options object from 2 arguments
-  static _getOptions(base = {}, ...args) {
-    let opt;
-    if (args.length === 2) {
-      return {
-        ...base,
-        vs: args[0],
-        fs: args[1]
-      };
-    } else {
-      return {
-        ...base,
-        ...(args[0] || {})
-      };
-    }
-  }
-
+  return attributeLocations;
 }

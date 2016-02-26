@@ -9,6 +9,10 @@ import {default as Framebuffer} from './fbo';
 
 function noop() {}
 
+const MAX_TEXTURES = 10;
+const MAX_POINT_LIGHTS = 4;
+const PICKING_RES = 4;
+
 const DEFAULT_SCENE_OPTS = {
   lights: {
     enable: false,
@@ -367,12 +371,13 @@ export default class Scene {
     if (this.pickingFBO === undefined) {
       this.pickingFBO = new Framebuffer(gl, {
         width: gl.canvas.width,
-        height: gl.canvas.height,
+        height: gl.canvas.height
       });
     }
 
     if (this.pickingProgram === undefined) {
-      this.pickingProgram = opt.pickingProgram || Program.fromDefaultShaders(gl);
+      this.pickingProgram =
+        opt.pickingProgram || Program.fromDefaultShaders(gl);
     }
 
     let pickingProgram = this.pickingProgram;
@@ -384,22 +389,24 @@ export default class Scene {
     this.pickingFBO.bind();
 
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(x,gl.canvas.height-y,1,1);
+    gl.scissor(x, gl.canvas.height - y, 1, 1);
 
     const oldClearColor = this.clearColor;
     const oldBackgroundColor = this.backgroundColor;
     this.clearColor = true;
-    this.backgroundColor = {r:255, g: 0, b:0, a: 255};
+    this.backgroundColor = {r: 255, g: 0, b: 0, a: 255};
 
     this.render({
-      renderProgram: pickingProgram,
+      renderProgram: pickingProgram
     });
 
     gl.disable(gl.SCISSOR_TEST);
 
     const pixel = new Uint8Array(4);
 
-    gl.readPixels(x, gl.canvas.height-y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    gl.readPixels(
+      x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel
+    );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.clearColor = oldClearColor;
@@ -410,11 +417,11 @@ export default class Scene {
     let b = pixel[2];
     let a = pixel[3];
 
-    return [r,g,b,a];
+    return [r, g, b, a];
   }
 
 }
 
-Scene.MAX_TEXTURES = 10;
-Scene.MAX_POINT_LIGHTS = 4;
-Scene.PICKING_RES = 4;
+Scene.MAX_TEXTURES = MAX_TEXTURES;
+Scene.MAX_POINT_LIGHTS = MAX_POINT_LIGHTS;
+Scene.PICKING_RES = PICKING_RES;
