@@ -3,6 +3,9 @@
 /* global window */
 
 export function createGLContext(canvas, opt) {
+  if (!isBrowserContext()) {
+    throw new Error("Can't create a WebGL context outside a browser context.")
+  }
   var gl = null;
   canvas = typeof canvas === 'string' ? document.getElementById(canvas) : canvas;
   let ctx;
@@ -58,6 +61,9 @@ export function createGLContext(canvas, opt) {
 }
 
 export function hasWebGL() {
+  if (!isBrowserContext()) {
+    return false;
+  }
   // Feature test WebGL
   try {
     const canvas = document.createElement('canvas');
@@ -69,7 +75,7 @@ export function hasWebGL() {
 }
 
 export function hasExtension(name) {
-  if (!PhiloGL.hasWebGL()) {
+  if (!hasWebGL()) {
     return false;
   }
   const canvas = document.createElement('canvas');
@@ -77,4 +83,11 @@ export function hasExtension(name) {
     canvas.getContext('experimental-webgl');
   // Should maybe be return !!context.getExtension(name);
   return context.getExtension(name);
+}
+
+function isBrowserContext() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return true;
 }
