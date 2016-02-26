@@ -3,6 +3,7 @@
 // buffers attributes and uniforms
 
 /* global document */
+import formatCompilerError from 'gl-format-compiler-error';
 import Shaders from './shaders';
 import {XHRGroup} from './io';
 import {merge, uid} from './utils';
@@ -136,7 +137,13 @@ function createShader(gl, shaderSource, shaderType) {
   if (!compiled) {
     var info = gl.getShaderInfoLog(shader);
     gl.deleteShader(shader);
-    throw new Error(`Error while compiling the shader ${info}`);
+    try {
+      var formattedLog = formatCompilerError(info, shaderSource, shaderType);
+    } catch(e) {
+      console.warn('Error formatting glsl compiler error:', e);
+      throw new Error(`Error while compiling the shader ${info}`);
+    }
+    throw new Error(formattedLog.long);
   }
   return shader;
 }
