@@ -54,7 +54,7 @@ export default class Model {
     this.id = opt.id || uid();
     // picking options
     this.pickable = Boolean(opt.pickable);
-    this.pick = opt.pick || function() {return false};
+    this.pick = opt.pick || (() => false);
 
     this.vertices = opt.vertices;
     this.normals = opt.normals;
@@ -341,23 +341,29 @@ export default class Model {
 
   setUniforms(program) {
     program.setUniforms(this.uniforms);
+    return this;
   }
 
+  // Makes sure buffers are created for all attributes
+  // and that the program is updated with those buffers
+  // TODO - do we need the separation between "attributes" and "buffers"
+  //  couldn't apps just create buffers directly?
   setAttributes(program) {
-    Object.keys(this.attributes).forEach((key) => {
-      if (!this.buffers[key]) {
-        const attr = this.attributes[key];
-        this.buffers[key] = new Buffer(program.gl, {
-          attribute: key,
-          data: attr.value,
-          size: attr.size,
-          instanced: attr.instanced,
-          bufferType: attr.bufferType || program.gl.ARRAY_BUFFER,
-          drawType: attr.drawType || program.gl.STATIC_DRAW
+    for (const attributeName of Object.keys(this.attributes)) {
+      const attribute = this.attributes[attributeName];
+      if (!this.buffers[attributeName]) {
+        this.buffers[attributeName] = new Buffer(program.gl, {
+          attribute: attributeName,
+          data: attribute.value,
+          size: attribute.size,
+          instanced: attribute.instanced ? 1 : 0,
+          bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
+          drawType: attribute.drawType || program.gl.STATIC_DRAW
         });
       }
-      program.setBuffer(this.buffers[key]);
-    });
+      program.setBuffer(this.buffers[attributeName]);
+    }
+    return this;
   }
 
   setVertices(program) {
@@ -469,12 +475,12 @@ export default class Model {
 
     const gl = program.gl;
     const multi = this.$texCoords.constructor.name === 'Object';
-    let i, txs, l, tex;
+    let tex;
 
     if (!this.buffers.texCoords) {
       if (multi) {
         this.buffers.texCoords = {};
-        for (i = 0, txs = this.textures, l = txs.length; i < l; i++) {
+        for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
           tex = txs[i];
           this.buffers.texCoords['texCoord' + (i + 1)] = new Buffer(gl, {
             attribute: 'texCoord' + (i + 1),
@@ -491,7 +497,7 @@ export default class Model {
       }
     } else if (this.dynamic) {
       if (multi) {
-        for (i = 0, txs = this.textures, l = txs.length; i < l; i++) {
+        for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
           tex = txs[i];
           this.buffers.texCoords['texCoord' + (i + 1)].update({
             data: this.$texCoords[tex]
@@ -505,7 +511,7 @@ export default class Model {
     }
 
     if (multi) {
-      for (i = 0, txs = this.textures, l = txs.length; i < l; i++) {
+      for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
         tex = txs[i];
         program.setBuffer(this.buffers.texCoords['texCoord' + (i + 1)]);
       }
@@ -515,7 +521,6 @@ export default class Model {
   }
 
   setTextures(program, force) {
-    const gl = program.gl;
     this.textures = this.textures ? splat(this.textures) : [];
     let tex2D = 0;
     let texCube = 0;
@@ -530,10 +535,10 @@ export default class Model {
         //   program.setUniform('samplerCube' + (texCube + 1), i);
         //   texCube++;
         // } else {
-          program.setUniform('hasTexture' + (i + 1), true);
-          program.setTexture(texs[i], tex2D);
-          program.setUniform('sampler' + (tex2D + 1), i);
-          tex2D++;
+        program.setUniform('hasTexture' + (i + 1), true);
+        program.setTexture(texs[i], tex2D);
+        program.setUniform('sampler' + (tex2D + 1), i);
+        tex2D++;
         // }
       } else {
         program.setUniform('hasTextureCube' + (i + 1), false);

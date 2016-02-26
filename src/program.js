@@ -9,7 +9,7 @@ import {XHRGroup} from './io';
 import {merge, uid} from './utils';
 export default class Program {
 
-  /**
+  /*
    * @classdesc Handles loading of programs, mapping of attributes and uniforms
    */
   constructor(gl, vertexShader, fragmentShader, id) {
@@ -24,6 +24,7 @@ export default class Program {
 
     // determine attribute locations (i.e. indices)
     this.attributeLocations = getAttributeLocations(gl, glProgram);
+    console.log(`${id} locations`, this.attributeLocations);
     // prepare uniform setters
     this.uniformSetters = getUniformSetters(gl, glProgram);
     // no attributes enabled yet
@@ -123,6 +124,36 @@ export default class Program {
     return this;
   }
 
+  // Calls the proper draw function for this program based on attributes etc
+  // TODO - this function is still experimental
+  draw({drawType, attributes, instanced, numInstances}) {
+    const {gl} = this;
+    const {indices, vertices} = attributes;
+    // TODO - shouldn't the caller do this lookup
+    drawType = drawType ? gl.get(drawType) : gl.POINTS;
+
+    const numIndices = indices ? indices.value.length : 0;
+
+    if (instanced && indices) {
+      // this instanced primitive does has indices, use drawElements extension
+      const extension = getExtension('ANGLE_instanced_arrays');
+      extension.drawElementsInstancedANGLE(
+        drawType, numIndices, gl.UNSIGNED_SHORT, 0, numInstances
+      );
+    } else if (instanced) {
+      // this instanced primitive does not have indices, use drawArrays ext
+      const extension = getExtension('ANGLE_instanced_arrays');
+      const numVertices = vertices ? vertices.value.length : 0;
+      extension.drawArraysInstancedANGLE(
+        drawType, 0, numVertices / 3, numInstances
+      );
+    } else if (attributes.indices) {
+      gl.drawElements(drawType, numIndices, gl.UNSIGNED_SHORT, 0);
+    } else {
+      // else if this.primitive does not have indices
+      gl.drawArrays(drawType, 0, numInstances);
+    }
+  }
 }
 
 // Creates a shader from a string source.
@@ -137,12 +168,18 @@ function createShader(gl, shaderSource, shaderType) {
   if (!compiled) {
     var info = gl.getShaderInfoLog(shader);
     gl.deleteShader(shader);
+    /* eslint-disable no-try-catch */
+    var formattedLog;
     try {
-      var formattedLog = formatCompilerError(info, shaderSource, shaderType);
-    } catch(e) {
-      console.warn('Error formatting glsl compiler error:', e);
+      formatCompilerError(info, shaderSource, shaderType);
+    } catch (error) {
+      /* eslint-disable no-console */
+      /* global console */
+      console.warn('Error formatting glsl compiler error:', error);
+      /* eslint-enable no-console */
       throw new Error(`Error while compiling the shader ${info}`);
     }
+    /* eslint-enable no-try-catch */
     throw new Error(formattedLog.long);
   }
   return shader;
@@ -167,17 +204,18 @@ function createProgram(gl, vertexShader, fragmentShader) {
 }
 
 // TODO - use tables to reduce complexity of method below
-const glUniformSetter = {
-  FLOAT: {function: 'uniform1fv', type: Float32Array},
-  FLOAT_VEC3: {function: 'uniform3fv', type: Float32Array},
-  FLOAT_MAT4: {function: 'uniformMatrix4fv', type: Float32Array},
-  INT: {function: 'uniform1iv', type: Uint16Array},
-  BOOL: {function: 'uniform1iv', type: Uint16Array},
-  SAMPLER_2D: {function: 'uniform1iv', type: Uint16Array},
-  SAMPLER_CUBE: {function: 'uniform1iv', type: Uint16Array}
-};
+// const glUniformSetter = {
+//   FLOAT: {function: 'uniform1fv', type: Float32Array},
+//   FLOAT_VEC3: {function: 'uniform3fv', type: Float32Array},
+//   FLOAT_MAT4: {function: 'uniformMatrix4fv', type: Float32Array},
+//   INT: {function: 'uniform1iv', type: Uint16Array},
+//   BOOL: {function: 'uniform1iv', type: Uint16Array},
+//   SAMPLER_2D: {function: 'uniform1iv', type: Uint16Array},
+//   SAMPLER_CUBE: {function: 'uniform1iv', type: Uint16Array}
+// };
 
 // Returns a Magic Uniform Setter
+/* eslint-disable complexity */
 function getUniformSetter(gl, glProgram, info, isArray) {
   const {name, type} = info;
   const loc = gl.getUniformLocation(glProgram, name);
@@ -185,26 +223,26 @@ function getUniformSetter(gl, glProgram, info, isArray) {
   let matrix = false;
   let vector = true;
   let glFunction;
-  let typedArray;
+  let TypedArray;
 
   if (info.size > 1 && isArray) {
     switch (type) {
 
     case gl.FLOAT:
       glFunction = gl.uniform1fv;
-      typedArray = Float32Array;
+      TypedArray = Float32Array;
       vector = false;
       break;
 
     case gl.FLOAT_VEC3:
       glFunction = gl.uniform3fv;
-      typedArray = Float32Array;
+      TypedArray = Float32Array;
       vector = true;
       break;
 
     case gl.FLOAT_MAT4:
       glFunction = gl.uniformMatrix4fv;
-      typedArray = Float32Array;
+      TypedArray = Float32Array;
       vector = true;
       break;
 
@@ -213,7 +251,7 @@ function getUniformSetter(gl, glProgram, info, isArray) {
     case gl.SAMPLER_2D:
     case gl.SAMPLER_CUBE:
       glFunction = gl.uniform1iv;
-      typedArray = Uint16Array;
+      TypedArray = Uint16Array;
       vector = false;
       break;
 
@@ -230,30 +268,30 @@ function getUniformSetter(gl, glProgram, info, isArray) {
       break;
     case gl.FLOAT_VEC2:
       glFunction = gl.uniform2fv;
-      typedArray = isArray ? Float32Array : new Float32Array(2);
+      TypedArray = isArray ? Float32Array : new Float32Array(2);
       break;
     case gl.FLOAT_VEC3:
       glFunction = gl.uniform3fv;
-      typedArray = isArray ? Float32Array : new Float32Array(3);
+      TypedArray = isArray ? Float32Array : new Float32Array(3);
       break;
     case gl.FLOAT_VEC4:
       glFunction = gl.uniform4fv;
-      typedArray = isArray ? Float32Array : new Float32Array(4);
+      TypedArray = isArray ? Float32Array : new Float32Array(4);
       break;
     case gl.INT: case gl.BOOL: case gl.SAMPLER_2D: case gl.SAMPLER_CUBE:
       glFunction = gl.uniform1i;
       break;
     case gl.INT_VEC2: case gl.BOOL_VEC2:
       glFunction = gl.uniform2iv;
-      typedArray = isArray ? Uint16Array : new Uint16Array(2);
+      TypedArray = isArray ? Uint16Array : new Uint16Array(2);
       break;
     case gl.INT_VEC3: case gl.BOOL_VEC3:
       glFunction = gl.uniform3iv;
-      typedArray = isArray ? Uint16Array : new Uint16Array(3);
+      TypedArray = isArray ? Uint16Array : new Uint16Array(3);
       break;
     case gl.INT_VEC4: case gl.BOOL_VEC4:
       glFunction = gl.uniform4iv;
-      typedArray = isArray ? Uint16Array : new Uint16Array(4);
+      TypedArray = isArray ? Uint16Array : new Uint16Array(4);
       break;
     case gl.FLOAT_MAT2:
       matrix = true;
@@ -275,31 +313,26 @@ function getUniformSetter(gl, glProgram, info, isArray) {
   glFunction = glFunction.bind(gl);
 
   // Set a uniform array
-  if (isArray && typedArray) {
+  if (isArray && TypedArray) {
 
-    return val => glFunction(loc, new typedArray(val));
+    return val => glFunction(loc, new TypedArray(val));
 
   } else if (matrix) {
     // Set a matrix uniform
     return val => glFunction(loc, false, val.toFloat32Array());
 
-  } else if (typedArray) {
+  } else if (TypedArray) {
 
     // Set a vector/typed array uniform
     return val => {
-      typedArray.set(val.toFloat32Array ? val.toFloat32Array() : val);
-      glFunction(loc, typedArray);
+      TypedArray.set(val.toFloat32Array ? val.toFloat32Array() : val);
+      glFunction(loc, TypedArray);
     };
 
-  } else {
-
-    // Set a primitive-valued uniform
-    return val => glFunction(loc, val);
-
   }
+  // Set a primitive-valued uniform
+  return val => glFunction(loc, val);
 
-  // FIXME: Unreachable code
-  throw new Error(`Unknown type: ${type}`);
 }
 
 // create uniform setters
@@ -321,12 +354,20 @@ function getUniformSetters(gl, glProgram) {
 
 // determine attribute locations (maps attribute name to index)
 function getAttributeLocations(gl, glProgram) {
-  const attributeLocations = {};
   const length = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
+  const attributeLocations = {};
   for (let i = 0; i < length; i++) {
     const info = gl.getActiveAttrib(glProgram, i);
     const index = gl.getAttribLocation(glProgram, info.name);
     attributeLocations[info.name] = index;
   }
   return attributeLocations;
+}
+
+function getExtension(gl, extensionName) {
+  const extension = gl.getExtension(extensionName);
+  if (!extension) {
+    throw new Error(`${extensionName} not supported!`);
+  }
+  return extension;
 }

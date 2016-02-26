@@ -225,6 +225,8 @@ export default class Scene {
 
   // Renders all objects in the scene.
   render(opt = {}) {
+    console.log(`render`);
+
     const camera = this.camera;
     const {renderProgram} = opt;
     const multiplePrograms = !renderProgram &&

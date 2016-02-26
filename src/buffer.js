@@ -124,4 +124,5 @@ function getExtension(gl, extensionName) {
   if (!extension) {
     throw new Error(`${extensionName} not supported!`);
   }
+  return extension;
 }
