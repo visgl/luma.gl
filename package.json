@@ -63,6 +63,6 @@
     "lint": "uber-standard",
     "precommit": "npm run lint -s",
     "start": "budo src/bundle.js:dist/LumaGL.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'",
-    "test": "babel-node --ignore='' test/index.js | faucet"
+    "test": "node_modules/.bin/babel-node --ignore='' test/index.js | faucet"
   }
 }
