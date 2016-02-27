@@ -2,11 +2,8 @@
 // Handle keyboard/mouse/touch events in the Canvas
 // TODO - this will not work under node
 
-/* eslint-disable dot-notation */
-/* global window */
-/* global document */
-
-
+/* eslint-disable dot-notation, max-statements, no-loop-func */
+/* global window, document */
 import {noop} from './utils';
 
 // returns an O3D object or false otherwise.

@@ -7,7 +7,7 @@
  **/
 export function merge(objects) {
   const mix = {};
-  for (let i = 0, l = arguments.length; i < l; i++){
+  for (let i = 0, l = arguments.length; i < l; i++) {
     const object = arguments[i];
     if (object.constructor.name !== 'Object') {
       continue;
@@ -18,7 +18,7 @@ export function merge(objects) {
       if (mp && op.constructor.name === 'Object' &&
         mp.constructor.name === 'Object') {
         mix[key] = merge(mp, op);
-      } else{
+      } else {
         mix[key] = detach(op);
       }
     }

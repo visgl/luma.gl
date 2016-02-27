@@ -1,10 +1,11 @@
-// media.js
 // media has utility functions for image, video and audio manipulation (and
 // maybe others like device, etc).
+
+/* eslint-disable */ // TODO - this file needs cleanup
+import {Program} from './webgl';
+import {Plane} from './objects';
 import {PerspectiveCamera} from './camera';
 import Scene from './scene';
-import Program from './program';
-import Plane from './objects/plane';
 import {splat} from './utils';
 
 // length given a 45 fov angle, and 0.2 distance to camera
@@ -15,11 +16,12 @@ const camera = new PerspectiveCamera({
   aspect: 1,
   near: 0.1,
   far: 500,
-  position: [0,0,0.2]
+  position: [0, 0, 0.2]
 });
 
-// rye: temporarily renaming this Img until we decide on a name that doesn't shadow
-//      the builtin Image class.
+// TODO/rye: temporarily renaming this Img until we decide on a name that
+// doesn't shadow the builtin Image class.
+
 export default class Img {
 
   // post process an image by setting it to a texture with a specified fragment

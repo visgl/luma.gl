@@ -1,11 +1,11 @@
-// scene.js
 // Scene Object management and rendering
+/* eslint-disable max-statements */
 
 import {Vec3} from './math';
-import Program from './program';
+import {Program} from './webgl';
 import assert from 'assert';
 import {merge, uid} from './utils';
-import {default as Framebuffer} from './fbo';
+import {Framebuffer} from './webgl';
 
 function noop() {}
 
@@ -225,8 +225,6 @@ export default class Scene {
 
   // Renders all objects in the scene.
   render(opt = {}) {
-    console.log(`render`);
-
     const camera = this.camera;
     const {renderProgram} = opt;
     const multiplePrograms = !renderProgram &&
@@ -255,7 +253,7 @@ export default class Scene {
         // when there are multiple programs to be used.
         // if (multiplePrograms) {
         this.beforeRender(program);
-        //}
+        // }
         model.onBeforeRender(program, camera);
         options.onBeforeRender(model, i);
         this.renderObject(model, program);
@@ -290,6 +288,7 @@ export default class Scene {
     // Draw
     // TODO(nico): move this into O3D, but, somehow,
     // abstract the gl.draw* methods inside that object.
+    // TODO - use webgl/draw.js
     if (object.render) {
       object.render(gl, program, this.camera);
     } else {
@@ -312,12 +311,13 @@ export default class Scene {
     if (this.pickingFBO === undefined) {
       this.pickingFBO = new Framebuffer(gl, {
         width: gl.canvas.width,
-        height: gl.canvas.height,
+        height: gl.canvas.height
       });
     }
 
     if (this.pickingProgram === undefined) {
-      this.pickingProgram = opt.pickingProgram || Program.fromDefaultShaders(gl);
+      this.pickingProgram =
+        opt.pickingProgram || Program.fromDefaultShaders(gl);
     }
 
     let pickingProgram = this.pickingProgram;
@@ -331,12 +331,12 @@ export default class Scene {
     let hash = {};
 
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(x,gl.canvas.height-y,1,1);
+    gl.scissor(x, gl.canvas.height - y, 1, 1);
 
     const oldClearColor = this.clearColor;
     const oldBackgroundColor = this.backgroundColor;
     this.clearColor = true;
-    this.backgroundColor = {r:0, g: 0, b:0, a: 0};
+    this.backgroundColor = {r: 0, g: 0, b: 0, a: 0};
 
     this.render({
       renderProgram: pickingProgram,
@@ -345,8 +345,8 @@ export default class Scene {
         let r = i % 256;
         let g = ((i / 256) >> 0) % 256;
         let b = ((i / (256 * 256)) >> 0) % 256;
-        hash[[r,g,b]] = elem;
-        pickingProgram.setUniform('pickColor', [r/255, g/255, b/255]);
+        hash[[r, g, b]] = elem;
+        pickingProgram.setUniform('pickColor', [r / 255, g / 255, b / 255]);
       }
     });
 
@@ -354,7 +354,9 @@ export default class Scene {
 
     const pixel = new Uint8Array(4);
 
-    gl.readPixels(x, gl.canvas.height-y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    gl.readPixels(
+      x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel
+    );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.clearColor = oldClearColor;
@@ -364,7 +366,7 @@ export default class Scene {
     let g = pixel[1];
     let b = pixel[2];
 
-    return hash[[r,g,b]];
+    return hash[[r, g, b]];
   }
 
   pickCustom(x, y, opt = {}) {

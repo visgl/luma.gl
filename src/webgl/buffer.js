@@ -1,4 +1,6 @@
 // Encapsulates a WebGLBuffer object
+
+import {getExtension} from './context';
 import assert from 'assert';
 
 export default class Buffer {
@@ -117,12 +119,4 @@ export default class Buffer {
     return this;
   }
 
-}
-
-function getExtension(gl, extensionName) {
-  const extension = gl.getExtension(extensionName);
-  if (!extension) {
-    throw new Error(`${extensionName} not supported!`);
-  }
-  return extension;
 }

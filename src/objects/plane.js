@@ -1,16 +1,20 @@
+/* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
+/* eslint-disable indent, no-loop-func, max-statements, comma-spacing */
+/* eslint-disable complexity, block-scoped-var */
 import Model from './model';
 
 export default class Plane extends Model {
   constructor(config = {}) {
     const type = config.type;
-    const unpack = config.unpack;
     const coords = type.split(',');
-    let c1len = config[coords[0] + 'len']; //width
-    const c2len = config[coords[1] + 'len']; //height
-    const subdivisions1 = config['n' + coords[0]] || 1; //subdivisionsWidth
-    const subdivisions2 = config['n' + coords[1]] || 1; //subdivisionsDepth
+    // width, height
+    let c1len = config[coords[0] + 'len'];
+    const c2len = config[coords[1] + 'len'];
+    // subdivisionsWidth, subdivisionsDepth
+    const subdivisions1 = config['n' + coords[0]] || 1;
+    const subdivisions2 = config['n' + coords[1]] || 1;
     const offset = config.offset;
-    const flipCull = !!config.flipCull;
+    const flipCull = Boolean(config.flipCull);
     const numVertices = (subdivisions1 + 1) * (subdivisions2 + 1);
     const positions = new Float32Array(numVertices * 3);
     const normals = new Float32Array(numVertices * 3);
@@ -18,7 +22,7 @@ export default class Plane extends Model {
     let i2 = 0, i3 = 0;
 
     if (flipCull) {
-      c1len = - c1len;
+      c1len = -c1len;
     }
 
     for (var z = 0; z <= subdivisions2; z++) {
@@ -105,15 +109,16 @@ export default class Plane extends Model {
       normals2 = new Float32Array(indices.length * 3);
       texCoords2 = new Float32Array(indices.length * 2);
 
-      for (x = 0, l = indices.length; x < l; ++x) {
+      const l = indices.length;
+      for (x = 0; x < l; ++x) {
         index = indices[x];
-        positions2[x * 3    ] = positions[index * 3    ];
+        positions2[x * 3 + 0] = positions[index * 3 + 0];
         positions2[x * 3 + 1] = positions[index * 3 + 1];
         positions2[x * 3 + 2] = positions[index * 3 + 2];
-        normals2[x * 3    ] = normals[index * 3    ];
+        normals2[x * 3 + 0] = normals[index * 3 + 0];
         normals2[x * 3 + 1] = normals[index * 3 + 1];
         normals2[x * 3 + 2] = normals[index * 3 + 2];
-        texCoords2[x * 2    ] = texCoords[index * 2    ];
+        texCoords2[x * 2 + 0] = texCoords[index * 2 + 0];
         texCoords2[x * 2 + 1] = texCoords[index * 2 + 1];
       }
 

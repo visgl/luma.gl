@@ -1,6 +1,6 @@
-// shaders.js
 // Default Shaders
 
+// TODO - adopt glslify
 const Shaders = {
   Vertex: {},
   Fragment: {}

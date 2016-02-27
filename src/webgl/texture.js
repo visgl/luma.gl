@@ -1,5 +1,5 @@
 
-import {merge} from './utils';
+import {merge} from '../utils';
 
 class Texture {
 
@@ -40,7 +40,6 @@ class Texture {
   }
 
 }
-
 
 export class Texture2D extends Texture {
 
@@ -86,7 +85,6 @@ export class Texture2D extends Texture {
 
 }
 
-
 export class TextureCube extends Texture {
 
   constructor(gl, opts) {
@@ -107,6 +105,7 @@ export class TextureCube extends Texture {
     return index;
   }
 
+  /* eslint-disable max-statements, max-len */
   update(opts) {
     const gl = this.gl;
     this.width = opts.width;

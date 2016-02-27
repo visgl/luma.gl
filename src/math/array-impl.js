@@ -1,6 +1,7 @@
-// math.js
 // Vec3, Mat4 and Quat classes
-/* eslint-disable computed-property-spacing */
+// TODO - clean up linting and remove some of thes exceptions
+/* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
+/* eslint-disable indent, no-loop-func */
 
 const sqrt = Math.sqrt;
 const sin = Math.sin;
@@ -11,6 +12,7 @@ const slice = Array.prototype.slice;
 
 // Vec3 Class
 export class Vec3 extends Array {
+
   constructor(x = 0, y = 0, z = 0) {
     super(3);
     this[0] = x;
@@ -150,11 +152,11 @@ var generics = {
 
   cross(dest, vec) {
     var dx = dest[0],
-        dy = dest[1],
-        dz = dest[2],
-        vx = vec[0],
-        vy = vec[1],
-        vz = vec[2];
+      dy = dest[1],
+      dz = dest[2],
+      vx = vec[0],
+      vy = vec[1],
+      vz = vec[2];
 
     return new Vec3(dy * vz - dz * vy,
                     dz * vx - dx * vz,
@@ -212,21 +214,22 @@ var generics = {
   clone(dest) {
     if (dest instanceof Vec3) {
       return new Vec3(dest[0], dest[1], dest[2]);
-    } else {
-      return Vec3.setVec3(new Float32Array(3), dest);
     }
+    return Vec3.setVec3(new Float32Array(3), dest);
   },
 
   toFloat32Array(dest) {
-        var ans = dest.typedContainer;
+    var ans = dest.typedContainer;
 
-        if (!ans) return dest;
+    if (!ans) {
+      return dest;
+    }
 
-        ans[0] = dest[0];
-        ans[1] = dest[1];
-        ans[2] = dest[2];
+    ans[0] = dest[0];
+    ans[1] = dest[1];
+    ans[2] = dest[2];
 
-        return ans;
+    return ans;
   }
 };
 
@@ -234,14 +237,13 @@ var generics = {
 var proto = Vec3.prototype;
 for (var method in generics) {
   Vec3[method] = generics[method];
-  proto[method] = (function (m) {
+  proto[method] = (function _(m) {
     return function() {
       var args = slice.call(arguments);
-
       args.unshift(this);
       return Vec3[m].apply(Vec3, args);
     };
- })(method);
+ }(method));
 }
 
 // Mat4 Class
@@ -256,7 +258,6 @@ export class Mat4 extends Array {
 
     this.length = 16;
 
-
     if (typeof n11 === 'number') {
 
       this.set(n11, n12, n13, n14,
@@ -269,45 +270,45 @@ export class Mat4 extends Array {
     }
 
     this.typedContainer = new Float32Array(16);
-  };
+  }
 
   static create() {
     return new Array(16);
   }
 
-  get n11() {return this[0]}
-  get n12() {return this[4]}
-  get n13() {return this[8]}
-  get n14() {return this[12]}
-  get n21() {return this[1]}
-  get n22() {return this[5]}
-  get n23() {return this[9]}
-  get n24() {return this[13]}
-  get n31() {return this[2]}
-  get n32() {return this[6]}
-  get n33() {return this[10]}
-  get n34() {return this[14]}
-  get n41() {return this[3]}
-  get n42() {return this[7]}
-  get n43() {return this[11]}
-  get n44() {return this[15]}
+  get n11() { return this[0]; }
+  get n12() { return this[4]; }
+  get n13() { return this[8]; }
+  get n14() { return this[12]; }
+  get n21() { return this[1]; }
+  get n22() { return this[5]; }
+  get n23() { return this[9]; }
+  get n24() { return this[13]; }
+  get n31() { return this[2]; }
+  get n32() { return this[6]; }
+  get n33() { return this[10]; }
+  get n34() { return this[14]; }
+  get n41() { return this[3]; }
+  get n42() { return this[7]; }
+  get n43() { return this[11]; }
+  get n44() { return this[15]; }
 
-  set n11(val) {this[0] = val}
-  set n12(val) {this[4] = val}
-  set n13(val) {this[8] = val}
-  set n14(val) {this[12] = val}
-  set n21(val) {this[1] = val}
-  set n22(val) {this[5] = val}
-  set n23(val) {this[9] = val}
-  set n24(val) {this[13] = val}
-  set n31(val) {this[2] = val}
-  set n32(val) {this[6] = val}
-  set n33(val) {this[10] = val}
-  set n34(val) {this[14] = val}
-  set n41(val) {this[3] = val}
-  set n42(val) {this[7] = val}
-  set n43(val) {this[11] = val}
-  set n44(val) {this[15] = val}
+  set n11(val) { this[0] = val; }
+  set n12(val) { this[4] = val; }
+  set n13(val) { this[8] = val; }
+  set n14(val) { this[12] = val; }
+  set n21(val) { this[1] = val; }
+  set n22(val) { this[5] = val; }
+  set n23(val) { this[9] = val; }
+  set n24(val) { this[13] = val; }
+  set n31(val) { this[2] = val; }
+  set n32(val) { this[6] = val; }
+  set n33(val) { this[10] = val; }
+  set n34(val) { this[14] = val; }
+  set n41(val) { this[3] = val; }
+  set n42(val) { this[7] = val; }
+  set n43(val) { this[11] = val; }
+  set n44(val) { this[15] = val; }
 
 }
 
@@ -341,9 +342,8 @@ generics = {
                       dest[1], dest[5], dest[9], dest[13],
                       dest[2], dest[6], dest[10], dest[14],
                       dest[3], dest[7], dest[11], dest[15]);
-    } else {
-      return new typedArray(dest);
     }
+    return new typedArray(dest);
   },
 
   set(dest, n11, n12, n13, n14,
@@ -398,7 +398,6 @@ generics = {
         b21 = b[4 ], b22 = b[5 ], b23 = b[6 ], b24 = b[7 ],
         b31 = b[8 ], b32 = b[9 ], b33 = b[10], b34 = b[11],
         b41 = b[12], b42 = b[13], b43 = b[14], b44 = b[15];
-
 
     dest[0 ] = b11 * a11 + b12 * a21 + b13 * a31 + b14 * a41;
     dest[1 ] = b11 * a12 + b12 * a22 + b13 * a32 + b14 * a42;
@@ -606,7 +605,6 @@ generics = {
     return dest;
   },
 
-
   scale(dest, x, y, z) {
     var m = Mat4.clone(dest);
     return Mat4.$scale(m, x, y, z);
@@ -641,37 +639,38 @@ generics = {
         x8 = dest[8],  x9 = dest[9], x10 = dest[10], x11 = dest[11],
         x12 = dest[12], x13 = dest[13], x14 = dest[14], x15 = dest[15];
 
-    var a0 = x0*x5 - x1*x4,
-        a1 = x0*x6 - x2*x4,
-        a2 = x0*x7 - x3*x4,
-        a3 = x1*x6 - x2*x5,
-        a4 = x1*x7 - x3*x5,
-        a5 = x2*x7 - x3*x6,
-        b0 = x8*x13 - x9*x12,
-        b1 = x8*x14 - x10*x12,
-        b2 = x8*x15 - x11*x12,
-        b3 = x9*x14 - x10*x13,
-        b4 = x9*x15 - x11*x13,
-        b5 = x10*x15 - x11*x14;
+    var a0 = x0 * x5 - x1 * x4,
+        a1 = x0 * x6 - x2 * x4,
+        a2 = x0 * x7 - x3 * x4,
+        a3 = x1 * x6 - x2 * x5,
+        a4 = x1 * x7 - x3 * x5,
+        a5 = x2 * x7 - x3 * x6,
+        b0 = x8 * x13 - x9 * x12,
+        b1 = x8 * x14 - x10 * x12,
+        b2 = x8 * x15 - x11 * x12,
+        b3 = x9 * x14 - x10 * x13,
+        b4 = x9 * x15 - x11 * x13,
+        b5 = x10 * x15 - x11 * x14;
 
-    var invdet = 1 / (a0*b5 - a1*b4 + a2*b3 + a3*b2 - a4*b1 + a5*b0);
+    var invdet = 1 /
+      (a0 * b5 - a1 * b4 + a2 * b3 + a3 * b2 - a4 * b1 + a5 * b0);
 
-    dest[0 ] = (+ x5*b5 - x6*b4 + x7*b3) * invdet;
-    dest[1 ] = (- x1*b5 + x2*b4 - x3*b3) * invdet;
-    dest[2 ] = (+ x13*a5 - x14*a4 + x15*a3) * invdet;
-    dest[3 ] = (- x9*a5 + x10*a4 - x11*a3) * invdet;
-    dest[4 ] = (- x4*b5 + x6*b2 - x7*b1) * invdet;
-    dest[5 ] = (+ x0*b5 - x2*b2 + x3*b1) * invdet;
-    dest[6 ] = (- x12*a5 + x14*a2 - x15*a1) * invdet;
-    dest[7 ] = (+ x8*a5 - x10*a2 + x11*a1) * invdet;
-    dest[8 ] = (+ x4*b4 - x5*b2 + x7*b0) * invdet;
-    dest[9 ] = (- x0*b4 + x1*b2 - x3*b0) * invdet;
-    dest[10] = (+ x12*a4 - x13*a2 + x15*a0) * invdet;
-    dest[11] = (- x8*a4 + x9*a2 - x11*a0) * invdet;
-    dest[12] = (- x4*b3 + x5*b1 - x6*b0) * invdet;
-    dest[13] = (+ x0*b3 - x1*b1 + x2*b0) * invdet;
-    dest[14] = (- x12*a3 + x13*a1 - x14*a0) * invdet;
-    dest[15] = (+ x8*a3 - x9*a1 + x10*a0) * invdet;
+    dest[0 ] = (+ x5 * b5 - x6 * b4 + x7 * b3) * invdet;
+    dest[1 ] = (- x1 * b5 + x2 * b4 - x3 * b3) * invdet;
+    dest[2 ] = (+ x13 * a5 - x14 * a4 + x15 * a3) * invdet;
+    dest[3 ] = (- x9 * a5 + x10 * a4 - x11 * a3) * invdet;
+    dest[4 ] = (- x4 * b5 + x6 * b2 - x7 * b1) * invdet;
+    dest[5 ] = (+ x0 * b5 - x2 * b2 + x3 * b1) * invdet;
+    dest[6 ] = (- x12 * a5 + x14 * a2 - x15 * a1) * invdet;
+    dest[7 ] = (+ x8 * a5 - x10 * a2 + x11 * a1) * invdet;
+    dest[8 ] = (+ x4 * b4 - x5 * b2 + x7 * b0) * invdet;
+    dest[9 ] = (- x0 * b4 + x1 * b2 - x3 * b0) * invdet;
+    dest[10] = (+ x12 * a4 - x13 * a2 + x15 * a0) * invdet;
+    dest[11] = (- x8 * a4 + x9 * a2 - x11 * a0) * invdet;
+    dest[12] = (- x4 * b3 + x5 * b1 - x6 * b0) * invdet;
+    dest[13] = (+ x0 * b3 - x1 * b1 + x2 * b0) * invdet;
+    dest[14] = (- x12 * a3 + x13 * a1 - x14 * a0) * invdet;
+    dest[15] = (+ x8 * a3 - x9 * a1 + x10 * a0) * invdet;
 
     return dest;
 
@@ -689,7 +688,7 @@ generics = {
     return Mat4.set(dest, x[0], x[1], x[2], -x.dot(eye),
                           y[0], y[1], y[2], -y.dot(eye),
                           z[0], z[1], z[2], -z.dot(eye),
-                          0,   0,   0,   1);
+                          0, 0, 0, 1);
   },
 
   frustum(dest, left, right, bottom, top, near, far) {
@@ -726,7 +725,7 @@ generics = {
     return Mat4.frustum(dest, xmin, xmax, ymin, ymax, near, far);
   },
 
-  ortho (dest, left, right, top, bottom, near, far) {
+  ortho(dest, left, right, top, bottom, near, far) {
     var te = this.elements,
         w = right - left,
         h = top - bottom,
@@ -737,35 +736,37 @@ generics = {
 
     dest[0] = 2 / w;	dest[4] = 0;	dest[8] = 0;	dest[12] = -x;
     dest[1] = 0;	dest[5] = 2 / h;	dest[9] = 0;	dest[13] = -y;
-    dest[2] = 0;	dest[6] = 0;	dest[10] = -2/p;	dest[14] = -z;
+    dest[2] = 0;	dest[6] = 0;	dest[10] = -2 / p;	dest[14] = -z;
     dest[3] = 0;	dest[7] = 0;	dest[11] = 0;	dest[15] = 1;
 
     return dest;
 	},
 
   toFloat32Array(dest) {
-        var ans = dest.typedContainer;
+    var ans = dest.typedContainer;
 
-        if (!ans) return dest;
+    if (!ans) {
+      return dest;
+    }
 
-        ans[0] = dest[0];
-        ans[1] = dest[1];
-        ans[2] = dest[2];
-        ans[3] = dest[3];
-        ans[4] = dest[4];
-        ans[5] = dest[5];
-        ans[6] = dest[6];
-        ans[7] = dest[7];
-        ans[8] = dest[8];
-        ans[9] = dest[9];
-        ans[10] = dest[10];
-        ans[11] = dest[11];
-        ans[12] = dest[12];
-        ans[13] = dest[13];
-        ans[14] = dest[14];
-        ans[15] = dest[15];
+    ans[0] = dest[0];
+    ans[1] = dest[1];
+    ans[2] = dest[2];
+    ans[3] = dest[3];
+    ans[4] = dest[4];
+    ans[5] = dest[5];
+    ans[6] = dest[6];
+    ans[7] = dest[7];
+    ans[8] = dest[8];
+    ans[9] = dest[9];
+    ans[10] = dest[10];
+    ans[11] = dest[11];
+    ans[12] = dest[12];
+    ans[13] = dest[13];
+    ans[14] = dest[14];
+    ans[15] = dest[15];
 
-        return ans;
+    return ans;
   }
 };
 
@@ -883,9 +884,8 @@ generics = {
   clone(dest) {
     if (dest instanceof Quat) {
       return new Quat(dest[0], dest[1], dest[2], dest[3]);
-    } else {
-      return Quat.setQuat(new typedArray(4), dest);
     }
+    return Quat.setQuat(new typedArray(4), dest);
   },
 
   neg(dest) {
@@ -1043,7 +1043,7 @@ generics = {
     dest[0] = -q0 * d;
     dest[1] = -q1 * d;
     dest[2] = -q2 * d;
-    dest[3] =  q3 * d;
+    dest[3] = q3 * d;
 
     return dest;
   },
@@ -1102,7 +1102,7 @@ for (method in generics) {
  })(method);
 }
 
-//Add static methods
+// Add static methods
 Vec3.fromQuat = function(q) {
   return new Vec3(q[0], q[1], q[2]);
 };
@@ -1114,8 +1114,20 @@ Mat4.fromQuat = function(q) {
       d = q[2];
 
   return new Mat4(
-    a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c, 0,
-    2 * b * c + 2 * a * d, a * a - b * b + c * c - d * d, 2 * c * d - 2 * a * b, 0,
-    2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a - b * b - c * c + d * d, 0,
-    0,                     0,                     0,                             1);
+    a * a + b * b - c * c - d * d,
+    2 * b * c - 2 * a * d,
+    2 * b * d + 2 * a * c,
+    0,
+
+    2 * b * c + 2 * a * d,
+    a * a - b * b + c * c - d * d,
+    2 * c * d - 2 * a * b,
+    0,
+
+    2 * b * d - 2 * a * c,
+    2 * c * d + 2 * a * b,
+    a * a - b * b - c * c + d * d,
+    0,
+
+    0, 0, 0, 1);
 };

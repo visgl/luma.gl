@@ -1,11 +1,9 @@
-// io.js
 // Provides loading of assets with XHR and JSONP methods.
-/* eslint-disable guard-for-in */
-/* global XMLHttpRequest */
-/* global document */
-import {uid, splat, merge, noop}  from './utils';
-import Img from './media';
-import {Texture2D} from './texture.js';
+/* eslint-disable guard-for-in, complexity */
+
+/* global document, XMLHttpRequest, Image */
+import {uid, splat, merge, noop} from './utils';
+import {Texture2D} from './webgl';
 
 export class XHR {
 
@@ -187,7 +185,7 @@ export class XHRGroup {
       noCache: opt.noCache,
       sendAsBinary: opt.sendAsBinary,
       responseType: opt.responseType,
-      body: opt.body,
+      body: opt.body
     }));
   }
 
@@ -195,7 +193,7 @@ export class XHRGroup {
     return await Promise.all(this.reqs.map(req => req.sendAsync()));
   }
 
-};
+}
 
 export function JSONP(opt) {
   opt = merge({
@@ -327,7 +325,8 @@ export async function loadTextures(gl, opt) {
   var images = await loadImages(opt.src);
   var textures = [];
   images.forEach((img, i) => {
-    var params = Array.isArray(opt.parameters) ? opt.parameters[i] : opt.parameters;
+    var params = Array.isArray(opt.parameters) ?
+      opt.parameters[i] : opt.parameters;
     params = params === undefined ? {} : params;
     textures.push(new Texture2D(gl, merge({
       data: img

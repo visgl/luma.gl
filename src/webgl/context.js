@@ -1,13 +1,15 @@
-// webgl.js
-// Checks if WebGL is enabled and creates a context for using WebGL.
-/* global window */
+// WebGLRenderingContext related methods
+/* eslint-disable no-try-catch, no-console, no-loop-func */
+/* global window, document, console */
 
+// Checks if WebGL is enabled and creates a context for using WebGL.
 export function createGLContext(canvas, opt) {
   if (!isBrowserContext()) {
-    throw new Error("Can't create a WebGL context outside a browser context.")
+    throw new Error(`Can't create a WebGL context outside a browser context.`);
   }
   var gl = null;
-  canvas = typeof canvas === 'string' ? document.getElementById(canvas) : canvas;
+  canvas = typeof canvas === 'string' ?
+    document.getElementById(canvas) : canvas;
   let ctx;
   ctx = canvas.getContext('experimental-webgl', opt);
   if (!ctx) {
@@ -26,14 +28,15 @@ export function createGLContext(canvas, opt) {
               Array.prototype.join.call(arguments),
               Array.prototype.slice.call(arguments)
             );
+            let ans;
             try {
-              var ans = v.apply(ctx, arguments);
+              ans = v.apply(ctx, arguments);
             } catch (e) {
               throw new Error(`${k} ${e}`);
             }
             const errorStack = [];
             let error;
-            while((error = ctx.getError()) !== ctx.NO_ERROR) {
+            while ((error = ctx.getError()) !== ctx.NO_ERROR) {
               errorStack.push(error);
             }
             if (errorStack.length) {
@@ -53,7 +56,7 @@ export function createGLContext(canvas, opt) {
   // add a get by name param
   if (gl) {
     gl.get = function(name) {
-      return typeof name == 'string'? gl[name] : name;
+      return typeof name === 'string' ? gl[name] : name;
     };
   }
 
@@ -83,6 +86,15 @@ export function hasExtension(name) {
     canvas.getContext('experimental-webgl');
   // Should maybe be return !!context.getExtension(name);
   return context.getExtension(name);
+}
+
+// Returns the extension or throws an error
+export function getExtension(gl, extensionName) {
+  const extension = gl.getExtension(extensionName);
+  if (!extension) {
+    throw new Error(`${extensionName} not supported!`);
+  }
+  return extension;
 }
 
 function isBrowserContext() {

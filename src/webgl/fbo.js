@@ -19,16 +19,23 @@ export default class Framebuffer {
       width: this.width,
       height: this.height,
       minFilter: this.minFilter,
-      magFilter: this.magFilter,
+      magFilter: this.magFilter
     });
 
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.texture, 0);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.texture, 0
+    );
 
     if (this.depth) {
       this.depth = gl.createRenderbuffer();
       gl.bindRenderbuffer(gl.RENDERBUFFER, this.depth);
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.width, this.height);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depth);
+      gl.renderbufferStorage(
+        gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.width, this.height
+      );
+      gl.framebufferRenderbuffer(
+        gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depth
+      );
     }
 
     var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);

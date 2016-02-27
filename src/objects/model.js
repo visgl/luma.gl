@@ -4,8 +4,8 @@
 
 // Define some locals
 import {Vec3, Mat4} from '../math';
+import {Buffer} from '../webgl';
 import Scene from '../scene';
-import Buffer from '../buffer';
 import {uid, splat} from '../utils';
 import assert from 'assert';
 

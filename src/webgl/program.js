@@ -1,12 +1,16 @@
-// program.js
 // Creates programs out of shaders and provides convenient methods for loading
 // buffers attributes and uniforms
 
-/* global document */
+/* eslint-disable no-console, complexity */
+
+/* global document, console */
+import {merge, uid} from '../utils';
 import formatCompilerError from 'gl-format-compiler-error';
-import Shaders from './shaders';
-import {XHRGroup} from './io';
-import {merge, uid} from './utils';
+
+// TODO - remove this functionality, should not depend on upper layers
+import {XHRGroup} from '../io';
+import Shaders from '../shaders';
+
 export default class Program {
 
   /*
@@ -124,36 +128,6 @@ export default class Program {
     return this;
   }
 
-  // Calls the proper draw function for this program based on attributes etc
-  // TODO - this function is still experimental
-  draw({drawType, attributes, instanced, numInstances}) {
-    const {gl} = this;
-    const {indices, vertices} = attributes;
-    // TODO - shouldn't the caller do this lookup
-    drawType = drawType ? gl.get(drawType) : gl.POINTS;
-
-    const numIndices = indices ? indices.value.length : 0;
-
-    if (instanced && indices) {
-      // this instanced primitive does has indices, use drawElements extension
-      const extension = getExtension('ANGLE_instanced_arrays');
-      extension.drawElementsInstancedANGLE(
-        drawType, numIndices, gl.UNSIGNED_SHORT, 0, numInstances
-      );
-    } else if (instanced) {
-      // this instanced primitive does not have indices, use drawArrays ext
-      const extension = getExtension('ANGLE_instanced_arrays');
-      const numVertices = vertices ? vertices.value.length : 0;
-      extension.drawArraysInstancedANGLE(
-        drawType, 0, numVertices / 3, numInstances
-      );
-    } else if (attributes.indices) {
-      gl.drawElements(drawType, numIndices, gl.UNSIGNED_SHORT, 0);
-    } else {
-      // else if this.primitive does not have indices
-      gl.drawArrays(drawType, 0, numInstances);
-    }
-  }
 }
 
 // Creates a shader from a string source.
@@ -215,7 +189,6 @@ function createProgram(gl, vertexShader, fragmentShader) {
 // };
 
 // Returns a Magic Uniform Setter
-/* eslint-disable complexity */
 function getUniformSetter(gl, glProgram, info, isArray) {
   const {name, type} = info;
   const loc = gl.getUniformLocation(glProgram, name);
@@ -362,12 +335,4 @@ function getAttributeLocations(gl, glProgram) {
     attributeLocations[info.name] = index;
   }
   return attributeLocations;
-}
-
-function getExtension(gl, extensionName) {
-  const extension = gl.getExtension(extensionName);
-  if (!extension) {
-    throw new Error(`${extensionName} not supported!`);
-  }
-  return extension;
 }
