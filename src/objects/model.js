@@ -6,7 +6,8 @@
 import {Vec3, Mat4} from '../math';
 import Scene from '../scene';
 import Buffer from '../buffer';
-import {uid, splat, noop} from '../utils';
+import {uid, splat} from '../utils';
+import assert from 'assert';
 
 const slice = Array.prototype.slice;
 
@@ -85,7 +86,7 @@ export default class Model {
     this.display = 'display' in opt ? opt.display : true;
     // before and after render callbacks
     this.onBeforeRender = opt.onBeforeRender || this.onBeforeRender;
-    this.onAfterRender = opt.onAfterRender || noop;
+    this.onAfterRender = opt.onAfterRender || this.onAfterRender;
     // set a custom program per o3d
     if (opt.program) {
       this.program = opt.program;
@@ -118,6 +119,16 @@ export default class Model {
     }
     if (attributes) {
       this.setAttributes(program);
+    }
+  }
+
+  onAfterRender() {
+    const {program, attributes} = this;
+    if (program) {
+      program.use();
+    }
+    if (attributes) {
+      this.unsetAttributes(program);
     }
   }
 
@@ -362,6 +373,14 @@ export default class Model {
         });
       }
       program.setBuffer(this.buffers[attributeName]);
+    }
+    return this;
+  }
+
+  unsetAttributes(program) {
+    for (const attributeName of Object.keys(this.attributes)) {
+      assert(this.buffers[attributeName]);
+      program.unsetBuffer(this.buffers[attributeName]);
     }
     return this;
   }

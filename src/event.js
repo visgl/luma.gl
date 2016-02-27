@@ -1,10 +1,13 @@
 // event.js
 // Handle keyboard/mouse/touch events in the Canvas
 // TODO - this will not work under node
+
+/* eslint-disable dot-notation */
 /* global window */
 /* global document */
 
-import {noop, uid, splat} from './utils';
+
+import {noop} from './utils';
 
 // returns an O3D object or false otherwise.
 function toO3D(n) {
@@ -93,6 +96,7 @@ export function stop(e) {
 }
 
 export class EventsProxy {
+
   constructor(domElem, opt) {
     this.scene = opt.scene;
     this.domElem = domElem;
@@ -110,44 +114,43 @@ export class EventsProxy {
   attachEvents() {
     const domElem = this.domElem;
     const opt = this.opt;
-    const self = this;
 
     if (opt.disableContextMenu) {
-      domElem.oncontextmenu = function() { return false; };
+      domElem.oncontextmenu = () => false;
     }
 
     if (opt.enableMouse) {
       ['mouseup', 'mousedown', 'mousemove', 'mouseover', 'mouseout']
       .forEach(action => {
         domElem.addEventListener(action, (e, win) => {
-          self[action](self.eventInfo(action, e, win));
+          this[action](this.eventInfo(action, e, win));
         }, false);
       });
 
       // "well, this is embarrassing..."
       let type = '';
-      if (!document.getBoxObjectFor && window.mozInnerScreenX == null) {
+      if (!document.getBoxObjectFor && window.mozInnerScreenX === null) {
         type = 'mousewheel';
       } else {
         type = 'DOMMouseScroll';
       }
       domElem.addEventListener(type, (e, win) => {
-        self['mousewheel'](self.eventInfo('mousewheel', e, win));
+        this['mousewheel'](this.eventInfo('mousewheel', e, win));
       }, false);
     }
 
     if (opt.enableTouch) {
-        ['touchstart', 'touchmove', 'touchend'].forEach(action => {
-          domElem.addEventListener(action, (e, win) => {
-            self[action](self.eventInfo(action, e, win));
-          }, false);
-        });
+      ['touchstart', 'touchmove', 'touchend'].forEach(action => {
+        domElem.addEventListener(action, (e, win) => {
+          this[action](this.eventInfo(action, e, win));
+        }, false);
+      });
     }
 
     if (opt.enableKeyboard) {
       ['keydown', 'keyup'].forEach(action => {
         document.addEventListener(action, (e, win) => {
-          self[action](self.eventInfo(action, e, win));
+          this[action](this.eventInfo(action, e, win));
         }, false);
       });
     }
@@ -368,6 +371,7 @@ Object.assign(EventsProxy.prototype, {
 export const Events = {
 
   create(gl, opt = {}) {
+
     opt = {
       cachePosition: true,
       cacheSize: true,
@@ -406,18 +410,16 @@ export const Events = {
     if (bind) {
       for (const name in opt) {
         if (name.match(/^on[a-zA-Z0-9]+$/)) {
-          ((name, fn) => {
-            opt[name] = function() {
-                fn.apply(bind, Array.prototype.slice.call(arguments));
+          ((fname, fn) => {
+            opt[fname] = function() {
+              fn.apply(bind, Array.prototype.slice.call(arguments));
             };
           })(name, opt[name]);
         }
       }
     }
 
-    new EventsProxy(gl, opt);
-    // assign event handler to app.
-    // app.events = opt;
+    return new EventsProxy(gl, opt);
   }
 
 };
