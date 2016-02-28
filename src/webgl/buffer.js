@@ -30,7 +30,7 @@ export default class Buffer {
     assert(gl, 'Buffer needs WebGLRenderingContext');
     this.gl = gl;
     this.glBuffer = gl.createBuffer();
-    opts = {...Buffer.getDefaultOpts(gl), ...opts};
+    opts = Object.assign({}, Buffer.getDefaultOpts(gl), opts);
     this.update(opts);
   }
 

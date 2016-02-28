@@ -74,8 +74,8 @@ export default class IcoSphere extends Model {
     }
 
     // Calculate texCoords and normals
-    var l = indices.length,
-        normals = new Array(l * 3),
+    l = indices.length;
+    var normals = new Array(l * 3),
         texCoords = new Array(l * 2);
 
     for (let i = l - 3; i >= 0; i -= 3) {

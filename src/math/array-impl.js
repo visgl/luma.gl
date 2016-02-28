@@ -1,5 +1,6 @@
 // Vec3, Mat4 and Quat classes
-// TODO - clean up linting and remove some of thes exceptions
+// TODO - clean up linting and remove some of these exceptions
+/* eslint-disable */
 /* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
 /* eslint-disable indent, no-loop-func */
 

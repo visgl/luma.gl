@@ -79,6 +79,8 @@ export default class Plane extends Model {
             normals[i3 + 1] = 0;
             normals[i3 + 2] = 0;
           break;
+        default:
+          break;
         }
         i3 += 3;
       }

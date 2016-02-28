@@ -1,5 +1,7 @@
 // graph.js
 // provide some basic scene graph capabilities
+// TODO cleanup lint
+/* eslint-disable */
 import Model from './objects/model';
 
 export default class Node {
@@ -63,7 +65,7 @@ export default class Node {
 
   // will update everything
   update() {
-    value: function() {
+    function value() {
       var matrix = this.matrix,
           pos = this.endPosition,
           rot = this.endRotation,

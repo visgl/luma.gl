@@ -1,4 +1,6 @@
 //  Timer based animation
+// TODO clean up linting
+/* eslint-disable */
 /* global setTimeout */
 import {merge, noop, splat} from '../utils';
 

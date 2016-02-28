@@ -69,9 +69,11 @@ export class Texture2D extends Texture {
     this.data = opts.data;
     this.bind();
     if (this.width || this.height) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, this.border, this.format, this.type, this.data);
+      gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height,
+        this.border, this.format, this.type, this.data);
     } else {
-      gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, this.data);
+      gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type,
+        this.data);
     }
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter);

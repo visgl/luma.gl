@@ -1,3 +1,4 @@
+/* eslint-disable max-statements, complexity */
 import Model from './model';
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,

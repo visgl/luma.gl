@@ -1,6 +1,8 @@
+/* eslint-disable max-statements, complexity */
 import Model from './model';
 
 export default class TruncatedCone extends Model {
+
   constructor(config = {}) {
     const bottomRadius = config.bottomRadius || 0;
     const topRadius = config.topRadius || 0;

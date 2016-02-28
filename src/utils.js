@@ -1,6 +1,30 @@
 /* eslint-disable guard-for-in */
 
 /**
+ * Wraps the argument in an array if it is not one.
+ * @param {object} a - The object to wrap.
+ * @return {Array} array
+ **/
+export function splat(a) {
+  return Array.isArray(a) && a || [a];
+}
+
+/**
+* Provides a standard noop function.
+**/
+export function noop() {}
+
+var _uid = Date.now();
+
+/**
+ * Returns a UID.
+ * @return {number} uid
+ **/
+export function uid() {
+  return _uid++;
+}
+
+/**
  * Merge multiple objects into one.
  * @param {...object} objects - The objects to merge.
  * @return {object} object
@@ -24,30 +48,6 @@ export function merge(objects) {
     }
   }
   return mix;
-}
-
-/**
- * Wraps the argument in an array if it is not one.
- * @param {object} a - The object to wrap.
- * @return {Array} array
- **/
-export function splat(a) {
-  return Array.isArray(a) && a || [a];
-}
-
-/**
-* Provides a standard noop function.
-**/
-export function noop() {}
-
-var _uid = Date.now();
-
-/**
- * Returns a UID.
- * @return {number} uid
- **/
-export function uid() {
-  return _uid++;
 }
 
 /**

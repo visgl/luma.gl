@@ -53,7 +53,6 @@ export default class Program {
   }
 
   // Alternate constructor
-  // Implement Program.fromShaderURIs (requires IO)
   static async fromShaderURIs(gl, vs, fs, opts) {
     opts = merge({
       path: '/',

@@ -1,5 +1,7 @@
 // workers.js
 //
+/* global Worker */
+/* eslint-disable one-var, indent */
 
 export default class WorkerGroup {
 
@@ -10,12 +12,12 @@ export default class WorkerGroup {
     }
   }
 
-  map(callback) {
+  map(func) {
     var workers = this.workers;
     var configs = this.configs = [];
 
     for (var i = 0, l = workers.length; i < l; i++) {
-      configs.push(callback && callback(i));
+      configs.push(func && func(i));
     }
 
     return this;
@@ -27,14 +29,14 @@ export default class WorkerGroup {
         configs = this.configs,
         l = workers.length,
         acum = opt.initialValue,
-        message = function (e) {
+        message = function _(e) {
           l--;
           if (acum === undefined) {
             acum = e.data;
           } else {
             acum = fn(acum, e.data);
           }
-          if (l == 0) {
+          if (l === 0) {
             opt.onComplete(acum);
           }
         };
