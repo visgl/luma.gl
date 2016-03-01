@@ -362,15 +362,18 @@ export default class Model {
   setAttributes(program) {
     for (const attributeName of Object.keys(this.attributes)) {
       const attribute = this.attributes[attributeName];
+      const bufferOpts = {
+        attribute: attributeName,
+        data: attribute.value,
+        size: attribute.size,
+        instanced: attribute.instanced ? 1 : 0,
+        bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
+        drawType: attribute.drawType || program.gl.STATIC_DRAW
+      };
       if (!this.buffers[attributeName]) {
-        this.buffers[attributeName] = new Buffer(program.gl, {
-          attribute: attributeName,
-          data: attribute.value,
-          size: attribute.size,
-          instanced: attribute.instanced ? 1 : 0,
-          bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
-          drawType: attribute.drawType || program.gl.STATIC_DRAW
-        });
+        this.buffers[attributeName] = new Buffer(program.gl, bufferOpts);
+      } else {
+        this.buffers[attributeName].update(bufferOpts);
       }
       program.setBuffer(this.buffers[attributeName]);
     }
