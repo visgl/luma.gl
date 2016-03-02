@@ -147,11 +147,11 @@ var webGLStart = function() {
 
       //Set program
       if (program.checked) {
-        moon.program = 'fragment';
-        box.program = 'fragment';
+        moon.program = perpixelProgram;
+        box.program = perpixelProgram;
       } else {
-        moon.program = 'vertex';
-        box.program = 'vertex';
+        moon.program = defaultProgram;
+        box.program = defaultProgram;
       }
 
       //Set textures
