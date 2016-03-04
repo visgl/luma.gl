@@ -40,7 +40,7 @@ Luma.gl comes with 16 lessons, a number of examples, and a full set of
 reference documenation.
 
 To run examples:
-```
+```sh
 git clone git@github.com:uber-common/luma.gl.git
 cd luma.gl
 npm install
@@ -53,7 +53,7 @@ e.g. http://127.0.0.1:3000/examples/lessons/1/
 ## Quickstart
 
 The following code sample illustrates the "flavor" of the LumaGL API.
-```
+```javascript
 import {createGLContext, Program, Buffer, PerspectiveCamera} from 'luma.gl';
 
 // Initialize WebGL context
