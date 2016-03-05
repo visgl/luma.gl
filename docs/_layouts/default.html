@@ -4,34 +4,35 @@
    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
    <title>{{ page.title }}</title>
    <meta name="author" content="Nicolas Garcia Belmonte" />
-   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>   
-   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>   
-   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" /> 
+   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
    <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
-<script type="text/javascript"> 
- 
+<script type="text/javascript">
+
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-1601691-8']);
   _gaq.push(['_trackPageview']);
- 
+
   (function() {
     var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
     ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
     var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
   })();
- 
-</script>    
+
+</script>
 </head>
 <body>
 
 <div class="site">
   <div class="title">
-    <a href="/philogl/"><img src="assets/logo.png" alt="library logo" /></a>
+    <!-- <a href="/philogl/"><img src="assets/logo.png" alt="library logo" /></a> -->
+    <h1>luma.gl</h1>
   </div>
-  
+
   <div id="sidebar">
     <div class="box help">
-      <b>Found a typo?</b> <a href="https://github.com/philogb/philogl/tree/master/docs">Help making the docs better!</a>
+      <b>Found a typo?</b> <a href="https://github.com/uber-common/luma.gl/tree/master/docs">Help making the docs better!</a>
     </div>
     <div class="box" id="modules">
       <b>Modules:</b>
@@ -41,9 +42,6 @@
         </li>
         <li>
           <a href="math.html">Math</a>
-        </li>
-        <li>
-          <a href="webgl.html">WebGL</a>
         </li>
         <li>
           <a href="program.html">Program</a>
@@ -72,9 +70,6 @@
        <li>
           <a href="media.html">Media</a>
         </li>
-       <li>
-          <a href="workers.html">Workers</a>
-        </li>
      </ul>
    </div>
 
@@ -84,9 +79,9 @@
     </ul>
    </div>
   </div>
-  
+
   {{ content }}
-  
+
 </div>
 </body>
 </html>

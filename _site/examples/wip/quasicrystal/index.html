@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Animating Quasicrystal</title>
+<link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+<style type="text/css">
+  canvas {
+    background: black;
+  }
+</style>
+
+
+<script id="shader-vs" type="x-shader/x-vertex"> 
+  attribute vec3 position;
+  attribute vec2 texCoord1;
+  
+  uniform mat4 worldMatrix;
+  uniform mat4 projectionMatrix;
+  
+  varying   vec2 pixel;
+  void main(void) {
+     gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.);
+     pixel = texCoord1;
+  }
+</script>
+
+<script id="shader-fs" type="x-shader/x-fragment"> 
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  #define PI 3.1415926535
+
+  uniform sampler2D sampler1;
+  uniform float t;
+  uniform float ratio;
+
+  varying vec2 pixel;
+
+  void main(void) {
+    float step = PI / ratio;
+    float s;
+    float c;
+    float ans;
+
+    vec2 defpixel = (pixel - vec2( 0.5 ) ) * 170.;
+
+    for (float idx = 0.; idx < 100.; idx++) {
+      if ( idx < ratio ) {
+        float value = idx * step;
+        s = sin( value );
+        c = cos( value );
+        ans += ( cos( c * defpixel.x + s * defpixel.y + t ) + 1. ) / 2.;
+      }
+    }
+
+    float v = mod(ans, 1.);
+    float k = ans - v;
+    
+    ans = ( mod( abs( k ), 2. ) ) <= 0.0001 ? v : 1. - v;
+
+    vec4 color = vec4( ans );
+    color.w = 1.;
+
+    gl_FragColor = color;
+  }
+</script>
+
+<script src="../../build/PhiloGL.js"></script>
+<script src="index.js"></script>
+
+</head>
+<body onload="load()">
+  <div id="container">
+    <div id="title">
+      <h1>Animating Quasicrystals</h1>
+    </div>
+    
+    <div class="controls">
+      Based on work by <a
+        href="http://www.jasondavies.com/animated-quasicrystals/">Jason Davies</a> - Ported to
+      <a href="http://senchalabs.github.com/philogl/">PhiloGL API</a> - <a id="fullscreen" href="#">Click here to go fullscreen</a>.
+      <br />
+      <form action="#">
+        <label for="range">Steps: </label><input id="range" type="number" min="1" max="10" step="0.1" value="7.0" />
+      </form>
+    </div>
+    <canvas id="c" width="600" height="600"></canvas>
+  </div>
+</body>
+</html>
+
+

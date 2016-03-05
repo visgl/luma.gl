@@ -1,0 +1,340 @@
+<h1 id="Scene">Class: Scene</h1>
+
+<p>The Scene class abstracts the use of low level code for lighting and other effects and creates a high level structure that
+plays well with objects created with <a href="o3d.html">O3D</a> and the default shaders in <a href="shaders.html">Shaders</a> to enable rendering of multiple
+models in the scene with different options. The Scene role is to connect the properties set in the <a href="o3d.html">O3D</a> models to the
+attributes defined in the shaders so that the buffer creation and updating is transparent to the user.
+The good thing about the design though is that the Scene provides many callback functions that can be executed at different
+stages of the rendering process for the user to update or bypass setting of the attributes and uniforms. This also enables you
+to create your own shader files that are compatible with the <a href="scene.html">Scene</a> class. Some examples of <a href="scene.html">Scene</a> compatible shader
+files can be found <a href="https://github.com/philogb/philogl/tree/master/shaders">here</a>. Also, for more information about the
+default shaders take a look at the <a href="shaders.html">Shaders</a> class. The <a href="o3d.html">O3D</a> options describe how to override or set callbacks when rendering
+objects with a default scene.</p>
+
+<h3 id="scene-static-properties">Scene Static Properties</h3>
+
+<ul>
+  <li>PICKING_RES - Used to set the default resolution for the texture / image used for color picking. Default value is <code class="highlighter-rouge">4</code>. For best picking precision use <code class="highlighter-rouge">1</code>.</li>
+</ul>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.Scene.PICKING_RES = 1;
+</code></pre>
+</div>
+
+<h2 id="Scene:constructor">Scene Method: constructor</h2>
+
+<p>Creates a new <a href="scene.html">Scene</a> instance.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var scene = new LumaGL.Scene(program, camera, options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>program - (<em>object</em>) A Program instance. For more information check the <a href="program.html">Program</a> class.</li>
+  <li>camera - (<em>object</em>) A Camera instance. For more information check the <a href="camera.html">Camera</a> class.</li>
+  <li>options - (<em>object</em>) An object with the following properties:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>lights - (<em>object</em>, optional) An object for managing lights. The options for lighting are:
+    <ul>
+      <li>enable - (<em>boolean</em>) Set this to <code class="highlighter-rouge">true</code> to enable lighting.</li>
+      <li>ambient - (<em>object</em>, optional) A r, g, b object with values in [0, 1] to select ambient lighting.</li>
+      <li>directional - (<em>object</em>, optional) An object with properties:
+        <ul>
+          <li>direction - (<em>object</em>) An object with x, y, z coordinates to display the light direction.</li>
+          <li>color - (<em>object</em>) A r, g, b object with values in [0, 1] to select the color.</li>
+        </ul>
+      </li>
+      <li>points - (<em>mixed</em>, optional) An array of point lights configuration objects containing as properties:
+        <ul>
+          <li>position - (<em>object</em>) A x, y, z object with the point light position.</li>
+          <li>
+            <table>
+              <tbody>
+                <tr>
+                  <td>color</td>
+                  <td>diffuse - (<em>object</em>) A r, g, b object with values in [0, 1] that sets the (diffuse) color for the point light.</td>
+                </tr>
+              </tbody>
+            </table>
+          </li>
+          <li>specular - (<em>object</em>, optional) A r, g, b object with values in [0, 1] that sets the specular light color.</li>
+        </ul>
+      </li>
+      <li>
+        <p>effects - (<em>object</em>, optional) An object with scene effect options.</p>
+
+        <ul>
+          <li>fog - (<em>object</em>, optional) An object with linear fog options explained below.
+            <ul>
+              <li>near - (<em>number</em>, optional) The near fog factor. Default’s the <a href="camera.html">Camera</a> near factor.</li>
+              <li>far - (<em>number</em>) The far fog factor. Default’s the <a href="camera.html">Camera</a> far factor.</li>
+              <li>color - (<em>object</em>) An <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">r,</span><span class="w"> </span><span class="err">g,</span><span class="w"> </span><span class="err">b</span><span class="w"> </span><span class="p">}</span></code> object with the fog color.</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Create a new Scene instance. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/16/">lesson 16</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">innerScene</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Scene</span><span class="p">(</span><span class="nx">program</span><span class="p">,</span> <span class="nx">innerCamera</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">lights</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">enable</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">points</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">position</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">x</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="na">y</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="na">z</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span>
+      <span class="p">},</span>
+      <span class="na">diffuse</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">r</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">g</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">b</span><span class="p">:</span> <span class="mf">0.8</span>
+      <span class="p">},</span>
+      <span class="na">specular</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">r</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">g</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">b</span><span class="p">:</span> <span class="mf">0.8</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">});</span></code></pre></figure>
+
+<p>Create a new Scene instance and add some fog to it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Scene</span><span class="p">(</span><span class="nx">program</span><span class="p">,</span> <span class="nx">camera</span><span class="p">,</span> <span class="p">{</span>
+  <span class="c1">//Setup lighting.</span>
+  <span class="na">lights</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">enable</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">points</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">position</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">x</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="na">y</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="na">z</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span>
+      <span class="p">},</span>
+      <span class="na">diffuse</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">r</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">g</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">b</span><span class="p">:</span> <span class="mf">0.8</span>
+      <span class="p">},</span>
+      <span class="na">specular</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">r</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">g</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span> <span class="na">b</span><span class="p">:</span> <span class="mf">0.8</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="c1">//Add fog effect.</span>
+  <span class="na">effects</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">fog</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">near</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+      <span class="na">far</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+      <span class="na">color</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">r</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="na">g</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span> <span class="na">b</span><span class="p">:</span> <span class="mf">0.7</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Scene:add">Scene Method: add</h2>
+
+<p>Add an <a href="o3d.html">O3D</a> object to the Scene.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.add(o[, ...]);
+</code></pre>
+</div>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<p>A variable argument list of <a href="o3d.html">O3D</a> instances.</p>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Add a moon and a box models to the scene. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/12/">lesson 12</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//Add objects to the scene</span>
+<span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">moon</span><span class="p">,</span> <span class="nx">box</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Scene:remove">Scene Method: remove</h2>
+
+<p>Removes an <a href="o3d.html">O3D</a> object from the Scene.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.remove(model);
+</code></pre>
+</div>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<p>model - (<em>object</em>) The model to be removed.</p>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Add a moon and a box models to the scene. Then remove them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//Add objects to the scene</span>
+<span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">moon</span><span class="p">,</span> <span class="nx">box</span><span class="p">);</span>
+
+<span class="c1">//Remove the moon</span>
+<span class="nx">scene</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">moon</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Scene:render">Scene Method: render</h2>
+
+<p>Renders all the objects added to the scene.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.render(callback);
+</code></pre>
+</div>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>callback - (<em>object</em>, optional) An object with
+<code class="highlighter-rouge">onBeforeRender(object, index)</code> and
+<code class="highlighter-rouge">onAfterRender(object, index)</code> methods to be called right before and
+right after rendering each element.</li>
+</ol>
+
+<h2 id="Scene:renderToTexture">Scene Method: renderToTexture</h2>
+
+<p>Performs <code class="highlighter-rouge">scene.render()</code> but binds a texture afterwards to store the rendered image in the texture itself and not the main
+buffer.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.renderToTexture(name);
+</code></pre>
+</div>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name/id of the texture to bind the rendering to.</li>
+</ol>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Bind a framebuffer, render the scene to a texture, and unbind the framebuffer. This is the procedure done
+to render the inner scene in the laptop example on <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/16/">lesson 16</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">function</span> <span class="nx">drawInnerScene</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'monitor'</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+
+  <span class="nx">gl</span><span class="p">.</span><span class="nx">viewport</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">screenWidth</span><span class="p">,</span> <span class="nx">screenHeight</span><span class="p">);</span>
+  <span class="nx">gl</span><span class="p">.</span><span class="nx">clear</span><span class="p">(</span><span class="nx">gl</span><span class="p">.</span><span class="nx">COLOR_BUFFER_BIT</span> <span class="o">|</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">DEPTH_BUFFER_BIT</span><span class="p">);</span>
+
+  <span class="nx">theta</span> <span class="o">+=</span> <span class="mf">0.01</span><span class="p">;</span>
+
+  <span class="nx">moon</span><span class="p">.</span><span class="nx">position</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="na">x</span><span class="p">:</span> <span class="nx">rho</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">cos</span><span class="p">(</span><span class="nx">theta</span><span class="p">),</span>
+    <span class="na">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="na">z</span><span class="p">:</span> <span class="nx">rho</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sin</span><span class="p">(</span><span class="nx">theta</span><span class="p">)</span>
+  <span class="p">};</span>
+  <span class="nx">moon</span><span class="p">.</span><span class="nx">update</span><span class="p">();</span>
+
+  <span class="nx">box</span><span class="p">.</span><span class="nx">position</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="na">x</span><span class="p">:</span> <span class="nx">rho</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">cos</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span> <span class="o">+</span> <span class="nx">theta</span><span class="p">),</span>
+    <span class="na">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="na">z</span><span class="p">:</span> <span class="nx">rho</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sin</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span> <span class="o">+</span> <span class="nx">theta</span><span class="p">)</span>
+  <span class="p">};</span>
+  <span class="nx">box</span><span class="p">.</span><span class="nx">update</span><span class="p">();</span>
+
+  <span class="nx">innerScene</span><span class="p">.</span><span class="nx">renderToTexture</span><span class="p">(</span><span class="s1">'monitor'</span><span class="p">);</span>
+
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'monitor'</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<h2 id="Scene:pick">Scene Method: pick</h2>
+
+<p>Returns an <a href="o3d.html">O3D</a> object under the given <code class="highlighter-rouge">x</code> and <code class="highlighter-rouge">y</code>
+coordinates. The object must have <code class="highlighter-rouge">pickable</code> set to <code class="highlighter-rouge">true</code>.</p>
+
+<h3 id="about-the-picking-algorithm">About the picking algorithm</h3>
+
+<p>The picking algorithm used in LumaGL is a color picking
+algorithm. Each model is assigned a different color and the scene is
+rendered to a texture. Then, the pixel pointed by the mouse
+position is retrieved from the texture and the color of that pixel is
+used to identify the model.</p>
+
+<h3 id="customizing-the-picking-algorithm">Customizing the picking algorithm</h3>
+
+<p>Sometimes we want to know more than just which object has been picked. For
+example, we would want to know which face of that object has been
+picked. In that case the <a href="o3d.html">O3D</a> constructor options
+<code class="highlighter-rouge">pickingColors</code> and <code class="highlighter-rouge">pick</code> are useful. By defining your own set of per
+vertex colors and a method that given a pixel returns special
+information on what part of the object has been retrieved, then it is
+possible to have finer grain picking. For more information about how to
+use this you can take a look at the Air Flights example or go to the
+<a href="http://groups.google.com/group/philogl">Google group of the framework</a>
+and ask for more info.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.pick(x, y, options);
+</code></pre>
+</div>
+
+<h3 id="arguments-5">Arguments:</h3>
+
+<ul>
+  <li>x - (<em>number</em>) The <code class="highlighter-rouge">x</code> position. The upper left corner of the viewport
+is considered to be <code class="highlighter-rouge">(0, 0)</code>.</li>
+  <li>y - (<em>number</em>) The <code class="highlighter-rouge">y</code> position. The upper left corner of the viewport
+is considered to be <code class="highlighter-rouge">(0, 0)</code>.</li>
+  <li>options - (<em>object</em>, optional) An object containing the following properties:
+    <ul>
+      <li>viewport - (<em>object</em>, optional) An object containing viewport
+information:
+        <ul>
+          <li>x - (<em>number</em>, optional) Viewport start <code class="highlighter-rouge">x</code> position. Default’s <code class="highlighter-rouge">0</code>.</li>
+          <li>y - (<em>number</em>, optional) Viewport start <code class="highlighter-rouge">y</code> position. Default’s <code class="highlighter-rouge">0</code>.</li>
+          <li>width - (<em>number</em>, optional) Viewport <code class="highlighter-rouge">width</code> dimension. Default’s <code class="highlighter-rouge">canvas.offsetWidth</code>.</li>
+          <li>height - (<em>number</em>, optional) Viewport <code class="highlighter-rouge">height</code> dimension. Default’s <code class="highlighter-rouge">canvas.offsetHeight</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="notes">Notes:</h3>
+
+<ul>
+  <li>You might want to check how picking is used in the <a href="event.html">Event</a> options. There you can grab
+the target of the event in a simple way.</li>
+  <li>Also, the picking method will disable blending. If you are using
+blending in your application (along with picking), you might want to
+turn blending <code class="highlighter-rouge">on</code> in the rendering loop to ensure it is always on.</li>
+</ul>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Get an object at <code class="highlighter-rouge">(100, 100)</code> and change its color by altering a
+uniform value.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">model</span> <span class="o">=</span> <span class="nx">scene</span><span class="p">.</span><span class="nx">pick</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">model</span><span class="p">.</span><span class="nx">uniforms</span><span class="p">.</span><span class="nx">colorUfm</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<h2 id="Scene:resetPicking">Scene Method: resetPicking</h2>
+
+<p>Clear framebuffers and previous scene captures and restart the picking
+routine without any cached values. Generally used when <code class="highlighter-rouge">lazyPicking</code> is set to
+<code class="highlighter-rouge">true</code> in <a href="event.html#Events:create">Events.create</a>.</p>
+
+<h3 id="syntax-7">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scene.resetPicking();
+</code></pre>
+</div>
+

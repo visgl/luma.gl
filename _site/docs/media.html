@@ -1,0 +1,113 @@
+<h1 id="Media">Script: Media</h1>
+
+<p>The goal of this module is to provide utility functions for media like audio, 
+video, or image post-processing among others things (for example other devices, camera, etc.). 
+The API in this module will be changing with time, and right now there’s
+only one utility method implemented under the <code class="highlighter-rouge">Image</code> object.</p>
+
+<h1 id="Media:Image">Object: Image</h1>
+
+<p>Povides utility functions for manipulating images.</p>
+
+<h2 id="Media:Image:postProcess">Image Method: postProcess</h2>
+
+<p>Creates a temporary scene with a plane, used to post-process textures and render the
+job to other texture(s) or to the main screen.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Media.Image.postProcess(options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object with the following properties:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>program - (<em>string</em>) The program <code class="highlighter-rouge">id</code> to be used for rendering.</li>
+  <li>fromTexture - (<em>mixed</em>) Can be an array of strings or just a string. The texture ids to send to the shaders when rendering.</li>
+  <li>toFrameBuffer - (<em>string</em>, optional) The <code class="highlighter-rouge">id</code> of the framebuffer to render the scene to. The associated texture will have as <code class="highlighter-rouge">id</code> the framebuffer id plus <code class="highlighter-rouge">-texture</code> as suffix.</li>
+  <li>toScreen - (<em>boolean</em>, optional) Set this to <code class="highlighter-rouge">true</code> to render the result to the screen. Default’s false.</li>
+  <li>aspectRatio - (<em>number</em>, optional) Sets the aspect ratio for the camera. If not specified it’s automatically set.</li>
+  <li>viewportX - (<em>number</em>, optional) The offset with of the frame. Default’s <code class="highlighter-rouge">0</code>.</li>
+  <li>viewportY - (<em>number</em>, optional) The offset height of the frame. Default’s <code class="highlighter-rouge">0</code>.</li>
+  <li>width - (<em>number</em>, optional) The with of the frame. Default’s the with of the canvas.</li>
+  <li>height - (<em>number</em>, optional) The height of the frame. Default’s the height of the canvas.</li>
+  <li>uniforms - (<em>object</em>, optional) An object descriptor with the name and value of the uniforms to be sent to the shaders. Default’s an empty object.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>In the <a href="http://senchalabs.github.com/philogl/LumaGL/examples/worldFlights/">World Flights</a> example we use image post-processing to create a pseudo bloom filter.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="c1">//create two framebuffers that will store an image to a texture.</span>
+  <span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">width</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="na">height</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="na">bindToTexture</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">parameters</span><span class="p">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MAG_FILTER'</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR'</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MIN_FILTER'</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR_MIPMAP_NEAREST'</span><span class="p">,</span>
+        <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">false</span>
+      <span class="p">}]</span>
+    <span class="p">},</span>
+    <span class="na">bindToRenderBuffer</span><span class="p">:</span> <span class="kc">true</span>
+  <span class="p">}).</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world2'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">width</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="na">height</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="na">bindToTexture</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">parameters</span><span class="p">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MAG_FILTER'</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR'</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MIN_FILTER'</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR_MIPMAP_NEAREST'</span><span class="p">,</span>
+        <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">false</span>
+      <span class="p">}]</span>
+    <span class="p">},</span>
+    <span class="na">bindToRenderBuffer</span><span class="p">:</span> <span class="kc">true</span>
+  <span class="p">});</span>
+
+  <span class="c1">//...later, when rendering the scene...</span>
+
+   <span class="c1">// render to a 'world-texture'</span>
+   <span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world'</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+   <span class="nx">program</span><span class="p">.</span><span class="nx">earth</span><span class="p">.</span><span class="nx">use</span><span class="p">();</span>
+   <span class="nx">gl</span><span class="p">.</span><span class="nx">clear</span><span class="p">(</span><span class="nx">clearOpt</span><span class="p">);</span>
+   <span class="nx">gl</span><span class="p">.</span><span class="nx">viewport</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+   <span class="nx">program</span><span class="p">.</span><span class="nx">earth</span><span class="p">.</span><span class="nx">setUniform</span><span class="p">(</span><span class="s1">'renderType'</span><span class="p">,</span>  <span class="mi">0</span><span class="p">);</span>
+   <span class="nx">scene</span><span class="p">.</span><span class="nx">renderToTexture</span><span class="p">(</span><span class="s1">'world'</span><span class="p">);</span>
+   <span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world'</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+
+   <span class="c1">// render to a 'world2-texture'</span>
+   <span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world2'</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+   <span class="nx">program</span><span class="p">.</span><span class="nx">earth</span><span class="p">.</span><span class="nx">use</span><span class="p">();</span>
+   <span class="nx">gl</span><span class="p">.</span><span class="nx">clear</span><span class="p">(</span><span class="nx">clearOpt</span><span class="p">);</span>
+   <span class="nx">gl</span><span class="p">.</span><span class="nx">viewport</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+   <span class="nx">program</span><span class="p">.</span><span class="nx">earth</span><span class="p">.</span><span class="nx">setUniform</span><span class="p">(</span><span class="s1">'renderType'</span><span class="p">,</span>  <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+   <span class="nx">scene</span><span class="p">.</span><span class="nx">renderToTexture</span><span class="p">(</span><span class="s1">'world2'</span><span class="p">);</span>
+   <span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'world2'</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+  
+   <span class="c1">// send the two textures to the shaders,</span>
+   <span class="c1">// and combine them in the shaders and print the</span>
+   <span class="c1">// result to the screen.</span>
+   <span class="nx">Media</span><span class="p">.</span><span class="nx">Image</span><span class="p">.</span><span class="nx">postProcess</span><span class="p">({</span>
+     <span class="na">fromTexture</span><span class="p">:</span> <span class="p">[</span><span class="s1">'world-texture'</span><span class="p">,</span> <span class="s1">'world2-texture'</span><span class="p">],</span>
+     <span class="na">toScreen</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+     <span class="na">program</span><span class="p">:</span> <span class="s1">'glow'</span><span class="p">,</span>
+     <span class="na">width</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+     <span class="na">height</span><span class="p">:</span> <span class="mi">1024</span>
+   <span class="p">});</span></code></pre></figure>
+
+<h3 id="notes">Notes:</h3>
+
+<p>You can find other examples in the <code class="highlighter-rouge">hoc</code> folder in the source code at <a href="http://github.com/senchalabs/philogl/">GitHub</a>.</p>
+

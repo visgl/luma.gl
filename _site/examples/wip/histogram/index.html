@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PhiloGL - Real time color 3D histogram</title>
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="text/javascript" src="../../build/PhiloGL.js"></script>
+    <script type="text/javascript" src="histogram.js"></script>
+  </head>
+  <body>
+    <div id="title">
+    <h1>Real time color 3D histogram analysis</h1>
+
+    <div class="description">Visualize frame by frame color decomposition. Choose from different <a href="http://en.wikipedia.org/wiki/HSL_and_HSV">color schemes</a> below. Feel free to pause the video
+      and to zoom/pan the histogram below.</div>
+  </div>
+
+  <div id="log-panel" style="display:none;">
+    <span id="log-message"></span>
+  </div>
+
+  <div id="fallback" class="fallback"></div>
+
+   <div id="container">
+      <video id="movie" autoplay controls class="shadows" width="480">
+          <source src="movie/shrek.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"' />
+          <source src="movie/shrek.ogv" type='video/ogg; codecs="theora, vorbis"' />
+      </video>
+      <div class="controls shadows">
+        <div class="section">
+          Choose a Color Scheme:
+        </div>
+        <ul class="schemes">
+          <li>
+            <div class="title">
+              <input type="radio" id="cube" name="shape" value="0" checked /><label for="cube">RGB Cube</label>
+            </div>
+            <img src="img/cube.png" />
+          </li>
+          <li>
+            <div class="title">
+              <input type="radio" id="clh" name="shape" value="1" /><label for="clh">Chroma Luma Hue</label>
+            </div>
+            <img src="img/bicone.png" />
+          </li>
+          <li>
+            <div class="title">
+              <input type="radio" id="cvh" name="shape" value="2" /><label for="cvh">Chroma Value Hue</label>
+            </div>
+            <img src="img/cone.png" />
+          </li>
+       </ul>
+        <div class="section">
+          Other Options:
+        </div>
+        <table>
+          <tr>
+            <td>Camera:</td>
+            <td>
+              <input type="button" id="camera" value="Start camera!" />
+            </td>
+          </tr>
+          <tr>
+            <td>Grain:</td>
+            <td>
+              <input type="radio" id="nonegrain" name="grain" value="0" /><label for="nonegrain">None</label>
+              <input type="radio" id="smallgrain" name="grain" value="0.01" checked /><label for="smallgrain">Small</label>
+              <input type="radio" id="mediumgrain" name="grain" value="0.03" /><label for="mediumgrain">Large</label>
+            </td>
+          </tr>
+          <tr>
+            <td>Background:</td>
+            <td>
+              <select id="grayscale">
+                <option>0.0</option>
+                <option>0.1</option>
+                <option>0.2</option>
+                <option selected>0.3</option>
+                <option>0.4</option>
+                <option>0.5</option>
+                <option>0.6</option>
+                <option>0.7</option>
+                <option>0.8</option>
+                <option>0.9</option>
+                <option>1.0</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <canvas class="shadows" id="histogram-canvas" width="500" height="575"></canvas>
+    </div>
+
+  <canvas id="pastie" width="50" height="50" style="display:none;"></canvas>
+
+  <div class="footer">
+    Copyright &copy; <a href="http://uxnerd.com/">Maria Luz Caballero</a> and <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a>.
+  </div>
+
+
+  <script>
+    if (!PhiloGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +  'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +  '<iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/ec-4GWoeYoU" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+</body>
+</html>

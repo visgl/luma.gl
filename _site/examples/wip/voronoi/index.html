@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PhiloGL - Spherical Voronoi Diagram</title>
+  <meta charset="utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+  <link type='text/css' rel='stylesheet' href='style.css' media='all' />
+  <script src="../../build/PhiloGL.js"></script>
+  <script src="index.js"></script>
+  <style type="text/css">
+    
+  </style>
+</head>
+<body>
+<div id="container">
+  <div class="title">
+    <h1>Spherical Voronoi Diagram</h1>
+  </div>
+  <div class="controls">
+    Click on the sphere to calculate a
+    <a href="javascript:toggleWeighted()">[unweighted/weighted]</a>
+    spherical Voronoi diagram.<br/>
+    <a class="toggle-button on" href="javascript:toggleFullscreen()">[Go fullscreen]</a><br/>
+    <a class="toggle-button off" href="javascript:toggleFullscreen()">[Exit fullscreen]</a>
+  </div>
+    <canvas id="voronoi" style="border: none;" width="500" height="500"></canvas>
+</div>
+  <div class="footer">
+    Author: <a href='http://twitter.com/ikarienator/'>Zhang Bei</a>
+  </div>
+</body>
+</html>
+
