@@ -1,18 +1,20 @@
-import 'babel-polyfill';
 
 const glslify = require('glslify');
-import * as LumaGL from '../../../src/index.js';
+
+import 'babel-polyfill';
+
+import {
+  createGLContext,
+  Program,
+  Buffer,
+  Cube,
+  Mat4,
+  Vec3,
+  Fx,
+  Framebuffer
+} from '../../../src';
 
 window.webGLStart = function() {
-
-  var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
-  var Buffer = LumaGL.Buffer;
-  var Cube = LumaGL.Cube;
-  var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
-  var Fx = LumaGL.Fx;
-  var Framebuffer = LumaGL.Framebuffer;
 
   var canvas = document.getElementById('render-canvas');
 
