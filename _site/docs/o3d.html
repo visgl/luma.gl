@@ -1,0 +1,431 @@
+<h1 id="O3D">Module: O3D</h1>
+
+<p>O3D provides Model management and 3D primitives. Here you’ll find methods for creating 
+3D models and primitives that are compatible with the <a href="scene.html">Scene</a> class.</p>
+
+<h2 id="O3D:Model">O3D Class: O3D.Model</h2>
+
+<p>The class Model enables you to create 3D models which are compatible with the 
+<a href="scene.html">Scene</a> class. All primitives (Sphere, etc) inherit from Model too.</p>
+
+<h3 id="properties">Properties:</h3>
+
+<p>A Model instance has a number of public properties that can be accessed/modified:</p>
+
+<ul>
+  <li>position - (<em>object</em>) A <code class="highlighter-rouge">Vec3</code> indicating the position of the Model.</li>
+  <li>rotation - (<em>object</em>) A <code class="highlighter-rouge">Vec3</code> indicating the rotation of the Model.</li>
+  <li>scale - (<em>object</em>) A <code class="highlighter-rouge">Vec3</code> indicating the scaling of the Model.</li>
+  <li>matrix - (<em>object</em>) A <code class="highlighter-rouge">Mat4</code> containing information about position, rotation and scale. 
+This matrix gets updated each time the method <code class="highlighter-rouge">update</code> is called on a Model instance.</li>
+</ul>
+
+<h2 id="O3D:Model:constructor">O3D.Model Method: constructor</h2>
+
+<p>The main constructor function for the Model class. Use this to create a new Model.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Model(options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>id - (<em>string</em>, optional) An id for the model. If not provided, a random unique identifier will be created.</li>
+  <li>dynamic - (<em>boolean</em>, optional) If true then the vertices and normals will always be updated in the Buffer Objects before rendering. Default’s false.</li>
+  <li>display - (<em>boolean</em>, optional) If false the element won’t be displayed in the scene. Default’s true.</li>
+  <li>vertices - (<em>array</em>, optional) An array of floats that describe the vertices of the model.</li>
+  <li>normals - (<em>array</em>, optional) An array of floats that describe the normals of the model.</li>
+  <li>textures - (<em>array</em>, optional) An array of strings of texture ids.</li>
+  <li>texCoords - (<em>mixed</em>, optional) Can be an array of floats indicating the texture coordinates for the texture to be used or an object that has texture ids as keys and an array of floats as values.</li>
+  <li>colors - (<em>array</em>, optional) An array of colors in RGBA. If just one color is specified that color will be used for all faces.</li>
+  <li>indices - (<em>array</em>, optional) An array of numbers describing the vertex indices for each face.</li>
+  <li>attributes - (<em>object</em>, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model. If you want to know more 
+about attribute descriptors you can find a description of them in <a href="program.html#Program:setBuffer">program.setBuffer</a>.</li>
+  <li>uniforms - (<em>object</em>, optional) An object with uniform names and values to be set before rendering the model.</li>
+  <li>program - (<em>string</em>, optional) A string with the id of the program to be used when rendering this model.</li>
+  <li>drawType - (<em>string</em>, optional) A string describing the drawType. Some options are <code class="highlighter-rouge">TRIANGLES</code>, <code class="highlighter-rouge">TRIANGLE_STRIP</code>, <code class="highlighter-rouge">POINTS</code>, <code class="highlighter-rouge">LINES</code>. Default’s <code class="highlighter-rouge">TRIANGLES</code>.</li>
+  <li>render - (<em>function</em>, optional) A function to be called for rendering the object instead of the default <a href="scene.html">Scene</a> rendering method.</li>
+  <li>pickable - (<em>boolean</em>, optional) If true the element can be selected with the mouse when using picking on the <a href="event.html">Event</a> configuration. Default’s false.</li>
+  <li>pickingColors - (<em>array</em>, optional) A custom set of colors to render the object to texture when performing the color picking algorithm.</li>
+  <li>pick - (<em>function</em>, optional) A custom pick function called with the retrieved pixel color from the picking texture.
+array of floats as values (to handle multiple textures).</li>
+  <li>onBeforeRender - (<em>function</em>, optional) Called before rendering an object. The first two formal parameters are the program and the camera respectively.</li>
+  <li>onAfterRender - (<em>function</em>, optional) Called after rendering an object. The first two formal parameters are the program and the camera respectively.</li>
+</ul>
+
+<h3 id="notes">Notes:</h3>
+
+<p><strong>New in version 1.3:</strong></p>
+
+<ul>
+  <li>Attribute arrays are implemented as getters and
+setters, and may not return the same information they’ve been set with. 
+Internally, attribute arrays are transformed into <a href="https://developer.mozilla.org/en/JavaScript_typed_arrays">typed arrays</a>, 
+a much faster data structure to use with this type of data.</li>
+  <li>Attribute arrays only accept plain arrays and not nested arrays
+anymore. Forcing the data structure to be this way gives us a big
+performance gain.</li>
+  <li>If you set a <code class="highlighter-rouge">color</code> attribute as a single color, then the array will
+be cloned to match the number of components for the model and will be
+served as an attribute. The getter for this property will return the
+cloned typed array.</li>
+  <li><code class="highlighter-rouge">toFloat32Array</code> and <code class="highlighter-rouge">toUint16Array</code> methods are not used anymore since the typed array can
+now be fetched when accessing the model property directly.</li>
+  <li><code class="highlighter-rouge">shininess</code>, <code class="highlighter-rouge">reflection</code> and <code class="highlighter-rouge">refraction</code> properties are now set in the <code class="highlighter-rouge">uniforms</code> object. Below is a description 
+of the attributes.</li>
+  <li>shininess - (<em>number</em>, optional) A number between [0.1, 200] describing how shiny an object is.</li>
+  <li>reflection - (<em>number</em>, optional) A number between [0, 1] describing the reflectivity of an object.</li>
+  <li>refraction - (<em>number</em>, optional) A number between [0, 1] describing the refraction index of an object.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Create a pyramid model (used in lesson 4 of learning WebGL examples).</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">pyramid</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Model</span><span class="p">({</span>
+    <span class="na">vertices</span><span class="p">:</span> <span class="p">[</span> <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+               <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+               <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+               <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+               <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">],</span>
+    
+    <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+  <span class="p">});</span></code></pre></figure>
+
+<p>Create a pyramid model and add some extra buffer information and uniform
+color to be set before rendering the model.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">fromVertices</span> <span class="o">=</span>  <span class="p">[</span> <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                      <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                      <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                      <span class="mi">0</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span>
+                     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">];</span>
+
+<span class="kd">var</span> <span class="nx">toVertices</span> <span class="o">=</span> <span class="nx">fromVertices</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">;</span> <span class="p">});</span>
+
+<span class="kd">var</span> <span class="nx">pyramid</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Model</span><span class="p">({</span>
+    <span class="na">vertices</span><span class="p">:</span> <span class="nx">fromVertices</span><span class="p">,</span>
+
+    <span class="na">uniforms</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">colorUfm</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="p">},</span>
+
+    <span class="na">attributes</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">endPosition</span><span class="p">:</span> <span class="p">{</span>
+          <span class="c1">//default is type: gl.FLOAT</span>
+          <span class="na">attribute</span><span class="p">:</span> <span class="s1">'endPosition'</span><span class="p">,</span>
+          <span class="na">size</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+          <span class="na">value</span><span class="p">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">(</span><span class="nx">toVertices</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:Model:update">O3D.Model Method: update</h2>
+
+<p>Update the model matrix. Useful to update changes to the <code class="highlighter-rouge">position</code>, <code class="highlighter-rouge">rotation</code> or <code class="highlighter-rouge">scale</code> properties.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>model.update();
+</code></pre>
+</div>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Change the position of the pyramid model and update its matrix.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="nx">pyramid</span><span class="p">.</span><span class="nx">position</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="na">x</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="na">y</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="na">z</span><span class="p">:</span> <span class="mi">20</span>
+  <span class="p">};</span>
+  
+  <span class="nx">pyramid</span><span class="p">.</span><span class="nx">update</span><span class="p">();</span></code></pre></figure>
+
+<h2 id="O3D:Cube">O3D Class: O3D.Cube</h2>
+
+<p>Creates a Cube model. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:Cube:constructor">O3D.Cube Method: constructor</h2>
+
+<p>The main constructor function for the Cube class. Use this to create a new Cube. Accepts the same properties and 
+options as O3D.Model constructor but has preset for <code class="highlighter-rouge">vertices</code>, <code class="highlighter-rouge">normals</code> and <code class="highlighter-rouge">indices</code>.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Cube(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) The same options as in O3D.Model constructor but has preset for <code class="highlighter-rouge">vertices</code>, <code class="highlighter-rouge">normals</code> and <code class="highlighter-rouge">indices</code>.</li>
+</ol>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Create a white cube.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whiteCube</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Cube</span><span class="p">({</span>
+      <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:Sphere">O3D Class: O3D.Sphere</h2>
+
+<p>Creates a Sphere model. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends-1">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:Sphere:constructor">O3D.Sphere Method: constructor</h2>
+
+<p>The main constructor function for the Sphere class. Use this to create a new Sphere.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Sphere(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing as poperties:</li>
+</ol>
+
+<h3 id="options-1">Options:</h3>
+
+<ul>
+  <li>nlat - (<em>number</em>, optional) The number of vertices for latitude. Default’s 10.</li>
+  <li>nlong - (<em>number</em>, optional) The number of vertices for longitude. Default’s 10.</li>
+  <li>radius - (<em>number</em>, optional) The radius of the sphere. Default’s 1.</li>
+</ul>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Create a white Sphere of radius 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whiteSphere</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Sphere</span><span class="p">({</span>
+  <span class="na">radius</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:IcoSphere">O3D Class: O3D.IcoSphere</h2>
+
+<p>Creates a Sphere model by subdividing an Icosahedron. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends-2">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:IcoSphere:constructor">O3D.IcoSphere Method: constructor</h2>
+
+<p>The main constructor function for the IcoSphere class. Use this to create a new IcoSphere.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.IcoSphere(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing as poperties:</li>
+</ol>
+
+<h3 id="options-2">Options:</h3>
+
+<ul>
+  <li>iterations - (<em>number</em>, optional) The number of iterations used to subdivide the Icosahedron. Default’s 0.</li>
+</ul>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Create a white IcoSphere of radius 1.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whiteSphere</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">IcoSphere</span><span class="p">({</span>
+  <span class="na">iterations</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+  <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:Plane">O3D Class: O3D.Plane</h2>
+
+<p>Creates a plane. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends-3">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:Plane:constructor">O3D.Plane Method: constructor</h2>
+
+<p>The main constructor function for the Plane class. Use this to create a new Plane.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Plane(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing as poperties:</li>
+</ol>
+
+<h3 id="options-3">Options:</h3>
+
+<ul>
+  <li>type - (<em>string</em>) Whether is a XY, YZ or XZ plane. Possible values are <code class="highlighter-rouge">x,y</code>, <code class="highlighter-rouge">x,z</code>, <code class="highlighter-rouge">y,z</code>.</li>
+  <li>xlen - (<em>number</em>) The length along the x-axis. Only used in <code class="highlighter-rouge">x,z</code> or <code class="highlighter-rouge">x,y</code> planes.</li>
+  <li>ylen - (<em>number</em>) The length along the y-axis. Only used in <code class="highlighter-rouge">y,z</code> or <code class="highlighter-rouge">x,y</code> planes.</li>
+  <li>zlen - (<em>number</em>) The length along the z-axis. Only used in <code class="highlighter-rouge">x,z</code> or <code class="highlighter-rouge">y,z</code> planes.</li>
+  <li>nx - (<em>number</em>) The number of subdivisions along the x-axis. Only used in <code class="highlighter-rouge">x,z</code> or <code class="highlighter-rouge">x,y</code> planes.</li>
+  <li>ny - (<em>number</em>) The number of subdivisions along the y-axis. Only used in <code class="highlighter-rouge">y,z</code> or <code class="highlighter-rouge">x,y</code> planes.</li>
+  <li>nz - (<em>number</em>) The number of subdivisions along the z-axis. Only used in <code class="highlighter-rouge">x,z</code> or <code class="highlighter-rouge">y,z</code> planes.</li>
+  <li>offset - (<em>number</em>) For XZ planes, the offset along the y-axis. For XY planes, the offset along the z-axis. For YZ planes, the offset along the x-axis.</li>
+</ul>
+
+<h3 id="examples-5">Examples:</h3>
+
+<p>Create a white XZ plane.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whitePlane</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Plane</span><span class="p">({</span>
+  <span class="na">type</span><span class="p">:</span> <span class="s1">'x,z'</span><span class="p">,</span>
+  <span class="na">xlen</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+  <span class="na">zlen</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+  <span class="na">nx</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+  <span class="na">nz</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+  <span class="na">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:Cylinder">O3D Class: O3D.Cylinder</h2>
+
+<p>Creates a Cylinder model. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends-4">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:Cylinder:constructor">O3D.Cylinder Method: constructor</h2>
+
+<p>The main constructor function for the Cylinder class. Use this to create a new Cylinder.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Cylinder(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-5">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing as poperties:</li>
+</ol>
+
+<h3 id="options-4">Options:</h3>
+
+<ul>
+  <li>nradial - (<em>number</em>, optional) The number of vertices for the disk. Default’s 10.</li>
+  <li>nvertical - (<em>number</em>, optional) The number of vertices for the height. Default’s 10.</li>
+  <li>radius - (<em>number</em>) The radius of the cylinder.</li>
+  <li>topCap - (<em>boolean</em>, optional) Whether to put the cap on the top of the cylinder. Default’s false.</li>
+  <li>bottomCap - (<em>boolean</em>, optional) Whether to put the cap on the bottom
+part of the cylinder. Default’s false.</li>
+</ul>
+
+<h3 id="examples-6">Examples:</h3>
+
+<p>Create a white Cylinder of radius 2 and height 3.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whiteCylinder</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Cylinder</span><span class="p">({</span>
+  <span class="na">radius</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="na">height</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+  <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="O3D:Cone">O3D Class: O3D.Cone</h2>
+
+<p>Creates a Cone model. Inherits methods from <a href="#O3D:Model">O3D.Model</a>.</p>
+
+<h3 id="extends-5">Extends</h3>
+
+<p>O3D.Model</p>
+
+<h2 id="O3D:Cone:constructor">O3D.Cone Method: constructor</h2>
+
+<p>The main constructor function for the Cone class. Use this to create a new Cone.</p>
+
+<h3 id="syntax-7">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var model = new LumaGL.O3D.Cone(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-6">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing as poperties:</li>
+</ol>
+
+<h3 id="options-5">Options:</h3>
+
+<ul>
+  <li>nradial - (<em>number</em>, optional) The number of vertices used to create the disk for a given height. Default’s 10.</li>
+  <li>nvertical - (<em>number</em>, optional) The number of vertices for the height. Default’s 10.</li>
+  <li>radius - (<em>number</em>) The radius of the base of the cone.</li>
+  <li>cap - (<em>boolean</em>, optional) Whether to put the cap on the base of the cone. Default’s false.</li>
+</ul>
+
+<h3 id="examples-7">Examples:</h3>
+
+<p>Create a white Cone of base radius 2 and height 3.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">whiteCone</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">O3D</span><span class="p">.</span><span class="nx">Cone</span><span class="p">({</span>
+  <span class="na">radius</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="na">height</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+  <span class="na">cap</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="na">colors</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">});</span></code></pre></figure>
+

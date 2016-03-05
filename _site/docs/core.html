@@ -1,0 +1,421 @@
+<h1 id="Core">Script: Core</h1>
+
+<p>Provides functions to create and initialize a WebGL context, and
+to check for presence of WebGL and extensions.</p>
+
+<h2 id="LumaGL:hasWebGL">Static Method: hasWebGL</h2>
+
+<p>Returns true or false whether the browser supports WebGL or not.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.hasWebGL();
+</code></pre>
+</div>
+
+<h2 id="LumaGL:hasExtension">Static Method: hasExtension</h2>
+
+<p>Returns true or false whether the browser supports a given WebGL
+extension or not.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.hasExtension(name);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>name  - (<em>string</em>) The name of the extension. For example <code class="highlighter-rouge">OES_texture_float</code>. More info <a href="http://www.khronos.org/registry/webgl/extensions/">here</a>.</li>
+</ol>
+
+<hr />
+<p>layout: docs
+title: WebGL
+categories: [Documentation]
+—</p>
+
+<h1 id="WebGL">Module: WebGL</h1>
+
+<p>Provides the <code class="highlighter-rouge">getContext</code> method which is a wrapper around the method that returns the native context for a 3D canvas. Also
+has the code to add <code class="highlighter-rouge">LumaGL.hasWebGL()</code> that returns a <em>boolean</em> whether the current browser supports WebGL or not. Also provides
+<code class="highlighter-rouge">LumaGL.hasExtension( name )</code> which returns if some WebGL extensions
+are provided by the browser.</p>
+
+<h2 id="WebGL:getContext">WebGL Function: getContext</h2>
+
+<p>Returns a WebGL context. Tries to get the context via <code class="highlighter-rouge">experimental-webgl</code> or just plain <code class="highlighter-rouge">webgl</code> if the first one fails.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<p>var gl = LumaGL.WebGL.getContext(canvas[, options]);</p>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>canvas - (<em>mixed</em>) Can be a string with the canvas id or the canvas element itself.</li>
+  <li>options - (<em>object</em>) An object with the following properties:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>debug - (<em>boolean</em>) If true, all gl calls will be <code class="highlighter-rouge">console.log</code>-ged and errors thrown to the console.</li>
+</ul>
+
+<h2 id="WebGL:Application">WebGL Class: WebGL.Application</h2>
+
+<p>The WebGL Application class has useful methods to manipulate
+buffers, textures and other things. Some of these methods can also be
+found in the <a href="program.md">Program</a> class, but in this case these aren’t bound to any
+particular program. A WebGL Application is created via the
+<a href="core.html">LumaGL</a> constructor function and returned on the <code class="highlighter-rouge">onLoad</code>
+callback. The application carries all the state regardless of the number of programs and other buffers defined via
+the WebGL Application or any other <a href="program.html">Program</a> instance. This
+design facilitates multiple program state and management.</p>
+
+<h3 id="properties">Properties:</h3>
+
+<p>A program instance has multiple public properties.</p>
+
+<ul>
+  <li>gl - (<em>object</em>) - The <code class="highlighter-rouge">WebGLRenderingContext</code></li>
+  <li>canvas - (<em>object</em>) The Canvas DOM element where the 3D context has been retrieved.</li>
+  <li>program - (<em>object</em>) A <a href="program.html">Program</a> instance. Can also be an object with program ids as keys and <a href="program.html">Program</a> instances as values.</li>
+  <li>camera - (<em>object</em>) A <a href="camera.html">Camera</a> instance.</li>
+  <li>scene - (<em>object</em>) A <a href="scene.html">Scene</a> instance.</li>
+  <li>buffers - (<em>object</em>) An object with buffer string id as key, buffer object as value.</li>
+  <li>frameBuffers - (<em>object</em>) An object with framebuffer string id as key, framebuffer object as value.</li>
+  <li>renderBuffers - (<em>object</em>) An object with renderbuffer string id as key, renderbuffer object as value.</li>
+  <li>textures - (<em>object</em>) An object with texture string id as key, texture object as value.</li>
+  <li>usedProgram - (<em>object</em>) The current <a href="program.html">Program</a> being used.</li>
+</ul>
+
+<h2 id="WebGL:Application:setBuffer">WebGL.Application Method: setBuffer</h2>
+
+<p>This method is useful to set properties (and data) to a buffer and/or attributes. If the buffer does not exist it will be created.
+Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<p>app.setBuffer(name, options);</p>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer. If no <code class="highlighter-rouge">attribute</code> value is set in <code class="highlighter-rouge">options</code> then the buffer name will be used as attribute name.</li>
+  <li>options - (<em>object</em>) An object with options/data described below:</li>
+</ol>
+
+<h3 id="options-1">Options:</h3>
+
+<ul>
+  <li>attribute - (<em>string</em>, optional) The name of the attribute to generate attribute calls to. If this parameter is not specified then the attribute name will
+be the buffer name.</li>
+  <li>bufferType - (<em>enum</em>, optional) The type of the buffer. Possible options are <code class="highlighter-rouge">gl.ELEMENT_ARRAY_BUFFER</code>, <code class="highlighter-rouge">gl.ARRAY_BUFFER</code>. Default’s <code class="highlighter-rouge">gl.ARRAY_BUFFER</code>.</li>
+  <li>size - (<em>numer</em>, optional) The size of the components in the buffer. Default’s 1.</li>
+  <li>dataType - (<em>enum</em>, optional) The type of the data being stored in the buffer. Default’s <code class="highlighter-rouge">gl.FLOAT</code>.</li>
+  <li>stride - (<em>number</em>, optional) The <code class="highlighter-rouge">stride</code> parameter when calling <code class="highlighter-rouge">gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>offset - (<em>number</em>, optional) The <code class="highlighter-rouge">offset</code> parameter when calling <code class="highlighter-rouge">gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>drawType - (<em>enum</em>, optional) The type of draw used when setting the <code class="highlighter-rouge">gl.bufferData</code>. Default’s <code class="highlighter-rouge">gl.STATIC_DRAW</code>.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Set buffer values for the vertices of a triangle.
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/1/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">app</span><span class="p">.</span><span class="nx">setBuffer</span><span class="p">(</span><span class="s1">'triangle'</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+  <span class="na">value</span><span class="p">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+  <span class="na">size</span><span class="p">:</span> <span class="mi">3</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="WebGL:Application:setBuffers">WebGL.Application Method: setBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<p>app.setBuffers(object);</p>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Set buffer values for the vertices of a triangle and a square.
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/1/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">app</span><span class="p">.</span><span class="nx">setBuffers</span><span class="p">({</span>
+  <span class="s1">'triangle'</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nl">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+    <span class="na">value</span><span class="p">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+    <span class="na">size</span><span class="p">:</span> <span class="mi">3</span>
+  <span class="p">},</span>
+
+  <span class="s1">'square'</span><span class="err">:</span> <span class="p">{</span>
+    <span class="nl">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+    <span class="nx">value</span><span class="err">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+    <span class="nx">size</span><span class="err">:</span> <span class="mi">3</span>
+  <span class="p">}</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="WebGL:Application:setFrameBuffer">WebGL.Application Method: setFrameBuffer</h2>
+
+<p>Creates or binds/unbinds a framebuffer. You can also use this method to bind the framebuffer to a texture and renderbuffers. If the
+framebuffer already exists then calling <code class="highlighter-rouge">setFrameBuffer</code> with <code class="highlighter-rouge">true</code> or <code class="highlighter-rouge">false</code> as options will bind/unbind the framebuffer.
+Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<p>app.setFrameBuffer(name[, options]);</p>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean used to bind/unbind the framebuffer or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-2">Options:</h3>
+
+<ul>
+  <li>width - (<em>number</em>) The width of the framebuffer. Default’s 0.</li>
+  <li>height - (<em>number</em>) The height of the framebuffer. Default’s 0.</li>
+  <li>bindToTexture - (<em>mixed</em>, optional) Whether to bind the framebuffer onto a texture. If false the framebuffer wont be bound to a texture. Else you should provide an object
+with the same options as in <code class="highlighter-rouge">setTexture</code>.</li>
+  <li>textureOptions - (<em>object</em>, optional) Some extra options for binding the framebuffer to the texture. Default’s <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">attachment:</span><span class="w"> </span><span class="err">gl.COLOR_ATTACHMENT0</span><span class="w"> </span><span class="p">}</span></code>.</li>
+  <li>bindToRenderBuffer - (<em>boolean</em>) Whether to bind the framebuffer to a renderbuffer. The <code class="highlighter-rouge">width</code> and <code class="highlighter-rouge">height</code> of the renderbuffer are the same as the ones specified above.</li>
+  <li>renderBufferOptions - (<em>object</em>, optional) Some extra options for binding the framebuffer to the renderbuffer. Default’s <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">attachment:</span><span class="w"> </span><span class="err">gl.DEPTH_ATTACHMENT</span><span class="w"> </span><span class="p">}</span></code>.</li>
+</ul>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Using a frambuffer to render a scene into a texture. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/16/">lesson 16</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//create framebuffer</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'monitor'</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">width</span><span class="p">:</span> <span class="nx">screenWidth</span><span class="p">,</span>
+  <span class="na">height</span><span class="p">:</span> <span class="nx">screenHeight</span><span class="p">,</span>
+  <span class="na">bindToTexture</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">parameters</span><span class="p">:</span> <span class="p">[{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MAG_FILTER'</span><span class="p">,</span>
+      <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR'</span>
+    <span class="p">},</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MIN_FILTER'</span><span class="p">,</span>
+      <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR_MIPMAP_NEAREST'</span><span class="p">,</span>
+      <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">false</span>
+    <span class="p">}]</span>
+  <span class="p">},</span>
+  <span class="na">bindToRenderBuffer</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="WebGL:Application:setFrameBuffers">WebGL.Application Method: setFrameBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setFrameBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<p>app.setFrameBuffers(object);</p>
+
+<h3 id="arguments-5">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h2 id="WebGL:Application:setRenderBuffer">WebGL.Application Method: setRenderBuffer</h2>
+
+<p>Creates or binds/unbinds a renderbuffer. If the renderbuffer already exists and the second parameter is a boolean it’ll bind or unbind the renderbuffer.
+ Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-7">Syntax:</h3>
+
+<p>app.setRenderBuffer(name[, options]);</p>
+
+<h3 id="arguments-6">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean used to bind/unbind the renderbuffer or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-3">Options:</h3>
+
+<ul>
+  <li>width - (<em>number</em>) The width of the renderbuffer. Default’s 0.</li>
+  <li>height - (<em>number</em>) The height of the renderbuffer. Default’s 0.</li>
+  <li>storageType - (<em>enum</em>, optional) The storage type. Default’s <code class="highlighter-rouge">gl.DEPTH_COMPONENT16</code>.</li>
+</ul>
+
+<h2 id="WebGL:Application:setRenderBuffers">WebGL.Application Method: setRenderBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setRenderBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-8">Syntax:</h3>
+
+<p>app.setRenderBuffers(object);</p>
+
+<h3 id="arguments-7">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h2 id="WebGL:Application:setTexture">WebGL.Application Method: setTexture</h2>
+
+<p>This method is used to either bind/unbind an existing texture or also to create a new texture form an <code class="highlighter-rouge">Image</code> element or
+to create an empty texture with specified dimensions. Also, for all properties set to a texture, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-9">Syntax:</h3>
+
+<p>app.setTexture(name[, options]);</p>
+
+<h3 id="arguments-8">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the texture.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean or enum used to bind/unbind the texture (or set the enum as active texture) or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-4">Options:</h3>
+
+<ul>
+  <li>textureType - (<em>enum</em>, optional) The texture type used to call <code class="highlighter-rouge">gl.bindTexture</code> with. Default’s <code class="highlighter-rouge">gl.TEXTURE_2D</code>.</li>
+  <li>
+    <p>pixelStore - (<em>array</em>, optional) An array of objects with name, value options to be set with <code class="highlighter-rouge">gl.pixelStorei</code> calls. Default’s</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code>  pixelStore: [{
+    name: gl.UNPACK_FLIP_Y_WEBGL,
+    value: true
+  }, {
+    name: gl.UNPACK_ALIGNMENT,
+    value: 1
+  }]
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>parameters - (<em>array</em>, optional) An array of objects with nane, value options to be set with <code class="highlighter-rouge">gl.texParameteri</code>. Default’s</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code>  parameters: [{
+    name: gl.TEXTURE_MAG_FILTER,
+    value: gl.NEAREST
+  }, {
+    name: gl.TEXTURE_MIN_FILTER,
+    value: gl.NEAREST
+  }, {
+    name: gl.TEXTURE_WRAP_S,
+    value: gl.CLAMP_TO_EDGE
+  }, {
+    name: gl.TEXTURE_WRAP_T,
+    value: gl.CLAMP_TO_EDGE
+  }]
+</code></pre>
+    </div>
+  </li>
+  <li>data - (<em>object</em>, optional) An object with properties described below:
+    <ul>
+      <li>format - (<em>enum</em>, optional) The format used for <code class="highlighter-rouge">gl.texImage2D</code> calls. Default’s <code class="highlighter-rouge">gl.RGBA</code>.</li>
+      <li>type - (<em>enum</em>, optional) The texture pixel component type used for <code class="highlighter-rouge">gl.texImage2D</code> calls. Default’s <code class="highlighter-rouge">gl.UNSIGNED_BYTE</code>. Needs <code class="highlighter-rouge">'OES_texture_float'</code> extension to use <code class="highlighter-rouge">gl.FLOAT</code>. The extension will be enabled automatically.</li>
+      <li>value - (<em>object</em>, optional) If set to an <code class="highlighter-rouge">Image</code> object then this image will be used to fill the texture. Default’s false. If no image is set then we might want to
+set the width and height of the texture.</li>
+      <li>width - (<em>number</em>, optional) The width of the texture. Default’s 0.</li>
+      <li>height - (<em>number</em>, optional) The height of the texture. Default’s 0.</li>
+      <li>border - (<em>number</em>, optional) The border of the texture. Default’s 0.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Setting a texture for a box. Adapted from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/6/">lesson 6</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">app</span><span class="p">.</span><span class="nx">setTexture</span><span class="p">(</span><span class="s1">'nearest'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">data</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">value</span><span class="p">:</span> <span class="nx">img</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">'path/to/image.png'</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="WebGL:Application:setTextures">WebGL.Application Method: setTextures</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setTexture(key, value)</code>.</p>
+
+<h3 id="syntax-10">Syntax:</h3>
+
+<p>app.setTextures(object);</p>
+
+<h3 id="arguments-9">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a texture name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Set multiple type of textures from the same image. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/6/">lesson 6</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//load textures from image</span>
+<span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">app</span><span class="p">.</span><span class="nx">setTextures</span><span class="p">({</span>
+    <span class="s1">'nearest'</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="s1">'linear'</span><span class="err">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="err">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">}]</span>
+    <span class="p">},</span>
+
+    <span class="s1">'mipmap'</span><span class="err">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="err">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR_MIPMAP_NEAREST</span><span class="p">,</span>
+        <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">true</span>
+      <span class="p">}]</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">'path/to/image.png'</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="WebGL:Application:use">WebGL.Application Method: use</h2>
+
+<p>Calls <code class="highlighter-rouge">gl.useProgram(program)</code> with the given program.</p>
+
+<h3 id="syntax-11">Syntax:</h3>
+
+<p>app.use(program);</p>
+
+<h3 id="arguments-10">Arguments:</h3>
+
+<p>program - (<em>object</em>) A <a href="program.html">Program</a> instance.</p>
+

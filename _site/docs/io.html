@@ -1,0 +1,310 @@
+<h1 id="IO">Module: IO</h1>
+
+<p>The IO module contains classes to load remote assets like images, shader files, textures, and more via different methods like 
+XHR or JSONP. These methods are also exposed to the user so he can load models and data sets in an asynchronous way.</p>
+
+<h2 id="IO:XHR">IO Class: IO.XHR</h2>
+
+<p>The XHR class provides an API for loading remote data asynchronously via an http request (AJAX). The domain serving the data must match the domain where 
+the data is queried.</p>
+
+<h2 id="IO:XHR:constructor">IO.XHR Method: constructor</h2>
+
+<p>Initializes a new XHR instance.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var xhr = new LumaGL.IO.XHR(options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>url - (<em>string</em>) The url to make the request to.</li>
+  <li>method - (<em>string</em>, optional) The request method. Possible values are <code class="highlighter-rouge">GET</code> or <code class="highlighter-rouge">POST</code>. Default’s <code class="highlighter-rouge">GET</code>.</li>
+  <li>async - (<em>boolean</em>, optional) Whether to make the request asynchronous or not. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true a random number will be appended to the url in order to force the reload of the file and avoid the use of the cache. 
+Default’s <code class="highlighter-rouge">false</code>.</li>
+  <li>responseType - (<em>string</em>, optional) The format/type of data to be retrieved. Set this to <code class="highlighter-rouge">arraybuffer</code> to get binary data. More info <a href="https://developer.mozilla.org/En/Using_XMLHttpRequest#Handling_binary_data">here</a>.</li>
+  <li>sendAsBinary - (<em>boolean</em>, optional) Whether the content should be sent as binary or not. Default’s false. More info <a href="https://developer.mozilla.org/en/xmlhttprequest#sendAsBinary()">here</a>.</li>
+  <li>body - (<em>mixed</em>, optional) To be used when <code class="highlighter-rouge">sendAsBinary</code> is <code class="highlighter-rouge">true</code>. The binary content to be sent. More info <a href="https://developer.mozilla.org/en/xmlhttprequest#sendAsBinary()">here</a>.</li>
+  <li>onProgress - (<em>function</em>, optional) A callback executed while the data is being downloaded. The first parameter of the callback is the percentage downloaded.</li>
+  <li>onSuccess - (<em>function</em>, optional) A callback executed once the connection was successful and the information completely sent. The first parameter of the callback is the <code class="highlighter-rouge">responseText</code> content.</li>
+  <li>onError - (<em>function</em>, optional) A callback executed if there’s an error while making the connection or sending the data.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Creating a request object to a specific url.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">req</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">XHR</span><span class="p">({</span>
+    <span class="na">url</span><span class="p">:</span> <span class="s1">'/mydomain/somethingelse/'</span><span class="p">,</span>
+    
+    <span class="na">onSuccess</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="nx">text</span><span class="p">);</span>
+    <span class="p">},</span>
+
+    <span class="na">onError</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"An error ocurred"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
+<h2 id="IO:XHR:send">IO.XHR Method: send</h2>
+
+<p>Creates a connection and sends the information to be sent.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>xhr.send();
+</code></pre>
+</div>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Creating a request object to a specific url and making the request. 
+Note the <code class="highlighter-rouge">send</code> call at the end of the instanciation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">req</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">XHR</span><span class="p">({</span>
+    <span class="na">url</span><span class="p">:</span> <span class="s1">'/mydomain/somethingelse/'</span><span class="p">,</span>
+    
+    <span class="na">onSuccess</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="nx">text</span><span class="p">);</span>
+    <span class="p">},</span>
+
+    <span class="na">onError</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"An error ocurred"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}).</span><span class="nx">send</span><span class="p">();</span></code></pre></figure>
+
+<h2 id="IO:XHR:Group">IO Class: IO.XHR.Group</h2>
+
+<p>The XHR Group class creates parallel XHR requests and returns the
+information in an array. Callbacks for when a single resquest is
+succesfull and also for when all requests are completed are provided.</p>
+
+<h2 id="IO:XHR:Group:constructor">IO.XHR.Group Method: constructor</h2>
+
+<p>Initializes a new XHR Group instance.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var xhr = new LumaGL.IO.XHR.Group(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options-1">Options:</h3>
+
+<ul>
+  <li>urls - (<em>array</em>) The urls to make the requests to.</li>
+  <li>method - (<em>string</em>, optional) The request method. Possible values are <code class="highlighter-rouge">GET</code> or <code class="highlighter-rouge">POST</code>. Default’s <code class="highlighter-rouge">GET</code>.</li>
+  <li>async - (<em>boolean</em>, optional) Whether to make the request asynchronous or not. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true a random number will be appended to the url in order to force the reload of the file and avoid the use of the cache. 
+Default’s <code class="highlighter-rouge">false</code>.</li>
+  <li>responseType - (<em>string</em>, optional) The format/type of data to be retrieved. Set this to <code class="highlighter-rouge">arraybuffer</code> to get binary data. More info <a href="https://developer.mozilla.org/En/Using_XMLHttpRequest#Handling_binary_data">here</a>.</li>
+  <li>sendAsBinary - (<em>boolean</em>, optional) Whether the content should be sent as binary or not. Default’s false. More info <a href="https://developer.mozilla.org/en/xmlhttprequest#sendAsBinary()">here</a>.</li>
+  <li>body - (<em>mixed</em>, optional) To be used when <code class="highlighter-rouge">sendAsBinary</code> is <code class="highlighter-rouge">true</code>. The binary content to be sent. More info <a href="https://developer.mozilla.org/en/xmlhttprequest#sendAsBinary()">here</a>.</li>
+  <li>onSuccess - (<em>function</em>, optional) A callback executed once the connection was successful and the information completely sent. This callback is called for each individual 
+request.</li>
+  <li>onError - (<em>function</em>, optional) A callback executed if there’s an error while making the connection or sending the data. This callback will be called for each unsuccesfull request.</li>
+  <li>onComplete - (<em>function</em>, optional) Called when all the requests are
+done. The first argument of this function will be an array with the
+answers for each request.</li>
+</ul>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Creating a request object to a specific url.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">req</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">XHR</span><span class="p">.</span><span class="nx">Group</span><span class="p">({</span>
+    <span class="na">urls</span><span class="p">:</span> <span class="p">[</span><span class="s1">'/mydomain/1/'</span> <span class="s1">'/mydomain/2/'</span><span class="p">],</span>
+
+    <span class="na">onError</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"An error ocurred in one request"</span><span class="p">);</span>
+    <span class="p">},</span>
+
+    <span class="na">onComplete</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">arr</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">alert</span><span class="p">(</span><span class="s2">"responses: "</span> <span class="o">+</span> <span class="nx">arr</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
+<h2 id="IO:XHR:Group:send">IO.XHR.Group Method: send</h2>
+
+<p>Creates parallel connections for each url and sends the information.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>xhr.send();
+</code></pre>
+</div>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Creating a request object to a specific url and making the request. 
+Note the <code class="highlighter-rouge">send</code> call at the end of the instanciation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">req</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">XHR</span><span class="p">({</span>
+    <span class="na">urls</span><span class="p">:</span> <span class="p">[</span><span class="s1">'/mydomain/1/'</span><span class="p">,</span> <span class="s1">'/mydomain/2/'</span><span class="p">],</span>
+    
+    <span class="na">onSuccess</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="nx">text</span><span class="p">);</span>
+    <span class="p">},</span>
+
+    <span class="na">onError</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"An error ocurred"</span><span class="p">);</span>
+    <span class="p">},</span>
+
+    <span class="na">onComplete</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">arr</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"answer array: "</span> <span class="o">+</span> <span class="nx">arr</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}).</span><span class="nx">send</span><span class="p">();</span></code></pre></figure>
+
+<h2 id="IO:JSONP">IO Class: IO.JSONP</h2>
+
+<p>The JSONP class provides an API for loading remote data asynchronously via an http request. Instead of using the <code class="highlighter-rouge">XMLHttpRequest</code> object JSONP creates a <code class="highlighter-rouge">script</code> 
+document that is appended to the head tag of the HTML page. This technique enables the user to query a different domain for JSON data. More information about this 
+technique can be found <a href="http://en.wikipedia.org/wiki/JSONP">here</a>.</p>
+
+<h2 id="IO:JSONP:constructor">IO.JSONP Method: constructor</h2>
+
+<p>Creates and sends a JSONP request. Can be called without the <code class="highlighter-rouge">new</code> keyword.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.IO.JSONP(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options-2">Options:</h3>
+
+<ul>
+  <li>url - (<em>string</em>) The url to make the request to.</li>
+  <li>data - (<em>object</em>, optional) A key/value object to build a query string from it. Default’s an empty object (i.e. <code class="highlighter-rouge"><span class="p">{}</span></code>)</li>
+  <li>callbackKey - (<em>string</em>) The name of the query string parameter to set the name of the callback function to.</li>
+  <li>onComplete - (<em>function</em>, optional) A callback executed once the connection ended. The first parameter of the callback is the JSON content.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true a random number will be appended to the url in order to force the reload of the file and avoid the use of the cache. 
+Default’s <code class="highlighter-rouge">false</code>.</li>
+</ul>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Creating a request object to a specific url.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">JSONP</span><span class="p">({</span>
+    <span class="na">url</span><span class="p">:</span> <span class="s1">'/anotherdomain/somethingelse/'</span><span class="p">,</span>
+    <span class="na">callbackKey</span><span class="p">:</span> <span class="s1">'callbackName'</span><span class="p">,</span>
+    <span class="na">data</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s1">'somekey'</span><span class="p">:</span> <span class="s1">'somevalue'</span>
+    <span class="p">},</span>
+    <span class="na">onComplete</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">json</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">json</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
+<h2 id="IO:Images">IO Class: IO.Images</h2>
+
+<p>A very useful class that enables loading of multiple remote images asynchronously and returns an array with all the images loaded.</p>
+
+<h2 id="IO:Images:constructor">IO.Images Method: constructor</h2>
+
+<p>Creates a request to Images providing an array that will be asynchonously filled with loaded images.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var images = new LumaGL.IO.Images(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options-3">Options:</h3>
+
+<ul>
+  <li>src - (<em>array</em>) An array of strings pointing to image urls.</li>
+  <li>onProgress - (<em>function</em>, optional) Callback executed each time an image is loaded. Provides as first argument the percentage of images loaded.</li>
+  <li>onComplete - (<em>function</em>, optional) Callback executed when all images finished loading. The <code class="highlighter-rouge">images</code> variable will now have all loaded images.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true a random number will be appended to the url in order to force the reload of the file and avoid the use of the cache. 
+Default’s <code class="highlighter-rouge">false</code>.</li>
+</ul>
+
+<h3 id="examples-5">Examples:</h3>
+
+<p>Creating a request to load images.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">imageUrls</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'image1.png'</span><span class="p">,</span> <span class="s1">'image2.png'</span><span class="p">,</span> <span class="s1">'image3.png'</span><span class="p">];</span>
+
+  <span class="kd">var</span> <span class="nx">images</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">Images</span><span class="p">({</span>
+    <span class="na">src</span><span class="p">:</span> <span class="nx">imageUrls</span><span class="p">,</span>
+    <span class="na">onProgress</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">perc</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">perc</span> <span class="o">+</span> <span class="s1">' loaded'</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="na">onComplete</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"All images loaded! Now do something with the images array"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
+<h2 id="IO:Textures">IO Class: IO.Textures</h2>
+
+<p>A very useful class that enables loading of multiple textures from remote images asynchronously.</p>
+
+<h2 id="IO:Textures:constructor">IO.Textures Method: constructor</h2>
+
+<p>Creates a request to Images to load the array of remote images and then generates Textures from them. The id of each texture will be the same as the url for each image. 
+Can be called without the <code class="highlighter-rouge">new</code> keyword.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.IO.Textures(options);
+</code></pre>
+</div>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options-4">Options:</h3>
+
+<ul>
+  <li>src - (<em>array</em>) An array of strings pointing to image urls.</li>
+  <li>onComplete - (<em>function</em>, optional) Callback executed when all images and textures finished loading.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true a random number will be appended to the url in order to force the reload of the file and avoid the use of the cache. 
+Default’s <code class="highlighter-rouge">false</code>.</li>
+</ul>
+
+<h3 id="examples-6">Examples:</h3>
+
+<p>Creating a request to load images and set them as textures for a specific program.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">imageUrls</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'image1.png'</span><span class="p">,</span> <span class="s1">'image2.png'</span><span class="p">,</span> <span class="s1">'image3.png'</span><span class="p">];</span>
+
+  <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">IO</span><span class="p">.</span><span class="nx">Textures</span><span class="p">({</span>
+    <span class="na">src</span><span class="p">:</span> <span class="nx">imageUrls</span><span class="p">,</span>
+    <span class="na">onComplete</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="s2">"All images and textures loaded!"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PhiloGL - Wallpaper Groups</title>
+    <meta charset='utf-8'>
+    <link rel="stylesheet" media="all" type="text/css" href="css/style.css" />
+    <link rel="stylesheet" media="all" type="text/css" href="css/spectrum.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+    <script src="js/spectrum.js"></script>
+    <script src="js/range.js"></script>
+    <script src="../../build/PhiloGL.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/index.js"></script>
+  </head>
+  <body>
+    <div class='top'>
+      <a href='#'>What's this?</a>
+    </div>
+
+    <section id="container">
+
+      <header id="title">
+        <h1>Wallpaper Groups</h1>
+      </header>
+
+      <canvas id="surface"></canvas>
+
+      <section id="controls">
+        <header>&raquo; Draw here</header>
+        <div class='options-body pattern'>
+          <canvas id="canvas" width="128" height="128"></canvas>
+          <section class='controls'>
+          <label>Pencil type</label>
+          <select id='pencil'>
+            <option>line</option>
+            <option>circle</option>
+            <option>rectangle</option>
+            <option>hairy</option>
+          </select>
+          <br>
+
+          <div class='size'>
+            <label>Size</label>
+            <input type='range' min='0' max='100' step='0.1'
+            value='15' id='size'/>
+            <br>
+          </div>
+
+          <label>Stroke width</label>
+          <input type='range' min='0' max='20' step='0.1'
+          value='15' id='stroke-width'/>
+          <br>
+
+          <label>Stroke color</label>
+          <input type='color' id='stroke-color' value='#00ff00' />
+          <br>
+
+          <label>Background</label>
+          <input type='color' id='background-color'
+          value='#000000' />
+          <br>
+
+          <!--<label>Shadow color</label>-->
+          <!--<input type='color' id='shadow-color'/>-->
+          <!--<br>-->
+
+          <!--<label>Shadow offsetX</label>-->
+          <!--<input type='range' min='-10' max='10' step='0.1'-->
+          <!--value='0' id='shadow-x'/>-->
+          <!--<br>-->
+
+          <!--<label>Shadow offsetY</label>-->
+          <!--<input type='range' min='-10' max='10' step='0.1'-->
+          <!--value='0' id='shadow-y'/>-->
+          <!--<br>-->
+
+          <!--<label>Shadow blur</label>-->
+          <!--<input type='range' min='0' max='20' step='0.1'-->
+          <!--value='0' id='shadow-blur'/>-->
+          <!--<br>-->
+          <div class='buttons'>
+            <button id='clear'>Clear canvas</button> <button id='save'>Save image</button>
+          </div>
+          </section>
+        </div>
+
+        <header>&raquo; Choose a pattern</header>
+        <div class='options-body groups'>
+          <label for='current-group'>Current group: </label>
+          <select id='current-group'>
+            <option>p1 (o)</option>
+            <option>p2 (2222)</option>
+            <option>pm (**)</option>
+            <option>pg (xx)</option>
+            <option>cm (*x)</option>
+            <option>pmm (*2222)</option>
+            <option>pmg (22*)</option>
+            <option>pgg (22x)</option>
+            <option>cmm (2*22)</option>
+            <option>p4 (442)</option>
+            <option>p4m (*442)</option>
+            <option>p4g (4*2)</option>
+            <option>p3 (333)</option>
+            <!--<option>p3m1 (*333)</option>-->
+            <!--<option>p31m (3*3)</option>-->
+            <!--<option>p6 (632)</option>-->
+            <!--<option>p6m (*632)</option>-->
+          </select>
+
+          <div class='group-description'>
+          </div>
+        <div class='options-body details'>
+
+        </div>
+        </div>
+
+        <header>&raquo; Apply effects</header>
+        <div class='options-body other'>
+          <label for='offset'>Offset: </label>
+          <input type='range' id='offset' min='0' max='40' value='20'
+          step='0.2'> <br>
+
+          <label for='scale'>Scale: </label>
+          <input type='range' id='scale' min='1' max='10' value='1'
+          step='0.2'> <br>
+
+          <label for='rotate'>Rotate: </label>
+          <input type='range' id='rotate' min='0' max='180' value='0'
+          step='1'> <br>
+
+          <label for='aura'>Aura: </label>
+          <input type='range' id='aura' min='0' max='1' value='0.1'
+          step='0.1'> <br>
+
+          <label for='hyperbole'>Hyperbole: </label>
+          <input type='range' id='hyperbole' min='0' max='1'
+          value='0'
+          step='0.00001'> <br>
+        </div>
+
+        </section>
+
+        <section id='group-descriptions'>
+          <div id='p1 (o)'>
+            <img src='img/groupthumb/p1.png' />
+            <div class='details'>
+              The group p1 contains only translations; there are no
+              rotations, reflections, or glide reflections.
+            </div>
+          </div>
+          <div id='p2 (2222)'>
+            <img src='img/groupthumb/p2.png' />
+            <div class='details'>
+              The group p2 contains four rotation centres of order two (180°), but no reflections or glide reflections.
+            </div>
+          </div>
+          <div id='pm (**)'>
+            <img src='img/groupthumb/pm.png' />
+            <div class='details'>
+              The group pm has no rotations. It has reflection axes, they are all parallel.
+            </div>
+          </div>
+          <div id='pg (xx)'>
+            <img src='img/groupthumb/pg.png' />
+            <div class='details'>
+              The group pg contains glide reflections only, and their axes are all parallel. There are no rotations or reflections.
+            </div>
+          </div>
+          <div id='cm (*x)'>
+            <img src='img/groupthumb/cm.png' />
+            <div class='details'>
+              The group cm contains no rotations. It has reflection axes, all parallel. There is at least one glide reflection whose axis is not a reflection axis; it is halfway between two adjacent parallel reflection axes.
+This group applies for symmetrically staggered rows (i.e. there is a shift per row of half the translation distance inside the rows) of identical objects, which have a symmetry axis perpendicular to the rows.
+            </div>
+          </div>
+          <div id='pmm (*2222)'>
+            <img src='img/groupthumb/pmm.png' />
+            <div class='details'>
+              The group pmm has reflections in two perpendicular directions, and four rotation centres of order two (180°) located at the intersections of the reflection axes.
+            </div>
+          </div>
+          <div id='pmg (22*)'>
+            <img src='img/groupthumb/pmg.png' />
+            <div class='details'>
+              The group pmg has two rotation centres of order two (180°), and reflections in only one direction. It has glide reflections whose axes are perpendicular to the reflection axes. The centres of rotation all lie on glide reflection axes.
+            </div>
+          </div>
+          <div id='pgg (22x)'>
+            <img src='img/groupthumb/pgg.png' />
+            <div class='details'>
+              The group pgg contains two rotation centres of order two (180°), and glide reflections in two perpendicular directions. The centres of rotation are not located on the glide reflection axes. There are no reflections.
+            </div>
+          </div>
+          <div id='cmm (2*22)'>
+            <img src='img/groupthumb/cmm.png' />
+            <div class='details'>
+              The group cmm has reflections in two perpendicular directions, and a rotation of order two (180°) whose centre is not on a reflection axis. It also has two rotations whose centres are on a reflection axis.
+            </div>
+          </div>
+          <div id='p4 (442)'>
+            <img src='img/groupthumb/p4.png' />
+            <div class='details'>
+              The group p4 has two rotation centres of order four (90°), and one rotation centre of order two (180°). It has no reflections or glide reflections.
+            </div>
+          </div>
+          <div id='p4m (*442)'>
+            <img src='img/groupthumb/p4m.png' />
+            <div class='details'>
+              The group p4m has two rotation centres of order four (90°), and reflections in four distinct directions (horizontal, vertical, and diagonals). It has additional glide reflections whose axes are not reflection axes; rotations of order two (180°) are centred at the intersection of the glide reflection axes. All rotation centres lie on reflection axes.
+            </div>
+          </div>
+          <div id='p4g (4*2)'>
+            <img src='img/groupthumb/p4g.png' />
+            <div class='details'>
+              The group p4g has two centres of rotation of order four (90°), which are each other's mirror image, but it has reflections in only two directions, which are perpendicular. There are rotations of order two (180°) whose centres are located at the intersections of reflection axes. It has glide reflections axes parallel to the reflection axes, in between them, and also at an angle of 45° with these.
+            </div>
+          </div>
+          <div id='p3 (333)'>
+            <img src='img/groupthumb/p3.png' />
+            <div class='details'>
+              The group p3 has three different rotation centres of order three (120°), but no reflections or glide reflections.
+            </div>
+          </div>
+          <div id='p3m1 (*333)'>
+            <img src='img/groupthumb/p3m1.png' />
+            <div class='details'>
+              The group p3m1 has three different rotation centres of order three (120°). It has reflections in the three sides of an equilateral triangle. The centre of every rotation lies on a reflection axis. There are additional glide reflections in three distinct directions, whose axes are located halfway between adjacent parallel reflection axes.
+            </div>
+          </div>
+          <div id='p31m (3*3)'>
+            <img src='img/groupthumb/p31m.png' />
+            <div class='details'>
+              The group p31m has three different rotation centres of order three (120°), of which two are each other's mirror image. It has reflections in three distinct directions. It has at least one rotation whose centre does not lie on a reflection axis. There are additional glide reflections in three distinct directions, whose axes are located halfway between adjacent parallel reflection axes.
+            </div>
+          </div>
+          <div id='p6 (632)'>
+            <img src='img/groupthumb/p6.png' />
+            <div class='details'>
+              The group p6 has one rotation centre of order six, which only differ by a rotation of 60°; it has also two rotation centres of order three, which only differ by a rotation of 120° and three of order two (or, equivalently, 180°). It has no reflections or glide reflections.
+            </div>
+          </div>
+          <div id='p6m (*632)'>
+            <img src='img/groupthumb/p6m.png' />
+            <div class='details'>
+              The group p6m has one rotation centre of order six (60°); it has also two rotation centres of order three, which only differ by a rotation of 60° (or, equivalently, 180°), and three of order two, which only differ by a rotation of 60°. It has also reflections in six distinct directions. There are additional glide reflections in six distinct directions, whose axes are located halfway between adjacent parallel reflection axes.
+            </div>
+          </div>
+        </section>
+
+
+      <footer>
+        Authors: <a href="http://philogb.github.com/">Nicolas Garcia
+          Belmonte</a> - <a href="http://zhangbei.github.com/">Zhang, Bei</a>
+      </footer>
+
+    </section>
+
+    <section id="fallback" class="fallback"></section>
+
+    <canvas id='bck-canvas' style='display:none'></canvas>
+
+  <script>
+    if (!PhiloGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +  '<iframe width="960" height="720" src="http://www.youtube.com/embed/uNbKqv2kO-Y?rel=0" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+  </body>
+</html>

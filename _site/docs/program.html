@@ -1,0 +1,598 @@
+<h1 id="Program">Class: Program</h1>
+
+<p>The Program class has very useful methods to create a Program out of shaders in different ways, methods for 
+using buffers, textures, setting uniforms and more.</p>
+
+<h3 id="properties">Properties:</h3>
+
+<p>A program instance has as public properties:</p>
+
+<ul>
+  <li>program - (<em>object</em>) The native WebGL program instance.</li>
+</ul>
+
+<h3 id="notes">Notes:</h3>
+
+<p>All instance methods in a program (unless they return some documented value) are chainable.</p>
+
+<h2 id="Program:fromShaderURIs">Program Static Method: fromShaderURIs</h2>
+
+<p>Creates a new program by asynchronously fetching the source contained in the files pointed by the given urls. 
+Ths method is very convenient because it enables you to write your shaders in separate files and keep your 
+project organized.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.Program.fromShaderURIs(options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>options - (<em>object</em>) An object with the following properties:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>path - (<em>string</em>, optional) A common path used as prefix for the vertex and fragment shaders url path.</li>
+  <li>vs - (<em>string</em>) The path to the vertex shader source file.</li>
+  <li>fs - (<em>string</em>) The path to the fragment shader source file.</li>
+  <li>noCache - (<em>boolean</em>, optional) If true, files will be reloaded and not taken
+from the cache. Useful on development phase. Default’s <code class="highlighter-rouge">false</code>.</li>
+  <li>onSuccess - (<em>function</em>) A callback function executed when the program was successfully created. The 
+first argument of the function is the <code class="highlighter-rouge">Program</code> instance.</li>
+  <li>onError - (<em>function</em>) A callback function executed when there’s an error while fetching/compiling the shaders.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Create a Program from the given script files.</p>
+
+<p>In <code class="highlighter-rouge">shaders/fragment.glsl</code></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#ifdef GL_ES
+precision highp float;
+#endif
+
+void main(void) {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+</code></pre>
+</div>
+
+<p>In <code class="highlighter-rouge">shaders/vertex.glsl</code></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>attribute vec3 aVertexPosition;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+}
+</code></pre>
+</div>
+
+<p>JavaScript code:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Program</span><span class="p">.</span><span class="nx">fromShaderURIs</span><span class="p">({</span>
+  <span class="na">path</span><span class="p">:</span> <span class="s1">'shaders/'</span><span class="p">,</span>
+  <span class="na">vs</span><span class="p">:</span> <span class="s1">'vertex.glsl'</span><span class="p">,</span>
+  <span class="na">fs</span><span class="p">:</span> <span class="s1">'fragment.glsl'</span><span class="p">,</span>
+  <span class="na">onSuccess</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">program</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="s2">"Got the program!"</span><span class="p">);</span>
+  <span class="p">},</span>
+  <span class="na">onError</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="s2">"An error ocurred while fetching or compiling the shaders"</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Program:fromShaderIds">Program Static Method: fromShaderIds</h2>
+
+<p>Creates a new program by fetching the source contained into the DOM scripts with ids provided in the method.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var program = LumaGL.Program.fromShaderIds(vertexShaderId, fragmentShaderId);
+</code></pre>
+</div>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>vertexShaderId - (<em>string</em>) The id of the script tag containig the source code for the vertex shader.</li>
+  <li>fragmentShaderId - (<em>string</em>) The id of the script tag containig the source code for the fragment shader.</li>
+</ol>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Create a Program from the given script ids.</p>
+
+<p>HTML code:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;script </span><span class="na">id=</span><span class="s">"shader-fs"</span> <span class="na">type=</span><span class="s">"x-shader/x-fragment"</span><span class="nt">&gt;</span>
+  <span class="err">#</span><span class="nx">ifdef</span> <span class="nx">GL_ES</span>
+  <span class="nx">precision</span> <span class="nx">highp</span> <span class="kr">float</span><span class="p">;</span>
+  <span class="err">#</span><span class="nx">endif</span>
+
+  <span class="k">void</span> <span class="nx">main</span><span class="p">(</span><span class="k">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">gl_FragColor</span> <span class="o">=</span> <span class="nx">vec4</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="nt">&lt;/script&gt;</span>
+
+<span class="nt">&lt;script </span><span class="na">id=</span><span class="s">"shader-vs"</span> <span class="na">type=</span><span class="s">"x-shader/x-vertex"</span><span class="nt">&gt;</span>
+  <span class="nx">attribute</span> <span class="nx">vec3</span> <span class="nx">aVertexPosition</span><span class="p">;</span>
+
+  <span class="nx">uniform</span> <span class="nx">mat4</span> <span class="nx">uMVMatrix</span><span class="p">;</span>
+  <span class="nx">uniform</span> <span class="nx">mat4</span> <span class="nx">uPMatrix</span><span class="p">;</span>
+
+  <span class="k">void</span> <span class="nx">main</span><span class="p">(</span><span class="k">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">gl_Position</span> <span class="o">=</span> <span class="nx">uPMatrix</span> <span class="o">*</span> <span class="nx">uMVMatrix</span> <span class="o">*</span> <span class="nx">vec4</span><span class="p">(</span><span class="nx">aVertexPosition</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="nt">&lt;/script&gt;</span></code></pre></figure>
+
+<p>JavaScript code:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">program</span> <span class="o">=</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Program</span><span class="p">.</span><span class="nx">fromShaderIds</span><span class="p">(</span><span class="s1">'shader-vs'</span><span class="p">,</span> <span class="s1">'shader-fs'</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Program:fromShaderSources">Program Static Method: fromShaderSources</h2>
+
+<p>Creates a new program by using the strings passed as arguments as source for the shaders.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var program = LumaGL.Program.fromShaderIds(vertexShaderSource, fragmentShaderSource);
+</code></pre>
+</div>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<ol>
+  <li>vertexShaderSource - (<em>string</em>) The vertex shader source as a string.</li>
+  <li>fragmentShaderSource - (<em>string</em>) The fragment shader source as a string.</li>
+</ol>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Create a Program from the given sources.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">program</span> <span class="o">=</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Program</span><span class="p">.</span><span class="nx">fromShaderSources</span><span class="p">([</span>
+  <span class="s2">"attribute vec3 aVertexPosition;"</span><span class="p">,</span>
+
+  <span class="s2">"uniform mat4 uMVMatrix;"</span><span class="p">,</span>
+  <span class="s2">"uniform mat4 uPMatrix;"</span><span class="p">,</span>
+
+  <span class="s2">"void main(void) {"</span><span class="p">,</span>
+    <span class="s2">"gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);"</span><span class="p">,</span>
+  <span class="s2">"}"</span> <span class="p">].</span><span class="nx">join</span><span class="p">(</span><span class="s1">'\n'</span><span class="p">),</span>
+  <span class="p">,</span> <span class="p">[</span>
+ <span class="s2">"#ifdef GL_ES"</span><span class="p">,</span>
+  <span class="s2">"precision highp float;"</span><span class="p">,</span>
+  <span class="s2">"#endif"</span><span class="p">,</span>
+
+  <span class="s2">"void main(void) {"</span><span class="p">,</span>
+    <span class="s2">"gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);"</span><span class="p">,</span>
+  <span class="s2">"}"</span> <span class="p">].</span><span class="nx">join</span><span class="p">(</span><span class="s1">'\n'</span><span class="p">));</span></code></pre></figure>
+
+<h2 id="Program:fromDefaultShaders">Program Static Method: fromDefaultShaders</h2>
+
+<p>Creates a new program by using the sources taken from <a href="http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex">Shaders.Vertex</a> and 
+<a href="http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment">Shaders.Fragment</a>.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>var program = LumaGL.Program.fromShaderIds(vertexDefaultShaderId, fragmentDefaultShaderId);
+</code></pre>
+</div>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>vertexDefaultShaderId - (<em>string</em>, optional) The vertex shader id from <a href="http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex">Shaders.Vertex</a>. Default’s <code class="highlighter-rouge">Default</code>.</li>
+  <li>fragmentShaderSource - (<em>string</em>) The fragment shader id from <a href="http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment">Shaders.Fragment</a>. Default’s <code class="highlighter-rouge">Default</code>.</li>
+</ol>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Extend <a href="http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment">Shaders.Fragment</a> with a default shader and create a Program from defaults. 
+Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/8/">lesson 8</a> example.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//Add Blend Fragment Shader</span>
+<span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Shaders</span><span class="p">.</span><span class="nx">Fragment</span><span class="p">.</span><span class="nx">Blend</span> <span class="o">=</span> <span class="p">[</span>
+
+    <span class="s2">"#ifdef GL_ES"</span><span class="p">,</span>
+    <span class="s2">"precision highp float;"</span><span class="p">,</span>
+    <span class="s2">"#endif"</span><span class="p">,</span>
+    
+    <span class="s2">"varying vec4 vColor;"</span><span class="p">,</span>
+    <span class="s2">"varying vec2 vTexCoord;"</span><span class="p">,</span>
+    <span class="s2">"varying vec3 lightWeighting;"</span><span class="p">,</span>
+    
+    <span class="s2">"uniform bool hasTexture1;"</span><span class="p">,</span>
+    <span class="s2">"uniform sampler2D sampler1;"</span><span class="p">,</span>
+    <span class="s2">"uniform float alpha;"</span><span class="p">,</span>
+
+    <span class="s2">"void main(){"</span><span class="p">,</span>
+      
+      <span class="s2">"if (hasTexture1) {"</span><span class="p">,</span>
+      
+        <span class="s2">"gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, alpha);"</span><span class="p">,</span>
+
+      <span class="s2">"}"</span><span class="p">,</span>
+    
+    <span class="s2">"}"</span>
+
+<span class="p">].</span><span class="nx">join</span><span class="p">(</span><span class="s2">"\n"</span><span class="p">);</span>
+
+<span class="kd">var</span> <span class="nx">program</span> <span class="o">=</span> <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Program</span><span class="p">.</span><span class="nx">fromDefaultShaders</span><span class="p">(</span><span class="s1">'Default'</span><span class="p">,</span> <span class="s1">'Blend'</span><span class="p">);</span></code></pre></figure>
+
+<h3 id="notes-1">Notes:</h3>
+
+<p>For more information about the default shader code <code class="highlighter-rouge">Default</code> included in the Framework take a look at the <a href="shaders.html">Shaders</a> script.</p>
+
+<h2 id="Program:setUniform">Program Method: setUniform</h2>
+
+<p>Sets the value of an uniform. There’s no need to convert the array into a typed array, that’s done automatically. 
+The name of the uniform matches the name of the uniform declared in the shader.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setUniform(name, value);
+</code></pre>
+</div>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name of the uniform to be set.</li>
+  <li>value - (<em>mixed</em>) The value to be set. Can be a float, an array of floats, a boolean, etc.</li>
+</ol>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Set matrix information for the projection matrix and element matrix of the camera and world. 
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/3/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">program</span><span class="p">.</span><span class="nx">setUniform</span><span class="p">(</span><span class="s1">'uMVMatrix'</span><span class="p">,</span> <span class="nx">view</span><span class="p">);</span>
+<span class="nx">program</span><span class="p">.</span><span class="nx">setUniform</span><span class="p">(</span><span class="s1">'uPMatrix'</span><span class="p">,</span> <span class="nx">camera</span><span class="p">.</span><span class="nx">projection</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Program:setUniforms">Program Method: setUniforms</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setUniform(key, value)</code>.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setUniforms(object);
+</code></pre>
+</div>
+
+<h3 id="arguments-5">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a uniform name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-5">Examples:</h3>
+
+<p>Set matrix information for the projection matrix and element matrix of the camera and world. 
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/3/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">program</span><span class="p">.</span><span class="nx">setUniforms</span><span class="p">({</span>
+  <span class="s1">'uMVMatrix'</span><span class="p">:</span> <span class="nx">view</span><span class="p">,</span>
+  <span class="s1">'uPMatrix'</span><span class="p">:</span> <span class="nx">camera</span><span class="p">.</span><span class="nx">projection</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Program:setBuffer">Program Method: setBuffer</h2>
+
+<p>This method is useful to set properties (and data) to a buffer and/or attributes. If the buffer does not exist it will be created. 
+Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setBuffer(name, options);
+</code></pre>
+</div>
+
+<h3 id="arguments-6">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer. If no <code class="highlighter-rouge">attribute</code> value is set in <code class="highlighter-rouge">options</code> then the buffer name will be used as attribute name.</li>
+  <li>options - (<em>object</em>) An object with options/data described below:</li>
+</ol>
+
+<h3 id="options-1">Options:</h3>
+
+<ul>
+  <li>attribute - (<em>string</em>, optional) The name of the attribute to generate attribute calls to. If this parameter is not specified then the attribute name will 
+be the buffer name.</li>
+  <li>bufferType - (<em>enum</em>, optional) The type of the buffer. Possible options are <code class="highlighter-rouge">gl.ELEMENT_ARRAY_BUFFER</code>, <code class="highlighter-rouge">gl.ARRAY_BUFFER</code>. Default’s <code class="highlighter-rouge">gl.ARRAY_BUFFER</code>.</li>
+  <li>size - (<em>numer</em>, optional) The size of the components in the buffer. Default’s 1.</li>
+  <li>dataType - (<em>enum</em>, optional) The type of the data being stored in the buffer. Default’s <code class="highlighter-rouge">gl.FLOAT</code>.</li>
+  <li>stride - (<em>number</em>, optional) The <code class="highlighter-rouge">stride</code> parameter when calling <code class="highlighter-rouge">gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>offset - (<em>number</em>, optional) The <code class="highlighter-rouge">offset</code> parameter when calling <code class="highlighter-rouge">gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>drawType - (<em>enum</em>, optional) The type of draw used when setting the <code class="highlighter-rouge">gl.bufferData</code>. Default’s <code class="highlighter-rouge">gl.STATIC_DRAW</code>.</li>
+</ul>
+
+<h3 id="examples-6">Examples:</h3>
+
+<p>Set buffer values for the vertices of a triangle. 
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/1/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">program</span><span class="p">.</span><span class="nx">setBuffer</span><span class="p">(</span><span class="s1">'triangle'</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+  <span class="na">value</span><span class="p">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+  <span class="na">size</span><span class="p">:</span> <span class="mi">3</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Program:setBuffers">Program Method: setBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-7">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setBuffers(object);
+</code></pre>
+</div>
+
+<h3 id="arguments-7">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-7">Examples:</h3>
+
+<p>Set buffer values for the vertices of a triangle and a square. 
+The context of this example can be seen <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/1/">here</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">program</span><span class="p">.</span><span class="nx">setBuffers</span><span class="p">({</span>
+  <span class="s1">'triangle'</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nl">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+    <span class="na">value</span><span class="p">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+    <span class="na">size</span><span class="p">:</span> <span class="mi">3</span>
+  <span class="p">},</span>
+  
+  <span class="s1">'square'</span><span class="err">:</span> <span class="p">{</span>
+    <span class="nl">attribute</span><span class="p">:</span> <span class="s1">'aVertexPosition'</span><span class="p">,</span>
+    <span class="nx">value</span><span class="err">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+    <span class="nx">size</span><span class="err">:</span> <span class="mi">3</span>
+  <span class="p">}</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Program:setFrameBuffer">Program Method: setFrameBuffer</h2>
+
+<p>Creates or binds/unbinds a framebuffer. You can also use this method to bind the framebuffer to a texture and renderbuffers. If the 
+framebuffer already exists then calling <code class="highlighter-rouge">setFrameBuffer</code> with <code class="highlighter-rouge">true</code> or <code class="highlighter-rouge">false</code> as options will bind/unbind the framebuffer. 
+Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-8">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setFrameBuffer(name[, options]);
+</code></pre>
+</div>
+
+<h3 id="arguments-8">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean used to bind/unbind the framebuffer or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-2">Options:</h3>
+
+<ul>
+  <li>width - (<em>number</em>) The width of the framebuffer. Default’s 0.</li>
+  <li>height - (<em>number</em>) The height of the framebuffer. Default’s 0.</li>
+  <li>bindToTexture - (<em>mixed</em>, optional) Whether to bind the framebuffer onto a texture. If false the framebuffer wont be bound to a texture. Else you should provide an object 
+with the same options as in <code class="highlighter-rouge">setTexture</code>.</li>
+  <li>textureOptions - (<em>object</em>, optional) Some extra options for binding the framebuffer to the texture. Default’s <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">attachment:</span><span class="w"> </span><span class="err">gl.COLOR_ATTACHMENT0</span><span class="w"> </span><span class="p">}</span></code>.</li>
+  <li>bindToRenderBuffer - (<em>boolean</em>) Whether to bind the framebuffer to a renderbuffer. The <code class="highlighter-rouge">width</code> and <code class="highlighter-rouge">height</code> of the renderbuffer are the same as the ones specified above.</li>
+  <li>renderBufferOptions - (<em>object</em>, optional) Some extra options for binding the framebuffer to the renderbuffer. Default’s <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">attachment:</span><span class="w"> </span><span class="err">gl.DEPTH_ATTACHMENT</span><span class="w"> </span><span class="p">}</span></code>.</li>
+</ul>
+
+<h3 id="examples-8">Examples:</h3>
+
+<p>Using a frambuffer to render a scene into a texture. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/16/">lesson 16</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//create framebuffer</span>
+<span class="nx">program</span><span class="p">.</span><span class="nx">setFrameBuffer</span><span class="p">(</span><span class="s1">'monitor'</span><span class="p">,</span> <span class="p">{</span>
+  <span class="na">width</span><span class="p">:</span> <span class="nx">screenWidth</span><span class="p">,</span>
+  <span class="na">height</span><span class="p">:</span> <span class="nx">screenHeight</span><span class="p">,</span>
+  <span class="na">bindToTexture</span><span class="p">:</span> <span class="p">{</span>      
+    <span class="na">parameters</span><span class="p">:</span> <span class="p">[{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MAG_FILTER'</span><span class="p">,</span>
+      <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR'</span>
+    <span class="p">},</span> <span class="p">{</span>
+      <span class="na">name</span><span class="p">:</span> <span class="s1">'TEXTURE_MIN_FILTER'</span><span class="p">,</span>
+      <span class="na">value</span><span class="p">:</span> <span class="s1">'LINEAR_MIPMAP_NEAREST'</span><span class="p">,</span>
+      <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">false</span>
+    <span class="p">}]</span>
+  <span class="p">},</span>
+  <span class="na">bindToRenderBuffer</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">});</span></code></pre></figure>
+
+<h2 id="Program:setFrameBuffers">Program Method: setFrameBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setFrameBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-9">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setFrameBuffers(object);
+</code></pre>
+</div>
+
+<h3 id="arguments-9">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h2 id="Program:setRenderBuffer">Program Method: setRenderBuffer</h2>
+
+<p>Creates or binds/unbinds a renderbuffer. If the renderbuffer already exists and the second parameter is a boolean it’ll bind or unbind the renderbuffer.
+ Also, for all properties set to a buffer, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-10">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setRenderBuffer(name[, options]);
+</code></pre>
+</div>
+
+<h3 id="arguments-10">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean used to bind/unbind the renderbuffer or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-3">Options:</h3>
+
+<ul>
+  <li>width - (<em>number</em>) The width of the renderbuffer. Default’s 0.</li>
+  <li>height - (<em>number</em>) The height of the renderbuffer. Default’s 0.</li>
+  <li>storageType - (<em>enum</em>, optional) The storage type. Default’s <code class="highlighter-rouge">gl.DEPTH_COMPONENT16</code>.</li>
+</ul>
+
+<h2 id="Program:setRenderBuffers">Program Method: setRenderBuffers</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setRenderBuffer(key, value)</code>.</p>
+
+<h3 id="syntax-11">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setRenderBuffers(object);
+</code></pre>
+</div>
+
+<h3 id="arguments-11">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a buffer name and its value respectively.</li>
+</ol>
+
+<h2 id="Program:setTexture">Program Method: setTexture</h2>
+
+<p>This method is used to either bind/unbind an existing texture or also to create a new texture form an <code class="highlighter-rouge">Image</code> element or 
+to create an empty texture with specified dimensions. Also, for all properties set to a texture, these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax-12">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setTexture(name[, options]);
+</code></pre>
+</div>
+
+<h3 id="arguments-12">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the texture.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean or enum used to bind/unbind the texture (or set the enum as active texture) or an object with options/data described below:</li>
+</ol>
+
+<h3 id="options-4">Options:</h3>
+
+<ul>
+  <li>textureType - (<em>enum</em>, optional) The texture type used to call <code class="highlighter-rouge">gl.bindTexture</code> with. Default’s <code class="highlighter-rouge">gl.TEXTURE_2D</code>.</li>
+  <li>pixelStore - (<em>array</em>, optional) An array of objects with name, value options to be set with <code class="highlighter-rouge">gl.pixelStorei</code> calls. 
+Default’s <code class="highlighter-rouge">[{ name: gl.UNPACK_FLIP_Y_WEBGL, value: true }]</code>.</li>
+  <li>parameters - (<em>array</em>, optional) An array of objects with nane, value options to be set with <code class="highlighter-rouge">gl.texParameteri</code>. 
+Default’s <code class="highlighter-rouge">[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTURE_MIN_FILTER, value: gl.NEAREST }]</code>.</li>
+  <li>data - (<em>object</em>, optional) An object with properties described below:
+    <ul>
+      <li>format - (<em>enum</em>, optional) The format used for <code class="highlighter-rouge">gl.texImage2D</code> calls. Default’s <code class="highlighter-rouge">gl.RGBA</code>.</li>
+      <li>value - (<em>object</em>, optional) If set to an <code class="highlighter-rouge">Image</code> object then this image will be used to fill the texture. Default’s false. If no image is set then we might want to 
+set the width and height of the texture.</li>
+      <li>width - (<em>number</em>, optional) The width of the texture. Default’s 0.</li>
+      <li>height - (<em>number</em>, optional) The height of the texture. Default’s 0.</li>
+      <li>border - (<em>number</em>, optional) The border of the texture. Default’s 0.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="examples-9">Examples:</h3>
+
+<p>Setting a texture for a box. Adapted from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/6/">lesson 6</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setTexture</span><span class="p">(</span><span class="s1">'nearest'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">data</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">value</span><span class="p">:</span> <span class="nx">img</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">'path/to/image.png'</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="Program:setTextures">Program Method: setTextures</h2>
+
+<p>For each <code class="highlighter-rouge">key, value</code> of the object passed in it executes <code class="highlighter-rouge">setTexture(key, value)</code>.</p>
+
+<h3 id="syntax-13">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.setTextures(object);
+</code></pre>
+</div>
+
+<h3 id="arguments-13">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a texture name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-10">Examples:</h3>
+
+<p>Set multiple type of textures from the same image. Taken from <a href="http://philogb.github.com/philogl/LumaGL/examples/lessons/6/">lesson 6</a>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//load textures from image</span>
+<span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setTextures</span><span class="p">({</span>
+    <span class="s1">'nearest'</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="s1">'linear'</span><span class="err">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="err">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">}]</span>
+    <span class="p">},</span>
+
+    <span class="s1">'mipmap'</span><span class="err">:</span> <span class="p">{</span>
+      <span class="nl">data</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nl">value</span><span class="p">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="err">:</span> <span class="p">[{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR_MIPMAP_NEAREST</span><span class="p">,</span>
+        <span class="na">generateMipmap</span><span class="p">:</span> <span class="kc">true</span>
+      <span class="p">}]</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">'path/to/image.png'</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="Program:use">Program Method: use</h2>
+
+<p>Calls <code class="highlighter-rouge">gl.useProgram(this.program)</code>. To set the current program as active.</p>
+
+<h3 id="syntax-14">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>program.use();
+</code></pre>
+</div>
+

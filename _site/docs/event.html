@@ -1,0 +1,121 @@
+<h1 id="Event">Module: Event</h1>
+
+<p>Provides the <a href="event.html">Events</a> object to bind events to the canvas to interact with 3D objects.
+The first parameter of each event callback function is an event wrapper object that contains as properties:</p>
+
+<ul>
+  <li>event - (<em>element</em>) The native event.</li>
+  <li>x - (<em>number</em>) The x position of the mouse pointer when the event was triggered.</li>
+  <li>y - (<em>number</em>) The y position of the mouse pointer when the event was triggered.</li>
+  <li>posArray - (<em>array</em>) If multiple events where triggered at the same time (like multiple fingers touching a screen), then the array of transformed positions will be here.</li>
+  <li>stop - (<em>function</em>) A method that can be called to stop the propagation of the event.</li>
+  <li>wheel - (<em>number</em>) Only on the mousewheel event. A number specifying the delta for the mouse scroll.</li>
+  <li>isRightClick - (<em>boolean</em>) Whether is right or left click.</li>
+  <li>code - (<em>number</em>) Available onKeyDown only. The key code number.</li>
+  <li>key - (<em>string</em>) Available onKeyDown only. The key pressed as a string. Can also be <code class="highlighter-rouge">enter</code>, <code class="highlighter-rouge">up</code>, <code class="highlighter-rouge">down</code>, <code class="highlighter-rouge">left</code>, <code class="highlighter-rouge">right</code>, <code class="highlighter-rouge">backspace</code>, <code class="highlighter-rouge">space</code>, <code class="highlighter-rouge">delete</code> and <code class="highlighter-rouge">esc</code>.</li>
+  <li>shift - (<em>boolean</em>) Available onKeyDown only. Whether the shift key is pressed.</li>
+  <li>control - (<em>booleanr</em>) Available onKeyDown only. Whether the control key is pressed.</li>
+  <li>alt - (<em>boolean</em>) Available onKeyDown only. Whether the alt key is pressed.</li>
+  <li>meta - (<em>boolean</em>) Available onKeyDown only. Whether the meta key is pressed.</li>
+</ul>
+
+<h2 id="Events:create">Events Method: create</h2>
+
+<p>Creates a set of events for the given domElement that can be handled through a callback.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LumaGL.Events.create(app, options);
+</code></pre>
+</div>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>app  - (<em>element</em>) A <a href="core.html#LumaGL:constructor">LumaGL application</a>.</li>
+  <li>options - (<em>object</em>) An object containing the following options:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>cachePosition - (<em>boolean</em>, optional) Whether to cache the current position of the canvas or calculate it each time in the event loop. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>cacheSize - (<em>boolean</em>, optional) Whether to cache the size of the canvas or calculate it each time in the event loop. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>relative - (<em>boolean</em>, optional) Whether to calculate the mouse position as relative to the canvas position or absolute. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>centerOrigin - (<em>boolean</em>, optional) Whether to set the center (0, 0) coordinate to the center of the canvas or to the top-left corner. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>disableContextMenu - (<em>boolean</em>, optional) Disable the context menu (generally shown when the canvas is right clicked). Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>enableTouch - (<em>boolean</em>, optional) Whether to append listeners to touch events. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>enableMouse - (<em>boolean</em>, optional) Whether to append listeners to mouse events. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>enableKeyboard - (<em>boolean</em>, optional) Whether to append listeners to keyboard events. Default’s <code class="highlighter-rouge">true</code>.</li>
+  <li>bind - (<em>mixed</em>, optional) bind the <em>thisArg</em> in the callbacks to the specified object.</li>
+  <li>picking - (<em>boolean</em>, optional) Whether to use picking. If true, the second parameter for the callback functions will be an <a href="o3d.html">O3D</a> target for the event (or a falsy value otherwise). Default’s false.</li>
+  <li>lazyPicking - (<em>boolean</em>, optional) When using lazy picking the framebuffer only stores a new image used for color picking when <code class="highlighter-rouge">scene.resetPicking();</code> is called. This is useful for when images of large resolution are being used and the scene is static most of the time (i.e. pickable objects don’t change their shape/position too often). <strong>Currently this only works for Chrome, Opera, Safari</strong>. Default’s false.</li>
+</ul>
+
+<h3 id="callbacks">Callbacks:</h3>
+
+<p>You can also provide callback functions for the events you need to
+handle. The first parameter of the callback is the event object
+described <a href="event.html#Event">here</a>. If <code class="highlighter-rouge">picking</code> is set to <code class="highlighter-rouge">true</code> in the
+options, then the second parameter of the callback may be an
+<a href="o3d.html">O3D</a> that is the target of the mouse event. If no target
+exists for the mouse event then a falsy value will be provided. The
+following callbacks are:</p>
+
+<ul>
+  <li>onClick - (<em>function</em>, optional) Handles the onClick event.</li>
+  <li>onRightClick - (<em>function</em>, optional) Handles the onRightClick event.</li>
+  <li>onDragStart - (<em>function</em>, optional) Handles the onDragStart event.</li>
+  <li>onDragMove - (<em>function</em>, optional) Handles the onDragMove event.</li>
+  <li>onDragEnd - (<em>function</em>, optional) Handles the onDragEnd event.</li>
+  <li>onDragCancel - (<em>function</em>, optional) Handles the onDragCancel event.</li>
+  <li>onTouchStart - (<em>function</em>, optional) Handles the onTouchStart event.</li>
+  <li>onTouchMove - (<em>function</em>, optional) Handles the onTouchMove event.</li>
+  <li>onTouchEnd - (<em>function</em>, optional) Handles the onTouchEnd event.</li>
+  <li>onTouchCancel - (<em>function</em>, optional) Handles the onTouchCancel event.</li>
+  <li>onTap - (<em>function</em>, optional) Handles the tap touch event.</li>
+  <li>onMouseMove - (<em>function</em>, optional) Handles the onMouseMove event.</li>
+  <li>onMouseEnter - (<em>function</em>, optional) Handles the onMouseEnter event.</li>
+  <li>onMouseLeave - (<em>function</em>, optional) Handles the onMouseLeave event.</li>
+  <li>onMouseWheel - (<em>function</em>, optional) Handles the onMouseWheel event.</li>
+  <li>onKeyDown - (<em>function</em>, optional) Handles the onKeyDown event.</li>
+  <li>onKeyUp - (<em>function</em>, optional) Handles the onKeyUp event.</li>
+</ul>
+
+<h3 id="notes">Notes:</h3>
+
+<p>Even though the <em>Events</em> object is accessible via the LumaGL function
+the events should be set in the <a href="core.html#LumaGL:constructor">LumaGL constructor</a>.</p>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Setting rotation and zoom to a moon object with drag and drop and mousewheel events.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">    <span class="kd">var</span> <span class="nx">pos</span><span class="p">,</span> <span class="nx">camera</span><span class="p">,</span> <span class="nx">moon</span><span class="p">,</span> <span class="nx">app</span><span class="p">;</span>
+
+    <span class="c1">//create and assign variables to objects...</span>
+
+    <span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Events</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">app</span><span class="p">,</span> <span class="p">{</span>
+      <span class="na">onDragStart</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">pos</span> <span class="o">=</span> <span class="p">{</span>
+          <span class="na">x</span><span class="p">:</span> <span class="nx">e</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span>
+          <span class="na">y</span><span class="p">:</span> <span class="nx">e</span><span class="p">.</span><span class="nx">y</span>
+        <span class="p">};</span>
+      <span class="p">},</span>
+      <span class="na">onDragMove</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">z</span> <span class="o">=</span> <span class="nx">camera</span><span class="p">.</span><span class="nx">position</span><span class="p">.</span><span class="nx">z</span><span class="p">,</span>
+            <span class="nx">sign</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">abs</span><span class="p">(</span><span class="nx">z</span><span class="p">)</span> <span class="o">/</span> <span class="nx">z</span><span class="p">;</span>
+
+        <span class="nx">moon</span><span class="p">.</span><span class="nx">rotation</span><span class="p">.</span><span class="nx">y</span> <span class="o">+=</span> <span class="o">-</span><span class="p">(</span><span class="nx">pos</span><span class="p">.</span><span class="nx">x</span> <span class="o">-</span> <span class="nx">e</span><span class="p">.</span><span class="nx">x</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+        <span class="nx">moon</span><span class="p">.</span><span class="nx">rotation</span><span class="p">.</span><span class="nx">x</span> <span class="o">+=</span> <span class="nx">sign</span> <span class="o">*</span> <span class="p">(</span><span class="nx">pos</span><span class="p">.</span><span class="nx">y</span> <span class="o">-</span> <span class="nx">e</span><span class="p">.</span><span class="nx">y</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+        <span class="nx">moon</span><span class="p">.</span><span class="nx">update</span><span class="p">();</span>
+        <span class="nx">pos</span><span class="p">.</span><span class="nx">x</span> <span class="o">=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">x</span><span class="p">;</span>
+        <span class="nx">pos</span><span class="p">.</span><span class="nx">y</span> <span class="o">=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">y</span><span class="p">;</span>
+      <span class="p">},</span>
+      <span class="na">onMouseWheel</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">stop</span><span class="p">();</span>
+        <span class="nx">camera</span><span class="p">.</span><span class="nx">position</span><span class="p">.</span><span class="nx">z</span> <span class="o">+=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">wheel</span><span class="p">;</span>
+        <span class="nx">camera</span><span class="p">.</span><span class="nx">update</span><span class="p">();</span>
+      <span class="p">}</span>
+  <span class="p">});</span></code></pre></figure>
+
