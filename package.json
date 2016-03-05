@@ -61,6 +61,7 @@
     "uglify-js": "^2.6.1"
   },
   "scripts": {
+    "jekyll": "jekyll build --source=docs",
     "build": "npm run build-dev && npm run build-min",
     "build-min": "browserify src/bundle.js | uglifyjs > dist/LumaGL.min.js",
     "build-dev": "browserify src/bundle.js -o dist/LumaGL.js",
