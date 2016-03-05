@@ -67,8 +67,8 @@ window.webGLStart = function() {
     })
   };
 
-  var programCube = Program.fromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
-  var programPrism = Program.fromHTMLTemplates(gl, 'prism-vs', 'prism-fs');
+  var programCube = makeProgramFromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
+  var programPrism = makeProgramFromHTMLTemplates(gl, 'prism-vs', 'prism-fs');
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

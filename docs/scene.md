@@ -65,7 +65,7 @@ Creates a new [Scene](scene.html) instance.
 
 ### Examples:
 
-Create a new Scene instance. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+Create a new Scene instance. Taken from [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 var innerScene = new LumaGL.Scene(program, innerCamera, {
@@ -136,7 +136,7 @@ A variable argument list of [O3D](o3d.html) instances.
 
 ### Examples:
 
-Add a moon and a box models to the scene. Taken from [lesson 12](http://philogb.github.com/philogl/LumaGL/examples/lessons/12/).
+Add a moon and a box models to the scene. Taken from [lesson 12](http://uber-common.github.com/luma.gl/examples/lessons/12/).
 
 {% highlight js %}
 //Add objects to the scene
@@ -204,7 +204,7 @@ buffer.
 ### Examples:
 
 Bind a framebuffer, render the scene to a texture, and unbind the framebuffer. This is the procedure done
-to render the inner scene in the laptop example on [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+to render the inner scene in the laptop example on [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 function drawInnerScene() {

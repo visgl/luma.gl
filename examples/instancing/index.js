@@ -66,7 +66,7 @@ window.webGLStart = function() {
     })
   };
 
-  var programCube = Program.fromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
+  var programCube = makeProgramFromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
 
   var tick = 0;
 

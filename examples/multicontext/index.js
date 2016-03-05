@@ -32,7 +32,7 @@ window.webGLStart = function() {
       size: 2
     });
 
-    var program = Program.fromHTMLTemplates(gl, 'quad-vs', fsID);
+    var program = makeProgramFromHTMLTemplates(gl, 'quad-vs', fsID);
 
     var time = 0;
 

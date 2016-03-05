@@ -180,7 +180,7 @@ In order to get familiar with the attributes and uniforms used by the [Scene](sc
 
 ### Examples:
 
-Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://philogb.github.com/philogl/LumaGL/examples/lessons/8/).
+Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://uber-common.github.com/luma.gl/examples/lessons/8/).
 
 {% highlight js %}
 //Add Blend Fragment Shader

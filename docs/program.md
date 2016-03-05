@@ -1,127 +1,69 @@
---- 
-layout: docs 
-title: Program 
+---
+layout: docs
+title: Program
 categories: [Documentation]
 ---
 
 Class: Program {#Program}
 ===========================
 
-The Program class has very useful methods to create a Program out of shaders in different ways, methods for 
-using buffers, textures, setting uniforms and more.
+The Program class encapsulates a WebGL program object
+- compilation and linking of shaders
+- setting and unsetting buffers
+- setting uniforms
+- using textures
+and more.
+
+
+### Notes:
+
+* Shader sources: A Program needs to be constructed with two strings
+containin source code for vertex and fragment shaders. While it is of course
+possible to store shader sources inline in JavaScript strings,
+when doing extensive shader programming, use of a tool like
+[glslify](https://github.com/stackgl/glslify)
+is recommended, as it supports organization of shader code
+directly in an applications source file tree. Also, for smaller examples,
+there are functions to help load shaders from HTML templates or URLs in
+`addons/helpers.js`.
+* Default Shaders: Luma.GL comes with a set of default shaders that can
+be used for basic rendering and picking.
+* All instance methods in a program (unless they return some documented value)
+are chainable.
 
 
 ### Properties:
 
 A program instance has as public properties:
 
-* program - (*object*) The native WebGL program instance.
-
-### Notes:
-
-All instance methods in a program (unless they return some documented value) are chainable.
+* program - (WebGLProgram) The native WebGL program instance.
 
 
-Program Static Method: fromShaderURIs {#Program:fromShaderURIs}
------------------------------------------------------------------
+Program constructor {#Program:constructor}
+----------------------------------------------------------------------
 
-Creates a new program by asynchronously fetching the source contained in the files pointed by the given urls. 
-Ths method is very convenient because it enables you to write your shaders in separate files and keep your 
-project organized.
+Creates a new program by using the strings passed as arguments as source for the shaders.
 
 ### Syntax:
 
-	LumaGL.Program.fromShaderURIs(options);
+	var program = new Program(gl, {
+    vs: vertexShaderSource,
+    fs: fragmentShaderSource,
+    id: id
+  });
 
 ### Arguments:
 
-1. options - (*object*) An object with the following properties:
-
-### Options:
-
-* path - (*string*, optional) A common path used as prefix for the vertex and fragment shaders url path.
-* vs - (*string*) The path to the vertex shader source file.
-* fs - (*string*) The path to the fragment shader source file.
-* noCache - (*boolean*, optional) If true, files will be reloaded and not taken
-  from the cache. Useful on development phase. Default's `false`.
-* onSuccess - (*function*) A callback function executed when the program was successfully created. The 
-first argument of the function is the `Program` instance.
-* onError - (*function*) A callback function executed when there's an error while fetching/compiling the shaders.
+1. gl
+1. opts.vs - (*string*) The vertex shader source as a string.
+2. opts.fs - (*string*) The fragment shader source as a string.
 
 ### Examples:
 
-Create a Program from the given script files.
-
-In `shaders/fragment.glsl`
-
-    #ifdef GL_ES
-    precision highp float;
-    #endif
-
-    void main(void) {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-    }
-
-In `shaders/vertex.glsl`
-
-    attribute vec3 aVertexPosition;
-
-    uniform mat4 uMVMatrix;
-    uniform mat4 uPMatrix;
-
-    void main(void) {
-      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-    }
-
-JavaScript code:
+Create a Program from the given sources.
 
 {% highlight js %}
-LumaGL.Program.fromShaderURIs({
-  path: 'shaders/',
-  vs: 'vertex.glsl',
-  fs: 'fragment.glsl',
-  onSuccess: function(program) {
-    alert("Got the program!");
-  },
-  onError: function(e) {
-    alert("An error ocurred while fetching or compiling the shaders");
-  }
-});
-{% endhighlight %}
-
-
-Program Static Method: fromShaderIds {#Program:fromShaderIds}
----------------------------------------------------------------
-
-Creates a new program by fetching the source contained into the DOM scripts with ids provided in the method.
-
-### Syntax:
-
-	var program = LumaGL.Program.fromShaderIds(vertexShaderId, fragmentShaderId);
-
-### Arguments:
-
-1. vertexShaderId - (*string*) The id of the script tag containig the source code for the vertex shader.
-2. fragmentShaderId - (*string*) The id of the script tag containig the source code for the fragment shader.
-
-### Examples:
-
-Create a Program from the given script ids.
-
-HTML code:
-
-{% highlight html %}
-<script id="shader-fs" type="x-shader/x-fragment">
-  #ifdef GL_ES
-  precision highp float;
-  #endif
-
-  void main(void) {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-  }
-</script>
-
-<script id="shader-vs" type="x-shader/x-vertex">
+const vs = `
   attribute vec3 aVertexPosition;
 
   uniform mat4 uMVMatrix;
@@ -130,111 +72,19 @@ HTML code:
   void main(void) {
     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
   }
-</script>
+`;
+const fs = `
+  #ifdef GL_ES
+    precision highp float;
+  #endif
+
+  void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+`;
+
+const program = new Program(gl, {vs, fs});
 {% endhighlight %}
-
-JavaScript code:
-
-{% highlight js %}
-var program = LumaGL.Program.fromShaderIds('shader-vs', 'shader-fs');
-{% endhighlight %}
-
-
-Program Static Method: fromShaderSources {#Program:fromShaderSources}
-----------------------------------------------------------------------
-
-Creates a new program by using the strings passed as arguments as source for the shaders.
-
-### Syntax:
-
-	var program = LumaGL.Program.fromShaderIds(vertexShaderSource, fragmentShaderSource);
-
-### Arguments:
-
-1. vertexShaderSource - (*string*) The vertex shader source as a string.
-2. fragmentShaderSource - (*string*) The fragment shader source as a string.
-
-### Examples:
-
-Create a Program from the given sources.
-
-{% highlight js %}
-var program = LumaGL.Program.fromShaderSources([
-  "attribute vec3 aVertexPosition;",
-
-  "uniform mat4 uMVMatrix;",
-  "uniform mat4 uPMatrix;",
-
-  "void main(void) {",
-    "gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);",
-  "}" ].join('\n'),
-  , [
- "#ifdef GL_ES",
-  "precision highp float;",
-  "#endif",
-
-  "void main(void) {",
-    "gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);",
-  "}" ].join('\n'));
-
-{% endhighlight %}
-
-
-Program Static Method: fromDefaultShaders {#Program:fromDefaultShaders}
-------------------------------------------------------------------------
-
-Creates a new program by using the sources taken from [Shaders.Vertex](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex) and 
-[Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment).
-
-### Syntax:
-
-	var program = LumaGL.Program.fromShaderIds(vertexDefaultShaderId, fragmentDefaultShaderId);
-
-### Arguments:
-
-1. vertexDefaultShaderId - (*string*, optional) The vertex shader id from [Shaders.Vertex](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex). Default's `Default`.
-2. fragmentShaderSource - (*string*) The fragment shader id from [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment). Default's `Default`.
-
-### Examples:
-
-Extend [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment) with a default shader and create a Program from defaults. 
-Taken from [lesson 8](http://philogb.github.com/philogl/LumaGL/examples/lessons/8/) example.
-
-{% highlight js %}
-//Add Blend Fragment Shader
-LumaGL.Shaders.Fragment.Blend = [
-
-    "#ifdef GL_ES",
-    "precision highp float;",
-    "#endif",
-    
-    "varying vec4 vColor;",
-    "varying vec2 vTexCoord;",
-    "varying vec3 lightWeighting;",
-    
-    "uniform bool hasTexture1;",
-    "uniform sampler2D sampler1;",
-    "uniform float alpha;",
-
-    "void main(){",
-      
-      "if (hasTexture1) {",
-      
-        "gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, alpha);",
-
-      "}",
-    
-    "}"
-
-].join("\n");
-
-var program = LumaGL.Program.fromDefaultShaders('Default', 'Blend');
-
-{% endhighlight %}
-
-### Notes:
-
-For more information about the default shader code `Default` included in the Framework take a look at the [Shaders](shaders.html) script.
 
 
 Program Method: setUniform {#Program:setUniform}
@@ -254,8 +104,10 @@ The name of the uniform matches the name of the uniform declared in the shader.
 
 ### Examples:
 
-Set matrix information for the projection matrix and element matrix of the camera and world. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/3/).
+Set matrix information for the projection matrix and element matrix
+of the camera and world.
+The context of this example can be seen
+[here](http://uber-common.github.com/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniform('uMVMatrix', view);
@@ -279,7 +131,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 ### Examples:
 
 Set matrix information for the projection matrix and element matrix of the camera and world. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/3/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({
@@ -292,8 +144,10 @@ program.setUniforms({
 Program Method: setBuffer {#Program:setBuffer}
 --------------------------------------------------
 
-This method is useful to set properties (and data) to a buffer and/or attributes. If the buffer does not exist it will be created. 
-Also, for all properties set to a buffer, these properties are remembered so they're optional for later calls.
+This method is useful to set properties (and data) to a buffer and/or
+attributes. If the buffer does not exist it will be created.
+Also, for all properties set to a buffer, these properties are
+remembered so they're optional for later calls.
 
 ### Syntax:
 
@@ -301,15 +155,19 @@ Also, for all properties set to a buffer, these properties are remembered so the
 
 ### Arguments:
 
-1. name - (*string*) The name (unique id) of the buffer. If no `attribute` value is set in `options` then the buffer name will be used as attribute name.
+1. name - (*string*) The name (unique id) of the buffer. If no `attribute`
+value is set in `options` then the buffer name will be used as attribute name.
 2. options - (*object*) An object with options/data described below:
 
 ### Options:
 
-* attribute - (*string*, optional) The name of the attribute to generate attribute calls to. If this parameter is not specified then the attribute name will 
-be the buffer name.
-* bufferType - (*enum*, optional) The type of the buffer. Possible options are `gl.ELEMENT_ARRAY_BUFFER`, `gl.ARRAY_BUFFER`. Default's `gl.ARRAY_BUFFER`.
-* size - (*numer*, optional) The size of the components in the buffer. Default's 1.
+* attribute - (*string*, optional) The name of the attribute to generate
+  attribute calls to. If this parameter is not specified then the attribute
+  name will be the buffer name.
+* bufferType - (*enum*, optional) The type of the buffer. Possible
+  options are `gl.ELEMENT_ARRAY_BUFFER`, `gl.ARRAY_BUFFER`. Default is 
+  `gl.ARRAY_BUFFER`.
+* size - (*numer*, optional) The size of the components in the buffer. Default is 1.
 * dataType - (*enum*, optional) The type of the data being stored in the buffer. Default's `gl.FLOAT`.
 * stride - (*number*, optional) The `stride` parameter when calling `gl.vertexAttribPointer`. Default's 0.
 * offset - (*number*, optional) The `offset` parameter when calling `gl.vertexAttribPointer`. Default's 0.
@@ -318,7 +176,7 @@ be the buffer name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {
@@ -340,12 +198,14 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 
 ### Arguments:
 
-1. object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+1. object - (*object*) An object with key value pairs matching
+   a buffer name and its value respectively.
 
 ### Examples:
 
-Set buffer values for the vertices of a triangle and a square. 
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+Set buffer values for the vertices of a triangle and a square.
+The context of this example can be seen
+[here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffers({
@@ -354,7 +214,6 @@ program.setBuffers({
     value: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
     size: 3
   },
-  
   'square': {
     attribute: 'aVertexPosition',
     value: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
@@ -367,9 +226,12 @@ program.setBuffers({
 Program Method: setFrameBuffer {#Program:setFrameBuffer}
 ---------------------------------------------------------
 
-Creates or binds/unbinds a framebuffer. You can also use this method to bind the framebuffer to a texture and renderbuffers. If the 
-framebuffer already exists then calling `setFrameBuffer` with `true` or `false` as options will bind/unbind the framebuffer. 
-Also, for all properties set to a buffer, these properties are remembered so they're optional for later calls.
+Creates or binds/unbinds a framebuffer. You can also use this method to
+bind the framebuffer to a texture and renderbuffers. If the
+framebuffer already exists then calling `setFrameBuffer` with
+`true` or `false` as options will bind/unbind the framebuffer.
+Also, for all properties set to a buffer, these properties are
+remembered so they're optional for later calls.
 
 ### Syntax:
 
@@ -378,28 +240,31 @@ Also, for all properties set to a buffer, these properties are remembered so the
 ### Arguments:
 
 1. name - (*string*) The name (unique id) of the buffer.
-2. options - (*mixed*) Can be a boolean used to bind/unbind the framebuffer or an object with options/data described below:
+2. options - (*mixed*) Can be a boolean used to bind/unbind
+   the framebuffer or an object with options/data described below:
 
 ### Options:
 
 * width - (*number*) The width of the framebuffer. Default's 0.
 * height - (*number*) The height of the framebuffer. Default's 0.
-* bindToTexture - (*mixed*, optional) Whether to bind the framebuffer onto a texture. If false the framebuffer wont be bound to a texture. Else you should provide an object 
-with the same options as in `setTexture`.
+* bindToTexture - (*mixed*, optional) Whether to bind the framebuffer
+onto a texture. If false the framebuffer wont be bound to a texture.
+Else you should provide an object with the same options as in `setTexture`.
 * textureOptions - (*object*, optional) Some extra options for binding the framebuffer to the texture. Default's `{ attachment: gl.COLOR_ATTACHMENT0 }`.
 * bindToRenderBuffer - (*boolean*) Whether to bind the framebuffer to a renderbuffer. The `width` and `height` of the renderbuffer are the same as the ones specified above.
 * renderBufferOptions - (*object*, optional) Some extra options for binding the framebuffer to the renderbuffer. Default's `{ attachment: gl.DEPTH_ATTACHMENT }`.
 
 ### Examples:
 
-Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+Using a frambuffer to render a scene into a texture. Taken from
+[lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 //create framebuffer
 program.setFrameBuffer('monitor', {
   width: screenWidth,
   height: screenHeight,
-  bindToTexture: {      
+  bindToTexture: {
     parameters: [{
       name: 'TEXTURE_MAG_FILTER',
       value: 'LINEAR'
@@ -417,7 +282,8 @@ program.setFrameBuffer('monitor', {
 Program Method: setFrameBuffers {#Program:setFrameBuffers}
 -----------------------------------------------------------
 
-For each `key, value` of the object passed in it executes `setFrameBuffer(key, value)`.
+For each `key, value` of the object passed in it executes
+`setFrameBuffer(key, value)`.
 
 ### Syntax:
 
@@ -425,14 +291,19 @@ For each `key, value` of the object passed in it executes `setFrameBuffer(key, v
 
 ### Arguments:
 
-1. object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+1. object - (*object*) An object with key value pairs matching a
+   buffer name and its value respectively.
 
 
 Program Method: setRenderBuffer {#Program:setRenderBuffer}
 -----------------------------------------------------------
 
-Creates or binds/unbinds a renderbuffer. If the renderbuffer already exists and the second parameter is a boolean it'll bind or unbind the renderbuffer.
- Also, for all properties set to a buffer, these properties are remembered so they're optional for later calls.
+Creates or binds/unbinds a renderbuffer. If the renderbuffer already
+exists and the second parameter is a boolean it'll bind or unbind the
+renderbuffer.
+
+Also, for all properties set to a buffer, these properties are remembered
+so they're optional for later calls.
 
 ### Syntax:
 
@@ -441,7 +312,8 @@ Creates or binds/unbinds a renderbuffer. If the renderbuffer already exists and 
 ### Arguments:
 
 1. name - (*string*) The name (unique id) of the buffer.
-2. options - (*mixed*) Can be a boolean used to bind/unbind the renderbuffer or an object with options/data described below:
+2. options - (*mixed*) Can be a boolean used to bind/unbind the renderbuffer
+   or an object with options/data described below:
 
 ### Options:
 
@@ -461,14 +333,18 @@ For each `key, value` of the object passed in it executes `setRenderBuffer(key, 
 
 ### Arguments:
 
-1. object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+1. object - (*object*) An object with key value pairs matching a
+   buffer name and its value respectively.
 
 
 Program Method: setTexture {#Program:setTexture}
 -------------------------------------------------
 
-This method is used to either bind/unbind an existing texture or also to create a new texture form an `Image` element or 
-to create an empty texture with specified dimensions. Also, for all properties set to a texture, these properties are remembered so they're optional for later calls.
+This method is used to either bind/unbind an existing texture or also
+to create a new texture form an `Image` element or
+to create an empty texture with specified dimensions.
+Also, for all properties set to a texture, these properties are
+remembered so they're optional for later calls.
 
 ### Syntax:
 
@@ -477,7 +353,9 @@ to create an empty texture with specified dimensions. Also, for all properties s
 ### Arguments:
 
 1. name - (*string*) The name (unique id) of the texture.
-2. options - (*mixed*) Can be a boolean or enum used to bind/unbind the texture (or set the enum as active texture) or an object with options/data described below:
+2. options - (*mixed*) Can be a boolean or enum used to bind/unbind the
+   texture (or set the enum as active texture) or an object with options/data
+   described below:
 
 ### Options:
 
@@ -488,15 +366,15 @@ Default's `[{ name: gl.UNPACK_FLIP_Y_WEBGL, value: true }]`.
 Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTURE_MIN_FILTER, value: gl.NEAREST }]`.
 * data - (*object*, optional) An object with properties described below:
   * format - (*enum*, optional) The format used for `gl.texImage2D` calls. Default's `gl.RGBA`.
-  * value - (*object*, optional) If set to an `Image` object then this image will be used to fill the texture. Default's false. If no image is set then we might want to 
-set the width and height of the texture.
+  * value - (*object*, optional) If set to an `Image` object then this image will be used to fill the texture. Default's false. If no image is set then we might want to set the width and height of the texture.
   * width - (*number*, optional) The width of the texture. Default's 0.
   * height - (*number*, optional) The height of the texture. Default's 0.
   * border - (*number*, optional) The border of the texture. Default's 0.
 
 ### Examples:
 
-Setting a texture for a box. Adapted from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Setting a texture for a box. Adapted from
+[lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -528,7 +406,8 @@ For each `key, value` of the object passed in it executes `setTexture(key, value
 
 ### Examples:
 
-Set multiple type of textures from the same image. Taken from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Set multiple type of textures from the same image. Taken from
+[lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 //load textures from image

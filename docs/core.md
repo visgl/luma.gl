@@ -126,7 +126,7 @@ be the buffer name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle.
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 app.setBuffer('triangle', {
@@ -153,7 +153,7 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 ### Examples:
 
 Set buffer values for the vertices of a triangle and a square.
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 app.setBuffers({
@@ -200,7 +200,7 @@ with the same options as in `setTexture`.
 
 ### Examples:
 
-Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 //create framebuffer
@@ -327,7 +327,7 @@ set the width and height of the texture.
 
 ### Examples:
 
-Setting a texture for a box. Adapted from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Setting a texture for a box. Adapted from [lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -359,7 +359,7 @@ For each `key, value` of the object passed in it executes `setTexture(key, value
 
 ### Examples:
 
-Set multiple type of textures from the same image. Taken from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Set multiple type of textures from the same image. Taken from [lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 //load textures from image

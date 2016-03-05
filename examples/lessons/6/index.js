@@ -33,7 +33,7 @@ var webGLStart = function() {
     aspect: canvas.width/canvas.height,
   });
 
-  var program = Program.fromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+  var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
 
   program.use();
 

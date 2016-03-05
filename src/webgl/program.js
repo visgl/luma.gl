@@ -3,40 +3,113 @@
 
 /* eslint-disable no-console, complexity */
 
-/* global document, console */
+/* global console */
+/* global WebGLRenderingContext */
 import {merge, uid} from '../utils';
 import formatCompilerError from 'gl-format-compiler-error';
+import assert from 'assert';
 
 // TODO - remove this functionality, should not depend on upper layers
 import {XHRGroup} from '../io';
 import Shaders from '../shaders';
 
+// For now this is an internal class
+class Shader {
+
+  constructor(gl, shaderSource, shaderType) {
+    this.gl = gl;
+    this.shader = gl.createShader(shaderType);
+    if (this.shader === null) {
+      throw new Error(`Error creating shader with type ${shaderType}`);
+    }
+    gl.shaderSource(this.shader, shaderSource);
+    gl.compileShader(this.shader);
+    var compiled = gl.getShaderParameter(this.shader, gl.COMPILE_STATUS);
+    if (!compiled) {
+      var info = gl.getShaderInfoLog(this.shader);
+      gl.deleteShader(this.shader);
+      /* eslint-disable no-try-catch */
+      var formattedLog;
+      try {
+        formatCompilerError(info, shaderSource, shaderType);
+      } catch (error) {
+        /* eslint-disable no-console */
+        /* global console */
+        console.warn('Error formatting glsl compiler error:', error);
+        /* eslint-enable no-console */
+        throw new Error(`Error while compiling the shader ${info}`);
+      }
+      /* eslint-enable no-try-catch */
+      throw new Error(formattedLog.long);
+    }
+  }
+
+}
+
+class VertexShader extends Shader {
+  constructor(gl, shaderSource) {
+    super(gl, shaderSource, gl.VERTEX_SHADER);
+  }
+}
+
+class FragmentShader extends Shader {
+  constructor(gl, shaderSource) {
+    super(gl, shaderSource, gl.FRAGMENT_SHADER);
+  }
+}
+
 export default class Program {
 
   /*
-   * @classdesc Handles loading of programs, mapping of attributes and uniforms
+   * @classdesc
+   * Handles creation of programs, mapping of attributes and uniforms
+   *
+   * @class
+   * @param {WebGLRenderingContext} gl - gl context
+   * @param {Object} opts - options
+   * @param {String} opts.vs - Vertex shader source
+   * @param {String} opts.fs - Fragment shader source
+   * @param {String} opts.id= - Id
    */
-  constructor(gl, vertexShader, fragmentShader, id) {
-    const glProgram = createProgram(gl, vertexShader, fragmentShader);
-    if (!glProgram) {
+  constructor(gl, opts, fs, id) {
+    let vs;
+    if (typeof opts === 'string') {
+      console.warn('DEPRECATED: New use: Program(gl, {vs, fs, id})');
+      vs = opts;
+    } else {
+      vs = opts.fs;
+      fs = opts.fs;
+      id = opts.id;
+    }
+
+    const program = gl.createProgram();
+    if (!program) {
       throw new Error('Failed to create program');
     }
 
-    this.gl = gl;
-    this.program = glProgram;
-    this.id = id || uid();
+    gl.attachShader(program, new VertexShader(gl, vs).shader);
+    gl.attachShader(program, new FragmentShader(gl, fs).shader);
+    gl.linkProgram(program);
+    const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+    if (!linked) {
+      throw new Error(`Error linking ${gl.getProgramInfoLog(program)}`);
+    }
 
+    this.gl = gl;
+    this.id = id || uid();
+    this.program = program;
     // determine attribute locations (i.e. indices)
-    this.attributeLocations = getAttributeLocations(gl, glProgram);
-    console.log(`${id} locations`, this.attributeLocations);
+    this.attributeLocations = getAttributeLocations(gl, program);
     // prepare uniform setters
-    this.uniformSetters = getUniformSetters(gl, glProgram);
+    this.uniformSetters = getUniformSetters(gl, program);
     // no attributes enabled yet
     this.attributeEnabled = {};
   }
 
   // Alternate constructor
   // Create a program from vertex and fragment shader node ids
+  // TODO - remove from Program
+  // Extracting templates should be done by app with separate helper method
   static fromHTMLTemplates(gl, vs, fs) {
     const vertexShader = document.getElementById(vs).innerHTML;
     const fragmentShader = document.getElementById(fs).innerHTML;
@@ -45,6 +118,8 @@ export default class Program {
 
   // Alternate constructor
   // Build program from default shaders (requires Shaders)
+  // TODO - remove from Program
+  // default shaders should be selected by app, e.g. with addons/helpers methods
   static fromDefaultShaders(gl) {
     return new Program(gl,
       Shaders.Vertex.Default,
@@ -53,6 +128,8 @@ export default class Program {
   }
 
   // Alternate constructor
+  // TODO - remove from Program.
+  // Loading should be done by app, e.g. with addons/helpers methods
   static async fromShaderURIs(gl, vs, fs, opts) {
     opts = merge({
       path: '/',
@@ -127,53 +204,6 @@ export default class Program {
     return this;
   }
 
-}
-
-// Creates a shader from a string source.
-function createShader(gl, shaderSource, shaderType) {
-  var shader = gl.createShader(shaderType);
-  if (shader === null) {
-    throw new Error(`Error creating shader with type ${shaderType}`);
-  }
-  gl.shaderSource(shader, shaderSource);
-  gl.compileShader(shader);
-  var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-  if (!compiled) {
-    var info = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    /* eslint-disable no-try-catch */
-    var formattedLog;
-    try {
-      formatCompilerError(info, shaderSource, shaderType);
-    } catch (error) {
-      /* eslint-disable no-console */
-      /* global console */
-      console.warn('Error formatting glsl compiler error:', error);
-      /* eslint-enable no-console */
-      throw new Error(`Error while compiling the shader ${info}`);
-    }
-    /* eslint-enable no-try-catch */
-    throw new Error(formattedLog.long);
-  }
-  return shader;
-}
-
-// Creates a program from vertex and fragment shader sources.
-function createProgram(gl, vertexShader, fragmentShader) {
-  const vs = createShader(gl, vertexShader, gl.VERTEX_SHADER);
-  const fs = createShader(gl, fragmentShader, gl.FRAGMENT_SHADER);
-
-  const glProgram = gl.createProgram();
-  gl.attachShader(glProgram, vs);
-  gl.attachShader(glProgram, fs);
-
-  gl.linkProgram(glProgram);
-  const linked = gl.getProgramParameter(glProgram, gl.LINK_STATUS);
-  if (!linked) {
-    throw new Error(`Error linking shader ${gl.getProgramInfoLog(glProgram)}`);
-  }
-
-  return glProgram;
 }
 
 // TODO - use tables to reduce complexity of method below

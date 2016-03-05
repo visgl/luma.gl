@@ -23,7 +23,7 @@ var webGLStart = function() {
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
   var defaultProgram = Program.fromDefaultShaders(gl);
-  var perpixelProgram = Program.fromHTMLTemplates(
+  var perpixelProgram = makeProgramFromHTMLTemplates(
     gl,
     'per-fragment-lighting-vs',
     'per-fragment-lighting-fs'

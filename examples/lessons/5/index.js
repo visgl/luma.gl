@@ -31,7 +31,7 @@ var webGLStart = function() {
 
       var nehe = textures[0];
 
-      var program = Program.fromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+      var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
 
       program.use();
 
