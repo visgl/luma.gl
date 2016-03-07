@@ -377,7 +377,6 @@ export const Events = {
       disableContextMenu: true,
       bind: false,
       picking: false,
-      lazyPicking: false,
 
       enableTouch: true,
       enableMouse: true,
