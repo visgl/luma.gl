@@ -1,5 +1,5 @@
---- 
-layout: docs 
+---
+layout: docs
 title: Math
 categories: [Documentation]
 ---
@@ -7,16 +7,16 @@ categories: [Documentation]
 Script: Math {#Math}
 ===========================
 
-The Math script provides `Vec3`, `Mat4` and `Quat` classes to manage three dimensional vectors, four by four matrices and quaternions respectively. 
+The Math script provides `Vec3`, `Mat4` and `Quat` classes to manage three dimensional vectors, four by four matrices and quaternions respectively.
 
 ### Generics:
 
-One very interesting thing to point about the Math script is that all `Vec3`, `Mat4` and `Quat` methods are generics. This means that all 
-instance methods of `Vec3`, `Mat4`, and `Quat` can also be accessed as static methods in which the first parameter of the static method is the receiver. 
-The receiver does not *have to be* an instance of the class but can instead be a `Vec3`-like, `Mat4`-like or `Quat`-like object. 
-This means that a simple array (i.e `[]`) can be used as the receiver for these methods. 
+One very interesting thing to point about the Math script is that all `Vec3`, `Mat4` and `Quat` methods are generics. This means that all
+instance methods of `Vec3`, `Mat4`, and `Quat` can also be accessed as static methods in which the first parameter of the static method is the receiver.
+The receiver does not *have to be* an instance of the class but can instead be a `Vec3`-like, `Mat4`-like or `Quat`-like object.
+This means that a simple array (i.e `[]`) can be used as the receiver for these methods.
 
-Although the *syntax* section for each method will include the generic and non-generic one, the arguments for each method will be described as with the instance 
+Although the *syntax* section for each method will include the generic and non-generic one, the arguments for each method will be described as with the instance
 method syntax.
 
 ### Chainable Methods:
@@ -27,33 +27,23 @@ All methods that do not return something in particular in the math package are c
 
 Say you want to add two `Vec3` vectors, `v1` and `v2`. Then there are three ways of performing this operation:
 
-1. `v1.add(v2)` Returns a new class with the result of adding `v1` and `v2`. This operation does not modify `v1` or `v2`.
+1. `v1.add(v2)` Returns a new instance with the result of adding `v1` and `v2`. This operation does not modify `v1` or `v2`.
 2. `v1.$add(v2)` Returns the result of adding `v1` to `v2`, but it alters `v1` updating it with the result.
 3. `vResult.add2(v1, v2)` Stores the result of adding `v1` to `v2` in `vResult`, another `Vec3` instance.
 
-These are the conventions we will be using for method naming. Methods altering the receiver will have a dollar sign (i.e. `$`), as opposed to 
-methods creating a new instance with the result. Methods requiring a receiver *and* the instances involved in the operation as formal parameters 
+These are the conventions we will be using for method naming. Methods altering the receiver will have a dollar sign (i.e. `$`), as opposed to
+methods creating a new instance with the result. Methods requiring a receiver *and* the instances involved in the operation as formal parameters
 will be suffixed with the number `2`.
 
 ### Notes:
 
-**New from version 1.3:** 
-
-All classes now extend from `Array` or some
+All classes extend from `Array` or some
 `DataView` class (i.e. some typed array). This means that `Vec3`, `Mat4`
-and `Quat`-like objects are now plain arrays and not plain objects. I
-have added getters for all properties in `Vec3`, `Mat4` and `Quat`
+and `Quat`-like objects are plain arrays and not plain objects. Getters
+have been added for all properties in `Vec3`, `Mat4` and `Quat`
 classes so you can still access them via `vec.x`, etc, but remember
-that the inner implementation is now an array, so `vec3[0]` will also
-work. The examples have been updated to reflect this.
-
-This implementation changes the signature for some methods and probably
-if you used object literals for `Vec3`, `Mat4` and `Quat` classes these
-things will have to be changed into arrays. The good thing about this is a noticeable
-boost in performance everywhere in the library, and in particular in the
-math functions. More information about this can be found in [my
-blog](http://blog.thejit.org/).
-
+that the inner implementation is an array, so `vec3[0]` will also
+work.
 
 Class: Vec3 {#Vec3}
 ===========================
@@ -68,7 +58,7 @@ Create a new `Vec3` instance from the `x`, `y`, `z` coordinates of a [Quat](#Qua
 
 ### Syntax:
 
-    LumaGL.Vec3.fromQuat(q);
+    Vec3.fromQuat(q);
 
 ### Arguments:
 
@@ -79,8 +69,8 @@ Create a new `Vec3` instance from the `x`, `y`, `z` coordinates of a [Quat](#Qua
 Create a vector from a Quaternion.
 
 {% highlight js %}
-  var q = new LumaGL.Quat(1, 2, 3, 4),
-      v = LumaGL.Vec3.fromQuat(q); //Vec3(1, 2, 3)
+  var q = new Quat(1, 2, 3, 4),
+      v = Vec3.fromQuat(q); //Vec3(1, 2, 3)
 {% endhighlight %}
 
 
@@ -91,7 +81,7 @@ Creates a new `Vec3` instance.
 
 ### Syntax:
 
-	var v = new LumaGL.Vec3(x, y, z);
+	var v = new Vec3(x, y, z);
 
 ### Arguments:
 
@@ -104,13 +94,13 @@ Creates a new `Vec3` instance.
 Create a (0, 0, 0) vector.
 
 {% highlight js %}
-  var v = new LumaGL.Vec3();
+  var v = new Vec3();
 {% endhighlight %}
 
 Create a (1, 2, 3) vector.
 
 {% highlight js %}
-  var v = new LumaGL.Vec3(1, 2, 3);
+  var v = new Vec3(1, 2, 3);
 {% endhighlight %}
 
 
@@ -123,7 +113,7 @@ Set `x`, `y`, `z` coordinates of one `Vec3` into another `Vec3`.
 
 	v1.setVec3(v2);
 
-    LumaGL.Vec3.setVec3(v1, v2);
+    Vec3.setVec3(v1, v2);
 
 ### Arguments:
 
@@ -134,8 +124,8 @@ Set `x`, `y`, `z` coordinates of one `Vec3` into another `Vec3`.
 Create two vectors and assign one vectors components to the other one.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.setVec3(v2); //v1 now contains (x=4, y=5, z=6)
 {% endhighlight %}
@@ -146,7 +136,7 @@ Set an object's `x`, `y`, `z` components to another object.
   var v1 = [],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.setVec3(v1, v2); //v1 now has [4, 5, 6]
+  Vec3.setVec3(v1, v2); //v1 now has [4, 5, 6]
 {% endhighlight %}
 
 
@@ -159,7 +149,7 @@ Set `x`, `y`, `z` coordinates.
 
 	v1.set(x, y, z);
 
-    LumaGL.Vec3.set(v1, x, y, z);
+    Vec3.set(v1, x, y, z);
 
 ### Arguments:
 
@@ -172,8 +162,8 @@ Set `x`, `y`, `z` coordinates.
 Create two vectors and assign one vectors components to the other one.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.set(v2.x, v2.y, v2.z); //v1 now contains (x=4, y=5, z=6)
 {% endhighlight %}
@@ -184,7 +174,7 @@ Set an object's `x`, `y`, `z` components to another object.
   var v1 = [],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.set(v1, v2.x, v2.y, v2.z); //v1 now has [4, 5, 6]
+  Vec3.set(v1, v2.x, v2.y, v2.z); //v1 now has [4, 5, 6]
 {% endhighlight %}
 
 Vec3 Method: add {#Vec3:add}
@@ -196,7 +186,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Vec3` in
 
 	v1.add(v2);
 
-    LumaGL.Vec3.add(v1, v2);
+    Vec3.add(v1, v2);
 
 ### Arguments:
 
@@ -207,8 +197,8 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Vec3` in
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.add(v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
 {% endhighlight %}
@@ -219,7 +209,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.add(v1, v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
+  Vec3.add(v1, v2); //v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.
 {% endhighlight %}
 
 
@@ -232,7 +222,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Modifies the original o
 
 	v1.$add(v2);
 
-    LumaGL.Vec3.$add(v1, v2);
+    Vec3.$add(v1, v2);
 
 ### Arguments:
 
@@ -243,8 +233,8 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects. Modifies the original o
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.$add(v2); //v1 is now Vec3(5, 7, 9).
 {% endhighlight %}
@@ -255,7 +245,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.$add(v1, v2); //v1 is now [ 5, 7, 9 ].
+  Vec3.$add(v1, v2); //v1 is now [ 5, 7, 9 ].
 {% endhighlight %}
 
 
@@ -268,7 +258,7 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects and stores the result in
 
 	v1.add2(v2, v3);
 
-    LumaGL.Vec3.add2(v1, v2, v3);
+    Vec3.add2(v1, v2, v3);
 
 ### Arguments:
 
@@ -280,9 +270,9 @@ Adds the `x`, `y`, `z` components of two `Vec3` objects and stores the result in
 Create two vectors and add them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(),
-      v2 = new LumaGL.Vec3(1, 2, 3),
-      v3 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(),
+      v2 = new Vec3(1, 2, 3),
+      v3 = new Vec3(4, 5, 6);
 
   v1.add2(v2, v3); //v1 is now Vec3(5, 7, 9), v2 and v3 are unchanged.
 {% endhighlight %}
@@ -294,7 +284,7 @@ Create two `x`, `y`, `z` objects and add them.
       v2 = [ 1, 2, 3 ],
       v3 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.add2(v1, v2, v3); //v2 and v3 are still the same but v1 is [ 5, 7, 9 ].
+  Vec3.add2(v1, v2, v3); //v2 and v3 are still the same but v1 is [ 5, 7, 9 ].
 {% endhighlight %}
 
 
@@ -307,7 +297,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Ve
 
 	v1.sub(v2);
 
-    LumaGL.Vec3.sub(v1, v2);
+    Vec3.sub(v1, v2);
 
 ### Arguments:
 
@@ -318,8 +308,8 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Creates a new `Ve
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.sub(v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
 {% endhighlight %}
@@ -330,7 +320,7 @@ Create two `x`, `y`, `z` objects and substract them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.sub(v1, v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
+  Vec3.sub(v1, v2); //v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.
 {% endhighlight %}
 
 
@@ -343,7 +333,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Modifies the orig
 
 	v1.$sub(v2);
 
-    LumaGL.Vec3.$sub(v1, v2);
+    Vec3.$sub(v1, v2);
 
 ### Arguments:
 
@@ -354,8 +344,8 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects. Modifies the orig
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.$sub(v2); //v1 is now Vec3(-3, -3, -3).
 {% endhighlight %}
@@ -366,7 +356,7 @@ Create two `x`, `y`, `z` objects and add them.
   var v1 = [ 1, 2, 3 ],
       v2 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.$sub(v1, v2); //v1 is now [ -3, -3, -3 ].
+  Vec3.$sub(v1, v2); //v1 is now [ -3, -3, -3 ].
 {% endhighlight %}
 
 
@@ -379,7 +369,7 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects and stores the res
 
 	v1.sub2(v2, v3);
 
-    LumaGL.Vec3.sub2(v1, v2, v3);
+    Vec3.sub2(v1, v2, v3);
 
 ### Arguments:
 
@@ -391,9 +381,9 @@ Substracts the `x`, `y`, `z` components of two `Vec3` objects and stores the res
 Create two vectors and substract them.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(),
-      v2 = new LumaGL.Vec3(1, 2, 3),
-      v3 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(),
+      v2 = new Vec3(1, 2, 3),
+      v3 = new Vec3(4, 5, 6);
 
   v1.sub2(v2, v3); //v1 is now Vec3(-3, -3, -3), v2 and v3 are unchanged.
 {% endhighlight %}
@@ -405,7 +395,7 @@ Create two `x`, `y`, `z` objects and substract them.
       v2 = [ 1, 2, 3 ],
       v3 = [ 4, 5, 6 ];
 
-  LumaGL.Vec3.sub2(v1, v2, v3); //v2 and v3 are still the same but v1 is { x: -3, y: -3, z: -3 }.
+  Vec3.sub2(v1, v2, v3); //v2 and v3 are still the same but v1 is { x: -3, y: -3, z: -3 }.
 {% endhighlight %}
 
 
@@ -418,7 +408,7 @@ Scales the Vec3 vector by a real number. Creates a new Vec3 with the scaled comp
 
 	v1.scale(s);
 
-    LumaGL.Vec3.scale(v1, s);
+    Vec3.scale(v1, s);
 
 ### Arguments:
 
@@ -429,7 +419,7 @@ Scales the Vec3 vector by a real number. Creates a new Vec3 with the scaled comp
 Create a vector and scale it by 2.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.scale(2); //v1 is unchanged but a new Vec3(2, 4, 6) is created.
 {% endhighlight %}
@@ -439,7 +429,7 @@ Create an `x`, `y`, `z` object and scale it by 2.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.scale(v1, 2); //v1 is still the same but a new Vec3(2, 4, 6) was created.
+  Vec3.scale(v1, 2); //v1 is still the same but a new Vec3(2, 4, 6) was created.
 {% endhighlight %}
 
 
@@ -452,7 +442,7 @@ Scales the Vec3 vector by a real number. Changes the original object.
 
 	v1.$scale(s);
 
-    LumaGL.Vec3.$scale(v1, s);
+    Vec3.$scale(v1, s);
 
 ### Arguments:
 
@@ -463,7 +453,7 @@ Scales the Vec3 vector by a real number. Changes the original object.
 Create a vector and scale it by 2.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.$scale(2); //v1 is now Vec3(2, 4, 6).
 {% endhighlight %}
@@ -473,7 +463,7 @@ Create an `x`, `y`, `z` object and scale it by 2.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.$scale(v1, 2); //v1 is now [ 2, 4, 6 ].
+  Vec3.$scale(v1, 2); //v1 is now [ 2, 4, 6 ].
 {% endhighlight %}
 
 
@@ -486,14 +476,14 @@ Negates a `Vec3`. Returns a new instance.
 
 	v1.neg();
 
-    LumaGL.Vec3.neg(v1);
+    Vec3.neg(v1);
 
 ### Examples:
 
 Create a vector and negate it.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.neg(); //v1 is unchanged but a new Vec3(-1, -2, -3) is created.
 {% endhighlight %}
@@ -503,7 +493,7 @@ Create an `x`, `y`, `z` object and negate it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.neg(v1); //v1 is still the same but a new Vec3(-1, -2, -3).
+  Vec3.neg(v1); //v1 is still the same but a new Vec3(-1, -2, -3).
 {% endhighlight %}
 
 
@@ -516,14 +506,14 @@ Negates a `Vec3`. Changes the original object.
 
 	v1.$neg();
 
-    LumaGL.Vec3.$neg(v1);
+    Vec3.$neg(v1);
 
 ### Examples:
 
 Create a vector and negate it.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.$neg(); //v1 is now Vec3(-1, -2, -3).
 {% endhighlight %}
@@ -533,7 +523,7 @@ Create an `x`, `y`, `z` object and negate it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.neg(v1); //v1 is now [ -1, -2, -3 ].
+  Vec3.neg(v1); //v1 is now [ -1, -2, -3 ].
 {% endhighlight %}
 
 
@@ -546,14 +536,14 @@ Creates a unit vector from the coordinates of `Vec3`.
 
 	v1.unit();
 
-    LumaGL.Vec3.unit(v1);
+    Vec3.unit(v1);
 
 ### Examples:
 
 Create a vector and make a unit vector from it.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.unit(); //v1 is unchanged but a new unit vector Vec3 is created.
 {% endhighlight %}
@@ -563,7 +553,7 @@ Create an `x`, `y`, `z` object and make a unit vector from it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.unit(v1); //v1 is still the same but a new Vec3 that is a unit vector is created.
+  Vec3.unit(v1); //v1 is still the same but a new Vec3 that is a unit vector is created.
 {% endhighlight %}
 
 
@@ -576,14 +566,14 @@ Creates a unit vector from the `Vec3` coordinates. Changes the original object.
 
 	v1.$unit();
 
-    LumaGL.Vec3.$unit(v1);
+    Vec3.$unit(v1);
 
 ### Examples:
 
 Create a vector and make a unit vector from it.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   v1.$unit(); //v1 is now a unit vector.
 {% endhighlight %}
@@ -593,21 +583,21 @@ Create an `x`, `y`, `z` object make a unit vector from it.
 {% highlight js %}
   var v1 = [ 1, 2, 3 ];
 
-  LumaGL.Vec3.$unit(v1); //v1 is now a unit vector object.
+  Vec3.$unit(v1); //v1 is now a unit vector object.
 {% endhighlight %}
 
 
 Vec3 Method: cross {#Vec3:cross}
 ------------------------------------
 
-Makes a cross product of two `Vec3` instances. Creates a new `Vec3` and does not modify the original objects. 
+Makes a cross product of two `Vec3` instances. Creates a new `Vec3` and does not modify the original objects.
 You can find more information about the cross product [here](http://en.wikipedia.org/wiki/Cross_product).
 
 ### Syntax:
 
 	v1.cross(v2);
 
-    LumaGL.Vec3.cross(v1, v2);
+    Vec3.cross(v1, v2);
 
 ### Arguments:
 
@@ -618,8 +608,8 @@ You can find more information about the cross product [here](http://en.wikipedia
 Create two vectors and make a cross product.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.cross(v2); //v1 and v2 are still the same but a new Vec3 was created with the result.
 {% endhighlight %}
@@ -631,21 +621,21 @@ Create two `x`, `y`, `z` objects and make a cross product.
       v2 = [ 4, 5, 6 ];
 
   //v1 and v2 are still the same but a new Vec3 with the result was created.
-  var ans = LumaGL.Vec3.cross(v1, v2);
+  var ans = Vec3.cross(v1, v2);
 {% endhighlight %}
 
 
 Vec3 Method: $cross {#Vec3:$cross}
 ------------------------------------
 
-Makes a cross product of two `Vec3` instances. Modifies the original object. 
+Makes a cross product of two `Vec3` instances. Modifies the original object.
 You can find more information about the cross product [here](http://en.wikipedia.org/wiki/Cross_product).
 
 ### Syntax:
 
 	v1.$cross(v2);
 
-    LumaGL.Vec3.$cross(v1, v2);
+    Vec3.$cross(v1, v2);
 
 ### Arguments:
 
@@ -656,8 +646,8 @@ You can find more information about the cross product [here](http://en.wikipedia
 Create two vectors and make a cross product.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.$cross(v2); //v1 contains now the result.
 {% endhighlight %}
@@ -669,7 +659,7 @@ Create two `x`, `y`, `z` objects and make a cross product.
       v2 = [ 4, 5, 6 ];
 
   //v1 contains now the result.
-  var ans = LumaGL.Vec3.$cross(v1, v2);
+  var ans = Vec3.$cross(v1, v2);
 {% endhighlight %}
 
 
@@ -682,7 +672,7 @@ Calculates the distance between two `Vec3`.
 
 	v1.distTo(v2);
 
-    LumaGL.Vec3.distTo(v1, v2);
+    Vec3.distTo(v1, v2);
 
 ### Arguments:
 
@@ -693,8 +683,8 @@ Calculates the distance between two `Vec3`.
 Create two vectors and calculate the distance.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.distTo(v2); //a real value with the distance is returned.
 {% endhighlight %}
@@ -706,7 +696,7 @@ Create two `x`, `y`, `z` objects and calculate their distance.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the distance is returned.
-  var ans = LumaGL.Vec3.distTo(v1, v2);
+  var ans = Vec3.distTo(v1, v2);
 {% endhighlight %}
 
 
@@ -719,7 +709,7 @@ Calculates the squared distance between two `Vec3`.
 
 	v1.distToSq(v2);
 
-    LumaGL.Vec3.distToSq(v1, v2);
+    Vec3.distToSq(v1, v2);
 
 ### Arguments:
 
@@ -730,8 +720,8 @@ Calculates the squared distance between two `Vec3`.
 Create two vectors and calculate the squared distance.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.distToSq(v2); //a real value with the squared distance is returned.
 {% endhighlight %}
@@ -743,7 +733,7 @@ Create two `x`, `y`, `z` objects and calculate their squared distance.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the squared distance is returned.
-  var ans = LumaGL.Vec3.distToSq(v1, v2);
+  var ans = Vec3.distToSq(v1, v2);
 {% endhighlight %}
 
 
@@ -756,14 +746,14 @@ Calculates the norm of `Vec3`.
 
 	v1.norm();
 
-    LumaGL.Vec3.norm(v1);
+    Vec3.norm(v1);
 
 ### Examples:
 
 Create a vector and calculate its norm.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   vi.norm(); //returns the real valued norm.
 {% endhighlight %}
@@ -774,7 +764,7 @@ Create an `x`, `y`, `z` object and calculate its norm.
   var v1 = [ 1, 2, 3 ];
 
   //A real number with the norm is returned.
-  var ans = LumaGL.Vec3.norm(v1);
+  var ans = Vec3.norm(v1);
 {% endhighlight %}
 
 
@@ -787,14 +777,14 @@ Calculates the squared norm of `Vec3`.
 
 	v1.normSq();
 
-    LumaGL.Vec3.normSq(v1);
+    Vec3.normSq(v1);
 
 ### Examples:
 
 Create a vector and calculate its squared norm.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3);
+  var v1 = new Vec3(1, 2, 3);
 
   vi.normSq(); //returns the real valued norm.
 {% endhighlight %}
@@ -805,21 +795,21 @@ Create an `x`, `y`, `z` object and calculate its squared norm.
   var v1 = [ 1, 2, 3 ];
 
   //A real number with the squared norm is returned.
-  var ans = LumaGL.Vec3.normSq(v1);
+  var ans = Vec3.normSq(v1);
 {% endhighlight %}
 
 
 Vec3 Method: dot {#Vec3:dot}
 ------------------------------------
 
-Calculates the dot product between two `Vec3`. You can find more information about the 
+Calculates the dot product between two `Vec3`. You can find more information about the
 dot product [here](http://en.wikipedia.org/wiki/Dot_product).
 
 ### Syntax:
 
 	v1.dot(v2);
 
-    LumaGL.Vec3.dot(v1, v2);
+    Vec3.dot(v1, v2);
 
 ### Arguments:
 
@@ -830,8 +820,8 @@ dot product [here](http://en.wikipedia.org/wiki/Dot_product).
 Create two vectors and calculate the dot product.
 
 {% highlight js %}
-  var v1 = new LumaGL.Vec3(1, 2, 3),
-      v2 = new LumaGL.Vec3(4, 5, 6);
+  var v1 = new Vec3(1, 2, 3),
+      v2 = new Vec3(4, 5, 6);
 
   v1.dot(v2); //a real value with the dot product is returned.
 {% endhighlight %}
@@ -843,7 +833,7 @@ Create two `x`, `y`, `z` objects and calculate the dot product.
       v2 = [ 4, 5, 6 ];
 
   //a real number with the dot product is returned.
-  var ans = LumaGL.Vec3.dot(v1, v2);
+  var ans = Vec3.dot(v1, v2);
 {% endhighlight %}
 
 
@@ -856,7 +846,7 @@ Clones a vector.
 
 	v1.clone();
 
-    LumaGL.Vec3.clone(v1);
+    Vec3.clone(v1);
 
 
 Class: Mat4 {#Mat4}
@@ -873,7 +863,7 @@ Quaternion must be a unit quaternion.
 
 ### Syntax:
 
-    LumaGL.Mat4.fromQuat(q);
+    Mat4.fromQuat(q);
 
 ### Arguments:
 
@@ -884,8 +874,8 @@ Quaternion must be a unit quaternion.
 Create a matrix from a Quaternion.
 
 {% highlight js %}
-  var q = new LumaGL.Quat(1, 2, 3, 4).$unit(),
-      m = LumaGL.Mat4.fromQuat(q); //a new Mat4 instance
+  var q = new Quat(1, 2, 3, 4).$unit(),
+      m = Mat4.fromQuat(q); //a new Mat4 instance
 {% endhighlight %}
 
 
@@ -896,12 +886,12 @@ Creates a new `Mat4` instance. If no arguments are set then an Identity matrix i
 
 ### Syntax:
 
-	var m = new LumaGL.Mat4();
-	
-    var m = new LumaGL.Mat4(n11, n12, n13, n14,
-                             n21, n22, n23, n24,
-                             n31, n32, n33, n34,
-                             n41, n42, n43, n44);
+	var m = new Mat4();
+
+    var m = new Mat4(n11, n12, n13, n14,
+                     n21, n22, n23, n24,
+                     n31, n32, n33, n34,
+                     n41, n42, n43, n44);
 
 ### Arguments:
 
@@ -912,16 +902,16 @@ Creates a new `Mat4` instance. If no arguments are set then an Identity matrix i
 Create an identity matrix.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 {% endhighlight %}
 
 Create a null matrix.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4( 0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0,
-                            0, 0, 0, 0 );
+  var m = new Mat4( 0, 0, 0, 0,
+                    0, 0, 0, 0,
+                    0, 0, 0, 0,
+                    0, 0, 0, 0 );
 {% endhighlight %}
 
 
@@ -934,17 +924,17 @@ Modifies the matrix to be an Identity matrix.
 
 	m.id();
 
-    LumaGL.Mat4.id(m);
+    Mat4.id(m);
 
 ### Examples:
 
 Create an identity matrix from some random matrix.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4( 1, 2, 3, 4,
-                            1, 2, 3, 4,
-                            1, 2, 3, 4,
-                            1, 2, 3, 4);
+  var m = new Mat4( 1, 2, 3, 4,
+                    1, 2, 3, 4,
+                    1, 2, 3, 4,
+                    1, 2, 3, 4 );
 
   m.id(); //m is now the Identity matrix.
 {% endhighlight %}
@@ -954,7 +944,7 @@ Create an identity matrix object.
 {% highlight js %}
   var m = [];
 
-  LumaGL.Mat4.id(m); //m object components are the Identity matrix ones.
+  Mat4.id(m); //m object components are the Identity matrix ones.
 {% endhighlight %}
 
 
@@ -970,7 +960,7 @@ Set all matrix coordinates.
           n31, n32, n33, n34,
           n41, n42, n43, n44);
 
-    LumaGL.Mat4.set(m, n11, n12, n13, n14,
+    Mat4.set(m, n11, n12, n13, n14,
                         n21, n22, n23, n24,
                         n31, n32, n33, n34,
                         n41, n42, n43, n44);
@@ -984,7 +974,7 @@ Set all matrix coordinates.
 Create a matrix and set some values to it.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.set(1, 2, 3, 4,
         1, 2, 3, 4,
@@ -997,7 +987,7 @@ Set an empty object matrix coordinates onto some values.
 {% highlight js %}
   var m = [];
 
-  LumaGL.Mat4.set(m, 1, 2, 3, 4,
+  Mat4.set(m, 1, 2, 3, 4,
                       1, 2, 3, 4,
                       1, 2, 3, 4,
                       1, 2, 3, 4);
@@ -1013,8 +1003,8 @@ Multiplies a `Mat4` by a `Vec3`. Returns a new `Vec3` without modifying the pass
 ### Syntax:
 
 	m.mulVec3(v);
-    
-    LumaGL.Mat4.mulVec3(m, v);
+
+    Mat4.mulVec3(m, v);
 
 ### Arguments:
 
@@ -1025,8 +1015,8 @@ Multiplies a `Mat4` by a `Vec3`. Returns a new `Vec3` without modifying the pass
 Create a matrix and a vector and multiply them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      v = new LumaGL.Vec3(1, 1, 1);
+  var m = new Mat4(),
+      v = new Vec3(1, 1, 1);
 
   m.mulVec3(v);
 {% endhighlight %}
@@ -1037,10 +1027,10 @@ Create a matrix object and a vector object and multiply them.
   var m = [],
       v = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Vec3.set(v, 1, 1, 1);
+  Mat4.id(m);
+  Vec3.set(v, 1, 1, 1);
 
-  LumaGL.Mat4.mulVec3(m, v);
+  Mat4.mulVec3(m, v);
 {% endhighlight %}
 
 
@@ -1052,8 +1042,8 @@ Multiplies a `Mat4` by a `Vec3`. Modifies the receiver.
 ### Syntax:
 
 	m.$mulVec3(v);
-    
-    LumaGL.Mat4.$mulVec3(m, v);
+
+    Mat4.$mulVec3(m, v);
 
 ### Arguments:
 
@@ -1064,8 +1054,8 @@ Multiplies a `Mat4` by a `Vec3`. Modifies the receiver.
 Create a matrix and a vector and multiply them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      v = new LumaGL.Vec3(1, 1, 1);
+  var m = new Mat4(),
+      v = new Vec3(1, 1, 1);
 
   m.$mulVec3(v);
 {% endhighlight %}
@@ -1076,10 +1066,10 @@ Create a matrix object and a vector object and multiply them.
   var m = [],
       v = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Vec3.set(v, 1, 1, 1);
+  Mat4.id(m);
+  Vec3.set(v, 1, 1, 1);
 
-  LumaGL.Mat4.$mulVec3(m, v);
+  Mat4.$mulVec3(m, v);
 {% endhighlight %}
 
 
@@ -1091,8 +1081,8 @@ Multiplies two `Mat4`. Creates a new `Mat4` with the result and does not modify 
 ### Syntax:
 
 	m.mulMat4(m1);
-    
-    LumaGL.Mat4.mulMat4(m, m1);
+
+    Mat4.mulMat4(m, m1);
 
 ### Arguments:
 
@@ -1103,8 +1093,8 @@ Multiplies two `Mat4`. Creates a new `Mat4` with the result and does not modify 
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      m1 = new LumaGL.Mat4();
+  var m = new Mat4(),
+      m1 = new Mat4();
 
   m.mulMat4(m1); //the result is a new Identity matrix
 {% endhighlight %}
@@ -1115,9 +1105,9 @@ Create a two matrices objects and multiply them.
   var m = [],
       m1 = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.id(m1);
-  LumaGL.Mat4.mulMat4(m, m1);
+  Mat4.id(m);
+  Mat4.id(m1);
+  Mat4.mulMat4(m, m1);
 {% endhighlight %}
 
 
@@ -1129,8 +1119,8 @@ Multiplies two `Mat4`, storing the result in the receiver.
 ### Syntax:
 
 	m.$mulMat4(m1);
-    
-    LumaGL.Mat4.$mulMat4(m, m1);
+
+    Mat4.$mulMat4(m, m1);
 
 ### Arguments:
 
@@ -1141,8 +1131,8 @@ Multiplies two `Mat4`, storing the result in the receiver.
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      m1 = new LumaGL.Mat4();
+  var m = new Mat4(),
+      m1 = new Mat4();
 
   m.$mulMat4(m1); //the result is stored in m.
 {% endhighlight %}
@@ -1153,9 +1143,9 @@ Create a two matrices objects and multiply them.
   var m = [],
       m1 = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.id(m1);
-  LumaGL.Mat4.$mulMat4(m, m1);
+  Mat4.id(m);
+  Mat4.id(m1);
+  Mat4.$mulMat4(m, m1);
 {% endhighlight %}
 
 
@@ -1167,8 +1157,8 @@ Multiplies two `Mat4`, storing the result in the receiver.
 ### Syntax:
 
 	m.mulMat42(m1, m2);
-    
-    LumaGL.Mat4.mulMat42(m, m1, m2);
+
+    Mat4.mulMat42(m, m1, m2);
 
 ### Arguments:
 
@@ -1180,9 +1170,9 @@ Multiplies two `Mat4`, storing the result in the receiver.
 Create two matrices and multiply them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      m1 = new LumaGL.Mat4(),
-      m2 = new LumaGL.Mat4();
+  var m = new Mat4(),
+      m1 = new Mat4(),
+      m2 = new Mat4();
 
   m.mulMat42(m1, m2); //the result is stored in m.
 {% endhighlight %}
@@ -1194,9 +1184,9 @@ Create a two matrices objects and multiply them.
       m1 = [],
       m2 = [];
 
-  LumaGL.Mat4.id(m1);
-  LumaGL.Mat4.id(m2);
-  LumaGL.Mat4.mulMat42(m, m1, m2);
+  Mat4.id(m1);
+  Mat4.id(m2);
+  Mat4.mulMat42(m, m1, m2);
 {% endhighlight %}
 
 
@@ -1208,8 +1198,8 @@ Adds two `Mat4`. Creates a new `Mat4` with the result and does not modify the or
 ### Syntax:
 
 	m.add(m1);
-    
-    LumaGL.Mat4.add(m, m1);
+
+    Mat4.add(m, m1);
 
 ### Arguments:
 
@@ -1220,8 +1210,8 @@ Adds two `Mat4`. Creates a new `Mat4` with the result and does not modify the or
 Create two matrices and add them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      m1 = new LumaGL.Mat4();
+  var m = new Mat4(),
+      m1 = new Mat4();
 
   m.add(m1); //the result is a new matrix
 {% endhighlight %}
@@ -1232,9 +1222,9 @@ Create a two matrices objects and add them.
   var m = [],
       m1 = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.id(m1);
-  LumaGL.Mat4.add(m, m1);
+  Mat4.id(m);
+  Mat4.id(m1);
+  Mat4.add(m, m1);
 {% endhighlight %}
 
 
@@ -1246,8 +1236,8 @@ Adds two `Mat4`, storing the result in the receiver.
 ### Syntax:
 
 	m.$add(m1);
-    
-    LumaGL.Mat4.$add(m, m1);
+
+    Mat4.$add(m, m1);
 
 ### Arguments:
 
@@ -1258,8 +1248,8 @@ Adds two `Mat4`, storing the result in the receiver.
 Create two matrices and add them.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      m1 = new LumaGL.Mat4();
+  var m = new Mat4(),
+      m1 = new Mat4();
 
   m.$add(m1); //the result is stored in m.
 {% endhighlight %}
@@ -1270,30 +1260,30 @@ Create a two matrices objects and add them.
   var m = [],
       m1 = [];
 
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.id(m1);
-  LumaGL.Mat4.$add(m, m1);
+  Mat4.id(m);
+  Mat4.id(m1);
+  Mat4.$add(m, m1);
 {% endhighlight %}
 
 
 Mat4 Method: transpose {#Mat4:transpose}
 -------------------------------------
 
-Transposes a `Mat4` matrix. More info about this operation can be found [here](http://en.wikipedia.org/wiki/Matrix_transpose). 
+Transposes a `Mat4` matrix. More info about this operation can be found [here](http://en.wikipedia.org/wiki/Matrix_transpose).
 Creates a new `Mat4` with the result.
 
 ### Syntax:
 
 	m.transpose();
-    
-    LumaGL.Mat4.transpose(m);
+
+    Mat4.transpose(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and transpose it.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.transpose(); //the result is a new Identity matrix
 {% endhighlight %}
@@ -1302,21 +1292,21 @@ Create a `Mat4` matrix and transpose it.
 Mat4 Method: $transpose {#Mat4:$transpose}
 -------------------------------------
 
-Transposes a `Mat4` matrix. More info about this operation can be found [here](http://en.wikipedia.org/wiki/Matrix_transpose). 
+Transposes a `Mat4` matrix. More info about this operation can be found [here](http://en.wikipedia.org/wiki/Matrix_transpose).
 Modifies the current matrix.
 
 ### Syntax:
 
 	m.$transpose();
-    
-    LumaGL.Mat4.$transpose(m);
+
+    Mat4.$transpose(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and transpose it.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.$transpose(); //the result is stored in m
 {% endhighlight %}
@@ -1330,8 +1320,8 @@ Applies a rotation of `theta` by `vec` to a `Mat4` matrix returning the result i
 ### Syntax:
 
 	m.rotateAxis(theta, vec);
-    
-    LumaGL.Mat4.rotateAxis(m, theta, vec);
+
+    Mat4.rotateAxis(m, theta, vec);
 
 ### Arguments:
 
@@ -1343,18 +1333,18 @@ Applies a rotation of `theta` by `vec` to a `Mat4` matrix returning the result i
 Create a rotation by `theta` and `v`.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      v = new LumaGL.Vec3(1, 1, 1);
-  
+  var m = new Mat4(),
+      v = new Vec3(1, 1, 1);
+
   m.rotateAxis(Math.PI, v); //the result is a new matrix
 {% endhighlight %}
 
 Another way of doing the same thing without creating a `Vec3`.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
+  var m = new Mat4(),
       v = [ 1, 1, 1 ];
-  
+
   m.rotateAxis(Math.PI, v); //the result is a new matrix
 {% endhighlight %}
 
@@ -1367,8 +1357,8 @@ Applies a rotation of angle `theta` by vector `vec` to a `Mat4` altering the cur
 ### Syntax:
 
 	m.$rotateAxis(theta, vec);
-    
-    LumaGL.Mat4.$rotateAxis(m, theta, vec);
+
+    Mat4.$rotateAxis(m, theta, vec);
 
 ### Arguments:
 
@@ -1380,18 +1370,18 @@ Applies a rotation of angle `theta` by vector `vec` to a `Mat4` altering the cur
 Create a rotation by `theta` and `v`.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      v = new LumaGL.Vec3(1, 1, 1);
-  
+  var m = new Mat4(),
+      v = new Vec3(1, 1, 1);
+
   m.$rotateAxis(Math.PI, v); //the result is in m
 {% endhighlight %}
 
 Another way of doing the same thing without creating a `Vec3`.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
+  var m = new Mat4(),
       v = [ 1, 1, 1 ];
-  
+
   m.$rotateAxis(Math.PI, v); //the result is in m
 {% endhighlight %}
 
@@ -1399,14 +1389,14 @@ Another way of doing the same thing without creating a `Vec3`.
 Mat4 Method: rotateXYZ {#Mat4:rotateXYZ}
 -------------------------------------------
 
-Applies a rotation of angle `rx` in the x-axis, `ry` in the y-axis and `rz` in the z-axis. 
+Applies a rotation of angle `rx` in the x-axis, `ry` in the y-axis and `rz` in the z-axis.
 Creates a new `Mat4` with the result.
 
 ### Syntax:
 
 	m.rotateXYZ(rx, ry, rz);
-    
-    LumaGL.Mat4.rotateXYZ(m, rx, ry, rz);
+
+    Mat4.rotateXYZ(m, rx, ry, rz);
 
 ### Arguments:
 
@@ -1419,7 +1409,7 @@ Creates a new `Mat4` with the result.
 Create a rotation on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.rotateXYZ(Math.PI, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1428,23 +1418,23 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.rotateXYZ(m, Math.PI, 0, 0); //creates a new Mat4 with the result.
+
+  Mat4.id(m);
+  Mat4.rotateXYZ(m, Math.PI, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
 Mat4 Method: $rotateXYZ {#Mat4:$rotateXYZ}
 -------------------------------------------
 
-Applies a rotation of angle `rx` in the x-axis, `ry` in the y-axis and `rz` in the z-axis. 
+Applies a rotation of angle `rx` in the x-axis, `ry` in the y-axis and `rz` in the z-axis.
 Alters the matrix.
 
 ### Syntax:
 
 	m.$rotateXYZ(rx, ry, rz);
-    
-    LumaGL.Mat4.$rotateXYZ(m, rx, ry, rz);
+
+    Mat4.$rotateXYZ(m, rx, ry, rz);
 
 ### Arguments:
 
@@ -1457,7 +1447,7 @@ Alters the matrix.
 Create a rotation on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.$rotateXYZ(Math.PI, 0, 0); //alters m
 {% endhighlight %}
@@ -1466,23 +1456,23 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.$rotateXYZ(m, Math.PI, 0, 0); //alters m
+
+  Mat4.id(m);
+  Mat4.$rotateXYZ(m, Math.PI, 0, 0); //alters m
 {% endhighlight %}
 
 
 Mat4 Method: translate {#Mat4:translate}
 -------------------------------------------
 
-Applies a translation to `Mat4` in the directions `x`, `y` and `z`. 
+Applies a translation to `Mat4` in the directions `x`, `y` and `z`.
 Stores the result in a new `Mat4` instance.
 
 ### Syntax:
 
 	m.translate(x, y, z);
-    
-    LumaGL.Mat4.translate(m, x, y, z);
+
+    Mat4.translate(m, x, y, z);
 
 ### Arguments:
 
@@ -1495,7 +1485,7 @@ Stores the result in a new `Mat4` instance.
 Create a translation on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.translate(10, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1504,23 +1494,23 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.translate(m, 10, 0, 0); //creates a new Mat4 with the result.
+
+  Mat4.id(m);
+  Mat4.translate(m, 10, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
 Mat4 Method: $translate {#Mat4:$translate}
 -------------------------------------------
 
-Applies a translation to `Mat4` in the directions `x`, `y` and `z`. 
+Applies a translation to `Mat4` in the directions `x`, `y` and `z`.
 Alters the original matrix.
 
 ### Syntax:
 
 	m.$translate(x, y, z);
-    
-    LumaGL.Mat4.$translate(m, x, y, z);
+
+    Mat4.$translate(m, x, y, z);
 
 ### Arguments:
 
@@ -1533,7 +1523,7 @@ Alters the original matrix.
 Create a translation on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.$translate(10, 0, 0); //the result is in m
 {% endhighlight %}
@@ -1542,23 +1532,23 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.$translate(m, 10, 0, 0); //the result is in m
+
+  Mat4.id(m);
+  Mat4.$translate(m, 10, 0, 0); //the result is in m
 {% endhighlight %}
 
 
 Mat4 Method: scale {#Mat4:scale}
 -------------------------------------------
 
-Applies scaling to `Mat4` in the directions `x`, `y` and `z`. 
+Applies scaling to `Mat4` in the directions `x`, `y` and `z`.
 Stores the result in a new `Mat4` instance.
 
 ### Syntax:
 
 	m.scale(x, y, z);
-    
-    LumaGL.Mat4.scale(m, x, y, z);
+
+    Mat4.scale(m, x, y, z);
 
 ### Arguments:
 
@@ -1571,7 +1561,7 @@ Stores the result in a new `Mat4` instance.
 Create a scaling on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.scale(10, 0, 0); //the result is a new matrix
 {% endhighlight %}
@@ -1580,23 +1570,23 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.scale(m, 10, 0, 0); //creates a new Mat4 with the result.
+
+  Mat4.id(m);
+  Mat4.scale(m, 10, 0, 0); //creates a new Mat4 with the result.
 {% endhighlight %}
 
 
 Mat4 Method: $scale {#Mat4:$scale}
 -------------------------------------------
 
-Applies scaling to `Mat4` in the directions `x`, `y` and `z`. 
+Applies scaling to `Mat4` in the directions `x`, `y` and `z`.
 Alters the original matrix.
 
 ### Syntax:
 
 	m.$scale(x, y, z);
-    
-    LumaGL.Mat4.$scale(m, x, y, z);
+
+    Mat4.$scale(m, x, y, z);
 
 ### Arguments:
 
@@ -1609,7 +1599,7 @@ Alters the original matrix.
 Create a scaling on the x-axis.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.$scale(10, 0, 0); //the result is in m
 {% endhighlight %}
@@ -1618,30 +1608,30 @@ Another way of doing it with generics:
 
 {% highlight js %}
   var m = [];
-  
-  LumaGL.Mat4.id(m);
-  LumaGL.Mat4.$scale(m, 10, 0, 0); //the result is in m
+
+  Mat4.id(m);
+  Mat4.$scale(m, 10, 0, 0); //the result is in m
 {% endhighlight %}
 
 
 Mat4 Method: invert {#Mat4:invert}
 -------------------------------------
 
-Inverts a `Mat4` matrix. The matrix has to be invertible. 
+Inverts a `Mat4` matrix. The matrix has to be invertible.
 Creates a new `Mat4` with the result.
 
 ### Syntax:
 
 	m.invert();
-    
-    LumaGL.Mat4.invert(m);
+
+    Mat4.invert(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and invert it.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.invert(); //the result is a new matrix
 {% endhighlight %}
@@ -1656,15 +1646,15 @@ Modifies the current matrix.
 ### Syntax:
 
 	m.$invert();
-    
-    LumaGL.Mat4.$invert(m);
+
+    Mat4.$invert(m);
 
 ### Examples:
 
 Create a `Mat4` matrix and invert it.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4();
+  var m = new Mat4();
 
   m.$invert(); //the result is stored in m
 {% endhighlight %}
@@ -1673,15 +1663,15 @@ Create a `Mat4` matrix and invert it.
 Mat4 Method: lookAt {#Mat4:lookAt}
 -----------------------------------
 
-Performs a `lookAt` operation on a matrix. Modifies the current matrix. 
-Ths method is useful when setting a camera matrix class. 
+Performs a `lookAt` operation on a matrix. Modifies the current matrix.
+Ths method is useful when setting a camera matrix class.
 For more information about the `lookAt` operation look [here](http://www.euclideanspace.com/maths/algebra/vectors/lookat/index.htm).
 
 ### Syntax:
 
 	m.lookAt(eye, center, up);
-    
-    LumaGL.Mat4.lookAt(m, eye, center, up);
+
+    Mat4.lookAt(m, eye, center, up);
 
 ### Arguments:
 
@@ -1694,7 +1684,7 @@ For more information about the `lookAt` operation look [here](http://www.euclide
 Create a lookAt matrix. The eye is looking at the origin.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
+  var m = new Mat4(),
       eye = [ 1, 0, 1 ],
       center = [ 0, 0, 0 ],
       up = [ 0, 1, 0 ];
@@ -1710,22 +1700,22 @@ Another way of doing it with generics:
       center = [ 0, 0, 0 ],
       up = [ 0, 1, 0 ];
 
-  LumaGL.Mat4.lookAt(m, eye, center, up); //the original object is modified.
+  Mat4.lookAt(m, eye, center, up); //the original object is modified.
 {% endhighlight %}
 
 
 Mat4 Method: frustum {#Mat4:frustum}
 -------------------------------------
 
-Performs a `frustum` operation on a matrix. Modifies the current matrix. 
-This method is useful when setting a camera projection matrix class. 
+Performs a `frustum` operation on a matrix. Modifies the current matrix.
+This method is useful when setting a camera projection matrix class.
 For more information about the `frustum` geometry look [here](http://en.wikipedia.org/wiki/Frustum).
 
 ### Syntax:
 
 	  m.frustum(left, right, bottom, top, near, far);
-    
-    LumaGL.Mat4.frustum(m, left, right, bottom, top, near, far);
+
+    Mat4.frustum(m, left, right, bottom, top, near, far);
 
 ### Arguments:
 
@@ -1740,14 +1730,14 @@ For more information about the `frustum` geometry look [here](http://en.wikipedi
 Mat4 Method: ortho {#Mat4:ortho}
 -------------------------------------
 
-Creates an orthographic projection. Modifies the current matrix. 
+Creates an orthographic projection. Modifies the current matrix.
 For more information about the `orthographic projection` geometry look [here](http://en.wikipedia.org/wiki/Orthographic_projection).
 
 ### Syntax:
 
 	  m.ortho(left, right, bottom, top, near, far);
-    
-    LumaGL.Mat4.ortho(m, left, right, bottom, top, near, far);
+
+    Mat4.ortho(m, left, right, bottom, top, near, far);
 
 ### Arguments:
 
@@ -1762,14 +1752,14 @@ For more information about the `orthographic projection` geometry look [here](ht
 Mat4 Method: perspective {#Mat4:perspective}
 ---------------------------------------------
 
-Creates a perspective matrix. This operation is based on creating a frustum matrix. Modifies the current matrix. 
-This method is useful when setting a camera projection matrix class. 
+Creates a perspective matrix. This operation is based on creating a frustum matrix. Modifies the current matrix.
+This method is useful when setting a camera projection matrix class.
 
 ### Syntax:
 
 	m.perspective(fov, aspect, near, far);
-    
-    LumaGL.Mat4.perspective(m, fov, aspect, near, far);
+
+    Mat4.perspective(m, fov, aspect, near, far);
 
 ### Arguments:
 
@@ -1798,7 +1788,7 @@ Clones a matrix.
 
 	m.clone();
 
-    LumaGL.Mat4.clone(m);
+    Mat4.clone(m);
 
 
 Class: Quat {#Quat}
@@ -1817,7 +1807,7 @@ Create a new `Quat` instance from the `x`, `y`, `z` coordinates of a [Vec3](#Vec
 
 ### Syntax:
 
-    LumaGL.Quat.fromVec3(v[, r]);
+    Quat.fromVec3(v[, r]);
 
 ### Arguments:
 
@@ -1829,8 +1819,8 @@ Create a new `Quat` instance from the `x`, `y`, `z` coordinates of a [Vec3](#Vec
 Create a Quaternion from a Vec3.
 
 {% highlight js %}
-  var v = new LumaGL.Vec3(1, 2, 3),
-      q = LumaGL.Quat.fromVec3(v, 7); //Quat(1, 2, 3, 7)
+  var v = new Vec3(1, 2, 3),
+      q = Quat.fromVec3(v, 7); //Quat(1, 2, 3, 7)
 {% endhighlight %}
 
 
@@ -1842,7 +1832,7 @@ must be an orthogonal matrix.
 
 ### Syntax:
 
-    LumaGL.Quat.fromMat4(m);
+    Quat.fromMat4(m);
 
 ### Arguments:
 
@@ -1853,8 +1843,8 @@ must be an orthogonal matrix.
 Create a Quaternion from a `Mat4`.
 
 {% highlight js %}
-  var m = new LumaGL.Mat4(),
-      q = LumaGL.Quat.fromMat4(m); //Quat
+  var m = new Mat4(),
+      q = Quat.fromMat4(m); //Quat
 {% endhighlight %}
 
 
@@ -1866,7 +1856,7 @@ radians.
 
 ### Syntax:
 
-    LumaGL.Quat.fromXRotation(angle);
+    Quat.fromXRotation(angle);
 
 ### Arguments:
 
@@ -1877,7 +1867,7 @@ radians.
 Create a Quaternion from an x-axis rotation.
 
 {% highlight js %}
-  var q = LumaGL.Quat.fromXRotation(Math.PI); //Quat(1, 0, 0, 0)
+  var q = Quat.fromXRotation(Math.PI); //Quat(1, 0, 0, 0)
 {% endhighlight %}
 
 
@@ -1889,7 +1879,7 @@ radians.
 
 ### Syntax:
 
-    LumaGL.Quat.fromYRotation(angle);
+    Quat.fromYRotation(angle);
 
 ### Arguments:
 
@@ -1900,7 +1890,7 @@ radians.
 Create a Quaternion from an y-axis rotation.
 
 {% highlight js %}
-  var q = LumaGL.Quat.fromYRotation(Math.PI); //Quat(0, 1, 0, 0)
+  var q = Quat.fromYRotation(Math.PI); //Quat(0, 1, 0, 0)
 {% endhighlight %}
 
 
@@ -1912,7 +1902,7 @@ radians.
 
 ### Syntax:
 
-    LumaGL.Quat.fromZRotation(angle);
+    Quat.fromZRotation(angle);
 
 ### Arguments:
 
@@ -1923,7 +1913,7 @@ radians.
 Create a Quaternion from an z-axis rotation.
 
 {% highlight js %}
-  var q = LumaGL.Quat.fromZRotation(Math.PI); //Quat(0, 0, 1, 0)
+  var q = Quat.fromZRotation(Math.PI); //Quat(0, 0, 1, 0)
 {% endhighlight %}
 
 
@@ -1934,7 +1924,7 @@ Create a new `Quat` instance from a rotation around an axis.
 
 ### Syntax:
 
-    LumaGL.Quat.fromAxisRotation(v, angle);
+    Quat.fromAxisRotation(v, angle);
 
 ### Arguments:
 
@@ -1946,8 +1936,8 @@ Create a new `Quat` instance from a rotation around an axis.
 Create a Quaternion from an z-axis rotation.
 
 {% highlight js %}
-  var v = new LumaGL.Vec3(0, 0, 1),
-      q = LumaGL.Quat.fromAxisRotation(v, Math.PI); //Quat(0, 0, 1, 0)
+  var v = new Vec3(0, 0, 1),
+      q = Quat.fromAxisRotation(v, Math.PI); //Quat(0, 0, 1, 0)
 {% endhighlight %}
 
 
@@ -1958,7 +1948,7 @@ Creates a new `Quat` instance.
 
 ### Syntax:
 
-	var q = new LumaGL.Quat(x, y, z, w);
+	var q = new Quat(x, y, z, w);
 
 ### Arguments:
 
@@ -1973,13 +1963,13 @@ Creates a new `Quat` instance.
 Create a (0, 0, 0, 0) quaternion.
 
 {% highlight js %}
-  var q = new LumaGL.Quat();
+  var q = new Quat();
 {% endhighlight %}
 
 Create a (1, 2, 3, 4) quaternion.
 
 {% highlight js %}
-  var q = new LumaGL.Quat(1, 2, 3, 4);
+  var q = new Quat(1, 2, 3, 4);
 {% endhighlight %}
 
 
@@ -1992,7 +1982,7 @@ Set `x`, `y`, `z`, `w` coordinates of one `Quat` into another `Quat`.
 
 	  q1.setQuat(q2);
 
-    LumaGL.Quat.setQuat(q1, q2);
+    Quat.setQuat(q1, q2);
 
 ### Arguments:
 
@@ -2003,8 +1993,8 @@ Set `x`, `y`, `z`, `w` coordinates of one `Quat` into another `Quat`.
 Create two quaternions and assign one quaternions components to the other one.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.setQuat(q2); //v1 now contains [ 4, 5, 6, 7 ]
 {% endhighlight %}
@@ -2015,7 +2005,7 @@ Set an object's `x`, `y`, `z`, `w` components to another object.
   var q1 = [],
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.setQuat(q1, q2); //q1 now has [ 4, 5, 6, 7 ]
+  Quat.setQuat(q1, q2); //q1 now has [ 4, 5, 6, 7 ]
 {% endhighlight %}
 
 
@@ -2028,7 +2018,7 @@ Set `x`, `y`, `z`, `w` coordinates.
 
 	  q1.set(x, y, z, w);
 
-    LumaGL.Quat.set(q1, x, y, z, w);
+    Quat.set(q1, x, y, z, w);
 
 ### Arguments:
 
@@ -2042,8 +2032,8 @@ Set `x`, `y`, `z`, `w` coordinates.
 Create two quaternions and assign one quaternions components to the other one.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.set(q2.x, q2.y, q2.z, q2.w); //q1 now contains [ 4, 5, 6, 7 ]
 {% endhighlight %}
@@ -2054,7 +2044,7 @@ Set an object's `x`, `y`, `z`, `w` components to another object.
   var q1 = [],
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.set(q1, q2.x, q2.y, q2.z, q2.w); //q1 now has [ 4, 5, 6, 7 ]
+  Quat.set(q1, q2.x, q2.y, q2.z, q2.w); //q1 now has [ 4, 5, 6, 7 ]
 {% endhighlight %}
 
 
@@ -2067,7 +2057,7 @@ Adds the `x`, `y`, `z` components of two `Quat` objects. Creates a new `Quat` in
 
 	  q1.add(q2);
 
-    LumaGL.Quat.add(q1, q2);
+    Quat.add(q1, q2);
 
 ### Arguments:
 
@@ -2078,8 +2068,8 @@ Adds the `x`, `y`, `z` components of two `Quat` objects. Creates a new `Quat` in
 Create two quaternions and add them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.add(q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
 {% endhighlight %}
@@ -2090,7 +2080,7 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.add(q1, q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
+  Quat.add(q1, q2); //q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.
 {% endhighlight %}
 
 
@@ -2103,7 +2093,7 @@ Adds the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the origi
 
 	  q1.$add(q2);
 
-    LumaGL.Quat.$add(q1, q2);
+    Quat.$add(q1, q2);
 
 ### Arguments:
 
@@ -2114,8 +2104,8 @@ Adds the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the origi
 Create two quaternions and add them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.$add(q2); //q1 is now Quat(5, 7, 9, 11).
 {% endhighlight %}
@@ -2126,7 +2116,7 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.$add(q1, q2); //q1 is now [ 5, 7, 9, 11 ].
+  Quat.$add(q1, q2); //q1 is now [ 5, 7, 9, 11 ].
 {% endhighlight %}
 
 
@@ -2139,7 +2129,7 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Creates a ne
 
 	  q1.sub(q2);
 
-    LumaGL.Quat.sub(q1, q2);
+    Quat.sub(q1, q2);
 
 ### Arguments:
 
@@ -2150,8 +2140,8 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Creates a ne
 Create two quaternions and substract them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.sub(q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
 {% endhighlight %}
@@ -2167,7 +2157,7 @@ Create two `x`, `y`, `z`, `w` objects and substract them.
       },
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.sub(q1, q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
+  Quat.sub(q1, q2); //q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.
 {% endhighlight %}
 
 
@@ -2180,7 +2170,7 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the
 
 	  q1.$sub(q2);
 
-    LumaGL.Quat.$sub(q1, q2);
+    Quat.$sub(q1, q2);
 
 ### Arguments:
 
@@ -2191,8 +2181,8 @@ Substracts the `x`, `y`, `z`, `w` components of two `Quat` objects. Modifies the
 Create two quaternions and substract them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4),
-      q2 = new LumaGL.Quat(4, 5, 6, 7);
+  var q1 = new Quat(1, 2, 3, 4),
+      q2 = new Quat(4, 5, 6, 7);
 
   q1.$sub(q2); //q1 is now Quat(-3, -3, -3, -3).
 {% endhighlight %}
@@ -2203,21 +2193,21 @@ Create two `x`, `y`, `z`, `w` objects and add them.
   var q1 = [ 1, 2, 3, 4 ],
       q2 = [ 4, 5, 6, 7 ];
 
-  LumaGL.Quat.$sub(q1, q2); //q1 is now [ -3, -3, -3, -3 ].
+  Quat.$sub(q1, q2); //q1 is now [ -3, -3, -3, -3 ].
 {% endhighlight %}
 
 
 Quat Method: mulQuat {#Quat:mulQuat}
 -------------------------------------
 
-Multiplies two quaternions returning a new `Quat` instance with the result. 
+Multiplies two quaternions returning a new `Quat` instance with the result.
 The original object is not modified.
 
 ### Syntax:
 
 	  q1.mulQuat(q2);
 
-    LumaGL.Quat.mulQuat(q1, q2);
+    Quat.mulQuat(q1, q2);
 
 ### Arguments:
 
@@ -2228,8 +2218,8 @@ The original object is not modified.
 Create two Quaternions and multiply them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 0, 0, 0),
-      q2 = new LumaGL.Quat(1, 0, 0, 0);
+  var q1 = new Quat(1, 0, 0, 0),
+      q2 = new Quat(1, 0, 0, 0);
 
   q1.mulQuat(q2); //q1 is unchanged but a new Quat(-1, 0, 0, 0) is created.
 {% endhighlight %}
@@ -2238,13 +2228,13 @@ Create two Quaternions and multiply them.
 Quat Method: $mulQuat {#Quat:$mulQuat}
 ---------------------------------------
 
-Multiplies two quaternions returning and modifies the receiver with the result. 
+Multiplies two quaternions returning and modifies the receiver with the result.
 
 ### Syntax:
 
 	  q1.$mulQuat(q2);
 
-    LumaGL.Quat.$mulQuat(q1, q2);
+    Quat.$mulQuat(q1, q2);
 
 ### Arguments:
 
@@ -2255,8 +2245,8 @@ Multiplies two quaternions returning and modifies the receiver with the result.
 Create two Quaternions and multiply them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 0, 0, 0),
-      q2 = new LumaGL.Quat(1, 0, 0, 0);
+  var q1 = new Quat(1, 0, 0, 0),
+      q2 = new Quat(1, 0, 0, 0);
 
   q1.$mulQuat(q2); //q1 is now Quat(-1, 0, 0, 0).
 {% endhighlight %}
@@ -2265,14 +2255,14 @@ Create two Quaternions and multiply them.
 Quat Method: divQuat {#Quat:divQuat}
 -------------------------------------
 
-Divides two quaternions returning a new `Quat` instance with the result. 
+Divides two quaternions returning a new `Quat` instance with the result.
 The original object is not modified.
 
 ### Syntax:
 
 	  q1.divQuat(q2);
 
-    LumaGL.Quat.divQuat(q1, q2);
+    Quat.divQuat(q1, q2);
 
 ### Arguments:
 
@@ -2283,8 +2273,8 @@ The original object is not modified.
 Create two Quaternions and divide them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 0, 0, 0),
-      q2 = new LumaGL.Quat(1, 0, 0, 0);
+  var q1 = new Quat(1, 0, 0, 0),
+      q2 = new Quat(1, 0, 0, 0);
 
   q1.divQuat(q2); //q1 is unchanged but a new Quat(1, 0, 0, 0) is created.
 {% endhighlight %}
@@ -2293,13 +2283,13 @@ Create two Quaternions and divide them.
 Quat Method: $divQuat {#Quat:$divQuat}
 ---------------------------------------
 
-Divides two quaternions returning and modifies the receiver with the result. 
+Divides two quaternions returning and modifies the receiver with the result.
 
 ### Syntax:
 
 	  q1.$divQuat(q2);
 
-    LumaGL.Quat.$divQuat(q1, q2);
+    Quat.$divQuat(q1, q2);
 
 ### Arguments:
 
@@ -2310,8 +2300,8 @@ Divides two quaternions returning and modifies the receiver with the result.
 Create two Quaternions and divide them.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 0, 0, 0),
-      q2 = new LumaGL.Quat(1, 0, 0, 0);
+  var q1 = new Quat(1, 0, 0, 0),
+      q2 = new Quat(1, 0, 0, 0);
 
   q1.$divQuat(q2); //q1 is now Quat(1, 0, 0, 0).
 {% endhighlight %}
@@ -2326,7 +2316,7 @@ Scales the Quat quaternion by a real number. Creates a new Quat with the scaled 
 
 	  q1.scale(s);
 
-    LumaGL.Quat.scale(q1, s);
+    Quat.scale(q1, s);
 
 ### Arguments:
 
@@ -2337,7 +2327,7 @@ Scales the Quat quaternion by a real number. Creates a new Quat with the scaled 
 Create a quaternion and scale it by 2.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.scale(2); //q1 is unchanged but a new Quat(2, 4, 6, 8) is created.
 {% endhighlight %}
@@ -2347,7 +2337,7 @@ Create an `x`, `y`, `z`, `w` object and scale it by 2.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.scale(q1, 2); //q1 is still the same but a new Quat(2, 4, 6, 8) was created.
+  Quat.scale(q1, 2); //q1 is still the same but a new Quat(2, 4, 6, 8) was created.
 {% endhighlight %}
 
 
@@ -2360,7 +2350,7 @@ Scales the Quat quaternion by a real number. Changes the original object.
 
 	  q1.$scale(s);
 
-    LumaGL.Quat.$scale(q1, s);
+    Quat.$scale(q1, s);
 
 ### Arguments:
 
@@ -2371,7 +2361,7 @@ Scales the Quat quaternion by a real number. Changes the original object.
 Create a quaternion and scale it by 2.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.$scale(2); //q1 is now Quat(2, 4, 6, 8).
 {% endhighlight %}
@@ -2381,7 +2371,7 @@ Create an `x`, `y`, `z`, `w` object and scale it by 2.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.$scale(q1, 2); //q1 is now [ 2, 4, 6, 8 ].
+  Quat.$scale(q1, 2); //q1 is now [ 2, 4, 6, 8 ].
 {% endhighlight %}
 
 
@@ -2394,14 +2384,14 @@ Conjugates a `Quat`. Returns a new instance.
 
 	  q1.conjugate();
 
-    LumaGL.Quat.conjugate(q1);
+    Quat.conjugate(q1);
 
 ### Examples:
 
 Create a quaternion and conjugate it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.conjugate(); //q1 is unchanged but a new Quat(-1, -2, -3, 4) is created.
 {% endhighlight %}
@@ -2411,7 +2401,7 @@ Create an `x`, `y`, `z`, `w` object and conjugate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.conjugate(q1); //q1 is still the same but a new Quat(-1, -2, -3, 4).
+  Quat.conjugate(q1); //q1 is still the same but a new Quat(-1, -2, -3, 4).
 {% endhighlight %}
 
 
@@ -2424,14 +2414,14 @@ conjugates a `Quat`. Changes the original object.
 
 	  q1.$conjugate();
 
-    LumaGL.Quat.$conjugate(q1);
+    Quat.$conjugate(q1);
 
 ### Examples:
 
 Create a quaternion and conjugate it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.$conjugate(); //q1 is now Quat(-1, -2, -3, 4).
 {% endhighlight %}
@@ -2441,7 +2431,7 @@ Create an `x`, `y`, `z`, `w` object and conjugate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.conjugate(q1); //q1 is now [ -1, -2, -3, 4 ].
+  Quat.conjugate(q1); //q1 is now [ -1, -2, -3, 4 ].
 {% endhighlight %}
 
 
@@ -2454,14 +2444,14 @@ Negates a `Quat`. Returns a new instance.
 
 	  q1.neg();
 
-    LumaGL.Quat.neg(q1);
+    Quat.neg(q1);
 
 ### Examples:
 
 Create a quaternion and negate it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.neg(); //q1 is unchanged but a new Quat(-1, -2, -3, -4) is created.
 {% endhighlight %}
@@ -2471,7 +2461,7 @@ Create an `x`, `y`, `z`, `w` object and negate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.neg(q1); //q1 is still the same but a new Quat(-1, -2, -3, -4).
+  Quat.neg(q1); //q1 is still the same but a new Quat(-1, -2, -3, -4).
 {% endhighlight %}
 
 
@@ -2484,14 +2474,14 @@ Negates a `Quat`. Changes the original object.
 
 	  q1.$neg();
 
-    LumaGL.Quat.$neg(q1);
+    Quat.$neg(q1);
 
 ### Examples:
 
 Create a quaternion and negate it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.$neg(); //q1 is now Quat(-1, -2, -3, -4).
 {% endhighlight %}
@@ -2501,7 +2491,7 @@ Create an `x`, `y`, `z`, `w` object and negate it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.neg(q1); //q1 is now [ -1, -2, -3, -4 ].
+  Quat.neg(q1); //q1 is now [ -1, -2, -3, -4 ].
 {% endhighlight %}
 
 
@@ -2515,14 +2505,14 @@ object is not modified.
 
 	  q1.unit();
 
-    LumaGL.Quat.unit(q1);
+    Quat.unit(q1);
 
 ### Examples:
 
 Create a quaternion and make a unit quaternion from it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.unit(); //q1 is unchanged but a new unit quaternion Quat is created.
 {% endhighlight %}
@@ -2532,7 +2522,7 @@ Create an `x`, `y`, `z`, `w` object and make a unit quaternion from it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.unit(q1); //q1 is still the same but a new Quat that is a unit quaternion is created.
+  Quat.unit(q1); //q1 is still the same but a new Quat that is a unit quaternion is created.
 {% endhighlight %}
 
 
@@ -2545,14 +2535,14 @@ Creates a unit quaternion from the `Quat` coordinates. Changes the original obje
 
 	  q1.$unit();
 
-    LumaGL.Quat.$unit(q1);
+    Quat.$unit(q1);
 
 ### Examples:
 
 Create a quaternion and make a unit quaternion from it.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   q1.$unit(); //q1 is now a unit quaternion.
 {% endhighlight %}
@@ -2562,7 +2552,7 @@ Create an `x`, `y`, `z`, `w` object and make a unit quaternion from it.
 {% highlight js %}
   var q1 = [ 1, 2, 3, 4 ];
 
-  LumaGL.Quat.$unit(q1); //q1 is now a unit quaternion vector.
+  Quat.$unit(q1); //q1 is now a unit quaternion vector.
 {% endhighlight %}
 
 
@@ -2575,14 +2565,14 @@ Calculates the norm of `Quat`.
 
 	  q1.norm();
 
-    LumaGL.Quat.norm(q1);
+    Quat.norm(q1);
 
 ### Examples:
 
 Create a quaternion and calculate its norm.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   vi.norm(); //returns the real valued norm.
 {% endhighlight %}
@@ -2593,7 +2583,7 @@ Create an `x`, `y`, `z`, `w` object and calculate its norm.
   var q1 = [ 1, 2, 3, 4 ];
 
   //A real number with the norm is returned.
-  var ans = LumaGL.Quat.norm(q1);
+  var ans = Quat.norm(q1);
 {% endhighlight %}
 
 
@@ -2606,14 +2596,14 @@ Calculates the squared norm of `Quat`.
 
 	  q1.normSq();
 
-    LumaGL.Quat.normSq(q1);
+    Quat.normSq(q1);
 
 ### Examples:
 
 Create a quaternion and calculate its squared norm.
 
 {% highlight js %}
-  var q1 = new LumaGL.Quat(1, 2, 3, 4);
+  var q1 = new Quat(1, 2, 3, 4);
 
   vi.normSq(); //returns the real valued norm.
 {% endhighlight %}
@@ -2624,7 +2614,7 @@ Create an `x`, `y`, `z`, `w` object and calculate its squared norm.
   var q1 = [ 1, 2, 3, 4 ];
 
   //A real number with the squared norm is returned.
-  var ans = LumaGL.Quat.normSq(q1);
+  var ans = Quat.normSq(q1);
 {% endhighlight %}
 
 
@@ -2637,6 +2627,4 @@ Clones a quaternion.
 
 	  q1.clone();
 
-    LumaGL.Quat.clone(q1);
-
-
+    Quat.clone(q1);
