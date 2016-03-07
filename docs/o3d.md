@@ -1,21 +1,14 @@
---- 
-layout: docs 
-title: O3D 
+---
+layout: docs
+title: Models & Primitives
 categories: [Documentation]
 ---
 
-Module: O3D {#O3D}
-===========================
-
-O3D provides Model management and 3D primitives. Here you'll find methods for creating 
-3D models and primitives that are compatible with the [Scene](scene.html) class.
-
-
-O3D Class: O3D.Model {#O3D:Model}
+Class: Model {Model}
 ----------------------------------
 
-The class Model enables you to create 3D models which are compatible with the 
-[Scene](scene.html) class. All primitives (Sphere, etc) inherit from Model too.
+The Model class enables you to create 3D models which are compatible with the
+[Scene](scene.html) class. All primitives (Sphere, etc) inherit from Model.
 
 
 ### Properties:
@@ -25,18 +18,18 @@ A Model instance has a number of public properties that can be accessed/modified
 * position - (*object*) A `Vec3` indicating the position of the Model.
 * rotation - (*object*) A `Vec3` indicating the rotation of the Model.
 * scale - (*object*) A `Vec3` indicating the scaling of the Model.
-* matrix - (*object*) A `Mat4` containing information about position, rotation and scale. 
+* matrix - (*object*) A `Mat4` containing information about position, rotation and scale.
 This matrix gets updated each time the method `update` is called on a Model instance.
 
 
-O3D.Model Method: constructor {#O3D:Model:constructor}
+Model Method: constructor {Model:constructor}
 -------------------------------------------------------
 
 The main constructor function for the Model class. Use this to create a new Model.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Model(options);
+	var model = new Model(options);
 
 ### Arguments:
 
@@ -53,8 +46,8 @@ The main constructor function for the Model class. Use this to create a new Mode
 * texCoords - (*mixed*, optional) Can be an array of floats indicating the texture coordinates for the texture to be used or an object that has texture ids as keys and an array of floats as values.
 * colors - (*array*, optional) An array of colors in RGBA. If just one color is specified that color will be used for all faces.
 * indices - (*array*, optional) An array of numbers describing the vertex indices for each face.
-* attributes - (*object*, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model. If you want to know more 
-about attribute descriptors you can find a description of them in [program.setBuffer](program.html#Program:setBuffer). 
+* attributes - (*object*, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model. If you want to know more
+about attribute descriptors you can find a description of them in [program.setBuffer](program.html#Program:setBuffer).
 * uniforms - (*object*, optional) An object with uniform names and values to be set before rendering the model.
 * program - (*string*, optional) A string with the id of the program to be used when rendering this model.
 * drawType - (*string*, optional) A string describing the drawType. Some options are `TRIANGLES`, `TRIANGLE_STRIP`, `POINTS`, `LINES`. Default's `TRIANGLES`.
@@ -68,33 +61,27 @@ array of floats as values (to handle multiple textures).
 
 ### Notes:
 
-**New in version 1.3:** 
-
  * Attribute arrays are implemented as getters and
-setters, and may not return the same information they've been set with. 
-Internally, attribute arrays are transformed into [typed arrays](https://developer.mozilla.org/en/JavaScript_typed_arrays), 
-a much faster data structure to use with this type of data.
- * Attribute arrays only accept plain arrays and not nested arrays
-   anymore. Forcing the data structure to be this way gives us a big
-performance gain.
+   setters, and may not return the same information they've been set with.
+   Internally, attribute arrays are transformed into
+   [typed arrays](https://developer.mozilla.org/en/JavaScript_typed_arrays).
+ * Attribute arrays only accept plain arrays.
  * If you set a `color` attribute as a single color, then the array will
    be cloned to match the number of components for the model and will be
-served as an attribute. The getter for this property will return the
-cloned typed array.
- * `toFloat32Array` and `toUint16Array` methods are not used anymore since the typed array can
-   now be fetched when accessing the model property directly.
- * `shininess`, `reflection` and `refraction` properties are now set in the `uniforms` object. Below is a description 
+   served as an attribute. The getter for this property will return the
+   cloned typed array.
+ * `shininess`, `reflection` and `refraction` properties are set in the `uniforms` object. Below is a description
 of the attributes.
- * shininess - (*number*, optional) A number between [0.1, 200] describing how shiny an object is.
- * reflection - (*number*, optional) A number between [0, 1] describing the reflectivity of an object.
- * refraction - (*number*, optional) A number between [0, 1] describing the refraction index of an object.
+   * shininess - (*number*, optional) A number between [0.1, 200] describing how shiny an object is.
+   * reflection - (*number*, optional) A number between [0, 1] describing the reflectivity of an object.
+   * refraction - (*number*, optional) A number between [0, 1] describing the refraction index of an object.
 
 ### Examples:
 
 Create a pyramid model (used in lesson 4 of learning WebGL examples).
 
 {% highlight js %}
-var pyramid = new LumaGL.O3D.Model({
+var pyramid = new Model({
     vertices: [ 0,  1,  0,
                -1, -1,  1,
                 1, -1,  1,
@@ -107,7 +94,7 @@ var pyramid = new LumaGL.O3D.Model({
                 0,  1,  0,
                -1, -1, -1,
                -1, -1,  1],
-    
+
     colors: [1, 0, 0, 1,
              0, 1, 0, 1,
              0, 0, 1, 1,
@@ -144,7 +131,7 @@ var fromVertices =  [ 0,  1,  0,
 
 var toVertices = fromVertices.map(function(value) { return value * 2; });
 
-var pyramid = new LumaGL.O3D.Model({
+var pyramid = new Model({
     vertices: fromVertices,
 
     uniforms: {
@@ -163,7 +150,7 @@ var pyramid = new LumaGL.O3D.Model({
 {% endhighlight %}
 
 
-O3D.Model Method: update {#O3D:Model:update}
+Model Method: update {Model:update}
 ---------------------------------------------
 
 Update the model matrix. Useful to update changes to the `position`, `rotation` or `scale` properties.
@@ -177,73 +164,69 @@ Update the model matrix. Useful to update changes to the `position`, `rotation` 
 Change the position of the pyramid model and update its matrix.
 
 {% highlight js %}
-  pyramid.position = {
-    x: 10,
-    y: 10,
-    z: 20
-  };
-  
+  pyramid.position = new Vec3(10, 10, 20);
+
   pyramid.update();
 {% endhighlight %}
 
 
-O3D Class: O3D.Cube {#O3D:Cube}
-----------------------------------
+Class: Cube {Cube}
+------------------
 
-Creates a Cube model. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a Cube model. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.Cube Method: constructor {#O3D:Cube:constructor}
--------------------------------------------------------
+Cube Method: constructor {Cube:constructor}
+-------------------------------------------
 
-The main constructor function for the Cube class. Use this to create a new Cube. Accepts the same properties and 
-options as O3D.Model constructor but has preset for `vertices`, `normals` and `indices`.
+The main constructor function for the Cube class. Use this to create a new Cube. Accepts the same properties and
+options as Model constructor but has preset for `vertices`, `normals` and `indices`.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Cube(options);
+	var model = new Cube(options);
 
 ### Arguments:
 
-1. options - (*object*) The same options as in O3D.Model constructor but has preset for `vertices`, `normals` and `indices`.
+1. options - (*object*) The same options as in Model constructor but has preset for `vertices`, `normals` and `indices`.
 
 ### Examples:
 
 Create a white cube.
 
 {% highlight js %}
-var whiteCube = new LumaGL.O3D.Cube({
+var whiteCube = new Cube({
       colors: [1, 1, 1, 1]
     });
 {% endhighlight %}
 
 
-O3D Class: O3D.Sphere {#O3D:Sphere}
+Class: Sphere {Sphere}
 ------------------------------------
 
-Creates a Sphere model. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a Sphere model. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.Sphere Method: constructor {#O3D:Sphere:constructor}
+Sphere Method: constructor {Sphere:constructor}
 ---------------------------------------------------------
 
-The main constructor function for the Sphere class. Use this to create a new Sphere. 
+The main constructor function for the Sphere class. Use this to create a new Sphere.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Sphere(options);
+	var model = new Sphere(options);
 
 ### Arguments:
 
-1. options - (*object*) An object containing as poperties:
+1. options - (*object*) An object containing as properties:
 
 ### Options:
 
@@ -256,35 +239,35 @@ The main constructor function for the Sphere class. Use this to create a new Sph
 Create a white Sphere of radius 2.
 
 {% highlight js %}
-var whiteSphere = new LumaGL.O3D.Sphere({
+var whiteSphere = new Sphere({
   radius: 2,
   colors: [1, 1, 1, 1]
 });
 {% endhighlight %}
 
 
-O3D Class: O3D.IcoSphere {#O3D:IcoSphere}
+Class: IcoSphere {IcoSphere}
 -----------------------------------------
 
-Creates a Sphere model by subdividing an Icosahedron. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a Sphere model by subdividing an Icosahedron. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.IcoSphere Method: constructor {#O3D:IcoSphere:constructor}
+IcoSphere Method: constructor {IcoSphere:constructor}
 ---------------------------------------------------------------
 
-The main constructor function for the IcoSphere class. Use this to create a new IcoSphere. 
+The main constructor function for the IcoSphere class. Use this to create a new IcoSphere.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.IcoSphere(options);
+	var model = new IcoSphere(options);
 
 ### Arguments:
 
-1. options - (*object*) An object containing as poperties:
+1. options - (*object*) An object containing as properties:
 
 ### Options:
 
@@ -295,35 +278,35 @@ The main constructor function for the IcoSphere class. Use this to create a new 
 Create a white IcoSphere of radius 1.
 
 {% highlight js %}
-var whiteSphere = new LumaGL.O3D.IcoSphere({
+var whiteSphere = new IcoSphere({
   iterations: 1,
   colors: [1, 1, 1, 1]
 });
 {% endhighlight %}
 
 
-O3D Class: O3D.Plane {#O3D:Plane}
+Class: Plane {Plane}
 ----------------------------------
 
-Creates a plane. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a plane. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.Plane Method: constructor {#O3D:Plane:constructor}
+Plane Method: constructor {Plane:constructor}
 ---------------------------------------------------------
 
-The main constructor function for the Plane class. Use this to create a new Plane. 
+The main constructor function for the Plane class. Use this to create a new Plane.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Plane(options);
+	var model = new Plane(options);
 
 ### Arguments:
 
-1. options - (*object*) An object containing as poperties:
+1. options - (*object*) An object containing as properties:
 
 ### Options:
 
@@ -341,7 +324,7 @@ The main constructor function for the Plane class. Use this to create a new Plan
 Create a white XZ plane.
 
 {% highlight js %}
-var whitePlane = new LumaGL.O3D.Plane({
+var whitePlane = new Plane({
   type: 'x,z',
   xlen: 10,
   zlen: 20,
@@ -354,28 +337,28 @@ var whitePlane = new LumaGL.O3D.Plane({
 
 
 
-O3D Class: O3D.Cylinder {#O3D:Cylinder}
+Class: Cylinder {Cylinder}
 ----------------------------------------
 
-Creates a Cylinder model. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a Cylinder model. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.Cylinder Method: constructor {#O3D:Cylinder:constructor}
+Cylinder Method: constructor {Cylinder:constructor}
 -------------------------------------------------------------
 
-The main constructor function for the Cylinder class. Use this to create a new Cylinder. 
+The main constructor function for the Cylinder class. Use this to create a new Cylinder.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Cylinder(options);
+	var model = new Cylinder(options);
 
 ### Arguments:
 
-1. options - (*object*) An object containing as poperties:
+1. options - (*object*) An object containing as properties:
 
 ### Options:
 
@@ -391,7 +374,7 @@ The main constructor function for the Cylinder class. Use this to create a new C
 Create a white Cylinder of radius 2 and height 3.
 
 {% highlight js %}
-var whiteCylinder = new LumaGL.O3D.Cylinder({
+var whiteCylinder = new Cylinder({
   radius: 2,
   height: 3,
   colors: [1, 1, 1, 1]
@@ -399,28 +382,28 @@ var whiteCylinder = new LumaGL.O3D.Cylinder({
 {% endhighlight %}
 
 
-O3D Class: O3D.Cone {#O3D:Cone}
+Class: Cone {Cone}
 ---------------------------------
 
-Creates a Cone model. Inherits methods from [O3D.Model](#O3D:Model).
+Creates a Cone model. Inherits methods from [Model](Model).
 
 ### Extends
 
-O3D.Model
+Model
 
 
-O3D.Cone Method: constructor {#O3D:Cone:constructor}
+Cone Method: constructor {Cone:constructor}
 -----------------------------------------------------
 
-The main constructor function for the Cone class. Use this to create a new Cone. 
+The main constructor function for the Cone class. Use this to create a new Cone.
 
 ### Syntax:
 
-	var model = new LumaGL.O3D.Cone(options);
+	var model = new Cone(options);
 
 ### Arguments:
 
-1. options - (*object*) An object containing as poperties:
+1. options - (*object*) An object containing as properties:
 
 ### Options:
 
@@ -434,12 +417,10 @@ The main constructor function for the Cone class. Use this to create a new Cone.
 Create a white Cone of base radius 2 and height 3.
 
 {% highlight js %}
-var whiteCone = new LumaGL.O3D.Cone({
+var whiteCone = new Cone({
   radius: 2,
   height: 3,
   cap: true,
   colors: [1, 1, 1, 1]
 });
 {% endhighlight %}
-
-
