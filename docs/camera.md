@@ -29,7 +29,7 @@ PerspectiveCamera Method: constructor {#PerspectiveCamera:constructor}
 
 ### Syntax:
 
-	var camera = new LumaGL.PerspectiveCamera([options]);
+	var camera = new PerspectiveCamera([options]);
 
 ### Options:
 
@@ -47,7 +47,7 @@ Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
 
 {% highlight js %}
   var canvas = document.getElementById('canvas');
-  var camera = new LumaGL.PerspectiveCamera({
+  var camera = new PerspectiveCamera({
         fov: 45,
         aspect: canvas.width / canvas.height,
         near: 0.1,
@@ -69,7 +69,7 @@ Updates the PerspectiveCamera *view* matrix with the information provided on *po
 ### Examples:
 
 {% highlight js %}
-  var camera = new LumaGL.PerspectiveCamera({
+  var camera = new PerspectiveCamera({
     fov: 45,
     aspect: canvas.width / canvas.height,
     near: 0.1,
@@ -103,7 +103,7 @@ OrthoCamera Method: constructor {#OrthoCamera:constructor}
 
 ### Syntax:
 
-	var camera = new LumaGL.OrthoCamera([options]);
+	var camera = new OrthoCamera([options]);
 
 ### Options:
 
@@ -121,7 +121,7 @@ Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
 
 {% highlight js %}
   var canvas = document.getElementById('canvas');
-  var camera = new LumaGL.OrthoCamera({
+  var camera = new OrthoCamera({
         fov: 45,
         aspect: canvas.width / canvas.height,
         near: 0.1,
@@ -143,7 +143,7 @@ Updates the OrthoCamera *view* matrix with the information provided on *position
 ### Examples:
 
 {% highlight js %}
-  var camera = new LumaGL.OrthoCamera({
+  var camera = new OrthoCamera({
     fov: 45,
     aspect: canvas.width / canvas.height,
     near: 0.1,
