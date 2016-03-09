@@ -16,22 +16,21 @@
 
       #controls {
         position: fixed;
-        bottom: 8px;
+        bottom: 40px;
         right: 8px;
         background: rgba(255,255,255,0.9);
         padding: 8px;
-        border: 1px solid #aaa;
-        border-radius: 8px;
         font-family: sans;
-        text-align: right;
+        text-align: center;
       }
 
-      .valign {
-        vertical-align: middle;
-      }
     </style>
 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
+    <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script type="text/javascript" src="../../dist/LumaGL.js"></script>
+    <script type="text/javascript" src="../examples.js"></script>
     <script type="text/javascript" src="index.js"></script>
 
     <script id="cube-vs" type="x-shader/x-vertex">
@@ -112,7 +111,7 @@
 
   <body onload="webGLStart();">
     <canvas id="render-canvas"></canvas>
-    <div id="controls" class="valign">
+    <div id="controls">
       reflection <input type="range" min="0.0" max="1.0" value="1.0" step="0.01" class="valign" id="reflection"><br>
       refraction <input type="range" min="0.0" max="1.0" value="1.0" step="0.01" class="valign" id="refraction"><br>
     </div>

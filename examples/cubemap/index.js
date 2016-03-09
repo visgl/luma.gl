@@ -20,7 +20,6 @@ window.webGLStart = function() {
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
 
   var textures = genTextures(512);
 
