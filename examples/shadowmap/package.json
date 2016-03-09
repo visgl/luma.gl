@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "An es6 shadowmap example for luma.gl.",
   "license": "MIT",
-  "author": "Ib Green <ib@uber.com>",
+  "author": "Rye Terrell <ryeterrell@ryeterrell.net>",
   "dependencies": {
     "babel-polyfill": "6.5.0",
     "gl-format-compiler-error": "^1.0.2",
@@ -28,7 +28,7 @@
     "budo": "^8.0.3"
   },
   "scripts": {
-    "build": "browserify src/index.js > bundle.js",
+    "build": "browserify src/index.js > dist/bundle.js",
     "start": "budo src/index.js:bundle.js -t babelify -t glslify --live --port 3001 --watch-glob '**/*.{html,css,js}'"
   }
 }
