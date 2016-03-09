@@ -67,6 +67,11 @@ export class Texture2D extends Texture {
     this.height = opts.height;
     this.border = opts.border || 0;
     this.data = opts.data;
+    if (this.flipY) {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    } else {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    }
     this.bind();
     if (this.width || this.height) {
       gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height,
