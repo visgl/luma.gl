@@ -1,0 +1,39 @@
+body {
+  margin: 0px;
+  padding: 0px;
+}
+
+.editor {
+  position: fixed;
+  right: 0px;
+  bottom: 32px;
+  width: 100%;
+  height: 50%;
+  opacity: 0.9;
+  box-sizing: border-box;
+  display: none;
+}
+
+.buttons {
+  position: fixed;
+  bottom: 0px;
+  right: 0px;
+  height: 32px;
+  width: 100%;
+  background: rgba(32,32,32,0.8);
+  color: white;
+  text-align: right;
+}
+
+.button {
+  line-height: 32px;
+  vertical-align: middle;
+  font-family: sans;
+  margin-right: 32px;
+  cursor: pointer;
+}
+
+a {
+  text-decoration: none !important;
+  color: white !important;
+}
