@@ -31,11 +31,11 @@ Creates a set of events for the given domElement that can be handled through a c
 
 ### Syntax:
 
-    LumaGL.Events.create(app, options);
+    Events.create(app, options);
 
 ### Arguments:
 
-1. gl  - (*object*) A WebGL context. Events are handled for the context's canvas element.
+1. gl  - (*WebGLRenderingContext*) A WebGLRenderingContext object. Events are handled for the context's canvas element.
 5. options - (*object*) An object containing the following options:
 
 ### Options:
@@ -88,7 +88,7 @@ Setting rotation and zoom to a moon object with drag and drop and mousewheel eve
 
     //create and assign variables to objects...
 
-    LumaGL.Events.create(gl, {
+    Events.create(gl, {
       onDragStart: function(e) {
         pos = {
           x: e.x,

@@ -31,7 +31,7 @@ Creates a new [Scene](scene.html) instance.
 
 ### Arguments:
 
-1. gl - (*object*) A WebGL context object.
+1. gl - (*WebGLRenderingContext*) A WebGLRenderingContext object.
 2. program - (*object*) A Program instance. For more information check the [Program](program.html) class.
 3. camera - (*object*) A Camera instance. For more information check the [Camera](camera.html) class.
 4. options - (*object*) An object with the following properties:
