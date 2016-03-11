@@ -144,7 +144,7 @@ function createShader(gl, shaderSource, shaderType) {
     /* eslint-disable no-try-catch */
     var formattedLog;
     try {
-      formatCompilerError(info, shaderSource, shaderType);
+      formattedLog = formatCompilerError(info, shaderSource, shaderType);
     } catch (error) {
       /* eslint-disable no-console */
       /* global console */
