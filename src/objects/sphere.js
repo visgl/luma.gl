@@ -1,14 +1,13 @@
-/* eslint-disable max-statements, complexity */
-import Model from './model';
+import Geometry from '../geometry';
+import Model from '../model';
 
-// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
-// copyright 2011 Google Inc. new BSD License
-// (http://www.opensource.org/licenses/bsd-license.php).
-export default class Sphere extends Model {
-  constructor(opt = {}) {
-    const nlat = opt.nlat || 10;
-    const nlong = opt.nlong || 10;
-    let radius = opt.radius || 1;
+export class SphereGeometry extends Geometry {
+
+  // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+  // copyright 2011 Google Inc. new BSD License
+  // (http://www.opensource.org/licenses/bsd-license.php).
+  /* eslint-disable max-statements, complexity */
+  constructor({nlat = 10, nlong = 10, radius = 1, ...opts} = {}) {
     const startLat = 0;
     const endLat = Math.PI;
     const latRange = endLat - startLat;
@@ -16,10 +15,6 @@ export default class Sphere extends Model {
     const endLong = 2 * Math.PI;
     const longRange = endLong - startLong;
     const numVertices = (nlat + 1) * (nlong + 1);
-    const vertices = new Float32Array(numVertices * 3);
-    const normals = new Float32Array(numVertices * 3);
-    const texCoords = new Float32Array(numVertices * 2);
-    const indices = new Uint16Array(nlat * nlong * 6);
 
     if (typeof radius === 'number') {
       var value = radius;
@@ -28,11 +23,19 @@ export default class Sphere extends Model {
       };
     }
 
+    const vertices = new Float32Array(numVertices * 3);
+    const normals = new Float32Array(numVertices * 3);
+    const texCoords = new Float32Array(numVertices * 2);
+    const indices = new Uint16Array(nlat * nlong * 6);
+
     // Create vertices, normals and texCoords
     for (let y = 0; y <= nlat; y++) {
       for (let x = 0; x <= nlong; x++) {
-        const u = x / nlong;
-        const v = y / nlat;
+
+        const index = x + y * (nlong + 1);
+        const i2 = index * 2;
+        const i3 = index * 3;
+
         const theta = longRange * u;
         const phi = latRange * v;
         const sinTheta = Math.sin(theta);
@@ -42,10 +45,11 @@ export default class Sphere extends Model {
         const ux = cosTheta * sinPhi;
         const uy = cosPhi;
         const uz = sinTheta * sinPhi;
+
         const r = radius(ux, uy, uz, u, v);
-        const index = x + y * (nlong + 1);
-        const i3 = index * 3;
-        const i2 = index * 2;
+
+        const u = x / nlong;
+        const v = y / nlat;
 
         vertices[i3 + 0] = r * ux;
         vertices[i3 + 1] = r * uy;
@@ -81,7 +85,13 @@ export default class Sphere extends Model {
       indices: indices,
       normals: normals,
       texCoords: texCoords,
-      ...opt
+      ...opts
     });
+  }
+}
+
+export default class Sphere extends Model {
+  constructor(opts) {
+    super({geometry: new SphereGeometry(opts), ...opts});
   }
 }

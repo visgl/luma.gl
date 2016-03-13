@@ -1,11 +1,18 @@
-import TruncatedCone from './truncated-cone';
+import {TruncatedConeGeometry} from './truncated-cone';
+import Model from '../model';
 
-export default class Cylinder extends TruncatedCone {
-  constructor(config = {}) {
+export class CylinderGeometry extends TruncatedConeGeometry {
+  constructor({radius = 1, ...opts} = {}) {
     super({
-      ...config,
-      bottomRadius: config.radius,
-      topRadius: config.radius
+      ...opts,
+      bottomRadius: radius,
+      topRadius: radius
     });
+  }
+}
+
+export default class Cylinder extends Model {
+  constructor(opts) {
+    super({geometry: new CylinderGeometry(opts), ...opts});
   }
 }

@@ -3,9 +3,9 @@
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
 
   var canvas = document.getElementById('lesson01-canvas');
   canvas.width = canvas.clientWidth;
@@ -19,7 +19,7 @@ window.webGLStart = function() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  var program = Program.fromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+  var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
 
   program.use();
 

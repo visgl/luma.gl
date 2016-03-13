@@ -1,9 +1,10 @@
+/* global LumaGL, document */
 var webGLStart = function() {
   var $id = function(d) { return document.getElementById(d); };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
+  var makeProgramFromShaderURIs = LumaGL.addons.makeProgramFromShaderURIs;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Fx = LumaGL.Fx;
@@ -11,7 +12,7 @@ var webGLStart = function() {
   var IO = LumaGL.IO;
   var Model = LumaGL.Model;
 
-  //Get Model
+  // Get Model
   new IO.XHR({
     url: 'Teapot.json',
     onSuccess: function(text) {
@@ -31,16 +32,17 @@ var webGLStart = function() {
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
   var camera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
-    position: new Vec3(0, 0, -50),
+    aspect: canvas.width / canvas.height,
+    position: new Vec3(0, 0, -50)
   });
 
   function animateObject(teapotJSON) {
     Promise.all([
-      Program.fromShaderURIs(gl, 'frag-lighting.vs.glsl', 'frag-lighting.fs.glsl', {
-          path: '../../../shaders/',
-          noCache: true
-      }),
+      makeProgramFromShaderURIs(gl,
+        'frag-lighting.vs.glsl',
+        'frag-lighting.fs.glsl',
+        {path: '../../../shaders/', noCache: true}
+      ),
       loadTextures(gl, {
         src: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
         parameters: [{
@@ -67,9 +69,9 @@ var webGLStart = function() {
       program.use();
       var scene = new Scene(gl, program, camera);
       var shininess = $id('shininess'),
-          //specular
+          // specular
           specular = $id('specular'),
-          //get light config from forms
+          // get light config from forms
           lighting = $id('lighting'),
           ambient = {
             r: $id('ambientR'),
@@ -90,19 +92,19 @@ var webGLStart = function() {
             db: $id('diffuseB')
           },
           texture = $id('texture'),
-          //object rotation
+          // object rotation
           theta = 0;
 
-      //Basic gl setup
-      //Add objects to the scene
+      // Basic gl setup
+      // Add objects to the scene
       scene.add(teapot);
 
-      //Animate
+      // Animate
       draw();
 
-      //Draw the scene
+      // Draw the scene
       function draw() {
-        //Setup lighting
+        // Setup lighting
         var lights = scene.config.lights;
         lights.enable = lighting.checked;
         lights.ambient = {
@@ -127,30 +129,30 @@ var webGLStart = function() {
             z: +point.z.value
           }
         };
-        //Set/Unset specular highlights
+        // Set/Unset specular highlights
         if (!specular.checked) {
           delete lights.points.specular;
         }
-        //Set shininess
+        // Set shininess
         teapot.uniforms.shininess = +shininess.value;
-        //Set texture
-        if (texture.value == 'none') {
+        // Set texture
+        if (texture.value === 'none') {
           delete teapot.textures;
-        } else if (texture.value == 'galvanized') {
+        } else if (texture.value === 'galvanized') {
           teapot.textures = tGalvanized;
         } else {
           teapot.textures = tEarth;
         }
 
-        //Update position
+        // Update position
         theta += 0.01;
         teapot.rotation.set(theta / 100, theta, 0);
         teapot.update();
 
-        //render objects
+        // render objects
         scene.render();
 
-        //request new frame
+        // request new frame
         Fx.requestAnimationFrame(draw);
       }
     });

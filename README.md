@@ -62,7 +62,7 @@ const canvas = document.getElementById('lesson01-canvas');
 const gl = createGLContext(canvas, {initialize: true});
 const camera = new PerspectiveCamera({aspect: canvas.width/canvas.height});
 
-const program = Program.fromDefaultShaders(gl);
+const program = makeProgramFromDefaultShaders(gl);
 program.use();
 program.setBuffer(new Buffer(gl, {
   attribute: 'aVertexPosition',

@@ -1,14 +1,14 @@
+/* global LumaGL, window, document */
 
-window.webGLStart = function() {
+window.webGLStart = function webGLStart() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var TextureCube = LumaGL.TextureCube;
   var Cube = LumaGL.Cube;
   var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
   var Fx = LumaGL.Fx;
 
   var canvas = document.getElementById('render-canvas');
@@ -20,6 +20,10 @@ window.webGLStart = function() {
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
+<<<<<<< HEAD
+=======
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+>>>>>>> 1b8e93bd28d828c72537fca5e7603a0efeee7a8d
 
   var textures = genTextures(512);
 
@@ -66,8 +70,8 @@ window.webGLStart = function() {
     })
   };
 
-  var programCube = Program.fromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
-  var programPrism = Program.fromHTMLTemplates(gl, 'prism-vs', 'prism-fs');
+  var programCube = makeProgramFromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
+  var programPrism = makeProgramFromHTMLTemplates(gl, 'prism-vs', 'prism-fs');
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

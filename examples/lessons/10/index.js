@@ -1,10 +1,11 @@
-
+/* global LumaGL, document, console */
 var webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var IO = LumaGL.IO;
   var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
+  var makeProgramFromDefaultShaders =
+    LumaGL.addons.makeProgramFromDefaultShaders;
   var Model = LumaGL.Model;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
@@ -21,7 +22,7 @@ var webGLStart = function() {
       speed = 0,
       joggingAngle = 0;
 
-  //Model
+  // Model
   var world;
 
   var canvas = document.getElementById('lesson10-canvas');
@@ -30,23 +31,23 @@ var webGLStart = function() {
 
   var gl = createGLContext(canvas);
 
-  //load world
+  // load world
   new IO.XHR({
     url: 'world.txt',
     onSuccess: function(data) {
-      var lines = data.split("\n");
+      var lines = data.split('\n');
       var vertexCount = 0;
       var vertexPositions = [];
       var vertexTextureCoords = [];
       for (var i in lines) {
-        var vals = lines[i].replace(/^\s+/, "").split(/\s+/);
-        if (vals.length == 5 && vals[0] != "//") {
-          // It is a line describing a vertex; get X, Y and Z first
+        var vals = lines[i].replace(/^\s+/, '').split(/\s+/);
+        if (vals.length === 5 && vals[0] !== '// ') {
+          //  It is a line describing a vertex; get X, Y and Z first
           vertexPositions.push(parseFloat(vals[0]));
           vertexPositions.push(parseFloat(vals[1]));
           vertexPositions.push(parseFloat(vals[2]));
 
-          // And then the texture coords
+          //  And then the texture coords
           vertexTextureCoords.push(parseFloat(vals[3]));
           vertexTextureCoords.push(parseFloat(vals[4]));
 
@@ -74,7 +75,7 @@ var webGLStart = function() {
 
     },
     onError: function() {
-      console.log("There was something wrong with loading the world.");
+      console.log('There was something wrong with loading the world.');
     }
   }).send();
 
@@ -84,34 +85,34 @@ var webGLStart = function() {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    var program = Program.fromDefaultShaders(gl);
+    var program = makeProgramFromDefaultShaders(gl);
     program.use();
 
     var camera = new PerspectiveCamera({
-      aspect: canvas.width/canvas.height,
+      aspect: canvas.width / canvas.height
     });
 
     var scene = new Scene(gl, program, camera);
 
     Events.create(canvas, {
       onKeyDown: function(e) {
-        switch(e.key) {
-          case 'left': case 'a':
-            yawRate = 0.001;
-            break;
-          case 'right': case 'd':
-            yawRate = -0.001;
-            break;
-          case 'up': case 'w':
-            speed = 0.001;
-            break;
-          case 'down': case 's':
-            speed = -0.001;
-            break;
+        switch (e.key) {
+        case 'left': case 'a':
+          yawRate = 0.001;
+          break;
+        case 'right': case 'd':
+          yawRate = -0.001;
+          break;
+        case 'up': case 'w':
+          speed = 0.001;
+          break;
+        case 'down': case 's':
+          speed = -0.001;
+          break;
         }
-        if (e.code == 33) {
+        if (e.code === 33) {
           pichRate = 0.001;
-        } else if (e.code == 34) {
+        } else if (e.code === 34) {
           pichRate = -0.001;
         }
       },
@@ -120,22 +121,23 @@ var webGLStart = function() {
         pitchRate = 0;
         yawRate = 0;
       }
-    })
+    });
 
     scene.add(world);
 
     var lastTime = 0;
     function animate() {
       var timeNow = Date.now();
-      if (lastTime != 0) {
+      if (lastTime !== 0) {
         var elapsed = timeNow - lastTime;
 
-        if (speed != 0) {
+        if (speed !== 0) {
           xPos -= Math.sin(yaw) * speed * elapsed;
           zPos -= Math.cos(yaw) * speed * elapsed;
 
-          joggingAngle += elapsed * 0.01;  // 0.6 "fiddle factor" - makes it feel more realistic :-)
-          yPos = Math.sin(joggingAngle) / 100 + 0.4
+          // 0.6 "fiddle factor" - makes it feel more realistic :-)
+          joggingAngle += elapsed * 0.01;
+          yPos = Math.sin(joggingAngle) / 100 + 0.4;
         }
 
         yaw += yawRate * elapsed;
@@ -146,12 +148,12 @@ var webGLStart = function() {
     }
 
     function drawScene() {
-      //Update Camera Position
+      // Update Camera Position
       camera.view.id()
                       .$rotateXYZ(-pitch, -yaw, 0)
                       .$translate(-xPos, -yPos, -zPos);
 
-      //Render all elements in the Scene
+      // Render all elements in the Scene
       scene.render();
     }
 

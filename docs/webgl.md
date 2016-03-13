@@ -7,6 +7,30 @@ categories: [Documentation]
 Script: Core {#Core}
 ===========================
 
+At its core, luma.gl provides JavaScript classes that manage
+core WebGL object types, with the intention of making these WebGL objects
+easier to work with in JavaScript.
+
+* *Boilerplate reduction* - These classes provide an API that closely matches
+  the operations supported by the underlying WebGL object, while reducing
+  the boilerplate often required by low-level WebGL functions (such as long,
+  repeated argument lists, or the multiple WebGL calls that are often
+  necessary to select and set up things before doing an actual operation).
+
+* *Parameter checking* - Parameter checks help catch a number of common
+  WebGL coding mistakes, which is important since bad parameters in WebGL
+  often lead to silent failure to render, or to inscrutable error messages
+  in the console, both of which can be hard to debug. As an example,
+  setting uniforms to illegal values now throws an exception containing a
+  helpful error message including the name of the problematic uniform.
+
+* *Error handling* - Methods carefully check WebGL return values and
+  throw exceptions when things go wrong, taking care to extract helpful
+  information into the error message.
+  As an example, a failed shader compilation will throw an Error with a
+  message indicating the problem inline in the shader's GLSL source.
+
+
 Provides functions to create and initialize a WebGL context, and
 to check for presence of WebGL and extensions.
 
@@ -126,7 +150,7 @@ be the buffer name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle.
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 app.setBuffer('triangle', {
@@ -153,7 +177,7 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 ### Examples:
 
 Set buffer values for the vertices of a triangle and a square.
-The context of this example can be seen [here](http://philogb.github.com/philogl/LumaGL/examples/lessons/1/).
+The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 app.setBuffers({
@@ -200,7 +224,7 @@ with the same options as in `setTexture`.
 
 ### Examples:
 
-Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+Using a frambuffer to render a scene into a texture. Taken from [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 //create framebuffer
@@ -327,7 +351,7 @@ set the width and height of the texture.
 
 ### Examples:
 
-Setting a texture for a box. Adapted from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Setting a texture for a box. Adapted from [lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -359,7 +383,7 @@ For each `key, value` of the object passed in it executes `setTexture(key, value
 
 ### Examples:
 
-Set multiple type of textures from the same image. Taken from [lesson 6](http://philogb.github.com/philogl/LumaGL/examples/lessons/6/).
+Set multiple type of textures from the same image. Taken from [lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 //load textures from image

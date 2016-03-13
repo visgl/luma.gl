@@ -18,8 +18,6 @@ files can be found [here](https://github.com/philogb/philogl/tree/master/shaders
 default shaders take a look at the [Shaders](shaders.html) class. The [O3D](o3d.html) options describe how to override or set callbacks when rendering
 objects with a default scene.
 
-
-
 Scene Method: constructor {#Scene:constructor}
 ------------------------------------------------
 
@@ -60,7 +58,7 @@ Creates a new [Scene](scene.html) instance.
 
 ### Examples:
 
-Create a new Scene instance. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
+Create a new Scene instance. Taken from [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 var innerScene = new LumaGL.Scene(gl, program, innerCamera, {
@@ -113,9 +111,6 @@ var scene = new LumaGL.Scene(gl, program, camera, {
 });
 {% endhighlight %}
 
-
-
-
 Scene Method: add {#Scene:add}
 --------------------------------
 
@@ -131,7 +126,7 @@ A variable argument list of [O3D](o3d.html) instances.
 
 ### Examples:
 
-Add a moon and a box models to the scene. Taken from [lesson 12](http://philogb.github.com/philogl/LumaGL/examples/lessons/12/).
+Add a moon and a box models to the scene. Taken from [lesson 12](http://uber-common.github.com/luma.gl/examples/lessons/12/).
 
 {% highlight js %}
 //Add objects to the scene
@@ -229,7 +224,6 @@ if (model) {
   model.uniforms.colorUfm = [1, 1, 1, 1];
 }
 {% endhighlight %}
-
 
 Scene Method: pickCustom {#Scene:pickCustom}
 --------------------------------

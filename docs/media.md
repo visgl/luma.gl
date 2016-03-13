@@ -1,5 +1,5 @@
---- 
-layout: docs 
+---
+layout: docs
 title: Media
 categories: [Documentation]
 ---

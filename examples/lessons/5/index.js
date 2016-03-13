@@ -3,7 +3,7 @@ var webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Fx = LumaGL.Fx;
   var Mat4 = LumaGL.Mat4;
@@ -31,7 +31,7 @@ var webGLStart = function() {
 
       var nehe = textures[0];
 
-      var program = Program.fromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+      var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
 
       program.use();
 

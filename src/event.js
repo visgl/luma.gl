@@ -6,6 +6,19 @@
 /* global window, document */
 import {noop} from './utils';
 
+const KEYS = {
+  'enter': 13,
+  'up': 38,
+  'down': 40,
+  'left': 37,
+  'right': 39,
+  'esc': 27,
+  'space': 32,
+  'backspace': 8,
+  'tab': 9,
+  'delete': 46
+};
+
 // returns an O3D object or false otherwise.
 function toO3D(n) {
   return n !== true ? n : false;
@@ -420,18 +433,7 @@ export const Events = {
 
 };
 
-Events.Keys = {
-  'enter': 13,
-  'up': 38,
-  'down': 40,
-  'left': 37,
-  'right': 39,
-  'esc': 27,
-  'space': 32,
-  'backspace': 8,
-  'tab': 9,
-  'delete': 46
-};
+Events.Keys = KEYS;
 
 function keyOf(code) {
   var keyMap = Events.Keys;

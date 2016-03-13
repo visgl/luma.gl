@@ -1,35 +1,35 @@
-/* eslint-disable max-statements, complexity */
-import Model from './model';
+import Geometry from '../geometry';
+import Model from '../model';
 
-export default class TruncatedCone extends Model {
+export class TruncatedConeGeometry extends Geometry {
 
-  constructor(config = {}) {
-    const bottomRadius = config.bottomRadius || 0;
-    const topRadius = config.topRadius || 0;
-    const height = config.height || 1;
-    const nradial = config.nradial || 10;
-    const nvertical = config.nvertical || 10;
-    const topCap = Boolean(config.topCap);
-    const bottomCap = Boolean(config.bottomCap);
+  // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+  // copyright 2011 Google Inc. new BSD License
+  // (http://www.opensource.org/licenses/bsd-license.php).
+  /* eslint-disable max-statements, complexity */
+  constructor({bottomRadius = 0, topRadius = 0, height = 1, nradial = 10,
+    nvertical = 10, topCap = false, bottomCap = false, ...opts} = {}) {
+
     const extra = (topCap ? 2 : 0) + (bottomCap ? 2 : 0);
     const numVertices = (nradial + 1) * (nvertical + 1 + extra);
-    const vertices = new Float32Array(numVertices * 3);
-    const normals = new Float32Array(numVertices * 3);
-    const texCoords = new Float32Array(numVertices * 2);
-    const indices = new Uint16Array(nradial * (nvertical + extra) * 6);
-    const vertsAroundEdge = nradial + 1;
-    const math = Math;
-    const slant = math.atan2(bottomRadius - topRadius, height);
-    const msin = math.sin;
-    const mcos = math.cos;
-    const mpi = math.PI;
+
+    const slant = Math.atan2(bottomRadius - topRadius, height);
+    const msin = Math.sin;
+    const mcos = Math.cos;
+    const mpi = Math.PI;
     const cosSlant = mcos(slant);
     const sinSlant = msin(slant);
     const start = topCap ? -2 : 0;
     const end = nvertical + (bottomCap ? 2 : 0);
+    const vertsAroundEdge = nradial + 1;
+
+    const vertices = new Float32Array(numVertices * 3);
+    const normals = new Float32Array(numVertices * 3);
+    const texCoords = new Float32Array(numVertices * 2);
+    const indices = new Uint16Array(nradial * (nvertical + extra) * 6);
+
     let i3 = 0;
     let i2 = 0;
-
     for (let i = start; i <= end; i++) {
       let v = i / nvertical;
       let y = height * v;
@@ -74,7 +74,7 @@ export default class TruncatedCone extends Model {
 
     for (let i = 0; i < nvertical + extra; i++) {
       for (let j = 0; j < nradial; j++) {
-        var index = (i * nradial + j) * 6;
+        const index = (i * nradial + j) * 6;
         indices[index + 0] = vertsAroundEdge * (i + 0) + 0 + j;
         indices[index + 1] = vertsAroundEdge * (i + 0) + 1 + j;
         indices[index + 2] = vertsAroundEdge * (i + 1) + 1 + j;
@@ -89,8 +89,14 @@ export default class TruncatedCone extends Model {
       normals: normals,
       texCoords: texCoords,
       indices: indices,
-      ...config
+      ...opts
     });
   }
 
+}
+
+export default class TruncatedCone extends Model {
+  constructor(opts) {
+    super({geometry: new TruncatedConeGeometry(opts), ...opts});
+  }
 }

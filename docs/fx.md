@@ -1,5 +1,5 @@
---- 
-layout: docs 
+---
+layout: docs
 title: Fx
 categories: [Documentation]
 ---
@@ -7,7 +7,7 @@ categories: [Documentation]
 Class: Fx {#Fx}
 ===========================
 
-Fx is the module that provides effects and tweening functions, as well as wrappers for eficient timer based animations 
+Fx is the module that provides effects and tweening functions, as well as wrappers for eficient timer based animations
 like `animationTime` and `requestAnimationFrame` wrappers.
 
 
