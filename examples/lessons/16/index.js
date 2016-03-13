@@ -1,10 +1,9 @@
+/* global LumaGL, document */
 var webGLStart = function() {
-
-  var $id = function(d) { return document.getElementById(d); };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
+  var makeProgramFromShaderURIs = LumaGL.addons.makeProgramFromShaderURIs;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Fx = LumaGL.Fx;
@@ -44,17 +43,19 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
 
   var outerCamera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
-    position: new Vec3(0, 0, -3),
+    aspect: canvas.width / canvas.height,
+    position: new Vec3(0, 0, -3)
   });
 
   function createApp(macbookJSON) {
 
     Promise.all([
 
-      Program.fromShaderURIs(gl, 'render-tex.vs.glsl', 'render-tex.fs.glsl', {
-        path: '../../../shaders/',
-      }),
+      makeProgramFromShaderURIs(gl,
+        'render-tex.vs.glsl',
+        'render-tex.fs.glsl',
+        {path: '../../../shaders/'}
+      ),
 
       loadTextures(gl, {
         src: ['moon.gif', 'crate.gif'],
@@ -62,7 +63,7 @@ var webGLStart = function() {
           magFilter: gl.LINEAR,
           minFilter: gl.LINEAR_MIPMAP_NEAREST,
           generateMipmap: true
-        },{
+        }, {
           magFilter: gl.LINEAR,
           minFilter: gl.LINEAR_MIPMAP_NEAREST,
           generateMipmap: true
@@ -187,13 +188,13 @@ var webGLStart = function() {
         rho = 4,
         theta = 0,
         laptopTheta = Math.PI,
-        //models
+        // models
         macbook = models.macbook,
         macbookscreen = models.macbookscreen,
         box = models.box,
         moon = models.moon;
 
-      //create framebuffer
+      // create framebuffer
       var fb = new Framebuffer(gl, {
         width: screenWidth,
         height: screenHeight,
@@ -203,7 +204,7 @@ var webGLStart = function() {
 
       models.macbookscreen.textures = fb.texture;
 
-      //Add objects to different scenes
+      // Add objects to different scenes
       outerScene.add(macbook, macbookscreen);
       innerScene.add(moon, box);
 
@@ -243,10 +244,10 @@ var webGLStart = function() {
 
         var phi = Math.sin(laptopTheta) * 1.77 + Math.PI;
 
-        macbook.rotation.set(-Math.PI/2, phi, 0);
+        macbook.rotation.set(-Math.PI / 2, phi, 0);
         macbook.update();
 
-        macbookscreen.rotation.set(-Math.PI/2, phi, 0);
+        macbookscreen.rotation.set(-Math.PI / 2, phi, 0);
         macbookscreen.update();
 
         outerScene.render();
@@ -258,8 +259,8 @@ var webGLStart = function() {
         Fx.requestAnimationFrame(draw);
       }
 
-      //Animate
+      // Animate
       draw();
     });
   }
-}
+};

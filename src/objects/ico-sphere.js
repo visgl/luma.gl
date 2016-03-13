@@ -1,26 +1,28 @@
-import Model from './model';
+import Geometry from '../geometry';
+import Model from '../model';
 import {Vec3} from '../math';
+
 // TODO - clean up linting and remove some of thes exceptions
 /* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
 /* eslint-disable indent, no-loop-func, max-statements, comma-spacing */
 /* eslint-disable complexity, block-scoped-var */
 
-export default class IcoSphere extends Model {
-  constructor(opt = {}) {
-    var iterations = opt.iterations || 0,
-        vertices = [],
-        indices = [],
-        sqrt = Math.sqrt,
-        acos = Math.acos,
-        atan2 = Math.atan2,
-        pi = Math.PI,
-        pi2 = pi * 2;
+function noop() {}
 
-    // Add a callback for when a vertex is created
-    opt.onAddVertex = opt.onAddVertex || function() {};
+const ICO_VERTICES = [-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0];
+const ICO_INDICES = [3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1];
 
-    vertices.push(-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0);
-    indices.push(3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1);
+export class IcoSphereGeometry extends Geometry {
+
+  constructor({iterations = 0, onAddVertex = noop, ...opts} = {}) {
+    const PI = Math.PI;
+    const PI2 = PI * 2;
+
+    const vertices = [...ICO_VERTICES];
+    const indices = [...ICO_INDICES];
+
+    vertices.push();
+    indices.push();
 
     var getMiddlePoint = (function() {
       var pointMemo = {};
@@ -28,24 +30,24 @@ export default class IcoSphere extends Model {
       return function(i1, i2) {
         i1 *= 3;
         i2 *= 3;
-        var mini = i1 < i2 ? i1 : i2,
-            maxi = i1 > i2 ? i1 : i2,
-            key = mini + '|' + maxi;
+        const mini = i1 < i2 ? i1 : i2;
+        const maxi = i1 > i2 ? i1 : i2;
+        const key = mini + '|' + maxi;
 
         if (key in pointMemo) {
           return pointMemo[key];
         }
 
-        var x1 = vertices[i1],
-            y1 = vertices[i1 + 1],
-            z1 = vertices[i1 + 2],
-            x2 = vertices[i2],
-            y2 = vertices[i2 + 1],
-            z2 = vertices[i2 + 2],
-            xm = (x1 + x2) / 2,
-            ym = (y1 + y2) / 2,
-            zm = (z1 + z2) / 2,
-            len = sqrt(xm * xm + ym * ym + zm * zm);
+        const x1 = vertices[i1];
+        const y1 = vertices[i1 + 1];
+        const z1 = vertices[i1 + 2];
+        const x2 = vertices[i2];
+        const y2 = vertices[i2 + 1];
+        const z2 = vertices[i2 + 2];
+        const xm = (x1 + x2) / 2;
+        const ym = (y1 + y2) / 2;
+        const zm = (z1 + z2) / 2;
+        const len = Math.sqrt(xm * xm + ym * ym + zm * zm);
 
         xm /= len;
         ym /= len;
@@ -74,53 +76,53 @@ export default class IcoSphere extends Model {
     }
 
     // Calculate texCoords and normals
-    l = indices.length;
-    var normals = new Array(l * 3),
-        texCoords = new Array(l * 2);
+    const normals = new Array(l * 3);
+    const texCoords = new Array(l * 2);
 
+    const l = indices.length;
     for (let i = l - 3; i >= 0; i -= 3) {
-      var i1 = indices[i + 0],
-          i2 = indices[i + 1],
-          i3 = indices[i + 2],
-          in1 = i1 * 3,
-          in2 = i2 * 3,
-          in3 = i3 * 3,
-          iu1 = i1 * 2,
-          iu2 = i2 * 2,
-          iu3 = i3 * 2,
-          x1 = vertices[in1 + 0],
-          y1 = vertices[in1 + 1],
-          z1 = vertices[in1 + 2],
-          theta1 = acos(z1 / sqrt(x1 * x1 + y1 * y1 + z1 * z1)),
-          phi1 = atan2(y1, x1) + pi,
-          v1 = theta1 / pi,
-          u1 = 1 - phi1 / pi2,
-          x2 = vertices[in2 + 0],
-          y2 = vertices[in2 + 1],
-          z2 = vertices[in2 + 2],
-          theta2 = acos(z2 / sqrt(x2 * x2 + y2 * y2 + z2 * z2)),
-          phi2 = atan2(y2, x2) + pi,
-          v2 = theta2 / pi,
-          u2 = 1 - phi2 / pi2,
-          x3 = vertices[in3 + 0],
-          y3 = vertices[in3 + 1],
-          z3 = vertices[in3 + 2],
-          theta3 = acos(z3 / sqrt(x3 * x3 + y3 * y3 + z3 * z3)),
-          phi3 = atan2(y3, x3) + pi,
-          v3 = theta3 / pi,
-          u3 = 1 - phi3 / pi2,
-          vec1 = [
-            x3 - x2,
-            y3 - y2,
-            z3 - z2
-          ],
-          vec2 = [
-            x1 - x2,
-            y1 - y2,
-            z1 - z2
-          ],
-          normal = Vec3.cross(vec1, vec2).$unit(),
-          newIndex;
+      let i1 = indices[i + 0];
+      let i2 = indices[i + 1];
+      let i3 = indices[i + 2];
+      const in1 = i1 * 3;
+      const in2 = i2 * 3;
+      const in3 = i3 * 3;
+      const iu1 = i1 * 2;
+      const iu2 = i2 * 2;
+      const iu3 = i3 * 2;
+      const x1 = vertices[in1 + 0];
+      const y1 = vertices[in1 + 1];
+      const z1 = vertices[in1 + 2];
+      const theta1 = Math.acos(z1 / Math.sqrt(x1 * x1 + y1 * y1 + z1 * z1));
+      const phi1 = Math.atan2(y1, x1) + PI;
+      const v1 = theta1 / PI;
+      const u1 = 1 - phi1 / PI2;
+      const x2 = vertices[in2 + 0];
+      const y2 = vertices[in2 + 1];
+      const z2 = vertices[in2 + 2];
+      const theta2 = Math.acos(z2 / Math.sqrt(x2 * x2 + y2 * y2 + z2 * z2));
+      const phi2 = Math.atan2(y2, x2) + PI;
+      const v2 = theta2 / PI;
+      const u2 = 1 - phi2 / PI2;
+      const x3 = vertices[in3 + 0];
+      const y3 = vertices[in3 + 1];
+      const z3 = vertices[in3 + 2];
+      const theta3 = Math.acos(z3 / Math.sqrt(x3 * x3 + y3 * y3 + z3 * z3));
+      const phi3 = Math.atan2(y3, x3) + PI;
+      const v3 = theta3 / PI;
+      const u3 = 1 - phi3 / PI2;
+      const vec1 = [
+        x3 - x2,
+        y3 - y2,
+        z3 - z2
+      ];
+      const vec2 = [
+        x1 - x2,
+        y1 - y2,
+        z1 - z2
+      ];
+      const normal = Vec3.cross(vec1, vec2).$unit();
+      let newIndex;
 
       if ((u1 === 0 || u2 === 0 || u3 === 0) &&
           (u1 === 0 || u1 > 0.5) &&
@@ -182,11 +184,19 @@ export default class IcoSphere extends Model {
     }
 
     super({
-      vertices: vertices,
-      indices: indices,
-      normals: normals,
-      texCoords: texCoords,
-      ...opt
+      ...opts,
+      attributes: {
+        vertices: vertices,
+        indices: indices,
+        normals: normals,
+        texCoords: texCoords
+      }
     });
+  }
+}
+
+export default class IcoSphere extends Model {
+  constructor(opts = {}) {
+    super({geometry: new IcoSphereGeometry(opts), ...opts});
   }
 }

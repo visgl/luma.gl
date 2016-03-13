@@ -3,6 +3,7 @@ var webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
@@ -22,8 +23,8 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var defaultProgram = Program.fromDefaultShaders(gl);
-  var perpixelProgram = Program.fromHTMLTemplates(
+  var defaultProgram = makeProgramFromDefaultShaders(gl);
+  var perpixelProgram = makeProgramFromHTMLTemplates(
     gl,
     'per-fragment-lighting-vs',
     'per-fragment-lighting-fs'

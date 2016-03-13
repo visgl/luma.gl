@@ -1,3 +1,11 @@
+@wwwtyro Looks great, and I think it could make sense to organize all our examples like this, with separate package.json files. It allows us to show Luma.GL's intended ES6 programming style in the example code, and makes the examples more free standing and easy to copy and build from.
+
+The only concern I have at this point is the size of the built bundles (currently 13K lines, 420K bytes), especially if we will be doing this for every example and every time we update we'll store a new version in the repo.
+
+So it might be worth a quick investigation into ways to use multiple browserify bundles, essentially bundling only the example's code, and requiring Luma.GL from the standard pre-built bundle (see for example: https://lincolnloop.com/blog/speedy-browserifying-multiple-bundles/)
+
+Not sure if budo will work with multiple bundles though, if it doesn't that would be a concern.
+
 ---
 layout: docs
 title: Program

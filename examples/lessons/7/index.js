@@ -199,7 +199,7 @@ var webGLStart = function() {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    var program = Program.fromDefaultShaders(gl);
+    var program = makeProgramFromDefaultShaders(gl);
 
     program.use();
 

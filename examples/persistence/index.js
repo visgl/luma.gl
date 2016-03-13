@@ -2,7 +2,7 @@
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Framebuffer = LumaGL.Framebuffer;
@@ -79,9 +79,9 @@ window.webGLStart = function() {
     })
   };
 
-  var programQuad = Program.fromHTMLTemplates(gl, 'quad-vs', 'quad-fs');
-  var programPersistence = Program.fromHTMLTemplates(gl, 'quad-vs', 'persistence-fs');
-  var programSphere = Program.fromHTMLTemplates(gl, 'sphere-vs', 'sphere-fs');
+  var programQuad = makeProgramFromHTMLTemplates(gl, 'quad-vs', 'quad-fs');
+  var programPersistence = makeProgramFromHTMLTemplates(gl, 'quad-vs', 'persistence-fs');
+  var programSphere = makeProgramFromHTMLTemplates(gl, 'sphere-vs', 'sphere-fs');
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

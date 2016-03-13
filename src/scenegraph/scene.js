@@ -1,11 +1,13 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements */
 
+import Group from './group';
 import {Vec3} from './math';
 import {Program} from './webgl';
-import assert from 'assert';
-import {merge, uid} from './utils';
+import {merge} from './utils';
 import {Framebuffer} from './webgl';
+import makeProgramFromDefaultShaders from './addons';
+import assert from 'assert';
 
 function noop() {}
 
@@ -36,51 +38,27 @@ const DEFAULT_SCENE_OPTS = {
   backgroundDepth: 1
 };
 
+const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
+
 // Scene class
-export default class Scene {
+export default class Scene extends Group {
 
-  constructor(gl, program, camera, opt = {}) {
-    assert(gl);
-    assert(camera);
-
-    this.gl = gl;
+  constructor(gl, camera, opt = {}) {
+    assert(gl, INVALID_ARGUMENT);
+    assert(camera, INVALID_ARGUMENT);
+    assert(!opt.program, 'LumaGL.Scene no longer supports "program" option');
 
     opt = merge(DEFAULT_SCENE_OPTS, opt);
 
-    this.program = opt.program ? program[opt.program] : program;
-    this.camera = camera;
-    this.models = [];
+    this.gl = gl;
     this.config = opt;
-  }
-
-  add(...models) {
-    for (const model of models) {
-      // Generate unique id for model
-      model.id = model.id || uid();
-      this.models.push(model);
-      // Create and load Buffers
-      this.defineBuffers(model);
-    }
-  }
-
-  remove(model) {
-    const models = this.models;
-    const indexOf = models.indexOf(model);
-    if (indexOf > -1) {
-      models.splice(indexOf, 1);
-    }
-  }
-
-  removeAll() {
-    this.models = [];
+    this.camera = camera;
   }
 
   getProgram(obj) {
-    let program = this.program;
-    if (obj && obj.program instanceof Program) {
+    let program;
+    if (obj && obj.program) {
       program = obj.program;
-    } else if (obj && obj.program) {
-      program = this.program[obj.program];
     }
     assert(program instanceof Program, 'Scene failed to find valid program');
     program.use();
@@ -205,8 +183,7 @@ export default class Scene {
     }
   }
 
-  clear() {
-    const gl = this.gl;
+  clear(gl) {
     if (this.config.clearColor) {
       const bg = this.config.backgroundColor;
       gl.clearColor(bg.r, bg.g, bg.b, bg.a);
@@ -224,56 +201,47 @@ export default class Scene {
   }
 
   // Renders all objects in the scene.
-  render(opt = {}) {
+  render(gl, opt = {}) {
     const camera = this.camera;
     const {renderProgram} = opt;
-    const multiplePrograms = !renderProgram &&
-      this.program &&
-      this.program.constructor.name === 'Object';
     const options = {
       onBeforeRender: noop,
       onAfterRender: noop,
       ...opt
     };
 
-    this.clear();
-
-    // If we're just using one program then
-    // execute the beforeRender method once.
-    if (!multiplePrograms && (renderProgram || this.program)) {
-      // this.beforeRender(renderProgram || this.program);
-    }
+    this.clear(gl);
 
     // Go through each model and render it.
     let i = 0;
     for (const model of this.models) {
       if (model.display) {
         const program = renderProgram || this.getProgram(model);
+
         // Setup the beforeRender method for each object
         // when there are multiple programs to be used.
-        // if (multiplePrograms) {
         this.beforeRender(program);
-        // }
         model.onBeforeRender(program, camera);
         options.onBeforeRender(model, i);
-        this.renderObject(model, program);
+
+        this.renderObject(gl, model, program);
+
         options.onAfterRender(model, i);
         model.onAfterRender(program, camera);
+
         i++;
       }
     }
   }
 
-  renderObject(object, program) {
-    const gl = this.gl;
-
+  renderObject(gl, model, program) {
     const {view} = this.camera;
-    const {matrix} = object;
+    const {matrix} = model;
     const worldMatrix = view.mulMat4(matrix);
     const worldInverse = worldMatrix.invert();
     const worldInverseTranspose = worldInverse.transpose();
 
-    object.setState(program);
+    model.setState(program);
 
     // Now set view and normal matrices
     program.setUniforms({
@@ -289,20 +257,20 @@ export default class Scene {
     // TODO(nico): move this into O3D, but, somehow,
     // abstract the gl.draw* methods inside that object.
     // TODO - use webgl/draw.js
-    if (object.render) {
-      object.render(gl, program, this.camera);
+    if (model.render) {
+      model.render(gl, program, this.camera);
     } else {
-      const drawType = object.drawType !== undefined ?
-        gl.get(object.drawType) : gl.TRIANGLES;
-      if (object.$indicesLength) {
+      const drawType = model.drawType !== undefined ?
+        gl.get(model.drawType) : gl.TRIANGLES;
+      if (model.$indicesLength) {
         gl.drawElements(
-          drawType, object.$indicesLength, gl.UNSIGNED_SHORT, 0);
+          drawType, model.$indicesLength, gl.UNSIGNED_SHORT, 0);
       } else {
-        gl.drawArrays(drawType, 0, object.$verticesLength / 3);
+        gl.drawArrays(drawType, 0, model.$verticesLength / 3);
       }
     }
 
-    object.unsetState(program);
+    model.unsetState(program);
   }
 
   pick(x, y, opt = {}) {
@@ -317,7 +285,7 @@ export default class Scene {
 
     if (this.pickingProgram === undefined) {
       this.pickingProgram =
-        opt.pickingProgram || Program.fromDefaultShaders(gl);
+        opt.pickingProgram || makeProgramFromDefaultShaders(gl);
     }
 
     let pickingProgram = this.pickingProgram;
@@ -381,7 +349,7 @@ export default class Scene {
 
     if (this.pickingProgram === undefined) {
       this.pickingProgram =
-        opt.pickingProgram || Program.fromDefaultShaders(gl);
+        opt.pickingProgram || makeProgramFromDefaultShaders(gl);
     }
 
     let pickingProgram = this.pickingProgram;

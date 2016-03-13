@@ -2,7 +2,7 @@
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var TextureCube = LumaGL.TextureCube;
@@ -32,7 +32,7 @@ window.webGLStart = function() {
       size: 2
     });
 
-    var program = Program.fromHTMLTemplates(gl, 'quad-vs', fsID);
+    var program = makeProgramFromHTMLTemplates(gl, 'quad-vs', fsID);
 
     var time = 0;
 

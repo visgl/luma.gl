@@ -2,7 +2,7 @@
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
+  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Cube = LumaGL.Cube;
@@ -66,7 +66,7 @@ window.webGLStart = function() {
     })
   };
 
-  var programCube = Program.fromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
+  var programCube = makeProgramFromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
 
   var tick = 0;
 

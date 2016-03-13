@@ -9,9 +9,9 @@ Object: Shaders {#Shaders}
 
 An object that contains default shaders that could be used with the [Scene](scene.html) class. Only one vertex shader and one fragment
 shader are shipped in this object. This is so because we encourage having shaders in separate files and access them in
-an asynchronous way by using `Program.fromShaderURIs` and other methods available in the Framework. You can set shader strings
+an asynchronous way by using `makeProgramFromShaderURIs` and other methods available in the Framework. You can set shader strings
 into `Shaders.Vertex` and `Shaders.Fragment`. We provide a default vertex and fragment shader in `Shaders.Vertex.Default` and
-`Shaders.Fragment.Default`. These shaders can also be conveniently used with `Program.fromDefaultShaders(vertexShaderName, fragmentShaderName)`.
+`Shaders.Fragment.Default`. These shaders can also be conveniently used with `makeProgramFromDefaultShaders(vertexShaderName, fragmentShaderName)`.
 
 
 Shaders Object: Vertex {#Shaders:Vertex}
@@ -180,7 +180,7 @@ In order to get familiar with the attributes and uniforms used by the [Scene](sc
 
 ### Examples:
 
-Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://philogb.github.com/philogl/LumaGL/examples/lessons/8/).
+Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://uber-common.github.com/luma.gl/examples/lessons/8/).
 
 {% highlight js %}
 //Add Blend Fragment Shader

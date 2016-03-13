@@ -1,8 +1,8 @@
-export {default as Model} from './model';
-export {default as Cone} from './cone';
-export {default as Cube} from './cube';
-export {default as Cylinder} from './cylinder';
-export {default as IcoSphere} from './ico-sphere';
-export {default as Plane} from './plane';
-export {default as Sphere} from './sphere';
-export {default as TruncatedCone} from './cone';
+export {default as Model, Geometry} from './model';
+export {default as Cone, ConeGeometry} from './cone';
+export {default as Cube, CubeGeometry} from './cube';
+export {default as Cylinder, CylinderGeometry} from './cylinder';
+export {default as IcoSphere, IcoSphereGeometry} from './ico-sphere';
+export {default as Plane, PlaneGeometry} from './plane';
+export {default as Sphere, SphereGeometry} from './sphere';
+export {default as TruncatedCone, TruncatedConeGeometry} from './cone';

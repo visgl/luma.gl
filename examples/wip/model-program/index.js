@@ -33,7 +33,7 @@ var webGLStart = function() {
 
     //Create object
     var cube = new Model({
-      program: Program.fromDefaultShaders(gl),
+      program: makeProgramFromDefaultShaders(gl),
       vertices: [-1, -1,  1,
                   1, -1,  1,
                   1,  1,  1,

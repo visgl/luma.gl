@@ -1,17 +1,15 @@
+/* global LumaGL, document */
 var webGLStart = function() {
 
-  var $id = function(d) { return document.getElementById(d); };
-
   var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
-  var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Model = LumaGL.Model;
-  var Cube = LumaGL.Cube;
+
+  var makeProgramFromDefaultShaders =
+    LumaGL.addons.makeProgramFromDefaultShaders;
+  var Fx = LumaGL.Fx;
 
   var canvas = document.getElementById('render-canvas');
 
@@ -21,9 +19,8 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var program = Program.fromDefaultShaders(gl);
+  var program = makeProgramFromDefaultShaders(gl);
   program.use();
-
 
   // rye TODO: there's a bug in merge that makes it require an object.
   var camera = new PerspectiveCamera({});
@@ -60,14 +57,15 @@ var webGLStart = function() {
 
   function height(x, z) {
     var d = Math.sqrt(x * x + z * z);
-    return 0.5 + (Math.sin(d * 24) + Math.cos((x + 8) * 12) + Math.tanh(z * 6)) * 0.125;
+    return 0.5 +
+      (Math.sin(d * 24) + Math.cos((x + 8) * 12) + Math.tanh(z * 6)) * 0.125;
   }
 
   var s = 1/res;
   for (var i = 0; i < res; i++) {
-    var x = s * (i - res/2);
+    var x = s * (i - res / 2);
     for (var k = 0; k < res; k++) {
-      var z = s * (k - res/2);
+      var z = s * (k - res / 2);
 
       var h0 = height(x + 0, z + 0);
       var h1 = height(x + s, z + 0);
@@ -82,10 +80,10 @@ var webGLStart = function() {
       vertices.push.apply(vertices, [x + 0, h3, z + s]);
 
       // quick-and-dirty forward difference normal approximation
-      var n0 = [(h1 - h0)/s, 1.0, (h3 - h0)/s];
-      var n1 = [(h0 - h1)/-s, 1.0, (h2 - h1)/s];
-      var n2 = [(h1 - h2)/-s, 1.0, (h3 - h2)/-s];
-      var n3 = [(h2 - h3)/s, 1.0, (h0 - h3)/-s];
+      var n0 = [(h1 - h0) / s, 1.0, (h3 - h0) / s];
+      var n1 = [(h0 - h1) / -s, 1.0, (h2 - h1) / s];
+      var n2 = [(h1 - h2) / -s, 1.0, (h3 - h2) / -s];
+      var n3 = [(h2 - h3) / s, 1.0, (h0 - h3) / -s];
 
       normals.push.apply(normals, n0);
       normals.push.apply(normals, n1);
@@ -103,7 +101,7 @@ var webGLStart = function() {
     }
   }
 
-  console.log(colors.length/4, vertices.length/3);
+  console.log(colors.length / 4, vertices.length / 3);
 
   var heightmap = new Model({
     vertices: vertices,
@@ -119,15 +117,16 @@ var webGLStart = function() {
     canvas.height = canvas.clientHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    camera.view.lookAt(new Vec3(0,1.5,0.75), new Vec3(0,0.5,0), new Vec3(0,1,0));
+    camera.view.lookAt(
+      new Vec3(0, 1.5, 0.75), new Vec3(0, 0.5, 0), new Vec3(0, 1, 0));
     camera.projection.perspective(60, canvas.width/canvas.height, 0.1, 1000);
 
     heightmap.rotation.y += 0.01;
     heightmap.update();
 
     var p = scene.pickCustom(pick.x, pick.y);
-    div = document.getElementById('altitude');
-    if (JSON.stringify(p) !== JSON.stringify([0,0,0,0])) {
+    var div = document.getElementById('altitude');
+    if (JSON.stringify(p) !== JSON.stringify([0, 0, 0, 0])) {
       div.innerHTML = "altitude: " + p[0];
       div.style.top = pick.y + 'px';
       div.style.left = pick.x + 'px';
@@ -144,4 +143,4 @@ var webGLStart = function() {
 
   draw();
 
-}
+};

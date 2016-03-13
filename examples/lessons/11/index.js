@@ -24,7 +24,7 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var program = Program.fromDefaultShaders(gl);
+  var program = makeProgramFromDefaultShaders(gl);
   program.use();
 
   var camera = new PerspectiveCamera({
