@@ -9,3 +9,4 @@ export {default as Shaders} from './shaders';
 export {default as Scene} from './scene';
 export * from './media';
 export {default as Fx} from './addons/fx';
+export * from './save-bitmap';
