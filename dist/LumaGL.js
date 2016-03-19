@@ -12235,15 +12235,13 @@ var Buffer = function () {
     value: function detachFromLocation(location) {
       var gl = this.gl;
 
-      if (location === undefined) {
-        if (this.instanced) {
-          var extension = (0, _context.getExtension)(gl, 'ANGLE_instanced_arrays');
-          // Clear instanced flag
-          extension.vertexAttribDivisorANGLE(location, 0);
-        }
-        // Disable the attribute
-        gl.disableVertexAttribArray(location);
+      if (this.instanced) {
+        var extension = (0, _context.getExtension)(gl, 'ANGLE_instanced_arrays');
+        // Clear instanced flag
+        extension.vertexAttribDivisorANGLE(location, 0);
       }
+      // Disable the attribute
+      gl.disableVertexAttribArray(location);
       // Unbind the buffer per webgl recommendations
       gl.bindBuffer(this.bufferType, null);
       return this;
