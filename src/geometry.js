@@ -1,12 +1,12 @@
-import {INDEX_TYPES, isTypedArray} from './webgl/types';
+import {DRAW_MODES, isTypedArray} from './webgl/types';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
 
 export default class Geometry {
 
-  constructor(drawType = 'TRIANGLES', ...attributes) {
-    assert(INDEX_TYPES.includes(drawType), ILLEGAL_ARG);
+  constructor({drawType = 'TRIANGLES', attributes}) {
+    assert(DRAW_MODES.includes(drawType), ILLEGAL_ARG);
 
     this.drawType = drawType;
     this.attributes = {};
@@ -16,8 +16,11 @@ export default class Geometry {
     this.setAttributes(attributes);
   }
 
-  setAttributes(...attributes) {
-    assert(attributes.every(attribute => isTypedArray(attribute)), ILLEGAL_ARG);
+  setAttributes(attributes) {
+    for (const attributeName in attributes) {
+      const attribute = attributes[attributeName];
+      assert(isTypedArray(attribute), ILLEGAL_ARG);
+    }
     Object.assign(this.attributes, attributes);
   }
 

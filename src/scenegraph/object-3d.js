@@ -1,8 +1,8 @@
-import {Vec3, Mat4} from './math';
+import {Vec3, Mat4} from '../math';
 import assert from 'assert';
 import {uid} from '../utils';
 
-export class Object3D {
+export default class Object3D {
   constructor({id, display = true}) {
     // model position, rotation, scale and all in all matrix
     this.position = new Vec3();

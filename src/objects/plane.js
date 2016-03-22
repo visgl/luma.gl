@@ -1,5 +1,5 @@
 import Geometry from '../geometry';
-import Model from '../model';
+import {Model} from '../scenegraph';
 
 export class PlaneGeometry extends Geometry {
 
@@ -18,9 +18,9 @@ export class PlaneGeometry extends Geometry {
     const subdivisions2 = opts['n' + coords[1]] || 1;
     const numVertices = (subdivisions1 + 1) * (subdivisions2 + 1);
 
-    const vertices = new Float32Array(numVertices * 3);
-    const normals = new Float32Array(numVertices * 3);
-    const texCoords = new Float32Array(numVertices * 2);
+    let vertices = new Float32Array(numVertices * 3);
+    let normals = new Float32Array(numVertices * 3);
+    let texCoords = new Float32Array(numVertices * 2);
 
     if (flipCull) {
       c1len = -c1len;
@@ -76,7 +76,7 @@ export class PlaneGeometry extends Geometry {
     }
 
     const numVertsAcross = subdivisions1 + 1;
-    const indices = [];
+    let indices = new Float32Array(subdivisions1 * subdivisions2 * 6);
 
     for (let z = 0; z < subdivisions2; z++) {
       for (let x = 0; x < subdivisions1; x++) {
@@ -118,11 +118,13 @@ export class PlaneGeometry extends Geometry {
     }
 
     super({
-      vertices,
-      normals,
-      texCoords,
-      ...(indices ? {indices} : {}),
-      ...opts
+      ...opts,
+      attributes: {
+        vertices,
+        normals,
+        texCoords,
+        ...(indices ? {indices} : {})
+      }
     });
   }
 }

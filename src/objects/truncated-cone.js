@@ -1,5 +1,5 @@
 import Geometry from '../geometry';
-import Model from '../model';
+import {Model} from '../scenegraph';
 
 export class TruncatedConeGeometry extends Geometry {
 
@@ -85,11 +85,13 @@ export class TruncatedConeGeometry extends Geometry {
     }
 
     super({
-      vertices: vertices,
-      normals: normals,
-      texCoords: texCoords,
-      indices: indices,
-      ...opts
+      ...opts,
+      attributes: {
+        vertices: vertices,
+        normals: normals,
+        texCoords: texCoords,
+        indices: indices
+      }
     });
   }
 

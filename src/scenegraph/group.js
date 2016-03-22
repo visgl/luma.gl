@@ -1,8 +1,8 @@
 import Object3D from './object-3d';
-import {uid} from './utils';
+import {uid} from '../utils';
 import assert from 'assert';
 
-export class Group3D extends Object3D {
+export default class Group extends Object3D {
   constructor({children = [], ...opts}) {
     children.every(child => assert(child instanceof Object3D));
     super(...opts);
@@ -33,7 +33,7 @@ export class Group3D extends Object3D {
 
   traverse({matrix, visitor}) {
     for (const child of this.children) {
-      if (child instanceof Group3D) {
+      if (child instanceof Group) {
         child.traverse({matrix, visitor});
       }
     }

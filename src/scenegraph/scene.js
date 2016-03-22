@@ -1,19 +1,16 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements */
 
-import Group from './group';
 import {Camera} from '../camera';
 import {Program, Framebuffer} from '../webgl';
-import {Vec3} from './math';
-import {merge} from './utils';
-import makeProgramFromDefaultShaders from './addons';
+import {Vec3} from '../math';
+import {merge} from '../utils';
+import makeProgramFromDefaultShaders from '../addons/helpers';
+import * as config from '../config';
+import Group from './group';
 import assert from 'assert';
 
 function noop() {}
-
-const MAX_TEXTURES = 10;
-const MAX_POINT_LIGHTS = 4;
-const PICKING_RES = 4;
 
 const DEFAULT_SCENE_OPTS = {
   lights: {
@@ -48,6 +45,8 @@ export default class Scene extends Group {
     assert(!opts.program, 'LumaGL.Scene no longer supports "program" option');
 
     opts = merge(DEFAULT_SCENE_OPTS, opts);
+
+    super(opts);
 
     this.gl = gl;
     this.config = opts;
@@ -363,6 +362,6 @@ export default class Scene extends Group {
 
 }
 
-Scene.MAX_TEXTURES = MAX_TEXTURES;
-Scene.MAX_POINT_LIGHTS = MAX_POINT_LIGHTS;
-Scene.PICKING_RES = PICKING_RES;
+Scene.MAX_TEXTURES = config.MAX_TEXTURES;
+Scene.MAX_POINT_LIGHTS = config.MAX_POINT_LIGHTS;
+Scene.PICKING_RES = config.PICKING_RES;

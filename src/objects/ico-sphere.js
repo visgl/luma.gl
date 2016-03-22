@@ -1,11 +1,8 @@
 import Geometry from '../geometry';
-import Model from '../model';
 import {Vec3} from '../math';
+import {Model} from '../scenegraph';
 
-// TODO - clean up linting and remove some of thes exceptions
-/* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
-/* eslint-disable indent, no-loop-func, max-statements, comma-spacing */
-/* eslint-disable complexity, block-scoped-var */
+/* eslint-disable comma-spacing, max-statements, complexity */
 
 function noop() {}
 
@@ -19,7 +16,7 @@ export class IcoSphereGeometry extends Geometry {
     const PI2 = PI * 2;
 
     const vertices = [...ICO_VERTICES];
-    const indices = [...ICO_INDICES];
+    let indices = [...ICO_INDICES];
 
     vertices.push();
     indices.push();
@@ -44,9 +41,9 @@ export class IcoSphereGeometry extends Geometry {
         const x2 = vertices[i2];
         const y2 = vertices[i2 + 1];
         const z2 = vertices[i2 + 2];
-        const xm = (x1 + x2) / 2;
-        const ym = (y1 + y2) / 2;
-        const zm = (z1 + z2) / 2;
+        let xm = (x1 + x2) / 2;
+        let ym = (y1 + y2) / 2;
+        let zm = (z1 + z2) / 2;
         const len = Math.sqrt(xm * xm + ym * ym + zm * zm);
 
         xm /= len;
@@ -62,9 +59,9 @@ export class IcoSphereGeometry extends Geometry {
     for (let i = 0; i < iterations; i++) {
       var indices2 = [];
       for (let j = 0; j < indices.length; j += 3) {
-        var a = getMiddlePoint(indices[j + 0], indices[j + 1]),
-            b = getMiddlePoint(indices[j + 1], indices[j + 2]),
-            c = getMiddlePoint(indices[j + 2], indices[j + 0]);
+        const a = getMiddlePoint(indices[j + 0], indices[j + 1]);
+        const b = getMiddlePoint(indices[j + 1], indices[j + 2]);
+        const c = getMiddlePoint(indices[j + 2], indices[j + 0]);
 
         indices2.push(
           c, indices[j + 0], a,
@@ -76,8 +73,8 @@ export class IcoSphereGeometry extends Geometry {
     }
 
     // Calculate texCoords and normals
-    const normals = new Array(l * 3);
-    const texCoords = new Array(l * 2);
+    const normals = new Array(indices.length * 3);
+    const texCoords = new Array(indices.length * 2);
 
     const l = indices.length;
     for (let i = l - 3; i >= 0; i -= 3) {
@@ -129,44 +126,44 @@ export class IcoSphereGeometry extends Geometry {
             (u2 === 0 || u2 > 0.5) &&
               (u3 === 0 || u3 > 0.5)) {
 
-          vertices.push(
-            vertices[in1 + 0],
-            vertices[in1 + 1],
-            vertices[in1 + 2]
-          );
-          newIndex = vertices.length / 3 - 1;
-          indices.push(newIndex);
-          texCoords[newIndex * 2 + 0] = 1;
-          texCoords[newIndex * 2 + 1] = v1;
-          normals[newIndex * 3 + 0] = normal.x;
-          normals[newIndex * 3 + 1] = normal.y;
-          normals[newIndex * 3 + 2] = normal.z;
+        vertices.push(
+          vertices[in1 + 0],
+          vertices[in1 + 1],
+          vertices[in1 + 2]
+        );
+        newIndex = vertices.length / 3 - 1;
+        indices.push(newIndex);
+        texCoords[newIndex * 2 + 0] = 1;
+        texCoords[newIndex * 2 + 1] = v1;
+        normals[newIndex * 3 + 0] = normal.x;
+        normals[newIndex * 3 + 1] = normal.y;
+        normals[newIndex * 3 + 2] = normal.z;
 
-          vertices.push(
-            vertices[in2 + 0],
-            vertices[in2 + 1],
-            vertices[in2 + 2]
-          );
-          newIndex = vertices.length / 3 - 1;
-          indices.push(newIndex);
-          texCoords[newIndex * 2 + 0] = 1;
-          texCoords[newIndex * 2 + 1] = v2;
-          normals[newIndex * 3 + 0] = normal.x;
-          normals[newIndex * 3 + 1] = normal.y;
-          normals[newIndex * 3 + 2] = normal.z;
+        vertices.push(
+          vertices[in2 + 0],
+          vertices[in2 + 1],
+          vertices[in2 + 2]
+        );
+        newIndex = vertices.length / 3 - 1;
+        indices.push(newIndex);
+        texCoords[newIndex * 2 + 0] = 1;
+        texCoords[newIndex * 2 + 1] = v2;
+        normals[newIndex * 3 + 0] = normal.x;
+        normals[newIndex * 3 + 1] = normal.y;
+        normals[newIndex * 3 + 2] = normal.z;
 
-          vertices.push(
-            vertices[in3 + 0],
-            vertices[in3 + 1],
-            vertices[in3 + 2]
-          );
-          newIndex = vertices.length / 3 - 1;
-          indices.push(newIndex);
-          texCoords[newIndex * 2 + 0] = 1;
-          texCoords[newIndex * 2 + 1] = v3;
-          normals[newIndex * 3 + 0] = normal.x;
-          normals[newIndex * 3 + 1] = normal.y;
-          normals[newIndex * 3 + 2] = normal.z;
+        vertices.push(
+          vertices[in3 + 0],
+          vertices[in3 + 1],
+          vertices[in3 + 2]
+        );
+        newIndex = vertices.length / 3 - 1;
+        indices.push(newIndex);
+        texCoords[newIndex * 2 + 0] = 1;
+        texCoords[newIndex * 2 + 1] = v3;
+        normals[newIndex * 3 + 0] = normal.x;
+        normals[newIndex * 3 + 1] = normal.y;
+        normals[newIndex * 3 + 2] = normal.z;
       }
 
       normals[in1 + 0] = normals[in2 + 0] = normals[in3 + 0] = normal.x;

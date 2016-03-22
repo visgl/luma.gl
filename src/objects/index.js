@@ -1,4 +1,3 @@
-export {default as Model, Geometry} from './model';
 export {default as Cone, ConeGeometry} from './cone';
 export {default as Cube, CubeGeometry} from './cube';
 export {default as Cylinder, CylinderGeometry} from './cylinder';

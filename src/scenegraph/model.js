@@ -3,10 +3,11 @@
 
 // Define some locals
 import {Program, Buffer} from '../webgl';
-import Scene from '../scene';
-import Object3D from '../object-3d';
 import {splat} from '../utils';
 import assert from 'assert';
+import Object3D from './object-3d';
+// TODO - Model should not depend on SCENE
+import {MAX_TEXTURES} from '../config';
 
 // Model repository
 // map attribute names to property names
@@ -187,7 +188,7 @@ export default class Model extends Object3D {
     this.textures = this.textures ? splat(this.textures) : [];
     let tex2D = 0;
     let texCube = 0;
-    const mtexs = Scene.MAX_TEXTURES;
+    const mtexs = MAX_TEXTURES;
     for (let i = 0, texs = this.textures, l = texs.length; i < mtexs; i++) {
       if (i < l) {
         // rye TODO: update this when TextureCube is implemented.

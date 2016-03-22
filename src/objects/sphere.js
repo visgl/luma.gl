@@ -1,5 +1,5 @@
 import Geometry from '../geometry';
-import Model from '../model';
+import {Model} from '../scenegraph';
 
 export class SphereGeometry extends Geometry {
 
@@ -81,11 +81,13 @@ export class SphereGeometry extends Geometry {
     }
 
     super({
-      vertices: vertices,
-      indices: indices,
-      normals: normals,
-      texCoords: texCoords,
-      ...opts
+      ...opts,
+      attributes: {
+        vertices: vertices,
+        indices: indices,
+        normals: normals,
+        texCoords: texCoords
+      }
     });
   }
 }

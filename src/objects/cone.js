@@ -1,5 +1,5 @@
 import {TruncatedConeGeometry} from './truncated-cone';
-import Model from '../model';
+import {Model} from '../scenegraph';
 
 export class ConeGeometry extends TruncatedConeGeometry {
   constructor({radius = 1, cap = true, ...opts} = {}) {
