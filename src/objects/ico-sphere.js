@@ -20,7 +20,7 @@ export default class IcoSphere extends Model {
     opt.onAddVertex = opt.onAddVertex || function() {};
 
     vertices.push(-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0);
-    indices.push(3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1);
+    indices.push(3,4,5, 3,5,1, 3,1,0, 3,0,4, 4,0,2, 4,2,5, 2,0,1, 5,2,1);
 
     var getMiddlePoint = (function() {
       var pointMemo = {};
