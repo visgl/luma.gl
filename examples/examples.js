@@ -7,7 +7,8 @@
     'persistence': 'Persistence',
     'picking': 'Picking',
     'custom-picking': 'Custom Picking',
-    'particles': 'Particles'
+    'particles': 'Particles',
+    'deferred-rendering': 'Deferred Rendering'
   };
 
   var IO = LumaGL.IO;
