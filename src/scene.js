@@ -76,13 +76,8 @@ export default class Scene {
   }
 
   getProgram(obj) {
-    let program = this.program;
-    if (obj && obj.program instanceof Program) {
-      program = obj.program;
-    } else if (obj && obj.program) {
-      program = this.program[obj.program];
-    }
-    assert(program instanceof Program, 'Scene failed to find valid program');
+    const program = obj ? obj.program : this.program;
+    // assert(program instanceof Program, 'Scene failed to find valid program');
     program.use();
     return program;
   }

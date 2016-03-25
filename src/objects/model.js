@@ -110,6 +110,18 @@ export default class Model {
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
 
+  isPickable() {
+    return this.pickable;
+  }
+
+  setPickable(pickable) {
+    this.pickable = Boolean(pickable);
+  }
+
+  setRenderFunction(render) {
+    this.render = render;
+  }
+
   // ensure known attributes use typed arrays
 
   onBeforeRender() {
