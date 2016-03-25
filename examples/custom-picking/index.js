@@ -101,11 +101,6 @@ var webGLStart = function() {
     }
   }
 
-<<<<<<< HEAD
-=======
-  console.log(colors.length / 4, vertices.length / 3);
-
->>>>>>> 1b8e93bd28d828c72537fca5e7603a0efeee7a8d
   var heightmap = new Model({
     vertices: vertices,
     colors: colors,

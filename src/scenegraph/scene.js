@@ -53,10 +53,7 @@ export default class Scene extends Group {
   }
 
   getProgram(obj) {
-    let program;
-    if (obj && obj.program) {
-      program = obj.program;
-    }
+    const program = obj ? obj.program : this.program;
     assert(program instanceof Program, 'Scene failed to find valid program');
     program.use();
     return program;

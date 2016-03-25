@@ -8,5 +8,7 @@ export * from './scenegraph';
 export * from './event';
 export * from './media';
 export {default as Shaders} from './shaders';
+
 export {default as Fx} from './addons/fx';
 export * from './addons/helpers';
+export * from './save-bitmap';

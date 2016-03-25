@@ -11,7 +11,8 @@ export default class Framebuffer {
     this.depth = opts.depth === undefined ? true : opts.depth;
     this.minFilter = opts.minFilter || gl.NEAREST;
     this.magFilter = opts.magFilter || gl.NEAREST;
-
+    this.format = opts.format || gl.RGBA;
+    this.type = opts.type || gl.UNSIGNED_BYTE;
     this.fbo = gl.createFramebuffer();
     this.bind();
 
@@ -19,7 +20,9 @@ export default class Framebuffer {
       width: this.width,
       height: this.height,
       minFilter: this.minFilter,
-      magFilter: this.magFilter
+      magFilter: this.magFilter,
+      type: this.type,
+      format: this.format
     });
 
     gl.framebufferTexture2D(

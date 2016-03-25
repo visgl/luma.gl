@@ -2,23 +2,10 @@ import Program from '../webgl/program';
 import Shaders from '../shaders';
 import {XHRGroup} from '../io';
 import {merge} from '../utils';
-
 /* global document */
 
 // Alternate constructor
-// Create a program from vertex and fragment shader node ids
-// TODO - remove from Program
-// Extracting templates should be done by app with separate helper method
-export function makeProgramFromHTMLTemplates(gl, vsId, fsId, id) {
-  const vs = document.getElementById(vsId).innerHTML;
-  const fs = document.getElementById(fsId).innerHTML;
-  return new Program(gl, {vs, fs, id});
-}
-
-// Alternate constructor
 // Build program from default shaders (requires Shaders)
-// TODO - remove from Program
-// default shaders should be selected by app, e.g. with addons/helpers methods
 export function makeProgramfromDefaultShaders(gl, id) {
   return new Program(gl, {
     vs: Shaders.Vertex.Default,
@@ -27,9 +14,16 @@ export function makeProgramfromDefaultShaders(gl, id) {
   });
 }
 
-// Alternate constructor
-// TODO - remove from Program.
-// Loading should be done by app, e.g. with addons/helpers methods
+// Create a program from vertex and fragment shader node ids
+// @deprecated - Use glslify instead
+export function makeProgramFromHTMLTemplates(gl, vsId, fsId, id) {
+  const vs = document.getElementById(vsId).innerHTML;
+  const fs = document.getElementById(fsId).innerHTML;
+  return new Program(gl, {vs, fs, id});
+}
+
+// Load shaders using XHR
+// @deprecated - Use glslify instead
 export async function makeProgramFromShaderURIs(gl, vs, fs, opts) {
   opts = merge({
     path: '/',
