@@ -163,9 +163,9 @@
         object = new O3D.Model({
           vertices: plane,
           program: 'surface',
-          drawType: "POINTS",
-          //drawType: gl.LINE_LOOP,
-          //drawType: gl.TRIANGLES,
+          drawMode: "POINTS",
+          //drawMode: gl.LINE_LOOP,
+          //drawMode: gl.TRIANGLES,
           textures: ['f1-texture'],
           uniforms: {
             //timer: 0,

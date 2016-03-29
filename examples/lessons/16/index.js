@@ -130,7 +130,7 @@ var webGLStart = function() {
           1.0, 0.0,
           0.0, 0.0
         ],
-        drawType: 'TRIANGLE_STRIP',
+        drawMode: 'TRIANGLE_STRIP',
         uniforms: {
           shininess: 0.2,
           'enableSpecularHighlights': false,

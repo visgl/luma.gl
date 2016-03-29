@@ -1,6 +1,6 @@
 // Encapsulates a WebGLBuffer object
 
-import {getExtension} from './context';
+import {getExtension, glCheckError} from './context';
 import assert from 'assert';
 
 export default class Buffer {
@@ -12,7 +12,7 @@ export default class Buffer {
       dataType: gl.FLOAT,
       stride: 0,
       offset: 0,
-      drawType: gl.STATIC_DRAW,
+      drawMode: gl.STATIC_DRAW,
       instanced: 0
     };
   }
@@ -29,9 +29,23 @@ export default class Buffer {
   constructor(gl, opts) {
     assert(gl, 'Buffer needs WebGLRenderingContext');
     this.gl = gl;
-    this.glBuffer = gl.createBuffer();
+    this.handle = gl.createBuffer();
+    glCheckError(gl);
     opts = Object.assign({}, Buffer.getDefaultOpts(gl), opts);
     this.update(opts);
+  }
+
+  delete() {
+    const {gl} = this;
+    gl.deleteBuffer(this.handle);
+    this.handle = null;
+    glCheckError(gl);
+    return this;
+  }
+
+  // todo - remove
+  destroy() {
+    this.delete();
   }
 
   /* Updates data in the buffer */
@@ -42,7 +56,7 @@ export default class Buffer {
     this.dataType = opts.dataType || this.dataType;
     this.stride = opts.stride || this.stride;
     this.offset = opts.offset || this.offset;
-    this.drawType = opts.drawType || this.drawType;
+    this.drawMode = opts.drawMode || this.drawMode;
     this.instanced = opts.instanced || this.instanced;
 
     this.data = opts.data || this.data;
@@ -56,8 +70,8 @@ export default class Buffer {
   bufferData(data) {
     assert(data, 'Buffer.bufferData needs data');
     this.data = data;
-    this.gl.bindBuffer(this.bufferType, this.glBuffer);
-    this.gl.bufferData(this.bufferType, this.data, this.drawType);
+    this.gl.bindBuffer(this.bufferType, this.handle);
+    this.gl.bufferData(this.bufferType, this.data, this.drawMode);
     this.gl.bindBuffer(this.bufferType, null);
     return this;
   }
@@ -65,7 +79,7 @@ export default class Buffer {
   attachToLocation(location) {
     const {gl} = this;
     // Bind the buffer so that we can operate on it
-    gl.bindBuffer(this.bufferType, this.glBuffer);
+    gl.bindBuffer(this.bufferType, this.handle);
     if (location === undefined) {
       return this;
     }
@@ -100,20 +114,13 @@ export default class Buffer {
 
   bind() {
     const {gl} = this;
-    gl.bindBuffer(this.bufferType, this.glBuffer);
+    gl.bindBuffer(this.bufferType, this.handle);
     return this;
   }
 
   unbind() {
     const {gl} = this;
     gl.bindBuffer(this.bufferType, null);
-    return this;
-  }
-
-  destroy() {
-    const {gl} = this;
-    gl.deleteBuffer(this.glBuffer);
-    this.glBuffer = null;
     return this;
   }
 

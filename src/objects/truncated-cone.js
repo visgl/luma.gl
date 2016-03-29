@@ -87,10 +87,10 @@ export class TruncatedConeGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        vertices: vertices,
-        normals: normals,
-        texCoords: texCoords,
-        indices: indices
+        vertices,
+        normals,
+        texCoords,
+        indices
       }
     });
   }

@@ -4,7 +4,7 @@
 import {Vec3, Mat4} from './math';
 import {merge} from './utils';
 
-class Camera {
+export class Camera {
 
   constructor(opts) {
     opts = merge({
@@ -25,6 +25,8 @@ class Camera {
     this.up = opts.up;
     this.view = new Mat4();
     this.uniforms = {};
+
+    this.projection = new Mat4();
     Object.seal(this);
 
     this.update();
@@ -32,14 +34,6 @@ class Camera {
 
   getUniforms() {
     return this.uniforms;
-  }
-
-  // TODO - should we remove this method?
-  // It creates a dependency between Camera.js and Program.js
-  // Camera could just expose uniforms that can be used in shaders
-  // apps would do Program.setUniforms(camera.getUniforms())
-  setStatus(program) {
-    program.setUniforms(this.getUniforms());
   }
 
   _updateUniforms() {

@@ -5,7 +5,7 @@ import assert from 'assert';
 export default class Group extends Object3D {
   constructor({children = [], ...opts}) {
     children.every(child => assert(child instanceof Object3D));
-    super(...opts);
+    super(opts);
     this.children = children;
   }
 
@@ -31,10 +31,35 @@ export default class Group extends Object3D {
     this.children = [];
   }
 
-  traverse({matrix, visitor}) {
+  *traverse({viewMatrix}) {
     for (const child of this.children) {
+      const {matrix} = child;
+      const worldMatrix = viewMatrix.mulMat4(matrix);
       if (child instanceof Group) {
-        child.traverse({matrix, visitor});
+        yield* child.traverse({matrix, worldMatrix});
+      } else {
+        if (child.program) {
+          child.program.use();
+          child.program.setUniforms({worldMatrix});
+        }
+        yield child;
+      }
+    }
+  }
+
+  *traverseReverse({viewMatrix}) {
+    for (let i = this.children.length - 1; i >= 0; --i) {
+      const child = this.children[i];
+      const {matrix} = child;
+      const worldMatrix = viewMatrix.mulMat4(matrix);
+      if (child instanceof Group) {
+        yield* child.traverseReverse({matrix, worldMatrix});
+      } else {
+        if (child.program) {
+          child.program.use();
+          child.program.setUniforms({worldMatrix});
+        }
+        yield child;
       }
     }
   }

@@ -59,7 +59,6 @@
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
-    "tape": "^4.0.0",
     "tape-catch": "^1.0.4",
     "testron": "^1.2.0",
     "uber-standard": "^5.1.0",

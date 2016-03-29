@@ -8,7 +8,9 @@ export class PlaneGeometry extends Geometry {
   // (http://www.opensource.org/licenses/bsd-license.php).
   /* eslint-disable max-statements, complexity */
   /* eslint-disable complexity, max-statements */
-  constructor({type, offset, flipCull = false, unpack = false, ...opts} = {}) {
+  constructor({
+    type = 'x,y', offset = 0, flipCull = false, unpack = false, ...opts
+  } = {}) {
     const coords = type.split(',');
     // width, height
     let c1len = opts[coords[0] + 'len'];
@@ -76,7 +78,7 @@ export class PlaneGeometry extends Geometry {
     }
 
     const numVertsAcross = subdivisions1 + 1;
-    let indices = new Float32Array(subdivisions1 * subdivisions2 * 6);
+    let indices = new Uint16Array(subdivisions1 * subdivisions2 * 6);
 
     for (let z = 0; z < subdivisions2; z++) {
       for (let x = 0; x < subdivisions1; x++) {

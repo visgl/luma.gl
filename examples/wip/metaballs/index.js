@@ -319,7 +319,7 @@
   function updateModel(data) {
     if (!model) {
       model = new O3D.Model({
-        // drawType: 'DYNAMIC_DRAW',
+        // drawMode: 'DYNAMIC_DRAW',
         vertices: data.vertices,
         normals: data.normals,
         dynamic: true,

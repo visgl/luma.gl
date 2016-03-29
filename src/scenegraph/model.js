@@ -2,11 +2,10 @@
 /* eslint-disable guard-for-in */
 
 // Define some locals
-import {Program, Buffer} from '../webgl';
+import {Program, Buffer, draw} from '../webgl';
 import {splat} from '../utils';
 import assert from 'assert';
 import Object3D from './object-3d';
-// TODO - Model should not depend on SCENE
 import {MAX_TEXTURES} from '../config';
 
 // Model repository
@@ -36,17 +35,20 @@ export default class Model extends Object3D {
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   constructor({
-    program, geometry, material,
-    shininess = 0, reflection = 0, refraction = 0,
+    program,
+    geometry,
+    material, shininess = 0, reflection = 0, refraction = 0,
+    // Enable instanced rendering (requires shader support and extra attributes)
+    instanced = false, instanceCount = 0,
     pickable, pick,
-    drawType = 'TRIANGLES', pickingColors, texCoords,
     // Extra uniforms and attributes (beyond geometry, material, camera)
-    uniforms = {}, attributes = {},
+    uniforms = {},
+    attributes = {}, pickingColors, texCoords,
     textures,
     render, onBeforeRender, onAfterRender,
     ...opts} = {}) {
 
-    assert(program instanceof Program);
+    assert(!program || program instanceof Program);
 
     super(opts);
 
@@ -54,6 +56,10 @@ export default class Model extends Object3D {
     this.program = program;
     this.geometry = geometry;
     this.material = material;
+
+    // instanced rendering
+    this.instanced = instanced;
+    this.instanceCount = instanceCount;
 
     // picking options
     this.pickable = Boolean(pickable);
@@ -76,90 +82,68 @@ export default class Model extends Object3D {
 
     this.buffers = {};
     this.userData = {};
+
+    this.textures = [];
+    // TODO - remove?
+    this.dynamic = false;
+
     Object.seal(this);
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
 
-  onBeforeRender() {
-    const {program, attributes} = this;
-    if (program) {
-      program.use();
-    }
-    if (attributes) {
-      this.setAttributes(program);
-    }
-  }
-
-  // TODO - delegate to "draw"
-
-  render() {
-    const {gl, geometry} = this;
-    const {drawType, attributes} = geometry;
-    const {indices, vertices} = attributes;
-    if (indices) {
-      gl.drawElements(drawType, indices.length, gl.UNSIGNED_SHORT, 0);
-    } else {
-      gl.drawArrays(drawType, 0, vertices.length / 3);
-    }
-  }
-
-  onAfterRender() {
-    const {program, attributes} = this;
-    if (program) {
-      program.use();
-    }
-    if (attributes) {
-      this.unsetAttributes(program);
-    }
-  }
-
   get hash() {
     return this.id + ' ' + this.$pickingIndex;
   }
 
-  setUniforms(program) {
-    program.setUniforms(this.uniforms);
-    return this;
+  setInstanceCount(instanceCount) {
+    assert(instanceCount !== undefined);
+    this.instanceCount = instanceCount;
   }
 
-  // Makes sure buffers are created for all attributes
-  // and that the program is updated with those buffers
-  // TODO - do we need the separation between "attributes" and "buffers"
-  //  couldn't apps just create buffers directly?
-  setAttributes(program, attributes) {
-    for (const attributeName of Object.keys(attributes)) {
-      const attribute = attributes[attributeName];
-      const bufferOpts = {
-        attribute: attributeName,
-        data: attribute.value,
-        size: attribute.size,
-        instanced: attribute.instanced ? 1 : 0,
-        bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
-        drawType: attribute.drawType || program.gl.STATIC_DRAW
-      };
-      if (!this.buffers[attributeName]) {
-        this.buffers[attributeName] = new Buffer(program.gl, bufferOpts);
-      } else {
-        this.buffers[attributeName].update(bufferOpts);
-      }
-      program.setBuffer(this.buffers[attributeName]);
-    }
-    return this;
+  getProgram() {
+    return this.program;
   }
 
-  unsetAttributes(program, attributes) {
-    for (const attributeName of Object.keys(attributes)) {
-      assert(this.buffers[attributeName]);
-      program.unsetBuffer(this.buffers[attributeName]);
-    }
-    return this;
+  isPickable() {
+    return this.pickable;
   }
 
-  setState(program) {
+  setPickable(pickable = true) {
+    this.pickable = Boolean(pickable);
+  }
+
+  onBeforeRender() {
+    const {program, attributes} = this;
+    program.use();
+    this.setAttributes(attributes);
+  }
+
+  render(gl) {
+    const {geometry, instanced, instanceCount} = this;
+    const {drawMode, attributes} = geometry;
+    const {indices, vertices} = attributes;
+    const vertexCount = indices ? indices.length : vertices.length / 3;
+    draw(gl, {
+      drawMode,
+      vertexCount,
+      indexed: Boolean(indices),
+      instanced,
+      instanceCount
+    });
+  }
+
+  onAfterRender() {
+    const {program, attributes} = this;
+    program.use();
+    this.unsetAttributes(attributes);
+  }
+
+  setProgramState() {
+    const {program} = this;
     this.setUniforms(program);
-    this.setAttributes(program, this.attributes);
-    this.setAttributes(program, this.geometry.attributes);
+    this.setAttributes(this.attributes);
+    this.setAttributes(this.geometry.attributes);
     this.setTextures(program);
 
     // this.setVertices(program);
@@ -170,7 +154,8 @@ export default class Model extends Object3D {
     // this.setIndices(program);
   }
 
-  unsetState(program) {
+  unsetProgramState() {
+    const {program} = this;
     const gl = program.gl;
     var attributes = program.attributes;
 
@@ -184,7 +169,51 @@ export default class Model extends Object3D {
 
   }
 
-  setTextures(program, force) {
+  setUniforms() {
+    const {program} = this;
+    program.setUniforms(this.uniforms);
+    return this;
+  }
+
+  // Makes sure buffers are created for all attributes
+  // and that the program is updated with those buffers
+  // TODO - do we need the separation between "attributes" and "buffers"
+  //  couldn't apps just create buffers directly?
+  setAttributes(attributes) {
+    assert(attributes);
+    const {program} = this;
+    for (const attributeName of Object.keys(attributes)) {
+      const attribute = attributes[attributeName];
+      const bufferOpts = {
+        attribute: attributeName,
+        data: attribute.value,
+        size: attribute.size,
+        instanced: attribute.instanced ? 1 : 0,
+        bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
+        drawMode: attribute.drawMode || program.gl.STATIC_DRAW
+      };
+      if (!this.buffers[attributeName]) {
+        this.buffers[attributeName] = new Buffer(program.gl, bufferOpts);
+      } else {
+        this.buffers[attributeName].update(bufferOpts);
+      }
+      program.setBuffer(this.buffers[attributeName]);
+    }
+    return this;
+  }
+
+  unsetAttributes(attributes) {
+    assert(attributes);
+    const {program} = this;
+    for (const attributeName of Object.keys(attributes)) {
+      assert(this.buffers[attributeName]);
+      program.unsetBuffer(this.buffers[attributeName]);
+    }
+    return this;
+  }
+
+  setTextures(force = false) {
+    const {program} = this;
     this.textures = this.textures ? splat(this.textures) : [];
     let tex2D = 0;
     let texCube = 0;
@@ -214,7 +243,7 @@ export default class Model extends Object3D {
   }
 
   // TODO - remove
-
+  /*
   setTexCoords(program) {
     if (!this.$texCoords) {
       return;
@@ -316,7 +345,7 @@ export default class Model extends Object3D {
     if (!this.buffers.indices) {
       this.buffers.indices = new Buffer(program.gl, {
         bufferType: gl.ELEMENT_ARRAY_BUFFER,
-        drawType: gl.STATIC_DRAW,
+        drawMode: gl.STATIC_DRAW,
         data: this.$indices,
         size: 1
       });
@@ -368,5 +397,5 @@ export default class Model extends Object3D {
 
     program.setBuffer(this.buffers.colors);
   }
-
+  */
 }

@@ -247,10 +247,10 @@
           surface.uniforms.colorUfm = [+sColorR.value, +sColorG.value, +sColorB.value, 1.0];
           //set grid
           if (grid.checked) {
-            surface.drawType = gl.LINES;
+            surface.drawMode = gl.LINES;
             //delete surface.indices;
           } else {
-            surface.drawType = gl.TRIANGLES;
+            surface.drawMode = gl.TRIANGLES;
             surface.indices = meshIndices;
           }
           //reset buffers if the fn has been updated or a parametric fn is called.

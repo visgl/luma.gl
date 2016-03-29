@@ -1,13 +1,13 @@
 // Scene Object management and rendering
-/* eslint-disable max-statements */
+/* eslint-disable max-statements, no-try-catch */
 
 import {Camera} from '../camera';
-import {Program, Framebuffer} from '../webgl';
+import Group from './group';
+import {pickModels} from './pick';
+import {Program} from '../webgl';
 import {Vec3} from '../math';
 import {merge} from '../utils';
-import makeProgramFromDefaultShaders from '../addons/helpers';
 import * as config from '../config';
-import Group from './group';
 import assert from 'assert';
 
 function noop() {}
@@ -40,9 +40,8 @@ const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
 // Scene class
 export default class Scene extends Group {
 
-  constructor(gl, opts = {}) {
+  constructor(gl, opts) {
     assert(gl, INVALID_ARGUMENT);
-    assert(!opts.program, 'LumaGL.Scene no longer supports "program" option');
 
     opts = merge(DEFAULT_SCENE_OPTS, opts);
 
@@ -63,18 +62,9 @@ export default class Scene extends Group {
     const program = this.getProgram(obj);
     const prevDynamic = obj.dynamic;
     obj.dynamic = true;
-    obj.setState(program);
+    obj.setProgramState(program);
     obj.dynamic = prevDynamic;
-    obj.unsetState(program);
-  }
-
-  // Setup lighting and scene effects like fog, etc.
-  beforeRender(program, camera) {
-    this.setupLighting(program);
-    this.setupEffects(program);
-    if (camera) {
-      this.camera.setStatus(program);
-    }
+    obj.unsetProgramState(program);
   }
 
   clear(gl) {
@@ -95,49 +85,60 @@ export default class Scene extends Group {
   }
 
   // Renders all objects in the scene.
-  render(gl, {camera, renderProgram,
-    onBeforeRender = noop, onAfterRender = noop, ...opts} = {}) {
-
-    assert(!camera || camera instanceof Camera);
-    assert(renderProgram instanceof Program);
+  render(gl, {
+    camera,
+    onBeforeRender = noop,
+    onAfterRender = noop,
+    context = {},
+    ...opts
+  } = {}) {
+    assert(camera instanceof Camera);
 
     this.clear(gl);
 
     // Go through each model and render it.
-    let i = 0;
-    for (const model of this.models) {
+    for (const model of this.traverse({viewMatrix: camera.view})) {
       if (model.display) {
-        const program = renderProgram || this.getProgram(model);
-
-        // Setup the beforeRender method for each object
-        // when there are multiple programs to be used.
-        this.beforeRender(program);
-        model.onBeforeRender(program, camera);
-        onBeforeRender(model, i);
-
-        this.renderObject(gl, model, program);
-
-        onAfterRender(model, i);
-        model.onAfterRender(program, camera);
-
-        i++;
+        onBeforeRender(model, context);
+        this.renderObject(gl, model);
+        onAfterRender(model, context);
       }
     }
   }
 
-  renderObject(gl, model, program, camera) {
-    model.setState(program);
+  renderObject(gl, model, camera, context = {}) {
+    model.setProgramState();
+    model.onBeforeRender(camera, context);
+
+    const program = this.getProgram(model);
+
+    // Setup lighting and scene effects like fog, etc.
+    this.setupLighting(program);
+    this.setupEffects(program);
+
+    // Camera exposes uniforms that can be used directly in shaders
+    if (camera) {
+      program.setUniforms(camera.getUniforms());
+    }
 
     // Now set view and normal matrices
-    const coordinateUniforms = model.getCoordinateUniforms(camera.view);
-    program.setUniforms(coordinateUniforms);
+    // const coordinateUniforms = model.getCoordinateUniforms(camera.view);
+    // program.setUniforms(coordinateUniforms);
 
     // Draw
     model.render(gl, program, this.camera);
 
-    model.unsetState(program);
+    model.onAfterRender(camera, context);
+    model.unsetProgramState();
   }
 
+  // TODO - this is the new picking for deck.gl
+  pickModels(gl, {camera, x, y, ...opts}) {
+    const {view: viewMatrix} = camera;
+    return pickModels(gl, {group: this, viewMatrix, x, y, ...opts});
+  }
+
+  /*
   pick(x, y, opt = {}) {
     const gl = this.gl;
 
@@ -256,6 +257,7 @@ export default class Scene extends Group {
 
     return [r, g, b, a];
   }
+  */
 
   // Setup the lighting system: ambient, directional, point lights.
   setupLighting(program) {

@@ -1,6 +1,6 @@
 import Geometry from '../geometry';
 import {Model} from '../scenegraph';
-import {makeTypedArray} from '../utils';
+import {makeTypedArray} from '../webgl/types';
 
 /* eslint-disable no-multi-spaces, indent */
 const CUBE_INDICES = [
@@ -125,7 +125,7 @@ export class CubeGeometry extends Geometry {
   constructor(opts = {}) {
     super({
       attributes: {
-        indices: makeTypedArray(Float32Array, CUBE_INDICES),
+        indices: makeTypedArray(Uint16Array, CUBE_INDICES),
         vertices: makeTypedArray(Float32Array, CUBE_VERTICES),
         normals: makeTypedArray(Float32Array, CUBE_NORMALS),
         texCoords: makeTypedArray(Float32Array, CUBE_TEX_COORDS)

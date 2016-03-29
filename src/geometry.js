@@ -1,19 +1,22 @@
 import {DRAW_MODES, isTypedArray} from './webgl/types';
+import {uid} from './utils';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
 
 export default class Geometry {
 
-  constructor({drawType = 'TRIANGLES', attributes}) {
-    assert(DRAW_MODES.includes(drawType), ILLEGAL_ARG);
+  constructor({drawMode = 'TRIANGLES', id = uid(), attributes, ...attrs}) {
+    assert(DRAW_MODES.includes(drawMode), ILLEGAL_ARG);
 
-    this.drawType = drawType;
+    this.id = id;
+    this.drawMode = drawMode;
     this.attributes = {};
     this.userData = {};
     Object.seal(this);
 
     this.setAttributes(attributes);
+    this.setAttributes(attrs);
   }
 
   setAttributes(attributes) {
@@ -24,7 +27,28 @@ export default class Geometry {
     Object.assign(this.attributes, attributes);
   }
 
+  get vertices() {
+    return this.attributes.vertices;
+  }
+
+  get normals() {
+    return this.attributes.normals;
+  }
+
+  get colors() {
+    return this.attributes.colors;
+  }
+
+  get texCoords() {
+    return this.attributes.texCoords;
+  }
+
+  get indices() {
+    return this.attributes.indices;
+  }
+
   // TODO - remove code below
+  /*
   set vertices(val) {
     if (!val) {
       delete this.$vertices;
@@ -42,10 +66,6 @@ export default class Geometry {
     this.$verticesLength = vlen;
   }
 
-  get vertices() {
-    return this.$vertices;
-  }
-
   set normals(val) {
     if (!val) {
       delete this.$normals;
@@ -61,10 +81,6 @@ export default class Geometry {
       this.$normals = new Float32Array(val);
     }
     this.$normalsLength = vlen;
-  }
-
-  get normals() {
-    return this.$normals;
   }
 
   set colors(val) {
@@ -86,10 +102,6 @@ export default class Geometry {
         Array.slice.call(this.$colors), this.$verticesLength / 3 * 4);
     }
     this.$colorsLength = this.$colors.length;
-  }
-
-  get colors() {
-    return this.$colors;
   }
 
   set pickingColors(val) {
@@ -115,6 +127,10 @@ export default class Geometry {
 
   get pickingColors() {
     return this.$pickingColors;
+  }
+
+  get texCoords() {
+    return this.$texCoords;
   }
 
   set texCoords(val) {
@@ -144,10 +160,6 @@ export default class Geometry {
     }
   }
 
-  get texCoords() {
-    return this.$texCoords;
-  }
-
   set indices(val) {
     if (!val) {
       delete this.$indices;
@@ -164,13 +176,11 @@ export default class Geometry {
     }
     this.$indicesLength = vlen;
   }
-
-  get indices() {
-    return this.$indices;
-  }
+  */
 
 }
 
+/*
 function normalizeColors(arr, len) {
   if (arr && arr.length < len) {
     const a0 = arr[0];
@@ -193,3 +203,4 @@ function normalizeColors(arr, len) {
   }
   return arr;
 }
+*/

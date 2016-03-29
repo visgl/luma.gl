@@ -1,6 +1,6 @@
 /* eslint-disable max-statements */
 import {Vec3, Mat4, Quat} from '../../src';
-import test from 'tape';
+import test from 'tape-catch';
 
 const abs = Math.abs;
 const delta = 0.001;

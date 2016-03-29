@@ -4,54 +4,10 @@
 /* eslint-disable no-console, complexity */
 
 /* global console */
+import {glCheckError2} from './context';
 import {uid} from '../utils';
-import formatCompilerError from 'gl-format-compiler-error';
+import {VertexShader, FragmentShader} from './shader';
 import Shaders from '../shaders';
-
-// For now this is an internal class
-class Shader {
-
-  constructor(gl, shaderSource, shaderType) {
-    this.gl = gl;
-    this.shader = gl.createShader(shaderType);
-    if (this.shader === null) {
-      throw new Error(`Error creating shader with type ${shaderType}`);
-    }
-    gl.shaderSource(this.shader, shaderSource);
-    gl.compileShader(this.shader);
-    var compiled = gl.getShaderParameter(this.shader, gl.COMPILE_STATUS);
-    if (!compiled) {
-      var info = gl.getShaderInfoLog(this.shader);
-      gl.deleteShader(this.shader);
-      /* eslint-disable no-try-catch */
-      var formattedLog;
-      try {
-        formattedLog = formatCompilerError(info, shaderSource, shaderType);
-      } catch (error) {
-        /* eslint-disable no-console */
-        /* global console */
-        console.warn('Error formatting glsl compiler error:', error);
-        /* eslint-enable no-console */
-        throw new Error(`Error while compiling the shader ${info}`);
-      }
-      /* eslint-enable no-try-catch */
-      throw new Error(formattedLog.long);
-    }
-  }
-
-}
-
-class VertexShader extends Shader {
-  constructor(gl, shaderSource) {
-    super(gl, shaderSource, gl.VERTEX_SHADER);
-  }
-}
-
-class FragmentShader extends Shader {
-  constructor(gl, shaderSource) {
-    super(gl, shaderSource, gl.FRAGMENT_SHADER);
-  }
-}
 
 export default class Program {
 
@@ -72,7 +28,7 @@ export default class Program {
       console.warn('DEPRECATED: New use: Program(gl, {vs, fs, id})');
       vs = opts;
     } else {
-      vs = opts.fs;
+      vs = opts.vs;
       fs = opts.fs;
       id = opts.id;
     }
@@ -85,8 +41,8 @@ export default class Program {
       throw new Error('Failed to create program');
     }
 
-    gl.attachShader(program, new VertexShader(gl, vs).shader);
-    gl.attachShader(program, new FragmentShader(gl, fs).shader);
+    gl.attachShader(program, new VertexShader(gl, vs).handle);
+    gl.attachShader(program, new FragmentShader(gl, fs).handle);
     gl.linkProgram(program);
     const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
     if (!linked) {
@@ -273,11 +229,16 @@ function getUniformSetter(gl, glProgram, info, isArray) {
   // Set a uniform array
   if (isArray && TypedArray) {
 
-    return val => glFunction(loc, new TypedArray(val));
-
+    return val => {
+      glFunction(loc, new TypedArray(val));
+      glCheckError2(gl);
+    };
   } else if (matrix) {
     // Set a matrix uniform
-    return val => glFunction(loc, false, val.toFloat32Array());
+    return val => {
+      glFunction(loc, false, val.toFloat32Array());
+      glCheckError2(gl);
+    };
 
   } else if (TypedArray) {
 
@@ -285,11 +246,15 @@ function getUniformSetter(gl, glProgram, info, isArray) {
     return val => {
       TypedArray.set(val.toFloat32Array ? val.toFloat32Array() : val);
       glFunction(loc, TypedArray);
+      glCheckError2(gl);
     };
 
   }
   // Set a primitive-valued uniform
-  return val => glFunction(loc, val);
+  return val => {
+    glFunction(loc, val);
+    glCheckError2(gl);
+  };
 
 }
 

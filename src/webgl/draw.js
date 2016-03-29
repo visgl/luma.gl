@@ -5,6 +5,37 @@ import {getExtension} from './context';
 import {GL_INDEX_TYPES, GL_DRAW_MODES} from './types';
 import assert from 'assert';
 
+// A good thing about webGL is that there are so many ways to draw things...
+// TODO - Use polyfilled WebGL2 methods instead of ANGLE extension
+export function draw(gl, {
+  drawMode, vertexCount, offset = 0,
+  indexed, indexType = null,
+  instanced = false, instanceCount = 0
+}) {
+  drawMode = gl.get(drawMode);
+  indexType = gl.get(indexType) || gl.UNSIGNED_SHORT;
+
+  assert(GL_DRAW_MODES(gl).indexOf(drawMode) > -1, 'Invalid draw mode');
+  assert(GL_INDEX_TYPES(gl).indexOf(indexType) > -1, 'Invalid index type');
+
+  if (instanced) {
+    const extension = gl.getExtension('ANGLE_instanced_arrays');
+    if (indexed) {
+      extension.drawElementsInstancedANGLE(
+        drawMode, vertexCount, indexType, offset, instanceCount
+      );
+    } else {
+      extension.drawArraysInstancedANGLE(
+        drawMode, offset, vertexCount, instanceCount
+      );
+    }
+  } else if (indexed) {
+    gl.drawElements(drawMode, vertexCount, indexType, offset);
+  } else {
+    gl.drawArrays(drawMode, offset, vertexCount);
+  }
+}
+
 // Call the proper draw function for the used program based on attributes etc
 export function draw2({gl, drawMode, elementType, count,
   indices, vertices, instanced, numInstances}) {
@@ -15,7 +46,7 @@ export function draw2({gl, drawMode, elementType, count,
 }
 
 // Call the proper draw function for the used program based on attributes etc
-export function draw({gl, drawMode, indexType, numPoints, numInstances}) {
+export function draw3({gl, drawMode, indexType, numPoints, numInstances}) {
   drawMode = drawMode || gl.POINTS;
 
   assert(GL_DRAW_MODES(gl).indexOf(indexType) > -1, 'Invalid draw mode');

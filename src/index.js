@@ -3,6 +3,7 @@ export * from './webgl';
 export * from './math';
 export * from './io';
 export * from './camera';
+export {default as Geometry} from './geometry';
 export * from './objects';
 export * from './scenegraph';
 export * from './event';

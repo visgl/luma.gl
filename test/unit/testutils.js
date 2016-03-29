@@ -1,5 +1,5 @@
 import {merge, splat, noop, uid} from '../../src/utils';
-import test from 'tape';
+import test from 'tape-catch';
 
 test('Utils#merge', t => {
   const a = {e: 1};

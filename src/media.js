@@ -10,7 +10,6 @@ import {splat} from './utils';
 
 // length given a 45 fov angle, and 0.2 distance to camera
 const length = 0.16568542494923805;
-const plane = new Plane({type: 'x,y', xlen: length, ylen: length, offset: 0});
 const camera = new PerspectiveCamera({
   fov: 45,
   aspect: 1,
@@ -27,6 +26,9 @@ export default class Img {
   // post process an image by setting it to a texture with a specified fragment
   // and vertex shader.
   static postProcess(opt) {
+    const plane =
+      new Plane({type: 'x,y', xlen: length, ylen: length, offset: 0});
+
     const program = app.program instanceof Program ?
       app.program :
       app.program[opt.program];
