@@ -1,6 +1,8 @@
 // Helper definitions for validation of webgl parameters
 /* eslint-disable no-inline-comments, max-len */
-import assert from 'assert';
+
+// TODO - remove
+export {isTypedArray, makeTypedArray} from '../utils';
 
 // INDEX TYPES
 
@@ -64,18 +66,3 @@ export const BUFFER_USAGE = [
 
 export const GL_BUFFER_USAGE =
   gl => BUFFER_USAGE.map(constant => gl[constant]).filter(constant => constant);
-
-// TYPED ARRAYS
-
-export function isTypedArray(value) {
-  return value.BYTES_PER_ELEMENT;
-}
-
-export function makeTypedArray(ArrayType, sourceArray) {
-  assert(Array.isArray(sourceArray));
-  const array = new ArrayType(sourceArray.length);
-  for (let i = 0; i < sourceArray.length; ++i) {
-    array[i] = sourceArray[i];
-  }
-  return array;
-}

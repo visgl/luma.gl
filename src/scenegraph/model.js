@@ -2,7 +2,7 @@
 /* eslint-disable guard-for-in */
 
 // Define some locals
-import {Program, Buffer, draw} from '../webgl';
+import {Buffer, draw} from '../webgl';
 import {splat} from '../utils';
 import assert from 'assert';
 import Object3D from './object-3d';
@@ -48,7 +48,8 @@ export default class Model extends Object3D {
     render, onBeforeRender, onAfterRender,
     ...opts} = {}) {
 
-    assert(!program || program instanceof Program);
+    assert(program);
+    // assert(program || program instanceof Program);
 
     super(opts);
 
