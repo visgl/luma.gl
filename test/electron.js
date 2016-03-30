@@ -1,2 +1,3 @@
 require('babel-polyfill');
-require('./');
+require('./node');
+require('./gpu');

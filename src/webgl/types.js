@@ -2,12 +2,7 @@
 /* eslint-disable no-inline-comments, max-len */
 import assert from 'assert';
 
-// WEBGL BUILT-IN TYPES
-// Convenience: enable app to "import" built-in WebGL types unknown to eslint
-/* global WebGLRenderingContext, WebGLBuffer */
-export {WebGLRenderingContext, WebGLBuffer};
-
-// INDEX TYPESxx
+// INDEX TYPES
 
 // For drawElements, size of indices
 export const INDEX_TYPES = ['UNSIGNED_BYTE', 'UNSIGNED_SHORT'];
