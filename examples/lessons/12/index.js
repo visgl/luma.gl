@@ -1,6 +1,10 @@
+/* global window, document, Image, LumaGL */
+/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 var webGLStart = function() {
 
-  var $id = function(d) { return document.getElementById(d); };
+  var $id = function(d) {
+    return document.getElementById(d); 
+  };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
@@ -21,7 +25,7 @@ var webGLStart = function() {
 
   var gl = createGLContext(canvas);
 
-  //Basic gl setup
+  // Basic gl setup
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
@@ -72,19 +76,19 @@ var webGLStart = function() {
     var tMoon = textures[0];
     var tCrate = textures[1];
 
-    //Create moon
+    // Create moon
     moon = new Sphere({
       nlat: 30,
       nlong: 30,
       radius: 2,
       textures: tMoon
     });
-    //Create box
+    // Create box
     box = new Cube({
       textures: tCrate
     });
     box.scale.set(2, 2, 2);
-    //Unpack app properties
+    // Unpack app properties
     var lighting = $id('lighting'),
         ambient = {
           r: $id('ambientR'),
@@ -100,16 +104,16 @@ var webGLStart = function() {
           g: $id('pointG'),
           b: $id('pointB')
         },
-        //objects position
+        // objects position
         rho = 6,
         theta = 0;
 
-    //Add objects to the scene
+    // Add objects to the scene
     scene.add(moon, box);
 
-    //Draw the scene
+    // Draw the scene
     function draw() {
-      //Setup lighting
+      // Setup lighting
       var lights = scene.config.lights;
       lights.enable = lighting.checked;
       lights.ambient = {
@@ -129,7 +133,7 @@ var webGLStart = function() {
           z: +point.z.value
         }
       };
-      //Update position
+      // Update position
       theta += 0.01;
 
       moon.position = {
@@ -146,14 +150,14 @@ var webGLStart = function() {
       };
       box.update();
 
-      //render objects
+      // render objects
       scene.render();
 
-      //request frame
+      // request frame
       Fx.requestAnimationFrame(draw);
     }
 
-    //Animate
+    // Animate
     draw();
   });
 }

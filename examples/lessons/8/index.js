@@ -1,7 +1,10 @@
-
 // Lighting form elements variables
-var $id = function(d) { return document.getElementById(d); };
+var $id = function(d) {
+  return document.getElementById(d);
+};
 
+/* global window, document, Image, LumaGL */
+/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 var webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;

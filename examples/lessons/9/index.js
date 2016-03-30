@@ -1,7 +1,10 @@
+/* global window, document, Image, LumaGL */
+/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
+window.webGLStart = function() {
 
-var webGLStart = function() {
-
-  var $id = function(d) { return document.getElementById(d); };
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;

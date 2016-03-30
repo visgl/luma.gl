@@ -50,6 +50,7 @@ export default class Buffer {
 
   /* Updates data in the buffer */
   update(opts = {}) {
+    assert(opts.data, 'Buffer needs data argument');
     this.attribute = opts.attribute || this.attribute;
     this.bufferType = opts.bufferType || this.bufferType;
     this.size = opts.size || this.size;

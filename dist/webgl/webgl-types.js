@@ -1,0 +1,11 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+// WEBGL BUILT-IN TYPES
+// Convenience: enable app to "import" built-in WebGL types unknown to eslint
+/* global WebGLRenderingContext, WebGLBuffer */
+exports.WebGLRenderingContext = WebGLRenderingContext;
+exports.WebGLBuffer = WebGLBuffer;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy93ZWJnbC93ZWJnbC10eXBlcy5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7OztRQUdRO1FBQXVCIiwiZmlsZSI6IndlYmdsLXR5cGVzLmpzIiwic291cmNlc0NvbnRlbnQiOlsiLy8gV0VCR0wgQlVJTFQtSU4gVFlQRVNcbi8vIENvbnZlbmllbmNlOiBlbmFibGUgYXBwIHRvIFwiaW1wb3J0XCIgYnVpbHQtaW4gV2ViR0wgdHlwZXMgdW5rbm93biB0byBlc2xpbnRcbi8qIGdsb2JhbCBXZWJHTFJlbmRlcmluZ0NvbnRleHQsIFdlYkdMQnVmZmVyICovXG5leHBvcnQge1dlYkdMUmVuZGVyaW5nQ29udGV4dCwgV2ViR0xCdWZmZXJ9O1xuXG4iXX0=

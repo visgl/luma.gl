@@ -1,4 +1,5 @@
 /* eslint-disable guard-for-in */
+import assert from 'assert';
 
 /**
  * Wraps the argument in an array if it is not one.
@@ -73,4 +74,19 @@ function detach(elem) {
   }
 
   return ans;
+}
+
+// TYPED ARRAYS
+
+export function isTypedArray(value) {
+  return value.BYTES_PER_ELEMENT;
+}
+
+export function makeTypedArray(ArrayType, sourceArray) {
+  assert(Array.isArray(sourceArray));
+  const array = new ArrayType(sourceArray.length);
+  for (let i = 0; i < sourceArray.length; ++i) {
+    array[i] = sourceArray[i];
+  }
+  return array;
 }

@@ -65,6 +65,7 @@ export default class Scene extends Group {
     obj.setProgramState(program);
     obj.dynamic = prevDynamic;
     obj.unsetProgramState(program);
+    return this;
   }
 
   clear(gl) {
@@ -82,6 +83,7 @@ export default class Scene extends Group {
     } else if (this.config.clearDepth) {
       gl.clear(gl.DEPTH_BUFFER_BIT);
     }
+    return this;
   }
 
   // Renders all objects in the scene.
@@ -104,6 +106,7 @@ export default class Scene extends Group {
         onAfterRender(model, context);
       }
     }
+    return this;
   }
 
   renderObject(gl, model, camera, context = {}) {
@@ -130,6 +133,7 @@ export default class Scene extends Group {
 
     model.onAfterRender(camera, context);
     model.unsetProgramState();
+    return this;
   }
 
   // TODO - this is the new picking for deck.gl
@@ -268,7 +272,7 @@ export default class Scene extends Group {
     program.setUniform('enableLights', enable);
 
     if (!enable) {
-      return;
+      return this;
     }
 
     if (ambient) {
@@ -283,12 +287,16 @@ export default class Scene extends Group {
     if (points) {
       this.setupPointLighting(program, points);
     }
+
+    return this;
   }
 
   setupAmbientLighting(program, ambient) {
     program.setUniforms({
       'ambientColor': [ambient.r, ambient.g, ambient.b]
     });
+
+    return this;
   }
 
   setupDirectionalLighting(program, directional) {
@@ -303,6 +311,8 @@ export default class Scene extends Group {
       'directionalColor': [color.r, color.g, color.b],
       'lightingDirection': [dir.x, dir.y, dir.z]
     });
+
+    return this;
   }
 
   setupPointLighting(program, points) {
@@ -340,6 +350,8 @@ export default class Scene extends Group {
         'pointSpecularColor': pointSpecularColors
       });
     }
+
+    return this;
   }
 
   // Setup effects like fog, etc.
@@ -357,6 +369,8 @@ export default class Scene extends Group {
     } else {
       program.setUniform('hasFog', false);
     }
+
+    return this;
   }
 
 }

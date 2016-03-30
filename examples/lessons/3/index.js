@@ -8,6 +8,7 @@ window.webGLStart = function() {
   var Fx = LumaGL.Fx;
   var Mat4 = LumaGL.Mat4;
   var Model = LumaGL.Model;
+  var Geometry = LumaGL.Geometry;
   var Buffer = LumaGL.Buffer;
 
   var canvas = document.getElementById('lesson03-canvas');
@@ -27,25 +28,33 @@ window.webGLStart = function() {
   program.use();
 
   var triangle = new Model({
-    vertices: [ 0,  1, 0,
-               -1, -1, 0,
-                1, -1, 0],
-
-    colors: [1, 0, 0, 1,
-             0, 1, 0, 1,
-             0, 0, 1, 1]
+    geometry: new Geometry({
+      vertices: new Float32Array(
+                [ 0,  1, 0,
+                 -1, -1, 0,
+                  1, -1, 0]),
+      colors: new Float32Array(
+              [1, 0, 0, 1,
+               0, 1, 0, 1,
+               0, 0, 1, 1])
+    }),
+    program: program
   });
 
   var square = new Model({
-    vertices: [ 1,  1, 0,
-               -1,  1, 0,
-                1, -1, 0,
-               -1, -1, 0],
-
-    colors: [0.5, 0.5, 1, 1,
-             0.5, 0.5, 1, 1,
-             0.5, 0.5, 1, 1,
-             0.5, 0.5, 1, 1]
+    geometry: new Geometry({
+      vertices: new Float32Array(
+        [ 1,  1, 0,
+         -1,  1, 0,
+          1, -1, 0,
+         -1, -1, 0]),
+      colors: new Float32Array(
+        [0.5, 0.5, 1, 1,
+         0.5, 0.5, 1, 1,
+         0.5, 0.5, 1, 1,
+         0.5, 0.5, 1, 1])
+    }),
+    program: program
   });
 
   var camera = new PerspectiveCamera({
@@ -62,12 +71,12 @@ window.webGLStart = function() {
       model.userData.buffers = [
         new Buffer(gl, {
           attribute: 'aVertexPosition',
-          data: model.vertices,
+          data: model.geometry.vertices,
           size: 3
         }),
         new Buffer(gl, {
           attribute: 'aVertexColor',
-          data: model.colors,
+          data: model.geometry.colors,
           size: 4
         })
       ];
