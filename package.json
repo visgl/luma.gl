@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "author": "Ib Green <ib@uber.com>",
@@ -61,7 +61,6 @@
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
     "tape-catch": "^1.0.4",
-    "testron": "^1.2.0",
     "uber-standard": "^5.1.0",
     "uglify-js": "^2.6.1"
   },
