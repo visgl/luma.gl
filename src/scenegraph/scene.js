@@ -102,15 +102,16 @@ export default class Scene extends Group {
     for (const model of this.traverse({viewMatrix: camera.view})) {
       if (model.display) {
         onBeforeRender(model, context);
-        this.renderObject(gl, model);
+        this.renderObject(gl, {model, camera, context});
         onAfterRender(model, context);
       }
     }
     return this;
   }
 
-  renderObject(gl, model, camera, context = {}) {
-    model.setProgramState();
+  renderObject(gl, {model, camera, context = {}}) {
+    assert(camera instanceof Camera);
+
     model.onBeforeRender(camera, context);
 
     const program = this.getProgram(model);
@@ -119,17 +120,8 @@ export default class Scene extends Group {
     this.setupLighting(program);
     this.setupEffects(program);
 
-    // Camera exposes uniforms that can be used directly in shaders
-    if (camera) {
-      program.setUniforms(camera.getUniforms());
-    }
-
-    // Now set view and normal matrices
-    // const coordinateUniforms = model.getCoordinateUniforms(camera.view);
-    // program.setUniforms(coordinateUniforms);
-
     // Draw
-    model.render(gl, {viewMatrix: camera.view});
+    model.render(gl, {camera, viewMatrix: camera.view});
 
     model.onAfterRender(camera, context);
     model.unsetProgramState();
@@ -139,7 +131,13 @@ export default class Scene extends Group {
   // TODO - this is the new picking for deck.gl
   pickModels(gl, {camera, x, y, ...opts}) {
     const {view: viewMatrix} = camera;
-    return pickModels(gl, {group: this, viewMatrix, x, y, ...opts});
+    return pickModels(gl, {
+      group: this,
+      camera,
+      viewMatrix,
+      x, y,
+      ...opts
+    });
   }
 
   /*

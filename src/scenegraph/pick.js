@@ -1,13 +1,14 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
-import {Framebuffer, glContextWithState, WebGLRenderingContext} from '../webgl';
+import {WebGLRenderingContext} from '../webgl/webgl-types';
+import {Framebuffer, glContextWithState} from '../webgl';
 import Group from './group';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Illegal argument to pick';
 
 export function pickModels(gl, {
-  group, viewMatrix, x, y,
+  group, camera, viewMatrix, x, y,
   pickingFBO = null,
   pickingProgram = null,
   pickingColors = null
@@ -41,7 +42,7 @@ export function pickModels(gl, {
 
         // Clear the frame buffer, render and sample
         gl.clear(gl.COLOR_BUFFER_BIT);
-        model.render(gl);
+        model.render(gl, {camera, viewMatrix});
 
         // Read color in the central pixel, to be mapped with picking colors
         const color = new Uint8Array(4);

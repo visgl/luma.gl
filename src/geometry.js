@@ -21,26 +21,49 @@ export default class Geometry {
 
   getVertexCount() {
     if (this.attributes.indices) {
-      return this.attributes.indices.length;
+      return this.attributes.indices.value.length;
     } else if (this.attributes.vertices) {
-      return this.attributes.vertices.length / 3;
+      return this.attributes.vertices.value.length / 3;
     }
     throw new Error('Cannot deduce geometry vertex count');
   }
 
-  get(attributeName) {
+  hasAttribute(attributeName) {
+    return Boolean(this.attributes[attributeName]);
+  }
+
+  getAttribute(attributeName) {
     const attribute = this.attributes[attributeName];
     assert(attribute);
-    return attribute;
+    return attribute.value;
+  }
+
+  getArray(attributeName) {
+    const attribute = this.attributes[attributeName];
+    assert(attribute);
+    return attribute.value;
   }
 
   setAttributes(attributes) {
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
-      assert(isTypedArray(attribute), ILLEGAL_ARG);
+      if (isTypedArray(attribute)) {
+        this.attributes[attributeName] = {
+          value: attribute,
+          size: attributeName === 'instanced' ? 1 : 3,
+          instanced: 0
+        };
+      } else {
+        assert(attribute.value);
+        assert(attribute.size);
+        this.attributes[attributeName] = attribute;
+      }
     }
-    Object.assign(this.attributes, attributes);
     return this;
+  }
+
+  getAttributes() {
+    return this.attributes;
   }
 
   get vertices() {

@@ -37,11 +37,10 @@ export class Camera {
   }
 
   _updateUniforms() {
-    const pos = this.position;
     const viewProjection = this.view.mulMat4(this.projection);
     const viewProjectionInverse = viewProjection.invert();
     this.uniforms = {
-      cameraPosition: [pos.x, pos.y, pos.z],
+      cameraPosition: this.position,
       projectionMatrix: this.projection,
       viewMatrix: this.view,
       viewProjectionMatrix: viewProjection,

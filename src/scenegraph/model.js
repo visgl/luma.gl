@@ -1,5 +1,6 @@
 // A scenegraph object node
-/* eslint-disable guard-for-in */
+/* eslint-disable guard-for-in, no-console */
+/* global console */
 
 // Define some locals
 import {Buffer, draw} from '../webgl';
@@ -7,6 +8,15 @@ import {splat} from '../utils';
 import assert from 'assert';
 import Object3D from './object-3d';
 import {MAX_TEXTURES} from '../config';
+
+const lumaLog = {
+  priority: 3,
+  table(priority, table) {
+    if (priority <= lumaLog.priority && table) {
+      console.table(table);
+    }
+  }
+};
 
 // TODO - experimental, not yet used
 export class Material {
@@ -95,6 +105,10 @@ export default class Model extends Object3D {
     return this.geometry.getVertexCount();
   }
 
+  isIndexed() {
+    return Boolean(this.geometry.indices);
+  }
+
   getProgram() {
     return this.program;
   }
@@ -108,11 +122,21 @@ export default class Model extends Object3D {
     return this;
   }
 
+  getAttributes() {
+    return this.attributes;
+  }
+
+  setAttributes(attributes = {}) {
+    Object.assign(this.attributes, attributes);
+    return this;
+  }
+
   getUniforms() {
     return this.uniforms;
   }
 
   setUniforms(uniforms = {}) {
+    this._checkUniforms(uniforms);
     Object.assign(this.uniforms, uniforms);
     return this;
   }
@@ -124,18 +148,30 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(gl, {viewMatrix}) {
-    const {program} = this;
-    program.setUniforms(this.getCoordinateUniforms(viewMatrix));
+  render(gl, {camera, viewMatrix}) {
+    // Camera exposes uniforms that can be used directly in shaders
+    this.setUniforms(camera.getUniforms());
+    this.setUniforms(this.getCoordinateUniforms(viewMatrix));
+
+    let table = this.getAttributesTable(this.geometry.attributes, {
+      header: `Attributes for ${this.geometry.id}`
+    });
+    table = this.getAttributesTable(this.attributes, {table});
+    lumaLog.table(3, table);
+
+    table = this.getUniformsTable(this.uniforms, {
+      header: `Uniforms for ${this.geometry.id}`
+    });
+    lumaLog.table(3, table);
+
+    this.setProgramState();
 
     const {geometry, instanced, instanceCount} = this;
-    const {drawMode, attributes} = geometry;
-    const {indices, vertices} = attributes;
-    const vertexCount = indices ? indices.length : vertices.length / 3;
+    const {drawMode} = geometry;
     draw(gl, {
       drawMode,
-      vertexCount,
-      indexed: Boolean(indices),
+      vertexCount: this.getVertexCount(),
+      indexed: this.isIndexed(),
       instanced,
       instanceCount
     });
@@ -151,8 +187,8 @@ export default class Model extends Object3D {
   setProgramState() {
     const {program} = this;
     program.setUniforms(this.uniforms);
-    this.setAttributes(this.attributes);
-    this.setAttributes(this.geometry.attributes);
+    this.enableAttributes(this.attributes);
+    this.enableAttributes(this.geometry.attributes);
     this.setTextures(program);
 
     // this.setVertices(program);
@@ -183,7 +219,7 @@ export default class Model extends Object3D {
   // and that the program is updated with those buffers
   // TODO - do we need the separation between "attributes" and "buffers"
   //  couldn't apps just create buffers directly?
-  setAttributes(attributes) {
+  enableAttributes(attributes) {
     assert(attributes);
     const {program} = this;
     for (const attributeName of Object.keys(attributes)) {
@@ -245,6 +281,68 @@ export default class Model extends Object3D {
       }
     }
     return this;
+  }
+
+  // TODO - Move into uniforms manager
+  _checkUniforms(uniformMap) {
+    for (const key in uniformMap) {
+      const value = uniformMap[key];
+      this._checkUniformValue(key, value);
+    }
+  }
+
+  _checkUniformValue(uniform, value) {
+    function isNumber(v) {
+      return !isNaN(v) && Number(v) === v && v !== undefined;
+    }
+
+    let ok = true;
+    if (Array.isArray(value) || value instanceof Float32Array) {
+      for (const element of value) {
+        if (!isNumber(element)) {
+          ok = false;
+        }
+      }
+    } else if (!isNumber(value)) {
+      ok = false;
+    }
+    if (!ok) {
+      /* eslint-disable no-console */
+      /* global console */
+      // Value could be unprintable so write the object on console
+      console.error(`${this.id} Bad uniform ${uniform}`, value);
+      /* eslint-enable no-console */
+      throw new Error(`${this.id} Bad uniform ${uniform}`);
+    }
+  }
+
+  // Todo move to attributes manager
+  getAttributesTable(attributes, {header = 'Attributes', table = null} = {}) {
+    table = table || {[header]: {}};
+    for (const attributeName in attributes) {
+      const attribute = attributes[attributeName];
+      table = table || {};
+      table[attributeName] = {
+        Name: attribute.value.constructor.name,
+        Length: attribute.value.length,
+        Size: attribute.size,
+        Instanced: attribute.instanced
+      };
+    }
+    return table;
+  }
+
+  // TODO - Move to uniforms manager
+  getUniformsTable(uniforms, {header = 'Uniforms', table = null} = {}) {
+    table = table || {[header]: {}};
+    for (const uniformName in uniforms) {
+      const uniform = uniforms[uniformName];
+      table[uniformName] = {
+        Type: uniform,
+        Value: uniform.toString()
+      };
+    }
+    return table;
   }
 
   // TODO - remove
