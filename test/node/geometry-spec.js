@@ -1,4 +1,4 @@
-/* eslint-disable max-statements */
+/* eslint-disable max-statements, max-len */
 import {
   ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry,
   PlaneGeometry, SphereGeometry
@@ -18,13 +18,23 @@ test('Object#Geometries', t => {
   for (const geometryTest of GEOMETRY_TESTS) {
     const {name, Geometry, opts} = geometryTest;
     const geometry = new Geometry(opts);
-    t.assert(geometry.vertices instanceof Float32Array,
+
+    let array;
+
+    array = geometry.hasAttribute('vertices') && geometry.getArray('vertices');
+    t.assert(array instanceof Float32Array,
       `${name}Geometry: expected vertices to be Float32Array`);
-    t.assert(geometry.normals instanceof Float32Array,
+
+    array = geometry.hasAttribute('normals') && geometry.getArray('normals');
+    t.assert(array instanceof Float32Array,
       `${name}Geometry: expected normals to be Float32Array`);
-    t.assert(geometry.texCoords instanceof Float32Array,
+
+    array = geometry.hasAttribute('texCoords') && geometry.getArray('texCoords');
+    t.assert(array instanceof Float32Array,
       `${name}Geometry: expected textCoords to be Float32Array`);
-    t.assert(!geometry.indices || geometry.indices instanceof Uint16Array,
+
+    array = geometry.hasAttribute('indices') && geometry.getArray('indices');
+    t.assert(!array || array instanceof Uint16Array,
       `${name}Geometry: indices (if present) must be Uint16Array`);
   }
   t.end();

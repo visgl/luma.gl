@@ -75,7 +75,7 @@
     "prepublish": "npm run build",
     "docs": "npm run build-docs && open ./_docs/index.html",
     "lint": "uber-standard",
-    "precommit": "npm run lint -s",
+    "precommit": "npm run lint -s && npm run test && npm run build",
     "test": "browserify test/index.js | testron | faucet",
     "test-node": "babel-node --include='' test/index.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
