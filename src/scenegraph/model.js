@@ -8,18 +8,6 @@ import assert from 'assert';
 import Object3D from './object-3d';
 import {MAX_TEXTURES} from '../config';
 
-// Model repository
-// map attribute names to property names
-// TODO(nico): textures are treated separately.
-/*
-const attributeMap = {
-  'position': 'vertices',
-  'normal': 'normals',
-  'pickingColor': 'pickingColors',
-  'colors': 'color'
-};
-*/
-
 // TODO - experimental, not yet used
 export class Material {
   constructor({shininess = 0, reflection = 0, refraction = 0} = {}) {
@@ -37,19 +25,20 @@ export default class Model extends Object3D {
   constructor({
     program,
     geometry,
-    material, shininess = 0, reflection = 0, refraction = 0,
+    material = null, textures = [],
     // Enable instanced rendering (requires shader support and extra attributes)
     instanced = false, instanceCount = 0,
-    pickable, pick,
+    // Picking
+    pickable = false, pick = null,
     // Extra uniforms and attributes (beyond geometry, material, camera)
     uniforms = {},
-    attributes = {}, pickingColors, texCoords,
-    textures,
-    render, onBeforeRender, onAfterRender,
-    ...opts} = {}) {
-
-    assert(program);
+    attributes = {},
+    render = null, onBeforeRender = null, onAfterRender = null,
+    ...opts
+  } = {}) {
     // assert(program || program instanceof Program);
+    assert(program);
+    assert(geometry);
 
     super(opts);
 
@@ -66,12 +55,6 @@ export default class Model extends Object3D {
     this.pickable = Boolean(pickable);
     this.pick = pick || (() => false);
 
-    // this.textures = textures && splat(textures);
-    // this.colors = opt.colors;
-    // this.indices = opt.indices;
-    // this.pickingColors = pickingColors || null;
-    // this.texCoords = opt.texCoords;
-
     // extra uniforms and attribute descriptors
     this.uniforms = uniforms;
     this.attributes = attributes;
@@ -84,7 +67,8 @@ export default class Model extends Object3D {
     this.buffers = {};
     this.userData = {};
 
-    this.textures = [];
+    this.textures = splat(textures);
+
     // TODO - remove?
     this.dynamic = false;
 
@@ -100,6 +84,15 @@ export default class Model extends Object3D {
   setInstanceCount(instanceCount) {
     assert(instanceCount !== undefined);
     this.instanceCount = instanceCount;
+    return this;
+  }
+
+  getInstanceCount() {
+    return this.instanceCount;
+  }
+
+  getVertexCount() {
+    return this.geometry.getVertexCount();
   }
 
   getProgram() {
@@ -112,6 +105,7 @@ export default class Model extends Object3D {
 
   setPickable(pickable = true) {
     this.pickable = Boolean(pickable);
+    return this;
   }
 
   getUniforms() {
@@ -120,12 +114,14 @@ export default class Model extends Object3D {
 
   setUniforms(uniforms = {}) {
     Object.assign(this.uniforms, uniforms);
+    return this;
   }
 
   onBeforeRender() {
     const {program, attributes} = this;
     program.use();
     this.setAttributes(attributes);
+    return this;
   }
 
   render(gl, {viewMatrix}) {
@@ -149,6 +145,7 @@ export default class Model extends Object3D {
     const {program, attributes} = this;
     program.use();
     this.unsetAttributes(attributes);
+    return this;
   }
 
   setProgramState() {
@@ -164,6 +161,7 @@ export default class Model extends Object3D {
     // this.setNormals(program);
     // this.setTexCoords(program);
     // this.setIndices(program);
+    return this;
   }
 
   unsetProgramState() {
@@ -178,6 +176,7 @@ export default class Model extends Object3D {
     for (var name in attributes) {
       gl.disableVertexAttribArray(attributes[name]);
     }
+    return this;
   }
 
   // Makes sure buffers are created for all attributes
@@ -245,6 +244,7 @@ export default class Model extends Object3D {
         program.setUniform('samplerCube' + (++texCube), i);
       }
     }
+    return this;
   }
 
   // TODO - remove

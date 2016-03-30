@@ -106,47 +106,55 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
   }
 }
 
-export function glCheckError2(gl) {
-  glCheckError(gl);
+export function glCheckError(gl) {
+  // Ensure all errors are cleared
+  let error;
+  let glError = gl.getError();
+  while (glError !== gl.NO_ERROR) {
+    if (error) {
+      console.error(error);
+    } else {
+      error = new Error(glGetErrorMessage(gl, glError));
+    }
+    glError = gl.getError();
+  }
+  if (error) {
+    throw error;
+  }
 }
 
-export function glCheckError(gl) {
-  const error = gl.getError();
-  switch (error) {
-  case gl.NO_ERROR:
-    //  No error has been recorded. The value of this constant is 0.
-    return;
-
+function glGetErrorMessage(gl, glError) {
+  switch (glError) {
   case gl.CONTEXT_LOST_WEBGL:
     //  If the WebGL context is lost, this error is returned on the
     // first call to getError. Afterwards and until the context has been
     // restored, it returns gl.NO_ERROR.
-    throw new Error('WebGL context lost');
+    return 'WebGL context lost';
 
   case gl.INVALID_ENUM:
     // An unacceptable value has been specified for an enumerated argument.
-    throw new Error('WebGL invalid enumerated argument');
+    return 'WebGL invalid enumerated argument';
 
   case gl.INVALID_VALUE:
     // A numeric argument is out of range.
-    throw new Error('WebGL invalid value');
+    return 'WebGL invalid value';
 
   case gl.INVALID_OPERATION:
     // The specified command is not allowed for the current state.
-    throw new Error('WebGL invalid operation');
+    return 'WebGL invalid operation';
 
   case gl.INVALID_FRAMEBUFFER_OPERATION:
     // The currently bound framebuffer is not framebuffer complete
     // when trying to render to or to read from it.
-    throw new Error('WebGL invalid framebuffer operation');
+    return 'WebGL invalid framebuffer operation';
 
   case gl.OUT_OF_MEMORY:
     // Not enough memory is left to execute the command.
-    throw new Error('WebGL out of memory');
+    return 'WebGL out of memory';
 
   default:
     // Not enough memory is left to execute the command.
-    throw new Error('WebGL unknown error');
+    return 'WebGL unknown error';
   }
 }
 

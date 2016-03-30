@@ -17,6 +17,7 @@ export default class Group extends Object3D {
       // Create and load Buffers
       this.defineBuffers(child);
     }
+    return this;
   }
 
   remove(child) {
@@ -25,10 +26,12 @@ export default class Group extends Object3D {
     if (indexOf > -1) {
       children.splice(indexOf, 1);
     }
+    return this;
   }
 
   removeAll() {
     this.children = [];
+    return this;
   }
 
   *traverse({viewMatrix}) {

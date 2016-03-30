@@ -3,9 +3,11 @@
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
+  var glCheckError = LumaGL.glCheckError;
   var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Fx = LumaGL.Fx;
+  var Vec3 = LumaGL.Vec3;
   var Mat4 = LumaGL.Mat4;
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
@@ -149,21 +151,21 @@ window.webGLStart = function() {
       if (model.geometry.vertices) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'aVertexPosition',
-          data: model.geometry.vertices,
+          data: model.geometry.get('vertices'),
           size: 3
         }));
       }
       if (model.geometry.colors) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'aVertexColor',
-          data: model.geometry.colors,
+          data: model.geometry.get('colors'),
           size: 4
         }));
       }
       if (model.geometry.indices) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'indices',
-          data: model.geometry.indices,
+          data: model.geometry.get('indices'),
           bufferType: gl.ELEMENT_ARRAY_BUFFER,
           size: 1
         }));
@@ -175,10 +177,11 @@ window.webGLStart = function() {
     // get new view matrix out of element and camera matrices
     view.mulMat42(camera.view, model.matrix);
     // set buffers with element data
-    program.setBuffers(model.userData.buffers);
-    // set uniforms
-    program.setUniform('uMVMatrix', view);
-    program.setUniform('uPMatrix', camera.projection);
+    program
+      .setBuffers(model.userData.buffers)
+      // set uniforms
+      .setUniform('uMVMatrix', view)
+      .setUniform('uPMatrix', camera.projection);
   }
 
   function animate() {
@@ -193,14 +196,18 @@ window.webGLStart = function() {
     pyramid.position.set(-1.5, 0, -8);
     pyramid.rotation.set(0, rPyramid, 0);
     setupElement(pyramid);
-    gl.drawArrays(gl.TRIANGLES, 0, pyramid.geometry.vertices.length / 3);
+    gl.drawArrays(gl.TRIANGLES, 0, pyramid.getVertexCount());
+    glCheckError(gl);
 
     // Draw Cube
-    cube.position.set(1.5, 0, -8);
-    cube.rotation.set(rCube, rCube, rCube);
+    cube
+      .setPosition(new Vec3(1.5, 0, -8))
+      .setRotation(new Vec3(rCube, rCube, rCube));
     setupElement(cube);
     gl.drawElements(
-      gl.TRIANGLES, cube.geometry.indices.length, gl.UNSIGNED_SHORT, 0);
+      gl.TRIANGLES, cube.getVertexCount(), gl.UNSIGNED_SHORT, 0
+    );
+    glCheckError(gl);
   }
 
   function tick() {

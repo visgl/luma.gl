@@ -19,12 +19,28 @@ export default class Geometry {
     this.setAttributes(attrs);
   }
 
+  getVertexCount() {
+    if (this.attributes.indices) {
+      return this.attributes.indices.length;
+    } else if (this.attributes.vertices) {
+      return this.attributes.vertices.length / 3;
+    }
+    throw new Error('Cannot deduce geometry vertex count');
+  }
+
+  get(attributeName) {
+    const attribute = this.attributes[attributeName];
+    assert(attribute);
+    return attribute;
+  }
+
   setAttributes(attributes) {
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       assert(isTypedArray(attribute), ILLEGAL_ARG);
     }
     Object.assign(this.attributes, attributes);
+    return this;
   }
 
   get vertices() {

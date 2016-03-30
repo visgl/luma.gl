@@ -4,7 +4,7 @@
 /* eslint-disable no-console, complexity */
 
 /* global console */
-import {glCheckError2} from './context';
+import {glCheckError} from './context';
 import {uid} from '../utils';
 import {VertexShader, FragmentShader} from './shader';
 import Shaders from '../shaders';
@@ -24,6 +24,8 @@ export default class Program {
    * @param {String} opts.id= - Id
    */
   constructor(gl, opts, fs, id) {
+    assert(gl, 'Program needs WebGLRenderingContext');
+
     let vs;
     if (typeof opts === 'string') {
       console.warn('DEPRECATED: New use: Program(gl, {vs, fs, id})');
@@ -234,13 +236,13 @@ function getUniformSetter(gl, glProgram, info, isArray) {
 
     return val => {
       glFunction(loc, new TypedArray(val));
-      glCheckError2(gl);
+      glCheckError(gl);
     };
   } else if (matrix) {
     // Set a matrix uniform
     return val => {
       glFunction(loc, false, val.toFloat32Array());
-      glCheckError2(gl);
+      glCheckError(gl);
     };
 
   } else if (TypedArray) {
@@ -249,14 +251,14 @@ function getUniformSetter(gl, glProgram, info, isArray) {
     return val => {
       TypedArray.set(val.toFloat32Array ? val.toFloat32Array() : val);
       glFunction(loc, TypedArray);
-      glCheckError2(gl);
+      glCheckError(gl);
     };
 
   }
   // Set a primitive-valued uniform
   return val => {
     glFunction(loc, val);
-    glCheckError2(gl);
+    glCheckError(gl);
   };
 
 }
