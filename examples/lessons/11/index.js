@@ -1,10 +1,13 @@
-var webGLStart = function() {
+/* global window, document, LumaGL */
+/* eslint-disable max-statements */
+window.webGLStart = function() {
 
-  var $id = function(d) { return document.getElementById(d); };
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Events = LumaGL.Events;
@@ -12,7 +15,8 @@ var webGLStart = function() {
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
 
-  var moon, pos;
+  var moon;
+  var pos;
 
   var canvas = document.getElementById('lesson11-canvas');
   canvas.width = canvas.clientWidth;

@@ -8,6 +8,7 @@ import {glCheckError2} from './context';
 import {uid} from '../utils';
 import {VertexShader, FragmentShader} from './shader';
 import Shaders from '../shaders';
+import assert from 'assert';
 
 export default class Program {
 
@@ -92,7 +93,8 @@ export default class Program {
     return this;
   }
 
-  setBuffers(...buffers) {
+  setBuffers(buffers) {
+    assert(Array.isArray(buffers), 'Program.setBuffers expects array');
     buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
       buffers[0] : buffers;
     for (const buffer of buffers) {
@@ -107,7 +109,8 @@ export default class Program {
     return this;
   }
 
-  unsetBuffers(...buffers) {
+  unsetBuffers(buffers) {
+    assert(Array.isArray(buffers), 'Program.setBuffers expects array');
     buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
       buffers[0] : buffers;
     for (const buffer of buffers) {

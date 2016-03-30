@@ -1,8 +1,9 @@
-/* global LumaGL, document, console */
-var webGLStart = function() {
+/* global window, document, LumaGL */
+/* eslint-disable max-statements */
+window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var IO = LumaGL.IO;
+  var XHR = LumaGL.XHR;
   var loadTextures = LumaGL.loadTextures;
   var makeProgramFromDefaultShaders =
     LumaGL.addons.makeProgramFromDefaultShaders;
@@ -12,15 +13,15 @@ var webGLStart = function() {
   var Events = LumaGL.Events;
   var Fx = LumaGL.Fx;
 
-  var pitch = 0,
-      pitchRate = 0,
-      yaw = 0,
-      yawRate = 0,
-      xPos = 0,
-      yPos = 0.4,
-      zPos = 0,
-      speed = 0,
-      joggingAngle = 0;
+  var pitch = 0;
+  var pitchRate = 0;
+  var yaw = 0;
+  var yawRate = 0;
+  var xPos = 0;
+  var yPos = 0.4;
+  var zPos = 0;
+  var speed = 0;
+  var joggingAngle = 0;
 
   // Model
   var world;
@@ -32,7 +33,7 @@ var webGLStart = function() {
   var gl = createGLContext(canvas);
 
   // load world
-  new IO.XHR({
+  new XHR({
     url: 'world.txt',
     onSuccess: function(data) {
       var lines = data.split('\n');
@@ -165,4 +166,4 @@ var webGLStart = function() {
 
     tick();
   }
-}
+};

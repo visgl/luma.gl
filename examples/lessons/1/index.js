@@ -1,5 +1,5 @@
 /* global window, document, LumaGL */
-
+/* eslint-disable max-statements */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
@@ -36,7 +36,7 @@ window.webGLStart = function() {
   });
 
   var camera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
+    aspect: canvas.width / canvas.height
   });
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

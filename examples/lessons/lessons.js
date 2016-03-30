@@ -1,6 +1,6 @@
 (function() {
 
-  var IO = LumaGL.IO;
+  var XHR = LumaGL.XHR;
 
   function onSuccess(data) {
     // Add the editor div.
@@ -102,7 +102,7 @@
   }
 
   function onLoad() {
-    new IO.XHR({
+    new XHR({
       url: window.location + 'index.js',
       onSuccess: onSuccess,
       onError: onError
