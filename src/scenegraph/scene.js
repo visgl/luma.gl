@@ -126,7 +126,7 @@ export default class Scene extends Group {
     // program.setUniforms(coordinateUniforms);
 
     // Draw
-    model.render(gl, program, this.camera);
+    model.render(gl, {viewMatrix: camera.view});
 
     model.onAfterRender(camera, context);
     model.unsetProgramState();

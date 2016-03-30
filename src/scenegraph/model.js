@@ -113,13 +113,24 @@ export default class Model extends Object3D {
     this.pickable = Boolean(pickable);
   }
 
+  getUniforms() {
+    return this.uniforms;
+  }
+
+  setUniforms(uniforms = {}) {
+    Object.assign(this.uniforms, uniforms);
+  }
+
   onBeforeRender() {
     const {program, attributes} = this;
     program.use();
     this.setAttributes(attributes);
   }
 
-  render(gl) {
+  render(gl, {viewMatrix}) {
+    const {program} = this;
+    program.setUniforms(this.getCoordinateUniforms(viewMatrix));
+
     const {geometry, instanced, instanceCount} = this;
     const {drawMode, attributes} = geometry;
     const {indices, vertices} = attributes;
@@ -141,7 +152,7 @@ export default class Model extends Object3D {
 
   setProgramState() {
     const {program} = this;
-    this.setUniforms(program);
+    program.setUniforms(this.uniforms);
     this.setAttributes(this.attributes);
     this.setAttributes(this.geometry.attributes);
     this.setTextures(program);
@@ -157,22 +168,15 @@ export default class Model extends Object3D {
   unsetProgramState() {
     const {program} = this;
     const gl = program.gl;
-    var attributes = program.attributes;
 
     // unbind the array and element buffers
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
+    var attributes = program.attributes;
     for (var name in attributes) {
       gl.disableVertexAttribArray(attributes[name]);
     }
-
-  }
-
-  setUniforms() {
-    const {program} = this;
-    program.setUniforms(this.uniforms);
-    return this;
   }
 
   // Makes sure buffers are created for all attributes
