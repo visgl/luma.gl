@@ -21,13 +21,6 @@
     "3d"
   ],
   "main": "src/index.js",
-  "dependencies": {
-    "babel-polyfill": "6.5.0",
-    "canvas-to-blob": "0.0.0",
-    "filesaver.js": "^0.2.0",
-    "gl-format-compiler-error": "^1.0.2",
-    "global": "^4.3.0"
-  },
   "browserify": {
     "transform": [
       "babelify",
@@ -42,6 +35,13 @@
       "**/Documents/**"
     ]
   },
+  "dependencies": {
+    "babel-polyfill": "6.5.0",
+    "canvas-to-blob": "0.0.0",
+    "filesaver.js": "^0.2.0",
+    "gl-format-compiler-error": "^1.0.2",
+    "global": "^4.3.0"
+  },
   "devDependencies": {
     "babel-cli": "6.5.1",
     "babel-core": "6.5.1",
@@ -53,6 +53,7 @@
     "browserify": "^13.0.0",
     "budo": "^8.0.3",
     "electron-prebuilt": "^0.37.2",
+    "testron": "^1.2.0",
     "eslint": "^1.9.0",
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
