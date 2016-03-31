@@ -1,5 +1,5 @@
 import Geometry from '../geometry';
-import {Model} from '../scenegraph';
+import Model from '../model';
 import {makeTypedArray} from '../webgl/types';
 
 /* eslint-disable no-multi-spaces, indent */

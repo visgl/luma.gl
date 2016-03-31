@@ -1,22 +1,13 @@
 // A scenegraph object node
-/* eslint-disable guard-for-in, no-console */
-/* global console */
+/* eslint-disable guard-for-in */
 
 // Define some locals
-import {Buffer, draw} from '../webgl';
-import {splat} from '../utils';
+import {MAX_TEXTURES} from './config';
+import Object3D from './scenegraph/object-3d';
+import {Buffer, draw} from './webgl';
+import {splat} from './utils';
+import log from './log';
 import assert from 'assert';
-import Object3D from './object-3d';
-import {MAX_TEXTURES} from '../config';
-
-const lumaLog = {
-  priority: 3,
-  table(priority, table) {
-    if (priority <= lumaLog.priority && table) {
-      console.table(table);
-    }
-  }
-};
 
 // TODO - experimental, not yet used
 export class Material {
@@ -157,12 +148,12 @@ export default class Model extends Object3D {
       header: `Attributes for ${this.geometry.id}`
     });
     table = this.getAttributesTable(this.attributes, {table});
-    lumaLog.table(3, table);
+    log.table(3, table);
 
     table = this.getUniformsTable(this.uniforms, {
       header: `Uniforms for ${this.geometry.id}`
     });
-    lumaLog.table(3, table);
+    log.table(3, table);
 
     this.setProgramState();
 
@@ -324,9 +315,10 @@ export default class Model extends Object3D {
       table = table || {};
       table[attributeName] = {
         Name: attribute.value.constructor.name,
-        Length: attribute.value.length,
+        Instanced: attribute.instanced,
+        Verts: attribute.value.length / attribute.size,
         Size: attribute.size,
-        Instanced: attribute.instanced
+        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT
       };
     }
     return table;

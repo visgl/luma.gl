@@ -4,7 +4,6 @@
 import {Camera} from '../camera';
 import Group from './group';
 import {pickModels} from './pick';
-import {Program} from '../webgl';
 import {Vec3} from '../math';
 import {merge} from '../utils';
 import * as config from '../config';
@@ -53,7 +52,7 @@ export default class Scene extends Group {
 
   getProgram(obj) {
     const program = obj ? obj.program : this.program;
-    assert(program instanceof Program, 'Scene failed to find valid program');
+    assert(program, 'Scene failed to find valid program');
     program.use();
     return program;
   }

@@ -1,6 +1,6 @@
 import Geometry from '../geometry';
 import {Vec3} from '../math';
-import {Model} from '../scenegraph';
+import Model from '../model';
 import {makeTypedArray} from '../webgl/types';
 
 /* eslint-disable comma-spacing, max-statements, complexity */

@@ -1,5 +1,5 @@
 import Geometry from '../geometry';
-import {Model} from '../scenegraph';
+import Model from '../model';
 
 export class TruncatedConeGeometry extends Geometry {
 

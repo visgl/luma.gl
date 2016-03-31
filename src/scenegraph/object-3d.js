@@ -17,7 +17,9 @@ export default class Object3D {
   }
 
   getCoordinateUniforms(viewMatrix) {
-    assert(viewMatrix instanceof Mat4);
+    // TODO - solve multiple class problem
+    // assert(viewMatrix instanceof Mat4);
+    assert(viewMatrix);
     const {matrix} = this;
     const worldMatrix = viewMatrix.mulMat4(matrix);
     const worldInverse = worldMatrix.invert();
