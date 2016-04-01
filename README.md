@@ -7,8 +7,8 @@ LumaGL's primary focus is to provide a set of efficient and easy-to-use
 WebGL building blocks enabling high-performance browser-based data visualizations.
 
 [**Examples**](http://uber-common.github.io/luma.gl/) [**Documentation**](http://uber-common.github.io/luma.gl/_site/docs/core.html)
-[![Master](https://travis-ci.org/uber-common/deck.gl.svg?branch=master)](https://travis-ci.org/uber-common/deck.gl)
-[![Dev](https://travis-ci.org/uber-common/deck.gl.svg?branch=dev)](https://travis-ci.org/uber-common/deck.gl)
+**Master**[![Build Status](https://travis-ci.org/uber-common/deck.gl.svg?branch=master)](https://travis-ci.org/uber-common/deck.gl)
+**Dev**[![Build Status](https://travis-ci.org/uber-common/deck.gl.svg?branch=dev)](https://travis-ci.org/uber-common/deck.gl)
 
 **Note** LumaGL has just been made public. Documentation is still in the process of being updated to correspond with the latest API changes.
 
