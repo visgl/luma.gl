@@ -71,12 +71,12 @@ window.webGLStart = function() {
       model.userData.buffers = [
         new Buffer(gl, {
           attribute: 'aVertexPosition',
-          data: model.geometry.vertices,
+          data: model.geometry.vertices.value,
           size: 3
         }),
         new Buffer(gl, {
           attribute: 'aVertexColor',
-          data: model.geometry.colors,
+          data: model.geometry.colors.value,
           size: 4
         })
       ];
