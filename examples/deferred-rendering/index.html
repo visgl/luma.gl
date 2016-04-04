@@ -1,0 +1,156 @@
+<html>
+
+  <head>
+    <title>Deferred Rendering Example</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" />
+    <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
+    <style>
+      body {
+        margin: 0px;
+        background: #000;
+      }
+      #render-canvas {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+
+    <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript" src="../../dist/LumaGL.js"></script>
+    <script type="text/javascript" src="../examples.js"></script>
+    <script type="text/javascript" src="noise.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+
+
+    <script id="lights-vs" type="x-shader/x-vertex">
+
+      precision highp float;
+
+      attribute vec3 aOffset;
+      attribute vec3 aPosition;
+      attribute vec3 aColor;
+
+      uniform mat4 uView;
+      uniform mat4 uProjection;
+
+      varying vec3 vLightPosition;
+      varying vec3 vColor;
+
+      void main(void) {
+        mat4 v = uView;
+        mat3 iview = mat3(
+          v[0][0], v[1][0], v[2][0],
+          v[0][1], v[1][1], v[2][1],
+          v[0][2], v[1][2], v[2][2]
+        );
+        gl_Position = uProjection * uView * vec4(iview * (aPosition) + aOffset, 1.0);
+        vLightPosition = aOffset;
+        vColor = aColor;
+      }
+
+    </script>
+
+
+    <script id="lights-fs" type="x-shader/x-fragment">
+
+      precision highp float;
+
+      uniform sampler2D uPosition;
+      uniform sampler2D uNormal;
+      uniform vec2 uRes;
+
+      varying vec3 vLightPosition;
+      varying vec3 vColor;
+
+      void main(void) {
+        vec2 p = gl_FragCoord.xy/uRes;
+
+        vec3 position = texture2D(uPosition, p).xyz;
+        vec3 normal = texture2D(uNormal, p).xyz;
+
+        float d = smoothstep(1.0, 0.0, length(vLightPosition - position));
+
+        vec3 toLight = normalize(vLightPosition - position);
+
+        float i = clamp(dot(normal, toLight), 0.0, 1.0);
+
+        gl_FragColor = vec4(i * d * vColor, 1.0);
+      }
+
+    </script>
+
+
+    <script id="position-vs" type="x-shader/x-vertex">
+
+      precision highp float;
+
+      attribute vec3 aPosition;
+
+      uniform mat4 uView;
+      uniform mat4 uProjection;
+
+      varying vec3 vPosition;
+
+      void main(void) {
+        gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+        vPosition = aPosition;
+      }
+
+    </script>
+
+
+    <script id="position-fs" type="x-shader/x-fragment">
+
+      precision highp float;
+
+      varying vec3 vPosition;
+
+      void main(void) {
+        gl_FragColor = vec4(vPosition,1.0);
+      }
+
+    </script>
+
+
+    <script id="normal-vs" type="x-shader/x-vertex">
+
+      precision highp float;
+
+      attribute vec3 aPosition;
+      attribute vec3 aNormal;
+
+      uniform mat4 uView;
+      uniform mat4 uProjection;
+
+      varying vec3 vNormal;
+
+      void main(void) {
+        gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+        vNormal = aNormal;
+      }
+
+    </script>
+
+
+    <script id="normal-fs" type="x-shader/x-fragment">
+
+      precision highp float;
+
+      varying vec3 vNormal;
+
+      void main(void) {
+        gl_FragColor = vec4(vNormal,1.0);
+      }
+
+    </script>
+
+
+  </head>
+
+  <body>
+    <canvas id="render-canvas"></canvas>
+  </body>
+
+</html>

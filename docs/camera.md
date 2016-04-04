@@ -4,44 +4,42 @@ title: Camera
 categories: [Documentation]
 ---
 
-Class: Camera {#Camera}
+LumaGL provides two camera classes - `PerspectiveCamera` and `OrthoCamera`. They
+are used to prepare perspective and orthographic projection matrices when rendering
+your scene, respectively.
+
+
+Class: PerspectiveCamera {#PerspectiveCamera}
 ===========================
 
-Provides the Camera object with information about the camera position, target position and projection matrix information.
+Used to calculate view and perspective projection matrices when rendering your scene.
 
 ### Properties:
-
-You can access most of the constructor properties from a camera
-instance:
 
 * fov  - (*number*) The angle (in degrees) for the field of view.
 * aspect  - (*number*) The aspect ratio of the screen.
 * near - (*number*) The closest distance that can be captured by the camera.
 * far - (*number*) The longest distance that can be captured by the camera.
+* position - (*object*) Vec3 representing the position of the camera.
+* target - (*object*) Vec3 representing the point the camera is looking at.
+* up - (*object*) Vec3 representing the up direction.
 
-
-Camera Method: constructor {#Camera:constructor}
+PerspectiveCamera Method: constructor {#PerspectiveCamera:constructor}
 ----------------------------------------------------
-
-The Camera object, used as eye to project the scene into.
 
 ### Syntax:
 
-	var camera = new LumaGL.Camera(fov, aspect, near, far [, options]);
-
-### Arguments:
-
-1. fov  - (*number*) The angle (in degrees) for the field of view.
-2. aspect  - (*number*) The aspect ratio of the screen.
-3. near - (*number*) The closest distance that can be captured by the camera.
-4. far - (*number*) The longest distance that can be captured by the camera.
-5. options - (*object*, optional) An object containing the following options:
+	var camera = new PerspectiveCamera([options]);
 
 ### Options:
 
-* position - (*object*) An x, y, z object with the camera position.
-* target - (*object*) An x, y, z object with the target position.
-* type - (*string*, optional) The type of projection. Either "perspective" or "orthographic". Default's "perspective".
+* fov  - (*number*) The angle (in degrees) for the field of view.
+* aspect  - (*number*) The aspect ratio of the screen.
+* near - (*number*) The closest distance that can be captured by the camera.
+* far - (*number*) The longest distance that can be captured by the camera.
+* position - (*object*) Vec3 representing the position of the camera.
+* target - (*object*) Vec3 representing the point the camera is looking at.
+* up - (*object*) Vec3 representing the up direction.
 
 ### Examples:
 
@@ -49,18 +47,20 @@ Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
 
 {% highlight js %}
   var canvas = document.getElementById('canvas');
-  var camera = new LumaGL.Camera(45, canvas.width / canvas.height, 0.1, 100, {
-        position: {
-          x: 0, y: 0, z: 10
-        }
+  var camera = new PerspectiveCamera({
+        fov: 45,
+        aspect: canvas.width / canvas.height,
+        near: 0.1,
+        far: 100,
+        position: new Vec3(0, 0, 10)
       });
 {% endhighlight %}
 
 
-Camera Method: update {#Camera:update}
+PerspectiveCamera Method: update {#PerspectiveCamera:update}
 ------------------------------------
 
-Updates the Camera *view* matrix with the information provided on *position* and *target* respectively.
+Updates the PerspectiveCamera *view* matrix with the information provided on *position* and *target*.
 
 ### Syntax:
 
@@ -69,18 +69,89 @@ Updates the Camera *view* matrix with the information provided on *position* and
 ### Examples:
 
 {% highlight js %}
-  var camera = new LumaGL.Camera(45, canvas.width / canvas.height, 0.1, 100, {
-    position: {
-      x: 0, y: 0, z: 10
-    }
+  var camera = new PerspectiveCamera({
+    fov: 45,
+    aspect: canvas.width / canvas.height,
+    near: 0.1,
+    far: 100,
+    position: new Vec3(0, 0, 10)
   });
 
-  camera.position = {
-    x: 10,
-    y: 0,
-    z: 10
-  };
+  camera.position = new Vec3(10, 0, 10);
   camera.update(); //update matrices
 
 {% endhighlight %}
 
+
+Class: OrthoCamera {#OrthoCamera}
+===========================
+
+Used to calculate view and orthographic projection matrices when rendering your scene.
+
+### Properties:
+
+* fov  - (*number*) The angle (in degrees) for the field of view.
+* aspect  - (*number*) The aspect ratio of the screen.
+* near - (*number*) The closest distance that can be captured by the camera.
+* far - (*number*) The longest distance that can be captured by the camera.
+* position - (*object*) Vec3 representing the position of the camera.
+* target - (*object*) Vec3 representing the point the camera is looking at.
+* up - (*object*) Vec3 representing the up direction.
+
+OrthoCamera Method: constructor {#OrthoCamera:constructor}
+----------------------------------------------------
+
+### Syntax:
+
+	var camera = new OrthoCamera([options]);
+
+### Options:
+
+* fov  - (*number*) The angle (in degrees) for the field of view.
+* aspect  - (*number*) The aspect ratio of the screen.
+* near - (*number*) The closest distance that can be captured by the camera.
+* far - (*number*) The longest distance that can be captured by the camera.
+* position - (*object*) Vec3 representing the position of the camera.
+* target - (*object*) Vec3 representing the point the camera is looking at.
+* up - (*object*) Vec3 representing the up direction.
+
+### Examples:
+
+Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
+
+{% highlight js %}
+  var canvas = document.getElementById('canvas');
+  var camera = new OrthoCamera({
+        fov: 45,
+        aspect: canvas.width / canvas.height,
+        near: 0.1,
+        far: 100,
+        position: new Vec3(0, 0, 10)
+      });
+{% endhighlight %}
+
+
+OrthoCamera Method: update {#OrthoCamera:update}
+------------------------------------
+
+Updates the OrthoCamera *view* matrix with the information provided on *position* and *target*.
+
+### Syntax:
+
+	camera.update();
+
+### Examples:
+
+{% highlight js %}
+  var camera = new OrthoCamera({
+    fov: 45,
+    aspect: canvas.width / canvas.height,
+    near: 0.1,
+    far: 100,
+    position: new Vec3(0, 0, 10)
+  });
+
+  camera.position = new Vec3(10, 0, 10);
+  camera.update(); //update matrices
+
+{% endhighlight %}

@@ -1,16 +1,14 @@
 LumaGL: A JavaScript WebGL Framework for Data Visualization
 ===========================================================
 
-[Examples](http://uber-common.github.io/luma.gl/)
-
-[Documentation](http://uber-common.github.io/luma.gl/_site/docs/core.html)
-
-**Note** LumaGL has just been made public. Documentation is still in the process of being updated to correspond with the latest API changes.
-
 ## Overview
 
 LumaGL's primary focus is to provide a set of efficient and easy-to-use
 WebGL building blocks enabling high-performance browser-based data visualizations.
+
+See [**Examples**](http://uber-common.github.io/luma.gl/) and [**Documentation**](http://uber-common.github.io/luma.gl/_site/docs/core.html).
+
+**Note** LumaGL has just been made public. Documentation is still in the process of being updated to correspond with the latest API changes.
 
 ## LumaGL Design Goals
 
@@ -48,9 +46,7 @@ cd luma.gl
 npm install
 npm start
 ```
-This builds the LumaGL bundle and starts a small local server.
-You should now be able to access the examples using your browser, at http://127.0.0.1:3000
-e.g. http://127.0.0.1:3000/examples/lessons/1/
+This builds the LumaGL bundle, starts a small local server, and opens a browser window on a welcome page, allowing you to run to all lessons and examples.
 
 ## Quickstart
 
@@ -79,4 +75,37 @@ program.setUniform('uPMatrix', camera.projection);
 // Draw Triangle
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 gl.drawArrays(gl.TRIANGLES, 0, 3);
+```
+
+# Developing
+**Master**[![Build Status](https://travis-ci.org/uber-common/luma.gl.svg?branch=master)](https://travis-ci.org/uber-common/luma.gl)
+**Dev**[![Build Status](https://travis-ci.org/uber-common/luma.gl.svg?branch=dev)](https://travis-ci.org/uber-common/luma.gl)
+
+Use `npm start` to run the test server, it will start a watch and automatically update when you save modified source files.
+
+## Publishing
+
+Before publishing run
+```
+npm run prepublish
+```
+to generate the static bundles, the optional pretranspiled ES5 distribution, and the documention.
+
+## Building Documentation
+
+To run the static site generation, you need to install the `jekyll` and `pygments` ruby gems which can be done with the following command:
+```sh
+gem install jekyll pygments.rb
+```
+Once that's done, you can rebuild the static site using the following npm script:
+```
+npm run build-docs
+```
+This will create a folder called `_site` in the root directory which contains all the static content for the site.  To view the docs locally, you can also run jekyll as a standalone server with the command:
+```
+jekyll serve --source=docs/
+```
+or 
+```
+npm run open-docs
 ```

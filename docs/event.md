@@ -31,11 +31,11 @@ Creates a set of events for the given domElement that can be handled through a c
 
 ### Syntax:
 
-    LumaGL.Events.create(app, options);
+    Events.create(app, options);
 
 ### Arguments:
 
-1. app  - (*element*) A [LumaGL application](core.html#LumaGL:constructor).
+1. gl  - (*WebGLRenderingContext*) A WebGLRenderingContext object. Events are handled for the context's canvas element.
 5. options - (*object*) An object containing the following options:
 
 ### Options:
@@ -50,7 +50,6 @@ Creates a set of events for the given domElement that can be handled through a c
 * enableKeyboard - (*boolean*, optional) Whether to append listeners to keyboard events. Default's `true`.
 * bind - (*mixed*, optional) bind the *thisArg* in the callbacks to the specified object.
 * picking - (*boolean*, optional) Whether to use picking. If true, the second parameter for the callback functions will be an [O3D](o3d.html) target for the event (or a falsy value otherwise). Default's false.
-* lazyPicking - (*boolean*, optional) When using lazy picking the framebuffer only stores a new image used for color picking when `scene.resetPicking();` is called. This is useful for when images of large resolution are being used and the scene is static most of the time (i.e. pickable objects don't change their shape/position too often). **Currently this only works for Chrome, Opera, Safari**. Default's false.
 
 ### Callbacks:
 
@@ -80,11 +79,6 @@ following callbacks are:
 * onKeyDown - (*function*, optional) Handles the onKeyDown event.
 * onKeyUp - (*function*, optional) Handles the onKeyUp event.
 
-### Notes:
-
-Even though the *Events* object is accessible via the LumaGL function
-the events should be set in the [LumaGL constructor](core.html#LumaGL:constructor).
-
 ### Examples:
 
 Setting rotation and zoom to a moon object with drag and drop and mousewheel events.
@@ -94,7 +88,7 @@ Setting rotation and zoom to a moon object with drag and drop and mousewheel eve
 
     //create and assign variables to objects...
 
-    LumaGL.Events.create(app, {
+    Events.create(gl, {
       onDragStart: function(e) {
         pos = {
           x: e.x,

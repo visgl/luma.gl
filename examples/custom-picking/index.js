@@ -103,8 +103,6 @@ var webGLStart = function() {
     }
   }
 
-  console.log(colors.length/4, vertices.length/3);
-
   var heightmap = new Model({
     vertices: vertices,
     colors: colors,

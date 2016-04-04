@@ -32,6 +32,7 @@ if (typeof window !== 'undefined') {
     OrthoCamera: LumaGL.OrthoCamera,
     Scene: LumaGL.Scene,
     Program: LumaGL.Program,
+    saveBitmap: LumaGL.saveBitmap,
     Media: {
       Image: LumaGL.Img
     },

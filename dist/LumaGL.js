@@ -16,23 +16,7 @@ function addLineNumbers (string, start, delim) {
   }).join('\n')
 }
 
-},{"pad-left":2}],2:[function(require,module,exports){
-/*!
- * pad-left <https://github.com/jonschlinkert/pad-left>
- *
- * Copyright (c) 2014-2015, Jon Schlinkert.
- * Licensed under the MIT license.
- */
-
-'use strict';
-
-var repeat = require('repeat-string');
-
-module.exports = function padLeft(str, num, ch) {
-  ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
-  return repeat(ch, num) + str;
-};
-},{"repeat-string":205}],3:[function(require,module,exports){
+},{"pad-left":208}],2:[function(require,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
 // THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -393,12 +377,12 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":208}],4:[function(require,module,exports){
+},{"util/":212}],3:[function(require,module,exports){
 module.exports = function _atob(str) {
   return atob(str)
 }
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -411,7 +395,7 @@ if (global._babelPolyfill) {
 }
 global._babelPolyfill = true;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"babel-regenerator-runtime":6,"core-js/shim":194}],6:[function(require,module,exports){
+},{"babel-regenerator-runtime":5,"core-js/shim":194}],5:[function(require,module,exports){
 (function (process,global){
 /**
  * Copyright (c) 2014, Facebook, Inc.
@@ -1072,7 +1056,7 @@ global._babelPolyfill = true;
 );
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":7}],7:[function(require,module,exports){
+},{"_process":6}],6:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1164,6 +1148,42 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 process.umask = function() { return 0; };
+
+},{}],7:[function(require,module,exports){
+module.exports = function (uri) {
+    var mime   = uri.split(',')[0].split(':')[1].split(';')[0];
+    var bytes  = atob(uri.split(',')[1]);
+    var len    = bytes.length;
+    var buffer = new window.ArrayBuffer(len);
+    var arr    = new window.Uint8Array(buffer);
+
+    for (var i = 0; i < len; i++) {
+        arr[i] = bytes.charCodeAt(i);
+    }
+
+    return new Blob([arr], { type: mime });
+}
+
+// IE >= 10, most modern browsers
+// The Blob type can't be polyfilled, which is why there aren't any polyfills for TypedArrays for older IE's
+module.exports.supported = (
+    typeof window.HTMLCanvasElement !== 'undefined' &&
+    typeof window.atob !== 'undefined' &&
+    typeof window.Blob !== 'undefined' &&
+    typeof window.ArrayBuffer !== 'undefined' &&
+    typeof window.Uint8Array !== 'undefined'
+);
+
+module.exports.init = function () {
+    if (!module.exports.supported) return;
+    var CanvasPrototype = window.HTMLCanvasElement.prototype;
+    
+    if (!CanvasPrototype.toBlob && CanvasPrototype.toDataURL) {
+        CanvasPrototype.toBlob = function (callback, type, quality) {
+            callback(module.exports(this.toDataURL(type, quality)));
+        }
+    }
+}
 
 },{}],8:[function(require,module,exports){
 module.exports = function(it){
@@ -4904,6 +4924,264 @@ require('./modules/web.immediate');
 require('./modules/web.dom.iterable');
 module.exports = require('./modules/$.core');
 },{"./modules/$.core":22,"./modules/es5":91,"./modules/es6.array.copy-within":92,"./modules/es6.array.fill":93,"./modules/es6.array.find":95,"./modules/es6.array.find-index":94,"./modules/es6.array.from":96,"./modules/es6.array.iterator":97,"./modules/es6.array.of":98,"./modules/es6.array.species":99,"./modules/es6.function.has-instance":100,"./modules/es6.function.name":101,"./modules/es6.map":102,"./modules/es6.math.acosh":103,"./modules/es6.math.asinh":104,"./modules/es6.math.atanh":105,"./modules/es6.math.cbrt":106,"./modules/es6.math.clz32":107,"./modules/es6.math.cosh":108,"./modules/es6.math.expm1":109,"./modules/es6.math.fround":110,"./modules/es6.math.hypot":111,"./modules/es6.math.imul":112,"./modules/es6.math.log10":113,"./modules/es6.math.log1p":114,"./modules/es6.math.log2":115,"./modules/es6.math.sign":116,"./modules/es6.math.sinh":117,"./modules/es6.math.tanh":118,"./modules/es6.math.trunc":119,"./modules/es6.number.constructor":120,"./modules/es6.number.epsilon":121,"./modules/es6.number.is-finite":122,"./modules/es6.number.is-integer":123,"./modules/es6.number.is-nan":124,"./modules/es6.number.is-safe-integer":125,"./modules/es6.number.max-safe-integer":126,"./modules/es6.number.min-safe-integer":127,"./modules/es6.number.parse-float":128,"./modules/es6.number.parse-int":129,"./modules/es6.object.assign":130,"./modules/es6.object.freeze":131,"./modules/es6.object.get-own-property-descriptor":132,"./modules/es6.object.get-own-property-names":133,"./modules/es6.object.get-prototype-of":134,"./modules/es6.object.is":138,"./modules/es6.object.is-extensible":135,"./modules/es6.object.is-frozen":136,"./modules/es6.object.is-sealed":137,"./modules/es6.object.keys":139,"./modules/es6.object.prevent-extensions":140,"./modules/es6.object.seal":141,"./modules/es6.object.set-prototype-of":142,"./modules/es6.object.to-string":143,"./modules/es6.promise":144,"./modules/es6.reflect.apply":145,"./modules/es6.reflect.construct":146,"./modules/es6.reflect.define-property":147,"./modules/es6.reflect.delete-property":148,"./modules/es6.reflect.enumerate":149,"./modules/es6.reflect.get":152,"./modules/es6.reflect.get-own-property-descriptor":150,"./modules/es6.reflect.get-prototype-of":151,"./modules/es6.reflect.has":153,"./modules/es6.reflect.is-extensible":154,"./modules/es6.reflect.own-keys":155,"./modules/es6.reflect.prevent-extensions":156,"./modules/es6.reflect.set":158,"./modules/es6.reflect.set-prototype-of":157,"./modules/es6.regexp.constructor":159,"./modules/es6.regexp.flags":160,"./modules/es6.regexp.match":161,"./modules/es6.regexp.replace":162,"./modules/es6.regexp.search":163,"./modules/es6.regexp.split":164,"./modules/es6.set":165,"./modules/es6.string.code-point-at":166,"./modules/es6.string.ends-with":167,"./modules/es6.string.from-code-point":168,"./modules/es6.string.includes":169,"./modules/es6.string.iterator":170,"./modules/es6.string.raw":171,"./modules/es6.string.repeat":172,"./modules/es6.string.starts-with":173,"./modules/es6.string.trim":174,"./modules/es6.symbol":175,"./modules/es6.weak-map":176,"./modules/es6.weak-set":177,"./modules/es7.array.includes":178,"./modules/es7.map.to-json":179,"./modules/es7.object.entries":180,"./modules/es7.object.get-own-property-descriptors":181,"./modules/es7.object.values":182,"./modules/es7.regexp.escape":183,"./modules/es7.set.to-json":184,"./modules/es7.string.at":185,"./modules/es7.string.pad-left":186,"./modules/es7.string.pad-right":187,"./modules/es7.string.trim-left":188,"./modules/es7.string.trim-right":189,"./modules/js.array.statics":190,"./modules/web.dom.iterable":191,"./modules/web.immediate":192,"./modules/web.timers":193}],195:[function(require,module,exports){
+/* FileSaver.js
+ * A saveAs() FileSaver implementation.
+ * 1.1.20150716
+ *
+ * By Eli Grey, http://eligrey.com
+ * License: X11/MIT
+ *   See https://github.com/eligrey/FileSaver.js/blob/master/LICENSE.md
+ */
+
+/*global self */
+/*jslint bitwise: true, indent: 4, laxbreak: true, laxcomma: true, smarttabs: true, plusplus: true */
+
+/*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
+
+var saveAs = saveAs || (function(view) {
+	"use strict";
+	// IE <10 is explicitly unsupported
+	if (typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
+		return;
+	}
+	var
+		  doc = view.document
+		  // only get URL when necessary in case Blob.js hasn't overridden it yet
+		, get_URL = function() {
+			return view.URL || view.webkitURL || view;
+		}
+		, save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a")
+		, can_use_save_link = "download" in save_link
+		, click = function(node) {
+			var event = new MouseEvent("click");
+			node.dispatchEvent(event);
+		}
+		, webkit_req_fs = view.webkitRequestFileSystem
+		, req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem
+		, throw_outside = function(ex) {
+			(view.setImmediate || view.setTimeout)(function() {
+				throw ex;
+			}, 0);
+		}
+		, force_saveable_type = "application/octet-stream"
+		, fs_min_size = 0
+		// See https://code.google.com/p/chromium/issues/detail?id=375297#c7 and
+		// https://github.com/eligrey/FileSaver.js/commit/485930a#commitcomment-8768047
+		// for the reasoning behind the timeout and revocation flow
+		, arbitrary_revoke_timeout = 500 // in ms
+		, revoke = function(file) {
+			var revoker = function() {
+				if (typeof file === "string") { // file is an object URL
+					get_URL().revokeObjectURL(file);
+				} else { // file is a File
+					file.remove();
+				}
+			};
+			if (view.chrome) {
+				revoker();
+			} else {
+				setTimeout(revoker, arbitrary_revoke_timeout);
+			}
+		}
+		, dispatch = function(filesaver, event_types, event) {
+			event_types = [].concat(event_types);
+			var i = event_types.length;
+			while (i--) {
+				var listener = filesaver["on" + event_types[i]];
+				if (typeof listener === "function") {
+					try {
+						listener.call(filesaver, event || filesaver);
+					} catch (ex) {
+						throw_outside(ex);
+					}
+				}
+			}
+		}
+		, auto_bom = function(blob) {
+			// prepend BOM for UTF-8 XML and text/* types (including HTML)
+			if (/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(blob.type)) {
+				return new Blob(["\ufeff", blob], {type: blob.type});
+			}
+			return blob;
+		}
+		, FileSaver = function(blob, name, no_auto_bom) {
+			if (!no_auto_bom) {
+				blob = auto_bom(blob);
+			}
+			// First try a.download, then web filesystem, then object URLs
+			var
+				  filesaver = this
+				, type = blob.type
+				, blob_changed = false
+				, object_url
+				, target_view
+				, dispatch_all = function() {
+					dispatch(filesaver, "writestart progress write writeend".split(" "));
+				}
+				// on any filesys errors revert to saving with object URLs
+				, fs_error = function() {
+					// don't create more object URLs than needed
+					if (blob_changed || !object_url) {
+						object_url = get_URL().createObjectURL(blob);
+					}
+					if (target_view) {
+						target_view.location.href = object_url;
+					} else {
+						var new_tab = view.open(object_url, "_blank");
+						if (new_tab == undefined && typeof safari !== "undefined") {
+							//Apple do not allow window.open, see http://bit.ly/1kZffRI
+							view.location.href = object_url
+						}
+					}
+					filesaver.readyState = filesaver.DONE;
+					dispatch_all();
+					revoke(object_url);
+				}
+				, abortable = function(func) {
+					return function() {
+						if (filesaver.readyState !== filesaver.DONE) {
+							return func.apply(this, arguments);
+						}
+					};
+				}
+				, create_if_not_found = {create: true, exclusive: false}
+				, slice
+			;
+			filesaver.readyState = filesaver.INIT;
+			if (!name) {
+				name = "download";
+			}
+			if (can_use_save_link) {
+				object_url = get_URL().createObjectURL(blob);
+				save_link.href = object_url;
+				save_link.download = name;
+				setTimeout(function() {
+					click(save_link);
+					dispatch_all();
+					revoke(object_url);
+					filesaver.readyState = filesaver.DONE;
+				});
+				return;
+			}
+			// Object and web filesystem URLs have a problem saving in Google Chrome when
+			// viewed in a tab, so I force save with application/octet-stream
+			// http://code.google.com/p/chromium/issues/detail?id=91158
+			// Update: Google errantly closed 91158, I submitted it again:
+			// https://code.google.com/p/chromium/issues/detail?id=389642
+			if (view.chrome && type && type !== force_saveable_type) {
+				slice = blob.slice || blob.webkitSlice;
+				blob = slice.call(blob, 0, blob.size, force_saveable_type);
+				blob_changed = true;
+			}
+			// Since I can't be sure that the guessed media type will trigger a download
+			// in WebKit, I append .download to the filename.
+			// https://bugs.webkit.org/show_bug.cgi?id=65440
+			if (webkit_req_fs && name !== "download") {
+				name += ".download";
+			}
+			if (type === force_saveable_type || webkit_req_fs) {
+				target_view = view;
+			}
+			if (!req_fs) {
+				fs_error();
+				return;
+			}
+			fs_min_size += blob.size;
+			req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
+				fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
+					var save = function() {
+						dir.getFile(name, create_if_not_found, abortable(function(file) {
+							file.createWriter(abortable(function(writer) {
+								writer.onwriteend = function(event) {
+									target_view.location.href = file.toURL();
+									filesaver.readyState = filesaver.DONE;
+									dispatch(filesaver, "writeend", event);
+									revoke(file);
+								};
+								writer.onerror = function() {
+									var error = writer.error;
+									if (error.code !== error.ABORT_ERR) {
+										fs_error();
+									}
+								};
+								"writestart progress write abort".split(" ").forEach(function(event) {
+									writer["on" + event] = filesaver["on" + event];
+								});
+								writer.write(blob);
+								filesaver.abort = function() {
+									writer.abort();
+									filesaver.readyState = filesaver.DONE;
+								};
+								filesaver.readyState = filesaver.WRITING;
+							}), fs_error);
+						}), fs_error);
+					};
+					dir.getFile(name, {create: false}, abortable(function(file) {
+						// delete file if it already exists
+						file.remove();
+						save();
+					}), abortable(function(ex) {
+						if (ex.code === ex.NOT_FOUND_ERR) {
+							save();
+						} else {
+							fs_error();
+						}
+					}));
+				}), fs_error);
+			}), fs_error);
+		}
+		, FS_proto = FileSaver.prototype
+		, saveAs = function(blob, name, no_auto_bom) {
+			return new FileSaver(blob, name, no_auto_bom);
+		}
+	;
+	// IE 10+ (native saveAs)
+	if (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob) {
+		return function(blob, name, no_auto_bom) {
+			if (!no_auto_bom) {
+				blob = auto_bom(blob);
+			}
+			return navigator.msSaveOrOpenBlob(blob, name || "download");
+		};
+	}
+
+	FS_proto.abort = function() {
+		var filesaver = this;
+		filesaver.readyState = filesaver.DONE;
+		dispatch(filesaver, "abort");
+	};
+	FS_proto.readyState = FS_proto.INIT = 0;
+	FS_proto.WRITING = 1;
+	FS_proto.DONE = 2;
+
+	FS_proto.error =
+	FS_proto.onwritestart =
+	FS_proto.onprogress =
+	FS_proto.onwrite =
+	FS_proto.onabort =
+	FS_proto.onerror =
+	FS_proto.onwriteend =
+		null;
+
+	return saveAs;
+}(
+	   typeof self !== "undefined" && self
+	|| typeof window !== "undefined" && window
+	|| this.content
+));
+// `self` is undefined in Firefox for Android content script context
+// while `this` is nsIContentFrameMessageManager
+// with an attribute `content` that corresponds to the window
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports.saveAs = saveAs;
+} else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
+  define([], function() {
+    return saveAs;
+  });
+}
+
+},{}],196:[function(require,module,exports){
 module.exports = {
   0: 'NONE',
   1: 'ONE',
@@ -5203,14 +5481,14 @@ module.exports = {
   37444: 'BROWSER_DEFAULT_WEBGL'
 }
 
-},{}],196:[function(require,module,exports){
+},{}],197:[function(require,module,exports){
 var gl10 = require('./1.0/numbers')
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
 }
 
-},{"./1.0/numbers":195}],197:[function(require,module,exports){
+},{"./1.0/numbers":196}],198:[function(require,module,exports){
 
 var sprintf = require('sprintf-js').sprintf;
 var glConstants = require('gl-constants/lookup');
@@ -5265,7 +5543,7 @@ function formatCompilerError(errLog, src, type) {
 }
 
 
-},{"add-line-numbers":1,"gl-constants/lookup":196,"glsl-shader-name":198,"sprintf-js":206}],198:[function(require,module,exports){
+},{"add-line-numbers":1,"gl-constants/lookup":197,"glsl-shader-name":199,"sprintf-js":210}],199:[function(require,module,exports){
 var tokenize = require('glsl-tokenizer')
 var atob     = require('atob-lite')
 
@@ -5290,12 +5568,14 @@ function getName(src) {
   }
 }
 
-},{"atob-lite":4,"glsl-tokenizer":203}],199:[function(require,module,exports){
+},{"atob-lite":3,"glsl-tokenizer":206}],200:[function(require,module,exports){
 module.exports = tokenize
 
-var literals = require('./lib/literals')
+var literals100 = require('./lib/literals')
   , operators = require('./lib/operators')
-  , builtins = require('./lib/builtins')
+  , builtins100 = require('./lib/builtins')
+  , literals300es = require('./lib/literals-300es')
+  , builtins300es = require('./lib/builtins-300es')
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -5327,7 +5607,7 @@ var map = [
   , 'integer'
 ]
 
-function tokenize() {
+function tokenize(opt) {
   var i = 0
     , total = 0
     , mode = NORMAL
@@ -5344,6 +5624,14 @@ function tokenize() {
     , isoperator = false
     , input = ''
     , len
+
+  opt = opt || {}
+  var allBuiltins = builtins100
+  var allLiterals = literals100
+  if (opt.version === '300 es') {
+    allBuiltins = builtins300es
+    allLiterals = literals300es
+  }
 
   return function(data) {
     tokens = []
@@ -5607,11 +5895,18 @@ function tokenize() {
       return i + 1
     }
 
+    if (c === '-' && /[eE]/.test(last)) {
+      content.push(c)
+      last = c
+      return i + 1
+    }
+
     if(/[^\d]/.test(c)) {
       token(content.join(''))
       mode = NORMAL
       return i
     }
+
     content.push(c)
     last = c
     return i + 1
@@ -5620,9 +5915,9 @@ function tokenize() {
   function readtoken() {
     if(/[^\d\w_]/.test(c)) {
       var contentstr = content.join('')
-      if(literals.indexOf(contentstr) > -1) {
+      if(allLiterals.indexOf(contentstr) > -1) {
         mode = KEYWORD
-      } else if(builtins.indexOf(contentstr) > -1) {
+      } else if(allBuiltins.indexOf(contentstr) > -1) {
         mode = BUILTIN
       } else {
         mode = IDENT
@@ -5637,20 +5932,157 @@ function tokenize() {
   }
 }
 
-},{"./lib/builtins":200,"./lib/literals":201,"./lib/operators":202}],200:[function(require,module,exports){
-module.exports = [
-    'gl_Position'
+},{"./lib/builtins":202,"./lib/builtins-300es":201,"./lib/literals":204,"./lib/literals-300es":203,"./lib/operators":205}],201:[function(require,module,exports){
+// 300es builtins/reserved words that were previously valid in v100
+var v100 = require('./builtins')
+
+// The texture2D|Cube functions have been removed
+// And the gl_ features are updated
+v100 = v100.slice().filter(function (b) {
+  return !/^(gl\_|texture)/.test(b)
+})
+
+module.exports = v100.concat([
+  // the updated gl_ constants
+    'gl_VertexID'
+  , 'gl_InstanceID'
+  , 'gl_Position'
   , 'gl_PointSize'
-  , 'gl_ClipVertex'
   , 'gl_FragCoord'
   , 'gl_FrontFacing'
+  , 'gl_FragDepth'
+  , 'gl_PointCoord'
+  , 'gl_MaxVertexAttribs'
+  , 'gl_MaxVertexUniformVectors'
+  , 'gl_MaxVertexOutputVectors'
+  , 'gl_MaxFragmentInputVectors'
+  , 'gl_MaxVertexTextureImageUnits'
+  , 'gl_MaxCombinedTextureImageUnits'
+  , 'gl_MaxTextureImageUnits'
+  , 'gl_MaxFragmentUniformVectors'
+  , 'gl_MaxDrawBuffers'
+  , 'gl_MinProgramTexelOffset'
+  , 'gl_MaxProgramTexelOffset'
+  , 'gl_DepthRangeParameters'
+  , 'gl_DepthRange'
+
+  // other builtins
+  , 'trunc'
+  , 'round'
+  , 'roundEven'
+  , 'isnan'
+  , 'isinf'
+  , 'floatBitsToInt'
+  , 'floatBitsToUint'
+  , 'intBitsToFloat'
+  , 'uintBitsToFloat'
+  , 'packSnorm2x16'
+  , 'unpackSnorm2x16'
+  , 'packUnorm2x16'
+  , 'unpackUnorm2x16'
+  , 'packHalf2x16'
+  , 'unpackHalf2x16'
+  , 'outerProduct'
+  , 'transpose'
+  , 'determinant'
+  , 'inverse'
+  , 'texture'
+  , 'textureSize'
+  , 'textureProj'
+  , 'textureLod'
+  , 'textureOffset'
+  , 'texelFetch'
+  , 'texelFetchOffset'
+  , 'textureProjOffset'
+  , 'textureLodOffset'
+  , 'textureProjLod'
+  , 'textureProjLodOffset'
+  , 'textureGrad'
+  , 'textureGradOffset'
+  , 'textureProjGrad'
+  , 'textureProjGradOffset'
+])
+
+},{"./builtins":202}],202:[function(require,module,exports){
+module.exports = [
+  // Keep this list sorted
+  'abs'
+  , 'acos'
+  , 'all'
+  , 'any'
+  , 'asin'
+  , 'atan'
+  , 'ceil'
+  , 'clamp'
+  , 'cos'
+  , 'cross'
+  , 'dFdx'
+  , 'dFdy'
+  , 'degrees'
+  , 'distance'
+  , 'dot'
+  , 'equal'
+  , 'exp'
+  , 'exp2'
+  , 'faceforward'
+  , 'floor'
+  , 'fract'
+  , 'gl_BackColor'
+  , 'gl_BackLightModelProduct'
+  , 'gl_BackLightProduct'
+  , 'gl_BackMaterial'
+  , 'gl_BackSecondaryColor'
+  , 'gl_ClipPlane'
+  , 'gl_ClipVertex'
+  , 'gl_Color'
+  , 'gl_DepthRange'
+  , 'gl_DepthRangeParameters'
+  , 'gl_EyePlaneQ'
+  , 'gl_EyePlaneR'
+  , 'gl_EyePlaneS'
+  , 'gl_EyePlaneT'
+  , 'gl_Fog'
+  , 'gl_FogCoord'
+  , 'gl_FogFragCoord'
+  , 'gl_FogParameters'
   , 'gl_FragColor'
+  , 'gl_FragCoord'
   , 'gl_FragData'
   , 'gl_FragDepth'
-  , 'gl_Color'
-  , 'gl_SecondaryColor'
-  , 'gl_Normal'
-  , 'gl_Vertex'
+  , 'gl_FragDepthEXT'
+  , 'gl_FrontColor'
+  , 'gl_FrontFacing'
+  , 'gl_FrontLightModelProduct'
+  , 'gl_FrontLightProduct'
+  , 'gl_FrontMaterial'
+  , 'gl_FrontSecondaryColor'
+  , 'gl_LightModel'
+  , 'gl_LightModelParameters'
+  , 'gl_LightModelProducts'
+  , 'gl_LightProducts'
+  , 'gl_LightSource'
+  , 'gl_LightSourceParameters'
+  , 'gl_MaterialParameters'
+  , 'gl_MaxClipPlanes'
+  , 'gl_MaxCombinedTextureImageUnits'
+  , 'gl_MaxDrawBuffers'
+  , 'gl_MaxFragmentUniformComponents'
+  , 'gl_MaxLights'
+  , 'gl_MaxTextureCoords'
+  , 'gl_MaxTextureImageUnits'
+  , 'gl_MaxTextureUnits'
+  , 'gl_MaxVaryingFloats'
+  , 'gl_MaxVertexAttribs'
+  , 'gl_MaxVertexTextureImageUnits'
+  , 'gl_MaxVertexUniformComponents'
+  , 'gl_ModelViewMatrix'
+  , 'gl_ModelViewMatrixInverse'
+  , 'gl_ModelViewMatrixInverseTranspose'
+  , 'gl_ModelViewMatrixTranspose'
+  , 'gl_ModelViewProjectionMatrix'
+  , 'gl_ModelViewProjectionMatrixInverse'
+  , 'gl_ModelViewProjectionMatrixInverseTranspose'
+  , 'gl_ModelViewProjectionMatrixTranspose'
   , 'gl_MultiTexCoord0'
   , 'gl_MultiTexCoord1'
   , 'gl_MultiTexCoord2'
@@ -5659,133 +6091,161 @@ module.exports = [
   , 'gl_MultiTexCoord5'
   , 'gl_MultiTexCoord6'
   , 'gl_MultiTexCoord7'
-  , 'gl_FogCoord'
-  , 'gl_MaxLights'
-  , 'gl_MaxClipPlanes'
-  , 'gl_MaxTextureUnits'
-  , 'gl_MaxTextureCoords'
-  , 'gl_MaxVertexAttribs'
-  , 'gl_MaxVertexUniformComponents'
-  , 'gl_MaxVaryingFloats'
-  , 'gl_MaxVertexTextureImageUnits'
-  , 'gl_MaxCombinedTextureImageUnits'
-  , 'gl_MaxTextureImageUnits'
-  , 'gl_MaxFragmentUniformComponents'
-  , 'gl_MaxDrawBuffers'
-  , 'gl_ModelViewMatrix'
-  , 'gl_ProjectionMatrix'
-  , 'gl_ModelViewProjectionMatrix'
-  , 'gl_TextureMatrix'
+  , 'gl_Normal'
   , 'gl_NormalMatrix'
-  , 'gl_ModelViewMatrixInverse'
-  , 'gl_ProjectionMatrixInverse'
-  , 'gl_ModelViewProjectionMatrixInverse'
-  , 'gl_TextureMatrixInverse'
-  , 'gl_ModelViewMatrixTranspose'
-  , 'gl_ProjectionMatrixTranspose'
-  , 'gl_ModelViewProjectionMatrixTranspose'
-  , 'gl_TextureMatrixTranspose'
-  , 'gl_ModelViewMatrixInverseTranspose'
-  , 'gl_ProjectionMatrixInverseTranspose'
-  , 'gl_ModelViewProjectionMatrixInverseTranspose'
-  , 'gl_TextureMatrixInverseTranspose'
   , 'gl_NormalScale'
-  , 'gl_DepthRangeParameters'
-  , 'gl_DepthRange'
-  , 'gl_ClipPlane'
-  , 'gl_PointParameters'
-  , 'gl_Point'
-  , 'gl_MaterialParameters'
-  , 'gl_FrontMaterial'
-  , 'gl_BackMaterial'
-  , 'gl_LightSourceParameters'
-  , 'gl_LightSource'
-  , 'gl_LightModelParameters'
-  , 'gl_LightModel'
-  , 'gl_LightModelProducts'
-  , 'gl_FrontLightModelProduct'
-  , 'gl_BackLightModelProduct'
-  , 'gl_LightProducts'
-  , 'gl_FrontLightProduct'
-  , 'gl_BackLightProduct'
-  , 'gl_FogParameters'
-  , 'gl_Fog'
-  , 'gl_TextureEnvColor'
-  , 'gl_EyePlaneS'
-  , 'gl_EyePlaneT'
-  , 'gl_EyePlaneR'
-  , 'gl_EyePlaneQ'
+  , 'gl_ObjectPlaneQ'
+  , 'gl_ObjectPlaneR'
   , 'gl_ObjectPlaneS'
   , 'gl_ObjectPlaneT'
-  , 'gl_ObjectPlaneR'
-  , 'gl_ObjectPlaneQ'
-  , 'gl_FrontColor'
-  , 'gl_BackColor'
-  , 'gl_FrontSecondaryColor'
-  , 'gl_BackSecondaryColor'
-  , 'gl_TexCoord'
-  , 'gl_FogFragCoord'
-  , 'gl_Color'
+  , 'gl_Point'
+  , 'gl_PointCoord'
+  , 'gl_PointParameters'
+  , 'gl_PointSize'
+  , 'gl_Position'
+  , 'gl_ProjectionMatrix'
+  , 'gl_ProjectionMatrixInverse'
+  , 'gl_ProjectionMatrixInverseTranspose'
+  , 'gl_ProjectionMatrixTranspose'
   , 'gl_SecondaryColor'
   , 'gl_TexCoord'
-  , 'gl_FogFragCoord'
-  , 'gl_PointCoord'
-  , 'radians'
-  , 'degrees'
-  , 'sin'
-  , 'cos'
-  , 'tan'
-  , 'asin'
-  , 'acos'
-  , 'atan'
-  , 'pow'
-  , 'exp'
-  , 'log'
-  , 'exp2'
-  , 'log2'
-  , 'sqrt'
-  , 'inversesqrt'
-  , 'abs'
-  , 'sign'
-  , 'floor'
-  , 'ceil'
-  , 'fract'
-  , 'mod'
-  , 'min'
-  , 'max'
-  , 'clamp'
-  , 'mix'
-  , 'step'
-  , 'smoothstep'
-  , 'length'
-  , 'distance'
-  , 'dot'
-  , 'cross'
-  , 'normalize'
-  , 'faceforward'
-  , 'reflect'
-  , 'refract'
-  , 'matrixCompMult'
-  , 'lessThan'
-  , 'lessThanEqual'
+  , 'gl_TextureEnvColor'
+  , 'gl_TextureMatrix'
+  , 'gl_TextureMatrixInverse'
+  , 'gl_TextureMatrixInverseTranspose'
+  , 'gl_TextureMatrixTranspose'
+  , 'gl_Vertex'
   , 'greaterThan'
   , 'greaterThanEqual'
-  , 'equal'
-  , 'notEqual'
-  , 'any'
-  , 'all'
+  , 'inversesqrt'
+  , 'length'
+  , 'lessThan'
+  , 'lessThanEqual'
+  , 'log'
+  , 'log2'
+  , 'matrixCompMult'
+  , 'max'
+  , 'min'
+  , 'mix'
+  , 'mod'
+  , 'normalize'
   , 'not'
+  , 'notEqual'
+  , 'pow'
+  , 'radians'
+  , 'reflect'
+  , 'refract'
+  , 'sign'
+  , 'sin'
+  , 'smoothstep'
+  , 'sqrt'
+  , 'step'
+  , 'tan'
   , 'texture2D'
-  , 'texture2DProj'
   , 'texture2DLod'
+  , 'texture2DProj'
   , 'texture2DProjLod'
   , 'textureCube'
   , 'textureCubeLod'
-  , 'dFdx'
-  , 'dFdy'
+  , 'texture2DLodEXT'
+  , 'texture2DProjLodEXT'
+  , 'textureCubeLodEXT'
+  , 'texture2DGradEXT'
+  , 'texture2DProjGradEXT'
+  , 'textureCubeGradEXT'
 ]
 
-},{}],201:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
+var v100 = require('./literals')
+
+module.exports = v100.slice().concat([
+   'layout'
+  , 'centroid'
+  , 'smooth'
+  , 'case'
+  , 'mat2x2'
+  , 'mat2x3'
+  , 'mat2x4'
+  , 'mat3x2'
+  , 'mat3x3'
+  , 'mat3x4'
+  , 'mat4x2'
+  , 'mat4x3'
+  , 'mat4x4'
+  , 'uint'
+  , 'uvec2'
+  , 'uvec3'
+  , 'uvec4'
+  , 'samplerCubeShadow'
+  , 'sampler2DArray'
+  , 'sampler2DArrayShadow'
+  , 'isampler2D'
+  , 'isampler3D'
+  , 'isamplerCube'
+  , 'isampler2DArray'
+  , 'usampler2D'
+  , 'usampler3D'
+  , 'usamplerCube'
+  , 'usampler2DArray'
+  , 'coherent'
+  , 'restrict'
+  , 'readonly'
+  , 'writeonly'
+  , 'resource'
+  , 'atomic_uint'
+  , 'noperspective'
+  , 'patch'
+  , 'sample'
+  , 'subroutine'
+  , 'common'
+  , 'partition'
+  , 'active'
+  , 'filter'
+  , 'image1D'
+  , 'image2D'
+  , 'image3D'
+  , 'imageCube'
+  , 'iimage1D'
+  , 'iimage2D'
+  , 'iimage3D'
+  , 'iimageCube'
+  , 'uimage1D'
+  , 'uimage2D'
+  , 'uimage3D'
+  , 'uimageCube'
+  , 'image1DArray'
+  , 'image2DArray'
+  , 'iimage1DArray'
+  , 'iimage2DArray'
+  , 'uimage1DArray'
+  , 'uimage2DArray'
+  , 'image1DShadow'
+  , 'image2DShadow'
+  , 'image1DArrayShadow'
+  , 'image2DArrayShadow'
+  , 'imageBuffer'
+  , 'iimageBuffer'
+  , 'uimageBuffer'
+  , 'sampler1DArray'
+  , 'sampler1DArrayShadow'
+  , 'isampler1D'
+  , 'isampler1DArray'
+  , 'usampler1D'
+  , 'usampler1DArray'
+  , 'isampler2DRect'
+  , 'usampler2DRect'
+  , 'samplerBuffer'
+  , 'isamplerBuffer'
+  , 'usamplerBuffer'
+  , 'sampler2DMS'
+  , 'isampler2DMS'
+  , 'usampler2DMS'
+  , 'sampler2DMSArray'
+  , 'isampler2DMSArray'
+  , 'usampler2DMSArray'
+])
+
+},{"./literals":204}],204:[function(require,module,exports){
 module.exports = [
   // current
     'precision'
@@ -5880,7 +6340,7 @@ module.exports = [
   , 'using'
 ]
 
-},{}],202:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 module.exports = [
     '<<='
   , '>>='
@@ -5929,13 +6389,13 @@ module.exports = [
   , '}'
 ]
 
-},{}],203:[function(require,module,exports){
+},{}],206:[function(require,module,exports){
 var tokenize = require('./index')
 
 module.exports = tokenizeString
 
-function tokenizeString(str) {
-  var generator = tokenize()
+function tokenizeString(str, opt) {
+  var generator = tokenize(opt)
   var tokens = []
 
   tokens = tokens.concat(generator(str))
@@ -5944,7 +6404,7 @@ function tokenizeString(str) {
   return tokens
 }
 
-},{"./index":199}],204:[function(require,module,exports){
+},{"./index":200}],207:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -5969,7 +6429,23 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],205:[function(require,module,exports){
+},{}],208:[function(require,module,exports){
+/*!
+ * pad-left <https://github.com/jonschlinkert/pad-left>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+var repeat = require('repeat-string');
+
+module.exports = function padLeft(str, num, ch) {
+  ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
+  return repeat(ch, num) + str;
+};
+},{"repeat-string":209}],209:[function(require,module,exports){
 /*!
  * repeat-string <https://github.com/jonschlinkert/repeat-string>
  *
@@ -5978,6 +6454,13 @@ if (typeof Object.create === 'function') {
  */
 
 'use strict';
+
+/**
+ * Results cache
+ */
+
+var res = '';
+var cache;
 
 /**
  * Expose `repeat`
@@ -6008,6 +6491,7 @@ function repeat(str, num) {
     throw new TypeError('repeat-string expects a string.');
   }
 
+  // cover common, quick use cases
   if (num === 1) return str;
   if (num === 2) return str + str;
 
@@ -6030,14 +6514,8 @@ function repeat(str, num) {
   return res.substr(0, max);
 }
 
-/**
- * Results cache
- */
 
-var res = '';
-var cache;
-
-},{}],206:[function(require,module,exports){
+},{}],210:[function(require,module,exports){
 (function(window) {
     var re = {
         not_string: /[^s]/,
@@ -6247,14 +6725,14 @@ var cache;
     }
 })(typeof window === "undefined" ? this : window);
 
-},{}],207:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],208:[function(require,module,exports){
+},{}],212:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6844,7 +7322,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":207,"_process":7,"inherits":204}],209:[function(require,module,exports){
+},{"./support/isBuffer":211,"_process":6,"inherits":207}],213:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6852,6 +7330,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); //  Timer based animation
+// TODO clean up linting
+/* eslint-disable */
 /* global setTimeout */
 
 
@@ -7062,7 +7542,7 @@ if (global) {
   }
 }
 
-},{"../utils":230}],210:[function(require,module,exports){
+},{"../utils":235}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7075,6 +7555,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 // workers.js
 //
+/* global Worker */
+/* eslint-disable one-var, indent */
 
 var WorkerGroup = function () {
   function WorkerGroup(fileName, n) {
@@ -7088,12 +7570,12 @@ var WorkerGroup = function () {
 
   _createClass(WorkerGroup, [{
     key: "map",
-    value: function map(callback) {
+    value: function map(func) {
       var workers = this.workers;
       var configs = this.configs = [];
 
       for (var i = 0, l = workers.length; i < l; i++) {
-        configs.push(callback && callback(i));
+        configs.push(func && func(i));
       }
 
       return this;
@@ -7106,14 +7588,14 @@ var WorkerGroup = function () {
           configs = this.configs,
           l = workers.length,
           acum = opt.initialValue,
-          message = function message(e) {
+          message = function _(e) {
         l--;
         if (acum === undefined) {
           acum = e.data;
         } else {
           acum = fn(acum, e.data);
         }
-        if (l == 0) {
+        if (l === 0) {
           opt.onComplete(acum);
         }
       };
@@ -7132,7 +7614,7 @@ var WorkerGroup = function () {
 
 exports.default = WorkerGroup;
 
-},{}],211:[function(require,module,exports){
+},{}],215:[function(require,module,exports){
 'use strict';
 
 require('babel-polyfill');
@@ -7182,6 +7664,7 @@ if (typeof window !== 'undefined') {
     OrthoCamera: LumaGL.OrthoCamera,
     Scene: LumaGL.Scene,
     Program: LumaGL.Program,
+    saveBitmap: LumaGL.saveBitmap,
     Media: {
       Image: LumaGL.Img
     },
@@ -7194,7 +7677,7 @@ if (typeof window !== 'undefined') {
   };
 }
 
-},{"./addons/fx":209,"./addons/workers":210,"./index":214,"babel-polyfill":5}],212:[function(require,module,exports){
+},{"./addons/fx":213,"./addons/workers":214,"./index":218,"babel-polyfill":4}],216:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7299,7 +7782,7 @@ var OrthoCamera = exports.OrthoCamera = function () {
   return OrthoCamera;
 }();
 
-},{"./math":217,"./utils":230}],213:[function(require,module,exports){
+},{"./math":221,"./utils":235}],217:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7495,8 +7978,8 @@ var EventsProxy = exports.EventsProxy = function () {
       var epos = getPos(e, win);
       var origPos = { x: epos[0].x, y: epos[0].y };
       var evt = {};
-      var x = undefined;
-      var y = undefined;
+      var x = void 0;
+      var y = void 0;
 
       // get Position
       for (var i = 0, l = epos.length; i < l; ++i) {
@@ -7722,7 +8205,6 @@ var Events = exports.Events = {
       disableContextMenu: true,
       bind: false,
       picking: false,
-      lazyPicking: false,
 
       enableTouch: true,
       enableMouse: true,
@@ -7786,7 +8268,7 @@ function keyOf(code) {
   }
 }
 
-},{"./utils":230}],214:[function(require,module,exports){
+},{"./utils":235}],218:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7795,93 +8277,63 @@ Object.defineProperty(exports, "__esModule", {
 
 var _webgl = require('./webgl');
 
-var _loop = function _loop(_key7) {
-  if (_key7 === "default") return 'continue';
-  Object.defineProperty(exports, _key7, {
+Object.keys(_webgl).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _webgl[_key7];
+      return _webgl[key];
     }
   });
-};
-
-for (var _key7 in _webgl) {
-  var _ret = _loop(_key7);
-
-  if (_ret === 'continue') continue;
-}
+});
 
 var _math = require('./math');
 
-var _loop2 = function _loop2(_key8) {
-  if (_key8 === "default") return 'continue';
-  Object.defineProperty(exports, _key8, {
+Object.keys(_math).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _math[_key8];
+      return _math[key];
     }
   });
-};
-
-for (var _key8 in _math) {
-  var _ret2 = _loop2(_key8);
-
-  if (_ret2 === 'continue') continue;
-}
+});
 
 var _io = require('./io');
 
-var _loop3 = function _loop3(_key9) {
-  if (_key9 === "default") return 'continue';
-  Object.defineProperty(exports, _key9, {
+Object.keys(_io).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _io[_key9];
+      return _io[key];
     }
   });
-};
-
-for (var _key9 in _io) {
-  var _ret3 = _loop3(_key9);
-
-  if (_ret3 === 'continue') continue;
-}
+});
 
 var _camera = require('./camera');
 
-var _loop4 = function _loop4(_key10) {
-  if (_key10 === "default") return 'continue';
-  Object.defineProperty(exports, _key10, {
+Object.keys(_camera).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _camera[_key10];
+      return _camera[key];
     }
   });
-};
-
-for (var _key10 in _camera) {
-  var _ret4 = _loop4(_key10);
-
-  if (_ret4 === 'continue') continue;
-}
+});
 
 var _objects = require('./objects');
 
-var _loop5 = function _loop5(_key11) {
-  if (_key11 === "default") return 'continue';
-  Object.defineProperty(exports, _key11, {
+Object.keys(_objects).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _objects[_key11];
+      return _objects[key];
     }
   });
-};
-
-for (var _key11 in _objects) {
-  var _ret5 = _loop5(_key11);
-
-  if (_ret5 === 'continue') continue;
-}
+});
 
 var _event = require('./event');
 
@@ -7912,21 +8364,15 @@ Object.defineProperty(exports, 'Scene', {
 
 var _media = require('./media');
 
-var _loop6 = function _loop6(_key12) {
-  if (_key12 === "default") return 'continue';
-  Object.defineProperty(exports, _key12, {
+Object.keys(_media).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _media[_key12];
+      return _media[key];
     }
   });
-};
-
-for (var _key12 in _media) {
-  var _ret6 = _loop6(_key12);
-
-  if (_ret6 === 'continue') continue;
-}
+});
 
 var _fx = require('./addons/fx');
 
@@ -7937,9 +8383,21 @@ Object.defineProperty(exports, 'Fx', {
   }
 });
 
+var _saveBitmap = require('./save-bitmap');
+
+Object.keys(_saveBitmap).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _saveBitmap[key];
+    }
+  });
+});
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"./addons/fx":209,"./camera":212,"./event":213,"./io":215,"./math":217,"./media":218,"./objects":223,"./scene":228,"./shaders":229,"./webgl":235}],215:[function(require,module,exports){
+},{"./addons/fx":213,"./camera":216,"./event":217,"./io":219,"./math":221,"./media":222,"./objects":227,"./save-bitmap":232,"./scene":233,"./shaders":234,"./webgl":240}],219:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8406,9 +8864,11 @@ var XHRGroup = exports.XHRGroup = function () {
         }, _callee, this);
       }));
 
-      return function sendAsync() {
+      function sendAsync() {
         return ref.apply(this, arguments);
-      };
+      }
+
+      return sendAsync;
     }()
   }]);
 
@@ -8476,7 +8936,7 @@ function loadImage(src) {
   });
 }
 
-},{"./utils":230,"./webgl":235}],216:[function(require,module,exports){
+},{"./utils":235,"./webgl":240}],220:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8567,7 +9027,8 @@ function _extendableBuiltin(cls) {
 }
 
 // Vec3, Mat4 and Quat classes
-// TODO - clean up linting and remove some of thes exceptions
+// TODO - clean up linting and remove some of these exceptions
+/* eslint-disable */
 /* eslint-disable computed-property-spacing, brace-style, max-params, one-var */
 /* eslint-disable indent, no-loop-func */
 
@@ -9754,7 +10215,7 @@ Mat4.fromQuat = function (q) {
   return new Mat4(a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c, 0, 2 * b * c + 2 * a * d, a * a - b * b + c * c - d * d, 2 * c * d - 2 * a * b, 0, 2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a - b * b - c * c + d * d, 0, 0, 0, 0, 1);
 };
 
-},{}],217:[function(require,module,exports){
+},{}],221:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9763,23 +10224,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _arrayImpl = require('./array-impl');
 
-var _loop = function _loop(_key2) {
-  if (_key2 === "default") return 'continue';
-  Object.defineProperty(exports, _key2, {
+Object.keys(_arrayImpl).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _arrayImpl[_key2];
+      return _arrayImpl[key];
     }
   });
-};
+});
 
-for (var _key2 in _arrayImpl) {
-  var _ret = _loop(_key2);
-
-  if (_ret === 'continue') continue;
-}
-
-},{"./array-impl":216}],218:[function(require,module,exports){
+},{"./array-impl":220}],222:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9902,7 +10357,7 @@ var Img = function () {
 
 exports.default = Img;
 
-},{"./camera":212,"./objects":223,"./scene":228,"./utils":230,"./webgl":235}],219:[function(require,module,exports){
+},{"./camera":216,"./objects":227,"./scene":233,"./utils":235,"./webgl":240}],223:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9944,7 +10399,7 @@ var Cone = function (_TruncatedCone) {
 
 exports.default = Cone;
 
-},{"./truncated-cone":227}],220:[function(require,module,exports){
+},{"./truncated-cone":231}],224:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10023,7 +10478,7 @@ var Cube = function (_Model) {
 
 exports.default = Cube;
 
-},{"./model":224}],221:[function(require,module,exports){
+},{"./model":228}],225:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10063,7 +10518,7 @@ var Cylinder = function (_TruncatedCone) {
 
 exports.default = Cylinder;
 
-},{"./truncated-cone":227}],222:[function(require,module,exports){
+},{"./truncated-cone":231}],226:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10162,14 +10617,14 @@ var IcoSphere = function (_Model) {
     }
 
     // Calculate texCoords and normals
-    var l = indices.length,
-        normals = new Array(l * 3),
+    l = indices.length;
+    var normals = new Array(l * 3),
         texCoords = new Array(l * 2);
 
-    for (var i = l - 3; i >= 0; i -= 3) {
-      var i1 = indices[i + 0],
-          i2 = indices[i + 1],
-          i3 = indices[i + 2],
+    for (var _i = l - 3; _i >= 0; _i -= 3) {
+      var i1 = indices[_i + 0],
+          i2 = indices[_i + 1],
+          i3 = indices[_i + 2],
           in1 = i1 * 3,
           in2 = i2 * 3,
           in3 = i3 * 3,
@@ -10259,7 +10714,7 @@ var IcoSphere = function (_Model) {
 
 exports.default = IcoSphere;
 
-},{"../math":217,"./model":224}],223:[function(require,module,exports){
+},{"../math":221,"./model":228}],227:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10337,7 +10792,7 @@ Object.defineProperty(exports, 'TruncatedCone', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"./cone":219,"./cube":220,"./cylinder":221,"./ico-sphere":222,"./model":224,"./plane":225,"./sphere":226}],224:[function(require,module,exports){
+},{"./cone":223,"./cube":224,"./cylinder":225,"./ico-sphere":226,"./model":228,"./plane":229,"./sphere":230}],228:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10379,7 +10834,7 @@ function normalizeColors(arr, len) {
     var a3 = arr[3];
     var ans = [a0, a1, a2, a3];
     var times = len / arr.length;
-    var index = undefined;
+    var index = void 0;
 
     while (--times) {
       index = times * 4;
@@ -10603,15 +11058,18 @@ var Model = function () {
           var attributeName = _step.value;
 
           var attribute = this.attributes[attributeName];
+          var bufferOpts = {
+            attribute: attributeName,
+            data: attribute.value,
+            size: attribute.size,
+            instanced: attribute.instanced ? 1 : 0,
+            bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
+            drawType: attribute.drawType || program.gl.STATIC_DRAW
+          };
           if (!this.buffers[attributeName]) {
-            this.buffers[attributeName] = new _webgl.Buffer(program.gl, {
-              attribute: attributeName,
-              data: attribute.value,
-              size: attribute.size,
-              instanced: attribute.instanced ? 1 : 0,
-              bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
-              drawType: attribute.drawType || program.gl.STATIC_DRAW
-            });
+            this.buffers[attributeName] = new _webgl.Buffer(program.gl, bufferOpts);
+          } else {
+            this.buffers[attributeName].update(bufferOpts);
           }
           program.setBuffer(this.buffers[attributeName]);
         }
@@ -10779,7 +11237,7 @@ var Model = function () {
 
       var gl = program.gl;
       var multi = this.$texCoords.constructor.name === 'Object';
-      var tex = undefined;
+      var tex = void 0;
 
       if (!this.buffers.texCoords) {
         if (multi) {
@@ -10801,9 +11259,9 @@ var Model = function () {
         }
       } else if (this.dynamic) {
         if (multi) {
-          for (var i = 0, txs = this.textures, l = txs.length; i < l; i++) {
-            tex = txs[i];
-            this.buffers.texCoords['texCoord' + (i + 1)].update({
+          for (var _i = 0, _txs = this.textures, _l = _txs.length; _i < _l; _i++) {
+            tex = _txs[_i];
+            this.buffers.texCoords['texCoord' + (_i + 1)].update({
               data: this.$texCoords[tex]
             });
           }
@@ -10815,9 +11273,9 @@ var Model = function () {
       }
 
       if (multi) {
-        for (var i = 0, txs = this.textures, l = txs.length; i < l; i++) {
-          tex = txs[i];
-          program.setBuffer(this.buffers.texCoords['texCoord' + (i + 1)]);
+        for (var _i2 = 0, _txs2 = this.textures, _l2 = _txs2.length; _i2 < _l2; _i2++) {
+          tex = _txs2[_i2];
+          program.setBuffer(this.buffers.texCoords['texCoord' + (_i2 + 1)]);
         }
       } else {
         program.setBuffer(this.buffers.texCoords);
@@ -11033,7 +11491,7 @@ var Model = function () {
 
 exports.default = Model;
 
-},{"../math":217,"../scene":228,"../utils":230,"../webgl":235,"assert":3}],225:[function(require,module,exports){
+},{"../math":221,"../scene":233,"../utils":235,"../webgl":240,"assert":2}],229:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11140,6 +11598,8 @@ var Plane = function (_Model) {
             normals[i3 + 1] = 0;
             normals[i3 + 2] = 0;
             break;
+          default:
+            break;
         }
         i3 += 3;
       }
@@ -11205,7 +11665,7 @@ var Plane = function (_Model) {
 
 exports.default = Plane;
 
-},{"./model":224}],226:[function(require,module,exports){
+},{"./model":228}],230:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11224,7 +11684,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /* eslint-disable max-statements, complexity */
+
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
 // copyright 2011 Google Inc. new BSD License
@@ -11294,17 +11755,17 @@ var Sphere = function (_Model) {
 
     // Create indices
     var numVertsAround = nlat + 1;
-    for (var x = 0; x < nlat; x++) {
-      for (var y = 0; y < nlong; y++) {
-        var index = (x * nlong + y) * 6;
+    for (var _x2 = 0; _x2 < nlat; _x2++) {
+      for (var _y = 0; _y < nlong; _y++) {
+        var _index = (_x2 * nlong + _y) * 6;
 
-        indices[index + 0] = y * numVertsAround + x;
-        indices[index + 1] = y * numVertsAround + x + 1;
-        indices[index + 2] = (y + 1) * numVertsAround + x;
+        indices[_index + 0] = _y * numVertsAround + _x2;
+        indices[_index + 1] = _y * numVertsAround + _x2 + 1;
+        indices[_index + 2] = (_y + 1) * numVertsAround + _x2;
 
-        indices[index + 3] = (y + 1) * numVertsAround + x;
-        indices[index + 4] = y * numVertsAround + x + 1;
-        indices[index + 5] = (y + 1) * numVertsAround + x + 1;
+        indices[_index + 3] = (_y + 1) * numVertsAround + _x2;
+        indices[_index + 4] = _y * numVertsAround + _x2 + 1;
+        indices[_index + 5] = (_y + 1) * numVertsAround + _x2 + 1;
       }
     }
 
@@ -11321,7 +11782,7 @@ var Sphere = function (_Model) {
 
 exports.default = Sphere;
 
-},{"./model":224}],227:[function(require,module,exports){
+},{"./model":228}],231:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11340,7 +11801,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /* eslint-disable max-statements, complexity */
+
 
 var TruncatedCone = function (_Model) {
   _inherits(TruncatedCone, _Model);
@@ -11379,7 +11841,7 @@ var TruncatedCone = function (_Model) {
     for (var i = start; i <= end; i++) {
       var v = i / nvertical;
       var y = height * v;
-      var ringRadius = undefined;
+      var ringRadius = void 0;
 
       if (i < 0) {
         y = 0;
@@ -11417,15 +11879,15 @@ var TruncatedCone = function (_Model) {
       }
     }
 
-    for (var i = 0; i < nvertical + extra; i++) {
-      for (var j = 0; j < nradial; j++) {
-        var index = (i * nradial + j) * 6;
-        indices[index + 0] = vertsAroundEdge * (i + 0) + 0 + j;
-        indices[index + 1] = vertsAroundEdge * (i + 0) + 1 + j;
-        indices[index + 2] = vertsAroundEdge * (i + 1) + 1 + j;
-        indices[index + 3] = vertsAroundEdge * (i + 0) + 0 + j;
-        indices[index + 4] = vertsAroundEdge * (i + 1) + 1 + j;
-        indices[index + 5] = vertsAroundEdge * (i + 1) + 0 + j;
+    for (var _i = 0; _i < nvertical + extra; _i++) {
+      for (var _j = 0; _j < nradial; _j++) {
+        var index = (_i * nradial + _j) * 6;
+        indices[index + 0] = vertsAroundEdge * (_i + 0) + 0 + _j;
+        indices[index + 1] = vertsAroundEdge * (_i + 0) + 1 + _j;
+        indices[index + 2] = vertsAroundEdge * (_i + 1) + 1 + _j;
+        indices[index + 3] = vertsAroundEdge * (_i + 0) + 0 + _j;
+        indices[index + 4] = vertsAroundEdge * (_i + 1) + 1 + _j;
+        indices[index + 5] = vertsAroundEdge * (_i + 1) + 0 + _j;
       }
     }
 
@@ -11442,7 +11904,28 @@ var TruncatedCone = function (_Model) {
 
 exports.default = TruncatedCone;
 
-},{"./model":224}],228:[function(require,module,exports){
+},{"./model":228}],232:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.saveBitmap = saveBitmap;
+
+var _filesaver = require('filesaver.js');
+
+var _canvasToBlob = require('canvas-to-blob');
+
+var _canvasToBlob2 = _interopRequireDefault(_canvasToBlob);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function saveBitmap(canvas, filename) {
+  var blob = (0, _canvasToBlob2.default)(canvas.toDataURL());
+  (0, _filesaver.saveAs)(blob, filename);
+}
+
+},{"canvas-to-blob":7,"filesaver.js":195}],233:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12000,7 +12483,7 @@ Scene.MAX_TEXTURES = MAX_TEXTURES;
 Scene.MAX_POINT_LIGHTS = MAX_POINT_LIGHTS;
 Scene.PICKING_RES = PICKING_RES;
 
-},{"./math":217,"./utils":230,"./webgl":235,"assert":3}],229:[function(require,module,exports){
+},{"./math":221,"./utils":235,"./webgl":240,"assert":2}],234:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12020,17 +12503,41 @@ Shaders.Fragment.Default = "\n\n#ifdef GL_ES\nprecision highp float;\n#endif\n\n
 
 exports.default = Shaders;
 
-},{}],230:[function(require,module,exports){
+},{}],235:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.merge = merge;
 exports.splat = splat;
 exports.noop = noop;
 exports.uid = uid;
+exports.merge = merge;
 /* eslint-disable guard-for-in */
+
+/**
+ * Wraps the argument in an array if it is not one.
+ * @param {object} a - The object to wrap.
+ * @return {Array} array
+ **/
+function splat(a) {
+  return Array.isArray(a) && a || [a];
+}
+
+/**
+* Provides a standard noop function.
+**/
+function noop() {}
+
+var _uid = Date.now();
+
+/**
+ * Returns a UID.
+ * @return {number} uid
+ **/
+function uid() {
+  return _uid++;
+}
 
 /**
  * Merge multiple objects into one.
@@ -12058,37 +12565,13 @@ function merge(objects) {
 }
 
 /**
- * Wraps the argument in an array if it is not one.
- * @param {object} a - The object to wrap.
- * @return {Array} array
- **/
-function splat(a) {
-  return Array.isArray(a) && a || [a];
-}
-
-/**
-* Provides a standard noop function.
-**/
-function noop() {}
-
-var _uid = Date.now();
-
-/**
- * Returns a UID.
- * @return {number} uid
- **/
-function uid() {
-  return _uid++;
-}
-
-/**
  * Internal function for duplicating an object.
  * @param {object} elem - The object to recursively duplicate.
  * @return {object} object
  **/
 function detach(elem) {
   var t = elem.constructor.name;
-  var ans = undefined;
+  var ans = void 0;
   if (t === 'Object') {
     ans = {};
     for (var p in elem) {
@@ -12106,14 +12589,12 @@ function detach(elem) {
   return ans;
 }
 
-},{}],231:[function(require,module,exports){
+},{}],236:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // Encapsulates a WebGLBuffer object
 
@@ -12160,7 +12641,7 @@ var Buffer = function () {
     (0, _assert2.default)(gl, 'Buffer needs WebGLRenderingContext');
     this.gl = gl;
     this.glBuffer = gl.createBuffer();
-    opts = _extends({}, Buffer.getDefaultOpts(gl), opts);
+    opts = Object.assign({}, Buffer.getDefaultOpts(gl), opts);
     this.update(opts);
   }
 
@@ -12226,15 +12707,13 @@ var Buffer = function () {
     value: function detachFromLocation(location) {
       var gl = this.gl;
 
-      if (location === undefined) {
-        if (this.instanced) {
-          var extension = (0, _context.getExtension)(gl, 'ANGLE_instanced_arrays');
-          // Clear instanced flag
-          extension.vertexAttribDivisorANGLE(location, 0);
-        }
-        // Disable the attribute
-        gl.disableVertexAttribArray(location);
+      if (this.instanced) {
+        var extension = (0, _context.getExtension)(gl, 'ANGLE_instanced_arrays');
+        // Clear instanced flag
+        extension.vertexAttribDivisorANGLE(location, 0);
       }
+      // Disable the attribute
+      gl.disableVertexAttribArray(location);
       // Unbind the buffer per webgl recommendations
       gl.bindBuffer(this.bufferType, null);
       return this;
@@ -12271,7 +12750,7 @@ var Buffer = function () {
 
 exports.default = Buffer;
 
-},{"./context":232,"assert":3}],232:[function(require,module,exports){
+},{"./context":237,"assert":2}],237:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12294,7 +12773,7 @@ function createGLContext(canvas, opt) {
   }
   var gl = null;
   canvas = typeof canvas === 'string' ? document.getElementById(canvas) : canvas;
-  var ctx = undefined;
+  var ctx = void 0;
   ctx = canvas.getContext('experimental-webgl', opt);
   if (!ctx) {
     ctx = canvas.getContext('webgl', opt);
@@ -12308,14 +12787,14 @@ function createGLContext(canvas, opt) {
         gl[m] = function (k, v) {
           return function () {
             console.log(k, Array.prototype.join.call(_arguments), Array.prototype.slice.call(_arguments));
-            var ans = undefined;
+            var ans = void 0;
             try {
               ans = v.apply(ctx, _arguments);
             } catch (e) {
               throw new Error(k + ' ' + e);
             }
             var errorStack = [];
-            var error = undefined;
+            var error = void 0;
             while ((error = ctx.getError()) !== ctx.NO_ERROR) {
               errorStack.push(error);
             }
@@ -12382,7 +12861,7 @@ function isBrowserContext() {
   return true;
 }
 
-},{}],233:[function(require,module,exports){
+},{}],238:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12413,9 +12892,9 @@ function draw(_ref) {
     extension.drawElementsInstancedANGLE(drawType, numIndices, gl.UNSIGNED_SHORT, 0, numInstances);
   } else if (instanced) {
     // this instanced primitive does not have indices, use drawArrays ext
-    var extension = (0, _context.getExtension)('ANGLE_instanced_arrays');
+    var _extension = (0, _context.getExtension)('ANGLE_instanced_arrays');
     var numVertices = vertices ? vertices.value.length : 0;
-    extension.drawArraysInstancedANGLE(drawType, 0, numVertices / 3, numInstances);
+    _extension.drawArraysInstancedANGLE(drawType, 0, numVertices / 3, numInstances);
   } else if (attributes.indices) {
     gl.drawElements(drawType, numIndices, gl.UNSIGNED_SHORT, 0);
   } else {
@@ -12424,7 +12903,7 @@ function draw(_ref) {
   }
 } // One of the good things about GL is that there are so many ways to draw things
 
-},{"./context":232}],234:[function(require,module,exports){
+},{"./context":237}],239:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12450,7 +12929,8 @@ var Framebuffer = function () {
     this.depth = opts.depth === undefined ? true : opts.depth;
     this.minFilter = opts.minFilter || gl.NEAREST;
     this.magFilter = opts.magFilter || gl.NEAREST;
-
+    this.format = opts.format || gl.RGBA;
+    this.type = opts.type || gl.UNSIGNED_BYTE;
     this.fbo = gl.createFramebuffer();
     this.bind();
 
@@ -12458,7 +12938,9 @@ var Framebuffer = function () {
       width: this.width,
       height: this.height,
       minFilter: this.minFilter,
-      magFilter: this.magFilter
+      magFilter: this.magFilter,
+      type: this.type,
+      format: this.format
     });
 
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.texture, 0);
@@ -12492,7 +12974,7 @@ var Framebuffer = function () {
 
 exports.default = Framebuffer;
 
-},{"./texture":237}],235:[function(require,module,exports){
+},{"./texture":242}],240:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12501,39 +12983,27 @@ Object.defineProperty(exports, "__esModule", {
 
 var _context = require('./context');
 
-var _loop = function _loop(_key3) {
-  if (_key3 === "default") return 'continue';
-  Object.defineProperty(exports, _key3, {
+Object.keys(_context).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _context[_key3];
+      return _context[key];
     }
   });
-};
-
-for (var _key3 in _context) {
-  var _ret = _loop(_key3);
-
-  if (_ret === 'continue') continue;
-}
+});
 
 var _draw = require('./draw');
 
-var _loop2 = function _loop2(_key4) {
-  if (_key4 === "default") return 'continue';
-  Object.defineProperty(exports, _key4, {
+Object.keys(_draw).forEach(function (key) {
+  if (key === "default") return;
+  Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _draw[_key4];
+      return _draw[key];
     }
   });
-};
-
-for (var _key4 in _draw) {
-  var _ret2 = _loop2(_key4);
-
-  if (_ret2 === 'continue') continue;
-}
+});
 
 var _buffer = require('./buffer');
 
@@ -12579,7 +13049,7 @@ Object.defineProperty(exports, 'TextureCube', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"./buffer":231,"./context":232,"./draw":233,"./fbo":234,"./program":236,"./texture":237}],236:[function(require,module,exports){
+},{"./buffer":236,"./context":237,"./draw":238,"./fbo":239,"./program":241,"./texture":242}],241:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12800,7 +13270,6 @@ var Program = function () {
     }
 
     // Alternate constructor
-    // Implement Program.fromShaderURIs (requires IO)
 
   }, {
     key: 'fromShaderURIs',
@@ -12836,9 +13305,11 @@ var Program = function () {
         }, _callee, this);
       }));
 
-      return function fromShaderURIs(_x, _x2, _x3, _x4) {
+      function fromShaderURIs(_x, _x2, _x3, _x4) {
         return ref.apply(this, arguments);
-      };
+      }
+
+      return fromShaderURIs;
     }()
   }]);
 
@@ -12863,7 +13334,7 @@ function createShader(gl, shaderSource, shaderType) {
     /* eslint-disable no-try-catch */
     var formattedLog;
     try {
-      (0, _glFormatCompilerError2.default)(info, shaderSource, shaderType);
+      formattedLog = (0, _glFormatCompilerError2.default)(info, shaderSource, shaderType);
     } catch (error) {
       /* eslint-disable no-console */
       /* global console */
@@ -12915,8 +13386,8 @@ function getUniformSetter(gl, glProgram, info, isArray) {
 
   var matrix = false;
   var vector = true;
-  var glFunction = undefined;
-  var TypedArray = undefined;
+  var glFunction = void 0;
+  var TypedArray = void 0;
 
   if (info.size > 1 && isArray) {
     switch (type) {
@@ -13057,7 +13528,7 @@ function getAttributeLocations(gl, glProgram) {
   return attributeLocations;
 }
 
-},{"../io":215,"../shaders":229,"../utils":230,"gl-format-compiler-error":197}],237:[function(require,module,exports){
+},{"../io":219,"../shaders":234,"../utils":235,"gl-format-compiler-error":198}],242:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -13149,6 +13620,11 @@ var Texture2D = exports.Texture2D = function (_Texture) {
       this.height = opts.height;
       this.border = opts.border || 0;
       this.data = opts.data;
+      if (this.flipY) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      } else {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      }
       this.bind();
       if (this.width || this.height) {
         gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, this.border, this.format, this.type, this.data);
@@ -13236,4 +13712,4 @@ var TextureCube = exports.TextureCube = function (_Texture2) {
   return TextureCube;
 }(Texture);
 
-},{"../utils":230}]},{},[211]);
+},{"../utils":235}]},{},[215]);

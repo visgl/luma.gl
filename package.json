@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "author": "Ib Green <ib@uber.com>",
@@ -23,6 +23,8 @@
   "main": "src/index.js",
   "dependencies": {
     "babel-polyfill": "6.5.0",
+    "canvas-to-blob": "0.0.0",
+    "filesaver.js": "^0.2.0",
     "gl-format-compiler-error": "^1.0.2",
     "global": "^4.3.0"
   },
@@ -50,13 +52,16 @@
     "babelify": "^7.2.0",
     "browserify": "^13.0.0",
     "budo": "^8.0.3",
+    "electron-prebuilt": "^0.37.2",
     "eslint": "^1.9.0",
+    "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
+    "tap-browser-color": "^0.1.2",
     "tape": "^4.0.0",
     "tape-catch": "^1.0.4",
-    "tap-browser-color": "^0.1.2",
+    "testron": "^1.2.0",
     "uber-standard": "^5.1.0",
     "uglify-js": "^2.6.1"
   },
@@ -67,7 +72,8 @@
     "build-dev": "browserify src/bundle.js -o dist/LumaGL.js",
     "lint": "uber-standard",
     "precommit": "npm run lint -s",
-    "test": "babel-node --include='' test/node.js | faucet",
+    "test": "browserify test/electron.js | testron | faucet",
+    "test-node": "babel-node --include='' test/node.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
     "start": "budo src/bundle.js:dist/LumaGL.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
   }

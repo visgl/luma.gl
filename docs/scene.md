@@ -20,15 +20,6 @@ objects with a default scene.
 
 
 
-### Scene Static Properties
-
-* PICKING\_RES - Used to set the default resolution for the texture / image used for color picking. Default value is `4`. For best picking precision use `1`.
-
-### Syntax:
-
-    LumaGL.Scene.PICKING_RES = 1;
-
-
 Scene Method: constructor {#Scene:constructor}
 ------------------------------------------------
 
@@ -40,9 +31,10 @@ Creates a new [Scene](scene.html) instance.
 
 ### Arguments:
 
-1. program - (*object*) A Program instance. For more information check the [Program](program.html) class.
-2. camera - (*object*) A Camera instance. For more information check the [Camera](camera.html) class.
-3. options - (*object*) An object with the following properties:
+1. gl - (*WebGLRenderingContext*) A WebGLRenderingContext object.
+2. program - (*object*) A Program instance. For more information check the [Program](program.html) class.
+3. camera - (*object*) A Camera instance. For more information check the [Camera](camera.html) class.
+4. options - (*object*) An object with the following properties:
 
 ### Options:
 
@@ -57,18 +49,21 @@ Creates a new [Scene](scene.html) instance.
     * color|diffuse - (*object*) A r, g, b object with values in [0, 1] that sets the (diffuse) color for the point light.
     * specular - (*object*, optional) A r, g, b object with values in [0, 1] that sets the specular light color.
   * effects - (*object*, optional) An object with scene effect options.
-
     * fog - (*object*, optional) An object with linear fog options explained below.
       * near - (*number*, optional) The near fog factor. Default's the [Camera](camera.html) near factor.
       * far - (*number*) The far fog factor. Default's the [Camera](camera.html) far factor.
       * color - (*object*) An `{ r, g, b }` object with the fog color.
+  * clearColor - (*bool*) Whether or not to clear the bound framebuffer.
+  * clearDepth - (*bool*) Whether or not to clear the depth buffer.
+  * backgroundColor - (*object*) An `{r, g, b}` object defining the color the bound framebuffer will be cleared to.
+  * backgroundDepth - (*number*) The value the depth buffer is cleared to.
 
 ### Examples:
 
 Create a new Scene instance. Taken from [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
 
 {% highlight js %}
-var innerScene = new LumaGL.Scene(program, innerCamera, {
+var innerScene = new LumaGL.Scene(gl, program, innerCamera, {
   lights: {
     enable: true,
     points: {
@@ -89,7 +84,7 @@ var innerScene = new LumaGL.Scene(program, innerCamera, {
 Create a new Scene instance and add some fog to it.
 
 {% highlight js %}
-var scene = new LumaGL.Scene(program, camera, {
+var scene = new LumaGL.Scene(gl, program, camera, {
   //Setup lighting.
   lights: {
     enable: true,
@@ -177,63 +172,13 @@ Renders all the objects added to the scene.
 
 ### Syntax:
 
-    scene.render(callback);
+    scene.render(options);
 
-### Arguments:
+### Options:
 
-1. callback - (*object*, optional) An object with
-   `onBeforeRender(object, index)` and
-   `onAfterRender(object, index)` methods to be called right before and
-right after rendering each element.
-
-
-Scene Method: renderToTexture {#Scene:renderToTexture}
--------------------------------------------------------
-
-Performs `scene.render()` but binds a texture afterwards to store the rendered image in the texture itself and not the main
-buffer.
-
-### Syntax:
-
-    scene.renderToTexture(name);
-
-### Arguments:
-
-1. name - (*string*) The name/id of the texture to bind the rendering to.
-
-### Examples:
-
-Bind a framebuffer, render the scene to a texture, and unbind the framebuffer. This is the procedure done
-to render the inner scene in the laptop example on [lesson 16](http://philogb.github.com/philogl/LumaGL/examples/lessons/16/).
-
-{% highlight js %}
-function drawInnerScene() {
-  program.setFrameBuffer('monitor', true);
-
-  gl.viewport(0, 0, screenWidth, screenHeight);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  theta += 0.01;
-
-  moon.position = {
-    x: rho * Math.cos(theta),
-    y: 0,
-    z: rho * Math.sin(theta)
-  };
-  moon.update();
-
-  box.position = {
-    x: rho * Math.cos(Math.PI + theta),
-    y: 0,
-    z: rho * Math.sin(Math.PI + theta)
-  };
-  box.update();
-
-  innerScene.renderToTexture('monitor');
-
-  program.setFrameBuffer('monitor', false);
-}
-{% endhighlight %}
+* renderProgram - (*object*) A Program instance with which to render all models. By default, models are rendered with their attached programs.
+* onBeforeRender - (*function*) A function that is called before each model is rendered.
+* onAfterRender - (*function*) A function that is called after each model is rendered.
 
 
 Scene Method: pick {#Scene:pick}
@@ -246,22 +191,9 @@ coordinates. The object must have `pickable` set to `true`.
 
 The picking algorithm used in LumaGL is a color picking
 algorithm. Each model is assigned a different color and the scene is
-rendered to a texture. Then, the pixel pointed by the mouse
-position is retrieved from the texture and the color of that pixel is
-used to identify the model.
-
-### Customizing the picking algorithm
-
-Sometimes we want to know more than just which object has been picked. For
-example, we would want to know which face of that object has been
-picked. In that case the [O3D](o3d.html) constructor options
-`pickingColors` and `pick` are useful. By defining your own set of per
-vertex colors and a method that given a pixel returns special
-information on what part of the object has been retrieved, then it is
-possible to have finer grain picking. For more information about how to
-use this you can take a look at the Air Flights example or go to the
-[Google group of the framework](http://groups.google.com/group/philogl)
-and ask for more info.
+rendered to a texture. Then, the pixel indicated by the given coordinates
+is retrieved from the texture and the color of that pixel is used to
+identify the model.
 
 ### Syntax:
 
@@ -274,12 +206,8 @@ is considered to be `(0, 0)`.
 * y - (*number*) The `y` position. The upper left corner of the viewport
 is considered to be `(0, 0)`.
 * options - (*object*, optional) An object containing the following properties:
-  * viewport - (*object*, optional) An object containing viewport
-    information:
-    * x - (*number*, optional) Viewport start `x` position. Default's `0`.
-    * y - (*number*, optional) Viewport start `y` position. Default's `0`.
-    * width - (*number*, optional) Viewport `width` dimension. Default's `canvas.offsetWidth`.
-    * height - (*number*, optional) Viewport `height` dimension. Default's `canvas.offsetHeight`.
+  * pickingProgram - (*object*) The Program instance with which to render the picking scene.
+    defaults to LumaGL's default shaders.
 
 ### Notes:
 
@@ -303,15 +231,23 @@ if (model) {
 {% endhighlight %}
 
 
-Scene Method: resetPicking {#Scene:resetPicking}
-------------------------------------------------
+Scene Method: pickCustom {#Scene:pickCustom}
+--------------------------------
 
-Clear framebuffers and previous scene captures and restart the picking
-routine without any cached values. Generally used when `lazyPicking` is set to
-`true` in [Events.create](event.html#Events:create).
+Behaves similarly to the `pick` function, but utilizes the per-vertex
+color attribute `pickingColors` to return the `(r, g, b, a)` tetrad
+under the given `x` and `y` coordinates.
 
 ### Syntax:
 
-    scene.resetPicking();
+    scene.pickCustom(x, y, options);
 
+### Arguments:
 
+* x - (*number*) The `x` position. The upper left corner of the viewport
+is considered to be `(0, 0)`.
+* y - (*number*) The `y` position. The upper left corner of the viewport
+is considered to be `(0, 0)`.
+* options - (*object*, optional) An object containing the following properties:
+  * pickingProgram - (*object*) The Program instance with which to render the picking scene.
+                     defaults to LumaGL's default shaders.
