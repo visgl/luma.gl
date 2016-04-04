@@ -72,6 +72,9 @@
     "build-scripts": "npm run build-script-main && npm run build-script-addons",
     "build-script-main": "browserify src/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "build-script-addons": "browserify src/addons/index.js -o dist/lumagl-addons.js --debug | uglifyjs > dist/lumagl-addons.min.js",
+    "watch-scripts": "npm run watch-script-main & npm run watch-script-addons",
+    "watch-script-main": "watchify src/bundle.js -v --debug -o dist/lumagl.js",
+    "watch-script-addons": "watchify src/addons/index.js -v --debug -o dist/lumagl-addons.js",
     "prepublish": "npm run build",
     "docs": "npm run build-docs && open ./_docs/index.html",
     "lint": "uber-standard",
@@ -80,6 +83,6 @@
     "test-node": "babel-node --include='' test/index.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
     "test-electron": "browserify test/electron.js | testron | faucet",
-    "start": "budo src/bundle.js:dist/LumaGL.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
+    "start": "echo Budo does not support multiple entry points. #budo src/bundle.js:dist/lumagl.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
   }
 }
