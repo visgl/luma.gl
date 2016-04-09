@@ -48,9 +48,15 @@ export default class Geometry {
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       if (isTypedArray(attribute)) {
+        let size = 3;
+        if (attributeName === 'instanced') {
+          size = 1;
+        } else if (attributeName === 'texCoords') {
+          size = 2;
+        }
         this.attributes[attributeName] = {
           value: attribute,
-          size: attributeName === 'instanced' ? 1 : 3,
+          size: size,
           instanced: 0
         };
       } else {

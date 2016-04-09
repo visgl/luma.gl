@@ -129,8 +129,7 @@ export class CubeGeometry extends Geometry {
         vertices: makeTypedArray(Float32Array, CUBE_VERTICES),
         normals: makeTypedArray(Float32Array, CUBE_NORMALS),
         texCoords: makeTypedArray(Float32Array, CUBE_TEX_COORDS)
-      },
-      ...opts
+      }
     });
   }
 }

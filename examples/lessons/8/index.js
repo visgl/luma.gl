@@ -16,6 +16,7 @@ var webGLStart = function() {
   var Fx = LumaGL.Fx;
   var Model = LumaGL.Model;
   var Shaders = LumaGL.Shaders;
+  var CubeGeometry = LumaGL.CubeGeometry;
 
   var canvas = document.getElementById('lesson08-canvas');
   canvas.width = canvas.clientWidth;
@@ -57,121 +58,6 @@ var webGLStart = function() {
         blending = $id('blending'),
         alpha = $id('alpha');
 
-    //Create object
-    var cube = new Model({
-      vertices: [-1, -1,  1,
-                  1, -1,  1,
-                  1,  1,  1,
-                 -1,  1,  1,
-
-                 -1, -1, -1,
-                 -1,  1, -1,
-                  1,  1, -1,
-                  1, -1, -1,
-
-                 -1,  1, -1,
-                 -1,  1,  1,
-                  1,  1,  1,
-                  1,  1, -1,
-
-                 -1, -1, -1,
-                  1, -1, -1,
-                  1, -1,  1,
-                 -1, -1,  1,
-
-                  1, -1, -1,
-                  1,  1, -1,
-                  1,  1,  1,
-                  1, -1,  1,
-
-                 -1, -1, -1,
-                 -1, -1,  1,
-                 -1,  1,  1,
-                 -1,  1, -1],
-
-      textures: glass,
-
-      texCoords: [0.0, 0.0,
-                  1.0, 0.0,
-                  1.0, 1.0,
-                  0.0, 1.0,
-
-                  // Back face
-                  1.0, 0.0,
-                  1.0, 1.0,
-                  0.0, 1.0,
-                  0.0, 0.0,
-
-                  // Top face
-                  0.0, 1.0,
-                  0.0, 0.0,
-                  1.0, 0.0,
-                  1.0, 1.0,
-
-                  // Bottom face
-                  1.0, 1.0,
-                  0.0, 1.0,
-                  0.0, 0.0,
-                  1.0, 0.0,
-
-                  // Right face
-                  1.0, 0.0,
-                  1.0, 1.0,
-                  0.0, 1.0,
-                  0.0, 0.0,
-
-                  // Left face
-                  0.0, 0.0,
-                  1.0, 0.0,
-                  1.0, 1.0,
-                  0.0, 1.0],
-
-      normals: [
-        // Front face
-         0.0,  0.0,  1.0,
-         0.0,  0.0,  1.0,
-         0.0,  0.0,  1.0,
-         0.0,  0.0,  1.0,
-
-        // Back face
-         0.0,  0.0, -1.0,
-         0.0,  0.0, -1.0,
-         0.0,  0.0, -1.0,
-         0.0,  0.0, -1.0,
-
-        // Top face
-         0.0,  1.0,  0.0,
-         0.0,  1.0,  0.0,
-         0.0,  1.0,  0.0,
-         0.0,  1.0,  0.0,
-
-        // Bottom face
-         0.0, -1.0,  0.0,
-         0.0, -1.0,  0.0,
-         0.0, -1.0,  0.0,
-         0.0, -1.0,  0.0,
-
-        // Right face
-         1.0,  0.0,  0.0,
-         1.0,  0.0,  0.0,
-         1.0,  0.0,  0.0,
-         1.0,  0.0,  0.0,
-
-        // Left face
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0
-      ],
-
-      indices: [0, 1, 2, 0, 2, 3,
-                4, 5, 6, 4, 6, 7,
-                8, 9, 10, 8, 10, 11,
-                12, 13, 14, 12, 14, 15,
-                16, 17, 18, 16, 18, 19,
-                20, 21, 22, 20, 22, 23]
-    });
-
     // Blend Fragment Shader
     var blendFS = [
 
@@ -199,16 +85,22 @@ var webGLStart = function() {
 
     ].join("\n");
 
-    var program = new Program(gl, Shaders.Vertex.Default, blendFS);
-
+    var program = new Program(gl, {
+      vs: Shaders.Vertex.Default,
+      fs: blendFS
+    });
     program.use();
+
+    //Create object
+    var cube = new Model({
+      program: program,
+      geometry: new CubeGeometry(),
+      textures: [glass]
+    });
 
     Events.create(canvas, {
       onKeyDown: function(e) {
         switch(e.key) {
-          case 'f':
-            filter = (filter + 1) % 3;
-            break;
           case 'up':
             xSpeed -= 0.02;
             break;
@@ -240,7 +132,7 @@ var webGLStart = function() {
       aspect: canvas.width/canvas.height,
     });
 
-    var scene = new Scene(gl, program, camera);
+    var scene = new Scene(gl, {});
 
     scene.add(cube);
 
@@ -282,7 +174,9 @@ var webGLStart = function() {
         b: +direction.b.value
       };
       //Render all elements in the Scene
-      scene.render();
+      scene.render(gl, {
+        camera: camera
+      });
     }
 
     function tick() {

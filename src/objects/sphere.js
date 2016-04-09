@@ -81,7 +81,6 @@ export class SphereGeometry extends Geometry {
     }
 
     super({
-      ...opts,
       attributes: {
         vertices: vertices,
         indices: indices,

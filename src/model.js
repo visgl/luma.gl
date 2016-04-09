@@ -220,7 +220,8 @@ export default class Model extends Object3D {
         data: attribute.value,
         size: attribute.size,
         instanced: attribute.instanced ? 1 : 0,
-        bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
+        bufferType: attribute.bufferType || attributeName === 'indices' ?
+          program.gl.ELEMENT_ARRAY_BUFFER : program.gl.ARRAY_BUFFER,
         drawMode: attribute.drawMode || program.gl.STATIC_DRAW
       };
       if (!this.buffers[attributeName]) {
