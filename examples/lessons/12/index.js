@@ -3,7 +3,7 @@
 var webGLStart = function() {
 
   var $id = function(d) {
-    return document.getElementById(d); 
+    return document.getElementById(d);
   };
 
   var createGLContext = LumaGL.createGLContext;
@@ -30,7 +30,7 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var program = makeProgramFromDefaultShaders(gl);
+  var program = new Program(gl, {});
   program.use();
 
   var camera = new PerspectiveCamera({
@@ -38,7 +38,7 @@ var webGLStart = function() {
     position: new Vec3(0, 0, 30),
   });
 
-  var scene = new Scene(gl, program, camera, {
+  var scene = new Scene(gl, {
     lights: {
       directional: {
         color: {
@@ -81,11 +81,13 @@ var webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
-      textures: tMoon
+      textures: tMoon,
+      program: program
     });
     // Create box
     box = new Cube({
-      textures: tCrate
+      textures: tCrate,
+      program: program
     });
     box.scale.set(2, 2, 2);
     // Unpack app properties
@@ -151,7 +153,9 @@ var webGLStart = function() {
       box.update();
 
       // render objects
-      scene.render();
+      scene.render(gl, {
+        camera: camera
+      });
 
       // request frame
       Fx.requestAnimationFrame(draw);

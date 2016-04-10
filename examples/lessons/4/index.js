@@ -101,7 +101,7 @@ window.webGLStart = function() {
        0, 0, 1, 1,
        0, 0, 1, 1]),
 
-    indices: new Float32Array(
+    indices: new Uint16Array(
       [0, 1, 2, 0, 2, 3,
        4, 5, 6, 4, 6, 7,
        8, 9, 10, 8, 10, 11,
@@ -151,21 +151,21 @@ window.webGLStart = function() {
       if (model.geometry.vertices) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'aVertexPosition',
-          data: model.geometry.get('vertices'),
+          data: model.geometry.vertices.value,
           size: 3
         }));
       }
       if (model.geometry.colors) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'aVertexColor',
-          data: model.geometry.get('colors'),
+          data: model.geometry.colors.value,
           size: 4
         }));
       }
       if (model.geometry.indices) {
         model.userData.buffers.push(new Buffer(gl, {
           attribute: 'indices',
-          data: model.geometry.get('indices'),
+          data: model.geometry.indices.value,
           bufferType: gl.ELEMENT_ARRAY_BUFFER,
           size: 1
         }));

@@ -5,13 +5,13 @@ window.webGLStart = function() {
   var createGLContext = LumaGL.createGLContext;
   var XHR = LumaGL.XHR;
   var loadTextures = LumaGL.loadTextures;
-  var makeProgramFromDefaultShaders =
-    LumaGL.addons.makeProgramFromDefaultShaders;
   var Model = LumaGL.Model;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Events = LumaGL.Events;
   var Fx = LumaGL.Fx;
+  var Program = LumaGL.Program;
+  var Geometry = LumaGL.Geometry;
 
   var pitch = 0;
   var pitchRate = 0;
@@ -22,6 +22,7 @@ window.webGLStart = function() {
   var zPos = 0;
   var speed = 0;
   var joggingAngle = 0;
+  var program;
 
   // Model
   var world;
@@ -56,6 +57,13 @@ window.webGLStart = function() {
         }
       }
 
+      worldGeometry = new Geometry({
+        attributes: {
+          vertices: new Float32Array(vertexPositions),
+          texCoords: new Float32Array(vertexTextureCoords),
+        }
+      });
+
       loadTextures(gl, {
         src: ['mud.gif'],
         parameters: [{
@@ -66,9 +74,11 @@ window.webGLStart = function() {
           generateMipmap: true
         }]
       }).then(function(textures) {
+        program = new Program(gl, {});
+        program.use();
         world = new Model({
-          vertices: vertexPositions,
-          texCoords: vertexTextureCoords,
+          program: program,
+          geometry: worldGeometry,
           textures: textures[0]
         });
         startApp();
@@ -86,14 +96,11 @@ window.webGLStart = function() {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    var program = makeProgramFromDefaultShaders(gl);
-    program.use();
-
     var camera = new PerspectiveCamera({
       aspect: canvas.width / canvas.height
     });
 
-    var scene = new Scene(gl, program, camera);
+    var scene = new Scene(gl, {});
 
     Events.create(canvas, {
       onKeyDown: function(e) {
@@ -155,7 +162,9 @@ window.webGLStart = function() {
                       .$translate(-xPos, -yPos, -zPos);
 
       // Render all elements in the Scene
-      scene.render();
+      scene.render(gl, {
+        camera: camera
+      });
     }
 
     function tick() {

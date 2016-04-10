@@ -14,6 +14,7 @@ window.webGLStart = function() {
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
+  var Program = LumaGL.Program;
 
   var moon;
   var pos;
@@ -28,7 +29,7 @@ window.webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var program = makeProgramFromDefaultShaders(gl);
+  var program = new Program(gl, {});
   program.use();
 
   var camera = new PerspectiveCamera({
@@ -36,7 +37,7 @@ window.webGLStart = function() {
     position: new Vec3(0, 0, -7),
   });
 
-  var scene = new Scene(gl, program, camera);
+  var scene = new Scene(gl, {});
 
   Events.create(canvas, {
     onDragStart: function(e) {
@@ -76,6 +77,7 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
+      program: program,
       textures: tMoon
     });
 
@@ -121,7 +123,9 @@ window.webGLStart = function() {
         }
       };
       //render moon
-      scene.render();
+      scene.render(gl, {
+        camera: camera
+      });
       //request new frame
       Fx.requestAnimationFrame(draw);
     }

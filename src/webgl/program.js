@@ -90,7 +90,18 @@ export default class Program {
   }
 
   setBuffer(buffer) {
-    const location = this.attributeLocations[buffer.attribute];
+    let location = this.attributeLocations[buffer.attribute];
+    if (location === undefined) {
+      if (buffer.attribute === 'vertices') {
+        location = this.attributeLocations.position;
+      } else if (buffer.attribute === 'colors') {
+        location = this.attributeLocations.color;
+      } else if (buffer.attribute === 'normals') {
+        location = this.attributeLocations.normal;
+      } else if (buffer.attribute === 'texCoords') {
+        location = this.attributeLocations.texCoord1;
+      }
+    }
     buffer.attachToLocation(location);
     return this;
   }

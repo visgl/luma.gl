@@ -126,17 +126,17 @@ window.webGLStart = function() {
     var buffers = [
       new Buffer(gl, {
         attribute: 'aVertexPosition',
-        data: cube.geometry.vertices,
+        data: cube.geometry.vertices.value,
         size: 3
       }),
       new Buffer(gl, {
         attribute: 'aTextureCoord',
-        data: cube.geometry.texCoords,
+        data: cube.geometry.texCoords.value,
         size: 2
       }),
       new Buffer(gl, {
         attribute: 'indices',
-        data: cube.geometry.indices,
+        data: cube.geometry.indices.value,
         bufferType: gl.ELEMENT_ARRAY_BUFFER,
         size: 1
       })
