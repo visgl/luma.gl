@@ -151,11 +151,11 @@ export default class Model extends Object3D {
     this.setUniforms(camera.getUniforms());
     this.setUniforms(this.getCoordinateUniforms(viewMatrix));
 
-    let table = this.getAttributesTable(this.geometry.attributes, {
+    let table = this.getAttributesTable(this.geometry.attributes, gl, {
       header: `Attributes for ${this.geometry.id}`,
       program: this.program
     });
-    table = this.getAttributesTable(this.attributes, {
+    table = this.getAttributesTable(this.attributes, gl, {
       table,
       program: this.program
     });
@@ -319,7 +319,7 @@ export default class Model extends Object3D {
   }
 
   // Todo move to attributes manager
-  getAttributesTable(attributes, {
+  getAttributesTable(attributes, gl, {
       header = 'Attributes',
       table = null,
       program
@@ -327,6 +327,11 @@ export default class Model extends Object3D {
     table = table || {[header]: {}};
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
+      let location = program && program.attributeLocations[attributeName];
+      if (location === undefined &&
+        attribute.bufferType === gl.ELEMENT_ARRAY_BUFFER) {
+        location = 'ELEMENT_ARRAY_BUFFER';
+      }
       table = table || {};
       table[attributeName] = {
         Name: attribute.value.constructor.name,
@@ -334,7 +339,7 @@ export default class Model extends Object3D {
         Verts: attribute.value.length / attribute.size,
         Size: attribute.size,
         Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT,
-        location: program && program.attributeLocations[attributeName]
+        Location: location
       };
     }
     return table;
