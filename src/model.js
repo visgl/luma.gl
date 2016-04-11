@@ -28,7 +28,10 @@ export default class Model extends Object3D {
     geometry,
     material = null, textures = [],
     // Enable instanced rendering (requires shader support and extra attributes)
-    instanced = false, instanceCount = 0,
+    instanced = false,
+    instanceCount = 0,
+    vertexCount = undefined,
+    isIndexed = undefined,
     // Picking
     pickable = false, pick = null,
     // Extra uniforms and attributes (beyond geometry, material, camera)
@@ -51,6 +54,9 @@ export default class Model extends Object3D {
     // instanced rendering
     this.instanced = instanced;
     this.instanceCount = instanceCount;
+    this.vertexCount = vertexCount;
+    this.isIndexed = isIndexed === undefined ?
+      Boolean(this.geometry.indices) : isIndexed;
 
     // picking options
     this.pickable = Boolean(pickable);
@@ -92,12 +98,13 @@ export default class Model extends Object3D {
     return this.instanceCount;
   }
 
-  getVertexCount() {
-    return this.geometry.getVertexCount();
+  setVertexCount(vertexCount) {
+    this.vertexCount = vertexCount;
   }
 
-  isIndexed() {
-    return Boolean(this.geometry.indices);
+  getVertexCount() {
+    return this.vertexCount === undefined ?
+      this.geometry.getVertexCount() : this.vertexCount;
   }
 
   getProgram() {
@@ -145,9 +152,13 @@ export default class Model extends Object3D {
     this.setUniforms(this.getCoordinateUniforms(viewMatrix));
 
     let table = this.getAttributesTable(this.geometry.attributes, {
-      header: `Attributes for ${this.geometry.id}`
+      header: `Attributes for ${this.geometry.id}`,
+      program: this.program
     });
-    table = this.getAttributesTable(this.attributes, {table});
+    table = this.getAttributesTable(this.attributes, {
+      table,
+      program: this.program
+    });
     log.table(3, table);
 
     table = this.getUniformsTable(this.uniforms, {
@@ -162,7 +173,7 @@ export default class Model extends Object3D {
     draw(gl, {
       drawMode,
       vertexCount: this.getVertexCount(),
-      indexed: this.isIndexed(),
+      indexed: this.isIndexed,
       instanced,
       instanceCount
     });
@@ -308,7 +319,11 @@ export default class Model extends Object3D {
   }
 
   // Todo move to attributes manager
-  getAttributesTable(attributes, {header = 'Attributes', table = null} = {}) {
+  getAttributesTable(attributes, {
+      header = 'Attributes',
+      table = null,
+      program
+    } = {}) {
     table = table || {[header]: {}};
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
@@ -318,7 +333,8 @@ export default class Model extends Object3D {
         Instanced: attribute.instanced,
         Verts: attribute.value.length / attribute.size,
         Size: attribute.size,
-        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT
+        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT,
+        location: program && program.attributeLocations[attributeName]
       };
     }
     return table;

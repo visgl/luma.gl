@@ -25,7 +25,7 @@ export default class Geometry {
     } else if (this.attributes.vertices) {
       return this.attributes.vertices.value.length / 3;
     }
-    throw new Error('Cannot deduce geometry vertex count');
+    return false;
   }
 
   hasAttribute(attributeName) {
