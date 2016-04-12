@@ -1,5 +1,5 @@
 // Default Shaders
-var glslify = require('glslify');
+const glslify = require('glslify');
 
 // TODO - adopt glslify
 const Shaders = {

@@ -263,7 +263,7 @@ export default class Scene extends Group {
   // Setup the lighting system: ambient, directional, point lights.
   setupLighting(program) {
     // Setup Lighting
-    let {enable, ambient, directional, points} = this.config.lights;
+    const {enable, ambient, directional, points} = this.config.lights;
 
     // Set light uniforms. Ambient and directional lights.
     program.setUniform('enableLights', enable);
@@ -297,7 +297,7 @@ export default class Scene extends Group {
   }
 
   setupDirectionalLighting(program, directional) {
-    let {color, direction} = directional;
+    const {color, direction} = directional;
 
     // Normalize lighting direction vector
     const dir = new Vec3(direction.x, direction.y, direction.z)

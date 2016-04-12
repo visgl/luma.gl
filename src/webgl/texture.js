@@ -3,6 +3,7 @@ import {glCheckError} from './context';
 
 class Texture {
 
+  /* eslint-disable max-statements */
   constructor(gl, opts = {}) {
     this.gl = gl;
     this.target = gl.TEXTURE_2D;
@@ -43,6 +44,7 @@ class Texture {
 
     this.userData = {};
   }
+  /* eslint-enable max-statements */
 
   delete() {
     const {gl} = this;

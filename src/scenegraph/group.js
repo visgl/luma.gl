@@ -34,7 +34,7 @@ export default class Group extends Object3D {
     return this;
   }
 
-  *traverse({viewMatrix}) {
+  * traverse({viewMatrix}) {
     for (const child of this.children) {
       const {matrix} = child;
       const worldMatrix = viewMatrix.mulMat4(matrix);
@@ -50,7 +50,7 @@ export default class Group extends Object3D {
     }
   }
 
-  *traverseReverse({viewMatrix}) {
+  * traverseReverse({viewMatrix}) {
     for (let i = this.children.length - 1; i >= 0; --i) {
       const child = this.children[i];
       const {matrix} = child;

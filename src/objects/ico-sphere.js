@@ -22,8 +22,8 @@ export class IcoSphereGeometry extends Geometry {
     vertices.push();
     indices.push();
 
-    var getMiddlePoint = (function() {
-      var pointMemo = {};
+    const getMiddlePoint = (function() {
+      const pointMemo = {};
 
       return function(i1, i2) {
         i1 *= 3;
@@ -58,7 +58,7 @@ export class IcoSphereGeometry extends Geometry {
     }());
 
     for (let i = 0; i < iterations; i++) {
-      var indices2 = [];
+      const indices2 = [];
       for (let j = 0; j < indices.length; j += 3) {
         const a = getMiddlePoint(indices[j + 0], indices[j + 1]);
         const b = getMiddlePoint(indices[j + 1], indices[j + 2]);
@@ -79,9 +79,9 @@ export class IcoSphereGeometry extends Geometry {
 
     const l = indices.length;
     for (let i = l - 3; i >= 0; i -= 3) {
-      let i1 = indices[i + 0];
-      let i2 = indices[i + 1];
-      let i3 = indices[i + 2];
+      const i1 = indices[i + 0];
+      const i2 = indices[i + 1];
+      const i3 = indices[i + 2];
       const in1 = i1 * 3;
       const in2 = i2 * 3;
       const in3 = i3 * 3;

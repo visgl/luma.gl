@@ -17,7 +17,7 @@ export class SphereGeometry extends Geometry {
     const numVertices = (nlat + 1) * (nlong + 1);
 
     if (typeof radius === 'number') {
-      var value = radius;
+      const value = radius;
       radius = function(n1, n2, n3, u, v) {
         return value;
       };
@@ -31,6 +31,9 @@ export class SphereGeometry extends Geometry {
     // Create vertices, normals and texCoords
     for (let y = 0; y <= nlat; y++) {
       for (let x = 0; x <= nlong; x++) {
+
+        const u = x / nlong;
+        const v = y / nlat;
 
         const index = x + y * (nlong + 1);
         const i2 = index * 2;
@@ -47,9 +50,6 @@ export class SphereGeometry extends Geometry {
         const uz = sinTheta * sinPhi;
 
         const r = radius(ux, uy, uz, u, v);
-
-        const u = x / nlong;
-        const v = y / nlat;
 
         vertices[i3 + 0] = r * ux;
         vertices[i3 + 1] = r * uy;

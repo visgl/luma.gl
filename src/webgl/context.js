@@ -161,8 +161,8 @@ function glGetErrorMessage(gl, glError) {
 // TODO - document or remove
 function createDebugContext(ctx) {
   const gl = {};
-  for (var m in ctx) {
-    var f = ctx[m];
+  for (const m in ctx) {
+    const f = ctx[m];
     if (typeof f === 'function') {
       gl[m] = ((k, v) => {
         return () => {

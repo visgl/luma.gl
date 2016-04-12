@@ -3,6 +3,7 @@ import assert from 'assert';
 import {uid} from '../utils';
 
 export default class Object3D {
+
   constructor({id, display = true}) {
     // model position, rotation, scale and all in all matrix
     this.position = new Vec3();
@@ -74,13 +75,14 @@ export default class Object3D {
       this.endRotation.setVec3(this.rotation);
       this.endScale.setVec3(this.scale);
     } else {
-      var parent = this.parent;
+      const parent = this.parent;
       this.endPosition.setVec3(this.position.add(parent.endPosition));
       this.endRotation.setVec3(this.rotation.add(parent.endRotation));
       this.endScale.setVec3(this.scale.add(parent.endScale));
     }
 
-    for (var i = 0, ch = this.children, l = ch.length; i < l; ++i) {
+    const ch = this.children;
+    for (let i = 0; i < ch.length; ++i) {
       ch[i].transform();
     }
 

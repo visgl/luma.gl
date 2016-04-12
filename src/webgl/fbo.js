@@ -3,6 +3,7 @@ import {Texture2D} from './texture';
 
 export default class Framebuffer {
 
+  /* eslint-disable max-statements */
   constructor(gl, opts = {}) {
     this.gl = gl;
 
@@ -41,7 +42,7 @@ export default class Framebuffer {
       );
     }
 
-    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error('Framebuffer creation failed.');
     }
@@ -50,6 +51,7 @@ export default class Framebuffer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
   }
+  /* eslint-enable max-statements */
 
   bind() {
     const gl = this.gl;

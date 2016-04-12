@@ -6,17 +6,17 @@
 export default class WorkerGroup {
 
   constructor(fileName, n) {
-    var workers = this.workers = [];
+    const workers = this.workers = [];
     while (n--) {
       workers.push(new Worker(fileName));
     }
   }
 
   map(func) {
-    var workers = this.workers;
-    var configs = this.configs = [];
+    const workers = this.workers;
+    const configs = this.configs = [];
 
-    for (var i = 0, l = workers.length; i < l; i++) {
+    for (let i = 0, l = workers.length; i < l; i++) {
       configs.push(func && func(i));
     }
 
@@ -24,24 +24,24 @@ export default class WorkerGroup {
   }
 
   reduce(opt) {
-    var fn = opt.reduceFn,
-        workers = this.workers,
-        configs = this.configs,
-        l = workers.length,
-        acum = opt.initialValue,
-        message = function _(e) {
-          l--;
-          if (acum === undefined) {
-            acum = e.data;
-          } else {
-            acum = fn(acum, e.data);
-          }
-          if (l === 0) {
-            opt.onComplete(acum);
-          }
-        };
-    for (var i = 0, ln = l; i < ln; i++) {
-      var w = workers[i];
+    const fn = opt.reduceFn;
+    const workers = this.workers;
+    const configs = this.configs;
+    let l = workers.length;
+    let acum = opt.initialValue;
+    const message = function _(e) {
+      l--;
+      if (acum === undefined) {
+        acum = e.data;
+      } else {
+        acum = fn(acum, e.data);
+      }
+      if (l === 0) {
+        opt.onComplete(acum);
+      }
+    };
+    for (let i = 0, ln = l; i < ln; i++) {
+      const w = workers[i];
       w.onmessage = message;
       w.postMessage(configs[i]);
     }

@@ -48,7 +48,7 @@ export function getKey(e) {
   const code = e.which || e.keyCode;
   let key = keyOf(code);
   // onkeydown
-  var fKey = code - 111;
+  const fKey = code - 111;
   if (fKey > 0 && fKey < 13) {
     key = 'f' + fKey;
   }
@@ -77,7 +77,9 @@ export function getPos(e, win) {
   // TODO(nico): make touch event handling better
   if (e.touches && e.touches.length) {
     const touchesPos = [];
-    for (var i = 0, l = e.touches.length, evt; i < l; ++i) {
+    const l = e.touches.length;
+    let evt;
+    for (let i = 0; i < l; ++i) {
       evt = e.touches[i];
       touchesPos.push({
         x: evt.pageX || (evt.clientX + doc.scrollLeft),
@@ -86,7 +88,7 @@ export function getPos(e, win) {
     }
     return touchesPos;
   }
-  var page = {
+  const page = {
     x: e.pageX || (e.clientX + doc.scrollLeft),
     y: e.pageY || (e.clientY + doc.scrollTop)
   };
@@ -213,7 +215,7 @@ export class EventsProxy {
       break;
     }
 
-    var cacheTarget;
+    let cacheTarget;
 
     Object.assign(evt, {
       x: epos[0].x,
@@ -244,7 +246,7 @@ export class EventsProxy {
     if (this.cacheSize) {
       return this.size;
     }
-    var domElem = this.domElem;
+    const domElem = this.domElem;
     return {
       width: domElem.width || domElem.offsetWidth,
       height: domElem.height || domElem.offsetHeight
@@ -299,7 +301,7 @@ export class EventsProxy {
       return;
     }
     if (this.hovered) {
-      var target = toO3D(e.getTarget());
+      const target = toO3D(e.getTarget());
       if (!target || target.hash !== this.hash) {
         this.callbacks.onMouseLeave(e, this.hovered);
         this.hovered = target;
@@ -415,12 +417,12 @@ export const Events = {
       ...opt
     };
 
-    var bind = opt.bind;
+    const bind = opt.bind;
     if (bind) {
       for (const name in opt) {
         if (name.match(/^on[a-zA-Z0-9]+$/)) {
           ((fname, fn) => {
-            opt[fname] = function() {
+            opt[fname] = function f() {
               fn.apply(bind, Array.prototype.slice.call(arguments));
             };
           })(name, opt[name]);
@@ -436,8 +438,8 @@ export const Events = {
 Events.Keys = KEYS;
 
 function keyOf(code) {
-  var keyMap = Events.Keys;
-  for (var name in keyMap) {
+  const keyMap = Events.Keys;
+  for (const name in keyMap) {
     if (keyMap[name] === code) {
       return name;
     }

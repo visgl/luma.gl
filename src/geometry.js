@@ -6,11 +6,18 @@ const ILLEGAL_ARG = 'Geometry: Illegal argument';
 
 export default class Geometry {
 
-  constructor({drawMode = 'TRIANGLES', id = uid(), attributes, ...attrs}) {
+  constructor({
+    id = uid(),
+    drawMode = 'TRIANGLES',
+    vertexCount = undefined,
+    attributes,
+    ...attrs
+  }) {
     assert(DRAW_MODES.includes(drawMode), ILLEGAL_ARG);
 
     this.id = id;
     this.drawMode = drawMode;
+    this.vertexCount = vertexCount;
     this.attributes = {};
     this.userData = {};
     Object.seal(this);
@@ -19,8 +26,14 @@ export default class Geometry {
     this.setAttributes(attrs);
   }
 
+  setVertexCount(vertexCount) {
+    this.vertexCount = vertexCount;
+  }
+
   getVertexCount() {
-    if (this.attributes.indices) {
+    if (this.vertexCount !== undefined) {
+      return this.vertexCount;
+    } else if (this.attributes.indices) {
       return this.attributes.indices.value.length;
     } else if (this.attributes.vertices) {
       return this.attributes.vertices.value.length / 3;
@@ -44,28 +57,64 @@ export default class Geometry {
     return attribute.value;
   }
 
+  // Attribute
+  //  value: typed array
+  //  type: indices, vertices, uvs
+  //  size: elements per vertex
+  //  bufferType: WebGL buffer type (string or constant)
+  /* eslint-disable default-case */
   setAttributes(attributes) {
     for (const attributeName in attributes) {
-      const attribute = attributes[attributeName];
+      let attribute = attributes[attributeName];
+      // Support type arrays
       if (isTypedArray(attribute)) {
-        this.attributes[attributeName] = {
-          value: attribute,
-          size: attributeName === 'instanced' ? 1 : 3,
-          instanced: 0
-        };
-      } else {
-        assert(attribute.value);
-        assert(attribute.size);
-        this.attributes[attributeName] = attribute;
+        attribute = {value: attribute};
       }
+      // Check for well known attribute names
+      switch (attributeName) {
+      case 'indices':
+        attribute.type = attribute.type || 'indices';
+        break;
+      case 'texCoords':
+        attribute.type = 'uvs';
+        break;
+      case 'vertices':
+      case 'positions':
+      case 'colors':
+      case 'normals':
+      case 'pickingColors':
+        attribute.size = 3;
+        break;
+      }
+
+      // Check for types
+      switch (attribute.type) {
+      case 'indices':
+        attribute.size = 1;
+        attribute.bufferType = 'ELEMENT_ARRAY_BUFFER';
+        attribute.instanced = 0;
+        break;
+      case 'uvs':
+        attribute.size = 2;
+        break;
+      }
+      assert(attribute.value, `attribute ${attributeName} needs value`);
+      assert(attribute.size, `attribute ${attributeName} needs size`);
+
+      this.attributes[attributeName] = {
+        ...attribute,
+        instanced: attribute.instanced || 0
+      };
     }
     return this;
   }
+  /* eslint-enable default-case */
 
   getAttributes() {
     return this.attributes;
   }
 
+  // TODO - remove code below
   get vertices() {
     return this.attributes.vertices;
   }
@@ -86,7 +135,6 @@ export default class Geometry {
     return this.attributes.indices;
   }
 
-  // TODO - remove code below
   /*
   set vertices(val) {
     if (!val) {

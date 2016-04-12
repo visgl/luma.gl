@@ -177,7 +177,7 @@ export class XHRGroup {
       ...opt
     };
 
-    var urls = splat(opt.urls);
+    const urls = splat(opt.urls);
     this.reqs = urls.map((url, i) => new XHR({
       url: url,
       method: opt.method,
@@ -204,10 +204,10 @@ export function JSONP(opt) {
     callbackKey: 'callback'
   }, opt || {});
 
-  var index = JSONP.counter++;
+  const index = JSONP.counter++;
   // create query string
-  var data = [];
-  for (var prop in opt.data) {
+  let data = [];
+  for (const prop in opt.data) {
     data.push(prop + '=' + opt.data[prop]);
   }
   data = data.join('&');
@@ -216,13 +216,13 @@ export function JSONP(opt) {
     data += (data.indexOf('?') >= 0 ? '&' : '?') + uid();
   }
   // create source url
-  var src = opt.url +
+  const src = opt.url +
     (opt.url.indexOf('?') > -1 ? '&' : '?') +
     opt.callbackKey + '=PhiloGL IO.JSONP.requests.request_' + index +
     (data.length > 0 ? '&' + data : '');
 
   // create script
-  var script = document.createElement('script');
+  const script = document.createElement('script');
   script.type = 'text/javascript';
   script.src = src;
 
@@ -248,7 +248,7 @@ JSONP.requests = {};
 // Creates an image-loading promise.
 function loadImage(src) {
   return new Promise(function(resolve, reject) {
-    var image = new Image();
+    const image = new Image();
     image.onload = function() {
       resolve(image);
     };
@@ -263,8 +263,8 @@ function loadImage(src) {
 // rye: TODO this needs to implement functionality from the
 //           original Images function.
 async function loadImages(srcs) {
-  let imagePromises = srcs.map((src) => loadImage(src));
-  let results = [];
+  const imagePromises = srcs.map(src => loadImage(src));
+  const results = [];
   for (const imagePromise of imagePromises) {
     results.push(await imagePromise);
   }
@@ -285,14 +285,14 @@ async function loadImages(srcs) {
 //
 //   let images;
 //   // Image onload handler
-//   var load = () => {
+//   const load = () => {
 //     opt.onProgress(Math.round(++count / l * 100));
 //     if (count === l) {
 //       opt.onComplete(images);
 //     }
 //   };
 //   // Image error handler
-//   var error = () => {
+//   const error = () => {
 //     if (++count === l) {
 //       opt.onComplete(images);
 //     }
@@ -322,10 +322,10 @@ async function loadImages(srcs) {
 // rye: TODO this needs to implement functionality from
 //           the original loadTextures function.
 export async function loadTextures(gl, opt) {
-  var images = await loadImages(opt.src);
-  var textures = [];
+  const images = await loadImages(opt.src);
+  const textures = [];
   images.forEach((img, i) => {
-    var params = Array.isArray(opt.parameters) ?
+    let params = Array.isArray(opt.parameters) ?
       opt.parameters[i] : opt.parameters;
     params = params === undefined ? {} : params;
     textures.push(new Texture2D(gl, merge({

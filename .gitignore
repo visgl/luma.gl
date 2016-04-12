@@ -1,4 +1,5 @@
 build/*
+dist/*
 .project
 .DS_Store
 *.zip

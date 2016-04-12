@@ -23,21 +23,16 @@ export default class Program {
    * @param {String} opts.fs - Fragment shader source
    * @param {String} opts.id= - Id
    */
-  constructor(gl, opts, fs, id) {
+  constructor(gl, {
+    vs = Shaders.Vertex.Default,
+    fs = Shaders.Fragment.Default,
+    id = uid()
+  } = {}, ...args) {
     assert(gl, 'Program needs WebGLRenderingContext');
 
-    let vs;
-    if (typeof opts === 'string') {
-      console.warn('DEPRECATED: New use: Program(gl, {vs, fs, id})');
-      vs = opts;
-    } else {
-      vs = opts.vs;
-      fs = opts.fs;
-      id = opts.id;
+    if (args.length) {
+      console.warn('Extra arguments to Program(gl, {vs, fs, id})');
     }
-
-    vs = vs || Shaders.Vertex.Default;
-    fs = fs || Shaders.Fragment.Default;
 
     const program = gl.createProgram();
     if (!program) {
@@ -53,7 +48,6 @@ export default class Program {
     }
 
     this.gl = gl;
-    this.id = id || uid();
     this.program = program;
     // determine attribute locations (i.e. indices)
     this.attributeLocations = getAttributeLocations(gl, program);

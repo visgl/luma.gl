@@ -210,8 +210,8 @@ export default class Model extends Object3D {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
-    var attributes = program.attributes;
-    for (var name in attributes) {
+    const attributes = program.attributes;
+    for (const name in attributes) {
       gl.disableVertexAttribArray(attributes[name]);
     }
     return this;
@@ -260,7 +260,9 @@ export default class Model extends Object3D {
     let tex2D = 0;
     let texCube = 0;
     const mtexs = MAX_TEXTURES;
-    for (let i = 0, texs = this.textures, l = texs.length; i < mtexs; i++) {
+    const texs = this.textures;
+    const l = texs.length;
+    for (let i = 0; i < mtexs; i++) {
       if (i < l) {
         // rye TODO: update this when TextureCube is implemented.
         // const isCube = app.textureMemo[texs[i]].isCube;
