@@ -56,6 +56,7 @@
     "eslint": "^1.9.0",
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
+    "gl": "^2.1.5",
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
@@ -72,8 +73,8 @@
     "build-dev": "browserify src/bundle.js -o dist/LumaGL.js",
     "lint": "uber-standard",
     "precommit": "npm run lint -s",
-    "test": "browserify test/electron.js | testron | faucet",
-    "test-node": "babel-node --include='' test/node.js | faucet",
+    "test": "babel-node --include='' test/node.js | faucet",
+    "test-electron": "browserify test/electron.js | testron | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
     "start": "budo src/bundle.js:dist/LumaGL.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
   }
