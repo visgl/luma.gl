@@ -20,7 +20,7 @@
     "animation",
     "3d"
   ],
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "browserify": {
     "transform": [
       "babelify",
