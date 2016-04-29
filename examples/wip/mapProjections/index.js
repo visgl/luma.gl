@@ -182,7 +182,7 @@ function createApp() {
       }
     },
     textures: {
-      src: ['img/earth1.jpg', 'img/clouds.jpg'],
+      urls: ['img/earth1.jpg', 'img/clouds.jpg'],
       parameters: [{
         name: 'TEXTURE_MAG_FILTER',
         value: 'LINEAR'

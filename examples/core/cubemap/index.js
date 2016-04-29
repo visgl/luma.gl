@@ -3,7 +3,7 @@
 window.webGLStart = function webGLStart() {
 
   var createGLContext = LumaGL.createGLContext;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var TextureCube = LumaGL.TextureCube;
@@ -67,8 +67,8 @@ window.webGLStart = function webGLStart() {
     })
   };
 
-  var programCube = makeProgramFromHTMLTemplates(gl, 'cube-vs', 'cube-fs');
-  var programPrism = makeProgramFromHTMLTemplates(gl, 'prism-vs', 'prism-fs');
+  var programCube = new Program(gl, getShadersFromHTML{vs: 'cube-vs', 'cube-fs');
+  var programPrism = new Program(gl, getShadersFromHTML{vs: 'prism-vs', 'prism-fs');
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

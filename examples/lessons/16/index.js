@@ -58,7 +58,7 @@ var webGLStart = function() {
       ),
 
       loadTextures(gl, {
-        src: ['moon.gif', 'crate.gif'],
+        urls: ['moon.gif', 'crate.gif'],
         parameters: [{
           magFilter: gl.LINEAR,
           minFilter: gl.LINEAR_MIPMAP_NEAREST,

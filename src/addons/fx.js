@@ -1,4 +1,4 @@
-//  Timer based animation
+// Timer based animation
 // TODO clean up linting
 /* eslint-disable */
 /* global setTimeout */
@@ -140,8 +140,8 @@ for (const t in transitions) {
 
 // animationTime - function branching
 
-//  rye: TODO- refactor global definition when we define the two
-//             (browserify/<script>) build paths.
+// rye: TODO- refactor global definition when we define the two
+//           (browserify/<script>) build paths.
 var global;
 try {
   global = window;

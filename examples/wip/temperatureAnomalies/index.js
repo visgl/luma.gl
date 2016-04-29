@@ -314,7 +314,7 @@ function init() {
         }
       },
       textures: {
-        src: ['img/earth.jpg']
+        urls: ['img/earth.jpg']
       },
       onError: function(e) {
         alert("There was an error creating the app. ");

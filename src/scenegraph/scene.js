@@ -86,7 +86,7 @@ export default class Scene extends Group {
   }
 
   // Renders all objects in the scene.
-  render(gl, {
+  render({
     camera,
     onBeforeRender = noop,
     onAfterRender = noop,
@@ -95,20 +95,21 @@ export default class Scene extends Group {
   } = {}) {
     assert(camera instanceof Camera);
 
+    const {gl} = this;
     this.clear(gl);
 
     // Go through each model and render it.
     for (const model of this.traverse({viewMatrix: camera.view})) {
       if (model.display) {
         onBeforeRender(model, context);
-        this.renderObject(gl, {model, camera, context});
+        this.renderObject({model, camera, context});
         onAfterRender(model, context);
       }
     }
     return this;
   }
 
-  renderObject(gl, {model, camera, context = {}}) {
+  renderObject({model, camera, context = {}}) {
     assert(camera instanceof Camera);
 
     model.onBeforeRender(camera, context);
@@ -120,7 +121,7 @@ export default class Scene extends Group {
     this.setupEffects(program);
 
     // Draw
-    model.render(gl, {camera, viewMatrix: camera.view});
+    model.render({camera, viewMatrix: camera.view});
 
     model.onAfterRender(camera, context);
     model.unsetProgramState();

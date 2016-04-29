@@ -1,6 +1,10 @@
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 var webGLStart = function() {
 
-  var $id = function(d) { return document.getElementById(d); };
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
@@ -19,11 +23,10 @@ var webGLStart = function() {
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, +canvas.width, +canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
-  var program = makeProgramFromDefaultShaders(gl);
+  var program = new Program(gl, getDefaultShaders());
   program.use();
-
 
   // rye TODO: there's a bug in merge that makes it require an object.
   var camera = new PerspectiveCamera({});
@@ -31,16 +34,10 @@ var webGLStart = function() {
   var scene = new Scene(gl, program, camera, {
     lights: {
       points: {
-        color: {
-          r: 1, g: 1, b: 1
-        },
-        position: {
-          x: 0, y: 0, z: 32
-        }
+        color: {r: 1, g: 1, b: 1},
+        position: {x: 0, y: 0, z: 32}
       },
-      ambient: {
-        r: 0.25, g: 0.25, b: 0.25
-      },
+      ambient: {r: 0.25, g: 0.25, b: 0.25},
       enable: true
     },
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
@@ -53,37 +50,17 @@ var webGLStart = function() {
   });
 
   loadTextures(gl, {
-    src: ['jupiter.jpg', 'mars.jpg', 'mercury.jpg', 'neptune.jpg', 'saturn.jpg', 'uranus.jpg', 'venus.jpg'],
-    parameters: [{
+    urls: [
+      'jupiter.jpg', 'mars.jpg', 'mercury.jpg',
+      'neptune.jpg', 'saturn.jpg', 'uranus.jpg', 'venus.jpg'
+    ],
+    parameters: {
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
       generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    },{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
-    }]
-  }).then(function(textures) {
+    }
+  })
+  .then(function(textures) {
     var tJupiter = textures[0];
     var tMars = textures[1];
     var tMercury = textures[2];
@@ -92,7 +69,7 @@ var webGLStart = function() {
     var tUranus = textures[5];
     var tVenus = textures[6];
 
-    jupiter = new Sphere({
+    var jupiter = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -100,7 +77,7 @@ var webGLStart = function() {
       pickable: true
     });
     jupiter.name = 'Jupiter';
-    mars = new Sphere({
+    var mars = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -108,7 +85,7 @@ var webGLStart = function() {
       pickable: true
     });
     mars.name = 'Mars';
-    mercury = new Sphere({
+    var mercury = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -116,7 +93,7 @@ var webGLStart = function() {
       pickable: true
     });
     mercury.name = 'Mercury';
-    neptune = new Sphere({
+    var neptune = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -124,7 +101,7 @@ var webGLStart = function() {
       pickable: true
     });
     neptune.name = 'Neptune';
-    saturn = new Sphere({
+    var saturn = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -132,7 +109,7 @@ var webGLStart = function() {
       pickable: true
     });
     saturn.name = 'Saturn';
-    uranus = new Sphere({
+    var uranus = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -140,7 +117,7 @@ var webGLStart = function() {
       pickable: true
     });
     uranus.name = 'Uranus';
-    venus = new Sphere({
+    var venus = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
@@ -155,7 +132,7 @@ var webGLStart = function() {
 
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
-      var theta = i/items.length * Math.PI*2;
+      var theta = i / items.length * Math.PI * 2;
       item.position = new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0);
       item.update();
     }
@@ -163,8 +140,12 @@ var webGLStart = function() {
     function draw() {
       canvas.width = canvas.clientWidth;
       canvas.height = canvas.clientHeight;
-      camera.view.lookAt(new Vec3(0,0,32), new Vec3(0,0,0), new Vec3(0,1,0));
-      camera.projection.perspective(15, canvas.width/canvas.height, 0.1, 100.0);
+      camera.view.lookAt(
+        new Vec3(0, 0, 32), new Vec3(0, 0, 0), new Vec3(0, 1, 0)
+      );
+      camera.projection.perspective(
+        15, canvas.width / canvas.height, 0.1, 100.0
+      );
 
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
@@ -173,7 +154,7 @@ var webGLStart = function() {
       }
 
       var p = scene.pick(pick.x, pick.y);
-      div = document.getElementById('planet-name');
+      var div = document.getElementById('planet-name');
       if (p) {
         div.innerHTML = p.name;
         div.style.top = pick.y + 'px';
@@ -183,7 +164,7 @@ var webGLStart = function() {
         div.style.display = 'none';
       }
 
-      gl.viewport(0,0,canvas.width,canvas.height);
+      gl.viewport(0, 0, canvas.width, canvas.height);
       program.use();
       scene.render();
 
@@ -192,4 +173,4 @@ var webGLStart = function() {
 
     draw();
   });
-}
+};

@@ -1,9 +1,9 @@
 /* global window, document, LumaGL */
-/* eslint-disable max-statements */
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var XHR = LumaGL.XHR;
+  var loadFiles = LumaGL.loadFiles;
   var loadTextures = LumaGL.loadTextures;
   var makeProgramFromDefaultShaders =
     LumaGL.addons.makeProgramFromDefaultShaders;
@@ -33,52 +33,55 @@ window.webGLStart = function() {
   var gl = createGLContext(canvas);
 
   // load world
-  new XHR({
-    url: 'world.txt',
-    onSuccess: function(data) {
-      var lines = data.split('\n');
-      var vertexCount = 0;
-      var vertexPositions = [];
-      var vertexTextureCoords = [];
-      for (var i in lines) {
-        var vals = lines[i].replace(/^\s+/, '').split(/\s+/);
-        if (vals.length === 5 && vals[0] !== '// ') {
-          //  It is a line describing a vertex; get X, Y and Z first
-          vertexPositions.push(parseFloat(vals[0]));
-          vertexPositions.push(parseFloat(vals[1]));
-          vertexPositions.push(parseFloat(vals[2]));
+  Promise.all(
+    loadFiles({path: ['world.txt']}),
+    loadTextures(gl, {
+      urls: ['mud.gif'],
+      parameters: [{
+        magFilter: gl.LINEAR,
+        minFilter: gl.LINEAR_MIPMAP_NEAREST,
+        wrapS: gl.REPEAT,
+        wrapT: gl.REPEAT,
+        generateMipmap: true
+      }]
+    })
+  )
+  .then(function onSuccess(results) {
+    var files = results[0];
+    var data = files[0];
+    var textures = results[1];
 
-          //  And then the texture coords
-          vertexTextureCoords.push(parseFloat(vals[3]));
-          vertexTextureCoords.push(parseFloat(vals[4]));
+    var lines = data.split('\n');
+    var vertexCount = 0;
+    var vertexPositions = [];
+    var vertexTextureCoords = [];
+    for (var i in lines) {
+      var vals = lines[i].replace(/^\s+/, '').split(/\s+/);
+      if (vals.length === 5 && vals[0] !== '// ') {
+        // It is a line describing a vertex; get X, Y and Z first
+        vertexPositions.push(parseFloat(vals[0]));
+        vertexPositions.push(parseFloat(vals[1]));
+        vertexPositions.push(parseFloat(vals[2]));
 
-          vertexCount += 1;
-        }
+        // And then the texture coords
+        vertexTextureCoords.push(parseFloat(vals[3]));
+        vertexTextureCoords.push(parseFloat(vals[4]));
+
+        vertexCount += 1;
       }
-
-      loadTextures(gl, {
-        src: ['mud.gif'],
-        parameters: [{
-          magFilter: gl.LINEAR,
-          minFilter: gl.LINEAR_MIPMAP_NEAREST,
-          wrapS: gl.REPEAT,
-          wrapT: gl.REPEAT,
-          generateMipmap: true
-        }]
-      }).then(function(textures) {
-        world = new Model({
-          vertices: vertexPositions,
-          texCoords: vertexTextureCoords,
-          textures: textures[0]
-        });
-        startApp();
-      });
-
-    },
-    onError: function() {
-      console.log('There was something wrong with loading the world.');
     }
-  }).send();
+
+    world = new Model({
+      vertices: vertexPositions,
+      texCoords: vertexTextureCoords,
+      textures: textures[0]
+    });
+
+    startApp();
+  })
+  .catch(function onError() {
+    console.log('There was something wrong with loading the world.');
+  });
 
   function startApp() {
 
@@ -150,9 +153,10 @@ window.webGLStart = function() {
 
     function drawScene() {
       // Update Camera Position
-      camera.view.id()
-                      .$rotateXYZ(-pitch, -yaw, 0)
-                      .$translate(-xPos, -yPos, -zPos);
+      camera
+        .view.id()
+        .$rotateXYZ(-pitch, -yaw, 0)
+        .$translate(-xPos, -yPos, -zPos);
 
       // Render all elements in the Scene
       scene.render();

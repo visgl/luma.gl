@@ -1,3 +1,5 @@
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 var createGLContext = LumaGL.createGLContext;
 var Program = LumaGL.Program;
 var Buffer = LumaGL.Buffer;

@@ -32,7 +32,7 @@ var webGLStart = function() {
     }),
 
     loadTextures(gl, {
-      src: ['earth.jpg', 'earth-specular.gif'],
+      urls: ['earth.jpg', 'earth-specular.gif'],
       parameters: [{
         magFilter: gl.LINEAR,
         minFilter: gl.LINEAR_MIPMAP_NEAREST,

@@ -1,9 +1,13 @@
-var webGLStart = function() {
-  var $id = function(d) { return document.getElementById(d); };
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
+window.webGLStart = function() {
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
@@ -23,34 +27,22 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var defaultProgram = makeProgramFromDefaultShaders(gl);
-  var perpixelProgram = makeProgramFromHTMLTemplates(
-    gl,
-    'per-fragment-lighting-vs',
-    'per-fragment-lighting-fs'
-  );
+  var defaultProgram = new Program(gl, getDefaultShaders());
+  var perpixelProgram = new Program(gl, getShadersFromHTML({
+    vs: 'per-fragment-lighting-vs',
+    fs: 'per-fragment-lighting-fs'
+  }));
 
   var camera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
-    position: new Vec3(0, 0, -30),
+    aspect: canvas.width / canvas.height,
+    position: new Vec3(0, 0, -30)
   });
 
-  var scene = new Scene(
-    gl,
-    {
-      'vertex': defaultProgram,
-      'fragment': perpixelProgram
-    },
-    camera,
-    {
+  var scene = new Scene(gl, {
     lights: {
       directional: {
-        color: {
-          r: 0, g: 0, b: 0
-        },
-        direction: {
-          x: 0, y: 0, z: 0
-        }
+        color: {r: 0, g: 0, b: 0},
+        direction: {x: 0, y: 0, z: 0}
       }
     }
   });
@@ -58,25 +50,24 @@ var webGLStart = function() {
   Events.create(canvas, {
     onMouseWheel: function(e, info) {
       info.stop();
-      var camera = this.camera;
-
       camera.position.z += info.wheel;
       camera.update();
     }
   });
 
   loadTextures(gl, {
-    src: ['moon.gif', 'crate.gif'],
+    urls: ['moon.gif', 'crate.gif'],
     parameters: [{
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
       generateMipmap: true
-    },{
+    }, {
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
       generateMipmap: true
     }]
-  }).then(function(textures) {
+  })
+  .then(function(textures) {
     var tMoon = textures[0];
     var tCrate = textures[1];
 
@@ -98,34 +89,34 @@ var webGLStart = function() {
     });
     box.scale.set(2, 2, 2);
 
-    //Unpack app properties
-    var lighting = $id('lighting'),
-        ambient = {
-          r: $id('ambientR'),
-          g: $id('ambientG'),
-          b: $id('ambientB')
-        },
-        point = {
-          x: $id('lightPositionX'),
-          y: $id('lightPositionY'),
-          z: $id('lightPositionZ'),
+    // Unpack app properties
+    var lighting = $id('lighting');
+    var ambient = {
+      r: $id('ambientR'),
+      g: $id('ambientG'),
+      b: $id('ambientB')
+    };
+    var point = {
+      x: $id('lightPositionX'),
+      y: $id('lightPositionY'),
+      z: $id('lightPositionZ'),
 
-          r: $id('pointR'),
-          g: $id('pointG'),
-          b: $id('pointB')
-        },
-        program = $id('per-fragment'),
-        textures = $id('textures'),
-        //objects position
-        rho = 6,
-        theta = 0;
+      r: $id('pointR'),
+      g: $id('pointG'),
+      b: $id('pointB')
+    };
+    var program = $id('per-fragment'),
+    var textures = $id('textures'),
+    // objects position
+    var rho = 6,
+    var theta = 0;
 
-    //Add objects to the scene
+    // Add objects to the scene
     scene.add(box, moon);
 
-    //Draw the scene
+    // Draw the scene
     function draw() {
-      //Setup lighting
+      // Setup lighting
       var lights = scene.config.lights;
       lights.enable = lighting.checked;
       lights.ambient = {
@@ -146,7 +137,7 @@ var webGLStart = function() {
         }
       };
 
-      //Set program
+      // Set program
       if (program.checked) {
         moon.program = perpixelProgram;
         box.program = perpixelProgram;
@@ -155,7 +146,7 @@ var webGLStart = function() {
         box.program = defaultProgram;
       }
 
-      //Set textures
+      // Set textures
       if (textures.checked) {
         moon.textures = tMoon;
         box.textures = tCrate;
@@ -164,7 +155,7 @@ var webGLStart = function() {
         delete box.textures;
       }
 
-      //Update position
+      // Update position
       theta += 0.01;
 
       moon.position = {
@@ -181,14 +172,14 @@ var webGLStart = function() {
       };
       box.update();
 
-      //render objects
+      // render objects
       scene.render();
 
-      //request new frame
+      // request new frame
       Fx.requestAnimationFrame(draw);
     }
 
-    //Animate
+    // Animate
     draw();
 
   });

@@ -4,7 +4,7 @@
 // Define some locals
 import {MAX_TEXTURES} from './config';
 import Object3D from './scenegraph/object-3d';
-import {Buffer, draw} from './webgl';
+import {Buffer, draw, Texture2D} from './webgl';
 import {splat} from './utils';
 import log from './log';
 import assert from 'assert';
@@ -26,7 +26,8 @@ export default class Model extends Object3D {
   constructor({
     program,
     geometry,
-    material = null, textures = [],
+    material = null,
+    textures = [],
     // Enable instanced rendering (requires shader support and extra attributes)
     instanced = false,
     instanceCount = 0,
@@ -100,15 +101,12 @@ export default class Model extends Object3D {
 
   setVertexCount(vertexCount) {
     this.vertexCount = vertexCount;
+    return this;
   }
 
   getVertexCount() {
     return this.vertexCount === undefined ?
       this.geometry.getVertexCount() : this.vertexCount;
-  }
-
-  getProgram() {
-    return this.program;
   }
 
   isPickable() {
@@ -118,6 +116,14 @@ export default class Model extends Object3D {
   setPickable(pickable = true) {
     this.pickable = Boolean(pickable);
     return this;
+  }
+
+  getProgram() {
+    return this.program;
+  }
+
+  getGeometry() {
+    return this.geometry;
   }
 
   getAttributes() {
@@ -139,6 +145,12 @@ export default class Model extends Object3D {
     return this;
   }
 
+  setTextures(textures = []) {
+    assert(textures.every(tex => tex instanceof Texture2D), 'setTextures');
+    this.textures = textures;
+    return this;
+  }
+
   onBeforeRender() {
     const {program, attributes} = this;
     program.use();
@@ -146,16 +158,24 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(gl, {camera, viewMatrix}) {
+  /*
+   * @param {Camera} opt.camera=
+   * @param {Camera} opt.viewMatrix=
+   */
+  render({camera, viewMatrix} = {}) {
     // Camera exposes uniforms that can be used directly in shaders
-    this.setUniforms(camera.getUniforms());
-    this.setUniforms(this.getCoordinateUniforms(viewMatrix));
+    if (camera) {
+      this.setUniforms(camera.getUniforms());
+    }
+    if (viewMatrix) {
+      this.setUniforms(this.getCoordinateUniforms(viewMatrix));
+    }
 
-    let table = this.getAttributesTable(this.geometry.attributes, gl, {
+    let table = this.getAttributesTable(this.geometry.attributes, {
       header: `Attributes for ${this.geometry.id}`,
       program: this.program
     });
-    table = this.getAttributesTable(this.attributes, gl, {
+    table = this.getAttributesTable(this.attributes, {
       table,
       program: this.program
     });
@@ -168,37 +188,34 @@ export default class Model extends Object3D {
 
     this.setProgramState();
 
+    const {gl} = this.program;
     const {geometry, instanced, instanceCount} = this;
-    const {drawMode} = geometry;
     draw(gl, {
-      drawMode,
+      drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
       indexed: this.isIndexed,
       instanced,
       instanceCount
     });
+
+    return this;
   }
 
   onAfterRender() {
     const {program, attributes} = this;
     program.use();
-    this.unsetAttributes(attributes);
+    // TODO - how about geometry?
+    // Is there a perf penalty to always detaching?
+    this._unattachAttributes(attributes);
     return this;
   }
 
   setProgramState() {
     const {program} = this;
     program.setUniforms(this.uniforms);
-    this.enableAttributes(this.attributes);
-    this.enableAttributes(this.geometry.attributes);
-    this.setTextures(program);
-
-    // this.setVertices(program);
-    // this.setColors(program);
-    // this.setPickingColors(program);
-    // this.setNormals(program);
-    // this.setTexCoords(program);
-    // this.setIndices(program);
+    this._attachAttributes(this.attributes);
+    this._attachAttributes(this.geometry.attributes);
+    this.bindTextures();
     return this;
   }
 
@@ -220,8 +237,8 @@ export default class Model extends Object3D {
   // Makes sure buffers are created for all attributes
   // and that the program is updated with those buffers
   // TODO - do we need the separation between "attributes" and "buffers"
-  //  couldn't apps just create buffers directly?
-  enableAttributes(attributes) {
+  // couldn't apps just create buffers directly?
+  _attachAttributes(attributes) {
     assert(attributes);
     const {program} = this;
     for (const attributeName of Object.keys(attributes)) {
@@ -244,7 +261,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  unsetAttributes(attributes) {
+  _unattachAttributes(attributes) {
     assert(attributes);
     const {program} = this;
     for (const attributeName of Object.keys(attributes)) {
@@ -254,7 +271,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  setTextures(force = false) {
+  bindTextures(force = false) {
     const {program} = this;
     this.textures = this.textures ? splat(this.textures) : [];
     let tex2D = 0;
@@ -267,21 +284,24 @@ export default class Model extends Object3D {
         // rye TODO: update this when TextureCube is implemented.
         // const isCube = app.textureMemo[texs[i]].isCube;
         // if (isCube) {
-        //   program.setUniform('hasTextureCube' + (i + 1), true);
-        //   program.setTexture(texs[i], gl['TEXTURE' + i]);
-        //   program.setUniform('samplerCube' + (texCube + 1), i);
-        //   texCube++;
+        // program.setUniform('hasTextureCube' + (i + 1), true);
+        // program.setTexture(texs[i], gl['TEXTURE' + i]);
+        // program.setUniform('samplerCube' + (texCube + 1), i);
+        // texCube++;
         // } else {
-        program.setUniform('hasTexture' + (i + 1), true);
         program.setTexture(texs[i], tex2D);
-        program.setUniform('sampler' + (tex2D + 1), i);
+        program.setUniforms({
+          [`hasTexture${i + 1}`]: true,
+          [`sampler${tex2D + 1}`]: i
+        });
         tex2D++;
-        // }
       } else {
-        program.setUniform('hasTextureCube' + (i + 1), false);
-        program.setUniform('hasTexture' + (i + 1), false);
-        program.setUniform('sampler' + (++tex2D), i);
-        program.setUniform('samplerCube' + (++texCube), i);
+        program.setUniforms({
+          [`hasTextureCube${i + 1}`]: false,
+          [`hasTexture${i + 1}`]: false,
+          [`sampler${++tex2D}`]: i,
+          [`samplerCube${++texCube}`]: i
+        });
       }
     }
     return this;
@@ -293,6 +313,7 @@ export default class Model extends Object3D {
       const value = uniformMap[key];
       this._checkUniformValue(key, value);
     }
+    return this;
   }
 
   _checkUniformValue(uniform, value) {
@@ -318,14 +339,18 @@ export default class Model extends Object3D {
       /* eslint-enable no-console */
       throw new Error(`${this.id} Bad uniform ${uniform}`);
     }
-  }
+    return this;
+ }
 
   // Todo move to attributes manager
-  getAttributesTable(attributes, gl, {
+  getAttributesTable(attributes, {
       header = 'Attributes',
       table = null,
       program
     } = {}) {
+    assert(program);
+    const {gl} = program;
+
     table = table || {[header]: {}};
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
@@ -363,10 +388,6 @@ export default class Model extends Object3D {
   // TODO - remove
   /*
   setTexCoords(program) {
-    if (!this.$texCoords) {
-      return;
-    }
-
     const gl = program.gl;
     const multi = this.$texCoords.constructor.name === 'Object';
     let tex;
@@ -415,9 +436,6 @@ export default class Model extends Object3D {
   }
 
   setVertices(program) {
-    if (!this.$vertices) {
-      return;
-    }
     if (!this.buffers.position) {
       this.buffers.position = new Buffer(program.gl, {
         attribute: 'position',
@@ -434,10 +452,6 @@ export default class Model extends Object3D {
   }
 
   setNormals(program) {
-    if (!this.$normals) {
-      return;
-    }
-
     if (!this.buffers.normal) {
       this.buffers.normal = new Buffer(program.gl, {
         attribute: 'normal',
@@ -454,12 +468,6 @@ export default class Model extends Object3D {
   }
 
   setIndices(program) {
-    if (!this.$indices) {
-      return;
-    }
-
-    const gl = program.gl;
-
     if (!this.buffers.indices) {
       this.buffers.indices = new Buffer(program.gl, {
         bufferType: gl.ELEMENT_ARRAY_BUFFER,
@@ -477,10 +485,6 @@ export default class Model extends Object3D {
   }
 
   setPickingColors(program) {
-    if (!this.$pickingColors) {
-      return;
-    }
-
     if (!this.buffers.pickingColors) {
       this.buffers.pickingColors = new Buffer(program.gl, {
         attribute: 'pickingColor',
@@ -497,10 +501,6 @@ export default class Model extends Object3D {
   }
 
   setColors(program) {
-    if (!this.$colors) {
-      return;
-    }
-
     if (!this.buffers.colors) {
       this.buffers.colors = new Buffer(program.gl, {
         attribute: 'color',

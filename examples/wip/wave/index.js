@@ -100,7 +100,7 @@ function webGLStart() {
     },
 
     textures: {
-      src: ['StepSky/Normal.jpg', 'StepSky/Reduce1.png', 'StepSky/Reduce2.png', 'StepSky/Reduce3.png', 'rocks.jpg'],
+      urls: ['StepSky/Normal.jpg', 'StepSky/Reduce1.png', 'StepSky/Reduce2.png', 'StepSky/Reduce3.png', 'rocks.jpg'],
       id: ['SKY0', 'SKY1', 'SKY2', 'SKY3', 'rocks'],
       textureType: 'TEXTURE_2D',
       parameters: [

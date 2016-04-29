@@ -1,5 +1,6 @@
-/* global window, document, Image, LumaGL */
-/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
+/* eslint-disable no-var, max-statements */
+/* eslint-disable array-bracket-spacing, no-multi-spaces */
+/* global window, document, LumaGL */
 window.webGLStart = function() {
 
   var $id = function(d) {
@@ -23,8 +24,11 @@ window.webGLStart = function() {
   var gl = createGLContext(canvas);
 
   var tStar;
+  var twinkle = $id('twinkle');
 
-  var Star = function(startingDistance, rotationSpeed) {
+  // class Star extends Model
+  function Star(startingDistance, rotationSpeed) {
+
     Model.call(this, {
       vertices: [
         -1.0, -1.0,  0.0,
@@ -45,15 +49,14 @@ window.webGLStart = function() {
       indices: [0, 1, 3, 3, 2, 0],
 
       onBeforeRender: function(program, camera) {
-        var min = Math.min,
-            isTwinkle = twinkle.checked,
-            r = isTwinkle? min(1, this.r + this.twinklerR) : this.r,
-            g = isTwinkle? min(1, this.g + this.twinklerG) : this.g,
-            b = isTwinkle? min(1, this.b + this.twinklerB) : this.b;
-        program.setUniform('uColor', [r, g, b]);
+        var min = Math.min;
+        var isTwinkle = twinkle.checked;
+        var r = isTwinkle ? min(1, this.r + this.twinklerR) : this.r;
+        var g = isTwinkle ? min(1, this.g + this.twinklerG) : this.g;
+        var b = isTwinkle ? min(1, this.b + this.twinklerB) : this.b;
+        program.setUniforms({uColor: [r, g, b]});
       }
-
-  });
+    });
 
     this.angle = 0;
     this.dist = startingDistance;
@@ -61,7 +64,7 @@ window.webGLStart = function() {
     this.spin = 0;
 
     this.randomiseColors();
-  };
+  }
 
   Star.prototype = Object.create(Model.prototype, {
 
@@ -80,7 +83,7 @@ window.webGLStart = function() {
     },
 
     animate: {
-      value: function(elapsedTime, twinkle) {
+      value: function value(elapsedTime, twinkle) {
         this.angle += this.rotationSpeed / 10;
 
         this.dist -= 0.001;
@@ -90,8 +93,12 @@ window.webGLStart = function() {
           this.randomiseColors();
         }
 
-        //update position
-        this.position.set(Math.cos(this.angle) * this.dist, Math.sin(this.angle) * this.dist, 0);
+        // update position
+        this.position.set(
+          Math.cos(this.angle) * this.dist,
+          Math.sin(this.angle) * this.dist,
+          0
+        );
         this.rotation.set(0, 0, this.spin);
         this.spin += 0.1;
         this.update();
@@ -100,49 +107,45 @@ window.webGLStart = function() {
 
   });
 
-  var zoom = -15,
-      tilt = 90,
-      spin = 0,
-      twinkle = $id('twinkle');
+  var zoom = -15;
+  var tilt = 90;
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   gl.enable(gl.BLEND);
 
-  colorUniformFS = [
+  var colorUniformFS = [
 
-      "#ifdef GL_ES",
-      "precision highp float;",
-      "#endif",
+    '#ifdef GL_ES',
+    'precision highp float;',
+    '#endif',
 
-      "varying vec4 vColor;",
-      "varying vec2 vTexCoord;",
-      "varying vec3 lightWeighting;",
+    'varying vec4 vColor;',
+    'varying vec2 vTexCoord;',
+    'varying vec3 lightWeighting;',
 
-      "uniform bool hasTexture1;",
-      "uniform sampler2D sampler1;",
-      "uniform vec3 uColor;",
+    'uniform bool hasTexture1;',
+    'uniform sampler2D sampler1;',
+    'uniform vec3 uColor;',
 
-      "void main(){",
+    'void main(){',
+    '  if (hasTexture1) {',
+    '    gl_FragColor = vec4(texture2D(sampler1,',
+    '      vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0) *',
+    '      vec4(uColor, 1.0);',
+    '  }',
+    '}'
 
-        "if (hasTexture1) {",
-
-          "gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0) * vec4(uColor, 1.0);",
-
-        "}",
-
-      "}"
-
-  ].join("\n");
+  ].join('\n');
 
   var program = new Program(gl, Shaders.Vertex.Default, colorUniformFS);
   program.use();
 
   var camera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
+    aspect: canvas.width / canvas.height
   });
 
-  var scene = new Scene(gl, program, camera);
+  var scene = new Scene(gl);
 
   Events.create(canvas, {
     onKeyDown: function(e) {
@@ -153,7 +156,7 @@ window.webGLStart = function() {
         case 'down':
           tilt += 1.5;
           break;
-        //handle page up/down
+        // handle page up/down
         default:
           if (e.code == 33) {
             zoom -= 0.1;
@@ -165,15 +168,17 @@ window.webGLStart = function() {
   });
 
   loadTextures(gl, {
-    src: ['star.gif'],
+    urls: ['star.gif'],
     parameters: [{
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
       generateMipmap: true
     }]
-  }).then(function(textures) {
+  })
+  .then(function(textures) {
     tStar = textures[0];
-    //Load all world objects
+
+    // Load all world objects
     var numStars = 50;
     for (var i = 0; i < numStars; i++) {
       scene.add(new Star(i / numStars * 5.0, i / numStars));
@@ -186,13 +191,13 @@ window.webGLStart = function() {
     }
 
     function drawScene() {
-      //Update Camera Position
+      // Update Camera Position
       var radTilt = tilt / 180 * Math.PI;
       camera.position.set(0, Math.cos(radTilt) * zoom,
                              Math.sin(radTilt) * zoom);
       camera.update();
-      //Render all elements in the Scene
-      scene.render();
+      // Render all elements in the Scene
+      scene.render({camera});
     }
 
     function tick() {
@@ -204,4 +209,4 @@ window.webGLStart = function() {
     tick();
   });
 
-}
+};

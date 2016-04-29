@@ -1,8 +1,10 @@
 /* global window, document, LumaGL */
-/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
+/* eslint-disable max-statements, no-var */
+/* eslint-disable array-bracket-spacing, no-multi-spaces */
 window.webGLStart = function() {
 
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+  var Program = LumaGL.Program;
   var createGLContext = LumaGL.createGLContext;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Fx = LumaGL.Fx;
@@ -10,6 +12,33 @@ window.webGLStart = function() {
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
   var Buffer = LumaGL.Buffer;
+
+  var triangleGeometry = new Geometry({
+    vertices: new Float32Array([
+      0,   1, 0,
+      -1, -1, 0,
+      1,  -1, 0
+    ]),
+    colors: new Float32Array([
+      1, 0, 0, 1,
+      0, 1, 0, 1,
+      0, 0, 1, 1
+    ])
+  });
+
+  var squareGeometry = new Geometry({
+    vertices: new Float32Array([
+      1,   1, 0,
+      -1,  1, 0,
+      1,  -1, 0,
+      -1, -1, 0]),
+    colors: new Float32Array([
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1
+    ])
+  });
 
   var canvas = document.getElementById('lesson03-canvas');
   canvas.width = canvas.clientWidth;
@@ -23,37 +52,20 @@ window.webGLStart = function() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+  var program = new Program(gl, getShadersFromHTML({
+    vs: 'shader-vs',
+    fs: 'shader-fs'
+  }));
 
   program.use();
 
   var triangle = new Model({
-    geometry: new Geometry({
-      vertices: new Float32Array(
-                [ 0,  1, 0,
-                 -1, -1, 0,
-                  1, -1, 0]),
-      colors: new Float32Array(
-              [1, 0, 0, 1,
-               0, 1, 0, 1,
-               0, 0, 1, 1])
-    }),
+    geometry: triangleGeometry,
     program: program
   });
 
   var square = new Model({
-    geometry: new Geometry({
-      vertices: new Float32Array(
-        [ 1,  1, 0,
-         -1,  1, 0,
-          1, -1, 0,
-         -1, -1, 0]),
-      colors: new Float32Array(
-        [0.5, 0.5, 1, 1,
-         0.5, 0.5, 1, 1,
-         0.5, 0.5, 1, 1,
-         0.5, 0.5, 1, 1])
-    }),
+    geometry: squareGeometry,
     program: program
   });
 
@@ -61,7 +73,6 @@ window.webGLStart = function() {
     aspect: canvas.width / canvas.height
   });
 
-  var view = new Mat4();
   var rTri = 0.0;
   var rSquare = 0.0;
 
@@ -71,26 +82,29 @@ window.webGLStart = function() {
       model.userData.buffers = [
         new Buffer(gl, {
           attribute: 'aVertexPosition',
-          data: model.geometry.vertices,
+          data: model.geometry.getArray('vertices'),
           size: 3
         }),
         new Buffer(gl, {
           attribute: 'aVertexColor',
-          data: model.geometry.colors,
+          data: model.geometry.getArray('colors'),
           size: 4
         })
       ];
     }
 
-    // update element matrix
-    model.update();
     // get new view matrix out of element and camera matrices
+    var view = new Mat4();
     view.mulMat42(camera.view, model.matrix);
-    // set buffers with element data
-    program.setBuffers(model.userData.buffers);
-    // set uniforms
-    program.setUniform('uMVMatrix', view);
-    program.setUniform('uPMatrix', camera.projection);
+
+    program
+      // set buffers with element data
+      .setBuffers(model.userData.buffers)
+      // set uniforms
+      .setUniforms({
+        uMVMatrix: view,
+        uPMatrix: camera.projection
+      });
   }
 
   function animate() {
@@ -102,14 +116,18 @@ window.webGLStart = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Draw triangle
-    triangle.position.set(-1.5, 0, -7);
-    triangle.rotation.set(0, rTri, 0);
+    triangle
+      .setPosition(-1.5, 0, -7)
+      .setRotation(0, rTri, 0)
+      .updateMatrix();
     setupModel(triangle);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // Draw Square
-    square.position.set(1.5, 0, -7);
-    square.rotation.set(rSquare, 0, 0);
+    square
+      .setPosition(1.5, 0, -7)
+      .setRotation(rSquare, 0, 0)
+      .updateMatrix();
     setupModel(square);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
@@ -121,5 +139,4 @@ window.webGLStart = function() {
   }
 
   tick();
-
 };

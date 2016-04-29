@@ -1,15 +1,11 @@
-
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Buffer = LumaGL.Buffer;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var TextureCube = LumaGL.TextureCube;
-  var Cube = LumaGL.Cube;
-  var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
-  var Fx = LumaGL.Fx;
+  var Program = LumaGL.Program;
 
   var positions = [
     -1, -1,
@@ -20,11 +16,10 @@ window.webGLStart = function() {
     -1,  1
   ];
 
-
   function doContext(canvasID, fsID) {
     var canvas = document.getElementById(canvasID);
     var gl = createGLContext(canvas);
-    gl.clearColor(1,0,1,1);
+    gl.clearColor(1, 0, 1, 1);
 
     var quad = new Buffer(gl, {
       attribute: 'aPosition',
@@ -32,7 +27,10 @@ window.webGLStart = function() {
       size: 2
     });
 
-    var program = makeProgramFromHTMLTemplates(gl, 'quad-vs', fsID);
+    var program = new Program(gl, getShadersFromHTML({
+      vs: 'quad-vs',
+      fs: fsID
+    }));
 
     var time = 0;
 

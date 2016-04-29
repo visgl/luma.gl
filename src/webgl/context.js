@@ -3,6 +3,10 @@
 /* global window, document, console */
 import assert from 'assert';
 
+function isBrowserContext() {
+  return typeof window !== 'undefined';
+}
+
 // Checks if WebGL is enabled and creates a context for using WebGL.
 export function createGLContext(canvas, opt = {}) {
   if (!isBrowserContext()) {
@@ -70,10 +74,6 @@ export function getExtension(gl, extensionName) {
   const extension = gl.getExtension(extensionName);
   assert(extension, `${extensionName} not supported!`);
   return extension;
-}
-
-function isBrowserContext() {
-  return typeof window !== 'undefined';
 }
 
 // Executes a function with gl states temporarily set, exception safe

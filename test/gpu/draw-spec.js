@@ -16,7 +16,7 @@ test('WebGL#draw', t => {
   t.end();
 
   // draw(gl, {
-  //  instanced: true,
+  // instanced: true,
   // });
 });
 

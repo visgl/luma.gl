@@ -1,17 +1,17 @@
 /* global window, document, LumaGL */
-/* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
+/* eslint-disable no-var, max-statements, indent, no-multi-spaces */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Mat4 = LumaGL.Mat4;
   var Geometry = LumaGL.Geometry;
   var Model = LumaGL.Model;
-  var Buffer = LumaGL.Buffer;
+  var Program = LumaGL.Program;
 
   var cubeGeometry = new Geometry({
     vertices: new Float32Array([
@@ -109,77 +109,61 @@ window.webGLStart = function() {
 
   loadTextures(gl, {
 
-    src: ['nehe.gif']
+    urls: ['nehe.gif']
 
-  }).then(function(textures) {
+  })
+  .then(function(textures) {
 
     var nehe = textures[0];
 
-    var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
-    program.use();
+    var program = new Program(gl, getShadersFromHTML({
+      vs: 'shader-vs',
+      fs: 'shader-fs'
+    }));
 
     var cube = new Model({
       geometry: cubeGeometry,
-      program
+      program,
+      textures: [nehe]
     });
 
-    var buffers = [
-      new Buffer(gl, {
-        attribute: 'aVertexPosition',
-        data: cube.geometry.vertices,
-        size: 3
-      }),
-      new Buffer(gl, {
-        attribute: 'aTextureCoord',
-        data: cube.geometry.texCoords,
-        size: 2
-      }),
-      new Buffer(gl, {
-        attribute: 'indices',
-        data: cube.geometry.indices,
-        bufferType: gl.ELEMENT_ARRAY_BUFFER,
-        size: 1
-      })
-    ];
+    var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
 
-    var camera = new PerspectiveCamera({
-      aspect: canvas.width / canvas.height
-    });
-
-    var view = new Mat4();
     var rCube = 0;
 
     function drawScene() {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      // get new view matrix out of element and camera matrices
+      var view = new Mat4();
+      view.mulMat42(camera.view, cube.matrix);
       // draw Cube
       rCube += 0.01;
+
       cube
+        // update element matrix
         .setPosition(new Vec3(0, 0, -5))
         .setRotation(new Vec3(rCube, rCube, rCube))
-        .update();
-      // update element matrix
-      cube.update();
-      // get new view matrix out of element and camera matrices
-      view.mulMat42(camera.view, cube.matrix);
-      // set attributes, indices and textures
-      program
-        .setBuffers(buffers)
-        .setTexture(nehe)
-        // set uniforms
-        .setUniform('uMVMatrix', view)
-        .setUniform('uPMatrix', camera.projection)
-        .setUniform('uSampler', 0);
+        .updateMatrix()
 
-      // draw triangles
-      gl.drawElements(
-        gl.TRIANGLES, cube.getVertexCount(), gl.UNSIGNED_SHORT, 0
-      );
+        // set uniforms
+        .setUniforms({
+          uMVMatrix: view,
+          uPMatrix: camera.projection,
+          uSampler: 0
+        })
+
+        // draw triangles
+        .render();
+
+      // gl.drawElements(
+      // gl.TRIANGLES, cube.getVertexCount(), gl.UNSIGNED_SHORT, 0
+      // );
       // request new frame
       Fx.requestAnimationFrame(drawScene);
     }
 
     drawScene();
-
   });
 
 };

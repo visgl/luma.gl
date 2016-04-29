@@ -3,9 +3,9 @@
 /* global window */
 import 'babel-polyfill';
 import * as LumaGL from './index';
-// import Fx from './addons/fx';
-// import WorkerGroup from './addons/workers';
-// import * as helpers from './addons/helpers';
+import * as addons from './addons';
+
+LumaGL.addons = addons;
 
 // Export all LumaGL objects as members of global LumaGL variable
 if (typeof window !== 'undefined') {

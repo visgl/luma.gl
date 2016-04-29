@@ -3,7 +3,6 @@
 
 /* eslint-disable no-console, complexity */
 
-/* global console */
 import {glCheckError} from './context';
 import {uid} from '../utils';
 import {VertexShader, FragmentShader} from './shader';
@@ -30,8 +29,8 @@ export default class Program {
   } = {}, ...args) {
     assert(gl, 'Program needs WebGLRenderingContext');
 
-    if (args.length) {
-      console.warn('Extra arguments to Program(gl, {vs, fs, id})');
+    if (arguments.length !== 2) {
+      throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
     }
 
     const program = gl.createProgram();
@@ -68,10 +67,7 @@ export default class Program {
   }
 
   setUniform(name, value) {
-    if (name in this.uniformSetters) {
-      this.uniformSetters[name](value);
-    }
-    return this;
+    throw new Error('Use setUniforms instead');
   }
 
   setUniforms(uniformMap) {
@@ -119,13 +115,13 @@ export default class Program {
 
 // TODO - use tables to reduce complexity of method below
 // const glUniformSetter = {
-//   FLOAT: {function: 'uniform1fv', type: Float32Array},
-//   FLOAT_VEC3: {function: 'uniform3fv', type: Float32Array},
-//   FLOAT_MAT4: {function: 'uniformMatrix4fv', type: Float32Array},
-//   INT: {function: 'uniform1iv', type: Uint16Array},
-//   BOOL: {function: 'uniform1iv', type: Uint16Array},
-//   SAMPLER_2D: {function: 'uniform1iv', type: Uint16Array},
-//   SAMPLER_CUBE: {function: 'uniform1iv', type: Uint16Array}
+// FLOAT: {function: 'uniform1fv', type: Float32Array},
+// FLOAT_VEC3: {function: 'uniform3fv', type: Float32Array},
+// FLOAT_MAT4: {function: 'uniformMatrix4fv', type: Float32Array},
+// INT: {function: 'uniform1iv', type: Uint16Array},
+// BOOL: {function: 'uniform1iv', type: Uint16Array},
+// SAMPLER_2D: {function: 'uniform1iv', type: Uint16Array},
+// SAMPLER_CUBE: {function: 'uniform1iv', type: Uint16Array}
 // };
 
 // Returns a Magic Uniform Setter

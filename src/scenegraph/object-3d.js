@@ -17,6 +17,59 @@ export default class Object3D {
     this.userData = {};
   }
 
+  setPosition(position, y, z) {
+    if (!(position instanceof Vec3)) {
+      position = new Vec3(position, y, z);
+    }
+    this.position = position;
+    return this;
+  }
+
+  setRotation(rotation, y, z) {
+    if (!(rotation instanceof Vec3)) {
+      rotation = new Vec3(rotation, y, z);
+    }
+    this.rotation = rotation;
+    return this;
+  }
+
+  setScale(scale, y, z) {
+    if (!(scale instanceof Vec3)) {
+      scale = new Vec3(scale, y, z);
+    }
+    this.scale = scale;
+    return this;
+  }
+
+  setMatrixComponents({position, rotation, scale}) {
+    if (position) {
+      assert(position instanceof Vec3, 'position must be Vec3');
+      this.position = position;
+    }
+    if (rotation) {
+      assert(rotation instanceof Vec3, 'rotation must be Vec3');
+      this.rotation = rotation;
+    }
+    if (scale) {
+      assert(scale instanceof Vec3, 'scale must be Vec3');
+      this.scale = scale;
+    }
+    this.updateMatrix();
+    return this;
+  }
+
+  updateMatrix() {
+    const pos = this.position;
+    const rot = this.rotation;
+    const scale = this.scale;
+
+    this.matrix.id();
+    this.matrix.$translate(pos.x, pos.y, pos.z);
+    this.matrix.$rotateXYZ(rot.x, rot.y, rot.z);
+    this.matrix.$scale(scale.x, scale.y, scale.z);
+    return this;
+  }
+
   getCoordinateUniforms(viewMatrix) {
     // TODO - solve multiple class problem
     // assert(viewMatrix instanceof Mat4);
@@ -32,39 +85,6 @@ export default class Object3D {
       worldInverseMatrix: worldInverse,
       worldInverseTransposeMatrix: worldInverseTranspose
     };
-  }
-
-  setPosition(position) {
-    assert(position instanceof Vec3);
-    this.position = position;
-    this.update();
-    return this;
-  }
-
-  setRotation(rotation) {
-    assert(rotation instanceof Vec3);
-    this.rotation = rotation;
-    this.update();
-    return this;
-  }
-
-  setScale(scale) {
-    assert(scale instanceof Vec3);
-    this.scale = scale;
-    this.update();
-    return this;
-  }
-
-  update() {
-    const pos = this.position;
-    const rot = this.rotation;
-    const scale = this.scale;
-
-    this.matrix.id();
-    this.matrix.$translate(pos.x, pos.y, pos.z);
-    this.matrix.$rotateXYZ(rot.x, rot.y, rot.z);
-    this.matrix.$scale(scale.x, scale.y, scale.z);
-    return this;
   }
 
   // TODO - copied code, not yet vetted

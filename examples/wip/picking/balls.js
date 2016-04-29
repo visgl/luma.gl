@@ -117,7 +117,7 @@ window.initializeApp = () => {
 
     events: {
       picking: true,
-      //  lazyPicking: true,
+      // lazyPicking: true,
       centerOrigin: false,
       cachePosition: false,
       onMouseEnter: (e, model) => {

@@ -44,7 +44,7 @@
     markup = (function () {
 
         // IE does not support gradients with multiple stops, so we need to simulate
-        //  that for the rainbow slider with 8 divs that each have a single gradient
+        // that for the rainbow slider with 8 divs that each have a single gradient
         var gradientFix = "";
         if (IE) {
             for (var i = 1; i <= 6; i++) {
@@ -915,16 +915,16 @@
     // Given a string or object, convert that input to RGB
     // Possible string inputs:
     //
-    //     "red"
-    //     "#f00" or "f00"
-    //     "#ff0000" or "ff0000"
-    //     "rgb 255 0 0" or "rgb (255, 0, 0)"
-    //     "rgb 1.0 0 0" or "rgb (1, 0, 0)"
-    //     "rgba (255, 0, 0, 1)" or "rgba 255, 0, 0, 1"
-    //     "rgba (1.0, 0, 0, 1)" or "rgba 1.0, 0, 0, 1"
-    //     "hsl(0, 100%, 50%)" or "hsl 0 100% 50%"
-    //     "hsla(0, 100%, 50%, 1)" or "hsla 0 100% 50%, 1"
-    //     "hsv(0, 100%, 100%)" or "hsv 0 100% 100%"
+    //   "red"
+    //   "#f00" or "f00"
+    //   "#ff0000" or "ff0000"
+    //   "rgb 255 0 0" or "rgb (255, 0, 0)"
+    //   "rgb 1.0 0 0" or "rgb (1, 0, 0)"
+    //   "rgba (255, 0, 0, 1)" or "rgba 255, 0, 0, 1"
+    //   "rgba (1.0, 0, 0, 1)" or "rgba 1.0, 0, 0, 1"
+    //   "hsl(0, 100%, 50%)" or "hsl 0 100% 50%"
+    //   "hsla(0, 100%, 50%, 1)" or "hsla 0 100% 50%, 1"
+    //   "hsv(0, 100%, 100%)" or "hsv 0 100% 100%"
     //
     function inputToRGB(color) {
 

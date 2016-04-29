@@ -22,12 +22,12 @@ void main(void) {
   idx = indices;
   vec4 samp = texture2D(sampler2, vec2(mod(indices, 256.0) / 256.0, floor(indices / 256.0) /256.0));
   position = samp.xyz * 2. - 1.;
-  
+
   float ratio = (1. - lightPosition.z) / (position.z - lightPosition.z);
   vec3 shadowPosition = mix(lightPosition, position, ratio);
   vec4 shadowSamp = texture2D(sampler3, (shadowPosition.xy + 1.5) / 3.);
-  
-//  vec3 vel = getAA(sampler1, position) + 1.;
+
+  // vec3 vel = getAA(sampler1, position) + 1.;
   float life = samp.w;
   color = vec4(1, 1, 1.1, 1);
   color.xyz *= smoothstep(0.3, 0.9, life);
@@ -43,6 +43,6 @@ void main(void) {
   color.a *= alpha * alpha;
   color.xyz *= 0.5 + vec3(2, 2, 1.7) / (.1 + pow(distance(lightPosition, position), 2.));
   color.xyz *= clamp(1. - (shadowSamp.z - samp.z) * 10., 0., 1.) * 0.5 + 0.5;
-  
+
   vTexCoord = vec2(0);
 }

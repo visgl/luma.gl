@@ -1,12 +1,14 @@
-
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+  var IcoSphere = LumaGL.IcoSphere;
+  var Program = LumaGL.Program;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Framebuffer = LumaGL.Framebuffer;
-  var IcoSphere = LumaGL.IcoSphere;
   var Mat4 = LumaGL.Mat4;
   var Vec3 = LumaGL.Vec3;
   var Fx = LumaGL.Fx;
@@ -18,27 +20,27 @@ window.webGLStart = function() {
   var gl = createGLContext(canvas);
 
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0,0,0,0);
+  gl.clearColor(0, 0, 0, 0);
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.BACK);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
   var fbo = new Framebuffer(gl, {
     width: canvas.width,
-    height: canvas.height,
-  })
+    height: canvas.height
+  });
 
   var pingpong = [
     new Framebuffer(gl, {
       width: canvas.width,
-      height: canvas.height,
+      height: canvas.height
     }),
     new Framebuffer(gl, {
       width: canvas.width,
-      height: canvas.height,
+      height: canvas.height
     })
   ];
 
@@ -79,19 +81,22 @@ window.webGLStart = function() {
     })
   };
 
-  var programQuad = makeProgramFromHTMLTemplates(gl, 'quad-vs', 'quad-fs');
-  var programPersistence = makeProgramFromHTMLTemplates(gl, 'quad-vs', 'persistence-fs');
-  var programSphere = makeProgramFromHTMLTemplates(gl, 'sphere-vs', 'sphere-fs');
+  var programQuad =
+    new Program(gl, getShadersFromHTML({vs: 'quad-vs', fs: 'quad-fs'}));
+  var programPersistence =
+    new Program(gl, getShadersFromHTML({vs: 'quad-vs', fs: 'persistence-fs'}));
+  var programSphere =
+    new Program(gl, getShadersFromHTML({vs: 'sphere-vs', fs: 'sphere-fs'}));
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   var camera = new PerspectiveCamera({
     fov: 75,
-    aspect: canvas.width/canvas.height,
+    aspect: canvas.width / canvas.height,
     near: 0.01,
     far: 100
   });
-  camera.view.lookAt(new Vec3(0,0,4), new Vec3(0,0,0), new Vec3(0,1,0));
+  camera.view.lookAt(new Vec3(0, 0, 4), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
 
   var tick = 0;
   var dt = 0.0125;
@@ -100,24 +105,27 @@ window.webGLStart = function() {
   var ePos = [];
   var eRot = [];
   for (var i = 0; i < count; i++) {
-    var pos = new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+    var pos =
+      new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     var a = Math.random() + 1.0;
-    pos.$unit().$scale(a,a,a);
+    pos.$unit().$scale(a, a, a);
     var s = 1.25;
-    pos.$scale(s,s,s);
+    pos.$scale(s, s, s);
     ePos.push(pos);
-    var q = new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+    var q =
+      new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     var axis = pos.cross(q);
     axis.$unit();
     var rot = new Mat4();
-    var theta = 4/a * dt;
+    var theta = 4 / a * dt;
     rot.$rotateAxis(theta, axis);
     eRot.push(rot);
   }
 
   var nPos = [];
   for (var i = 0; i < count; i++) {
-    var pos = new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+    var pos =
+      new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     pos = pos.unit().scale(0.5);
     nPos.push(pos);
   }
@@ -159,7 +167,9 @@ window.webGLStart = function() {
       programSphere.setBuffer(sphere.vertices);
       programSphere.setBuffer(sphere.normals);
       programSphere.setBuffer(sphere.indices);
-      gl.drawElements(gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(
+        gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0
+      );
     }
 
     var current = pingpong[ppi];
@@ -188,5 +198,4 @@ window.webGLStart = function() {
   }
 
   render();
-
 };

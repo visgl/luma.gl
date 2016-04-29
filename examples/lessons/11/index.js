@@ -1,5 +1,5 @@
 /* global window, document, LumaGL */
-/* eslint-disable max-statements */
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function() {
 
   var $id = function(d) {
@@ -9,6 +9,7 @@ window.webGLStart = function() {
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
+  var Program = LumaGL.Program;
   var Scene = LumaGL.Scene;
   var Events = LumaGL.Events;
   var Fx = LumaGL.Fx;
@@ -26,17 +27,17 @@ window.webGLStart = function() {
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, +canvas.width, +canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
-  var program = makeProgramFromDefaultShaders(gl);
+  var program = new Program(gl, getDefaultShaders());
   program.use();
 
   var camera = new PerspectiveCamera({
-    aspect: canvas.width/canvas.height,
-    position: new Vec3(0, 0, -7),
+    aspect: canvas.width / canvas.height,
+    position: new Vec3(0, 0, -7)
   });
 
-  var scene = new Scene(gl, program, camera);
+  var scene = new Scene(gl);
 
   Events.create(canvas, {
     onDragStart: function(e) {
@@ -46,8 +47,8 @@ window.webGLStart = function() {
       };
     },
     onDragMove: function(e) {
-      var z = camera.position.z,
-          sign = Math.abs(z) / z;
+      var z = camera.position.z;
+      var sign = Math.abs(z) / z;
       moon.rotation.y += -(pos.x - e.x) / 100;
       moon.rotation.x += sign * (pos.y - e.y) / 100;
       moon.update();
@@ -62,13 +63,14 @@ window.webGLStart = function() {
   });
 
   loadTextures(gl, {
-    src: ['moon.gif'],
+    urls: ['moon.gif'],
     parameters: [{
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
       generateMipmap: true
     }]
-  }).then(function(textures) {
+  })
+  .then(function(textures) {
 
     var tMoon = textures[0];
 
@@ -79,54 +81,55 @@ window.webGLStart = function() {
       textures: tMoon
     });
 
-    var lighting = $id('lighting'),
-        ambient = {
-          r: $id('ambientR'),
-          g: $id('ambientG'),
-          b: $id('ambientB')
-        },
-        direction = {
-          x: $id('lightDirectionX'),
-          y: $id('lightDirectionY'),
-          z: $id('lightDirectionZ'),
+    var lighting = $id('lighting');
+    var ambient = {
+      r: $id('ambientR'),
+      g: $id('ambientG'),
+      b: $id('ambientB')
+    };
+    var direction = {
+      x: $id('lightDirectionX'),
+      y: $id('lightDirectionY'),
+      z: $id('lightDirectionZ'),
 
-          r: $id('directionalR'),
-          g: $id('directionalG'),
-          b: $id('directionalB')
-        };
+      r: $id('directionalR'),
+      g: $id('directionalG'),
+      b: $id('directionalB')
+    };
 
-    //Add object to the scene
+    // Add object to the scene
     scene.add(moon);
 
-    //Draw the scene
+    // Draw the scene
     function draw() {
-      //Setup lighting
+      // Setup lighting
       var lights = scene.config.lights;
       lights.enable = lighting.checked;
       lights.ambient = {
-        r: +ambient.r.value,
-        g: +ambient.g.value,
-        b: +ambient.b.value
+        r: Number(ambient.r.value),
+        g: Number(ambient.g.value),
+        b: Number(ambient.b.value)
       };
       lights.directional = {
         color: {
-          r: +direction.r.value,
-          g: +direction.g.value,
-          b: +direction.b.value
+          r: Number(direction.r.value),
+          g: Number(direction.g.value),
+          b: Number(direction.b.value)
         },
         direction: {
-          x: +direction.x.value,
-          y: +direction.y.value,
-          z: +direction.z.value
+          x: Number(direction.x.value),
+          y: Number(direction.y.value),
+          z: Number(direction.z.value)
         }
       };
-      //render moon
+
+      // render moon
       scene.render();
-      //request new frame
+      // request new frame
       Fx.requestAnimationFrame(draw);
     }
-    //Animate
+    // Animate
     draw();
   });
 
-}
+};

@@ -28,7 +28,6 @@ function PHeap(elem, subheaps) {
     }
   }
 
-    
   PHeap.prototype = {
     find: function() {
       if (!this.elem) {
@@ -453,7 +452,7 @@ Solids.prototype = Object.create(null, {
         vertices: vertices,
         normals: normals,
         texCoords: texCoords,
-//        colors: colors,
+//      colors: colors,
         shininess: 32,
         textures: ['img/earth1.jpg', 'img/clouds.jpg'],
         program: 'earth',
@@ -944,9 +943,9 @@ onmessage = function(e) {
 
   postMessage({
     tetra: solids.tetra.model,
-//    hexa: solids.hexa.model,
-//    octa: solids.octa.model,
-//    dode: solids.dode.model,
-//    ico: solids.ico.model
+//  hexa: solids.hexa.model,
+//  octa: solids.octa.model,
+//  dode: solids.dode.model,
+//  ico: solids.ico.model
   });
 };

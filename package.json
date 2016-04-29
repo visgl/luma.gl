@@ -6,7 +6,9 @@
   "author": "Ib Green <ib@uber.com>",
   "contributors": [
     "Nicolas Belomonte <nico@uber.com>",
-    "Rye Terrell <ryeterrell@ryeterrell.net"
+    "Rye Terrell <ryeterrell@ryeterrell.net",
+    "Shan He <shan@uber.com>",
+    "Mikola Lysenko <mikolalysenko@gmail.com"
   ],
   "repository": {
     "type": "git",
@@ -39,8 +41,10 @@
     "babel-polyfill": "6.5.0",
     "canvas-to-blob": "0.0.0",
     "filesaver.js": "^0.2.0",
+    "get-pixels": "^3.3.0",
     "gl-format-compiler-error": "^1.0.2",
-    "global": "^4.3.0"
+    "global": "^4.3.0",
+    "save-pixels": "^2.3.0"
   },
   "devDependencies": {
     "babel-cli": "6.5.1",
@@ -57,6 +61,7 @@
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
     "glslify": "^5.0.2",
+    "glslify-babel": "^1.0.0",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
     "tape-catch": "^1.0.4",
@@ -65,12 +70,10 @@
   },
   "scripts": {
     "build-docs": "rm -fr _docs/* && jekyll build --source=docs",
-    "build": "npm run build-clean && npm run build-compile && npm run build-scripts",
+    "build": "npm run build-clean && npm run build-compile && npm run build-script",
     "build-clean": "rm -fr dist/*",
     "build-compile": "babel src -d dist --source-maps inline --copy-files",
-    "build-scripts": "npm run build-script-main && npm run build-script-addons",
-    "build-script-main": "browserify src/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
-    "build-script-addons": "browserify src/addons/index.js -o dist/lumagl-addons.js --debug | uglifyjs > dist/lumagl-addons.min.js",
+    "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run build-docs && open ./_docs/index.html",
     "lint": "eslint src",
     "precommit": "npm run lint -s && npm run test",
@@ -79,6 +82,6 @@
     "test-node": "babel-node --include='' test/index.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
     "test-electron": "browserify test/electron.js | testron | faucet",
-    "start": "budo src/bundle.js:dist/LumaGL.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
+    "start": "budo src/bundle.js:dist/lumagl.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
   }
 }

@@ -2,11 +2,11 @@
 //
 //
 //
-//  Intersects a ray with the qj set w/ parameter mu and returns
-//  the color of the phong shaded surface (estimate)
-//  (Surface also colored by normal direction)
+// Intersects a ray with the qj set w/ parameter mu and returns
+// the color of the phong shaded surface (estimate)
+// (Surface also colored by normal direction)
 //
-//     Adapted by Nicolas Garcia Belmonte from original work by Keenan Crane (kcrane@uiuc.edu)
+//   Adapted by Nicolas Garcia Belmonte from original work by Keenan Crane (kcrane@uiuc.edu)
 //
 //
 
@@ -85,7 +85,7 @@ vec4 quatSq( vec4 q ) {
 // until q has a magnitude greater than the threshold value (i.e., it probably
 // diverges) or we've reached the maximum number of allowable iterations (i.e.,
 // it probably converges).  More iterations reveal greater detail in the set.
-// 
+//\
 // To estimate the derivative at q, we recursively evaluate
 //
 // q' = 2*q*q'
@@ -164,12 +164,14 @@ float intersectQJulia( inout vec3 rO, inout vec3 rD, vec4 c, int maxIterations, 
                // there was no intersection.
 
    for(int j = 0; j < 25; ++j) {
-      
-      vec4 z = vec4( rO, 0.0 );             // iterate on the point at the current ray origin.  We
-                                          // want to know if this point belongs to the set.
 
-      vec4 zp = vec4( 1, 0.0, 0.0, 0.0 );       // start the derivative at real 1.  The derivative is
-                                          // needed to get a lower bound on the distance to the set.
+      // iterate on the point at the current ray origin.  We
+      // want to know if this point belongs to the set.
+      vec4 z = vec4( rO, 0.0 );
+
+      vec4 zp = vec4( 1, 0.0, 0.0, 0.0 );
+      // start the derivative at real 1.  The derivative is
+      // needed to get a lower bound on the distance to the set.
 
       // iterate this point until we can guess if the sequence diverges or converges.
       iterateIntersect( z, zp, c, maxIterations );
@@ -237,22 +239,22 @@ vec3 intersectSphere( vec3 rO, vec3 rD ) {
 
 // ------------ main() -------------------------------------------------
 //
-//  Each fragment performs the intersection of a single ray with
-//  the quaternion Julia set.  In the current implementation
-//  the ray's origin and direction are passed in on texture
-//  coordinates, but could also be looked up in a texture for a
-//  more general set of rays.
+// Each fragment performs the intersection of a single ray with
+// the quaternion Julia set.  In the current implementation
+// the ray's origin and direction are passed in on texture
+// coordinates, but could also be looked up in a texture for a
+// more general set of rays.
 //
-//  The overall procedure for intersection performed in main() is:
+// The overall procedure for intersection performed in main() is:
 //
-//  -move the ray origin forward onto a bounding sphere surrounding the Julia set
-//  -test the new ray for the nearest intersection with the Julia set
-//  -if the ray does include a point in the set:
-//      -estimate the gradient of the potential function to get a "normal"
-//      -use the normal and other information to perform Phong shading
-//      -cast a shadow ray from the point of intersection to the light
-//      -if the shadow ray hits something, modify the Phong shaded color to represent shadow
-//  -return the shaded color if there was a hit and the background color otherwise
+// -move the ray origin forward onto a bounding sphere surrounding the Julia set
+// -test the new ray for the nearest intersection with the Julia set
+// -if the ray does include a point in the set:
+//    -estimate the gradient of the potential function to get a "normal"
+//    -use the normal and other information to perform Phong shading
+//    -cast a shadow ray from the point of intersection to the light
+//    -if the shadow ray hits something, modify the Phong shaded color to represent shadow
+// -return the shaded color if there was a hit and the background color otherwise
 //
 
 uniform vec3 rO;
@@ -273,7 +275,6 @@ void main() {
 
    // Initially set the output color to the background color.  It will stay
    // this way unless we find an intersection with the Julia set.
-   
    color = backgroundColor;
 
 
@@ -288,7 +289,6 @@ void main() {
 
    // Next, try to find a point along the ray which intersects the Julia set.
    // (More details are given in the routine itself.)
-   
    float dist = intersectQJulia( rayOrigin, rayDirection, mu, maxIterations, epsilon );
 
 
@@ -296,9 +296,8 @@ void main() {
    // We say that we found an intersection if our estimate of the distance to
    // the set is smaller than some small value epsilon.  In this case we want
    // to do some shading / coloring.
-   
    if( dist < epsilon ) {
-//      color = vColor;
+      //    color = vColor;
       // Determine a "surface normal" which we'll use for lighting calculations.
       vec3 N = normEstimate( rayOrigin, mu, maxIterations );
 
@@ -328,5 +327,3 @@ void main() {
    // Return the final color which is still the background color if we didn't hit anything.
    gl_FragColor = color;
 }
-
-

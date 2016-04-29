@@ -421,7 +421,7 @@ function createApp() {
       }
     },
     textures: {
-      src: ['img/lala.jpg']
+      urls: ['img/lala.jpg']
     },
     onError: function(e) {
       Log.write("There was an error creating the app. ", true);

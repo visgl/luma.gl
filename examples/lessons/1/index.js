@@ -1,11 +1,12 @@
 /* global window, document, LumaGL */
-/* eslint-disable max-statements */
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.Program;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var makeProgramFromHTMLTemplates = LumaGL.addons.makeProgramFromHTMLTemplates;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
 
   var canvas = document.getElementById('lesson01-canvas');
   canvas.width = canvas.clientWidth;
@@ -19,7 +20,10 @@ window.webGLStart = function() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  var program = makeProgramFromHTMLTemplates(gl, 'shader-vs', 'shader-fs');
+  var program = new Program(gl, getShadersFromHTML({
+    vs: 'shader-vs',
+    fs: 'shader-fs'
+  }));
 
   program.use();
 
@@ -35,24 +39,27 @@ window.webGLStart = function() {
     size: 3
   });
 
-  var camera = new PerspectiveCamera({
-    aspect: canvas.width / canvas.height
-  });
+  var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Draw Triangle
   camera.view.$translate(-1.5, 0, -7);
-  program.setUniform('uMVMatrix', camera.view);
-  program.setUniform('uPMatrix', camera.projection);
-  program.setBuffer(triangle);
+  program
+    .setBuffer(triangle)
+    .setUniforms({
+      uMVMatrix: camera.view,
+      uPMatrix: camera.projection
+    });
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
   // Draw Square
   camera.view.$translate(3, 0, 0);
-  program.setUniform('uMVMatrix', camera.view);
-  program.setUniform('uPMatrix', camera.projection);
-  program.setBuffer(square);
+  program
+    .setBuffer(square)
+    .setUniforms({
+      uMVMatrix: camera.view,
+      uPMatrix: camera.projection
+    });
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
 };

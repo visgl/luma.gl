@@ -81,7 +81,7 @@ function init() {
       }
     },
     textures: {
-      src: ['img/elevation_3764_2048_post_small.jpg'],
+      urls: ['img/elevation_3764_2048_post_small.jpg'],
       parameters: [{
         name: 'TEXTURE_MAG_FILTER',
         value: 'LINEAR'

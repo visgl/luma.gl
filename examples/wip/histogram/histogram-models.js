@@ -1,6 +1,6 @@
 // rye: TODO- Defining window so that the window detection in the root PhiloGL
-//            index.js doesn't blow up. This ickiness will go away when we 
-//            implement the two build paths.
+//          index.js doesn't blow up. This ickiness will go away when we 
+//          implement the two build paths.
 window = this;
 
 importScripts('../../build/PhiloGL.js');

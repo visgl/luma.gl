@@ -6,7 +6,7 @@ import {merge} from './utils';
 
 export class Camera {
 
-  constructor(opts) {
+  constructor(opts = {}) {
     opts = merge({
       fov: 45,
       near: 0.1,

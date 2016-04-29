@@ -85,6 +85,6 @@ void main(void) {
   float px = .005;
   float MULT = 1e-25;
   float v = (vPosition.x + 0.5) * MULT;
-//  gl_FragColor = vec4(decode(encode(v)), v, v, 1) / MULT;
+  // gl_FragColor = vec4(decode(encode(v)), v, v, 1) / MULT;
   gl_FragColor = shot(vPosition.xyz);
 }

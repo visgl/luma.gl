@@ -44,7 +44,7 @@ var webGLStart = function() {
         {path: '../../../shaders/', noCache: true}
       ),
       loadTextures(gl, {
-        src: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
+        urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
         parameters: [{
           magFilter: gl.LINEAR,
           minFilter: gl.LINEAR_MIPMAP_NEAREST,

@@ -1,16 +1,24 @@
-/* eslint-disable no-var, no-console, max-statements */
 /* global window, document, ace, LumaGL, console */
+/* eslint-disable no-var, no-console, max-statements */
 (function() {
-
   var loadFiles = LumaGL.loadFiles;
 
-  window.addEventListener('load', () => {
-    loadFiles({urls: [
-      window.location + 'index.js'
-    ]})
-    .then(files => {
-      const data = files[0];
+  var examples = {
+    'cubemap': 'Cubemap',
+    'instancing': 'Instancing',
+    'multicontext': 'Multiple Contexts',
+    'persistence': 'Persistence',
+    'picking': 'Picking',
+    'custom-picking': 'Custom Picking',
+    'particles': 'Particles',
+    'deferred-rendering': 'Deferred Rendering'
+  };
 
+  window.addEventListener('load', function onLoad() {
+
+    loadFiles({urls: [window.location + 'index.js']})
+    .then(function onSuccess(files) {
+      var data = files[0];
       // Add the editor div.
       var editorDiv = document.createElement('div');
       editorDiv.className = 'editor';
@@ -37,83 +45,77 @@
       div.className = 'buttons';
       document.body.appendChild(div);
 
-      var controlsDiv = document.getElementById('controls');
-      controlsDiv.style.display = 'none';
-
       // Add the editor button.
-      var span = document.createElement('span');
-      span.className = 'button';
-      span.innerHTML =
+      var editorSpan = document.createElement('span');
+      editorSpan.className = 'button';
+      editorSpan.innerHTML =
         '<span class="glyphicon glyphicon-search"></span> Source';
-      span.onclick = function() {
-        controlsDiv.style.display = 'none';
+      editorSpan.onclick = function() {
         if (editorDiv.style.display !== 'none') {
           editorDiv.style.display = 'none';
         } else {
           editorDiv.style.display = 'block';
         }
       };
-      div.appendChild(span);
+      div.appendChild(editorSpan);
 
-      // Add the controls button.
-      if (controlsDiv.innerHTML !== '') {
-        span = document.createElement('span');
-        span.className = 'button';
-        span.innerHTML =
-          '<span class="glyphicon glyphicon-cog"></span> Controls';
-        span.onclick = function() {
-          editorDiv.style.display = 'none';
-          if (controlsDiv.style.display !== 'none') {
-            controlsDiv.style.display = 'none';
-          } else {
-            controlsDiv.style.display = 'block';
-          }
-        };
-        div.appendChild(span);
-      }
+      var exampleKeys = Object.keys(examples);
+      var exampleNames = exampleKeys.map(function(k) {
+        return examples[k];
+      });
 
       // Add the prev/next buttons.
       var split = window.location.pathname.split('/');
       var baseurl = split.slice(0, split.length - 2).join('/') + '/';
-      var current = parseInt(split[split.length - 2]);
+      var ex = split[split.length - 2];
+      var current = exampleKeys.indexOf(ex);
       var prev = current - 1;
       var next = current + 1;
+      var span;
       if (prev > 0) {
         span = document.createElement('span');
         span.className = 'button';
         span.innerHTML =
-          '<a href="' + baseurl + prev + '">' +
+          '<a href="' + baseurl + exampleKeys[prev] + '">' +
           '<span class="glyphicon glyphicon-chevron-left"></span>' +
-          ' Previous</a>';
+          exampleNames[prev] + '</a>';
         div.appendChild(span);
       } else {
         span = document.createElement('span');
         span.className = 'button';
-        span.innerHTML = '<a href="' + baseurl + 16 + '">' +
-          '<span class="glyphicon glyphicon-chevron-left">' +
-          '</span> Lesson 16</a>';
+        span.innerHTML =
+          '<a href="' + baseurl + exampleKeys[exampleKeys.length - 1] + '">' +
+          '<span class="glyphicon glyphicon-chevron-left"></span>' +
+          exampleNames[exampleNames.length - 1] + '</a>';
         div.appendChild(span);
       }
       span = document.createElement('span');
       span.className = 'button';
-      span.innerHTML = '<span style="color:yellow">' +
-        'Lesson ' + current + '</span>';
+      span.innerHTML =
+        '<span style="color:yellow">' +
+        exampleNames[current] + ' Example</span>';
       div.appendChild(span);
-      if (next < 17) {
+      if (next < exampleKeys.length) {
         span = document.createElement('span');
         span.className = 'button';
-        span.innerHTML = '<a href="' + baseurl + next + '">' +
-          'Next <span class="glyphicon glyphicon-chevron-right"></span></a>';
+        span.innerHTML =
+          '<a href="' + baseurl + exampleKeys[next] + '">' +
+          exampleNames[next] +
+          ' <span class="glyphicon glyphicon-chevron-right"></span></a>';
         div.appendChild(span);
       } else {
         span = document.createElement('span');
         span.className = 'button';
-        span.innerHTML = '<a href="' + baseurl + 1 + '">' +
-          'Lesson 1 <span class="glyphicon glyphicon-chevron-right"></span>' +
-          '</a>';
+        span.innerHTML =
+          '<a href="' + baseurl + exampleKeys[0] + '">' + exampleNames[0] +
+          '<span class="glyphicon glyphicon-chevron-right"></span></a>';
         div.appendChild(span);
       }
     })
-    .catch(() => console.error('Error loading lesson source.'));
+    .catch(function onError() {
+      console.error('Error loading lesson source.');
+    });
+
   });
+
 }());

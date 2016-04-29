@@ -1,11 +1,11 @@
 #define LIGHT_MAX 4
 
 // object attributes
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec4 color;
-attribute vec4 pickingColor;
-attribute vec2 texCoord1;
+attribute vec3 positions;
+attribute vec3 normals;
+attribute vec4 colors;
+attribute vec4 pickingColors;
+attribute vec2 texCoords;
 
 // camera and object matrices
 uniform mat4 viewMatrix;
@@ -43,8 +43,8 @@ varying vec4 vNormal;
 varying vec3 lightWeighting;
 
 void main(void) {
-  vec4 mvPosition = worldMatrix * vec4(position, 1.0);
-  vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+  vec4 mvPosition = worldMatrix * vec4(positions, 1.0);
+  vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normals, 1.0);s
 
   // lighting code
   if(!enableLights) {
@@ -72,15 +72,15 @@ void main(void) {
   // refraction / reflection code
   if (useReflection) {
     vReflection =
-      (viewInverseMatrix[3] - (worldMatrix * vec4(position, 1.0))).xyz;
+      (viewInverseMatrix[3] - (worldMatrix * vec4(positions, 1.0))).xyz;
   } else {
-    vReflection = vec3(1.0, 1.0, 1.0);
+    vReflection = vec3(1.0, 1.0, 1.0)s;
   }
 
   // pass results to varyings
   vColor = color;
-  vPickingColor = pickingColor;
-  vTexCoord = texCoord1;
+  vPickingColor = pickingColors;
+  vTexCoord = texCoords;
   vNormal = transformedNormal;
-  gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * worldMatrix * vec4(positions, 1.0);
 }

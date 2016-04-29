@@ -34,7 +34,7 @@ easier to work with in JavaScript.
 Provides functions to create and initialize a WebGL context, and
 to check for presence of WebGL and extensions.
 
-Static Method: hasWebGL {#LumaGL:hasWebGL}
+Function: hasWebGL {#LumaGL:hasWebGL}
 ------------------------------------------------------
 
 Returns true or false whether the browser supports WebGL or not.
