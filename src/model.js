@@ -340,7 +340,7 @@ export default class Model extends Object3D {
       throw new Error(`${this.id} Bad uniform ${uniform}`);
     }
     return this;
- }
+  }
 
   // Todo move to attributes manager
   getAttributesTable(attributes, {

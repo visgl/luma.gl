@@ -60,7 +60,7 @@
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
     "glslify": "^5.0.2",
-    "glslify-babel": "^1.0.0",
+    "glslify-babel": "^1.0.1",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
     "tape-catch": "^1.0.4",
