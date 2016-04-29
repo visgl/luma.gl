@@ -25,8 +25,7 @@
   "main": "dist/index.js",
   "browserify": {
     "transform": [
-      "babelify",
-      "glslify"
+      "babelify"
     ]
   },
   "standard": {
