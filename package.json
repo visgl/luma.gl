@@ -77,7 +77,7 @@
     "lint": "eslint src",
     "precommit": "npm run lint -s && npm run test",
     "prepublish": "npm run build",
-    "test": "npm run lint && npm run test-node",
+    "test": "npm run build && npm run lint && npm run test-node",
     "test-node": "babel-node --include='' test/index.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
     "test-electron": "browserify test/electron.js | testron | faucet",
