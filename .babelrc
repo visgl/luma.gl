@@ -1,8 +1,8 @@
 {
   "presets": ["es2015", "stage-2"],
   "plugins": [
-    "glslify-babel",
-    ["babel-plugin-transform-builtin-extend", {
+  	"glslify",
+    ["transform-builtin-extend", {
       "globals": ["Array"]
     }]
   ],

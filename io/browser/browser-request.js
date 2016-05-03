@@ -1,88 +1,8 @@
 // Supports loading (requesting) assets with XHR (XmlHttpRequest)
 /* eslint-disable guard-for-in, complexity, no-try-catch */
 
-/* global XMLHttpRequest, Image */
-import {uid, noop} from '../utils';
-import {Texture2D} from '../webgl';
-import assert from 'assert';
-
-/*
- * Loads (Requests) multiple files asynchronously
- */
-export async function loadFiles({urls, onProgress = noop, ...opts}) {
-  assert(urls.every(url => typeof url === 'string'),
-    'loadImages: {urls} must be array of strings');
-  let count = 0;
-  return await Promise.all(urls.map(
-    url => {
-      const promise = loadFile(url, opts);
-      promise.then(file => onProgress({
-        progress: ++count / urls.length,
-        count,
-        total: urls.length,
-        url
-      }));
-      return promise;
-    }
-  ));
-}
-
-/*
- * Loads (requests) multiple images asynchronously
- */
-export async function loadImages({urls, onProgress = noop, ...opts}) {
-  assert(urls.every(url => typeof url === 'string'),
-    'loadImages: {urls} must be array of strings');
-  let count = 0;
-  return await Promise.all(urls.map(
-    url => {
-      const promise = loadImage(url, opts);
-      promise.then(file => onProgress({
-        progress: ++count / urls.length,
-        count,
-        total: urls.length,
-        url
-      }));
-      return promise;
-    }
-  ));
-}
-
-// Load multiple textures from images
-export async function loadTextures(gl, {urls, parameters}) {
-  const images = await loadImages({urls});
-  const textures = [];
-  images.forEach((img, i) => {
-    let params = Array.isArray(parameters) ? parameters[i] : parameters;
-    params = params === undefined ? {} : params;
-    textures.push(new Texture2D(gl, {
-      ...params,
-      data: img
-    }));
-  });
-  return textures;
-}
-
-/*
- * Loads images asynchronously
- * returns a promise tracking the load
- */
-function loadImage(url) {
-  return new Promise(function(resolve, reject) {
-    try {
-      const image = new Image();
-      image.onload = function() {
-        resolve(image);
-      };
-      image.onerror = function() {
-        reject(new Error(`Could not load image ${url}.`));
-      };
-      image.src = url;
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
+/* global XMLHttpRequest */
+function noop() {}
 
 const XHR_STATES = {
   UNINITIALIZED: 0,
@@ -140,7 +60,7 @@ class XHR {
         const {async} = opt;
 
         if (opt.noCache) {
-          opt.url += (opt.url.indexOf('?') >= 0 ? '&' : '?') + uid();
+          opt.url += (opt.url.indexOf('?') >= 0 ? '&' : '?') + Date.now();
         }
 
         req.open(opt.method, opt.url, async);
@@ -181,6 +101,7 @@ class XHR {
   }
 }
 
-function loadFile(url, opts) {
-  return new XHR({url, ...opts}).sendAsync();
+export default function request(opts) {
+  const xhr = new XHR(opts);
+  return xhr.sendAsync();
 }
