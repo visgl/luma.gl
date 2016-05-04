@@ -6,7 +6,7 @@ LumaGL: A JavaScript WebGL Framework for Data Visualization
 LumaGL's primary focus is to provide a set of efficient and easy-to-use
 WebGL building blocks enabling high-performance browser-based data visualizations.
 
-See [**Examples**](http://uber.github.io/luma.gl/) and [**Documentation**](http://uber.github.io/luma.gl/_site/docs/core.html).
+See [**Examples**](http://uber.github.io/luma.gl/) and [**Documentation**](http://uber.github.io/luma.gl/docs/core.html).
 
 **Note** LumaGL has just been made public. Documentation is still in the process of being updated to correspond with the latest API changes.
 
