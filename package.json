@@ -29,10 +29,12 @@
     "global": "^4.3.0"
   },
   "browserify": {
-    "transform": [
-      "babelify",
-      "glslify"
-    ]
+    "transform": [[
+      "babelify", {
+        "presets": ["es2015"],
+        "plugins": ["glslify-babel"]
+      }
+    ]]
   },
   "standard": {
     "ignore": [
@@ -58,6 +60,7 @@
     "faucet": "0.0.1",
     "gl": "^2.1.5",
     "glslify": "^5.0.2",
+    "glslify-babel": "^1.0.0",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
     "tape": "^4.0.0",
