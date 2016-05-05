@@ -1,5 +1,9 @@
-export {default as loadFile} from './browser-request';
-export * from './image-io';
+import loadFile from './browser-request';
+import imageIO from './image-io';
+import browserFS from './browser-fs';
 
-import * as browserFs from './browser-fs';
-export {browserFs};
+export default Object.assign(loadFile, {
+  loadFile,
+  ...browserFS,
+  ...imageIO
+});
