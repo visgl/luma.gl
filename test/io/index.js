@@ -1,1 +1,1 @@
-import './read-write-image'
+import './read-image';
