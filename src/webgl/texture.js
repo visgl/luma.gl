@@ -8,6 +8,12 @@ class Texture {
     this.gl = gl;
     this.target = gl.TEXTURE_2D;
 
+    if (typeof Image !== 'undefined' && opts instanceof Image) {
+      opts = {
+        data: opts
+      };
+    }
+
     opts = merge({
       flipY: true,
       alignment: 1,
@@ -91,6 +97,12 @@ export class Texture2D extends Texture {
   /* eslint-disable max-statements */
   update(opts) {
     const gl = this.gl;
+
+    if (typeof Image !== 'undefined' && opts instanceof Image) {
+      opts = {
+        data: opts
+      }
+    }
     this.width = opts.width;
     this.height = opts.height;
     this.border = opts.border || 0;
