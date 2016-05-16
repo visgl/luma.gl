@@ -30,18 +30,7 @@ export function createGLContext(canvas, opt = {}) {
   // Set as debug handler
   gl = opt.debug ? createDebugContext(gl) : gl;
 
-  // Add a safe get method
-  gl.get = function glGet(name) {
-    let value = name;
-    if (typeof name === 'string') {
-      value = this[name];
-      assert(value, `Accessing gl.${name}`);
-    }
-    return value;
-  };
-
   return gl;
-
 }
 
 export function hasWebGL() {

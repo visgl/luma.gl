@@ -2,6 +2,7 @@
 /* global document, HTMLCanvasElement, Image */
 /* eslint-disable guard-for-in, complexity, no-try-catch */
 import assert from 'assert';
+import through from 'through';
 
 /*
  * Returns data bytes representing a compressed image in PNG or JPG format,
@@ -11,10 +12,7 @@ import assert from 'assert';
  * @param {String} opt.type='png' - png, jpg or image/png, image/jpg are valid
  * @param {String} opt.dataURI= - Whether to include a data URI header
  */
-export function compressImage(image, {
-  type = 'png',
-  dataURI = false
-}) {
+function compressImage(image, type) {
   if (image instanceof HTMLCanvasElement) {
     const canvas = image;
     return canvas.toDataURL(type);
@@ -27,17 +25,21 @@ export function compressImage(image, {
   canvas.getContext('2d').drawImage(image, 0, 0);
 
   // Get raw image data
-  let data = canvas.toDataURL(type);
-  if (!dataURI) {
-    data = data.replace(/^data:image\/(png|jpg);base64,/, '');
-  }
+  const data =
+    canvas.toDataURL(type || 'png')
+      .replace(/^data:image\/(png|jpg);base64,/, '');
+
+  // Dump data into stream and return
+  const result = through();
+  process.nextTick(() => result.end(new Buffer(data, 'base64')));
+  return result;
 }
 
 /*
  * Loads images asynchronously
  * returns a promise tracking the load
  */
-export function loadImage(url) {
+function loadImage(url) {
   return new Promise(function(resolve, reject) {
     try {
       const image = new Image();
@@ -53,3 +55,8 @@ export function loadImage(url) {
     }
   });
 }
+
+export default {
+  compressImage,
+  loadImage
+};

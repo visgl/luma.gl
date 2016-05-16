@@ -7,7 +7,7 @@ function noop() {}
 /*
  * Loads (Requests) multiple files asynchronously
  */
-export function loadFiles({urls, loader, onProgress = noop, ...opts}) {
+function loadFiles({urls, loader, onProgress = noop, ...opts}) {
   assert(loader, '');
   assert(urls.every(url => typeof url === 'string'),
     'loadImages: {urls} must be array of strings');
@@ -29,7 +29,7 @@ export function loadFiles({urls, loader, onProgress = noop, ...opts}) {
 /*
  * Loads (requests) multiple images asynchronously
  */
-export async function loadImages({urls, onProgress = noop, ...opts}) {
+async function loadImages({urls, onProgress = noop, ...opts}) {
   assert(urls.every(url => typeof url === 'string'),
     'loadImages: {urls} must be array of strings');
   let count = 0;
@@ -46,3 +46,8 @@ export async function loadImages({urls, onProgress = noop, ...opts}) {
     }
   ));
 }
+
+export default {
+  loadFiles,
+  loadImages
+};
