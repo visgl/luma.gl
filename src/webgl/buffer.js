@@ -1,6 +1,8 @@
 // Encapsulates a WebGLBuffer object
 
 import {getExtension, glCheckError} from './context';
+import glGet from './get';
+
 import assert from 'assert';
 
 export default class Buffer {
@@ -63,12 +65,12 @@ export default class Buffer {
     const {gl} = this;
     assert(data, 'Buffer needs data argument');
     this.attribute = attribute || this.attribute;
-    this.bufferType = gl.get(bufferType) || this.bufferType;
+    this.bufferType = glGet(gl, bufferType) || this.bufferType;
     this.size = size || this.size;
-    this.dataType = gl.get(dataType) || this.dataType;
+    this.dataType = glGet(gl, dataType) || this.dataType;
     this.stride = stride || this.stride;
     this.offset = offset || this.offset;
-    this.drawMode = gl.get(drawMode) || this.drawMode;
+    this.drawMode = glGet(gl, drawMode) || this.drawMode;
     this.instanced = instanced || this.instanced;
 
     this.data = data || this.data;
