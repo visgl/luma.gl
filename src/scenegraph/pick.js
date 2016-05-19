@@ -50,7 +50,7 @@ export function pickModels(gl, {
           x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color
         );
 
-        program.setUniform('renderPickingBuffer', 0);
+        program.setUniforms({renderPickingBuffer: 0});
         model.unsetProgramState(program);
 
         // Add the information to the stack
