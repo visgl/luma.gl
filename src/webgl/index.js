@@ -5,6 +5,7 @@
 export * from './types';
 export * from './context';
 export * from './draw';
+export {default as glGet} from './get';
 export {default as Buffer} from './buffer';
 export {default as Program} from './program';
 export {default as Framebuffer} from './fbo';
