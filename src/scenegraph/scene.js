@@ -267,7 +267,7 @@ export default class Scene extends Group {
     const {enable, ambient, directional, points} = this.config.lights;
 
     // Set light uniforms. Ambient and directional lights.
-    program.setUniforms('enableLights', enable);
+    program.setUniforms({enableLights: enable});
 
     if (!enable) {
       return this;
@@ -316,7 +316,7 @@ export default class Scene extends Group {
   setupPointLighting(program, points) {
     points = points instanceof Array ? points : [points];
     const numberPoints = points.length;
-    program.setUniforms('numberPoints', numberPoints);
+    program.setUniforms({numberPoints});
 
     const pointLocations = [];
     const pointColors = [];
@@ -365,7 +365,7 @@ export default class Scene extends Group {
         'fogColor': [color.r, color.g, color.b]
       });
     } else {
-      program.setUniforms('hasFog', false);
+      program.setUniforms({hasFog: false});
     }
 
     return this;
