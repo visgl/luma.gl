@@ -7,8 +7,7 @@ function noop() {}
 /*
  * Loads (Requests) multiple files asynchronously
  */
-export function loadFiles({urls, loader, onProgress = noop, ...opts}) {
-  assert(loader, '');
+export function loadFiles({urls, onProgress = noop, ...opts}) {
   assert(urls.every(url => typeof url === 'string'),
     'loadImages: {urls} must be array of strings');
   let count = 0;

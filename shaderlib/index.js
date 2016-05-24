@@ -1,17 +1,17 @@
+// NOTE - ES5 export file
+/* eslint-disable no-var */
+
 // Default Shaders
-const glslify = require('glslify');
+var glslify = require('glslify');
 
-// TODO - adopt glslify
-const Shaders = {
-  Vertex: {
-    Default: glslify('./default-vertex.glsl')
-  },
-  Fragment: {
-    Default: glslify('./default-fragment.glsl')
-  }
-};
+module.exports = require('../dist/shaderlib-helpers');
 
-Shaders.vs = Shaders.Vertex.Default;
-Shaders.fs = Shaders.Fragment.Default;
+var vertex = glslify('./default-vertex.glsl');
+var fragment = glslify('./default-fragment.glsl');
 
-export default Shaders;
+Object.assign(module.exports, {
+  Vertex: {Default: vertex},
+  Fragment: {Default: fragment},
+  vs: vertex,
+  fs: fragment
+});
