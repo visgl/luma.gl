@@ -1,5 +1,4 @@
-import Shaders from '../shaders';
-import {merge} from '../utils';
+import Shaders from '../../shaderlib';
 import assert from 'assert';
 /* global document */
 

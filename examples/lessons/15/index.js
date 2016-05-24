@@ -28,7 +28,7 @@ var webGLStart = function() {
   Promise.all([
 
     makeProgramFromShaderURIs(gl, 'spec-map.vs.glsl', 'spec-map.fs.glsl', {
-      path: '../../../shaders/'
+      path: '../../../shaderlib/'
     }),
 
     loadTextures(gl, {

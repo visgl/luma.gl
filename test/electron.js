@@ -1,4 +1,4 @@
 require('babel-polyfill');
-require('./node');
-require('./gpu');
-require('./io');
+
+require('./gpu-independent-tests');
+require('./gpu-dependent-tests');

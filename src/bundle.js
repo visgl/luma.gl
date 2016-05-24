@@ -4,7 +4,7 @@
 import 'babel-polyfill';
 import * as LumaGL from './index';
 import * as addons from './addons';
-import * as IO from '../io/browser';
+import * as IO from './io/browser';
 
 LumaGL.addons = addons;
 LumaGL.IO = IO;

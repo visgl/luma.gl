@@ -171,20 +171,7 @@ export default class Model extends Object3D {
       this.setUniforms(this.getCoordinateUniforms(viewMatrix));
     }
 
-    let table = this.getAttributesTable(this.geometry.attributes, {
-      header: `Attributes for ${this.geometry.id}`,
-      program: this.program
-    });
-    table = this.getAttributesTable(this.attributes, {
-      table,
-      program: this.program
-    });
-    log.table(3, table);
-
-    table = this.getUniformsTable(this.uniforms, {
-      header: `Uniforms for ${this.geometry.id}`
-    });
-    log.table(3, table);
+    this._log();
 
     this.setProgramState();
 
@@ -342,6 +329,25 @@ export default class Model extends Object3D {
     return this;
   }
 
+  _log() {
+    if (log.priority >= 3) {
+      let table = this.getAttributesTable(this.geometry.attributes, {
+        header: `Attributes for ${this.geometry.id}`,
+        program: this.program
+      });
+      table = this.getAttributesTable(this.attributes, {
+        table,
+        program: this.program
+      });
+      log.table(3, table);
+
+      table = this.getUniformsTable(this.uniforms, {
+        header: `Uniforms for ${this.geometry.id}`
+      });
+      log.table(3, table);
+    }
+  }
+
   // Todo move to attributes manager
   getAttributesTable(attributes, {
       header = 'Attributes',
@@ -384,136 +390,4 @@ export default class Model extends Object3D {
     }
     return table;
   }
-
-  // TODO - remove
-  /*
-  setTexCoords(program) {
-    const gl = program.gl;
-    const multi = this.$texCoords.constructor.name === 'Object';
-    let tex;
-
-    if (!this.buffers.texCoords) {
-      if (multi) {
-        this.buffers.texCoords = {};
-        for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
-          tex = txs[i];
-          this.buffers.texCoords['texCoord' + (i + 1)] = new Buffer(gl, {
-            attribute: 'texCoord' + (i + 1),
-            data: this.$texCoords[tex],
-            size: 2
-          });
-        }
-      } else {
-        this.buffers.texCoords = new Buffer(gl, {
-          attribute: 'texCoord1',
-          data: this.$texCoords,
-          size: 2
-        });
-      }
-    } else if (this.dynamic) {
-      if (multi) {
-        for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
-          tex = txs[i];
-          this.buffers.texCoords['texCoord' + (i + 1)].update({
-            data: this.$texCoords[tex]
-          });
-        }
-      } else {
-        this.buffers.texCoords.update({
-          data: this.$texCoords
-        });
-      }
-    }
-
-    if (multi) {
-      for (let i = 0, txs = this.textures, l = txs.length; i < l; i++) {
-        tex = txs[i];
-        program.setBuffer(this.buffers.texCoords['texCoord' + (i + 1)]);
-      }
-    } else {
-      program.setBuffer(this.buffers.texCoords);
-    }
-  }
-
-  setVertices(program) {
-    if (!this.buffers.position) {
-      this.buffers.position = new Buffer(program.gl, {
-        attribute: 'position',
-        data: this.$vertices,
-        size: 3
-      });
-    } else if (this.dynamic) {
-      this.buffers.position.update({
-        data: this.$vertices
-      });
-    }
-
-    program.setBuffer(this.buffers.position);
-  }
-
-  setNormals(program) {
-    if (!this.buffers.normal) {
-      this.buffers.normal = new Buffer(program.gl, {
-        attribute: 'normal',
-        data: this.$normals,
-        size: 3
-      });
-    } else if (this.dynamic) {
-      this.buffers.normal.update({
-        data: this.$normals
-      });
-    }
-
-    program.setBuffer(this.buffers.normal);
-  }
-
-  setIndices(program) {
-    if (!this.buffers.indices) {
-      this.buffers.indices = new Buffer(program.gl, {
-        bufferType: gl.ELEMENT_ARRAY_BUFFER,
-        drawMode: gl.STATIC_DRAW,
-        data: this.$indices,
-        size: 1
-      });
-    } else if (this.dynamic) {
-      this.buffers.indices.update({
-        data: this.$indices
-      });
-    }
-
-    program.setBuffer(this.buffers.indices);
-  }
-
-  setPickingColors(program) {
-    if (!this.buffers.pickingColors) {
-      this.buffers.pickingColors = new Buffer(program.gl, {
-        attribute: 'pickingColor',
-        data: this.$pickingColors,
-        size: 4
-      });
-    } else if (this.dynamic) {
-      this.buffers.pickingColors.update({
-        data: this.$pickingColors
-      });
-    }
-
-    program.setBuffer(this.buffers.pickingColors);
-  }
-
-  setColors(program) {
-    if (!this.buffers.colors) {
-      this.buffers.colors = new Buffer(program.gl, {
-        attribute: 'color',
-        data: this.$colors,
-        size: 4
-      });
-    } else if (this.dynamic) {
-      this.buffers.colors.update({
-        data: this.$colors
-      });
-    }
-
-    program.setBuffer(this.buffers.colors);
-  }
-  */
 }

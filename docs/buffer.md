@@ -7,18 +7,22 @@ categories: [Documentation]
 Class: Buffer {#Buffer}
 ===========================
 
+Wraps a WebGLBuffer. A WebGLBuffer is essentially a mechanism to upload
+memory buffers (attributes) to the GPU (the cost of which can vary
+depending on whether the system uses a unified memory architecture or not).
 
-Buffer Method: setBuffer {#Buffer:setBuffer}
+Buffer constructor: {#Buffer:constructor}
 --------------------------------------------------
 
-This method is useful to set properties (and data) to a buffer and/or
-attributes. If the buffer does not exist it will be created.
-Also, for all properties set to a buffer, these properties are
-remembered so they're optional for later calls.
+Creates a new WebGLBuffers. Also, for all properties set to a buffer,
+these properties are remembered so they're optional for later calls.
 
 ### Syntax:
 
-	program.setBuffer(name, options);
+{% highlight js %}
+  import {Buffer} from 'luma.gl';
+	const buffer = new Buffer(gl, options);
+{% endhighlight %}
 
 ### Arguments:
 
@@ -32,7 +36,7 @@ value is set in `options` then the buffer name will be used as attribute name.
   attribute calls to. If this parameter is not specified then the attribute
   name will be the buffer name.
 * bufferType - (*enum*, optional) The type of the buffer. Possible
-  options are `gl.ELEMENT_ARRAY_BUFFER`, `gl.ARRAY_BUFFER`. Default is 
+  options are `gl.ELEMENT_ARRAY_BUFFER`, `gl.ARRAY_BUFFER`. Default is
   `gl.ARRAY_BUFFER`.
 * size - (*numer*, optional) The size of the components in the buffer. Default is 1.
 * dataType - (*enum*, optional) The type of the data being stored in the buffer. Default's `gl.FLOAT`.
@@ -43,47 +47,12 @@ value is set in `options` then the buffer name will be used as attribute name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle. 
-The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
+The context of this example can be seen [here](http://uber/.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {
   attribute: 'aVertexPosition',
   value: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
   size: 3
-});
-{% endhighlight %}
-
-
-Buffer Method: setBuffers {#Buffer:setBuffers}
---------------------------------------------------
-
-For each `key, value` of the object passed in it executes `setBuffer(key, value)`.
-
-### Syntax:
-
-	program.setBuffers(object);
-
-### Arguments:
-
-1. object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
-
-### Examples:
-
-Set buffer values for the vertices of a triangle and a square. 
-The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
-
-{% highlight js %}
-program.setBuffers({
-  'triangle': {
-    attribute: 'aVertexPosition',
-    value: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
-    size: 3
-  },
-  
-  'square': {
-    attribute: 'aVertexPosition',
-    value: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
-    size: 3
-  }
 });
 {% endhighlight %}

@@ -41,7 +41,7 @@ var webGLStart = function() {
       makeProgramFromShaderURIs(gl,
         'frag-lighting.vs.glsl',
         'frag-lighting.fs.glsl',
-        {path: '../../../shaders/', noCache: true}
+        {path: '../../../shaderlib/', noCache: true}
       ),
       loadTextures(gl, {
         urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],

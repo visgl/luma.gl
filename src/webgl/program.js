@@ -6,7 +6,7 @@
 import {glCheckError} from './context';
 import {uid} from '../utils';
 import {VertexShader, FragmentShader} from './shader';
-import Shaders from '../shaders';
+import Shaders from '../../shaderlib';
 import assert from 'assert';
 
 export default class Program {
@@ -61,21 +61,17 @@ export default class Program {
     return this;
   }
 
-  setTexture(texture, index) {
-    texture.bind(index);
-    return this;
-  }
-
-  setUniform(name, value) {
-    throw new Error('Use setUniforms instead');
-  }
-
   setUniforms(uniformMap) {
     for (const name of Object.keys(uniformMap)) {
       if (name in this.uniformSetters) {
         this.uniformSetters[name](uniformMap[name]);
       }
     }
+    return this;
+  }
+
+  setTexture(texture, index) {
+    texture.bind(index);
     return this;
   }
 

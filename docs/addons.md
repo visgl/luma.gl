@@ -141,7 +141,7 @@ Creates a new program by using the sources taken from [Shaders.Vertex](http://ph
 ### Examples:
 
 Extend [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment) with a default shader and create a Program from defaults.
-Taken from [lesson 8](http://uber-common.github.com/luma.gl/examples/lessons/8/) example.
+Taken from [lesson 8](http://uber/.github.com/luma.gl/examples/lessons/8/) example.
 
 {% highlight js %}
 //Add Blend Fragment Shader

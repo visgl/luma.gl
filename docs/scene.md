@@ -7,16 +7,25 @@ categories: [Documentation]
 Class: Scene {#Scene}
 ===============================
 
-The Scene class abstracts the use of low level code for lighting and other effects and creates a high level structure that
-plays well with objects created with [O3D](o3d.html) and the default shaders in [Shaders](shaders.html) to enable rendering of multiple
-models in the scene with different options. The Scene role is to connect the properties set in the [O3D](o3d.html) models to the
-attributes defined in the shaders so that the buffer creation and updating is transparent to the user.
-The good thing about the design though is that the Scene provides many callback functions that can be executed at different
-stages of the rendering process for the user to update or bypass setting of the attributes and uniforms. This also enables you
-to create your own shader files that are compatible with the [Scene](scene.html) class. Some examples of [Scene](scene.html) compatible shader
-files can be found [here](https://github.com/philogb/philogl/tree/master/shaders). Also, for more information about the
-default shaders take a look at the [Shaders](shaders.html) class. The [O3D](o3d.html) options describe how to override or set callbacks when rendering
-objects with a default scene.
+The Scene class abstracts the use of low level code for lighting and other
+effects and creates a high level structure that
+plays well with objects created with [O3D](o3d.html) and the
+default shaders in [Shaders](shaders.html) to enable rendering of multiple
+models in the scene with different options.
+
+The Scene role is to connect the properties set in the [O3D](o3d.html)
+models to the attributes defined in the shaders so that the buffer creation
+and updating is transparent to the user.
+The good thing about the design though is that the Scene provides many
+callback functions that can be executed at different stages of the
+rendering process for the user to update or bypass setting of the
+attributes and uniforms. This also enables you to create your own shader
+files that are compatible with the [Scene](scene.html) class.
+Some examples of [Scene](scene.html) compatible shader files can be found
+[here](https://github.com/philogb/philogl/tree/master/shaders).
+Also, for more information about the default shaders take a look at the
+[Shaders](shaders.html) class. The [O3D](o3d.html) options describe how
+to override or set callbacks when rendering objects with a default scene.
 
 Scene Method: constructor {#Scene:constructor}
 ------------------------------------------------
@@ -30,8 +39,6 @@ Creates a new [Scene](scene.html) instance.
 ### Arguments:
 
 1. gl - (*WebGLRenderingContext*) A WebGLRenderingContext object.
-2. program - (*object*) A Program instance. For more information check the [Program](program.html) class.
-3. camera - (*object*) A Camera instance. For more information check the [Camera](camera.html) class.
 4. options - (*object*) An object with the following properties:
 
 ### Options:
@@ -58,7 +65,7 @@ Creates a new [Scene](scene.html) instance.
 
 ### Examples:
 
-Create a new Scene instance. Taken from [lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
+Create a new Scene instance. Taken from [lesson 16](http://uber/.github.com/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 var innerScene = new LumaGL.Scene(gl, program, innerCamera, {
@@ -114,19 +121,12 @@ var scene = new LumaGL.Scene(gl, program, camera, {
 Scene Method: add {#Scene:add}
 --------------------------------
 
-Add an [O3D](o3d.html) object to the Scene.
-
-### Syntax:
-
-    scene.add(o[, ...]);
-
-### Arguments:
-
-A variable argument list of [O3D](o3d.html) instances.
+Inherited from Group
 
 ### Examples:
 
-Add a moon and a box models to the scene. Taken from [lesson 12](http://uber-common.github.com/luma.gl/examples/lessons/12/).
+Add a moon and a box models to the scene. Taken from
+[lesson 12](http://uber/.github.com/luma.gl/examples/lessons/12/).
 
 {% highlight js %}
 //Add objects to the scene
@@ -206,20 +206,19 @@ is considered to be `(0, 0)`.
 
 ### Notes:
 
- * You might want to check how picking is used in the [Event](event.html) options. There you can grab
-the target of the event in a simple way.
+ * You might want to check how picking is used in the
+   [Event](event.html) options. There you can grab the target of the event
+   in a simple way.
  * Also, the picking method will disable blending. If you are using
    blending in your application (along with picking), you might want to
    turn blending `on` in the rendering loop to ensure it is always on.
 
 ### Examples:
 
-Get an object at `(100, 100)` and change its color by altering a
-uniform value.
+Get an object at `(100, 100)` and change its color by altering a uniform value.
 
 {% highlight js %}
 var model = scene.pick(100, 100);
-
 if (model) {
   model.uniforms.colorUfm = [1, 1, 1, 1];
 }
@@ -234,7 +233,7 @@ under the given `x` and `y` coordinates.
 
 ### Syntax:
 
-    scene.pickCustom(x, y, options);
+  scene.pickCustom(x, y, options);
 
 ### Arguments:
 
@@ -243,5 +242,5 @@ is considered to be `(0, 0)`.
 * y - (*number*) The `y` position. The upper left corner of the viewport
 is considered to be `(0, 0)`.
 * options - (*object*, optional) An object containing the following properties:
-  * pickingProgram - (*object*) The Program instance with which to render the picking scene.
-                     defaults to LumaGL's default shaders.
+  * pickingProgram - (*object*) The Program instance with which to render
+    the picking scene. defaults to LumaGL's default shaders.

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "2.0.0-beta2",
+  "version": "2.0.0-beta3",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "author": "Ib Green <ib@uber.com>",
@@ -12,7 +12,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/uber-common/luma.gl"
+    "url": "https://github.com/uber//luma.gl"
   },
   "keywords": [
     "webgl",
@@ -23,12 +23,11 @@
     "3d"
   ],
   "main": "dist/index.js",
-  "browserify": {
-    "transform": [
-      "babelify",
-      "glslify"
-    ]
-  },
+  "files": [
+    "dist",
+    "shaderlib",
+    "src"
+  ],
   "standard": {
     "ignore": [
       "**/build/**",
@@ -38,7 +37,9 @@
     ]
   },
   "dependencies": {
-    "babel-polyfill": "6.5.0",
+    "babel-core": "^6.7.7",
+    "babel-plugin-transform-builtin-extend": "^1.1.0",
+    "babel-polyfill": "^6.5.0",
     "canvas-to-blob": "0.0.0",
     "filesaver.js": "^0.2.0",
     "get-pixels": "^3.3.0",
@@ -49,16 +50,15 @@
     "through": "^2.3.8"
   },
   "devDependencies": {
-    "babel-cli": "6.5.1",
-    "babel-core": "6.5.1",
-    "babel-eslint": "4.1.8",
     "babel-plugin-glslify": "^1.0.0",
-    "babel-plugin-transform-builtin-extend": "1.1.0",
-    "babel-preset-es2015": "6.5.0",
-    "babel-preset-stage-2": "^6.5.0",
+    "babel-cli": "^6.3.15",
+    "babel-eslint": "^4.1.6",
+    "babel-plugin-transform-builtin-extend": "^1.1.0",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-preset-stage-2": "^6.3.13",
     "babelify": "^7.2.0",
-    "bl": "^1.1.2",
     "browserify": "^13.0.0",
+    "bl": "^1.1.2",
     "budo": "^8.0.3",
     "electron-prebuilt": "^0.37.2",
     "eslint": "^1.10.3",
@@ -66,11 +66,11 @@
     "faucet": "0.0.1",
     "gl": "^3.0.6",
     "glslify": "^5.0.2",
-    "glslify-babel": "^1.0.1",
     "husky": "^0.10.2",
     "mkdirp": "^0.5.1",
     "tap-browser-color": "^0.1.2",
     "tape-catch": "^1.0.4",
+    "tape-promise": "^1.1.0",
     "testron": "^1.2.0",
     "uglify-js": "^2.6.1"
   },
@@ -79,15 +79,15 @@
     "build": "npm run build-clean && npm run build-compile && npm run build-script",
     "build-clean": "rm -fr dist/*",
     "build-compile": "babel src -d dist --source-maps inline --copy-files",
-    "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
+    "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t glslify && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run build-docs && open ./_docs/index.html",
     "lint": "eslint src",
-    "precommit": "npm run lint -s && npm run test",
+    "precommit": "npm test",
     "prepublish": "npm run build",
     "test": "npm run lint && npm run test-node",
-    "test-node": "babel-node --include='' test/index.js | faucet",
-    "test-browser": "budo test/browser.js:build/test-bundle.js --dir test -t babelify --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js}'",
+    "test-node": "babel-node --include='' test/node.js | faucet",
+    "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
-    "start": "budo src/bundle.js:dist/lumagl.js -t babelify --live --open --port 3000 --watch-glob '**/*.{html,css,js}'"
+    "start": "budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
   }
 }

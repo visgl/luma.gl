@@ -1,5 +1,5 @@
 require('babel-polyfill');
 require('tap-browser-color')();
-require('./node');
-require('./gpu');
-require('./io');
+
+require('./gpu-independent-tests');
+require('./gpu-dependent-tests');

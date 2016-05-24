@@ -54,7 +54,7 @@ var webGLStart = function() {
       makeProgramFromShaderURIs(gl,
         'render-tex.vs.glsl',
         'render-tex.fs.glsl',
-        {path: '../../../shaders/'}
+        {path: '../../../shaderlib/'}
       ),
 
       loadTextures(gl, {

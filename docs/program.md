@@ -7,15 +7,20 @@ categories: [Documentation]
 Class: Program {#Program}
 ===========================
 
-The Program class encapsulates a WebGL program object
-- compilation and linking of shaders
-- setting and unsetting buffers
-- setting uniforms
-- using textures
+The Program class encapsulates a WebGLProgram object. It contains a matched
+pair of vertex and fragment shaders. Calling `Program.use()` after construction
+will cause any subsequent `draw*` calls to use the shaders from this program.
+
+`Program` handles
+- Compilation and linking of shaders
+- Setting and unsetting buffers (attributes)
+- Setting uniform values
+- Setting buffers
+- Setting textures
 and more.
 
 
-### Notes:
+### Notes on Shader Programming
 
 * Shader sources: A Program needs to be constructed with two strings
 containin source code for vertex and fragment shaders. While it is of course
@@ -23,9 +28,11 @@ possible to store shader sources inline in JavaScript strings,
 when doing extensive shader programming, use of a tool like
 [glslify](https://github.com/stackgl/glslify)
 is recommended, as it supports organization of shader code
-directly in an applications source file tree. Also, for smaller examples,
-there are functions to help load shaders from HTML templates or URLs in
-`addons/helpers.js`.
+directly in an applications source file tree. Luma is integrated with glslify
+
+
+Also, for smaller examples, there are functions to help load shaders
+from HTML templates or URLs in `addons/helpers.js`.
 * Default Shaders: Luma.GL comes with a set of default shaders that can
 be used for basic rendering and picking.
 * All instance methods in a program (unless they return some documented value)
@@ -42,25 +49,31 @@ A program instance has as public properties:
 Program constructor {#Program:constructor}
 ----------------------------------------------------------------------
 
-Creates a new program by using the strings passed as arguments as source for the shaders.
+Creates a new program by using the strings passed as arguments
+as source for the shaders. The shaders are compiled into WebGLShaders
+and a WebGLProgram is created and the shaders are linked.
 
 ### Syntax:
 
-	var program = new Program(gl, {
+{% highlight js %}
+	const program = new Program(gl, {
     vs: vertexShaderSource,
     fs: fragmentShaderSource,
-    id: id
+    id: 'my-identifier'
   });
+{% endhighlight %}
 
 ### Arguments:
 
-1. gl
-1. opts.vs - (*string*) The vertex shader source as a string.
-2. opts.fs - (*string*) The fragment shader source as a string.
+1. gl - WebGLContext
+2. opts.vs - (*string*) The vertex shader source as a string.
+3. opts.fs - (*string*) The fragment shader source as a string.
+4. opts.id= - (*string*) Optional string id to help indentify the program
+                         during debugging.
 
 ### Examples:
 
-Create a Program from the given sources.
+Create a Program from the given vertex and fragment shader source code.
 
 {% highlight js %}
 const vs = `
@@ -87,32 +100,15 @@ const program = new Program(gl, {vs, fs});
 {% endhighlight %}
 
 
-Program Method: setUniform {#Program:setUniform}
---------------------------------------------------
+Program Method: use {#Program:use}
+-----------------------------------
 
-Sets the value of an uniform. There's no need to convert the array into a typed array, that's done automatically. 
-The name of the uniform matches the name of the uniform declared in the shader.
+Calls `gl.useProgram(this.program)`. To set the current program as active.
+After this call, `draw` calls will run the shaders in this program.
 
 ### Syntax:
 
-	program.setUniform(name, value);
-
-### Arguments:
-
-1. name - (*string*) The name of the uniform to be set.
-2. value - (*mixed*) The value to be set. Can be a float, an array of floats, a boolean, etc.
-
-### Examples:
-
-Set matrix information for the projection matrix and element matrix
-of the camera and world.
-The context of this example can be seen
-[here](http://uber-common.github.com/luma.gl/examples/lessons/3/).
-
-{% highlight js %}
-program.setUniform('uMVMatrix', view);
-program.setUniform('uPMatrix', camera.projection);
-{% endhighlight %}
+  program.use();
 
 
 Program Method: setUniforms {#Program:setUniforms}
@@ -126,12 +122,28 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 
 ### Arguments:
 
-1. object - (*object*) An object with key value pairs matching a uniform name and its value respectively.
+1. object - (*object*) An object with key value pairs matching a
+                       uniform name and its value respectively.
+
+
+1. key - (*string*) The name of the uniform to be set.
+                    The name of the uniform will be matched with the name of
+                    the uniform declared in the shader. You can set more
+                    uniforms on the Program than its shaders use, the extra
+                    uniforms will simply be ignored.
+2. value - (*mixed*) The value to be set.
+                     Can be a float, an array of floats, a boolean, etc.
+                     When the shaders are run (through a draw call),
+                     The must match the declaration.
+                     There's no need to convert arrays into a typed array,
+                     that's done automatically.
 
 ### Examples:
 
-Set matrix information for the projection matrix and element matrix of the camera and world. 
-The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/3/).
+Set matrix information for the projection matrix and element matrix of the
+camera and world.
+The context of this example can be seen
+[here](http://uber/.github.com/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({
@@ -144,10 +156,8 @@ program.setUniforms({
 Program Method: setBuffer {#Program:setBuffer}
 --------------------------------------------------
 
-This method is useful to set properties (and data) to a buffer and/or
-attributes. If the buffer does not exist it will be created.
-Also, for all properties set to a buffer, these properties are
-remembered so they're optional for later calls.
+Sets a WebGLBuffer to a specific attribute
+
 
 ### Syntax:
 
@@ -159,24 +169,11 @@ remembered so they're optional for later calls.
 value is set in `options` then the buffer name will be used as attribute name.
 2. options - (*object*) An object with options/data described below:
 
-### Options:
-
-* attribute - (*string*, optional) The name of the attribute to generate
-  attribute calls to. If this parameter is not specified then the attribute
-  name will be the buffer name.
-* bufferType - (*enum*, optional) The type of the buffer. Possible
-  options are `gl.ELEMENT_ARRAY_BUFFER`, `gl.ARRAY_BUFFER`. Default is 
-  `gl.ARRAY_BUFFER`.
-* size - (*numer*, optional) The size of the components in the buffer. Default is 1.
-* dataType - (*enum*, optional) The type of the data being stored in the buffer. Default's `gl.FLOAT`.
-* stride - (*number*, optional) The `stride` parameter when calling `gl.vertexAttribPointer`. Default's 0.
-* offset - (*number*, optional) The `offset` parameter when calling `gl.vertexAttribPointer`. Default's 0.
-* drawType - (*enum*, optional) The type of draw used when setting the `gl.bufferData`. Default's `gl.STATIC_DRAW`.
-
 ### Examples:
 
 Set buffer values for the vertices of a triangle. 
-The context of this example can be seen [here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
+The context of this example can be seen
+[here](http://uber/.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {
@@ -205,7 +202,7 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 
 Set buffer values for the vertices of a triangle and a square.
 The context of this example can be seen
-[here](http://uber-common.github.com/luma.gl/examples/lessons/1/).
+[here](http://uber/.github.com/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffers({
@@ -221,121 +218,6 @@ program.setBuffers({
   }
 });
 {% endhighlight %}
-
-
-Program Method: setFrameBuffer {#Program:setFrameBuffer}
----------------------------------------------------------
-
-Creates or binds/unbinds a framebuffer. You can also use this method to
-bind the framebuffer to a texture and renderbuffers. If the
-framebuffer already exists then calling `setFrameBuffer` with
-`true` or `false` as options will bind/unbind the framebuffer.
-Also, for all properties set to a buffer, these properties are
-remembered so they're optional for later calls.
-
-### Syntax:
-
-	program.setFrameBuffer(name[, options]);
-
-### Arguments:
-
-1. name - (*string*) The name (unique id) of the buffer.
-2. options - (*mixed*) Can be a boolean used to bind/unbind
-   the framebuffer or an object with options/data described below:
-
-### Options:
-
-* width - (*number*) The width of the framebuffer. Default's 0.
-* height - (*number*) The height of the framebuffer. Default's 0.
-* bindToTexture - (*mixed*, optional) Whether to bind the framebuffer
-onto a texture. If false the framebuffer wont be bound to a texture.
-Else you should provide an object with the same options as in `setTexture`.
-* textureOptions - (*object*, optional) Some extra options for binding the framebuffer to the texture. Default's `{ attachment: gl.COLOR_ATTACHMENT0 }`.
-* bindToRenderBuffer - (*boolean*) Whether to bind the framebuffer to a renderbuffer. The `width` and `height` of the renderbuffer are the same as the ones specified above.
-* renderBufferOptions - (*object*, optional) Some extra options for binding the framebuffer to the renderbuffer. Default's `{ attachment: gl.DEPTH_ATTACHMENT }`.
-
-### Examples:
-
-Using a frambuffer to render a scene into a texture. Taken from
-[lesson 16](http://uber-common.github.com/luma.gl/examples/lessons/16/).
-
-{% highlight js %}
-//create framebuffer
-program.setFrameBuffer('monitor', {
-  width: screenWidth,
-  height: screenHeight,
-  bindToTexture: {
-    parameters: [{
-      name: 'TEXTURE_MAG_FILTER',
-      value: 'LINEAR'
-    }, {
-      name: 'TEXTURE_MIN_FILTER',
-      value: 'LINEAR_MIPMAP_NEAREST',
-      generateMipmap: false
-    }]
-  },
-  bindToRenderBuffer: true
-});
-{% endhighlight %}
-
-
-Program Method: setFrameBuffers {#Program:setFrameBuffers}
------------------------------------------------------------
-
-For each `key, value` of the object passed in it executes
-`setFrameBuffer(key, value)`.
-
-### Syntax:
-
-	program.setFrameBuffers(object);
-
-### Arguments:
-
-1. object - (*object*) An object with key value pairs matching a
-   buffer name and its value respectively.
-
-
-Program Method: setRenderBuffer {#Program:setRenderBuffer}
------------------------------------------------------------
-
-Creates or binds/unbinds a renderbuffer. If the renderbuffer already
-exists and the second parameter is a boolean it'll bind or unbind the
-renderbuffer.
-
-Also, for all properties set to a buffer, these properties are remembered
-so they're optional for later calls.
-
-### Syntax:
-
-	program.setRenderBuffer(name[, options]);
-
-### Arguments:
-
-1. name - (*string*) The name (unique id) of the buffer.
-2. options - (*mixed*) Can be a boolean used to bind/unbind the renderbuffer
-   or an object with options/data described below:
-
-### Options:
-
-* width - (*number*) The width of the renderbuffer. Default's 0.
-* height - (*number*) The height of the renderbuffer. Default's 0.
-* storageType - (*enum*, optional) The storage type. Default's `gl.DEPTH_COMPONENT16`.
-
-
-Program Method: setRenderBuffers {#Program:setRenderBuffers}
--------------------------------------------------------------
-
-For each `key, value` of the object passed in it executes `setRenderBuffer(key, value)`.
-
-### Syntax:
-
-	program.setRenderBuffers(object);
-
-### Arguments:
-
-1. object - (*object*) An object with key value pairs matching a
-   buffer name and its value respectively.
-
 
 Program Method: setTexture {#Program:setTexture}
 -------------------------------------------------
@@ -374,7 +256,7 @@ Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTU
 ### Examples:
 
 Setting a texture for a box. Adapted from
-[lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
+[lesson 6](http://uber/.github.com/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -394,72 +276,5 @@ img.src = 'path/to/image.png';
 Program Method: setTextures {#Program:setTextures}
 ----------------------------------------------------
 
-For each `key, value` of the object passed in it executes `setTexture(key, value)`.
-
-### Syntax:
-
-	program.setTextures(object);
-
-### Arguments:
-
-1. object - (*object*) An object with key value pairs matching a texture name and its value respectively.
-
-### Examples:
-
-Set multiple type of textures from the same image. Taken from
-[lesson 6](http://uber-common.github.com/luma.gl/examples/lessons/6/).
-
-{% highlight js %}
-//load textures from image
-var img = new Image();
-img.onload = function() {
-  program.setTextures({
-    'nearest': {
-      data: {
-        value: img
-      }
-    },
-
-    'linear': {
-      data: {
-        value: img
-      },
-      parameters: [{
-        name: gl.TEXTURE_MAG_FILTER,
-        value: gl.LINEAR
-      }, {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR
-      }]
-    },
-
-    'mipmap': {
-      data: {
-        value: img
-      },
-      parameters: [{
-        name: gl.TEXTURE_MAG_FILTER,
-        value: gl.LINEAR
-      }, {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR_MIPMAP_NEAREST,
-        generateMipmap: true
-      }]
-    }
-  });
-};
-
-img.src = 'path/to/image.png';
-{% endhighlight %}
-
-
-Program Method: use {#Program:use}
------------------------------------
-
-Calls `gl.useProgram(this.program)`. To set the current program as active.
-
-### Syntax:
-
-	program.use();
-
+Sets a number of textures on the program.
 
