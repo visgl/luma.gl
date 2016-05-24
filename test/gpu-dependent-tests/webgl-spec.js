@@ -10,6 +10,7 @@ test('WebGL#headless', t => {
   const gl = createGLContext(canvas);
   t.ok(gl instanceof WebGLRenderingContext);
   t.ok(hasWebGL(), 'hasWebGL() is true');
-  t.notOk(hasExtension('noextension'), 'hasExtension(noextension) is false');
+  t.notOk(hasExtension(gl, 'noextension'),
+  	'hasExtension(noextension) is false');
   t.end();
 });

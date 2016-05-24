@@ -38,7 +38,6 @@
   },
   "dependencies": {
     "babel-core": "^6.7.7",
-    "babel-plugin-transform-builtin-extend": "^1.1.0",
     "babel-polyfill": "^6.5.0",
     "canvas-to-blob": "0.0.0",
     "filesaver.js": "^0.2.0",
@@ -64,7 +63,7 @@
     "eslint": "^1.10.3",
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
-    "gl": "^3.0.6",
+    "gl": "^4.0.0",
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "mkdirp": "^0.5.1",
@@ -86,6 +85,7 @@
     "prepublish": "npm run build",
     "test": "npm run lint && npm run test-node",
     "test-node": "babel-node --include='' test/node.js | faucet",
+    "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "start": "budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"

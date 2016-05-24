@@ -1,16 +1,51 @@
 // WebGLRenderingContext related methods
 /* eslint-disable no-try-catch, no-console, no-loop-func */
-/* global window, document, console */
 import assert from 'assert';
+import log from '../log';
+
+import headlessGL from 'gl';
+/* global window, document, console */
+/* global WebGLRenderingContext */
 
 function isBrowserContext() {
   return typeof window !== 'undefined';
 }
 
-// Checks if WebGL is enabled and creates a context for using WebGL.
-export function createGLContext(canvas, opt = {}) {
+// Check if WebGL is available
+// TODO Remove? - Kind of expensive since it creates and disposes of a context
+export function hasWebGL() {
   if (!isBrowserContext()) {
-    throw new Error(`Can't create a WebGL context outside a browser context.`);
+    // Assumes headless-gl has been set up per https://www.npmjs.com/package/gl
+    return true;
+  }
+  // Feature test WebGL
+  try {
+    const canvas = document.createElement('canvas');
+    // TODO - can we destroy context immediately rather than rely on GC?
+    return Boolean(window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+  } catch (error) {
+    return false;
+  }
+}
+
+// Checks if WebGL is enabled and creates a context for using WebGL.
+export function createGLContext(canvas, {
+  // Note, width&height only used by headless gl
+  width = 800,
+  height = 600,
+  debug = true,
+  // Override default since this is a gotcha for most apps
+  preserveDrawingBuffer = true,
+  ...opts
+}) {
+  const glOpts = {
+    preserveDrawingBuffer,
+    ...opts
+  };
+
+  if (!isBrowserContext()) {
+    return headlessGL(width, height, glOpts);
   }
   canvas = typeof canvas === 'string' ?
     document.getElementById(canvas) : canvas;
@@ -20,46 +55,31 @@ export function createGLContext(canvas, opt = {}) {
   }, false);
 
   // Prefer webgl2 over webgl1, prefer conformant over experimental
-  let gl = canvas.getContext('webgl2', opt);
-  gl = gl || canvas.getContext('experimental-webgl2', opt);
-  gl = gl || canvas.getContext('webgl', opt);
-  gl = gl || canvas.getContext('experimental-webgl', opt);
+  let gl = canvas.getContext('webgl2', glOpts);
+  gl = gl || canvas.getContext('experimental-webgl2', glOpts);
+  gl = gl || canvas.getContext('webgl', glOpts);
+  gl = gl || canvas.getContext('experimental-webgl', glOpts);
 
   assert(gl, 'Failed to create WebGLRenderingContext');
 
-  // Set as debug handler
-  gl = opt.debug ? createDebugContext(gl) : gl;
-
-  return gl;
-}
-
-export function hasWebGL() {
-  if (!isBrowserContext()) {
-    return false;
-  }
-  // Feature test WebGL
-  try {
-    const canvas = document.createElement('canvas');
-    return Boolean(window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-  } catch (error) {
-    return false;
-  }
-}
-
-export function hasExtension(name) {
-  if (!hasWebGL()) {
-    return false;
-  }
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('webgl') ||
-    canvas.getContext('experimental-webgl');
-  // Should maybe be return !!context.getExtension(name);
-  return context.getExtension(name);
+  return debug ? createDebugContext(gl) : gl;
 }
 
 // Returns the extension or throws an error
 export function getExtension(gl, extensionName) {
+  const ERROR = 'Illegal arg to getExtension';
+  assert(gl instanceof WebGLRenderingContext, ERROR);
+  assert(typeof extensionName === 'string', ERROR);
+  const extension = gl.getExtension(extensionName);
+  assert(extension, `${extensionName} not supported!`);
+  return extension;
+}
+
+// Returns the extension or throws an error
+export function hasExtension(gl, extensionName) {
+  const ERROR = 'Illegal arg to hasExtension';
+  assert(gl instanceof WebGLRenderingContext, ERROR);
+  assert(typeof extensionName === 'string', ERROR);
   const extension = gl.getExtension(extensionName);
   assert(extension, `${extensionName} not supported!`);
   return extension;
@@ -95,18 +115,20 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
   }
 }
 
-export function glCheckError(gl) {
-  // Ensure all errors are cleared
-  let error;
+// Returns an Error representing the Latest webGl error or null
+export function glGetError(gl) {
+  // Loop to ensure all errors are cleared
+  const errorStack = [];
   let glError = gl.getError();
   while (glError !== gl.NO_ERROR) {
-    if (error) {
-      console.error(error);
-    } else {
-      error = new Error(glGetErrorMessage(gl, glError));
-    }
+    errorStack.push(glGetErrorMessage(gl, glError));
     glError = gl.getError();
   }
+  return errorStack.length ? new Error(errorStack.join('\n')) : null;
+}
+
+export function glCheckError(gl) {
+  const error = glGetError(gl);
   if (error) {
     throw error;
   }
@@ -147,40 +169,26 @@ function glGetErrorMessage(gl, glError) {
   }
 }
 
-// TODO - document or remove
-function createDebugContext(ctx) {
-  const gl = {};
-  for (const m in ctx) {
-    const f = ctx[m];
-    if (typeof f === 'function') {
-      gl[m] = ((k, v) => {
-        return () => {
-          console.log(
-            k,
-            Array.prototype.join.call(arguments),
-            Array.prototype.slice.call(arguments)
-          );
-          let ans;
-          try {
-            ans = v.apply(ctx, arguments);
-          } catch (e) {
-            throw new Error(`${k} ${e}`);
-          }
-          const errorStack = [];
-          let error;
-          while ((error = ctx.getError()) !== ctx.NO_ERROR) {
-            errorStack.push(error);
-          }
-          if (errorStack.length) {
-            throw errorStack.join();
-          }
-          return ans;
-        };
-      })(m, f);
+// Replace each gl function with a wrapper that traces and
+// throws JavaScript errors on problems
+function createDebugContext(gl) {
+  const debugContext = {};
+  for (const functionName in gl) {
+    const func = gl[functionName];
+    if (typeof func === 'function') {
+      debugContext[functionName] = getDebugFunction(gl, functionName, func);
     } else {
-      gl[m] = f;
+      debugContext[functionName] = func;
     }
   }
+  return debugContext;
+}
 
-  return gl;
+function getDebugFunction(gl, functionName, func) {
+  return (...args) => {
+    log.log(2, `gl.${functionName}`, ...args);
+    const result = gl[functionName](...args);
+    glCheckError(gl);
+    return result;
+  };
 }

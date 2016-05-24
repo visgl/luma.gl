@@ -7,9 +7,16 @@ export class TruncatedConeGeometry extends Geometry {
   // copyright 2011 Google Inc. new BSD License
   // (http://www.opensource.org/licenses/bsd-license.php).
   /* eslint-disable max-statements, complexity */
-  constructor({bottomRadius = 0, topRadius = 0, height = 1, nradial = 10,
-    nvertical = 10, topCap = false, bottomCap = false, ...opts} = {}) {
-
+  constructor({
+    bottomRadius = 0,
+    topRadius = 0,
+    height = 1,
+    nradial = 10,
+    nvertical = 10,
+    topCap = false,
+    bottomCap = false,
+    ...opts
+  } = {}) {
     const extra = (topCap ? 2 : 0) + (bottomCap ? 2 : 0);
     const numVertices = (nradial + 1) * (nvertical + 1 + extra);
 
