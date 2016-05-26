@@ -1,12 +1,10 @@
-/* global document */
 import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
 
 import {createGLContext, Buffer} from '../../src/webgl';
 import test from 'tape-catch';
 
 test('WebGL#Buffer constructor', t => {
-  const canvas = document.createElement('canvas');
-  const gl = createGLContext(canvas);
+  const gl = createGLContext(null, {});
   t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
 
   t.throws(

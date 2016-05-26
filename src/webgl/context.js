@@ -4,8 +4,9 @@ import assert from 'assert';
 import log from '../log';
 
 import headlessGL from 'gl';
+import {WebGLRenderingContext} from './webgl-types';
+
 /* global window, document, console */
-/* global WebGLRenderingContext */
 
 function isBrowserContext() {
   return typeof window !== 'undefined';
@@ -49,6 +50,9 @@ export function createGLContext(canvas, {
   }
   canvas = typeof canvas === 'string' ?
     document.getElementById(canvas) : canvas;
+  if (!canvas) {
+    canvas = document.createElement('canvas')
+  }
 
   canvas.addEventListener('webglcontextcreationerror', e => {
     console.log(e.statusMessage || 'Unknown error');
@@ -81,7 +85,7 @@ export function hasExtension(gl, extensionName) {
   assert(gl instanceof WebGLRenderingContext, ERROR);
   assert(typeof extensionName === 'string', ERROR);
   const extension = gl.getExtension(extensionName);
-  assert(extension, `${extensionName} not supported!`);
+  // assert(extension, `${extensionName} not supported!`);
   return extension;
 }
 
