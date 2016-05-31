@@ -56,7 +56,7 @@
     "eslint": "^1.9.0",
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
-    "gl": "^2.1.5",
+    "gl": "^3.0.5",
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "tap-browser-color": "^0.1.2",
