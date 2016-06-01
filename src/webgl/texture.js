@@ -1,5 +1,6 @@
 import {merge} from '../utils';
 import {glCheckError} from './context';
+/* global Image */
 
 class Texture {
 

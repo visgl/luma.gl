@@ -8,6 +8,11 @@ const lumaLog = {
     if (priority <= lumaLog.priority && table) {
       console.table(table);
     }
+  },
+  log(priority, ...args) {
+    if (priority <= lumaLog.priority) {
+      console.debug(...args);
+    }
   }
 };
 

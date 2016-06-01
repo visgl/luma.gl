@@ -10,7 +10,6 @@ Class: Model {Model}
 The Model class enables you to create 3D models which are compatible with the
 [Scene](scene.html) class. All primitives (Sphere, etc) inherit from Model.
 
-
 ### Properties:
 
 A Model instance has a number of public properties that can be accessed/modified:

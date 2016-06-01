@@ -63,7 +63,7 @@
     "eslint": "^1.10.3",
     "eslint-plugin-react": "^4.2.3",
     "faucet": "0.0.1",
-    "gl": "^4.0.0",
+    "gl": "^4.0.1",
     "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "mkdirp": "^0.5.1",

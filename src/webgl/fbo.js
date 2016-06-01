@@ -1,61 +1,94 @@
-
+import {Framebuffer} from './framebuffer';
 import {Texture2D} from './texture';
+import {Renderbuffer} from './framebuffer';
+import assert from 'assert';
 
-export default class Framebuffer {
+export default class FramebufferObject {
 
   /* eslint-disable max-statements */
-  constructor(gl, opts = {}) {
-    this.gl = gl;
+  constructor(gl, {
+    width = 1,
+    height = 1,
+    depth = true,
+    minFilter = gl.NEAREST,
+    magFilter = gl.NEAREST,
+    format = gl.RGBA,
+    type = gl.UNSIGNED_BYTE
+  } = {}) {
+    this.depth = depth;
+    this.minFilter = minFilter;
+    this.magFilter = magFilter;
+    this.format = format;
+    this.type = type;
 
-    this.width = opts.width ? opts.width : 1;
-    this.height = opts.height ? opts.height : 1;
-    this.depth = opts.depth === undefined ? true : opts.depth;
-    this.minFilter = opts.minFilter || gl.NEAREST;
-    this.magFilter = opts.magFilter || gl.NEAREST;
-    this.format = opts.format || gl.RGBA;
-    this.type = opts.type || gl.UNSIGNED_BYTE;
-    this.fbo = gl.createFramebuffer();
-    this.bind();
+    this.resize(width, height);
+  }
 
-    this.texture = new Texture2D(gl, {
-      width: this.width,
-      height: this.height,
+  resize(width, height) {
+    assert(width >= 0 && height >= 0, 'Width and height need to be integers');
+    if (width === this.width && height === this.height) {
+      return;
+    }
+
+    const {gl} = this;
+
+    // TODO - do we need to reallocate the framebuffer?
+    const fb = new Framebuffer(gl);
+
+    const colorBuffer = new Texture2D(gl, {
+      width,
+      height,
       minFilter: this.minFilter,
       magFilter: this.magFilter,
       type: this.type,
       format: this.format
     });
 
-    gl.framebufferTexture2D(
-      gl.FRAMEBUFFER,
-      gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture.texture, 0
-    );
+    fb.texture2D({
+      attachment: gl.COLOR_ATTACHMENT0,
+      texture: colorBuffer
+    });
 
+    if (this.colorBuffer) {
+      this.colorBuffer.delete();
+    }
+    this.colorBuffer = colorBuffer;
+
+    // Add a depth buffer if requested
     if (this.depth) {
-      this.depth = gl.createRenderbuffer();
-      gl.bindRenderbuffer(gl.RENDERBUFFER, this.depth);
-      gl.renderbufferStorage(
-        gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.width, this.height
-      );
-      gl.framebufferRenderbuffer(
-        gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depth
-      );
+      const depthBuffer = new Renderbuffer().storage({
+        format: gl.DEPTH_COMPONENT16,
+        width,
+        height
+      });
+      fb.attachRenderbuffer({renderbuffer: depthBuffer});
+
+      if (this.depthBuffer) {
+        this.depthBuffer.delete();
+      }
+      this.depthBuffer = depthBuffer;
     }
 
-    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
-      throw new Error('Framebuffer creation failed.');
+    // Checks that framebuffer was properly set up,
+    // if not, throws an explanatory error
+    fb.checkStatus();
+
+    this.width = width;
+    this.height = height;
+
+    // Immediately dispose of old buffer
+    if (this.fb) {
+      this.fb.delete();
     }
-
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
+    this.fb = fb;
   }
   /* eslint-enable max-statements */
 
   bind() {
-    const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+    this.fb.bind();
   }
 
+  unbind() {
+    this.fb.unbind();
+  }
 }

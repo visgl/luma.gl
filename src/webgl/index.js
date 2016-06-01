@@ -3,10 +3,19 @@
 // but make it easier to use.
 // Higher level abstractions can be built on these classes
 export * from './types';
+
+// Low level objects
+export {default as Buffer} from './buffer';
+export {default as Program} from './program';
+export {default as Framebuffer} from './framebuffer';
+export {default as Renderbuffer} from './renderbuffer';
+export {default as VertexAttributes} from './vertex-attributes';
+export {Texture2D, TextureCube} from './texture';
+
+// Functions
 export * from './context';
 export * from './draw';
 export {default as glGet} from './get';
-export {default as Buffer} from './buffer';
-export {default as Program} from './program';
-export {default as Framebuffer} from './fbo';
-export {Texture2D, TextureCube} from './texture';
+
+// Higher level abstractions
+export {default as FBO} from './fbo';
