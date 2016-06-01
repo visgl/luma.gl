@@ -7,8 +7,10 @@ categories: [Documentation]
 Object: Shaders {#Shaders}
 ===============================
 
-An object that contains default shaders that could be used with the [Scene](scene.html) class. Only one vertex shader and one fragment
-shader are shipped in this object. This is so because we encourage having shaders in separate files and access them in
+An object that contains default shaders that could be used with the
+[Scene](scene.html) class. Only one vertex shader and one fragment
+shader are shipped in this object. This is so because we encourage
+having shaders in separate files and access them in
 an asynchronous way by using `makeProgramFromShaderURIs` and other methods available in the Framework. You can set shader strings
 into `Shaders.Vertex` and `Shaders.Fragment`. We provide a default vertex and fragment shader in `Shaders.Vertex.Default` and
 `Shaders.Fragment.Default`. These shaders can also be conveniently used with `makeProgramFromDefaultShaders(vertexShaderName, fragmentShaderName)`.

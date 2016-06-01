@@ -11,6 +11,6 @@ test('WebGL#headless', t => {
   t.ok(gl instanceof WebGLRenderingContext);
   t.ok(hasWebGL(), 'hasWebGL() is true');
   t.notOk(hasExtension(gl, 'noextension'),
-  	'hasExtension(noextension) is false');
+    'hasExtension(noextension) is false');
   t.end();
 });
