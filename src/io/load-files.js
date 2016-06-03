@@ -13,7 +13,7 @@ export function loadFiles({urls, onProgress = noop, ...opts}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      const promise = loadFile(url, opts);
+      const promise = loadFile({url, ...opts});
       promise.then(file => onProgress({
         progress: ++count / urls.length,
         count,
@@ -34,7 +34,7 @@ export function loadImages({urls, onProgress = noop, ...opts}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      const promise = loadImage(url, opts);
+      const promise = loadImage({url, ...opts});
       promise.then(file => onProgress({
         progress: ++count / urls.length,
         count,

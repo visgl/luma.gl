@@ -113,7 +113,7 @@
       }
     })
     .catch(function onError() {
-      console.error('Error loading lesson source.');
+      console.error('Error loading example source.');
     });
 
   });

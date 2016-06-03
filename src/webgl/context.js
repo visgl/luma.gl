@@ -38,7 +38,7 @@ export function createGLContext(canvas, {
   // Override default since this is a gotcha for most apps
   preserveDrawingBuffer = true,
   ...opts
-}) {
+} = {}) {
   const glOpts = {
     preserveDrawingBuffer,
     ...opts
@@ -55,14 +55,20 @@ export function createGLContext(canvas, {
   }, false);
 
   // Prefer webgl2 over webgl1, prefer conformant over experimental
-  let gl = canvas.getContext('webgl2', glOpts);
-  gl = gl || canvas.getContext('experimental-webgl2', glOpts);
+  let gl;
+  // Conditionally load WebGL2 context, since luma.gl users freak out about
+  // Chrome's "Creation of WebGL2 contexts disabled" message
+  if (opts.webgl2) {
+    gl = canvas.getContext('webgl2', glOpts);
+    gl = gl || canvas.getContext('experimental-webgl2', glOpts);
+  }
   gl = gl || canvas.getContext('webgl', glOpts);
   gl = gl || canvas.getContext('experimental-webgl', glOpts);
 
   assert(gl, 'Failed to create WebGLRenderingContext');
 
-  return debug ? createDebugContext(gl) : gl;
+  // return debug ? createDebugContext(gl) : gl;
+  return gl;
 }
 
 // Returns the extension or throws an error
