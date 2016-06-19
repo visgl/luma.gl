@@ -13,10 +13,13 @@ function isBrowserContext() {
 }
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
-export function createGLContext(canvas, {
-  // Note, width are height are only used by headless gl
+export function createGLContext({
+  // Note: canvas is only used when in browser
+  canvas,
+  // Note: width are height are only used by headless gl
   width = 800,
   height = 600,
+  // Common parameters
   webgl2 = false,
   debug = true,
   // Override default since this is a gotcha for most apps

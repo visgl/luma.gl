@@ -380,65 +380,60 @@ Object.assign(EventsProxy.prototype, {
   moved: false
 });
 
-export const Events = {
+export function registerEventHandlers(domElement, opt = {}) {
+  opt = {
+    cachePosition: true,
+    cacheSize: true,
+    relative: true,
+    centerOrigin: true,
+    disableContextMenu: true,
+    bind: false,
+    picking: false,
 
-  create(gl, opt = {}) {
+    enableTouch: true,
+    enableMouse: true,
+    enableKeyboard: true,
 
-    opt = {
-      cachePosition: true,
-      cacheSize: true,
-      relative: true,
-      centerOrigin: true,
-      disableContextMenu: true,
-      bind: false,
-      picking: false,
+    onClick: noop,
+    onRightClick: noop,
+    onDragStart: noop,
+    onDragMove: noop,
+    onDragEnd: noop,
+    onDragCancel: noop,
+    onTouchStart: noop,
+    onTouchMove: noop,
+    onTouchEnd: noop,
+    onTouchCancel: noop,
+    onTap: noop,
+    onMouseMove: noop,
+    onMouseEnter: noop,
+    onMouseLeave: noop,
+    onMouseWheel: noop,
+    onKeyDown: noop,
+    onKeyUp: noop,
+    ...opt
+  };
 
-      enableTouch: true,
-      enableMouse: true,
-      enableKeyboard: true,
-
-      onClick: noop,
-      onRightClick: noop,
-      onDragStart: noop,
-      onDragMove: noop,
-      onDragEnd: noop,
-      onDragCancel: noop,
-      onTouchStart: noop,
-      onTouchMove: noop,
-      onTouchEnd: noop,
-      onTouchCancel: noop,
-      onTap: noop,
-      onMouseMove: noop,
-      onMouseEnter: noop,
-      onMouseLeave: noop,
-      onMouseWheel: noop,
-      onKeyDown: noop,
-      onKeyUp: noop,
-      ...opt
-    };
-
-    const bind = opt.bind;
-    if (bind) {
-      for (const name in opt) {
-        if (name.match(/^on[a-zA-Z0-9]+$/)) {
-          ((fname, fn) => {
-            opt[fname] = function f() {
-              fn.apply(bind, Array.prototype.slice.call(arguments));
-            };
-          })(name, opt[name]);
-        }
+  const bind = opt.bind;
+  if (bind) {
+    for (const name in opt) {
+      if (name.match(/^on[a-zA-Z0-9]+$/)) {
+        ((fname, fn) => {
+          opt[fname] = function f() {
+            fn.apply(bind, Array.prototype.slice.call(arguments));
+          };
+        })(name, opt[name]);
       }
     }
-
-    return new EventsProxy(gl, opt);
   }
 
-};
+  return new EventsProxy(domElement, opt);
+}
 
-Events.Keys = KEYS;
+export const Keys = KEYS;
 
 function keyOf(code) {
-  const keyMap = Events.Keys;
+  const keyMap = Keys;
   for (const name in keyMap) {
     if (keyMap[name] === code) {
       return name;
