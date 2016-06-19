@@ -1,274 +1,368 @@
-import {WebGLRenderingContext} from './types';
-import {getExtension} from './context';
+import {WebGLRenderingContext, WebGL2RenderingContext} from './types';
+import {glCheckError} from './context';
 import assert from 'assert';
 
-export class VertexAttributesArray {
+/**
+ * Methods for manipulating the vertex attributes array, which is where
+ * vertex data is staged for shader execution.
+ *
+ * Vertex attributes are stored in "arrays" with indices from 0 and up.
+ * During shader execution, these indices (or 'locations') are matched to
+ * the indices assigned to shader attributes during WebGLProgram linking.
+ *
+ * Note: The global state contains an implicit vertex attribute array which
+ * the methods in this class manipulate by default. It is also possible to
+ * create and bind a VertexArrayObject to manage multiple arrays.
+ *
+ * Each vertex attribute has these properties:
+ * - Can be enabled or disabled (Only enable attrs actually used by a program)
+ * - Has an instance `divisor` (usually 1 or 0 to enable/disable instancing)
+ * - Have a size (1-4 values per vertex)
+ * - Has a value or values that is accessible in shaders
+ *
+ * Attribute values are either
+ * - Generic: a constant value for all vertices/instances, or
+ * - Bound to a WebGLBuffer with unique values for each vertex/instance
+ *
+ * When binding to a WebGLBuffer it is necessary to specify the layout of
+ * data in the buffer:
+ * - size (1-4 values per vertex)
+ * - data type (e.g. gl.FLOAT)
+ * - stride, offset, and integer normalization policy can also be specified
+ *
+ * Note: All methods in this class take a `location` index to specify which
+ * vertex attribute in the array they are operating on.
+ *
+ * Note: Attribute 0 can sometimes be treated specially by the driver,
+ * to be safe we avoid disabling it.
+ *
+ * Note: WebGL2
+ * - Improves support for integer attributes, both generic and buffered.
+ * - Setting instance "divisors" no longer require using a WebGL extension.
+ *
+ */
 
-  /**
-   * @classdesc
-   * Methods for manipulating the vertex attributes array, which is where
-   * vertex data is staged for shader execution.
-   *
-   * Vertex attributes are stored in "arrays" with indices from 0 and up.
-   * During shader execution, these indices (or 'locations') are matched to
-   * the indices assigned to shader attributes during WebGLProgram linking.
-   *
-   * Note: The global state contains an implicit vertex attribute array which
-   * the methods in this class manipulate by default. It is also possible to
-   * create and bind a VertexArrayObject to manage multiple arrays.
-   *
-   * Each vertex attribute has these properties:
-   * - Can be enabled or disabled (Only enable attrs actually used by a program)
-   * - Has an instance `divisor` (usually 1 or 0 to enable/disable instancing)
-   * - Have a size (1-4 values per vertex)
-   * - Has a value or values that is accessible in shaders
-   *
-   * Attribute values are either
-   * - Generic: a constant value for all vertices/instances, or
-   * - Bound to a WebGLBuffer with unique values for each vertex/instance
-   *
-   * When binding to a WebGLBuffer it is necessary to specify the layout of
-   * data in the buffer:
-   * - size (1-4 values per vertex)
-   * - data type (e.g. gl.FLOAT)
-   * - stride, offset, and integer normalization policy can also be specified
-   *
-   * Note: All methods in this class take a `location` index to specify which
-   * vertex attribute in the array they are operating on.
-   *
-   * Note: Attribute 0 can sometimes be treated specially by the driver,
-   * to be safe we avoid disabling it.
-   *
-   * Note: WebGL2
-   * - Improves support for integer attributes, both generic and buffered.
-   * - Setting instance "divisors" no longer require using a WebGL extension.
-   *
-   * @class
-   * @param {WebGLRenderingContext} gl - webgl context
-   */
-  constructor(gl) {
-    assert(gl instanceof WebGLRenderingContext,
-      'VertexAttributesArray needs WebGLRenderingContext');
-    this.gl = gl;
+// ACCESSORS
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+const ERR_WEBGL2 = 'WebGL2 required';
+
+/**
+ * The max number of attributes in the vertex attribute array is an
+ * implementation defined limit, but never smaller than 8
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @returns {GLuint} - (max) number of attributes in the vertex attribute array
+ */
+export function getMaxAttributes(gl) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  const maxAttributes = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+  glCheckError(gl);
+  return maxAttributes;
+}
+
+/**
+ * Is instance divisor availble (checks for WebGL2 or ANGLE extension)
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @returns {Boolean} - is divisor available?
+ */
+export function hasDivisor(gl) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  return Boolean(
+    gl instanceof WebGL2RenderingContext ||
+    gl.getExtension(gl, 'ANGLE_instanced_arrays')
+  );
+}
+
+/**
+ * Returns true if the vertex attribute is enabled at this index.
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {Boolean} - enabled status
+ */
+export function isEnabled(gl, location) {
+  return Boolean(get(gl, location, gl.VERTEX_ATTRIB_ARRAY_ENABLED));
+}
+
+/**
+ * Returns the currently bound buffer
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {WebGLBuffer} Returns the currently bound buffer
+ */
+export function getBuffer(gl, location) {
+  return get(gl, location, gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING);
+}
+
+/**
+ * Get values for generic vertex attributes
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {Float32Array} (with 4 elements) representing the current value
+ * of the vertex attribute at the given index.
+ */
+export function getGeneric(gl, location) {
+  return get(gl, gl.CURRENT_VERTEX_ATTRIB);
+}
+
+/**
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ */
+// @returns {GLint} the size of an element of the vertex array.
+export function getSize(gl, location) {
+  return get(location, gl.VERTEX_ATTRIB_ARRAY_SIZE);
+}
+
+/**
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ */
+// @returns {GLenum} representing the array type.
+export function getType(gl, location) {
+  return get(location, gl.VERTEX_ATTRIB_ARRAY_TYPE);
+}
+
+/**
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ */
+// @returns {GLboolean} true if fixed-point data types are normalized
+// for the vertex attribute array at the given index.
+export function isNormalized(gl, location) {
+  return get(location, gl.VERTEX_ATTRIB_ARRAY_NORMALIZED);
+}
+
+/**
+ * check if an integer data type in the vertex attribute at index
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - index of the vertex attribute.
+ * @returns {GLboolean} - true if an integer data type is in the
+ * vertex attribute array at the given index.
+ */
+export function isInteger(gl, location) {
+  assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+  return get(location, gl.VERTEX_ATTRIB_ARRAY_INTEGER);
+}
+
+/**
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {GLint} number of bytes between successive elements in the array.
+ * 0 means that the elements are sequential.
+ */
+export function getStride(gl, location) {
+  return get(location, gl.VERTEX_ATTRIB_ARRAY_STRIDE);
+}
+
+/**
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {GLuint} the address of a specified vertex attribute.
+ */
+export function getOffset(
+  gl, location, pname = gl.VERTEX_ATTRIB_ARRAY_POINTER
+) {
+  return gl.getVertexAttribOffset(location, pname);
+}
+
+/**
+ * @private
+ * Generic getter for information about a vertex attribute at a given position
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - index of the vertex attribute.
+ * @param {GLenum} pname - specifies the information to query.
+ * @returns {*} - requested vertex attribute information (specified by pname)
+ */
+function get(gl, location, pname) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  return gl.getVertexAttrib(location, pname);
+}
+
+// MODIFIERS
+
+/**
+ * Enable the attribute
+ * Note: By default all attributes are disabled. Only attributes
+ * used by a program's shaders should be enabled.
+ *
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ */
+export function enable(gl, location) {
+  gl.enableVertexAttribArray(location);
+}
+
+/**
+ * Disable the attribute
+ * Note: Only attributes used by a program's shaders should be enabled.
+ *
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ */
+export function disable(gl, location) {
+  // Don't disable location 0
+  if (location > 0) {
+    gl.disableVertexAttribArray(location);
   }
+}
 
-  /**
-   * Enable the attribute
-   * Note: By default all attributes are disabled. Only attributes
-   * used by a program's shaders should be enabled.
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @returns {VertexAttributeArray} Returns itself for chaining.
-   */
-  enable(location) {
-    const {gl} = this;
-    gl.enableVertexAttribArray(location);
-    return this;
+/**
+ * Set the frequency divisor used for instanced rendering.
+ * Note: Usually simply set to 1 or 0 to enable/disable instanced rendering
+ * for a specific attribute.
+ *
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @param {GLuint} divisor - instances that pass between updates of attribute
+ */
+export function setDivisor(gl, location, divisor) {
+  if (gl instanceof WebGL2RenderingContext) {
+    gl.vertexAttribDivisor(location, divisor);
+    glCheckError(gl);
   }
-
-  /**
-   * Disable the attribute
-   * Note: Only attributes used by a program's shaders should be enabled.
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @returns {VertexAttributeArray} Returns itself for chaining.
-   */
-  disable(location) {
-    const {gl} = this;
-    // Don't disable location 0
-    if (location > 0) {
-      gl.disableVertexAttribArray(location);
-    }
-    return this;
-  }
-
-  /**
-   * Returns true if the vertex attribute is enabled at this index.
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @returns {Boolean} - enabled status
-   */
-  isEnabled(location) {
-    return Boolean(this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_ENABLED));
-  }
-
-  /**
-   * Set the frequency divisor used for instanced rendering.
-   * Note: Usually simply set to 1 or 0 to enable/disable instanced rendering
-   * for a specific attribute.
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @param {GLuint} divisor - instances that pass between updates of attribute
-   * @returns {VertexAttributeArray} Returns itself for chaining.
-   */
-  setDivisor(location, divisor) {
-    const {gl} = this;
-    const ext = getExtension(gl, 'ANGLE_instanced_arrays');
+  const ext = gl.getExtension('ANGLE_instanced_arrays');
+  if (ext) {
     ext.vertexAttribDivisorANGLE(location, divisor);
-    return this;
+    glCheckError(gl);
   }
+  throw new Error('WebGL instanced rendering not supported');
+}
 
-  /**
-   * Returns the frequency divisor used for instanced rendering.
-   * @param {GLuint} location - ordinal number of the attribute
-   * @returns {GLuint} divisor
-   */
-  getDivisor(location) {
-    const {gl} = this;
-    const ext = getExtension(gl, 'ANGLE_instanced_arrays');
-    return this.get(location, ext.VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE);
+/**
+ * Returns the frequency divisor used for instanced rendering.
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @returns {GLuint} divisor
+ */
+export function getDivisor(gl, location) {
+  assert(location > 0);
+  if (gl instanceof WebGL2RenderingContext) {
+    const divisor = get(location, gl.VERTEX_ATTRIB_ARRAY_DIVISOR);
+    glCheckError(gl);
+    return divisor;
   }
-
-  /*
-   * Specify values for generic vertex attributes
-   * Generic vertex attributes are constant for all vertices
-   * Up to 4 values depending on attribute size
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @param {GLuint} divisor - instances that pass between updates of attribute
-   * @returns {VertexAttributeArray} Returns itself for chaining.
-   */
-  setConstantFloats(location, v0, v1, v2, v3) {
-    const {gl} = this;
-    switch (arguments.length - 1) {
-    case 1: gl.vertexAttrib1f(location, v0); break;
-    case 2: gl.vertexAttrib2f(location, v0, v1); break;
-    case 3: gl.vertexAttrib3f(location, v0, v1, v2); break;
-    case 4: gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
-    default:
-      throw new Error('vertex attribute size must be between 1 and 4');
-    }
-    return this;
+  const ext = gl.getExtension('ANGLE_instanced_arrays');
+  if (ext) {
+    const divisor = get(location, ext.VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE);
+    glCheckError(gl);
+    return divisor;
   }
+  // if instanced arrays not available, 0 means divisor has not been set
+  return 0;
+}
 
-  /**
-   * Specify values for generic vertex attributes
-   * Note: Generic vertex attributes are constant for all vertices
-   * Up to 4 values depending on attribute size
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @param {GLuint} size -
-   * @param {Float32Array} array -
-   * @returns {VertexAttributeArray} Returns itself for chaining.
-   */
-  setConstant(location, size, array) {
-    const {gl} = this;
-    switch (size) {
-    case 1: gl.vertexAttrib1fv(location, array); break;
-    case 2: gl.vertexAttrib2fv(location, array); break;
-    case 3: gl.vertexAttrib3fv(location, array); break;
-    case 4: gl.vertexAttrib4fv(location, array); break;
-    default:
-      throw new Error('vertex attribute size must be between 1 and 4');
-    }
-    return this;
-  }
+/**
+ * Set a location in vertex attributes array to a buffer, specifying
+ * its data layout and integer to float conversion and normalization flags
+ *
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @param {WebGLBuffer|Buffer} buffer - WebGL buffer to set as value
+ * @param {GLuint} target=gl.ARRAY_BUFFER - which target to bind to
+ * @param {GLuint} size - number of values per element (1-4)
+ * @param {GLuint} type - type of values (e.g. gl.FLOAT)
+ * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
+ * @param {GLuint} integer=false - WebGL2 only, disable int-to-float conversion
+ * @param {GLuint} stride=0 - supports strided arrays
+ * @param {GLuint} offset=0 - supports strided arrays
+ */
 
-  /**
-   * Specify values for generic vertex attributes
-   * Generic vertex attributes are constant for all vertices
-   * Up to 4 values depending on attribute size
-   *
-   * @param {GLuint} location - ordinal number of the attribute
-   * @returns {Float32Array} (with 4 elements) representing the current value
-   * of the vertex attribute at the given index.
-   */
-  getConstant(location) {
-    return this.get(this.gl.CURRENT_VERTEX_ATTRIB);
-  }
+export function setBuffer({
+  gl,
+  location,
+  buffer,
+  target = gl.ARRAY_BUFFER,
+  size,
+  type,
+  normalized = gl.FALSE,
+  integer = false,
+  stride = 0,
+  offset = 0
+} = {}) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
 
-  // Note: will set currently bound buffer
-  setBuffer({
-    location,
-    buffer,
-    size,
-    dataType = this.gl.FLOAT,
-    normalized = this.gl.FALSE,
-    stride = 0,
-    offset = 0,
-    autobind = true
-  } = {}) {
-    const {gl} = this;
-    buffer.bind({autobind});
-    // Attaches bound ARRAY_BUFFER with specified buffer format
+  // Copy main data characteristics from buffer
+  target = target !== undefined ? target : buffer.target;
+  type = type !== undefined ? type : buffer.type;
+  size = size !== undefined ? size : buffer.size;
+  buffer.bind(target);
+
+  // Attach bound ARRAY_BUFFER with specified buffer format
+  if (!integer) {
     gl.vertexAttribPointer(
       location,
       size,
-      dataType,
+      type,
       normalized,
       stride,
       offset
     );
-    buffer.unbind({autobind});
-    return this;
-  }
-
-  // @returns {WebGLBuffer} Returns the currently bound buffer
-  getBuffer(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING);
-  }
-
-  // @returns {GLint} the size of an element of the vertex array.
-  getSize(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_SIZE);
-  }
-
-  // @returns {GLenum} representing the array type.
-  getType(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_TYPE);
-  }
-
-  // @returns {GLboolean} true if fixed-point data types are normalized
-  // for the vertex attribute array at the given index.
-  isNormalized(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_NORMALIZED);
-  }
-
-  // @returns {GLint} number of bytes between successive elements in the array.
-  // 0 means that the elements are sequential.
-  getStride(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_STRIDE);
-  }
-
-  // returns the address of a specified vertex attribute.
-  getOffset(location, pname = this.gl.VERTEX_ATTRIB_ARRAY_POINTER) {
-    return this.gl.getVertexAttribOffset(location, pname);
-  }
-
-  // Generic getter
-  // Returns information about a vertex attribute at a given position.
-  get(location, pname) {
-    return this.gl.getVertexAttrib(location, pname);
-  }
-
-  // WEBGL2 INTERFACE
-
-  // specifies *integer* data formats and locations of vertex attributes
-  setIntegerBuffer({
-    location,
-    buffer,
-    size,
-    dataType = this.gl.FLOAT,
-    stride = 0,
-    offset = 0,
-    autobind = true
-  } = {}) {
-    const {gl} = this;
-    // Attaches bound ARRAY_BUFFER with specified buffer format
-    buffer.bind({autobind});
+    glCheckError(gl);
+  } else {
+    // specifies *integer* data formats and locations of vertex attributes
+    // For glVertexAttribIPointer, Values are always left as integer values.
+    // Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE,
+    // gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.vertexAttribIPointer(
       location,
       size,
-      dataType,
+      type,
       stride,
       offset
     );
-    buffer.unbind({autobind});
-    return this;
+    glCheckError(gl);
+  }
+  buffer.unbind(target);
+}
+
+/*
+ * Specify values for generic vertex attributes
+ * Generic vertex attributes are constant for all vertices
+ * Up to 4 values depending on attribute size
+ *
+ * @param {WebGLRenderingContext} gl - webgl context
+ * @param {GLuint} location - ordinal number of the attribute
+ * @param {GLuint} divisor - instances that pass between updates of attribute
+ */
+/* eslint-disable no-console */
+/* global console */
+export function setGeneric({gl, location, array}) {
+  console.warn('VertexAttributes.setGeneric is not well tested');
+  // throw new Error('vertex attribute size must be between 1 and 4');
+
+  if (array instanceof Float32Array) {
+    gl.vertexAttrib4fv(location, array);
+  } else if (array instanceof Int32Array) {
+    assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
+    gl.vertexAttribI4iv(location, array);
+  } else if (array instanceof Uint32Array) {
+    assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
+    gl.vertexAttribI4uiv(location, array);
+  }
+}
+
+/*
+ * Specify values for generic vertex attributes
+ * Generic vertex attributes are constant for all vertices
+ * Up to 4 values depending on attribute size
+ *
+ * @param {GLuint} location - ordinal number of the attribute
+ * @param {GLuint} divisor - instances that pass between updates of attribute
+ */
+/* eslint-disable max-params */
+export function setGenericValues(gl, location, v0, v1, v2, v3) {
+  console.warn('VertexAttributes.setGenericValues is not well tested');
+  switch (arguments.length - 1) {
+  case 1: gl.vertexAttrib1f(location, v0); break;
+  case 2: gl.vertexAttrib2f(location, v0, v1); break;
+  case 3: gl.vertexAttrib3f(location, v0, v1, v2); break;
+  case 4: gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
+  default:
+    throw new Error('vertex attribute size must be between 1 and 4');
   }
 
-  // @returns {Boolean} is integer data type in the vertex attribute at index
-  isIntegerBuffer(location) {
-    return this.get(location, this.gl.VERTEX_ATTRIB_ARRAY_INTEGER);
-  }
+  // assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
+  // Looks like these will check how many arguments were supplied?
+  // gl.vertexAttribI4i(location, v0, v1, v2, v3);
+  // gl.vertexAttribI4ui(location, v0, v1, v2, v3);
 }

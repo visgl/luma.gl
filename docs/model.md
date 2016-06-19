@@ -10,7 +10,6 @@ Class: Model {#Model}
 For most applications, the `Model` class is probably the most central Luma.GL
 class.
 
-
 `Model` overview:
 - `Model` is a subclass of Object3D, meaning that it can be used in scene graphs
   (by adding it to a `Group` or a `Scene`), and it can be positioned, rotated
@@ -90,7 +89,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 Set matrix information for the projection matrix and element matrix of the
 camera and world.
 The context of this example can be seen
-[here](http://uber/.github.com/luma.gl/examples/lessons/3/).
+[here]http://uber.github.io/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({

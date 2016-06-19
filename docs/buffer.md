@@ -47,7 +47,7 @@ value is set in `options` then the buffer name will be used as attribute name.
 ### Examples:
 
 Set buffer values for the vertices of a triangle. 
-The context of this example can be seen [here](http://uber/.github.com/luma.gl/examples/lessons/1/).
+The context of this example can be seen [here]http://uber.github.io/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {

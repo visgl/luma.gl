@@ -11,12 +11,16 @@ import assert from 'assert';
 // This function unifies those into a single call with simple parameters
 // that have sane defaults.
 export function draw(gl, {
-  drawMode = null, vertexCount, offset = 0,
-  indexed, indexType = null,
-  instanced = false, instanceCount = 0
+  drawMode = gl.TRIANGLES,
+  vertexCount,
+  offset = 0,
+  indexed = false,
+  indexType = gl.UNSIGNED_SHORT,
+  instanced = false,
+  instanceCount = 0
 }) {
-  drawMode = drawMode ? glGet(gl, drawMode) : gl.TRIANGLES;
-  indexType = indexType ? glGet(gl, indexType) : gl.UNSIGNED_SHORT;
+  drawMode = glGet(gl, drawMode);
+  indexType = glGet(gl, indexType);
 
   assert(GL_DRAW_MODES(gl).indexOf(drawMode) > -1, 'Invalid draw mode');
   assert(GL_INDEX_TYPES(gl).indexOf(indexType) > -1, 'Invalid index type');

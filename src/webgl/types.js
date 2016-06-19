@@ -1,6 +1,8 @@
 // Helper definitions for validation of webgl parameters
 /* eslint-disable no-inline-comments, max-len */
 
+export * from './webgl-types';
+
 // TODO - remove
 export {isTypedArray, makeTypedArray} from '../utils';
 

@@ -4,12 +4,8 @@ title: Program
 categories: [Documentation]
 ---
 
-Class: Program {#Program}
-===========================
-
 The Program class encapsulates a WebGLProgram object. It contains a matched
-pair of vertex and fragment shaders. Calling `Program.use()` after construction
-will cause any subsequent `draw*` calls to use the shaders from this program.
+pair of vertex and fragment shaders.
 
 `Program` handles
 - Compilation and linking of shaders
@@ -19,6 +15,8 @@ will cause any subsequent `draw*` calls to use the shaders from this program.
 - Setting textures
 and more.
 
+Calling `Program.use()` after construction
+will cause any subsequent `draw*` calls to use the shaders from this program.
 
 ### Notes on Shader Programming
 
@@ -30,11 +28,15 @@ when doing extensive shader programming, use of a tool like
 is recommended, as it supports organization of shader code
 directly in an applications source file tree. Luma is integrated with glslify
 
-
 Also, for smaller examples, there are functions to help load shaders
 from HTML templates or URLs in `addons/helpers.js`.
 * Default Shaders: Luma.GL comes with a set of default shaders that can
 be used for basic rendering and picking.
+
+
+Class: Program {#Program}
+===========================
+
 * All instance methods in a program (unless they return some documented value)
 are chainable.
 
@@ -143,7 +145,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 Set matrix information for the projection matrix and element matrix of the
 camera and world.
 The context of this example can be seen
-[here](http://uber/.github.com/luma.gl/examples/lessons/3/).
+[here]http://uber.github.io/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({
@@ -173,7 +175,7 @@ value is set in `options` then the buffer name will be used as attribute name.
 
 Set buffer values for the vertices of a triangle. 
 The context of this example can be seen
-[here](http://uber/.github.com/luma.gl/examples/lessons/1/).
+[here]http://uber.github.io/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffer('triangle', {
@@ -202,7 +204,7 @@ For each `key, value` of the object passed in it executes `setBuffer(key, value)
 
 Set buffer values for the vertices of a triangle and a square.
 The context of this example can be seen
-[here](http://uber/.github.com/luma.gl/examples/lessons/1/).
+[here]http://uber.github.io/luma.gl/examples/lessons/1/).
 
 {% highlight js %}
 program.setBuffers({
@@ -256,7 +258,7 @@ Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTU
 ### Examples:
 
 Setting a texture for a box. Adapted from
-[lesson 6](http://uber/.github.com/luma.gl/examples/lessons/6/).
+[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();

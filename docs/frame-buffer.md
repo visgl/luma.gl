@@ -7,6 +7,9 @@ categories: [Documentation]
 Class: FrameBuffer {#FrameBuffer}
 ===========================
 
+TODO - framebuffer handling has been broken out into a separate class, but
+documentation is not yet up to date.
+For now, please refer directly to src/webgl/frame-buffer.js
 
 
 Program Method: setFrameBuffer {#Program:setFrameBuffer}
@@ -43,7 +46,7 @@ Else you should provide an object with the same options as in `setTexture`.
 ### Examples:
 
 Using a frambuffer to render a scene into a texture. Taken from
-[lesson 16](http://uber/.github.com/luma.gl/examples/lessons/16/).
+[lesson 16]http://uber.github.io/luma.gl/examples/lessons/16/).
 
 {% highlight js %}
 //create framebuffer

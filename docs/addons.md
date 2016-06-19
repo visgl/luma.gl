@@ -4,6 +4,7 @@ title: addons
 categories: [Documentation]
 ---
 
+
 makeProgramFromShaderURIs {#makeProgramFromShaderURIs}
 -----------------------------------------------------------------
 
@@ -126,8 +127,8 @@ var program = LumaGL.Program.fromShaderIds('shader-vs', 'shader-fs');
 makeProgramFromDefaultShaders {#makeProgramFromDefaultShaders}
 ------------------------------------------------------------------------
 
-Creates a new program by using the sources taken from [Shaders.Vertex](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex) and
-[Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment).
+Creates a new program by using the sources taken from [Shaders.Vertex](shaders.html#Shaders:Vertex) and
+[Shaders.Fragment](shaders.html#Shaders:Fragment).
 
 ### Syntax:
 
@@ -135,13 +136,13 @@ Creates a new program by using the sources taken from [Shaders.Vertex](http://ph
 
 ### Arguments:
 
-1. vertexDefaultShaderId - (*string*, optional) The vertex shader id from [Shaders.Vertex](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Vertex). Default's `Default`.
-2. fragmentShaderSource - (*string*) The fragment shader id from [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment). Default's `Default`.
+1. vertexDefaultShaderId - (*string*, optional) The vertex shader id from [Shaders.Vertex](shaders.html#Shaders:Vertex). Default's `Default`.
+2. fragmentShaderSource - (*string*) The fragment shader id from [Shaders.Fragment](shaders.html#Shaders:Fragment). Default's `Default`.
 
 ### Examples:
 
-Extend [Shaders.Fragment](http://philogb.github.com/philogl/doc/shaders.html#Shaders:Fragment) with a default shader and create a Program from defaults.
-Taken from [lesson 8](http://uber/.github.com/luma.gl/examples/lessons/8/) example.
+Extend [Shaders.Fragment](shaders.html#Shaders:Fragment) with a default shader and create a Program from defaults.
+Taken from [lesson 8]http://uber.github.io/luma.gl/examples/lessons/8/) example.
 
 {% highlight js %}
 //Add Blend Fragment Shader

@@ -1,15 +1,16 @@
 import test from 'tape-catch';
 
-/* global document */
 import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
 
 import {createGLContext, Program} from '../../src/webgl';
 import shaders from '../../shaderlib';
 
-test('WebGL#Program constructor', t => {
-  const canvas = document.createElement('canvas');
-  const gl = createGLContext(canvas);
-  t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
+const fixture = {
+  gl: createGLContext(null, {})
+};
+
+test('WebGL#Program construct/delete', t => {
+  const {gl} = fixture;
 
   t.throws(
     () => new Program(),
@@ -18,5 +19,12 @@ test('WebGL#Program constructor', t => {
 
   const program = new Program(gl, shaders);
   t.ok(program instanceof Program, 'Program construction successful');
+
+  program.delete();
+  t.ok(program instanceof Program, 'Program delete successful');
+
+  program.delete();
+  t.ok(program instanceof Program, 'Program repeated delete successful');
+
   t.end();
 });

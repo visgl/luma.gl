@@ -4,41 +4,25 @@ import assert from 'assert';
 import log from '../log';
 
 import headlessGL from 'gl';
+import {WebGLRenderingContext} from './webgl-types';
+
 /* global window, document, console */
-/* global WebGLRenderingContext */
 
 function isBrowserContext() {
   return typeof window !== 'undefined';
 }
 
-// Check if WebGL is available
-// TODO Remove? - Kind of expensive since it creates and disposes of a context
-export function hasWebGL() {
-  if (!isBrowserContext()) {
-    // Assumes headless-gl has been set up per https://www.npmjs.com/package/gl
-    return true;
-  }
-  // Feature test WebGL
-  try {
-    const canvas = document.createElement('canvas');
-    // TODO - can we destroy context immediately rather than rely on GC?
-    return Boolean(window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-  } catch (error) {
-    return false;
-  }
-}
-
 // Checks if WebGL is enabled and creates a context for using WebGL.
 export function createGLContext(canvas, {
-  // Note, width&height only used by headless gl
+  // Note, width are height are only used by headless gl
   width = 800,
   height = 600,
+  webgl2 = false,
   debug = true,
   // Override default since this is a gotcha for most apps
   preserveDrawingBuffer = true,
   ...opts
-}) {
+} = {}) {
   const glOpts = {
     preserveDrawingBuffer,
     ...opts
@@ -49,35 +33,33 @@ export function createGLContext(canvas, {
   }
   canvas = typeof canvas === 'string' ?
     document.getElementById(canvas) : canvas;
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+  }
 
   canvas.addEventListener('webglcontextcreationerror', e => {
     console.log(e.statusMessage || 'Unknown error');
   }, false);
 
   // Prefer webgl2 over webgl1, prefer conformant over experimental
-  let gl = canvas.getContext('webgl2', glOpts);
-  gl = gl || canvas.getContext('experimental-webgl2', glOpts);
+  let gl;
+  if (webgl2) {
+    gl = canvas.getContext('webgl2', glOpts);
+    gl = gl || canvas.getContext('experimental-webgl2', glOpts);
+  }
   gl = gl || canvas.getContext('webgl', glOpts);
   gl = gl || canvas.getContext('experimental-webgl', glOpts);
 
   assert(gl, 'Failed to create WebGLRenderingContext');
 
-  return debug ? createDebugContext(gl) : gl;
+  // return debug ? createDebugContext(gl) : gl;
+
+  return gl;
 }
 
 // Returns the extension or throws an error
-export function getExtension(gl, extensionName) {
+export function getGLExtension(gl, extensionName) {
   const ERROR = 'Illegal arg to getExtension';
-  assert(gl instanceof WebGLRenderingContext, ERROR);
-  assert(typeof extensionName === 'string', ERROR);
-  const extension = gl.getExtension(extensionName);
-  assert(extension, `${extensionName} not supported!`);
-  return extension;
-}
-
-// Returns the extension or throws an error
-export function hasExtension(gl, extensionName) {
-  const ERROR = 'Illegal arg to hasExtension';
   assert(gl instanceof WebGLRenderingContext, ERROR);
   assert(typeof extensionName === 'string', ERROR);
   const extension = gl.getExtension(extensionName);
@@ -191,4 +173,41 @@ function getDebugFunction(gl, functionName, func) {
     glCheckError(gl);
     return result;
   };
+}
+
+// Deprecated methods
+
+// Check if WebGL is available
+// TODO Remove? - Kind of expensive since it creates and disposes of a context
+export function hasWebGL() {
+  console.warn('luma.gl: hasWebGL is deprecated');
+  if (!isBrowserContext()) {
+    // Assumes headless-gl has been set up per https://www.npmjs.com/package/gl
+    return true;
+  }
+  // Feature test WebGL
+  try {
+    const canvas = document.createElement('canvas');
+    // TODO - can we destroy context immediately rather than rely on GC?
+    return Boolean(window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+  } catch (error) {
+    return false;
+  }
+}
+
+// Returns the extension or throws an error
+export function hasExtension(gl, extensionName) {
+  console.warn('luma.gl: hasExtension is deprecated');
+  const ERROR = 'Illegal arg to hasExtension';
+  assert(gl instanceof WebGLRenderingContext, ERROR);
+  assert(typeof extensionName === 'string', ERROR);
+  const extension = gl.getExtension(extensionName);
+  // assert(extension, `${extensionName} not supported!`);
+  return extension;
+}
+
+export function getExtension(gl, extensionName) {
+  console.warn('luma.gl: getExtension is deprecated');
+  return getGLExtension(gl, extensionName);
 }

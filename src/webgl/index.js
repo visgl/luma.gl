@@ -9,8 +9,10 @@ export {default as Buffer} from './buffer';
 export {default as Program} from './program';
 export {default as Framebuffer} from './framebuffer';
 export {default as Renderbuffer} from './renderbuffer';
-export {default as VertexAttributes} from './vertex-attributes';
 export {Texture2D, TextureCube} from './texture';
+
+import * as VertexAttributes from './vertex-attributes';
+export {VertexAttributes};
 
 // Functions
 export * from './context';

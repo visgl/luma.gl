@@ -4,6 +4,7 @@
 /* eslint-disable no-console */
 
 import {uid} from '../utils';
+import {glCheckError} from './context';
 import {VertexShader, FragmentShader} from './shader';
 import Shaders from '../../shaderlib';
 import {default as VertexAttributes} from './vertex-attributes';
@@ -42,26 +43,46 @@ export default class Program {
     gl.attachShader(program, new VertexShader(gl, vs).handle);
     gl.attachShader(program, new FragmentShader(gl, fs).handle);
     gl.linkProgram(program);
+    gl.validateProgram(program);
     const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
     if (!linked) {
       throw new Error(`Error linking ${gl.getProgramInfoLog(program)}`);
     }
 
     this.gl = gl;
-    this.program = program;
+    this.handle = program;
     // determine attribute locations (i.e. indices)
-    this.attributeLocations = getAttributeLocations(gl, program);
+    this.updateAttributeInfo();
     // prepare uniform setters
     this.uniformSetters = getUniformSetters(gl, program);
     // no attributes enabled yet
     this.attributeEnabled = {};
   }
 
-  use() {
-    this.gl.useProgram(this.program);
+  delete() {
+    const {gl} = this;
+    if (this.handle) {
+      gl.deleteProgram(this.handle);
+      glCheckError(gl);
+    }
+    this.handle = null;
     return this;
   }
 
+  use() {
+    this.gl.useProgram(this.handle);
+    return this;
+  }
+
+  /**
+   * Apply a set of uniform values to a program
+   * Only uniforms with names actually present in the linked program
+   * will be updated.
+   * other uniforms will be ignored
+   *
+   * @param {Object} uniformMap - An object with names being keys
+   * @returns {Program} - returns itself for chaining.
+   */
   setUniforms(uniformMap) {
     for (const name of Object.keys(uniformMap)) {
       if (name in this.uniformSetters) {
@@ -71,14 +92,62 @@ export default class Program {
     return this;
   }
 
+  /**
+   * Set a texture at a given index
+   */
   setTexture(texture, index) {
     texture.bind(index);
     return this;
   }
 
+  // ATTRIBUTES
+
+  /**
+   * @returns {String[]} - array, "active" attribute names from shader linking
+   */
+  getAttributeNames() {
+    return this.attributeInfoMap.keys();
+  }
+
+  /**
+   * @param {String} - name of an attribute (matches name in a linked shader)
+   * @returns {String[]} - array of actual attribute names from shader linking
+   */
+  getAttributeLocation(attributeName) {
+    return gl.getAttribLocation(this.handle, attributeName);
+  }
+
+  /**
+   * @param {String} - name of an attribute (matches name in a linked shader)
+   * @returns {WebGLActiveInfo} - info about an active attribute
+   */
+  getAttributeInfo(attributeName) {
+    return this.attributeInfoMap[attributeName];
+  }
+
+  attachToLocation({
+    location, buffer, size, dataType, stride, offset, instanced
+  }) {}
+
+  /**
+   * @param {String} - name of an attribute (matches name in a linked shader)
+   * @returns {WebGLActiveInfo} - info about an active attribute
+   */
   setBuffer(buffer) {
-    const location = this.attributeLocations[buffer.attribute];
-    buffer.attachToLocation(location);
+    const location = this.getAttributeLocation(buffer.attribute);
+    const {gl} = this;
+    new VertexAttributes(gl)
+      .enable(location)
+      .setBuffer({location, buffer, size, dataType, stride, offset})
+      .divisor(location, instanced ? 1 : 0);
+    return this;
+  }
+
+  unsetBuffer(buffer) {
+    const location = this.getAttributeLocation(buffer.attribute);
+    new VertexAttributes(this.gl)
+      .divisor(location, 0)
+      .disable(location);
     return this;
   }
 
@@ -92,14 +161,6 @@ export default class Program {
     return this;
   }
 
-  unsetBuffer(buffer) {
-    const location = this.attributeLocations[buffer.attribute];
-    new VertexAttributes(this.gl)
-      .divisor(location, 0)
-      .disable(location);
-    return this;
-  }
-
   unsetBuffers(buffers) {
     assert(Array.isArray(buffers), 'Program.setBuffers expects array');
     buffers = buffers.length === 1 && Array.isArray(buffers[0]) ?
@@ -110,21 +171,6 @@ export default class Program {
     return this;
   }
 
-  attachToLocation({
-    location, buffer, size, dataType, stride, offset, instanced
-  } = {}) {
-    const {gl} = this;
-    return new VertexAttributes(gl)
-      .enable(location)
-      .setBuffer({location, buffer, size, dataType, stride, offset})
-      .divisor(location, instanced ? 1 : 0);
-  }
-
-  detachFromLocation({location}) {
-    return new VertexAttributes(this.gl)
-      .divisor(0)
-      .disable();
-  }
 
   // WEBGL2 INTERFACE
 
@@ -157,41 +203,59 @@ export default class Program {
     return gl.getProgramParameter(this.handle, pname);
   }
 
-  get deleteStatus() {
+  isFlaggedForDeletion() {
     return this.getProgramParameter(this.gl.DELETE_STATUS);
   }
 
-  get linkStatus() {
+  getLastLinkStatus() {
     return this.getProgramParameter(this.gl.LINK_STATUS);
   }
 
-  get validateStatus() {
+  getLastValidationStatus() {
     return this.getProgramParameter(this.gl.VALIDATE_STATUS);
   }
 
-  get attachedShadersCount() {
+  getAttachedShadersCount() {
     return this.getProgramParameter(this.gl.ATTACHED_SHADERS);
   }
 
-  get activeAttributesCount() {
+  getActiveAttributesCount() {
     return this.getProgramParameter(this.gl.ACTIVE_ATTRIBUTES);
   }
 
-  get activeUniformsCount() {
+  getActiveUniformsCount() {
     return this.getProgramParameter(this.gl.ACTIVE_UNIFORMS);
   }
 
   // This may be gl.SEPARATE_ATTRIBS or gl.INTERLEAVED_ATTRIBS.
-  get transformFeedbackBufferMode() {
+  getTransformFeedbackBufferMode() {
     return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_BUFFER_MODE);
   }
 
-  get transformFeedbackVaryingsCount() {
+  getTransformFeedbackVaryingsCount() {
     return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_VARYINGS);
   }
 
-  get activeUniformBlocksCount() {
+  getActiveUniformBlocksCount() {
     return this.getProgramParameter(this.gl.ACTIVE_UNIFORM_BLOCKS);
+  }
+
+  // determine attribute locations (maps attribute name to index)
+  _updateAttributeInfo() {
+    const {gl} = this;
+    this.attributeInfoMap = {};
+    const length = gl.getProgramParameter(this.handle, gl.ACTIVE_ATTRIBUTES);
+    for (let i = 0; i < length; i++) {
+      const info = gl.getActiveAttrib(this.handle, i);
+      const index = gl.getAttribLocation(this.handle, info.name);
+      console.log(`Attribute ${i} ${index}`);
+
+      // Add console
+      this.attributeInfoMap[info.name] = {
+        ...info,
+        index
+      };
+    }
   }
 }
 
@@ -212,14 +276,3 @@ function getUniformSetters(gl, glProgram) {
   return uniformSetters;
 }
 
-// determine attribute locations (maps attribute name to index)
-function getAttributeLocations(gl, glProgram) {
-  const length = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
-  const attributeLocations = {};
-  for (let i = 0; i < length; i++) {
-    const info = gl.getActiveAttrib(glProgram, i);
-    const index = gl.getAttribLocation(glProgram, info.name);
-    attributeLocations[info.name] = index;
-  }
-  return attributeLocations;
-}

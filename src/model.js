@@ -4,7 +4,7 @@
 // Define some locals
 import {MAX_TEXTURES} from './config';
 import Object3D from './scenegraph/object-3d';
-import {Buffer, draw, Texture2D} from './webgl';
+import {Buffer, VertexAttributes, draw, Texture2D} from './webgl';
 import {splat} from './utils';
 import log from './log';
 import assert from 'assert';
@@ -225,9 +225,77 @@ export default class Model extends Object3D {
   // and that the program is updated with those buffers
   // TODO - do we need the separation between "attributes" and "buffers"
   // couldn't apps just create buffers directly?
-  _attachAttributes(attributes) {
+  _attachAttributes(attributeMap1, attributeMap2) {
+    assert(attributeMap1);
+    const {gl, program} = this;
+
+    // Iterate only over attributes actually used by program shaders
+    const attributeNames = program.getAttributeNames();
+    for (const attributeName of attributeNames) {
+      const attribute = this.getAttributeFromMaps(
+        attributeMap1, attributeMap2, attribute
+      );
+
+      const location = this.getAttributeLocation(attributeName)
+      const vertexAttributes = new VertexAttributes(gl);
+      let buffer = vertexAttributes.getBuffer(location);
+      if (!buffer) {
+        buffer = new Buffer(gl, {
+          bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER
+        })
+        .setData({
+          bufferType: attribute.bufferType,
+          data: attribute.value,
+          usage: attribute.usage
+        })
+        vertexAttributes.setBuffer({
+          location,
+          buffer,
+          size: attribute.size,
+          instanced: attribute.instanced ? 1 : 0
+        });
+      } else {
+        // buffer
+      }
+      buffer = attribute instanceof Buffer ?
+        attribute : new Buffer(gl, {bufferType: attribute.bufferType});
+
+      const bufferOpts = {
+        attribute: attributeName
+      };
+      if (!this.buffers[attributeName]) {
+        this.buffers[attributeName] = new Buffer(program.gl, bufferOpts);
+      } else {
+        this.buffers[attributeName].update(bufferOpts);
+      }
+      program.setBuffer(this.buffers[attributeName]);
+    }
+    return this;
+  }
+
+  _getAttributeFromMaps(attributeMap1, attributeMap2, attributeName) {
+    const attribute1 = attributeMap1[attributeName];
+    const attribute2 = attributeMap2[attributeName];
+    if (attribute1 && attribute2) {
+      throw new Error(
+        `Program ${this.id} attribute ${attributeName}: multiple matches`);
+    }
+    const attribute = attribute1 || attribute2;
+    if (!attribute) {
+      throw new Error(
+        `Program ${this.id} attribute ${attributeName}: no match`);
+    }
+    return attribute;
+  }
+
+  // Makes sure buffers are created for all attributes
+  // and that the program is updated with those buffers
+  // TODO - do we need the separation between "attributes" and "buffers"
+  // couldn't apps just create buffers directly?
+  _attachAttributes2(attributes) {
     assert(attributes);
     const {program} = this;
+    program.getAttributes();
     for (const attributeName of Object.keys(attributes)) {
       const attribute = attributes[attributeName];
       const bufferOpts = {

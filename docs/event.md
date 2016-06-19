@@ -10,19 +10,19 @@ Module: Event {#Event}
 Provides the [Events](event.html) object to bind events to the canvas to interact with 3D objects.
 The first parameter of each event callback function is an event wrapper object that contains as properties:
 
-* event - (*element*) The native event.
-* x - (*number*) The x position of the mouse pointer when the event was triggered.
-* y - (*number*) The y position of the mouse pointer when the event was triggered.
-* posArray - (*array*) If multiple events where triggered at the same time (like multiple fingers touching a screen), then the array of transformed positions will be here.
-* stop - (*function*) A method that can be called to stop the propagation of the event.
-* wheel - (*number*) Only on the mousewheel event. A number specifying the delta for the mouse scroll.
-* isRightClick - (*boolean*) Whether is right or left click.
-* code - (*number*) Available onKeyDown only. The key code number.
-* key - (*string*) Available onKeyDown only. The key pressed as a string. Can also be `enter`, `up`, `down`, `left`, `right`, `backspace`, `space`, `delete` and `esc`.
-* shift - (*boolean*) Available onKeyDown only. Whether the shift key is pressed.
-* control - (*booleanr*) Available onKeyDown only. Whether the control key is pressed.
-* alt - (*boolean*) Available onKeyDown only. Whether the alt key is pressed.
-* meta - (*boolean*) Available onKeyDown only. Whether the meta key is pressed.
+* **event** (*element*) - The native event.
+* **x** (*number*) - The x position of the mouse pointer when the event was triggered.
+* **y** (*number*) - The y position of the mouse pointer when the event was triggered.
+* **posArray** (*array*) - If multiple events where triggered at the same time (like multiple fingers touching a screen), then the array of transformed positions will be here.
+* **stop** (*function*) - A method that can be called to stop the propagation of the event.
+* **wheel** (*number*) - Only on the mousewheel event. A number specifying the delta for the mouse scroll.
+* **isRightClick** (*boolean*) - Whether is right or left click.
+* **code** (*number*) - Available onKeyDown only. The key code number.
+* **key** (*string*) - Available onKeyDown only. The key pressed as a string. Can also be `enter`, `up`, `down`, `left`, `right`, `backspace`, `space`, `delete` and `esc`.
+* **shift** (*boolean*) - Available onKeyDown only. Whether the shift key is pressed.
+* **control** (*booleanr*) - Available onKeyDown only. Whether the control key is pressed.
+* **alt** (*boolean*) - Available onKeyDown only. Whether the alt key is pressed.
+* **meta** (*boolean*) - Available onKeyDown only. Whether the meta key is pressed.
 
 Events Method: create {#Events:create}
 ----------------------------------------------------
