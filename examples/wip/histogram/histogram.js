@@ -327,7 +327,7 @@
               size: 3
             },
             'indices': {
-              bufferType: gl.ELEMENT_ARRAY_BUFFER,
+              target: gl.ELEMENT_ARRAY_BUFFER,
               drawMode: gl.STATIC_DRAW,
               value: new Uint16Array(histogram.indices),
               size: 1

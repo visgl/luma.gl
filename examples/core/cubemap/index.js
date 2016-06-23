@@ -41,7 +41,7 @@ window.webGLStart = function webGLStart() {
       size: 3
     }),
     indices: new Buffer(gl, {
-      bufferType: gl.ELEMENT_ARRAY_BUFFER,
+      target: gl.ELEMENT_ARRAY_BUFFER,
       data: cubeModel.$indices,
       size: 1
     })
@@ -61,7 +61,7 @@ window.webGLStart = function webGLStart() {
       size: 3
     }),
     indices: new Buffer(gl, {
-      bufferType: gl.ELEMENT_ARRAY_BUFFER,
+      target: gl.ELEMENT_ARRAY_BUFFER,
       data: prismModel.$indices,
       size: 1
     })

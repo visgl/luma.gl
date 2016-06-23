@@ -17,7 +17,6 @@ export {VertexAttributes};
 // Functions
 export * from './context';
 export * from './draw';
-export {default as glGet} from './get';
 
 // Higher level abstractions
 export {default as FBO} from './fbo';

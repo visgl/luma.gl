@@ -11,7 +11,6 @@ window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var getDefaultShaders = LumaGL.getDefaultShaders;
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
   var Program = LumaGL.Program;
@@ -63,7 +62,7 @@ window.webGLStart = function() {
 
     // Create object
     var cubeGeometry = new Geometry({
-      vertices: [
+      positions: new Float32Array([
         -1, -1,  1,
          1, -1,  1,
          1,  1,  1,
@@ -93,9 +92,9 @@ window.webGLStart = function() {
         -1, -1,  1,
         -1,  1,  1,
         -1,  1, -1
-      ],
+      ]),
 
-      texCoords: [
+      texCoords: new Float32Array([
         0.0, 0.0,
         1.0, 0.0,
         1.0, 1.0,
@@ -130,9 +129,9 @@ window.webGLStart = function() {
         1.0, 0.0,
         1.0, 1.0,
         0.0, 1.0
-      ],
+      ]),
 
-      normals: [
+      normals: new Float32Array([
         // Front face
         0.0,  0.0,  1.0,
         0.0,  0.0,  1.0,
@@ -168,19 +167,19 @@ window.webGLStart = function() {
         -1.0,  0.0,  0.0,
         -1.0,  0.0,  0.0,
         -1.0,  0.0,  0.0
-      ],
+      ]),
 
-      indices: [
+      indices: new Uint16Array([
         0, 1, 2, 0, 2, 3,
         4, 5, 6, 4, 6, 7,
         8, 9, 10, 8, 10, 11,
         12, 13, 14, 12, 14, 15,
         16, 17, 18, 16, 18, 19,
         20, 21, 22, 20, 22, 23
-      ]
+      ])
     });
 
-    var program = new Program(gl, getDefaultShaders());
+    var program = new Program(gl);
     program.use();
 
     var cube = new Model({
@@ -189,6 +188,7 @@ window.webGLStart = function() {
       textures: [crate]
     });
 
+    let filter = 0;
     addEvents(canvas, {
       onKeyDown: function(e) {
         switch (e.key) {
@@ -239,7 +239,7 @@ window.webGLStart = function() {
       // Update Cube position
       cube.position.set(0, 0, z);
       cube.rotation.set(xRot, yRot, 0);
-      cube.update();
+      cube.updateMatrix();
 
       // Update scene config with light info
       var lightConfig = scene.config.lights;

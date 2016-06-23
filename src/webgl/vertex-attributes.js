@@ -1,6 +1,6 @@
 import {WebGLRenderingContext, WebGL2RenderingContext} from './types';
 import Buffer from './buffer';
-import {glCheckError} from './context';
+import {glGet, glCheckError} from './context';
 import assert from 'assert';
 
 /**
@@ -282,7 +282,7 @@ export function setBuffer({
   buffer = Buffer.makeFrom(gl, buffer);
 
   // Copy main data characteristics from buffer
-  target = target !== undefined ? target : buffer.target;
+  target = glGet(gl, target !== undefined ? target : buffer.target);
   layout = layout !== undefined ? layout : buffer.layout;
   assert(target, 'setBuffer needs target');
   assert(layout, 'setBuffer called on uninitialized buffer');
@@ -295,7 +295,7 @@ export function setBuffer({
     gl.vertexAttribPointer(
       location,
       layout.size,
-      layout.type,
+      glGet(gl, layout.type),
       layout.normalized,
       layout.stride,
       layout.offset
@@ -310,7 +310,7 @@ export function setBuffer({
     gl.vertexAttribIPointer(
       location,
       layout.size,
-      layout.type,
+      glGet(gl, layout.type),
       layout.stride,
       layout.offset
     );

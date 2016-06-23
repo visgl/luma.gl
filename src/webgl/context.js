@@ -6,6 +6,8 @@ import log from '../log';
 import headlessGL from 'gl';
 import {WebGLRenderingContext} from './webgl-types';
 
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+
 /* global window, document, console */
 
 function isBrowserContext() {
@@ -63,8 +65,22 @@ export function createGLContext({
   return gl;
 }
 
+// Resolve a WebGL enumeration name (returns itself if already a number)
+export function glGet(gl, name) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+
+  let value = name;
+  if (typeof name === 'string') {
+    value = gl[name];
+    assert(value, `Accessing gl.${name}`);
+  }
+  return value;
+}
+
 // Returns the extension or throws an error
 export function getGLExtension(gl, extensionName) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+
   const ERROR = 'Illegal arg to getExtension';
   assert(gl instanceof WebGLRenderingContext, ERROR);
   assert(typeof extensionName === 'string', ERROR);
@@ -76,6 +92,8 @@ export function getGLExtension(gl, extensionName) {
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
 export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
+  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+
   let scissorTestWasEnabled;
   if (scissorTest) {
     scissorTestWasEnabled = gl.isEnabled(gl.SCISSOR_TEST);

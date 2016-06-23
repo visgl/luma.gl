@@ -10,6 +10,7 @@ export default class Geometry {
     id = uid(),
     drawMode = 'TRIANGLES',
     vertexCount = undefined,
+    isIndexed = false,
     attributes,
     ...attrs
   }) {
@@ -18,6 +19,7 @@ export default class Geometry {
     this.id = id;
     this.drawMode = drawMode;
     this.vertexCount = vertexCount;
+    this.isIndexed = isIndexed;
     this.attributes = {};
     this.userData = {};
     Object.seal(this);
@@ -37,6 +39,8 @@ export default class Geometry {
       return this.attributes.indices.value.length;
     } else if (this.attributes.vertices) {
       return this.attributes.vertices.value.length / 3;
+    } else if (this.attributes.positions) {
+      return this.attributes.positions.value.length / 3;
     }
     return false;
   }
@@ -65,7 +69,7 @@ export default class Geometry {
   // value: typed array
   // type: indices, vertices, uvs
   // size: elements per vertex
-  // bufferType: WebGL buffer type (string or constant)
+  // target: WebGL buffer type (string or constant)
   setAttributes(attributes) {
     for (const attributeName in attributes) {
       let attribute = attributes[attributeName];
@@ -111,6 +115,7 @@ export default class Geometry {
       attribute.size = 1;
       attribute.target = 'ELEMENT_ARRAY_BUFFER';
       attribute.instanced = 0;
+      this.isIndexed = true;
       break;
     case 'uvs':
       attribute.size = 2;

@@ -56,8 +56,7 @@ export default class Model extends Object3D {
     this.instanced = instanced;
     this.instanceCount = instanceCount;
     this.vertexCount = vertexCount;
-    this.isIndexed = isIndexed === undefined ?
-      Boolean(this.geometry.indices) : isIndexed;
+    this.isIndexed = this.geometry.isIndexed || isIndexed;
 
     // picking options
     this.pickable = Boolean(pickable);
@@ -202,6 +201,7 @@ export default class Model extends Object3D {
 
   setProgramState() {
     const {program} = this;
+    program.use();
     program.setUniforms(this.uniforms);
     program.setBuffers(this.buffers);
     this.bindTextures();
@@ -350,7 +350,7 @@ export default class Model extends Object3D {
       const attribute = attributes[attributeName];
       let location = program && program.attributeLocations[attributeName];
       if (location === undefined &&
-        attribute.bufferType === gl.ELEMENT_ARRAY_BUFFER) {
+        attribute.target === gl.ELEMENT_ARRAY_BUFFER) {
         location = 'ELEMENT_ARRAY_BUFFER';
       }
       table = table || {};

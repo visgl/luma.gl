@@ -159,15 +159,15 @@ window.webGLStart = function() {
     view.mulMat42(camera.view, pyramid.matrix);
 
     // Draw Pyramid
-    pyramid
-      .setPosition(new Vec3(-1.5, 0, -8))
-      .setRotation(new Vec3(0, rPyramid, 0))
-      .updateMatrix()
-      .setUniforms({
-        uMVMatrix: view,
-        uPMatrix: camera.projection
-      })
-      .render();
+    // pyramid
+    //   .setPosition(new Vec3(-1.5, 0, -8))
+    //   .setRotation(new Vec3(0, rPyramid, 0))
+    //   .updateMatrix()
+    //   .setUniforms({
+    //     uMVMatrix: view,
+    //     uPMatrix: camera.projection
+    //   })
+    //   .render();
 
     // get new view matrix out of element and camera matrices
     view.mulMat42(camera.view, cube.matrix);

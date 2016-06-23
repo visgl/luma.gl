@@ -75,7 +75,7 @@ window.webGLStart = function() {
       size: 3
     }),
     indices: new Buffer(gl, {
-      bufferType: gl.ELEMENT_ARRAY_BUFFER,
+      target: gl.ELEMENT_ARRAY_BUFFER,
       data: sphereModel.$indices,
       size: 1
     })

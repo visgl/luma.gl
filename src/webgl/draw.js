@@ -1,8 +1,7 @@
 /* eslint-disable */
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
-import {getExtension} from './context';
-import glGet from './get';
+import {getExtension, glGet} from './context';
 import {GL_INDEX_TYPES, GL_DRAW_MODES} from './types';
 import assert from 'assert';
 

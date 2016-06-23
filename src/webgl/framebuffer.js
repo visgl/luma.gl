@@ -49,15 +49,15 @@ export class Framebuffer {
 
   // WEBGL INTERFACE
 
-  bind({target = 'FRAMEBUFFER'} = {}) {
+  bind({target = this.gl.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(target), this.handle);
+    gl.bindFramebuffer(glGet(gl, target), this.handle);
     return this;
   }
 
-  unbind({target = 'FRAMEBUFFER'} = {}) {
+  unbind({target = this.gl.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(target), null);
+    gl.bindFramebuffer(glGet(gl, target), null);
     return this;
   }
 

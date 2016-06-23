@@ -55,7 +55,7 @@ test('WebGL#Buffer bind/unbind', t => {
   // t.throws(
   //   () => buffer.bind().unbind(),
   //   /.*WebGL invalid enumerated argument.*/,
-  //   'Buffer bind fails on bad bufferType');
+  //   'Buffer bind fails on bad target');
   buffer.delete();
 
   t.end();

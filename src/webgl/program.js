@@ -36,7 +36,7 @@ export default class Program {
   } = {}) {
     assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
 
-    if (arguments.length !== 2) {
+    if (arguments.length > 2) {
       throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
     }
 
@@ -98,14 +98,18 @@ export default class Program {
     }
     for (const bufferName in buffers) {
       const buffer = buffers[bufferName];
-      const location = this._attributeLocations[bufferName];
-      if (warn && location >= 0 && VertexAttributes.isEnabled(gl, location)) {
-        console.warn(`Attribute ${location}:${bufferName} already enabled`);
+      if (buffer.target === gl.ELEMENT_ARRAY_BUFFER) {
+        buffer.bind();
+      } else {
+        const location = this._attributeLocations[bufferName];
+        if (warn && location >= 0 && VertexAttributes.isEnabled(gl, location)) {
+          console.warn(`Attribute ${location}:${bufferName} already enabled`);
+        }
+        VertexAttributes.enable(gl, location);
+        VertexAttributes.setBuffer({gl, location, buffer});
+        const divisor = buffer.layout.instanced ? 1 : 0;
+        VertexAttributes.setDivisor(gl, location, divisor);
       }
-      VertexAttributes.enable(gl, location);
-      VertexAttributes.setBuffer({gl, location, buffer});
-      const divisor = buffer.layout.instanced ? 1 : 0;
-      VertexAttributes.setDivisor(gl, location, divisor);
     }
     return this;
   }
@@ -120,6 +124,7 @@ export default class Program {
       VertexAttributes.disable(gl, i);
       VertexAttributes.divisor(gl, i, 0);
     }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     return this;
   }
 

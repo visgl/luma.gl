@@ -1,5 +1,5 @@
 import {WebGLRenderingContext, WebGLBuffer} from './types';
-import {glCheckError} from './context';
+import {glGet, glCheckError} from './context';
 import assert from 'assert';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
@@ -25,7 +25,7 @@ export class BufferLayout {
    */
   constructor({
     // Characteristics of stored data
-    type = this.gl.FLOAT,
+    type = 'FLOAT',
     size = 1,
     offset = 0,
     stride = 0,
@@ -132,14 +132,16 @@ export default class Buffer {
   } = {}) {
     const {gl} = this;
     assert(data || bytes >= 0, 'Buffer.setData needs data or bytes');
+    target = glGet(gl, target);
+    type = glGet(gl, type);
 
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.handle);
-    gl.bufferData(gl.ARRAY_BUFFER, data || bytes, usage);
+    gl.bindBuffer(target, this.handle);
+    gl.bufferData(target, data || bytes, usage);
     glCheckError(gl);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(target, null);
 
     this.target = target;
     this.layout = layout || new BufferLayout({
