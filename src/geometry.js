@@ -24,8 +24,11 @@ export default class Geometry {
     this.userData = {};
     Object.seal(this);
 
-    this.setAttributes(attributes);
-    this.setAttributes(attrs);
+    if (attributes) {
+      this.setAttributes(attributes);
+    } else {
+      this.setAttributes(attrs);
+    }
   }
 
   setVertexCount(vertexCount) {

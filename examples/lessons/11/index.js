@@ -39,7 +39,7 @@ window.webGLStart = function() {
 
   var scene = new Scene(gl);
 
-  Events.register(canvas, {
+  addEvents(canvas, {
     onDragStart: function(e) {
       pos = {
         x: e.x,
