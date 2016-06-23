@@ -380,7 +380,7 @@ Object.assign(EventsProxy.prototype, {
   moved: false
 });
 
-export function registerEventHandlers(domElement, opt = {}) {
+export function addEvents(domElement, opt = {}) {
   opt = {
     cachePosition: true,
     cacheSize: true,

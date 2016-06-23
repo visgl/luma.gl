@@ -13,7 +13,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
   var Buffer = LumaGL.Buffer;
   var Texture2D = LumaGL.Texture2D;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
   var loadImages = LumaGL.loadImages;
 
   var cubeGeometry = new Geometry({
@@ -134,7 +134,7 @@ window.webGLStart = function() {
     program
   });
 
-  Events.create(canvas, {
+  addEvents(canvas, {
     onKeyDown: function(e) {
       switch (e.key) {
       case 'f':

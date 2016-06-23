@@ -12,7 +12,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
   var Fx = LumaGL.Fx;
   var Model = LumaGL.Model;
   var Shaders = LumaGL.Shaders;
@@ -147,7 +147,7 @@ window.webGLStart = function() {
 
   var scene = new Scene(gl);
 
-  Events.create(canvas, {
+  addEvents(canvas, {
     onKeyDown: function(e) {
       switch(e.key) {
         case 'up':

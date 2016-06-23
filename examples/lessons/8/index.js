@@ -14,7 +14,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
   var Fx = LumaGL.Fx;
   var Model = LumaGL.Model;
   var Shaders = LumaGL.Shaders;
@@ -211,7 +211,7 @@ window.webGLStart = function() {
     var program = new Program(gl, {vs: Shaders.Vertex.Default, fs: blendFS});
     program.use();
 
-    Events.create(canvas, {
+    addEvents(canvas, {
       onKeyDown: function(e) {
         switch(e.key) {
           case 'f':

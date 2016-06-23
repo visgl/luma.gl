@@ -15,7 +15,7 @@ var webGLStart = function() {
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
 
   var canvas = document.getElementById('render-canvas');
 

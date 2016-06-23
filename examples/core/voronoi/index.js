@@ -12,7 +12,7 @@ window.webGLStart = function() {
   const Mat4 = LumaGL.Mat4;
   const Vec3 = LumaGL.Vec3;
   const Fx = LumaGL.Fx;
-  const registerEventHandlers = LumaGL.registerEventHandlers;
+  const addEvents = LumaGL.addEvents;
 
   const numSites = 1;
   const sites = [0, 0, 1];
@@ -96,7 +96,7 @@ window.webGLStart = function() {
     fs: 'sph-shader.fs.glsl'
   });
 
-  registerEventHandlers(canvas, {
+  addEvents(canvas, {
     cachePosition: false,
     onDragStart: function(e) {
       matStart = mat.clone();

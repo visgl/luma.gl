@@ -11,7 +11,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
@@ -47,7 +47,7 @@ window.webGLStart = function() {
     }
   });
 
-  Events.create(canvas, {
+  addEvents(canvas, {
     onMouseWheel: function(e, info) {
       info.stop();
       camera.position.z += info.wheel;

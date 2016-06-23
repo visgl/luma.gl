@@ -17,7 +17,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
+  var addEvents = LumaGL.addEvents;
   var Fx = LumaGL.Fx;
 
   var canvas = document.getElementById('lesson07-canvas');
@@ -189,7 +189,7 @@ window.webGLStart = function() {
       textures: [crate]
     });
 
-    Events.create(canvas, {
+    addEvents(canvas, {
       onKeyDown: function(e) {
         switch (e.key) {
         case 'f':
