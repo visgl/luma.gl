@@ -14,7 +14,7 @@ window.webGLStart = function() {
 
   var canvas = document.getElementById('render-canvas');
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);

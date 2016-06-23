@@ -9,12 +9,14 @@ const {
   WebGLRenderbuffer
 } = glob;
 
-class DummyWebGL2RenderingContext {}
+class UndefinedWebGL2RenderingContext {}
 
-// Ensure that WebGL2RenderingContext is defined so that apps can test
-// with instanceof
+// Ensure that WebGL2RenderingContext is defined even in non-WebGL2
+// environments so that apps can test their gl contexts with
+// if (gl instanceof WebGL2RenderingContext) { ... }
+
 const WebGL2RenderingContext =
-  glob.WebGL2RenderingContext || DummyWebGL2RenderingContext;
+  glob.WebGL2RenderingContext || UndefinedWebGL2RenderingContext;
 
 export {
   WebGL2RenderingContext,

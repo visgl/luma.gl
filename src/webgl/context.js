@@ -22,7 +22,7 @@ export function createGLContext({
   // Common parameters
   webgl2 = false,
   debug = true,
-  // Override default since this is a gotcha for most apps
+  // Override default since this is a gotcha for some apps
   preserveDrawingBuffer = true,
   ...opts
 } = {}) {
@@ -57,6 +57,9 @@ export function createGLContext({
 
   // return debug ? createDebugContext(gl) : gl;
 
+  if (debug) {
+    gl.debug = true;
+  }
   return gl;
 }
 
@@ -113,9 +116,11 @@ export function glGetError(gl) {
 }
 
 export function glCheckError(gl) {
-  const error = glGetError(gl);
-  if (error) {
-    throw error;
+  if (gl.debug) {
+    const error = glGetError(gl);
+    if (error) {
+      throw error;
+    }
   }
 }
 
@@ -126,31 +131,24 @@ function glGetErrorMessage(gl, glError) {
     // first call to getError. Afterwards and until the context has been
     // restored, it returns gl.NO_ERROR.
     return 'WebGL context lost';
-
   case gl.INVALID_ENUM:
     // An unacceptable value has been specified for an enumerated argument.
     return 'WebGL invalid enumerated argument';
-
   case gl.INVALID_VALUE:
     // A numeric argument is out of range.
     return 'WebGL invalid value';
-
   case gl.INVALID_OPERATION:
     // The specified command is not allowed for the current state.
     return 'WebGL invalid operation';
-
   case gl.INVALID_FRAMEBUFFER_OPERATION:
     // The currently bound framebuffer is not framebuffer complete
     // when trying to render to or to read from it.
     return 'WebGL invalid framebuffer operation';
-
   case gl.OUT_OF_MEMORY:
     // Not enough memory is left to execute the command.
     return 'WebGL out of memory';
-
   default:
-    // Not enough memory is left to execute the command.
-    return 'WebGL unknown error';
+    return `WebGL unknown error ${glError}`;
   }
 }
 

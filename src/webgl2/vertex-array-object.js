@@ -1,92 +1,44 @@
 // WebGL2 VertexArray Objects Helper
-import {glCheckError} from '../context';
+import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl/types';
+import {glCheckError} from '../webgl/context';
+import assert from 'assert';
 
-/* eslint-disable max-len */
-// WebGLVertexArrayObject? createVertexArray();
-// void deleteVertexArray(WebGLVertexArrayObject? vertexArray);
-// [WebGLHandlesContextLoss] GLboolean isVertexArray(WebGLVertexArrayObject? vertexArray);
-// void bindVertexArray(WebGLVertexArrayObject? array);
+/* eslint-disable camelcase */
+const OES_vertex_array_object = 'OES_vertex_array_object';
+
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 export default class VertexArrayObject {
-  constructor(gl) {
-    this.handle = gl.createVertexArray();
-    glCheckError(gl);
-    this.userData = {};
-    Object.seal(this);
+
+  // Returns true if VertexArrayObject is supported by implementation
+  static isSupported(gl) {
+    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    return (
+      gl instanceof WebGL2RenderingContext ||
+      gl.getExtension('OES_vertex_array_object')
+    );
   }
 
-  delete() {
-    const {gl} = this;
-    gl.deleteVertexArray(this.handle);
-    glCheckError(gl);
-    return this;
+  // Wraps a WebGLVertexArrayObject in a VertexArrayObject
+  static wrap(gl, object) {
+    return object instanceof VertexArrayObject ?
+      object :
+      new VertexArrayObject(gl, {handle: object.handle || object});
   }
 
-  bind() {
-    const {gl} = this;
-    gl.bindVertexArray(this.handle);
-    glCheckError(gl);
-    return this;
-  }
+  // Create a VertexArrayObject
+  constructor(gl, {handle} = {}) {
+    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assert(VertexArrayObject.isSupported(gl),
+      'VertexArrayObject: WebGL2 or OES_vertex_array_object required');
 
-  unbind() {
-    const {gl} = this;
-    gl.bindVertexArray(null);
-    glCheckError(gl);
-    return this;
-  }
-}
+    handle = handle || createVertexArray(gl);
+    if (!isVertexArray(handle)) {
+      throw new Error('Could not create VertexArrayObject');
+    }
 
-function createVertexArray(gl) {
-  if (gl instanceof WebGL2RenderingContext) {
-    return gl.createVertexArray();
-  }
-  const ext = gl.getExtension('OES_vertex_array_object');
-  if (ext) {
-    return ext.createVertexArrayOES();
-  }
-  return null;
-}
-
-function deleteVertexArray(gl, vertexArray) {
-  if (gl instanceof WebGL2RenderingContext) {
-    gl.deleteVertexArray(vertexArray);
-    glCheckError(gl);
-  }
-  const ext = gl.getExtension('OES_vertex_array_object');
-  if (ext) {
-    ext.deleteVertexArrayOES(vertexArray);
-    glCheckError(gl);
-  }
-}
-
-function isVertexArray(gl, vertexArray) {
-  if (gl instanceof WebGL2RenderingContext) {
-    return gl.isVertexArray(vertexArray);
-  }
-  const ext = gl.getExtension('OES_vertex_array_object');
-  if (ext) {
-    ext.isVertexArrayOES(vertexArray);
-  }
-  return false;
-}
-
-function bindVertexArray(gl, vertexArray) {
-  if (gl instanceof WebGL2RenderingContext) {
-    gl.bindVertexArrayOES(vertexArray);
-    glCheckError(gl);
-  }
-  const ext = gl.getExtension('OES_vertex_array_object');
-  if (ext) {
-    ext.bindVertexArrayOES(vertexArray);
-    glCheckError(gl);
-  }
-}
-
-export default class VertexArrays {
-  constructor(gl) {
-    this.handle = createVertexArray(gl);
-    glCheckError(gl);
+    this.gl = gl;
+    this.handle = handle;
     this.userData = {};
     Object.seal(this);
   }
@@ -107,7 +59,50 @@ export default class VertexArrays {
   unbind() {
     const {gl} = this;
     bindVertexArray(gl, null);
-    glCheckError(gl);
     return this;
   }
+}
+
+function createVertexArray(gl) {
+  if (gl instanceof WebGL2RenderingContext) {
+    return gl.createVertexArray();
+  }
+  const ext = gl.getExtension(OES_vertex_array_object);
+  if (ext) {
+    return ext.createVertexArrayOES();
+  }
+  return null;
+}
+
+function deleteVertexArray(gl, vertexArray) {
+  if (gl instanceof WebGL2RenderingContext) {
+    gl.deleteVertexArray(vertexArray);
+  }
+  const ext = gl.getExtension(OES_vertex_array_object);
+  if (ext) {
+    ext.deleteVertexArrayOES(vertexArray);
+  }
+  glCheckError(gl);
+}
+
+function isVertexArray(gl, vertexArray) {
+  if (gl instanceof WebGL2RenderingContext) {
+    return gl.isVertexArray(vertexArray);
+  }
+  const ext = gl.getExtension(OES_vertex_array_object);
+  if (ext) {
+    return ext.isVertexArrayOES(vertexArray);
+  }
+  return false;
+}
+
+function bindVertexArray(gl, vertexArray) {
+  if (gl instanceof WebGL2RenderingContext) {
+    gl.bindVertexArray(vertexArray);
+  }
+  const ext = gl.getExtension(OES_vertex_array_object);
+  if (ext) {
+    ext.bindVertexArrayOES(vertexArray);
+  }
+  glCheckError(gl);
 }

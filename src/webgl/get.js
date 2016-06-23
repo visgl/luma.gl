@@ -8,4 +8,4 @@ export default function glGet(gl, name) {
     assert(value, `Accessing gl.${name}`);
   }
   return value;
-};
+}

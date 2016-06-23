@@ -32,6 +32,14 @@ export class Camera {
     this.update();
   }
 
+  project() {
+    return null;
+  }
+
+  unproject() {
+    return null;
+  }
+
   getUniforms() {
     return this.uniforms;
   }

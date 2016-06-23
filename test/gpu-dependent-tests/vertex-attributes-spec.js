@@ -1,15 +1,11 @@
 /* eslint-disable max-len */
-import {WebGLRenderingContext, WebGL2RenderingContext} from '../../src/webgl/webgl-types';
+import {WebGL2RenderingContext} from '../../src/webgl/webgl-types';
 
 import {createGLContext, VertexAttributes} from '../../src/webgl';
 import test from 'tape-catch';
 
-const fixture = {
-  gl: createGLContext(null, {})
-};
-
 test('WebGL#VertexAttributes#enable', t => {
-  const gl = createGLContext(null);
+  const gl = createGLContext();
 
   const MAX_ATTRIBUTES = VertexAttributes.getMaxAttributes(gl);
   t.ok(MAX_ATTRIBUTES >= 8, 'VertexAttributes.getMaxAttributes() >= 8');
@@ -39,10 +35,10 @@ test('WebGL#VertexAttributes#enable', t => {
 });
 
 test('WebGL#VertexAttributes#WebGL2 support', t => {
-  const gl = createGLContext(null, {webgl2: true});
+  const gl = createGLContext({webgl2: true});
 
   if (!(gl instanceof WebGL2RenderingContext)) {
-    t.comment('WebGL2 NOT ENABLED: skipping tests');
+    t.comment('- WebGL2 NOT ENABLED: skipping tests');
     t.end();
     return;
   }

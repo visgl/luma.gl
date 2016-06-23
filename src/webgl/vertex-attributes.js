@@ -1,4 +1,5 @@
 import {WebGLRenderingContext, WebGL2RenderingContext} from './types';
+import Buffer from './buffer';
 import {glCheckError} from './context';
 import assert from 'assert';
 
@@ -42,9 +43,10 @@ import assert from 'assert';
  *
  */
 
-// ACCESSORS
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
+
+// ACCESSORS
 
 /**
  * The max number of attributes in the vertex attribute array is an
@@ -224,7 +226,10 @@ export function setDivisor(gl, location, divisor) {
     ext.vertexAttribDivisorANGLE(location, divisor);
     glCheckError(gl);
   }
-  throw new Error('WebGL instanced rendering not supported');
+  // Accept divisor 0 even if instancing is not supported (0 = no instancing)
+  if (divisor !== 0) {
+    throw new Error('WebGL instanced rendering not supported');
+  }
 }
 
 /**
@@ -246,7 +251,7 @@ export function getDivisor(gl, location) {
     glCheckError(gl);
     return divisor;
   }
-  // if instanced arrays not available, 0 means divisor has not been set
+  // if instancing is not available, return 0 meaning divisor has not been set
   return 0;
 }
 
@@ -258,43 +263,42 @@ export function getDivisor(gl, location) {
  * @param {GLuint} location - ordinal number of the attribute
  * @param {WebGLBuffer|Buffer} buffer - WebGL buffer to set as value
  * @param {GLuint} target=gl.ARRAY_BUFFER - which target to bind to
- * @param {GLuint} size - number of values per element (1-4)
- * @param {GLuint} type - type of values (e.g. gl.FLOAT)
- * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
- * @param {GLuint} integer=false - WebGL2 only, disable int-to-float conversion
- * @param {GLuint} stride=0 - supports strided arrays
- * @param {GLuint} offset=0 - supports strided arrays
+ * @param {Object} layout= Optional data layout, defaults to buffer's layout
+ * @param {GLuint} layout.size - number of values per element (1-4)
+ * @param {GLuint} layout.type - type of values (e.g. gl.FLOAT)
+ * @param {GLbool} layout.normalized=false - normalize integers to [-1,1], [0,1]
+ * @param {GLuint} layout.integer=false - WebGL2 only, disable int-to-float conv
+ * @param {GLuint} layout.stride=0 - supports strided arrays
+ * @param {GLuint} layout.offset=0 - supports strided arrays
  */
-
 export function setBuffer({
   gl,
   location,
   buffer,
-  target = gl.ARRAY_BUFFER,
-  size,
-  type,
-  normalized = gl.FALSE,
-  integer = false,
-  stride = 0,
-  offset = 0
+  target,
+  layout
 } = {}) {
   assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  buffer = Buffer.makeFrom(gl, buffer);
 
   // Copy main data characteristics from buffer
   target = target !== undefined ? target : buffer.target;
-  type = type !== undefined ? type : buffer.type;
-  size = size !== undefined ? size : buffer.size;
-  buffer.bind(target);
+  layout = layout !== undefined ? layout : buffer.layout;
+  assert(target, 'setBuffer needs target');
+  assert(layout, 'setBuffer called on uninitialized buffer');
 
-  // Attach bound ARRAY_BUFFER with specified buffer format
-  if (!integer) {
+  // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
+  buffer.bind({target: gl.ARRAY_BUFFER});
+
+  // Attach bound ARRAY_BUFFER with specified buffer format to location
+  if (!layout.integer) {
     gl.vertexAttribPointer(
       location,
-      size,
-      type,
-      normalized,
-      stride,
-      offset
+      layout.size,
+      layout.type,
+      layout.normalized,
+      layout.stride,
+      layout.offset
     );
     glCheckError(gl);
   } else {
@@ -305,14 +309,15 @@ export function setBuffer({
     assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.vertexAttribIPointer(
       location,
-      size,
-      type,
-      stride,
-      offset
+      layout.size,
+      layout.type,
+      layout.stride,
+      layout.offset
     );
     glCheckError(gl);
   }
-  buffer.unbind(target);
+
+  buffer.unbind({target: gl.ARRAY_BUFFER});
 }
 
 /*

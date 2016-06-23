@@ -26,7 +26,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   // Basic gl setup
   gl.enable(gl.DEPTH_TEST);

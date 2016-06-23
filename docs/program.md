@@ -21,31 +21,61 @@ will cause any subsequent `draw*` calls to use the shaders from this program.
 ### Notes on Shader Programming
 
 * Shader sources: A Program needs to be constructed with two strings
-containin source code for vertex and fragment shaders. While it is of course
-possible to store shader sources inline in JavaScript strings,
-when doing extensive shader programming, use of a tool like
-[glslify](https://github.com/stackgl/glslify)
-is recommended, as it supports organization of shader code
-directly in an applications source file tree. Luma is integrated with glslify
+  containing source code for vertex and fragment shaders. While it is of course
+  possible to store shader sources inline in JavaScript strings,
+  when doing extensive shader programming, use of a tool like
+  [glslify](https://github.com/stackgl/glslify)
+  is recommended, as it supports organization of shader code
+  directly in an applications source file tree.
+  luma.gl is fully integrated with glslify and the babel plugin
+  babel-plugin-glslify was written specifically to support luma.gl.
 
-Also, for smaller examples, there are functions to help load shaders
-from HTML templates or URLs in `addons/helpers.js`.
+  Also, for smaller examples, there are functions to help load shaders
+  from HTML templates or URLs in `addons/helpers.js`.
+
 * Default Shaders: Luma.GL comes with a set of default shaders that can
-be used for basic rendering and picking.
+  be used for basic rendering and picking.
+
+### Program Methods
+
+| **Method** | **Description** |
+|====|====|
+| `constructor` | creates a Program |
+| `delete` | deletes resources held by program |
+| `getAttributeCount` | Gets number of active attributes |
+| `getAttributeInfo` | Gets {name, type, size} for attribute at index |
+| `getAttributeName` | Gets name for attribute at index |
+| `getAttributeLocation` | Gets index for attribute with name |
+| `getAttributeNames` |  |
+| `getAttributeLocations` |  |
+| `setAttributes` | Sets named uniforms from a map, ignoring names |
+| `getUniformCount` | Gets number of active uniforms |
+| `getUniformInfo` | Gets {name, type, size} for uniform at index |
+| `setUniforms` | Sets named uniforms from a map, ignoring names |
+| `isFlaggedForDeletion`  | DELETE_STATUS |
+| `getLastLinkStatus`  | LINK_STATUS |
+| `getLastValidationStatus`  | gl.VALIDATE_STATUS |
+| `getAttachedShadersCount`  | gl.ATTACHED_SHADERS |
+| `getTransformFeedbackBufferMode` WebGL2 | gl.TRANSFORM_FEEDBACK_BUFFER_MODE |
+| `getTransformFeedbackVaryingsCount` WebGL2 | gl.TRANSFORM_FEEDBACK_VARYINGS |
+| `getActiveUniformBlocksCount` WebGL2 | gl.ACTIVE_UNIFORM_BLOCKS |
+| `getFragDataLocation` WebGL2 | |
+
+### Remarks
+
+* All instance methods in a program (unless they return some documented value)
+  are chainable.
+
 
 
 Class: Program {#Program}
 ===========================
 
-* All instance methods in a program (unless they return some documented value)
-are chainable.
-
-
 ### Properties:
 
 A program instance has as public properties:
 
-* program - (WebGLProgram) The native WebGL program instance.
+* handle - (WebGLProgram) The native WebGL program instance.
 
 
 Program constructor {#Program:constructor}
@@ -67,11 +97,11 @@ and a WebGLProgram is created and the shaders are linked.
 
 ### Arguments:
 
-1. gl - WebGLContext
-2. opts.vs - (*string*) The vertex shader source as a string.
-3. opts.fs - (*string*) The fragment shader source as a string.
-4. opts.id= - (*string*) Optional string id to help indentify the program
-                         during debugging.
+1. **gl** (*WebGLRenderingContext*)
+2. **opts.vs** (*string*) - The vertex shader source as a string.
+3. **opts.fs** (*string*) - The fragment shader source as a string.
+4. **opts.id** (*string*) - Optional string id to help indentify the program
+   during debugging.
 
 ### Examples:
 
@@ -244,9 +274,9 @@ remembered so they're optional for later calls.
 ### Options:
 
 * textureType - (*enum*, optional) The texture type used to call `gl.bindTexture` with. Default's `gl.TEXTURE_2D`.
-* pixelStore - (*array*, optional) An array of objects with name, value options to be set with `gl.pixelStorei` calls. 
+* pixelStore - (*array*, optional) An array of objects with name, value options to be set with `gl.pixelStorei` calls.
 Default's `[{ name: gl.UNPACK_FLIP_Y_WEBGL, value: true }]`.
-* parameters - (*array*, optional) An array of objects with nane, value options to be set with `gl.texParameteri`. 
+* parameters - (*array*, optional) An array of objects with nane, value options to be set with `gl.texParameteri`.
 Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTURE_MIN_FILTER, value: gl.NEAREST }]`.
 * data - (*object*, optional) An object with properties described below:
   * format - (*enum*, optional) The format used for `gl.texImage2D` calls. Default's `gl.RGBA`.

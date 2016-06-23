@@ -11,15 +11,15 @@ var webGLStart = function() {
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
-  var Events = LumaGL.Events;
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
+  var Events = LumaGL.Events;
 
   var canvas = document.getElementById('render-canvas');
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);

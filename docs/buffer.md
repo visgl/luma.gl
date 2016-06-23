@@ -4,6 +4,30 @@ title: Buffer
 categories: [Documentation]
 ---
 
+
+### Buffer Methods
+
+| **Method** | **Description** |
+|====|====|
+| `constructor` | creates a Buffer|
+| `delete` | Destroys buffer |
+| `initializeData` | Creates and initializes the buffer object's data store. |
+| `updateData` | Updates a subset of a buffer object's data store.
+| `bind` | Binds a buffer to a given binding point (target). |
+| `unbind` | bind(null) |
+| `bindBase` WebGL2 | Binds a buffer to a given binding point (target) at a given index. |
+| `unbindBase` WebGL2 |  |
+| `bindRange` WebGL2 | binds a range of a given WebGLBuffer to a given binding point (target) at a given index. |
+| `unbindRange` WebGL2 | |
+| `update` | Updates data in the buffer |
+
+
+### Remarks
+
+* All instance methods in a buffer (unless they return some documented value)
+  are chainable.
+
+
 Class: Buffer {#Buffer}
 ===========================
 
@@ -14,7 +38,7 @@ depending on whether the system uses a unified memory architecture or not).
 Buffer constructor: {#Buffer:constructor}
 --------------------------------------------------
 
-Creates a new WebGLBuffers. Also, for all properties set to a buffer,
+Creates a new WebGLBuffer. Also, for all properties set to a buffer,
 these properties are remembered so they're optional for later calls.
 
 ### Syntax:

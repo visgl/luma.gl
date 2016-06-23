@@ -1,11 +1,65 @@
-// Encapsulates a WebGLBuffer object
-
-import {WebGLRenderingContext} from './types';
+import {WebGLRenderingContext, WebGLBuffer} from './types';
 import {glCheckError} from './context';
-import glGet from './get';
 import assert from 'assert';
 
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+const ERR_WEBGL2 = 'WebGL2 required';
+
+// Encapsulates a WebGLBuffer object
+
+export class BufferLayout {
+  /**
+   * @classdesc
+   * Store characteristics of a data layout
+   * This data can be used when updating vertex attributes with
+   * the associated buffer, freeing the application from keeping
+   * track of this metadata.
+   *
+   * @class
+   * @param {GLuint} size - number of values per element (1-4)
+   * @param {GLuint} type - type of values (e.g. gl.FLOAT)
+   * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
+   * @param {GLuint} integer=false - WebGL2 only, int-to-float conversion
+   * @param {GLuint} stride=0 - supports strided arrays
+   * @param {GLuint} offset=0 - supports strided arrays
+   */
+  constructor({
+    // Characteristics of stored data
+    type = this.gl.FLOAT,
+    size = 1,
+    offset = 0,
+    stride = 0,
+    normalized = false,
+    integer = false,
+    instanced = 0
+  } = {}) {
+    this.type = type;
+    this.size = size;
+    this.offset = offset;
+    this.stride = stride;
+    this.normalized = normalized;
+    this.integer = integer;
+    this.instanced = instanced;
+  }
+}
+
 export default class Buffer {
+
+  /**
+   * Returns a Buffer wrapped WebGLBuffer from a variety of inputs.
+   * Allows other functions to transparently accept raw WebGLBuffers etc
+   * and manipulate them using the methods in the `Buffer` class.
+   * Checks for ".handle" (allows use of stack.gl's gl-buffer)
+   *
+   * @param {WebGLRenderingContext} gl - if a new buffer needs to be initialized
+   * @param {*} object - candidate that will be coerced to a buffer
+   * @returns {Buffer} - Buffer object that wraps the buffer parameter
+   */
+  static makeFrom(gl, object = {}) {
+    return object instanceof Buffer ? object :
+      // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
+      new Buffer(gl, {handle: object.handle || object});
+  }
 
   /*
    * @classdesc
@@ -21,19 +75,19 @@ export default class Buffer {
    * @param {WebGLRenderingContext} gl - gl context
    * @param {string} opt.id - id for debugging
    */
-  constructor(gl, {id} = {}) {
-    assert(gl instanceof WebGLRenderingContext,
-      'Buffer needs WebGLRenderingContext');
-    this.handle = gl.createBuffer();
-    if (!this.handle) {
+  constructor(gl = {}, {
+    id,
+    handle
+  } = {}) {
+    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    this.handle = handle || gl.createBuffer();
+    if (!(this.handle instanceof WebGLBuffer)) {
       throw new Error('Failed to create WebGLBuffer');
     }
     this.gl = gl;
     this.id = id;
-    this.name = name;
-    this.target = undefined;
-    this.type = undefined;
-    this.size = undefined;
+    this.target = gl.ARRAY_BUFFER;
+    this.layout = null;
     this.userData = {};
     Object.seal(this);
   }
@@ -61,15 +115,20 @@ export default class Buffer {
    * @param {GLuint} opt.size=1 - number of values per vertex
    * @returns {Buffer} Returns itself for chaining.
    */
-  initializeData({
+  setData({
     data,
     bytes,
-    usage = this.gl.STATIC_DRAW,
-
-    // Characteristics of stored data
     target = this.gl.ARRAY_BUFFER,
+    usage = this.gl.STATIC_DRAW,
+    // Characteristics of stored data
+    layout,
     type = this.gl.FLOAT,
-    size = 1
+    size = 1,
+    offset = 0,
+    stride = 0,
+    normalized = false,
+    integer = false,
+    instanced = 0
   } = {}) {
     const {gl} = this;
     assert(data || bytes >= 0, 'Buffer.setData needs data or bytes');
@@ -78,17 +137,20 @@ export default class Buffer {
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
     gl.bindBuffer(gl.ARRAY_BUFFER, this.handle);
-    glCheckError(gl);
     gl.bufferData(gl.ARRAY_BUFFER, data || bytes, usage);
     glCheckError(gl);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    glCheckError(gl);
 
-    // On initialization we store characteristics of the data, if supplied
-    // This is intended to be used when updating attributes with this buffer
     this.target = target;
-    this.type = type;
-    this.size = size;
+    this.layout = layout || new BufferLayout({
+      type,
+      size,
+      offset,
+      stride,
+      normalized,
+      integer,
+      instanced
+    });
 
     return this;
   }
@@ -98,22 +160,20 @@ export default class Buffer {
    * @param {ArrayBufferView} opt.data - contents
    * @returns {Buffer} Returns itself for chaining.
    */
-  updateData({
+  subData({
     data,
     offset = 0
   } = {}) {
     const {gl} = this;
-    assert(data, 'Buffer.bufferData needs data');
+    assert(data, 'Buffer.updateData needs data');
 
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
     gl.bindBuffer(gl.ARRAY_BUFFER, this.handle);
-    glCheckError(gl);
     gl.bufferSubData(gl.ARRAY_BUFFER, offset, data);
     glCheckError(gl);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    glCheckError(gl);
 
     return this;
   }
@@ -126,14 +186,14 @@ export default class Buffer {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bind(target = this.target) {
+  bind({target = this.target} = {}) {
     const {gl} = this;
     gl.bindBuffer(target, this.handle);
     glCheckError(gl);
     return this;
   }
 
-  unbind({target = this.target}) {
+  unbind({target = this.target} = {}) {
     const {gl} = this;
     gl.bindBuffer(target, null);
     glCheckError(gl);
@@ -149,21 +209,19 @@ export default class Buffer {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bindBase({target = this.target, index, autobind = true} = {}) {
+  bindBase({target = this.target, index} = {}) {
     const {gl} = this;
-    if (autobind) {
-      gl.bindBufferBase(target, index, this.handle);
-      glCheckError(gl);
-    }
+    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    gl.bindBufferBase(target, index, this.handle);
+    glCheckError(gl);
     return this;
   }
 
-  unbindBase({target = this.target, index, autobind = true} = {}) {
+  unbindBase({target = this.target, index} = {}) {
     const {gl} = this;
-    if (autobind) {
-      gl.bindBufferBase(target, index, null);
-      glCheckError(gl);
-    }
+    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    gl.bindBufferBase(target, index, null);
+    glCheckError(gl);
     return this;
   }
 
@@ -177,98 +235,20 @@ export default class Buffer {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bindRange({
-    target = this.target,
-    index,
-    offset = 0,
-    size,
-    autobind = true
-  } = {}) {
+  bindRange({target = this.target, index, offset = 0, size} = {}) {
     const {gl} = this;
-    if (autobind) {
-      gl.bindBufferRange(target, index, this.handle, offset, size);
-      glCheckError(gl);
-    }
+    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    gl.bindBufferRange(target, index, this.handle, offset, size);
+    glCheckError(gl);
     return this;
   }
 
-  unbindRange({target = this.target, index, autobind = true} = {}) {
+  unbindRange({target = this.target, index} = {}) {
     const {gl} = this;
-    if (autobind) {
-      gl.bindBufferBase(target, index, null);
-      glCheckError(gl);
-    }
+    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    gl.bindBufferBase(target, index, null);
+    glCheckError(gl);
     return this;
   }
 
-}
-
-export class BufferObject extends Buffer {
-
-  constructor(gl, {
-    target,
-    size = 1,
-    dataType = gl.FLOAT,
-    stride = 0,
-    offset = 0,
-    usage = gl.STATIC_DRAW,
-    instanced = 0
-  } = {}) {
-    super(gl, {target});
-    this.update({
-      target,
-      size,
-      dataType,
-      stride,
-      offset,
-      usage,
-      instanced
-    });
-  }
-
-  /* Updates data in the buffer */
-  update({
-    location,
-    target,
-    data,
-    size,
-    stride,
-    offset,
-    drawMode,
-    instanced
-  } = {}) {
-    const {gl} = this;
-    assert(data, 'Buffer needs data argument');
-    this.target = glGet(gl, target) || this.target;
-    this.size = size || this.size;
-    this.stride = stride || this.stride;
-    this.offset = offset || this.offset;
-    this.drawMode = glGet(gl, drawMode) || this.drawMode;
-    this.instanced = instanced || this.instanced;
-
-    /* Updates data in the buffer */
-    this.data = data || this.data;
-    if (this.data !== undefined) {
-      this.data({data});
-    }
-    return this;
-  }
-
-  /**
-   * initializes and creates the buffer object's data store.
-   * Updates data in the buffer
-   * @returns {Buffer} Returns itself for chaining.
-   */
-  attachToLocation({location, size, dataType, stride, offset, instanced} = {}) {
-    return new VertexAttributesArray(this.gl, {location})
-      .enable()
-      .pointer({size, dataType, stride, offset})
-      .divisor(instanced ? 1 : 0);
-  }
-
-  detachFromLocation({location}) {
-    return new VertexAttributesArray(this.gl, {location})
-      .divisor(0)
-      .disable();
-  }
 }

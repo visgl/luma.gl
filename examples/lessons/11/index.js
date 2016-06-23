@@ -23,13 +23,13 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  var program = new Program(gl, getDefaultShaders());
+  var program = new Program(gl);
   program.use();
 
   var camera = new PerspectiveCamera({
@@ -39,7 +39,7 @@ window.webGLStart = function() {
 
   var scene = new Scene(gl);
 
-  Events.create(canvas, {
+  Events.register(canvas, {
     onDragStart: function(e) {
       pos = {
         x: e.x,

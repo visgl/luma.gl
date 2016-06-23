@@ -14,7 +14,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
 
   var pyramidGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
        0,  1,  0,
       -1, -1,  1,
        1, -1,  1,
@@ -46,7 +46,7 @@ window.webGLStart = function() {
   });
 
   var cubeGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
       -1, -1,  1,
        1, -1,  1,
        1,  1,  1,
@@ -118,7 +118,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   var program =
     new Program(gl, getShadersFromHTML({vs: 'shader-vs', fs: 'shader-fs'}));
@@ -141,55 +141,11 @@ window.webGLStart = function() {
 
   program.use();
 
-  var camera = new PerspectiveCamera({
-    aspect: canvas.width / canvas.height
-  });
+  var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
 
   var view = new Mat4();
   var rPyramid = 0;
   var rCube = 0;
-
-  function setupElement(model) {
-    // Set up buffers if we haven't already.
-    if (!model.userData.buffers) {
-      model.userData.buffers = [];
-      if (model.geometry.vertices) {
-        model.userData.buffers.push(new Buffer(gl, {
-          attribute: 'aVertexPosition',
-          data: model.geometry.getArray('vertices'),
-          size: 3
-        }));
-      }
-      if (model.geometry.colors) {
-        model.userData.buffers.push(new Buffer(gl, {
-          attribute: 'aVertexColor',
-          data: model.geometry.getArray('colors'),
-          size: 4
-        }));
-      }
-      if (model.geometry.indices) {
-        model.userData.buffers.push(new Buffer(gl, {
-          attribute: 'indices',
-          data: model.geometry.getArray('indices'),
-          bufferType: gl.ELEMENT_ARRAY_BUFFER,
-          size: 1
-        }));
-      }
-    }
-
-    // update element matrix
-    model.updateMatrix();
-    // get new view matrix out of element and camera matrices
-    view.mulMat42(camera.view, model.matrix);
-    // set buffers with element data
-    program
-      .setBuffers(model.userData.buffers)
-      // set uniforms
-      .setUniforms({
-        uMVMatrix: view,
-        uPMatrix: camera.projection
-      });
-  }
 
   function animate() {
     rPyramid += 0.01;
@@ -199,18 +155,32 @@ window.webGLStart = function() {
   function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    // get new view matrix out of element and camera matrices
+    view.mulMat42(camera.view, pyramid.matrix);
+
     // Draw Pyramid
     pyramid
       .setPosition(new Vec3(-1.5, 0, -8))
       .setRotation(new Vec3(0, rPyramid, 0))
       .updateMatrix()
+      .setUniforms({
+        uMVMatrix: view,
+        uPMatrix: camera.projection
+      })
       .render();
+
+    // get new view matrix out of element and camera matrices
+    view.mulMat42(camera.view, cube.matrix);
 
     // Draw Cube
     cube
       .setPosition(new Vec3(1.5, 0, -8))
       .setRotation(new Vec3(rCube, rCube, rCube))
       .updateMatrix()
+      .setUniforms({
+        uMVMatrix: view,
+        uPMatrix: camera.projection
+      })
       .render();
   }
 

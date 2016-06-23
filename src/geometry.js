@@ -57,49 +57,25 @@ export default class Geometry {
     return attribute.value;
   }
 
+  getAttributes() {
+    return this.attributes;
+  }
+
   // Attribute
   // value: typed array
   // type: indices, vertices, uvs
   // size: elements per vertex
   // bufferType: WebGL buffer type (string or constant)
-  /* eslint-disable default-case */
   setAttributes(attributes) {
     for (const attributeName in attributes) {
       let attribute = attributes[attributeName];
+
       // Support type arrays
       if (isTypedArray(attribute)) {
         attribute = {value: attribute};
       }
-      // Check for well known attribute names
-      switch (attributeName) {
-      case 'indices':
-        attribute.type = attribute.type || 'indices';
-        break;
-      case 'texCoords':
-        attribute.type = 'uvs';
-        break;
-      case 'vertices':
-      case 'positions':
-      case 'colors':
-      case 'normals':
-      case 'pickingColors':
-        attribute.size = 3;
-        break;
-      }
 
-      // Check for types
-      switch (attribute.type) {
-      case 'indices':
-        attribute.size = 1;
-        attribute.bufferType = 'ELEMENT_ARRAY_BUFFER';
-        attribute.instanced = 0;
-        break;
-      case 'uvs':
-        attribute.size = 2;
-        break;
-      }
-      assert(attribute.value, `attribute ${attributeName} needs value`);
-      assert(attribute.size, `attribute ${attributeName} needs size`);
+      this._autoDetectAttribute(attributeName, attribute);
 
       this.attributes[attributeName] = {
         ...attribute,
@@ -108,31 +84,40 @@ export default class Geometry {
     }
     return this;
   }
+
+  // Check for well known attribute names
+  /* eslint-disable default-case */
+  _autoDetectAttribute(attributeName, attribute) {
+    let type;
+    switch (attributeName) {
+    case 'indices':
+      type = type || 'indices';
+      break;
+    case 'texCoords':
+      type = 'uvs';
+      break;
+    case 'vertices':
+    case 'positions':
+    case 'colors':
+    case 'normals':
+    case 'pickingColors':
+      attribute.size = 3;
+      break;
+    }
+
+    // Check for types
+    switch (type) {
+    case 'indices':
+      attribute.size = 1;
+      attribute.target = 'ELEMENT_ARRAY_BUFFER';
+      attribute.instanced = 0;
+      break;
+    case 'uvs':
+      attribute.size = 2;
+      break;
+    }
+    assert(attribute.value, `attribute ${attributeName} needs value`);
+    assert(attribute.size, `attribute ${attributeName} needs size`);
+  }
   /* eslint-enable default-case */
-
-  getAttributes() {
-    return this.attributes;
-  }
-
-  // TODO - remove code below
-  get vertices() {
-    return this.attributes.vertices;
-  }
-
-  get normals() {
-    return this.attributes.normals;
-  }
-
-  get colors() {
-    return this.attributes.colors;
-  }
-
-  get texCoords() {
-    return this.attributes.texCoords;
-  }
-
-  get indices() {
-    return this.attributes.indices;
-  }
-
 }

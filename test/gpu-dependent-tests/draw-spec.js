@@ -6,7 +6,7 @@ import {createGLContext, Program} from '../../src/webgl';
 import shaders from '../../shaderlib';
 
 test('WebGL#draw', t => {
-  const gl = createGLContext(null, {});
+  const gl = createGLContext({});
   t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
 
   const program = new Program(gl, shaders);

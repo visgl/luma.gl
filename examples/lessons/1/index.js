@@ -12,7 +12,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 1);
@@ -27,14 +27,12 @@ window.webGLStart = function() {
 
   program.use();
 
-  var triangle = new Buffer(gl, {
-    attribute: 'aVertexPosition',
+  var trianglePositions = new Buffer(gl).setData({
     data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
     size: 3
   });
 
-  var square = new Buffer(gl, {
-    attribute: 'aVertexPosition',
+  var squarePositions = new Buffer(gl).setData({
     data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
     size: 3
   });
@@ -46,7 +44,9 @@ window.webGLStart = function() {
   // Draw Triangle
   camera.view.$translate(-1.5, 0, -7);
   program
-    .setBuffer(triangle)
+    .setBuffers({
+      positions: trianglePositions
+    })
     .setUniforms({
       uMVMatrix: camera.view,
       uPMatrix: camera.projection
@@ -56,7 +56,9 @@ window.webGLStart = function() {
   // Draw Square
   camera.view.$translate(3, 0, 0);
   program
-    .setBuffer(square)
+    .setBuffers({
+      positions: squarePositions
+    })
     .setUniforms({
       uMVMatrix: camera.view,
       uPMatrix: camera.projection

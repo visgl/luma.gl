@@ -8,6 +8,7 @@ window.webGLStart = function() {
   var makeProgramFromDefaultShaders =
     LumaGL.addons.makeProgramFromDefaultShaders;
   var Model = LumaGL.Model;
+  var Geometry = LumaGL.Geometry;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Events = LumaGL.Events;
@@ -30,7 +31,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   // load world
   Promise.all(
@@ -72,9 +73,11 @@ window.webGLStart = function() {
     }
 
     world = new Model({
-      vertices: vertexPositions,
-      texCoords: vertexTextureCoords,
-      textures: textures[0]
+      geometry: new Geometry({
+        vertices: vertexPositions,
+        texCoords: vertexTextureCoords,
+        textures: textures[0]
+      })
     });
 
     startApp();

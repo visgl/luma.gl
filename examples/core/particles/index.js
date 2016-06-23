@@ -46,7 +46,7 @@ function begin() {
 
   var canvas = document.getElementById('render-canvas');
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0.0,0.0,0.0, 0);

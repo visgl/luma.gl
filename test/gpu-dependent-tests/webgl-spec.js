@@ -5,7 +5,7 @@ import {createGLContext, hasWebGL, hasExtension}
 import test from 'tape-catch';
 
 test('WebGL#headless', t => {
-  const gl = createGLContext(null, {});
+  const gl = createGLContext({});
   t.ok(gl instanceof WebGLRenderingContext, 'Context creation ok');
   t.ok(hasWebGL(), 'hasWebGL() is true');
   t.notOk(hasExtension(gl, 'noextension'),
