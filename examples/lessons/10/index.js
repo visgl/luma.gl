@@ -5,8 +5,9 @@ window.webGLStart = function() {
   var createGLContext = LumaGL.createGLContext;
   var loadFiles = LumaGL.loadFiles;
   var loadTextures = LumaGL.loadTextures;
-  var makeProgramFromDefaultShaders =
-    LumaGL.addons.makeProgramFromDefaultShaders;
+  // var makeProgramFromDefaultShaders =
+  //   LumaGL.addons.makeProgramFromDefaultShaders;
+  var Program = LumaGL.Program;
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
@@ -34,8 +35,8 @@ window.webGLStart = function() {
   var gl = createGLContext({canvas});
 
   // load world
-  Promise.all(
-    loadFiles({path: ['world.txt']}),
+  Promise.all([
+    loadFiles({urls: ['world.txt']}),
     loadTextures(gl, {
       urls: ['mud.gif'],
       parameters: [{
@@ -46,7 +47,7 @@ window.webGLStart = function() {
         generateMipmap: true
       }]
     })
-  )
+  ])
   .then(function onSuccess(results) {
     var files = results[0];
     var data = files[0];
@@ -72,34 +73,37 @@ window.webGLStart = function() {
       }
     }
 
-    world = new Model({
-      geometry: new Geometry({
-        vertices: vertexPositions,
-        texCoords: vertexTextureCoords,
-        textures: textures[0]
-      })
-    });
-
-    startApp();
+    var vertices = new Float32Array(vertexPositions);
+    var texCoords = new Float32Array(vertexTextureCoords);
+    startApp({vertices, texCoords, textures});
   })
-  .catch(function onError() {
+  .catch(function onError(e) {
     console.log('There was something wrong with loading the world.');
+    console.log(e.message, e.stack);
   });
 
-  function startApp() {
-
+  function startApp(params) {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    var program = makeProgramFromDefaultShaders(gl);
+    var program = new Program(gl);
     program.use();
+
+    world = new Model({
+      geometry: new Geometry({
+        vertices: params.vertices,
+        texCoords: params.texCoords,
+      }),
+      textures: params.textures,
+      program
+    });
 
     var camera = new PerspectiveCamera({
       aspect: canvas.width / canvas.height
     });
 
-    var scene = new Scene(gl, program, camera);
+    var scene = new Scene(gl, program);
 
     addEvents(canvas, {
       onKeyDown: function(e) {
@@ -162,7 +166,7 @@ window.webGLStart = function() {
         .$translate(-xPos, -yPos, -zPos);
 
       // Render all elements in the Scene
-      scene.render();
+      scene.render({camera});
     }
 
     function tick() {
