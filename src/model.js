@@ -79,8 +79,6 @@ export default class Model extends Object3D {
     // TODO - remove?
     this.dynamic = false;
 
-    Object.seal(this);
-
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
   }
   /* eslint-enable max-statements */
