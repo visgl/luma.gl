@@ -226,7 +226,7 @@ window.webGLStart = function() {
       aspect: canvas.width / canvas.height
     });
 
-    var scene = new Scene(gl, program, camera);
+    var scene = new Scene(gl, program);
 
     scene.add(cube);
 
@@ -261,7 +261,7 @@ window.webGLStart = function() {
       };
 
       // Render all elements in the Scene
-      scene.render();
+      scene.render({camera});
     }
 
     function tick() {

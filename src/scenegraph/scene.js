@@ -4,7 +4,7 @@
 import {Camera} from '../camera';
 import Group from './group';
 import {pickModels} from './pick';
-import {Vec3} from '../math';
+import {Mat4, Vec3} from '../math';
 import {merge} from '../utils';
 import * as config from '../config';
 import assert from 'assert';
@@ -93,7 +93,7 @@ export default class Scene extends Group {
     context = {},
     ...opts
   } = {}) {
-    assert(camera instanceof Camera);
+    assert(camera instanceof Camera, 'Invalid Camera in Scene.render');
 
     const {gl} = this;
     this.clear(gl);
@@ -110,7 +110,7 @@ export default class Scene extends Group {
   }
 
   renderObject({model, camera, context = {}}) {
-    assert(camera instanceof Camera);
+    assert(camera instanceof Camera, 'Invalid Camera in Scene.renderObject');
 
     model.onBeforeRender(camera, context);
 
