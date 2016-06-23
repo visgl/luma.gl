@@ -4,7 +4,7 @@
 // Define some locals
 import {MAX_TEXTURES} from './config';
 import Object3D from './scenegraph/object-3d';
-import {Buffer, draw, Texture2D} from './webgl';
+import {Buffer, VertexAttributes, draw, Texture2D} from './webgl';
 import {splat} from './utils';
 import log from './log';
 import assert from 'assert';
@@ -81,6 +81,8 @@ export default class Model extends Object3D {
     this.dynamic = false;
 
     Object.seal(this);
+
+    this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -132,6 +134,7 @@ export default class Model extends Object3D {
 
   setAttributes(attributes = {}) {
     Object.assign(this.attributes, attributes);
+    this._createBuffersFromAttributeDescriptors(attributes);
     return this;
   }
 
@@ -193,15 +196,14 @@ export default class Model extends Object3D {
     program.use();
     // TODO - how about geometry?
     // Is there a perf penalty to always detaching?
-    this._unattachAttributes(attributes);
+    this.unsetProgramState(attributes);
     return this;
   }
 
   setProgramState() {
     const {program} = this;
     program.setUniforms(this.uniforms);
-    this._attachAttributes(this.attributes);
-    this._attachAttributes(this.geometry.attributes);
+    program.setBuffers(this.buffers);
     this.bindTextures();
     return this;
   }
@@ -225,36 +227,22 @@ export default class Model extends Object3D {
   // and that the program is updated with those buffers
   // TODO - do we need the separation between "attributes" and "buffers"
   // couldn't apps just create buffers directly?
-  _attachAttributes(attributes) {
-    assert(attributes);
-    const {program} = this;
-    for (const attributeName of Object.keys(attributes)) {
-      const attribute = attributes[attributeName];
-      const bufferOpts = {
-        attribute: attributeName,
-        data: attribute.value,
-        size: attribute.size,
-        instanced: attribute.instanced ? 1 : 0,
-        bufferType: attribute.bufferType || program.gl.ARRAY_BUFFER,
-        drawMode: attribute.drawMode || program.gl.STATIC_DRAW
-      };
-      if (!this.buffers[attributeName]) {
-        this.buffers[attributeName] = new Buffer(program.gl, bufferOpts);
-      } else {
-        this.buffers[attributeName].update(bufferOpts);
-      }
-      program.setBuffer(this.buffers[attributeName]);
-    }
-    return this;
-  }
+  _createBuffersFromAttributeDescriptors(attributes) {
+    const {program: {gl}} = this;
 
-  _unattachAttributes(attributes) {
-    assert(attributes);
-    const {program} = this;
-    for (const attributeName of Object.keys(attributes)) {
-      assert(this.buffers[attributeName]);
-      program.unsetBuffer(this.buffers[attributeName]);
+    for (const attributeName in attributes) {
+      const attribute = attributes[attributeName];
+
+      this.buffers[attributeName] =
+        this.buffers[attributeName] || new Buffer(gl);
+
+      const buffer = this.buffers[attributeName];
+      buffer.setData({
+        ...attribute,
+        data: attribute.value
+      });
     }
+
     return this;
   }
 
@@ -331,17 +319,17 @@ export default class Model extends Object3D {
 
   _log() {
     if (log.priority >= 3) {
-      let table = this.getAttributesTable(this.geometry.attributes, {
+      let table = this._getAttributesTable(this.geometry.attributes, {
         header: `Attributes for ${this.geometry.id}`,
         program: this.program
       });
-      table = this.getAttributesTable(this.attributes, {
+      table = this._getAttributesTable(this.attributes, {
         table,
         program: this.program
       });
       log.table(3, table);
 
-      table = this.getUniformsTable(this.uniforms, {
+      table = this._getUniformsTable(this.uniforms, {
         header: `Uniforms for ${this.geometry.id}`
       });
       log.table(3, table);
@@ -349,7 +337,7 @@ export default class Model extends Object3D {
   }
 
   // Todo move to attributes manager
-  getAttributesTable(attributes, {
+  _getAttributesTable(attributes, {
       header = 'Attributes',
       table = null,
       program
@@ -379,7 +367,7 @@ export default class Model extends Object3D {
   }
 
   // TODO - Move to uniforms manager
-  getUniformsTable(uniforms, {header = 'Uniforms', table = null} = {}) {
+  _getUniformsTable(uniforms, {header = 'Uniforms', table = null} = {}) {
     table = table || {[header]: {}};
     for (const uniformName in uniforms) {
       const uniform = uniforms[uniformName];

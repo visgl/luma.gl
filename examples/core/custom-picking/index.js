@@ -14,11 +14,11 @@ window.webGLStart = function() {
 
   var canvas = document.getElementById('render-canvas');
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, +canvas.width, +canvas.height);
+  gl.viewport(0, 0, Number(canvas.width), Number(canvas.height));
 
   var program = makeProgramFromDefaultShaders(gl);
   program.use();
@@ -119,7 +119,10 @@ window.webGLStart = function() {
     gl.viewport(0, 0, canvas.width, canvas.height);
 
     camera.view.lookAt(
-      new Vec3(0, 1.5, 0.75), new Vec3(0, 0.5, 0), new Vec3(0, 1, 0));
+      new Vec3(0, 1.5, 0.75),
+      new Vec3(0, 0.5, 0),
+      new Vec3(0, 1, 0)
+    );
     camera.projection.perspective(60, canvas.width / canvas.height, 0.1, 1000);
 
     heightmap.rotation.y += 0.01;

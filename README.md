@@ -8,8 +8,6 @@ WebGL building blocks enabling high-performance browser-based data visualization
 
 See [**Examples**](http://uber/.github.io/luma.gl/) and [**Documentation**](http://uber/.github.io/luma.gl/_site/docs/core.html).
 
-**Note** LumaGL has just been made public. Documentation is still in the process of being updated to correspond with the latest API changes.
-
 ## LumaGL Design Goals
 
 - Focused on data visualization. While generic in nature, LumaGL

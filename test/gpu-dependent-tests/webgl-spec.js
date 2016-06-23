@@ -1,4 +1,3 @@
-/* global document */
 import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
 
 import {createGLContext, hasWebGL, hasExtension}
@@ -6,9 +5,8 @@ import {createGLContext, hasWebGL, hasExtension}
 import test from 'tape-catch';
 
 test('WebGL#headless', t => {
-  const canvas = document.createElement('canvas');
-  const gl = createGLContext(canvas);
-  t.ok(gl instanceof WebGLRenderingContext);
+  const gl = createGLContext({});
+  t.ok(gl instanceof WebGLRenderingContext, 'Context creation ok');
   t.ok(hasWebGL(), 'hasWebGL() is true');
   t.notOk(hasExtension(gl, 'noextension'),
     'hasExtension(noextension) is false');

@@ -18,80 +18,82 @@ const camera = new PerspectiveCamera({
   position: [0, 0, 0.2]
 });
 
-// TODO/rye: temporarily renaming this Img until we decide on a name that
-// doesn't shadow the builtin Image class.
+// post process an image by setting it to a texture with a specified fragment
+// and vertex shader.
+export function postProcessImage({
+  program,
+  fromTexture,
+  toFrameBuffer,
+  toScreen,
+  width,
+  height,
+  viewportX = 0,
+  viewportY = 0,
+  aspectRatio = Math.max(height / width, width / height)
+} = {}) {
+  var textures = opt.fromTexture ? splat(opt.fromTexture) : [];
+  var framebuffer = opt.toFrameBuffer;
+  var screen = !!opt.toScreen;
+  var width = opt.width || app.canvas.width;
+  var height = opt.height || app.canvas.height;
+  var x = opt.viewportX;
+  var y = opt.viewportY;
 
-export default class Img {
+  const plane = new Plane({
+    type: 'x,y',
+    xlen: length,
+    ylen: length,
+    offset: 0
+  });
+  plane.textures = textures;
+  plane.program = program;
 
-  // post process an image by setting it to a texture with a specified fragment
-  // and vertex shader.
-  static postProcess(opt) {
-    const plane =
-      new Plane({type: 'x,y', xlen: length, ylen: length, offset: 0});
+  camera.aspect = opt.aspectRatio;
+  camera.update();
 
-    const program = app.program instanceof Program ?
-      app.program :
-      app.program[opt.program];
-    var textures = opt.fromTexture ? splat(opt.fromTexture) : [],
-        framebuffer = opt.toFrameBuffer,
-        screen = !!opt.toScreen,
-        width = opt.width || app.canvas.width,
-        height = opt.height || app.canvas.height,
-        x = opt.viewportX || 0,
-        y = opt.viewportY || 0;
+  const scene = new Scene(app, program, camera);
+  scene.program = program;
 
-    camera.aspect = opt.aspectRatio ?
-      opt.aspectRatio : Math.max(height / width, width / height);
-    camera.update();
-
-    const scene = new Scene(app, program, camera);
-
-    scene.program = program;
-
-    plane.textures = textures;
-    plane.program = program;
-
-    if (!scene.models.length) {
-      scene.add(plane);
-    }
-
-    if (framebuffer) {
-      // create framebuffer
-      if (!(framebuffer in app.frameBufferMemo)) {
-        app.setFrameBuffer(framebuffer, {
-          width: width,
-          height: height,
-          bindToTexture: {
-            parameters: [{
-              name: 'TEXTURE_MAG_FILTER',
-              value: 'LINEAR'
-            }, {
-              name: 'TEXTURE_MIN_FILTER',
-              value: 'LINEAR',
-              generateMipmap: false
-            }]
-          },
-          bindToRenderBuffer: false
-        });
-      }
-      program.use();
-      app.setFrameBuffer(framebuffer, true);
-      gl.viewport(x, y, width, height);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      program.setUniforms(opt.uniforms || {});
-      scene.renderToTexture(framebuffer);
-      app.setFrameBuffer(framebuffer, false);
-    }
-
-    if (screen) {
-      program.use();
-      gl.viewport(x, y, width, height);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      program.setUniforms(opt.uniforms || {});
-      scene.render();
-    }
-
-    return this;
+  if (!scene.models.length) {
+    scene.add(plane);
   }
 
+  if (framebuffer) {
+    // create framebuffer
+    if (!(framebuffer in app.frameBufferMemo)) {
+      app.setFrameBuffer(framebuffer, {
+        width: width,
+        height: height,
+        bindToTexture: {
+          parameters: [{
+            name: 'TEXTURE_MAG_FILTER',
+            value: 'LINEAR'
+          }, {
+            name: 'TEXTURE_MIN_FILTER',
+            value: 'LINEAR',
+            generateMipmap: false
+          }]
+        },
+        bindToRenderBuffer: false
+      });
+    }
+
+    program.use();
+    app.setFrameBuffer(framebuffer, true);
+    gl.viewport(x, y, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    program.setUniforms(opt.uniforms || {});
+    scene.renderToTexture(framebuffer);
+    app.setFrameBuffer(framebuffer, false);
+  }
+
+  if (screen) {
+    program.use();
+    gl.viewport(x, y, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    program.setUniforms(opt.uniforms || {});
+    scene.render();
+  }
+
+  return this;
 }

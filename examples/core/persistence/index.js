@@ -17,7 +17,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 0);

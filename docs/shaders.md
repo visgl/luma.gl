@@ -20,7 +20,8 @@ Shaders Object: Vertex {#Shaders:Vertex}
 --------------------------------------
 
 Append in this object vertex shaders to be used with a [Scene](scene.html). We provide `Shaders.Vertex.Default` which is the
-default shader used in the library. You can find more scene compatible shaders [here](https://github.com/philogb/philogl/tree/master/shaders).
+default shader used in the library. You can find more scene compatible shaders
+[here](https://github.com/uber/luma.gl/tree/master/shaders).
 In order to get familiar with the attributes and uniforms used by the [Scene](scene.html) we provide the default vertex shader code:
 
     #define LIGHT_MAX 4
@@ -182,7 +183,7 @@ In order to get familiar with the attributes and uniforms used by the [Scene](sc
 
 ### Examples:
 
-Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8](http://uber/.github.com/luma.gl/examples/lessons/8/).
+Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8]http://uber.github.io/luma.gl/examples/lessons/8/).
 
 {% highlight js %}
 //Add Blend Fragment Shader

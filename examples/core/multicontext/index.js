@@ -18,7 +18,7 @@ window.webGLStart = function() {
 
   function doContext(canvasID, fsID) {
     var canvas = document.getElementById(canvasID);
-    var gl = createGLContext(canvas);
+    var gl = createGLContext({canvas});
     gl.clearColor(1, 0, 1, 1);
 
     var quad = new Buffer(gl, {

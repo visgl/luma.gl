@@ -4,18 +4,23 @@ title: Model
 categories: [Documentation]
 ---
 
+The `Model` class holds all the data necessary to draw an object in
+luma.gl: **shaders** (via a `Program` instance), **vertex attributes**
+(a `Geometry` instance), **uniforms** and **textures**.
+
 Class: Model {#Model}
 ===========================
 
-For most applications, the `Model` class is probably the most central Luma.GL
+For most applications, the `Model` class is probably the most central luma.gl
 class.
 
+### Model Overview:
 
-`Model` overview:
 - `Model` is a subclass of Object3D, meaning that it can be used in scene graphs
-  (by adding it to a `Group` or a `Scene`), and it can be positioned, rotated
-  and scaled.
-- `Model` contains a Model (the shaders), a Geometry (the attributes
+  (by adding it to a [`Group`](group.html) or a [`Scene`](scene.html)),
+  and it can be positioned, rotated and scaled.
+- `Model` contains a [`Program`](program.html) (the shaders),
+  a [`Geometry`](geometry.html) (containing the attributes
   for the primitive), any additional attributes for instanced rendering,
   and also stores textures and uniforms.
 - Has simple boolean flags for selecting indexed and/or instanced rendering.
@@ -26,8 +31,35 @@ class.
 - Setting textures and more.
 
 
-**Note:** All instance methods in `Model` are chainable
+### Remarks
+* All instance methods in `Model` are chainable
   (unless they return a documented value).
+
+### Methods
+
+| **Method** | **Description** |
+|====|====|
+| `constructor` | creates a Model|
+| `hash` | Return a "unique" integer |
+| `setInstanceCount` | How many instances |
+| `getInstanceCount` | Defaults to 0 |
+| `setVertexCount` | How many vertices, can be autocalculated from `Geometry` |
+| `getVertexCount` | Gets vertex count |
+| `isPickable` | True if picking is enabled |
+| `setPickable` | enable/disable picking|
+| `getProgram` | Get model's `Program` instance |
+| `getGeometry` | Get model's `Geometry` instance |
+| `getAttributes` | Get a map of named attributes |
+| `setAttributes` | Sets map of attributes (Arrays or buffers) |
+| `getUniforms` | Returns map of currently stored uniforms |
+| `setUniforms` | Stores named uniforms {key, value} |
+| `setTextures` | Sets array of textures for model |
+| `render` | Takes a camera or a viewMatrix parameter |
+| onBeforeRender | Called before model renders |
+| `onAfterRender` | Called after model renders |
+| `setProgramState` | Sets uniforms, attributes, textures, uses program |
+| `unsetProgramState` | Unbinds attributes etc |
+| `bindTextures` | binds textures |
 
 
 Model constructor {#Model:constructor}
@@ -44,18 +76,9 @@ Model constructor {#Model:constructor}
 * pickable = false, pick = null
 * uniforms = {}
 * attributes = {}
-* render = null, onBeforeRender = null, onAfterRender = null
-
-
-Model Method: use {#Model:use}
------------------------------------
-
-Calls `gl.useModel(this.program)`. To set the current program as active.
-After this call, `draw` calls will run the shaders in this program.
-
-### Syntax:
-
-  program.use();
+* render = null
+* onBeforeRender = null
+* onAfterRender = null
 
 
 Model Method: setUniforms {#Model:setUniforms}
@@ -90,7 +113,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 Set matrix information for the projection matrix and element matrix of the
 camera and world.
 The context of this example can be seen
-[here](http://uber/.github.com/luma.gl/examples/lessons/3/).
+[here]http://uber.github.io/luma.gl/examples/lessons/3/).
 
 {% highlight js %}
 program.setUniforms({

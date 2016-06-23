@@ -11,10 +11,9 @@ window.webGLStart = function() {
   var Mat4 = LumaGL.Mat4;
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
-  var Buffer = LumaGL.Buffer;
-
+  
   var triangleGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
       0,   1, 0,
       -1, -1, 0,
       1,  -1, 0
@@ -27,7 +26,7 @@ window.webGLStart = function() {
   });
 
   var squareGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
       1,   1, 0,
       -1,  1, 0,
       1,  -1, 0,
@@ -44,7 +43,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 1);
@@ -77,34 +76,15 @@ window.webGLStart = function() {
   var rSquare = 0.0;
 
   function setupModel(model) {
-    // Set up buffers if we haven't already.
-    if (!model.userData.buffers) {
-      model.userData.buffers = [
-        new Buffer(gl, {
-          attribute: 'aVertexPosition',
-          data: model.geometry.getArray('vertices'),
-          size: 3
-        }),
-        new Buffer(gl, {
-          attribute: 'aVertexColor',
-          data: model.geometry.getArray('colors'),
-          size: 4
-        })
-      ];
-    }
-
     // get new view matrix out of element and camera matrices
     var view = new Mat4();
     view.mulMat42(camera.view, model.matrix);
 
-    program
-      // set buffers with element data
-      .setBuffers(model.userData.buffers)
-      // set uniforms
-      .setUniforms({
-        uMVMatrix: view,
-        uPMatrix: camera.projection
-      });
+    model.setUniforms({
+      uMVMatrix: view,
+      uPMatrix: camera.projection
+    })
+    .setProgramState();
   }
 
   function animate() {

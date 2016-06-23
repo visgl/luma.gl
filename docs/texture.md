@@ -7,7 +7,9 @@ categories: [Documentation]
 Class: Texture {#Texture}
 ===========================
 
-
+**TODO** - texture support has been broken out into separate Texture classes,
+but documentation is not yet up to date.
+For now, please refer directly to src/webgl/texture.js
 
 Program Method: setTexture {#Program:setTexture}
 -------------------------------------------------
@@ -46,7 +48,7 @@ Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTU
 ### Examples:
 
 Setting a texture for a box. Adapted from
-[lesson 6](http://uber/.github.com/luma.gl/examples/lessons/6/).
+[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 var img = new Image();
@@ -79,7 +81,7 @@ For each `key, value` of the object passed in it executes `setTexture(key, value
 ### Examples:
 
 Set multiple type of textures from the same image. Taken from
-[lesson 6](http://uber/.github.com/luma.gl/examples/lessons/6/).
+[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).
 
 {% highlight js %}
 //load textures from image

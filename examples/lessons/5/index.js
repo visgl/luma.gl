@@ -14,7 +14,7 @@ window.webGLStart = function() {
   var Program = LumaGL.Program;
 
   var cubeGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
       -1, -1,  1,
       1, -1,  1,
       1,  1,  1,
@@ -98,7 +98,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 1);

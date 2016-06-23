@@ -23,7 +23,7 @@ window.webGLStart = function() {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 
-  var gl = createGLContext(canvas);
+  var gl = createGLContext({canvas});
 
   loadTextures(gl, {
     urls: ['glass.gif'],

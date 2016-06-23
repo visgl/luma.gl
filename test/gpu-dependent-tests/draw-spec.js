@@ -1,14 +1,12 @@
 import test from 'tape-catch';
 
-/* global document */
 import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
 
 import {createGLContext, Program} from '../../src/webgl';
 import shaders from '../../shaderlib';
 
 test('WebGL#draw', t => {
-  const canvas = document.createElement('canvas');
-  const gl = createGLContext(canvas);
+  const gl = createGLContext({});
   t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
 
   const program = new Program(gl, shaders);
@@ -19,4 +17,3 @@ test('WebGL#draw', t => {
   // instanced: true,
   // });
 });
-
