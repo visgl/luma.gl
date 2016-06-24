@@ -247,8 +247,10 @@ function createApp() {
             //start animation
             this.fx.start({
               onCompute: function(delta) {
-                earthProgram.setUniform('action', 1);
-                earthProgram.setUniform('delta', delta);
+                earthProgram.setUniforms({
+                  action; 1,
+                  delta: delta
+                });
               },
               onComplete: function() {
                 that.busyClose = false;
@@ -288,14 +290,16 @@ function createApp() {
             //start animation
             this.fx.start({
               onCompute: function(delta) {
-                earthProgram.setUniform('action', 0);
-                earthProgram.setUniform('delta', delta);
+                earthProgram.setUniforms({
+                  action: 0,
+                  delta: delta
+                });
               },
               onComplete: function() {
                 that.busyOpen = false;
                 that.mapOpened = true;
                 callback();
-              },      
+              },
               transition: Fx.Transition.Cubic.easeInOut,
               duration: 2000,
             });
@@ -378,7 +382,7 @@ function createApp() {
         program.earth.use();
         app.setFrameBuffer('shadow', true);
         gl.clear(clearOpt);
-        program.earth.setUniform('renderType', Types.SHADOW);
+        program.earth.setUniforms({renderType: Types.SHADOW});
         shadowScene.renderToTexture('shadow');
         app.setFrameBuffer('shadow', false);
       }
@@ -390,7 +394,7 @@ function createApp() {
         if (!app.dragging && theta == 0) {
           earth.rotation.set(Math.PI, 0,  0);
           earth.update();
-        } 
+        }
         theta += 0.0001;
         //render objects
         gl.clear(clearOpt);
@@ -398,12 +402,16 @@ function createApp() {
           onBeforeRender: function(elem) {
             var p = program[elem.program];
             if (elem.program == 'earth') {
-              p.setUniform('renderType', Types.EARTH);
-              p.setUniform('cloudOffset', theta);
-              p.setUniform('alphaAngle', 0);
+              p.setUniforms({
+                renderType: Types.EARTH,
+                cloudOffset: theta,
+                alphaAngle: 0
+              });
             } else if (elem.program == 'plane') {
-              p.setUniform('width', width);
-              p.setUniform('height', height);
+              p.setUniforms({
+                width: width,
+                height: height
+              });
             }
           }
         });

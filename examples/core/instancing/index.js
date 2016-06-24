@@ -39,42 +39,25 @@ window.webGLStart = function() {
     }
   }
 
-  var cubeModel = new Cube();
-
-  var cube = {
-    vertices: new Buffer(gl, {
-      attribute: 'aPosition',
-      data: cubeModel.$vertices,
-      size: 3
-    }),
-    normals: new Buffer(gl, {
-      attribute: 'aNormal',
-      data: new Float32Array(cubeModel.$normals),
-      size: 3
-    }),
-    indices: new Buffer(gl, {
-      target: gl.ELEMENT_ARRAY_BUFFER,
-      data: cubeModel.$indices,
-      size: 1
-    }),
-    offsets: new Buffer(gl, {
-      attribute: 'aOffset',
-      data: new Float32Array(offsets),
-      size: 2,
-      instanced: 1
-    }),
-    colors: new Buffer(gl, {
-      attribute: 'aColor',
-      data: new Float32Array(colors),
-      size: 3,
-      instanced: 1
-    })
-  };
-
-  var programCube = new Program(gl, getShadersFromHTML({
-    vs: 'cube-vs',
-    fs: 'cube-fs'
-  }));
+  var cube = new Cube({
+    program: new Program(gl, getShadersFromHTML({
+      vs: 'cube-vs',
+      fs: 'cube-fs'
+    })),
+    attributes: {
+      instanceOffsets: {
+        value: new Float32Array(offsets),
+        size: 2,
+        instanced: 1
+      },
+      instanceColors: {
+        value: new Float32Array(colors),
+        size: 3,
+        instanced: 1
+      }
+    },
+    instanced: false
+  });
 
   var tick = 0;
 
@@ -103,26 +86,15 @@ window.webGLStart = function() {
     var matrix = new Mat4()
       .$rotateXYZ(tick * 0.01, 0, 0)
       .$rotateXYZ(0, tick * 0.013, 0);
-    programCube
-      .use()
+    cube
       .setUniforms({
         uModel: matrix,
         uView: view,
         uProjection: projection,
         uTime: tick * 0.1
-      })
-      .setBuffers([
-        cube.vertices,
-        cube.normals,
-        cube.indices,
-        cube.offsets,
-        cube.colors
-      ]);
+      });
 
-    const ext = gl.getExtension('ANGLE_instanced_arrays');
-    ext.drawElementsInstancedANGLE(
-      gl.TRIANGLES, cubeModel.$indicesLength, gl.UNSIGNED_SHORT, 0, side * side
-    );
+    cube.render();
 
     Fx.requestAnimationFrame(render);
   }

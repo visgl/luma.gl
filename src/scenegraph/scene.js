@@ -159,8 +159,10 @@ export default class Scene extends Group {
     let pickingProgram = this.pickingProgram;
 
     pickingProgram.use();
-    pickingProgram.setUniform('enablePicking', true);
-    pickingProgram.setUniform('hasPickingColors', false);
+    pickingProgram.setUniforms({
+      enablePicking: true,
+      hasPickingColors: false
+    });
 
     this.pickingFBO.bind();
 
@@ -182,7 +184,7 @@ export default class Scene extends Group {
         let g = ((i / 256) >> 0) % 256;
         let b = ((i / (256 * 256)) >> 0) % 256;
         hash[[r, g, b]] = elem;
-        pickingProgram.setUniform('pickColor', [r / 255, g / 255, b / 255]);
+        pickingProgram.setUniforms({pickColor: [r / 255, g / 255, b / 255]});
       }
     });
 
@@ -223,8 +225,10 @@ export default class Scene extends Group {
     let pickingProgram = this.pickingProgram;
 
     pickingProgram.use();
-    pickingProgram.setUniform('enablePicking', true);
-    pickingProgram.setUniform('hasPickingColors', true);
+    pickingProgram.setUniforms({
+      enablePicking: true,
+      hasPickingColors: true
+    });
 
     this.pickingFBO.bind();
 

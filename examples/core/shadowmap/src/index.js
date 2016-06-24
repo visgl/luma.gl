@@ -24,15 +24,15 @@ window.webGLStart = function() {
 
   var fbShadow = new Framebuffer(gl, {
     width: 1024,
-    height: 1024,
+    height: 1024
     // type: gl.FLOAT
   });
 
   var q = 1;
   var y = -3;
   var plane = [
-    -q,y,q,   q,y,q,   q,y,-q,
-    -q,y,q,   q,y,-q,  -q,y,-q
+    -q, y, q, q, y, q, q, y, -q,
+    -q, y, q, q, y, -q, -q, y, -q
   ];
 
   var plane = {
@@ -41,7 +41,7 @@ window.webGLStart = function() {
       data: new Float32Array(plane),
       size: 3
     })
-  }
+  };
 
   var cubeModel = new Cube();
 
@@ -89,45 +89,51 @@ window.webGLStart = function() {
     model.$rotateXYZ(0, tick * 0.013, 0);
 
     var m2 = new Mat4();
-    m2 = m2.scale(2,2,2);
-    m2 = m2.translate(0,0,0);
+    m2 = m2.scale(2, 2, 2);
+    m2 = m2.translate(0, 0, 0);
     m2.$rotateXYZ(0, 0, tick * 0.007);
 
     fbShadow.bind();
-    gl.viewport(0,0,1024,1024);
+    gl.viewport(0, 0, 1024, 1024);
     gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    sdwView.lookAt(lightPos, new Vec3(0,0,0), new Vec3(0,0,-1));
+    sdwView.lookAt(lightPos, new Vec3(0, 0, 0), new Vec3(0, 0, -1));
     sdwProj.ortho(-4, 4, 4, -4, 0, 64);
     programShadow.use();
-    programShadow.setUniform('uModel', model);
-    programShadow.setUniform('uView', sdwView);
-    programShadow.setUniform('uProjection', sdwProj);
-    programShadow.setUniform('uLightPosition', lightPos);
+    programShadow.setUniforms({
+      uModel: model,
+      uView: sdwView,
+      uProjection: sdwProj,
+      uLightPosition: lightPos
+    });
     programShadow.setBuffer(cube.vertices);
     programShadow.setBuffer(cube.indices);
     gl.drawElements(gl.TRIANGLES, cubeModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0,0,canvas.width,canvas.height);
+    gl.viewport(0, 0, canvas.width,canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    camView.lookAt(new Vec3(0, 8, 8), new Vec3(0, 3, 0), new Vec3(0,1,0));
+    camView.lookAt(new Vec3(0, 8, 8), new Vec3(0, 3, 0), new Vec3(0, 1, 0));
     camProj.perspective(75, canvas.width/canvas.height, 0.1, 100);
     programScene.use();
-    programScene.setUniform('uModel', model);
-    programScene.setUniform('uView', camView);
-    programScene.setUniform('uProjection', camProj);
-    programScene.setUniform('uShadowView', sdwView);
-    programScene.setUniform('uShadowProj', sdwProj);
-    programScene.setUniform('uShadowMap', fbShadow.texture.bind(0));
+    programScene.setUniforms({
+      uModel: model,
+      uView: camView,
+      uProjection: camProj,
+      uShadowView: sdwView,
+      uShadowProj: sdwProj,
+      uShadowMap: fbShadow.texture.bind(0)
+    });
     programScene.setBuffer(cube.vertices);
     programScene.setBuffer(cube.normals);
     programScene.setBuffer(cube.indices);
-    programScene.setUniform('uShadow', 0.0);
+    programScene.setUniforms({uShadow: 0.0});
     gl.drawElements(gl.TRIANGLES, cubeModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
-    programScene.setUniform('uModel', m2);
-    programScene.setUniform('uShadow', 1.0);
+    programScene.setUniforms({
+      uModel: m2,
+      uShadow: 1.0
+    });
     gl.drawElements(gl.TRIANGLES, cubeModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
 
     Fx.requestAnimationFrame(render);

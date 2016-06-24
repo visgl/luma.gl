@@ -29,12 +29,12 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
     <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
     <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
-    <script type="text/javascript" src="../../dist/LumaGL.js"></script>
+    <script type="text/javascript" src="../../../dist/LumaGL.js"></script>
     <script type="text/javascript" src="../examples.js"></script>
     <script type="text/javascript" src="index.js"></script>
 
     <script id="cube-vs" type="x-shader/x-vertex">
-      attribute vec3 aPosition;
+      attribute vec3 positions;
 
       uniform mat4 uModel;
       uniform mat4 uView;
@@ -43,8 +43,8 @@
       varying vec3 position;
 
       void main(void) {
-        gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-        position = aPosition;
+        gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+        position = positions;
       }
     </script>
 
@@ -64,8 +64,8 @@
     </script>
 
     <script id="prism-vs" type="x-shader/x-vertex">
-      attribute vec3 aPosition;
-      attribute vec3 aNormal;
+      attribute vec3 positions;
+      attribute vec3 normals;
 
       uniform mat4 uModel;
       uniform mat4 uView;
@@ -76,9 +76,9 @@
       varying vec3 color;
 
       void main(void) {
-        gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-        position = vec3(uModel * vec4(aPosition,1));
-        normal = vec3(uModel * vec4(aNormal, 1));
+        gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+        position = vec3(uModel * vec4(positions,1));
+        normal = vec3(uModel * vec4(normals, 1));
       }
     </script>
 

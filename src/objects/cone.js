@@ -15,6 +15,9 @@ export class ConeGeometry extends TruncatedConeGeometry {
 
 export default class Cone extends Model {
   constructor(opts = {}) {
-    super({geometry: new ConeGeometry(opts), ...opts});
+    super({
+      geometry: new ConeGeometry(opts),
+      ...opts
+    });
   }
 }

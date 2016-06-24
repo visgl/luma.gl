@@ -21,9 +21,9 @@ test('Object#Geometries', t => {
 
     let array;
 
-    array = geometry.hasAttribute('vertices') && geometry.getArray('vertices');
+    array = geometry.hasAttribute('positions') && geometry.getArray('positions');
     t.assert(array instanceof Float32Array,
-      `${name}Geometry: expected vertices to be Float32Array`);
+      `${name}Geometry: expected positions to be Float32Array`);
 
     array = geometry.hasAttribute('normals') && geometry.getArray('normals');
     t.assert(array instanceof Float32Array,

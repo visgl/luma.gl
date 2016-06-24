@@ -8,8 +8,8 @@ var Framebuffer = LumaGL.Framebuffer;
 var Mat4 = LumaGL.Mat4;
 var Vec3 = LumaGL.Vec3;
 var Fx = LumaGL.Fx;
-var Texture2D = LumaGL.Texture2D;
 
+/* global Noise */
 var noise = new Noise();
 
 var heightMemo = {};
@@ -32,8 +32,8 @@ function normal(x, z) {
     var p0 = new Vec3(x, y0, z);
     var px = new Vec3(x + dr, ydx, z);
     var pz = new Vec3(x, ydz, z + dr);
-    p0px = px.sub(p0);
-    p0pz = pz.sub(p0);
+    var p0px = px.sub(p0);
+    var p0pz = pz.sub(p0);
     normalMemo[[x, z]] = p0pz.cross(p0px).unit();
   }
   return normalMemo[[x, z]];
@@ -214,8 +214,10 @@ window.onload = function() {
     fbPosition.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     pPosition.use();
-    pPosition.setUniform('uView', view);
-    pPosition.setUniform('uProjection', projection);
+    pPosition.setUniforms({
+      uView: view,
+      uProjection: projection
+    });
     pPosition.setBuffer(terrain.position);
     gl.drawArrays(gl.TRIANGLES, 0, terrain.count);
     pPosition.unsetBuffer(terrain.position);
@@ -223,8 +225,10 @@ window.onload = function() {
     fbNormal.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     pNormal.use();
-    pNormal.setUniform('uView', view);
-    pNormal.setUniform('uProjection', projection);
+    pNormal.setUniforms({
+      uView: view,
+      uProjection: projection
+    });
     pNormal.setBuffer(terrain.position);
     pNormal.setBuffer(terrain.normal);
     gl.drawArrays(gl.TRIANGLES, 0, terrain.count);
@@ -280,7 +284,7 @@ window.onload = function() {
         quad.color
       ]);
 
-    requestAnimationFrame(render);
+    Fx.requestAnimationFrame(render);
   }
 
   render();

@@ -379,7 +379,7 @@
           loop();
 
           function loop() {
-            program.setUniform('size', sizeValue);
+            program.setUniforms({size: sizeValue});
             if (played) {
               if (movie.paused || movie.ended) {
                 program.setBuffer('histogram');

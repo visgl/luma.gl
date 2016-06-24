@@ -7,7 +7,7 @@ import {makeTypedArray} from '../webgl/types';
 
 function noop() {}
 
-const ICO_VERTICES = [-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0];
+const ICO_POSITIONS = [-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0];
 const ICO_INDICES = [3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1];
 
 export class IcoSphereGeometry extends Geometry {
@@ -16,10 +16,10 @@ export class IcoSphereGeometry extends Geometry {
     const PI = Math.PI;
     const PI2 = PI * 2;
 
-    const vertices = [...ICO_VERTICES];
+    const positions = [...ICO_POSITIONS];
     let indices = [...ICO_INDICES];
 
-    vertices.push();
+    positions.push();
     indices.push();
 
     const getMiddlePoint = (function() {
@@ -36,12 +36,12 @@ export class IcoSphereGeometry extends Geometry {
           return pointMemo[key];
         }
 
-        const x1 = vertices[i1];
-        const y1 = vertices[i1 + 1];
-        const z1 = vertices[i1 + 2];
-        const x2 = vertices[i2];
-        const y2 = vertices[i2 + 1];
-        const z2 = vertices[i2 + 2];
+        const x1 = positions[i1];
+        const y1 = positions[i1 + 1];
+        const z1 = positions[i1 + 2];
+        const x2 = positions[i2];
+        const y2 = positions[i2 + 1];
+        const z2 = positions[i2 + 2];
         let xm = (x1 + x2) / 2;
         let ym = (y1 + y2) / 2;
         let zm = (z1 + z2) / 2;
@@ -51,9 +51,9 @@ export class IcoSphereGeometry extends Geometry {
         ym /= len;
         zm /= len;
 
-        vertices.push(xm, ym, zm);
+        positions.push(xm, ym, zm);
 
-        return (pointMemo[key] = (vertices.length / 3 - 1));
+        return (pointMemo[key] = (positions.length / 3 - 1));
       };
     }());
 
@@ -88,23 +88,23 @@ export class IcoSphereGeometry extends Geometry {
       const iu1 = i1 * 2;
       const iu2 = i2 * 2;
       const iu3 = i3 * 2;
-      const x1 = vertices[in1 + 0];
-      const y1 = vertices[in1 + 1];
-      const z1 = vertices[in1 + 2];
+      const x1 = positions[in1 + 0];
+      const y1 = positions[in1 + 1];
+      const z1 = positions[in1 + 2];
       const theta1 = Math.acos(z1 / Math.sqrt(x1 * x1 + y1 * y1 + z1 * z1));
       const phi1 = Math.atan2(y1, x1) + PI;
       const v1 = theta1 / PI;
       const u1 = 1 - phi1 / PI2;
-      const x2 = vertices[in2 + 0];
-      const y2 = vertices[in2 + 1];
-      const z2 = vertices[in2 + 2];
+      const x2 = positions[in2 + 0];
+      const y2 = positions[in2 + 1];
+      const z2 = positions[in2 + 2];
       const theta2 = Math.acos(z2 / Math.sqrt(x2 * x2 + y2 * y2 + z2 * z2));
       const phi2 = Math.atan2(y2, x2) + PI;
       const v2 = theta2 / PI;
       const u2 = 1 - phi2 / PI2;
-      const x3 = vertices[in3 + 0];
-      const y3 = vertices[in3 + 1];
-      const z3 = vertices[in3 + 2];
+      const x3 = positions[in3 + 0];
+      const y3 = positions[in3 + 1];
+      const z3 = positions[in3 + 2];
       const theta3 = Math.acos(z3 / Math.sqrt(x3 * x3 + y3 * y3 + z3 * z3));
       const phi3 = Math.atan2(y3, x3) + PI;
       const v3 = theta3 / PI;
@@ -127,12 +127,12 @@ export class IcoSphereGeometry extends Geometry {
             (u2 === 0 || u2 > 0.5) &&
               (u3 === 0 || u3 > 0.5)) {
 
-        vertices.push(
-          vertices[in1 + 0],
-          vertices[in1 + 1],
-          vertices[in1 + 2]
+        positions.push(
+          positions[in1 + 0],
+          positions[in1 + 1],
+          positions[in1 + 2]
         );
-        newIndex = vertices.length / 3 - 1;
+        newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
         texCoords[newIndex * 2 + 1] = v1;
@@ -140,12 +140,12 @@ export class IcoSphereGeometry extends Geometry {
         normals[newIndex * 3 + 1] = normal.y;
         normals[newIndex * 3 + 2] = normal.z;
 
-        vertices.push(
-          vertices[in2 + 0],
-          vertices[in2 + 1],
-          vertices[in2 + 2]
+        positions.push(
+          positions[in2 + 0],
+          positions[in2 + 1],
+          positions[in2 + 2]
         );
-        newIndex = vertices.length / 3 - 1;
+        newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
         texCoords[newIndex * 2 + 1] = v2;
@@ -153,12 +153,12 @@ export class IcoSphereGeometry extends Geometry {
         normals[newIndex * 3 + 1] = normal.y;
         normals[newIndex * 3 + 2] = normal.z;
 
-        vertices.push(
-          vertices[in3 + 0],
-          vertices[in3 + 1],
-          vertices[in3 + 2]
+        positions.push(
+          positions[in3 + 0],
+          positions[in3 + 1],
+          positions[in3 + 2]
         );
-        newIndex = vertices.length / 3 - 1;
+        newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
         texCoords[newIndex * 2 + 1] = v3;
@@ -184,7 +184,7 @@ export class IcoSphereGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        vertices: makeTypedArray(Float32Array, vertices),
+        positions: makeTypedArray(Float32Array, positions),
         normals: makeTypedArray(Float32Array, normals),
         texCoords: makeTypedArray(Float32Array, texCoords),
         indices: makeTypedArray(Uint16Array, indices)
@@ -195,6 +195,9 @@ export class IcoSphereGeometry extends Geometry {
 
 export default class IcoSphere extends Model {
   constructor(opts = {}) {
-    super({geometry: new IcoSphereGeometry(opts), ...opts});
+    super({
+      ...opts,
+      geometry: new IcoSphereGeometry(opts)
+    });
   }
 }

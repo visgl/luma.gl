@@ -42,7 +42,7 @@
           var camera = this.camera,
               pos = camera.position;
           pos.x = e.x * 0.0001;
-          this.program.setUniform('rO', pos.toFloat32Array());
+          this.program.setUniforms(rO: pos.toFloat32Array()});
         }
       },
       onError: function() {
@@ -74,15 +74,15 @@
 
         //Add control listeners.
         shadows.addEventListener('change', function() {
-          program.setUniform('renderShadows', !!shadows.checked);
+          program.setUniforms({renderShadows: Boolean(shadows.checked)});
         }, false);
 
         maxIterations.addEventListener('change', function() {
-          program.setUniform('maxIterations', +maxIterations.value);
+          program.setUniforms({maxIterations: Boolean(maxIterations.value)});
         }, false);
 
         epsilon.addEventListener('change', function() {
-          program.setUniform('epsilon', +epsilon.value);
+          program.setUniforms(epsilon: Boolean(epsilon.value)});
         }, false);
 
         animate.addEventListener('change', function() {
@@ -90,7 +90,7 @@
           region1 = panel1.getBoundingClientRect();
           panel2.style.display = animate.checked ? 'none' : '';
           region2 = panel2.getBoundingClientRect();
-          
+
           if (!animate.checked) {
             var delta = (Fx.animationTime() - t) / 5000,
                 style1 = pointer1.style,
@@ -174,16 +174,22 @@
         }, false);
 
         function updateMu() {
-          program.setUniform('mu', [parseInt(pointer1.style.left, 10) / 50 - 1,
-                                    parseInt(pointer1.style.top, 10)  / 50 - 1,
-                                    parseInt(pointer2.style.left, 10) / 50 - 1,
-                                    parseInt(pointer2.style.top, 10)  / 50 - 1]);
+          program.setUniforms({
+            mu: [
+              parseInt(pointer1.style.left, 10) / 50 - 1,
+              parseInt(pointer1.style.top, 10)  / 50 - 1,
+              parseInt(pointer2.style.left, 10) / 50 - 1,
+              parseInt(pointer2.style.top, 10)  / 50 - 1
+            ]
+          });
         }
         //...DnD stuff ends
 
         var fn = function() {
           colorArray = [+backgroundR.value, +backgroundG.value, +backgroundB.value, 1];
-          program.setUniform('backgroundColor', colorArray);
+          program.setUniforms(
+            backgroundColor: colorArray
+          });
         };
 
         [backgroundR, backgroundG, backgroundB].forEach(function(n) { n.addEventListener('change', fn, false); });

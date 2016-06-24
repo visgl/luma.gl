@@ -13,6 +13,9 @@ export class CylinderGeometry extends TruncatedConeGeometry {
 
 export default class Cylinder extends Model {
   constructor(opts) {
-    super({geometry: new CylinderGeometry(opts), ...opts});
+    super({
+      ...opts,
+      geometry: new CylinderGeometry(opts)
+    });
   }
 }

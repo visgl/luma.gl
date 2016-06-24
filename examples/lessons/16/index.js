@@ -1,37 +1,34 @@
-/* global LumaGL, document */
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 var webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
-  var makeProgramFromShaderURIs = LumaGL.addons.makeProgramFromShaderURIs;
+  var Program = LumaGL.addons.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
-  var IO = LumaGL.IO;
+  var loadFiles = LumaGL.loadFiles;
   var Model = LumaGL.Model;
   var Framebuffer = LumaGL.Framebuffer;
 
-  new IO.XHR({
-    url: 'macbook.json',
-    onError: function() {
-      alert('Unable to load macbook model');
-    },
-    onSuccess: function(jsonString) {
-      var json = JSON.parse(jsonString);
-      json.shininess = 5;
-      json.uniforms = {
-        'enableSpecularHighlights': true,
-        'materialAmbientColor': [1, 1, 1],
-        'materialDiffuseColor': [1, 1, 1],
-        'materialSpecularColor': [1.5, 1.5, 1.5],
-        'materialEmissiveColor': [0, 0, 0]
-      };
-      createApp(json);
-    }
-  }).send();
+  loadFiles({urls: ['macbook.json']})
+  .catch(error => alert('Unable to load macbook model'))
+  .then(jsonString => {
+    var json = JSON.parse(jsonString);
+    json.shininess = 5;
+    json.uniforms = {
+      'enableSpecularHighlights': true,
+      'materialAmbientColor': [1, 1, 1],
+      'materialDiffuseColor': [1, 1, 1],
+      'materialSpecularColor': [1.5, 1.5, 1.5],
+      'materialEmissiveColor': [0, 0, 0]
+    };
+    createApp(json);
+  });
 
   var canvas = document.getElementById('lesson16-canvas');
   canvas.width = canvas.clientWidth;

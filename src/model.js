@@ -257,9 +257,11 @@ export default class Model extends Object3D {
         // rye TODO: update this when TextureCube is implemented.
         // const isCube = app.textureMemo[texs[i]].isCube;
         // if (isCube) {
-        // program.setUniform('hasTextureCube' + (i + 1), true);
         // program.setTexture(texs[i], gl['TEXTURE' + i]);
-        // program.setUniform('samplerCube' + (texCube + 1), i);
+        // program.setUniforms({
+        //   ['hasTextureCube' + (i + 1)]: true,
+        //   [samplerCube' + (texCube + 1)]: i
+        // })
         // texCube++;
         // } else {
         program.setTexture(texs[i], tex2D);
@@ -346,7 +348,7 @@ export default class Model extends Object3D {
     table = table || {[header]: {}};
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
-      let location = program && program.attributeLocations[attributeName];
+      let location = program && program._attributeLocations[attributeName];
       if (location === undefined &&
         attribute.target === gl.ELEMENT_ARRAY_BUFFER) {
         location = 'ELEMENT_ARRAY_BUFFER';

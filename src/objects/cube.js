@@ -12,7 +12,7 @@ const CUBE_INDICES = [
   20, 21, 22, 20, 22, 23
 ];
 
-const CUBE_VERTICES = [
+const CUBE_POSITIONS = [
   -1, -1,  1,
    1, -1,  1,
    1,  1,  1,
@@ -124,19 +124,22 @@ const CUBE_TEX_COORDS = [
 export class CubeGeometry extends Geometry {
   constructor(opts = {}) {
     super({
+      ...opts,
       attributes: {
         indices: makeTypedArray(Uint16Array, CUBE_INDICES),
-        vertices: makeTypedArray(Float32Array, CUBE_VERTICES),
+        positions: makeTypedArray(Float32Array, CUBE_POSITIONS),
         normals: makeTypedArray(Float32Array, CUBE_NORMALS),
         texCoords: makeTypedArray(Float32Array, CUBE_TEX_COORDS)
-      },
-      ...opts
+      }
     });
   }
 }
 
 export default class Cube extends Model {
   constructor(opts = {}) {
-    super({geometry: new CubeGeometry(opts), ...opts});
+    super({
+      ...opts,
+      geometry: new CubeGeometry(opts)
+    });
   }
 }

@@ -6,6 +6,7 @@ window.webGLStart = function() {
   var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Buffer = LumaGL.Buffer;
   var Program = LumaGL.Program;
+  var Fx = LumaGL.Fx;
 
   var positions = [
     -1, -1,
@@ -21,8 +22,8 @@ window.webGLStart = function() {
     var gl = createGLContext({canvas});
     gl.clearColor(1, 0, 1, 1);
 
-    var quad = new Buffer(gl, {
-      attribute: 'aPosition',
+    var quad = new Buffer(gl).setData({
+      attribute: '',
       data: new Float32Array(positions),
       size: 2
     });
@@ -40,9 +41,14 @@ window.webGLStart = function() {
       canvas.style.height = canvas.width + 'px';
       canvas.height = canvas.width;
       gl.viewport(0, 0, canvas.width, canvas.height);
-      program.use();
-      program.setBuffer(quad);
-      program.setUniform('uTime', time);
+      program
+        .use()
+        .setBuffers({
+          aPosition: quad
+        })
+        .setUniforms({
+          uTime: time
+        });
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       Fx.requestAnimationFrame(render);
     }

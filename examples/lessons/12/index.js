@@ -1,6 +1,6 @@
 /* global window, document, LumaGL */
-/* eslint-disable no-var,
-     max-statements, array-bracket-spacing, no-multi-spaces */
+/* eslint-disable no-var, max-statements, array-bracket-spacing,
+   no-multi-spaces */
 window.webGLStart = function() {
 
   var $id = function(d) {
@@ -10,7 +10,6 @@ window.webGLStart = function() {
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
   var Program = LumaGL.Program;
-  var getDefaultShaders = LumaGL.addons.getDefaultShaders;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var addEvents = LumaGL.addEvents;
@@ -32,9 +31,6 @@ window.webGLStart = function() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, canvas.width, canvas.height);
-
-  var program = new Program(gl, getDefaultShaders());
-  program.use();
 
   var camera = new PerspectiveCamera({
     aspect: canvas.width / canvas.height,
@@ -79,11 +75,13 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
-      textures: tMoon
+      textures: tMoon,
+      program: new Program(gl)
     });
     // Create box
     box = new Cube({
-      textures: tCrate
+      textures: tCrate,
+      program: new Program(gl)
     });
     box.scale.set(2, 2, 2);
 
@@ -152,7 +150,7 @@ window.webGLStart = function() {
         .updateMatrix();
 
       // render objects
-      scene.render();
+      scene.render({camera});
 
       // request frame
       Fx.requestAnimationFrame(draw);

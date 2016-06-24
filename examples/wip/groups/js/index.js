@@ -101,7 +101,9 @@ document.addEventListener('DOMContentLoaded', function() {
         gl.clearColor(rgb[1] / 255, rgb[2] / 255, rgb[3] / 255, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        app.program.setUniform('background', [rgb[1] / 255, rgb[2] / 255, rgb[3] / 255, 1]);
+        app.program.setUniforms(
+          background: [rgb[1] / 255, rgb[2] / 255, rgb[3] / 255, 1]
+        });
 
         app.setTexture('pattern', {
           data: {

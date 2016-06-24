@@ -30,7 +30,7 @@ export class TruncatedConeGeometry extends Geometry {
     const end = nvertical + (bottomCap ? 2 : 0);
     const vertsAroundEdge = nradial + 1;
 
-    const vertices = new Float32Array(numVertices * 3);
+    const positions = new Float32Array(numVertices * 3);
     const normals = new Float32Array(numVertices * 3);
     const texCoords = new Float32Array(numVertices * 2);
     const indices = new Uint16Array(nradial * (nvertical + extra) * 6);
@@ -63,9 +63,9 @@ export class TruncatedConeGeometry extends Geometry {
         const sin = msin(j * mpi * 2 / nradial);
         const cos = mcos(j * mpi * 2 / nradial);
 
-        vertices[i3 + 0] = sin * ringRadius;
-        vertices[i3 + 1] = y;
-        vertices[i3 + 2] = cos * ringRadius;
+        positions[i3 + 0] = sin * ringRadius;
+        positions[i3 + 1] = y;
+        positions[i3 + 2] = cos * ringRadius;
 
         normals[i3 + 0] = (i < 0 || i > nvertical) ? 0 : (sin * cosSlant);
         normals[i3 + 1] = (i < 0) ? -1 : (i > nvertical ? 1 : sinSlant);
@@ -94,7 +94,7 @@ export class TruncatedConeGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        vertices,
+        positions,
         normals,
         texCoords,
         indices
@@ -106,6 +106,9 @@ export class TruncatedConeGeometry extends Geometry {
 
 export default class TruncatedCone extends Model {
   constructor(opts) {
-    super({geometry: new TruncatedConeGeometry(opts), ...opts});
+    super({
+      ...opts,
+      geometry: new TruncatedConeGeometry(opts)
+    });
   }
 }

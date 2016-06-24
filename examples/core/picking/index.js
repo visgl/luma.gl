@@ -1,11 +1,6 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
 var webGLStart = function() {
-
-  var $id = function(d) {
-    return document.getElementById(d);
-  };
-
   var createGLContext = LumaGL.createGLContext;
   var loadTextures = LumaGL.loadTextures;
   var Program = LumaGL.Program;
@@ -25,7 +20,7 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  var program = new Program(gl, getDefaultShaders());
+  var program = new Program(gl);
   program.use();
 
   // rye TODO: there's a bug in merge that makes it require an object.

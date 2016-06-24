@@ -33,7 +33,9 @@ export default class VertexArrayObject {
       'VertexArrayObject: WebGL2 or OES_vertex_array_object required');
 
     handle = handle || createVertexArray(gl);
-    if (!isVertexArray(handle)) {
+    // TODO isVertexArray fails when using extension for some reason
+    // if (!isVertexArray(gl, handle)) {
+    if (!handle) {
       throw new Error('Could not create VertexArrayObject');
     }
 

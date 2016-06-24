@@ -27,7 +27,7 @@ window.webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, +canvas.width, +canvas.height);
 
-  var defaultProgram = new Program(gl, getDefaultShaders());
+  var defaultProgram = new Program(gl);
   var perpixelProgram = new Program(gl, getShadersFromHTML({
     vs: 'per-fragment-lighting-vs',
     fs: 'per-fragment-lighting-fs'

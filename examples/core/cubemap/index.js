@@ -1,8 +1,9 @@
 /* global LumaGL, window, document */
-
+/* eslint-disable no-var, max-statements */
 window.webGLStart = function webGLStart() {
 
   var createGLContext = LumaGL.createGLContext;
+  var Program = LumaGL.addons.Program;
   var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
@@ -32,43 +33,19 @@ window.webGLStart = function webGLStart() {
     generateMipmap: true
   });
 
-  var cubeModel = new Cube();
+  var cube = new Cube({
+    program: new Program(gl, getShadersFromHTML({
+      vs: 'cube-vs',
+      fs: 'cube-fs'
+    }))
+  });
 
-  var cube = {
-    vertices: new Buffer(gl, {
-      attribute: 'aPosition',
-      data: cubeModel.$vertices,
-      size: 3
-    }),
-    indices: new Buffer(gl, {
-      target: gl.ELEMENT_ARRAY_BUFFER,
-      data: cubeModel.$indices,
-      size: 1
-    })
-  };
-
-  var prismModel = new Cube();
-
-  var prism = {
-    vertices: new Buffer(gl, {
-      attribute: 'aPosition',
-      data: new Float32Array(prismModel.$vertices),
-      size: 3
-    }),
-    normals: new Buffer(gl, {
-      attribute: 'aNormal',
-      data: new Float32Array(prismModel.$normals),
-      size: 3
-    }),
-    indices: new Buffer(gl, {
-      target: gl.ELEMENT_ARRAY_BUFFER,
-      data: prismModel.$indices,
-      size: 1
-    })
-  };
-
-  var programCube = new Program(gl, getShadersFromHTML{vs: 'cube-vs', 'cube-fs');
-  var programPrism = new Program(gl, getShadersFromHTML{vs: 'prism-vs', 'prism-fs');
+  var prism = new Cube({
+    program: new Program(gl, getShadersFromHTML({
+      vs: 'prism-vs',
+      fs: 'prism-fs'
+    }))
+  });
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -77,78 +54,80 @@ window.webGLStart = function webGLStart() {
   function render() {
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
-    gl.viewport(0,0,canvas.width,canvas.height);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     var camera = new PerspectiveCamera({
       fov: 75,
-      aspect: canvas.width/canvas.height,
+      aspect: canvas.width / canvas.height
     });
     camera.view.$translate(0, 0, -4);
     tick++;
     var model = new Mat4();
-    model.$scale(5,5,5);
-    programCube.use();
-    programCube.setUniform('uTexture', cubemap.bind(0));
-    programCube.setUniform('uModel', model);
-    programCube.setUniform('uView', camera.view);
-    programCube.setUniform('uProjection', camera.projection);
-    programCube.setBuffer(cube.indices);
-    programCube.setBuffer(cube.vertices);
+    model.$scale(5, 5, 5);
+    cube
+      .setUniforms({
+        uTexture: cubemap.bind(0),
+        uModel: model,
+        uView: camera.view,
+        uProjection: camera.projection
+      });
     gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
 
     var reflection = parseFloat(document.getElementById('reflection').value);
     var refraction = parseFloat(document.getElementById('refraction').value);
 
-    var model = new Mat4();
+    model = new Mat4();
     model.$rotateXYZ(tick * 0.01, 0, 0);
     model.$rotateXYZ(0, tick * 0.013, 0);
-    programPrism.use();
-    programPrism.setUniform('uTexture', cubemap.bind(0));
-    programPrism.setUniform('uModel', model);
-    programPrism.setUniform('uView', camera.view);
-    programPrism.setUniform('uProjection', camera.projection);
-    programPrism.setUniform('uReflect', reflection);
-    programPrism.setUniform('uRefract', refraction);
-    programPrism.setBuffer(prism.vertices);
-    programPrism.setBuffer(prism.normals);
-    programPrism.setBuffer(prism.indices);
-    gl.drawElements(gl.TRIANGLES, prismModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
+    prism
+      .setUniforms({
+        uTexture: cubemap.bind(0),
+        uModel: model,
+        uView: camera.view,
+        uProjection: camera.projection,
+        uReflect: reflection,
+        uRefract: refraction
+      });
+
+    gl.drawElements(
+      gl.TRIANGLES, prism.getVer, gl.UNSIGNED_SHORT, 0
+    );
 
     Fx.requestAnimationFrame(render);
   }
 
   render();
 
-  function genTextures (size) {
-    var signs = ['pos', 'neg']
-    var axes = ['x', 'y', 'z']
+  function genTextures(size) {
+    var signs = ['pos', 'neg'];
+    var axes = ['x', 'y', 'z'];
     var textures = {
       pos: {},
       neg: {}
-    }
+    };
     for (var i = 0; i < signs.length; i++) {
-      var sign = signs[i]
+      var sign = signs[i];
       for (var j = 0; j < axes.length; j++) {
-        var axis = axes[j]
-        var canvas = document.createElement('canvas')
-        canvas.width = canvas.height = size
-        var ctx = canvas.getContext('2d')
+        var axis = axes[j];
+        var canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        var ctx = canvas.getContext('2d');
         if (axis === 'x' || axis === 'z') {
-          ctx.translate(size, size)
-          ctx.rotate(Math.PI)
+          ctx.translate(size, size);
+          ctx.rotate(Math.PI);
         }
         var color = 'rgb(0,64,128)';
-        ctx.fillStyle = color
-        ctx.fillRect(0, 0, size, size)
-        ctx.fillStyle = 'white'
-        ctx.fillRect(8, 8, size - 16, size - 16)
         ctx.fillStyle = color;
-        ctx.font = size / 4 + 'px serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(sign + '-' + axis, size / 2, size / 2)
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(8, 8, size - 16, size - 16);
+        ctx.fillStyle = color;
+        ctx.font = size / 4 + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sign + '-' + axis, size / 2, size / 2);
         ctx.strokeStyle = color;
-        ctx.strokeRect(0, 0, size, size)
-        textures[sign][axis] = canvas
+        ctx.strokeRect(0, 0, size, size);
+        textures[sign][axis] = canvas;
       }
     }
     return textures;

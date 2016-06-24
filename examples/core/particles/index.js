@@ -2,6 +2,7 @@
 /* eslint-disable no-var, max-statements */
 var createGLContext = LumaGL.createGLContext;
 var Program = LumaGL.Program;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
 var Buffer = LumaGL.Buffer;
 var Framebuffer = LumaGL.Framebuffer;
 var PerspectiveCamera = LumaGL.PerspectiveCamera;
@@ -9,7 +10,6 @@ var Mat4 = LumaGL.Mat4;
 var Vec3 = LumaGL.Vec3;
 var Fx = LumaGL.Fx;
 var Texture2D = LumaGL.Texture2D;
-
 
 var spriteImg = new Image();
 var marbleImg = new Image();
@@ -57,19 +57,14 @@ function begin() {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
-
   var dd = 4;
-  fillPos = function() {
+  function fillPos() {
     return [
       dd * (Math.random() - 0.5),
       dd * (Math.random() - 0.5),
       dd * (Math.random() - 0.5),
       dd * (Math.random() - 0.5)
-    ]
-  }
-
-  fillColor = function() {
-    return [0,0,0,1];
+    ];
   }
 
   var dataSize = 256;
@@ -87,10 +82,9 @@ function begin() {
     generateMipmap: true
   });
 
-
   var quadpos = [
-    -1, -1, 0,   +1, -1, 0,   +1, +1, 0,
-    -1, -1, 0,   +1, +1, 0,   -1, +1, 0
+    -1, -1, 0, +1, -1, 0, +1, +1, 0,
+    -1, -1, 0, +1, +1, 0, -1, +1, 0
   ];
 
   var quad = new Buffer(gl, {
@@ -125,7 +119,7 @@ function begin() {
       data: indexArray,
       size: 1,
       instanced: 1
-    }),
+    })
   };
 
   var plane = {
@@ -141,11 +135,26 @@ function begin() {
     })
   };
 
-  var pAccelerate = Program.fromHTMLTemplates(gl, 'quad-vs', 'accelerate-fs');
-  var pIntegrate = Program.fromHTMLTemplates(gl, 'quad-vs', 'integrate-fs');
-  var pScene = Program.fromHTMLTemplates(gl, 'scene-vs', 'scene-fs');
-  var pPlane = Program.fromHTMLTemplates(gl, 'plane-vs', 'plane-fs');
-  var pCopy = Program.fromHTMLTemplates(gl, 'quad-vs', 'copy-fs');
+  var pAccelerate = new Program(gl, getShadersFromHTML({
+    vs: 'quad-vs',
+    fs: 'accelerate-fs'
+  }));
+  var pIntegrate = new Program(gl, getShadersFromHTML({
+    vs: 'quad-vs',
+    fs: 'integrate-fs'
+  }));
+  var pScene = new Program(gl, getShadersFromHTML({
+    vs: 'scene-vs',
+    fs: 'scene-fs'
+  }));
+  var pPlane = new Program(gl, getShadersFromHTML({
+    vs: 'plane-vs',
+    fs: 'plane-fs'
+  }));
+  var pCopy = new Program(gl, getShadersFromHTML({
+    vs: 'quad-vs',
+    fs: 'copy-fs'
+  }));
 
   function copy(src, opts) {
     opts = opts || {};
@@ -159,12 +168,12 @@ function begin() {
     }
     gl.viewport(0, 0, opts.width, opts.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    pCopy.setUniform('uTexture', src.bind(0));
+    pCopy.setUniforms({uTexture: src.bind(0)});
     pCopy.setBuffer(quad);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  fbPosition = [
+  const fbPosition = [
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
@@ -182,10 +191,10 @@ function begin() {
   copy(tPosition, {
     width: dataSize,
     height: dataSize,
-    dest: fbPosition[0],
+    dest: fbPosition[0]
   });
 
-  fbVelocity = [
+  const fbVelocity = [
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
@@ -218,90 +227,104 @@ function begin() {
 
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
-  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
   function render() {
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
-    gl.viewport(0,0,canvas.width,canvas.height);
+    gl.viewport(0, 0, canvas.width, canvas.height);
 
     tick++;
 
     var r = Math.sin(tick * 0.001) * 500 + 600;
     view.lookAt(
-      new Vec3(Math.cos(tick * 0.002) * r, Math.sin(tick * 0.003) * 500 + 400, Math.sin(tick * 0.002) * r),
+      new Vec3(
+        Math.cos(tick * 0.002) * r,
+        Math.sin(tick * 0.003) * 500 + 400,
+        Math.sin(tick * 0.002) * r
+      ),
       new Vec3(0, 0, 0),
-      new Vec3(0,1,0)
+      new Vec3(0, 1, 0)
     );
-    projection.perspective(60, canvas.width/canvas.height, 1, 10000);
+    projection.perspective(60, canvas.width / canvas.height, 1, 10000);
 
-    fbVelocitySrc = fbVelocity[ppongIndex];
-    fbVelocityDst = fbVelocity[1 - ppongIndex];
-    fbPositionSrc = fbPosition[ppongIndex];
-    fbPositionDst = fbPosition[1 - ppongIndex];
+    const fbVelocitySrc = fbVelocity[ppongIndex];
+    const fbVelocityDst = fbVelocity[1 - ppongIndex];
+    const fbPositionSrc = fbPosition[ppongIndex];
+    const fbPositionDst = fbPosition[1 - ppongIndex];
 
-    gl.viewport(0,0,dataSize,dataSize);
+    gl.viewport(0, 0, dataSize, dataSize);
 
     fbVelocityDst.bind();
     gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
     pAccelerate.use();
-    pAccelerate.setUniform('uSpeed', Math.sin(tick*0.005) * 8 + 8);
-    pAccelerate.setUniform('uPosition', fbPositionSrc.texture.bind(0));
-    pAccelerate.setUniform('uVelocity', fbVelocitySrc.texture.bind(1));
-    pAccelerate.setUniform('uTime', tick * 0.25);
+    pAccelerate.setUniforms({
+      uSpeed: Math.sin(tick * 0.005) * 8 + 8),
+      uPosition: fbPositionSrc.texture.bind(0),
+      uVelocity: fbVelocitySrc.texture.bind(1),
+      uTime: tick * 0.25
+    });
     pAccelerate.setBuffer(quad);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     fbPositionDst.bind();
     gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
     pIntegrate.use();
-    pIntegrate.setUniform('uPosition', fbPositionSrc.texture.bind(0));
-    pIntegrate.setUniform('uVelocity', fbVelocityDst.texture.bind(1));
+    pIntegrate.setUniforms({
+      uPosition: fbPositionSrc.texture.bind(0),
+      uVelocity: fbVelocityDst.texture.bind(1)
+    });
     pIntegrate.setBuffer(quad);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0,0,canvas.width,canvas.height);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     var model = new Mat4();
     model.$translate(0, -200, 0);
-    model.$rotateXYZ(-Math.PI/2,0,0);
+    model.$rotateXYZ(-Math.PI / 2, 0, 0);
     model.$scale(1000, 1000, 1);
 
     pPlane.use();
     pPlane.setBuffer(plane.vertices);
     pPlane.setBuffer(plane.uvs);
-    pPlane.setUniform('uTexture', tMarble.bind(0));
-    pPlane.setUniform('uModel', model);
-    pPlane.setUniform('uView', view);
-    pPlane.setUniform('uProjection', projection);
+    pPlane.setUniforms({
+      uTexture: tMarble.bind(0),
+      uModel: model,
+      uView: view,
+      uProjection: projection
+    });
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     pScene.use();
     pScene.setBuffer(sprite.vertices);
     pScene.setBuffer(sprite.uvs);
     pScene.setBuffer(sprite.index);
-    pScene.setUniform('uReflect', true);
-    pScene.setUniform('uColor', color);
-    pScene.setUniform('uView', view);
-    pScene.setUniform('uProjection', projection);
-    pScene.setUniform('uPosition', fbPositionDst.texture.bind(1));
-    pScene.setUniform('uSprite', tSprite.bind(2));
-    pScene.setUniform('uDataSize', dataSize);
-    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, dataSize*dataSize);
+    pScene.setUniforms({
+      uReflect: true,
+      uColor: color,
+      uView: view,
+      uProjection: projection,
+      uPosition: fbPositionDst.texture.bind(1),
+      uSprite: tSprite.bind(2),
+      uDataSize: dataSize
+    });
+    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, dataSize * dataSize);
 
     pScene.use();
     pScene.setBuffer(sprite.vertices);
     pScene.setBuffer(sprite.uvs);
     pScene.setBuffer(sprite.index);
-    pScene.setUniform('uReflect', false);
-    pScene.setUniform('uColor', color);
-    pScene.setUniform('uView', view);
-    pScene.setUniform('uProjection', projection);
-    pScene.setUniform('uPosition', fbPositionDst.texture.bind(1));
-    pScene.setUniform('uSprite', tSprite.bind(2));
-    pScene.setUniform('uDataSize', dataSize);
+    pScene.setUniforms({
+      uReflect: false,
+      uColor: color,
+      uView: view,
+      uProjection: projection,
+      uPosition: fbPositionDst.texture.bind(1),
+      uSprite: tSprite.bind(2),
+      uDataSize: dataSize
+    });
     ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, dataSize*dataSize);
 
     ppongIndex = 1 - ppongIndex;
@@ -310,5 +333,4 @@ function begin() {
   }
 
   render();
-
 };

@@ -497,14 +497,14 @@ function createApp() {
         gl.viewport(0, 0, 1024, 1024);
 
         program.earth.use();
-        program.earth.setUniform('renderType',  0);
+        program.earth.setUniforms({renderType: 0});
         app.setFrameBuffer('world', true);
         gl.clear(clearOpt);
         scene.renderToTexture('world');
         app.setFrameBuffer('world', false);
 
         program.earth.use();
-        program.earth.setUniform('renderType',  -1);
+        program.earth.setUniforms({renderType: -1});
         app.setFrameBuffer('world2', true);
         gl.clear(clearOpt);
         scene.renderToTexture('world2');

@@ -23,12 +23,12 @@ export class SphereGeometry extends Geometry {
       };
     }
 
-    const vertices = new Float32Array(numVertices * 3);
+    const positions = new Float32Array(numVertices * 3);
     const normals = new Float32Array(numVertices * 3);
     const texCoords = new Float32Array(numVertices * 2);
     const indices = new Uint16Array(nlat * nlong * 6);
 
-    // Create vertices, normals and texCoords
+    // Create positions, normals and texCoords
     for (let y = 0; y <= nlat; y++) {
       for (let x = 0; x <= nlong; x++) {
 
@@ -51,9 +51,9 @@ export class SphereGeometry extends Geometry {
 
         const r = radius(ux, uy, uz, u, v);
 
-        vertices[i3 + 0] = r * ux;
-        vertices[i3 + 1] = r * uy;
-        vertices[i3 + 2] = r * uz;
+        positions[i3 + 0] = r * ux;
+        positions[i3 + 1] = r * uy;
+        positions[i3 + 2] = r * uz;
 
         normals[i3 + 0] = ux;
         normals[i3 + 1] = uy;
@@ -83,7 +83,7 @@ export class SphereGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        vertices: vertices,
+        positions: positions,
         indices: indices,
         normals: normals,
         texCoords: texCoords
@@ -93,7 +93,10 @@ export class SphereGeometry extends Geometry {
 }
 
 export default class Sphere extends Model {
-  constructor(opts) {
-    super({geometry: new SphereGeometry(opts), ...opts});
+  constructor(opts = {}) {
+    super({
+      ...opts,
+      geometry: new SphereGeometry(opts)
+    });
   }
 }

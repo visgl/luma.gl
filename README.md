@@ -59,16 +59,19 @@ const gl = createGLContext(canvas, {initialize: true});
 const camera = new PerspectiveCamera({aspect: canvas.width/canvas.height});
 
 const program = makeProgramFromDefaultShaders(gl);
-program.use();
-program.setBuffer(new Buffer(gl, {
-  attribute: 'aVertexPosition',
-  data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
-  size: 3
-}));
-
 camera.view.$translate(-1.5, 0, -7);
-program.setUniform('uMVMatrix', camera.view);
-program.setUniform('uPMatrix', camera.projection);
+program
+  .use()
+  .setBuffers({
+    aVertexPosition: new Buffer(gl).setData({
+      data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
+      size: 3
+    })
+  })
+  .setUniforms({
+    uMVMatrix: camera.view.
+    uPMatrix: camera.projection
+  });
 
 // Draw Triangle
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

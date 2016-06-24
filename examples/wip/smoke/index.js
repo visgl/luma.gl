@@ -354,10 +354,12 @@ function webGLStart() {
         var program = app.program.shadow;
 
         program.use();
-        program.setBuffer('indices', { value: idx });
-        program.setUniform('platform', -1);
-        program.setUniform('SHADOW_RESO', SHADOW_RESO);
-        program.setUniform('lightPosition', [light.x, light.y, light.z]);
+        program.setBuffer('indices', {value: idx});
+         ,``
+          platform: -1,
+          SHADOW_RESO,
+          lightPosition: [light.x, light.y, light.z]
+        });
 
         app.setFrameBuffer('softShadow', true);
         gl.viewport(0, 0, SHADOW_RESO, SHADOW_RESO);
@@ -376,9 +378,11 @@ function webGLStart() {
         program = app.program.shadowMap;
         program.use();
         program.setBuffer('indices', { value: idx });
-        program.setUniform('platform', 1);
-        program.setUniform('SHADOW_RESO', SHADOW_RESO / 100);
-        program.setUniform('lightPosition', [light.x, light.y, light.z]);
+        program.setUniforms({
+          platform: 1,
+          SHADOW_RESO: SHADOW_RESO / 100,
+          lightPosition: [light.x, light.y, light.z]
+        });
         app.setFrameBuffer('shadowMap', true);
         gl.viewport(0, 0, SHADOW_RESO, SHADOW_RESO);
         gl.clearColor(0, 0, 0, 0);

@@ -20,7 +20,7 @@ export class PlaneGeometry extends Geometry {
     const subdivisions2 = opts['n' + coords[1]] || 1;
     const numVertices = (subdivisions1 + 1) * (subdivisions2 + 1);
 
-    let vertices = new Float32Array(numVertices * 3);
+    let positions = new Float32Array(numVertices * 3);
     let normals = new Float32Array(numVertices * 3);
     let texCoords = new Float32Array(numVertices * 2);
 
@@ -39,9 +39,9 @@ export class PlaneGeometry extends Geometry {
 
         switch (type) {
         case 'x,y':
-          vertices[i3 + 0] = c1len * u - c1len * 0.5;
-          vertices[i3 + 1] = c2len * v - c2len * 0.5;
-          vertices[i3 + 2] = offset;
+          positions[i3 + 0] = c1len * u - c1len * 0.5;
+          positions[i3 + 1] = c2len * v - c2len * 0.5;
+          positions[i3 + 2] = offset;
 
           normals[i3 + 0] = 0;
           normals[i3 + 1] = 0;
@@ -49,9 +49,9 @@ export class PlaneGeometry extends Geometry {
           break;
 
         case 'x,z':
-          vertices[i3 + 0] = c1len * u - c1len * 0.5;
-          vertices[i3 + 1] = offset;
-          vertices[i3 + 2] = c2len * v - c2len * 0.5;
+          positions[i3 + 0] = c1len * u - c1len * 0.5;
+          positions[i3 + 1] = offset;
+          positions[i3 + 2] = c2len * v - c2len * 0.5;
 
           normals[i3 + 0] = 0;
           normals[i3 + 1] = flipCull ? 1 : -1;
@@ -59,9 +59,9 @@ export class PlaneGeometry extends Geometry {
           break;
 
         case 'y,z':
-          vertices[i3 + 0] = offset;
-          vertices[i3 + 1] = c1len * u - c1len * 0.5;
-          vertices[i3 + 2] = c2len * v - c2len * 0.5;
+          positions[i3 + 0] = offset;
+          positions[i3 + 1] = c1len * u - c1len * 0.5;
+          positions[i3 + 2] = c2len * v - c2len * 0.5;
 
           normals[i3 + 0] = flipCull ? 1 : -1;
           normals[i3 + 1] = 0;
@@ -97,15 +97,15 @@ export class PlaneGeometry extends Geometry {
 
     // Optionally, unpack indexed geometry
     if (unpack) {
-      const vertices2 = new Float32Array(indices.length * 3);
+      const positions2 = new Float32Array(indices.length * 3);
       const normals2 = new Float32Array(indices.length * 3);
       const texCoords2 = new Float32Array(indices.length * 2);
 
       for (let x = 0; x < indices.length; ++x) {
         const index = indices[x];
-        vertices2[x * 3 + 0] = vertices[index * 3 + 0];
-        vertices2[x * 3 + 1] = vertices[index * 3 + 1];
-        vertices2[x * 3 + 2] = vertices[index * 3 + 2];
+        positions2[x * 3 + 0] = positions[index * 3 + 0];
+        positions2[x * 3 + 1] = positions[index * 3 + 1];
+        positions2[x * 3 + 2] = positions[index * 3 + 2];
         normals2[x * 3 + 0] = normals[index * 3 + 0];
         normals2[x * 3 + 1] = normals[index * 3 + 1];
         normals2[x * 3 + 2] = normals[index * 3 + 2];
@@ -113,7 +113,7 @@ export class PlaneGeometry extends Geometry {
         texCoords2[x * 2 + 1] = texCoords[index * 2 + 1];
       }
 
-      vertices = vertices2;
+      positions = positions2;
       normals = normals2;
       texCoords = texCoords2;
       indices = undefined;
@@ -122,7 +122,7 @@ export class PlaneGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        vertices,
+        positions,
         normals,
         texCoords,
         ...(indices ? {indices} : {})
@@ -133,6 +133,9 @@ export class PlaneGeometry extends Geometry {
 
 export default class Plane extends Model {
   constructor(opts) {
-    super({geometry: new PlaneGeometry(opts), ...opts});
+    super({
+      ...opts,
+      geometry: new PlaneGeometry(opts)
+    });
   }
 }

@@ -133,37 +133,43 @@ window.webGLStart = function() {
   function render() {
     tick++;
 
-    fbo.bind()
+    fbo.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     for (var i = 0; i < count; i++) {
       ePos[i] = eRot[i].mulVec3(ePos[i]);
       var model = new Mat4();
       model.$translate(ePos[i][0], ePos[i][1], ePos[i][2]);
-      model.$scale(0.06125,0.06125,0.06125);
+      model.$scale(0.06125, 0.06125, 0.06125);
       programSphere.use();
-      programSphere.setUniform('uModel', model);
-      programSphere.setUniform('uView', camera.view);
-      programSphere.setUniform('uProjection', camera.projection);
-      programSphere.setUniform('uColor', [0.0,0.5,1]);
-      programSphere.setUniform('uLighting', false);
+      programSphere.setUniforms({
+        uModel: model,
+        uView: camera.view,
+        uProjection: camera.projection,
+        uColor: [0.0,0.5,1],
+        uLighting: false
+      });
       programSphere.setBuffer(sphere.vertices);
       programSphere.setBuffer(sphere.normals);
       programSphere.setBuffer(sphere.indices);
-      gl.drawElements(gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(
+        gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0
+      );
     }
 
     for (var i = 0; i < count; i++) {
       var model = new Mat4();
-      model.$rotateXYZ(tick * 0.013,0,0);
-      model.$rotateXYZ(0,tick * 0.021,0);
+      model.$rotateXYZ(tick * 0.013, 0, 0);
+      model.$rotateXYZ(0, tick * 0.021, 0);
       model.$translate(nPos[i][0], nPos[i][1], nPos[i][2]);
-      model.$scale(0.25,0.25,0.25);
+      model.$scale(0.25, 0.25, 0.25);
       programSphere.use();
-      programSphere.setUniform('uModel', model);
-      programSphere.setUniform('uView', camera.view);
-      programSphere.setUniform('uProjection', camera.projection);
-      programSphere.setUniform('uColor', [1,0.25,0.25]);
-      programSphere.setUniform('uLighting', true);
+      programSphere.setUniforms({
+        uModel: model,
+        uView: camera.view,
+        uProjection: camera.projection,
+        uColor: [1, 0.25, 0.25],
+        uLighting: true
+      });
       programSphere.setBuffer(sphere.vertices);
       programSphere.setBuffer(sphere.normals);
       programSphere.setBuffer(sphere.indices);
@@ -176,9 +182,11 @@ window.webGLStart = function() {
     var next = pingpong[1 - ppi];
 
     programPersistence.use();
-    programPersistence.setUniform('uScene', fbo.texture.bind(0));
-    programPersistence.setUniform('uPersistence', next.texture.bind(1));
-    programPersistence.setUniform('uRes', [canvas.width, canvas.height]);
+    programPersistence.setUniforms({
+      uScene: fbo.texture.bind(0),
+      uPersistence: next.texture.bind(1),
+      uRes: [canvas.width, canvas.height]
+    });
     programPersistence.setBuffer(quad);
     current.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -187,8 +195,10 @@ window.webGLStart = function() {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     programQuad.use();
-    programQuad.setUniform('uTexture', current.texture.bind(0));
-    programQuad.setUniform('uRes', [canvas.width, canvas.height]);
+    programQuad.setUniforms({
+      uTexture: current.texture.bind(0),
+      uRes: [canvas.width, canvas.height]
+    });
     programQuad.setBuffer(quad);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 

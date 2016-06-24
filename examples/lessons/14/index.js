@@ -1,4 +1,5 @@
-/* global LumaGL, document */
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 var webGLStart = function() {
   var $id = function(d) { return document.getElementById(d); };
 

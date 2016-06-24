@@ -1,3 +1,5 @@
+/* global window, document, LumaGL */
+/* eslint-disable no-var, max-statements */
 var webGLStart = function() {
   var $id = function(d) { return document.getElementById(d); };
 
@@ -65,7 +67,7 @@ var webGLStart = function() {
     var scene = new Scene(gl, program, camera);
     var specularMap = $id('specular-map'),
         colorMap = $id('color-map'),
-        //get light config from forms
+        // get light config from forms
         lighting = $id('lighting'),
         ambient = {
           r: $id('ambientR'),
@@ -85,21 +87,23 @@ var webGLStart = function() {
           dg: $id('diffuseG'),
           db: $id('diffuseB')
         },
-        //object rotation
+        // object rotation
         theta = 0;
 
-    //onBeforeRender
+    // onBeforeRender
     earth.onBeforeRender = function(program, camera) {
-      program.setUniform('enableSpecularMap', specularMap.checked);
-      program.setUniform('enableColorMap', colorMap.checked);
+      program.setUniforms({
+        enableSpecularMap: specularMap.checked,
+        enableColorMap: colorMap.checked
+      });
     };
 
-    //Add objects to the scene
+    // Add objects to the scene
     scene.add(earth);
 
-    //Draw the scene
+    // Draw the scene
     function draw() {
-      //Setup lighting
+      // Setup lighting
       var lights = scene.config.lights;
       lights.enable = lighting.checked;
       lights.ambient = {
@@ -125,19 +129,19 @@ var webGLStart = function() {
         }
       };
 
-      //Update position
+      // Update position
       theta += 0.01;
       earth.rotation.set(Math.PI, theta,  0.1);
       earth.update();
 
-      //render objects
+      // render objects
       scene.render();
 
-      //request new frame
+      // request new frame
       Fx.requestAnimationFrame(draw);
     }
 
-    //Animate
+    // Animate
     draw();
   });
 }
