@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+   <title>Buffer</title>
+   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
+   <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-1601691-8']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</head>
+<body>
+
+<div class="site">
+  <div class="title">
+    <!-- <a href="/lumagl/"><img src="assets/logo.png" alt="library logo" /></a> -->
+    <h1>luma.gl</h1>
+  </div>
+
+  <div id="sidebar">
+    <div class="box help">
+      <b>Found a typo?</b>
+      <a href="https://github.com/uber//luma.gl/tree/master/docs">
+        Help make the docs better!
+      </a>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Overview:</b>
+      <ul>
+        <li>
+          <a href="index.html">Overview</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Core Classes:</b>
+        <li>
+          <a href="model.html">Model</a>
+        </li>
+        <li>
+          <a href="camera.html">Camera</a>
+        </li>
+        <li>
+          <a href="scene.html">Scene</a>
+        </li>
+     </ul>
+   </div>
+
+
+    <div class="box" id="modules">
+      <b>WebGL Classes:</b>
+      <ul>
+        <li>
+          <a href="context.html">WebGL Context Creation</a>
+        </li>
+        <li>
+          <a href="program.html">Program</a>
+        </li>
+        <li>
+          <a href="buffer.html">Buffer</a>
+        </li>
+        <li>
+          <a href="frame-buffer.html">FrameBuffer</a>
+        </li>
+        <li>
+          <a href="texture.html">Texture</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Modules:</b>
+      <ul>
+        <li>
+          <a href="math.html">Math</a>
+        </li>
+        <li>
+          <a href="shaders.html">Shaders</a>
+        </li>
+        <li>
+          <a href="event.html">Event</a>
+        </li>
+        <li>
+          <a href="fx.html">Fx</a>
+        </li>
+        <li>
+          <a href="io.html">IO</a>
+        </li>
+        <li>
+          <a href="media.html">Media</a>
+        </li>
+     </ul>
+   </div>
+
+   <div class="box" id="method-summary">
+     <b>Methods: </b>
+    <ul id="method-summary-list">
+    </ul>
+   </div>
+  </div>
+
+  <div id="doc">
+
+<h1>Buffer</h1>
+
+<h3 id="buffer-methods">Buffer Methods</h3>
+
+<table>
+  <tbody>
+    <tr>
+      <td><strong>Method</strong></td>
+      <td><strong>Description</strong></td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td><code>constructor</code></td>
+      <td>creates a Buffer</td>
+    </tr>
+    <tr>
+      <td><code>delete</code></td>
+      <td>Destroys buffer</td>
+    </tr>
+    <tr>
+      <td><code>initializeData</code></td>
+      <td>Creates and initializes the buffer object’s data store.</td>
+    </tr>
+    <tr>
+      <td><code>updateData</code></td>
+      <td>Updates a subset of a buffer object’s data store.</td>
+    </tr>
+    <tr>
+      <td><code>bind</code></td>
+      <td>Binds a buffer to a given binding point (target).</td>
+    </tr>
+    <tr>
+      <td><code>unbind</code></td>
+      <td>bind(null)</td>
+    </tr>
+    <tr>
+      <td><code>bindBase</code> WebGL2</td>
+      <td>Binds a buffer to a given binding point (target) at a given index.</td>
+    </tr>
+    <tr>
+      <td><code>unbindBase</code> WebGL2</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code>bindRange</code> WebGL2</td>
+      <td>binds a range of a given WebGLBuffer to a given binding point (target) at a given index.</td>
+    </tr>
+    <tr>
+      <td><code>unbindRange</code> WebGL2</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code>update</code></td>
+      <td>Updates data in the buffer</td>
+    </tr>
+  </tfoot>
+</table>
+
+<h3 id="remarks">Remarks</h3>
+
+<ul>
+  <li>All instance methods in a buffer (unless they return some documented value)
+are chainable.</li>
+</ul>
+
+<h1 id="Buffer">Class: Buffer</h1>
+
+<p>Wraps a WebGLBuffer. A WebGLBuffer is essentially a mechanism to upload
+memory buffers (attributes) to the GPU (the cost of which can vary
+depending on whether the system uses a unified memory architecture or not).</p>
+
+<h2 id="Buffer:constructor">Buffer constructor:</h2>
+
+<p>Creates a new WebGLBuffer. Also, for all properties set to a buffer,
+these properties are remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kr">import</span> <span class="p">{</span><span class="nx">Buffer</span><span class="p">}</span> <span class="nx">from</span> <span class="s1">&#39;luma.gl&#39;</span><span class="p">;</span>
+	<span class="kr">const</span> <span class="nx">buffer</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Buffer</span><span class="p">(</span><span class="nx">gl</span><span class="p">,</span> <span class="nx">options</span><span class="p">);</span></code></pre></figure>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the buffer. If no <code>attribute</code>
+value is set in <code>options</code> then the buffer name will be used as attribute name.</li>
+  <li>options - (<em>object</em>) An object with options/data described below:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>attribute - (<em>string</em>, optional) The name of the attribute to generate
+attribute calls to. If this parameter is not specified then the attribute
+name will be the buffer name.</li>
+  <li>bufferType - (<em>enum</em>, optional) The type of the buffer. Possible
+options are <code>gl.ELEMENT_ARRAY_BUFFER</code>, <code>gl.ARRAY_BUFFER</code>. Default is
+<code>gl.ARRAY_BUFFER</code>.</li>
+  <li>size - (<em>numer</em>, optional) The size of the components in the buffer. Default is 1.</li>
+  <li>dataType - (<em>enum</em>, optional) The type of the data being stored in the buffer. Default’s <code>gl.FLOAT</code>.</li>
+  <li>stride - (<em>number</em>, optional) The <code>stride</code> parameter when calling <code>gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>offset - (<em>number</em>, optional) The <code>offset</code> parameter when calling <code>gl.vertexAttribPointer</code>. Default’s 0.</li>
+  <li>drawType - (<em>enum</em>, optional) The type of draw used when setting the <code>gl.bufferData</code>. Default’s <code>gl.STATIC_DRAW</code>.</li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Set buffer values for the vertices of a triangle. 
+The context of this example can be seen [here]http://uber.github.io/luma.gl/examples/lessons/1/).</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="nx">program</span><span class="p">.</span><span class="nx">setBuffer</span><span class="p">(</span><span class="s1">&#39;triangle&#39;</span><span class="p">,</span> <span class="p">{</span>
+  <span class="nx">attribute</span><span class="o">:</span> <span class="s1">&#39;aVertexPosition&#39;</span><span class="p">,</span>
+  <span class="nx">value</span><span class="o">:</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+  <span class="nx">size</span><span class="o">:</span> <span class="mi">3</span>
+<span class="p">});</span></code></pre></figure>
+
+
+
+</div>
+
+<script type="text/javascript">
+  (function() {
+    var h2 = document.getElementById('doc').getElementsByTagName('h2'),
+        ans = [];
+    for (var i = 0, l = h2.length; i < l; i++) {
+      var elem = h2[i];
+      ans.push('<a href=\'#' + elem.id + '\'>' + (elem.innerText || elem.textContent) + '</a>');
+    }
+    document.getElementById('method-summary-list').innerHTML = '<li>' + ans.join('</li><li>') + '</li>';
+  })();
+</script>
+
+
+</div>
+</body>
+</html>
