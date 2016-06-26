@@ -10,3 +10,6 @@ examples/winds/data/*.html
 node_modules
 npm-debug.log
 test/data/test.png
+
+# editor files
+.idea
