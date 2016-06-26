@@ -80,7 +80,7 @@
     "build-compile": "babel src -d dist --source-maps inline --copy-files",
     "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t glslify && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run build-docs && open ./_docs/index.html",
-    "gh-pages": "git push origin `git subtree split --prefix build_folder master`:gh-pages --force",
+    "gh-pages": "git push origin `git subtree split --prefix _docs dev`:gh-pages --force",
     "publish-gh-pages": "rm -rf _docs && npm run build-docs && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run gh-pages",
     "lint": "eslint src",
     "precommit": "npm test",
