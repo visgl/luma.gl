@@ -11,6 +11,7 @@ var webGLStart = function() {
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
   var addEvents = LumaGL.addEvents;
+  var pickModels = LumaGL.pickModels;
 
   var canvas = document.getElementById('render-canvas');
 
@@ -20,13 +21,10 @@ var webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  var program = new Program(gl);
-  program.use();
-
   // rye TODO: there's a bug in merge that makes it require an object.
   var camera = new PerspectiveCamera({});
 
-  var scene = new Scene(gl, program, camera, {
+  var scene = new Scene(gl, {
     lights: {
       points: {
         color: {r: 1, g: 1, b: 1},
@@ -64,12 +62,15 @@ var webGLStart = function() {
     var tUranus = textures[5];
     var tVenus = textures[6];
 
+    var program = new Program(gl);
+
     var jupiter = new Sphere({
       nlat: 32,
       nlong: 32,
       radius: 1,
       textures: tJupiter,
-      pickable: true
+      pickable: true,
+      program
     });
     jupiter.name = 'Jupiter';
     var mars = new Sphere({
@@ -77,7 +78,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tMars,
-      pickable: true
+      pickable: true,
+      program
     });
     mars.name = 'Mars';
     var mercury = new Sphere({
@@ -85,7 +87,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tMercury,
-      pickable: true
+      pickable: true,
+      program
     });
     mercury.name = 'Mercury';
     var neptune = new Sphere({
@@ -93,7 +96,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tNeptune,
-      pickable: true
+      pickable: true,
+      program
     });
     neptune.name = 'Neptune';
     var saturn = new Sphere({
@@ -101,7 +105,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tSaturn,
-      pickable: true
+      pickable: true,
+      program
     });
     saturn.name = 'Saturn';
     var uranus = new Sphere({
@@ -109,7 +114,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tUranus,
-      pickable: true
+      pickable: true,
+      program
     });
     uranus.name = 'Uranus';
     var venus = new Sphere({
@@ -117,7 +123,8 @@ var webGLStart = function() {
       nlong: 32,
       radius: 1,
       textures: tVenus,
-      pickable: true
+      pickable: true,
+      program
     });
     venus.name = 'Venus';
 
@@ -129,7 +136,7 @@ var webGLStart = function() {
       var item = items[i];
       var theta = i / items.length * Math.PI * 2;
       item.position = new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0);
-      item.update();
+      item.updateMatrix();
     }
 
     function draw() {
@@ -145,10 +152,15 @@ var webGLStart = function() {
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
         item.rotation.y += 0.01;
-        item.update();
+        item.updateMatrix();
       }
 
-      var p = scene.pick(pick.x, pick.y);
+      var p = pickModels(gl, {
+        group: scene,
+        viewMatrix: camera.view,
+        x: pick.x,
+        y: pick.y
+      });
       var div = document.getElementById('planet-name');
       if (p) {
         div.innerHTML = p.name;
@@ -161,7 +173,7 @@ var webGLStart = function() {
 
       gl.viewport(0, 0, canvas.width, canvas.height);
       program.use();
-      scene.render();
+      scene.render({camera});
 
       Fx.requestAnimationFrame(draw);
     }

@@ -1,7 +1,10 @@
-import {Framebuffer} from './framebuffer';
+import {WebGL, WebGLRenderingContext} from './webgl-types';
+import Framebuffer from './framebuffer';
+import Renderbuffer from './renderbuffer';
 import {Texture2D} from './texture';
-import {Renderbuffer} from './framebuffer';
 import assert from 'assert';
+
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 export default class FramebufferObject {
 
@@ -10,11 +13,14 @@ export default class FramebufferObject {
     width = 1,
     height = 1,
     depth = true,
-    minFilter = gl.NEAREST,
-    magFilter = gl.NEAREST,
-    format = gl.RGBA,
-    type = gl.UNSIGNED_BYTE
+    minFilter = WebGL.NEAREST,
+    magFilter = WebGL.NEAREST,
+    format = WebGL.RGBA,
+    type = WebGL.UNSIGNED_BYTE
   } = {}) {
+    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+
+    this.gl = gl;
     this.depth = depth;
     this.minFilter = minFilter;
     this.magFilter = magFilter;
@@ -36,16 +42,20 @@ export default class FramebufferObject {
     const fb = new Framebuffer(gl);
 
     const colorBuffer = new Texture2D(gl, {
+      minFilter: this.minFilter,
+      magFilter: this.magFilter
+    })
+    // TODO - should be handled by Texture2D constructor?
+    .setImageData({
+      data: null,
       width,
       height,
-      minFilter: this.minFilter,
-      magFilter: this.magFilter,
       type: this.type,
       format: this.format
     });
 
-    fb.texture2D({
-      attachment: gl.COLOR_ATTACHMENT0,
+    fb.attachTexture({
+      attachment: WebGL.COLOR_ATTACHMENT0,
       texture: colorBuffer
     });
 
@@ -56,12 +66,15 @@ export default class FramebufferObject {
 
     // Add a depth buffer if requested
     if (this.depth) {
-      const depthBuffer = new Renderbuffer().storage({
-        format: gl.DEPTH_COMPONENT16,
+      const depthBuffer = new Renderbuffer(gl).storage({
+        internalFormat: WebGL.DEPTH_COMPONENT16,
         width,
         height
       });
-      fb.attachRenderbuffer({renderbuffer: depthBuffer});
+      fb.attachRenderbuffer({
+        attachment: WebGL.DEPTH_ATTACHMENT,
+        renderbuffer: depthBuffer
+      });
 
       if (this.depthBuffer) {
         this.depthBuffer.delete();

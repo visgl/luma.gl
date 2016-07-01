@@ -1,4 +1,4 @@
-import {WebGLRenderingContext, WebGL2RenderingContext} from './types';
+import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
 import Buffer from './buffer';
 import {glGet, glCheckError} from './context';
 import assert from 'assert';
@@ -220,11 +220,13 @@ export function setDivisor(gl, location, divisor) {
   if (gl instanceof WebGL2RenderingContext) {
     gl.vertexAttribDivisor(location, divisor);
     glCheckError(gl);
+    return;
   }
   const ext = gl.getExtension('ANGLE_instanced_arrays');
   if (ext) {
     ext.vertexAttribDivisorANGLE(location, divisor);
     glCheckError(gl);
+    return;
   }
   // Accept divisor 0 even if instancing is not supported (0 = no instancing)
   if (divisor !== 0) {

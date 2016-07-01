@@ -19,6 +19,7 @@ window.webGLStart = function() {
   var Scene = LumaGL.Scene;
   var addEvents = LumaGL.addEvents;
   var Fx = LumaGL.Fx;
+  var Vec3 = LumaGL.Vec3;
 
   var canvas = document.getElementById('lesson08-canvas');
   canvas.width = canvas.clientWidth;
@@ -92,7 +93,7 @@ window.webGLStart = function() {
     var cube = new Model({
       program,
       geometry: new Geometry({
-        vertices: new Float32Array([
+        positions: new Float32Array([
           -1, -1,  1,
           1, -1,  1,
           1,  1,  1,
@@ -260,8 +261,8 @@ window.webGLStart = function() {
     function drawScene() {
       // Update Cube position
       cube
-        .setPosition(0, 0, z)
-        .setRotation(xRot, yRot, 0)
+        .setPosition(new Vec3(0, 0, z))
+        .setRotation(new Vec3(xRot, yRot, 0))
         .updateMatrix();
       if (blending.checked) {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);

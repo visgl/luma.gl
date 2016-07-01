@@ -39,25 +39,6 @@ test('WebGL#Buffer bind/unbind', t => {
     .delete();
   t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
 
-  buffer = new Buffer(gl, {target: gl.ARRAY_BUFFER})
-    .bind()
-    .unbind()
-    .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
-
-  buffer = new Buffer(gl, {target: gl.ARRAY_ELEMENT_BUFFER})
-    .bind()
-    .unbind()
-    .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
-
-  // buffer = new Buffer(gl, {target: gl.STATIC_DRAW});
-  // t.throws(
-  //   () => buffer.bind().unbind(),
-  //   /.*WebGL invalid enumerated argument.*/,
-  //   'Buffer bind fails on bad target');
-  buffer.delete();
-
   t.end();
 });
 
@@ -67,22 +48,27 @@ test('WebGL#Buffer data/subData', t => {
   let buffer;
 
   buffer = new Buffer(gl)
+    .setData({
+      target: gl.ARRAY_BUFFER,
+      data: new Float32Array([1, 2, 3])
+    })
     .bind()
     .unbind()
     .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
+  t.ok(buffer instanceof Buffer,
+    'Buffer.setData(ARRAY_BUFFER) successful');
 
-  buffer = new Buffer(gl, {target: gl.ARRAY_BUFFER})
+  // TODO- buffer could check for integer ARRAY_ELEMENT_BUFFER types
+  buffer = new Buffer(gl)
+    .setData({
+      target: gl.ARRAY_ELEMENT_BUFFER,
+      data: new Float32Array([1, 2, 3])
+    })
     .bind()
     .unbind()
     .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
-
-  buffer = new Buffer(gl, {target: gl.ARRAY_ELEMENT_BUFFER})
-    .bind()
-    .unbind()
-    .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
+  t.ok(buffer instanceof Buffer,
+    'Buffer.setData(ARRAY_ELEMENT_BUFFER) successful');
 
   t.end();
 });

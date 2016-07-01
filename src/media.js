@@ -40,6 +40,7 @@ export function postProcessImage({
   var y = opt.viewportY;
 
   const plane = new Plane({
+    program,
     type: 'x,y',
     xlen: length,
     ylen: length,
@@ -58,34 +59,28 @@ export function postProcessImage({
     scene.add(plane);
   }
 
-  if (framebuffer) {
-    // create framebuffer
-    if (!(framebuffer in app.frameBufferMemo)) {
-      app.setFrameBuffer(framebuffer, {
-        width: width,
-        height: height,
-        bindToTexture: {
-          parameters: [{
-            name: 'TEXTURE_MAG_FILTER',
-            value: 'LINEAR'
-          }, {
-            name: 'TEXTURE_MIN_FILTER',
-            value: 'LINEAR',
-            generateMipmap: false
-          }]
-        },
-        bindToRenderBuffer: false
-      });
-    }
+  var fbo = new FrameBuffer(framebuffer, {
+    width: width,
+    height: height,
+    bindToTexture: {
+      parameters: [{
+        name: 'TEXTURE_MAG_FILTER',
+        value: 'LINEAR'
+      }, {
+        name: 'TEXTURE_MIN_FILTER',
+        value: 'LINEAR',
+        generateMipmap: false
+      }]
+    },
+    bindToRenderBuffer: false
+  });
 
-    program.use();
-    app.setFrameBuffer(framebuffer, true);
-    gl.viewport(x, y, width, height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    program.setUniforms(opt.uniforms || {});
-    scene.renderToTexture(framebuffer);
-    app.setFrameBuffer(framebuffer, false);
-  }
+  fbo.bind();
+  gl.viewport(x, y, width, height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  program.setUniforms(opt.uniforms || {});
+  scene.renderToTexture(framebuffer);
+  app.setFrameBuffer(framebuffer, false);
 
   if (screen) {
     program.use();

@@ -6,7 +6,7 @@ const glslify = require('glslify');
 const vertex = glslify('../../shaderlib/default-vertex.glsl');
 const fragment = glslify('../../shaderlib/default-fragment.glsl');
 
-export default {
+module.exports = {
   Vertex: {Default: vertex},
   Fragment: {Default: fragment},
   vs: vertex,

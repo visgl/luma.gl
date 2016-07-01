@@ -29,20 +29,23 @@ window.webGLStart = function() {
       -1, -1,  1
     ]),
 
-    colors: new Float32Array([
-      1, 0, 0, 1,
-      0, 1, 0, 1,
-      0, 0, 1, 1,
-      1, 0, 0, 1,
-      0, 0, 1, 1,
-      0, 1, 0, 1,
-      1, 0, 0, 1,
-      0, 1, 0, 1,
-      0, 0, 1, 1,
-      1, 0, 0, 1,
-      0, 0, 1, 1,
-      0, 1, 0, 1
-    ])
+    colors: {
+      size: 4,
+      value: new Float32Array([
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 0, 0, 1,
+        0, 0, 1, 1,
+        0, 1, 0, 1,
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 0, 0, 1,
+        0, 0, 1, 1,
+        0, 1, 0, 1
+      ])
+    }
   });
 
   var cubeGeometry = new Geometry({
@@ -77,34 +80,37 @@ window.webGLStart = function() {
       -1,  1,  1,
       -1,  1, -1]),
 
-    colors: new Float32Array([
-      1, 0, 0, 1,
-      1, 0, 0, 1,
-      1, 0, 0, 1,
-      1, 0, 0, 1,
-      1, 1, 0, 1,
-      1, 1, 0, 1,
-      1, 1, 0, 1,
-      1, 1, 0, 1,
-      0, 1, 0, 1,
-      0, 1, 0, 1,
-      0, 1, 0, 1,
-      0, 1, 0, 1,
-      1, 0.5, 0.5, 1,
-      1, 0.5, 0.5, 1,
-      1, 0.5, 0.5, 1,
-      1, 0.5, 0.5, 1,
-      1, 0, 1, 1,
-      1, 0, 1, 1,
-      1, 0, 1, 1,
-      1, 0, 1, 1,
-      0, 0, 1, 1,
-      0, 0, 1, 1,
-      0, 0, 1, 1,
-      0, 0, 1, 1
-    ]),
+    colors: {
+      size: 4,
+      value: new Float32Array([
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 1, 0, 1,
+        1, 1, 0, 1,
+        1, 1, 0, 1,
+        1, 1, 0, 1,
+        0, 1, 0, 1,
+        0, 1, 0, 1,
+        0, 1, 0, 1,
+        0, 1, 0, 1,
+        1, 0.5, 0.5, 1,
+        1, 0.5, 0.5, 1,
+        1, 0.5, 0.5, 1,
+        1, 0.5, 0.5, 1,
+        1, 0, 1, 1,
+        1, 0, 1, 1,
+        1, 0, 1, 1,
+        1, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1
+      ])
+    },
 
-    indices: new Float32Array([
+    indices: new Uint16Array([
       0, 1, 2, 0, 2, 3,
       4, 5, 6, 4, 6, 7,
       8, 9, 10, 8, 10, 11,
@@ -159,15 +165,15 @@ window.webGLStart = function() {
     view.mulMat42(camera.view, pyramid.matrix);
 
     // Draw Pyramid
-    // pyramid
-    //   .setPosition(new Vec3(-1.5, 0, -8))
-    //   .setRotation(new Vec3(0, rPyramid, 0))
-    //   .updateMatrix()
-    //   .setUniforms({
-    //     uMVMatrix: view,
-    //     uPMatrix: camera.projection
-    //   })
-    //   .render();
+    pyramid
+      .setPosition(new Vec3(-1.5, 0, -8))
+      .setRotation(new Vec3(0, rPyramid, 0))
+      .updateMatrix()
+      .setUniforms({
+        uMVMatrix: view,
+        uPMatrix: camera.projection
+      })
+      .render();
 
     // get new view matrix out of element and camera matrices
     view.mulMat42(camera.view, cube.matrix);

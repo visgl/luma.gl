@@ -17,44 +17,37 @@ export default class Object3D {
     this.userData = {};
   }
 
-  setPosition(position, y, z) {
-    if (!(position instanceof Vec3)) {
-      position = new Vec3(position, y, z);
-    }
+  setPosition(position) {
+    assert(position instanceof Vec3, 'setPosition requires vector argument');
     this.position = position;
     return this;
   }
 
-  setRotation(rotation, y, z) {
-    if (!(rotation instanceof Vec3)) {
-      rotation = new Vec3(rotation, y, z);
-    }
+  setRotation(rotation) {
+    assert(rotation instanceof Vec3, 'setRotation requires vector argument');
     this.rotation = rotation;
     return this;
   }
 
-  setScale(scale, y, z) {
-    if (!(scale instanceof Vec3)) {
-      scale = new Vec3(scale, y, z);
-    }
+  setScale(scale) {
+    assert(scale instanceof Vec3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
   }
 
-  setMatrixComponents({position, rotation, scale}) {
+  setMatrixComponents({position, rotation, scale, update = true}) {
     if (position) {
-      assert(position instanceof Vec3, 'position must be Vec3');
-      this.position = position;
+      this.setPosition(position);
     }
     if (rotation) {
-      assert(rotation instanceof Vec3, 'rotation must be Vec3');
-      this.rotation = rotation;
+      this.setRotation(rotation);
     }
     if (scale) {
-      assert(scale instanceof Vec3, 'scale must be Vec3');
-      this.scale = scale;
+      this.setScale(scale);
     }
-    this.updateMatrix();
+    if (update) {
+      this.updateMatrix();
+    }
     return this;
   }
 

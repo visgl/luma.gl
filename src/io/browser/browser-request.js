@@ -13,39 +13,41 @@ const XHR_STATES = {
 };
 
 class XHR {
-  constructor(opt = {}) {
-    opt = {
-      url: null,
-      method: 'GET',
-      async: true,
-      noCache: false,
-      // body: null,
-      sendAsBinary: false,
-      responseType: false,
-      onProgress: noop,
-      onSuccess: noop,
-      onError: noop,
-      onAbort: noop,
-      onComplete: noop,
-      ...opt
-    };
+  constructor({
+    url,
+    path = null,
+    method = 'GET',
+    async = true,
+    noCache = false,
+    // body = null,
+    sendAsBinary = false,
+    responseType = false,
+    onProgress = noop,
+    onSuccess = noop,
+    onError = noop,
+    onAbort = noop,
+    onComplete = noop,
+    ...opt
+  }) {
+    this.url = path ? path.join(path, url) : url;
+    this.method = method;
+    this.async = async;
+    this.noCache = noCache;
+    this.sendAsBinary = sendAsBinary;
+    this.responseType = responseType;
 
-    this.opt = opt;
     this.req = new XMLHttpRequest();
 
+    this.req.onload = e => onComplete(e);
+    this.req.onerror = e => onError(e);
+    this.req.onabort = e => onAbort(e);
     this.req.onprogress = e => {
       if (e.lengthComputable) {
-        this.opt.onProgress(e, Math.round(e.loaded / e.total * 100));
+        onProgress(e, Math.round(e.loaded / e.total * 100));
       } else {
-        this.opt.onProgress(e, -1);
+        onProgress(e, -1);
       }
     };
-
-    this.req.onerror = e => this.opt.onError(e);
-
-    this.req.onabort = e => this.opt.onAbort(e);
-
-    this.req.onload = e => this.opt.onComplete(e);
   }
 
   setRequestHeader(header, value) {
@@ -53,20 +55,22 @@ class XHR {
     return this;
   }
 
-  sendAsync(body) {
+  sendAsync(body = this.body || null) {
     return new Promise((resolve, reject) => {
       try {
-        const {req, opt} = this;
-        const {async} = opt;
+        const {
+          req, method, async, noCache, sendAsBinary, responseType
+        } = this;
 
-        if (opt.noCache) {
-          opt.url += (opt.url.indexOf('?') >= 0 ? '&' : '?') + Date.now();
+        let url = this.url;
+        if (noCache) {
+          url += (url.indexOf('?') >= 0 ? '&' : '?') + Date.now();
         }
 
-        req.open(opt.method, opt.url, async);
+        req.open(method, url, async);
 
-        if (opt.responseType) {
-          req.responseType = opt.responseType;
+        if (responseType) {
+          req.responseType = responseType;
         }
 
         if (async) {
@@ -75,23 +79,23 @@ class XHR {
               if (req.status === 200) {
                 resolve(req.responseType ? req.response : req.responseText);
               } else {
-                reject(new Error(req.status));
+                reject(new Error(`${req.status}: ${url}`));
               }
             }
           };
         }
 
-        if (opt.sendAsBinary) {
-          req.sendAsBinary(body || opt.body || null);
+        if (sendAsBinary) {
+          req.sendAsBinary(body);
         } else {
-          req.send(body || opt.body || null);
+          req.send(body);
         }
 
         if (!async) {
           if (req.status === 200) {
             resolve(req.responseType ? req.response : req.responseText);
           } else {
-            reject(new Error(req.status));
+            reject(new Error(`${req.status}: ${url}`));
           }
         }
       } catch (error) {

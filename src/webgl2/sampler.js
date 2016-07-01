@@ -1,9 +1,11 @@
 // WebGL2 Sampler Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
 
-import {WebGL2RenderingContext} from './types';
+import {WebGL2RenderingContext} from './webgl-types';
 import {glCheckError} from '../context';
 import assert from 'assert';
+
+const ERR_WEBGL2 = 'WebGL2 required';
 
 // WebGLSampler? createSampler();
 // void deleteSampler(WebGLSampler? sampler);
@@ -20,7 +22,7 @@ export default class Sampler {
    * @param {WebGL2RenderingContext} gl
    */
   constructor(gl) {
-    assert(gl instanceof WebGL2RenderingContext);
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     this.gl = gl;
     this.handle = gl.createSampler();
     glCheckError(gl);
@@ -62,6 +64,60 @@ export default class Sampler {
   }
 
   /**
+   * Batch update sampler settings
+   *
+   * @param {GLenum} compare_func - texture comparison function.
+   * @param {GLenum} compare_mode - texture comparison mode.
+   * @param {GLenum} mag_filter - texture magnification filter.
+   * @param {GLenum} MIN_FILTER - texture minification filter
+   * @param {GLfloat} MAX_LOD: maximum level-of-detail value.
+   * @param {GLfloat} MIN_LOD: minimum level-of-detail value.
+   * @param {GLenum} WRAP_R: texture wrapping function for texture coordinate r.
+   * @param {GLenum} WRAP_S: texture wrapping function for texture coordinate s.
+   * @param {GLenum} WRAP_T: texture wrapping function for texture coordinate t.
+   */
+  setParameters({
+    compareFunc,
+    compareMode,
+    magFilter,
+    minFilter,
+    minLOD,
+    maxLOD,
+    wrapR,
+    wrapS,
+    wrapT
+  }) {
+    const {gl} = this;
+    if (compareFunc) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_COMPARE_FUNC, compareFunc);
+    }
+    if (compareMode) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_COMPARE_MODE, compareMode);
+    }
+    if (magFilter) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_MAG_FILTER, magFilter);
+    }
+    if (minFilter) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_MIN_FILTER, minFilter);
+    }
+    if (minLOD) {
+      gl.samplerParameterf(this.handle, gl.TEXTURE_MIN_LOD, minLOD);
+    }
+    if (maxLOD) {
+      gl.samplerParameterf(this.handle, gl.TEXTURE_MAX_LOD, maxLOD);
+    }
+    if (wrapR) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_R, wrapR);
+    }
+    if (wrapS) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_S, wrapS);
+    }
+    if (wrapT) {
+      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_T, wrapT);
+    }
+  }
+
+  /**
    * @param {GLenum} pname
    * @param {GLint} param
    * @return {Sampler} returns self to enable chaining
@@ -74,7 +130,7 @@ export default class Sampler {
   }
 
   /**
-   * @param {GLenum} pname
+   * @param {GLenum} pname  
    * @param {GLfloat} param
    * @return {Sampler} returns self to enable chaining
    */

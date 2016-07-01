@@ -11,18 +11,22 @@ window.webGLStart = function() {
   var Mat4 = LumaGL.Mat4;
   var Model = LumaGL.Model;
   var Geometry = LumaGL.Geometry;
-  
+  var Vec3 = LumaGL.Vec3;
+
   var triangleGeometry = new Geometry({
     positions: new Float32Array([
       0,   1, 0,
       -1, -1, 0,
       1,  -1, 0
     ]),
-    colors: new Float32Array([
-      1, 0, 0, 1,
-      0, 1, 0, 1,
-      0, 0, 1, 1
-    ])
+    colors: {
+      value: new Float32Array([
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1
+      ]),
+      size: 4
+    }
   });
 
   var squareGeometry = new Geometry({
@@ -31,12 +35,15 @@ window.webGLStart = function() {
       -1,  1, 0,
       1,  -1, 0,
       -1, -1, 0]),
-    colors: new Float32Array([
-      0.5, 0.5, 1, 1,
-      0.5, 0.5, 1, 1,
-      0.5, 0.5, 1, 1,
-      0.5, 0.5, 1, 1
-    ])
+    colors: {
+      value: new Float32Array([
+        0.5, 0.5, 1, 1,
+        0.5, 0.5, 1, 1,
+        0.5, 0.5, 1, 1,
+        0.5, 0.5, 1, 1
+      ]),
+      size: 4
+    }
   });
 
   var canvas = document.getElementById('lesson03-canvas');
@@ -97,16 +104,16 @@ window.webGLStart = function() {
 
     // Draw triangle
     triangle
-      .setPosition(-1.5, 0, -7)
-      .setRotation(0, rTri, 0)
+      .setPosition(new Vec3(-1.5, 0, -7))
+      .setRotation(new Vec3(0, rTri, 0))
       .updateMatrix();
     setupModel(triangle);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // Draw Square
     square
-      .setPosition(1.5, 0, -7)
-      .setRotation(rSquare, 0, 0)
+      .setPosition(new Vec3(1.5, 0, -7))
+      .setRotation(new Vec3(rSquare, 0, 0))
       .updateMatrix();
     setupModel(square);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

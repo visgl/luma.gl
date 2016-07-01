@@ -1,5 +1,5 @@
 import {DRAW_MODES, isTypedArray} from './webgl/types';
-import {uid} from './utils';
+import {uid, getArrayTypeFromGLType} from './utils';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
@@ -7,10 +7,9 @@ const ILLEGAL_ARG = 'Geometry: Illegal argument';
 export default class Geometry {
 
   constructor({
-    id = uid(),
+    id = uid('geometry'),
     drawMode = 'TRIANGLES',
     vertexCount = undefined,
-    isIndexed = false,
     attributes,
     ...attrs
   }) {
@@ -19,7 +18,6 @@ export default class Geometry {
     this.id = id;
     this.drawMode = drawMode;
     this.vertexCount = vertexCount;
-    this.isIndexed = isIndexed;
     this.attributes = {};
     this.userData = {};
     Object.seal(this);
@@ -77,10 +75,16 @@ export default class Geometry {
     for (const attributeName in attributes) {
       let attribute = attributes[attributeName];
 
-      // Support type arrays
-      if (isTypedArray(attribute)) {
-        attribute = {value: attribute};
+      // Wrap "unwrapped" arrays and try to autodetect their type
+      if (Array.isArray(attribute) || isTypedArray(attribute)) {
+        attribute = {
+          value: attribute
+          // TODO - autodetect attribute.type from Array type
+        };
       }
+      assert(Array.isArray(attribute.value) || isTypedArray(attribute.value),
+        `attribute ${attributeName}: must be an array or an object` +
+        `with value as typed array`);
 
       this._autoDetectAttribute(attributeName, attribute);
 
@@ -95,37 +99,53 @@ export default class Geometry {
   // Check for well known attribute names
   /* eslint-disable default-case */
   _autoDetectAttribute(attributeName, attribute) {
-    let type;
+
+    // const arrayType = getTypeFromArray(attribute.value);
+    // attribute.type = attribute.type || arrayType;
+    // assert(attribute.type === arrayType);
+
+    let category;
     switch (attributeName) {
     case 'indices':
-      type = type || 'indices';
+      category = category || 'indices';
       break;
     case 'texCoords':
-      type = 'uvs';
+      category = 'uvs';
       break;
     case 'vertices':
     case 'positions':
-    case 'colors':
     case 'normals':
     case 'pickingColors':
-      attribute.size = 3;
+      category = 'vectors';
       break;
     }
 
-    // Check for types
-    switch (type) {
-    case 'indices':
-      attribute.size = 1;
-      attribute.target = 'ELEMENT_ARRAY_BUFFER';
-      attribute.instanced = 0;
-      this.isIndexed = true;
+    // Check for categorys
+    switch (category) {
+    case 'vectors':
+      attribute.size = attribute.size || 3;
+      attribute.type = attribute.type || 'FLOAT';
       break;
     case 'uvs':
-      attribute.size = 2;
+      attribute.size = attribute.size || 2;
+      attribute.type = attribute.type || 'FLOAT';
+      break;
+    case 'indices':
+      attribute.size = attribute.size || 1;
+      attribute.type = attribute.type || 'UNSIGNED_SHORT';
+      attribute.target = attribute.target || 'ELEMENT_ARRAY_BUFFER';
+      attribute.instanced = attribute.instanced || 0;
       break;
     }
-    assert(attribute.value, `attribute ${attributeName} needs value`);
+
     assert(attribute.size, `attribute ${attributeName} needs size`);
+
+    // Convert Array to typed array if possible
+    if (Array.isArray(attribute.value)) {
+      const ArrayType = getArrayTypeFromGLType(attribute.type);
+      attribute.value = new ArrayType(attribute.value);
+    }
+
   }
   /* eslint-enable default-case */
 }

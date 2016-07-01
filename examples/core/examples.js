@@ -4,14 +4,14 @@
   var loadFiles = LumaGL.loadFiles;
 
   var examples = {
-    'cubemap': 'Cubemap',
     'instancing': 'Instancing',
-    'multicontext': 'Multiple Contexts',
-    'persistence': 'Persistence',
     'picking': 'Picking',
-    'custom-picking': 'Custom Picking',
-    'particles': 'Particles',
-    'deferred-rendering': 'Deferred Rendering'
+    'multicontext': 'Multiple Contexts',
+    'cubemap': 'Cubemap'
+    // 'persistence': 'Persistence',
+    // 'custom-picking': 'Custom Picking',
+    // 'particles': 'Particles',
+    // 'deferred-rendering': 'Deferred Rendering'
   };
 
   window.addEventListener('load', function onLoad() {

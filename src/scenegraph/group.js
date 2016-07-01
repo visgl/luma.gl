@@ -1,4 +1,5 @@
 import Object3D from './object-3d';
+import {Mat4} from '../math';
 import {uid} from '../utils';
 import assert from 'assert';
 
@@ -34,7 +35,7 @@ export default class Group extends Object3D {
     return this;
   }
 
-  * traverse({viewMatrix}) {
+  * traverse({viewMatrix = new Mat4()} = {}) {
     for (const child of this.children) {
       const {matrix} = child;
       const worldMatrix = viewMatrix.mulMat4(matrix);

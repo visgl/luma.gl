@@ -1,22 +1,24 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-var webGLStart = function() {
+window.webGLStart = function() {
 
   var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.addons.Program;
+  var Geometry = LumaGL.Geometry;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
   var Fx = LumaGL.Fx;
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
-  var loadFiles = LumaGL.loadFiles;
   var Model = LumaGL.Model;
   var Framebuffer = LumaGL.Framebuffer;
+  var loadFiles = LumaGL.loadFiles;
+  var loadTextures = LumaGL.loadTextures;
+  var loadProgram = LumaGL.loadProgram;
+  var parseModel = LumaGL.parseModel;
 
   loadFiles({urls: ['macbook.json']})
-  .catch(error => alert('Unable to load macbook model'))
+  .catch(error => window.alert('Unable to load macbook model: ' + error))
   .then(jsonString => {
     var json = JSON.parse(jsonString);
     json.shininess = 5;
@@ -47,13 +49,10 @@ var webGLStart = function() {
   function createApp(macbookJSON) {
 
     Promise.all([
-
-      makeProgramFromShaderURIs(gl,
-        'render-tex.vs.glsl',
-        'render-tex.fs.glsl',
-        {path: '../../../shaderlib/'}
-      ),
-
+      loadProgram(gl, {
+        vs: '../../../shaderlib/render-tex.vs.glsl',
+        fs: '../../../shaderlib/render-tex.fs.glsl'
+      }),
       loadTextures(gl, {
         urls: ['moon.gif', 'crate.gif'],
         parameters: [{
@@ -66,24 +65,21 @@ var webGLStart = function() {
           generateMipmap: true
         }]
       })
-
-    ]).then(function(results) {
-
+    ])
+    .then(function(results) {
       var program = results[0];
-
       var tMoon = results[1][0];
       var tCrate = results[1][1];
 
-      var screenWidth = 512,
-          screenHeight = 512,
-          screenRatio = 1.66;
+      var screenWidth = 512;
+      var screenHeight = 512;
+      var screenRatio = 1.66;
 
-      var models = {};
-
-      models.moon = new Sphere({
+      var moon = new Sphere({
         nlat: 30,
         nlong: 30,
         radius: 2,
+        program,
         textures: tMoon,
         uniforms: {
           shininess: 5,
@@ -95,7 +91,8 @@ var webGLStart = function() {
         }
       });
 
-      models.box = new Cube({
+      var box = new Cube({
+        program,
         textures: tCrate,
         uniforms: {
           shininess: 5,
@@ -106,28 +103,31 @@ var webGLStart = function() {
           'materialEmissiveColor': [0, 0, 0]
         }
       });
-      models.box.scale.set(2, 2, 2);
+      box.setScale(new Vec3(2, 2, 2));
 
-      models.macbookscreen = new Model({
-        normals: [
-          0, -0.965926, 0.258819,
-          0, -0.965926, 0.258819,
-          0, -0.965926, 0.258819,
-          0, -0.965926, 0.258819
-        ],
-        vertices: [
-          0.580687, 0.659, 0.813106,
-          -0.580687, 0.659, 0.813107,
-          0.580687, 0.472, 0.113121,
-          -0.580687, 0.472, 0.113121
-        ],
-        texCoords: [
-          1.0, 1.0,
-          0.0, 1.0,
-          1.0, 0.0,
-          0.0, 0.0
-        ],
-        drawMode: 'TRIANGLE_STRIP',
+      var macbookscreen = new Model({
+        program,
+        geometry: new Geometry({
+          drawMode: 'TRIANGLE_STRIP',
+          normals: new Float32Array([
+            0, -0.965926, 0.258819,
+            0, -0.965926, 0.258819,
+            0, -0.965926, 0.258819,
+            0, -0.965926, 0.258819
+          ]),
+          vertices: new Float32Array([
+            0.580687, 0.659, 0.813106,
+            -0.580687, 0.659, 0.813107,
+            0.580687, 0.472, 0.113121,
+            -0.580687, 0.472, 0.113121
+          ]),
+          texCoords: new Float32Array([
+            1.0, 1.0,
+            0.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0
+          ])
+        }),
         uniforms: {
           shininess: 0.2,
           'enableSpecularHighlights': false,
@@ -138,68 +138,49 @@ var webGLStart = function() {
         }
       });
 
-      program.use();
+      var macbook = parseModel(gl, {file: macbookJSON, program});
 
-      models.macbook = new Model(macbookJSON);
-
-      var outerScene = new Scene(gl, program, outerCamera, {
+      var outerScene = new Scene(gl, {
         lights: {
           enable: true,
           points: {
-            position: {
-              x: 1, y: 2, z: -1
-            },
-            diffuse: {
-              r: 0.8, g: 0.8, b: 0.8
-            },
-            specular: {
-              r: 0.8, g: 0.8, b: 0.8
-            }
+            position: {x: 1, y: 2, z: -1},
+            diffuse: {r: 0.8, g: 0.8, b: 0.8},
+            specular: {r: 0.8, g: 0.8, b: 0.8}
           }
         }
       });
 
       var innerCamera = new PerspectiveCamera({
-          fov: 45,
-          aspect: screenRatio,
-          near: 0.1,
-          far: 100,
-          position: new Vec3(0, 0, -17)
-        }),
-        innerScene = new Scene(gl, program, innerCamera, {
-          lights: {
-            enable: true,
-            points: {
-              position: {
-                x: -1, y: 2, z: -1
-              },
-              diffuse: {
-                r: 0.8, g: 0.8, b: 0.8
-              },
-              specular: {
-                r: 0.8, g: 0.8, b: 0.8
-              }
-            }
+        fov: 45,
+        aspect: screenRatio,
+        near: 0.1,
+        far: 100,
+        position: new Vec3(0, 0, -17)
+      });
+      var innerScene = new Scene(gl, {
+        lights: {
+          enable: true,
+          points: {
+            position: {x: -1, y: 2, z: -1},
+            diffuse: {r: 0.8, g: 0.8, b: 0.8},
+            specular: {r: 0.8, g: 0.8, b: 0.8}
           }
-        }),
-        rho = 4,
-        theta = 0,
-        laptopTheta = Math.PI,
-        // models
-        macbook = models.macbook,
-        macbookscreen = models.macbookscreen,
-        box = models.box,
-        moon = models.moon;
+        }
+      });
+      var rho = 4;
+      var theta = 0;
+      var laptopTheta = Math.PI;
 
       // create framebuffer
       var fb = new Framebuffer(gl, {
         width: screenWidth,
         height: screenHeight,
         minFilter: gl.LINEAR,
-        magFilter: gl.LINEAR,
+        magFilter: gl.LINEAR
       });
 
-      models.macbookscreen.textures = fb.texture;
+      macbookscreen.textures = fb.texture;
 
       // Add objects to different scenes
       outerScene.add(macbook, macbookscreen);
@@ -213,24 +194,26 @@ var webGLStart = function() {
       function drawInnerScene() {
         theta += 0.04;
 
-        moon.position = {
-          x: rho * Math.cos(theta),
-          y: 0,
-          z: rho * Math.sin(theta)
-        };
-        moon.update();
+        moon
+          .setPosition(new Vec3(
+            rho * Math.cos(theta),
+            0,
+            rho * Math.sin(theta)
+          ))
+          .updateMatrix();
 
-        box.position = {
-          x: rho * Math.cos(Math.PI + theta),
-          y: 0,
-          z: rho * Math.sin(Math.PI + theta)
-        };
-        box.update();
+        box
+          .setPosition(new Vec3(
+            rho * Math.cos(Math.PI + theta),
+            0,
+            rho * Math.sin(Math.PI + theta)
+          ))
+          .updateMatrix();
 
         gl.viewport(0, 0, screenWidth, screenHeight);
 
         fb.bind();
-        innerScene.render();
+        innerScene.render({camera: innerCamera});
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
 
@@ -241,13 +224,15 @@ var webGLStart = function() {
 
         var phi = Math.sin(laptopTheta) * 1.77 + Math.PI;
 
-        macbook.rotation.set(-Math.PI / 2, phi, 0);
-        macbook.update();
+        macbook
+          .setRotation(new Vec3(-Math.PI / 2, phi, 0))
+          .updateMatrix();
 
-        macbookscreen.rotation.set(-Math.PI / 2, phi, 0);
-        macbookscreen.update();
+        macbookscreen
+          .setRotation(new Vec3(-Math.PI / 2, phi, 0))
+          .updateMatrix();
 
-        outerScene.render();
+        outerScene.render({camera: outerCamera});
       }
 
       function draw() {

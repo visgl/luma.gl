@@ -134,19 +134,19 @@ window.webGLStart = function() {
       theta += 0.01;
 
       moon
-        .setPosition({
-          x: rho * Math.cos(theta),
-          y: 0,
-          z: rho * Math.sin(theta)
-        })
+        .setPosition(new Vec3(
+          rho * Math.cos(theta),
+          0,
+          rho * Math.sin(theta)
+        ))
         .updateMatrix();
 
       box
-        .setPosition({
-          x: rho * Math.cos(Math.PI + theta),
-          y: 0,
-          z: rho * Math.sin(Math.PI + theta)
-        })
+        .setPosition(new Vec3(
+          rho * Math.cos(Math.PI + theta),
+          0,
+          rho * Math.sin(Math.PI + theta)
+        ))
         .updateMatrix();
 
       // render objects

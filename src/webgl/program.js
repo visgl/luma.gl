@@ -3,7 +3,7 @@
 
 /* eslint-disable no-console */
 
-import {WebGLRenderingContext, WebGL2RenderingContext} from './types';
+import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
 import {glCheckError} from './context';
 import * as VertexAttributes from './vertex-attributes';
 import Buffer from './buffer';
@@ -17,6 +17,22 @@ const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
 
 export default class Program {
+
+  /**
+   * Returns a Program wrapped WebGLProgram from a variety of inputs.
+   * Allows other functions to transparently accept raw WebGLPrograms etc
+   * and manipulate them using the methods in the `Program` class.
+   * Checks for ".handle"
+   *
+   * @param {WebGLRenderingContext} gl - if a new buffer needs to be initialized
+   * @param {*} object - candidate that will be coerced to a buffer
+   * @returns {Program} - Program object that wraps the buffer parameter
+   */
+  static makeFrom(gl, object = {}) {
+    return object instanceof Program ? object :
+      // Use .handle if available, else use 'program' directly
+      new Program(gl).setData({handle: object.handle || object});
+  }
 
   /*
    * @classdesc
@@ -32,7 +48,8 @@ export default class Program {
   constructor(gl, {
     vs = Shaders.Vertex.Default,
     fs = Shaders.Fragment.Default,
-    id = uid()
+    id = uid('program'),
+    handle
   } = {}) {
     assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
 
@@ -40,28 +57,27 @@ export default class Program {
       throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
     }
 
-    const program = gl.createProgram();
-    if (!program) {
+    this.handle = handle || gl.createProgram();
+    if (!this.handle) {
       throw new Error('Failed to create program');
     }
 
-    gl.attachShader(program, new VertexShader(gl, vs).handle);
-    gl.attachShader(program, new FragmentShader(gl, fs).handle);
-    gl.linkProgram(program);
-    gl.validateProgram(program);
-    const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (!linked) {
-      throw new Error(`Error linking ${gl.getProgramInfoLog(program)}`);
-    }
-
     this.gl = gl;
-    this.handle = program;
+    this.id = id;
+    this.userData = {};
+
+    this._compileAndLink(vs, fs);
+
     // determine attribute locations (i.e. indices)
     this._attributeLocations = this._getAttributeLocations();
     this._attributeCount = this.getActiveAttributeCount();
+    this._warn = [];
+    this._filledLocations = {};
+
     // prepare uniform setters
     this._uniformSetters = this._getUniformSetters();
     this._uniformCount = this.getActiveUniformCount();
+    Object.seal(this);
   }
 
   delete() {
@@ -74,6 +90,18 @@ export default class Program {
     return this;
   }
 
+  _compileAndLink(vs, fs) {
+    const {gl} = this;
+    gl.attachShader(this.handle, new VertexShader(gl, vs).handle);
+    gl.attachShader(this.handle, new FragmentShader(gl, fs).handle);
+    gl.linkProgram(this.handle);
+    gl.validateProgram(this.handle);
+    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+    if (!linked) {
+      throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
+    }
+  }
+
   use() {
     const {gl} = this;
     gl.useProgram(this.handle);
@@ -81,6 +109,10 @@ export default class Program {
   }
 
   // DEPRECATED METHODS
+  clearBuffers() {
+    this._filledLocations = {};
+    return this;
+  }
 
   /**
    * Attach a map of Buffers values to a program
@@ -91,24 +123,71 @@ export default class Program {
    *  and values are expected to be instances of Buffer.
    * @returns {Program} Returns itself for chaining.
    */
-  setBuffers(buffers, {warn = false} = {}) {
+  /* eslint-disable max-statements */
+  setBuffers(buffers, {clear = true, check = true, drawParams = {}} = {}) {
     const {gl} = this;
     if (Array.isArray(buffers)) {
       throw new Error('Program.setBuffers expects map of buffers');
     }
+
+    if (clear) {
+      this.clearBuffers();
+    }
+
+    // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
+    // index type is saved for drawElement calls
+    drawParams.isInstanced = false;
+    drawParams.isIndexed = false;
+    drawParams.indexType = null;
+
     for (const bufferName in buffers) {
-      const buffer = buffers[bufferName];
+      const location = this._attributeLocations[bufferName];
+      const buffer = Buffer.makeFrom(gl, buffers[bufferName]);
+
+      // SET ELEMENTS ARRAY BUFFER
       if (buffer.target === gl.ELEMENT_ARRAY_BUFFER) {
-        buffer.bind();
-      } else {
-        const location = this._attributeLocations[bufferName];
-        if (warn && location >= 0 && VertexAttributes.isEnabled(gl, location)) {
-          console.warn(`Attribute ${location}:${bufferName} already enabled`);
+        if (location !== undefined) {
+          throw new Error(`Program ${this.id}: ` +
+            `Attribute ${bufferName}:${location}` +
+            `has both location and type gl.ELEMENT_ARRAY_BUFFER`);
         }
+        if (this.isIndexed) {
+          throw new Error(`Program ${this.id}: ` +
+            `Attribute ${bufferName} duplicate gl.ELEMENT_ARRAY_BUFFER`);
+        }
+        buffer.bind();
+        drawParams.isIndexed = true;
+        drawParams.indexType = buffer.layout.type;
+      } else if (location === undefined && !this._warn[bufferName]) {
+        console.warn(`Program ${this.id}: Buffer ${bufferName} not used`);
+        this._warn[bufferName] = true;
+      } else {
+        const divisor = buffer.layout.instanced ? 1 : 0;
         VertexAttributes.enable(gl, location);
         VertexAttributes.setBuffer({gl, location, buffer});
-        const divisor = buffer.layout.instanced ? 1 : 0;
         VertexAttributes.setDivisor(gl, location, divisor);
+        this._filledLocations[bufferName] = true;
+        drawParams.isInstanced = buffer.layout.instanced > 0;
+      }
+    }
+
+    if (check) {
+      this.checkBuffers();
+    }
+
+    return this;
+  }
+  /* eslint-enable max-statements */
+
+  checkBuffers() {
+    for (const attributeName in this._attributeLocations) {
+      if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
+        const location = this._attributeLocations[attributeName];
+        // throw new Error(`Program ${this.id}: ` +
+        //   `Attribute ${location}:${attributeName} not supplied`);
+        console.warn(`Program ${this.id}: ` +
+          `Attribute ${location}:${attributeName} not supplied`);
+        this._warn[attributeName] = true;
       }
     }
     return this;
@@ -117,12 +196,12 @@ export default class Program {
   /*
    * @returns {Program} Returns itself for chaining.
    */
-  unsetBuffers(buffers) {
+  unsetBuffers() {
     const {gl} = this;
     const length = this._attributeCount;
     for (let i = 1; i < length; ++i) {
+      // VertexAttributes.setDivisor(gl, i, 0);
       VertexAttributes.disable(gl, i);
-      VertexAttributes.divisor(gl, i, 0);
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     return this;
@@ -285,13 +364,9 @@ export default class Program {
   _getAttributeLocations() {
     const attributeLocations = {};
     const length = this.getActiveAttributeCount();
-    for (let i = 0; i < length; i++) {
-      const name = this.getAttributeName(i);
-      // TODO - is this necessary, doesn't it always return i?
-      const index = this.getAttributeLocation(name);
-      console.log(`Attribute ${i} ${index}`);
-
-      attributeLocations[name] = index;
+    for (let location = 0; location < length; location++) {
+      const name = this.getAttributeName(location);
+      attributeLocations[name] = location;
     }
     return attributeLocations;
   }

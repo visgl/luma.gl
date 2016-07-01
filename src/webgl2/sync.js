@@ -1,7 +1,7 @@
 // WebGL2 Sync Object Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
 
-import {WebGL2RenderingContext} from './types';
+import {WebGL2RenderingContext} from './webgl-types';
 import {glCheckError} from '../context';
 import assert from 'assert';
 

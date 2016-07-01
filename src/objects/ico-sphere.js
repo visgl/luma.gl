@@ -1,7 +1,6 @@
 import Geometry from '../geometry';
 import {Vec3} from '../math';
 import Model from '../model';
-import {makeTypedArray} from '../webgl/types';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 
@@ -184,10 +183,10 @@ export class IcoSphereGeometry extends Geometry {
     super({
       ...opts,
       attributes: {
-        positions: makeTypedArray(Float32Array, positions),
-        normals: makeTypedArray(Float32Array, normals),
-        texCoords: makeTypedArray(Float32Array, texCoords),
-        indices: makeTypedArray(Uint16Array, indices)
+        positions: new Float32Array(positions),
+        normals: new Float32Array(normals),
+        texCoords: new Float32Array(texCoords),
+        indices: new Uint16Array(indices)
       }
     });
   }

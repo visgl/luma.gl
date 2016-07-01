@@ -1,5 +1,6 @@
 import Geometry from '../geometry';
 import Model from '../model';
+import {uid} from '../utils';
 
 export class SphereGeometry extends Geometry {
 
@@ -7,7 +8,13 @@ export class SphereGeometry extends Geometry {
   // copyright 2011 Google Inc. new BSD License
   // (http://www.opensource.org/licenses/bsd-license.php).
   /* eslint-disable max-statements, complexity */
-  constructor({nlat = 10, nlong = 10, radius = 1, ...opts} = {}) {
+  constructor({
+    nlat = 10,
+    nlong = 10,
+    radius = 1,
+    id = uid('sphere-geometry'),
+    ...opts
+  } = {}) {
     const startLat = 0;
     const endLat = Math.PI;
     const latRange = endLat - startLat;
@@ -82,6 +89,7 @@ export class SphereGeometry extends Geometry {
 
     super({
       ...opts,
+      id,
       attributes: {
         positions: positions,
         indices: indices,
@@ -93,9 +101,10 @@ export class SphereGeometry extends Geometry {
 }
 
 export default class Sphere extends Model {
-  constructor(opts = {}) {
+  constructor({id = uid('sphere'), ...opts} = {}) {
     super({
       ...opts,
+      id,
       geometry: new SphereGeometry(opts)
     });
   }

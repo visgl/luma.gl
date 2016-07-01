@@ -2,9 +2,11 @@
 /* eslint-disable guard-for-in */
 
 // Define some locals
+import {glGet} from './webgl/context';
 import {MAX_TEXTURES} from './config';
 import Object3D from './scenegraph/object-3d';
-import {Buffer, VertexAttributes, draw, Texture2D} from './webgl';
+import {Buffer, Program, draw, Texture2D} from './webgl';
+import Geometry from './geometry';
 import {splat} from './utils';
 import log from './log';
 import assert from 'assert';
@@ -28,58 +30,59 @@ export default class Model extends Object3D {
     geometry,
     material = null,
     textures = [],
-    // Enable instanced rendering (requires shader support and extra attributes)
-    instanced = false,
+    // Enables instanced rendering (needs shader support and extra attributes)
+    isInstanced = false,
     instanceCount = 0,
     vertexCount = undefined,
-    isIndexed = undefined,
     // Picking
     pickable = false, pick = null,
     // Extra uniforms and attributes (beyond geometry, material, camera)
     uniforms = {},
     attributes = {},
-    render = null, onBeforeRender = null, onAfterRender = null,
+    render = null,
+    onBeforeRender = () => {},
+    onAfterRender = () => {},
     ...opts
   } = {}) {
     // assert(program || program instanceof Program);
-    assert(program);
-    assert(geometry);
+    assert(program instanceof Program, 'Model needs a program');
+    assert(geometry instanceof Geometry, 'Model needs a geometry');
 
     super(opts);
 
     // set a custom program per o3d
+    // this.program = Program.makeFrom(gl, program);
     this.program = program;
     this.geometry = geometry;
     this.material = material;
 
     // instanced rendering
-    this.instanced = instanced;
+    this.isInstanced = isInstanced;
     this.instanceCount = instanceCount;
     this.vertexCount = vertexCount;
-    this.isIndexed = this.geometry.isIndexed || isIndexed;
 
     // picking options
     this.pickable = Boolean(pickable);
     this.pick = pick || (() => false);
 
-    // extra uniforms and attribute descriptors
-    this.uniforms = uniforms;
-    this.attributes = attributes;
-
     // override the render method, before and after render callbacks
     this.render = render || this.render;
-    this.onBeforeRender = onBeforeRender || this.onBeforeRender;
-    this.onAfterRender = onAfterRender || this.onAfterRender;
-
-    this.buffers = {};
-    this.userData = {};
+    this.onBeforeRender = onBeforeRender;
+    this.onAfterRender = onAfterRender;
 
     this.textures = splat(textures);
 
     // TODO - remove?
+    this.buffers = {};
+    this.userData = {};
+    this.drawParams = {};
     this.dynamic = false;
 
+    // extra uniforms and attribute descriptors
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
+    this.attributes = {};
+    this.setAttributes(attributes);
+    this.uniforms = uniforms;
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -151,13 +154,6 @@ export default class Model extends Object3D {
     return this;
   }
 
-  onBeforeRender() {
-    const {program, attributes} = this;
-    program.use();
-    this.setAttributes(attributes);
-    return this;
-  }
-
   /*
    * @param {Camera} opt.camera=
    * @param {Camera} opt.viewMatrix=
@@ -174,26 +170,29 @@ export default class Model extends Object3D {
     this._log();
 
     this.setProgramState();
+    const drawParams = this.drawParams;
+    if (drawParams.isInstanced && !this.isInstanced) {
+      console.warn('Found instanced attributes on non-instanced model');
+    }
+
+    this.onBeforeRender();
 
     const {gl} = this.program;
-    const {geometry, instanced, instanceCount} = this;
+    const {geometry, isInstanced, instanceCount} = this;
+    const {isIndexed, indexType} = drawParams;
     draw(gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
-      indexed: this.isIndexed,
-      instanced,
+      isIndexed: isIndexed,
+      indexType: indexType,
+      isInstanced,
       instanceCount
     });
 
-    return this;
-  }
+    this.onAfterRender();
 
-  onAfterRender() {
-    const {program, attributes} = this;
-    program.use();
-    // TODO - how about geometry?
-    // Is there a perf penalty to always detaching?
-    this.unsetProgramState(attributes);
+    this.unsetProgramState();
+
     return this;
   }
 
@@ -201,7 +200,8 @@ export default class Model extends Object3D {
     const {program} = this;
     program.use();
     program.setUniforms(this.uniforms);
-    program.setBuffers(this.buffers);
+    this.drawParams = {};
+    program.setBuffers(this.buffers, {drawParams: this.drawParams});
     this.bindTextures();
     return this;
   }
@@ -210,14 +210,13 @@ export default class Model extends Object3D {
     const {program} = this;
     const gl = program.gl;
 
+    // Ensure all vertex attributes (except 0) are disabled
+    this.program.unsetBuffers();
+
     // unbind the array and element buffers
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
-    const attributes = program.attributes;
-    for (const name in attributes) {
-      gl.disableVertexAttribArray(attributes[name]);
-    }
     return this;
   }
 
@@ -350,7 +349,7 @@ export default class Model extends Object3D {
       const attribute = attributes[attributeName];
       let location = program && program._attributeLocations[attributeName];
       if (location === undefined &&
-        attribute.target === gl.ELEMENT_ARRAY_BUFFER) {
+        glGet(gl, attribute.target) === gl.ELEMENT_ARRAY_BUFFER) {
         location = 'ELEMENT_ARRAY_BUFFER';
       }
       table = table || {};

@@ -73,9 +73,9 @@ window.webGLStart = function() {
       }
     }
 
-    var vertices = new Float32Array(vertexPositions);
+    var positions = new Float32Array(vertexPositions);
     var texCoords = new Float32Array(vertexTextureCoords);
-    startApp({vertices, texCoords, textures});
+    startApp({positions, texCoords, textures});
   })
   .catch(function onError(e) {
     console.log('There was something wrong with loading the world.');
@@ -92,8 +92,8 @@ window.webGLStart = function() {
 
     world = new Model({
       geometry: new Geometry({
-        vertices: params.vertices,
-        texCoords: params.texCoords,
+        positions: params.positions,
+        texCoords: params.texCoords
       }),
       textures: params.textures,
       program
@@ -105,6 +105,7 @@ window.webGLStart = function() {
 
     var scene = new Scene(gl, program);
 
+    var pitchRate = 0;
     addEvents(canvas, {
       onKeyDown: function(e) {
         switch (e.key) {

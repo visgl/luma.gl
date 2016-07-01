@@ -1,4 +1,5 @@
-import {WebGLRenderingContext, WebGLBuffer} from './types';
+import {WebGLRenderingContext, WebGLBuffer} from './webgl-types';
+import {assertArrayType} from './webgl-checks';
 import {glGet, glCheckError} from './context';
 import assert from 'assert';
 
@@ -58,7 +59,7 @@ export default class Buffer {
   static makeFrom(gl, object = {}) {
     return object instanceof Buffer ? object :
       // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
-      new Buffer(gl, {handle: object.handle || object});
+      new Buffer(gl).setData({handle: object.handle || object});
   }
 
   /*
@@ -134,6 +135,10 @@ export default class Buffer {
     assert(data || bytes >= 0, 'Buffer.setData needs data or bytes');
     target = glGet(gl, target);
     type = glGet(gl, type);
+
+    if (data) {
+      assertArrayType(data, type, 'in Buffer.setData');
+    }
 
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER

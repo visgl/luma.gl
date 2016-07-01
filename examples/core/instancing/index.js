@@ -34,10 +34,12 @@ window.webGLStart = function() {
         Math.random() * 0.75 + 0.25,
         Math.random() * 0.75 + 0.25
       ];
-      offsets.push([x, y]);
-      colors.push(c);
+      offsets.push(x, y);
+      colors.push(...c);
     }
   }
+
+  var instanceCount = side * side;
 
   var cube = new Cube({
     program: new Program(gl, getShadersFromHTML({
@@ -56,7 +58,8 @@ window.webGLStart = function() {
         instanced: 1
       }
     },
-    instanced: false
+    isInstanced: 1,
+    instanceCount
   });
 
   var tick = 0;
@@ -86,6 +89,7 @@ window.webGLStart = function() {
     var matrix = new Mat4()
       .$rotateXYZ(tick * 0.01, 0, 0)
       .$rotateXYZ(0, tick * 0.013, 0);
+
     cube
       .setUniforms({
         uModel: matrix,

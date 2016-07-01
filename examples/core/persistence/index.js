@@ -5,10 +5,12 @@ window.webGLStart = function() {
   var createGLContext = LumaGL.createGLContext;
   var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var IcoSphere = LumaGL.IcoSphere;
+  var Model = LumaGL.Model;
   var Program = LumaGL.Program;
   var Buffer = LumaGL.Buffer;
+  var Geometry = LumaGL.Geometry;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Framebuffer = LumaGL.Framebuffer;
+  var Framebuffer = LumaGL.FBO;
   var Mat4 = LumaGL.Mat4;
   var Vec3 = LumaGL.Vec3;
   var Fx = LumaGL.Fx;
@@ -33,7 +35,7 @@ window.webGLStart = function() {
     height: canvas.height
   });
 
-  var pingpong = [
+  var pingpongFrameBuffers = [
     new Framebuffer(gl, {
       width: canvas.width,
       height: canvas.height
@@ -44,7 +46,7 @@ window.webGLStart = function() {
     })
   ];
 
-  var quadPositions = [
+  var QUAD_POSITIONS = [
     -1, -1,
      1, -1,
      1,  1,
@@ -53,41 +55,26 @@ window.webGLStart = function() {
     -1,  1
   ];
 
-  var quad = new Buffer(gl, {
-    attribute: 'aPosition',
-    data: new Float32Array(quadPositions),
-    size: 2
+  var quad = new Model({
+    program:
+      new Program(gl, getShadersFromHTML({vs: 'quad-vs', fs: 'quad-fs'})),
+    geometry: new Geometry({
+      positions: {
+        value: new Float32Array(QUAD_POSITIONS),
+        size: 2
+      }
+    })
   });
-
   var ppi = 0;
 
-  var sphereModel = new IcoSphere({iterations: 4});
+  var sphere = new IcoSphere({
+    iterations: 4,
+    program:
+      new Program(gl, getShadersFromHTML({vs: 'sphere-vs', fs: 'sphere-fs'}))
+  });
 
-  var sphere = {
-    vertices: new Buffer(gl, {
-      attribute: 'aPosition',
-      data: new Float32Array(sphereModel.$vertices),
-      size: 3
-    }),
-    normals: new Buffer(gl, {
-      attribute: 'aNormal',
-      data: new Float32Array(sphereModel.$normals),
-      size: 3
-    }),
-    indices: new Buffer(gl, {
-      target: gl.ELEMENT_ARRAY_BUFFER,
-      data: sphereModel.$indices,
-      size: 1
-    })
-  };
-
-  var programQuad =
-    new Program(gl, getShadersFromHTML({vs: 'quad-vs', fs: 'quad-fs'}));
-  var programPersistence =
+  var persistenceProgram =
     new Program(gl, getShadersFromHTML({vs: 'quad-vs', fs: 'persistence-fs'}));
-  var programSphere =
-    new Program(gl, getShadersFromHTML({vs: 'sphere-vs', fs: 'sphere-fs'}));
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   var camera = new PerspectiveCamera({
@@ -133,73 +120,73 @@ window.webGLStart = function() {
   function render() {
     tick++;
 
+    var modelMatrix;
+
     fbo.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     for (var i = 0; i < count; i++) {
       ePos[i] = eRot[i].mulVec3(ePos[i]);
-      var model = new Mat4();
-      model.$translate(ePos[i][0], ePos[i][1], ePos[i][2]);
-      model.$scale(0.06125, 0.06125, 0.06125);
-      programSphere.use();
-      programSphere.setUniforms({
-        uModel: model,
-        uView: camera.view,
-        uProjection: camera.projection,
-        uColor: [0.0,0.5,1],
-        uLighting: false
-      });
-      programSphere.setBuffer(sphere.vertices);
-      programSphere.setBuffer(sphere.normals);
-      programSphere.setBuffer(sphere.indices);
+      modelMatrix = new Mat4();
+      modelMatrix.$translate(ePos[i][0], ePos[i][1], ePos[i][2]);
+      modelMatrix.$scale(0.06125, 0.06125, 0.06125);
+      sphere
+        .setUniforms({
+          uModel: modelMatrix,
+          uView: camera.view,
+          uProjection: camera.projection,
+          uColor: [0.0, 0.5, 1],
+          uLighting: 0
+        });
+
       gl.drawElements(
-        gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0
+        gl.TRIANGLES, sphere.$indicesLength, gl.UNSIGNED_SHORT, 0
       );
     }
 
     for (var i = 0; i < count; i++) {
-      var model = new Mat4();
-      model.$rotateXYZ(tick * 0.013, 0, 0);
-      model.$rotateXYZ(0, tick * 0.021, 0);
-      model.$translate(nPos[i][0], nPos[i][1], nPos[i][2]);
-      model.$scale(0.25, 0.25, 0.25);
-      programSphere.use();
-      programSphere.setUniforms({
-        uModel: model,
-        uView: camera.view,
-        uProjection: camera.projection,
-        uColor: [1, 0.25, 0.25],
-        uLighting: true
-      });
-      programSphere.setBuffer(sphere.vertices);
-      programSphere.setBuffer(sphere.normals);
-      programSphere.setBuffer(sphere.indices);
+      modelMatrix = new Mat4();
+      modelMatrix.$rotateXYZ(tick * 0.013, 0, 0);
+      modelMatrix.$rotateXYZ(0, tick * 0.021, 0);
+      modelMatrix.$translate(nPos[i][0], nPos[i][1], nPos[i][2]);
+      modelMatrix.$scale(0.25, 0.25, 0.25);
+      sphere
+        .setUniforms({
+          uModel: modelMatrix,
+          uView: camera.view,
+          uProjection: camera.projection,
+          uColor: [1, 0.25, 0.25],
+          uLighting: 1
+        });
       gl.drawElements(
-        gl.TRIANGLES, sphereModel.$indicesLength, gl.UNSIGNED_SHORT, 0
+        gl.TRIANGLES, sphere.$indicesLength, gl.UNSIGNED_SHORT, 0
       );
     }
 
-    var current = pingpong[ppi];
-    var next = pingpong[1 - ppi];
+    var currentFrameBuffer = pingpongFrameBuffers[ppi];
+    var nextFrameBuffer = pingpongFrameBuffers[1 - ppi];
 
-    programPersistence.use();
-    programPersistence.setUniforms({
-      uScene: fbo.texture.bind(0),
-      uPersistence: next.texture.bind(1),
-      uRes: [canvas.width, canvas.height]
-    });
-    programPersistence.setBuffer(quad);
-    current.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    persistenceProgram
+      .use()
+      .setUniforms({
+        uScene: fbo.texture.bind(0),
+        uPersistence: nextFrameBuffer.texture.bind(1),
+        uRes: [canvas.width, canvas.height]
+      })
+      .setBuffers(quad);
+    currentFrameBuffer.bind();
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    programQuad.use();
-    programQuad.setUniforms({
-      uTexture: current.texture.bind(0),
-      uRes: [canvas.width, canvas.height]
-    });
-    programQuad.setBuffer(quad);
+    quad
+      .use()
+      .setUniforms({
+        uTexture: currentFrameBuffer.texture.bind(0),
+        uRes: [canvas.width, canvas.height]
+      })
+      .setBuffers(quad);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     Fx.requestAnimationFrame(render);

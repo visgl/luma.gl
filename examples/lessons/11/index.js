@@ -32,12 +32,12 @@ window.webGLStart = function() {
   var program = new Program(gl);
   program.use();
 
+  var scene = new Scene(gl);
+
   var camera = new PerspectiveCamera({
     aspect: canvas.width / canvas.height,
     position: new Vec3(0, 0, -7)
   });
-
-  var scene = new Scene(gl);
 
   addEvents(canvas, {
     onDragStart: function(e) {
@@ -51,14 +51,14 @@ window.webGLStart = function() {
       var sign = Math.abs(z) / z;
       moon.rotation.y += -(pos.x - e.x) / 100;
       moon.rotation.x += sign * (pos.y - e.y) / 100;
-      moon.update();
+      moon.updateMatrix();
       pos.x = e.x;
       pos.y = e.y;
     },
     onMouseWheel: function(e) {
       e.stop();
       camera.position.z += e.wheel;
-      camera.update();
+      camera.updateMatrix();
     }
   });
 
@@ -78,7 +78,8 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
-      textures: tMoon
+      textures: tMoon,
+      program: new Program(gl)
     });
 
     var lighting = $id('lighting');
@@ -124,7 +125,7 @@ window.webGLStart = function() {
       };
 
       // render moon
-      scene.render();
+      scene.render({camera});
       // request new frame
       Fx.requestAnimationFrame(draw);
     }

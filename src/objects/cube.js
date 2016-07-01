@@ -1,6 +1,6 @@
 import Geometry from '../geometry';
 import Model from '../model';
-import {makeTypedArray} from '../webgl/types';
+import {uid} from '../utils';
 
 /* eslint-disable no-multi-spaces, indent */
 const CUBE_INDICES = [
@@ -122,23 +122,25 @@ const CUBE_TEX_COORDS = [
 /* eslint-enable no-multi-spaces, indent */
 
 export class CubeGeometry extends Geometry {
-  constructor(opts = {}) {
+  constructor({id = uid('cube-geometry'), ...opts} = {}) {
     super({
       ...opts,
+      id,
       attributes: {
-        indices: makeTypedArray(Uint16Array, CUBE_INDICES),
-        positions: makeTypedArray(Float32Array, CUBE_POSITIONS),
-        normals: makeTypedArray(Float32Array, CUBE_NORMALS),
-        texCoords: makeTypedArray(Float32Array, CUBE_TEX_COORDS)
+        indices: new Uint16Array(CUBE_INDICES),
+        positions: new Float32Array(CUBE_POSITIONS),
+        normals: new Float32Array(CUBE_NORMALS),
+        texCoords: new Float32Array(CUBE_TEX_COORDS)
       }
     });
   }
 }
 
 export default class Cube extends Model {
-  constructor(opts = {}) {
+  constructor({id = uid('cube'), ...opts} = {}) {
     super({
       ...opts,
+      id,
       geometry: new CubeGeometry(opts)
     });
   }

@@ -1,14 +1,18 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
 import {WebGLRenderingContext} from '../webgl/webgl-types';
-import {Framebuffer, glContextWithState} from '../webgl';
+import {glContextWithState, FramebufferObject} from '../webgl';
 import Group from './group';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Illegal argument to pick';
 
 export function pickModels(gl, {
-  group, camera, viewMatrix, x, y,
+  group,
+  camera,
+  viewMatrix,
+  x,
+  y,
   pickingFBO = null,
   pickingProgram = null,
   pickingColors = null
@@ -19,7 +23,7 @@ export function pickModels(gl, {
 
   // Set up a frame buffer if needed
   // TODO - cache picking fbo (needs to be resized)?
-  pickingFBO = pickingFBO || new Framebuffer(gl, {
+  pickingFBO = pickingFBO || new FramebufferObject(gl, {
     width: gl.canvas.width,
     height: gl.canvas.height
   });
@@ -32,7 +36,6 @@ export function pickModels(gl, {
     // We are only interested in one pixel, no need to render anything else
     scissorTest: {x, y: gl.canvas.height - y, w: 1, h: 1}
   }, () => {
-
     for (const model of group.traverseReverse({viewMatrix})) {
       if (model.isPickable()) {
         const program = model.getProgram();
@@ -50,14 +53,15 @@ export function pickModels(gl, {
           x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color
         );
 
-        program.setUniforms({renderPickingBuffer: 0});
+        program.setUniforms({
+          renderPickingBuffer: 0
+        });
         model.unsetProgramState(program);
 
         // Add the information to the stack
         picked.push({model, color});
       }
     }
-
   });
 
   return picked;

@@ -17,6 +17,7 @@ window.webGLStart = function() {
   var Fx = LumaGL.Fx;
   var Model = LumaGL.Model;
   var Shaders = LumaGL.Shaders;
+  var Vec3 = LumaGL.Vec3;
 
   var canvas = document.getElementById('lesson09-canvas');
   canvas.width = canvas.clientWidth;
@@ -61,13 +62,13 @@ window.webGLStart = function() {
       super({
         program,
         geometry: new Geometry({
-          vertices: new Float32Array([
+          positions: new Float32Array([
             -1.0, -1.0,  0.0,
             1.0, -1.0,  0.0,
             -1.0,  1.0,  0.0,
             1.0,  1.0,  0.0
           ]),
-          texCoords: new Uint16Array([
+          texCoords: new Float32Array([
             0.0, 0.0,
             1.0, 0.0,
             0.0, 1.0,
@@ -122,9 +123,9 @@ window.webGLStart = function() {
         Math.sin(this.angle) * this.dist,
         0
       );
-      this.rotation.set(0, 0, this.spin);
+      this.setRotation(new Vec3(0, 0, this.spin));
       this.spin += 0.1;
-      this.update();
+      this.updateMatrix();
     }
   }
 
@@ -179,7 +180,7 @@ window.webGLStart = function() {
     }
 
     function animate() {
-      scene.models.forEach(function(star) {
+      scene.children.forEach(function(star) {
         star.animate();
       });
     }

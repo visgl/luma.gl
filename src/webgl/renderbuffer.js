@@ -1,19 +1,21 @@
+import {WebGLRenderingContext} from './webgl-types';
 import {glGet, assertWebGL2} from './context';
-import {WebGLRenderbuffer} from './webgl-types';
+
+import assert from 'assert';
+
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 export default class Renderbuffer {
 
-  static getHandle(object) {
-    if (object instanceof Renderbuffer) {
-      object = object.handle;
-    }
-    if (!(object instanceof WebGLRenderbuffer)) {
-      throw new Error(`Expected Luma Renderbuffer or WebGLRenderbuffer`);
-    }
-    return object;
+  static makeFrom(gl, object = {}) {
+    return object instanceof Renderbuffer ? object :
+      // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
+      new Renderbuffer(gl, {handle: object.handle || object});
   }
 
   constructor(gl, opts = {}) {
+    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+
     this.gl = gl;
     this.handle = gl.createRenderbuffer();
     if (!this.handle) {
@@ -48,31 +50,25 @@ export default class Renderbuffer {
    * @param {Boolean} opt.autobind=true - method call will bind/unbind object
    * @returns {Renderbuffer} returns itself to enable chaining
    */
-  storage({internalFormat, width, height, autobind = true} = {}) {
+  storage({internalFormat, width, height}) {
     const {gl} = this;
-    if (autobind) {
-      this.bind();
-    }
+    assert(internalFormat, 'Needs internalFormat');
+    this.bind();
     gl.renderbufferStorage(
-      gl.RENDERBUFFER, glGet(internalFormat), width, height
+      gl.RENDERBUFFER, glGet(gl, internalFormat), width, height
     );
-    if (autobind) {
-      this.unbind();
-    }
+    this.unbind();
     return this;
   }
 
   // @param {Boolean} opt.autobind=true - method call will bind/unbind object
   // @returns {GLenum|GLint} - depends on pname
-  getParameter(pname, {autobind = true}) {
+  getParameter(pname) {
     const {gl} = this;
-    if (autobind) {
-      this.bind();
-    }
-    const value = gl.getRenderbufferParameter(gl.RENDERBUFFER, glGet(pname));
-    if (autobind) {
-      this.unbind();
-    }
+    this.bind();
+    const value =
+      gl.getRenderbufferParameter(gl.RENDERBUFFER, glGet(gl, pname));
+    this.unbind();
     return value;
   }
 

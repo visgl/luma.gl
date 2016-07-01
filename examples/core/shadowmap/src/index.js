@@ -36,7 +36,7 @@ window.webGLStart = function() {
   ];
 
   var plane = {
-    vertices: new Buffer(gl, {
+    vertices: new Buffer(gl).setData({
       attribute: 'aPosition',
       data: new Float32Array(plane),
       size: 3
@@ -46,17 +46,17 @@ window.webGLStart = function() {
   var cubeModel = new Cube();
 
   var cube = {
-    vertices: new Buffer(gl, {
+    vertices: new Buffer(gl).setData({
       attribute: 'aPosition',
       data: new Float32Array(cubeModel.$vertices),
       size: 3
     }),
-    normals: new Buffer(gl, {
+    normals: new Buffer(gl).setData({
       attribute: 'aNormal',
       data: new Float32Array(cubeModel.$normals),
       size: 3
     }),
-    indices: new Buffer(gl, {
+    indices: new Buffer(gl).setData({
       target: gl.ELEMENT_ARRAY_BUFFER,
       data: cubeModel.$indices,
       size: 1

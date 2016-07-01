@@ -1,5 +1,6 @@
 import Geometry from '../geometry';
 import Model from '../model';
+import {uid} from '../utils';
 
 export class PlaneGeometry extends Geometry {
 
@@ -9,7 +10,12 @@ export class PlaneGeometry extends Geometry {
   /* eslint-disable max-statements, complexity */
   /* eslint-disable complexity, max-statements */
   constructor({
-    type = 'x,y', offset = 0, flipCull = false, unpack = false, ...opts
+    type = 'x,y',
+    offset = 0,
+    flipCull = false,
+    unpack = false,
+    id = uid('plane-geometry'),
+    ...opts
   } = {}) {
     const coords = type.split(',');
     // width, height
@@ -121,6 +127,7 @@ export class PlaneGeometry extends Geometry {
 
     super({
       ...opts,
+      id,
       attributes: {
         positions,
         normals,
@@ -132,9 +139,10 @@ export class PlaneGeometry extends Geometry {
 }
 
 export default class Plane extends Model {
-  constructor(opts) {
+  constructor({id = uid('plane'), ...opts}) {
     super({
       ...opts,
+      id,
       geometry: new PlaneGeometry(opts)
     });
   }

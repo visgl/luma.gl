@@ -6,8 +6,6 @@ window.webGLStart = function() {
   };
 
   var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
   var Program = LumaGL.Program;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var Scene = LumaGL.Scene;
@@ -16,6 +14,8 @@ window.webGLStart = function() {
   var Vec3 = LumaGL.Vec3;
   var Sphere = LumaGL.Sphere;
   var Cube = LumaGL.Cube;
+  var loadTextures = LumaGL.loadTextures;
+  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
 
   var canvas = document.getElementById('lesson13-canvas');
   canvas.width = canvas.clientWidth;
@@ -25,7 +25,7 @@ window.webGLStart = function() {
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, +canvas.width, +canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
   var defaultProgram = new Program(gl);
   var perpixelProgram = new Program(gl, getShadersFromHTML({
@@ -73,21 +73,21 @@ window.webGLStart = function() {
 
     // Create moon
     var moon = new Sphere({
+      program: defaultProgram,
       nlat: 30,
       nlong: 30,
       radius: 2,
       textures: tMoon,
-      program: 'vertex',
       colors: [1, 1, 1, 1]
     });
 
     // Create box
     var box = new Cube({
+      program: defaultProgram,
       textures: tCrate,
-      program: 'vertex',
       colors: [1, 1, 1, 1]
     });
-    box.scale.set(2, 2, 2);
+    box.setScale(new Vec3(2, 2, 2));
 
     // Unpack app properties
     var lighting = $id('lighting');
@@ -105,10 +105,10 @@ window.webGLStart = function() {
       g: $id('pointG'),
       b: $id('pointB')
     };
-    var program = $id('per-fragment'),
-    var textures = $id('textures'),
+    var program = $id('per-fragment');
+    var textures = $id('textures');
     // objects position
-    var rho = 6,
+    var rho = 6;
     var theta = 0;
 
     // Add objects to the scene
@@ -120,20 +120,20 @@ window.webGLStart = function() {
       var lights = scene.config.lights;
       lights.enable = lighting.checked;
       lights.ambient = {
-        r: +ambient.r.value,
-        g: +ambient.g.value,
-        b: +ambient.b.value
+        r: Number(ambient.r.value),
+        g: Number(ambient.g.value),
+        b: Number(ambient.b.value)
       };
       lights.points = {
         color: {
-          r: +point.r.value,
-          g: +point.g.value,
-          b: +point.b.value
+          r: Number(point.r.value),
+          g: Number(point.g.value),
+          b: Number(point.b.value)
         },
         position: {
-          x: +point.x.value,
-          y: +point.y.value,
-          z: +point.z.value
+          x: Number(point.x.value),
+          y: Number(point.y.value),
+          z: Number(point.z.value)
         }
       };
 
@@ -158,22 +158,22 @@ window.webGLStart = function() {
       // Update position
       theta += 0.01;
 
-      moon.position = {
-        x: rho * Math.cos(theta),
-        y: 0,
-        z: rho * Math.sin(theta)
-      };
-      moon.update();
+      moon.setPosition(new Vec3(
+        rho * Math.cos(theta),
+        0,
+        rho * Math.sin(theta)
+      ));
+      moon.updateMatrix();
 
-      box.position = {
-        x: rho * Math.cos(Math.PI + theta),
-        y: 0,
-        z: rho * Math.sin(Math.PI + theta)
-      };
-      box.update();
+      box.setPosition(new Vec3(
+        rho * Math.cos(Math.PI + theta),
+        0,
+        rho * Math.sin(Math.PI + theta)
+      ));
+      box.updateMatrix();
 
       // render objects
-      scene.render();
+      scene.render({camera});
 
       // request new frame
       Fx.requestAnimationFrame(draw);
@@ -183,4 +183,4 @@ window.webGLStart = function() {
     draw();
 
   });
-}
+};

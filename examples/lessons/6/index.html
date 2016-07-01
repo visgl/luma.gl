@@ -32,8 +32,8 @@
 </script>
 
 <script id="shader-vs" type="x-shader/x-vertex">
-  attribute vec3 aVertexPosition;
-  attribute vec2 aTextureCoord;
+  attribute vec3 positions;
+  attribute vec2 texCoords;
 
   uniform mat4 uMVMatrix;
   uniform mat4 uPMatrix;
@@ -42,8 +42,8 @@
 
 
   void main(void) {
-    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-    vTextureCoord = aTextureCoord;
+    gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+    vTextureCoord = texCoords;
   }
 </script>
 </head>

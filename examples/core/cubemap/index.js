@@ -3,9 +3,8 @@
 window.webGLStart = function webGLStart() {
 
   var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.addons.Program;
+  var Program = LumaGL.Program;
   var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var Buffer = LumaGL.Buffer;
   var PerspectiveCamera = LumaGL.PerspectiveCamera;
   var TextureCube = LumaGL.TextureCube;
   var Cube = LumaGL.Cube;
@@ -47,11 +46,11 @@ window.webGLStart = function webGLStart() {
     }))
   });
 
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
   var tick = 0;
 
   function render() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -60,77 +59,76 @@ window.webGLStart = function webGLStart() {
       aspect: canvas.width / canvas.height
     });
     camera.view.$translate(0, 0, -4);
+
     tick++;
-    var model = new Mat4();
-    model.$scale(5, 5, 5);
+    var modelMatrix = new Mat4();
+    modelMatrix.$scale(5, 5, 5);
     cube
       .setUniforms({
         uTexture: cubemap.bind(0),
-        uModel: model,
+        uModel: modelMatrix,
         uView: camera.view,
         uProjection: camera.projection
-      });
-    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+      })
+      .render();
+
+    // gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
 
     var reflection = parseFloat(document.getElementById('reflection').value);
     var refraction = parseFloat(document.getElementById('refraction').value);
 
-    model = new Mat4();
-    model.$rotateXYZ(tick * 0.01, 0, 0);
-    model.$rotateXYZ(0, tick * 0.013, 0);
+    modelMatrix = new Mat4();
+    modelMatrix.$rotateXYZ(tick * 0.01, 0, 0);
+    modelMatrix.$rotateXYZ(0, tick * 0.013, 0);
     prism
       .setUniforms({
         uTexture: cubemap.bind(0),
-        uModel: model,
+        uModel: modelMatrix,
         uView: camera.view,
         uProjection: camera.projection,
         uReflect: reflection,
         uRefract: refraction
-      });
-
-    gl.drawElements(
-      gl.TRIANGLES, prism.getVer, gl.UNSIGNED_SHORT, 0
-    );
+      })
+      .render();
 
     Fx.requestAnimationFrame(render);
   }
 
   render();
-
-  function genTextures(size) {
-    var signs = ['pos', 'neg'];
-    var axes = ['x', 'y', 'z'];
-    var textures = {
-      pos: {},
-      neg: {}
-    };
-    for (var i = 0; i < signs.length; i++) {
-      var sign = signs[i];
-      for (var j = 0; j < axes.length; j++) {
-        var axis = axes[j];
-        var canvas = document.createElement('canvas');
-        canvas.width = canvas.height = size;
-        var ctx = canvas.getContext('2d');
-        if (axis === 'x' || axis === 'z') {
-          ctx.translate(size, size);
-          ctx.rotate(Math.PI);
-        }
-        var color = 'rgb(0,64,128)';
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = 'white';
-        ctx.fillRect(8, 8, size - 16, size - 16);
-        ctx.fillStyle = color;
-        ctx.font = size / 4 + 'px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(sign + '-' + axis, size / 2, size / 2);
-        ctx.strokeStyle = color;
-        ctx.strokeRect(0, 0, size, size);
-        textures[sign][axis] = canvas;
-      }
-    }
-    return textures;
-  }
-
 };
+
+function genTextures(size) {
+  var signs = ['pos', 'neg'];
+  var axes = ['x', 'y', 'z'];
+  var textures = {
+    pos: {},
+    neg: {}
+  };
+  for (var i = 0; i < signs.length; i++) {
+    var sign = signs[i];
+    for (var j = 0; j < axes.length; j++) {
+      var axis = axes[j];
+      var canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      if (axis === 'x' || axis === 'z') {
+        ctx.translate(size, size);
+        ctx.rotate(Math.PI);
+      }
+      var color = 'rgb(0,64,128)';
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(8, 8, size - 16, size - 16);
+      ctx.fillStyle = color;
+      ctx.font = size / 4 + 'px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sign + '-' + axis, size / 2, size / 2);
+      ctx.strokeStyle = color;
+      ctx.strokeRect(0, 0, size, size);
+      textures[sign][axis] = canvas;
+    }
+  }
+  return textures;
+}

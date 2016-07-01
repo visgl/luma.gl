@@ -1,10 +1,10 @@
 // Helper definitions for validation of webgl parameters
 /* eslint-disable no-inline-comments, max-len */
-
+import assert from 'assert';
 export * from './webgl-types';
 
 // TODO - remove
-export {isTypedArray, makeTypedArray} from '../utils';
+export {isTypedArray} from '../utils';
 
 // INDEX TYPES
 
@@ -15,8 +15,13 @@ export const GL_INDEX_TYPES = gl => INDEX_TYPES.map(constant => gl[constant]);
 export function isIndexType(type) {
   return INDEX_TYPES.indexOf(type) !== -1;
 }
-export function isGLIndexType(glType) {
-  return GL_INDEX_TYPES.indexOf(glType) !== -1;
+export function isGLIndexType(gl, glType) {
+  return GL_INDEX_TYPES(gl).indexOf(glType) !== -1;
+}
+
+export function assertIndexType(gl, glType, source) {
+  assert(isGLIndexType(gl, glType),
+    `Bad index type gl.${getKey(gl, glType)} ${source}`);
 }
 
 // DRAW MODES
@@ -30,8 +35,13 @@ export const GL_DRAW_MODES = gl => DRAW_MODES.map(constant => gl[constant]);
 export function isDrawMode(mode) {
   return DRAW_MODES.indexOf(mode) !== -1;
 }
-export function isGLDrawMode(glMode) {
-  return GL_DRAW_MODES.indexOf(glMode) !== -1;
+export function isGLDrawMode(gl, glMode) {
+  return GL_DRAW_MODES(gl).indexOf(glMode) !== -1;
+}
+
+export function assertDrawMode(gl, glType, source) {
+  assert(isGLDrawMode(gl, glType),
+    `Bad draw mode gl.${getKey(gl, glType)} ${source}`);
 }
 
 // TARGET TYPES
@@ -68,3 +78,12 @@ export const BUFFER_USAGE = [
 
 export const GL_BUFFER_USAGE =
   gl => BUFFER_USAGE.map(constant => gl[constant]).filter(constant => constant);
+
+function getKey(gl, value) {
+  for (const key in gl) {
+    if (gl[key] === value) {
+      return key;
+    }
+  }
+  return String(value);
+}

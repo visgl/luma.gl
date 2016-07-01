@@ -17,7 +17,7 @@ window.webGLStart = function() {
   var loadImages = LumaGL.loadImages;
 
   var cubeGeometry = new Geometry({
-    vertices: new Float32Array([
+    positions: new Float32Array([
       -1, -1,  1,
       1, -1,  1,
       1,  1,  1,

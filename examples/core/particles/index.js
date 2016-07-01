@@ -87,7 +87,7 @@ function begin() {
     -1, -1, 0, +1, +1, 0, -1, +1, 0
   ];
 
-  var quad = new Buffer(gl, {
+  var quad = new Buffer(gl).setData({
     attribute: 'aPosition',
     data: new Float32Array(quadpos),
     size: 3
@@ -104,17 +104,17 @@ function begin() {
   ];
 
   var sprite = {
-    vertices: new Buffer(gl, {
+    vertices: new Buffer(gl).setData({
       attribute: 'aPosition',
       data: new Float32Array(quadpos),
       size: 3
     }),
-    uvs: new Buffer(gl, {
+    uvs: new Buffer(gl).setData({
       attribute: 'aUV',
       data: new Float32Array(quaduv),
       size: 2
     }),
-    index: new Buffer(gl, {
+    index: new Buffer(gl).setData({
       attribute: 'aIndex',
       data: indexArray,
       size: 1,
@@ -123,12 +123,12 @@ function begin() {
   };
 
   var plane = {
-    vertices: new Buffer(gl, {
+    vertices: new Buffer(gl).setData({
       attribute: 'aPosition',
       data: new Float32Array(quadpos),
       size: 3
     }),
-    uvs: new Buffer(gl, {
+    uvs: new Buffer(gl).setData({
       attribute: 'aUV',
       data: new Float32Array(quaduv),
       size: 2

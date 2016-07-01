@@ -37,11 +37,11 @@ window.webGLStart = function() {
   camera.view.$translate(-1.5, 0, -7);
   program
     .setBuffers({
-      aVertexPosition: new Buffer(gl).setData({
+      positions: new Buffer(gl).setData({
         data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
         size: 3
       }),
-      aVertexColor: new Buffer(gl).setData({
+      colors: new Buffer(gl).setData({
         data: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]),
         size: 4
       })
@@ -56,11 +56,11 @@ window.webGLStart = function() {
   camera.view.$translate(3, 0, 0);
   program
     .setBuffers({
-      aVertexPosition: new Buffer(gl).setData({
+      positions: new Buffer(gl).setData({
         data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
         size: 3
       }),
-      aVertexColor: new Buffer(gl).setData({
+      colors: new Buffer(gl).setData({
         data: new Float32Array(
           [0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1]),
         size: 4
