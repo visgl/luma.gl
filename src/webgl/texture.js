@@ -1,6 +1,5 @@
 import {WebGL, WebGLRenderingContext, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
-/* global HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
 import {glTypeFromArray} from './webgl-checks';
 import {glCheckError} from './context';
 import Buffer from './buffer';
@@ -47,18 +46,17 @@ export class Texture {
     if (this.handle) {
       gl.deleteTexture(this.handle);
       this.handle = null;
+      glCheckError(gl);
     }
-    glCheckError(gl);
     return this;
   }
 
   generateMipmap() {
     const {gl} = this;
     this.bind();
-    gl.generateMipmap(this.target);
+    this.gl.generateMipmap(this.target);
     glCheckError(gl);
-    this.unbind();
-    return this;
+    return this.unbind();
   }
 
   /*
@@ -98,10 +96,19 @@ export class Texture {
 
     pixels = pixels || data;
 
+    // Support ndarrays
+    if (pixels && pixels.data) {
+      const ndarray = pixels;
+      pixels = ndarray.data;
+      width = ndarray.shape[0];
+      height = ndarray.shape[1];
+    }
+
     this.bind();
 
     if (pixels === null) {
 
+      // Create an minimal texture
       width = width || 1;
       height = height || 1;
       type = type || WebGL.UNSIGNED_BYTE;
@@ -113,22 +120,23 @@ export class Texture {
 
     } else if (ArrayBuffer.isView(pixels)) {
 
+      // Create from a typed array
       assert(width > 0 && height > 0, 'Texture2D: Width and height required');
       type = type || glTypeFromArray(pixels);
       // TODO - WebGL2 check?
       if (type === gl.FLOAT && !this.hasFloatTexture) {
         throw new Error('floating point textures are not supported.');
       }
-
       gl.texImage2D(target,
         mipmapLevel, format, width, height, border, format, type, pixels);
       this.width = width;
       this.height = height;
 
     } else if (pixels instanceof WebGLBuffer || pixels instanceof Buffer) {
-      type = type || WebGL.UNSIGNED_BYTE;
 
+      // WebGL2 allows us to create texture directly from a WebGL buffer
       assert(gl instanceof WebGL2RenderingContext, 'Requires WebGL2');
+      type = type || WebGL.UNSIGNED_BYTE;
       // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
       const buffer = Buffer.makeFrom(pixels);
       gl.bindBuffer(WebGL.PIXEL_UNPACK_BUFFER, buffer.handle);
@@ -139,22 +147,15 @@ export class Texture {
       this.height = height;
 
     } else {
-      type = type || WebGL.UNSIGNED_BYTE;
 
+      // Assume pixels is a browser supported object (ImageData, Canvas, ...)
       assert(width === undefined && height === undefined,
         'Texture2D.setImageData: Width and height must not be provided');
+      type = type || WebGL.UNSIGNED_BYTE;
+      const imageSize = this._deduceImageSize(pixels);
       gl.texImage2D(target, mipmapLevel, format, format, type, pixels);
-      if (pixels instanceof HTMLImageElement) {
-        this.width = pixels.naturalWidth;
-        this.height = pixels.naturalHeight;
-      } else if (pixels instanceof HTMLCanvasElement) {
-        this.width = pixels.width;
-        this.height = pixels.height;
-      } else if (pixels instanceof HTMLVideoElement) {
-        this.width = pixels.videoWidth;
-        this.height = pixels.videoHeight;
-      }
-
+      this.width = imageSize.width;
+      this.height = imageSize.height;
     }
 
     glCheckError(gl);
@@ -162,6 +163,22 @@ export class Texture {
     return this;
   }
 
+  /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
+  _deduceImageSize(image) {
+    if (typeof ImageData !== 'undefined' && image instanceof ImageData) {
+      return {width: image.width, height: image.height};
+    } else if (typeof HTMLImageElement !== 'undefined' &&
+      image instanceof HTMLImageElement) {
+      return {width: image.naturalWidth, height: image.naturalHeight};
+    } else if (typeof HTMLCanvasElement !== 'undefined' &&
+      image instanceof HTMLCanvasElement) {
+      return {width: image.width, height: image.height};
+    } else if (typeof HTMLVideoElement !== 'undefined' &&
+      image instanceof HTMLVideoElement) {
+      return {width: image.videoWidth, height: image.videoHeight};
+    }
+    throw new Error('Failed to deduce image size');
+  }
   /**
    * Batch update pixel storage modes
    * @param {GLint} packAlignment - Packing of pixel data in memory (1,2,4,8)

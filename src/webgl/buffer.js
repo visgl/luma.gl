@@ -81,14 +81,18 @@ export default class Buffer {
     handle
   } = {}) {
     assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
-    this.handle = handle || gl.createBuffer();
-    if (!(this.handle instanceof WebGLBuffer)) {
+
+    handle = handle || gl.createBuffer();
+    if (!(handle instanceof WebGLBuffer)) {
       throw new Error('Failed to create WebGLBuffer');
     }
+
     this.gl = gl;
+    this.handle = handle;
     this.id = id;
     this.target = gl.ARRAY_BUFFER;
     this.layout = null;
+
     this.userData = {};
     Object.seal(this);
   }

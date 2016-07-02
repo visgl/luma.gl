@@ -1,4 +1,4 @@
 require('babel-polyfill');
 
-require('./gpu-independent-tests');
-require('./gpu-dependent-tests');
+require('./webgl-independent');
+require('./webgl');

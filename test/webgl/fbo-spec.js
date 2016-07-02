@@ -1,7 +1,12 @@
-import test from 'tape-catch';
-
 import {createGLContext, FramebufferObject, Buffer} from '../../src/webgl';
 import shaders from '../../shaderlib';
+
+import test from 'tape-catch';
+import headlessGL from 'gl';
+
+const fixture = {
+  gl: createGLContext({headlessGL})
+};
 
 const VS = `
 attribute vec3 positions;
@@ -21,10 +26,6 @@ void main(void) {
 `;
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
-
-const fixture = {
-  gl: createGLContext({})
-};
 
 test('WebGL#FramebufferObject construct/delete', t => {
   const {gl} = fixture;

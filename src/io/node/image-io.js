@@ -24,10 +24,5 @@ export function compressImage(image, type = 'png') {
 }
 
 export function loadImage(url) {
-  return getPixelsAsync(url)
-  .then(result => ({
-    width: result.shape[0],
-    height: result.shape[1],
-    data: result.data
-  }));
+  return getPixelsAsync(url);
 }

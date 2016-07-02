@@ -1,10 +1,10 @@
 import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
-
 import {createGLContext, Buffer} from '../../src/webgl';
 import test from 'tape-catch';
+import headlessGL from 'gl';
 
 const fixture = {
-  gl: createGLContext({debug: true})
+  gl: createGLContext({headlessGL, debug: true})
 };
 
 test('WebGL#Buffer constructor/delete', t => {

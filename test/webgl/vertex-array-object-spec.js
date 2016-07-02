@@ -1,12 +1,13 @@
 /* eslint-disable max-len */
-import test from 'tape-catch';
-
 import {createGLContext} from '../../src/webgl';
 import {VertexArrayObject} from '../../src/webgl2';
 import shaders from '../../shaderlib';
 
+import test from 'tape-catch';
+import headlessGL from 'gl';
+
 const fixture = {
-  gl: createGLContext()
+  gl: createGLContext({headlessGL})
 };
 
 test('WebGL#VertexArrayObject construct/delete', t => {

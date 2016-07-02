@@ -1,13 +1,20 @@
 import test from 'blue-tape';
-import {loadImage} from '../../../src';
-import {Program, Texture2D, Buffer} from '../../../src';
+import {
+  createGLContext, loadImage,
+  Program, Texture2D, Buffer
+} from '../../../src';
 
-import createContext from 'gl';
+import headlessGL from 'gl';
 
-const DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=';
+const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA
+Bytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=`;
+
+test('WebGL#load-file', t => {
+  return loadImage(DATA_URL);
+});
 
 test('WebGL#read-texture', t => {
-  const gl = createContext(2, 2);
+  const gl = createGLContext({headlessGL, width: 2, height: 2, debug: true});
 
   const program = new Program(gl, {
     vs: `
@@ -42,12 +49,12 @@ test('WebGL#read-texture', t => {
   .then(image => {
     const texture = new Texture2D(gl, {pixels: image, generateMipmap: true});
     t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
-    texture.bind(0);
 
     program
       .use()
       .setBuffers({positions: triangle})
       .setUniforms({tex: 0});
+    texture.bind(0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -58,12 +65,8 @@ test('WebGL#read-texture', t => {
       255, 0, 255, 255,
       255, 0, 255, 255,
       255, 0, 255, 255
-    ]), 'pixels ok');
+    ]), 'modified pixels ok');
 
-    t.end();
-  })
-  .catch(error => {
-    t.comment(error);
     t.end();
   });
 });
