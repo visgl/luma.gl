@@ -66,7 +66,5 @@ test('WebGL#read-texture', t => {
       255, 0, 255, 255,
       255, 0, 255, 255
     ]), 'modified pixels ok');
-
-    t.end();
   });
 });

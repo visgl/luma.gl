@@ -94,7 +94,7 @@
     "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
-    "profile-discify": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
+    "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
     "start": "budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
   }
 }

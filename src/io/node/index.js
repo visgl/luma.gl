@@ -4,4 +4,4 @@ const browserFs = {readFile, writeFile};
 export {browserFs};
 
 // Export node implementation of image io
-export * from './image-io';
+export * from './node-image-io';

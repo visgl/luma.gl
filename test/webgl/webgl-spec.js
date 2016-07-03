@@ -1,4 +1,4 @@
-import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
+import {isWebGLRenderingContext} from '../../src/webgl/webgl-checks';
 import {createGLContext} from '../../src/webgl';
 
 import headlessGL from 'gl';
@@ -6,6 +6,6 @@ import test from 'tape-catch';
 
 test('WebGL#headless context creation', t => {
   const gl = createGLContext({headlessGL});
-  t.ok(gl instanceof WebGLRenderingContext, 'Context creation ok');
+  t.ok(isWebGLRenderingContext(gl), 'Context creation ok');
   t.end();
 });

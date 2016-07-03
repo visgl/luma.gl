@@ -1,4 +1,4 @@
-import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
+import {isWebGLRenderingContext} from '../../src/webgl/webgl-checks';
 
 import {createGLContext, Program} from '../../src/webgl';
 import shaders from '../../shaderlib';
@@ -8,7 +8,7 @@ import headlessGL from 'gl';
 
 test('WebGL#draw', t => {
   const gl = createGLContext({headlessGL});
-  t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
+  t.ok(isWebGLRenderingContext(gl), 'Created gl context');
 
   const program = new Program(gl, shaders);
   t.ok(program instanceof Program, 'Program construction successful');

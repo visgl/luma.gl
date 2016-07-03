@@ -1,13 +1,30 @@
 // Helper definitions for validation of webgl parameters
 /* eslint-disable no-inline-comments, max-len */
-import {WebGL, WebGLRenderingContext} from './webgl-types';
+import {WebGL, WebGLRenderingContext, WebGL2RenderingContext}
+  from './webgl-types';
 import assert from 'assert';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+const ERR_WEBGL2 = 'Requires WebGL2';
+
+export function isWebGLRenderingContext(gl) {
+  return gl instanceof WebGLRenderingContext ||
+    (gl && gl.ARRAY_BUFFER === 0x8892);
+}
+
+export function isWebGL2RenderingContext(gl) {
+  return gl instanceof WebGL2RenderingContext ||
+    (gl && gl.TEXTURE_BINDING_3D === 0x806A);
+}
 
 export function assertWebGLRenderingContext(gl) {
   // Need to handle debug context
-  assert(gl instanceof WebGLRenderingContext || gl.FLOAT !== 0, ERR_CONTEXT);
+  assert(isWebGLRenderingContext(gl), ERR_CONTEXT);
+}
+
+export function assertWebGL2RenderingContext(gl) {
+  // Need to handle debug context
+  assert(isWebGL2RenderingContext(gl), ERR_WEBGL2);
 }
 
 // INDEX TYPES

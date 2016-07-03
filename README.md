@@ -34,28 +34,16 @@ Technical Design Goals:
 - Built in support for WebGL and Shader debugging and profiling.
 
 
-### Running luma.gl outside of a Browser (Node.js)
+### Running luma.gl in Node.js
 
-luma.gl's unit tests run in Node.js (`npm run test-headless`, see
-[Travis CI](https://travis-ci.org/uber/luma.gl) using
-`[headless-gl](https://www.npmjs.com/package/gl)`
+If `headless-gl` is installed and properly configured on your system
+(it can often autodetect your configuration),
+you should be able to run luma.gl in Node.js from the console,
+even machines that do not have GPUs.
 
-If `headless-gl` is properly configured on your system (it can often autodetect
-your configuration), you should be able to run luma.gl even on e.g.
-virtual machines that do not have GPUs (uses Mesa emulation).
-See [headless-gl](https://www.npmjs.com/package/gl) for more information
-about such configurations. While you can use `headless-gl` directly, to
-create a context, luma.gl provides some helpful integration points:
-* The `createGLContext` method will automatically create a browser or
-  headless context depending on the environment, enabling you to write
-  clean code that works both in both environments
-* luma.gl has implementations of IO functions, including image loading,
-  that work both in browser and under Node.js. (Browser apps tend to rely on
-  the DOM `Image` class to load images, which is not available under Node.js).
-**Note** To avoid including the `gl` module in environments that don't
-need it, headless-gl is not installed by default (i.e. `gl` is not a
-package dependency of luma.gl). Instead, the app must install and import
-headless-gl itself, and pass headless-gl as an argument to `createGLContext`.
+For more information, see
+[headless-gl](https://www.npmjs.com/package/gl) and
+[luma.gl documentation](http://uber.github.io/luma.gl/context.html#createGLContext).
 
 
 ## Compatibility
@@ -71,20 +59,10 @@ npm modules and are also quite useful on their own.
   `ndarray`.
 
 
-## Roadmap
+## Usage
 
-These are some ideas for next steps for luma.gl:
-
-* WebGL2 support - Continue to build javascript abstractions for
-  WebGL2 features, especially transform feedback.
-
-* Replace current math library with `gl-matrix` -
-  Increase interoperability with e.g.
-  `stack.gl` and remove the need to maintain our own math library.
-
-* Break out IO library to a separate module - Most of luma.gl's dependencies
-  come from this module, but these dependencies are not needed for smaller
-  browser based apps, so these functions should really be optional.
+* [deck.gl](https://github.com/uber/deck.gl) builds 3D map visualization
+  overlays on luma.gl.
 
 
 ## History
@@ -92,9 +70,6 @@ These are some ideas for next steps for luma.gl:
 luma.gl started out as a fork of
 [PhiloGL](https://github.com/philogb/philogl) however no effort has been
 made to maintain compatibility with PhiloGL-based applications.
-
-luma.gl is considered a companion library to
-[deck.gl](https://github.com/uber/deck.gl).
 
 
 # Installation

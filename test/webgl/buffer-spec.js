@@ -1,4 +1,4 @@
-import {WebGLRenderingContext} from '../../src/webgl/webgl-types';
+import {isWebGLRenderingContext} from '../../src/webgl/webgl-checks';
 import {createGLContext, Buffer} from '../../src/webgl';
 import test from 'tape-catch';
 import headlessGL from 'gl';
@@ -9,7 +9,7 @@ const fixture = {
 
 test('WebGL#Buffer constructor/delete', t => {
   const {gl} = fixture;
-  t.ok(gl instanceof WebGLRenderingContext, 'Created gl context');
+  t.ok(isWebGLRenderingContext(gl), 'Created gl context');
 
   t.throws(
     () => new Buffer(),

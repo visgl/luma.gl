@@ -3,13 +3,8 @@
 import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext} from './webgl-types';
 import assert from 'assert';
-import {log} from '../utils';
-
-/* global window, document */
-
-function isBrowserContext() {
-  return typeof window !== 'undefined';
-}
+import {log, isBrowser} from '../utils';
+/* global document */
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
@@ -35,7 +30,7 @@ export function createGLContext({
 } = {}) {
   let gl;
 
-  if (!isBrowserContext()) {
+  if (!isBrowser()) {
 
     // Create headless gl context
     if (!headlessGL) {
@@ -71,7 +66,7 @@ export function createGLContext({
     assert(gl, 'Failed to create WebGLRenderingContext');
   }
 
-  if (debug) {
+  if (isBrowser() && debug) {
     const debugGL =
       WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
     class WebGLDebugContext {}
@@ -79,6 +74,10 @@ export function createGLContext({
     gl = debugGL;
     gl.debug = true;
     log.priority = log.priority < 1 ? 1 : log.priority;
+
+    console.debug('luma.gl debug context created: ', gl);
+    console.debug(
+      'Change lumaLog.priority in console to control logging (0-3, default 1)');
   }
 
   return gl;

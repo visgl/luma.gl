@@ -1,6 +1,15 @@
 /* eslint-disable no-try-catch */
 import assert from 'assert';
-import {saveAs} from 'filesaver.js';
+
+// TODO hack - trick filesaver.js to skip loading under node
+if (typeof window === 'undefined') {
+  global.navigator = {userAgent: 'MSIE 9.'};
+}
+const saveAs = require('filesaver.js');
+if (typeof window === 'undefined') {
+  delete global.navigator;
+}
+// END hack
 
 const window = require('global/window');
 const File = window.File;
@@ -17,7 +26,7 @@ const Blob = window.Blob;
  * @param {Function} callback - Standard node (err, data) callback
  * @return {Promise} - promise, can be used instead of callback
  */
-function writeFile(file, data, options, callback) {
+function writeFile(file, data, options, callback = () => {}) {
   // options is optional
   if (callback === undefined && typeof options === 'function') {
     options = undefined;
@@ -27,19 +36,15 @@ function writeFile(file, data, options, callback) {
     data = new Blob(data);
   }
   return new Promise((resolve, reject) => {
+    let result;
     try {
-      saveAs(data, file, options);
+      result = saveAs(data, file, options);
     } catch (error) {
       reject(error);
-      if (callback) {
-        callback(error);
-      }
-      return;
+      return callback(error, null);
     }
     resolve();
-    if (callback) {
-      callback(null);
-    }
+    return callback(null, result);
   });
 }
 
