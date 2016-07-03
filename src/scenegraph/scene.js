@@ -50,23 +50,6 @@ export default class Scene extends Group {
     this.config = opts;
   }
 
-  getProgram(obj) {
-    const program = obj ? obj.program : this.program;
-    assert(program, 'Scene failed to find valid program');
-    program.use();
-    return program;
-  }
-
-  defineBuffers(obj) {
-    const program = this.getProgram(obj);
-    const prevDynamic = obj.dynamic;
-    obj.dynamic = true;
-    obj.setProgramState(program);
-    obj.dynamic = prevDynamic;
-    obj.unsetProgramState(program);
-    return this;
-  }
-
   clear(gl) {
     if (this.config.clearColor) {
       const bg = this.config.backgroundColor;
@@ -112,19 +95,15 @@ export default class Scene extends Group {
   renderObject({model, camera, context = {}}) {
     assert(camera instanceof Camera, 'Invalid Camera in Scene.renderObject');
 
-    model.onBeforeRender(camera, context);
-
-    const program = this.getProgram(model);
-
     // Setup lighting and scene effects like fog, etc.
+    const {program} = model;
     this.setupLighting(program);
     this.setupEffects(program);
 
     // Draw
+    model.onBeforeRender(camera, context);
     model.render({camera, viewMatrix: camera.view});
-
     model.onAfterRender(camera, context);
-    model.unsetProgramState();
     return this;
   }
 

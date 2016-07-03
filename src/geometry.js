@@ -1,5 +1,5 @@
-import {DRAW_MODES, isTypedArray} from './webgl/types';
-import {uid, getArrayTypeFromGLType} from './utils';
+import {DRAW_MODES} from './webgl/types';
+import {uid} from './utils';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
@@ -76,14 +76,12 @@ export default class Geometry {
       let attribute = attributes[attributeName];
 
       // Wrap "unwrapped" arrays and try to autodetect their type
-      if (Array.isArray(attribute) || isTypedArray(attribute)) {
-        attribute = {
-          value: attribute
-          // TODO - autodetect attribute.type from Array type
-        };
-      }
-      assert(Array.isArray(attribute.value) || isTypedArray(attribute.value),
-        `attribute ${attributeName}: must be an array or an object` +
+      attribute = ArrayBuffer.isView(attribute) ?
+        {value: attribute} :
+        attribute;
+
+      assert(ArrayBuffer.isView(attribute.value),
+        `${this._print(attributeName)}: must be a typed array or an object` +
         `with value as typed array`);
 
       this._autoDetectAttribute(attributeName, attribute);
@@ -97,13 +95,8 @@ export default class Geometry {
   }
 
   // Check for well known attribute names
-  /* eslint-disable default-case */
+  /* eslint-disable default-case, complexity */
   _autoDetectAttribute(attributeName, attribute) {
-
-    // const arrayType = getTypeFromArray(attribute.value);
-    // attribute.type = attribute.type || arrayType;
-    // assert(attribute.type === arrayType);
-
     let category;
     switch (attributeName) {
     case 'indices':
@@ -124,28 +117,26 @@ export default class Geometry {
     switch (category) {
     case 'vectors':
       attribute.size = attribute.size || 3;
-      attribute.type = attribute.type || 'FLOAT';
       break;
     case 'uvs':
       attribute.size = attribute.size || 2;
-      attribute.type = attribute.type || 'FLOAT';
       break;
     case 'indices':
       attribute.size = attribute.size || 1;
-      attribute.type = attribute.type || 'UNSIGNED_SHORT';
-      attribute.target = attribute.target || 'ELEMENT_ARRAY_BUFFER';
-      attribute.instanced = attribute.instanced || 0;
+      attribute.isIndexed = attribute.isIndexed || true;
+      assert(
+        attribute.value instanceof Uint16Array ||
+        attribute.value instanceof Uint32Array,
+        'attribute array for "indices" must be of integer type'
+      );
       break;
     }
 
     assert(attribute.size, `attribute ${attributeName} needs size`);
-
-    // Convert Array to typed array if possible
-    if (Array.isArray(attribute.value)) {
-      const ArrayType = getArrayTypeFromGLType(attribute.type);
-      attribute.value = new ArrayType(attribute.value);
-    }
-
   }
-  /* eslint-enable default-case */
+  /* eslint-enable default-case, complexity */
+
+  _print(attributeName) {
+    return `Geometry ${this.id} attribute ${attributeName}`;
+  }
 }

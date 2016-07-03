@@ -1,18 +1,17 @@
 // WebGL2 VertexArray Objects Helper
-import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl/types';
+import {WebGL2RenderingContext} from '../webgl/webgl-types';
+import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
 import {glCheckError} from '../webgl/context';
 import assert from 'assert';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
-
 export default class VertexArrayObject {
 
   // Returns true if VertexArrayObject is supported by implementation
   static isSupported(gl) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
     return (
       gl instanceof WebGL2RenderingContext ||
       gl.getExtension('OES_vertex_array_object')
@@ -28,7 +27,7 @@ export default class VertexArrayObject {
 
   // Create a VertexArrayObject
   constructor(gl, {handle} = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
     assert(VertexArrayObject.isSupported(gl),
       'VertexArrayObject: WebGL2 or OES_vertex_array_object required');
 

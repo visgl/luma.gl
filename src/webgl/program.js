@@ -1,19 +1,14 @@
-// Creates programs out of shaders and provides convenient methods for loading
-// buffers attributes and uniforms
-
-/* eslint-disable no-console */
-
-import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
+import {WebGL2RenderingContext} from './webgl-types';
+import {assertWebGLRenderingContext} from './webgl-checks';
 import {glCheckError} from './context';
 import * as VertexAttributes from './vertex-attributes';
 import Buffer from './buffer';
 import {getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import Shaders from '../../shaderlib';
-import {uid} from '../utils';
+import {log, uid} from '../utils';
 import assert from 'assert';
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
 
 export default class Program {
@@ -51,7 +46,7 @@ export default class Program {
     id = uid('program'),
     handle
   } = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     if (arguments.length > 2) {
       throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
@@ -158,9 +153,11 @@ export default class Program {
         buffer.bind();
         drawParams.isIndexed = true;
         drawParams.indexType = buffer.layout.type;
-      } else if (location === undefined && !this._warn[bufferName]) {
-        console.warn(`Program ${this.id}: Buffer ${bufferName} not used`);
-        this._warn[bufferName] = true;
+      } else if (location === undefined) {
+        if (!this._warn[bufferName]) {
+          log.warn(2, `Program ${this.id}: Buffer ${bufferName} not used`);
+          this._warn[bufferName] = true;
+        }
       } else {
         const divisor = buffer.layout.instanced ? 1 : 0;
         VertexAttributes.enable(gl, location);
@@ -185,7 +182,7 @@ export default class Program {
         const location = this._attributeLocations[attributeName];
         // throw new Error(`Program ${this.id}: ` +
         //   `Attribute ${location}:${attributeName} not supplied`);
-        console.warn(`Program ${this.id}: ` +
+        log.warn(0, `Program ${this.id}: ` +
           `Attribute ${location}:${attributeName} not supplied`);
         this._warn[attributeName] = true;
       }

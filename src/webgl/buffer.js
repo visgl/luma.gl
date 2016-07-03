@@ -1,9 +1,10 @@
-import {WebGLRenderingContext, WebGLBuffer} from './webgl-types';
-import {assertArrayType} from './webgl-checks';
-import {glGet, glCheckError} from './context';
+import {WebGL, WebGL2RenderingContext, WebGLBuffer}
+  from './webgl-types';
+import {assertWebGLRenderingContext, glTypeFromArray, assertArrayTypeMatch}
+  from './webgl-checks';
+import {glCheckError} from './context';
 import assert from 'assert';
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
 
 // Encapsulates a WebGLBuffer object
@@ -26,7 +27,7 @@ export class BufferLayout {
    */
   constructor({
     // Characteristics of stored data
-    type = 'FLOAT',
+    type,
     size = 1,
     offset = 0,
     stride = 0,
@@ -80,7 +81,7 @@ export default class Buffer {
     id,
     handle
   } = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     handle = handle || gl.createBuffer();
     if (!(handle instanceof WebGLBuffer)) {
@@ -123,11 +124,11 @@ export default class Buffer {
   setData({
     data,
     bytes,
-    target = this.gl.ARRAY_BUFFER,
-    usage = this.gl.STATIC_DRAW,
+    target = WebGL.ARRAY_BUFFER,
+    usage = WebGL.STATIC_DRAW,
     // Characteristics of stored data
     layout,
-    type = this.gl.FLOAT,
+    type,
     size = 1,
     offset = 0,
     stride = 0,
@@ -137,11 +138,10 @@ export default class Buffer {
   } = {}) {
     const {gl} = this;
     assert(data || bytes >= 0, 'Buffer.setData needs data or bytes');
-    target = glGet(gl, target);
-    type = glGet(gl, type);
+    type = type || glTypeFromArray(data);
 
     if (data) {
-      assertArrayType(data, type, 'in Buffer.setData');
+      assertArrayTypeMatch(data, type, 'in Buffer.setData');
     }
 
     // Note: When we are just creating and/or filling the buffer with data,
@@ -222,7 +222,7 @@ export default class Buffer {
    */
   bindBase({target = this.target, index} = {}) {
     const {gl} = this;
-    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.bindBufferBase(target, index, this.handle);
     glCheckError(gl);
     return this;
@@ -230,7 +230,7 @@ export default class Buffer {
 
   unbindBase({target = this.target, index} = {}) {
     const {gl} = this;
-    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.bindBufferBase(target, index, null);
     glCheckError(gl);
     return this;
@@ -248,7 +248,7 @@ export default class Buffer {
    */
   bindRange({target = this.target, index, offset = 0, size} = {}) {
     const {gl} = this;
-    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.bindBufferRange(target, index, this.handle, offset, size);
     glCheckError(gl);
     return this;
@@ -256,7 +256,7 @@ export default class Buffer {
 
   unbindRange({target = this.target, index} = {}) {
     const {gl} = this;
-    assert(gl instanceof WebGLRenderingContext, ERR_WEBGL2);
+    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
     gl.bindBufferBase(target, index, null);
     glCheckError(gl);
     return this;

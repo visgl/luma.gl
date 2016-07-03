@@ -15,8 +15,6 @@ export default class Group extends Object3D {
       // Generate unique id for child
       child.id = child.id || uid();
       this.children.push(child);
-      // Create and load Buffers
-      this.defineBuffers(child);
     }
     return this;
   }

@@ -1,4 +1,5 @@
 import formatCompilerError from 'gl-format-compiler-error';
+import {log} from '../utils';
 
 // For now this is an internal class
 export class Shader {
@@ -37,7 +38,7 @@ export class Shader {
       } catch (error) {
         /* eslint-disable no-console */
         /* global console */
-        console.warn('Error formatting glsl compiler error:', error);
+        log.warn('Error formatting glsl compiler error:', error);
         /* eslint-enable no-console */
         throw new Error(`Error while compiling the shader ${info}`);
       }

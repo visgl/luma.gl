@@ -1,6 +1,6 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
-import {WebGLRenderingContext} from '../webgl/webgl-types';
+import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
 import {glContextWithState, FramebufferObject} from '../webgl';
 import Group from './group';
 import assert from 'assert';
@@ -17,7 +17,7 @@ export function pickModels(gl, {
   pickingProgram = null,
   pickingColors = null
 }) {
-  assert(gl instanceof WebGLRenderingContext, ILLEGAL_ARG);
+  assertWebGLRenderingContext(gl);
   assert(group instanceof Group, ILLEGAL_ARG);
   assert(Array.isArray(viewMatrix), ILLEGAL_ARG);
 
@@ -38,25 +38,18 @@ export function pickModels(gl, {
   }, () => {
     for (const model of group.traverseReverse({viewMatrix})) {
       if (model.isPickable()) {
-        const program = model.getProgram();
-        program.use();
-        program.setUniforms({renderPickingBuffer: 1});
-        model.setProgramState(program);
 
         // Clear the frame buffer, render and sample
         gl.clear(gl.COLOR_BUFFER_BIT);
+        model.setUniforms({renderPickingBuffer: 1});
         model.render(gl, {camera, viewMatrix});
+        model.setUniforms({renderPickingBuffer: 0});
 
         // Read color in the central pixel, to be mapped with picking colors
         const color = new Uint8Array(4);
         gl.readPixels(
           x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color
         );
-
-        program.setUniforms({
-          renderPickingBuffer: 0
-        });
-        model.unsetProgramState(program);
 
         // Add the information to the stack
         picked.push({model, color});

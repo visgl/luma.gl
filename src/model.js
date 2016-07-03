@@ -5,10 +5,9 @@
 import {glGet} from './webgl/context';
 import {MAX_TEXTURES} from './config';
 import Object3D from './scenegraph/object-3d';
-import {Buffer, Program, draw, Texture2D} from './webgl';
+import {WebGL, Buffer, Program, draw, Texture2D} from './webgl';
 import Geometry from './geometry';
-import {splat} from './utils';
-import log from './log';
+import {log, splat} from './utils';
 import assert from 'assert';
 
 // TODO - experimental, not yet used
@@ -56,8 +55,14 @@ export default class Model extends Object3D {
     this.geometry = geometry;
     this.material = material;
 
+    if (opts.instanced) {
+      console.warn(`Warning: ` +
+        `Model constructor: parameter instanced renamed to isInstanced. ` +
+        `This will become a hard error in a future version of luma.gl.`);
+    }
+
     // instanced rendering
-    this.isInstanced = isInstanced;
+    this.isInstanced = isInstanced || opts.instanced;
     this.instanceCount = instanceCount;
     this.vertexCount = vertexCount;
 
@@ -207,16 +212,9 @@ export default class Model extends Object3D {
   }
 
   unsetProgramState() {
-    const {program} = this;
-    const gl = program.gl;
-
-    // Ensure all vertex attributes (except 0) are disabled
+    // Ensures all vertex attributes are disabled and ELEMENT_ARRAY_BUFFER
+    // is unbound
     this.program.unsetBuffers();
-
-    // unbind the array and element buffers
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
     return this;
   }
 
@@ -236,7 +234,9 @@ export default class Model extends Object3D {
       const buffer = this.buffers[attributeName];
       buffer.setData({
         ...attribute,
-        data: attribute.value
+        data: attribute.value,
+        target: attribute.isIndexed ?
+          WebGL.ELEMENT_ARRAY_BUFFER : WebGL.ARRAY_BUFFER
       });
     }
 
@@ -342,14 +342,12 @@ export default class Model extends Object3D {
       program
     } = {}) {
     assert(program);
-    const {gl} = program;
 
     table = table || {[header]: {}};
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       let location = program && program._attributeLocations[attributeName];
-      if (location === undefined &&
-        glGet(gl, attribute.target) === gl.ELEMENT_ARRAY_BUFFER) {
+      if (location === undefined && attribute.isIndexed) {
         location = 'ELEMENT_ARRAY_BUFFER';
       }
       table = table || {};

@@ -2,10 +2,9 @@
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
 import {getExtension, glGet, glCheckError} from './context';
-import {assertDrawMode, assertIndexType} from './webgl-checks';
+import {assertWebGLRenderingContext, assertDrawMode, assertIndexType}
+  from './webgl-checks';
 import assert from 'assert';
-
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 // A good thing about webGL is that there are so many ways to draw things,
 // e.g. depending on whether data is indexed and/or isInstanced.
@@ -20,7 +19,7 @@ export function draw(gl, {
   isInstanced = false,
   instanceCount = 0
 }) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  assertWebGLRenderingContext(gl);
 
   drawMode = glGet(gl, drawMode);
   indexType = glGet(gl, indexType);

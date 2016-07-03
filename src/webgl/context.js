@@ -1,19 +1,18 @@
 // WebGLRenderingContext related methods
-/* eslint-disable no-try-catch, no-console, no-loop-func */
-import assert from 'assert';
-import log from '../log';
-
+/* eslint-disable no-try-catch, no-loop-func */
+import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext} from './webgl-types';
+import assert from 'assert';
+import {log} from '../utils';
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
-
-/* global window, document, console */
+/* global window, document */
 
 function isBrowserContext() {
   return typeof window !== 'undefined';
 }
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
+/* eslint-disable complexity, max-statements */
 export function createGLContext({
   // Optional: Supply headless context creator
   // Done like this to avoid hard dependency on headless-gl
@@ -29,6 +28,7 @@ export function createGLContext({
   // Attempt to allocate WebGL2 context
   webgl2 = false,
   // Instrument context (at the expense of performance)
+  // Note: defaults to true and needs to be explicitly turn off
   debug = true,
   // Other options are passed through to context creator
   ...opts
@@ -57,7 +57,7 @@ export function createGLContext({
     }
 
     canvas.addEventListener('webglcontextcreationerror', e => {
-      console.log(e.statusMessage || 'Unknown error');
+      log.log(0, e.statusMessage || 'Unknown error');
     }, false);
 
     // Prefer webgl2 over webgl1, prefer conformant over experimental
@@ -71,17 +71,24 @@ export function createGLContext({
     assert(gl, 'Failed to create WebGLRenderingContext');
   }
 
-  // return debug ? createDebugContext(gl) : gl;
-
   if (debug) {
+    const debugGL =
+      WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
+    class WebGLDebugContext {}
+    Object.assign(WebGLDebugContext.prototype, debugGL);
+    gl = debugGL;
     gl.debug = true;
+    log.priority = log.priority < 1 ? 1 : log.priority;
   }
+
   return gl;
 }
 
+// alert(WebGLDebugUtils.glEnumToString(ctx.getError()));
+
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function glGet(gl, name) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  // assertWebGLRenderingContext(gl);
 
   let value = name;
   if (typeof name === 'string') {
@@ -93,7 +100,7 @@ export function glGet(gl, name) {
 
 // Returns the extension or throws an error
 export function getGLExtension(gl, extensionName) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  // assertWebGLRenderingContext(gl);
 
   const ERROR = 'Illegal arg to getExtension';
   assert(gl instanceof WebGLRenderingContext, ERROR);
@@ -106,7 +113,7 @@ export function getGLExtension(gl, extensionName) {
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
 export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  // assertWebGLRenderingContext(gl);
 
   let scissorTestWasEnabled;
   if (scissorTest) {
@@ -133,6 +140,25 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
+}
+
+function throwOnError(err, functionName, args) {
+  const errorMessage = WebGLDebug.glEnumToString(err);
+  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+  throw new Error(`${errorMessage} was caused by call to: ` +
+    `gl.${functionName}(${functionArgs})`);
+}
+
+function validateArgsAndLog(functionName, args) {
+  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+  for (const arg of args) {
+    if (arg === undefined) {
+      throw new Error(
+        `undefined argument: gl.${functionName}(${functionArgs})`);
+    }
+  }
+
+  log.log(3, `gl.${functionName}(${functionArgs})`);
 }
 
 // Returns an Error representing the Latest webGl error or null
@@ -184,63 +210,9 @@ function glGetErrorMessage(gl, glError) {
   }
 }
 
-// Replace each gl function with a wrapper that traces and
-// throws JavaScript errors on problems
-function createDebugContext(gl) {
-  const debugContext = {};
-  for (const functionName in gl) {
-    const func = gl[functionName];
-    if (typeof func === 'function') {
-      debugContext[functionName] = getDebugFunction(gl, functionName, func);
-    } else {
-      debugContext[functionName] = func;
-    }
-  }
-  return debugContext;
-}
-
-function getDebugFunction(gl, functionName, func) {
-  return (...args) => {
-    log.log(2, `gl.${functionName}`, ...args);
-    const result = gl[functionName](...args);
-    glCheckError(gl);
-    return result;
-  };
-}
-
 // Deprecated methods
 
-// Check if WebGL is available
-// TODO Remove? - Kind of expensive since it creates and disposes of a context
-export function hasWebGL() {
-  console.warn('luma.gl: hasWebGL is deprecated');
-  if (!isBrowserContext()) {
-    // Assumes headless-gl has been set up per https://www.npmjs.com/package/gl
-    return true;
-  }
-  // Feature test WebGL
-  try {
-    const canvas = document.createElement('canvas');
-    // TODO - can we destroy context immediately rather than rely on GC?
-    return Boolean(window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-  } catch (error) {
-    return false;
-  }
-}
-
-// Returns the extension or throws an error
-export function hasExtension(gl, extensionName) {
-  console.warn('luma.gl: hasExtension is deprecated');
-  const ERROR = 'Illegal arg to hasExtension';
-  assert(gl instanceof WebGLRenderingContext, ERROR);
-  assert(typeof extensionName === 'string', ERROR);
-  const extension = gl.getExtension(extensionName);
-  // assert(extension, `${extensionName} not supported!`);
-  return extension;
-}
-
 export function getExtension(gl, extensionName) {
-  console.warn('luma.gl: getExtension is deprecated');
+  log.warn(0, 'luma.gl: getExtension is deprecated');
   return getGLExtension(gl, extensionName);
 }

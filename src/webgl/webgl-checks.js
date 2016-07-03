@@ -3,7 +3,12 @@
 import {WebGL, WebGLRenderingContext} from './webgl-types';
 import assert from 'assert';
 
-export {isTypedArray, makeTypedArray} from '../utils';
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+
+export function assertWebGLRenderingContext(gl) {
+  // Need to handle debug context
+  assert(gl instanceof WebGLRenderingContext || gl.FLOAT !== 0, ERR_CONTEXT);
+}
 
 // INDEX TYPES
 
@@ -100,7 +105,7 @@ export function glTypeFromArray(array) {
   throw new Error('Failed to deduce WebGL type from array');
 }
 
-export function assertArrayType(array, type, source) {
+export function assertArrayTypeMatch(array, type, source) {
   assert(type === glTypeFromArray(array),
     `${array.constructor.name || 'Array'} ` +
     `does not match element type gl.${glKey(type)} ${source}`);

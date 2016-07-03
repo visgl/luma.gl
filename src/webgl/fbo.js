@@ -1,10 +1,9 @@
-import {WebGL, WebGLRenderingContext} from './webgl-types';
+import {WebGL} from './webgl-types';
+import {assertWebGLRenderingContext} from './webgl-checks';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import {Texture2D} from './texture';
 import assert from 'assert';
-
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 export default class FramebufferObject {
 
@@ -18,7 +17,7 @@ export default class FramebufferObject {
     format = WebGL.RGBA,
     type = WebGL.UNSIGNED_BYTE
   } = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     this.gl = gl;
     this.depth = depth;

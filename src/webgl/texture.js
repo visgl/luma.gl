@@ -1,12 +1,11 @@
-import {WebGL, WebGLRenderingContext, WebGL2RenderingContext, WebGLBuffer}
+import {WebGL, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
-import {glTypeFromArray} from './webgl-checks';
+import {assertWebGLRenderingContext, glTypeFromArray} from './webgl-checks';
 import {glCheckError} from './context';
 import Buffer from './buffer';
 import Framebuffer from './framebuffer';
 import assert from 'assert';
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
 
 export class Texture {
@@ -22,7 +21,7 @@ export class Texture {
     handle,
     ...opts
   }) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     this.handle = handle || gl.createTexture();
     if (!this.handle) {
@@ -112,7 +111,7 @@ export class Texture {
       width = width || 1;
       height = height || 1;
       type = type || WebGL.UNSIGNED_BYTE;
-      pixels = new Uint8Array([255, 0, 0, 1]);
+      // pixels = new Uint8Array([255, 0, 0, 1]);
       gl.texImage2D(target,
         mipmapLevel, format, width, height, border, format, type, pixels);
       this.width = width;
@@ -427,7 +426,7 @@ export class Texture2D extends Texture {
    * @param {GLint} height - height of texture
    */
   constructor(gl, opts = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     super(gl, {...opts, target: gl.TEXTURE_2D});
 
@@ -582,7 +581,7 @@ export class TextureCube extends Texture {
   }
 
   constructor(gl, opts = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     super(gl, {...opts, target: gl.TEXTURE_CUBE_MAP});
     this.setCubeMapImageData(opts);
@@ -614,6 +613,7 @@ export class TextureCube extends Texture {
     width,
     height,
     pixels,
+    data,
     border = 0,
     format = WebGL.RGBA,
     type = WebGL.UNSIGNED_BYTE,
@@ -621,6 +621,7 @@ export class TextureCube extends Texture {
     ...opts
   }) {
     const {gl} = this;
+    pixels = pixels || data;
     this.bind();
     if (this.width || this.height) {
       gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X,

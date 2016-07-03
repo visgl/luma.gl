@@ -3,9 +3,6 @@
 import assert from 'assert';
 export * from './webgl-types';
 
-// TODO - remove
-export {isTypedArray} from '../utils';
-
 // INDEX TYPES
 
 // For drawElements, size of indices

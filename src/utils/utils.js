@@ -81,10 +81,6 @@ function detach(elem) {
 
 // TYPED ARRAYS
 
-export function isTypedArray(value) {
-  return value && value.BYTES_PER_ELEMENT;
-}
-
 export function getArrayType(array) {
   // Sorted in some order of likelihood to reduce amount of comparisons
   if (array instanceof Float32Array) {

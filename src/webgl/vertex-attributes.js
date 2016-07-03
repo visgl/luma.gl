@@ -1,6 +1,8 @@
-import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
+import {WebGL2RenderingContext} from './webgl-types';
+import {assertWebGLRenderingContext} from './webgl-checks';
 import Buffer from './buffer';
 import {glGet, glCheckError} from './context';
+import {log} from '../utils';
 import assert from 'assert';
 
 /**
@@ -43,7 +45,6 @@ import assert from 'assert';
  *
  */
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 const ERR_WEBGL2 = 'WebGL2 required';
 
 // ACCESSORS
@@ -55,7 +56,7 @@ const ERR_WEBGL2 = 'WebGL2 required';
  * @returns {GLuint} - (max) number of attributes in the vertex attribute array
  */
 export function getMaxAttributes(gl) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  assertWebGLRenderingContext(gl);
   const maxAttributes = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
   glCheckError(gl);
   return maxAttributes;
@@ -67,7 +68,7 @@ export function getMaxAttributes(gl) {
  * @returns {Boolean} - is divisor available?
  */
 export function hasDivisor(gl) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  assertWebGLRenderingContext(gl);
   return Boolean(
     gl instanceof WebGL2RenderingContext ||
     gl.getExtension(gl, 'ANGLE_instanced_arrays')
@@ -175,7 +176,7 @@ export function getOffset(
  * @returns {*} - requested vertex attribute information (specified by pname)
  */
 function get(gl, location, pname) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  assertWebGLRenderingContext(gl);
   return gl.getVertexAttrib(location, pname);
 }
 
@@ -280,7 +281,7 @@ export function setBuffer({
   target,
   layout
 } = {}) {
-  assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+  assertWebGLRenderingContext(gl);
   buffer = Buffer.makeFrom(gl, buffer);
 
   // Copy main data characteristics from buffer
@@ -331,10 +332,8 @@ export function setBuffer({
  * @param {GLuint} location - ordinal number of the attribute
  * @param {GLuint} divisor - instances that pass between updates of attribute
  */
-/* eslint-disable no-console */
-/* global console */
 export function setGeneric({gl, location, array}) {
-  console.warn('VertexAttributes.setGeneric is not well tested');
+  log.warn(0, 'VertexAttributes.setGeneric is not well tested');
   // throw new Error('vertex attribute size must be between 1 and 4');
 
   if (array instanceof Float32Array) {
@@ -358,7 +357,7 @@ export function setGeneric({gl, location, array}) {
  */
 /* eslint-disable max-params */
 export function setGenericValues(gl, location, v0, v1, v2, v3) {
-  console.warn('VertexAttributes.setGenericValues is not well tested');
+  log.warn(0, 'VertexAttributes.setGenericValues is not well tested');
   switch (arguments.length - 1) {
   case 1: gl.vertexAttrib1f(location, v0); break;
   case 2: gl.vertexAttrib2f(location, v0, v1); break;

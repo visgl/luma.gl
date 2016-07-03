@@ -1,12 +1,11 @@
-import {WebGL, WebGLRenderingContext} from './webgl-types';
+import {WebGL} from './webgl-types';
+import {assertWebGLRenderingContext} from './webgl-checks';
 import {glGet, glConstant, glArrayFromType, glTypeFromArray,
   assertWebGL2} from './context';
 import {Texture2D} from './texture';
 import Renderbuffer from './renderbuffer';
 import {} from '../utils';
 import assert from 'assert';
-
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 function glFormatComponents(format) {
   switch (format) {
@@ -26,7 +25,7 @@ export default class Framebuffer {
   }
 
   constructor(gl) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     this.gl = gl;
     this.handle = gl.createFramebuffer();

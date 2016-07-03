@@ -1,9 +1,7 @@
-import {WebGLRenderingContext} from './webgl-types';
+import {assertWebGLRenderingContext} from './webgl-checks';
 import {glGet, assertWebGL2} from './context';
 
 import assert from 'assert';
-
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 
 export default class Renderbuffer {
 
@@ -14,7 +12,7 @@ export default class Renderbuffer {
   }
 
   constructor(gl, opts = {}) {
-    assert(gl instanceof WebGLRenderingContext, ERR_CONTEXT);
+    assertWebGLRenderingContext(gl);
 
     this.gl = gl;
     this.handle = gl.createRenderbuffer();

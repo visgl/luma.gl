@@ -58,6 +58,18 @@ test('WebGL#Buffer data/subData', t => {
   t.ok(buffer instanceof Buffer,
     'Buffer.setData(ARRAY_BUFFER) successful');
 
+  // TODO- buffer could check for integer ELEMENT_ARRAY_BUFFER types
+  buffer = new Buffer(gl)
+    .setData({
+      target: gl.ELEMENT_ARRAY_BUFFER,
+      data: new Float32Array([1, 2, 3])
+    })
+    .bind()
+    .unbind()
+    .delete();
+  t.ok(buffer instanceof Buffer,
+    'Buffer.setData(ELEMENT_ARRAY_BUFFER) successful');
+
   // TODO- buffer could check for integer ARRAY_ELEMENT_BUFFER types
   buffer = new Buffer(gl)
     .setData({
@@ -68,7 +80,7 @@ test('WebGL#Buffer data/subData', t => {
     .unbind()
     .delete();
   t.ok(buffer instanceof Buffer,
-    'Buffer.setData(ARRAY_ELEMENT_BUFFER) successful');
+    'Buffer.setData(ARRAY_ELEMENT_BUFFER) typo! successful');
 
   t.end();
 });

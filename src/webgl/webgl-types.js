@@ -1,5 +1,4 @@
 // WEBGL BUILT-IN TYPES
-import WebGL from 'gl-constants';
 
 // Convenience: enable app to "import" built-in WebGL types unknown to eslint
 /* global window */
@@ -24,27 +23,11 @@ function getImage() {
   return glob.Image || ImageNotSupported;
 }
 
-// Extracts constants from WebGL prototype
-function getWebGLConstants() {
-  const constants = {};
-  const WebGLContext =
-    glob.WebGL2RenderingContext || WebGLRenderingContext;
-  console.error('***', WebGLRenderingContext.prototype);
-  for (const key in WebGLContext.prototype) {
-    if (typeof WebGLContext[key] !== 'function') {
-      constants[key] = WebGLContext[key];
-    }
-  }
-  Object.freeze(constants);
-  return constants;
-}
-
 // const WebGL = getWebGLConstants();
 const WebGL2RenderingContext = getWebGL2RenderingContext();
 const Image = getImage();
 
 export {
-  WebGL,
   WebGL2RenderingContext,
   WebGLRenderingContext,
   WebGLBuffer,
@@ -52,3 +35,6 @@ export {
   WebGLRenderbuffer,
   Image
 };
+
+// Convenience
+export {default as WebGL} from './webgl-constants';
