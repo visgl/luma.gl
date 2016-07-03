@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+   <title>Texture</title>
+   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
+   <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-1601691-8']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</head>
+<body>
+
+<div class="site">
+  <div class="title">
+    <!-- <a href="/lumagl/"><img src="assets/logo.png" alt="library logo" /></a> -->
+    <h1>luma.gl</h1>
+  </div>
+
+  <div id="sidebar">
+    <div class="box help">
+      <b>Found a typo?</b>
+      <a href="https://github.com/uber//luma.gl/tree/master/docs">
+        Help make the docs better!
+      </a>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Overview:</b>
+      <ul>
+        <li>
+          <a href="index.html">Overview</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Core Classes:</b>
+        <li>
+          <a href="model.html">Model</a>
+        </li>
+        <li>
+          <a href="camera.html">Camera</a>
+        </li>
+        <li>
+          <a href="scene.html">Scene</a>
+        </li>
+     </ul>
+   </div>
+
+
+    <div class="box" id="modules">
+      <b>WebGL Classes:</b>
+      <ul>
+        <li>
+          <a href="context.html">WebGL Context Creation</a>
+        </li>
+        <li>
+          <a href="program.html">Program</a>
+        </li>
+        <li>
+          <a href="buffer.html">Buffer</a>
+        </li>
+        <li>
+          <a href="frame-buffer.html">FrameBuffer</a>
+        </li>
+        <li>
+          <a href="texture.html">Texture</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Modules:</b>
+      <ul>
+        <li>
+          <a href="math.html">Math</a>
+        </li>
+        <li>
+          <a href="shaders.html">Shaders</a>
+        </li>
+        <li>
+          <a href="event.html">Event</a>
+        </li>
+        <li>
+          <a href="fx.html">Fx</a>
+        </li>
+        <li>
+          <a href="io.html">IO</a>
+        </li>
+        <li>
+          <a href="media.html">Media</a>
+        </li>
+     </ul>
+   </div>
+
+   <div class="box" id="method-summary">
+     <b>Methods: </b>
+    <ul id="method-summary-list">
+    </ul>
+   </div>
+  </div>
+
+  <div id="doc">
+
+<h1>Texture</h1>
+
+<h1 id="Texture">Class: Texture</h1>
+
+<p><strong>TODO</strong> - texture support has been broken out into separate Texture classes,
+but documentation is not yet up to date.
+For now, please refer directly to src/webgl/texture.js</p>
+
+<h2 id="Program:setTexture">Program Method: setTexture</h2>
+
+<p>This method is used to either bind/unbind an existing texture or also
+to create a new texture form an <code>Image</code> element or
+to create an empty texture with specified dimensions.
+Also, for all properties set to a texture, these properties are
+remembered so they’re optional for later calls.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<pre><code>program.setTexture(name[, options]);
+</code></pre>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>name - (<em>string</em>) The name (unique id) of the texture.</li>
+  <li>options - (<em>mixed</em>) Can be a boolean or enum used to bind/unbind the
+texture (or set the enum as active texture) or an object with options/data
+described below:</li>
+</ol>
+
+<h3 id="options">Options:</h3>
+
+<ul>
+  <li>textureType - (<em>enum</em>, optional) The texture type used to call <code>gl.bindTexture</code> with. Default’s <code>gl.TEXTURE_2D</code>.</li>
+  <li>pixelStore - (<em>array</em>, optional) An array of objects with name, value options to be set with <code>gl.pixelStorei</code> calls. 
+Default’s <code>[{ name: gl.UNPACK_FLIP_Y_WEBGL, value: true }]</code>.</li>
+  <li>parameters - (<em>array</em>, optional) An array of objects with nane, value options to be set with <code>gl.texParameteri</code>. 
+Default’s <code>[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTURE_MIN_FILTER, value: gl.NEAREST }]</code>.</li>
+  <li>data - (<em>object</em>, optional) An object with properties described below:
+    <ul>
+      <li>format - (<em>enum</em>, optional) The format used for <code>gl.texImage2D</code> calls. Default’s <code>gl.RGBA</code>.</li>
+      <li>value - (<em>object</em>, optional) If set to an <code>Image</code> object then this image will be used to fill the texture. Default’s false. If no image is set then we might want to set the width and height of the texture.</li>
+      <li>width - (<em>number</em>, optional) The width of the texture. Default’s 0.</li>
+      <li>height - (<em>number</em>, optional) The height of the texture. Default’s 0.</li>
+      <li>border - (<em>number</em>, optional) The border of the texture. Default’s 0.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Setting a texture for a box. Adapted from
+[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setTexture</span><span class="p">(</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="p">{</span>
+      <span class="nx">value</span><span class="o">:</span> <span class="nx">img</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">&#39;path/to/image.png&#39;</span><span class="p">;</span></code></pre></figure>
+
+<h2 id="Program:setTextures">Program Method: setTextures</h2>
+
+<p>For each <code>key, value</code> of the object passed in it executes <code>setTexture(key, value)</code>.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<pre><code>program.setTextures(object);
+</code></pre>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>object - (<em>object</em>) An object with key value pairs matching a texture name and its value respectively.</li>
+</ol>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Set multiple type of textures from the same image. Taken from
+[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//load textures from image</span>
+<span class="kd">var</span> <span class="nx">img</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Image</span><span class="p">();</span>
+<span class="nx">img</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">program</span><span class="p">.</span><span class="nx">setTextures</span><span class="p">({</span>
+    <span class="s1">&#39;nearest&#39;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="nx">data</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">img</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="s1">&#39;linear&#39;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="nx">data</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="o">:</span> <span class="p">[{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">}]</span>
+    <span class="p">},</span>
+
+    <span class="s1">&#39;mipmap&#39;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="nx">data</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">img</span>
+      <span class="p">},</span>
+      <span class="nx">parameters</span><span class="o">:</span> <span class="p">[{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MAG_FILTER</span><span class="p">,</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR</span>
+      <span class="p">},</span> <span class="p">{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">TEXTURE_MIN_FILTER</span><span class="p">,</span>
+        <span class="nx">value</span><span class="o">:</span> <span class="nx">gl</span><span class="p">.</span><span class="nx">LINEAR_MIPMAP_NEAREST</span><span class="p">,</span>
+        <span class="nx">generateMipmap</span><span class="o">:</span> <span class="kc">true</span>
+      <span class="p">}]</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+
+<span class="nx">img</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="s1">&#39;path/to/image.png&#39;</span><span class="p">;</span></code></pre></figure>
+
+
+
+</div>
+
+<script type="text/javascript">
+  (function() {
+    var h2 = document.getElementById('doc').getElementsByTagName('h2'),
+        ans = [];
+    for (var i = 0, l = h2.length; i < l; i++) {
+      var elem = h2[i];
+      ans.push('<a href=\'#' + elem.id + '\'>' + (elem.innerText || elem.textContent) + '</a>');
+    }
+    document.getElementById('method-summary-list').innerHTML = '<li>' + ans.join('</li><li>') + '</li>';
+  })();
+</script>
+
+
+</div>
+</body>
+</html>
