@@ -14,6 +14,7 @@ to check for presence of WebGL and extensions.
 
 Note that the use of these functions is NOT required to use the remaining
 functions and classes in luma.gl.
+
 You could e.g. manually create a WebGLContext by using canvas.getContext,
 or use a context created by another WebGL library.
 In fact, luma.gl is explicitly designed to work with any WebGL context, and
