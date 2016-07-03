@@ -138,21 +138,42 @@ that might complicate composing your code with other WebGL based modules.</p>
 
 <h3 id="syntax">Syntax:</h3>
 
-<p>const gl = createGLContext(canvas[, options]);</p>
+<p>const gl = createGLContext(options);</p>
 
 <h3 id="arguments">Arguments:</h3>
 
 <ol>
-  <li><strong>canvas</strong> (<em>mixed</em>) - Can be a string with the canvas id or the canvas element itself.</li>
   <li><strong>options</strong> (<em>object</em>) - An object with the following properties:</li>
 </ol>
 
 <h3 id="options">Options:</h3>
 
 <ul>
-  <li><strong>debug</strong> (<em>boolean</em>, false) - If true, all gl calls will be <code>console.log</code>-ged and errors thrown to the console.</li>
-  <li><strong>webgl2</strong> (<em>boolean</em>, false) - If true, will attempt to create WebGL2 context</li>
-  <li><strong>width</strong> (<em>boolean</em>) - for headless contexts</li>
+  <li><strong>canvas</strong> (<em>string</em>|<em>DOMElement</em>,
+required for browser contexts, ignored for headless contexts)
+Can be a string with the canvas id or the canvas element itself.</li>
+  <li><strong>width</strong> (<em>number</em>,
+required for headless contexts, ignored for browser contexts) -
+width of the “vrtual screen” render target</li>
+  <li><strong>height</strong> (<em>number</em>,
+required for headless contexts, ignored for browser contexts) -
+height of the “vrtual screen” render target</li>
+  <li><strong>debug</strong> (<em>boolean</em>, <code>true</code>) - Unless set to false,
+all gl calls will be <code>console.log</code>-ged and errors thrown to the console.
+Note that catching webgl errors has a performance impact as it requires
+a GPU sync after each operation, so make sure to pass <code>false</code> in production
+environments.</li>
+  <li><strong>webgl2</strong> (<em>boolean</em>, <code>false</code>) - If true, will attempt to create a
+WebGL2 context (not supported on headless environments). Will fall back
+to WebGL1 contexts. Use <code>gl instanceof WebGL2RenderingContext</code> to determine
+what type of context was actually returned.</li>
+  <li><strong>headlessGL</strong> (<em>function</em>, null) -
+In Node.js environments, contexts are created using
+<a href="https://www.npmjs.com/package/gl">headless-gl</a>.
+To avoid including the <code>headless-gl</code> module in applications that don’t
+use it, luma.gl requires the app to
+install and import headless-gl itself, and pass headless-gl as an
+argument to <code>createGLContext</code>.</li>
 </ul>
 
 <h3 id="remarks">Remarks</h3>
@@ -163,10 +184,24 @@ first using <code>webgl</code> and then falls back to <code>experimental-webgl</
 <code>webgl2</code> option is set, this function will first try <code>webgl2</code> and then
 <code>experimental-webgl2</code>, before falling back to webgl1.</li>
   <li>In Node.js environments, the context is created using headless-gl.
-In this case width and height options are important.</li>
-  <li>The <code>preserveDrawingBuffers</code> option  defaults to <code>true</code> if not overriden.
-This differs from the normal WebGL context creation defaults.</li>
+In this case width and height options must be supplied as there is
+no canvas element to use as reference.</li>
+  <li>While you can certainly use
+<a href="https://www.npmjs.com/package/gl">headless-gl</a> directly to
+create a context (without passing it to <code>createGLContext</code>),
+the <code>createGLContext</code> method will automatically create a browser or
+headless context depending on the environment, enabling you to write
+cleaner application code that works both in both environments.</li>
+  <li>When working with headless environments, also note that luma.gl has two
+separate implementations of its IO API functions, <code>loadImage</code>/<code>loadImages</code>,
+that work both in browser and under Node.js. (Browser apps tend to rely on
+the DOM <code>Image</code> class to load images, which is not available under Node.js).</li>
 </ul>
+
+<pre><code class="language-js">import headlessGL from 'gl';
+import {createGLContext} from 'luma.gl';
+const gl = createGLContext({headlessGL})
+</code></pre>
 
 <h2 id="getGLExtension">Static Method: getGLExtension</h2>
 
@@ -234,31 +269,24 @@ of time during development.</p>
 exception if an error was reported. Raw WebGL calls tend to either fail
 silently or log something cryptic in the console without making it clear
 what call generated the warning, so being able to break
-on exceptions where they happen in the luma code can be very helpful.
-If you use raw gl calls and want the same behaviour, you can import
-<code>glCheckError</code> and call it after each gl call.</li>
+on exceptions where they happen in the luma code can be very helpful.</li>
   <li>Luma allows you to set <code>id</code>s on many classes, which allows you to easily
 check in the debugger which object is involved in a stack trace.</li>
-  <li>Luma has integrated the best support for extracting information about
+  <li>Luma has takes care to extract as much information as possible about
 shader compiler errors etc, and will throw exceptions with very detailed
 error strings when shaders fail to compile.</li>
-  <li>Luma also understands <code>glslify</code> names, making it possible to name shaders
+  <li>Luma also understands <code>glslify</code> “names”, making it possible to name shaders
 inside the shader code, which makes it easier to identify which shader
 is being called.</li>
-  <li>Luma runs checks on attributes when they are being set, catching many
-trivial errors such as setting uniforms to <code>undefined</code> or wrong type
-(scalar vs array etc).</li>
+  <li>Luma runs checks on attributes and buffers when they are being set,
+catching many trivial errors such as setting uniforms to <code>undefined</code>
+or wrong type (scalar vs array etc).</li>
   <li>Luma has a logging mechanism. Set the global variable lumaLog.priority to 3
 (can be done in the browser console at any time) and luma will print
 tables for uniforms and attributes providing information
 about their values and types before each render call. This can be extremely
 helpful for checking that shaders are getting valid inputs.</li>
 </ul>
-
-<p><strong>Note:</strong> It is not currently possible to disable luma’s debug support e.g.
-  for a production build. However, the overhead of luma’s debugging support
-  should be quite small compared to rendering cost for the vast
-  majority of applications.</p>
 
 
 
