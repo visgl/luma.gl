@@ -85,7 +85,7 @@ reference documenation.
 
 To run examples:
 ```sh
-git clone git@github.com:uber//luma.gl.git
+git clone git@github.com:uber/luma.gl.git
 cd luma.gl
 npm install
 npm start

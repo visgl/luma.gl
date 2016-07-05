@@ -9,6 +9,8 @@ import {merge} from '../utils';
 import * as config from '../config';
 import assert from 'assert';
 
+const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
+
 function noop() {}
 
 const DEFAULT_SCENE_OPTS = {
@@ -33,8 +35,6 @@ const DEFAULT_SCENE_OPTS = {
   backgroundColor: {r: 0, g: 0, b: 0, a: 1},
   backgroundDepth: 1
 };
-
-const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
 
 // Scene class
 export default class Scene extends Group {
