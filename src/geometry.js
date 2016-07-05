@@ -103,6 +103,9 @@ export default class Geometry {
       category = category || 'indices';
       break;
     case 'texCoords':
+    case 'texCoord1':
+    case 'texCoord2':
+    case 'texCoord3':
       category = 'uvs';
       break;
     case 'vertices':

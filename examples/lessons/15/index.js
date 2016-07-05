@@ -57,11 +57,20 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
+      program,
       uniforms: {
-        shininess: 32
+        shininess: 32,
+        hasTexture1: true,
+        sampler1: tDiffuse,
+        hasTexture2: true,
+        sampler2: tSpecular
       },
-      textures: [tDiffuse, tSpecular],
-      colors: [1, 1, 1, 1]
+      attributes: {
+        colors: {
+          value: new Float32Array([1, 1, 1, 1]),
+          size: 4
+        }
+      }
     });
 
     program.use();
@@ -92,8 +101,8 @@ window.webGLStart = function() {
     var theta = 0;
 
     // onBeforeRender
-    earth.onBeforeRender = function(program, camera) {
-      program.setUniforms({
+    earth.onBeforeRender = function() {
+      this.program.setUniforms({
         enableSpecularMap: specularMap.checked,
         enableColorMap: colorMap.checked
       });

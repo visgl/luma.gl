@@ -54,10 +54,7 @@ window.webGLStart = function() {
 
       ].join('\n');
 
-      var program = new Program(gl, {
-        vs: Shaders.Vertex.Default,
-        fs: colorUniformFS
-      });
+      var program = new Program(gl, {fs: colorUniformFS});
 
       super({
         program,
@@ -76,7 +73,10 @@ window.webGLStart = function() {
           ]),
           indices: new Uint16Array([0, 1, 3, 3, 2, 0])
         }),
-        textures: tStar,
+        uniforms: {
+          hasTexture1: true,
+          sampler1: tStar
+        },
         onBeforeRender() {
           var min = Math.min;
           var isTwinkle = twinkle.checked;

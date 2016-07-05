@@ -124,7 +124,9 @@ window.webGLStart = function() {
     var cube = new Model({
       geometry: cubeGeometry,
       program,
-      textures: [nehe]
+      uniforms: {
+        uSampler: nehe
+      }
     });
 
     var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
@@ -149,8 +151,7 @@ window.webGLStart = function() {
         // set uniforms
         .setUniforms({
           uMVMatrix: view,
-          uPMatrix: camera.projection,
-          uSampler: 0
+          uPMatrix: camera.projection
         })
 
         // draw triangles

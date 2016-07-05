@@ -78,8 +78,11 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
-      textures: tMoon,
-      program: new Program(gl)
+      program: new Program(gl),
+      uniforms: {
+        hasTexture1: true,
+        sampler1: tMoon
+      }
     });
 
     var lighting = $id('lighting');

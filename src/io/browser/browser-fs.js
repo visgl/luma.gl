@@ -1,12 +1,14 @@
 /* eslint-disable no-try-catch */
+import {isBrowser} from '../../utils';
 import assert from 'assert';
 
 // TODO hack - trick filesaver.js to skip loading under node
-if (typeof window === 'undefined') {
+/* global global*/
+if (!isBrowser()) {
   global.navigator = {userAgent: 'MSIE 9.'};
 }
 const saveAs = require('filesaver.js');
-if (typeof window === 'undefined') {
+if (!isBrowser()) {
   delete global.navigator;
 }
 // END hack

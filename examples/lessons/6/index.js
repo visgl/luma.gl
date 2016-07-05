@@ -186,14 +186,11 @@ window.webGLStart = function() {
       .setRotation(new Vec3(xRot, yRot, 0))
       .updateMatrix()
       // set attributes, indices and textures
-      .setTextures([
-        textures[filters[filter]]
-      ])
       // set uniforms
       .setUniforms({
         uMVMatrix: view,
         uPMatrix: camera.projection,
-        uSampler: 0
+        uSampler: textures[filters[filter]]
       })
       .render();
   }

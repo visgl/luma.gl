@@ -12,7 +12,7 @@ export function isBrowser() {
  * @return {Array} array
  **/
 export function splat(a) {
-  return Array.isArray(a) && a || [a];
+  return a ? (Array.isArray(a) ? a : [a]) : [];
 }
 
 /**

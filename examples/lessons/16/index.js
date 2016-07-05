@@ -80,27 +80,29 @@ window.webGLStart = function() {
         nlong: 30,
         radius: 2,
         program,
-        textures: tMoon,
         uniforms: {
+          hasTexture1: true,
+          sampler1: tMoon,
           shininess: 5,
-          'enableSpecularHighlights': false,
-          'materialAmbientColor': [1, 1, 1],
-          'materialDiffuseColor': [1, 1, 1],
-          'materialSpecularColor': [0, 0, 0],
-          'materialEmissiveColor': [0, 0, 0]
+          enableSpecularHighlights: false,
+          materialAmbientColor: [1, 1, 1],
+          materialDiffuseColor: [1, 1, 1],
+          materialSpecularColor: [0, 0, 0],
+          materialEmissiveColor: [0, 0, 0]
         }
       });
 
       var box = new Cube({
         program,
-        textures: tCrate,
         uniforms: {
+          hasTexture1: true,
+          sampler1: tCrate,
           shininess: 5,
-          'enableSpecularHighlights': false,
-          'materialAmbientColor': [1, 1, 1],
-          'materialDiffuseColor': [1, 1, 1],
-          'materialSpecularColor': [0, 0, 0],
-          'materialEmissiveColor': [0, 0, 0]
+          enableSpecularHighlights: false,
+          materialAmbientColor: [1, 1, 1],
+          materialDiffuseColor: [1, 1, 1],
+          materialSpecularColor: [0, 0, 0],
+          materialEmissiveColor: [0, 0, 0]
         }
       });
       box.setScale(new Vec3(2, 2, 2));
@@ -130,11 +132,11 @@ window.webGLStart = function() {
         }),
         uniforms: {
           shininess: 0.2,
-          'enableSpecularHighlights': false,
-          'materialAmbientColor': [0, 0, 0],
-          'materialDiffuseColor': [0, 0, 0],
-          'materialSpecularColor': [0.5, 0.5, 0.5],
-          'materialEmissiveColor': [1.5, 1.5, 1.5]
+          enableSpecularHighlights: false,
+          materialAmbientColor: [0, 0, 0],
+          materialDiffuseColor: [0, 0, 0],
+          materialSpecularColor: [0.5, 0.5, 0.5],
+          materialEmissiveColor: [1.5, 1.5, 1.5]
         }
       });
 

@@ -10,7 +10,7 @@ export {default as Program} from './program';
 export {default as Framebuffer} from './framebuffer';
 export {default as Renderbuffer} from './renderbuffer';
 export {default as FramebufferObject} from './fbo';
-export {Texture2D, TextureCube} from './texture';
+export * from './texture';
 
 import * as VertexAttributes from './vertex-attributes';
 export {VertexAttributes};
@@ -18,6 +18,7 @@ export {VertexAttributes};
 // Functions
 export * from './context';
 export * from './draw';
+export * from './uniforms';
 
 // Higher level abstractions
 export {default as FBO} from './fbo';

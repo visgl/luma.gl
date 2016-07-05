@@ -28,10 +28,10 @@ test('WebGL#read-texture', t => {
 
     fs: `
     precision mediump float;
-    uniform sampler2D tex;
+    uniform sampler2D texSampler;
     varying vec2 uv;
     void main () {
-      gl_FragColor = texture2D(tex, uv);
+      gl_FragColor = texture2D(texSampler, uv);
     }`
   });
   t.ok(program instanceof Program, 'Program construction successful');
@@ -53,8 +53,7 @@ test('WebGL#read-texture', t => {
     program
       .use()
       .setBuffers({positions: triangle})
-      .setUniforms({tex: 0});
-    texture.bind(0);
+      .setUniforms({texSampler: texture});
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 

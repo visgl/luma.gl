@@ -1,7 +1,7 @@
 /* eslint-disable */
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
-import {getExtension, glGet, glCheckError} from './context';
+import {getExtension, glGet} from './context';
 import {assertWebGLRenderingContext, assertDrawMode, assertIndexType}
   from './webgl-checks';
 import assert from 'assert';
@@ -36,18 +36,14 @@ export function draw(gl, {
       extension.drawElementsInstancedANGLE(
         drawMode, vertexCount, indexType, offset, instanceCount
       );
-      glCheckError(gl);
     } else {
       extension.drawArraysInstancedANGLE(
         drawMode, offset, vertexCount, instanceCount
       );
-      glCheckError(gl);
     }
   } else if (isIndexed) {
     gl.drawElements(drawMode, vertexCount, indexType, offset);
-    glCheckError(gl);
   } else {
     gl.drawArrays(drawMode, offset, vertexCount);
-    glCheckError(gl);
   }
 }

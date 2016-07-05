@@ -1,11 +1,12 @@
-import {WebGL2RenderingContext} from './webgl-types';
+import {WebGL, WebGL2RenderingContext} from './webgl-types';
 import {assertWebGLRenderingContext} from './webgl-checks';
 import {glCheckError} from './context';
 import * as VertexAttributes from './vertex-attributes';
 import Buffer from './buffer';
-import {getUniformSetter} from './uniforms';
+import {Texture} from './texture';
+import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
-import Shaders from '../../shaderlib';
+import SHADERS from '../../shaderlib';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
@@ -40,10 +41,12 @@ export default class Program {
    * @param {String} opts.fs - Fragment shader source
    * @param {String} opts.id= - Id
    */
+  /* eslint-disable max-statements */
   constructor(gl, {
-    vs = Shaders.Vertex.Default,
-    fs = Shaders.Fragment.Default,
     id = uid('program'),
+    vs = SHADERS.DEFAULT.vs,
+    fs = SHADERS.DEFAULT.fs,
+    defaultUniforms = SHADERS.DEFAULT.defaultUniforms,
     handle
   } = {}) {
     assertWebGLRenderingContext(gl);
@@ -52,28 +55,33 @@ export default class Program {
       throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
     }
 
-    this.handle = handle || gl.createProgram();
+    this.gl = gl;
+    this.id = id;
+    this.defaultUniforms = defaultUniforms;
+    this.handle = handle;
+    if (!this.handle) {
+      this.handle = gl.createProgram();
+      this._compileAndLink(vs, fs);
+    }
     if (!this.handle) {
       throw new Error('Failed to create program');
     }
 
-    this.gl = gl;
-    this.id = id;
-    this.userData = {};
-
-    this._compileAndLink(vs, fs);
-
     // determine attribute locations (i.e. indices)
     this._attributeLocations = this._getAttributeLocations();
-    this._attributeCount = this.getActiveAttributeCount();
+    this._attributeCount = this.getAttributeCount();
     this._warn = [];
     this._filledLocations = {};
 
     // prepare uniform setters
     this._uniformSetters = this._getUniformSetters();
-    this._uniformCount = this.getActiveUniformCount();
+    this._uniformCount = this.getUniformCount();
+    this._textureIndexCounter = 0;
+
+    this.userData = {};
     Object.seal(this);
   }
+  /* eslint-enable max-statements */
 
   delete() {
     const {gl} = this;
@@ -213,43 +221,81 @@ export default class Program {
    * @param {Object} uniformMap - An object with names being keys
    * @returns {Program} - returns itself for chaining.
    */
-  setUniforms(uniformMap) {
-    for (const name of Object.keys(uniformMap)) {
-      if (name in this._uniformSetters) {
-        this._uniformSetters[name](uniformMap[name]);
+  /* eslint-disable max-depth */
+  setUniforms(uniforms) {
+    for (const uniformName in uniforms) {
+      const uniform = uniforms[uniformName];
+      const uniformSetter = this._uniformSetters[uniformName];
+      if (uniformSetter) {
+        if (uniform instanceof Texture) {
+          if (uniformSetter.textureIndex === undefined) {
+            uniformSetter.textureIndex = this._textureIndexCounter++;
+          }
+          // Bind texture to index, and set the uniform sampler to the index
+          const texture = uniform;
+          const {textureIndex} = uniformSetter;
+          // console.debug('setting texture', textureIndex, texture);
+          texture.bind(textureIndex);
+          uniformSetter(textureIndex);
+        } else {
+          // Just set the value
+          uniformSetter(uniform);
+        }
       }
     }
     return this;
+  }
+  /* eslint-enable max-depth */
+
+  /*
+   * Binds array of textures, at indices corresponding to positions in array
+   */
+  setTextures(textures) {
+    throw new Error('setTextures replaced with setAttributes');
+    // assert(Array.isArray(textures), 'setTextures requires array textures');
+    // for (let i = 0; i < textures.length; ++i) {
+    //   textures[i].bind(i);
+    // }
+    // return this;
+  }
+
+  unsetTextures(textures) {
+    throw new Error('unsetTextures replaced with setAttributes');
+    // assert(Array.isArray(textures), 'unsetTextures requires array textures');
+    // for (let i = 0; i < textures.length; ++i) {
+    //   textures[i].unbind(i);
+    // }
+    // return this;
   }
 
   /*
    * Set a texture at a given index
    */
   setTexture(texture, index) {
-    texture.bind(index);
-    return this;
+    throw new Error('setTexture replaced with setAttributes');
+    // texture.bind(index);
+    // return this;
   }
 
   getAttachedShadersCount() {
     return this.getProgramParameter(this.gl.ATTACHED_SHADERS);
   }
 
-  // ATTRIBUTES
+  // ATTRIBUTES API
+  // Note: Locations are numeric indices
 
-  getActiveAttributeCount() {
+  getAttributeCount() {
     return this.getProgramParameter(this.gl.ACTIVE_ATTRIBUTES);
   }
 
   /**
+   * Returns an object with info about attribute at index "location"/
    * @param {int} location - index of an attribute
    * @returns {WebGLActiveInfo} - info about an active attribute
    *   fields: {name, size, type}
    */
   getAttributeInfo(location) {
-    const {gl} = this;
-    const value = gl.getActiveAttrib(this.handle, location);
-    glCheckError(gl);
-    return value;
+    return this.gl.getActiveAttrib(this.handle, location);
   }
 
   getAttributeName(location) {
@@ -257,27 +303,42 @@ export default class Program {
   }
 
   /**
+   * Returns location (index) of a name
    * @param {String} attributeName - name of an attribute
    *   (matches name in a linked shader)
    * @returns {String[]} - array of actual attribute names from shader linking
    */
   getAttributeLocation(attributeName) {
-    const {gl} = this;
-    const value = gl.getAttribLocation(this.handle, attributeName);
-    glCheckError(gl);
-    return value;
+    return this.gl.getAttribLocation(this.handle, attributeName);
   }
 
-  getActiveUniformCount() {
-    return this.getProgramParameter(this.gl.ACTIVE_UNIFORMS);
+  // UNIFORMS API
+  // Note: locations are opaque structures
+
+  getUniformCount() {
+    return this.getProgramParameter(WebGL.ACTIVE_UNIFORMS);
   }
 
-  getUniformInfo(location) {
-    const {gl} = this;
-    const info = gl.getActiveUniform(this.handle, location);
-    glCheckError(gl);
-    return info;
+  /*
+   * @returns {WebGLActiveInfo} - object with {name, size, type}
+   */
+  getUniformInfo(index) {
+    return this.gl.getActiveUniform(this.handle, index);
   }
+
+  /*
+   * @returns {WebGLUniformLocation} - opaque object representing location
+   * of uniform, used by setter methods
+   */
+  getUniformLocation(name) {
+    return this.gl.getUniformLocation(this.handle, name);
+  }
+
+  getUniformValue(location) {
+    return this.gl.getUniform(this.handle, location);
+  }
+
+  // PROGRAM API
 
   isFlaggedForDeletion() {
     return this.getProgramParameter(this.gl.DELETE_STATUS);
@@ -360,7 +421,7 @@ export default class Program {
   // determine attribute locations (maps attribute name to index)
   _getAttributeLocations() {
     const attributeLocations = {};
-    const length = this.getActiveAttributeCount();
+    const length = this.getAttributeCount();
     for (let location = 0; location < length; location++) {
       const name = this.getAttributeName(location);
       attributeLocations[name] = location;
@@ -373,17 +434,29 @@ export default class Program {
   _getUniformSetters() {
     const {gl} = this;
     const uniformSetters = {};
-    const length = this.getActiveUniformCount();
+    const length = this.getUniformCount();
     for (let i = 0; i < length; i++) {
       const info = this.getUniformInfo(i);
-      let name = info.name;
-      // if array name then clean the array brackets
-      name = name[name.length - 1] === ']' ?
-        name.substr(0, name.length - 3) :
-        name;
-      uniformSetters[name] =
-        getUniformSetter(gl, this.handle, info, info.name !== name);
+      const parsedName = parseUniformName(info.name);
+      const location = this.getUniformLocation(parsedName.name);
+      uniformSetters[parsedName.name] =
+        getUniformSetter(gl, location, info, parsedName.isArray);
     }
     return uniformSetters;
   }
 }
+
+// create uniform setters
+// Map of uniform names to setter functions
+export function getUniformDescriptors(gl, program) {
+  const uniformDecriptors = {};
+  const length = program.getUniformCount();
+  for (let i = 0; i < length; i++) {
+    const info = program.getUniformInfo(i);
+    const location = program.getUniformLocation(info.name);
+    const descriptor = getUniformSetter(gl, location, info);
+    uniformDecriptors[descriptor.name] = descriptor;
+  }
+  return uniformDecriptors;
+}
+

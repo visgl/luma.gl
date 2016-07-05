@@ -88,8 +88,9 @@ window.webGLStart = function() {
       '}'
     ].join('\n');
 
-    var program = new Program(gl, {vs: Shaders.Vertex.Default, fs: blendFS});
+    var program = new Program(gl, {fs: blendFS});
 
+    /* eslint-disable indent */
     var cube = new Model({
       program,
       geometry: new Geometry({
@@ -209,8 +210,12 @@ window.webGLStart = function() {
           20, 21, 22, 20, 22, 23
         ])
       }),
-      textures: glass
+      uniforms: {
+        hasTexture1: true,
+        sampler1: glass
+      }
     });
+    /* eslint-disable indent */
 
     addEvents(canvas, {
       onKeyDown: function(e) {

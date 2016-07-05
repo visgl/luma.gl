@@ -77,9 +77,9 @@ window.webGLStart = function() {
     var texCoords = new Float32Array(vertexTextureCoords);
     startApp({positions, texCoords, textures});
   })
-  .catch(function onError(e) {
-    console.log('There was something wrong with loading the world.');
-    console.log(e.message, e.stack);
+  .catch(function onError(error) {
+    console.error('There was something wrong with loading the world.');
+    console.error(error);
   });
 
   function startApp(params) {
@@ -91,12 +91,15 @@ window.webGLStart = function() {
     program.use();
 
     world = new Model({
+      program,
       geometry: new Geometry({
         positions: params.positions,
         texCoords: params.texCoords
       }),
-      textures: params.textures,
-      program
+      uniforms: {
+        hasTexture1: true,
+        sampler1: params.textures[0]
+      }
     });
 
     var camera = new PerspectiveCamera({

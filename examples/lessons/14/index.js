@@ -73,7 +73,10 @@ window.webGLStart = function() {
       // attributes: {
       //   colors: [1, 1, 1, 1]
       // },
-      textures: tGalvanized
+      uniforms: {
+        hasTexture1: true,
+        sampler1: tGalvanized
+      }
     });
 
     var scene = new Scene(gl);

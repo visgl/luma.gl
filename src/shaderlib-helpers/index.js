@@ -3,12 +3,14 @@
 // Default Shaders
 const glslify = require('glslify');
 
-const vertex = glslify('../../shaderlib/default-vertex.glsl');
-const fragment = glslify('../../shaderlib/default-fragment.glsl');
+const vs = glslify('../../shaderlib/default-vertex.glsl');
+const fs = glslify('../../shaderlib/default-fragment.glsl');
+const defaultUniforms = require('../../shaderlib/default-uniforms');
 
 module.exports = {
-  Vertex: {Default: vertex},
-  Fragment: {Default: fragment},
-  vs: vertex,
-  fs: fragment
+  DEFAULT: {
+    vs,
+    fs,
+    defaultUniforms
+  }
 };

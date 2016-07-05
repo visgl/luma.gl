@@ -2,6 +2,7 @@
 /* eslint-disable no-try-catch, no-loop-func */
 import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext} from './webgl-types';
+import {isWebGL2RenderingContext} from './webgl-checks';
 import assert from 'assert';
 import {log, isBrowser} from '../utils';
 /* global document */
@@ -75,12 +76,26 @@ export function createGLContext({
     gl.debug = true;
     log.priority = log.priority < 1 ? 1 : log.priority;
 
-    console.debug('luma.gl debug context created: ', gl);
-    console.debug(
+    logInfo(gl);
+
+    log.log(0,
       'Change lumaLog.priority in console to control logging (0-3, default 1)');
+    log.log(0,
+      'Set lumaLog.break to array of matching strings to break on gl logs');
   }
 
   return gl;
+}
+
+function logInfo(gl) {
+  const webGL = isWebGL2RenderingContext(gl) ? 'WebGL2' : 'WebGL1';
+  const info = glGetDebugInfo(gl);
+  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : ``;
+  const debug = gl.debug ? 'debug' : '';
+  log.log(0, `${webGL} ${debug} context created ${driver}`, gl);
+
+  // const extensions = gl.getSupportedExtensions();
+  // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
 }
 
 // alert(WebGLDebugUtils.glEnumToString(ctx.getError()));
@@ -107,6 +122,18 @@ export function getGLExtension(gl, extensionName) {
   const extension = gl.getExtension(extensionName);
   assert(extension, `${extensionName} not supported!`);
   return extension;
+}
+
+export function glGetDebugInfo(gl) {
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  /* Avoid Firefox issues with debug context and extensions */
+  if (info && info.UNMASKED_VENDOR_WEBGL && info.UNMASKED_RENDERER_WEBGL) {
+    return {
+      vendor: gl.getParameter(info.UNMASKED_VENDOR_WEBGL),
+      renderer: gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
+    };
+  }
+  return null;
 }
 
 // Executes a function with gl states temporarily set, exception safe
@@ -148,16 +175,27 @@ function throwOnError(err, functionName, args) {
     `gl.${functionName}(${functionArgs})`);
 }
 
-function validateArgsAndLog(functionName, args) {
-  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+function validateArgsAndLog(functionName, functionArgs) {
+  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
+  args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
+  const functionString = `gl.${functionName}(${args})`;
+  const breaks = log.break;
+  const isBreakpoint = breaks && breaks.every(
+    breakString => functionString.indexOf(breakString) !== -1
+  );
+
+  if (isBreakpoint) {
+    debugger;
+  }
+
   for (const arg of args) {
     if (arg === undefined) {
       throw new Error(
-        `undefined argument: gl.${functionName}(${functionArgs})`);
+        `undefined argument: ${functionString}`);
     }
   }
 
-  log.log(3, `gl.${functionName}(${functionArgs})`);
+  log.log(3, `${functionString}`);
 }
 
 // Returns an Error representing the Latest webGl error or null

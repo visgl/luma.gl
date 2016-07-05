@@ -58,6 +58,7 @@ export function loadTextures(gl, {urls, onProgress = noop, ...opts}) {
       opts.parameters[i] : opts.parameters;
     params = params === undefined ? {} : params;
     return new Texture2D(gl, {
+      id: urls[i],
       ...params,
       data: img
     });
@@ -88,7 +89,7 @@ export function parseModel(gl, {
   program = new Program(gl),
   ...opts
 }) {
-  const json = parseJSON(file);
+  const json = typeof file === 'string' ? parseJSON(file) : file;
   // Remove any attributes so that we can create a geometry
   // TODO - change format to put these in geometry sub object?
   const attributes = {};
@@ -96,7 +97,8 @@ export function parseModel(gl, {
   for (const key in json) {
     const value = json[key];
     if (Array.isArray(value)) {
-      attributes[key] = value;
+      attributes[key] = key === 'indices' ?
+        new Uint16Array(value) : new Float32Array(value);
     } else {
       modelOptions[key] = value;
     }

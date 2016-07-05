@@ -1,17 +1,16 @@
 import {WebGL, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
 import {assertWebGLRenderingContext, glTypeFromArray} from './webgl-checks';
-import {glCheckError} from './context';
 import Buffer from './buffer';
 import Framebuffer from './framebuffer';
+import {uid} from '../utils';
 import assert from 'assert';
-
-const ERR_WEBGL2 = 'WebGL2 required';
 
 export class Texture {
 
   /* eslint-disable max-statements */
   constructor(gl, {
+    id = uid('texture'),
     unpackFlipY = true,
     magFilter = WebGL.NEAREST,
     minFilter = WebGL.NEAREST,
@@ -24,15 +23,16 @@ export class Texture {
     assertWebGLRenderingContext(gl);
 
     this.handle = handle || gl.createTexture();
-    if (!this.handle) {
-      glCheckError(gl);
-    }
+    // if (!this.handle) {
+    // }
 
+    this.id = id;
     this.gl = gl;
     this.target = target;
     this.hasFloatTexture = gl.getExtension('OES_texture_float');
     this.width = null;
     this.height = null;
+    this.textureUnit = undefined;
     this.userData = {};
 
     this.setPixelStorageModes({...opts, unpackFlipY});
@@ -41,21 +41,22 @@ export class Texture {
   /* eslint-enable max-statements */
 
   delete() {
-    const {gl} = this;
     if (this.handle) {
-      gl.deleteTexture(this.handle);
+      this.gl.deleteTexture(this.handle);
       this.handle = null;
-      glCheckError(gl);
     }
     return this;
   }
 
+  toString() {
+    return `Texture(${this.id},${this.width}x${this.height})`;
+  }
+
   generateMipmap() {
-    const {gl} = this;
-    this.bind();
+    this.gl.bindTexture(this.target, this.handle);
     this.gl.generateMipmap(this.target);
-    glCheckError(gl);
-    return this.unbind();
+    this.gl.bindTexture(this.target, null);
+    return this;
   }
 
   /*
@@ -103,7 +104,7 @@ export class Texture {
       height = ndarray.shape[1];
     }
 
-    this.bind();
+    gl.bindTexture(this.target, this.handle);
 
     if (pixels === null) {
 
@@ -157,8 +158,8 @@ export class Texture {
       this.height = imageSize.height;
     }
 
-    glCheckError(gl);
-    this.unbind();
+    gl.bindTexture(this.target, null);
+
     return this;
   }
 
@@ -178,6 +179,7 @@ export class Texture {
     }
     throw new Error('Failed to deduce image size');
   }
+
   /**
    * Batch update pixel storage modes
    * @param {GLint} packAlignment - Packing of pixel data in memory (1,2,4,8)
@@ -224,7 +226,7 @@ export class Texture {
   } = {}) {
     const {gl} = this;
 
-    this.bind();
+    gl.bindTexture(this.target, this.handle);
 
     if (packAlignment) {
       gl.pixelStorei(gl.PACK_ALIGNMENT, packAlignment);
@@ -269,7 +271,7 @@ export class Texture {
       gl.pixelStorei(gl.UNPACK_SKIP_IMAGES, unpackSkipImages);
     }
 
-    this.unbind();
+    gl.bindTexture(this.target, null);
     return this;
   }
   /* eslint-enable complexity, max-statements */
@@ -306,7 +308,7 @@ export class Texture {
     compareMode
   }) {
     const {gl} = this;
-    this.bind();
+    gl.bindTexture(this.target, this.handle);
 
     if (magFilter) {
       gl.texParameteri(this.target, gl.TEXTURE_MAG_FILTER, magFilter);
@@ -343,21 +345,21 @@ export class Texture {
       gl.texParameterf(this.target, gl.TEXTURE_MAX_LOD, maxLOD);
     }
 
-    this.unbind();
+    gl.bindTexture(this.target, null);
     return this;
   }
   /* eslint-enable complexity, max-statements */
 
   getParameters() {
     const {gl} = this;
-    this.bind();
+    gl.bindTexture(this.target, this.handle);
     const webglParams = {
       magFilter: gl.getTexParameter(this.target, gl.TEXTURE_MAG_FILTER),
       minFilter: gl.getTexParameter(this.target, gl.TEXTURE_MIN_FILTER),
       wrapS: gl.getTexParameter(this.target, gl.TEXTURE_WRAP_S),
       wrapT: gl.getTexParameter(this.target, gl.TEXTURE_WRAP_T)
     };
-    this.unbind();
+    gl.bindTexture(this.target, null);
     return webglParams;
   }
 
@@ -368,15 +370,14 @@ export class Texture {
     format = WebGL.RGBA,
     type = WebGL.UNSIGNED_BYTE
   }) {
-    const {gl} = this;
-
     // TODO - WebGL2 check?
-    if (type === gl.FLOAT && !this.hasFloatTexture) {
+    if (type === WebGL.FLOAT && !this.hasFloatTexture) {
       throw new Error('floating point textures are not supported.');
     }
 
-    gl.texImage2D(gl.TEXTURE_2D, 0, format, format, type, pixels);
-    glCheckError(gl);
+    this.gl.bindTexture(this.target, this.handle);
+    this.gl.texImage2D(WebGL.TEXTURE_2D, 0, format, format, type, pixels);
+    this.gl.bindTexture(this.target, null);
     return this;
   }
 
@@ -440,32 +441,40 @@ export class Texture2D extends Texture {
     }
   }
 
-  bind(index) {
+  // target cannot be modified by bind:
+  // textures are special because when you first bind them to a target,
+  // they get special information. When you first bind a texture as a
+  // GL_TEXTURE_2D, you are actually setting special state in the texture.
+  // You are saying that this texture is a 2D texture.
+  // And it will always be a 2D texture; this state cannot be changed ever.
+  // If you have a texture that was first bound as a GL_TEXTURE_2D,
+  // you must always bind it as a GL_TEXTURE_2D;
+  // attempting to bind it as GL_TEXTURE_1D will give rise to an error
+  // (while run-time).
+
+  bind(textureUnit = this.textureUnit) {
     const {gl} = this;
-    if (index !== undefined) {
-      gl.activeTexture(gl.TEXTURE0 + index);
+    if (textureUnit === undefined) {
+      throw new Error('Texture.bind: must specify texture unit');
     }
-    // Textures are special because when you first bind them to a target,
-    // they get special information. When you first bind a texture as a
-    // GL_TEXTURE_2D, you are actually setting special state in the texture.
-    // You are saying that this texture is a 2D texture.
-    // And it will always be a 2D texture; this state cannot be changed ever.
-    // If you have a texture that was first bound as a GL_TEXTURE_2D,
-    // you must always bind it as a GL_TEXTURE_2D;
-    // attempting to bind it as GL_TEXTURE_1D will give rise to an error
-    // (while run-time).
+    this.textureUnit = textureUnit;
+    gl.activeTexture(gl.TEXTURE0 + textureUnit);
     gl.bindTexture(this.target, this.handle);
-    glCheckError(gl);
-    if (index === undefined) {
-      const result = gl.getParameter(gl.ACTIVE_TEXTURE) - gl.TEXTURE0;
-      return result;
-    }
-    return index;
+    return textureUnit;
   }
 
   unbind() {
     const {gl} = this;
+    if (this.textureUnit === undefined) {
+      throw new Error('Texture.unbind: texture unit not specified');
+    }
+    gl.activeTexture(gl.TEXTURE0 + this.textureUnit);
     gl.bindTexture(this.target, null);
+    return this.textureUnit;
+  }
+
+  getActiveUnit() {
+    return this.gl.getParameter(WebGL.ACTIVE_TEXTURE) - WebGL.TEXTURE0;
   }
 
   // WebGL2
@@ -587,17 +596,14 @@ export class TextureCube extends Texture {
     this.setCubeMapImageData(opts);
   }
 
-  bind(index) {
+  bind({index}) {
     const {gl} = this;
     if (index !== undefined) {
       gl.activeTexture(gl.TEXTURE0 + index);
-      glCheckError(gl);
     }
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.handle);
-    glCheckError(gl);
     if (index === undefined) {
       const result = gl.getParameter(gl.ACTIVE_TEXTURE) - gl.TEXTURE0;
-      glCheckError(gl);
       return result;
     }
     return index;
@@ -650,7 +656,6 @@ export class TextureCube extends Texture {
       gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
         0, format, format, type, pixels.neg.z);
     }
-    glCheckError(gl);
 
     this.unbind();
 

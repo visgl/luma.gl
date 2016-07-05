@@ -61,6 +61,7 @@ window.webGLStart = function() {
     };
 
     // Create object
+    /* eslint-disable indent */
     var cubeGeometry = new Geometry({
       positions: new Float32Array([
         -1, -1,  1,
@@ -93,6 +94,7 @@ window.webGLStart = function() {
         -1,  1,  1,
         -1,  1, -1
       ]),
+      /* eslint-enable indent */
 
       texCoords: new Float32Array([
         0.0, 0.0,
@@ -185,7 +187,10 @@ window.webGLStart = function() {
     var cube = new Model({
       geometry: cubeGeometry,
       program: program,
-      textures: [crate]
+      uniforms: {
+        hasTexture1: true,
+        sampler1: crate
+      }
     });
 
     let filter = 0;
@@ -235,37 +240,9 @@ window.webGLStart = function() {
       yRot += ySpeed;
     }
 
-    function drawScene() {
-      // Update Cube position
-      cube.position.set(0, 0, z);
-      cube.rotation.set(xRot, yRot, 0);
-      cube.updateMatrix();
-
-      // Update scene config with light info
-      var lightConfig = scene.config.lights;
-      lightConfig.enable = lighting.checked;
-      lightConfig.ambient = {
-        r: Number(ambient.r.value),
-        g: Number(ambient.g.value),
-        b: Number(ambient.b.value)
-      };
-      lightConfig.directional.direction = {
-        x: Number(direction.x.value),
-        y: Number(direction.y.value),
-        z: Number(direction.z.value)
-      };
-      lightConfig.directional.color = {
-        r: Number(direction.r.value),
-        g: Number(direction.g.value),
-        b: Number(direction.b.value)
-      };
-
-      // Render all elements in the Scene
-      scene.render({camera});
-    }
-
     function tick() {
-      drawScene();
+      drawScene(scene, cube, camera, lighting, ambient,
+        direction, z, xRot, yRot);
       animate();
       Fx.requestAnimationFrame(tick);
     }
@@ -274,3 +251,35 @@ window.webGLStart = function() {
   });
 
 };
+
+/* eslint-disable max-params */
+function drawScene(scene, cube, camera, lighting, ambient,
+  direction, z, xRot, yRot) {
+
+  // Update Cube position
+  cube.position.set(0, 0, z);
+  cube.rotation.set(xRot, yRot, 0);
+  cube.updateMatrix();
+
+  // Update scene config with light info
+  var lightConfig = scene.config.lights;
+  lightConfig.enable = lighting.checked;
+  lightConfig.ambient = {
+    r: Number(ambient.r.value),
+    g: Number(ambient.g.value),
+    b: Number(ambient.b.value)
+  };
+  lightConfig.directional.direction = {
+    x: Number(direction.x.value),
+    y: Number(direction.y.value),
+    z: Number(direction.z.value)
+  };
+  lightConfig.directional.color = {
+    r: Number(direction.r.value),
+    g: Number(direction.g.value),
+    b: Number(direction.b.value)
+  };
+
+  // Render all elements in the Scene
+  scene.render({camera});
+}

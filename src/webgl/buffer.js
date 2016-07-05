@@ -2,7 +2,6 @@ import {WebGL, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
 import {assertWebGLRenderingContext, glTypeFromArray, assertArrayTypeMatch}
   from './webgl-checks';
-import {glCheckError} from './context';
 import assert from 'assert';
 
 const ERR_WEBGL2 = 'WebGL2 required';
@@ -103,7 +102,6 @@ export default class Buffer {
     if (this.handle) {
       gl.deleteBuffer(this.handle);
       this.handle = null;
-      glCheckError(gl);
     }
     return this;
   }
@@ -147,10 +145,9 @@ export default class Buffer {
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
-    gl.bindBuffer(target, this.handle);
+    this.bind({target});
     gl.bufferData(target, data || bytes, usage);
-    glCheckError(gl);
-    gl.bindBuffer(target, null);
+    this.unbind({target});
 
     this.target = target;
     this.layout = layout || new BufferLayout({
@@ -181,10 +178,9 @@ export default class Buffer {
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.handle);
-    gl.bufferSubData(gl.ARRAY_BUFFER, offset, data);
-    glCheckError(gl);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    this.bind({target: WebGL.ARRAY_BUFFER});
+    gl.bufferSubData(WebGL.ARRAY_BUFFER, offset, data);
+    this.unbind({target: WebGL.ARRAY_BUFFER});
 
     return this;
   }
@@ -198,16 +194,12 @@ export default class Buffer {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bind({target = this.target} = {}) {
-    const {gl} = this;
-    gl.bindBuffer(target, this.handle);
-    glCheckError(gl);
+    this.gl.bindBuffer(target, this.handle);
     return this;
   }
 
   unbind({target = this.target} = {}) {
-    const {gl} = this;
-    gl.bindBuffer(target, null);
-    glCheckError(gl);
+    // this.gl.bindBuffer(target, null);
     return this;
   }
 
@@ -221,18 +213,14 @@ export default class Buffer {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bindBase({target = this.target, index} = {}) {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
-    gl.bindBufferBase(target, index, this.handle);
-    glCheckError(gl);
+    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    this.gl.bindBufferBase(target, index, this.handle);
     return this;
   }
 
   unbindBase({target = this.target, index} = {}) {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
-    gl.bindBufferBase(target, index, null);
-    glCheckError(gl);
+    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    this.gl.bindBufferBase(target, index, null);
     return this;
   }
 
@@ -247,18 +235,14 @@ export default class Buffer {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bindRange({target = this.target, index, offset = 0, size} = {}) {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
-    gl.bindBufferRange(target, index, this.handle, offset, size);
-    glCheckError(gl);
+    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    this.gl.bindBufferRange(target, index, this.handle, offset, size);
     return this;
   }
 
   unbindRange({target = this.target, index} = {}) {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
-    gl.bindBufferBase(target, index, null);
-    glCheckError(gl);
+    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    this.gl.bindBufferBase(target, index, null);
     return this;
   }
 

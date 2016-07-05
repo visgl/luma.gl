@@ -7,6 +7,7 @@ import './texture-spec';
 import './framebuffer-spec';
 import './renderbuffer-spec';
 import './draw-spec';
+import './uniforms-spec';
 
 // import './fbo-spec';
 

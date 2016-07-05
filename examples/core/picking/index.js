@@ -1,17 +1,18 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-var webGLStart = function() {
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var Sphere = LumaGL.Sphere;
-  var Cube = LumaGL.Cube;
-  var addEvents = LumaGL.addEvents;
-  var pickModels = LumaGL.pickModels;
+var createGLContext = LumaGL.createGLContext;
+var loadTextures = LumaGL.loadTextures;
+var Program = LumaGL.Program;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var Fx = LumaGL.Fx;
+var Vec3 = LumaGL.Vec3;
+var Sphere = LumaGL.Sphere;
+var pickModels = LumaGL.pickModels;
+
+var pick = {x: 0, y: 0};
+
+window.webGLStart = function() {
 
   var canvas = document.getElementById('render-canvas');
 
@@ -36,17 +37,23 @@ var webGLStart = function() {
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
 
-  var pick = {x: 0, y: 0};
   canvas.addEventListener('mousemove', function(e) {
     pick.x = e.offsetX;
     pick.y = e.offsetY;
   });
 
+  const PLANETS = [
+    {name: 'JUPITER', textureUrl: 'jupiter.jpg'},
+    {name: 'MARS', textureUrl: 'mars.jpg'},
+    {name: 'MERCURY', textureUrl: 'mercury.jpg'},
+    {name: 'NEPTUNE', textureUrl: 'neptune.jpg'},
+    {name: 'SATURN', textureUrl: 'saturn.jpg'},
+    {name: 'URANUS', textureUrl: 'uranus.jpg'},
+    {name: 'VENUS', textureUrl: 'venus.jpg'}
+  ];
+
   loadTextures(gl, {
-    urls: [
-      'jupiter.jpg', 'mars.jpg', 'mercury.jpg',
-      'neptune.jpg', 'saturn.jpg', 'uranus.jpg', 'venus.jpg'
-    ],
+    urls: PLANETS.map(planet => planet.textureUrl),
     parameters: {
       magFilter: gl.LINEAR,
       minFilter: gl.LINEAR_MIPMAP_NEAREST,
@@ -68,7 +75,7 @@ var webGLStart = function() {
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tJupiter,
+      textures: [tJupiter],
       pickable: true,
       program
     });
@@ -128,9 +135,10 @@ var webGLStart = function() {
     });
     venus.name = 'Venus';
 
-    scene.add(jupiter, mars, mercury, neptune, saturn, uranus, venus);
-
-    var items = [jupiter, uranus, mars, neptune, mercury, saturn, venus];
+    // scene.add(jupiter, mars, mercury, neptune, saturn, uranus, venus);
+    // var items = [jupiter, uranus, mars, neptune, mercury, saturn, venus];
+    scene.add(jupiter);
+    var items = [jupiter];
 
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
@@ -139,45 +147,48 @@ var webGLStart = function() {
       item.updateMatrix();
     }
 
-    function draw() {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
-      camera.view.lookAt(
-        new Vec3(0, 0, 32), new Vec3(0, 0, 0), new Vec3(0, 1, 0)
-      );
-      camera.projection.perspective(
-        15, canvas.width / canvas.height, 0.1, 100.0
-      );
-
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        item.rotation.y += 0.01;
-        item.updateMatrix();
-      }
-
-      var p = pickModels(gl, {
-        group: scene,
-        viewMatrix: camera.view,
-        x: pick.x,
-        y: pick.y
-      });
-      var div = document.getElementById('planet-name');
-      if (p) {
-        div.innerHTML = p.name;
-        div.style.top = pick.y + 'px';
-        div.style.left = pick.x + 'px';
-        div.style.display = 'block';
-      } else {
-        div.style.display = 'none';
-      }
-
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      program.use();
-      scene.render({camera});
-
-      Fx.requestAnimationFrame(draw);
+    function drawFrame() {
+      draw(gl, canvas, camera, scene);
+      Fx.requestAnimationFrame(drawFrame);
     }
-
-    draw();
+    drawFrame();
   });
 };
+
+function draw(gl, canvas, camera, scene) {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  camera.view.lookAt(
+    new Vec3(0, 0, 32), new Vec3(0, 0, 0), new Vec3(0, 1, 0)
+  );
+  camera.projection.perspective(
+    15, canvas.width / canvas.height, 0.1, 100.0
+  );
+
+  for (var i = 0; i < scene.children.length; i++) {
+    var item = scene.children[i];
+    item.rotation.y += 0.01;
+    item.updateMatrix();
+  }
+
+  var p = null;
+  // var p = pickModels(gl, {
+  //   group: scene,
+  //   viewMatrix: camera.view,
+  //   x: pick.x,
+  //   y: pick.y
+  // });
+
+  var div = document.getElementById('planet-name');
+  if (p) {
+    div.innerHTML = p.name;
+    div.style.top = pick.y + 'px';
+    div.style.left = pick.x + 'px';
+    div.style.display = 'block';
+  } else {
+    div.style.display = 'none';
+  }
+
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  scene.render({camera});
+}

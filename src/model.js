@@ -2,10 +2,13 @@
 /* eslint-disable guard-for-in */
 
 // Define some locals
-import {glGet} from './webgl/context';
 import {MAX_TEXTURES} from './config';
+import {
+  WebGL, Buffer, Program, draw,
+  checkUniformValues, getUniformsTable
+} from './webgl';
+
 import Object3D from './scenegraph/object-3d';
-import {WebGL, Buffer, Program, draw, Texture2D} from './webgl';
 import Geometry from './geometry';
 import {log, splat} from './utils';
 import assert from 'assert';
@@ -28,7 +31,7 @@ export default class Model extends Object3D {
     program,
     geometry,
     material = null,
-    textures = [],
+    textures,
     // Enables instanced rendering (needs shader support and extra attributes)
     isInstanced = false,
     instanceCount = 0,
@@ -49,20 +52,30 @@ export default class Model extends Object3D {
 
     super(opts);
 
+    if (opts.instanced) {
+      console.warn(`Warning: ` +
+        `Model constructor: parameter "instanced" renamed to "isInstanced". ` +
+        `This will become a hard error in a future version of luma.gl.`);
+      isInstanced = isInstanced || opts.instanced;
+    }
+
+    if (textures) {
+      throw new Error(`Model constructor: parameter "textures" deprecated. ` +
+        `Use uniforms to set textures`);
+    }
+
     // set a custom program per o3d
     // this.program = Program.makeFrom(gl, program);
     this.program = program;
     this.geometry = geometry;
     this.material = material;
-
-    if (opts.instanced) {
-      console.warn(`Warning: ` +
-        `Model constructor: parameter instanced renamed to isInstanced. ` +
-        `This will become a hard error in a future version of luma.gl.`);
-    }
+    this.uniforms = {
+      ...program.defaultUniforms,
+      ...uniforms
+    };
 
     // instanced rendering
-    this.isInstanced = isInstanced || opts.instanced;
+    this.isInstanced = isInstanced;
     this.instanceCount = instanceCount;
     this.vertexCount = vertexCount;
 
@@ -75,8 +88,6 @@ export default class Model extends Object3D {
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
 
-    this.textures = splat(textures);
-
     // TODO - remove?
     this.buffers = {};
     this.userData = {};
@@ -87,7 +98,6 @@ export default class Model extends Object3D {
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.attributes = {};
     this.setAttributes(attributes);
-    this.uniforms = uniforms;
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -148,15 +158,13 @@ export default class Model extends Object3D {
   }
 
   setUniforms(uniforms = {}) {
-    this._checkUniforms(uniforms);
+    checkUniformValues(uniforms);
     Object.assign(this.uniforms, uniforms);
     return this;
   }
 
   setTextures(textures = []) {
-    assert(textures.every(tex => tex instanceof Texture2D), 'setTextures');
-    this.textures = textures;
-    return this;
+    throw new Error('setTextures replaced with setUniforms');
   }
 
   /*
@@ -172,12 +180,13 @@ export default class Model extends Object3D {
       this.setUniforms(this.getCoordinateUniforms(viewMatrix));
     }
 
-    this._log();
+    log.log(2, `Rendering model ${this.id}`, this);
+    this._log(3);
 
     this.setProgramState();
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
-      console.warn('Found instanced attributes on non-instanced model');
+      log.warn(0, 'Found instanced attributes on non-instanced model');
     }
 
     this.onBeforeRender();
@@ -204,10 +213,10 @@ export default class Model extends Object3D {
   setProgramState() {
     const {program} = this;
     program.use();
+    // this.bindTextures();
     program.setUniforms(this.uniforms);
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
-    this.bindTextures();
     return this;
   }
 
@@ -244,135 +253,110 @@ export default class Model extends Object3D {
   }
 
   bindTextures(force = false) {
-    const {program} = this;
-    this.textures = this.textures ? splat(this.textures) : [];
+    const textures = splat(this.textures);
     let tex2D = 0;
-    let texCube = 0;
-    const mtexs = MAX_TEXTURES;
-    const texs = this.textures;
-    const l = texs.length;
-    for (let i = 0; i < mtexs; i++) {
-      if (i < l) {
+
+    // const texCube = 0;
+    for (let i = 0; i < MAX_TEXTURES; i++) {
+      if (i < textures.length) {
         // rye TODO: update this when TextureCube is implemented.
-        // const isCube = app.textureMemo[texs[i]].isCube;
+        // const isCube = app.textureMemo[textures[i]].isCube;
         // if (isCube) {
-        // program.setTexture(texs[i], gl['TEXTURE' + i]);
+        // program.setTexture(textures[i], gl['TEXTURE' + i]);
         // program.setUniforms({
         //   ['hasTextureCube' + (i + 1)]: true,
         //   [samplerCube' + (texCube + 1)]: i
         // })
         // texCube++;
         // } else {
-        program.setTexture(texs[i], tex2D);
-        program.setUniforms({
+        this.setUniforms({
           [`hasTexture${i + 1}`]: true,
-          [`sampler${tex2D + 1}`]: i
+          [`sampler${tex2D + 1}`]: textures[i]
         });
         tex2D++;
       } else {
-        program.setUniforms({
+        this.setUniforms({
           [`hasTextureCube${i + 1}`]: false,
-          [`hasTexture${i + 1}`]: false,
-          [`sampler${++tex2D}`]: i,
-          [`samplerCube${++texCube}`]: i
+          [`hasTexture${i + 1}`]: false
+          // [`sampler${++tex2D}`]: i,
+          // [`samplerCube${++texCube}`]: i
         });
       }
     }
     return this;
   }
 
-  // TODO - Move into uniforms manager
-  _checkUniforms(uniformMap) {
-    for (const key in uniformMap) {
-      const value = uniformMap[key];
-      this._checkUniformValue(key, value);
-    }
-    return this;
-  }
-
-  _checkUniformValue(uniform, value) {
-    function isNumber(v) {
-      return !isNaN(v) && Number(v) === v && v !== undefined;
-    }
-
-    let ok = true;
-    if (Array.isArray(value) || value instanceof Float32Array) {
-      for (const element of value) {
-        if (!isNumber(element)) {
-          ok = false;
+  _log(priority = 3) {
+    if (log.priority >= priority) {
+      let table = this._getAttributesTable({
+        header: `Attributes ${this.geometry.id}`,
+        program: this.program,
+        attributes: {
+          ...this.geometry.attributes,
+          ...this.attributes
         }
-      }
-    } else if (!isNumber(value)) {
-      ok = false;
-    }
-    if (!ok) {
-      /* eslint-disable no-console */
-      /* global console */
-      // Value could be unprintable so write the object on console
-      console.error(`${this.id} Bad uniform ${uniform}`, value);
-      /* eslint-enable no-console */
-      throw new Error(`${this.id} Bad uniform ${uniform}`);
-    }
-    return this;
-  }
+      });
+      log.table(priority, table);
 
-  _log() {
-    if (log.priority >= 3) {
-      let table = this._getAttributesTable(this.geometry.attributes, {
-        header: `Attributes for ${this.geometry.id}`,
-        program: this.program
+      table = getUniformsTable({
+        header: `Uniforms ${this.geometry.id}`,
+        program: this.program,
+        uniforms: this.uniforms
       });
-      table = this._getAttributesTable(this.attributes, {
-        table,
-        program: this.program
-      });
-      log.table(3, table);
-
-      table = this._getUniformsTable(this.uniforms, {
-        header: `Uniforms for ${this.geometry.id}`
-      });
-      log.table(3, table);
+      log.table(priority, table);
     }
   }
 
   // Todo move to attributes manager
-  _getAttributesTable(attributes, {
-      header = 'Attributes',
-      table = null,
-      program
-    } = {}) {
+  _getAttributesTable({
+    attributes,
+    header = 'Attributes',
+    program
+  } = {}) {
     assert(program);
+    const attributeLocations = program._attributeLocations;
+    const table = table || {[header]: {}};
 
-    table = table || {[header]: {}};
+    // Add used attributes
+    for (const attributeName in attributeLocations) {
+      const attribute = attributes[attributeName];
+      const location = attributeLocations[attributeName];
+      table[attributeName] = this._getAttributeEntry(attribute, location);
+    }
+
+    // Add any unused attributes
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
-      let location = program && program._attributeLocations[attributeName];
-      if (location === undefined && attribute.isIndexed) {
-        location = 'ELEMENT_ARRAY_BUFFER';
+      if (!table[attributeName]) {
+        table[attributeName] = this._getAttributeEntry(attribute, null);
       }
-      table = table || {};
-      table[attributeName] = {
-        Name: attribute.value.constructor.name,
+    }
+
+    return table;
+  }
+
+  _getAttributeEntry(attribute, location) {
+    if (attribute) {
+      if (location === null) {
+        location = attribute.isIndexed ? 'ELEMENT_ARRAY_BUFFER' : 'NOT USED';
+      }
+      return {
+        Location: location,
+        Type: attribute.value.constructor.name,
         Instanced: attribute.instanced,
         Verts: attribute.value.length / attribute.size,
         Size: attribute.size,
-        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT,
-        Location: location
+        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT
       };
     }
-    return table;
+    return {
+      Location: location,
+      Type: 'NOT PROVIDED',
+      Instanced: 'N/A',
+      Verts: 'N/A',
+      Size: 'N/A',
+      Bytes: 'N/A'
+    };
   }
 
-  // TODO - Move to uniforms manager
-  _getUniformsTable(uniforms, {header = 'Uniforms', table = null} = {}) {
-    table = table || {[header]: {}};
-    for (const uniformName in uniforms) {
-      const uniform = uniforms[uniformName];
-      table[uniformName] = {
-        Type: uniform,
-        Value: uniform.toString()
-      };
-    }
-    return table;
-  }
 }

@@ -1,7 +1,7 @@
 #define SHADER_NAME luma-frag-lighting-fs
 
-attribute vec3 position;
-attribute vec3 normal;
+attribute vec3 positions;
+attribute vec3 normals;
 attribute vec2 texCoord1;
 attribute vec2 texCoord2;
 attribute vec2 texCoord3;
@@ -20,8 +20,8 @@ varying vec4 vColor;
 
 
 void main(void) {
-  vPosition = worldMatrix * vec4(position, 1.0);
-  vTransformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+  vPosition = worldMatrix * vec4(positions, 1.0);
+  vTransformedNormal = worldInverseTransposeMatrix * vec4(normals, 1.0);
   vTexCoord1 = texCoord1;
   vTexCoord2 = texCoord2;
   vTexCoord3 = texCoord3;

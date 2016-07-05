@@ -75,13 +75,19 @@ window.webGLStart = function() {
       nlat: 30,
       nlong: 30,
       radius: 2,
-      textures: tMoon,
-      program: new Program(gl)
+      program: new Program(gl),
+      uniforms: {
+        hasTexture1: true,
+        sampler1: tMoon
+      }
     });
     // Create box
     box = new Cube({
-      textures: tCrate,
-      program: new Program(gl)
+      program: new Program(gl),
+      uniforms: {
+        hasTexture1: true,
+        sampler1: tCrate
+      }
     });
     box.scale.set(2, 2, 2);
 
