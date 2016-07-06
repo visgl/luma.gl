@@ -107,7 +107,7 @@ export function glGet(gl, name) {
   let value = name;
   if (typeof name === 'string') {
     value = gl[name];
-    assert(value, `Accessing gl.${name}`);
+    assert(value !== undefined, `Accessing gl.${name}`);
   }
   return value;
 }
