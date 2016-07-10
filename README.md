@@ -8,8 +8,8 @@ WebGL building blocks enabling high-performance browser-based data
 visualizations.
 
 See
-[**Examples**](http://uber/.github.io/luma.gl/) and
-[**Documentation**](http://uber/.github.io/luma.gl/_site/docs/core.html).
+[**Examples**](http://uber.github.io/luma.gl/) and
+[**Documentation**](http://uber.github.io/luma.gl/docs/#core-classes).
 
 
 ## luma.gl Design Goals
