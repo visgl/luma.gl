@@ -2,9 +2,7 @@ import test from 'blue-tape';
 import {
   createGLContext, loadImage,
   Program, Texture2D, Buffer
-} from '../../../src';
-
-import headlessGL from 'gl';
+} from '../../../src/headless';
 
 const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA
 Bytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=`;
@@ -14,7 +12,7 @@ test('WebGL#load-file', t => {
 });
 
 test('WebGL#read-texture', t => {
-  const gl = createGLContext({headlessGL, width: 2, height: 2, debug: true});
+  const gl = createGLContext({width: 2, height: 2, debug: true});
 
   const program = new Program(gl, {
     vs: `

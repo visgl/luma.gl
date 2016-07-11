@@ -2,12 +2,11 @@
 import {
   createGLContext, Program, Buffer, Texture, Texture2D, TextureCube,
   checkUniformValues
-} from '../../src/webgl';
+} from '../../src/headless';
 
 import test from 'tape-catch';
-import headlessGL from 'gl';
 
-const gl = createGLContext({headlessGL});
+const gl = createGLContext();
 
 const MATRIX_2 = [
   1, 0,

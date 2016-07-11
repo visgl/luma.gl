@@ -1,11 +1,3 @@
-/* global process */
-export function isBrowser() {
-  const isNode =
-    typeof process === 'object' &&
-    String(process) === '[object process]';
-  return !isNode;
-}
-
 /**
  * Wraps the argument in an array if it is not one.
  * @param {object} a - The object to wrap.

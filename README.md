@@ -8,8 +8,9 @@ WebGL building blocks enabling high-performance browser-based data
 visualizations.
 
 See
-[**Examples**](http://uber/.github.io/luma.gl/) and
-[**Documentation**](http://uber/.github.io/luma.gl/_site/docs/core.html).
+[**Examples**](http://uber.github.io/luma.gl/) and
+[**Documentation**](http://uber.github.io/luma.gl/_site/docs/core.html).
+[**Change Log**](https://github.com/uber/luma.gl/blob/master/CHANGELOG.md).
 
 
 ## luma.gl Design Goals
@@ -41,7 +42,15 @@ If `headless-gl` is installed and properly configured on your system
 you should be able to run luma.gl in Node.js from the console,
 even machines that do not have GPUs.
 
-For more information, see
+To do this, your application should import 'luma.gl/headless':
+```js
+import {createGLContext, Model, ...} from 'luma.gl/headless';
+
+const gl = createGLContext({width, height, ...});
+```
+
+All luma.gl unit tests are run under Node.js in this configuration so it
+should work out of the box. For more information, see
 [headless-gl](https://www.npmjs.com/package/gl) and
 [luma.gl documentation](http://uber.github.io/luma.gl/context.html#createGLContext).
 

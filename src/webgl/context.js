@@ -4,7 +4,7 @@ import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext} from './webgl-types';
 import {isWebGL2RenderingContext} from './webgl-checks';
 import assert from 'assert';
-import {log, isBrowser} from '../utils';
+import {log, isBrowser, getGlobal} from '../utils';
 /* global document */
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
@@ -32,6 +32,7 @@ export function createGLContext({
   let gl;
 
   if (!isBrowser()) {
+    headlessGL = headlessGL || getGlobal().headlessGL;
 
     // Create headless gl context
     if (!headlessGL) {

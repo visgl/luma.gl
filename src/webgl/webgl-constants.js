@@ -1,5 +1,5 @@
 // WEBGL BUILT-IN TYPES
-import WebGL from 'gl-constants';
+import GL from 'gl-constants';
 
 // Extracts constants from WebGL prototype
 function getWebGLConstants() {
@@ -15,6 +15,6 @@ function getWebGLConstants() {
   return constants;
 }
 
-// const WebGL = getWebGLConstants();
+// const GL = getWebGLConstants();
 
-export default WebGL;
+export default GL;

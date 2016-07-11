@@ -1,8 +1,13 @@
 // WEBGL BUILT-IN TYPES
+// Enables app to "import" built-in WebGL types unknown to eslint
+// Provides a hook for application to preimport headless gl
 
-// Convenience: enable app to "import" built-in WebGL types unknown to eslint
-/* global window */
-const glob = typeof window !== 'undefined' ? window : require('gl/wrap');
+/* global window, global */
+const glob = typeof window !== 'undefined' ? window : global.headlessGLTypes;
+if (!glob) {
+  throw new Error('No WebGL type definitions available');
+}
+
 const {
   WebGLRenderingContext,
   WebGLBuffer,
