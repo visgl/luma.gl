@@ -1,4 +1,3 @@
-import {DRAW_MODES} from './webgl/types';
 import {uid} from './utils';
 import assert from 'assert';
 
@@ -13,7 +12,7 @@ export default class Geometry {
     attributes,
     ...attrs
   }) {
-    assert(DRAW_MODES.includes(drawMode), ILLEGAL_ARG);
+    assert(drawMode, ILLEGAL_ARG);
 
     this.id = id;
     this.drawMode = drawMode;

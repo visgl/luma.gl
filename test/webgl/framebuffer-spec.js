@@ -1,10 +1,8 @@
-import {createGLContext, Framebuffer} from '../../src/webgl';
-
+import {createGLContext, Framebuffer} from '../../src/headless';
 import test from 'tape-catch';
-import headlessGL from 'gl';
 
 const fixture = {
-  gl: createGLContext({headlessGL})
+  gl: createGLContext()
 };
 
 test('WebGL#Framebuffer construct/delete', t => {

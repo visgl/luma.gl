@@ -1,5 +1,6 @@
 // webgl
 import './webgl-spec';
+import './core-spec.js';
 import './vertex-attributes-spec';
 import './buffer-spec';
 import './program-spec';

@@ -1,5 +1,5 @@
+import {loadImage} from '../../../src/headless';
 import test from '../../setup';
-import {loadImage} from '../../../src';
 
 /* eslint-disable max-len */
 const PNG_BITS = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=';

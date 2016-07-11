@@ -1,11 +1,9 @@
-import {createGLContext, Program, Buffer} from '../../src/webgl';
+import {createGLContext, Program, Buffer} from '../../src/headless';
 import shaders from '../../shaderlib';
-
 import test from 'tape-catch';
-import headlessGL from 'gl';
 
 const fixture = {
-  gl: createGLContext({headlessGL})
+  gl: createGLContext()
 };
 
 const VS = `

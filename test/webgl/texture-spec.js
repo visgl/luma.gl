@@ -1,10 +1,8 @@
-import {createGLContext, Texture2D, Buffer} from '../../src/webgl';
-
+import {createGLContext, Texture2D, Buffer} from '../../src/headless';
 import test from 'tape-catch';
-import headlessGL from 'gl';
 
 const fixture = {
-  gl: createGLContext({headlessGL})
+  gl: createGLContext()
 };
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
