@@ -48,6 +48,23 @@ export default class Scene extends Group {
 
     this.gl = gl;
     this.config = opts;
+    this.needsRedraw = false;
+    Object.seal(this);
+  }
+
+  setNeedsRedraw(redraw = true) {
+    this.needsRedraw = redraw;
+    return this;
+  }
+
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    for (const model of this.traverse()) {
+      redraw = redraw || model.getNeedsRedraw({clearRedrawFlags});
+    }
+    return redraw;
   }
 
   clear(gl) {

@@ -69,6 +69,7 @@ export default class Model extends Object3D {
     this.userData = {};
     this.drawParams = {};
     this.dynamic = false;
+    this.needsRedraw = true;
 
     // set a custom program per o3d
     // this.program = Program.makeFrom(gl, program);
@@ -102,6 +103,19 @@ export default class Model extends Object3D {
 
   get hash() {
     return this.id + ' ' + this.$pickingIndex;
+  }
+
+  setNeedsRedraw(redraw = true) {
+    this.needsRedraw = redraw;
+    return this;
+  }
+
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    return redraw;
   }
 
   setInstanceCount(instanceCount) {
@@ -144,6 +158,8 @@ export default class Model extends Object3D {
   setGeometry(geometry) {
     this.geometry = geometry;
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
+    this.setNeedsRedraw();
+    return this;
   }
 
   getAttributes() {
@@ -153,6 +169,7 @@ export default class Model extends Object3D {
   setAttributes(attributes = {}) {
     Object.assign(this.attributes, attributes);
     this._createBuffersFromAttributeDescriptors(attributes);
+    this.setNeedsRedraw();
     return this;
   }
 
@@ -163,11 +180,8 @@ export default class Model extends Object3D {
   setUniforms(uniforms = {}) {
     checkUniformValues(uniforms);
     Object.assign(this.uniforms, uniforms);
+    this.setNeedsRedraw();
     return this;
-  }
-
-  setTextures(textures = []) {
-    throw new Error('setTextures replaced with setUniforms');
   }
 
   /*
@@ -212,6 +226,8 @@ export default class Model extends Object3D {
     this.onAfterRender();
 
     this.unsetProgramState();
+
+    this.setNeedsRedraw(false);
 
     return this;
   }
@@ -260,40 +276,6 @@ export default class Model extends Object3D {
       }
     }
 
-    return this;
-  }
-
-  bindTextures(force = false) {
-    const textures = splat(this.textures);
-    let tex2D = 0;
-
-    // const texCube = 0;
-    for (let i = 0; i < MAX_TEXTURES; i++) {
-      if (i < textures.length) {
-        // rye TODO: update this when TextureCube is implemented.
-        // const isCube = app.textureMemo[textures[i]].isCube;
-        // if (isCube) {
-        // program.setTexture(textures[i], gl['TEXTURE' + i]);
-        // program.setUniforms({
-        //   ['hasTextureCube' + (i + 1)]: true,
-        //   [samplerCube' + (texCube + 1)]: i
-        // })
-        // texCube++;
-        // } else {
-        this.setUniforms({
-          [`hasTexture${i + 1}`]: true,
-          [`sampler${tex2D + 1}`]: textures[i]
-        });
-        tex2D++;
-      } else {
-        this.setUniforms({
-          [`hasTextureCube${i + 1}`]: false,
-          [`hasTexture${i + 1}`]: false
-          // [`sampler${++tex2D}`]: i,
-          // [`samplerCube${++texCube}`]: i
-        });
-      }
-    }
     return this;
   }
 
@@ -385,4 +367,43 @@ export default class Model extends Object3D {
     };
   }
 
+  // DEPRECATED / REMOVED
+  setTextures(textures = []) {
+    throw new Error('setTextures replaced with setUniforms');
+  }
+
+  bindTextures(force = false) {
+    console.warn('Model.bindTextures is deprecated');
+    const textures = splat(this.textures);
+    let tex2D = 0;
+
+    // const texCube = 0;
+    for (let i = 0; i < MAX_TEXTURES; i++) {
+      if (i < textures.length) {
+        // rye TODO: update this when TextureCube is implemented.
+        // const isCube = app.textureMemo[textures[i]].isCube;
+        // if (isCube) {
+        // program.setTexture(textures[i], gl['TEXTURE' + i]);
+        // program.setUniforms({
+        //   ['hasTextureCube' + (i + 1)]: true,
+        //   [samplerCube' + (texCube + 1)]: i
+        // })
+        // texCube++;
+        // } else {
+        this.setUniforms({
+          [`hasTexture${i + 1}`]: true,
+          [`sampler${tex2D + 1}`]: textures[i]
+        });
+        tex2D++;
+      } else {
+        this.setUniforms({
+          [`hasTextureCube${i + 1}`]: false,
+          [`hasTexture${i + 1}`]: false
+          // [`sampler${++tex2D}`]: i,
+          // [`samplerCube${++texCube}`]: i
+        });
+      }
+    }
+    return this;
+  }
 }
