@@ -34,10 +34,10 @@ export default class Geometry {
     return this;
   }
 
-  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
     return redraw;
   }
 

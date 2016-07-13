@@ -46,10 +46,10 @@ export default class AttributeManager {
   }
 
   // Returns the redraw flag
-  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = this.needsRedraw;
     redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
     return redraw;
   }
 
