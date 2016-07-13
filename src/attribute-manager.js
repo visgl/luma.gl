@@ -20,7 +20,6 @@ export default class AttributeManager {
   constructor({id = ''}) {
     this.id = id;
     this.attributes = {};
-    this.instancedAttributes = {};
     this.allocedInstances = -1;
     this.needsRedraw = true;
     this.userData = {};
@@ -33,13 +32,30 @@ export default class AttributeManager {
     return this.attributes;
   }
 
-  // Returns the redraw flag
-  getNeedsRedraw({clearFlag}) {
-    const needsRedraw = this.needsRedraw;
-    if (clearFlag) {
-      this.needsRedraw = false;
+  getChangedAttributes({clearChangedFlags = false}) {
+    const {attributes} = this;
+    const changedAttributes = {};
+    for (const attributeName in attributes) {
+      const attribute = attributes[attributeName];
+      if (attribute.changed) {
+        attribute.changed = attribute.changed && !clearChangedFlags;
+        changedAttributes[attributeName] = attribute;
+      }
     }
-    return needsRedraw;
+    return changedAttributes;
+  }
+
+  // Returns the redraw flag
+  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+    let redraw = this.needsRedraw;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
+    return redraw;
+  }
+
+  setNeedsRedraw(redraw = true) {
+    this.needsRedraw = true;
+    return this;
   }
 
   // Adds a static attribute (that is not auto updated)
@@ -63,8 +79,6 @@ export default class AttributeManager {
       autoUpdate: true
     });
     Object.assign(this.attributes, newAttributes);
-    // and instancedAttributes (for updating when data changes)
-    Object.assign(this.instancedAttributes, newAttributes);
   }
 
   // Marks an attribute for update
@@ -73,13 +87,14 @@ export default class AttributeManager {
     const attribute = attributes[attributeName];
     assert(attribute);
     attribute.needsUpdate = true;
+    // For performance tuning
+    log.log(1, `invalidated attribute ${attributeName} for ${this.id}`);
   }
 
   invalidateAll() {
     const {attributes} = this;
     for (const attributeName in attributes) {
-      const attribute = attributes[attributeName];
-      attribute.needsUpdate = true;
+      this.invalidate(attributeName);
     }
   }
 
@@ -103,14 +118,15 @@ export default class AttributeManager {
       const attribute = attributes[attributeName];
       const buffer = bufferMap[attributeName];
       if (buffer) {
-        attribute.isApplicationBuffer = true;
+        attribute.isExternalBuffer = true;
         attribute.needsUpdate = false;
         if (attribute.value !== buffer) {
           attribute.value = buffer;
+          attribute.changed = true;
           this.needsRedraw = true;
         }
       } else {
-        attribute.isApplicationBuffer = false;
+        attribute.isExternalBuffer = false;
       }
     }
   }
@@ -127,12 +143,12 @@ export default class AttributeManager {
       const allocCount = Math.max(numInstances, 1);
       for (const attributeName in attributes) {
         const attribute = attributes[attributeName];
-        const {size, isApplicationBuffer, autoUpdate} = attribute;
-        if (!isApplicationBuffer && autoUpdate) {
+        const {size, isExternalBuffer, autoUpdate} = attribute;
+        if (!isExternalBuffer && autoUpdate) {
           const ArrayType = attribute.type || Float32Array;
           attribute.value = new ArrayType(size * allocCount);
           attribute.needsUpdate = true;
-          log(2, `autoallocated ${allocCount} ${attributeName} for ${this.id}`);
+          log.log(2, `allocated ${allocCount} ${attributeName} for ${this.id}`);
         }
       }
       this.allocedInstances = allocCount;
@@ -149,15 +165,16 @@ export default class AttributeManager {
       const {update} = attribute;
       if (attribute.needsUpdate && attribute.autoUpdate) {
         if (update) {
-          log(2,
+          log.log(2,
             `autoupdating ${numInstances} ${attributeName} for ${this.id}`);
           update.call(context, attribute, numInstances);
         } else {
-          log(2,
+          log.log(2,
             `autocalculating ${numInstances} ${attributeName} for ${this.id}`);
           this._updateAttributeFromData(attribute, data, getValue);
         }
         attribute.needsUpdate = false;
+        attribute.changed = true;
         this.needsRedraw = true;
       }
     }
@@ -169,7 +186,7 @@ export default class AttributeManager {
     for (const object of data) {
       const values = getValue(object);
       // If this attribute's buffer wasn't copied from props, initialize it
-      if (!attribute.isApplicationBuffer) {
+      if (!attribute.isExternalBuffer) {
         const {value, size} = attribute;
         value[i * size + 0] = values[attribute[0]];
         if (size >= 2) {
@@ -222,23 +239,26 @@ export default class AttributeManager {
 
       // Initialize the attribute descriptor, with WebGL and metadata fields
       const attributeData = {
+        // Ensure that fields are present before Object.seal()
+        target: undefined,
+        isIndexed: false,
+
+        // Reserved for application
+        userData: {},
+
         // Metadata
         ...attribute,
         ...updater,
 
         // State
-        isApplicationBuffer: false,
+        isExternalBuffer: false,
         needsUpdate: true,
-
-        // Reserved for application
-        userData: {},
+        changed: true,
 
         // WebGL fields
         size: attribute.size,
         value: attribute.value || null,
 
-        // buffer type
-        target: undefined,
         ..._extraProps
       };
       // Sanity - no app fields on our attributes. Use userData instead.

@@ -18,6 +18,7 @@ export default class Geometry {
     this.drawMode = drawMode;
     this.vertexCount = vertexCount;
     this.attributes = {};
+    this.needsRedraw = true;
     this.userData = {};
     Object.seal(this);
 
@@ -26,6 +27,18 @@ export default class Geometry {
     } else {
       this.setAttributes(attrs);
     }
+  }
+
+  setNeedsRedraw(redraw = true) {
+    this.needsRedraw = redraw;
+    return this;
+  }
+
+  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
+    return redraw;
   }
 
   setVertexCount(vertexCount) {
@@ -90,6 +103,7 @@ export default class Geometry {
         instanced: attribute.instanced || 0
       };
     }
+    this.setNeedsRedraw();
     return this;
   }
 
