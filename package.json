@@ -26,7 +26,8 @@
   "files": [
     "dist",
     "shaderlib",
-    "src"
+    "src",
+    "headless.js"
   ],
   "standard": {
     "ignore": [
