@@ -57,12 +57,12 @@ export default class Scene extends Group {
     return this;
   }
 
-  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
     for (const model of this.traverse()) {
-      redraw = redraw || model.getNeedsRedraw({clearNeedsRedraw});
+      redraw = redraw || model.getNeedsRedraw({clearRedrawFlags});
     }
     return redraw;
   }

@@ -110,11 +110,11 @@ export default class Model extends Object3D {
     return this;
   }
 
-  getNeedsRedraw({clearNeedsRedraw = false} = {}) {
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearNeedsRedraw;
-    redraw = redraw || this.geometry.getNeedsRedraw({clearNeedsRedraw});
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
     return redraw;
   }
 
