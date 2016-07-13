@@ -1,7 +1,7 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
+import {GL, glContextWithState, FramebufferObject} from '../webgl';
 import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
-import {glContextWithState, FramebufferObject} from '../webgl';
 import Group from './group';
 import assert from 'assert';
 
@@ -40,7 +40,7 @@ export function pickModels(gl, {
       if (model.isPickable()) {
 
         // Clear the frame buffer, render and sample
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
         model.setUniforms({renderPickingBuffer: 1});
         model.render(gl, {camera, viewMatrix});
         model.setUniforms({renderPickingBuffer: 0});

@@ -42,4 +42,4 @@ export {
 };
 
 // Convenience
-export {default as WebGL} from './webgl-constants';
+export {default as WebGL, default as GL} from './webgl-constants';

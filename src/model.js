@@ -64,11 +64,22 @@ export default class Model extends Object3D {
         `Use uniforms to set textures`);
     }
 
+    // TODO - remove?
+    this.buffers = {};
+    this.userData = {};
+    this.drawParams = {};
+    this.dynamic = false;
+
     // set a custom program per o3d
     // this.program = Program.makeFrom(gl, program);
     this.program = program;
-    this.geometry = geometry;
     this.material = material;
+
+    // Attributes and buffers
+    this.setGeometry(geometry);
+    this.attributes = {};
+    this.setAttributes(attributes);
+
     this.uniforms = {
       ...program.defaultUniforms,
       ...uniforms
@@ -83,21 +94,8 @@ export default class Model extends Object3D {
     this.pickable = Boolean(pickable);
     this.pick = pick || (() => false);
 
-    // override the render method, before and after render callbacks
-    this.render = render || this.render;
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
-
-    // TODO - remove?
-    this.buffers = {};
-    this.userData = {};
-    this.drawParams = {};
-    this.dynamic = false;
-
-    // extra uniforms and attribute descriptors
-    this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
-    this.attributes = {};
-    this.setAttributes(attributes);
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -143,6 +141,11 @@ export default class Model extends Object3D {
     return this.geometry;
   }
 
+  setGeometry(geometry) {
+    this.geometry = geometry;
+    this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
+  }
+
   getAttributes() {
     return this.attributes;
   }
@@ -180,16 +183,19 @@ export default class Model extends Object3D {
       this.setUniforms(this.getCoordinateUniforms(viewMatrix));
     }
 
-    log.log(2, `Rendering model ${this.id}`, this);
-    this._log(3);
+    log.log(2, `Rendering model ${this.id} - setting state`, this);
 
     this.setProgramState();
+
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
       log.warn(0, 'Found instanced attributes on non-instanced model');
     }
 
     this.onBeforeRender();
+
+    log.log(2, `Rendering model ${this.id} - calling draw`, this);
+    this._log(3);
 
     const {gl} = this.program;
     const {geometry, isInstanced, instanceCount} = this;
@@ -237,16 +243,21 @@ export default class Model extends Object3D {
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
 
-      this.buffers[attributeName] =
-        this.buffers[attributeName] || new Buffer(gl);
+      if (attribute instanceof Buffer) {
+        this.buffers[attributeName] = attribute;
+      } else {
+        // Autocreate a buffer
+        this.buffers[attributeName] =
+          this.buffers[attributeName] || new Buffer(gl);
 
-      const buffer = this.buffers[attributeName];
-      buffer.setData({
-        ...attribute,
-        data: attribute.value,
-        target: attribute.isIndexed ?
-          WebGL.ELEMENT_ARRAY_BUFFER : WebGL.ARRAY_BUFFER
-      });
+        const buffer = this.buffers[attributeName];
+        buffer.setData({
+          ...attribute,
+          data: attribute.value,
+          target: attribute.isIndexed ?
+            WebGL.ELEMENT_ARRAY_BUFFER : WebGL.ARRAY_BUFFER
+        });
+      }
     }
 
     return this;
@@ -336,15 +347,30 @@ export default class Model extends Object3D {
   }
 
   _getAttributeEntry(attribute, location) {
+    const round = num => Math.round(num * 10) / 10;
+
     if (attribute) {
       if (location === null) {
         location = attribute.isIndexed ? 'ELEMENT_ARRAY_BUFFER' : 'NOT USED';
       }
+
+      if (attribute instanceof Buffer) {
+        const buffer = attribute;
+        return {
+          Location: location,
+          Type: buffer.layout.type,
+          Instanced: buffer.layout.instanced,
+          Verts: round(buffer.data.length / buffer.layout.size),
+          Size: buffer.layout.size,
+          Bytes: buffer.data.length * buffer.data.BYTES_PER_ELEMENT
+        };
+      }
+
       return {
         Location: location,
         Type: attribute.value.constructor.name,
         Instanced: attribute.instanced,
-        Verts: attribute.value.length / attribute.size,
+        Verts: round(attribute.value.length / attribute.size),
         Size: attribute.size,
         Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT
       };

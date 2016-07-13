@@ -1,4 +1,4 @@
-import {WebGL, WebGL2RenderingContext} from './webgl-types';
+import {GL, WebGL2RenderingContext} from './webgl-types';
 import {assertWebGLRenderingContext} from './webgl-checks';
 import {glCheckError} from './context';
 import * as VertexAttributes from './vertex-attributes';
@@ -43,7 +43,7 @@ export default class Program {
    */
   /* eslint-disable max-statements */
   constructor(gl, {
-    id = uid('program'),
+    id,
     vs = SHADERS.DEFAULT.vs,
     fs = SHADERS.DEFAULT.fs,
     defaultUniforms = SHADERS.DEFAULT.defaultUniforms,
@@ -55,8 +55,15 @@ export default class Program {
       throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
     }
 
+    this.vs = new VertexShader(gl, vs);
+    this.fs = new FragmentShader(gl, fs);
+
+    // If program is not named, name it after shader names
+    let programName = this.vs.getName() || this.fs.getName();
+    programName = programName ? `${programName}-program` : `program`;
+    this.id = id || uid(programName);
+
     this.gl = gl;
-    this.id = id;
     this.defaultUniforms = defaultUniforms;
     this.handle = handle;
     if (!this.handle) {
@@ -95,8 +102,8 @@ export default class Program {
 
   _compileAndLink(vs, fs) {
     const {gl} = this;
-    gl.attachShader(this.handle, new VertexShader(gl, vs).handle);
-    gl.attachShader(this.handle, new FragmentShader(gl, fs).handle);
+    gl.attachShader(this.handle, this.vs.handle);
+    gl.attachShader(this.handle, this.fs.handle);
     gl.linkProgram(this.handle);
     gl.validateProgram(this.handle);
     const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
@@ -115,6 +122,10 @@ export default class Program {
   clearBuffers() {
     this._filledLocations = {};
     return this;
+  }
+
+  _print(bufferName) {
+    return `Program ${this.id}: Attribute ${bufferName}`;
   }
 
   /**
@@ -143,37 +154,31 @@ export default class Program {
     drawParams.isIndexed = false;
     drawParams.indexType = null;
 
-    for (const bufferName in buffers) {
-      const location = this._attributeLocations[bufferName];
-      const buffer = Buffer.makeFrom(gl, buffers[bufferName]);
+    const {locations, elements} = this._sortBuffersByLocation(buffers);
 
-      // SET ELEMENTS ARRAY BUFFER
-      if (buffer.target === gl.ELEMENT_ARRAY_BUFFER) {
-        if (location !== undefined) {
-          throw new Error(`Program ${this.id}: ` +
-            `Attribute ${bufferName}:${location}` +
-            `has both location and type gl.ELEMENT_ARRAY_BUFFER`);
-        }
-        if (this.isIndexed) {
-          throw new Error(`Program ${this.id}: ` +
-            `Attribute ${bufferName} duplicate gl.ELEMENT_ARRAY_BUFFER`);
-        }
-        buffer.bind();
-        drawParams.isIndexed = true;
-        drawParams.indexType = buffer.layout.type;
-      } else if (location === undefined) {
-        if (!this._warn[bufferName]) {
-          log.warn(2, `Program ${this.id}: Buffer ${bufferName} not used`);
-          this._warn[bufferName] = true;
-        }
+    // Process locations in order
+    for (let location = 0; location < locations.length; ++location) {
+      const bufferName = locations[location];
+      const buffer = buffers[bufferName];
+      // DISABLE MISSING ATTRIBUTE
+      if (!buffer) {
+        VertexAttributes.disable(gl, location);
       } else {
         const divisor = buffer.layout.instanced ? 1 : 0;
         VertexAttributes.enable(gl, location);
         VertexAttributes.setBuffer({gl, location, buffer});
         VertexAttributes.setDivisor(gl, location, divisor);
-        this._filledLocations[bufferName] = true;
         drawParams.isInstanced = buffer.layout.instanced > 0;
+        this._filledLocations[bufferName] = true;
       }
+    }
+
+    // SET ELEMENTS ARRAY BUFFER
+    if (elements) {
+      const buffer = buffers[elements];
+      buffer.bind();
+      drawParams.isIndexed = true;
+      drawParams.indexType = buffer.layout.type;
     }
 
     if (check) {
@@ -183,6 +188,35 @@ export default class Program {
     return this;
   }
   /* eslint-enable max-statements */
+
+  _sortBuffersByLocation(buffers) {
+    let elements = null;
+    const locations = new Array(this._attributeCount);
+
+    for (const bufferName in buffers) {
+      const buffer = Buffer.makeFrom(this.gl, buffers[bufferName]);
+      const location = this._attributeLocations[bufferName];
+      if (location === undefined) {
+        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
+          throw new Error(
+            `${this._print(bufferName)} duplicate gl.ELEMENT_ARRAY_BUFFER`);
+        } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+          elements = bufferName;
+        } else if (!this._warn[bufferName]) {
+          log.warn(2, `${this._print(bufferName)} not used`);
+          this._warn[bufferName] = true;
+        }
+      } else {
+        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+          throw new Error(`${this._print(bufferName)}:${location} ` +
+            `has both location and type gl.ELEMENT_ARRAY_BUFFER`);
+        }
+        locations[location] = bufferName;
+      }
+    }
+
+    return {locations, elements};
+  }
 
   checkBuffers() {
     for (const attributeName in this._attributeLocations) {
@@ -247,36 +281,6 @@ export default class Program {
   }
   /* eslint-enable max-depth */
 
-  /*
-   * Binds array of textures, at indices corresponding to positions in array
-   */
-  setTextures(textures) {
-    throw new Error('setTextures replaced with setAttributes');
-    // assert(Array.isArray(textures), 'setTextures requires array textures');
-    // for (let i = 0; i < textures.length; ++i) {
-    //   textures[i].bind(i);
-    // }
-    // return this;
-  }
-
-  unsetTextures(textures) {
-    throw new Error('unsetTextures replaced with setAttributes');
-    // assert(Array.isArray(textures), 'unsetTextures requires array textures');
-    // for (let i = 0; i < textures.length; ++i) {
-    //   textures[i].unbind(i);
-    // }
-    // return this;
-  }
-
-  /*
-   * Set a texture at a given index
-   */
-  setTexture(texture, index) {
-    throw new Error('setTexture replaced with setAttributes');
-    // texture.bind(index);
-    // return this;
-  }
-
   getAttachedShadersCount() {
     return this.getProgramParameter(this.gl.ATTACHED_SHADERS);
   }
@@ -316,7 +320,7 @@ export default class Program {
   // Note: locations are opaque structures
 
   getUniformCount() {
-    return this.getProgramParameter(WebGL.ACTIVE_UNIFORMS);
+    return this.getProgramParameter(GL.ACTIVE_UNIFORMS);
   }
 
   /*
@@ -443,6 +447,38 @@ export default class Program {
         getUniformSetter(gl, location, info, parsedName.isArray);
     }
     return uniformSetters;
+  }
+
+  // REMOVED
+
+  /*
+   * Binds array of textures, at indices corresponding to positions in array
+   */
+  setTextures(textures) {
+    throw new Error('setTextures replaced with setAttributes');
+    // assert(Array.isArray(textures), 'setTextures requires array textures');
+    // for (let i = 0; i < textures.length; ++i) {
+    //   textures[i].bind(i);
+    // }
+    // return this;
+  }
+
+  unsetTextures(textures) {
+    throw new Error('unsetTextures replaced with setAttributes');
+    // assert(Array.isArray(textures), 'unsetTextures requires array textures');
+    // for (let i = 0; i < textures.length; ++i) {
+    //   textures[i].unbind(i);
+    // }
+    // return this;
+  }
+
+  /*
+   * Set a texture at a given index
+   */
+  setTexture(texture, index) {
+    throw new Error('setTexture replaced with setAttributes');
+    // texture.bind(index);
+    // return this;
   }
 }
 

@@ -3,6 +3,7 @@
 var createGLContext = LumaGL.createGLContext;
 var loadTextures = LumaGL.loadTextures;
 var Program = LumaGL.Program;
+var Buffer = LumaGL.Buffer;
 var PerspectiveCamera = LumaGL.PerspectiveCamera;
 var Scene = LumaGL.Scene;
 var Fx = LumaGL.Fx;
@@ -72,68 +73,100 @@ window.webGLStart = function() {
     var program = new Program(gl);
 
     var jupiter = new Sphere({
+      id: 'Jupiter',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: [tJupiter],
+      uniforms: {
+        sampler1: tJupiter,
+        hasTexture1: true,
+        colors: [1, 1, 1, 1]
+      },
+      attributes: {
+        colors: new Buffer(gl).setData({
+          data: new Float32Array(10000),
+          size: 4
+        }),
+        pickingColors: new Buffer(gl).setData({
+          data: new Float32Array(10000),
+          size: 3
+        })
+      },
       pickable: true,
       program
     });
-    jupiter.name = 'Jupiter';
     var mars = new Sphere({
+      id: 'Mars',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tMars,
+      uniforms: {
+        sampler1: tMars,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    mars.name = 'Mars';
     var mercury = new Sphere({
+      id: 'Mercury',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tMercury,
+      uniforms: {
+        sampler1: tMercury,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    mercury.name = 'Mercury';
     var neptune = new Sphere({
+      id: 'Neptune',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tNeptune,
+      uniforms: {
+        sampler1: tNeptune,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    neptune.name = 'Neptune';
     var saturn = new Sphere({
+      id: 'Saturn',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tSaturn,
+      uniforms: {
+        sampler1: tSaturn,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    saturn.name = 'Saturn';
     var uranus = new Sphere({
+      id: 'Uranus',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tUranus,
+      uniforms: {
+        sampler1: tUranus,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    uranus.name = 'Uranus';
     var venus = new Sphere({
+      id: 'Venus',
       nlat: 32,
       nlong: 32,
       radius: 1,
-      textures: tVenus,
+      uniforms: {
+        sampler1: tVenus,
+        hasTexture1: false
+      },
       pickable: true,
       program
     });
-    venus.name = 'Venus';
 
     // scene.add(jupiter, mars, mercury, neptune, saturn, uranus, venus);
     // var items = [jupiter, uranus, mars, neptune, mercury, saturn, venus];
@@ -181,7 +214,7 @@ function draw(gl, canvas, camera, scene) {
 
   var div = document.getElementById('planet-name');
   if (p) {
-    div.innerHTML = p.name;
+    div.innerHTML = p.id;
     div.style.top = pick.y + 'px';
     div.style.left = pick.x + 'px';
     div.style.display = 'block';

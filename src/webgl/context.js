@@ -25,7 +25,7 @@ export function createGLContext({
   webgl2 = false,
   // Instrument context (at the expense of performance)
   // Note: defaults to true and needs to be explicitly turn off
-  debug = true,
+  debug = false,
   // Other options are passed through to context creator
   ...opts
 } = {}) {
@@ -169,6 +169,12 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
   }
 }
 
+function getFunctionString(functionName, functionArgs) {
+  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
+  args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
+  return `gl.${functionName}(${args})`;
+}
+
 function throwOnError(err, functionName, args) {
   const errorMessage = WebGLDebug.glEnumToString(err);
   const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
@@ -176,27 +182,34 @@ function throwOnError(err, functionName, args) {
     `gl.${functionName}(${functionArgs})`);
 }
 
+// Don't generate function string until it is needed
 function validateArgsAndLog(functionName, functionArgs) {
-  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
-  args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
-  const functionString = `gl.${functionName}(${args})`;
-  const breaks = log.break;
-  const isBreakpoint = breaks && breaks.every(
-    breakString => functionString.indexOf(breakString) !== -1
-  );
-
-  if (isBreakpoint) {
-    debugger;
+  let functionString;
+  if (log.priority >= 3) {
+    functionString = getFunctionString(functionName, functionArgs);
+    log.info(3, `${functionString}`);
   }
 
-  for (const arg of args) {
+  for (const arg of functionArgs) {
     if (arg === undefined) {
-      throw new Error(
-        `undefined argument: ${functionString}`);
+      functionString = functionString ||
+        getFunctionString(functionName, functionArgs);
+      throw new Error(`Undefined argument: ${functionString}`);
     }
   }
 
-  log.log(3, `${functionString}`);
+  const breaks = log.break;
+  if (log.break) {
+    functionString = functionString ||
+      getFunctionString(functionName, functionArgs);
+    const isBreakpoint = log.break && log.break.every(
+      breakString => functionString.indexOf(breakString) !== -1
+    );
+
+    if (isBreakpoint) {
+      debugger;
+    }
+  }
 }
 
 // Returns an Error representing the Latest webGl error or null

@@ -14,6 +14,11 @@ const lumaLog = {
       console.debug(...args);
     }
   },
+  info(priority, ...args) {
+    if (priority <= lumaLog.priority) {
+      console.log(...args);
+    }
+  },
   warn(priority, ...args) {
     if (priority <= lumaLog.priority) {
       console.warn(...args);
