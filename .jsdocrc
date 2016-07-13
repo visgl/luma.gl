@@ -1,0 +1,18 @@
+{
+    "plugins": ["plugins/markdown"],
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc","closure"]
+    },
+    "source": {
+        "include": [ "src", "README.md" ],
+        "includePattern": ".+\\.js$"
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false,
+        "default": {
+            "outputSourceFiles": false
+        }
+    }
+}

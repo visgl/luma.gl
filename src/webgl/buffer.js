@@ -1,4 +1,4 @@
-import {WebGL, WebGL2RenderingContext, WebGLBuffer}
+import {GL, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
 import {assertWebGLRenderingContext, glTypeFromArray, assertArrayTypeMatch}
   from './webgl-checks';
@@ -90,7 +90,9 @@ export default class Buffer {
     this.gl = gl;
     this.handle = handle;
     this.id = id;
-    this.target = gl.ARRAY_BUFFER;
+    this.bytes = undefined;
+    this.data = null;
+    this.target = GL.ARRAY_BUFFER;
     this.layout = null;
 
     this.userData = {};
@@ -122,8 +124,8 @@ export default class Buffer {
   setData({
     data,
     bytes,
-    target = WebGL.ARRAY_BUFFER,
-    usage = WebGL.STATIC_DRAW,
+    target = GL.ARRAY_BUFFER,
+    usage = GL.STATIC_DRAW,
     // Characteristics of stored data
     layout,
     type,
@@ -142,13 +144,8 @@ export default class Buffer {
       assertArrayTypeMatch(data, type, 'in Buffer.setData');
     }
 
-    // Note: When we are just creating and/or filling the buffer with data,
-    // the target we use doesn't technically matter, so use ARRAY_BUFFER
-    // https://www.opengl.org/wiki/Buffer_Object
-    this.bind({target});
-    gl.bufferData(target, data || bytes, usage);
-    this.unbind({target});
-
+    this.bytes = bytes;
+    this.data = data;
     this.target = target;
     this.layout = layout || new BufferLayout({
       type,
@@ -159,6 +156,13 @@ export default class Buffer {
       integer,
       instanced
     });
+
+    // Note: When we are just creating and/or filling the buffer with data,
+    // the target we use doesn't technically matter, so use ARRAY_BUFFER
+    // https://www.opengl.org/wiki/Buffer_Object
+    this.bind({target});
+    gl.bufferData(target, data || bytes, usage);
+    this.unbind({target});
 
     return this;
   }
@@ -178,9 +182,9 @@ export default class Buffer {
     // Note: When we are just creating and/or filling the buffer with data,
     // the target we use doesn't technically matter, so use ARRAY_BUFFER
     // https://www.opengl.org/wiki/Buffer_Object
-    this.bind({target: WebGL.ARRAY_BUFFER});
-    gl.bufferSubData(WebGL.ARRAY_BUFFER, offset, data);
-    this.unbind({target: WebGL.ARRAY_BUFFER});
+    this.bind({target: GL.ARRAY_BUFFER});
+    gl.bufferSubData(GL.ARRAY_BUFFER, offset, data);
+    this.unbind({target: GL.ARRAY_BUFFER});
 
     return this;
   }

@@ -1,13 +1,17 @@
+import {GL} from './webgl-types';
 import formatCompilerError from 'gl-format-compiler-error';
-import {log} from '../utils';
+import getShaderName from 'glsl-shader-name';
+import {log, uid} from '../utils';
 
 // For now this is an internal class
 export class Shader {
 
   /* eslint-disable max-statements */
   constructor(gl, shaderSource, shaderType) {
+    this.id = getShaderName(shaderSource) || uid(this._getName(shaderType));
     this.gl = gl;
     this.shaderType = shaderType;
+    this.shaderSource = shaderSource;
     this.handle = gl.createShader(shaderType);
     if (this.handle === null) {
       throw new Error(`Error creating shader with type ${shaderType}`);
@@ -23,11 +27,15 @@ export class Shader {
     }
   }
 
+  getName() {
+    return getShaderName(this.shaderSource);
+  }
+
   _compile(shaderSource) {
     const {gl} = this;
     gl.shaderSource(this.handle, shaderSource);
     gl.compileShader(this.handle);
-    const compiled = gl.getShaderParameter(this.handle, gl.COMPILE_STATUS);
+    const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compiled) {
       const info = gl.getShaderInfoLog(this.handle);
       gl.deleteShader(this.handle);
@@ -47,16 +55,24 @@ export class Shader {
     }
   }
   /* eslint-enable max-statements */
+
+  _getName(shaderType) {
+    switch (shaderType) {
+    case GL.VERTEX_SHADER: return 'vertex-shader';
+    case GL.FRAGMENT_SHADER: return 'fragment-shader';
+    default: return 'shader';
+    }
+  }
 }
 
 export class VertexShader extends Shader {
   constructor(gl, shaderSource) {
-    super(gl, shaderSource, gl.VERTEX_SHADER);
+    super(gl, shaderSource, GL.VERTEX_SHADER);
   }
 }
 
 export class FragmentShader extends Shader {
   constructor(gl, shaderSource) {
-    super(gl, shaderSource, gl.FRAGMENT_SHADER);
+    super(gl, shaderSource, GL.FRAGMENT_SHADER);
   }
 }

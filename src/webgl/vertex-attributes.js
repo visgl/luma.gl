@@ -47,6 +47,17 @@ import assert from 'assert';
 
 const ERR_WEBGL2 = 'WebGL2 required';
 
+function glGetLumaInfo(gl) {
+  if (!gl.luma) {
+    gl.luma = {extensions: {}};
+  }
+  if (gl.luma.extensions['ANGLE_instanced_arrays'] === undefined) {
+    gl.luma.extensions['ANGLE_instanced_arrays'] =
+      gl.getExtension('ANGLE_instanced_arrays');
+  }
+  return gl.luma;
+}
+
 // ACCESSORS
 
 /**
@@ -57,8 +68,7 @@ const ERR_WEBGL2 = 'WebGL2 required';
  */
 export function getMaxAttributes(gl) {
   assertWebGLRenderingContext(gl);
-  const maxAttributes = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-  glCheckError(gl);
+  return gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
   return maxAttributes;
 }
 
@@ -220,13 +230,11 @@ export function disable(gl, location) {
 export function setDivisor(gl, location, divisor) {
   if (gl instanceof WebGL2RenderingContext) {
     gl.vertexAttribDivisor(location, divisor);
-    glCheckError(gl);
     return;
   }
-  const ext = gl.getExtension('ANGLE_instanced_arrays');
+  const ext = glGetLumaInfo(gl).extensions['ANGLE_instanced_arrays'];
   if (ext) {
     ext.vertexAttribDivisorANGLE(location, divisor);
-    glCheckError(gl);
     return;
   }
   // Accept divisor 0 even if instancing is not supported (0 = no instancing)
@@ -245,13 +253,11 @@ export function getDivisor(gl, location) {
   assert(location > 0);
   if (gl instanceof WebGL2RenderingContext) {
     const divisor = get(location, gl.VERTEX_ATTRIB_ARRAY_DIVISOR);
-    glCheckError(gl);
     return divisor;
   }
-  const ext = gl.getExtension('ANGLE_instanced_arrays');
+  const ext = glGetLumaInfo(gl).extensions['ANGLE_instanced_arrays'];
   if (ext) {
     const divisor = get(location, ext.VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE);
-    glCheckError(gl);
     return divisor;
   }
   // if instancing is not available, return 0 meaning divisor has not been set
@@ -303,7 +309,6 @@ export function setBuffer({
       layout.stride,
       layout.offset
     );
-    glCheckError(gl);
   } else {
     // specifies *integer* data formats and locations of vertex attributes
     // For glVertexAttribIPointer, Values are always left as integer values.
@@ -317,7 +322,6 @@ export function setBuffer({
       layout.stride,
       layout.offset
     );
-    glCheckError(gl);
   }
 
   buffer.unbind({target: gl.ARRAY_BUFFER});
