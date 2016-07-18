@@ -9,11 +9,27 @@ function isBrowser() {
   return !isNode;
 };
 
-function getGlobal() {
-  return isBrowser() ? window : global;
+const glob = isBrowser() ? window : global;
+
+// Export lumagl symbols as luma, lumagl and LumaGL on global context
+if (glob.lumagl) {
+  throw new Error('lumagl multiple copies detected');
 }
+glob.lumagl = {};
+glob.luma = glob.lumagl;
+glob.LumaGL = glob.lumagl;
+
+// Keep luma globals in a globals sub-object
+glob.lumagl.globals = {
+  headlessGL: null,
+  headlessTypes: null,
+  modules: {},
+  nodeIO: {}
+};
 
 module.exports = {
-  isBrowser: isBrowser,
-  getGlobal: getGlobal
+  isBrowser,
+  global: glob,
+  lumagl: glob.lumagl,
+  lumaGlobals: glob.lumagl.globals
 };

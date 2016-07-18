@@ -259,9 +259,9 @@ function begin() {
     gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
     pAccelerate.use();
     pAccelerate.setUniforms({
-      uSpeed: Math.sin(tick * 0.005) * 8 + 8),
-      uPosition: fbPositionSrc.texture.bind(0),
-      uVelocity: fbVelocitySrc.texture.bind(1),
+      uSpeed: Math.sin(tick * 0.005) * 8 + 8,
+      uPosition: fbPositionSrc.texture,
+      uVelocity: fbVelocitySrc.texture,
       uTime: tick * 0.25
     });
     pAccelerate.setBuffer(quad);

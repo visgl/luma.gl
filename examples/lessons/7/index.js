@@ -1,6 +1,15 @@
 /* eslint-disable max-statements, no-var */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global window, document, LumaGL */
+var createGLContext = LumaGL.createGLContext;
+var loadTextures = LumaGL.loadTextures;
+var Model = LumaGL.Model;
+var Geometry = LumaGL.Geometry;
+var Program = LumaGL.Program;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var addEvents = LumaGL.addEvents;
+var Fx = LumaGL.Fx;
 
 // Lighting form elements variables
 var $id = function(d) {
@@ -8,16 +17,6 @@ var $id = function(d) {
 };
 
 window.webGLStart = function() {
-
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Model = LumaGL.Model;
-  var Geometry = LumaGL.Geometry;
-  var Program = LumaGL.Program;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var addEvents = LumaGL.addEvents;
-  var Fx = LumaGL.Fx;
 
   var canvas = document.getElementById('lesson07-canvas');
   canvas.width = canvas.clientWidth;

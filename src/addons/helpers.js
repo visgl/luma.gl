@@ -10,6 +10,10 @@ export function getDefaultShaders({id}) {
   };
 }
 
+export function getStringFromHTML(id) {
+  return document.getElementById(id).innerHTML;
+}
+
 export function getShadersFromHTML({vs, fs, id}) {
   assert(vs);
   assert(fs);

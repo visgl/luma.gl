@@ -1,6 +1,6 @@
-import Geometry from '../geometry';
 import {Vec3} from '../math';
-import Model from '../model';
+import Geometry from '../core/geometry';
+import Model from '../core/model';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 

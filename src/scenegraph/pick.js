@@ -51,8 +51,11 @@ export function pickModels(gl, {
           x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color
         );
 
+        const isPicked =
+          color[0] !== 0 || color[1] !== 0 || color[2] !== 0 || color[3] !== 0;
+
         // Add the information to the stack
-        picked.push({model, color});
+        picked.push({model, color, isPicked});
       }
     }
   });

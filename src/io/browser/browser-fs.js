@@ -113,7 +113,7 @@ function getFileErrorMessage(e) {
   }
 }
 
-export default {
+export {
   writeFile,
   readFile
 }

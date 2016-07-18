@@ -1,17 +1,17 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Fx = LumaGL.Fx;
+var Vec3 = LumaGL.Vec3;
+var Mat4 = LumaGL.Mat4;
+var Model = LumaGL.Model;
+var Geometry = LumaGL.Geometry;
+var Buffer = LumaGL.Buffer;
+var Program = LumaGL.Program;
 
-  var createGLContext = LumaGL.createGLContext;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var Mat4 = LumaGL.Mat4;
-  var Model = LumaGL.Model;
-  var Geometry = LumaGL.Geometry;
-  var Buffer = LumaGL.Buffer;
-  var Program = LumaGL.Program;
+window.webGLStart = function() {
 
   var pyramidGeometry = new Geometry({
     positions: new Float32Array([
