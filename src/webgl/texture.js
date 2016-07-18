@@ -148,11 +148,11 @@ export class Texture {
 
     } else {
 
+      const imageSize = this._deduceImageSize(pixels);
       // Assume pixels is a browser supported object (ImageData, Canvas, ...)
       assert(width === undefined && height === undefined,
         'Texture2D.setImageData: Width and height must not be provided');
       type = type || WebGL.UNSIGNED_BYTE;
-      const imageSize = this._deduceImageSize(pixels);
       gl.texImage2D(target, mipmapLevel, format, format, type, pixels);
       this.width = imageSize.width;
       this.height = imageSize.height;
@@ -177,7 +177,7 @@ export class Texture {
       image instanceof HTMLVideoElement) {
       return {width: image.videoWidth, height: image.videoHeight};
     }
-    throw new Error('Failed to deduce image size');
+    throw new Error('Unknown image data format. Failed to deduce image size');
   }
 
   /**
@@ -596,7 +596,7 @@ export class TextureCube extends Texture {
     this.setCubeMapImageData(opts);
   }
 
-  bind({index}) {
+  bind({index} = {}) {
     const {gl} = this;
     if (index !== undefined) {
       gl.activeTexture(gl.TEXTURE0 + index);

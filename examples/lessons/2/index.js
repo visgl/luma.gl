@@ -1,13 +1,12 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
+var createGLContext = LumaGL.createGLContext;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Program = LumaGL.Program;
+var Buffer = LumaGL.Buffer;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+
 window.webGLStart = function() {
-
-  var createGLContext = LumaGL.createGLContext;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Program = LumaGL.Program;
-  var Buffer = LumaGL.Buffer;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-
   var canvas = document.getElementById('lesson02-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;

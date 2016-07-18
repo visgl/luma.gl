@@ -1,10 +1,12 @@
 // Use stackgl modules for DOM-less reading and writing of images
+// NOTE: These are not dependencies of luma.gl.
+// They need to be imported by the app.
 import getPixels from 'get-pixels';
 import savePixels from 'save-pixels';
 import ndarray from 'ndarray';
-import {promisify} from '../utils';
+import {readFile, writeFile} from 'fs';
 
-const getPixelsAsync = promisify(getPixels);
+import {promisify, lumaGlobals} from './utils';
 
 /**
  * Returns data bytes representing a compressed image in PNG or JPG format,
@@ -23,6 +25,20 @@ export function compressImage(image, type = 'png') {
     0), type.replace('image/', ''));
 }
 
+const getPixelsAsync = promisify(getPixels);
+
 export function loadImage(url) {
   return getPixelsAsync(url);
 }
+
+
+lumaGlobals.modules.getPixels = getPixels;
+lumaGlobals.modules.savePixels = savePixels;
+lumaGlobals.modules.ndarray = ndarray;
+
+lumaGlobals.nodeIO = {
+  readFile,
+  writeFile,
+  compressImage,
+  loadImage
+};

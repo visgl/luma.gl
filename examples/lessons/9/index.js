@@ -1,24 +1,23 @@
 /* eslint-disable no-var, max-statements */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global window, document, LumaGL */
+var createGLContext = LumaGL.createGLContext;
+var loadTextures = LumaGL.loadTextures;
+var Program = LumaGL.Program;
+var Geometry = LumaGL.Geometry;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var addEvents = LumaGL.addEvents;
+var Fx = LumaGL.Fx;
+var Model = LumaGL.Model;
+var Shaders = LumaGL.Shaders;
+var Vec3 = LumaGL.Vec3;
+
+var $id = function(d) {
+  return document.getElementById(d);
+};
+
 window.webGLStart = function() {
-
-  var $id = function(d) {
-    return document.getElementById(d);
-  };
-
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var Program = LumaGL.Program;
-  var Geometry = LumaGL.Geometry;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var addEvents = LumaGL.addEvents;
-  var Fx = LumaGL.Fx;
-  var Model = LumaGL.Model;
-  var Shaders = LumaGL.Shaders;
-  var Vec3 = LumaGL.Vec3;
-
   var canvas = document.getElementById('lesson09-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;

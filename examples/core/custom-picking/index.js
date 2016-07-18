@@ -1,16 +1,16 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
+var createGLContext = LumaGL.createGLContext;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Program = LumaGL.Program;
+var Geometry = LumaGL.Geometry;
+var Scene = LumaGL.Scene;
+var Vec3 = LumaGL.Vec3;
+var Model = LumaGL.Model;
+
+var Fx = LumaGL.Fx;
+
 window.webGLStart = function() {
-
-  var createGLContext = LumaGL.createGLContext;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Vec3 = LumaGL.Vec3;
-  var Model = LumaGL.Model;
-
-  var makeProgramFromDefaultShaders =
-    LumaGL.addons.makeProgramFromDefaultShaders;
-  var Fx = LumaGL.Fx;
 
   var canvas = document.getElementById('render-canvas');
 
@@ -20,7 +20,7 @@ window.webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
   gl.viewport(0, 0, Number(canvas.width), Number(canvas.height));
 
-  var program = makeProgramFromDefaultShaders(gl);
+  var program = new Program(gl);
   program.use();
 
   // rye TODO: there's a bug in merge that makes it require an object.
@@ -105,10 +105,15 @@ window.webGLStart = function() {
   }
 
   var heightmap = new Model({
-    vertices: vertices,
-    colors: colors,
-    normals: normals,
-    pickingColors: colors
+    program,
+    geometry: new Geometry({
+      attributes: {
+        vertices: vertices,
+        colors: colors,
+        normals: normals,
+        pickingColors: colors
+      }
+    })
   });
 
   scene.add(heightmap);

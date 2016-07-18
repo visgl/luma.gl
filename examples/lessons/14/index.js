@@ -1,20 +1,22 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
-  var $id = function(d) {
-    return document.getElementById(d);
-  };
 
-  var createGLContext = LumaGL.createGLContext;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var Model = LumaGL.Model;
-  var loadFiles = LumaGL.loadFiles;
-  var loadTextures = LumaGL.loadTextures;
-  var loadProgram = LumaGL.loadProgram;
-  var parseModel = LumaGL.parseModel;
+var createGLContext = LumaGL.createGLContext;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var Fx = LumaGL.Fx;
+var Vec3 = LumaGL.Vec3;
+var Model = LumaGL.Model;
+var loadFiles = LumaGL.loadFiles;
+var loadTextures = LumaGL.loadTextures;
+var loadProgram = LumaGL.loadProgram;
+var parseModel = LumaGL.parseModel;
+
+function $id(d) {
+  return document.getElementById(d);
+}
+
+window.webGLStart = function() {
 
   // Get Model
 
@@ -61,7 +63,7 @@ window.webGLStart = function() {
     })
   ])
   .then(function(results) {
-    var teapotJSON = results[0];
+    var teapotJSON = results[0][0];
     var program = results[1];
     var tGalvanized = results[2][0];
     var tEarth = results[2][1];
@@ -159,8 +161,9 @@ window.webGLStart = function() {
 
       // Update position
       theta += 0.01;
-      teapot.setRotation(new Vec3(theta / 100, theta, 0));
-      teapot.updateMatrix();
+      teapot.update({
+        rotation: new Vec3(theta / 100, theta, 0)
+      });
 
       // render objects
       scene.render({camera});

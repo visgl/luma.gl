@@ -1,5 +1,5 @@
-import test from '../../setup';
-import {promisify, compressImage, loadImage} from '../../../src';
+import test from '../setup';
+import {promisify, compressImage, loadImage} from '../../src';
 import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';

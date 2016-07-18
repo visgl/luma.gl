@@ -1,5 +1,5 @@
-import Geometry from '../geometry';
-import Model from '../model';
+import Geometry from '../core/geometry';
+import Model from '../core/model';
 import {uid} from '../utils';
 
 /* eslint-disable no-multi-spaces, indent */
