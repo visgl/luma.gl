@@ -1,7 +1,7 @@
-import {createGLContext} from '../../src/headless';
-import {isWebGLRenderingContext} from '../../src/webgl/webgl-checks';
+const {createGLContext} = require('../../src/headless');
+const {isWebGLRenderingContext} = require('../../src/webgl/webgl-checks');
 
-import test from 'tape-catch';
+const test = require('tape-catch');
 
 test('WebGL#headless context creation', t => {
   const gl = createGLContext();

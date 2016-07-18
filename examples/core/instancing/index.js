@@ -1,51 +1,41 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
+var getStringFromHTML = LumaGL.addons.getStringFromHTML;
+var Program = LumaGL.Program;
+var Cube = LumaGL.Cube;
+var Mat4 = LumaGL.Mat4;
+var Vec3 = LumaGL.Vec3;
+var Renderer = LumaGL.Renderer;
 
-  var createGLContext = LumaGL.createGLContext;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var Buffer = LumaGL.Buffer;
-  var Program = LumaGL.Program;
-  var Cube = LumaGL.Cube;
-  var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
-  var Fx = LumaGL.Fx;
+var SIDE = 256;
 
-  var canvas = document.getElementById('render-canvas');
+new luma.Renderer()
+.init(function(context) {
+  var gl = context.gl;
 
-  var gl = createGLContext({canvas});
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(1, 1, 1, 1);
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-  var side = 256;
+  var colors = new Float32Array(SIDE * SIDE * 3)
+    .map(e => Math.random() * 0.75 + 0.25);
+
   var offsets = [];
-  var colors = [];
-  for (var i = 0; i < side; i++) {
-    var x = (-side + 1) * 3 / 2 + i * 3;
-    for (var j = 0; j < side; j++) {
-      var y = (-side + 1) * 3 / 2 + j * 3;
-      var c = [
-        Math.random() * 0.75 + 0.25,
-        Math.random() * 0.75 + 0.25,
-        Math.random() * 0.75 + 0.25
-      ];
+  for (var i = 0; i < SIDE; i++) {
+    var x = (-SIDE + 1) * 3 / 2 + i * 3;
+    for (var j = 0; j < SIDE; j++) {
+      var y = (-SIDE + 1) * 3 / 2 + j * 3;
       offsets.push(x, y);
-      colors.push(...c);
     }
   }
 
-  var instanceCount = side * side;
+  var instanceCount = SIDE * SIDE;
 
   var cube = new Cube({
-    program: new Program(gl, getShadersFromHTML({
-      vs: 'cube-vs',
-      fs: 'cube-fs'
-    })),
+    gl,
+    vs: getStringFromHTML('cube-vs'),
+    fs: getStringFromHTML('cube-fs'),
     attributes: {
       instanceOffsets: {
         value: new Float32Array(offsets),
@@ -53,7 +43,7 @@ window.webGLStart = function() {
         instanced: 1
       },
       instanceColors: {
-        value: new Float32Array(colors),
+        value: colors,
         size: 3,
         instanced: 1
       }
@@ -62,46 +52,136 @@ window.webGLStart = function() {
     instanceCount
   });
 
-  var tick = 0;
+  // Make availble in context for frame renderer
+  return {cube};
+})
+.frame(function(context) {
+  var gl = context.gl;
 
-  var view = new Mat4();
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  var projection = new Mat4();
+  var model = new Mat4()
+    .$rotateXYZ(context.tick * 0.01, 0, 0)
+    .$rotateXYZ(0, context.tick * 0.013, 0);
 
-  function render() {
-    tick++;
+  var view = new Mat4().lookAt(
+    new Vec3(
+      Math.cos(context.tick * 0.005) * SIDE / 2,
+      Math.sin(context.tick * 0.006) * SIDE / 2,
+      (Math.sin(context.tick * 0.0035) + 1) * SIDE / 4 + 32),
+    new Vec3(0, 0, 0),
+    new Vec3(0, 1, 0)
+  );
+  var projection = new Mat4()
+    .perspective(60, context.width / context.height, 1, 2048.0);
 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    view.lookAt(
-      new Vec3(
-        Math.cos(tick * 0.005) * side / 2,
-        Math.sin(tick * 0.006) * side / 2,
-        (Math.sin(tick * 0.0035) + 1) * side / 4 + 32),
-      new Vec3(0, 0, 0),
-      new Vec3(0, 1, 0)
-    );
-    projection.perspective(60, canvas.width / canvas.height, 1, 2048.0);
+  context.cube.render({
+    uModel: model,
+    uView: view,
+    uProjection: projection,
+    uTime: context.tick * 0.1
+  });
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+});
 
-    var matrix = new Mat4()
-      .$rotateXYZ(tick * 0.01, 0, 0)
-      .$rotateXYZ(0, tick * 0.013, 0);
+/*
+import {Cube, Mat4, Vec3, Renderer} from '../..';
 
-    cube
-      .setUniforms({
-        uModel: matrix,
-        uView: view,
-        uProjection: projection,
-        uTime: tick * 0.1
-      });
+var SIDE = 256;
 
-    cube.render();
+new Renderer()
+.init(({gl}) => {
+  gl.clearColor(1, 1, 1, 1);
+  gl.clearDepth(1);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
 
-    Fx.requestAnimationFrame(render);
+  const colors = new Float32Array(SIDE * SIDE * 3)
+    .map(e => Math.random() * 0.75 + 0.25);
+
+  const offsets = [];
+  for (let i = 0; i < SIDE; i++) {
+    const x = (-SIDE + 1) * 3 / 2 + i * 3;
+    for (let j = 0; j < SIDE; j++) {
+      const y = (-SIDE + 1) * 3 / 2 + j * 3;
+      offsets.push(x, y);
+    }
   }
 
-  render();
-};
+  var instanceCount = SIDE * SIDE;
+
+  var cube = new Cube({
+    gl,
+    vs: `
+      attribute vec3 positions;
+      attribute vec3 normals;
+      attribute vec2 instanceOffsets;
+      attribute vec3 instanceColors;
+
+      uniform mat4 uModel;
+      uniform mat4 uView;
+      uniform mat4 uProjection;
+      uniform float uTime;
+
+      varying vec3 color;
+      varying vec3 normal;
+
+      void main(void) {
+        float d = length(instanceOffsets);
+        vec4 offset = vec4(instanceOffsets, sin((uTime + d) * 0.1) * 16.0,0);
+        gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
+        normal = vec3(uModel * vec4(normals, 1.0));
+        color = instanceColors;
+      }`,
+    fs: `
+      #ifdef GL_ES
+      precision highp float;
+      #endif
+
+      varying vec3 color;
+      varying vec3 normal;
+
+      void main(void) {
+        float d = abs(dot(normalize(normal), normalize(vec3(1,1,2))));
+        gl_FragColor = vec4(d * color,1);
+      }`,
+    attributes: {
+      instanceOffsets: {
+        value: new Float32Array(offsets),
+        size: 2,
+        instanced: 1
+      },
+      instanceColors: {
+        value: colors,
+        size: 3,
+        instanced: 1
+      }
+    },
+    isInstanced: 1,
+    instanceCount
+  });
+
+  // Make availble in context for frame renderer
+  return {cube};
+})
+.frame(({gl, cube, tick, width, height}) => {
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  const view = new Mat4().lookAt(
+    [
+      Math.cos(tick * 0.005) * SIDE / 2,
+      Math.sin(tick * 0.006) * SIDE / 2,
+      (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+    ],
+    [0, 0, 0],
+    [0, 1, 0]
+  );
+
+  context.cube.render({
+    uModel: new Mat4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+    uView: view,
+    uProjection: new Mat4().perspective(60, width / height, 1, 2048.0),
+    uTime: tick * 0.1
+  });
+});
+*/

@@ -1,19 +1,17 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var loadFiles = LumaGL.loadFiles;
+var loadTextures = LumaGL.loadTextures;
+var Program = LumaGL.Program;
+var Model = LumaGL.Model;
+var Geometry = LumaGL.Geometry;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var addEvents = LumaGL.addEvents;
+var Fx = LumaGL.Fx;
 
-  var createGLContext = LumaGL.createGLContext;
-  var loadFiles = LumaGL.loadFiles;
-  var loadTextures = LumaGL.loadTextures;
-  // var makeProgramFromDefaultShaders =
-  //   LumaGL.addons.makeProgramFromDefaultShaders;
-  var Program = LumaGL.Program;
-  var Model = LumaGL.Model;
-  var Geometry = LumaGL.Geometry;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var addEvents = LumaGL.addEvents;
-  var Fx = LumaGL.Fx;
+window.webGLStart = function() {
 
   var pitch = 0;
   var pitchRate = 0;

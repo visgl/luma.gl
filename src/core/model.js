@@ -2,15 +2,13 @@
 /* eslint-disable guard-for-in */
 
 // Define some locals
-import {MAX_TEXTURES} from './config';
 import {
-  WebGL, Buffer, Program, draw,
-  checkUniformValues, getUniformsTable
-} from './webgl';
-
-import Object3D from './scenegraph/object-3d';
+  WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable
+} from '../webgl';
+import Object3D from '../scenegraph/object-3d';
+import {log, splat} from '../utils';
+import {MAX_TEXTURES} from './config';
 import Geometry from './geometry';
-import {log, splat} from './utils';
 import assert from 'assert';
 
 // TODO - experimental, not yet used
@@ -29,6 +27,9 @@ export default class Model extends Object3D {
   /* eslint-disable complexity  */
   constructor({
     program,
+    gl = null,
+    vs = null,
+    fs = null,
     geometry,
     material = null,
     textures,
@@ -47,10 +48,13 @@ export default class Model extends Object3D {
     ...opts
   } = {}) {
     // assert(program || program instanceof Program);
-    assert(program instanceof Program, 'Model needs a program');
     assert(geometry instanceof Geometry, 'Model needs a geometry');
 
     super(opts);
+
+    // set a custom program per o3d
+    this.program = program || new Program(gl, {vs, fs});
+    assert(this.program instanceof Program, 'Model needs a program');
 
     if (opts.instanced) {
       console.warn(`Warning: ` +
@@ -71,9 +75,6 @@ export default class Model extends Object3D {
     this.dynamic = false;
     this.needsRedraw = true;
 
-    // set a custom program per o3d
-    // this.program = Program.makeFrom(gl, program);
-    this.program = program;
     this.material = material;
 
     // Attributes and buffers
@@ -81,10 +82,11 @@ export default class Model extends Object3D {
     this.attributes = {};
     this.setAttributes(attributes);
 
-    this.uniforms = {
-      ...program.defaultUniforms,
+    this.uniforms = {};
+    this.setUniforms({
+      ...this.program.defaultUniforms,
       ...uniforms
-    };
+    });
 
     // instanced rendering
     this.isInstanced = isInstanced;
@@ -188,7 +190,10 @@ export default class Model extends Object3D {
    * @param {Camera} opt.camera=
    * @param {Camera} opt.viewMatrix=
    */
-  render({camera, viewMatrix} = {}) {
+  /* eslint-disable max-statements */
+  render(uniforms = {}) {
+    // TODO - special treatment of these parameters should be removed
+    const {camera, viewMatrix, ...otherUniforms} = uniforms;
     // Camera exposes uniforms that can be used directly in shaders
     if (camera) {
       this.setUniforms(camera.getUniforms());
@@ -199,7 +204,7 @@ export default class Model extends Object3D {
 
     log.log(2, `Rendering model ${this.id} - setting state`, this);
 
-    this.setProgramState();
+    this.setProgramState(otherUniforms);
 
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
@@ -232,11 +237,10 @@ export default class Model extends Object3D {
     return this;
   }
 
-  setProgramState() {
+  setProgramState(uniforms) {
     const {program} = this;
     program.use();
-    // this.bindTextures();
-    program.setUniforms(this.uniforms);
+    program.setUniforms({...this.uniforms, ...uniforms});
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
     return this;
@@ -369,41 +373,7 @@ export default class Model extends Object3D {
 
   // DEPRECATED / REMOVED
   setTextures(textures = []) {
-    throw new Error('setTextures replaced with setUniforms');
-  }
-
-  bindTextures(force = false) {
-    console.warn('Model.bindTextures is deprecated');
-    const textures = splat(this.textures);
-    let tex2D = 0;
-
-    // const texCube = 0;
-    for (let i = 0; i < MAX_TEXTURES; i++) {
-      if (i < textures.length) {
-        // rye TODO: update this when TextureCube is implemented.
-        // const isCube = app.textureMemo[textures[i]].isCube;
-        // if (isCube) {
-        // program.setTexture(textures[i], gl['TEXTURE' + i]);
-        // program.setUniforms({
-        //   ['hasTextureCube' + (i + 1)]: true,
-        //   [samplerCube' + (texCube + 1)]: i
-        // })
-        // texCube++;
-        // } else {
-        this.setUniforms({
-          [`hasTexture${i + 1}`]: true,
-          [`sampler${tex2D + 1}`]: textures[i]
-        });
-        tex2D++;
-      } else {
-        this.setUniforms({
-          [`hasTextureCube${i + 1}`]: false,
-          [`hasTexture${i + 1}`]: false
-          // [`sampler${++tex2D}`]: i,
-          // [`samplerCube${++texCube}`]: i
-        });
-      }
-    }
-    return this;
+    throw new Error(
+      'model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
   }
 }

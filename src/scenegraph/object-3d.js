@@ -63,6 +63,20 @@ export default class Object3D {
     return this;
   }
 
+  update({position, rotation, scale} = {}) {
+    if (position) {
+      this.setPosition(position);
+    }
+    if (rotation) {
+      this.setRotation(rotation);
+    }
+    if (scale) {
+      this.setScale(scale);
+    }
+    this.updateMatrix();
+    return this;
+  }
+
   getCoordinateUniforms(viewMatrix) {
     // TODO - solve multiple class problem
     // assert(viewMatrix instanceof Mat4);

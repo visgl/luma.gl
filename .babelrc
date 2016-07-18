@@ -2,9 +2,8 @@
   "presets": ["es2015", "stage-2"],
   "plugins": [
   	"glslify",
-    ["transform-builtin-extend", {
-      "globals": ["Array"]
-    }]
+  	"transform-decorators-legacy",
+    ["transform-builtin-extend", {"globals": ["Array"]}]
   ],
   "compact": "false"
 }

@@ -1,5 +1,5 @@
 /* eslint-disable guard-for-in */
-import {log} from './utils';
+import {log} from '../utils';
 import assert from 'assert';
 
 // auto: -

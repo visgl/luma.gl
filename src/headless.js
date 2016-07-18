@@ -1,19 +1,18 @@
-import {getGlobal} from './utils/is-browser';
+import {global, lumaGlobals} from './utils';
 
-let headlessGLTypes;
-let headlessGL;
-try {
-  headlessGLTypes = require('gl/wrap');
-  headlessGL = require('gl');
-} catch (error) {
-  /* ignore */
+// We want to run on both brow
+//try {
+lumaGlobals.headlessGL = require('gl');
+lumaGlobals.headlessTypes = require('gl/wrap');
+// } catch (error) {
+//   /* ignore */
+// }
+
+if (!lumaGlobals.headlessTypes.WebGLRenderingContext) {
+  throw new Error('Could not access headless WebGL type definitions');
 }
 
-const glob = getGlobal();
-glob.headlessGLTypes = headlessGLTypes;
-glob.headlessGL = headlessGL;
-
-// TODO - not necessary - Make sure webgl-types initializes with right types
+// Just to trigger check and make sure luma.gl initializes with valid types
 require('./webgl/webgl-types');
 
 // Now import standard luma.gl package
