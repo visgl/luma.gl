@@ -1,0 +1,248 @@
+html, body {
+  text-align: center;
+  font-family: Verdana;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9em;
+  background-color: rgb(51, 51, 51);
+  color: white;
+}
+
+h1 {
+  font-family: Arial;
+}
+
+div#title {
+  margin: 20px;
+}
+
+div.description {
+  font-size: 0.9em;
+}
+
+a:link, a:visited {
+  color: #23A4FF;
+}
+
+a:hover, a:active {
+  color: #6EC3FF;
+}
+
+#container {
+  margin: auto;
+  width: 1100px;
+}
+
+body.no-webgl #container {
+  display: none;
+}
+
+div.fallback {
+  display: none;
+}
+
+body.no-webgl div.fallback {
+  display: block;
+}
+
+div.tooltip {
+  position: absolute;
+  color: black;
+  padding: 5px;
+  background-color: #fff;
+  border: 1px solid #555;
+  /*
+  border-radius: 0.5em;
+  border: 1px solid #ccc;
+  background-color: -webkit-linear-gradient(#111, #666, #666);
+  background-color: -moz-linear-gradient(top, #111, #666, #666);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  -o-box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  */
+  font-size: 0.8em;
+}
+
+div.tooltip.show {
+  display: block;
+}
+
+div.tooltip.hide {
+  display: none;
+}
+
+#log-panel {
+  font-family: Arial;
+  margin: 0;
+  position: fixed;
+  top: 0;
+  right: 0;
+  padding: 5px;
+  color: white;
+  background-color: red;
+  font-weight: bold;
+  font-size: 1em;
+  z-index: 4000;
+  border-bottom-left-radius: 0.5em;
+}
+
+
+.description {
+  font-size: 14px;
+  text-align: center;
+  margin: 10px auto;
+  padding: 3px;
+/*background-color: rgb(255, 241, 168);*/
+/*  border: 1px solid #ccc;*/
+}
+
+h1 {
+  text-shadow: rgba(255, 255, 255, 0.2) 0 0 3px;
+  margin: 5px;
+}
+
+#map {
+  position: relative;
+  height: 575px;
+}
+
+.canvas-container {
+  margin: auto;
+  overflow: visible;
+}
+
+.canvas-container #canvas-wrapper, 
+.canvas-container .list-wrapper {
+  float: left;
+}
+
+#canvas-wrapper {
+  width: 700px;
+  height: 600px;
+  overflow: hidden;
+}
+
+#canvas-wrapper > canvas {
+  margin-top: -212px;
+  margin-left: -162px;
+}
+
+.list-wrapper::after {
+  content: '';
+
+  position: absolute;
+  bottom: 0;
+  width: 250px;
+  height: 30px;
+  
+  background: -webkit-linear-gradient(top, rgba(51, 51, 51, 0.3), rgba(51, 51, 51, 1));
+  background: -moz-linear-gradient(top, rgba(51, 51, 51, 0.3), rgba(51, 51, 51, 1));
+  background: -o-linear-gradient(top, rgba(51, 51, 51, 0.3), rgba(51, 51, 51, 1));
+  background: linear-gradient(top, rgba(51, 51, 51, 0.3), rgba(51, 51, 51, 1));
+}
+
+input#search {
+  width: 240px;
+}
+
+.list-container {
+  height: 512px;
+}
+
+.list-container {
+  overflow: auto;
+  width: 270px;
+}
+
+.list-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 250px;
+  height: 560px;
+}
+
+#tip {
+  font-size: 0.8em;
+  font-style: italic;
+  color: white;
+  padding-top: 15px;
+  text-align: left;
+  text-indent: 5px;
+}
+
+ul#selected-airlines {
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font-size: 0.8em;
+}
+
+ul#selected-airlines > li {
+  position: relative;
+  list-style: none;
+  display: block;
+  color: white;
+  padding: 0;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+ul#selected-airlines > li:hover {
+  text-decoration: underline;
+}
+
+ul#selected-airlines > li:nth-last-child(1) {
+  border-bottom: 1px solid white;
+  padding-bottom: 10px;
+}
+
+ul#selected-airlines > li .square {
+  float: left;
+  width: 10px;
+  height: 10px;
+  margin: 1px 4px 0 2px;
+  border: 1px solid #555;
+  border-radius: 1em;
+}
+
+ul#selected-airlines > li > input {
+  float: left;
+}
+
+ul#airline-list {
+  font-size: 0.8em;
+  list-style: none;
+  padding: 0;
+  margin-top: 1px;
+}
+
+ul#airline-list > li {
+  list-style: none;
+  display: block;
+  text-align: left;
+  color: white;
+}
+
+ul#airline-list > li > label {
+  cursor: pointer;
+}
+
+canvas {
+  background-color: rgb(0.1, 0.1, 0.1);
+}
+
+.footer {
+  margin: 4px;
+  font-size: 0.8em;
+}
+
+#loading {
+  background-color: #550000;
+  color: #fff;
+  font-style: italic;
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 12px;
+}

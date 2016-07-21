@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Reflective Metaballs</title>
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="text/javascript" src="../../build/PhiloGL.js"></script>
+		<script type="text/javascript" src="Grid.js"></script>
+    <script type="text/javascript" src="Balls.js"></script>    
+    <script type="text/javascript" src="index.js"></script>
+  </head>
+  <body onload="setTimeout(init, 200);">
+    <div id="container">
+      
+      <div id="title">
+        <h1>Reflective Metaballs</h1>
+      </div>
+      
+      <div class="controls">
+        A Metaballs example with cubemap reflection. You can change the background image by clicking below.
+
+        <ul>
+          <li><img src="grimmnight/thumb.jpg" title="GrimmNight" /></li>
+          <li><img src="interstellar/thumb.jpg" title="InterStellar" /></li>
+          <li><img src="miramar/thumb.jpg" title="Miramar" /></li>
+          <li><img src="stormydays/thumb.jpg" title="StormyDays" /></li>
+          <li><img src="violentdays/thumb.jpg" title="ViolentDays" /></li>
+        </ul>
+      </div>
+
+      <div id="canvas-container">
+        <canvas id="canvas" width="900" height="450"></canvas>
+      </div>
+
+      <div class="footer">
+        Author: <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a> - Images created by <a href="http://www.zfight.com/">Jockum Skoglund aka hipshot</a> .
+      </div>
+
+    </div>
+    
+    <div id="fallback" class="fallback"></div>
+
+  <script>
+    if (!PhiloGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +  '<iframe width="480" height="390" src="http://www.youtube.com/embed/Zz2ELlSK_60?rel=0" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+  </body>
+</html>
