@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+   <title>Shaders</title>
+   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
+   <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-1601691-8']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</head>
+<body>
+
+<div class="site">
+  <div class="title">
+    <!-- <a href="/lumagl/"><img src="assets/logo.png" alt="library logo" /></a> -->
+    <h1>luma.gl</h1>
+  </div>
+
+  <div id="sidebar">
+    <div class="box help">
+      <b>Found a typo?</b>
+      <a href="https://github.com/uber//luma.gl/tree/master/docs">
+        Help make the docs better!
+      </a>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Overview:</b>
+      <ul>
+        <li>
+          <a href="index.html">Overview</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Core Classes:</b>
+        <li>
+          <a href="model.html">Model</a>
+        </li>
+        <li>
+          <a href="camera.html">Camera</a>
+        </li>
+        <li>
+          <a href="scene.html">Scene</a>
+        </li>
+     </ul>
+   </div>
+
+
+    <div class="box" id="modules">
+      <b>WebGL Classes:</b>
+      <ul>
+        <li>
+          <a href="context.html">WebGL Context Creation</a>
+        </li>
+        <li>
+          <a href="program.html">Program</a>
+        </li>
+        <li>
+          <a href="buffer.html">Buffer</a>
+        </li>
+        <li>
+          <a href="frame-buffer.html">FrameBuffer</a>
+        </li>
+        <li>
+          <a href="texture.html">Texture</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Modules:</b>
+      <ul>
+        <li>
+          <a href="math.html">Math</a>
+        </li>
+        <li>
+          <a href="shaders.html">Shaders</a>
+        </li>
+        <li>
+          <a href="event.html">Event</a>
+        </li>
+        <li>
+          <a href="fx.html">Fx</a>
+        </li>
+        <li>
+          <a href="io.html">IO</a>
+        </li>
+        <li>
+          <a href="media.html">Media</a>
+        </li>
+     </ul>
+   </div>
+
+   <div class="box" id="method-summary">
+     <b>Methods: </b>
+    <ul id="method-summary-list">
+    </ul>
+   </div>
+  </div>
+
+  <div id="doc">
+
+<h1>Shaders</h1>
+
+<h1 id="Shaders">Object: Shaders</h1>
+
+<p>An object that contains default shaders that could be used with the
+<a href="scene.html">Scene</a> class. Only one vertex shader and one fragment
+shader are shipped in this object. This is so because we encourage
+having shaders in separate files and access them in
+an asynchronous way by using <code>makeProgramFromShaderURIs</code> and other methods available in the Framework. You can set shader strings
+into <code>Shaders.Vertex</code> and <code>Shaders.Fragment</code>. We provide a default vertex and fragment shader in <code>Shaders.Vertex.Default</code> and
+<code>Shaders.Fragment.Default</code>. These shaders can also be conveniently used with <code>makeProgramFromDefaultShaders(vertexShaderName, fragmentShaderName)</code>.</p>
+
+<h2 id="Shaders:Vertex">Shaders Object: Vertex</h2>
+
+<p>Append in this object vertex shaders to be used with a <a href="scene.html">Scene</a>. We provide <code>Shaders.Vertex.Default</code> which is the
+default shader used in the library. You can find more scene compatible shaders
+<a href="https://github.com/uber/luma.gl/tree/master/shaders">here</a>.
+In order to get familiar with the attributes and uniforms used by the <a href="scene.html">Scene</a> we provide the default vertex shader code:</p>
+
+<pre><code>#define LIGHT_MAX 4
+//object attributes
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec4 color;
+attribute vec4 pickingColor;
+attribute vec2 texCoord1;
+//camera and object matrices
+uniform mat4 viewMatrix;
+uniform mat4 viewInverseMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 viewProjectionMatrix;
+//objectMatrix * viewMatrix = worldMatrix
+uniform mat4 worldMatrix;
+uniform mat4 worldInverseMatrix;
+uniform mat4 worldInverseTransposeMatrix;
+uniform mat4 objectMatrix;
+uniform vec3 cameraPosition;
+//lighting configuration
+uniform bool enableLights;
+uniform vec3 ambientColor;
+uniform vec3 directionalColor;
+uniform vec3 lightingDirection;
+//point lights configuration
+uniform vec3 pointLocation[LIGHT_MAX];
+uniform vec3 pointColor[LIGHT_MAX];
+uniform int numberPoints;
+//reflection / refraction configuration
+uniform bool useReflection;
+//varyings
+varying vec3 vReflection;
+varying vec4 vColor;
+varying vec4 vPickingColor;
+varying vec2 vTexCoord;
+varying vec4 vNormal;
+varying vec3 lightWeighting;
+
+void main(void) {
+  vec4 mvPosition = worldMatrix * vec4(position, 1.0);
+  vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+  //lighting code
+  if(!enableLights) {
+    lightWeighting = vec3(1.0, 1.0, 1.0);
+  } else {
+    vec3 plightDirection;
+    vec3 pointWeight = vec3(0.0, 0.0, 0.0);
+    float directionalLightWeighting = max(dot(transformedNormal.xyz, lightingDirection), 0.0);
+    for (int i = 0; i &lt; LIGHT_MAX; i++) {
+      if (i &lt; numberPoints) {
+        plightDirection = normalize((viewMatrix * vec4(pointLocation[i], 1.0)).xyz - mvPosition.xyz);
+        pointWeight += max(dot(transformedNormal.xyz, plightDirection), 0.0) * pointColor[i];
+      } else {
+        break;
+      }
+    }
+
+    lightWeighting = ambientColor + (directionalColor * directionalLightWeighting) + pointWeight;
+  }
+  //refraction / reflection code
+  if (useReflection) {
+    vReflection = (viewInverseMatrix[3] - (worldMatrix * vec4(position, 1.0))).xyz;
+  } else {
+    vReflection = vec3(1.0, 1.0, 1.0);
+  }
+  //pass results to varyings
+  vColor = color;
+  vPickingColor = pickingColor;
+  vTexCoord = texCoord1;
+  vNormal = transformedNormal;
+  gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
+}
+</code></pre>
+
+<h3 id="syntax">Syntax:</h3>
+
+<pre><code>LumaGL.Shaders.Vertex.MyName = shaderCode;
+</code></pre>
+
+<h3 id="examples">Examples:</h3>
+
+<p>See the example on how to extend the fragment shader object below.</p>
+
+<h2 id="Shaders:Fragment">Shaders Object: Fragment</h2>
+
+<p>Append in this object fragment shaders to be used with a <a href="scene.html">Scene</a>. We provide <code>Shaders.Fragment.Default</code> which is the
+default shader used in the library. You can find more scene compatible shaders <a href="https://github.com/philogb/philogl/tree/master/shaders">here</a>.
+In order to get familiar with the attributes and uniforms used by the <a href="scene.html">Scene</a> we provide the default fragment shader code:</p>
+
+<pre><code>#ifdef GL_ES
+precision highp float;
+#endif
+//varyings
+varying vec4 vColor;
+varying vec4 vPickingColor;
+varying vec2 vTexCoord;
+varying vec3 lightWeighting;
+varying vec3 vReflection;
+varying vec4 vNormal;
+//texture configs
+uniform bool hasTexture1;
+uniform sampler2D sampler1;
+uniform bool hasTextureCube1;
+uniform samplerCube samplerCube1;
+//picking configs
+uniform bool enablePicking;
+uniform bool hasPickingColors;
+uniform vec3 pickColor;
+//reflection / refraction configs
+uniform float reflection;
+uniform float refraction;
+//fog configuration
+uniform bool hasFog;
+uniform vec3 fogColor;
+uniform float fogNear;
+uniform float fogFar;
+
+void main(){
+  //set color from texture
+  if (!hasTexture1) {
+    gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);
+  } else {
+    gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0);
+  }
+  //has cube texture then apply reflection
+ if (hasTextureCube1) {
+   vec3 nReflection = normalize(vReflection);
+   vec3 reflectionValue;
+   if (refraction &gt; 0.0) {
+    reflectionValue = refract(nReflection, vNormal.xyz, refraction);
+   } else {
+    reflectionValue = -reflect(nReflection, vNormal.xyz);
+   }
+   vec4 cubeColor = textureCube(samplerCube1, vec3(-reflectionValue.x, -reflectionValue.y, reflectionValue.z));
+   gl_FragColor = vec4(mix(gl_FragColor.xyz, cubeColor.xyz, reflection), 1.0);
+ }
+  //set picking
+  if (enablePicking) {
+    if (hasPickingColors) {
+      gl_FragColor = vPickingColor;
+    } else {
+      gl_FragColor = vec4(pickColor, 1.0);
+    }
+  }
+  //handle fog
+  if (hasFog) {
+    float depth = gl_FragCoord.z / gl_FragCoord.w;
+    float fogFactor = smoothstep(fogNear, fogFar, depth);
+    gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
+  }
+}
+</code></pre>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<pre><code>LumaGL.Shaders.Fragment.MyName = shaderCode;
+</code></pre>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Extending the Fragment Shader object to use a blending uniform. You can see the entire example in [lesson 8]http://uber.github.io/luma.gl/examples/lessons/8/).</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="c1">//Add Blend Fragment Shader</span>
+<span class="nx">LumaGL</span><span class="p">.</span><span class="nx">Shaders</span><span class="p">.</span><span class="nx">Fragment</span><span class="p">.</span><span class="nx">Blend</span> <span class="o">=</span> <span class="p">[</span>
+
+    <span class="s2">&quot;#ifdef GL_ES&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;precision highp float;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;#endif&quot;</span><span class="p">,</span>
+
+    <span class="s2">&quot;varying vec4 vColor;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;varying vec2 vTexCoord;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;varying vec3 lightWeighting;&quot;</span><span class="p">,</span>
+
+    <span class="s2">&quot;uniform bool hasTexture1;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uniform sampler2D sampler1;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uniform float alpha;&quot;</span><span class="p">,</span>
+
+    <span class="s2">&quot;void main(){&quot;</span><span class="p">,</span>
+
+      <span class="s2">&quot;if (hasTexture1) {&quot;</span><span class="p">,</span>
+
+        <span class="s2">&quot;gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, alpha);&quot;</span><span class="p">,</span>
+
+      <span class="s2">&quot;}&quot;</span><span class="p">,</span>
+
+    <span class="s2">&quot;}&quot;</span>
+
+<span class="p">].</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot;\n&quot;</span><span class="p">);</span></code></pre></figure>
+
+
+
+</div>
+
+<script type="text/javascript">
+  (function() {
+    var h2 = document.getElementById('doc').getElementsByTagName('h2'),
+        ans = [];
+    for (var i = 0, l = h2.length; i < l; i++) {
+      var elem = h2[i];
+      ans.push('<a href=\'#' + elem.id + '\'>' + (elem.innerText || elem.textContent) + '</a>');
+    }
+    document.getElementById('method-summary-list').innerHTML = '<li>' + ans.join('</li><li>') + '</li>';
+  })();
+</script>
+
+
+</div>
+</body>
+</html>

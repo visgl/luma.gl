@@ -1,0 +1,2527 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+   <title>Math</title>
+   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
+   <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-1601691-8']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</head>
+<body>
+
+<div class="site">
+  <div class="title">
+    <!-- <a href="/lumagl/"><img src="assets/logo.png" alt="library logo" /></a> -->
+    <h1>luma.gl</h1>
+  </div>
+
+  <div id="sidebar">
+    <div class="box help">
+      <b>Found a typo?</b>
+      <a href="https://github.com/uber//luma.gl/tree/master/docs">
+        Help make the docs better!
+      </a>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Overview:</b>
+      <ul>
+        <li>
+          <a href="index.html">Overview</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Core Classes:</b>
+        <li>
+          <a href="model.html">Model</a>
+        </li>
+        <li>
+          <a href="camera.html">Camera</a>
+        </li>
+        <li>
+          <a href="scene.html">Scene</a>
+        </li>
+     </ul>
+   </div>
+
+
+    <div class="box" id="modules">
+      <b>WebGL Classes:</b>
+      <ul>
+        <li>
+          <a href="context.html">WebGL Context Creation</a>
+        </li>
+        <li>
+          <a href="program.html">Program</a>
+        </li>
+        <li>
+          <a href="buffer.html">Buffer</a>
+        </li>
+        <li>
+          <a href="frame-buffer.html">FrameBuffer</a>
+        </li>
+        <li>
+          <a href="texture.html">Texture</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="box" id="modules">
+      <b>Modules:</b>
+      <ul>
+        <li>
+          <a href="math.html">Math</a>
+        </li>
+        <li>
+          <a href="shaders.html">Shaders</a>
+        </li>
+        <li>
+          <a href="event.html">Event</a>
+        </li>
+        <li>
+          <a href="fx.html">Fx</a>
+        </li>
+        <li>
+          <a href="io.html">IO</a>
+        </li>
+        <li>
+          <a href="media.html">Media</a>
+        </li>
+     </ul>
+   </div>
+
+   <div class="box" id="method-summary">
+     <b>Methods: </b>
+    <ul id="method-summary-list">
+    </ul>
+   </div>
+  </div>
+
+  <div id="doc">
+
+<h1>Math</h1>
+
+<h1 id="Math">Script: Math</h1>
+
+<p>The Math script provides <code>Vec3</code>, <code>Mat4</code> and <code>Quat</code> classes to manage three dimensional vectors, four by four matrices and quaternions respectively.</p>
+
+<h3 id="generics">Generics:</h3>
+
+<p>One very interesting thing to point about the Math script is that all <code>Vec3</code>, <code>Mat4</code> and <code>Quat</code> methods are generics. This means that all
+instance methods of <code>Vec3</code>, <code>Mat4</code>, and <code>Quat</code> can also be accessed as static methods in which the first parameter of the static method is the receiver.
+The receiver does not <em>have to be</em> an instance of the class but can instead be a <code>Vec3</code>-like, <code>Mat4</code>-like or <code>Quat</code>-like object.
+This means that a simple array (i.e <code>[]</code>) can be used as the receiver for these methods.</p>
+
+<p>Although the <em>syntax</em> section for each method will include the generic and non-generic one, the arguments for each method will be described as with the instance
+method syntax.</p>
+
+<h3 id="chainable-methods">Chainable Methods:</h3>
+
+<p>All methods that do not return something in particular in the math package are chainable.</p>
+
+<h3 id="conventions">Conventions:</h3>
+
+<p>Say you want to add two <code>Vec3</code> vectors, <code>v1</code> and <code>v2</code>. Then there are three ways of performing this operation:</p>
+
+<ol>
+  <li><code>v1.add(v2)</code> Returns a new instance with the result of adding <code>v1</code> and <code>v2</code>. This operation does not modify <code>v1</code> or <code>v2</code>.</li>
+  <li><code>v1.$add(v2)</code> Returns the result of adding <code>v1</code> to <code>v2</code>, but it alters <code>v1</code> updating it with the result.</li>
+  <li><code>vResult.add2(v1, v2)</code> Stores the result of adding <code>v1</code> to <code>v2</code> in <code>vResult</code>, another <code>Vec3</code> instance.</li>
+</ol>
+
+<p>These are the conventions we will be using for method naming. Methods altering the receiver will have a dollar sign (i.e. <code>$</code>), as opposed to
+methods creating a new instance with the result. Methods requiring a receiver <em>and</em> the instances involved in the operation as formal parameters
+will be suffixed with the number <code>2</code>.</p>
+
+<h3 id="notes">Notes:</h3>
+
+<p>All classes extend from <code>Array</code> or some
+<code>DataView</code> class (i.e. some typed array). This means that <code>Vec3</code>, <code>Mat4</code>
+and <code>Quat</code>-like objects are plain arrays and not plain objects. Getters
+have been added for all properties in <code>Vec3</code>, <code>Mat4</code> and <code>Quat</code>
+classes so you can still access them via <code>vec.x</code>, etc, but remember
+that the inner implementation is an array, so <code>vec3[0]</code> will also
+work.</p>
+
+<h1 id="Vec3">Class: Vec3</h1>
+
+<p>A class to handle three dimensional vectors.</p>
+
+<h2 id="Vec3:fromQuat">Vec3 Static Method: fromQuat</h2>
+
+<p>Create a new <code>Vec3</code> instance from the <code>x</code>, <code>y</code>, <code>z</code> coordinates of a <a href="#Quat">Quat</a>.</p>
+
+<h3 id="syntax">Syntax:</h3>
+
+<pre><code>Vec3.fromQuat(q);
+</code></pre>
+
+<h3 id="arguments">Arguments:</h3>
+
+<ol>
+  <li>q - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples">Examples:</h3>
+
+<p>Create a vector from a Quaternion.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">fromQuat</span><span class="p">(</span><span class="nx">q</span><span class="p">);</span> <span class="c1">//Vec3(1, 2, 3)</span></code></pre></figure>
+
+<h2 id="Vec3:constructor">Vec3 Method: constructor</h2>
+
+<p>Creates a new <code>Vec3</code> instance.</p>
+
+<h3 id="syntax-1">Syntax:</h3>
+
+<pre><code>var v = new Vec3(x, y, z);
+</code></pre>
+
+<h3 id="arguments-1">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>, optional) The x component. If not provided is 0.</li>
+  <li>y - (<em>number</em>, optional) The y component. If not provided is 0.</li>
+  <li>z - (<em>number</em>, optional) The z component. If not provided is 0.</li>
+</ol>
+
+<h3 id="examples-1">Examples:</h3>
+
+<p>Create a (0, 0, 0) vector.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">();</span></code></pre></figure>
+
+<p>Create a (1, 2, 3) vector.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:setVec3">Vec3 Method: setVec3</h2>
+
+<p>Set <code>x</code>, <code>y</code>, <code>z</code> coordinates of one <code>Vec3</code> into another <code>Vec3</code>.</p>
+
+<h3 id="syntax-2">Syntax:</h3>
+
+<pre><code>v1.setVec3(v2);
+
+Vec3.setVec3(v1, v2);
+</code></pre>
+
+<h3 id="arguments-2">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-2">Examples:</h3>
+
+<p>Create two vectors and assign one vectors components to the other one.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">setVec3</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 now contains (x=4, y=5, z=6)</span></code></pre></figure>
+
+<p>Set an object’s <code>x</code>, <code>y</code>, <code>z</code> components to another object.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">setVec3</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 now has [4, 5, 6]</span></code></pre></figure>
+
+<h2 id="Vec3:set">Vec3 Method: set</h2>
+
+<p>Set <code>x</code>, <code>y</code>, <code>z</code> coordinates.</p>
+
+<h3 id="syntax-3">Syntax:</h3>
+
+<pre><code>v1.set(x, y, z);
+
+Vec3.set(v1, x, y, z);
+</code></pre>
+
+<h3 id="arguments-3">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The x coordinate.</li>
+  <li>y - (<em>number</em>) The y coordinate.</li>
+  <li>z - (<em>number</em>) The z coordinate.</li>
+</ol>
+
+<h3 id="examples-3">Examples:</h3>
+
+<p>Create two vectors and assign one vectors components to the other one.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">v2</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="nx">v2</span><span class="p">.</span><span class="nx">y</span><span class="p">,</span> <span class="nx">v2</span><span class="p">.</span><span class="nx">z</span><span class="p">);</span> <span class="c1">//v1 now contains (x=4, y=5, z=6)</span></code></pre></figure>
+
+<p>Set an object’s <code>x</code>, <code>y</code>, <code>z</code> components to another object.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="nx">v2</span><span class="p">.</span><span class="nx">y</span><span class="p">,</span> <span class="nx">v2</span><span class="p">.</span><span class="nx">z</span><span class="p">);</span> <span class="c1">//v1 now has [4, 5, 6]</span></code></pre></figure>
+
+<h2 id="Vec3:add">Vec3 Method: add</h2>
+
+<p>Adds the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects. Creates a new <code>Vec3</code> instance and does not modify the original objects.</p>
+
+<h3 id="syntax-4">Syntax:</h3>
+
+<pre><code>v1.add(v2);
+
+Vec3.add(v1, v2);
+</code></pre>
+
+<h3 id="arguments-4">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-4">Examples:</h3>
+
+<p>Create two vectors and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 and v2 are still the same but a new Vec3(5, 7, 9) was created.</span></code></pre></figure>
+
+<h2 id="vec3-method-add-vec3add">Vec3 Method: $add {#Vec3:$add}</h2>
+
+<p>Adds the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects. Modifies the original object.</p>
+
+<h3 id="syntax-5">Syntax:</h3>
+
+<pre><code>v1.$add(v2);
+
+Vec3.$add(v1, v2);
+</code></pre>
+
+<h3 id="arguments-5">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-5">Examples:</h3>
+
+<p>Create two vectors and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 is now Vec3(5, 7, 9).</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 is now [ 5, 7, 9 ].</span></code></pre></figure>
+
+<h2 id="Vec3:add2">Vec3 Method: add2</h2>
+
+<p>Adds the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects and stores the result in the receiver.</p>
+
+<h3 id="syntax-6">Syntax:</h3>
+
+<pre><code>v1.add2(v2, v3);
+
+Vec3.add2(v1, v2, v3);
+</code></pre>
+
+<h3 id="arguments-6">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+  <li>v3 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-6">Examples:</h3>
+
+<p>Create two vectors and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v3</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">add2</span><span class="p">(</span><span class="nx">v2</span><span class="p">,</span> <span class="nx">v3</span><span class="p">);</span> <span class="c1">//v1 is now Vec3(5, 7, 9), v2 and v3 are unchanged.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v3</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">add2</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">,</span> <span class="nx">v3</span><span class="p">);</span> <span class="c1">//v2 and v3 are still the same but v1 is [ 5, 7, 9 ].</span></code></pre></figure>
+
+<h2 id="Vec3:sub">Vec3 Method: sub</h2>
+
+<p>Substracts the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects. Creates a new <code>Vec3</code> instance and does not modify the original objects.</p>
+
+<h3 id="syntax-7">Syntax:</h3>
+
+<pre><code>v1.sub(v2);
+
+Vec3.sub(v1, v2);
+</code></pre>
+
+<h3 id="arguments-7">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-7">Examples:</h3>
+
+<p>Create two vectors and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 and v2 are still the same but a new Vec3(-3, -3, -3) was created.</span></code></pre></figure>
+
+<h2 id="vec3-method-sub-vec3sub">Vec3 Method: $sub {#Vec3:$sub}</h2>
+
+<p>Substracts the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects. Modifies the original object.</p>
+
+<h3 id="syntax-8">Syntax:</h3>
+
+<pre><code>v1.$sub(v2);
+
+Vec3.$sub(v1, v2);
+</code></pre>
+
+<h3 id="arguments-8">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-8">Examples:</h3>
+
+<p>Create two vectors and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$sub</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 is now Vec3(-3, -3, -3).</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">$sub</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 is now [ -3, -3, -3 ].</span></code></pre></figure>
+
+<h2 id="Vec3:sub2">Vec3 Method: sub2</h2>
+
+<p>Substracts the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Vec3</code> objects and stores the result in the receiver.</p>
+
+<h3 id="syntax-9">Syntax:</h3>
+
+<pre><code>v1.sub2(v2, v3);
+
+Vec3.sub2(v1, v2, v3);
+</code></pre>
+
+<h3 id="arguments-9">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+  <li>v3 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-9">Examples:</h3>
+
+<p>Create two vectors and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v3</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">sub2</span><span class="p">(</span><span class="nx">v2</span><span class="p">,</span> <span class="nx">v3</span><span class="p">);</span> <span class="c1">//v1 is now Vec3(-3, -3, -3), v2 and v3 are unchanged.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v3</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">sub2</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">,</span> <span class="nx">v3</span><span class="p">);</span> <span class="c1">//v2 and v3 are still the same but v1 is { x: -3, y: -3, z: -3 }.</span></code></pre></figure>
+
+<h2 id="Vec3:scale">Vec3 Method: scale</h2>
+
+<p>Scales the Vec3 vector by a real number. Creates a new Vec3 with the scaled components.</p>
+
+<h3 id="syntax-10">Syntax:</h3>
+
+<pre><code>v1.scale(s);
+
+Vec3.scale(v1, s);
+</code></pre>
+
+<h3 id="arguments-10">Arguments:</h3>
+
+<ol>
+  <li>s - (<em>number</em>) A real number to scale the Vec3.</li>
+</ol>
+
+<h3 id="examples-10">Examples:</h3>
+
+<p>Create a vector and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span> <span class="c1">//v1 is unchanged but a new Vec3(2, 4, 6) is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="c1">//v1 is still the same but a new Vec3(2, 4, 6) was created.</span></code></pre></figure>
+
+<h2 id="vec3-method-scale-vec3scale">Vec3 Method: $scale {#Vec3:$scale}</h2>
+
+<p>Scales the Vec3 vector by a real number. Changes the original object.</p>
+
+<h3 id="syntax-11">Syntax:</h3>
+
+<pre><code>v1.$scale(s);
+
+Vec3.$scale(v1, s);
+</code></pre>
+
+<h3 id="arguments-11">Arguments:</h3>
+
+<ol>
+  <li>s - (<em>number</em>) A real number to scale the Vec3.</li>
+</ol>
+
+<h3 id="examples-11">Examples:</h3>
+
+<p>Create a vector and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span> <span class="c1">//v1 is now Vec3(2, 4, 6).</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="c1">//v1 is now [ 2, 4, 6 ].</span></code></pre></figure>
+
+<h2 id="Vec3:neg">Vec3 Method: neg</h2>
+
+<p>Negates a <code>Vec3</code>. Returns a new instance.</p>
+
+<h3 id="syntax-12">Syntax:</h3>
+
+<pre><code>v1.neg();
+
+Vec3.neg(v1);
+</code></pre>
+
+<h3 id="examples-12">Examples:</h3>
+
+<p>Create a vector and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">neg</span><span class="p">();</span> <span class="c1">//v1 is unchanged but a new Vec3(-1, -2, -3) is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">neg</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span> <span class="c1">//v1 is still the same but a new Vec3(-1, -2, -3).</span></code></pre></figure>
+
+<h2 id="vec3-method-neg-vec3neg">Vec3 Method: $neg {#Vec3:$neg}</h2>
+
+<p>Negates a <code>Vec3</code>. Changes the original object.</p>
+
+<h3 id="syntax-13">Syntax:</h3>
+
+<pre><code>v1.$neg();
+
+Vec3.$neg(v1);
+</code></pre>
+
+<h3 id="examples-13">Examples:</h3>
+
+<p>Create a vector and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$neg</span><span class="p">();</span> <span class="c1">//v1 is now Vec3(-1, -2, -3).</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">neg</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span> <span class="c1">//v1 is now [ -1, -2, -3 ].</span></code></pre></figure>
+
+<h2 id="Vec3:unit">Vec3 Method: unit</h2>
+
+<p>Creates a unit vector from the coordinates of <code>Vec3</code>.</p>
+
+<h3 id="syntax-14">Syntax:</h3>
+
+<pre><code>v1.unit();
+
+Vec3.unit(v1);
+</code></pre>
+
+<h3 id="examples-14">Examples:</h3>
+
+<p>Create a vector and make a unit vector from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">unit</span><span class="p">();</span> <span class="c1">//v1 is unchanged but a new unit vector Vec3 is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and make a unit vector from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">unit</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span> <span class="c1">//v1 is still the same but a new Vec3 that is a unit vector is created.</span></code></pre></figure>
+
+<h2 id="vec3-method-unit-vec3unit">Vec3 Method: $unit {#Vec3:$unit}</h2>
+
+<p>Creates a unit vector from the <code>Vec3</code> coordinates. Changes the original object.</p>
+
+<h3 id="syntax-15">Syntax:</h3>
+
+<pre><code>v1.$unit();
+
+Vec3.$unit(v1);
+</code></pre>
+
+<h3 id="examples-15">Examples:</h3>
+
+<p>Create a vector and make a unit vector from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$unit</span><span class="p">();</span> <span class="c1">//v1 is now a unit vector.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object make a unit vector from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">$unit</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span> <span class="c1">//v1 is now a unit vector object.</span></code></pre></figure>
+
+<h2 id="Vec3:cross">Vec3 Method: cross</h2>
+
+<p>Makes a cross product of two <code>Vec3</code> instances. Creates a new <code>Vec3</code> and does not modify the original objects.
+You can find more information about the cross product <a href="http://en.wikipedia.org/wiki/Cross_product">here</a>.</p>
+
+<h3 id="syntax-16">Syntax:</h3>
+
+<pre><code>v1.cross(v2);
+
+Vec3.cross(v1, v2);
+</code></pre>
+
+<h3 id="arguments-12">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-16">Examples:</h3>
+
+<p>Create two vectors and make a cross product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">cross</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 and v2 are still the same but a new Vec3 was created with the result.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and make a cross product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="c1">//v1 and v2 are still the same but a new Vec3 with the result was created.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">cross</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="vec3-method-cross-vec3cross">Vec3 Method: $cross {#Vec3:$cross}</h2>
+
+<p>Makes a cross product of two <code>Vec3</code> instances. Modifies the original object.
+You can find more information about the cross product <a href="http://en.wikipedia.org/wiki/Cross_product">here</a>.</p>
+
+<h3 id="syntax-17">Syntax:</h3>
+
+<pre><code>v1.$cross(v2);
+
+Vec3.$cross(v1, v2);
+</code></pre>
+
+<h3 id="arguments-13">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-17">Examples:</h3>
+
+<p>Create two vectors and make a cross product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">$cross</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//v1 contains now the result.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and make a cross product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="c1">//v1 contains now the result.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">$cross</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:distTo">Vec3 Method: distTo</h2>
+
+<p>Calculates the distance between two <code>Vec3</code>.</p>
+
+<h3 id="syntax-18">Syntax:</h3>
+
+<pre><code>v1.distTo(v2);
+
+Vec3.distTo(v1, v2);
+</code></pre>
+
+<h3 id="arguments-14">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-18">Examples:</h3>
+
+<p>Create two vectors and calculate the distance.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">distTo</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//a real value with the distance is returned.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and calculate their distance.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="c1">//a real number with the distance is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">distTo</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:distToSq">Vec3 Method: distToSq</h2>
+
+<p>Calculates the squared distance between two <code>Vec3</code>.</p>
+
+<h3 id="syntax-19">Syntax:</h3>
+
+<pre><code>v1.distToSq(v2);
+
+Vec3.distToSq(v1, v2);
+</code></pre>
+
+<h3 id="arguments-15">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-19">Examples:</h3>
+
+<p>Create two vectors and calculate the squared distance.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">distToSq</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//a real value with the squared distance is returned.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and calculate their squared distance.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="c1">//a real number with the squared distance is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">distToSq</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:norm">Vec3 Method: norm</h2>
+
+<p>Calculates the norm of <code>Vec3</code>.</p>
+
+<h3 id="syntax-20">Syntax:</h3>
+
+<pre><code>v1.norm();
+
+Vec3.norm(v1);
+</code></pre>
+
+<h3 id="examples-20">Examples:</h3>
+
+<p>Create a vector and calculate its norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">vi</span><span class="p">.</span><span class="nx">norm</span><span class="p">();</span> <span class="c1">//returns the real valued norm.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and calculate its norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="c1">//A real number with the norm is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">norm</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:normSq">Vec3 Method: normSq</h2>
+
+<p>Calculates the squared norm of <code>Vec3</code>.</p>
+
+<h3 id="syntax-21">Syntax:</h3>
+
+<pre><code>v1.normSq();
+
+Vec3.normSq(v1);
+</code></pre>
+
+<h3 id="examples-21">Examples:</h3>
+
+<p>Create a vector and calculate its squared norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+
+  <span class="nx">vi</span><span class="p">.</span><span class="nx">normSq</span><span class="p">();</span> <span class="c1">//returns the real valued norm.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code> object and calculate its squared norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">];</span>
+
+  <span class="c1">//A real number with the squared norm is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">normSq</span><span class="p">(</span><span class="nx">v1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:dot">Vec3 Method: dot</h2>
+
+<p>Calculates the dot product between two <code>Vec3</code>. You can find more information about the
+dot product <a href="http://en.wikipedia.org/wiki/Dot_product">here</a>.</p>
+
+<h3 id="syntax-22">Syntax:</h3>
+
+<pre><code>v1.dot(v2);
+
+Vec3.dot(v1, v2);
+</code></pre>
+
+<h3 id="arguments-16">Arguments:</h3>
+
+<ol>
+  <li>v2 - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-22">Examples:</h3>
+
+<p>Create two vectors and calculate the dot product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+
+  <span class="nx">v1</span><span class="p">.</span><span class="nx">dot</span><span class="p">(</span><span class="nx">v2</span><span class="p">);</span> <span class="c1">//a real value with the dot product is returned.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code> objects and calculate the dot product.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">],</span>
+      <span class="nx">v2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span> <span class="p">];</span>
+
+  <span class="c1">//a real number with the dot product is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Vec3</span><span class="p">.</span><span class="nx">dot</span><span class="p">(</span><span class="nx">v1</span><span class="p">,</span> <span class="nx">v2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Vec3:clone">Vec3 Method: clone</h2>
+
+<p>Clones a vector.</p>
+
+<h3 id="syntax-23">Syntax:</h3>
+
+<pre><code>v1.clone();
+
+Vec3.clone(v1);
+</code></pre>
+
+<h1 id="Mat4">Class: Mat4</h1>
+
+<p>A class to handle four by four matrices.</p>
+
+<h2 id="Mat4:fromQuat">Mat4 Static Method: fromQuat</h2>
+
+<p>Create a new <code>Mat4</code> instance from a <a href="#Quat">Quat</a> instance. The
+Quaternion must be a unit quaternion.</p>
+
+<h3 id="syntax-24">Syntax:</h3>
+
+<pre><code>Mat4.fromQuat(q);
+</code></pre>
+
+<h3 id="arguments-17">Arguments:</h3>
+
+<ol>
+  <li>q - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-23">Examples:</h3>
+
+<p>Create a matrix from a Quaternion.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">).</span><span class="nx">$unit</span><span class="p">(),</span>
+      <span class="nx">m</span> <span class="o">=</span> <span class="nx">Mat4</span><span class="p">.</span><span class="nx">fromQuat</span><span class="p">(</span><span class="nx">q</span><span class="p">);</span> <span class="c1">//a new Mat4 instance</span></code></pre></figure>
+
+<h2 id="Mat4:constructor">Mat4 Method: constructor</h2>
+
+<p>Creates a new <code>Mat4</code> instance. If no arguments are set then an Identity matrix is created.</p>
+
+<h3 id="syntax-25">Syntax:</h3>
+
+<pre><code>var m = new Mat4();
+
+var m = new Mat4(n11, n12, n13, n14,
+                 n21, n22, n23, n24,
+                 n31, n32, n33, n34,
+                 n41, n42, n43, n44);
+</code></pre>
+
+<h3 id="arguments-18">Arguments:</h3>
+
+<ol>
+  <li>n - (<em>number</em>) The matrix component.</li>
+</ol>
+
+<h3 id="examples-24">Examples:</h3>
+
+<p>Create an identity matrix.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span></code></pre></figure>
+
+<p>Create a null matrix.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:id">Mat4 Method: id</h2>
+
+<p>Modifies the matrix to be an Identity matrix.</p>
+
+<h3 id="syntax-26">Syntax:</h3>
+
+<pre><code>m.id();
+
+Mat4.id(m);
+</code></pre>
+
+<h3 id="examples-25">Examples:</h3>
+
+<p>Create an identity matrix from some random matrix.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                    <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                    <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                    <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">);</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">id</span><span class="p">();</span> <span class="c1">//m is now the Identity matrix.</span></code></pre></figure>
+
+<p>Create an identity matrix object.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span> <span class="c1">//m object components are the Identity matrix ones.</span></code></pre></figure>
+
+<h2 id="Mat4:set">Mat4 Method: set</h2>
+
+<p>Set all matrix coordinates.</p>
+
+<h3 id="syntax-27">Syntax:</h3>
+
+<pre><code>m.set(n11, n12, n13, n14,
+      n21, n22, n23, n24,
+      n31, n32, n33, n34,
+      n41, n42, n43, n44);
+
+Mat4.set(m, n11, n12, n13, n14,
+                    n21, n22, n23, n24,
+                    n31, n32, n33, n34,
+                    n41, n42, n43, n44);
+</code></pre>
+
+<h3 id="arguments-19">Arguments:</h3>
+
+<ol>
+  <li>n - (<em>number</em>) The n matrix coordinates.</li>
+</ol>
+
+<h3 id="examples-26">Examples:</h3>
+
+<p>Create a matrix and set some values to it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span></code></pre></figure>
+
+<p>Set an empty object matrix coordinates onto some values.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+                      <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:mulVec3">Mat4 Method: mulVec3</h2>
+
+<p>Multiplies a <code>Mat4</code> by a <code>Vec3</code>. Returns a new <code>Vec3</code> without modifying the passed in object.</p>
+
+<h3 id="syntax-28">Syntax:</h3>
+
+<pre><code>m.mulVec3(v);
+
+Mat4.mulVec3(m, v);
+</code></pre>
+
+<h3 id="arguments-20">Arguments:</h3>
+
+<ol>
+  <li>v - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-27">Examples:</h3>
+
+<p>Create a matrix and a vector and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">mulVec3</span><span class="p">(</span><span class="nx">v</span><span class="p">);</span></code></pre></figure>
+
+<p>Create a matrix object and a vector object and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">mulVec3</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="mat4-method-mulvec3-mat4mulvec3">Mat4 Method: $mulVec3 {#Mat4:$mulVec3}</h2>
+
+<p>Multiplies a <code>Mat4</code> by a <code>Vec3</code>. Modifies the receiver.</p>
+
+<h3 id="syntax-29">Syntax:</h3>
+
+<pre><code>m.$mulVec3(v);
+
+Mat4.$mulVec3(m, v);
+</code></pre>
+
+<h3 id="arguments-21">Arguments:</h3>
+
+<ol>
+  <li>v - (<em>object</em>) A <code>Vec3</code> instance.</li>
+</ol>
+
+<h3 id="examples-28">Examples:</h3>
+
+<p>Create a matrix and a vector and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$mulVec3</span><span class="p">(</span><span class="nx">v</span><span class="p">);</span></code></pre></figure>
+
+<p>Create a matrix object and a vector object and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Vec3</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$mulVec3</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:mulMat4">Mat4 Method: mulMat4</h2>
+
+<p>Multiplies two <code>Mat4</code>. Creates a new <code>Mat4</code> with the result and does not modify the original instances.</p>
+
+<h3 id="syntax-30">Syntax:</h3>
+
+<pre><code>m.mulMat4(m1);
+
+Mat4.mulMat4(m, m1);
+</code></pre>
+
+<h3 id="arguments-22">Arguments:</h3>
+
+<ol>
+  <li>m1 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-29">Examples:</h3>
+
+<p>Create two matrices and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">mulMat4</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span> <span class="c1">//the result is a new Identity matrix</span></code></pre></figure>
+
+<p>Create a two matrices objects and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">mulMat4</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">m1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="mat4-method-mulmat4-mat4mulmat4">Mat4 Method: $mulMat4 {#Mat4:$mulMat4}</h2>
+
+<p>Multiplies two <code>Mat4</code>, storing the result in the receiver.</p>
+
+<h3 id="syntax-31">Syntax:</h3>
+
+<pre><code>m.$mulMat4(m1);
+
+Mat4.$mulMat4(m, m1);
+</code></pre>
+
+<h3 id="arguments-23">Arguments:</h3>
+
+<ol>
+  <li>m1 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-30">Examples:</h3>
+
+<p>Create two matrices and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$mulMat4</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span> <span class="c1">//the result is stored in m.</span></code></pre></figure>
+
+<p>Create a two matrices objects and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$mulMat4</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">m1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:mulMat42">Mat4 Method: mulMat42</h2>
+
+<p>Multiplies two <code>Mat4</code>, storing the result in the receiver.</p>
+
+<h3 id="syntax-32">Syntax:</h3>
+
+<pre><code>m.mulMat42(m1, m2);
+
+Mat4.mulMat42(m, m1, m2);
+</code></pre>
+
+<h3 id="arguments-24">Arguments:</h3>
+
+<ol>
+  <li>m1 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+  <li>m2 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-31">Examples:</h3>
+
+<p>Create two matrices and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">mulMat42</span><span class="p">(</span><span class="nx">m1</span><span class="p">,</span> <span class="nx">m2</span><span class="p">);</span> <span class="c1">//the result is stored in m.</span></code></pre></figure>
+
+<p>Create a two matrices objects and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m2</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m2</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">mulMat42</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">m1</span><span class="p">,</span> <span class="nx">m2</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:add">Mat4 Method: add</h2>
+
+<p>Adds two <code>Mat4</code>. Creates a new <code>Mat4</code> with the result and does not modify the original instances.</p>
+
+<h3 id="syntax-33">Syntax:</h3>
+
+<pre><code>m.add(m1);
+
+Mat4.add(m, m1);
+</code></pre>
+
+<h3 id="arguments-25">Arguments:</h3>
+
+<ol>
+  <li>m1 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-32">Examples:</h3>
+
+<p>Create two matrices and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<p>Create a two matrices objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">m1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="mat4-method-add-mat4add">Mat4 Method: $add {#Mat4:$add}</h2>
+
+<p>Adds two <code>Mat4</code>, storing the result in the receiver.</p>
+
+<h3 id="syntax-34">Syntax:</h3>
+
+<pre><code>m.$add(m1);
+
+Mat4.$add(m, m1);
+</code></pre>
+
+<h3 id="arguments-26">Arguments:</h3>
+
+<ol>
+  <li>m1 - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-33">Examples:</h3>
+
+<p>Create two matrices and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span> <span class="c1">//the result is stored in m.</span></code></pre></figure>
+
+<p>Create a two matrices objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">m1</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m1</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">m1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Mat4:transpose">Mat4 Method: transpose</h2>
+
+<p>Transposes a <code>Mat4</code> matrix. More info about this operation can be found <a href="http://en.wikipedia.org/wiki/Matrix_transpose">here</a>.
+Creates a new <code>Mat4</code> with the result.</p>
+
+<h3 id="syntax-35">Syntax:</h3>
+
+<pre><code>m.transpose();
+
+Mat4.transpose(m);
+</code></pre>
+
+<h3 id="examples-34">Examples:</h3>
+
+<p>Create a <code>Mat4</code> matrix and transpose it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">transpose</span><span class="p">();</span> <span class="c1">//the result is a new Identity matrix</span></code></pre></figure>
+
+<h2 id="mat4-method-transpose-mat4transpose">Mat4 Method: $transpose {#Mat4:$transpose}</h2>
+
+<p>Transposes a <code>Mat4</code> matrix. More info about this operation can be found <a href="http://en.wikipedia.org/wiki/Matrix_transpose">here</a>.
+Modifies the current matrix.</p>
+
+<h3 id="syntax-36">Syntax:</h3>
+
+<pre><code>m.$transpose();
+
+Mat4.$transpose(m);
+</code></pre>
+
+<h3 id="examples-35">Examples:</h3>
+
+<p>Create a <code>Mat4</code> matrix and transpose it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$transpose</span><span class="p">();</span> <span class="c1">//the result is stored in m</span></code></pre></figure>
+
+<h2 id="Mat4:rotateAxis">Mat4 Method: rotateAxis</h2>
+
+<p>Applies a rotation of <code>theta</code> by <code>vec</code> to a <code>Mat4</code> matrix returning the result in a new matrix.</p>
+
+<h3 id="syntax-37">Syntax:</h3>
+
+<pre><code>m.rotateAxis(theta, vec);
+
+Mat4.rotateAxis(m, theta, vec);
+</code></pre>
+
+<h3 id="arguments-27">Arguments:</h3>
+
+<ol>
+  <li>theta - (<em>number</em>) An angle in radians.</li>
+  <li>vec - (<em>object</em>) A <code>Vec3</code> (or array).</li>
+</ol>
+
+<h3 id="examples-36">Examples:</h3>
+
+<p>Create a rotation by <code>theta</code> and <code>v</code>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">rotateAxis</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<p>Another way of doing the same thing without creating a <code>Vec3</code>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span> <span class="p">];</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">rotateAxis</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<h2 id="mat4-method-rotateaxis-mat4rotateaxis">Mat4 Method: $rotateAxis {#Mat4:$rotateAxis}</h2>
+
+<p>Applies a rotation of angle <code>theta</code> by vector <code>vec</code> to a <code>Mat4</code> altering the current matrix.</p>
+
+<h3 id="syntax-38">Syntax:</h3>
+
+<pre><code>m.$rotateAxis(theta, vec);
+
+Mat4.$rotateAxis(m, theta, vec);
+</code></pre>
+
+<h3 id="arguments-28">Arguments:</h3>
+
+<ol>
+  <li>theta - (<em>number</em>) An angle in radians.</li>
+  <li>vec - (<em>object</em>) A <code>Vec3</code> (or array).</li>
+</ol>
+
+<h3 id="examples-37">Examples:</h3>
+
+<p>Create a rotation by <code>theta</code> and <code>v</code>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$rotateAxis</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<p>Another way of doing the same thing without creating a <code>Vec3</code>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">v</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span> <span class="p">];</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$rotateAxis</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="nx">v</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<h2 id="Mat4:rotateXYZ">Mat4 Method: rotateXYZ</h2>
+
+<p>Applies a rotation of angle <code>rx</code> in the x-axis, <code>ry</code> in the y-axis and <code>rz</code> in the z-axis.
+Creates a new <code>Mat4</code> with the result.</p>
+
+<h3 id="syntax-39">Syntax:</h3>
+
+<pre><code>m.rotateXYZ(rx, ry, rz);
+
+Mat4.rotateXYZ(m, rx, ry, rz);
+</code></pre>
+
+<h3 id="arguments-29">Arguments:</h3>
+
+<ol>
+  <li>rx - (<em>number</em>) An angle in radians.</li>
+  <li>ry - (<em>number</em>) An angle in radians.</li>
+  <li>rz - (<em>number</em>) An angle in radians.</li>
+</ol>
+
+<h3 id="examples-38">Examples:</h3>
+
+<p>Create a rotation on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">rotateXYZ</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">rotateXYZ</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//creates a new Mat4 with the result.</span></code></pre></figure>
+
+<h2 id="mat4-method-rotatexyz-mat4rotatexyz">Mat4 Method: $rotateXYZ {#Mat4:$rotateXYZ}</h2>
+
+<p>Applies a rotation of angle <code>rx</code> in the x-axis, <code>ry</code> in the y-axis and <code>rz</code> in the z-axis.
+Alters the matrix.</p>
+
+<h3 id="syntax-40">Syntax:</h3>
+
+<pre><code>m.$rotateXYZ(rx, ry, rz);
+
+Mat4.$rotateXYZ(m, rx, ry, rz);
+</code></pre>
+
+<h3 id="arguments-30">Arguments:</h3>
+
+<ol>
+  <li>rx - (<em>number</em>) An angle in radians.</li>
+  <li>ry - (<em>number</em>) An angle in radians.</li>
+  <li>rz - (<em>number</em>) An angle in radians.</li>
+</ol>
+
+<h3 id="examples-39">Examples:</h3>
+
+<p>Create a rotation on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$rotateXYZ</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//alters m</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$rotateXYZ</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//alters m</span></code></pre></figure>
+
+<h2 id="Mat4:translate">Mat4 Method: translate</h2>
+
+<p>Applies a translation to <code>Mat4</code> in the directions <code>x</code>, <code>y</code> and <code>z</code>.
+Stores the result in a new <code>Mat4</code> instance.</p>
+
+<h3 id="syntax-41">Syntax:</h3>
+
+<pre><code>m.translate(x, y, z);
+
+Mat4.translate(m, x, y, z);
+</code></pre>
+
+<h3 id="arguments-31">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The amount to be translated in the x direction.</li>
+  <li>y - (<em>number</em>) The amount to be translated in the y direction.</li>
+  <li>z - (<em>number</em>) The amount to be translated in the z direction..</li>
+</ol>
+
+<h3 id="examples-40">Examples:</h3>
+
+<p>Create a translation on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">translate</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">translate</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//creates a new Mat4 with the result.</span></code></pre></figure>
+
+<h2 id="mat4-method-translate-mat4translate">Mat4 Method: $translate {#Mat4:$translate}</h2>
+
+<p>Applies a translation to <code>Mat4</code> in the directions <code>x</code>, <code>y</code> and <code>z</code>.
+Alters the original matrix.</p>
+
+<h3 id="syntax-42">Syntax:</h3>
+
+<pre><code>m.$translate(x, y, z);
+
+Mat4.$translate(m, x, y, z);
+</code></pre>
+
+<h3 id="arguments-32">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The amount to be translated in the x direction.</li>
+  <li>y - (<em>number</em>) The amount to be translated in the y direction.</li>
+  <li>z - (<em>number</em>) The amount to be translated in the z direction..</li>
+</ol>
+
+<h3 id="examples-41">Examples:</h3>
+
+<p>Create a translation on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$translate</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$translate</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<h2 id="Mat4:scale">Mat4 Method: scale</h2>
+
+<p>Applies scaling to <code>Mat4</code> in the directions <code>x</code>, <code>y</code> and <code>z</code>.
+Stores the result in a new <code>Mat4</code> instance.</p>
+
+<h3 id="syntax-43">Syntax:</h3>
+
+<pre><code>m.scale(x, y, z);
+
+Mat4.scale(m, x, y, z);
+</code></pre>
+
+<h3 id="arguments-33">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The amount to be scaled in the x direction.</li>
+  <li>y - (<em>number</em>) The amount to be scaled in the y direction.</li>
+  <li>z - (<em>number</em>) The amount to be scaled in the z direction..</li>
+</ol>
+
+<h3 id="examples-42">Examples:</h3>
+
+<p>Create a scaling on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//creates a new Mat4 with the result.</span></code></pre></figure>
+
+<h2 id="mat4-method-scale-mat4scale">Mat4 Method: $scale {#Mat4:$scale}</h2>
+
+<p>Applies scaling to <code>Mat4</code> in the directions <code>x</code>, <code>y</code> and <code>z</code>.
+Alters the original matrix.</p>
+
+<h3 id="syntax-44">Syntax:</h3>
+
+<pre><code>m.$scale(x, y, z);
+
+Mat4.$scale(m, x, y, z);
+</code></pre>
+
+<h3 id="arguments-34">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The amount to be scaled in the x direction.</li>
+  <li>y - (<em>number</em>) The amount to be scaled in the y direction.</li>
+  <li>z - (<em>number</em>) The amount to be scaled in the z direction..</li>
+</ol>
+
+<h3 id="examples-43">Examples:</h3>
+
+<p>Create a scaling on the x-axis.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">id</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span>
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//the result is in m</span></code></pre></figure>
+
+<h2 id="Mat4:invert">Mat4 Method: invert</h2>
+
+<p>Inverts a <code>Mat4</code> matrix. The matrix has to be invertible.
+Creates a new <code>Mat4</code> with the result.</p>
+
+<h3 id="syntax-45">Syntax:</h3>
+
+<pre><code>m.invert();
+
+Mat4.invert(m);
+</code></pre>
+
+<h3 id="examples-44">Examples:</h3>
+
+<p>Create a <code>Mat4</code> matrix and invert it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">invert</span><span class="p">();</span> <span class="c1">//the result is a new matrix</span></code></pre></figure>
+
+<h2 id="mat4-method-invert-mat4invert">Mat4 Method: $invert {#Mat4:$invert}</h2>
+
+<p>Inverts a <code>Mat4</code> matrix. The matrix has to be invertible.
+Modifies the current matrix.</p>
+
+<h3 id="syntax-46">Syntax:</h3>
+
+<pre><code>m.$invert();
+
+Mat4.$invert(m);
+</code></pre>
+
+<h3 id="examples-45">Examples:</h3>
+
+<p>Create a <code>Mat4</code> matrix and invert it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">();</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">$invert</span><span class="p">();</span> <span class="c1">//the result is stored in m</span></code></pre></figure>
+
+<h2 id="Mat4:lookAt">Mat4 Method: lookAt</h2>
+
+<p>Performs a <code>lookAt</code> operation on a matrix. Modifies the current matrix.
+Ths method is useful when setting a camera matrix class.
+For more information about the <code>lookAt</code> operation look <a href="http://www.euclideanspace.com/maths/algebra/vectors/lookat/index.htm">here</a>.</p>
+
+<h3 id="syntax-47">Syntax:</h3>
+
+<pre><code>m.lookAt(eye, center, up);
+
+Mat4.lookAt(m, eye, center, up);
+</code></pre>
+
+<h3 id="arguments-35">Arguments:</h3>
+
+<ol>
+  <li>eye - (<em>object</em>) The eye position as a <code>Vec3</code> (or x,y,z object).</li>
+  <li>center - (<em>number</em>) The center position as a <code>Vec3</code> (or x,y,z object).</li>
+  <li>up - (<em>number</em>) The up vector of the “camera” as a <code>Vec3</code> (or x,y,z object).</li>
+</ol>
+
+<h3 id="examples-46">Examples:</h3>
+
+<p>Create a lookAt matrix. The eye is looking at the origin.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">eye</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="p">],</span>
+      <span class="nx">center</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">],</span>
+      <span class="nx">up</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span> <span class="p">];</span>
+
+  <span class="nx">m</span><span class="p">.</span><span class="nx">lookAt</span><span class="p">(</span><span class="nx">eye</span><span class="p">,</span> <span class="nx">center</span><span class="p">,</span> <span class="nx">up</span><span class="p">);</span> <span class="c1">//the original matrix is modified.</span></code></pre></figure>
+
+<p>Another way of doing it with generics:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">eye</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="p">],</span>
+      <span class="nx">center</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">],</span>
+      <span class="nx">up</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span> <span class="p">];</span>
+
+  <span class="nx">Mat4</span><span class="p">.</span><span class="nx">lookAt</span><span class="p">(</span><span class="nx">m</span><span class="p">,</span> <span class="nx">eye</span><span class="p">,</span> <span class="nx">center</span><span class="p">,</span> <span class="nx">up</span><span class="p">);</span> <span class="c1">//the original object is modified.</span></code></pre></figure>
+
+<h2 id="Mat4:frustum">Mat4 Method: frustum</h2>
+
+<p>Performs a <code>frustum</code> operation on a matrix. Modifies the current matrix.
+This method is useful when setting a camera projection matrix class.
+For more information about the <code>frustum</code> geometry look <a href="http://en.wikipedia.org/wiki/Frustum">here</a>.</p>
+
+<h3 id="syntax-48">Syntax:</h3>
+
+<pre><code>  m.frustum(left, right, bottom, top, near, far);
+
+Mat4.frustum(m, left, right, bottom, top, near, far);
+</code></pre>
+
+<h3 id="arguments-36">Arguments:</h3>
+
+<ol>
+  <li>left - (<em>number</em>) The left part of the frustum.</li>
+  <li>right - (<em>number</em>) The right part of the frustum.</li>
+  <li>bottom - (<em>number</em>) The bottom part of the frustum.</li>
+  <li>top - (<em>number</em>) The top part of the frustum.</li>
+  <li>near - (<em>number</em>) The nearest part of the frustum.</li>
+  <li>far - (<em>number</em>) The furthest part of the frustum.</li>
+</ol>
+
+<h2 id="Mat4:ortho">Mat4 Method: ortho</h2>
+
+<p>Creates an orthographic projection. Modifies the current matrix.
+For more information about the <code>orthographic projection</code> geometry look <a href="http://en.wikipedia.org/wiki/Orthographic_projection">here</a>.</p>
+
+<h3 id="syntax-49">Syntax:</h3>
+
+<pre><code>  m.ortho(left, right, bottom, top, near, far);
+
+Mat4.ortho(m, left, right, bottom, top, near, far);
+</code></pre>
+
+<h3 id="arguments-37">Arguments:</h3>
+
+<ol>
+  <li>left - (<em>number</em>) The left part of the orthographic projection.</li>
+  <li>right - (<em>number</em>) The right part of the orthographic projection.</li>
+  <li>bottom - (<em>number</em>) The bottom part of the orthographic projection.</li>
+  <li>top - (<em>number</em>) The top part of the orthographic projection.</li>
+  <li>near - (<em>number</em>) The nearest part of the orthographic projection.</li>
+  <li>far - (<em>number</em>) The furthest part of the orthographic projection.</li>
+</ol>
+
+<h2 id="Mat4:perspective">Mat4 Method: perspective</h2>
+
+<p>Creates a perspective matrix. This operation is based on creating a frustum matrix. Modifies the current matrix.
+This method is useful when setting a camera projection matrix class.</p>
+
+<h3 id="syntax-50">Syntax:</h3>
+
+<pre><code>m.perspective(fov, aspect, near, far);
+
+Mat4.perspective(m, fov, aspect, near, far);
+</code></pre>
+
+<h3 id="arguments-38">Arguments:</h3>
+
+<ol>
+  <li>fov - (<em>number</em>) The field of view. An angle in degrees.</li>
+  <li>aspect - (<em>number</em>) The aspect ratio. Generally <code>canvas.width / canvas.height</code>.</li>
+  <li>near - (<em>number</em>) The nearest part to be captured by the camera.</li>
+  <li>far - (<em>number</em>) The furthest part to be captured by the camera.</li>
+</ol>
+
+<h2 id="Mat4:toFloat32Array">Mat4 Method: toFloat32Array</h2>
+
+<p>Converts the matrix in a <a href="https://developer.mozilla.org/en/JavaScript_typed_arrays/Float32Array">Float32Array</a>. Useful when setting matrix uniforms.</p>
+
+<h3 id="syntax-51">Syntax:</h3>
+
+<pre><code>m.toFloat32Array();
+</code></pre>
+
+<h2 id="Mat4:clone">Mat4 Method: clone</h2>
+
+<p>Clones a matrix.</p>
+
+<h3 id="syntax-52">Syntax:</h3>
+
+<pre><code>m.clone();
+
+Mat4.clone(m);
+</code></pre>
+
+<h1 id="Quat">Class: Quat</h1>
+
+<p>A class to handle Quaternions. More information on quternions can be
+found <a href="http://en.wikipedia.org/wiki/Quaternion">here</a>. The quaternion
+will be represented by an instance with <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components
+that make a quaternion like: <code>xi + yj + zk + w</code>.</p>
+
+<h2 id="Quat:fromVec3">Quat Static Method: fromVec3</h2>
+
+<p>Create a new <code>Quat</code> instance from the <code>x</code>, <code>y</code>, <code>z</code> coordinates of a <a href="#Vec3">Vec3</a> and a real component.</p>
+
+<h3 id="syntax-53">Syntax:</h3>
+
+<pre><code>Quat.fromVec3(v[, r]);
+</code></pre>
+
+<h3 id="arguments-39">Arguments:</h3>
+
+<ol>
+  <li>v - (<em>object</em>) A <code>Vec3</code> instance.</li>
+  <li>r - (<em>number</em>, optional) The real component. Default’s <code>0</code>.</li>
+</ol>
+
+<h3 id="examples-47">Examples:</h3>
+
+<p>Create a Quaternion from a Vec3.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromVec3</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span> <span class="c1">//Quat(1, 2, 3, 7)</span></code></pre></figure>
+
+<h2 id="Quat:fromMat4">Quat Static Method: fromMat4</h2>
+
+<p>Create a new <code>Quat</code> instance from a <a href="#Mat4">Mat4</a>. The <code>Mat4</code> instance
+must be an orthogonal matrix.</p>
+
+<h3 id="syntax-54">Syntax:</h3>
+
+<pre><code>Quat.fromMat4(m);
+</code></pre>
+
+<h3 id="arguments-40">Arguments:</h3>
+
+<ol>
+  <li>m - (<em>object</em>) A <code>Mat4</code> instance.</li>
+</ol>
+
+<h3 id="examples-48">Examples:</h3>
+
+<p>Create a Quaternion from a <code>Mat4</code>.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mat4</span><span class="p">(),</span>
+      <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromMat4</span><span class="p">(</span><span class="nx">m</span><span class="p">);</span> <span class="c1">//Quat</span></code></pre></figure>
+
+<h2 id="Quat:fromXRotation">Quat Static Method: fromXRotation</h2>
+
+<p>Create a new <code>Quat</code> instance from a rotation around the x-axis in
+radians.</p>
+
+<h3 id="syntax-55">Syntax:</h3>
+
+<pre><code>Quat.fromXRotation(angle);
+</code></pre>
+
+<h3 id="arguments-41">Arguments:</h3>
+
+<ol>
+  <li>angle - (<em>number</em>) The angle in radians.</li>
+</ol>
+
+<h3 id="examples-49">Examples:</h3>
+
+<p>Create a Quaternion from an x-axis rotation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromXRotation</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">);</span> <span class="c1">//Quat(1, 0, 0, 0)</span></code></pre></figure>
+
+<h2 id="Quat:fromYRotation">Quat Static Method: fromYRotation</h2>
+
+<p>Create a new <code>Quat</code> instance from a rotation around the y-axis in
+radians.</p>
+
+<h3 id="syntax-56">Syntax:</h3>
+
+<pre><code>Quat.fromYRotation(angle);
+</code></pre>
+
+<h3 id="arguments-42">Arguments:</h3>
+
+<ol>
+  <li>angle - (<em>number</em>) The angle in radians.</li>
+</ol>
+
+<h3 id="examples-50">Examples:</h3>
+
+<p>Create a Quaternion from an y-axis rotation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromYRotation</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">);</span> <span class="c1">//Quat(0, 1, 0, 0)</span></code></pre></figure>
+
+<h2 id="Quat:fromZRotation">Quat Static Method: fromZRotation</h2>
+
+<p>Create a new <code>Quat</code> instance from a rotation around the z-axis in
+radians.</p>
+
+<h3 id="syntax-57">Syntax:</h3>
+
+<pre><code>Quat.fromZRotation(angle);
+</code></pre>
+
+<h3 id="arguments-43">Arguments:</h3>
+
+<ol>
+  <li>angle - (<em>number</em>) The angle in radians.</li>
+</ol>
+
+<h3 id="examples-51">Examples:</h3>
+
+<p>Create a Quaternion from an z-axis rotation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromZRotation</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">);</span> <span class="c1">//Quat(0, 0, 1, 0)</span></code></pre></figure>
+
+<h2 id="Quat:fromAxisRotation">Quat Static Method: fromAxisRotation</h2>
+
+<p>Create a new <code>Quat</code> instance from a rotation around an axis.</p>
+
+<h3 id="syntax-58">Syntax:</h3>
+
+<pre><code>Quat.fromAxisRotation(v, angle);
+</code></pre>
+
+<h3 id="arguments-44">Arguments:</h3>
+
+<ol>
+  <li>v - (<em>object</em>) A <code>Vec3</code>-like object (i.e an array of three components).</li>
+  <li>angle - (<em>number</em>) The angle in radians.</li>
+</ol>
+
+<h3 id="examples-52">Examples:</h3>
+
+<p>Create a Quaternion from an z-axis rotation.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">v</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+      <span class="nx">q</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">fromAxisRotation</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="p">);</span> <span class="c1">//Quat(0, 0, 1, 0)</span></code></pre></figure>
+
+<h2 id="Quat:constructor">Quat Method: constructor</h2>
+
+<p>Creates a new <code>Quat</code> instance.</p>
+
+<h3 id="syntax-59">Syntax:</h3>
+
+<pre><code>var q = new Quat(x, y, z, w);
+</code></pre>
+
+<h3 id="arguments-45">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>, optional) The x component. If not provided is 0.</li>
+  <li>y - (<em>number</em>, optional) The y component. If not provided is 0.</li>
+  <li>z - (<em>number</em>, optional) The z component. If not provided is 0.</li>
+  <li>w - (<em>number</em>, optional) The non-imaginary component. If not provided
+is 0.</li>
+</ol>
+
+<h3 id="examples-53">Examples:</h3>
+
+<p>Create a (0, 0, 0, 0) quaternion.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">();</span></code></pre></figure>
+
+<p>Create a (1, 2, 3, 4) quaternion.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Quat:setQuat">Quat Method: setQuat</h2>
+
+<p>Set <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> coordinates of one <code>Quat</code> into another <code>Quat</code>.</p>
+
+<h3 id="syntax-60">Syntax:</h3>
+
+<pre><code>  q1.setQuat(q2);
+
+Quat.setQuat(q1, q2);
+</code></pre>
+
+<h3 id="arguments-46">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-54">Examples:</h3>
+
+<p>Create two quaternions and assign one quaternions components to the other one.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">setQuat</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//v1 now contains [ 4, 5, 6, 7 ]</span></code></pre></figure>
+
+<p>Set an object’s <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components to another object.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">setQuat</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 now has [ 4, 5, 6, 7 ]</span></code></pre></figure>
+
+<h2 id="Quat:set">Quat Method: set</h2>
+
+<p>Set <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> coordinates.</p>
+
+<h3 id="syntax-61">Syntax:</h3>
+
+<pre><code>  q1.set(x, y, z, w);
+
+Quat.set(q1, x, y, z, w);
+</code></pre>
+
+<h3 id="arguments-47">Arguments:</h3>
+
+<ol>
+  <li>x - (<em>number</em>) The x coordinate.</li>
+  <li>y - (<em>number</em>) The y coordinate.</li>
+  <li>z - (<em>number</em>) The z coordinate.</li>
+  <li>w - (<em>number</em>) The w coordinate.</li>
+</ol>
+
+<h3 id="examples-55">Examples:</h3>
+
+<p>Create two quaternions and assign one quaternions components to the other one.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">q2</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">y</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">z</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">w</span><span class="p">);</span> <span class="c1">//q1 now contains [ 4, 5, 6, 7 ]</span></code></pre></figure>
+
+<p>Set an object’s <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components to another object.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[],</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">y</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">z</span><span class="p">,</span> <span class="nx">q2</span><span class="p">.</span><span class="nx">w</span><span class="p">);</span> <span class="c1">//q1 now has [ 4, 5, 6, 7 ]</span></code></pre></figure>
+
+<h2 id="Quat:add">Quat Method: add</h2>
+
+<p>Adds the <code>x</code>, <code>y</code>, <code>z</code> components of two <code>Quat</code> objects. Creates a new <code>Quat</code> instance and does not modify the original objects.</p>
+
+<h3 id="syntax-62">Syntax:</h3>
+
+<pre><code>  q1.add(q2);
+
+Quat.add(q1, q2);
+</code></pre>
+
+<h3 id="arguments-48">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-56">Examples:</h3>
+
+<p>Create two quaternions and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">],</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 and q2 are still the same but a new Quat(5, 7, 9, 11) was created.</span></code></pre></figure>
+
+<h2 id="quat-method-add-quatadd">Quat Method: $add {#Quat:$add}</h2>
+
+<p>Adds the <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components of two <code>Quat</code> objects. Modifies the original object.</p>
+
+<h3 id="syntax-63">Syntax:</h3>
+
+<pre><code>  q1.$add(q2);
+
+Quat.$add(q1, q2);
+</code></pre>
+
+<h3 id="arguments-49">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-57">Examples:</h3>
+
+<p>Create two quaternions and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now Quat(5, 7, 9, 11).</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">],</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">$add</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now [ 5, 7, 9, 11 ].</span></code></pre></figure>
+
+<h2 id="Quat:sub">Quat Method: sub</h2>
+
+<p>Substracts the <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components of two <code>Quat</code> objects. Creates a new <code>Quat</code> instance and does not modify the original objects.</p>
+
+<h3 id="syntax-64">Syntax:</h3>
+
+<pre><code>  q1.sub(q2);
+
+Quat.sub(q1, q2);
+</code></pre>
+
+<h3 id="arguments-50">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-58">Examples:</h3>
+
+<p>Create two quaternions and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> objects and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nx">x</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nx">y</span><span class="o">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="nx">z</span><span class="o">:</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="nx">w</span><span class="o">:</span> <span class="mi">4</span>
+      <span class="p">},</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 and q2 are still the same but a new Quat(-3, -3, -3, -3) was created.</span></code></pre></figure>
+
+<h2 id="quat-method-sub-quatsub">Quat Method: $sub {#Quat:$sub}</h2>
+
+<p>Substracts the <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> components of two <code>Quat</code> objects. Modifies the original object.</p>
+
+<h3 id="syntax-65">Syntax:</h3>
+
+<pre><code>  q1.$sub(q2);
+
+Quat.$sub(q1, q2);
+</code></pre>
+
+<h3 id="arguments-51">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-59">Examples:</h3>
+
+<p>Create two quaternions and substract them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$sub</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now Quat(-3, -3, -3, -3).</span></code></pre></figure>
+
+<p>Create two <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> objects and add them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">],</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">$sub</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now [ -3, -3, -3, -3 ].</span></code></pre></figure>
+
+<h2 id="Quat:mulQuat">Quat Method: mulQuat</h2>
+
+<p>Multiplies two quaternions returning a new <code>Quat</code> instance with the result.
+The original object is not modified.</p>
+
+<h3 id="syntax-66">Syntax:</h3>
+
+<pre><code>  q1.mulQuat(q2);
+
+Quat.mulQuat(q1, q2);
+</code></pre>
+
+<h3 id="arguments-52">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-60">Examples:</h3>
+
+<p>Create two Quaternions and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">mulQuat</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is unchanged but a new Quat(-1, 0, 0, 0) is created.</span></code></pre></figure>
+
+<h2 id="quat-method-mulquat-quatmulquat">Quat Method: $mulQuat {#Quat:$mulQuat}</h2>
+
+<p>Multiplies two quaternions returning and modifies the receiver with the result.</p>
+
+<h3 id="syntax-67">Syntax:</h3>
+
+<pre><code>  q1.$mulQuat(q2);
+
+Quat.$mulQuat(q1, q2);
+</code></pre>
+
+<h3 id="arguments-53">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-61">Examples:</h3>
+
+<p>Create two Quaternions and multiply them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$mulQuat</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now Quat(-1, 0, 0, 0).</span></code></pre></figure>
+
+<h2 id="Quat:divQuat">Quat Method: divQuat</h2>
+
+<p>Divides two quaternions returning a new <code>Quat</code> instance with the result.
+The original object is not modified.</p>
+
+<h3 id="syntax-68">Syntax:</h3>
+
+<pre><code>  q1.divQuat(q2);
+
+Quat.divQuat(q1, q2);
+</code></pre>
+
+<h3 id="arguments-54">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-62">Examples:</h3>
+
+<p>Create two Quaternions and divide them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">divQuat</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is unchanged but a new Quat(1, 0, 0, 0) is created.</span></code></pre></figure>
+
+<h2 id="quat-method-divquat-quatdivquat">Quat Method: $divQuat {#Quat:$divQuat}</h2>
+
+<p>Divides two quaternions returning and modifies the receiver with the result.</p>
+
+<h3 id="syntax-69">Syntax:</h3>
+
+<pre><code>  q1.$divQuat(q2);
+
+Quat.$divQuat(q1, q2);
+</code></pre>
+
+<h3 id="arguments-55">Arguments:</h3>
+
+<ol>
+  <li>q2 - (<em>object</em>) A <code>Quat</code> instance.</li>
+</ol>
+
+<h3 id="examples-63">Examples:</h3>
+
+<p>Create two Quaternions and divide them.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+      <span class="nx">q2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$divQuat</span><span class="p">(</span><span class="nx">q2</span><span class="p">);</span> <span class="c1">//q1 is now Quat(1, 0, 0, 0).</span></code></pre></figure>
+
+<h2 id="Quat:scale">Quat Method: scale</h2>
+
+<p>Scales the Quat quaternion by a real number. Creates a new Quat with the scaled components.</p>
+
+<h3 id="syntax-70">Syntax:</h3>
+
+<pre><code>  q1.scale(s);
+
+Quat.scale(q1, s);
+</code></pre>
+
+<h3 id="arguments-56">Arguments:</h3>
+
+<ol>
+  <li>s - (<em>number</em>) A real number to scale the Quat.</li>
+</ol>
+
+<h3 id="examples-64">Examples:</h3>
+
+<p>Create a quaternion and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span> <span class="c1">//q1 is unchanged but a new Quat(2, 4, 6, 8) is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">scale</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="c1">//q1 is still the same but a new Quat(2, 4, 6, 8) was created.</span></code></pre></figure>
+
+<h2 id="quat-method-scale-quatscale">Quat Method: $scale {#Quat:$scale}</h2>
+
+<p>Scales the Quat quaternion by a real number. Changes the original object.</p>
+
+<h3 id="syntax-71">Syntax:</h3>
+
+<pre><code>  q1.$scale(s);
+
+Quat.$scale(q1, s);
+</code></pre>
+
+<h3 id="arguments-57">Arguments:</h3>
+
+<ol>
+  <li>s - (<em>number</em>) A real number to scale the Quat.</li>
+</ol>
+
+<h3 id="examples-65">Examples:</h3>
+
+<p>Create a quaternion and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span> <span class="c1">//q1 is now Quat(2, 4, 6, 8).</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and scale it by 2.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">$scale</span><span class="p">(</span><span class="nx">q1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="c1">//q1 is now [ 2, 4, 6, 8 ].</span></code></pre></figure>
+
+<h2 id="Quat:conjugate">Quat Method: conjugate</h2>
+
+<p>Conjugates a <code>Quat</code>. Returns a new instance.</p>
+
+<h3 id="syntax-72">Syntax:</h3>
+
+<pre><code>  q1.conjugate();
+
+Quat.conjugate(q1);
+</code></pre>
+
+<h3 id="examples-66">Examples:</h3>
+
+<p>Create a quaternion and conjugate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">conjugate</span><span class="p">();</span> <span class="c1">//q1 is unchanged but a new Quat(-1, -2, -3, 4) is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and conjugate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">conjugate</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is still the same but a new Quat(-1, -2, -3, 4).</span></code></pre></figure>
+
+<h2 id="quat-method-conjugate-quatconjugate">Quat Method: $conjugate {#Quat:$conjugate}</h2>
+
+<p>conjugates a <code>Quat</code>. Changes the original object.</p>
+
+<h3 id="syntax-73">Syntax:</h3>
+
+<pre><code>  q1.$conjugate();
+
+Quat.$conjugate(q1);
+</code></pre>
+
+<h3 id="examples-67">Examples:</h3>
+
+<p>Create a quaternion and conjugate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$conjugate</span><span class="p">();</span> <span class="c1">//q1 is now Quat(-1, -2, -3, 4).</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and conjugate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">conjugate</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is now [ -1, -2, -3, 4 ].</span></code></pre></figure>
+
+<h2 id="Quat:neg">Quat Method: neg</h2>
+
+<p>Negates a <code>Quat</code>. Returns a new instance.</p>
+
+<h3 id="syntax-74">Syntax:</h3>
+
+<pre><code>  q1.neg();
+
+Quat.neg(q1);
+</code></pre>
+
+<h3 id="examples-68">Examples:</h3>
+
+<p>Create a quaternion and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">neg</span><span class="p">();</span> <span class="c1">//q1 is unchanged but a new Quat(-1, -2, -3, -4) is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">neg</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is still the same but a new Quat(-1, -2, -3, -4).</span></code></pre></figure>
+
+<h2 id="quat-method-neg-quatneg">Quat Method: $neg {#Quat:$neg}</h2>
+
+<p>Negates a <code>Quat</code>. Changes the original object.</p>
+
+<h3 id="syntax-75">Syntax:</h3>
+
+<pre><code>  q1.$neg();
+
+Quat.$neg(q1);
+</code></pre>
+
+<h3 id="examples-69">Examples:</h3>
+
+<p>Create a quaternion and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$neg</span><span class="p">();</span> <span class="c1">//q1 is now Quat(-1, -2, -3, -4).</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and negate it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">neg</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is now [ -1, -2, -3, -4 ].</span></code></pre></figure>
+
+<h2 id="Quat:unit">Quat Method: unit</h2>
+
+<p>Creates a unit quaternion from the coordinates of <code>Quat</code>. The original
+object is not modified.</p>
+
+<h3 id="syntax-76">Syntax:</h3>
+
+<pre><code>  q1.unit();
+
+Quat.unit(q1);
+</code></pre>
+
+<h3 id="examples-70">Examples:</h3>
+
+<p>Create a quaternion and make a unit quaternion from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">unit</span><span class="p">();</span> <span class="c1">//q1 is unchanged but a new unit quaternion Quat is created.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and make a unit quaternion from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">unit</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is still the same but a new Quat that is a unit quaternion is created.</span></code></pre></figure>
+
+<h2 id="quat-method-unit-quatunit">Quat Method: $unit {#Quat:$unit}</h2>
+
+<p>Creates a unit quaternion from the <code>Quat</code> coordinates. Changes the original object.</p>
+
+<h3 id="syntax-77">Syntax:</h3>
+
+<pre><code>  q1.$unit();
+
+Quat.$unit(q1);
+</code></pre>
+
+<h3 id="examples-71">Examples:</h3>
+
+<p>Create a quaternion and make a unit quaternion from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">q1</span><span class="p">.</span><span class="nx">$unit</span><span class="p">();</span> <span class="c1">//q1 is now a unit quaternion.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and make a unit quaternion from it.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="nx">Quat</span><span class="p">.</span><span class="nx">$unit</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span> <span class="c1">//q1 is now a unit quaternion vector.</span></code></pre></figure>
+
+<h2 id="Quat:norm">Quat Method: norm</h2>
+
+<p>Calculates the norm of <code>Quat</code>.</p>
+
+<h3 id="syntax-78">Syntax:</h3>
+
+<pre><code>  q1.norm();
+
+Quat.norm(q1);
+</code></pre>
+
+<h3 id="examples-72">Examples:</h3>
+
+<p>Create a quaternion and calculate its norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">vi</span><span class="p">.</span><span class="nx">norm</span><span class="p">();</span> <span class="c1">//returns the real valued norm.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and calculate its norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="c1">//A real number with the norm is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">norm</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Quat:normSq">Quat Method: normSq</h2>
+
+<p>Calculates the squared norm of <code>Quat</code>.</p>
+
+<h3 id="syntax-79">Syntax:</h3>
+
+<pre><code>  q1.normSq();
+
+Quat.normSq(q1);
+</code></pre>
+
+<h3 id="examples-73">Examples:</h3>
+
+<p>Create a quaternion and calculate its squared norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Quat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+  <span class="nx">vi</span><span class="p">.</span><span class="nx">normSq</span><span class="p">();</span> <span class="c1">//returns the real valued norm.</span></code></pre></figure>
+
+<p>Create an <code>x</code>, <code>y</code>, <code>z</code>, <code>w</code> object and calculate its squared norm.</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">  <span class="kd">var</span> <span class="nx">q1</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="p">];</span>
+
+  <span class="c1">//A real number with the squared norm is returned.</span>
+  <span class="kd">var</span> <span class="nx">ans</span> <span class="o">=</span> <span class="nx">Quat</span><span class="p">.</span><span class="nx">normSq</span><span class="p">(</span><span class="nx">q1</span><span class="p">);</span></code></pre></figure>
+
+<h2 id="Quat:clone">Quat Method: clone</h2>
+
+<p>Clones a quaternion.</p>
+
+<h3 id="syntax-80">Syntax:</h3>
+
+<pre><code>  q1.clone();
+
+Quat.clone(q1);
+</code></pre>
+
+
+</div>
+
+<script type="text/javascript">
+  (function() {
+    var h2 = document.getElementById('doc').getElementsByTagName('h2'),
+        ans = [];
+    for (var i = 0, l = h2.length; i < l; i++) {
+      var elem = h2[i];
+      ans.push('<a href=\'#' + elem.id + '\'>' + (elem.innerText || elem.textContent) + '</a>');
+    }
+    document.getElementById('method-summary-list').innerHTML = '<li>' + ans.join('</li><li>') + '</li>';
+  })();
+</script>
+
+
+</div>
+</body>
+</html>
