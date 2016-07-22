@@ -1,0 +1,8 @@
+2.0.0-beta series
+- layer architecture refactored to improve performance
+- updated to handle perspective mode
+- shaderlib
+2.0.4-0
+- incorrect release
+1.0.1
+- initial version
