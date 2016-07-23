@@ -9,11 +9,13 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css?family=Maven+Pro" rel="stylesheet"/>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet"/>
 
     <style>
       body {
-        margin-top: 64px;
         margin-bottom: 128px;
+        font-family: 'Maven Pro', sans-serif;
       }
       .thumbnail {
         width: 262.5px;
@@ -28,6 +30,95 @@
         font-size: 0.8em;
         text-align: center;
       }
+
+      #header {
+        padding-top: 100px;
+        background: linear-gradient(#00141b, #00024b);
+        color: white;
+        text-align: center;
+      }
+
+      #content {
+        padding-top: 50px;
+      }
+
+      h1 {
+        font-size: 50px;
+      }
+
+      h3 {
+        font-size: 30px;
+      }
+
+      .links {
+        display: flex;
+        justify-content: center;
+        margin-top: 50px;
+        margin-bottom: 50px;
+      }
+
+      .link {
+        width: 200px;
+        background: white;
+        border-bottom: 2px solid #8a05ef;
+        color: #8a05ef;
+        font-size: 16px;
+        margin: 5px;
+        padding: 10px;
+        border-radius: 0px;
+      }
+      .logo {
+        width: 50px;
+      }
+
+      .thumbnail {
+        padding: 0;
+        margin-bottom: 0px;
+        border-radius: 0px;
+        border: none;
+      }
+
+      .thumbnail-container {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .thumbnail-link {
+        position: relative;
+      }
+
+      .thumbnail-link:hover {
+         cursor: pointer;
+      }
+
+      .thumbnail-label {
+        background: rgba(138, 5, 239, 0.8);
+        position: absolute;
+        bottom: 0px;
+        text-align: center;
+        color: white;
+        width: 100%;
+        padding: 5px;
+        transition: padding 400ms, background 400ms;
+      }
+
+      .thumbnail-link img {
+        -webkit-filter: grayscale(80%);
+        filter: grayscale(80%);
+        transition: filter 400ms, -webkit-filter 400ms;
+      }
+
+      .thumbnail-link:hover > .thumbnail-label {
+        padding-bottom: 15px;
+        background: rgba(138, 5, 239, 1.0);
+      }
+
+      .thumbnail-link:hover img {
+        -webkit-filter: grayscale(0%);
+        filter: grayscale(0%);
+      }
+
     </style>
 
     <title>luma.gl</title>
@@ -35,141 +126,158 @@
   </head>
 
   <body>
+    <div id="page-content">
+      <div id="header">
+        <div class="container">
+          <h1><img class="logo" src="./static/luma-icon.png"/> LumaGL</h1>
+          <h3>A JavaScript WebGL Framework for Data Visualization</h3>
 
-    <div class='container'>
-      <h2>LumaGL: A JavaScript WebGL Framework for Data Visualization</h2>
-
-      <p>LumaGL's primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.</p>
-
-
-      <h3>Documentation</h3>
-
-      <h3><a href='http://uber.github.io/luma.gl'>Docs</a></h3>
-      <h3><a href='https://github.com/uber/luma.gl'>README</a></h3>
-
-      <h3>Examples</h3>
-
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/core/instancing'><img src='static/instancing-example.png' class='thumbnail'></a>
-          <p>Instancing</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/picking'><img src='static/picking-example.png' class='thumbnail'></a>
-          <p>Picking</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/multicontext'><img src='static/multicontext-example.png' class='thumbnail'></a>
-          <p>Multiple contexts</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/cubemap'><img src='static/cubemap-example.png' class='thumbnail'></a>
-          <p>Cubemap</p>
+          <div class="links">
+            <a class="btn link" href="https://github.com/uber/luma.gl">
+              <i class="fa fa-github"></i> Github
+            </a>
+            <a class="btn link" href="https://uber.github.io/luma.gl/docs">
+              <i class="fa fa-book"></i> Documentation
+            </a>
+          </div>
         </div>
       </div>
+      <div id="content">
+        <div class='container'>
+<!--           <h3>Documentation</h3>
 
-      <!--
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/core/persistence'><img src='static/persistence-example.png' class='thumbnail'></a>
-          <p>Persistence</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/custom-picking'><img src='static/custom-picking-example.png' class='thumbnail'></a>
-          <p>Custom Picking</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/deferred-rendering'><img src='static/deferred-rendering-example.png' class='thumbnail'></a>
-          <p>Deferred Rendering</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/core/particles'><img src='static/particles-example.png' class='thumbnail'></a>
-          <p>Particles</p>
+          <h3><a href='http://uber.github.io/luma.gl'>Docs</a></h3>
+          <h3><a href='https://github.com/uber/luma.gl'>README</a></h3>
+ -->  
+          <blockquote>LumaGL's primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.</blockquote>
+          <h3>Examples</h3>
+
+          <div class="thumbnail-container">
+            <div class="thumbnail-link">
+                <a href='examples/core/instancing'>
+                  <img src='static/instancing-example.png' class='thumbnail'>
+                </a>
+              <div class="thumbnail-label">Instancing</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/picking'>
+                <img src='static/picking-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Picking</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/multicontext'>
+                <img src='static/multicontext-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Multiple contexts</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/cubemap'>
+                <img src='static/cubemap-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Cubemap</div>
+            </div>
+          </div>
+
+          <!--
+          <div class='row'>
+            <div class='col-md-3'>
+              <a href='examples/core/persistence'><img src='static/persistence-example.png' class='thumbnail'></a>
+              <p>Persistence</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/custom-picking'><img src='static/custom-picking-example.png' class='thumbnail'></a>
+              <p>Custom Picking</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/deferred-rendering'><img src='static/deferred-rendering-example.png' class='thumbnail'></a>
+              <p>Deferred Rendering</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/particles'><img src='static/particles-example.png' class='thumbnail'></a>
+              <p>Particles</p>
+            </div>
+          </div>
+          -->
+
+          <h3>Lessons</h3>
+
+          luma.gl versions of the classic "Learning WebGL" lessons.
+
+          <div class="thumbnail-container">
+            <a class="thumbnail-link" href='examples/lessons/1'>
+              <img src='static/lesson-1.png' class='thumbnail'/>
+              <div class="thumbnail-label">1: A Triangle and a Square</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/2'>
+              <img src='static/lesson-2.png' class='thumbnail'/>
+              <div class="thumbnail-label">2: Adding Color</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/3'>
+              <img src='static/lesson-3.png' class='thumbnail'/>
+              <div class="thumbnail-label">3: A Bit of Movement</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/4'>
+              <img src='static/lesson-4.png' class='thumbnail'/>
+              <div class="thumbnail-label">4: Some Real 3D Objects</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/5'>
+              <img src='static/lesson-5.png' class='thumbnail'/>
+              <div class="thumbnail-label">5: Introducing Textures</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/6'>
+              <img src='static/lesson-6.png' class='thumbnail'/>
+              <div class="thumbnail-label">6: Keyboard Input and Texture Filters</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/7'>
+              <img src='static/lesson-7.png' class='thumbnail'/>
+              <div class="thumbnail-label">7: Basic Directional and Ambient Lighting</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/8'>
+              <img src='static/lesson-8.png' class='thumbnail'/>
+              <div class="thumbnail-label">8: Depth Buffer, Transparency and Blending</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/9'>
+              <img src='static/lesson-9.png' class='thumbnail'/>
+              <div class="thumbnail-label">9: Lots of Moving Objects</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/10'>
+              <img src='static/lesson-10.png' class='thumbnail'/>
+              <div class="thumbnail-label">10: Loading a World, and a Basic Camera</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/11'>
+              <img src='static/lesson-11.png' class='thumbnail'/>
+              <div class="thumbnail-label">11: Spheres, Rotation Matrices and Mouse Events</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/12'>
+              <img src='static/lesson-12.png' class='thumbnail'/>
+              <div class="thumbnail-label">12: Point Lighting</div>
+            </a>
+          </div>
+          <!-- TODO Fix these
+          <div class='row'>
+            <div class='col-md-3'>
+              <a href='examples/lessons/13'><img src='static/lesson-13.png' class='thumbnail'></a>
+              <p class='lesson-title'>13: Per-Fragment Lighting, Multiple Programs</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/14'><img src='static/lesson-14.png' class='thumbnail'></a>
+              <p class='lesson-title'>14: Specular Highlights, Loading a JSON Model</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/15'><img src='static/lesson-15.png' class='thumbnail'></a>
+              <p class='lesson-title'>15: Specular Maps</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/16'><img src='static/lesson-16.png' class='thumbnail'></a>
+              <p class='lesson-title'>16: Render-to-Texture</p>
+            </div>
+          </div>
+          -->
+
         </div>
       </div>
-      -->
-
-      <h3>Lessons</h3>
-
-      luma.gl versions of the classic "Learning WebGL" lessons.
-
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/lessons/1'><img src='static/lesson-1.png' class='thumbnail'></a>
-          <p class='lesson-title'>1: A Triangle and a Square</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/2'><img src='static/lesson-2.png' class='thumbnail'></a>
-          <p class='lesson-title'>2: Adding Color</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/3'><img src='static/lesson-3.png' class='thumbnail'></a>
-          <p class='lesson-title'>3: A Bit of Movement</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/4'><img src='static/lesson-4.png' class='thumbnail'></a>
-          <p class='lesson-title'>4: Some Real 3D Objects</p>
-        </div>
-      </div>
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/lessons/5'><img src='static/lesson-5.png' class='thumbnail'></a>
-          <p class='lesson-title'>5: Introducing Textures</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/6'><img src='static/lesson-6.png' class='thumbnail'></a>
-          <p class='lesson-title'>6: Keyboard Input and Texture Filters</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/7'><img src='static/lesson-7.png' class='thumbnail'></a>
-          <p class='lesson-title'>7: Basic Directional and Ambient Lighting</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/8'><img src='static/lesson-8.png' class='thumbnail'></a>
-          <p class='lesson-title'>8: Depth Buffer, Transparency and Blending</p>
-        </div>
-      </div>
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/lessons/9'><img src='static/lesson-9.png' class='thumbnail'></a>
-          <p class='lesson-title'>9: Lots of Moving Objects</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/10'><img src='static/lesson-10.png' class='thumbnail'></a>
-          <p class='lesson-title'>10: Loading a World, and a Basic Camera</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/11'><img src='static/lesson-11.png' class='thumbnail'></a>
-          <p class='lesson-title'>11: Spheres, Rotation Matrices and Mouse Events</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/12'><img src='static/lesson-12.png' class='thumbnail'></a>
-          <p class='lesson-title'>12: Point Lighting</p>
-        </div>
-      </div>
-      <!-- TODO Fix these
-      <div class='row'>
-        <div class='col-md-3'>
-          <a href='examples/lessons/13'><img src='static/lesson-13.png' class='thumbnail'></a>
-          <p class='lesson-title'>13: Per-Fragment Lighting, Multiple Programs</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/14'><img src='static/lesson-14.png' class='thumbnail'></a>
-          <p class='lesson-title'>14: Specular Highlights, Loading a JSON Model</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/15'><img src='static/lesson-15.png' class='thumbnail'></a>
-          <p class='lesson-title'>15: Specular Maps</p>
-        </div>
-        <div class='col-md-3'>
-          <a href='examples/lessons/16'><img src='static/lesson-16.png' class='thumbnail'></a>
-          <p class='lesson-title'>16: Render-to-Texture</p>
-        </div>
-      </div>
-      -->
-
     </div>
-
   </body>
 
 </html>
