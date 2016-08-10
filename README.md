@@ -9,7 +9,7 @@ visualizations.
 
 See
 [**Examples**](http://uber.github.io/luma.gl/) and
-[**Documentation**](http://uber.github.io/luma.gl/_site/docs/core.html).
+[**Documentation**](http://uber.github.io/luma.gl/docs/).
 [**Change Log**](https://github.com/uber/luma.gl/blob/master/CHANGELOG.md).
 
 
