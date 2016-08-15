@@ -6,6 +6,7 @@ export * from './media';
 export {default as Fx} from './fx';
 export {default as WorkerGroup} from './workers';
 export * from './helpers';
+export * from './frame';
 
 /* global window */
 if (typeof window !== 'undefined' && window.LumaGL) {

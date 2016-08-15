@@ -5,11 +5,11 @@ var Program = LumaGL.Program;
 var Cube = LumaGL.Cube;
 var Mat4 = LumaGL.Mat4;
 var Vec3 = LumaGL.Vec3;
-var Renderer = LumaGL.Renderer;
+var Renderer = LumaGL.addons.Renderer;
 
 var SIDE = 256;
 
-new luma.Renderer()
+new Renderer()
 .init(function(context) {
   var gl = context.gl;
 
