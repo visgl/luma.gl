@@ -1,3 +1,4 @@
 source: ./
 destination: ./_docs
 highlighter: pygments
+exclude: [node_modules, src]

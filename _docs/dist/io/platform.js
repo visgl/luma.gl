@@ -1,0 +1,11 @@
+'use strict';
+
+var _utils = require('../utils');
+
+if ((0, _utils.isBrowser)()) {
+  module.exports = require('./browser');
+} else {
+  module.exports = require('./node');
+} // Use require instead of import/export to dynamically export the right set
+// of functions
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9pby9wbGF0Zm9ybS5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOztBQUVBOztBQUVBLElBQUksdUJBQUosRUFBaUI7QUFDZixTQUFPLE9BQVAsR0FBaUIsUUFBUSxXQUFSLENBQWpCO0FBQ0QsQ0FGRCxNQUVPO0FBQ0wsU0FBTyxPQUFQLEdBQWlCLFFBQVEsUUFBUixDQUFqQjtBQUNELEMiLCJmaWxlIjoicGxhdGZvcm0uanMiLCJzb3VyY2VzQ29udGVudCI6WyIvLyBVc2UgcmVxdWlyZSBpbnN0ZWFkIG9mIGltcG9ydC9leHBvcnQgdG8gZHluYW1pY2FsbHkgZXhwb3J0IHRoZSByaWdodCBzZXRcbi8vIG9mIGZ1bmN0aW9uc1xuaW1wb3J0IHtpc0Jyb3dzZXJ9IGZyb20gJy4uL3V0aWxzJztcblxuaWYgKGlzQnJvd3NlcigpKSB7XG4gIG1vZHVsZS5leHBvcnRzID0gcmVxdWlyZSgnLi9icm93c2VyJyk7XG59IGVsc2Uge1xuICBtb2R1bGUuZXhwb3J0cyA9IHJlcXVpcmUoJy4vbm9kZScpO1xufVxuIl19
