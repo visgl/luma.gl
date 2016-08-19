@@ -1,19 +1,19 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var IcoSphere = LumaGL.IcoSphere;
+var Model = LumaGL.Model;
+var Program = LumaGL.Program;
+var Buffer = LumaGL.Buffer;
+var Geometry = LumaGL.Geometry;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Framebuffer = LumaGL.FBO;
+var Mat4 = LumaGL.Mat4;
+var Vec3 = LumaGL.Vec3;
+var Fx = LumaGL.Fx;
 
-  var createGLContext = LumaGL.createGLContext;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var IcoSphere = LumaGL.IcoSphere;
-  var Model = LumaGL.Model;
-  var Program = LumaGL.Program;
-  var Buffer = LumaGL.Buffer;
-  var Geometry = LumaGL.Geometry;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Framebuffer = LumaGL.FBO;
-  var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
-  var Fx = LumaGL.Fx;
+window.webGLStart = function() {
 
   var canvas = document.getElementById('render-canvas');
   canvas.width = canvas.clientWidth;

@@ -44,13 +44,13 @@ window.webGLStart = function() {
   });
 
   const PLANETS = [
-    {name: 'JUPITER', textureUrl: 'jupiter.jpg'},
-    {name: 'MARS', textureUrl: 'mars.jpg'},
-    {name: 'MERCURY', textureUrl: 'mercury.jpg'},
-    {name: 'NEPTUNE', textureUrl: 'neptune.jpg'},
-    {name: 'SATURN', textureUrl: 'saturn.jpg'},
-    {name: 'URANUS', textureUrl: 'uranus.jpg'},
-    {name: 'VENUS', textureUrl: 'venus.jpg'}
+    {name: 'Jupiter', textureUrl: 'jupiter.jpg'},
+    {name: 'Mars', textureUrl: 'mars.jpg'},
+    {name: 'Mercury', textureUrl: 'mercury.jpg'},
+    {name: 'Neptune', textureUrl: 'neptune.jpg'},
+    {name: 'Saturn', textureUrl: 'saturn.jpg'},
+    {name: 'Uranus', textureUrl: 'uranus.jpg'},
+    {name: 'Venus', textureUrl: 'venus.jpg'}
   ];
 
   loadTextures(gl, {
@@ -72,113 +72,42 @@ window.webGLStart = function() {
 
     var program = new Program(gl);
 
-    var jupiter = new Sphere({
-      id: 'Jupiter',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tJupiter,
-        hasTexture1: true,
-        colors: [1, 1, 1, 1]
-      },
-      attributes: {
-        colors: new Buffer(gl).setData({
-          data: new Float32Array(10000),
-          size: 4
-        }),
-        pickingColors: new Buffer(gl).setData({
-          data: new Float32Array(10000),
-          size: 3
-        })
-      },
-      pickable: true,
-      program
-    });
-    var mars = new Sphere({
-      id: 'Mars',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tMars,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
-    });
-    var mercury = new Sphere({
-      id: 'Mercury',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tMercury,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
-    });
-    var neptune = new Sphere({
-      id: 'Neptune',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tNeptune,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
-    });
-    var saturn = new Sphere({
-      id: 'Saturn',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tSaturn,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
-    });
-    var uranus = new Sphere({
-      id: 'Uranus',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tUranus,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
-    });
-    var venus = new Sphere({
-      id: 'Venus',
-      nlat: 32,
-      nlong: 32,
-      radius: 1,
-      uniforms: {
-        sampler1: tVenus,
-        hasTexture1: false
-      },
-      pickable: true,
-      program
+    const planets = PLANETS.map(function(planet, i) {
+      return new Sphere({
+        id: planet.name,
+        nlat: 32,
+        nlong: 32,
+        radius: 1,
+        uniforms: {
+          sampler1: textures[i],
+          hasTexture1: true,
+          hasTextureCube1: false,
+          colors: [1, 1, 1, 1]
+        },
+        attributes: {
+          colors: new Buffer(gl).setData({
+            data: new Float32Array(10000),
+            size: 4
+          }),
+          pickingColors: new Buffer(gl).setData({
+            data: new Float32Array(10000),
+            size: 3
+          })
+        },
+        pickable: true,
+        program
+      });
     });
 
-    // scene.add(jupiter, mars, mercury, neptune, saturn, uranus, venus);
-    // var items = [jupiter, uranus, mars, neptune, mercury, saturn, venus];
-    scene.add(jupiter);
-    var items = [jupiter];
-
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      var theta = i / items.length * Math.PI * 2;
-      item.position = new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0);
-      item.updateMatrix();
+    for (var i = 0; i < planets.length; i++) {
+      var planet = planets[i];
+      var theta = i / planets.length * Math.PI * 2;
+      planet.update({
+        position: new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0)
+      });
     }
+
+    scene.add(planets);
 
     function drawFrame() {
       draw(gl, canvas, camera, scene);
@@ -204,17 +133,18 @@ function draw(gl, canvas, camera, scene) {
     item.updateMatrix();
   }
 
-  var p = null;
-  // var p = pickModels(gl, {
-  //   group: scene,
-  //   viewMatrix: camera.view,
-  //   x: pick.x,
-  //   y: pick.y
-  // });
+  var picked = pickModels(gl, {
+    group: scene,
+    viewMatrix: camera.view,
+    x: pick.x,
+    y: pick.y
+  });
+
+  var pickedModel = picked.find(function(model) { return model.isPicked; });
 
   var div = document.getElementById('planet-name');
-  if (p) {
-    div.innerHTML = p.id;
+  if (pickedModel) {
+    div.innerHTML = pickedModel.model.id;
     div.style.top = pick.y + 'px';
     div.style.left = pick.x + 'px';
     div.style.display = 'block';

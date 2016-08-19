@@ -1,21 +1,21 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var Geometry = LumaGL.Geometry;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Scene = LumaGL.Scene;
+var Fx = LumaGL.Fx;
+var Vec3 = LumaGL.Vec3;
+var Sphere = LumaGL.Sphere;
+var Cube = LumaGL.Cube;
+var Model = LumaGL.Model;
+var Framebuffer = LumaGL.Framebuffer;
+var loadFiles = LumaGL.loadFiles;
+var loadTextures = LumaGL.loadTextures;
+var loadProgram = LumaGL.loadProgram;
+var parseModel = LumaGL.parseModel;
 
-  var createGLContext = LumaGL.createGLContext;
-  var Geometry = LumaGL.Geometry;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Scene = LumaGL.Scene;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var Sphere = LumaGL.Sphere;
-  var Cube = LumaGL.Cube;
-  var Model = LumaGL.Model;
-  var Framebuffer = LumaGL.Framebuffer;
-  var loadFiles = LumaGL.loadFiles;
-  var loadTextures = LumaGL.loadTextures;
-  var loadProgram = LumaGL.loadProgram;
-  var parseModel = LumaGL.parseModel;
+window.webGLStart = function() {
 
   loadFiles({urls: ['macbook.json']})
   .catch(error => window.alert('Unable to load macbook model: ' + error))

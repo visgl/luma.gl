@@ -1,20 +1,20 @@
 /* global window, document, Image, LumaGL */
 /* eslint-disable max-statements, no-var, no-multi-spaces */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Fx = LumaGL.Fx;
+var Mat4 = LumaGL.Mat4;
+var Vec3 = LumaGL.Vec3;
+var Model = LumaGL.Model;
+var Geometry = LumaGL.Geometry;
+var Program = LumaGL.Program;
+var Buffer = LumaGL.Buffer;
+var Texture2D = LumaGL.Texture2D;
+var addEvents = LumaGL.addEvents;
+var loadImages = LumaGL.loadImages;
 
-  var createGLContext = LumaGL.createGLContext;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Fx = LumaGL.Fx;
-  var Mat4 = LumaGL.Mat4;
-  var Vec3 = LumaGL.Vec3;
-  var Model = LumaGL.Model;
-  var Geometry = LumaGL.Geometry;
-  var Program = LumaGL.Program;
-  var Buffer = LumaGL.Buffer;
-  var Texture2D = LumaGL.Texture2D;
-  var addEvents = LumaGL.addEvents;
-  var loadImages = LumaGL.loadImages;
+window.webGLStart = function() {
 
   var cubeGeometry = new Geometry({
     positions: new Float32Array([
