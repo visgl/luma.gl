@@ -1,18 +1,17 @@
 /* global window, document, LumaGL */
 /* eslint-disable max-statements, no-var */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var Program = LumaGL.Program;
+var createGLContext = LumaGL.createGLContext;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Fx = LumaGL.Fx;
+var Mat4 = LumaGL.Mat4;
+var Model = LumaGL.Model;
+var Geometry = LumaGL.Geometry;
+var Vec3 = LumaGL.Vec3;
+
 window.webGLStart = function() {
-
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var Program = LumaGL.Program;
-  var createGLContext = LumaGL.createGLContext;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Fx = LumaGL.Fx;
-  var Mat4 = LumaGL.Mat4;
-  var Model = LumaGL.Model;
-  var Geometry = LumaGL.Geometry;
-  var Vec3 = LumaGL.Vec3;
-
   var triangleGeometry = new Geometry({
     positions: new Float32Array([
       0,   1, 0,
