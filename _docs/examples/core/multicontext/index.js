@@ -1,12 +1,12 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function() {
+var createGLContext = LumaGL.createGLContext;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var Buffer = LumaGL.Buffer;
+var Program = LumaGL.Program;
+var Fx = LumaGL.Fx;
 
-  var createGLContext = LumaGL.createGLContext;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var Buffer = LumaGL.Buffer;
-  var Program = LumaGL.Program;
-  var Fx = LumaGL.Fx;
+window.webGLStart = function() {
 
   var positions = [
     -1, -1,

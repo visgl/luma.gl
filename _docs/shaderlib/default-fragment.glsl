@@ -44,20 +44,20 @@ void main(){
   }
 
   // has cube texture then apply reflection
-  if (hasTextureCube1) {
-    vec3 nReflection = normalize(vReflection);
-    vec3 reflectionValue;
-    if (refraction > 0.0) {
-     reflectionValue = refract(nReflection, vNormal.xyz, refraction);
-    } else {
-     reflectionValue = -reflect(nReflection, vNormal.xyz);
-    }
+  // if (hasTextureCube1) {
+  //   vec3 nReflection = normalize(vReflection);
+  //   vec3 reflectionValue;
+  //   if (refraction > 0.0) {
+  //    reflectionValue = refract(nReflection, vNormal.xyz, refraction);
+  //   } else {
+  //    reflectionValue = -reflect(nReflection, vNormal.xyz);
+  //   }
 
-    // TODO(nico): check whether this is right.
-    vec4 cubeColor = textureCube(samplerCube1,
-        vec3(-reflectionValue.x, -reflectionValue.y, reflectionValue.z));
-    gl_FragColor = vec4(mix(gl_FragColor.xyz, cubeColor.xyz, reflection), 1.0);
-  }
+  //   // TODO(nico): check whether this is right.
+  //   vec4 cubeColor = textureCube(samplerCube1,
+  //       vec3(-reflectionValue.x, -reflectionValue.y, reflectionValue.z));
+  //   gl_FragColor = vec4(mix(gl_FragColor.xyz, cubeColor.xyz, reflection), 1.0);
+  // }
 
   // set picking
   if (enablePicking) {

@@ -180,14 +180,16 @@ the following npm script:
 ```
 npm run build-docs
 ```
-This will create a folder called `_site` in the root directory
+This will create a folder called `_docs` in the root directory
 which contains all the static content for the site.  To view
-the docs locally, you can also run jekyll as a standalone server
-with the command:
+the docs locally, run this command:
 ```
-jekyll serve --source=docs/
+npm run docs
 ```
-or
+
+To publish the documentation to the `gh-pages` branch, run the following command
+on a clean brach:
 ```
-npm run open-docs
+npm run docs-publish
 ```
+

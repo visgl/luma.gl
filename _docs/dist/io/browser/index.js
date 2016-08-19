@@ -17,7 +17,7 @@ Object.defineProperty(exports, 'loadFile', {
 var _browserImageIo = require('./browser-image-io');
 
 Object.keys(_browserImageIo).forEach(function (key) {
-  if (key === "default") return;
+  if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {

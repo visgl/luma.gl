@@ -1,15 +1,15 @@
 /* global LumaGL, window, document */
 /* eslint-disable no-var, max-statements */
-window.webGLStart = function webGLStart() {
+var createGLContext = LumaGL.createGLContext;
+var Program = LumaGL.Program;
+var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var TextureCube = LumaGL.TextureCube;
+var Cube = LumaGL.Cube;
+var Mat4 = LumaGL.Mat4;
+var Fx = LumaGL.Fx;
 
-  var createGLContext = LumaGL.createGLContext;
-  var Program = LumaGL.Program;
-  var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var TextureCube = LumaGL.TextureCube;
-  var Cube = LumaGL.Cube;
-  var Mat4 = LumaGL.Mat4;
-  var Fx = LumaGL.Fx;
+window.webGLStart = function webGLStart() {
 
   var canvas = document.getElementById('render-canvas');
 

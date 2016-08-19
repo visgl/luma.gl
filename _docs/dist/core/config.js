@@ -1,0 +1,9 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var MAX_TEXTURES = exports.MAX_TEXTURES = 10;
+var MAX_POINT_LIGHTS = exports.MAX_POINT_LIGHTS = 4;
+var PICKING_RES = exports.PICKING_RES = 4;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9jb3JlL2NvbmZpZy5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7OztBQUFPLElBQU0sc0NBQWUsRUFBckI7QUFDQSxJQUFNLDhDQUFtQixDQUF6QjtBQUNBLElBQU0sb0NBQWMsQ0FBcEIiLCJmaWxlIjoiY29uZmlnLmpzIiwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IGNvbnN0IE1BWF9URVhUVVJFUyA9IDEwO1xuZXhwb3J0IGNvbnN0IE1BWF9QT0lOVF9MSUdIVFMgPSA0O1xuZXhwb3J0IGNvbnN0IFBJQ0tJTkdfUkVTID0gNDtcbiJdfQ==
