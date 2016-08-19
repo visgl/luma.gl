@@ -1,0 +1,90 @@
+html, body {
+  text-align: center;
+  font-family: 'Crimson Text', Verdana;
+  margin: 0;
+  padding: 0;
+}
+
+input, select {
+  font-size: 15px;
+  font-family: 'Crimson Text', Verdana;
+  max-width: 80px;
+}
+
+#fxy {
+  width: 550px;
+  max-width: 550px;
+}
+
+input.error {
+  background: #ffdddd;
+}
+
+#container {
+  width: 900px;
+  margin: auto;
+}
+
+body.no-webgl #container {
+  display: none;
+}
+
+div.fallback {
+  display: none;
+}
+
+body.no-webgl div.fallback {
+  display: block;
+}
+
+.description {
+  width: 200px;
+  font-size: 13px;
+  position: absolute;
+  padding: 5px;
+  text-align: left;
+  right: 8px;
+  top: 8px;
+  border: 1px solid #ccc;
+  background-color: rgb(255, 241, 168);
+}
+
+#title {
+
+}
+
+h1 {
+  text-shadow: rgba(0, 0, 0, 0.2) 0 0 3px;
+  margin: 5px;
+}
+
+.controls {
+  position: relative;
+  background: #E0ECFF;
+  padding: 7px;
+  border: 1px solid #ccc;
+  margin: 7px 0;
+/*  text-align: left;*/
+}
+
+.controls table tr td {
+  text-align: left;
+  margin: auto;
+  font-size: 15px;
+}
+
+#canvas-container {
+  margin: auto;
+}
+
+canvas {
+  -webkit-box-shadow: #333 0 0 10px;
+  -o-box-shadow: #333 0 0 10px;
+  -moz-box-shadow: #333 0 0 10px;
+  box-shadow: #333 0 0 10px;
+}
+
+.footer {
+  margin: 4px;
+  font-size: 13px;
+}

@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Image post-processing API example</title>
+<link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+<style type="text/css">
+  canvas {
+    background: black;
+  }
+</style>
+
+
+<script id="shader-vs" type="x-shader/x-vertex"> 
+  attribute vec3 position;
+  attribute vec2 texCoord1;
+  
+  uniform mat4 worldMatrix;
+  uniform mat4 projectionMatrix;
+  
+  varying   vec2 pixel;
+  void main(void) {
+     gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.);
+     pixel = texCoord1;
+  }
+</script>
+
+<script id="shader-fs-advance" type="x-shader/x-fragment"> 
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  uniform sampler2D sampler1;//sampler_prev;
+
+  varying vec2 pixel;
+  uniform vec2 mouse;
+
+  bool is_onscreen(vec2 uv){
+    return (uv.x < 1.) && (uv.x > 0.) && (uv.y < 1.) && (uv.y > 0.);
+  }
+
+  void main(void) {
+    vec2 c = vec2(-0.25, 0.0) + (mouse.yx-0.5)*vec2(0.2,-0.55);
+    vec2 tuning =  vec2(1.8) - (mouse.y-0.5)*0.3;
+    vec2 complexSquaredPlusC; // One steps towards the Julia Attractor
+    vec2 uv = (pixel - vec2(0.5))*tuning;
+    complexSquaredPlusC.x = (uv.x * uv.x - uv.y * uv.y + c.x + 0.5);
+    complexSquaredPlusC.y = (2. * uv.x * uv.y + c.y + 0.5);
+    
+    if(is_onscreen(complexSquaredPlusC)){
+      vec4 old = texture2D(sampler1, complexSquaredPlusC);
+      gl_FragColor = old + vec4( .004, .008, .012, 1.); // increment to white
+    }else{
+      // return border color
+      gl_FragColor = vec4(0., 0., 0., 1.); // out is black
+    }
+    gl_FragColor.a = 1.;
+  }
+</script>
+
+<script id="shader-fs-composite" type="x-shader/x-fragment"> 
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+    uniform sampler2D sampler1;//sampler_prev;
+
+    varying vec2 pixel;
+    uniform vec2 mouse;
+
+  void main(void) {
+    // negative
+    gl_FragColor = texture2D(sampler1, pixel);
+    gl_FragColor.a = 1.;
+  }
+</script>
+
+<script src="../../build/PhiloGL.js"></script>
+<script src="index.js"></script>
+
+</head>
+<body onresize="setMaximalSize()">
+  <div id="container">
+    <div id="title">
+      <h1>Image post-processing API</h1>
+    </div>
+    
+    <div class="controls">
+      Progressive Julia Fractal/Attractor - Original work by <a
+        href="http://twitter.com/Flexi23/">Felix Woitzel</a> - Ported to
+      <a href="http://http://uber.github.io/luma.gl/">PhiloGL API</a>
+    </div>
+    <canvas id="c" width="900" height="550"></canvas>
+  </div>
+</body>
+</html>
+
+

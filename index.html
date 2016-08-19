@@ -1,381 +1,293 @@
 <!DOCTYPE html>
-<html lang="en-us">
-<head>
-   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-   <title>Overview</title>
-   <link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
-   <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
-   <link rel="shortcut icon" type="image/ico" href="assets/favicon.ico" />
-   <link rel="stylesheet" href="assets/style.css" type="text/css" media="screen, projection, handheld" />
-<script type="text/javascript">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-1601691-8']);
-  _gaq.push(['_trackPageview']);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-</script>
-</head>
-<body>
+<html lang="en">
 
-<div class="site">
-  <div class="title">
-    <!-- <a href="/lumagl/"><img src="assets/logo.png" alt="library logo" /></a> -->
-    <h1>luma.gl</h1>
-  </div>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css?family=Maven+Pro" rel="stylesheet"/>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet"/>
 
-  <div id="sidebar">
-    <div class="box help">
-      <b>Found a typo?</b>
-      <a href="https://github.com/uber//luma.gl/tree/master/docs">
-        Help make the docs better!
-      </a>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-7157694-74', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+    <style>
+      body {
+        margin-bottom: 128px;
+        font-family: 'Maven Pro', sans-serif;
+      }
+      .thumbnail {
+        width: 262.5px;
+        height: 233px;
+        margin-top: 32px;
+      }
+      .lesson-title {
+        height: 35px;
+        width: 262.5px;
+        margin: 0;
+        padding: 0;
+        font-size: 0.8em;
+        text-align: center;
+      }
+
+      #header {
+        padding-top: 100px;
+        background: linear-gradient(#00141b, #00024b);
+        color: white;
+        text-align: center;
+      }
+
+      #content {
+        padding-top: 50px;
+      }
+
+      h1 {
+        font-size: 50px;
+      }
+
+      h3 {
+        font-size: 30px;
+      }
+
+      .links {
+        display: flex;
+        justify-content: center;
+        margin-top: 50px;
+        margin-bottom: 50px;
+      }
+
+      .link {
+        width: 200px;
+        background: white;
+        border-bottom: 2px solid #8a05ef;
+        color: #8a05ef;
+        font-size: 16px;
+        margin: 5px;
+        padding: 10px;
+        border-radius: 0px;
+      }
+      .logo {
+        width: 50px;
+      }
+
+      .thumbnail {
+        padding: 0;
+        margin-bottom: 0px;
+        border-radius: 0px;
+        border: none;
+      }
+
+      .thumbnail-container {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .thumbnail-link {
+        position: relative;
+      }
+
+      .thumbnail-link:hover {
+         cursor: pointer;
+      }
+
+      .thumbnail-label {
+        background: rgba(138, 5, 239, 0.8);
+        position: absolute;
+        bottom: 0px;
+        text-align: center;
+        color: white;
+        width: 100%;
+        padding: 5px;
+        transition: padding 400ms, background 400ms;
+      }
+
+      .thumbnail-link img {
+        -webkit-filter: grayscale(80%);
+        filter: grayscale(80%);
+        transition: filter 400ms, -webkit-filter 400ms;
+      }
+
+      .thumbnail-link:hover > .thumbnail-label {
+        padding-bottom: 15px;
+        background: rgba(138, 5, 239, 1.0);
+      }
+
+      .thumbnail-link:hover img {
+        -webkit-filter: grayscale(0%);
+        filter: grayscale(0%);
+      }
+
+    </style>
+
+    <title>luma.gl</title>
+
+  </head>
+
+  <body>
+    <div id="page-content">
+      <div id="header">
+        <div class="container">
+          <h1><img class="logo" src="./static/luma-icon.png"/> LumaGL</h1>
+          <h3>A JavaScript WebGL Framework for Data Visualization</h3>
+
+          <div class="links">
+            <a class="btn link" href="https://github.com/uber/luma.gl">
+              <i class="fa fa-github"></i> Github
+            </a>
+            <a class="btn link" href="https://uber.github.io/luma.gl/docs">
+              <i class="fa fa-book"></i> Documentation
+            </a>
+          </div>
+        </div>
+      </div>
+      <div id="content">
+        <div class='container'>
+<!--           <h3>Documentation</h3>
+
+          <h3><a href='http://uber.github.io/luma.gl'>Docs</a></h3>
+          <h3><a href='https://github.com/uber/luma.gl'>README</a></h3>
+ -->  
+          <blockquote>LumaGL's primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.</blockquote>
+          <h3>Examples</h3>
+
+          <div class="thumbnail-container">
+            <div class="thumbnail-link">
+                <a href='examples/core/instancing'>
+                  <img src='static/instancing-example.png' class='thumbnail'>
+                </a>
+              <div class="thumbnail-label">Instancing</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/picking'>
+                <img src='static/picking-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Picking</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/multicontext'>
+                <img src='static/multicontext-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Multiple contexts</div>
+            </div>
+            <div class="thumbnail-link">
+              <a href='examples/core/cubemap'>
+                <img src='static/cubemap-example.png' class='thumbnail'>
+              </a>
+              <div class="thumbnail-label">Cubemap</div>
+            </div>
+          </div>
+
+          <!--
+          <div class='row'>
+            <div class='col-md-3'>
+              <a href='examples/core/persistence'><img src='static/persistence-example.png' class='thumbnail'></a>
+              <p>Persistence</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/custom-picking'><img src='static/custom-picking-example.png' class='thumbnail'></a>
+              <p>Custom Picking</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/deferred-rendering'><img src='static/deferred-rendering-example.png' class='thumbnail'></a>
+              <p>Deferred Rendering</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/core/particles'><img src='static/particles-example.png' class='thumbnail'></a>
+              <p>Particles</p>
+            </div>
+          </div>
+          -->
+
+          <h3>Lessons</h3>
+
+          luma.gl versions of the classic "Learning WebGL" lessons.
+
+          <div class="thumbnail-container">
+            <a class="thumbnail-link" href='examples/lessons/1'>
+              <img src='static/lesson-1.png' class='thumbnail'/>
+              <div class="thumbnail-label">1: A Triangle and a Square</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/2'>
+              <img src='static/lesson-2.png' class='thumbnail'/>
+              <div class="thumbnail-label">2: Adding Color</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/3'>
+              <img src='static/lesson-3.png' class='thumbnail'/>
+              <div class="thumbnail-label">3: A Bit of Movement</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/4'>
+              <img src='static/lesson-4.png' class='thumbnail'/>
+              <div class="thumbnail-label">4: Some Real 3D Objects</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/5'>
+              <img src='static/lesson-5.png' class='thumbnail'/>
+              <div class="thumbnail-label">5: Introducing Textures</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/6'>
+              <img src='static/lesson-6.png' class='thumbnail'/>
+              <div class="thumbnail-label">6: Keyboard Input and Texture Filters</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/7'>
+              <img src='static/lesson-7.png' class='thumbnail'/>
+              <div class="thumbnail-label">7: Basic Directional and Ambient Lighting</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/8'>
+              <img src='static/lesson-8.png' class='thumbnail'/>
+              <div class="thumbnail-label">8: Depth Buffer, Transparency and Blending</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/9'>
+              <img src='static/lesson-9.png' class='thumbnail'/>
+              <div class="thumbnail-label">9: Lots of Moving Objects</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/10'>
+              <img src='static/lesson-10.png' class='thumbnail'/>
+              <div class="thumbnail-label">10: Loading a World, and a Basic Camera</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/11'>
+              <img src='static/lesson-11.png' class='thumbnail'/>
+              <div class="thumbnail-label">11: Spheres, Rotation Matrices and Mouse Events</div>
+            </a>
+            <a class="thumbnail-link" href='examples/lessons/12'>
+              <img src='static/lesson-12.png' class='thumbnail'/>
+              <div class="thumbnail-label">12: Point Lighting</div>
+            </a>
+          </div>
+          <!-- TODO Fix these
+          <div class='row'>
+            <div class='col-md-3'>
+              <a href='examples/lessons/13'><img src='static/lesson-13.png' class='thumbnail'></a>
+              <p class='lesson-title'>13: Per-Fragment Lighting, Multiple Programs</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/14'><img src='static/lesson-14.png' class='thumbnail'></a>
+              <p class='lesson-title'>14: Specular Highlights, Loading a JSON Model</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/15'><img src='static/lesson-15.png' class='thumbnail'></a>
+              <p class='lesson-title'>15: Specular Maps</p>
+            </div>
+            <div class='col-md-3'>
+              <a href='examples/lessons/16'><img src='static/lesson-16.png' class='thumbnail'></a>
+              <p class='lesson-title'>16: Render-to-Texture</p>
+            </div>
+          </div>
+          -->
+
+        </div>
+      </div>
     </div>
+  </body>
 
-    <div class="box" id="modules">
-      <b>Overview:</b>
-      <ul>
-        <li>
-          <a href="index.html">Overview</a>
-        </li>
-      </ul>
-    </div>
-
-    <div class="box" id="modules">
-      <b>Core Classes:</b>
-        <li>
-          <a href="model.html">Model</a>
-        </li>
-        <li>
-          <a href="camera.html">Camera</a>
-        </li>
-        <li>
-          <a href="scene.html">Scene</a>
-        </li>
-     </ul>
-   </div>
-
-
-    <div class="box" id="modules">
-      <b>WebGL Classes:</b>
-      <ul>
-        <li>
-          <a href="context.html">WebGL Context Creation</a>
-        </li>
-        <li>
-          <a href="program.html">Program</a>
-        </li>
-        <li>
-          <a href="buffer.html">Buffer</a>
-        </li>
-        <li>
-          <a href="frame-buffer.html">FrameBuffer</a>
-        </li>
-        <li>
-          <a href="texture.html">Texture</a>
-        </li>
-      </ul>
-    </div>
-
-    <div class="box" id="modules">
-      <b>Modules:</b>
-      <ul>
-        <li>
-          <a href="math.html">Math</a>
-        </li>
-        <li>
-          <a href="shaders.html">Shaders</a>
-        </li>
-        <li>
-          <a href="event.html">Event</a>
-        </li>
-        <li>
-          <a href="fx.html">Fx</a>
-        </li>
-        <li>
-          <a href="io.html">IO</a>
-        </li>
-        <li>
-          <a href="media.html">Media</a>
-        </li>
-     </ul>
-   </div>
-
-   <div class="box" id="method-summary">
-     <b>Methods: </b>
-    <ul id="method-summary-list">
-    </ul>
-   </div>
-  </div>
-
-  <div id="doc">
-
-<h1>Overview</h1>
-
-<p>This is the main page of the reference documentation for <strong>luma.gl</strong>.</p>
-
-<p>As a guide for getting started, for most applications,
-the <a href="model.html"><code>Model</code></a>, <a href="scene.html"><code>Scene</code></a> and
-<a href="camera.html#PerspectiveCamera"><code>PerspectiveCamera</code></a>
-classes are likely the primary luma.gl classes.
-These tie together a lot of the concepts in luma.gl and are good places
-to start reading.</p>
-
-<h2 id="core-classes">Core Classes</h2>
-<hr />
-
-<p>These classes are the basic building blocks of most applications.</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Class</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><a href="model.html"><code>Model</code></a></td>
-      <td>A renderable object with Geometry, Textures, and uniforms.</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html"><code>Geometry</code></a></td>
-      <td>Holds attributes and drawType for a geometric primitive</td>
-    </tr>
-    <tr>
-      <td><a href="camera.html#PerspectiveCamera"><code>PerspectiveCamera</code></a></td>
-      <td>Generates uniform matrices for perspective viewing</td>
-    </tr>
-    <tr>
-      <td><a href="camera.html#OrthoCamera"><code>OrthoCamera</code></a></td>
-      <td>Generates uniform matrices for orthographic viewing</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="scene-graph">Scene Graph</h2>
-<hr />
-
-<p>A basic hierarchy of 3D objects with positioning, grouping, traversal and
-scene support.</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Class</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><a href="object3d.html"><code>Object3D</code></a></td>
-      <td>Base class, golds position, rotation, scale</td>
-    </tr>
-    <tr>
-      <td><a href="group.html"><code>Group</code></a></td>
-      <td>Supports recursive travesal and matrix transformation</td>
-    </tr>
-    <tr>
-      <td><a href="scene.html"><code>Scene</code></a></td>
-      <td>A Group with settings that can be rendered using default shaders</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="geometric-primitives">Geometric Primitives</h2>
-<hr />
-
-<p>A geometry holds a set of attributes (native JavaScript arrays)
-(vertices, normals, texCoords, indices) and a drawType.</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Class</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><a href="geometry.html#Geometry"><code>Geometry</code></a></td>
-      <td>Base class, holds vertex attributes and drawType</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html#ConeGeometry"><code>ConeGeometry</code></a></td>
-      <td>Vertex attributes for a cone</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html#CubeGeometry"><code>CubeGeometry</code></a></td>
-      <td>Vertex attributes for a cube</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html#IcoSphereGeometry"><code>IcoSphereGeometry</code></a></td>
-      <td>Vertex attributes for an icosahedron</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html#PlaneGeometry"><code>PlaneGeometry</code></a></td>
-      <td>Vertex attributes for a plane</td>
-    </tr>
-    <tr>
-      <td><a href="geometry.html#SphereGeometry"><code>SphereGeometry</code></a></td>
-      <td>Vertex attributes for a sphere</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="webgl-classes">WebGL Classes</h2>
-<hr />
-
-<p>luma.gl is built on top of a set of JavaScript modules and classes that
-manage/wrap basic WebGL API objects, making WebGL objects easier to work
-with in JavaScript.</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Class/Module</strong></td>
-      <td><strong>WebGL Type</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><a href="context.html#createGLContext"><code>createGLContext</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext"><code>WebGLRenderingContext</code></a></td>
-      <td>The main GL context.</td>
-    </tr>
-    <tr>
-      <td><a href="program.html"><code>Program</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram"><code>WebGLProgram</code></a></td>
-      <td>Shaders, attributes and uniforms.</td>
-    </tr>
-    <tr>
-      <td><a href="buffer.html"><code>Buffer</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLBuffer"><code>WebGLBuffer</code></a></td>
-      <td>Holds memory on GPU</td>
-    </tr>
-    <tr>
-      <td><a href="texture.html"><code>Texture</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture"><code>WebGLTexture</code></a></td>
-      <td>Holds a loaded texture</td>
-    </tr>
-    <tr>
-      <td><a href="frame-buffer.html"><code>FrameBuffer</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLFrameBuffer"><code>WebGLFrameBuffer</code></a></td>
-      <td>Holds a framebuffer</td>
-    </tr>
-    <tr>
-      <td><a href="render-buffer.html"><code>RenderBuffer</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderBuffer"><code>WebGLRenderBuffer</code></a></td>
-      <td>Holds a renderbuffer</td>
-    </tr>
-    <tr>
-      <td><a href="vertex-attributes.html"><code>VertexAttributes</code></a></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttribPointer"><code>gl.vertexAttrib*</code></a></td>
-      <td>Manipulates shader attributes</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="webgl2-classes">WebGL2 Classes</h2>
-<hr />
-
-<p>luma.gl is designed to facilitate use of the latest WebGL features, so
-wrapper classes are provided for the new objects in WebGL2.</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Class/Module</strong></td>
-      <td><strong>WebGL Type</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><code>Query</code></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery"><code>WebGLQuery</code></a></td>
-      <td>Occlusion, performance queries</td>
-    </tr>
-    <tr>
-      <td><code>Sampler</code></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLSampler"><code>WebGLSampler</code></a></td>
-      <td>Stores texture sampling params</td>
-    </tr>
-    <tr>
-      <td><code>Sync</code></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLSync"><code>WebGLSync</code></a></td>
-      <td>Synchronize GPU and app.</td>
-    </tr>
-    <tr>
-      <td><code>TransformFeedback</code></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback"><code>WebGLTransformFeedback</code></a></td>
-      <td>Capture Vertex Shader output</td>
-    </tr>
-    <tr>
-      <td><code>VertexArrayObject</code></td>
-      <td><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject"><code>WebGLVertexArrayObject</code></a></td>
-      <td>Save global vertex attribute array.</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="supporting-modules">Supporting Modules</h2>
-<hr />
-
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Module</strong></td>
-      <td><strong>Description</strong></td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td><a href="math.html"><code>Math</code></a></td>
-      <td>Small math library, Vec3, Vec4, Mat4, Quat</td>
-    </tr>
-    <tr>
-      <td><a href="event.html"><code>Event</code></a></td>
-      <td>Event handling</td>
-    </tr>
-    <tr>
-      <td><a href="io.html"><code>IO</code></a></td>
-      <td>Loader support</td>
-    </tr>
-    <tr>
-      <td><a href="fx.html"><code>Fx</code></a></td>
-      <td>render loop support (or use <code>window.requestAnimationFrame</code>)</td>
-    </tr>
-  </tfoot>
-</table>
-
-<h2 id="addons">Addons</h2>
-<hr />
-
-<p>Functions that are not considered a core part of the library are
-collected in the <code>addons</code> folder. These are not guaranteed to remain in future
-versions of the library, but in such cases they can be copied into the
-application if still useful.</p>
-
-
-</div>
-
-<script type="text/javascript">
-  (function() {
-    var h2 = document.getElementById('doc').getElementsByTagName('h2'),
-        ans = [];
-    for (var i = 0, l = h2.length; i < l; i++) {
-      var elem = h2[i];
-      ans.push('<a href=\'#' + elem.id + '\'>' + (elem.innerText || elem.textContent) + '</a>');
-    }
-    document.getElementById('method-summary-list').innerHTML = '<li>' + ans.join('</li><li>') + '</li>';
-  })();
-</script>
-
-
-</div>
-</body>
 </html>
