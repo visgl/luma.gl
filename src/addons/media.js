@@ -2,11 +2,11 @@
 // maybe others like device, etc).
 
 /* eslint-disable */ // TODO - this file needs cleanup
-import {Program} from './webgl';
-import {Plane} from './objects';
-import {PerspectiveCamera} from './camera';
-import Scene from './scenegraph';
-import {splat} from './utils';
+import {Program} from '../webgl';
+import {Plane} from '../core/geometry';
+import {PerspectiveCamera} from '../core/camera';
+import Scene from '../scenegraph';
+import {splat} from '../utils';
 
 // length given a 45 fov angle, and 0.2 distance to camera
 const length = 0.16568542494923805;

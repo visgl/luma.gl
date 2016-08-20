@@ -10,11 +10,14 @@ export default class Group extends Object3D {
     this.children = children;
   }
 
+  // Unpacks arrays and nested arrays of children
   add(...children) {
     for (const child of children) {
-      // Generate unique id for child
-      child.id = child.id || uid();
-      this.children.push(child);
+      if (Array.isArray(child)) {
+        this.add(...child);
+      } else {
+        this.children.push(child);
+      }
     }
     return this;
   }

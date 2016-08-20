@@ -1,20 +1,20 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
+var createGLContext = LumaGL.createGLContext;
+var loadTextures = LumaGL.loadTextures;
+var PerspectiveCamera = LumaGL.PerspectiveCamera;
+var Program = LumaGL.Program;
+var Scene = LumaGL.Scene;
+var addEvents = LumaGL.addEvents;
+var Fx = LumaGL.Fx;
+var Vec3 = LumaGL.Vec3;
+var Sphere = LumaGL.Sphere;
+
+function $id(d) {
+  return document.getElementById(d);
+}
+
 window.webGLStart = function() {
-
-  var $id = function(d) {
-    return document.getElementById(d);
-  };
-
-  var createGLContext = LumaGL.createGLContext;
-  var loadTextures = LumaGL.loadTextures;
-  var PerspectiveCamera = LumaGL.PerspectiveCamera;
-  var Program = LumaGL.Program;
-  var Scene = LumaGL.Scene;
-  var addEvents = LumaGL.addEvents;
-  var Fx = LumaGL.Fx;
-  var Vec3 = LumaGL.Vec3;
-  var Sphere = LumaGL.Sphere;
 
   var moon;
   var pos;

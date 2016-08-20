@@ -1,5 +1,5 @@
-import Geometry from '../geometry';
-import Model from '../model';
+import Geometry from '../core/geometry';
+import Model from '../core/model';
 
 export class TruncatedConeGeometry extends Geometry {
 

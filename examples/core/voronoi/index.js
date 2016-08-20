@@ -1,6 +1,16 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-
+const createGLContext = LumaGL.createGLContext;
+const IcoSphere = LumaGL.IcoSphere;
+const Program = LumaGL.Program;
+const Buffer = LumaGL.Buffer;
+const PerspectiveCamera = LumaGL.PerspectiveCamera;
+const Framebuffer = LumaGL.Framebuffer;
+const Media = LumaGL.Media;
+const Mat4 = LumaGL.Mat4;
+const Vec3 = LumaGL.Vec3;
+const Fx = LumaGL.Fx;
+const addEvents = LumaGL.addEvents;
 
 const VERTEX_SHADER = `
 attribute vec3 position;
@@ -72,18 +82,6 @@ void main(void) {
 `;
 
 window.webGLStart = function() {
-  const createGLContext = LumaGL.createGLContext;
-  const IcoSphere = LumaGL.IcoSphere;
-  const Program = LumaGL.Program;
-  const Buffer = LumaGL.Buffer;
-  const PerspectiveCamera = LumaGL.PerspectiveCamera;
-  const Framebuffer = LumaGL.Framebuffer;
-  const Media = LumaGL.Media;
-  const Mat4 = LumaGL.Mat4;
-  const Vec3 = LumaGL.Vec3;
-  const Fx = LumaGL.Fx;
-  const addEvents = LumaGL.addEvents;
-
   const numSites = 1;
   const sites = [0, 0, 1];
   const siteColors = [0.5, 0.5, 0.7];

@@ -1,12 +1,12 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements, no-try-catch */
 
-import {Camera} from '../camera';
-import Group from './group';
-import {pickModels} from './pick';
+import * as config from '../core/config';
+import {Camera} from '../core/camera';
 import {Mat4, Vec3} from '../math';
 import {merge} from '../utils';
-import * as config from '../config';
+import Group from './group';
+import {pickModels} from './pick';
 import assert from 'assert';
 
 const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
@@ -93,7 +93,7 @@ export default class Scene extends Group {
     context = {},
     ...opts
   } = {}) {
-    assert(camera instanceof Camera, 'Invalid Camera in Scene.render');
+    // assert(camera instanceof Camera, 'Invalid Camera in Scene.render');
 
     const {gl} = this;
     this.clear(gl);

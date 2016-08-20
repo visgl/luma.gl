@@ -1,4 +1,4 @@
-import {uid} from './utils';
+import {uid} from '../utils';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
