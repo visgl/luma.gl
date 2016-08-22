@@ -1,4 +1,4 @@
-2.3.0 - Decoupled headless-gl dependency
+### 2.3.0 - Decoupled headless-gl dependency
 
 - It is now necessary to import luma.gl through `luma.gl/headless` to get
 headless integration.
