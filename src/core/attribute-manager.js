@@ -59,22 +59,22 @@ export default class AttributeManager {
   }
 
   // Adds a static attribute (that is not auto updated)
-  add(attributes, updaters) {
-    const newAttributes = this._add(attributes, updaters, {});
+  add(attributes) {
+    const newAttributes = this._add(attributes, {});
     Object.assign(this.attributes, newAttributes);
   }
 
   // Adds a dynamic attribute, that is autoupdated
-  addDynamic(attributes, updaters) {
-    const newAttributes = this._add(attributes, updaters, {
+  addDynamic(attributes) {
+    const newAttributes = this._add(attributes, {
       autoUpdate: true
     });
     Object.assign(this.attributes, newAttributes);
   }
 
   // Adds an instanced attribute that is autoupdated
-  addInstanced(attributes, updaters) {
-    const newAttributes = this._add(attributes, updaters, {
+  addInstanced(attributes) {
+    const newAttributes = this._add(attributes, {
       instanced: 1,
       autoUpdate: true
     });
@@ -226,16 +226,15 @@ export default class AttributeManager {
   }
 
   // Used to register an attribute
-  _add(attributes, updaters, _extraProps = {}) {
+  _add(attributes, _extraProps = {}) {
 
     const newAttributes = {};
 
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
-      const updater = updaters && updaters[attributeName];
 
       // Check all fields and generate helpful error messages
-      this._validate(attributeName, attribute, updater);
+      this._validate(attributeName, attribute);
 
       // Initialize the attribute descriptor, with WebGL and metadata fields
       const attributeData = {
@@ -248,7 +247,6 @@ export default class AttributeManager {
 
         // Metadata
         ...attribute,
-        ...updater,
 
         // State
         isExternalBuffer: false,
@@ -271,28 +269,12 @@ export default class AttributeManager {
     return newAttributes;
   }
 
-  _validate(attributeName, attribute, updater) {
+  _validate(attributeName, attribute) {
     assert(typeof attribute.size === 'number',
       `Attribute definition for ${attributeName} missing size`);
 
-    // Check that value extraction keys are set
-    assert(typeof attribute[0] === 'string',
-      `Attribute definition for ${attributeName} missing key 0`);
-    if (attribute.size >= 2) {
-      assert(typeof attribute[1] === 'string',
-        `Attribute definition for ${attributeName} missing key 1`);
-    }
-    if (attribute.size >= 3) {
-      assert(typeof attribute[2] === 'string',
-        `Attribute definition for ${attributeName} missing key 2`);
-    }
-    if (attribute.size >= 4) {
-      assert(typeof attribute[3] === 'string',
-        `Attribute definition for ${attributeName} missing key 3`);
-    }
-
     // Check the updater
-    assert(!updater || typeof updater.update === 'function',
+    assert(typeof attribute.update === 'function' || attribute.noAlloc,
       `Attribute updater for ${attributeName} missing update method`);
   }
 
