@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "2.4.2",
+  "version": "3.0.0-beta1",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "author": "Ib Green <ib@uber.com>",
@@ -8,7 +8,8 @@
     "Nicolas Belomonte <nico@uber.com>",
     "Rye Terrell <ryeterrell@ryeterrell.net",
     "Shan He <shan@uber.com>",
-    "Mikola Lysenko <mikolalysenko@gmail.com"
+    "Mikola Lysenko <mikolalysenko@gmail.com",
+    "Wesam Manassra <manassra@uber.com>"
   ],
   "repository": {
     "type": "git",

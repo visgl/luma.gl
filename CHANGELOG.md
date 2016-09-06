@@ -1,8 +1,17 @@
+
+# BETA releases
+
+### 3.0.0-beta1
+- Attribute manager changes
+
+# Official releases
+
 ### 2.5.0 - Fixes to examples
 
 - Fixes to examples
 - Cleanup example code
-- Program.render() now takes a map of uniforms, reducing need to "set" uniforms before render.
+- Program.render() now takes a map of uniforms,
+  reducing need to "set" uniforms before render.
 - Experimental `requestAnimationFrame` replacement class
 
 
