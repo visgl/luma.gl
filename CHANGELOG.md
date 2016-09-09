@@ -5,11 +5,24 @@
 
 # Official releases
 
-### 2.5.0 - Fixes to examples
-- Fixes to examples
-- Cleanup example code
-- Program.render() now takes a map of uniforms, reducing need to "set" uniforms before render.
-- Experimental `requestAnimationFrame` replacement class
+
+### 2.5.0 - Node.js/AttributeManager/Renderer/Program.render()/Examples
+
+- Ensure luma.gl does not fail under node until createGLContext is called.
+
+- Program.render() now takes a map of uniforms,
+  reducing need to "set" uniforms before render.
+
+- AttributeManager improvements
+    - add logging/instrumentation hooks, to help apps profile attribute updates.
+    - Pass AttributeManager.update() parameters through to the individual
+      attribute updater funcs, enabling app to generate shared attributes
+      independently of layers for additional performance gains.
+    - Add JSDoc to all public methods and basic test cases.
+
+- New experimental Renderer class - `requestAnimationFrame` replacement.
+
+- Improvement/fixes to examples
 
 ### 2.4.2 - Bugfix for redraw flag management
 - Fix redrawFlag names

@@ -2,42 +2,35 @@
 // Enables app to "import" built-in WebGL types unknown to eslint
 // Provides a hook for application to preimport headless gl
 
-const ERR_WEBGL_MISSING = `
-WebGL API is missing. To run luma.gl under Node.js,
-please install headless-gl and import 'luma.gl/headless' instead of 'luma.gl'.
-`;
-
 /* global window */
 import {global, lumaGlobals} from '../utils';
 
+class DummyType {}
+
 const {
-  WebGLRenderingContext,
-  WebGLProgram,
-  WebGLShader,
-  WebGLBuffer,
-  WebGLFramebuffer,
-  WebGLRenderbuffer,
-  WebGLTexture,
-  WebGLUniformLocation,
-  WebGLActiveInfo,
-  WebGLShaderPrecisionFormat
+  WebGLRenderingContext = DummyType,
+  WebGLProgram = DummyType,
+  WebGLShader = DummyType,
+  WebGLBuffer = DummyType,
+  WebGLFramebuffer = DummyType,
+  WebGLRenderbuffer = DummyType,
+  WebGLTexture = DummyType,
+  WebGLUniformLocation = DummyType,
+  WebGLActiveInfo = DummyType,
+  WebGLShaderPrecisionFormat = DummyType
 } = lumaGlobals.headlessTypes || global;
 
-const allWebGLTypesAvailable =
-  WebGLRenderingContext &&
-  WebGLProgram &&
-  WebGLShader &&
-  WebGLBuffer &&
-  WebGLFramebuffer &&
-  WebGLRenderbuffer &&
-  WebGLTexture &&
-  WebGLUniformLocation &&
-  WebGLActiveInfo &&
-  WebGLShaderPrecisionFormat;
-
-if (!allWebGLTypesAvailable) {
-  throw new Error(ERR_WEBGL_MISSING);
-}
+export const webGLTypesAvailable =
+  WebGLRenderingContext !== DummyType &&
+  WebGLProgram !== DummyType &&
+  WebGLShader !== DummyType &&
+  WebGLBuffer !== DummyType &&
+  WebGLFramebuffer !== DummyType &&
+  WebGLRenderbuffer !== DummyType &&
+  WebGLTexture !== DummyType &&
+  WebGLUniformLocation !== DummyType &&
+  WebGLActiveInfo !== DummyType &&
+  WebGLShaderPrecisionFormat !== DummyType;
 
 // Ensures that WebGL2RenderingContext is defined in non-WebGL2 environments
 // so that apps can test their gl contexts with instanceof
