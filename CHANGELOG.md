@@ -1,3 +1,9 @@
+# BETA releases
+
+### 3.0.0-beta1
+- Attribute manager changes
+
+# Official releases
 
 ### 2.5.0 - Fixes to examples
 - Fixes to examples
@@ -35,6 +41,9 @@ headless-gl.
 ### 2.0.0 - Major API refactoring
 
 ### 2.0.0-beta series
+  - layer architecture refactored to improve performance
+  - updated to handle perspective mode
+  - shaderlib
   - Beta releases, don't use.
 
 ### 1.0.1 - Initial release.
