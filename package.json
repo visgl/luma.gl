@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "author": "Ib Green <ib@uber.com>",
