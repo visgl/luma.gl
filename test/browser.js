@@ -3,3 +3,5 @@ require('tap-browser-color')();
 
 require('./webgl');
 require('./webgl-independent');
+
+require('./core');

@@ -1,0 +1,1 @@
+import './attribute-manager-spec';
