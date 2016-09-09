@@ -2,6 +2,7 @@
 .gitattributes export-ignore
 build/** -diff
 dist/** -diff
+_docs/** -diff
 build/compiler.jar export-ignore
 build/build.py export-ignore
 build/build.js export-ignore

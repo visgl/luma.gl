@@ -47,6 +47,7 @@
     "gl-constants": "^1.0.0",
     "gl-format-compiler-error": "^1.0.2",
     "glsl-shader-name": "^1.0.0",
+    "glslify": "^5.0.2",
     "through": "^2.3.8",
     "webgl-debug": "^1.0.2"
   },
@@ -72,7 +73,6 @@
     "faucet": "0.0.1",
     "get-pixels": "^3.3.0",
     "gl": "^4.0.2",
-    "glslify": "^5.0.2",
     "husky": "^0.10.2",
     "mkdirp": "^0.5.1",
     "ndarray": "^1.0.18",
