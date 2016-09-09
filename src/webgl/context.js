@@ -1,20 +1,23 @@
 // WebGLRenderingContext related methods
 /* eslint-disable no-try-catch, no-loop-func */
 import WebGLDebug from 'webgl-debug';
-import {WebGLRenderingContext} from './webgl-types';
+import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
 import {isWebGL2RenderingContext} from './webgl-checks';
 import assert from 'assert';
 import {log, isBrowser, lumaGlobals} from '../utils';
 /* global document */
 
+const ERR_WEBGL_MISSING_BROWSER = `\
+WebGL API is missing. Check your if your browser supports WebGL or
+install a recent version of a major browser.`;
+
+const ERR_WEBGL_MISSING_NODE = `\
+WebGL API is missing. To run luma.gl under Node.js, please "npm install gl"
+and import 'luma.gl/headless' before importing 'luma.gl'.`;
+
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
 export function createGLContext({
-  // Optional: Supply headless context creator
-  // Done like this to avoid hard dependency on headless-gl
-  headlessGL = null,
-  // Force headless on/off
-  headless,
   // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
   canvas,
   // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
@@ -32,23 +35,27 @@ export function createGLContext({
   let gl;
 
   if (!isBrowser()) {
-    headlessGL = headlessGL || lumaGlobals.headlessGL;
-
     // Create headless gl context
-    if (!headlessGL) {
+    if (!webGLTypesAvailable) {
+      throw new Error(ERR_WEBGL_MISSING_NODE);
+    }
+    if (!lumaGlobals.headlessGL) {
       throw new Error(
         `Cannot create headless WebGL context, headlessGL not available`);
     }
-    gl = headlessGL(width, height, opts);
+    gl = lumaGlobals.headlessGL(width, height, opts);
     if (!gl) {
       throw new Error('headlessGL failed to create headless WebGL context');
     }
-
   } else {
-
     // Create browser gl context
-    canvas = typeof canvas === 'string' ?
-      document.getElementById(canvas) : canvas;
+    if (!webGLTypesAvailable) {
+      throw new Error(ERR_WEBGL_MISSING_BROWSER);
+    }
+    // Make sure we have a canvas
+    if (typeof canvas === 'string') {
+      canvas = document.getElementById(canvas);
+    }
     if (!canvas) {
       canvas = document.createElement('canvas');
     }
