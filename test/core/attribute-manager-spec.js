@@ -46,14 +46,61 @@ test('Core#AttributeManager.update', t => {
   const attributeManager = new AttributeManager();
   attributeManager.add({positions: {size: 2, update}});
 
+  let attribute;
+
+  // First update, should autoalloc and update the value array
   attributeManager.update({
     numInstances: 1,
     data: [{}]
   });
 
-  const attribute = attributeManager.getAttributes()['positions'];
+  attribute = attributeManager.getAttributes()['positions'];
   t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
   t.equals(attribute.value[1], 1, 'attribute value is correct');
+
+
+  // Second update without invalidation, should not update
+  attribute.value[1] = 2;
+
+  attributeManager.update({
+    numInstances: 1,
+    data: [{}]
+  });
+
+  attribute = attributeManager.getAttributes()['positions'];
+  t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
+  t.equals(attribute.value[1], 2,
+    'Second update, attribute value was not changed');
+
+  // Third update, with invalidation, should update
+  attributeManager.invalidateAll();
+  attributeManager.update({
+    numInstances: 1,
+    data: [{}]
+  });
+
+  attribute = attributeManager.getAttributes()['positions'];
+  t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
+  t.equals(attribute.value[1], 1,
+    'Third update, attribute value was updated');
+
+  t.end();
+});
+
+test('Core#AttributeManager.update - 0 numInstances', t => {
+  const attributeManager = new AttributeManager();
+  attributeManager.add({positions: {size: 2, update}});
+
+  let attribute;
+
+  // First update, should autoalloc and update the value array
+  attributeManager.update({
+    numInstances: 0,
+    data: []
+  });
+
+  attribute = attributeManager.getAttributes()['positions'];
+  t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
 
   t.end();
 });
