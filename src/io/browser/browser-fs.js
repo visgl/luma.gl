@@ -4,12 +4,18 @@ import assert from 'assert';
 
 // TODO hack - trick filesaver.js to skip loading under node
 /* global global*/
+const savedNavigatorExists = 'navigator' in global;
+const savedNavigator = global.navigator;
 if (!isBrowser()) {
   global.navigator = {userAgent: 'MSIE 9.'};
 }
 const saveAs = require('filesaver.js');
 if (!isBrowser()) {
-  delete global.navigator;
+  if (savedNavigatorExists) {
+    global.navigator = savedNavigator;
+  } else {
+    delete global.navigator;
+  }
 }
 // END hack
 
