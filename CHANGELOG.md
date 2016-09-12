@@ -1,10 +1,7 @@
-# BETA releases
-
-### 3.0.0-beta1
-- Attribute manager changes
-
 # Official releases
 
+### 2.5.1
+- Attribute manager changes
 
 ### 2.5.0 - Node.js/AttributeManager/Renderer/Program.render()/Examples
 
@@ -60,3 +57,7 @@ headless-gl.
   - Beta releases, don't use.
 
 ### 1.0.1 - Initial release.
+
+# Older BETA releases
+
+### 3.0.0-beta13 - Changes folded into 2.5.1
