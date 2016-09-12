@@ -60,4 +60,4 @@ headless-gl.
 
 # Older BETA releases
 
-### 3.0.0-beta13 - Changes folded into 2.5.1
+### 3.0.0-beta1 - Changes folded into 2.5.1
