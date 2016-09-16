@@ -1,27 +1,28 @@
-import {WebGL} from './webgl-types';
+import {GL} from './webgl-types';
 import {Texture} from './texture';
+import {formatValue} from '../utils';
 import assert from 'assert';
 
 // TODO - use tables to reduce complexity of method below
 /* eslint-disable max-len */
 const UNIFORM_BASE_DESCRIPTORS = {
-  [WebGL.FLOAT]: {function: 'uniform1f', type: Float32Array},
-  [WebGL.INT]: {function: 'uniform1i', type: Uint16Array},
-  [WebGL.BOOL]: {function: 'uniform1i', type: Uint16Array},
-  [WebGL.FLOAT_VEC2]: {function: 'uniform2fv', type: Float32Array, elements: 2},
-  [WebGL.FLOAT_VEC3]: {function: 'uniform3fv', type: Float32Array, elements: 3},
-  [WebGL.FLOAT_VEC4]: {function: 'uniform4fv', type: Float32Array, elements: 4},
-  [WebGL.INT_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
-  [WebGL.INT_VEC3]: {function: 'uniform3iv', type: Uint16Array, elements: 3},
-  [WebGL.INT_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
-  [WebGL.BOOL_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
-  [WebGL.BOOL_VEC3]: {function: 'uniform3fv', type: Uint16Array, elements: 3},
-  [WebGL.BOOL_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
-  [WebGL.FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
-  [WebGL.FLOAT_MAT3]: {mfunction: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
-  [WebGL.FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
-  [WebGL.SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
-  [WebGL.SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
+  [GL.FLOAT]: {function: 'uniform1f', type: Float32Array},
+  [GL.INT]: {function: 'uniform1i', type: Uint16Array},
+  [GL.BOOL]: {function: 'uniform1i', type: Uint16Array},
+  [GL.FLOAT_VEC2]: {function: 'uniform2fv', type: Float32Array, elements: 2},
+  [GL.FLOAT_VEC3]: {function: 'uniform3fv', type: Float32Array, elements: 3},
+  [GL.FLOAT_VEC4]: {function: 'uniform4fv', type: Float32Array, elements: 4},
+  [GL.INT_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
+  [GL.INT_VEC3]: {function: 'uniform3iv', type: Uint16Array, elements: 3},
+  [GL.INT_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
+  [GL.BOOL_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
+  [GL.BOOL_VEC3]: {function: 'uniform3fv', type: Uint16Array, elements: 3},
+  [GL.BOOL_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
+  [GL.FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
+  [GL.FLOAT_MAT3]: {mfunction: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
+  [GL.FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
+  [GL.SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
+  [GL.SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
 };
 /* eslint-enable max-len */
 
@@ -146,7 +147,7 @@ export function getUniformsTable({
     if (uniform !== undefined) {
       table[uniformName] = {
         Type: uniform,
-        Value: uniform.toString()
+        Value: formatValue(uniform)
       };
     }
   }
@@ -168,7 +169,7 @@ export function getUniformsTable({
     if (!table[uniformName]) {
       table[uniformName] = {
         Type: 'NOT USED: ' + uniform,
-        Value: uniform.toString()
+        Value: formatValue(uniform)
       };
     }
   }

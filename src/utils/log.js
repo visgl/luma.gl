@@ -27,6 +27,22 @@ const log = {
   }
 };
 
+export function formatValue(v, maxElts = 16) {
+  if (Array.isArray(v) || ArrayBuffer.isView(v)) {
+    let string = '[';
+    for (let i = 0; i < v.length && i < maxElts; ++i) {
+      if (i > 0) {
+        string += ', '
+      }
+      string += formatValue(v[i]);
+    }
+    return string + ']';
+  } else if (Number.isFinite(v)) {
+    return v.toPrecision(2);
+  }
+  return String(v);
+}
+
 // Make available in browser console
 luma.log = log;
 

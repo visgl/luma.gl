@@ -6,7 +6,7 @@ import {
   WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable
 } from '../webgl';
 import Object3D from '../scenegraph/object-3d';
-import {log, splat} from '../utils';
+import {log, formatValue, splat} from '../utils';
 import {MAX_TEXTURES} from './config';
 import Geometry from './geometry';
 import assert from 'assert';
@@ -202,7 +202,7 @@ export default class Model extends Object3D {
       this.setUniforms(this.getCoordinateUniforms(viewMatrix));
     }
 
-    log.log(2, `Rendering model ${this.id} - setting state`, this);
+    log.log(2, `>>> RENDERING MODEL ${this.id} - setting state`, this);
 
     this.setProgramState(otherUniforms);
 
@@ -214,7 +214,7 @@ export default class Model extends Object3D {
     this.onBeforeRender();
 
     log.log(2, `Rendering model ${this.id} - calling draw`, this);
-    this._log(3);
+    this._logAttributesAndUniforms(3, uniforms);
 
     const {gl} = this.program;
     const {geometry, isInstanced, instanceCount} = this;
@@ -233,6 +233,8 @@ export default class Model extends Object3D {
     this.unsetProgramState();
 
     this.setNeedsRedraw(false);
+
+    log.log(2, `<<< RENDERING MODEL ${this.id} - complete`, this);
 
     return this;
   }
@@ -283,7 +285,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  _log(priority = 3) {
+  _logAttributesAndUniforms(priority = 3, uniforms) {
     if (log.priority >= priority) {
       let table = this._getAttributesTable({
         header: `Attributes ${this.geometry.id}`,
@@ -298,7 +300,7 @@ export default class Model extends Object3D {
       table = getUniformsTable({
         header: `Uniforms ${this.geometry.id}`,
         program: this.program,
-        uniforms: this.uniforms
+        uniforms: {...this.uniforms, ...  uniforms}
       });
       log.table(priority, table);
     }
@@ -308,6 +310,7 @@ export default class Model extends Object3D {
   _getAttributesTable({
     attributes,
     header = 'Attributes',
+    instanced,
     program
   } = {}) {
     assert(program);
@@ -335,40 +338,43 @@ export default class Model extends Object3D {
   _getAttributeEntry(attribute, location) {
     const round = num => Math.round(num * 10) / 10;
 
-    if (attribute) {
-      if (location === null) {
-        location = attribute.isIndexed ? 'ELEMENT_ARRAY_BUFFER' : 'NOT USED';
-      }
+    let type = 'NOT PROVIDED'
+    let instanced = 0;
+    let size = 'N/A';
+    let verts = 'N/A';
+    let bytes = 'N/A';
+    let value = 'N/A';
 
-      if (attribute instanceof Buffer) {
-        const buffer = attribute;
-        const verts = round(buffer.data.length / buffer.layout.size);
-        const bytes = buffer.data.length * buffer.data.BYTES_PER_ELEMENT;
-        return {
-          Location: location,
-          Type: buffer.layout.type,
-          Instanced: buffer.layout.instanced,
-          Size: buffer.layout.size,
-          'Verts (Bytes)': `${verts} (${bytes})`
-        };
-      }
-
-      return {
-        Location: location,
-        Type: attribute.value.constructor.name,
-        Instanced: attribute.instanced,
-        Verts: round(attribute.value.length / attribute.size),
-        Size: attribute.size,
-        Bytes: attribute.value.length * attribute.value.BYTES_PER_ELEMENT
-      };
+    if (attribute && location === null) {
+      location = attribute.isIndexed ? 'ELEMENT_ARRAY_BUFFER' : 'NOT USED';
     }
+
+    if (attribute instanceof Buffer) {
+      const buffer = attribute;
+      type = buffer.layout.type;
+      instanced = buffer.layout.instanced;
+      size = buffer.layout.size;
+      verts = round(buffer.data.length / buffer.layout.size);
+      bytes = buffer.data.length * buffer.data.BYTES_PER_ELEMENT;
+    } else if (attribute) {
+      type = attribute.value.constructor.name;
+      instanced = attribute.instanced;
+      size = attribute.size;
+      verts = round(attribute.value.length / attribute.size);
+      bytes = attribute.value.length * attribute.value.BYTES_PER_ELEMENT;
+      value = attribute.value;
+    }
+
+
+    if (instanced) {
+      type = `${type} [instanced]`
+    }
+
     return {
       Location: location,
-      Type: 'NOT PROVIDED',
-      Instanced: 'N/A',
-      Verts: 'N/A',
-      Size: 'N/A',
-      Bytes: 'N/A'
+      Type: type,
+      'SizexVerts=Bytes': `${size}x${verts}=${bytes}`,
+      'Value': formatValue(value)
     };
   }
 
