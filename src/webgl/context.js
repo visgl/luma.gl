@@ -192,9 +192,9 @@ function throwOnError(err, functionName, args) {
 // Don't generate function string until it is needed
 function validateArgsAndLog(functionName, functionArgs) {
   let functionString;
-  if (log.priority >= 3) {
+  if (log.priority >= 4) {
     functionString = getFunctionString(functionName, functionArgs);
-    log.info(3, `${functionString}`);
+    log.info(4, `${functionString}`);
   }
 
   for (const arg of functionArgs) {
