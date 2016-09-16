@@ -69,7 +69,6 @@ function glGetLumaInfo(gl) {
 export function getMaxAttributes(gl) {
   assertWebGLRenderingContext(gl);
   return gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-  return maxAttributes;
 }
 
 /**

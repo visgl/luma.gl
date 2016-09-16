@@ -432,7 +432,7 @@ export default class Program {
     const length = this.getAttributeCount();
     for (let location = 0; location < length; location++) {
       const name = this.getAttributeName(location);
-      attributeLocations[name] = location;
+      attributeLocations[name] = this.getAttributeLocation(name);
     }
     return attributeLocations;
   }

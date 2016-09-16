@@ -213,7 +213,7 @@ export default class Model extends Object3D {
 
     this.onBeforeRender();
 
-    log.log(2, `Rendering model ${this.id} - calling draw`, this);
+    log.log(2, `Rendering model ${this.id} - calling draw`);
     this._logAttributesAndUniforms(3, uniforms);
 
     const {gl} = this.program;
