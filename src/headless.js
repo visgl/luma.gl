@@ -1,14 +1,14 @@
-import {global, lumaGlobals} from './utils';
+import {global, luma} from './utils';
 
 // We want to run on both brow
 //try {
-lumaGlobals.headlessGL = require('gl');
-lumaGlobals.headlessTypes = require('gl/wrap');
+luma.globals.headlessGL = require('gl');
+luma.globals.headlessTypes = require('gl/wrap');
 // } catch (error) {
 //   /* ignore */
 // }
 
-if (!lumaGlobals.headlessTypes.WebGLRenderingContext) {
+if (!luma.globals.headlessTypes.WebGLRenderingContext) {
   throw new Error('Could not access headless WebGL type definitions');
 }
 

@@ -2,4 +2,4 @@
 // of functions
 import {isBrowser} from '../utils';
 
-module.exports = isBrowser() ? require('./browser') : require('./node');
+module.exports = isBrowser ? require('./browser') : require('./node');

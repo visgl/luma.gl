@@ -6,11 +6,11 @@ import assert from 'assert';
 /* global global*/
 const savedNavigatorExists = 'navigator' in global;
 const savedNavigator = global.navigator;
-if (!isBrowser()) {
+if (!isBrowser) {
   global.navigator = {userAgent: 'MSIE 9.'};
 }
 const saveAs = require('filesaver.js');
-if (!isBrowser()) {
+if (!isBrowser) {
   if (savedNavigatorExists) {
     global.navigator = savedNavigator;
   } else {

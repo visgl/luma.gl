@@ -3,7 +3,7 @@
 // Provides a hook for application to preimport headless gl
 
 /* global window */
-import {global, lumaGlobals} from '../utils';
+import {global, luma} from '../utils';
 
 class DummyType {}
 
@@ -18,7 +18,7 @@ const {
   WebGLUniformLocation = DummyType,
   WebGLActiveInfo = DummyType,
   WebGLShaderPrecisionFormat = DummyType
-} = lumaGlobals.headlessTypes || global;
+} = luma.globals.headlessTypes || global;
 
 export const webGLTypesAvailable =
   WebGLRenderingContext !== DummyType &&

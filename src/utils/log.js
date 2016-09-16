@@ -1,4 +1,4 @@
-import {lumagl} from './is-browser';
+import {luma} from './is-browser';
 /* eslint-disable no-console */
 /* global console */
 /* global window */
@@ -28,6 +28,6 @@ const log = {
 };
 
 // Make available in browser console
-lumagl.log = log;
+luma.log = log;
 
 export default log;

@@ -2,11 +2,13 @@
 import 'babel-polyfill';
 import * as LumaGL from './index';
 import * as addons from './addons';
-import {lumagl} from './utils';
+import {luma} from './utils';
 /* global window */
 
 // Export all LumaGL objects as members of global lumagl variable
 if (typeof window !== 'undefined') {
-  Object.assign(lumagl, LumaGL);
-  lumagl.addons = addons;
+  luma.LumaGL = LumaGL;
+  luma.addons = addons;
+  LumaGL.addons = addons;
+  window.LumaGL = LumaGL;
 }

@@ -1,35 +1,44 @@
 // This function is needed in initialization stages,
 // make sure it can be imported in isolation
 /* global process */
-function isBrowser() {
-  const isNode =
-    typeof process === 'object' &&
-    String(process) === '[object process]' &&
-    !process.browser;
-  return !isNode;
+export const isNode =
+  typeof process === 'object' &&
+  String(process) === '[object process]' &&
+  !process.browser;
+export const isBrowser = !isNode;
+
+// TODO - Move this definition out of utils
+export const luma = {
+  // Keep some luma globals in a sub-object
+  // This allows us to dynamically detect if certain modules have been
+  // included (such as IO and headless) and enable related functionality,
+  // without unconditionally requiring and thus bundling big dependencies
+  // into the app.
+  globals: {
+    headlessGL: null,
+    headlessTypes: null,
+    modules: {},
+    nodeIO: {}
+  }
+
+  // Logger will also be attached here.
 };
 
-const glob = isBrowser() ? window : global;
-
-// Export lumagl symbols as luma, lumagl and LumaGL on global context
-if (glob.lumagl) {
-  throw new Error('lumagl multiple copies detected');
+if (isBrowser) {
+  // Export luma symbols as luma, luma and Luma on global context
+  if (window.luma) {
+    throw new Error('luma.gl - multiple versions detected');
+  }
+  window.luma = luma;
+} else {
+  if (global.luma) {
+    throw new Error('luma.gl - multiple versions detected');
+  }
+  global.luma = luma;
 }
-glob.lumagl = {};
-glob.luma = glob.lumagl;
-glob.LumaGL = glob.lumagl;
-
-// Keep luma globals in a globals sub-object
-glob.lumagl.globals = {
-  headlessGL: null,
-  headlessTypes: null,
-  modules: {},
-  nodeIO: {}
-};
 
 module.exports = {
   isBrowser,
-  global: glob,
-  lumagl: glob.lumagl,
-  lumaGlobals: glob.lumagl.globals
+  global: isBrowser ? window : global,
+  luma
 };

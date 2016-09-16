@@ -342,13 +342,14 @@ export default class Model extends Object3D {
 
       if (attribute instanceof Buffer) {
         const buffer = attribute;
+        const verts = round(buffer.data.length / buffer.layout.size);
+        const bytes = buffer.data.length * buffer.data.BYTES_PER_ELEMENT;
         return {
           Location: location,
           Type: buffer.layout.type,
           Instanced: buffer.layout.instanced,
-          Verts: round(buffer.data.length / buffer.layout.size),
           Size: buffer.layout.size,
-          Bytes: buffer.data.length * buffer.data.BYTES_PER_ELEMENT
+          'Verts (Bytes)': `${verts} (${bytes})`
         };
       }
 

@@ -1,4 +1,4 @@
-import {lumaGlobals} from '../../utils';
+import {luma} from '../../utils';
 
 // Export node functions matched by browser-fs
 function notImplemented(functionName) {
@@ -8,18 +8,18 @@ function notImplemented(functionName) {
 }
 
 export function readFile(...args) {
-  return (lumaGlobals.nodeIO.readFile || notImplemented('readFile'))(...args);
+  return (luma.globals.nodeIO.readFile || notImplemented('readFile'))(...args);
 }
 
 export function writeFile(...args) {
-  return (lumaGlobals.nodeIO.writeFile || notImplemented('writeFile'))(...args);
+  return (luma.globals.nodeIO.writeFile || notImplemented('writeFile'))(...args);
 }
 
 export function compressImage(...args) {
-  const f = lumaGlobals.nodeIO.compressImage || notImplemented('compressImage');
+  const f = luma.globals.nodeIO.compressImage || notImplemented('compressImage');
   return f(...args);
 }
 
 export function loadImage(...args) {
-  return (lumaGlobals.nodeIO.loadImage || notImplemented('loadImage'))(...args);
+  return (luma.globals.nodeIO.loadImage || notImplemented('loadImage'))(...args);
 }

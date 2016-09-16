@@ -6,7 +6,7 @@ import savePixels from 'save-pixels';
 import ndarray from 'ndarray';
 import {readFile, writeFile} from 'fs';
 
-import {promisify, lumaGlobals} from './utils';
+import {promisify, luma} from './utils';
 
 /**
  * Returns data bytes representing a compressed image in PNG or JPG format,
@@ -32,11 +32,11 @@ export function loadImage(url) {
 }
 
 
-lumaGlobals.modules.getPixels = getPixels;
-lumaGlobals.modules.savePixels = savePixels;
-lumaGlobals.modules.ndarray = ndarray;
+luma.globals.modules.getPixels = getPixels;
+luma.globals.modules.savePixels = savePixels;
+luma.globals.modules.ndarray = ndarray;
 
-lumaGlobals.nodeIO = {
+luma.globals.nodeIO = {
   readFile,
   writeFile,
   compressImage,

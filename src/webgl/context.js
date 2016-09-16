@@ -4,7 +4,7 @@ import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
 import {isWebGL2RenderingContext} from './webgl-checks';
 import assert from 'assert';
-import {log, isBrowser, lumaGlobals} from '../utils';
+import {log, isBrowser, luma} from '../utils';
 /* global document */
 
 const ERR_WEBGL_MISSING_BROWSER = `\
@@ -34,16 +34,16 @@ export function createGLContext({
 } = {}) {
   let gl;
 
-  if (!isBrowser()) {
+  if (!isBrowser) {
     // Create headless gl context
     if (!webGLTypesAvailable) {
       throw new Error(ERR_WEBGL_MISSING_NODE);
     }
-    if (!lumaGlobals.headlessGL) {
+    if (!luma.globals.headlessGL) {
       throw new Error(
         `Cannot create headless WebGL context, headlessGL not available`);
     }
-    gl = lumaGlobals.headlessGL(width, height, opts);
+    gl = luma.globals.headlessGL(width, height, opts);
     if (!gl) {
       throw new Error('headlessGL failed to create headless WebGL context');
     }
@@ -75,7 +75,7 @@ export function createGLContext({
     assert(gl, 'Failed to create WebGLRenderingContext');
   }
 
-  if (isBrowser() && debug) {
+  if (isBrowser && debug) {
     const debugGL =
       WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
     class WebGLDebugContext {}

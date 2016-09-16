@@ -46,15 +46,19 @@ export default class Program {
     id,
     vs = SHADERS.DEFAULT.vs,
     fs = SHADERS.DEFAULT.fs,
-    defaultUniforms = SHADERS.DEFAULT.defaultUniforms,
+    defaultUniforms,
     handle
   } = {}) {
     assertWebGLRenderingContext(gl);
 
-    if (arguments.length > 2) {
-      throw new Error('Wrong number of arguments to Program(gl, {vs, fs, id})');
+    // Assign default uniforms if any of the default shaders is being used
+    if (vs === SHADERS.DEFAULT.vs || fs === SHADERS.DEFAULT.fs
+      && defaultUniforms === undefined
+    ) {
+      defaultUniforms = SHADERS.DEFAULT.defaultUniforms;
     }
 
+    // Create shaders
     this.vs = new VertexShader(gl, vs);
     this.fs = new FragmentShader(gl, fs);
 
