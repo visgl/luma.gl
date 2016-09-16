@@ -1,6 +1,13 @@
 # Official releases
 
-### 2.5.1
+### 2.5.3 - FIX: Linux rendering issues
+- Add missing call to getAttribLocation.
+- Some polish on luma's built-in attribute/uniform logging
+
+### 2.5.2 - FIX: document.navigator override
+- More gentle override, carefully restoring the variable.
+
+### 2.5.1 - FIX: make deprecated AttributeManager.add updateMap work again 
 - Attribute manager changes
 
 ### 2.5.0 - Node.js/AttributeManager/Renderer/Program.render()/Examples
@@ -21,10 +28,10 @@
 
 - Improvement/fixes to examples
 
-### 2.4.2 - Bugfix for redraw flag management
+### 2.4.2 - FIX: redraw flag management
 - Fix redrawFlag names
 
-### 2.4.1 - Bugfix for headless mode
+### 2.4.1 - FIX: headless mode
 - Add headless.js to exported files
 
 ### 2.4.0 - Improve change detection
