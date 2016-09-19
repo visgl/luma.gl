@@ -202,7 +202,7 @@ export default class Model extends Object3D {
       this.setUniforms(this.getCoordinateUniforms(viewMatrix));
     }
 
-    log.log(2, `>>> RENDERING MODEL ${this.id} - setting state`, this);
+    log.log(2, `>>> RENDERING MODEL ${this.id}`, this);
 
     this.setProgramState(otherUniforms);
 
@@ -213,7 +213,6 @@ export default class Model extends Object3D {
 
     this.onBeforeRender();
 
-    log.log(2, `Rendering model ${this.id} - calling draw`);
     this._logAttributesAndUniforms(3, uniforms);
 
     const {gl} = this.program;
@@ -234,7 +233,7 @@ export default class Model extends Object3D {
 
     this.setNeedsRedraw(false);
 
-    log.log(2, `<<< RENDERING MODEL ${this.id} - complete`, this);
+    log.log(2, `<<< RENDERING MODEL ${this.id} - complete`);
 
     return this;
   }
@@ -285,7 +284,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  _logAttributesAndUniforms(priority = 3, uniforms) {
+  _logAttributesAndUniforms(priority = 3, uniforms = {}) {
     if (log.priority >= priority) {
       let table = this._getAttributesTable({
         header: `Attributes ${this.geometry.id}`,
@@ -300,7 +299,7 @@ export default class Model extends Object3D {
       table = getUniformsTable({
         header: `Uniforms ${this.geometry.id}`,
         program: this.program,
-        uniforms: {...this.uniforms, ...  uniforms}
+        uniforms: {...this.uniforms, ...uniforms}
       });
       log.table(priority, table);
     }
@@ -365,16 +364,15 @@ export default class Model extends Object3D {
       value = attribute.value;
     }
 
+    type = String(type).replace('Array', '');
+    const isInteger = type.indexOf('nt') !== -1;
 
-    if (instanced) {
-      type = `${type} [instanced]`
-    }
+    location = `${location}${instanced ? ' [instanced]' : ''}`;
 
     return {
       Location: location,
-      Type: type,
-      'SizexVerts=Bytes': `${size}x${verts}=${bytes}`,
-      'Value': formatValue(value)
+      'Type Size x Verts = Bytes': `${type} ${size} x ${verts} = ${bytes}`,
+      'Value': formatValue(value, {size, isInteger})
     };
   }
 

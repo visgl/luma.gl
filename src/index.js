@@ -1,11 +1,11 @@
 // Export all symbols for LumaGL
-export * from './webgl';
-export * from './webgl2';
-export * from './io';
-export * from './math';
-export * from './scenegraph';
-export * from './geometry';
-export * from './core';
-export {default as Shaders} from '../shaderlib';
+/* global window */
+export * from './luma';
 
-export {default as Fx} from './addons/fx';
+// Assign global luma variable to help debugging
+import * as lumaSymbols from './luma';
+import {luma} from './utils';
+if (typeof window !== 'undefined') {
+  Object.assign(luma, lumaSymbols);
+  window.luma = luma;
+}
