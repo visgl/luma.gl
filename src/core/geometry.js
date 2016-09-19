@@ -94,7 +94,7 @@ export default class Geometry {
 
       assert(ArrayBuffer.isView(attribute.value),
         `${this._print(attributeName)}: must be a typed array or an object` +
-        `with value as typed array`);
+        'with value as typed array');
 
       this._autoDetectAttribute(attributeName, attribute);
 

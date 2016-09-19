@@ -92,7 +92,7 @@ export function checkUniformValues(uniforms, source) {
     const value = uniforms[uniformName];
     if (!checkUniformValue(value)) {
       // Add space to source
-      source = source ? `${source} ` : ``;
+      source = source ? `${source} ` : '';
       /* eslint-disable no-console */
       /* global console */
       // Value could be unprintable so write the object on console
@@ -131,6 +131,7 @@ function checkUniformValue(value) {
 }
 
 // Prepares a table suitable for console.table
+/* eslint-disable max-statements */
 export function getUniformsTable({
   header = 'Uniforms',
   program,
@@ -168,7 +169,7 @@ export function getUniformsTable({
     const uniform = uniforms[uniformName];
     if (!table[uniformName]) {
       table[uniformName] = {
-        Type: 'NOT USED: ' + uniform,
+        Type: `NOT USED: ${uniform}`,
         Value: formatValue(uniform)
       };
     }

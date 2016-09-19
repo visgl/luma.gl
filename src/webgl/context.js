@@ -46,7 +46,7 @@ export function createGLContext({
     }
     if (!luma.globals.headlessGL) {
       throw new Error(
-        `Cannot create headless WebGL context, headlessGL not available`);
+        'Cannot create headless WebGL context, headlessGL not available');
     }
     gl = luma.globals.headlessGL(width, height, opts);
     if (!gl) {
@@ -100,7 +100,7 @@ export function createGLContext({
 function logInfo(gl) {
   const webGL = isWebGL2RenderingContext(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
-  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : ``;
+  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
   const debug = gl.debug ? 'debug' : '';
   log.log(0, `luma.gl created ${webGL} ${debug} context ${driver}`, gl);
 
@@ -207,7 +207,6 @@ function validateArgsAndLog(functionName, functionArgs) {
     }
   }
 
-  const breaks = log.break;
   if (log.break) {
     functionString = functionString ||
       getFunctionString(functionName, functionArgs);
@@ -215,9 +214,11 @@ function validateArgsAndLog(functionName, functionArgs) {
       breakString => functionString.indexOf(breakString) !== -1
     );
 
+    /* eslint-disable no-debugger */
     if (isBreakpoint) {
       debugger;
     }
+    /* eslint-enable no-debugger */
   }
 }
 

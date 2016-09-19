@@ -76,6 +76,7 @@ export default class Sampler {
    * @param {GLenum} WRAP_S: texture wrapping function for texture coordinate s.
    * @param {GLenum} WRAP_T: texture wrapping function for texture coordinate t.
    */
+  /* eslint-disable max-statements */
   setParameters({
     compareFunc,
     compareMode,
@@ -116,6 +117,7 @@ export default class Sampler {
       gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_T, wrapT);
     }
   }
+  /* eslint-enable max-statements */
 
   /**
    * @param {GLenum} pname
@@ -130,7 +132,7 @@ export default class Sampler {
   }
 
   /**
-   * @param {GLenum} pname  
+   * @param {GLenum} pname
    * @param {GLfloat} param
    * @return {Sampler} returns self to enable chaining
    */

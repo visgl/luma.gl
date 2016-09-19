@@ -52,8 +52,8 @@ export default class Program {
     assertWebGLRenderingContext(gl);
 
     // Assign default uniforms if any of the default shaders is being used
-    if (vs === SHADERS.DEFAULT.vs || fs === SHADERS.DEFAULT.fs
-      && defaultUniforms === undefined
+    if (vs === SHADERS.DEFAULT.vs || fs === SHADERS.DEFAULT.fs &&
+      defaultUniforms === undefined
     ) {
       defaultUniforms = SHADERS.DEFAULT.defaultUniforms;
     }
@@ -64,7 +64,7 @@ export default class Program {
 
     // If program is not named, name it after shader names
     let programName = this.vs.getName() || this.fs.getName();
-    programName = programName ? `${programName}-program` : `program`;
+    programName = programName ? `${programName}-program` : 'program';
     this.id = id || uid(programName);
 
     this.gl = gl;
@@ -213,7 +213,7 @@ export default class Program {
       } else {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           throw new Error(`${this._print(bufferName)}:${location} ` +
-            `has both location and type gl.ELEMENT_ARRAY_BUFFER`);
+            'has both location and type gl.ELEMENT_ARRAY_BUFFER');
         }
         locations[location] = bufferName;
       }

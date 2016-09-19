@@ -91,10 +91,10 @@ export class SphereGeometry extends Geometry {
       ...opts,
       id,
       attributes: {
-        positions: positions,
-        indices: indices,
-        normals: normals,
-        texCoords: texCoords
+        positions,
+        indices,
+        normals,
+        texCoords
       }
     });
   }

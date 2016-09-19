@@ -3,7 +3,7 @@
 
 import * as config from '../core/config';
 import {Camera} from '../core/camera';
-import {Mat4, Vec3} from '../math';
+import {Vec3} from '../math';
 import {merge} from '../utils';
 import Group from './group';
 import {pickModels} from './pick';
@@ -291,7 +291,7 @@ export default class Scene extends Group {
 
   setupAmbientLighting(program, ambient) {
     program.setUniforms({
-      'ambientColor': [ambient.r, ambient.g, ambient.b]
+      ambientColor: [ambient.r, ambient.g, ambient.b]
     });
 
     return this;
@@ -306,8 +306,8 @@ export default class Scene extends Group {
       .$scale(-1);
 
     program.setUniforms({
-      'directionalColor': [color.r, color.g, color.b],
-      'lightingDirection': [dir.x, dir.y, dir.z]
+      directionalColor: [color.r, color.g, color.b],
+      lightingDirection: [dir.x, dir.y, dir.z]
     });
 
     return this;
@@ -340,12 +340,12 @@ export default class Scene extends Group {
 
     if (pointLocations.length) {
       program.setUniforms({
-        'pointLocation': pointLocations,
-        'pointColor': pointColors
+        pointLocation: pointLocations,
+        pointColor: pointColors
       });
       program.setUniforms({
-        'enableSpecular': enableSpecular,
-        'pointSpecularColor': pointSpecularColors
+        enableSpecular,
+        pointSpecularColor: pointSpecularColors
       });
     }
 
@@ -359,10 +359,10 @@ export default class Scene extends Group {
     if (fog) {
       const {color = {r: 0.5, g: 0.5, b: 0.5}} = fog;
       program.setUniforms({
-        'hasFog': true,
-        'fogNear': fog.near,
-        'fogFar': fog.far,
-        'fogColor': [color.r, color.g, color.b]
+        hasFog: true,
+        fogNear: fog.near,
+        fogFar: fog.far,
+        fogColor: [color.r, color.g, color.b]
       });
     } else {
       program.setUniforms({hasFog: false});

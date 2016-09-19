@@ -13,7 +13,7 @@ import {promisify, luma} from './utils';
  * This data can be saved using file system (f) methods or
  * used in a request.
  * @param {Image} image to save
- * @param {String} opt.type='png' - png, jpg or image/png, image/jpg are valid
+ * @param {String} type='png' - png, jpg or image/png, image/jpg are valid
  * @param {String} opt.dataURI= - Whether to include a data URI header
  * @return {*} bytes
  */
@@ -30,7 +30,6 @@ const getPixelsAsync = promisify(getPixels);
 export function loadImage(url) {
   return getPixelsAsync(url);
 }
-
 
 luma.globals.modules.getPixels = getPixels;
 luma.globals.modules.savePixels = savePixels;

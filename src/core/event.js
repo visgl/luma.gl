@@ -30,7 +30,7 @@ function _getPos(elem) {
   return {
     x: bbox.left,
     y: bbox.top,
-    bbox: bbox
+    bbox
   };
 }
 

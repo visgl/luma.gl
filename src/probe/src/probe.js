@@ -108,6 +108,7 @@ export default class Probe {
   /**
    * Configure probe with new values (can include custom key/value pairs).
    * Configuration will be persisted across browser sessions
+   * @param {Object} config - named parameters
    * @param {Boolean} config.isEnabled Whether probe is enabled
    * @param {Number} config.level Logging level
    * @param {Boolean} config.isLogEnabled Whether logging prints to console

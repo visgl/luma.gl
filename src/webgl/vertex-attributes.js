@@ -1,7 +1,8 @@
+/* eslint-disable dot-notation*/
 import {WebGL2RenderingContext} from './webgl-types';
 import {assertWebGLRenderingContext} from './webgl-checks';
 import Buffer from './buffer';
-import {glGet, glCheckError} from './context';
+import {glGet} from './context';
 import {log} from '../utils';
 import assert from 'assert';
 
@@ -168,6 +169,7 @@ export function getStride(gl, location) {
 /**
  * @param {WebGLRenderingContext} gl - webgl context
  * @param {GLuint} location - ordinal number of the attribute
+ * @param {GLuint} pname - enum specifying which offset to return
  * @returns {GLuint} the address of a specified vertex attribute.
  */
 export function getOffset(

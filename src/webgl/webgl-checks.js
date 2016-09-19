@@ -154,10 +154,8 @@ export function glArrayFromType(glType, clamped = false) {
   case WebGL.INT:
     return Int32Array;
 
-
   default:
     throw new Error('Failed to deduce type from array');
   }
 }
 /* eslint-enable complexity */
-

@@ -86,7 +86,7 @@ function deleteVertexArray(gl, vertexArray) {
   glCheckError(gl);
 }
 
-function isVertexArray(gl, vertexArray) {
+export function isVertexArray(gl, vertexArray) {
   if (gl instanceof WebGL2RenderingContext) {
     return gl.isVertexArray(vertexArray);
   }
