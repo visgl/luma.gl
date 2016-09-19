@@ -364,7 +364,9 @@ export default class Model extends Object3D {
       value = attribute.value;
     }
 
+    // Generate a type name by dropping Array from Float32Array etc.
     type = String(type).replace('Array', '');
+    // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
     const isInteger = type.indexOf('nt') !== -1;
 
     location = `${location}${instanced ? ' [instanced]' : ''}`;
