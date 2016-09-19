@@ -1,5 +1,9 @@
 # Official releases
 
+### 2.5.4 - FIX: Luma global initialization
+- Makes the luma object available in console for debugging.
+- Makes optional headless support more reliable.
+
 ### 2.5.3 - FIX: Linux rendering issues
 - Add missing call to getAttribLocation.
 - Some polish on luma's built-in attribute/uniform logging
