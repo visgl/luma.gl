@@ -1,4 +1,4 @@
-import {luma} from './is-browser';
+import {luma} from './globals';
 /* eslint-disable no-console */
 /* global console */
 /* global window */
@@ -27,18 +27,20 @@ const log = {
   }
 };
 
-export function formatValue(v, maxElts = 16) {
+export function formatValue(v, opts = {}) {
+  const {maxElts = 16, size = 1, isInteger = false} = opts;
   if (Array.isArray(v) || ArrayBuffer.isView(v)) {
     let string = '[';
     for (let i = 0; i < v.length && i < maxElts; ++i) {
       if (i > 0) {
-        string += ', '
+        string += ',' + ((i + 1) % size === 0) ? ' ' : '';
       }
-      string += formatValue(v[i]);
+      string += formatValue(v[i], opts);
     }
-    return string + ']';
+    const terminator = v.length > maxElts ? '...' : ']';
+    return `${string}${terminator}`;
   } else if (Number.isFinite(v)) {
-    return v.toPrecision(2);
+    return isInteger ? v.toFixed(0) : v.toPrecision(2);
   }
   return String(v);
 }
