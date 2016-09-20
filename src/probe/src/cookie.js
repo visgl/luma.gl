@@ -1,3 +1,4 @@
+/* eslint-disable */
 // Adapted from https://github.com/substack/cookie-cutter (under MIT license)
 export default function (doc) {
   if (!doc) doc = {};

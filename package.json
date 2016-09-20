@@ -102,8 +102,8 @@
     "extends": [
       "eslint-config-uber-es2015"
     ],
-    "ecmaFeatures": {
-      "experimentalObjectRestSpread": true
+    "rules": {
+      "guard-for-in": 0
     }
   }
 }

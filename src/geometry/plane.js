@@ -19,11 +19,11 @@ export class PlaneGeometry extends Geometry {
   } = {}) {
     const coords = type.split(',');
     // width, height
-    let c1len = opts[coords[0] + 'len'];
-    const c2len = opts[coords[1] + 'len'];
+    let c1len = opts[`${coords[0]}len`];
+    const c2len = opts[`${coords[1]}len`];
     // subdivisionsWidth, subdivisionsDepth
-    const subdivisions1 = opts['n' + coords[0]] || 1;
-    const subdivisions2 = opts['n' + coords[1]] || 1;
+    const subdivisions1 = opts[`n${coords[0]}`] || 1;
+    const subdivisions2 = opts[`n${coords[1]}`] || 1;
     const numVertices = (subdivisions1 + 1) * (subdivisions2 + 1);
 
     let positions = new Float32Array(numVertices * 3);

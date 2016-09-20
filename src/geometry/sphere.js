@@ -25,9 +25,7 @@ export class SphereGeometry extends Geometry {
 
     if (typeof radius === 'number') {
       const value = radius;
-      radius = function(n1, n2, n3, u, v) {
-        return value;
-      };
+      radius = (n1, n2, n3, u, v) => value;
     }
 
     const positions = new Float32Array(numVertices * 3);

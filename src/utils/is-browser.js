@@ -1,6 +1,6 @@
 // This function is needed in initialization stages,
 // make sure it can be imported in isolation
-/* global process, window, global */
+/* global process */
 export const isNode =
   typeof process === 'object' &&
   String(process) === '[object process]' &&

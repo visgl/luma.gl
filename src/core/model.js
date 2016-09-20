@@ -6,10 +6,16 @@ import {
   WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable
 } from '../webgl';
 import Object3D from '../scenegraph/object-3d';
-import {log, formatValue, splat} from '../utils';
-import {MAX_TEXTURES} from './config';
+import {log, formatValue} from '../utils';
 import Geometry from './geometry';
 import assert from 'assert';
+
+const MSG_INSTANCED_PARAM_DEPRECATED = `\
+Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
+This will become a hard error in a future version of luma.gl.`;
+
+const MSG_TEXTURES_PARAM_REMOVED =
+  'Model: parameter "textures" removed. Use uniforms to set textures';
 
 // TODO - experimental, not yet used
 export class Material {
@@ -57,15 +63,14 @@ export default class Model extends Object3D {
     assert(this.program instanceof Program, 'Model needs a program');
 
     if (opts.instanced) {
-      console.warn(`Warning: ` +
-        `Model constructor: parameter "instanced" renamed to "isInstanced". ` +
-        `This will become a hard error in a future version of luma.gl.`);
+      /* global console */
+      /* eslint-disable no-console */
+      console.warn(MSG_INSTANCED_PARAM_DEPRECATED);
       isInstanced = isInstanced || opts.instanced;
     }
 
     if (textures) {
-      throw new Error(`Model constructor: parameter "textures" deprecated. ` +
-        `Use uniforms to set textures`);
+      throw new Error(MSG_TEXTURES_PARAM_REMOVED);
     }
 
     // TODO - remove?
@@ -104,7 +109,7 @@ export default class Model extends Object3D {
   /* eslint-enable complexity */
 
   get hash() {
-    return this.id + ' ' + this.$pickingIndex;
+    return `${this.id} ${this.$pickingIndex}`;
   }
 
   setNeedsRedraw(redraw = true) {
@@ -221,8 +226,8 @@ export default class Model extends Object3D {
     draw(gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
-      isIndexed: isIndexed,
-      indexType: indexType,
+      isIndexed,
+      indexType,
       isInstanced,
       instanceCount
     });
@@ -314,7 +319,7 @@ export default class Model extends Object3D {
   } = {}) {
     assert(program);
     const attributeLocations = program._attributeLocations;
-    const table = table || {[header]: {}};
+    const table = {[header]: {}};
 
     // Add used attributes
     for (const attributeName in attributeLocations) {
@@ -337,7 +342,7 @@ export default class Model extends Object3D {
   _getAttributeEntry(attribute, location) {
     const round = num => Math.round(num * 10) / 10;
 
-    let type = 'NOT PROVIDED'
+    let type = 'NOT PROVIDED';
     let instanced = 0;
     let size = 'N/A';
     let verts = 'N/A';
@@ -374,7 +379,7 @@ export default class Model extends Object3D {
     return {
       Location: location,
       'Type Size x Verts = Bytes': `${type} ${size} x ${verts} = ${bytes}`,
-      'Value': formatValue(value, {size, isInteger})
+      Value: formatValue(value, {size, isInteger})
     };
   }
 

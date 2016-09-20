@@ -153,9 +153,9 @@ export default class AttributeManager {
   } = {}) {
     this.onLog = onLog !== undefined ? onLog : this.onLog;
     this.onUpdateStart =
-      onUpdateStart !== undefined ? onUpdateStart : this.onUpdateStart;;
+      onUpdateStart !== undefined ? onUpdateStart : this.onUpdateStart;
     this.onUpdateEnd =
-      onUpdateEnd !== undefined ? onUpdateEnd : this.onUpdateEnd;;
+      onUpdateEnd !== undefined ? onUpdateEnd : this.onUpdateEnd;
   }
 
   /**
@@ -307,13 +307,14 @@ export default class AttributeManager {
   // Checks that any attribute buffers in props are valid
   // Note: This is just to help app catch mistakes
   _checkExternalBuffers(bufferMap = {}, opts = {}) {
-    const {attributes, numInstances} = this;
+    const {attributes} = this;
     for (const attributeName in bufferMap) {
       const attribute = attributes[attributeName];
-      const buffer = bufferMap[attributeName];
       if (!attribute && !opts.ignoreUnknownAttributes) {
         throw new Error(`Unknown attribute prop ${attributeName}`);
       }
+      // const buffer = bufferMap[attributeName];
+      // TODO - check buffer type
     }
   }
 
@@ -321,13 +322,15 @@ export default class AttributeManager {
   // Update attribute buffers from any attributes in props
   // Detach any previously set buffers, marking all
   // Attributes for auto allocation
+  /* eslint-disable max-statements */
   _setExternalBuffers(bufferMap) {
-    const {attributes} = this;
+    const {attributes, numInstances} = this;
 
     // Copy the refs of any supplied buffers in the props
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       const buffer = bufferMap[attributeName];
+      attribute.isExternalBuffer = false;
       if (buffer) {
         if (!(buffer instanceof Float32Array)) {
           throw new Error('Attribute properties must be of type Float32Array');
@@ -343,18 +346,17 @@ export default class AttributeManager {
           attribute.changed = true;
           this.needsRedraw = true;
         }
-      } else {
-        attribute.isExternalBuffer = false;
       }
     }
   }
+  /* eslint-enable max-statements */
 
   /* Checks that typed arrays for attributes are big enough
    * sets alloc flag if not
    * @return {Boolean} whether any updates are needed
    */
   _analyzeBuffers({numInstances}) {
-    const {allocedInstances, attributes} = this;
+    const {attributes} = this;
     assert(numInstances !== undefined);
 
     // Track whether any allocations or updates are needed
@@ -392,6 +394,7 @@ export default class AttributeManager {
    * @param {Object} opts.props - passed to updaters
    * @param {Object} opts.context - Used as "this" context for updaters
    */
+  /* eslint-disable max-statements */
   _updateBuffers({numInstances, data, props, context}) {
     const {attributes} = this;
 
@@ -427,5 +430,5 @@ export default class AttributeManager {
 
     this.allocedInstances = allocCount;
   }
-
+  /* eslint-enable max-statements */
 }

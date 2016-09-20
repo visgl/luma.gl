@@ -29,7 +29,7 @@ export default class WorkerGroup {
     const configs = this.configs;
     let l = workers.length;
     let acum = opt.initialValue;
-    const message = function _(e) {
+    const message = e => {
       l--;
       if (acum === undefined) {
         acum = e.data;

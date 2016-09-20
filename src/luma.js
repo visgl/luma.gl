@@ -1,5 +1,4 @@
 // Export all symbols for LumaGL
-/* global window */
 export * from './webgl';
 export * from './webgl2';
 export * from './io';

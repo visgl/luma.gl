@@ -50,13 +50,13 @@ export function getKey(e) {
   // onkeydown
   const fKey = code - 111;
   if (fKey > 0 && fKey < 13) {
-    key = 'f' + fKey;
+    key = `f${fKey}`;
   }
   key = key || String.fromCharCode(code).toLowerCase();
 
   return {
-    code: code,
-    key: key,
+    code,
+    key,
     shift: e.shiftKey,
     control: e.ctrlKey,
     alt: e.altKey,
@@ -439,4 +439,5 @@ function keyOf(code) {
       return name;
     }
   }
+  return null;
 }

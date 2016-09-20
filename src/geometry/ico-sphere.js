@@ -21,15 +21,15 @@ export class IcoSphereGeometry extends Geometry {
     positions.push();
     indices.push();
 
-    const getMiddlePoint = (function() {
+    const getMiddlePoint = (() => {
       const pointMemo = {};
 
-      return function(i1, i2) {
+      return (i1, i2) => {
         i1 *= 3;
         i2 *= 3;
         const mini = i1 < i2 ? i1 : i2;
         const maxi = i1 > i2 ? i1 : i2;
-        const key = mini + '|' + maxi;
+        const key = `${mini}|${maxi}`;
 
         if (key in pointMemo) {
           return pointMemo[key];
@@ -54,7 +54,7 @@ export class IcoSphereGeometry extends Geometry {
 
         return (pointMemo[key] = (positions.length / 3 - 1));
       };
-    }());
+    })();
 
     for (let i = 0; i < iterations; i++) {
       const indices2 = [];
