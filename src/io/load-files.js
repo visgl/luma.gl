@@ -66,9 +66,9 @@ export function loadTextures(gl, {urls, onProgress = noop, ...opts}) {
 
 export function loadProgram(gl, {vs, fs, onProgress = noop, ...opts}) {
   return loadFiles({urls: [vs, fs], onProgress, ...opts})
-  .then(function([vsText, fsText]) {
-    return new Program(gl, {vs: vsText, fs: fsText, ...opts});
-  });
+  .then(
+    ([vsText, fsText]) => new Program(gl, {vs: vsText, fs: fsText, ...opts})
+  );
 }
 
 // Loads a simple JSON format
@@ -78,9 +78,7 @@ export function loadModel(gl, {
   ...opts
 }) {
   return loadFiles({urls: [url], onProgress, ...opts})
-  .then(function([file]) {
-    return parseModel(gl, {file, ...opts});
-  });
+  .then(([file]) => parseModel(gl, {file, ...opts}));
 }
 
 export function parseModel(gl, {

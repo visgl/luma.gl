@@ -122,4 +122,4 @@ function getFileErrorMessage(e) {
 export {
   writeFile,
   readFile
-}
+};

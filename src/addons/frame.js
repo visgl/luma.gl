@@ -1,3 +1,4 @@
+/* global window, document, setTimeout, clearTimeout, HTMLCanvasElement */
 import autobind from 'autobind-decorator';
 import assert from 'assert';
 import {isBrowser} from '../utils';
@@ -81,13 +82,15 @@ function nodeCancelAnimationFrame(requestId) {
 }
 
 const bodyLoadPromise = new Promise((resolve, reject) => {
-  window.onload = function() {
-    resolve(document.body);
-  }
+  window.onload = () => resolve(document.body);
 });
 
 export class Renderer {
 
+  /*
+   * @param {HTMLCanvasElement} canvas - if provided, with and height will be
+   *   passed to context
+   */
   constructor({
     gl = null,
     canvas = null,
@@ -157,12 +160,11 @@ export class Renderer {
 
   /**
    * Starts a global render loop with the given frame function
-   * @param {HTMLCanvasElement} canvas - if provided, with and height will be
-   *   passed to context
    * @param {Function} onRenderFrame - application frame renderer function
    *  expected to take a context parameter
    * @param {Object} context - contains frame specific info
    *  (E.g. tick, width, height, etc)
+   * @return {Renderer} - returns self for chaining
    */
   frame(onRenderFrame) {
     this.stop();
@@ -202,6 +204,7 @@ export class Renderer {
    * NOTE: No effect on headless contexts
    * @param {Number} width - new width of canvas in CSS coordinates
    * @param {Number} height - new height of canvas in CSS coordinates
+   * @return {Renderer} - returns self for chaining
    */
   resizeCanvas(width, height) {
     if (this.canvas) {
@@ -219,6 +222,9 @@ export class Renderer {
    *  canvas CSS width x CSS height
    *  canvas CSS width * devicePixelRatio x CSS height * devicePixelRatio
    * TODO - add separate call for headless contexts
+   * @param {Number} width - new width of canvas in CSS coordinates
+   * @param {Number} height - new height of canvas in CSS coordinates
+   * @return {Renderer} - returns self for chaining
    */
   resizeDrawingBuffer(width, height) {
     if (this.canvas) {

@@ -4,7 +4,7 @@ import {luma} from '../../utils';
 function notImplemented(functionName) {
   return () => {
     throw new Error(`${functionName} not available (see luma.gl/headless-io)`);
-  }
+  };
 }
 
 export function readFile(...args) {

@@ -1,7 +1,6 @@
 import {luma} from './globals';
 /* eslint-disable no-console */
 /* global console */
-/* global window */
 
 const log = {
   priority: 0,
@@ -33,7 +32,7 @@ export function formatValue(v, opts = {}) {
     let string = '[';
     for (let i = 0; i < v.length && i < maxElts; ++i) {
       if (i > 0) {
-        string += ',' + ((i + 1) % size === 0) ? ' ' : '';
+        string += `,${((i + 1) % size === 0) ? ' ' : ''}`;
       }
       string += formatValue(v[i], opts);
     }

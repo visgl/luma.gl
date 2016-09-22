@@ -55,6 +55,7 @@ class XHR {
     return this;
   }
 
+  /* eslint-disable max-statements */
   sendAsync(body = this.body || null) {
     return new Promise((resolve, reject) => {
       try {
@@ -62,10 +63,9 @@ class XHR {
           req, method, async, noCache, sendAsBinary, responseType
         } = this;
 
-        let url = this.url;
-        if (noCache) {
-          url += (url.indexOf('?') >= 0 ? '&' : '?') + Date.now();
-        }
+        const url = noCache ?
+          this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + Date.now() :
+          this.url;
 
         req.open(method, url, async);
 
@@ -103,6 +103,7 @@ class XHR {
       }
     });
   }
+  /* eslint-enable max-statements */
 }
 
 export function loadFile(opts) {

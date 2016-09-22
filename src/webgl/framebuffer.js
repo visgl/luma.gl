@@ -4,16 +4,14 @@ import {glGet, glConstant, glArrayFromType, glTypeFromArray,
   assertWebGL2} from './context';
 import {Texture2D} from './texture';
 import Renderbuffer from './renderbuffer';
-import {} from '../utils';
-import assert from 'assert';
 
 function glFormatComponents(format) {
   switch (format) {
   case WebGL.ALPHA: return 1;
   case WebGL.RGB: return 3;
   case WebGL.RGBA: return 4;
+  default: throw new Error('Unknown format');
   }
-  throw new Error(`Unknown format`);
 }
 
 export default class Framebuffer {
@@ -405,20 +403,20 @@ export default class Framebuffer {
       error = 'Success. Framebuffer is correctly set up';
       break;
     case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-      error = `The attachment types are mismatched or not all framebuffer attachment points are framebuffer attachment complete.`;
+      error = 'The attachment types are mismatched or not all framebuffer attachment points are framebuffer attachment complete.';
       break;
     case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-      error = `There is no attachment.`;
+      error = 'There is no attachment.';
       break;
     case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-      error = `Height and width of the attachment are not the same.`;
+      error = 'Height and width of the attachment are not the same.';
       break;
     case gl.FRAMEBUFFER_UNSUPPORTED:
-      error = `The format of the attachment is not supported or if depth and stencil attachments are not the same renderbuffer.`;
+      error = 'The format of the attachment is not supported or if depth and stencil attachments are not the same renderbuffer.';
       break;
     // When using a WebGL 2 context, the following values can be returned
     case gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-      error = `The values of gl.RENDERBUFFER_SAMPLES are different among attached renderbuffers, or are non-zero if the attached images are a mix of renderbuffers and textures.`;
+      error = 'The values of gl.RENDERBUFFER_SAMPLES are different among attached renderbuffers, or are non-zero if the attached images are a mix of renderbuffers and textures.';
       break;
     default:
       error = `Framebuffer error ${status}`;

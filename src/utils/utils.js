@@ -16,6 +16,7 @@ const uidCounters = {};
 
 /**
  * Returns a UID.
+ * @param {String} id= - Identifier base name
  * @return {number} uid
  **/
 export function uid(id = 'id') {
@@ -120,9 +121,8 @@ export function getGLTypeFromArrayType(arrayType) {
   case Int32Array:
     return 'INT';
   default:
-    return null;
+    throw new Error('Failed to deduce type from array');
   }
-  throw new Error('Failed to deduce type from array');
 }
 
 export function getGLTypeFromArray(array) {

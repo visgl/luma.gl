@@ -44,10 +44,7 @@ export class Shader {
       try {
         formattedLog = formatCompilerError(info, shaderSource, this.shaderType);
       } catch (error) {
-        /* eslint-disable no-console */
-        /* global console */
         log.warn('Error formatting glsl compiler error:', error);
-        /* eslint-enable no-console */
         throw new Error(`Error while compiling the shader ${info}`);
       }
       /* eslint-enable no-try-catch */

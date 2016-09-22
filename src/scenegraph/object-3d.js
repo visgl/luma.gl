@@ -88,7 +88,7 @@ export default class Object3D {
 
     return {
       objectMatrix: matrix,
-      worldMatrix: worldMatrix,
+      worldMatrix,
       worldInverseMatrix: worldInverse,
       worldInverseTransposeMatrix: worldInverseTranspose
     };

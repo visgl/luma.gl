@@ -1,3 +1,4 @@
+/* eslint-disable */
 // An adaptation of the THREE.js stats helpers (MIT licensed)
 // https://github.com/mrdoob/stats.js
 // https://github.com/jeromeetienne/threex.rendererstats
@@ -20,6 +21,7 @@ const GRAPH_HEIGHT = 30 * PR;
 
 export class Panel {
 
+  /* eslint-disable max-statements */
   constructor(name, fg, bg) {
     const canvas = document.createElement('canvas');
     canvas.width = WIDTH;
@@ -47,6 +49,7 @@ export class Panel {
     this.context = context;
     this.dom = canvas;
   }
+  /* eslint-enable max-statements */
 
   update({value, maxValue}) {
     const min = Math.min(min, value);

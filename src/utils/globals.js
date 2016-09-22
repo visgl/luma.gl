@@ -1,6 +1,7 @@
-// TODO - Move this definition out of utils
+/* global window, global */
 import {isBrowser} from './is-browser';
 
+// TODO - Move this definition out of utils
 export const luma = {
   // Keep some luma globals in a sub-object
   // This allows us to dynamically detect if certain modules have been

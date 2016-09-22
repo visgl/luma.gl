@@ -1,4 +1,4 @@
-import {WebGL, WebGL2RenderingContext, WebGLBuffer}
+import {GL, WebGL2RenderingContext, WebGLBuffer}
   from './webgl-types';
 import {assertWebGLRenderingContext, glTypeFromArray} from './webgl-checks';
 import Buffer from './buffer';
@@ -12,11 +12,11 @@ export class Texture {
   constructor(gl, {
     id = uid('texture'),
     unpackFlipY = true,
-    magFilter = WebGL.NEAREST,
-    minFilter = WebGL.NEAREST,
-    wrapS = WebGL.CLAMP_TO_EDGE,
-    wrapT = WebGL.CLAMP_TO_EDGE,
-    target = WebGL.TEXTURE_2D,
+    magFilter = GL.NEAREST,
+    minFilter = GL.NEAREST,
+    wrapS = GL.CLAMP_TO_EDGE,
+    wrapT = GL.CLAMP_TO_EDGE,
+    target = GL.TEXTURE_2D,
     handle,
     ...opts
   }) {
@@ -78,7 +78,7 @@ export class Texture {
    * @param {Number} offset - (WEBGL2) offset from start of buffer
    * @param {GLint} border - must be 0.
    */
-  /* eslint-disable max-len, max-statements */
+  /* eslint-disable max-len, max-statements, complexity */
   setImageData({
     target = this.target,
     pixels = null,
@@ -86,7 +86,7 @@ export class Texture {
     width,
     height,
     mipmapLevel = 0,
-    format = WebGL.RGBA,
+    format = GL.RGBA,
     type,
     offset = 0,
     border = 0,
@@ -111,7 +111,7 @@ export class Texture {
       // Create an minimal texture
       width = width || 1;
       height = height || 1;
-      type = type || WebGL.UNSIGNED_BYTE;
+      type = type || GL.UNSIGNED_BYTE;
       // pixels = new Uint8Array([255, 0, 0, 1]);
       gl.texImage2D(target,
         mipmapLevel, format, width, height, border, format, type, pixels);
@@ -136,13 +136,13 @@ export class Texture {
 
       // WebGL2 allows us to create texture directly from a WebGL buffer
       assert(gl instanceof WebGL2RenderingContext, 'Requires WebGL2');
-      type = type || WebGL.UNSIGNED_BYTE;
+      type = type || GL.UNSIGNED_BYTE;
       // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
       const buffer = Buffer.makeFrom(pixels);
-      gl.bindBuffer(WebGL.PIXEL_UNPACK_BUFFER, buffer.handle);
+      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
       gl.texImage2D(target,
         mipmapLevel, format, width, height, border, format, type, offset);
-      gl.bindBuffer(WebGL.GL_PIXEL_UNPACK_BUFFER, null);
+      gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
       this.width = width;
       this.height = height;
 
@@ -152,7 +152,7 @@ export class Texture {
       // Assume pixels is a browser supported object (ImageData, Canvas, ...)
       assert(width === undefined && height === undefined,
         'Texture2D.setImageData: Width and height must not be provided');
-      type = type || WebGL.UNSIGNED_BYTE;
+      type = type || GL.UNSIGNED_BYTE;
       gl.texImage2D(target, mipmapLevel, format, format, type, pixels);
       this.width = imageSize.width;
       this.height = imageSize.height;
@@ -162,6 +162,7 @@ export class Texture {
 
     return this;
   }
+  /* eslint-enable max-len, max-statements, complexity */
 
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
   _deduceImageSize(image) {
@@ -367,16 +368,16 @@ export class Texture {
 
   image2D({
     pixels,
-    format = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE
   }) {
     // TODO - WebGL2 check?
-    if (type === WebGL.FLOAT && !this.hasFloatTexture) {
+    if (type === GL.FLOAT && !this.hasFloatTexture) {
       throw new Error('floating point textures are not supported.');
     }
 
     this.gl.bindTexture(this.target, this.handle);
-    this.gl.texImage2D(WebGL.TEXTURE_2D, 0, format, format, type, pixels);
+    this.gl.texImage2D(GL.TEXTURE_2D, 0, format, format, type, pixels);
     this.gl.bindTexture(this.target, null);
     return this;
   }
@@ -418,11 +419,12 @@ export class Texture2D extends Texture {
   /**
    * @classdesc
    * 2D WebGL Texture
+   * Note: Constructor will initialize your texture.
    *
    * @class
-   * Constructor will initialize your texture.
    * @param {WebGLRenderingContext} gl - gl context
-   * @param {Image||ArrayBuffer||null} opts.data=
+   * @param {Image|ArrayBuffer|null} opts= - named options
+   * @param {Image|ArrayBuffer|null} opts.data= - buffer
    * @param {GLint} width - width of texture
    * @param {GLint} height - height of texture
    */
@@ -474,7 +476,7 @@ export class Texture2D extends Texture {
   }
 
   getActiveUnit() {
-    return this.gl.getParameter(WebGL.ACTIVE_TEXTURE) - WebGL.TEXTURE0;
+    return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;
   }
 
   // WebGL2
@@ -484,9 +486,9 @@ export class Texture2D extends Texture {
     width = null,
     height = null,
     mipmapLevel = 0,
-    internalFormat = WebGL.RGBA,
-    format = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE,
+    internalFormat = GL.RGBA,
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE,
     border = 0,
     ...opts
   }) {
@@ -494,7 +496,7 @@ export class Texture2D extends Texture {
 
     // This signature of texImage2D uses currently bound GL_PIXEL_UNPACK_BUFFER
     buffer = Buffer.makeFrom(buffer);
-    gl.bindBuffer(WebGL.PIXEL_UNPACK_BUFFER, buffer.target);
+    gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.target);
     // And as always, we must also bind the texture itself
     this.bind();
 
@@ -502,7 +504,7 @@ export class Texture2D extends Texture {
       mipmapLevel, format, width, height, border, format, type, buffer.target);
 
     this.unbind();
-    gl.bindBuffer(WebGL.GL_PIXEL_UNPACK_BUFFER, null);
+    gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
     return this;
   }
 
@@ -512,9 +514,9 @@ export class Texture2D extends Texture {
     width = null,
     height = null,
     mipmapLevel = 0,
-    internalFormat = WebGL.RGBA,
-    format = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE,
+    internalFormat = GL.RGBA,
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE,
     border = 0,
     ...opts
   }) {
@@ -539,8 +541,8 @@ export class Texture2D extends Texture {
     width,
     height,
     mipmapLevel = 0,
-    internalFormat = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE,
+    internalFormat = GL.RGBA,
+    type = GL.UNSIGNED_BYTE,
     border = 0,
     ...opts
   }) {
@@ -565,8 +567,8 @@ export class Texture2D extends Texture {
     width,
     height,
     mipmapLevel = 0,
-    internalFormat = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE,
+    internalFormat = GL.RGBA,
+    type = GL.UNSIGNED_BYTE,
     border = 0
   }) {
     // if (pixels instanceof ArrayBufferView) {
@@ -621,8 +623,8 @@ export class TextureCube extends Texture {
     pixels,
     data,
     border = 0,
-    format = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE,
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE,
     generateMipmap = false,
     ...opts
   }) {

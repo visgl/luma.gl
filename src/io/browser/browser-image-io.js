@@ -1,6 +1,5 @@
 // Image loading/saving for browser
 /* global document, HTMLCanvasElement, Image */
-/* eslint-disable guard-for-in, complexity, no-try-catch */
 
 /* global process, Buffer */
 import assert from 'assert';
@@ -42,15 +41,11 @@ export function compressImage(image, type) {
  * returns a promise tracking the load
  */
 export function loadImage(url) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     try {
       const image = new Image();
-      image.onload = function() {
-        resolve(image);
-      };
-      image.onerror = function() {
-        reject(new Error(`Could not load image ${url}.`));
-      };
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error(`Could not load image ${url}.`));
       image.src = url;
     } catch (error) {
       reject(error);

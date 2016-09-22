@@ -11,8 +11,8 @@ export * from './frame';
 /* global window */
 if (typeof window !== 'undefined' && window.LumaGL) {
   window.LumaGL.addons = {
-    Fx: Fx,
-    WorkerGroup: WorkerGroup
+    Fx,
+    WorkerGroup
   };
   Object.assign(window.LumaGL.addons, helpers);
 }
