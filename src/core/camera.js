@@ -27,6 +27,7 @@ export class Camera {
     this.uniforms = {};
 
     this.projection = new Mat4();
+    this.projectionFP64 = new Float32Array(32);
     Object.seal(this);
 
     this.update();
@@ -53,7 +54,8 @@ export class Camera {
       viewMatrix: this.view,
       viewProjectionMatrix: viewProjection,
       viewInverseMatrix: this.view.invert(),
-      viewProjectionInverseMatrix: viewProjectionInverse
+      viewProjectionInverseMatrix: viewProjectionInverse,
+      projectionFP64: this.projectionFP64
     };
   }
 
