@@ -1,5 +1,9 @@
 # Official releases
 
+### 2.6.0 - "64 bit" camera projection matrix
+ - Add 64 bit matrix to Luma.gl Camera
+ - Updated linter rules
+
 ### 2.5.4 - FIX: Luma global initialization
 - Makes the luma object available in console for debugging.
 - Makes optional headless support more reliable.
@@ -68,7 +72,3 @@ headless-gl.
   - Beta releases, don't use.
 
 ### 1.0.1 - Initial release.
-
-# Older BETA releases
-
-### 3.0.0-beta1 - Changes folded into 2.5.1
