@@ -1,5 +1,10 @@
 # Official releases
 
+### 2.7.0 - Add ability to import luma without io
+  - import "luma.gl/luma" will import luma without io functions
+  - import "luma.gl/io" will import luma io functions only 
+  - omitting io functions significantly reduces dependencies
+
 ### 2.6.0 - "64 bit" camera projection matrix
  - Add 64 bit matrix to Luma.gl Camera
  - Updated linter rules
