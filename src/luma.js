@@ -1,7 +1,6 @@
 // Export all symbols for LumaGL
 export * from './webgl';
 export * from './webgl2';
-export * from './io';
 export * from './math';
 export * from './scenegraph';
 export * from './geometry';
