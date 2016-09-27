@@ -1,9 +1,8 @@
 import test from 'blue-tape';
 import '../../../src/headless-io';
-import {
-  createGLContext, loadImage,
-  Program, Texture2D, Buffer
-} from '../../../src/headless';
+import {createGLContext, Program, Texture2D, Buffer}
+  from '../../../src/headless';
+import {loadImage} from '../../../src/io';
 
 const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA
 Bytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=`;

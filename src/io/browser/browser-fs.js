@@ -34,7 +34,7 @@ const Blob = window.Blob;
  * @param {Function} callback - Standard node (err, data) callback
  * @return {Promise} - promise, can be used instead of callback
  */
-function writeFile(file, data, options, callback = () => {}) {
+export function writeFile(file, data, options, callback = () => {}) {
   // options is optional
   if (callback === undefined && typeof options === 'function') {
     options = undefined;
@@ -64,7 +64,7 @@ function writeFile(file, data, options, callback = () => {}) {
  * @param {File|Blob} file  HTML File or Blob object to read as string
  * @returns {Promise.string}  Resolves to a string containing file contents
  */
-function readFile(file) {
+export function readFile(file) {
   return new Promise((resolve, reject) => {
     try {
       assert(File, 'window.File not defined. Must run under browser.');
@@ -118,8 +118,3 @@ function getFileErrorMessage(e) {
     return 'Read error.';
   }
 }
-
-export {
-  writeFile,
-  readFile
-};

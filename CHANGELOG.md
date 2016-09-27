@@ -1,3 +1,8 @@
+# Beta releases
+
+### 3.0.0-beta2 - 'io' functions now only accessible through 'luma.gl/io'
+### 3.0.0-beta1 - obsolete, folded into master
+
 # Official releases
 
 ### 2.7.0 - Add ability to import luma without io
