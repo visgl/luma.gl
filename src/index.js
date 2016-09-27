@@ -1,6 +1,7 @@
 // Export all symbols for LumaGL
 /* global window */
 export * from './luma';
+export * from './io';
 
 // Assign global luma variable to help debugging
 import * as lumaSymbols from './luma';
