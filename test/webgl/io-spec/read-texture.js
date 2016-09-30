@@ -1,5 +1,4 @@
 import test from 'blue-tape';
-import '../../../src/headless-io';
 import {createGLContext, Program, Texture2D, Buffer}
   from '../../../src/headless';
 import {loadImage} from '../../../src/io';

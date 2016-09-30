@@ -1,4 +1,5 @@
-import {luma, isBrowser} from './utils';
+import isBrowser from './utils/is-browser';
+import luma from './globals';
 
 if (!isBrowser) {
   luma.globals.headlessGL = require('gl');

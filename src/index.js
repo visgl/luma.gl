@@ -1,11 +1,9 @@
+import luma from './globals';
+
 // Export all symbols for LumaGL
-/* global window */
-export * from './luma';
+export * from './without-io';
+export * from './io';
 
 // Assign global luma variable to help debugging
-import * as lumaSymbols from './luma';
-import {luma} from './utils';
-Object.assign(luma, lumaSymbols);
-if (typeof window !== 'undefined') {
-  window.luma = luma;
-}
+import * as io from './io';
+Object.assign(luma, io);

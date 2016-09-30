@@ -6,7 +6,8 @@ import savePixels from 'save-pixels';
 import ndarray from 'ndarray';
 import {readFile, writeFile} from 'fs';
 
-import {promisify, luma} from './utils';
+import {promisify} from '../../utils';
+import luma from '../../globals';
 
 /**
  * Returns data bytes representing a compressed image in PNG or JPG format,

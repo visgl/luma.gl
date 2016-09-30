@@ -185,7 +185,7 @@ export default class Model extends Object3D {
   }
 
   setUniforms(uniforms = {}) {
-    checkUniformValues(uniforms);
+    checkUniformValues(uniforms, this.id);
     Object.assign(this.uniforms, uniforms);
     this.setNeedsRedraw();
     return this;
@@ -291,22 +291,23 @@ export default class Model extends Object3D {
 
   _logAttributesAndUniforms(priority = 3, uniforms = {}) {
     if (log.priority >= priority) {
-      let table = this._getAttributesTable({
-        header: `Attributes ${this.geometry.id}`,
+      const attributeTable = this._getAttributesTable({
+        header: `Attributes ${this.id}`,
         program: this.program,
         attributes: {
           ...this.geometry.attributes,
           ...this.attributes
         }
       });
-      log.table(priority, table);
+      log.table(priority, attributeTable);
 
-      table = getUniformsTable({
-        header: `Uniforms ${this.geometry.id}`,
+      const {table, unusedTable, unusedCount} = getUniformsTable({
+        header: `Uniforms ${this.id}`,
         program: this.program,
         uniforms: {...this.uniforms, ...uniforms}
       });
       log.table(priority, table);
+      log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
     }
   }
 

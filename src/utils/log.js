@@ -1,4 +1,4 @@
-import {luma} from './globals';
+import luma from '../globals';
 /* eslint-disable no-console */
 /* global console */
 
@@ -26,22 +26,36 @@ const log = {
   }
 };
 
-export function formatValue(v, opts = {}) {
-  const {maxElts = 16, size = 1, isInteger = false} = opts;
-  if (Array.isArray(v) || ArrayBuffer.isView(v)) {
-    let string = '[';
-    for (let i = 0; i < v.length && i < maxElts; ++i) {
-      if (i > 0) {
-        string += `,${((i + 1) % size === 0) ? ' ' : ''}`;
-      }
-      string += formatValue(v[i], opts);
+function formatArrayValue(v, opts) {
+  const {maxElts = 16, size = 1} = opts;
+  let string = '[';
+  for (let i = 0; i < v.length && i < maxElts; ++i) {
+    if (i > 0) {
+      string += `,${(i % size === 0) ? ' ' : ''}`;
     }
-    const terminator = v.length > maxElts ? '...' : ']';
-    return `${string}${terminator}`;
-  } else if (Number.isFinite(v)) {
-    return isInteger ? v.toFixed(0) : v.toPrecision(2);
+    string += formatValue(v[i], opts);
   }
-  return String(v);
+  const terminator = v.length > maxElts ? '...' : ']';
+  return `${string}${terminator}`;
+}
+
+export function formatValue(v, opts = {}) {
+  const {isInteger = false} = opts;
+  if (Array.isArray(v) || ArrayBuffer.isView(v)) {
+    return formatArrayValue(v, opts);
+  }
+  if (!Number.isFinite(v)) {
+    return String(v);
+  }
+  if (isInteger) {
+    return v.toFixed(0);
+  }
+  if (Math.abs(v) > 100 && Math.abs(v) < 10000) {
+    return v.toFixed(0);
+  }
+  const string = v.toPrecision(2);
+  const decimal = string.indexOf('.0');
+  return decimal === string.length - 2 ? string.slice(0, -1) : string;
 }
 
 // Make available in browser console

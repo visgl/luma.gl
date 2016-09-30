@@ -164,18 +164,22 @@ export function getUniformsTable({
     }
   }
 
+  const unusedTable = {};
+  let unusedCount = 0;
+
   // List any unused uniforms
   for (const uniformName in uniforms) {
     const uniform = uniforms[uniformName];
     if (!table[uniformName]) {
-      table[uniformName] = {
+      unusedCount++;
+      unusedTable[uniformName] = {
         Type: `NOT USED: ${uniform}`,
         Value: formatValue(uniform)
       };
     }
   }
 
-  return table;
+  return {table, unusedTable, unusedCount};
 }
 
 /*

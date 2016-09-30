@@ -4,7 +4,8 @@ import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
 import {isWebGL2RenderingContext} from './webgl-checks';
 import assert from 'assert';
-import {log, isBrowser, luma} from '../utils';
+import {log, isBrowser} from '../utils';
+import luma from '../globals';
 /* global document */
 
 const ERR_WEBGL_MISSING_BROWSER = `\
@@ -18,7 +19,7 @@ and import 'luma.gl/headless' before importing 'luma.gl'.`;
 const STARTUP_MESSAGE = `\
 Assign luma.log.priority in console to control logging: \
 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
-Assign luma.log.break to array of matching strings to break on gl logs`;
+luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
@@ -102,7 +103,8 @@ function logInfo(gl) {
   const info = glGetDebugInfo(gl);
   const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0, `luma.gl created ${webGL} ${debug} context ${driver}`, gl);
+  log.log(0,
+    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);

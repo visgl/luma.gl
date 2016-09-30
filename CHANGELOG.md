@@ -1,13 +1,18 @@
 # Beta releases
 
-### 3.0.0-beta2 - 'io' functions now only accessible through 'luma.gl/io'
+### 3.0.0-beta2 - obsolete, folded into master
 ### 3.0.0-beta1 - obsolete, folded into master
 
 # Official releases
 
+### 2.8.0  Debug log improvements, import fix
+  - Debug logs now print unused attributes more compactly, number formatting
+    improved.
+  - FIX: io import issue in 2.7.0
+
 ### 2.7.0 - Add ability to import luma without io
   - import "luma.gl/luma" will import luma without io functions
-  - import "luma.gl/io" will import luma io functions only 
+  - import "luma.gl/io" will import luma io functions only
   - omitting io functions significantly reduces dependencies
 
 ### 2.6.0 - "64 bit" camera projection matrix
@@ -25,7 +30,7 @@
 ### 2.5.2 - FIX: document.navigator override
 - More gentle override, carefully restoring the variable.
 
-### 2.5.1 - FIX: make deprecated AttributeManager.add updateMap work again 
+### 2.5.1 - FIX: make deprecated AttributeManager.add updateMap work again
 - Attribute manager changes
 
 ### 2.5.0 - Node.js/AttributeManager/Renderer/Program.render()/Examples

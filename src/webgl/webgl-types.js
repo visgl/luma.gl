@@ -2,7 +2,9 @@
 // Enables app to "import" built-in WebGL types unknown to eslint
 // Provides a hook for application to preimport headless gl
 
-import {global, luma} from '../utils';
+import luma from '../globals';
+
+const global = luma.global;
 
 class DummyType {}
 
