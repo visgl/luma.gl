@@ -70,6 +70,7 @@
     "mkdirp": "^0.5.1",
     "ndarray": "^1.0.18",
     "save-pixels": "^2.3.2",
+    "source-map-support": "^0.4.2",
     "tap-browser-color": "^0.1.2",
     "tape-catch": "^1.0.4",
     "tape-promise": "^1.1.0",

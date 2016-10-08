@@ -1,9 +1,10 @@
 // WebGL2 Query Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
 
-import {WebGL2RenderingContext} from './webgl-types';
+import {isWebGL2RenderingContext, assertWebGL2RenderingContext}
+  from './webgl-checks';
 import {glCheckError} from '../context';
-import assert from 'assert';
+import queryManager from './helpers/query-manager';
 
 /* eslint-disable max-len */
 // gl.ANY_SAMPLES_PASSED // Specifies an occlusion query: these queries detect whether an object is visible (whether the scoped drawing commands pass the depth test and if so, how many samples pass).
@@ -15,16 +16,27 @@ import assert from 'assert';
 
 export default class Query {
 
+  static isSupported(gl) {
+    return isWebGL2RenderingContext(gl);
+  }
+
   /**
    * @class
    * @param {WebGL2RenderingContext} gl
    */
   constructor(gl) {
-    assert(gl instanceof WebGL2RenderingContext);
-    this.gl = gl;
-    this.handle = gl.createQuery();
+    assertWebGL2RenderingContext(gl);
+    const handle = gl.createQuery();
     glCheckError(gl);
+
+    this.gl = gl;
+    this.handle = handle;
+    this.target = null;
     this.userData = {};
+
+    // query manager needs a promise field
+    this.promise = null;
+
     Object.seal(this);
   }
 
@@ -32,10 +44,12 @@ export default class Query {
    * @return {Query} returns self to enable chaining
    */
   delete() {
-    const {gl} = this;
-    gl.deleteQuery(this.handle);
-    this.handle = null;
-    glCheckError(gl);
+    queryManager.deleteQuery(this);
+    if (this.handle) {
+      this.gl.deleteQuery(this.handle);
+      this.handle = null;
+      glCheckError(this.gl);
+    }
     return this;
   }
 
@@ -43,38 +57,41 @@ export default class Query {
    * @return {Query} returns self to enable chaining
    */
   begin(target) {
-    const {gl} = this;
-    gl.beginQuery(target, this.handle);
-    glCheckError(gl);
+    queryManager.beginQuery(this);
+    this.target = target;
+    this.gl.beginQuery(target, this.handle);
+    glCheckError(this.gl);
     return this;
   }
 
   /*
    * @return {Query} returns self to enable chaining
    */
-  end(target) {
-    const {gl} = this;
-    gl.endQuery(target);
-    glCheckError(gl);
+  end() {
+    if (this.target) {
+      this.target = null;
+      this.gl.endQuery(this.target);
+      glCheckError(this.gl);
+    }
     return this;
   }
 
-  // @param {GLenum} pname
-  getParameters(pname) {
-    const {gl} = this;
-    const result = gl.getQueryParameters(this.handle, pname);
-    glCheckError(gl);
-    return result;
+  cancel() {
+    this.end();
+    queryManager.cancelQuery(this);
+    return this;
   }
 
   isResultAvailable() {
-    const {gl} = this;
-    return this.getParameters(gl.QUERY_RESULT_AVAILBLE);
+    return this.gl.getQueryParameter(this.handle,
+      this.gl.QUERY_RESULT_AVAILBLE);
   }
 
   getResult() {
-    const {gl} = this;
-    return this.getParameters(gl.QUERY_RESULT);
+    return this.gl.getQueryParameter(this.handle, this.gl.QUERY_RESULT);
   }
 
+  static poll(gl) {
+    queryManager.poll(gl);
+  }
 }

@@ -7,14 +7,6 @@ import assert from 'assert';
 
 const ERR_WEBGL2 = 'WebGL2 required';
 
-// WebGLSampler? createSampler();
-// void deleteSampler(WebGLSampler? sampler);
-// [WebGLHandlesContextLoss] GLboolean isSampler(WebGLSampler? sampler);
-// void bindSampler(GLuint unit, WebGLSampler? sampler);
-// void samplerParameteri(WebGLSampler? sampler, GLenum pname, GLint param);
-// void samplerParameterf(WebGLSampler? sampler, GLenum pname, GLfloat param);
-// any getSamplerParameter(WebGLSampler? sampler, GLenum pname);
-
 export default class Sampler {
 
   /**

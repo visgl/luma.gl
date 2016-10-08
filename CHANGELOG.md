@@ -5,6 +5,10 @@
 
 # Official releases
 
+### 2.9.0  TimerQuery support, Fixes context creation crash on Travis CI
+  - Support EXT_disjoint_timer_query
+  - Fix: context creation crash when WEBGL_debug_info extension was undefined
+
 ### 2.8.0  Debug log improvements, import fix
   - Debug logs now print unused attributes more compactly, number formatting
     improved.
