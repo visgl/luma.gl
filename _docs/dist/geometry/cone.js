@@ -27,7 +27,7 @@ var ConeGeometry = exports.ConeGeometry = function (_TruncatedConeGeometr) {
   _inherits(ConeGeometry, _TruncatedConeGeometr);
 
   function ConeGeometry() {
-    var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     var _ref$radius = _ref.radius;
     var radius = _ref$radius === undefined ? 1 : _ref$radius;
@@ -38,7 +38,7 @@ var ConeGeometry = exports.ConeGeometry = function (_TruncatedConeGeometr) {
 
     _classCallCheck(this, ConeGeometry);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(ConeGeometry).call(this, _extends({}, opts, {
+    return _possibleConstructorReturn(this, (ConeGeometry.__proto__ || Object.getPrototypeOf(ConeGeometry)).call(this, _extends({}, opts, {
       topRadius: 0,
       topCap: Boolean(cap),
       bottomCap: Boolean(cap),
@@ -53,11 +53,11 @@ var Cone = function (_Model) {
   _inherits(Cone, _Model);
 
   function Cone() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, Cone);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(Cone).call(this, _extends({
+    return _possibleConstructorReturn(this, (Cone.__proto__ || Object.getPrototypeOf(Cone)).call(this, _extends({
       geometry: new ConeGeometry(opts)
     }, opts)));
   }
@@ -66,4 +66,4 @@ var Cone = function (_Model) {
 }(_model2.default);
 
 exports.default = Cone;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9nZW9tZXRyeS9jb25lLmpzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBOztBQUNBOzs7Ozs7Ozs7Ozs7OztJQUVhLFksV0FBQSxZOzs7QUFDWCwwQkFBb0Q7QUFBQSxxRUFBSixFQUFJOztBQUFBLDJCQUF2QyxNQUF1QztBQUFBLFFBQXZDLE1BQXVDLCtCQUE5QixDQUE4QjtBQUFBLHdCQUEzQixHQUEyQjtBQUFBLFFBQTNCLEdBQTJCLDRCQUFyQixJQUFxQjs7QUFBQSxRQUFaLElBQVk7O0FBQUE7O0FBQUEsd0dBRTdDLElBRjZDO0FBR2hELGlCQUFXLENBSHFDO0FBSWhELGNBQVEsUUFBUSxHQUFSLENBSndDO0FBS2hELGlCQUFXLFFBQVEsR0FBUixDQUxxQztBQU1oRCxvQkFBYztBQU5rQztBQVFuRDs7Ozs7SUFHa0IsSTs7O0FBQ25CLGtCQUF1QjtBQUFBLFFBQVgsSUFBVyx5REFBSixFQUFJOztBQUFBOztBQUFBO0FBRW5CLGdCQUFVLElBQUksWUFBSixDQUFpQixJQUFqQjtBQUZTLE9BR2hCLElBSGdCO0FBS3RCOzs7OztrQkFOa0IsSSIsImZpbGUiOiJjb25lLmpzIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHtUcnVuY2F0ZWRDb25lR2VvbWV0cnl9IGZyb20gJy4vdHJ1bmNhdGVkLWNvbmUnO1xuaW1wb3J0IE1vZGVsIGZyb20gJy4uL2NvcmUvbW9kZWwnO1xuXG5leHBvcnQgY2xhc3MgQ29uZUdlb21ldHJ5IGV4dGVuZHMgVHJ1bmNhdGVkQ29uZUdlb21ldHJ5IHtcbiAgY29uc3RydWN0b3Ioe3JhZGl1cyA9IDEsIGNhcCA9IHRydWUsIC4uLm9wdHN9ID0ge30pIHtcbiAgICBzdXBlcih7XG4gICAgICAuLi5vcHRzLFxuICAgICAgdG9wUmFkaXVzOiAwLFxuICAgICAgdG9wQ2FwOiBCb29sZWFuKGNhcCksXG4gICAgICBib3R0b21DYXA6IEJvb2xlYW4oY2FwKSxcbiAgICAgIGJvdHRvbVJhZGl1czogcmFkaXVzXG4gICAgfSk7XG4gIH1cbn1cblxuZXhwb3J0IGRlZmF1bHQgY2xhc3MgQ29uZSBleHRlbmRzIE1vZGVsIHtcbiAgY29uc3RydWN0b3Iob3B0cyA9IHt9KSB7XG4gICAgc3VwZXIoe1xuICAgICAgZ2VvbWV0cnk6IG5ldyBDb25lR2VvbWV0cnkob3B0cyksXG4gICAgICAuLi5vcHRzXG4gICAgfSk7XG4gIH1cbn1cbiJdfQ==
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9nZW9tZXRyeS9jb25lLmpzIl0sIm5hbWVzIjpbIkNvbmVHZW9tZXRyeSIsInJhZGl1cyIsImNhcCIsIm9wdHMiLCJ0b3BSYWRpdXMiLCJ0b3BDYXAiLCJCb29sZWFuIiwiYm90dG9tQ2FwIiwiYm90dG9tUmFkaXVzIiwiQ29uZSIsImdlb21ldHJ5Il0sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7QUFBQTs7QUFDQTs7Ozs7Ozs7Ozs7Ozs7SUFFYUEsWSxXQUFBQSxZOzs7QUFDWCwwQkFBb0Q7QUFBQSxtRkFBSixFQUFJOztBQUFBLDJCQUF2Q0MsTUFBdUM7QUFBQSxRQUF2Q0EsTUFBdUMsK0JBQTlCLENBQThCO0FBQUEsd0JBQTNCQyxHQUEyQjtBQUFBLFFBQTNCQSxHQUEyQiw0QkFBckIsSUFBcUI7O0FBQUEsUUFBWkMsSUFBWTs7QUFBQTs7QUFBQSxvSUFFN0NBLElBRjZDO0FBR2hEQyxpQkFBVyxDQUhxQztBQUloREMsY0FBUUMsUUFBUUosR0FBUixDQUp3QztBQUtoREssaUJBQVdELFFBQVFKLEdBQVIsQ0FMcUM7QUFNaERNLG9CQUFjUDtBQU5rQztBQVFuRDs7Ozs7SUFHa0JRLEk7OztBQUNuQixrQkFBdUI7QUFBQSxRQUFYTixJQUFXLHVFQUFKLEVBQUk7O0FBQUE7O0FBQUE7QUFFbkJPLGdCQUFVLElBQUlWLFlBQUosQ0FBaUJHLElBQWpCO0FBRlMsT0FHaEJBLElBSGdCO0FBS3RCOzs7OztrQkFOa0JNLEkiLCJmaWxlIjoiY29uZS5qcyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7VHJ1bmNhdGVkQ29uZUdlb21ldHJ5fSBmcm9tICcuL3RydW5jYXRlZC1jb25lJztcbmltcG9ydCBNb2RlbCBmcm9tICcuLi9jb3JlL21vZGVsJztcblxuZXhwb3J0IGNsYXNzIENvbmVHZW9tZXRyeSBleHRlbmRzIFRydW5jYXRlZENvbmVHZW9tZXRyeSB7XG4gIGNvbnN0cnVjdG9yKHtyYWRpdXMgPSAxLCBjYXAgPSB0cnVlLCAuLi5vcHRzfSA9IHt9KSB7XG4gICAgc3VwZXIoe1xuICAgICAgLi4ub3B0cyxcbiAgICAgIHRvcFJhZGl1czogMCxcbiAgICAgIHRvcENhcDogQm9vbGVhbihjYXApLFxuICAgICAgYm90dG9tQ2FwOiBCb29sZWFuKGNhcCksXG4gICAgICBib3R0b21SYWRpdXM6IHJhZGl1c1xuICAgIH0pO1xuICB9XG59XG5cbmV4cG9ydCBkZWZhdWx0IGNsYXNzIENvbmUgZXh0ZW5kcyBNb2RlbCB7XG4gIGNvbnN0cnVjdG9yKG9wdHMgPSB7fSkge1xuICAgIHN1cGVyKHtcbiAgICAgIGdlb21ldHJ5OiBuZXcgQ29uZUdlb21ldHJ5KG9wdHMpLFxuICAgICAgLi4ub3B0c1xuICAgIH0pO1xuICB9XG59XG4iXX0=

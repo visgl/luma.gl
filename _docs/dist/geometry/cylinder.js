@@ -27,7 +27,7 @@ var CylinderGeometry = exports.CylinderGeometry = function (_TruncatedConeGeomet
   _inherits(CylinderGeometry, _TruncatedConeGeometr);
 
   function CylinderGeometry() {
-    var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     var _ref$radius = _ref.radius;
     var radius = _ref$radius === undefined ? 1 : _ref$radius;
@@ -36,7 +36,7 @@ var CylinderGeometry = exports.CylinderGeometry = function (_TruncatedConeGeomet
 
     _classCallCheck(this, CylinderGeometry);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(CylinderGeometry).call(this, _extends({}, opts, {
+    return _possibleConstructorReturn(this, (CylinderGeometry.__proto__ || Object.getPrototypeOf(CylinderGeometry)).call(this, _extends({}, opts, {
       bottomRadius: radius,
       topRadius: radius
     })));
@@ -51,7 +51,7 @@ var Cylinder = function (_Model) {
   function Cylinder(opts) {
     _classCallCheck(this, Cylinder);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(Cylinder).call(this, _extends({}, opts, {
+    return _possibleConstructorReturn(this, (Cylinder.__proto__ || Object.getPrototypeOf(Cylinder)).call(this, _extends({}, opts, {
       geometry: new CylinderGeometry(opts)
     })));
   }
@@ -60,4 +60,4 @@ var Cylinder = function (_Model) {
 }(_model2.default);
 
 exports.default = Cylinder;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9nZW9tZXRyeS9jeWxpbmRlci5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7QUFBQTs7QUFDQTs7Ozs7Ozs7Ozs7Ozs7SUFFYSxnQixXQUFBLGdCOzs7QUFDWCw4QkFBd0M7QUFBQSxxRUFBSixFQUFJOztBQUFBLDJCQUEzQixNQUEyQjtBQUFBLFFBQTNCLE1BQTJCLCtCQUFsQixDQUFrQjs7QUFBQSxRQUFaLElBQVk7O0FBQUE7O0FBQUEsNEdBRWpDLElBRmlDO0FBR3BDLG9CQUFjLE1BSHNCO0FBSXBDLGlCQUFXO0FBSnlCO0FBTXZDOzs7OztJQUdrQixROzs7QUFDbkIsb0JBQVksSUFBWixFQUFrQjtBQUFBOztBQUFBLG9HQUVYLElBRlc7QUFHZCxnQkFBVSxJQUFJLGdCQUFKLENBQXFCLElBQXJCO0FBSEk7QUFLakI7Ozs7O2tCQU5rQixRIiwiZmlsZSI6ImN5bGluZGVyLmpzIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHtUcnVuY2F0ZWRDb25lR2VvbWV0cnl9IGZyb20gJy4vdHJ1bmNhdGVkLWNvbmUnO1xuaW1wb3J0IE1vZGVsIGZyb20gJy4uL2NvcmUvbW9kZWwnO1xuXG5leHBvcnQgY2xhc3MgQ3lsaW5kZXJHZW9tZXRyeSBleHRlbmRzIFRydW5jYXRlZENvbmVHZW9tZXRyeSB7XG4gIGNvbnN0cnVjdG9yKHtyYWRpdXMgPSAxLCAuLi5vcHRzfSA9IHt9KSB7XG4gICAgc3VwZXIoe1xuICAgICAgLi4ub3B0cyxcbiAgICAgIGJvdHRvbVJhZGl1czogcmFkaXVzLFxuICAgICAgdG9wUmFkaXVzOiByYWRpdXNcbiAgICB9KTtcbiAgfVxufVxuXG5leHBvcnQgZGVmYXVsdCBjbGFzcyBDeWxpbmRlciBleHRlbmRzIE1vZGVsIHtcbiAgY29uc3RydWN0b3Iob3B0cykge1xuICAgIHN1cGVyKHtcbiAgICAgIC4uLm9wdHMsXG4gICAgICBnZW9tZXRyeTogbmV3IEN5bGluZGVyR2VvbWV0cnkob3B0cylcbiAgICB9KTtcbiAgfVxufVxuIl19
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9nZW9tZXRyeS9jeWxpbmRlci5qcyJdLCJuYW1lcyI6WyJDeWxpbmRlckdlb21ldHJ5IiwicmFkaXVzIiwib3B0cyIsImJvdHRvbVJhZGl1cyIsInRvcFJhZGl1cyIsIkN5bGluZGVyIiwiZ2VvbWV0cnkiXSwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBOztBQUNBOzs7Ozs7Ozs7Ozs7OztJQUVhQSxnQixXQUFBQSxnQjs7O0FBQ1gsOEJBQXdDO0FBQUEsbUZBQUosRUFBSTs7QUFBQSwyQkFBM0JDLE1BQTJCO0FBQUEsUUFBM0JBLE1BQTJCLCtCQUFsQixDQUFrQjs7QUFBQSxRQUFaQyxJQUFZOztBQUFBOztBQUFBLDRJQUVqQ0EsSUFGaUM7QUFHcENDLG9CQUFjRixNQUhzQjtBQUlwQ0csaUJBQVdIO0FBSnlCO0FBTXZDOzs7OztJQUdrQkksUTs7O0FBQ25CLG9CQUFZSCxJQUFaLEVBQWtCO0FBQUE7O0FBQUEsNEhBRVhBLElBRlc7QUFHZEksZ0JBQVUsSUFBSU4sZ0JBQUosQ0FBcUJFLElBQXJCO0FBSEk7QUFLakI7Ozs7O2tCQU5rQkcsUSIsImZpbGUiOiJjeWxpbmRlci5qcyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7VHJ1bmNhdGVkQ29uZUdlb21ldHJ5fSBmcm9tICcuL3RydW5jYXRlZC1jb25lJztcbmltcG9ydCBNb2RlbCBmcm9tICcuLi9jb3JlL21vZGVsJztcblxuZXhwb3J0IGNsYXNzIEN5bGluZGVyR2VvbWV0cnkgZXh0ZW5kcyBUcnVuY2F0ZWRDb25lR2VvbWV0cnkge1xuICBjb25zdHJ1Y3Rvcih7cmFkaXVzID0gMSwgLi4ub3B0c30gPSB7fSkge1xuICAgIHN1cGVyKHtcbiAgICAgIC4uLm9wdHMsXG4gICAgICBib3R0b21SYWRpdXM6IHJhZGl1cyxcbiAgICAgIHRvcFJhZGl1czogcmFkaXVzXG4gICAgfSk7XG4gIH1cbn1cblxuZXhwb3J0IGRlZmF1bHQgY2xhc3MgQ3lsaW5kZXIgZXh0ZW5kcyBNb2RlbCB7XG4gIGNvbnN0cnVjdG9yKG9wdHMpIHtcbiAgICBzdXBlcih7XG4gICAgICAuLi5vcHRzLFxuICAgICAgZ2VvbWV0cnk6IG5ldyBDeWxpbmRlckdlb21ldHJ5KG9wdHMpXG4gICAgfSk7XG4gIH1cbn1cbiJdfQ==

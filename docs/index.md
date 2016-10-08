@@ -90,6 +90,15 @@ wrapper classes are provided for the new objects in WebGL2.
 | `TransformFeedback` | [`WebGLTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) | Capture Vertex Shader output |
 | `VertexArrayObject` | [`WebGLVertexArrayObject`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject) | Save global vertex attribute array. |
 
+
+## WebGL Extensions
+---------------------------------
+
+luma.gl uses [`WebGL Extensions`](extensions.html) to make WebGL 2 features
+(conditionally) available under WebGL1 and to enable an improved
+debugging/profiling experience.
+
+
 ## Supporting Modules
 ---------------------------------
 

@@ -8,6 +8,9 @@ import {log, isBrowser} from '../utils';
 import luma from '../globals';
 /* global document */
 
+const GL_UNMASKED_VENDOR_WEBGL = 0x9245;
+const GL_UNMASKED_RENDERER_WEBGL = 0x9246;
+
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
 install a recent version of a major browser.`;
@@ -136,16 +139,18 @@ export function getGLExtension(gl, extensionName) {
   return extension;
 }
 
+/**
+ * Provides strings identifying the GPU vendor and driver.
+ * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @param {WebGLRenderingContext} gl - context
+ * @return {Object} - 'vendor' and 'renderer' string fields.
+ */
 export function glGetDebugInfo(gl) {
   const info = gl.getExtension('WEBGL_debug_renderer_info');
-  /* Avoid Firefox issues with debug context and extensions */
-  if (info && info.UNMASKED_VENDOR_WEBGL && info.UNMASKED_RENDERER_WEBGL) {
-    return {
-      vendor: gl.getParameter(info.UNMASKED_VENDOR_WEBGL),
-      renderer: gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
-    };
-  }
-  return null;
+  return {
+    vendor: info ? gl.getParameter(GL_UNMASKED_VENDOR_WEBGL) : 'unknown',
+    renderer: info ? gl.getParameter(GL_UNMASKED_RENDERER_WEBGL) : 'unknown'
+  };
 }
 
 // Executes a function with gl states temporarily set, exception safe
