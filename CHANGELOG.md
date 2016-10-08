@@ -5,9 +5,11 @@
 
 # Official releases
 
-### 2.9.0  TimerQuery support, Fixes context creation crash on Travis CI
+### 2.9.0  TimerQuery, WebGL Extension doc, fix crash on Travis CI
   - Support EXT_disjoint_timer_query
+  - Document luma.gl use of WebGL extensions.
   - Fix: context creation crash when WEBGL_debug_info extension was undefined
+  - Add
 
 ### 2.8.0  Debug log improvements, import fix
   - Debug logs now print unused attributes more compactly, number formatting
