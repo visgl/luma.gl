@@ -1,8 +1,8 @@
 // WebGL2 Sync Object Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
-
 import {WebGL2RenderingContext} from './webgl-types';
 import {glCheckError} from '../context';
+import queryManager from './queryManager';
 import assert from 'assert';
 
 // WebGLSync? fenceSync(GLenum condition, GLbitfield flags);
@@ -17,16 +17,20 @@ export default class Sync {
   /**
    * @class
    * @param {WebGL2RenderingContext} gl
-   * @param {GLenum} condition
-   * @param {GLbitfield} flags
    */
-  constructor(gl, {condition, flags}) {
+  constructor(gl) {
     assert(gl instanceof WebGL2RenderingContext);
-    this.gl = gl;
-    condition = condition || gl.SYNC_GPU_COMMANDS_COMPLETE;
-    this.handle = gl.fenceSync(condition, flags);
+
+    const handle = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     glCheckError(gl);
+
+    this.gl = gl;
+    this.handle = handle;
     this.userData = {};
+
+    // query manager needs a promise field
+    this.promise = null;
+
     Object.seal(this);
   }
 
@@ -34,10 +38,12 @@ export default class Sync {
    * @return {Sync} returns self to enable chaining
    */
   delete() {
-    const {gl} = this;
-    gl.deleteSync(this.handle);
-    this.handle = null;
-    glCheckError(gl);
+    queryManager.deleteQuery(this);
+    if (this.handle) {
+      this.gl.deleteSync(this.handle);
+      this.handle = null;
+      glCheckError(this.gl);
+    }
     return this;
   }
 
@@ -47,9 +53,8 @@ export default class Sync {
    * @return {Sync} returns self to enable chaining
    */
   wait(flags, timeout) {
-    const {gl} = this;
-    gl.waitSync(this.handle, flags, timeout);
-    glCheckError(gl);
+    this.gl.waitSync(this.handle, flags, timeout);
+    glCheckError(this.gl);
     return this;
   }
 
@@ -59,19 +64,22 @@ export default class Sync {
    * @return {GLenum} result
    */
   clientWait(flags, timeout) {
-    const {gl} = this;
-    const result = gl.clientWaitSync(this.handle, flags, timeout);
-    glCheckError(gl);
+    const result = this.gl.clientWaitSync(this.handle, flags, timeout);
+    glCheckError(this.gl);
     return result;
   }
 
-  // @param {GLenum} pname
-  getParameter(pname) {
-    const {gl} = this;
-    const result = gl.getSyncParameter(this.handle, pname);
-    glCheckError(gl);
-    return result;
+  cancel() {
+    queryManager.cancelQuery(this);
   }
 
+  isResultAvailable() {
+    const status = this.gl.getSyncParameter(this.handle, this.gl.SYNC_STATUS);
+    return status === this.gl.SIGNALED;
+  }
+
+  getResult() {
+    return this.gl.SIGNALED;
+  }
 }
 

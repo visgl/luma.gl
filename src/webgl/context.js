@@ -2,10 +2,12 @@
 /* eslint-disable no-try-catch, no-loop-func */
 import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
-import {isWebGL2RenderingContext} from './webgl-checks';
-import assert from 'assert';
+import {assertWebGLRenderingContext, isWebGL2RenderingContext}
+  from './webgl-checks';
+import queryManager from './helpers/query-manager';
 import {log, isBrowser} from '../utils';
 import luma from '../globals';
+import assert from 'assert';
 /* global document */
 
 const GL_UNMASKED_VENDOR_WEBGL = 0x9245;
@@ -18,6 +20,12 @@ install a recent version of a major browser.`;
 const ERR_WEBGL_MISSING_NODE = `\
 WebGL API is missing. To run luma.gl under Node.js, please "npm install gl"
 and import 'luma.gl/headless' before importing 'luma.gl'.`;
+
+const ERR_HEADLESSGL_NOT_AVAILABLE =
+'Cannot create headless WebGL context, headlessGL not available';
+
+const ERR_HEADLESSGL_FAILED =
+'headlessGL failed to create headless WebGL context';
 
 const STARTUP_MESSAGE = `\
 Assign luma.log.priority in console to control logging: \
@@ -36,7 +44,7 @@ export function createGLContext({
   // Attempt to allocate WebGL2 context
   webgl2 = false,
   // Instrument context (at the expense of performance)
-  // Note: defaults to true and needs to be explicitly turn off
+  // Note: currently defaults to true and needs to be explicitly turned off
   debug = true,
   // Other options are passed through to context creator
   ...opts
@@ -49,12 +57,11 @@ export function createGLContext({
       throw new Error(ERR_WEBGL_MISSING_NODE);
     }
     if (!luma.globals.headlessGL) {
-      throw new Error(
-        'Cannot create headless WebGL context, headlessGL not available');
+      throw new Error(ERR_HEADLESSGL_NOT_AVAILABLE);
     }
     gl = luma.globals.headlessGL(width, height, opts);
     if (!gl) {
-      throw new Error('headlessGL failed to create headless WebGL context');
+      throw new Error(ERR_HEADLESSGL_FAILED);
     }
   } else {
     // Create browser gl context
@@ -101,24 +108,9 @@ export function createGLContext({
   return gl;
 }
 
-function logInfo(gl) {
-  const webGL = isWebGL2RenderingContext(gl) ? 'WebGL2' : 'WebGL1';
-  const info = glGetDebugInfo(gl);
-  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
-  const debug = gl.debug ? 'debug' : '';
-  log.log(0,
-    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
-
-  // const extensions = gl.getSupportedExtensions();
-  // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
-}
-
-// alert(WebGLDebugUtils.glEnumToString(ctx.getError()));
-
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function glGet(gl, name) {
   // assertWebGLRenderingContext(gl);
-
   let value = name;
   if (typeof name === 'string') {
     value = gl[name];
@@ -130,7 +122,6 @@ export function glGet(gl, name) {
 // Returns the extension or throws an error
 export function getGLExtension(gl, extensionName) {
   // assertWebGLRenderingContext(gl);
-
   const ERROR = 'Illegal arg to getExtension';
   assert(gl instanceof WebGLRenderingContext, ERROR);
   assert(typeof extensionName === 'string', ERROR);
@@ -139,19 +130,15 @@ export function getGLExtension(gl, extensionName) {
   return extension;
 }
 
-/**
- * Provides strings identifying the GPU vendor and driver.
- * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
- * @param {WebGLRenderingContext} gl - context
- * @return {Object} - 'vendor' and 'renderer' string fields.
- */
-export function glGetDebugInfo(gl) {
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
-  return {
-    vendor: info ? gl.getParameter(GL_UNMASKED_VENDOR_WEBGL) : 'unknown',
-    renderer: info ? gl.getParameter(GL_UNMASKED_RENDERER_WEBGL) : 'unknown'
-  };
+// POLLING FOR PENDING QUERIES
+
+// Calling this function checks all pending queries for completion
+export function poll(gl) {
+  assertWebGLRenderingContext(gl);
+  queryManager.poll(gl);
 }
+
+// VERY LIMITED / BASIC GL STATE MANAGEMENT
 
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
@@ -184,6 +171,36 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
     }
   }
 }
+
+// DEBUG INFO
+
+/**
+ * Provides strings identifying the GPU vendor and driver.
+ * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @param {WebGLRenderingContext} gl - context
+ * @return {Object} - 'vendor' and 'renderer' string fields.
+ */
+export function glGetDebugInfo(gl) {
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  return {
+    vendor: info ? gl.getParameter(GL_UNMASKED_VENDOR_WEBGL) : 'unknown',
+    renderer: info ? gl.getParameter(GL_UNMASKED_RENDERER_WEBGL) : 'unknown'
+  };
+}
+
+function logInfo(gl) {
+  const webGL = isWebGL2RenderingContext(gl) ? 'WebGL2' : 'WebGL1';
+  const info = glGetDebugInfo(gl);
+  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
+  const debug = gl.debug ? 'debug' : '';
+  log.log(0,
+    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
+
+  // const extensions = gl.getSupportedExtensions();
+  // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
+}
+
+// DEBUG TRACING
 
 function getFunctionString(functionName, functionArgs) {
   let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);

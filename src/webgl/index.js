@@ -17,6 +17,9 @@ export {Texture, Texture2D, TextureCube} from './texture';
 import * as VertexAttributes from './vertex-attributes';
 export {VertexAttributes};
 
+// Extensions
+export {default as TimerQuery} from './timer-query';
+
 // Functions
 export * from './context';
 export * from './draw';
