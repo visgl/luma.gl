@@ -1,11 +1,11 @@
 {
   "name": "luma.gl",
-  "version": "2.9.1",
+  "version": "2.10.0",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
-  "author": "Ib Green <ib@uber.com>",
   "contributors": [
-    "Nicolas Belomonte <nico@uber.com>",
+    "Ib Green <ib@uber.com>",
+    "Nicolas Belmonte <nico@uber.com>",
     "Rye Terrell <ryeterrell@ryeterrell.net",
     "Shan He <shan@uber.com>",
     "Mikola Lysenko <mikolalysenko@gmail.com",
@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/uber//luma.gl"
+    "url": "https://github.com/uber/luma.gl"
   },
   "keywords": [
     "webgl",
@@ -33,11 +33,11 @@
   ],
   "dependencies": {
     "autobind-decorator": "^1.3.3",
-    "babel-core": "^6.7.7",
     "babel-polyfill": "^6.5.0",
     "canvas-to-blob": "0.0.0",
     "filesaver.js": "^0.2.0",
     "gl-constants": "^1.0.0",
+    "gl-matrix": "^2.3.2",
     "glsl-shader-name": "^1.0.0",
     "glslify": "^5.0.2",
     "through": "^2.3.8",
@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "babel-cli": "^6.3.15",
+    "babel-core": "^6.7.7",
     "babel-eslint": "^6.0.0",
     "babel-plugin-glslify": "^1.0.0",
     "babel-plugin-transform-builtin-extend": "^1.1.0",
@@ -80,6 +81,7 @@
     "build": "npm run build-clean && npm run build-compile && npm run build-script",
     "build-clean": "rm -fr dist/*",
     "build-compile": "babel src -d dist --source-maps inline --copy-files",
+    "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
     "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t glslify && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
@@ -88,22 +90,13 @@
     "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages",
     "lint": "eslint src",
     "precommit": "npm test",
-    "prepublish": "npm run build",
+    "mypublish": "npm run build && npm run test && npm publish",
     "test": "npm run lint && npm run test-headless && npm run test-headless-nowebgl",
     "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-headless-nowebgl": "babel-node --include='' test/headless-nowebgl.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
-    "start": "budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
-  },
-  "eslintConfig": {
-    "parser": "babel-eslint",
-    "extends": [
-      "eslint-config-uber-es2015"
-    ],
-    "rules": {
-      "guard-for-in": 0
-    }
+    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t glslify"
   }
 }

@@ -7,3 +7,6 @@ require('./webgl');
 // require('./node-dependent');
 
 require('./core');
+
+// deprecated
+require('../src/deprecated/test');

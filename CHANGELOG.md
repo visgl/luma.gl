@@ -5,8 +5,17 @@
 
 # Official releases
 
-### 2.9.1 GLSL shader compiler error handling 
-  - FIX: GLSL shader compiler error parsing 
+### 2.10.0
+- Introduce new gl-matrix based math library.
+- Move old math lib to deprecated folder.
+- Move FBO to deprecated folder.
+- Examples converted to ES6. AnimationFrame class updates.
+- Add back persistence example
+- WebGL type and constant cleanup
+- Fix glTypeToArray and use clamped arrays by default
+
+### 2.9.1 GLSL shader compiler error handling
+  - FIX: GLSL shader compiler error parsing
 
 ### 2.9.0  TimerQuery, WebGL Extension doc, fix crash on Travis CI
   - Support EXT_disjoint_timer_query

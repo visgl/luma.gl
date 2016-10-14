@@ -140,23 +140,23 @@ window.webGLStart = function() {
       theta += 0.01;
 
       moon
-        .setPosition(new Vec3(
+        .setPosition([
           rho * Math.cos(theta),
           0,
           rho * Math.sin(theta)
-        ))
+        ])
         .updateMatrix();
 
       box
-        .setPosition(new Vec3(
+        .setPosition([
           rho * Math.cos(Math.PI + theta),
           0,
           rho * Math.sin(Math.PI + theta)
-        ))
+        ])
         .updateMatrix();
 
       // render objects
-      scene.render({camera});
+      scene.render(camera.getUniforms());
 
       // request frame
       Fx.requestAnimationFrame(draw);

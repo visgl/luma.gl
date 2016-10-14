@@ -3,7 +3,8 @@
 
 // Define some locals
 import {
-  WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable
+  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
+  WebGLRenderingContext
 } from '../webgl';
 import Object3D from '../scenegraph/object-3d';
 import {log, formatValue} from '../utils';
@@ -29,9 +30,15 @@ export class Material {
 // Model abstract O3D Class
 export default class Model extends Object3D {
 
+  constructor(gl, opts = {}) {
+    opts = gl instanceof WebGLRenderingContext ? {...opts, gl} : gl;
+    super(opts);
+    this.init(opts);
+  }
+
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
-  constructor({
+  init({
     program,
     gl = null,
     vs = null,
@@ -44,7 +51,8 @@ export default class Model extends Object3D {
     instanceCount = 0,
     vertexCount = undefined,
     // Picking
-    pickable = false, pick = null,
+    pickable = true,
+    pick = null,
     // Extra uniforms and attributes (beyond geometry, material, camera)
     uniforms = {},
     attributes = {},
@@ -55,8 +63,6 @@ export default class Model extends Object3D {
   } = {}) {
     // assert(program || program instanceof Program);
     assert(geometry instanceof Geometry, 'Model needs a geometry');
-
-    super(opts);
 
     // set a custom program per o3d
     this.program = program || new Program(gl, {vs, fs});
@@ -107,6 +113,10 @@ export default class Model extends Object3D {
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
+
+  destroy() {
+    // TODO
+  }
 
   get hash() {
     return `${this.id} ${this.$pickingIndex}`;
@@ -191,39 +201,53 @@ export default class Model extends Object3D {
     return this;
   }
 
+  draw({uniforms = {}, attributes = {}, settings = {}} = {}) {
+    return this.render(uniforms);
+  }
+
+  // TODO - uniform names are too strongly linked camera <=> default shaders
+  // At least all special handling is collected here.
+  addViewUniforms(uniforms) {
+    // TODO - special treatment of these parameters should be removed
+    const {camera, viewMatrix, modelMatrix, ...otherUniforms} = uniforms;
+    // Camera exposes uniforms that can be used directly in shaders
+    const cameraUniforms = camera ? camera.getUniforms() : {};
+
+    const viewUniforms = viewMatrix ?
+      this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
+
+    return {
+      ...cameraUniforms,
+      ...viewUniforms,
+      ...otherUniforms
+    };
+  }
+
   /*
    * @param {Camera} opt.camera=
    * @param {Camera} opt.viewMatrix=
    */
   /* eslint-disable max-statements */
   render(uniforms = {}) {
-    // TODO - special treatment of these parameters should be removed
-    const {camera, viewMatrix, ...otherUniforms} = uniforms;
-    // Camera exposes uniforms that can be used directly in shaders
-    if (camera) {
-      this.setUniforms(camera.getUniforms());
-    }
-    if (viewMatrix) {
-      this.setUniforms(this.getCoordinateUniforms(viewMatrix));
-    }
+    const resolvedUniforms = this.addViewUniforms(uniforms);
+
+    this.setUniforms(resolvedUniforms);
 
     log.log(2, `>>> RENDERING MODEL ${this.id}`, this);
 
-    this.setProgramState(otherUniforms);
+    this.setProgramState();
+
+    this._logAttributesAndUniforms(3, resolvedUniforms);
+
+    this.onBeforeRender();
 
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
       log.warn(0, 'Found instanced attributes on non-instanced model');
     }
-
-    this.onBeforeRender();
-
-    this._logAttributesAndUniforms(3, uniforms);
-
-    const {gl} = this.program;
-    const {geometry, isInstanced, instanceCount} = this;
     const {isIndexed, indexType} = drawParams;
-    draw(gl, {
+    const {geometry, isInstanced, instanceCount} = this;
+    draw(this.program.gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
       isIndexed,
@@ -243,12 +267,12 @@ export default class Model extends Object3D {
     return this;
   }
 
-  setProgramState(uniforms) {
+  setProgramState() {
     const {program} = this;
     program.use();
-    program.setUniforms({...this.uniforms, ...uniforms});
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
+    program.setUniforms(this.uniforms);
     return this;
   }
 
@@ -281,7 +305,7 @@ export default class Model extends Object3D {
           ...attribute,
           data: attribute.value,
           target: attribute.isIndexed ?
-            WebGL.ELEMENT_ARRAY_BUFFER : WebGL.ARRAY_BUFFER
+            GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
         });
       }
     }

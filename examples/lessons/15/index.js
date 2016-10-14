@@ -145,7 +145,7 @@ window.webGLStart = function() {
       earth.updateMatrix();
 
       // render objects
-      scene.render({camera});
+      scene.render(camera.getUniforms());
 
       // request new frame
       Fx.requestAnimationFrame(draw);

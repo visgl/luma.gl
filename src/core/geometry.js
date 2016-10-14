@@ -6,15 +6,15 @@ const ILLEGAL_ARG = 'Geometry: Illegal argument';
 export default class Geometry {
 
   constructor({
-    id = uid('geometry'),
+    id,
     drawMode = 'TRIANGLES',
     vertexCount = undefined,
     attributes,
     ...attrs
-  }) {
+  } = {}) {
     assert(drawMode, ILLEGAL_ARG);
 
-    this.id = id;
+    this.id = id || uid(this.constructor.name);
     this.drawMode = drawMode;
     this.vertexCount = vertexCount;
     this.attributes = {};

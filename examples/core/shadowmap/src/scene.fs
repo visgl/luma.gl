@@ -1,3 +1,5 @@
+#define SHADER_NAME scene.fs
+
 #ifdef GL_ES
 precision highp float;
 #endif

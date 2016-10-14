@@ -6,9 +6,6 @@ import shaderName from 'glsl-shader-name';
  * Formats a GLSL shader compiler error and generates a string
  * showing the source code around the error.
  *
- * Depends on assumptions about how the glsl compilers and various browsers
- * format their errors, which changes over time.
- *
  * From https://github.com/wwwtyro/gl-format-compiler-error (public domain)
  *
  * @param {String} errLog - error log from gl.getShaderInfoLog

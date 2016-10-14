@@ -1,6 +1,5 @@
 // WebGL2 VertexArray Objects Helper
-import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
-import {glCheckError} from '../webgl/context';
+import {assertWebGLContext, glCheckError} from '../webgl/webgl-checks';
 import queryManager from './helpers/query-manager';
 
 /* eslint-disable no-multi-spaces */
@@ -32,7 +31,7 @@ export default class TimerQuery {
    * @return {Boolean} - TimerQueries are supported with specified configuration
    */
   static isSupported(gl, {requireTimestamps = false} = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
     const ext = gl.getExtension('EXT_disjoint_timer_query');
     const queryCounterBits = ext ?
       ext.getQueryEXT(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT) :
@@ -97,7 +96,7 @@ export default class TimerQuery {
     onComplete = noop,
     onError = noop
   } = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     this.gl = gl;
     this.ext = this.gl.getExtension('EXT_disjoint_timer_query');

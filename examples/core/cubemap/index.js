@@ -1,134 +1,171 @@
-/* global LumaGL, window, document */
-/* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
-var Program = LumaGL.Program;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var TextureCube = LumaGL.TextureCube;
-var Cube = LumaGL.Cube;
-var Mat4 = LumaGL.Mat4;
-var Fx = LumaGL.Fx;
+/* global LumaGL, document */
+const {createGLContext, AnimationFrame} = LumaGL;
+const {GL, TextureCube, Cube} = LumaGL;
+const {Matrix4, radians} = LumaGL;
 
-window.webGLStart = function webGLStart() {
-
-  var canvas = document.getElementById('render-canvas');
-
-  var gl = createGLContext({canvas});
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
+new AnimationFrame()
+.context(() => createGLContext({canvas: 'render-canvas'}))
+.init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);
   gl.clearDepth(1);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
+  gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
-  var textures = genTextures(512);
+  return {
+    cube: getCube(gl),
+    prism: getPrism(gl),
+    cubemap: new TextureCube(gl, {
+      minFilter: gl.LINEAR_MIPMAP_LINEAR,
+      magFilter: gl.LINEAR,
+      data: genTextures(512),
+      flipY: true,
+      generateMipmap: true
+    })
+  };
+})
+.frame(({gl, tick, aspect, cube, prism, cubemap}) => {
+  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-  var cubemap = new TextureCube(gl, {
-    minFilter: gl.LINEAR_MIPMAP_LINEAR,
-    magFilter: gl.LINEAR,
-    data: textures,
-    flipY: true,
-    generateMipmap: true
+  const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
+  const projection = Matrix4.perspective({fov: radians(75), aspect});
+
+  cube.render({
+    uTexture: cubemap,
+    uModel: new Matrix4().scale([5, 5, 5]),
+    uView: view,
+    uProjection: projection
   });
 
-  var cube = new Cube({
-    program: new Program(gl, getShadersFromHTML({
-      vs: 'cube-vs',
-      fs: 'cube-fs'
-    }))
+  const reflection = parseFloat(document.getElementById('reflection').value);
+  const refraction = parseFloat(document.getElementById('refraction').value);
+
+  prism.render({
+    uTexture: cubemap,
+    uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+    uView: view,
+    uProjection: projection,
+    uReflect: reflection,
+    uRefract: refraction
   });
+});
 
-  var prism = new Cube({
-    program: new Program(gl, getShadersFromHTML({
-      vs: 'prism-vs',
-      fs: 'prism-fs'
-    }))
+function getCube(gl) {
+  return new Cube({
+    gl,
+    vs: `\
+attribute vec3 positions;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+varying vec3 position;
+
+void main(void) {
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+  position = positions;
+}
+`,
+    fs: `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform samplerCube uTexture;
+
+varying vec3 position;
+
+void main(void) {
+  vec4 c = textureCube(uTexture, normalize(position));
+  gl_FragColor = vec4(c);
+}
+`
   });
+}
 
-  var tick = 0;
+function getPrism(gl) {
+  return new Cube({
+    gl,
+    vs: `\
+attribute vec3 positions;
+attribute vec3 normals;
 
-  function render() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    var camera = new PerspectiveCamera({
-      fov: 75,
-      aspect: canvas.width / canvas.height
-    });
-    camera.view.$translate(0, 0, -4);
+varying vec3 position;
+varying vec3 normal;
+varying vec3 color;
 
-    tick++;
-    var modelMatrix = new Mat4();
-    modelMatrix.$scale(5, 5, 5);
-    cube
-      .setUniforms({
-        uTexture: cubemap.bind(0),
-        uModel: modelMatrix,
-        uView: camera.view,
-        uProjection: camera.projection
-      })
-      .render();
+void main(void) {
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+  position = vec3(uModel * vec4(positions,1));
+  normal = vec3(uModel * vec4(normals, 1));
+}
+`,
+    fs: `\
+#ifdef GL_ES
+precision highp float;
+#endif
 
-    // gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+uniform samplerCube uTexture;
+uniform float uReflect;
+uniform float uRefract;
 
-    var reflection = parseFloat(document.getElementById('reflection').value);
-    var refraction = parseFloat(document.getElementById('refraction').value);
+varying vec3 position;
+varying vec3 normal;
 
-    modelMatrix = new Mat4();
-    modelMatrix.$rotateXYZ(tick * 0.01, 0, 0);
-    modelMatrix.$rotateXYZ(0, tick * 0.013, 0);
-    prism
-      .setUniforms({
-        uTexture: cubemap.bind(0),
-        uModel: modelMatrix,
-        uView: camera.view,
-        uProjection: camera.projection,
-        uReflect: reflection,
-        uRefract: refraction
-      })
-      .render();
-
-    Fx.requestAnimationFrame(render);
-  }
-
-  render();
-};
+void main(void) {
+  vec4 color = vec4(1,0,0,1);
+  vec3 n = normalize(normal);
+  vec3 f0 = reflect(position - vec3(0,0,2.5), n);
+  vec3 f1 = refract(position - vec3(0,0,2.5), n, 0.75);
+  vec4 c0 = uReflect * textureCube(uTexture, normalize(f0)) + (1.0 - uReflect) * color;
+  vec4 c1 = uRefract * textureCube(uTexture, normalize(f1)) + (1.0 - uRefract) * color;
+  vec4 c = 0.5 * c0 + 0.5 * c1;
+  gl_FragColor = vec4(c * color);
+}
+`
+  });
+}
 
 function genTextures(size) {
-  var signs = ['pos', 'neg'];
-  var axes = ['x', 'y', 'z'];
-  var textures = {
+  const signs = ['pos', 'neg'];
+  const axes = ['x', 'y', 'z'];
+  const textures = {
     pos: {},
     neg: {}
   };
-  for (var i = 0; i < signs.length; i++) {
-    var sign = signs[i];
-    for (var j = 0; j < axes.length; j++) {
-      var axis = axes[j];
-      var canvas = document.createElement('canvas');
-      canvas.width = canvas.height = size;
-      var ctx = canvas.getContext('2d');
-      if (axis === 'x' || axis === 'z') {
-        ctx.translate(size, size);
-        ctx.rotate(Math.PI);
-      }
-      var color = 'rgb(0,64,128)';
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = 'white';
-      ctx.fillRect(8, 8, size - 16, size - 16);
-      ctx.fillStyle = color;
-      ctx.font = size / 4 + 'px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(sign + '-' + axis, size / 2, size / 2);
-      ctx.strokeStyle = color;
-      ctx.strokeRect(0, 0, size, size);
+  for (const sign of signs) {
+    for (const axis of axes) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      drawTexture({ctx, sign, axis, size});
       textures[sign][axis] = canvas;
     }
   }
   return textures;
+}
+
+function drawTexture({ctx, sign, axis, size}) {
+  if (axis === 'x' || axis === 'z') {
+    ctx.translate(size, size);
+    ctx.rotate(Math.PI);
+  }
+  const color = 'rgb(0,64,128)';
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = 'white';
+  ctx.fillRect(8, 8, size - 16, size - 16);
+  ctx.fillStyle = color;
+  ctx.font = `${size / 4}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${sign}-${axis}`, size / 2, size / 2);
+  ctx.strokeStyle = color;
+  ctx.strokeRect(0, 0, size, size);
 }

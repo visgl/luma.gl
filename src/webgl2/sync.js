@@ -1,9 +1,7 @@
 // WebGL2 Sync Object Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
-import {WebGL2RenderingContext} from './webgl-types';
-import {glCheckError} from '../context';
+import {assertWebGL2Context, glCheckError} from '../webgl/webgl-checks';
 import queryManager from './queryManager';
-import assert from 'assert';
 
 // WebGLSync? fenceSync(GLenum condition, GLbitfield flags);
 // [WebGLHandlesContextLoss] GLboolean isSync(WebGLSync? sync);
@@ -13,13 +11,12 @@ import assert from 'assert';
 // any getSyncParameter(WebGLSync? sync, GLenum pname);
 
 export default class Sync {
-
   /**
    * @class
    * @param {WebGL2RenderingContext} gl
    */
   constructor(gl) {
-    assert(gl instanceof WebGL2RenderingContext);
+    assertWebGL2Context(gl);
 
     const handle = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     glCheckError(gl);

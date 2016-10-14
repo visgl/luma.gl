@@ -3,12 +3,13 @@
 
 var createGLContext = LumaGL.createGLContext;
 var Program = LumaGL.Program;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
 var Buffer = LumaGL.Buffer;
 var Framebuffer = LumaGL.Framebuffer;
 var Mat4 = LumaGL.Mat4;
 var Vec3 = LumaGL.Vec3;
+
 var Fx = LumaGL.Fx;
+var getHTMLTemplate = LumaGL.addons.getHTMLTemplate;
 
 /* global Noise */
 var noise = new Noise();
@@ -78,15 +79,14 @@ function generateTerrain(size, resolution) {
   }
 
   return {
-    position: positions,
-    normal: normals,
-    color: colors
+    positions: positions,
+    normals: normals,
+    colors: colors
   };
 
 }
 
 window.onload = function() {
-
   var canvas = document.getElementById('render-canvas');
 
   var gl = createGLContext({canvas});
@@ -125,47 +125,59 @@ window.onload = function() {
     -1, +1, 0
   ]);
 
-  var quadBuffers = {
-    positions: new Buffer(gl).setData({
-      data: new Float32Array(QUAD_POSITIONS),
-      size: 3
-    }),
-    colors: new Buffer(gl).setData({
-      data: new Float32Array(colors),
-      size: 3,
-      instanced: 1
-    }),
-    offsets: new Buffer(gl).setData({
-      data: new Float32Array([0, 0, 0]),
-      size: 3,
-      instanced: 1
-    })
-  };
+  const quadGeometry = new Geometry({
+    attributes: {
+      aPosition: new Buffer(gl).setData({
+        data: new Float32Array(QUAD_POSITIONS),
+        size: 3
+      }),
+      aColor: new Buffer(gl).setData({
+        data: new Float32Array(colors),
+        size: 3,
+        instanced: 1
+      }),
+      aOffset: new Buffer(gl).setData({
+        data: new Float32Array([0, 0, 0]),
+        size: 3,
+        instanced: 1
+      })
+    },
+    vertexCount: QUAD_POSITIONS.length / 3,
+    instanceCount: colors.length / 3
+  });
 
   var terrainData = generateTerrain(16, 256);
 
-  var terrain = {
-    positions: new Buffer(gl).setData({
-      data: new Float32Array(terrainData.positions),
-      size: 3
-    }),
-    normals: new Buffer(gl).setData({
-      data: new Float32Array(terrainData.normals),
-      size: 3
-    }),
-    colors: new Buffer(gl).setData({
-      data: new Float32Array(terrainData.colors),
-      size: 3
-    }),
-    count: terrainData.positions.length / 3
-  };
+  const terrainGeometry = new Geometry({
+    attributes: {
+      aPosition: new Buffer(gl).setData({
+        data: new Float32Array(terrainData.positions),
+        size: 3
+      }),
+      aNormal: new Buffer(gl).setData({
+        data: new Float32Array(terrainData.normals),
+        size: 3
+      }),
+      aColor: new Buffer(gl).setData({
+        data: new Float32Array(terrainData.colors),
+        size: 3
+      })
+    },
+    vertexCount: terrainData.positions.length / 3
+  });
 
-  var pPosition =
-    new Program(gl, getShadersFromHTML({vs: 'position-vs', fs: 'position-fs'}));
-  var pNormal =
-    new Program(gl, getShadersFromHTML({vs: 'normal-vs', fs: 'normal-fs'}));
-  var pLights =
-    new Program(gl, getShadersFromHTML({vs: 'lights-vs', fs: 'lights-fs'}));
+  var pPosition = new Program(gl, {
+    vs: getHTMLTemplate('position-vs'),
+    fs: getHTMLTemplate('position-fs')
+  });
+  var pNormal = new Program(gl, {
+    vs: getHTMLTemplate('normal-vs'),
+    fs: getHTMLTemplate('normal-fs')
+  });
+  var pLights = new Program(gl, {
+    vs: getHTMLTemplate('lights-vs'),
+    fs: getHTMLTemplate('lights-fs')
+  });
 
   var fbPosition = new Framebuffer(gl, {
     width: canvas.clientWidth,
@@ -217,11 +229,8 @@ window.onload = function() {
         uView: view,
         uProjection: projection
       })
-      .setBuffers({
-        positions: terrain.positions
-      });
-    gl.drawArrays(gl.TRIANGLES, 0, terrain.count);
-    pPosition.unsetBuffer(terrain.positions);
+      .setBuffers(terrainBuffers);
+    gl.drawArrays(gl.TRIANGLES, 0, terrainBuffersCount);
 
     fbNormal.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -231,13 +240,10 @@ window.onload = function() {
         uView: view,
         uProjection: projection
       })
-      .setBuffers({
-        positions: terrain.positions,
-        normals: terrain.normals
-      });
-    gl.drawArrays(gl.TRIANGLES, 0, terrain.count);
-    pNormal.unsetBuffer(terrain.positions);
-    pNormal.unsetBuffer(terrain.normals);
+      .setBuffers(terrainBuffers);
+    gl.drawArrays(gl.TRIANGLES, 0, terrainBuffersCount);
+    // pNormal.unsetBuffer(terrain.positions);
+    // pNormal.unsetBuffer(terrain.normals);
 
     // Update the lights.
     var data = [];
@@ -252,9 +258,10 @@ window.onload = function() {
       light.current =
         light.target.sub(light.current).scale(0.005).add(light.current);
       light.current.y = height(light.current.x, light.current.z) + 0.02;
-      data.push([light.current.x, light.current.y, light.current.z]);
+      data.push(light.current.x, light.current.y, light.current.z);
     }
-    quadBuffers.offset.subData({
+    // TODO - subData
+    quadBuffers.aOffset.setData({
       data: new Float32Array(data)
     });
 
@@ -266,14 +273,14 @@ window.onload = function() {
 
     pLights
       .use()
+      .setBuffers(quadBuffers)
       .setUniforms({
         uView: view,
         uProjection: projection,
-        uPosition: fbPosition.texture.bind(0),
-        uNormal: fbNormal.texture.bind(1),
+        uPosition: fbPosition.texture,
+        uNormal: fbNormal.texture,
         uRes: [canvas.width, canvas.height]
-      })
-      .setBuffers(quadBuffers);
+      });
 
     const ext = gl.getExtension('ANGLE_instanced_arrays');
     ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, nLights);

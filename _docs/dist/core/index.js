@@ -22,15 +22,6 @@ Object.defineProperty(exports, 'Model', {
   }
 });
 
-var _attributeManager = require('./attribute-manager');
-
-Object.defineProperty(exports, 'AttributeManager', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_attributeManager).default;
-  }
-});
-
 var _camera = require('./camera');
 
 Object.keys(_camera).forEach(function (key) {
@@ -56,4 +47,4 @@ Object.keys(_event).forEach(function (key) {
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9jb3JlL2luZGV4LmpzIl0sIm5hbWVzIjpbImRlZmF1bHQiXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7OzZDQUFRQSxPOzs7Ozs7Ozs7MENBQ0FBLE87Ozs7Ozs7OztxREFDQUEsTzs7Ozs7O0FBQ1I7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBOzs7O0FBQ0E7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBIiwiZmlsZSI6ImluZGV4LmpzIiwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IHtkZWZhdWx0IGFzIEdlb21ldHJ5fSBmcm9tICcuL2dlb21ldHJ5JztcbmV4cG9ydCB7ZGVmYXVsdCBhcyBNb2RlbH0gZnJvbSAnLi9tb2RlbCc7XG5leHBvcnQge2RlZmF1bHQgYXMgQXR0cmlidXRlTWFuYWdlcn0gZnJvbSAnLi9hdHRyaWJ1dGUtbWFuYWdlcic7XG5leHBvcnQgKiBmcm9tICcuL2NhbWVyYSc7XG5leHBvcnQgKiBmcm9tICcuL2V2ZW50JztcbiJdfQ==
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9jb3JlL2luZGV4LmpzIl0sIm5hbWVzIjpbImRlZmF1bHQiXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7OzZDQUFRQSxPOzs7Ozs7Ozs7MENBQ0FBLE87Ozs7OztBQUNSO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTs7OztBQUNBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQSIsImZpbGUiOiJpbmRleC5qcyIsInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCB7ZGVmYXVsdCBhcyBHZW9tZXRyeX0gZnJvbSAnLi9nZW9tZXRyeSc7XG5leHBvcnQge2RlZmF1bHQgYXMgTW9kZWx9IGZyb20gJy4vbW9kZWwnO1xuZXhwb3J0ICogZnJvbSAnLi9jYW1lcmEnO1xuZXhwb3J0ICogZnJvbSAnLi9ldmVudCc7XG4iXX0=

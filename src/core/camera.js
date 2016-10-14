@@ -1,7 +1,7 @@
 // camera.js
 // Provides a Camera with ModelView and Projection matrices
 
-import {Vec3, Mat4} from '../math';
+import {Vec3, Mat4} from '../deprecated';
 import {merge} from '../utils';
 
 export class Camera {
@@ -27,7 +27,6 @@ export class Camera {
     this.uniforms = {};
 
     this.projection = new Mat4();
-    this.projectionFP64 = new Float32Array(32);
     Object.seal(this);
 
     this.update();
@@ -54,8 +53,7 @@ export class Camera {
       viewMatrix: this.view,
       viewProjectionMatrix: viewProjection,
       viewInverseMatrix: this.view.invert(),
-      viewProjectionInverseMatrix: viewProjectionInverse,
-      projectionFP64: this.projectionFP64
+      viewProjectionInverseMatrix: viewProjectionInverse
     };
   }
 

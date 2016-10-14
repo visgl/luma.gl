@@ -1,4 +1,4 @@
-import {Vec3} from '../math';
+import {Vector3} from '../math';
 import Geometry from '../core/geometry';
 import Model from '../core/model';
 
@@ -118,7 +118,7 @@ export class IcoSphereGeometry extends Geometry {
         y1 - y2,
         z1 - z2
       ];
-      const normal = Vec3.cross(vec1, vec2).$unit();
+      const normal = Vector3.cross(vec1, vec2).normalize();
       let newIndex;
 
       if ((u1 === 0 || u2 === 0 || u3 === 0) &&

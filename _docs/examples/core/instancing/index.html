@@ -33,8 +33,9 @@
 
       void main(void) {
         float d = length(instanceOffsets);
-        vec4 offset = vec4(instanceOffsets, sin((uTime + d) * 0.1) * 16.0,0);
+        vec4 offset = vec4(instanceOffsets, sin((uTime + d) * 0.1) * 16.0, 0);
         gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
+
         normal = vec3(uModel * vec4(normals, 1.0));
         color = instanceColors;
       }
