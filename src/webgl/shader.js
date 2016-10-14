@@ -1,5 +1,5 @@
 import {GL} from './webgl-types';
-import formatCompilerError from 'gl-format-compiler-error';
+import formatCompilerError from './webgl-format-glsl-error';
 import getShaderName from 'glsl-shader-name';
 import {log, uid, isBrowser} from '../utils';
 
@@ -11,7 +11,7 @@ export class Shader {
     this.id = getShaderName(shaderSource) || uid(this.getTypeName(shaderType));
     this.gl = gl;
     this.shaderType = shaderType;
-    this.shaderSource = shaderSource;
+    this.source = shaderSource;
     this.handle = gl.createShader(shaderType);
     if (this.handle === null) {
       throw new Error(`Error creating shader with type ${shaderType}`);
@@ -28,7 +28,7 @@ export class Shader {
   }
 
   getName() {
-    return getShaderName(this.shaderSource);
+    return getShaderName(this.source);
   }
 
   getTypeName(shaderType) {
@@ -41,26 +41,20 @@ export class Shader {
 
   compile() {
     const {gl} = this;
-    gl.shaderSource(this.handle, this.shaderSource);
+    gl.shaderSource(this.handle, this.source);
     gl.compileShader(this.handle);
     const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compiled) {
-      const info = gl.getShaderInfoLog(this.handle);
-      gl.deleteShader(this.handle);
-      /* eslint-disable no-try-catch */
-      let formattedLog;
-      try {
-        formattedLog =
-          formatCompilerError(info, this.shaderSource, this.shaderType);
-        if (log.priority > 0) {
-          this.copyToClipboard(this.shaderSource);
-        }
-      } catch (error) {
-        log.warn('Error formatting glsl compiler error:', error);
-        throw new Error(`Error while compiling the shader ${info}`);
+      const infoLog = gl.getShaderInfoLog(this.handle);
+      const error = formatCompilerError(infoLog, this.source, this.shaderType);
+
+      if (log.priority > 0) {
+        this.copyToClipboard(this.source);
       }
-      /* eslint-enable no-try-catch */
-      throw new Error(formattedLog.long);
+
+      this.delete();
+
+      throw new Error(`Error while compiling the shader ${error}`);
     }
   }
   /* eslint-enable max-statements */
@@ -71,23 +65,27 @@ export class Shader {
       /* global document */
       const input = document.createElement('textarea');
       document.body.appendChild(input);
-      input.value = ('Place text to be copied in here');
+      input.value = text;
       input.focus();
       input.select();
-      document.execCommand('Copy');
+      if (!document.execCommand('copy')) {
+        /* eslint-disable no-console */
+        /* global console */
+        console.log('Failed to copy to clipboard');
+      }
       input.remove();
     }
   }
 }
 
 export class VertexShader extends Shader {
-  constructor(gl, shaderSource) {
-    super(gl, shaderSource, GL.VERTEX_SHADER);
+  constructor(gl, source) {
+    super(gl, source, GL.VERTEX_SHADER);
   }
 }
 
 export class FragmentShader extends Shader {
-  constructor(gl, shaderSource) {
-    super(gl, shaderSource, GL.FRAGMENT_SHADER);
+  constructor(gl, source) {
+    super(gl, source, GL.FRAGMENT_SHADER);
   }
 }
