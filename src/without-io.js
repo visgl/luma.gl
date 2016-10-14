@@ -16,8 +16,10 @@ import * as scenegraph from './scenegraph';
 import * as geometry from './geometry';
 import * as core from './core';
 import {default as Shaders} from '../shaderlib';
+
 // TODO - remove
 import {default as Fx} from './addons/fx';
+import * as deprecated from './deprecated';
 
 import luma from './globals';
 Object.assign(luma,
@@ -28,5 +30,6 @@ Object.assign(luma,
   geometry,
   core,
   Shaders,
+  deprecated,
   {Fx}
 );

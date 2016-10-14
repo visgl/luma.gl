@@ -142,7 +142,7 @@ export function poll(gl) {
 
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
-export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
+export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
   // assertWebGLRenderingContext(gl);
 
   let scissorTestWasEnabled;
@@ -153,23 +153,26 @@ export function glContextWithState(gl, {scissorTest, frameBuffer}, func) {
     gl.scissor(x, y, w, h);
   }
 
-  if (frameBuffer) {
+  if (framebuffer) {
     // TODO - was there any previously set frame buffer we need to remember?
-    frameBuffer.bind();
+    framebuffer.bind();
   }
 
+  let value;
   try {
-    func(gl);
+    value = func(gl);
   } finally {
     if (!scissorTestWasEnabled) {
       gl.disable(gl.SCISSOR_TEST);
     }
-    if (frameBuffer) {
+    if (framebuffer) {
       // TODO - was there any previously set frame buffer?
       // TODO - delegate "unbind" to Framebuffer object?
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
+
+  return value;
 }
 
 // DEBUG INFO

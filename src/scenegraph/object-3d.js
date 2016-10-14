@@ -1,4 +1,4 @@
-import {Vec3, Mat4} from '../math';
+import {Vec3, Mat4} from '../deprecated';
 import assert from 'assert';
 import {uid} from '../utils';
 

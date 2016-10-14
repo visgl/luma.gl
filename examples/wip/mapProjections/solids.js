@@ -652,7 +652,7 @@ Solids.prototype = Object.create(null, {
               y: y1 - y2,
               z: z1 - z2
             },
-            normal = Vec3.cross(vec1, vec2).$unit(),
+            normal = Vec3.cross(vec1, vec2).normalize(),
             x12m = (x1 + x2) / 2,
             y12m = (y1 + y2) / 2,
             z12m = (z1 + z2) / 2,

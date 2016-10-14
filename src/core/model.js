@@ -108,6 +108,10 @@ export default class Model extends Object3D {
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
 
+  destroy() {
+    // TODO
+  }
+
   get hash() {
     return `${this.id} ${this.$pickingIndex}`;
   }
@@ -189,6 +193,10 @@ export default class Model extends Object3D {
     Object.assign(this.uniforms, uniforms);
     this.setNeedsRedraw();
     return this;
+  }
+
+  draw({uniforms = {}, attributes = {}, settings = {}} = {}) {
+    return this.render(uniforms);
   }
 
   /*

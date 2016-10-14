@@ -1,4 +1,5 @@
-import {AttributeManager} from '../../src';
+/* eslint-disable dot-notation, max-statements, no-unused-vars */
+import {AttributeManager} from './attribute-manager';
 import test from 'tape-catch';
 
 function update(attribute, {data}) {
@@ -58,7 +59,6 @@ test('Core#AttributeManager.update', t => {
   t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
   t.equals(attribute.value[1], 1, 'attribute value is correct');
 
-
   // Second update without invalidation, should not update
   attribute.value[1] = 2;
 
@@ -91,15 +91,13 @@ test('Core#AttributeManager.update - 0 numInstances', t => {
   const attributeManager = new AttributeManager();
   attributeManager.add({positions: {size: 2, update}});
 
-  let attribute;
-
   // First update, should autoalloc and update the value array
   attributeManager.update({
     numInstances: 0,
     data: []
   });
 
-  attribute = attributeManager.getAttributes()['positions'];
+  const attribute = attributeManager.getAttributes()['positions'];
   t.ok(ArrayBuffer.isView(attribute.value), 'attribute has typed array');
 
   t.end();

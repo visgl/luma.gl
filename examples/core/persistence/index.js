@@ -95,14 +95,14 @@ window.webGLStart = function() {
     var pos =
       new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     var a = Math.random() + 1.0;
-    pos.$unit().$scale(a, a, a);
+    pos.normalize().$scale(a, a, a);
     var s = 1.25;
     pos.$scale(s, s, s);
     ePos.push(pos);
     var q =
       new Vec3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
     var axis = pos.cross(q);
-    axis.$unit();
+    axis.normalize();
     var rot = new Mat4();
     var theta = 4 / a * dt;
     rot.$rotateAxis(theta, axis);

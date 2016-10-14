@@ -3,7 +3,7 @@
 
 import * as config from '../core/config';
 import {Camera} from '../core/camera';
-import {Vec3} from '../math';
+import {Vector3} from '../math';
 import {merge} from '../utils';
 import Group from './group';
 import {pickModels} from './pick';
@@ -301,9 +301,9 @@ export default class Scene extends Group {
     const {color, direction} = directional;
 
     // Normalize lighting direction vector
-    const dir = new Vec3(direction.x, direction.y, direction.z)
-      .$unit()
-      .$scale(-1);
+    const dir = new Vector3(direction.x, direction.y, direction.z)
+      .normalize()
+      .scale([-1, -1, -1]);
 
     program.setUniforms({
       directionalColor: [color.r, color.g, color.b],
