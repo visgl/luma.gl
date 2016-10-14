@@ -1,5 +1,6 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
+var GL = LumaGL.GL;
 var createGLContext = LumaGL.createGLContext;
 var Program = LumaGL.Program;
 var PerspectiveCamera = LumaGL.PerspectiveCamera;
@@ -32,11 +33,6 @@ window.webGLStart = function() {
     vs: 'per-fragment-lighting-vs',
     fs: 'per-fragment-lighting-fs'
   }));
-
-  var camera = new PerspectiveCamera({
-    aspect: canvas.width / canvas.height,
-    position: new Vec3(0, 0, -30)
-  });
 
   var scene = new Scene(gl, {
     lights: {
@@ -164,22 +160,24 @@ window.webGLStart = function() {
       // Update position
       theta += 0.01;
 
-      moon.setPosition(new Vec3(
-        rho * Math.cos(theta),
-        0,
-        rho * Math.sin(theta)
-      ));
+      moon.setPosition([rho * Math.cos(theta), 0, rho * Math.sin(theta)]);
       moon.updateMatrix();
 
-      box.setPosition(new Vec3(
+      box.setPosition([
         rho * Math.cos(Math.PI + theta),
         0,
         rho * Math.sin(Math.PI + theta)
-      ));
+      ]);
       box.updateMatrix();
 
+      var camera = new PerspectiveCamera({
+        aspect: canvas.width / canvas.height,
+        position: new Vec3(0, 0, -30)
+      });
+
       // render objects
-      scene.render({camera});
+      gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+      scene.render(camera.getUniforms());
 
       // request new frame
       Fx.requestAnimationFrame(draw);

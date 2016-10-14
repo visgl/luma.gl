@@ -1,154 +1,144 @@
-/* global window, document, LumaGL */
+/* global document, LumaGL */
 /* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var Program = LumaGL.Program;
-var Geometry = LumaGL.Geometry;
-var Scene = LumaGL.Scene;
-var Vec3 = LumaGL.Vec3;
-var Model = LumaGL.Model;
+const {createGLContext, AnimationFrame} = LumaGL;
+const {GL, Scene, Model, Program, Geometry} = LumaGL;
+const {Matrix4, radians} = LumaGL;
 
-var Fx = LumaGL.Fx;
+class HeightmapGeometry extends Geometry {
+  constructor(opts) {
+    super(opts);
+    this._initialize();
+  }
 
-window.webGLStart = function() {
+  _initialize() {
+    var positions = [];
+    var normals = [];
+    var colors = [];
 
-  var canvas = document.getElementById('render-canvas');
+    function height(x, z) {
+      var d = Math.sqrt(x * x + z * z);
+      return 0.5 +
+        (Math.sin(d * 24) + Math.cos((x + 8) * 12) + Math.tanh(z * 6)) * 0.125;
+    }
 
-  var gl = createGLContext({canvas});
+    const res = 128;
 
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, Number(canvas.width), Number(canvas.height));
+    var s = 1 / res;
+    for (var i = 0; i < res; i++) {
+      var x = s * (i - res / 2);
+      for (var k = 0; k < res; k++) {
+        var z = s * (k - res / 2);
 
-  var program = new Program(gl);
-  program.use();
+        var h0 = height(x + 0, z + 0);
+        var h1 = height(x + s, z + 0);
+        var h2 = height(x + s, z + s);
+        var h3 = height(x + 0, z + s);
 
-  // rye TODO: there's a bug in merge that makes it require an object.
-  var camera = new PerspectiveCamera({});
+        positions.push(x + 0, h0, z + 0);
+        positions.push(x + s, h1, z + 0);
+        positions.push(x + s, h2, z + s);
+        positions.push(x + 0, h0, z + 0);
+        positions.push(x + s, h2, z + s);
+        positions.push(x + 0, h3, z + s);
 
-  var scene = new Scene(gl, {
-    program,
-    camera,
+        // quick-and-dirty forward difference normal approximation
+        var n0 = [(h1 - h0) / s, 1.0, (h3 - h0) / s];
+        var n1 = [(h0 - h1) / -s, 1.0, (h2 - h1) / s];
+        var n2 = [(h1 - h2) / -s, 1.0, (h3 - h2) / -s];
+        var n3 = [(h2 - h3) / s, 1.0, (h0 - h3) / -s];
+
+        normals.push(...n0);
+        normals.push(...n1);
+        normals.push(...n2);
+        normals.push(...n0);
+        normals.push(...n2);
+        normals.push(...n3);
+
+        colors.push(h0, h0, h0, 1);
+        colors.push(h1, h1, h1, 1);
+        colors.push(h2, h2, h2, 1);
+        colors.push(h0, h0, h0, 1);
+        colors.push(h2, h2, h2, 1);
+        colors.push(h3, h3, h3, 1);
+      }
+    }
+
+    this.setAttributes({
+      positions: {size: 3, value: new Float32Array(positions)},
+      normals: {size: 3, value: new Float32Array(normals)},
+      colors: {size: 4, value: new Float32Array(colors)},
+      pickingColors: {size: 4, value: new Float32Array(colors)},
+      // Dummy to silence shader attribute 0 warnings
+      texCoords: {size: 2, value: new Float32Array(positions)}
+    });
+    this.setVertexCount(positions.length / 3);
+  }
+}
+
+var scene;
+var pick = {x: 0, y: 0};
+var heightmap;
+
+new AnimationFrame({gl: createGLContext()})
+.init(({gl}) => {
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
+
+  scene = new Scene(gl, {
     lights: {
       points: {
-        color: {
-          r: 1, g: 1, b: 1
-        },
-        position: {
-          x: 0, y: 0, z: 32
-        }
+        color: {r: 1, g: 1, b: 1},
+        position: {x: 0, y: 0, z: 32}
       },
-      ambient: {
-        r: 0.25, g: 0.25, b: 0.25
-      },
+      ambient: {r: 0.25, g: 0.25, b: 0.25},
       enable: true
     },
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
 
-  var pick = {x: 0, y: 0};
-  canvas.addEventListener('mousemove', function(e) {
+  gl.canvas.addEventListener('mousemove', function mousemove(e) {
     pick.x = e.offsetX;
     pick.y = e.offsetY;
   });
 
-  var vertices = [];
-  var normals = [];
-  var colors = [];
-
-  var res = 128;
-
-  function height(x, z) {
-    var d = Math.sqrt(x * x + z * z);
-    return 0.5 +
-      (Math.sin(d * 24) + Math.cos((x + 8) * 12) + Math.tanh(z * 6)) * 0.125;
-  }
-
-  var s = 1 / res;
-  for (var i = 0; i < res; i++) {
-    var x = s * (i - res / 2);
-    for (var k = 0; k < res; k++) {
-      var z = s * (k - res / 2);
-
-      var h0 = height(x + 0, z + 0);
-      var h1 = height(x + s, z + 0);
-      var h2 = height(x + s, z + s);
-      var h3 = height(x + 0, z + s);
-
-      vertices.push([x + 0, h0, z + 0]);
-      vertices.push([x + s, h1, z + 0]);
-      vertices.push([x + s, h2, z + s]);
-      vertices.push([x + 0, h0, z + 0]);
-      vertices.push([x + s, h2, z + s]);
-      vertices.push([x + 0, h3, z + s]);
-
-      // quick-and-dirty forward difference normal approximation
-      var n0 = [(h1 - h0) / s, 1.0, (h3 - h0) / s];
-      var n1 = [(h0 - h1) / -s, 1.0, (h2 - h1) / s];
-      var n2 = [(h1 - h2) / -s, 1.0, (h3 - h2) / -s];
-      var n3 = [(h2 - h3) / s, 1.0, (h0 - h3) / -s];
-
-      normals.push(n0);
-      normals.push(n1);
-      normals.push(n2);
-      normals.push(n0);
-      normals.push(n2);
-      normals.push(n3);
-
-      colors.push([h0, h0, h0, 1]);
-      colors.push([h1, h1, h1, 1]);
-      colors.push([h2, h2, h2, 1]);
-      colors.push([h0, h0, h0, 1]);
-      colors.push([h2, h2, h2, 1]);
-      colors.push([h3, h3, h3, 1]);
-    }
-  }
-
-  var heightmap = new Model({
-    program,
-    geometry: new Geometry({
-      attributes: {
-        vertices: vertices,
-        colors: colors,
-        normals: normals,
-        pickingColors: colors
-      }
-    })
+  heightmap = new Model({
+    id: 'heightmap',
+    program: new Program(gl),
+    geometry: new HeightmapGeometry()
   });
 
   scene.add(heightmap);
+})
+.frame(({tick, aspect}) => {
+  const projection = Matrix4.perspective({
+    fov: radians(60), aspect, near: 0.1, far: 1000
+  });
 
-  function draw() {
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
+  const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
+  const model = new Matrix4().clone(view).rotateY(tick * 0.01);
 
-    camera.view.lookAt(
-      new Vec3(0, 1.5, 0.75),
-      new Vec3(0, 0.5, 0),
-      new Vec3(0, 1, 0)
-    );
-    camera.projection.perspective(60, canvas.width / canvas.height, 0.1, 1000);
+  const uniforms = {
+    projectionMatrix: projection,
+    viewMatrix: view,
+    modelMatrix: model,
+    hasPickingColors: true
+  };
 
-    heightmap.rotation.y += 0.01;
-    heightmap.update();
+  scene.render(uniforms);
 
-    var p = scene.pickCustom(pick.x, pick.y);
-    var div = document.getElementById('altitude');
-    if (JSON.stringify(p) !== JSON.stringify([0, 0, 0, 0])) {
-      div.innerHTML = 'altitude: ' + p[0];
-      div.style.top = pick.y + 'px';
-      div.style.left = pick.x + 'px';
-      div.style.display = 'block';
-    } else {
-      div.style.display = 'none';
-    }
+  var div = document.getElementById('altitude');
+  const pickInfo = scene.pickModels({
+    uniforms,
+    x: pick.x,
+    y: pick.y
+  });
 
-    program.use();
-    scene.render();
-
-    Fx.requestAnimationFrame(draw);
+  if (pickInfo) {
+    div.innerHTML = `altitude: ${pickInfo.color[0]}`;
+    div.style.top = `${pick.y}px`;
+    div.style.left = `${pick.x}px`;
+    div.style.display = 'block';
+  } else {
+    div.style.display = 'none';
   }
-
-  draw();
-};
+});

@@ -1,36 +1,51 @@
-import {WebGL} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
-import {glGet, glConstant, glArrayFromType, glTypeFromArray,
-  assertWebGL2} from './context';
-import {Texture2D} from './texture';
+import {GL, glGet, glTypeToArray, glTypeFromArray} from './webgl';
+import {assertWebGLContext, assertWebGL2} from './webgl-checks';
+import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
+import assert from 'assert';
+import {uid, log} from '../utils';
 
-function glFormatComponents(format) {
+// Returns number of components in a specific WebGL format
+function glFormatToComponents(format) {
   switch (format) {
-  case WebGL.ALPHA: return 1;
-  case WebGL.RGB: return 3;
-  case WebGL.RGBA: return 4;
+  case GL.ALPHA: return 1;
+  case GL.RGB: return 3;
+  case GL.RGBA: return 4;
   default: throw new Error('Unknown format');
   }
 }
 
 export default class Framebuffer {
-
   static makeFrom(gl, object = {}) {
     return object instanceof Framebuffer ? object :
       // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
       new Framebuffer(gl, {handle: object.handle || object});
   }
 
-  constructor(gl) {
-    assertWebGLRenderingContext(gl);
+  /* eslint-disable max-statements */
+  constructor(gl, {id, ...params} = {}) {
+    assertWebGLContext(gl);
 
-    this.gl = gl;
-    this.handle = gl.createFramebuffer();
-    if (!this.handle) {
+    const handle = gl.createFramebuffer();
+    if (!handle) {
       throw new Error('Failed to create WebGL Framebuffer');
     }
+
+    this.gl = gl;
+    this.id = uid(id);
+    this.handle = handle;
+    this.colorBuffer = null;
+    this.depthBuffer = null;
+    this.stencilBuffer = null;
+    this.texture = null;
+    this.userData = {};
+    this.width = 0;
+    this.height = 0;
+    Object.seal(this);
+
+    this.resize(params);
   }
+  /* eslint-enable max-statements */
 
   delete() {
     const {gl} = this;
@@ -39,17 +54,91 @@ export default class Framebuffer {
 
   // SIMPLIFIED INTERFACE
 
+  resize({width, height}) {
+    this.update({width, height});
+  }
+
+  /* eslint-disable max-statements */
+  update({
+    width = 1,
+    height = 1,
+    depth = true,
+    minFilter = GL.NEAREST,
+    magFilter = GL.NEAREST,
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE
+  }) {
+    assert(width >= 0 && height >= 0, 'Width and height need to be integers');
+    if (width === this.width && height === this.height) {
+      return;
+    }
+
+    log.log(1, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+
+    const {gl} = this;
+
+    // TODO - do we need to reallocate the framebuffer?
+    const colorBuffer = new Texture2D(gl, {
+      minFilter: this.minFilter,
+      magFilter: this.magFilter
+    })
+    // TODO - should be handled by Texture2D constructor?
+    .setImageData({
+      data: null,
+      width,
+      height,
+      type,
+      format
+    });
+
+    this.attachTexture({
+      attachment: GL.COLOR_ATTACHMENT0,
+      texture: colorBuffer
+    });
+
+    if (this.colorBuffer) {
+      this.colorBuffer.delete();
+    }
+    this.colorBuffer = colorBuffer;
+    this.texture = colorBuffer;
+
+    // Add a depth buffer if requested
+    if (this.depth) {
+      const depthBuffer = new Renderbuffer(gl).storage({
+        internalFormat: GL.DEPTH_COMPONENT16,
+        width,
+        height
+      });
+      this.attachRenderbuffer({
+        attachment: GL.DEPTH_ATTACHMENT,
+        renderbuffer: depthBuffer
+      });
+
+      if (this.depthBuffer) {
+        this.depthBuffer.delete();
+      }
+      this.depthBuffer = depthBuffer;
+    }
+
+    // Checks that framebuffer was properly set up,
+    // if not, throws an explanatory error
+    this.checkStatus();
+
+    this.width = width;
+    this.height = height;
+  }
+
   // WEBGL INTERFACE
 
-  bind({target = WebGL.FRAMEBUFFER} = {}) {
+  bind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), this.handle);
+    gl.bindFramebuffer(target, this.handle);
     return this;
   }
 
-  unbind({target = WebGL.FRAMEBUFFER} = {}) {
+  unbind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), null);
+    gl.bindFramebuffer(target, null);
     return this;
   }
 
@@ -63,7 +152,7 @@ export default class Framebuffer {
     y = 0,
     width,
     height,
-    format = WebGL.RGBA,
+    format = GL.RGBA,
     type,
     pixelArray = null
   }) {
@@ -72,9 +161,9 @@ export default class Framebuffer {
     // Deduce type and allocated pixelArray if needed
     if (!pixelArray) {
       // Allocate pixel array if not already available, using supplied type
-      type = type || WebGL.UNSIGNED_BYTE;
-      const ArrayType = glArrayFromType(type);
-      const components = glFormatComponents(format);
+      type = type || GL.UNSIGNED_BYTE;
+      const ArrayType = glTypeToArray(type);
+      const components = glFormatToComponents(format);
       // TODO - check for composite type (components = 1).
       pixelArray = pixelArray || new ArrayType(width * height * components);
     }
@@ -109,9 +198,9 @@ export default class Framebuffer {
    */
   attachTexture({
     texture = null,
-    target = WebGL.FRAMEBUFFER,
-    attachment = WebGL.COLOR_ATTACHMENT0,
-    textureTarget = WebGL.TEXTURE_2D,
+    target = GL.FRAMEBUFFER,
+    attachment = GL.COLOR_ATTACHMENT0,
+    textureTarget = GL.TEXTURE_2D,
     // mipmapLevel, currently only 0 is supported by WebGL
     mipmapLevel = 0
   } = {}) {
@@ -122,9 +211,9 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferTexture2D(
-      glGet(gl, target),
-      glGet(gl, attachment),
-      glGet(gl, textureTarget),
+      target,
+      glGet(attachment),
+      glGet(textureTarget),
       texture.handle,
       mipmapLevel
     );
@@ -145,9 +234,9 @@ export default class Framebuffer {
    */
   attachRenderbuffer({
     renderbuffer = null,
-    attachment = WebGL.COLOR_ATTACHMENT0,
-    target = WebGL.FRAMEBUFFER,
-    renderbufferTarget = WebGL.RENDERBUFFER
+    attachment = GL.COLOR_ATTACHMENT0,
+    target = GL.FRAMEBUFFER,
+    renderbufferTarget = GL.RENDERBUFFER
   } = {}) {
     const {gl} = this;
     renderbuffer = renderbuffer && Renderbuffer.makeFrom(gl, renderbuffer);
@@ -155,9 +244,9 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferRenderbuffer(
-      glGet(gl, target),
-      glGet(gl, attachment),
-      glGet(gl, renderbufferTarget),
+      target,
+      glGet(attachment),
+      glGet(renderbufferTarget),
       renderbuffer.handle
     );
 
@@ -166,12 +255,12 @@ export default class Framebuffer {
     return this;
   }
 
-  checkStatus({target = WebGL.FRAMEBUFFER} = {}) {
+  checkStatus({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
 
     this.bind({target});
 
-    const status = gl.checkFramebufferStatus(glGet(gl, target));
+    const status = gl.checkFramebufferStatus(target);
 
     this.unbind({target});
 
@@ -188,7 +277,7 @@ export default class Framebuffer {
     srcX0, srcY0, srcX1, srcY1,
     dstX0, dstY0, dstX1, dstY1,
     mask,
-    filter = WebGL.NEAREST
+    filter = GL.NEAREST
   }) {
     const {gl} = this;
     assertWebGL2(gl);
@@ -202,7 +291,7 @@ export default class Framebuffer {
   }
 
   textureLayer({
-    target = WebGL.FRAMEBUFFER,
+    target = GL.FRAMEBUFFER,
     attachment,
     texture,
     level,
@@ -215,17 +304,17 @@ export default class Framebuffer {
   }
 
   invalidate({
-    target = WebGL.FRAMEBUFFER,
+    target = GL.FRAMEBUFFER,
     attachments = []
   }) {
     const {gl} = this;
     assertWebGL2(gl);
-    gl.invalidateFramebuffer(glConstant(target), attachments);
+    gl.invalidateFramebuffer(target, attachments);
     return this;
   }
 
   invalidateSub({
-    target = WebGL.FRAMEBUFFER,
+    target = GL.FRAMEBUFFER,
     attachments = [],
     x = 0,
     y = 0,
@@ -234,9 +323,7 @@ export default class Framebuffer {
   }) {
     const {gl} = this;
     assertWebGL2(gl);
-    gl.invalidateFramebuffer(
-      glConstant(target), attachments, x, y, width, height
-    );
+    gl.invalidateFramebuffer(target, attachments, x, y, width, height);
     return this;
   }
 
@@ -256,109 +343,111 @@ export default class Framebuffer {
   // @returns {GLint}
   alphaSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE);
   }
 
   // @returns {GLint}
   blueSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE);
   }
 
   // @returns {GLenum}
   colorEncoding() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING);
+      GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING);
   }
 
   // @returns {GLenum}
   componentType() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE);
+      GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE);
   }
 
   // @returns {GLint}
   depthSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
   }
 
   // @returns {GLint}
   greenSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE);
   }
 
   // @returns {WebGLRenderbuffer|WebGLTexture}
   objectName() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+      GL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
   }
 
   // @returns {GLenum}
   objectType() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
+      GL.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
   }
 
   // @returns {GLint}
   redSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_RED_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE);
   }
 
   // @returns {GLint}
   stencilSize() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE);
+      GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE);
   }
 
   // @returns {GLint}
   cubeMapFace() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE);
+      GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE);
   }
 
   // @returns {GLint}
   layer() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER);
+      GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER);
   }
 
   // @returns {GLint}
   level() {
     return this.getAttachmentParameter(
-      WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL);
+      GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL);
   }
 
   getParameters() {
     return {
-      alphaSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE),
-      blueSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE),
-      colorEncoding: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING),
-      componentType: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE),
-      depthSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE),
-      greenSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE),
-      objectName: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME),
-      objectType: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE),
       redSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_RED_SIZE),
+        GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE),
+      greenSize: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE),
+      blueSize: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE),
+      alphaSize: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE),
+
+      depthSize: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE),
       stencilSize: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE),
+        GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE),
+
+      colorEncoding: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING),
+      componentType: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE),
+      objectName: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME),
+      objectType: this.getAttachmentParameter(
+        GL.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE),
       cubeMapFace: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE),
+        GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE),
       layer: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER),
+        GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER),
       level: this.getAttachmentParameter(
-        WebGL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL)
+        GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL)
     };
   }
 
@@ -396,27 +485,26 @@ export default class Framebuffer {
 
   /* eslint-disable max-len */
   _getFrameBufferStatus(status) {
-    const {gl} = this;
     let error;
     switch (status) {
-    case gl.FRAMEBUFFER_COMPLETE:
+    case GL.FRAMEBUFFER_COMPLETE:
       error = 'Success. Framebuffer is correctly set up';
       break;
-    case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+    case GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
       error = 'The attachment types are mismatched or not all framebuffer attachment points are framebuffer attachment complete.';
       break;
-    case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+    case GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
       error = 'There is no attachment.';
       break;
-    case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+    case GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
       error = 'Height and width of the attachment are not the same.';
       break;
-    case gl.FRAMEBUFFER_UNSUPPORTED:
+    case GL.FRAMEBUFFER_UNSUPPORTED:
       error = 'The format of the attachment is not supported or if depth and stencil attachments are not the same renderbuffer.';
       break;
     // When using a WebGL 2 context, the following values can be returned
-    case gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-      error = 'The values of gl.RENDERBUFFER_SAMPLES are different among attached renderbuffers, or are non-zero if the attached images are a mix of renderbuffers and textures.';
+    case GL.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+      error = 'The values of GL.RENDERBUFFER_SAMPLES are different among attached renderbuffers, or are non-zero if the attached images are a mix of renderbuffers and textures.';
       break;
     default:
       error = `Framebuffer error ${status}`;

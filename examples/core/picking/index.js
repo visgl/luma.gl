@@ -1,32 +1,18 @@
-/* global window, document, LumaGL */
-/* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
-var loadTextures = LumaGL.loadTextures;
-var Program = LumaGL.Program;
-var Buffer = LumaGL.Buffer;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var Scene = LumaGL.Scene;
-var Fx = LumaGL.Fx;
-var Vec3 = LumaGL.Vec3;
-var Sphere = LumaGL.Sphere;
-var pickModels = LumaGL.pickModels;
+/* global document, LumaGL */
+const {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} = LumaGL;
+const {loadTextures, Program, Buffer, Scene, Sphere, Vec3, pickModels} = LumaGL;
 
-var pick = {x: 0, y: 0};
+const pick = {x: 0, y: 0};
 
-window.webGLStart = function() {
+let scene;
 
-  var canvas = document.getElementById('render-canvas');
+new AnimationFrame()
+.context(() => createGLContext())
+.init(({gl, canvas}) => {
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
 
-  var gl = createGLContext({canvas});
-
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, canvas.width, canvas.height);
-
-  // rye TODO: there's a bug in merge that makes it require an object.
-  var camera = new PerspectiveCamera({});
-
-  var scene = new Scene(gl, {
+  scene = new Scene(gl, {
     lights: {
       points: {
         color: {r: 1, g: 1, b: 1},
@@ -38,7 +24,7 @@ window.webGLStart = function() {
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
 
-  canvas.addEventListener('mousemove', function(e) {
+  canvas.addEventListener('mousemove', function mousemove(e) {
     pick.x = e.offsetX;
     pick.y = e.offsetY;
   });
@@ -61,18 +47,10 @@ window.webGLStart = function() {
       generateMipmap: true
     }
   })
-  .then(function(textures) {
-    var tJupiter = textures[0];
-    var tMars = textures[1];
-    var tMercury = textures[2];
-    var tNeptune = textures[3];
-    var tSaturn = textures[4];
-    var tUranus = textures[5];
-    var tVenus = textures[6];
+  .then(function onTexturesLoaded(textures) {
+    const program = new Program(gl);
 
-    var program = new Program(gl);
-
-    const planets = PLANETS.map(function(planet, i) {
+    const planets = PLANETS.map(function map(planet, i) {
       return new Sphere({
         id: planet.name,
         nlat: 32,
@@ -99,59 +77,44 @@ window.webGLStart = function() {
       });
     });
 
-    for (var i = 0; i < planets.length; i++) {
-      var planet = planets[i];
-      var theta = i / planets.length * Math.PI * 2;
+    for (let i = 0; i < planets.length; i++) {
+      const planet = planets[i];
+      const theta = i / planets.length * Math.PI * 2;
       planet.update({
         position: new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0)
       });
     }
 
     scene.add(planets);
-
-    function drawFrame() {
-      draw(gl, canvas, camera, scene);
-      Fx.requestAnimationFrame(drawFrame);
-    }
-    drawFrame();
   });
-};
+})
+.frame(({gl, aspect}) => {
+  const uniforms = {
+    projectionMatrix: Matrix4.perspective({fov: radians(15), aspect}),
+    viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
+  };
 
-function draw(gl, canvas, camera, scene) {
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-  camera.view.lookAt(
-    new Vec3(0, 0, 32), new Vec3(0, 0, 0), new Vec3(0, 1, 0)
-  );
-  camera.projection.perspective(
-    15, canvas.width / canvas.height, 0.1, 100.0
-  );
-
-  for (var i = 0; i < scene.children.length; i++) {
-    var item = scene.children[i];
+  for (const item of scene.children) {
     item.rotation.y += 0.01;
     item.updateMatrix();
   }
 
-  var picked = pickModels(gl, {
+  scene.render(uniforms);
+
+  const pickedModel = pickModels(gl, {
     group: scene,
-    viewMatrix: camera.view,
+    uniforms,
     x: pick.x,
     y: pick.y
   });
 
-  var pickedModel = picked.find(function(model) { return model.isPicked; });
-
-  var div = document.getElementById('planet-name');
+  const div = document.getElementById('planet-name');
   if (pickedModel) {
     div.innerHTML = pickedModel.model.id;
-    div.style.top = pick.y + 'px';
-    div.style.left = pick.x + 'px';
+    div.style.top = `${pick.y}px`;
+    div.style.left = `${pick.x}px`;
     div.style.display = 'block';
   } else {
     div.style.display = 'none';
   }
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
-  scene.render({camera});
-}
+});

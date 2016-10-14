@@ -1,0 +1,75 @@
+<html>
+
+  <head>
+    <title>Mandelbrot example</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+    <style>
+
+      body {
+        margin: 0px;
+        background: #888;
+      }
+
+      canvas {
+        width: 100%;
+        margin: 16px auto 16px auto;
+        border: 1px solid black;
+      }
+
+      #container {
+        width: 900px;
+        margin: 128px auto 128px auto;
+        background: white;
+        padding: 64px;
+        box-sizing: border-box;
+        box-shadow: 0px 0px 32px -2px #000;
+      }
+
+      #title {
+        font-size: 2em;
+        text-align: center;
+      }
+
+      #text-container {
+        margin-top: 64px;
+       -webkit-column-count: 2;
+       -moz-column-count: 2;
+        column-count: 2;
+       -webkit-column-gap: 20px;
+       -moz-column-gap: 20px;
+        column-gap: 20px;
+        text-align: justify;
+        font-size: 16px;
+        line-height: 18px;
+      }
+
+      p {
+        text-indent: 32px;
+        margin: 0px;
+      }
+
+    </style>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
+    <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript" src="../../lumagl.js"></script>
+    <script type="text/javascript" src="../examples.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+  </head>
+
+  <body>
+    <div id='container'>
+      <div id='title'>Rendering Mandelbrot Sets with LumaGL</div>
+      <div id='text-container'>
+        <div id='zoom'></div>
+        <canvas id="canvas-1"></canvas>
+        <p>Zoom in on mandelbrot set</p>
+        <p>32 bits only goes to 50,000x</p>
+        <canvas id="canvas-0"></canvas>
+        <p>Should try 64 bits</p>
+      </div>
+  </body>
+
+</html>

@@ -1,7 +1,31 @@
 // WEBGL BUILT-IN TYPES
 import GL from 'gl-constants';
+import assert from 'assert';
 
-// Extracts constants from WebGL prototype
+export {GL};
+export default GL;
+
+// Resolve a WebGL enumeration name (returns itself if already a number)
+export function glGet(name) {
+  // assertWebGLContext(gl);
+  let value = name;
+  if (typeof name === 'string') {
+    value = GL[name];
+    assert(value !== undefined, `Accessing GL.${name}`);
+  }
+  return value;
+}
+
+export function glKey(value) {
+  for (const key in GL) {
+    if (GL[key] === value) {
+      return `GL.${key}`;
+    }
+  }
+  return String(value);
+}
+
+// Extract constants from WebGL prototype
 // function getWebGLConstants() {
 //   const constants = {};
 //   const WebGLContext =
@@ -16,5 +40,3 @@ import GL from 'gl-constants';
 // }
 
 // const GL = getWebGLConstants();
-
-export default GL;

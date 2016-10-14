@@ -3,32 +3,35 @@
   "version": "0.0.0",
   "description": "An es6 shadowmap example for luma.gl.",
   "license": "MIT",
-  "author": "Ib Green <ib@uber.com>",
-  "dependencies": {
-    "babel-polyfill": "6.5.0",
-    "gl-format-compiler-error": "^1.0.2",
-    "global": "^4.3.0",
-    "glslify": "^5.0.2"
-  },
+  "contributors": [
+    "Rye Terrell <ryeterrell@ryeterrell.net",
+    "Ib Green <ib@uber.com>"
+  ],
   "browserify": {
     "transform": [
       "babelify",
       "glslify"
     ]
   },
+  "dependencies": {
+    "babel-polyfill": "^6.5.0",
+    "gl-format-compiler-error": "^1.0.2",
+    "global": "^4.3.0",
+    "glslify": "^5.0.2"
+  },
   "devDependencies": {
-    "babel-cli": "6.5.1",
-    "babel-core": "6.5.1",
-    "babel-eslint": "4.1.8",
-    "babel-plugin-transform-builtin-extend": "1.1.0",
-    "babel-preset-es2015": "6.5.0",
+    "babel-cli": "^6.5.0",
+    "babel-core": "^6.5.0",
+    "babel-eslint": "^4.1.8",
+    "babel-plugin-transform-builtin-extend": "^1.1.0",
+    "babel-preset-es2015": "^6.5.0",
     "babel-preset-stage-2": "^6.5.0",
     "babelify": "^7.2.0",
     "browserify": "^13.0.0",
     "budo": "^8.0.3"
   },
   "scripts": {
-    "build": "browserify src/index.js > bundle.js",
-    "start": "budo src/index.js:bundle.js -t babelify -t glslify --live --port 3001 --watch-glob '**/*.{html,css,js}'"
+    "build": "browserify src/app.js > bundle.js",
+    "start": "budo src/app.js:bundle.js -t babelify -t glslify --live --open --port 3001 --watch-glob '**/*.{html,css,js}'"
   }
 }

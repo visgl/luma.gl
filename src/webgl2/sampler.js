@@ -1,11 +1,7 @@
 // WebGL2 Sampler Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
 
-import {WebGL2RenderingContext} from './webgl-types';
-import {glCheckError} from '../context';
-import assert from 'assert';
-
-const ERR_WEBGL2 = 'WebGL2 required';
+import {assertWebGL2Context, glCheckError} from '../webgl-checks';
 
 export default class Sampler {
 
@@ -14,7 +10,7 @@ export default class Sampler {
    * @param {WebGL2RenderingContext} gl
    */
   constructor(gl) {
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(gl);
     this.gl = gl;
     this.handle = gl.createSampler();
     glCheckError(gl);

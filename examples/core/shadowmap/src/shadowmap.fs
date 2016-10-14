@@ -1,3 +1,5 @@
+#define SHADER_NAME shadowmap.fs
+
 #ifdef GL_ES
 precision highp float;
 #endif

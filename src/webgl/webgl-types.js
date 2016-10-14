@@ -1,6 +1,10 @@
 // WEBGL BUILT-IN TYPES
-// Enables app to "import" built-in WebGL types unknown to eslint
-// Provides a hook for application to preimport headless gl
+// 1) Exports all WebGL constants as {GL}
+// 2) Enables app to "import" WebGL types
+//    - Importing these types makes them known to eslint etc.
+//    - Provides dummy types for WebGL2 when not available to streamline
+//      library code.
+//    - Exports types from headless gl when running under Node.js
 
 import luma from '../globals';
 
@@ -41,15 +45,16 @@ function getWebGL2RenderingContext() {
   return global.WebGL2RenderingContext || WebGL2RenderingContextNotSupported;
 }
 
+// Ensure that Image is defined under Node.js
 function getImage() {
   class ImageNotSupported {}
   return global.Image || ImageNotSupported;
 }
 
-// const WebGL = getWebGLConstants();
 const WebGL2RenderingContext = getWebGL2RenderingContext();
 const Image = getImage();
 
+// Export the standard WebGL types
 export {
   Image,
 
@@ -66,6 +71,3 @@ export {
 
   WebGL2RenderingContext
 };
-
-// Convenience
-export {default as WebGL, default as GL} from './webgl-constants';

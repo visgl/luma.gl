@@ -1,5 +1,5 @@
 import Object3D from './object-3d';
-import {Mat4} from '../math';
+import {Mat4} from '../deprecated';
 import assert from 'assert';
 
 export default class Group extends Object3D {
@@ -51,7 +51,7 @@ export default class Group extends Object3D {
     }
   }
 
-  * traverseReverse({viewMatrix}) {
+  * traverseReverse({viewMatrix = new Mat4()} = {}) {
     for (let i = this.children.length - 1; i >= 0; --i) {
       const child = this.children[i];
       const {matrix} = child;

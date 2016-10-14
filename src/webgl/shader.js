@@ -1,4 +1,4 @@
-import {GL} from './webgl-types';
+import {GL} from './webgl';
 import formatCompilerError from './webgl-format-glsl-error';
 import getShaderName from 'glsl-shader-name';
 import {log, uid, isBrowser} from '../utils';

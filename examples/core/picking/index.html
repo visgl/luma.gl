@@ -4,7 +4,7 @@
   <title>Picking example</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
   <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
-  <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
   <script type="text/javascript" src="../../../dist/lumagl.js"></script>
   <script type="text/javascript" src="../examples.js"></script>
   <script type="text/javascript" src="index.js"></script>
@@ -13,7 +13,7 @@
     body {
       margin: 0px;
     }
-    #render-canvas {
+    canvas {
       width: 100%;
       height: 100%;
       background-image: url('bg.png');
@@ -36,8 +36,7 @@
 </head>
 
 
-<body onload="webGLStart();">
-  <canvas id="render-canvas"></canvas>
+<body>
   <div id='planet-name'></div>
 </body>
 
