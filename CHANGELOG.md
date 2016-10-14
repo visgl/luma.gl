@@ -5,6 +5,9 @@
 
 # Official releases
 
+### 2.9.1 GLSL shader compiler error handling 
+  - FIX: GLSL shader compiler error parsing 
+
 ### 2.9.0  TimerQuery, WebGL Extension doc, fix crash on Travis CI
   - Support EXT_disjoint_timer_query
   - Document luma.gl use of WebGL extensions.
