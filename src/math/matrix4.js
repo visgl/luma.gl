@@ -4,8 +4,11 @@ import Vector3 from './vector3';
 import Vector4 from './vector4';
 
 import {unary, binary, spread} from './utils/decorators';
-import {validateMatrix4, checkMatrix4, checkVector2, checkVector3, checkVector4}
-  from './utils/validators';
+import {
+  validateMatrix4,
+  checkMatrix4, checkVector2, checkVector3, checkVector4,
+  checkArguments
+} from './utils/validators';
 
 export default class Matrix4 extends Array {
   constructor(...args) {
@@ -109,7 +112,12 @@ export default class Matrix4 extends Array {
   // eye vec3  Position of the viewer
   // center  vec3  Point the viewer is looking at
   // up  vec3  vec3 pointing up
-  lookAt({eye, center, up}) {
+  @unary
+  lookAt({
+    eye,
+    center,
+    up = [0, 1, 0]
+  } = {}) {
     mat4.lookAt(this, eye, center, up);
     checkMatrix4(this);
     return this;
@@ -122,7 +130,12 @@ export default class Matrix4 extends Array {
   // top number  Top bound of the frustum
   // near  number  Near bound of the frustum
   // far number  Far bound of the frustum
-  ortho({left, right, bottom, top, near, far}) {
+  @unary
+  ortho({
+    left, right, bottom, top,
+    near = 0.1,
+    far = 500
+  }) {
     mat4.ortho(this, left, right, bottom, top, near, far);
     checkMatrix4(this);
     return this;
@@ -133,7 +146,16 @@ export default class Matrix4 extends Array {
   // aspect  number  Aspect ratio. typically viewport width/height
   // near  number  Near bound of the frustum
   // far number  Far bound of the frustum
-  perspective({fov, aspect, near, far}) {
+  @unary
+  perspective({
+    fov = 45 * Math.PI / 180,
+    aspect = 1,
+    near = 0.1,
+    far = 500
+  } = {}) {
+    if (fov > Math.PI * 2) {
+      throw Error('radians');
+    }
     mat4.perspective(this, fov, aspect, near, far);
     checkMatrix4(this);
     return this;
@@ -146,6 +168,7 @@ export default class Matrix4 extends Array {
   //   upDegrees, downDegrees, leftDegrees, rightDegrees
   // near  number  Near bound of the frustum
   // far number  Far bound of the frustum
+  @unary
   perspectiveFromFieldOfView(out, fov, near, far) {
     mat4.perspectiveFromFieldOfView(out, fov, near, far);
     checkMatrix4(this);
@@ -364,6 +387,57 @@ export default class Matrix4 extends Array {
     checkMatrix4(this);
     return this;
   }
+
+  // TODO - may not be needed
+  /* eslint-disable max-statements */
+  rotateXYZ([rx, ry, rz]) {
+    const d11 = this[0];
+    const d12 = this[1];
+    const d13 = this[2];
+    const d14 = this[3];
+    const d21 = this[4];
+    const d22 = this[5];
+    const d23 = this[6];
+    const d24 = this[7];
+    const d31 = this[8];
+    const d32 = this[9];
+    const d33 = this[10];
+    const d34 = this[11];
+    const crx = Math.cos(rx);
+    const cry = Math.cos(ry);
+    const crz = Math.cos(rz);
+    const srx = Math.sin(rx);
+    const sry = Math.sin(ry);
+    const srz = Math.sin(rz);
+    const m11 = cry * crz;
+    const m21 = -crx * srz + srx * sry * crz;
+    const m31 = srx * srz + crx * sry * crz;
+    const m12 = cry * srz;
+    const m22 = crx * crz + srx * sry * srz;
+    const m32 = -srx * crz + crx * sry * srz;
+    const m13 = -sry;
+    const m23 = srx * cry;
+    const m33 = crx * cry;
+
+    this[0] = d11 * m11 + d21 * m12 + d31 * m13;
+    this[1] = d12 * m11 + d22 * m12 + d32 * m13;
+    this[2] = d13 * m11 + d23 * m12 + d33 * m13;
+    this[3] = d14 * m11 + d24 * m12 + d34 * m13;
+
+    this[4] = d11 * m21 + d21 * m22 + d31 * m23;
+    this[5] = d12 * m21 + d22 * m22 + d32 * m23;
+    this[6] = d13 * m21 + d23 * m22 + d33 * m23;
+    this[7] = d14 * m21 + d24 * m22 + d34 * m23;
+
+    this[8] = d11 * m31 + d21 * m32 + d31 * m33;
+    this[9] = d12 * m31 + d22 * m32 + d32 * m33;
+    this[10] = d13 * m31 + d23 * m32 + d33 * m33;
+    this[11] = d14 * m31 + d24 * m32 + d34 * m33;
+
+    checkMatrix4(this);
+    return this;
+  }
+  /* eslint-enable max-statements */
 
   @binary
   scale(vec) {

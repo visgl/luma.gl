@@ -104,18 +104,6 @@ export default class Program {
     return this;
   }
 
-  _compileAndLink(vs, fs) {
-    const {gl} = this;
-    gl.attachShader(this.handle, this.vs.handle);
-    gl.attachShader(this.handle, this.fs.handle);
-    gl.linkProgram(this.handle);
-    gl.validateProgram(this.handle);
-    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
-    if (!linked) {
-      throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
-    }
-  }
-
   use() {
     const {gl} = this;
     gl.useProgram(this.handle);
@@ -193,35 +181,6 @@ export default class Program {
   }
   /* eslint-enable max-statements */
 
-  _sortBuffersByLocation(buffers) {
-    let elements = null;
-    const locations = new Array(this._attributeCount);
-
-    for (const bufferName in buffers) {
-      const buffer = Buffer.makeFrom(this.gl, buffers[bufferName]);
-      const location = this._attributeLocations[bufferName];
-      if (location === undefined) {
-        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
-          throw new Error(
-            `${this._print(bufferName)} duplicate gl.ELEMENT_ARRAY_BUFFER`);
-        } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-          elements = bufferName;
-        } else if (!this._warn[bufferName]) {
-          log.warn(2, `${this._print(bufferName)} not used`);
-          this._warn[bufferName] = true;
-        }
-      } else {
-        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-          throw new Error(`${this._print(bufferName)}:${location} ` +
-            'has both location and type gl.ELEMENT_ARRAY_BUFFER');
-        }
-        locations[location] = bufferName;
-      }
-    }
-
-    return {locations, elements};
-  }
-
   checkBuffers() {
     for (const attributeName in this._attributeLocations) {
       if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
@@ -285,15 +244,17 @@ export default class Program {
   }
   /* eslint-enable max-depth */
 
+  // RAW WEBGL METHODS
+
   getAttachedShadersCount() {
-    return this.getProgramParameter(this.gl.ATTACHED_SHADERS);
+    return this.getProgramParameter(GL.ATTACHED_SHADERS);
   }
 
   // ATTRIBUTES API
   // Note: Locations are numeric indices
 
   getAttributeCount() {
-    return this.getProgramParameter(this.gl.ACTIVE_ATTRIBUTES);
+    return this.getProgramParameter(GL.ACTIVE_ATTRIBUTES);
   }
 
   /**
@@ -349,15 +310,15 @@ export default class Program {
   // PROGRAM API
 
   isFlaggedForDeletion() {
-    return this.getProgramParameter(this.gl.DELETE_STATUS);
+    return this.getProgramParameter(GL.DELETE_STATUS);
   }
 
   getLastLinkStatus() {
-    return this.getProgramParameter(this.gl.LINK_STATUS);
+    return this.getProgramParameter(GL.LINK_STATUS);
   }
 
   getLastValidationStatus() {
-    return this.getProgramParameter(this.gl.VALIDATE_STATUS);
+    return this.getProgramParameter(GL.VALIDATE_STATUS);
   }
 
   // WEBGL2 INTERFACE
@@ -414,6 +375,47 @@ export default class Program {
 
   // PRIVATE METHODS
 
+  _compileAndLink(vs, fs) {
+    const {gl} = this;
+    gl.attachShader(this.handle, this.vs.handle);
+    gl.attachShader(this.handle, this.fs.handle);
+    gl.linkProgram(this.handle);
+    gl.validateProgram(this.handle);
+    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+    if (!linked) {
+      throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
+    }
+  }
+
+  _sortBuffersByLocation(buffers) {
+    let elements = null;
+    const locations = new Array(this._attributeCount);
+
+    for (const bufferName in buffers) {
+      const buffer = Buffer.makeFrom(this.gl, buffers[bufferName]);
+      const location = this._attributeLocations[bufferName];
+      if (location === undefined) {
+        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
+          throw new Error(
+            `${this._print(bufferName)} duplicate gl.ELEMENT_ARRAY_BUFFER`);
+        } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+          elements = bufferName;
+        } else if (!this._warn[bufferName]) {
+          log.warn(2, `${this._print(bufferName)} not used`);
+          this._warn[bufferName] = true;
+        }
+      } else {
+        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+          throw new Error(`${this._print(bufferName)}:${location} ` +
+            'has both location and type gl.ELEMENT_ARRAY_BUFFER');
+        }
+        locations[location] = bufferName;
+      }
+    }
+
+    return {locations, elements};
+  }
+
   // Check that all active attributes are enabled
   _areAllAttributesEnabled() {
     const {gl} = this;
@@ -452,51 +454,19 @@ export default class Program {
     }
     return uniformSetters;
   }
-
-  // REMOVED
-
-  /*
-   * Binds array of textures, at indices corresponding to positions in array
-   */
-  setTextures(textures) {
-    throw new Error('setTextures replaced with setAttributes');
-    // assert(Array.isArray(textures), 'setTextures requires array textures');
-    // for (let i = 0; i < textures.length; ++i) {
-    //   textures[i].bind(i);
-    // }
-    // return this;
-  }
-
-  unsetTextures(textures) {
-    throw new Error('unsetTextures replaced with setAttributes');
-    // assert(Array.isArray(textures), 'unsetTextures requires array textures');
-    // for (let i = 0; i < textures.length; ++i) {
-    //   textures[i].unbind(i);
-    // }
-    // return this;
-  }
-
-  /*
-   * Set a texture at a given index
-   */
-  setTexture(texture, index) {
-    throw new Error('setTexture replaced with setAttributes');
-    // texture.bind(index);
-    // return this;
-  }
 }
 
 // create uniform setters
 // Map of uniform names to setter functions
 export function getUniformDescriptors(gl, program) {
-  const uniformDecriptors = {};
+  const uniformDescriptors = {};
   const length = program.getUniformCount();
   for (let i = 0; i < length; i++) {
     const info = program.getUniformInfo(i);
     const location = program.getUniformLocation(info.name);
     const descriptor = getUniformSetter(gl, location, info);
-    uniformDecriptors[descriptor.name] = descriptor;
+    uniformDescriptors[descriptor.name] = descriptor;
   }
-  return uniformDecriptors;
+  return uniformDescriptors;
 }
 

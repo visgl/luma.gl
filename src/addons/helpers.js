@@ -10,7 +10,7 @@ export function getDefaultShaders({id}) {
   };
 }
 
-export function getStringFromHTML(id) {
+export function getHTMLTemplate(id) {
   return document.getElementById(id).innerHTML;
 }
 
@@ -18,8 +18,8 @@ export function getShadersFromHTML({vs, fs, id}) {
   assert(vs);
   assert(fs);
   return {
-    vs: document.getElementById(vs).innerHTML,
-    fs: document.getElementById(fs).innerHTML,
-    id
+    id,
+    vs: getHTMLTemplate(vs),
+    fs: getHTMLTemplate(fs)
   };
 }

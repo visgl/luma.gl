@@ -11,8 +11,6 @@ import assert from 'assert';
 
 const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
 
-function noop() {}
-
 const DEFAULT_SCENE_OPTS = {
   lights: {
     enable: false,
@@ -67,7 +65,8 @@ export default class Scene extends Group {
     return redraw;
   }
 
-  clear(gl) {
+  clear() {
+    const {gl} = this;
     if (this.config.clearColor) {
       const bg = this.config.backgroundColor;
       gl.clearColor(bg.r, bg.g, bg.b, bg.a);
@@ -86,237 +85,71 @@ export default class Scene extends Group {
   }
 
   // Renders all objects in the scene.
-  render({
-    camera,
-    onBeforeRender = noop,
-    onAfterRender = noop,
-    context = {},
-    ...opts
-  } = {}) {
-    // assert(camera instanceof Camera, 'Invalid Camera in Scene.render');
-
-    const {gl} = this;
-    this.clear(gl);
-
+  render(uniforms = {}) {
+    this.clear();
     // Go through each model and render it.
-    for (const model of this.traverse({viewMatrix: camera.view})) {
+    for (const model of this.traverse()) {
       if (model.display) {
-        onBeforeRender(model, context);
-        this.renderObject({model, camera, context});
-        onAfterRender(model, context);
+        this.renderObject({model, uniforms});
       }
     }
     return this;
   }
 
-  renderObject({model, camera, context = {}}) {
-    assert(camera instanceof Camera, 'Invalid Camera in Scene.renderObject');
-
+  renderObject({model, uniforms}) {
     // Setup lighting and scene effects like fog, etc.
-    const {program} = model;
-    this.setupLighting(program);
-    this.setupEffects(program);
-
-    // Draw
-    model.onBeforeRender(camera, context);
-    model.render({camera, viewMatrix: camera.view});
-    model.onAfterRender(camera, context);
+    model.render({...this.getSceneUniforms(), ...uniforms});
     return this;
   }
 
-  // TODO - this is the new picking for deck.gl
-  pickModels(gl, {camera, x, y, ...opts}) {
-    const {view: viewMatrix} = camera;
-    return pickModels(gl, {
+  pickModels({x, y, uniforms = {}, ...opts} = {}) {
+    return pickModels(this.gl, {
       group: this,
-      camera,
-      viewMatrix,
       x, y,
+      uniforms: {...uniforms},
       ...opts
     });
   }
 
-  /*
-  pick(x, y, opt = {}) {
-    const gl = this.gl;
-
-    if (this.pickingFBO === undefined) {
-      this.pickingFBO = new Framebuffer(gl, {
-        width: gl.canvas.width,
-        height: gl.canvas.height
-      });
-    }
-
-    if (this.pickingProgram === undefined) {
-      this.pickingProgram =
-        opt.pickingProgram || makeProgramFromDefaultShaders(gl);
-    }
-
-    let pickingProgram = this.pickingProgram;
-
-    pickingProgram.use();
-    pickingProgram.setUniforms({
-      enablePicking: true,
-      hasPickingColors: false
-    });
-
-    this.pickingFBO.bind();
-
-    let hash = {};
-
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(x, gl.canvas.height - y, 1, 1);
-
-    const oldClearColor = this.clearColor;
-    const oldBackgroundColor = this.backgroundColor;
-    this.clearColor = true;
-    this.backgroundColor = {r: 0, g: 0, b: 0, a: 0};
-
-    this.render({
-      renderProgram: pickingProgram,
-      onBeforeRender: function(elem, i) {
-        i++;
-        let r = i % 256;
-        let g = ((i / 256) >> 0) % 256;
-        let b = ((i / (256 * 256)) >> 0) % 256;
-        hash[[r, g, b]] = elem;
-        pickingProgram.setUniforms({pickColor: [r / 255, g / 255, b / 255]});
-      }
-    });
-
-    gl.disable(gl.SCISSOR_TEST);
-
-    const pixel = new Uint8Array(4);
-
-    gl.readPixels(
-      x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel
-    );
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    this.clearColor = oldClearColor;
-    this.backgroundColor = oldBackgroundColor;
-
-    let r = pixel[0];
-    let g = pixel[1];
-    let b = pixel[2];
-
-    return hash[[r, g, b]];
-  }
-
-  pickCustom(x, y, opt = {}) {
-    const gl = this.gl;
-
-    if (this.pickingFBO === undefined) {
-      this.pickingFBO = new Framebuffer(gl, {
-        width: gl.canvas.width,
-        height: gl.canvas.height
-      });
-    }
-
-    if (this.pickingProgram === undefined) {
-      this.pickingProgram =
-        opt.pickingProgram || makeProgramFromDefaultShaders(gl);
-    }
-
-    let pickingProgram = this.pickingProgram;
-
-    pickingProgram.use();
-    pickingProgram.setUniforms({
-      enablePicking: true,
-      hasPickingColors: true
-    });
-
-    this.pickingFBO.bind();
-
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(x, gl.canvas.height - y, 1, 1);
-
-    const oldClearColor = this.clearColor;
-    const oldBackgroundColor = this.backgroundColor;
-    this.clearColor = true;
-    this.backgroundColor = {r: 255, g: 0, b: 0, a: 255};
-
-    this.render({
-      renderProgram: pickingProgram
-    });
-
-    gl.disable(gl.SCISSOR_TEST);
-
-    const pixel = new Uint8Array(4);
-
-    gl.readPixels(
-      x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel
-    );
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    this.clearColor = oldClearColor;
-    this.backgroundColor = oldBackgroundColor;
-
-    let r = pixel[0];
-    let g = pixel[1];
-    let b = pixel[2];
-    let a = pixel[3];
-
-    return [r, g, b, a];
-  }
-  */
-
   // Setup the lighting system: ambient, directional, point lights.
-  setupLighting(program) {
+  getSceneUniforms() {
     // Setup Lighting
     const {enable, ambient, directional, points} = this.config.lights;
 
     // Set light uniforms. Ambient and directional lights.
-    program.setUniforms({enableLights: enable});
-
-    if (!enable) {
-      return this;
-    }
-
-    if (ambient) {
-      this.setupAmbientLighting(program, ambient);
-    }
-
-    if (directional) {
-      this.setupDirectionalLighting(program, directional);
-    }
-
-    // Set point lights
-    if (points) {
-      this.setupPointLighting(program, points);
-    }
-
-    return this;
+    return {
+      ...this.getEffectsUniforms(),
+      enableLights: enable,
+      ...(enable && ambient ? this.getAmbientUniforms(ambient) : {}),
+      ...(enable && directional ? this.getDirectionalUniforms(directional) : {}),
+      ...(enable && points ? this.getPointUniforms(points) : {})
+    };
   }
 
-  setupAmbientLighting(program, ambient) {
-    program.setUniforms({
+  getAmbientUniforms(ambient) {
+    return {
       ambientColor: [ambient.r, ambient.g, ambient.b]
-    });
-
-    return this;
+    };
   }
 
-  setupDirectionalLighting(program, directional) {
+  getDirectionalUniforms(directional) {
     const {color, direction} = directional;
 
     // Normalize lighting direction vector
     const dir = new Vector3(direction.x, direction.y, direction.z)
       .normalize()
-      .scale([-1, -1, -1]);
+      .scale(-1, -1, -1);
 
-    program.setUniforms({
+    return {
       directionalColor: [color.r, color.g, color.b],
       lightingDirection: [dir.x, dir.y, dir.z]
-    });
-
-    return this;
+    };
   }
 
-  setupPointLighting(program, points) {
+  getPointUniforms(points) {
     points = points instanceof Array ? points : [points];
     const numberPoints = points.length;
-    program.setUniforms({numberPoints});
+    const uniforms = {numberPoints};
 
     const pointLocations = [];
     const pointColors = [];
@@ -339,38 +172,32 @@ export default class Scene extends Group {
     }
 
     if (pointLocations.length) {
-      program.setUniforms({
+      Object.assign(uniforms, {
         pointLocation: pointLocations,
-        pointColor: pointColors
-      });
-      program.setUniforms({
+        pointColor: pointColors,
         enableSpecular,
         pointSpecularColor: pointSpecularColors
       });
     }
 
-    return this;
+    return uniforms;
   }
 
   // Setup effects like fog, etc.
-  setupEffects(program) {
+  getEffectsUniforms() {
     const {fog} = this.config.effects;
 
     if (fog) {
       const {color = {r: 0.5, g: 0.5, b: 0.5}} = fog;
-      program.setUniforms({
+      return {
         hasFog: true,
         fogNear: fog.near,
         fogFar: fog.far,
         fogColor: [color.r, color.g, color.b]
-      });
-    } else {
-      program.setUniforms({hasFog: false});
+      };
     }
-
-    return this;
+    return {hasFog: false};
   }
-
 }
 
 Scene.MAX_TEXTURES = config.MAX_TEXTURES;

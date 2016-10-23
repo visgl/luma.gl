@@ -3,8 +3,8 @@
   "version": "2.9.1",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
-  "author": "Ib Green <ib@uber.com>",
   "contributors": [
+    "Ib Green <ib@uber.com>",
     "Nicolas Belomonte <nico@uber.com>",
     "Rye Terrell <ryeterrell@ryeterrell.net",
     "Shan He <shan@uber.com>",

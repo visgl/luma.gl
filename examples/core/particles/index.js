@@ -1,15 +1,15 @@
-/* global window, document, LumaGL */
+/* global document, LumaGL */
 /* eslint-disable no-var, max-statements */
+var GL = LumaGL.GL;
 var createGLContext = LumaGL.createGLContext;
 var Program = LumaGL.Program;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
 var Buffer = LumaGL.Buffer;
 var Framebuffer = LumaGL.Framebuffer;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
 var Mat4 = LumaGL.Mat4;
 var Vec3 = LumaGL.Vec3;
-var Fx = LumaGL.Fx;
 var Texture2D = LumaGL.Texture2D;
+
+var getHTMLTemplate = LumaGL.addons.getHTMLTemplate;
 
 var spriteImg = new Image();
 var marbleImg = new Image();
@@ -30,13 +30,12 @@ function dataTexture(gl, size, fill) {
   return new Texture2D(gl, {
     width: size,
     height: size,
-    format: gl.RGBA,
-    type: gl.FLOAT,
+    format: GL.RGBA,
+    type: GL.FLOAT,
     data: temp,
     flipY: false
   });
 }
-
 
 function begin() {
 
@@ -49,13 +48,13 @@ function begin() {
   var gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0.0,0.0,0.0, 0);
+  gl.clearColor(0, 0, 0, 0);
   gl.clearDepth(1);
-  gl.enable(gl.CULL_FACE);
-  gl.disable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.enable(GL.CULL_FACE);
+  gl.disable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
+  gl.enable(GL.BLEND);
+  gl.blendFunc(GL.SRC_ALPHA, gl.ONE);
 
   var dd = 4;
   function fillPos() {
@@ -75,10 +74,10 @@ function begin() {
   });
   var tMarble = new Texture2D(gl, {
     data: marbleImg,
-    wrapS: gl.REPEAT,
-    wrapT: gl.REPEAT,
-    magFilter: gl.LINEAR,
-    minFilter: gl.LINEAR_MIPMAP_LINEAR,
+    wrapS: GL.REPEAT,
+    wrapT: GL.REPEAT,
+    magFilter: GL.LINEAR,
+    minFilter: GL.LINEAR_MIPMAP_LINEAR,
     generateMipmap: true
   });
 
@@ -87,35 +86,34 @@ function begin() {
     -1, -1, 0, +1, +1, 0, -1, +1, 0
   ];
 
-  var quad = new Buffer(gl).setData({
-    attribute: 'aPosition',
-    data: new Float32Array(quadpos),
-    size: 3
-  });
+  var quad = {
+    aPosition: new Buffer(gl).setData({
+      data: new Float32Array(quadpos),
+      size: 3
+    })
+  };
 
-  var indexArray = new Float32Array(dataSize*dataSize);
-  for (var i = 0; i < dataSize*dataSize; i++) {
+  var indexArray = new Float32Array(dataSize * dataSize);
+  for (var i = 0; i < dataSize * dataSize; i++) {
     indexArray[i] = i;
   }
 
   var quaduv = [
-    0, 0,  1, 0,  1, 1,
-    0, 0,  1, 1,  0, 1
+    0, 0, 1, 0, 1, 1,
+    0, 0, 1, 1, 0, 1
   ];
 
   var sprite = {
-    vertices: new Buffer(gl).setData({
-      attribute: 'aPosition',
+    aPosition: new Buffer(gl).setData({
       data: new Float32Array(quadpos),
       size: 3
     }),
-    uvs: new Buffer(gl).setData({
-      attribute: 'aUV',
+    aUV: new Buffer(gl).setData({
       data: new Float32Array(quaduv),
       size: 2
     }),
-    index: new Buffer(gl).setData({
-      attribute: 'aIndex',
+    aIndex: new Buffer(gl).setData({
+      attribute: '',
       data: indexArray,
       size: 1,
       instanced: 1
@@ -123,68 +121,70 @@ function begin() {
   };
 
   var plane = {
-    vertices: new Buffer(gl).setData({
-      attribute: 'aPosition',
+    aPosition: new Buffer(gl).setData({
       data: new Float32Array(quadpos),
       size: 3
     }),
-    uvs: new Buffer(gl).setData({
-      attribute: 'aUV',
+    aUV: new Buffer(gl).setData({
       data: new Float32Array(quaduv),
       size: 2
     })
   };
 
-  var pAccelerate = new Program(gl, getShadersFromHTML({
-    vs: 'quad-vs',
-    fs: 'accelerate-fs'
-  }));
-  var pIntegrate = new Program(gl, getShadersFromHTML({
-    vs: 'quad-vs',
-    fs: 'integrate-fs'
-  }));
-  var pScene = new Program(gl, getShadersFromHTML({
-    vs: 'scene-vs',
-    fs: 'scene-fs'
-  }));
-  var pPlane = new Program(gl, getShadersFromHTML({
-    vs: 'plane-vs',
-    fs: 'plane-fs'
-  }));
-  var pCopy = new Program(gl, getShadersFromHTML({
-    vs: 'quad-vs',
-    fs: 'copy-fs'
-  }));
+  var pAccelerate = new Program(gl, {
+    id: 'accelerate',
+    vs: getHTMLTemplate('quad-vs'),
+    fs: getHTMLTemplate('accelerate-fs')
+  });
+  var pIntegrate = new Program(gl, {
+    id: 'integrate',
+    vs: getHTMLTemplate('quad-vs'),
+    fs: getHTMLTemplate('integrate-fs')
+  });
+  var pScene = new Program(gl, {
+    id: 'scene',
+    vs: getHTMLTemplate('scene-vs'),
+    fs: getHTMLTemplate('scene-fs')
+  });
+  var pPlane = new Program(gl, {
+    id: 'plane',
+    vs: getHTMLTemplate('plane-vs'),
+    fs: getHTMLTemplate('plane-fs')
+  });
+  var pCopy = new Program(gl, {
+    id: 'copy',
+    vs: getHTMLTemplate('quad-vs'),
+    fs: getHTMLTemplate('copy-fs')
+  });
 
-  function copy(src, opts) {
-    opts = opts || {};
-    opts.width = opts.width || 1;
-    opts.height = opts.height || 1;
+  function copy(src, {width = 1, height = 1, dest = null}) {
     pCopy.use();
-    if (opts.dest) {
-      opts.dest.bind();
+    if (dest) {
+      dest.bind();
     } else {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     }
-    gl.viewport(0, 0, opts.width, opts.height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    pCopy.setUniforms({uTexture: src.bind(0)});
-    pCopy.setBuffer(quad);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.viewport(0, 0, width, height);
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    pCopy
+      .setBuffers(quad)
+      .setUniforms({uTexture: src})
+      .render();
+//      .drawArrays(GL.TRIANGLES, 0, 6);
   }
 
   const fbPosition = [
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
-      format: gl.RGBA,
-      type: gl.FLOAT
+      format: GL.RGBA,
+      type: GL.FLOAT
     }),
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
-      format: gl.RGBA,
-      type: gl.FLOAT
+      format: GL.RGBA,
+      type: GL.FLOAT
     })
   ];
 
@@ -198,21 +198,21 @@ function begin() {
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
-      format: gl.RGBA,
-      type: gl.FLOAT
+      format: GL.RGBA,
+      type: GL.FLOAT
     }),
     new Framebuffer(gl, {
       width: dataSize,
       height: dataSize,
-      format: gl.RGBA,
-      type: gl.FLOAT
+      format: GL.RGBA,
+      type: GL.FLOAT
     })
   ];
 
   fbVelocity[0].bind();
-  gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
+  gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
   fbVelocity[1].bind();
-  gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
+  gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
 
   var ppongIndex = 0;
 
@@ -256,76 +256,76 @@ function begin() {
     gl.viewport(0, 0, dataSize, dataSize);
 
     fbVelocityDst.bind();
-    gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
-    pAccelerate.use();
-    pAccelerate.setUniforms({
-      uSpeed: Math.sin(tick * 0.005) * 8 + 8,
-      uPosition: fbPositionSrc.texture,
-      uVelocity: fbVelocitySrc.texture,
-      uTime: tick * 0.25
-    });
-    pAccelerate.setBuffer(quad);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
+    pAccelerate
+      .use()
+      .setBuffers(quad)
+      .setUniforms({
+        uSpeed: Math.sin(tick * 0.005) * 8 + 8,
+        uPosition: fbPositionSrc.texture,
+        uVelocity: fbVelocitySrc.texture,
+        uTime: tick * 0.25
+      });
+    gl.drawArrays(GL.TRIANGLES, 0, 6);
 
     fbPositionDst.bind();
-    gl.clear(gl.COLOR_BUFFER_BIT, gl.DEPTH_BUFFER_BIT);
-    pIntegrate.use();
-    pIntegrate.setUniforms({
-      uPosition: fbPositionSrc.texture.bind(0),
-      uVelocity: fbVelocityDst.texture.bind(1)
-    });
-    pIntegrate.setBuffer(quad);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
+    pIntegrate
+      .use()
+      .setBuffers(quad)
+      .setUniforms({
+        uPosition: fbPositionSrc.texture,
+        uVelocity: fbVelocityDst.texture
+      });
+    gl.drawArrays(GL.TRIANGLES, 0, 6);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     var model = new Mat4();
     model.$translate(0, -200, 0);
     model.$rotateXYZ(-Math.PI / 2, 0, 0);
     model.$scale(1000, 1000, 1);
 
-    pPlane.use();
-    pPlane.setBuffer(plane.vertices);
-    pPlane.setBuffer(plane.uvs);
-    pPlane.setUniforms({
-      uTexture: tMarble.bind(0),
-      uModel: model,
-      uView: view,
-      uProjection: projection
-    });
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    pPlane
+      .use()
+      .setBuffers(plane)
+      .setUniforms({
+        uTexture: tMarble,
+        uModel: model,
+        uView: view,
+        uProjection: projection
+      });
+    gl.drawArrays(GL.TRIANGLES, 0, 6);
 
-    pScene.use();
-    pScene.setBuffer(sprite.vertices);
-    pScene.setBuffer(sprite.uvs);
-    pScene.setBuffer(sprite.index);
-    pScene.setUniforms({
-      uReflect: true,
-      uColor: color,
-      uView: view,
-      uProjection: projection,
-      uPosition: fbPositionDst.texture.bind(1),
-      uSprite: tSprite.bind(2),
-      uDataSize: dataSize
-    });
-    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, dataSize * dataSize);
+    pScene
+      .use()
+      .setBuffers(sprite)
+      .setUniforms({
+        uReflect: true,
+        uColor: color,
+        uView: view,
+        uProjection: projection,
+        uPosition: fbPositionDst.texture,
+        uSprite: tSprite,
+        uDataSize: dataSize
+      });
+    ext.drawArraysInstancedANGLE(GL.TRIANGLES, 0, 6, dataSize * dataSize);
 
-    pScene.use();
-    pScene.setBuffer(sprite.vertices);
-    pScene.setBuffer(sprite.uvs);
-    pScene.setBuffer(sprite.index);
-    pScene.setUniforms({
-      uReflect: false,
-      uColor: color,
-      uView: view,
-      uProjection: projection,
-      uPosition: fbPositionDst.texture.bind(1),
-      uSprite: tSprite.bind(2),
-      uDataSize: dataSize
-    });
-    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, dataSize*dataSize);
+    pScene
+      .use()
+      .setBuffers(sprite)
+      .setUniforms({
+        uReflect: false,
+        uColor: color,
+        uView: view,
+        uProjection: projection,
+        uPosition: fbPositionDst.texture,
+        uSprite: tSprite,
+        uDataSize: dataSize
+      });
+    ext.drawArraysInstancedANGLE(GL.TRIANGLES, 0, 6, dataSize * dataSize);
 
     ppongIndex = 1 - ppongIndex;
 
@@ -333,4 +333,4 @@ function begin() {
   }
 
   render();
-};
+}

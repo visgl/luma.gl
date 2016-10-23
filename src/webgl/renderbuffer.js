@@ -1,3 +1,4 @@
+import {GL} from './webgl-types';
 import {assertWebGLRenderingContext} from './webgl-checks';
 import {glGet, assertWebGL2} from './context';
 
@@ -22,20 +23,17 @@ export default class Renderbuffer {
   }
 
   delete() {
-    const {gl} = this;
-    gl.deleteRenderbuffer(this.handle);
+    this.gl.deleteRenderbuffer(this.handle);
     return this;
   }
 
   bind() {
-    const {gl} = this;
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.handle);
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
     return this;
   }
 
   unbind() {
-    const {gl} = this;
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.handle);
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
     return this;
   }
 
@@ -53,7 +51,7 @@ export default class Renderbuffer {
     assert(internalFormat, 'Needs internalFormat');
     this.bind();
     gl.renderbufferStorage(
-      gl.RENDERBUFFER, glGet(gl, internalFormat), width, height
+      GL.RENDERBUFFER, glGet(gl, internalFormat), width, height
     );
     this.unbind();
     return this;
@@ -65,19 +63,19 @@ export default class Renderbuffer {
     const {gl} = this;
     this.bind();
     const value =
-      gl.getRenderbufferParameter(gl.RENDERBUFFER, glGet(gl, pname));
+      gl.getRenderbufferParameter(GL.RENDERBUFFER, glGet(gl, pname));
     this.unbind();
     return value;
   }
 
   // @returns {GLint} - width of the image of the currently bound renderbuffer.
   get width() {
-    return this.getParameter(this.gl.RENDERBUFFER_WIDTH);
+    return this.getParameter(GL.RENDERBUFFER_WIDTH);
   }
 
   // @returns {GLint} - height of the image of the currently bound renderbuffer.
   get height() {
-    return this.getParameter(this.gl.RENDERBUFFER_HEIGHT);
+    return this.getParameter(GL.RENDERBUFFER_HEIGHT);
   }
 
   // @returns {GLenum} internal format of the currently bound renderbuffer.
@@ -88,37 +86,37 @@ export default class Renderbuffer {
   // gl.DEPTH_COMPONENT16: 16 depth bits.
   // gl.STENCIL_INDEX8: 8 stencil bits.
   get internalFormat() {
-    return this.getParameter(this.gl.RENDERBUFFER_INTERNAL_FORMAT);
+    return this.getParameter(GL.RENDERBUFFER_INTERNAL_FORMAT);
   }
 
   //  @returns {GLint} - resolution size (in bits) for the green color.
   get greenSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_GREEN_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_GREEN_SIZE);
   }
 
   // @returns {GLint} - resolution size (in bits) for the blue color.
   get blueSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_BLUE_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_BLUE_SIZE);
   }
 
   // @returns {GLint} - resolution size (in bits) for the red color.
   get redSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_RED_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_RED_SIZE);
   }
 
   // @returns {GLint} - resolution size (in bits) for the alpha component.
   get alphaSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_ALPHA_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_ALPHA_SIZE);
   }
 
   // @returns {GLint} - resolution size (in bits) for the depth component.
   get depthSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_DEPTH_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_DEPTH_SIZE);
   }
 
   // @returns {GLint} - resolution size (in bits) for the stencil component.
   get stencilSize() {
-    return this.getParameter(this.gl.RENDERBUFFER_STENCIL_SIZE);
+    return this.getParameter(GL.RENDERBUFFER_STENCIL_SIZE);
   }
 
   // When using a WebGL 2 context, the following value is available
@@ -138,7 +136,7 @@ export default class Renderbuffer {
     const {gl} = this;
     assertWebGL2(gl);
     gl.renderbufferStorageMultisample(
-      gl.RENDERBUFFER, samples, internalformat, width, height
+      GL.RENDERBUFFER, samples, internalformat, width, height
     );
     return this;
   }
@@ -148,7 +146,7 @@ export default class Renderbuffer {
     const {gl} = this;
     assertWebGL2(gl);
     return gl.getInternalformatParameter(
-      gl.RENDERBUFFER, internalformat, pname
+      GL.RENDERBUFFER, internalformat, pname
     );
   }
 }

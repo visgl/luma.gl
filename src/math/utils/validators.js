@@ -1,5 +1,13 @@
 import {glMatrix} from 'gl-matrix';
 
+export function checkArguments(...args) {
+  for (let i = 0; i < args.length; ++i) {
+    if (args[i] === undefined) {
+      throw new Error('Invalid math argument');
+    }
+  }
+}
+
 export function validateVector2(v) {
   return v.length === 2 &&
     Number.isFinite(v[0]) && Number.isFinite(v[1]);

@@ -23,14 +23,12 @@
     <script type="text/javascript" src="noise.js"></script>
     <script type="text/javascript" src="index.js"></script>
 
-
     <script id="lights-vs" type="x-shader/x-vertex">
-
       precision highp float;
 
-      attribute vec3 offsets;
-      attribute vec3 positions;
-      attribute vec3 colors;
+      attribute vec3 aOffset;
+      attribute vec3 aPosition;
+      attribute vec3 aColor;
 
       uniform mat4 uView;
       uniform mat4 uProjection;
@@ -45,16 +43,14 @@
           v[0][1], v[1][1], v[2][1],
           v[0][2], v[1][2], v[2][2]
         );
-        gl_Position = uProjection * uView * vec4(iview * (positions) + offsets, 1.0);
-        vLightPosition = offsets;
-        vColor = colors;
+        gl_Position = uProjection * uView * vec4(iview * (aPosition) + aOffset, 1.0);
+        vLightPosition = aOffset;
+        vColor = aColor;
       }
-
     </script>
 
 
     <script id="lights-fs" type="x-shader/x-fragment">
-
       precision highp float;
 
       uniform sampler2D uPosition;
@@ -65,7 +61,7 @@
       varying vec3 vColor;
 
       void main(void) {
-        vec2 p = gl_FragCoord.xy/uRes;
+        vec2 p = gl_FragCoord.xy / uRes;
 
         vec3 position = texture2D(uPosition, p).xyz;
         vec3 normal = texture2D(uNormal, p).xyz;
@@ -78,15 +74,13 @@
 
         gl_FragColor = vec4(i * d * vColor, 1.0);
       }
-
     </script>
 
 
     <script id="position-vs" type="x-shader/x-vertex">
-
       precision highp float;
 
-      attribute vec3 positions;
+      attribute vec3 aPosition;
 
       uniform mat4 uView;
       uniform mat4 uProjection;
@@ -94,15 +88,13 @@
       varying vec3 vPosition;
 
       void main(void) {
-        gl_Position = uProjection * uView * vec4(positions, 1.0);
+        gl_Position = uProjection * uView * vec4(aPosition, 1.0);
         vPosition = aPosition;
       }
-
     </script>
 
 
     <script id="position-fs" type="x-shader/x-fragment">
-
       precision highp float;
 
       varying vec3 vPosition;
@@ -110,12 +102,10 @@
       void main(void) {
         gl_FragColor = vec4(vPosition,1.0);
       }
-
     </script>
 
 
     <script id="normal-vs" type="x-shader/x-vertex">
-
       precision highp float;
 
       attribute vec3 aPosition;
@@ -130,12 +120,9 @@
         gl_Position = uProjection * uView * vec4(aPosition, 1.0);
         vNormal = aNormal;
       }
-
     </script>
 
-
     <script id="normal-fs" type="x-shader/x-fragment">
-
       precision highp float;
 
       varying vec3 vNormal;
@@ -143,7 +130,6 @@
       void main(void) {
         gl_FragColor = vec4(vNormal,1.0);
       }
-
     </script>
 
 

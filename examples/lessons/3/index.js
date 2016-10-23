@@ -62,8 +62,6 @@ window.webGLStart = function() {
     fs: 'shader-fs'
   }));
 
-  program.use();
-
   var triangle = new Model({
     geometry: triangleGeometry,
     program: program
@@ -80,6 +78,8 @@ window.webGLStart = function() {
 
   var rTri = 0.0;
   var rSquare = 0.0;
+
+  program.use();
 
   function setupModel(model) {
     // get new view matrix out of element and camera matrices

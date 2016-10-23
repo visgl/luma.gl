@@ -69,9 +69,9 @@ void main(){
   }
 
   // handle fog
-  if (hasFog) {
-    float depth = gl_FragCoord.z / gl_FragCoord.w;
-    float fogFactor = smoothstep(fogNear, fogFar, depth);
-    gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
-  }
+  // if (hasFog) {
+  //   float depth = gl_FragCoord.z / gl_FragCoord.w;
+  //   float fogFactor = smoothstep(fogNear, fogFar, depth);
+  //   gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
+  // }
 }

@@ -25,6 +25,7 @@ export * from './context';
 export * from './draw';
 export * from './uniforms';
 
+// Deprecated
 // Higher level abstractions
-export {default as FramebufferObject} from './fbo';
-export {default as FBO} from './fbo';
+// export {default as FramebufferObject} from './fbo';
+// export {default as FBO} from './fbo';

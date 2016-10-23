@@ -1,32 +1,30 @@
-/* global window, document, LumaGL */
-/* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
+/* global document, LumaGL */
+/* eslint-disable no-var, max-statements, prefer-template, object-shorthand */
+var GL = LumaGL.GL;
 var loadTextures = LumaGL.loadTextures;
 var Program = LumaGL.Program;
 var Buffer = LumaGL.Buffer;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
 var Scene = LumaGL.Scene;
-var Fx = LumaGL.Fx;
-var Vec3 = LumaGL.Vec3;
 var Sphere = LumaGL.Sphere;
+var Vec3 = LumaGL.Vec3;
+var Matrix4 = LumaGL.Matrix4;
+var radians = LumaGL.radians;
 var pickModels = LumaGL.pickModels;
+var Renderer = LumaGL.addons.Renderer;
 
 var pick = {x: 0, y: 0};
 
-window.webGLStart = function() {
+var scene;
 
-  var canvas = document.getElementById('render-canvas');
+new Renderer()
+.init(function init(context) {
+  const gl = context.gl;
+  const canvas = context.canvas;
 
-  var gl = createGLContext({canvas});
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
 
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.viewport(0, 0, canvas.width, canvas.height);
-
-  // rye TODO: there's a bug in merge that makes it require an object.
-  var camera = new PerspectiveCamera({});
-
-  var scene = new Scene(gl, {
+  scene = new Scene(gl, {
     lights: {
       points: {
         color: {r: 1, g: 1, b: 1},
@@ -38,7 +36,7 @@ window.webGLStart = function() {
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
 
-  canvas.addEventListener('mousemove', function(e) {
+  canvas.addEventListener('mousemove', function mousemove(e) {
     pick.x = e.offsetX;
     pick.y = e.offsetY;
   });
@@ -61,18 +59,10 @@ window.webGLStart = function() {
       generateMipmap: true
     }
   })
-  .then(function(textures) {
-    var tJupiter = textures[0];
-    var tMars = textures[1];
-    var tMercury = textures[2];
-    var tNeptune = textures[3];
-    var tSaturn = textures[4];
-    var tUranus = textures[5];
-    var tVenus = textures[6];
-
+  .then(function onTexturesLoaded(textures) {
     var program = new Program(gl);
 
-    const planets = PLANETS.map(function(planet, i) {
+    const planets = PLANETS.map(function map(planet, i) {
       return new Sphere({
         id: planet.name,
         nlat: 32,
@@ -108,24 +98,16 @@ window.webGLStart = function() {
     }
 
     scene.add(planets);
-
-    function drawFrame() {
-      draw(gl, canvas, camera, scene);
-      Fx.requestAnimationFrame(drawFrame);
-    }
-    drawFrame();
   });
-};
+})
+.frame(function frame(context) {
+  const gl = context.gl;
+  const width = context.width;
+  const height = context.height;
 
-function draw(gl, canvas, camera, scene) {
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-  camera.view.lookAt(
-    new Vec3(0, 0, 32), new Vec3(0, 0, 0), new Vec3(0, 1, 0)
-  );
-  camera.projection.perspective(
-    15, canvas.width / canvas.height, 0.1, 100.0
-  );
+  const projection =
+     new Matrix4().perspective({fov: radians(15), aspect: width / height});
+  const view = new Matrix4().lookAt({eye: [0, 0, 32]});
 
   for (var i = 0; i < scene.children.length; i++) {
     var item = scene.children[i];
@@ -133,14 +115,23 @@ function draw(gl, canvas, camera, scene) {
     item.updateMatrix();
   }
 
+  const uniforms = {
+    projectionMatrix: projection,
+    viewMatrix: view
+  };
+
+  scene.render(uniforms);
+
   var picked = pickModels(gl, {
     group: scene,
-    viewMatrix: camera.view,
+    uniforms,
     x: pick.x,
     y: pick.y
   });
 
-  var pickedModel = picked.find(function(model) { return model.isPicked; });
+  var pickedModel = picked.find(function find(model) {
+    return model.isPicked;
+  });
 
   var div = document.getElementById('planet-name');
   if (pickedModel) {
@@ -151,7 +142,4 @@ function draw(gl, canvas, camera, scene) {
   } else {
     div.style.display = 'none';
   }
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
-  scene.render({camera});
-}
+});

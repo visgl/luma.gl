@@ -1,5 +1,4 @@
 <html>
-
   <head>
     <title>Cubemap example</title>
     <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
@@ -8,12 +7,10 @@
       body {
         margin: 0px;
       }
-
       #render-canvas {
         width: 100%;
         height: 100%;
       }
-
       #controls {
         position: fixed;
         bottom: 40px;
@@ -23,7 +20,6 @@
         font-family: sans;
         text-align: center;
       }
-
     </style>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -93,7 +89,6 @@
 
       varying vec3 position;
       varying vec3 normal;
-      // varying vec3 color;
 
       void main(void) {
         vec4 color = vec4(1,0,0,1);
@@ -106,14 +101,18 @@
         gl_FragColor = vec4(c * color);
       }
     </script>
-
   </head>
 
-  <body onload="webGLStart();">
-    <canvas id="render-canvas"></canvas>
+  <body>
     <div id="controls">
-      reflection <input type="range" min="0.0" max="1.0" value="1.0" step="0.01" class="valign" id="reflection"><br>
-      refraction <input type="range" min="0.0" max="1.0" value="1.0" step="0.01" class="valign" id="refraction"><br>
+      reflection
+      <input class="valign" id="reflection"
+        type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+      <br>
+      refraction
+      <input class="valign" id="refraction"
+        type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+      <br>
     </div>
   </body>
 

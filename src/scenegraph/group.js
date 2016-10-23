@@ -51,7 +51,7 @@ export default class Group extends Object3D {
     }
   }
 
-  * traverseReverse({viewMatrix}) {
+  * traverseReverse({viewMatrix = new Mat4()} = {}) {
     for (let i = this.children.length - 1; i >= 0; --i) {
       const child = this.children[i];
       const {matrix} = child;

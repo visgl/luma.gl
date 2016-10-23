@@ -25,12 +25,11 @@ function decorate(entryArgs, handleDescriptor) {
   };
 }
 
-export function unary(...args) {
-  return decorate(args,
+export function unary(...decoratorArgs) {
+  return decorate(decoratorArgs,
     (target, methodKey, descriptor, []) => {
       const Class = target.constructor;
-      Class[methodKey] = (a) => new Class().set(a)[methodKey]();
-
+      Class[methodKey] = (...args) => (new Class())[methodKey](...args);
       return {
         ...descriptor,
         value: function unaryWrapper() {
@@ -61,7 +60,7 @@ export function spread(...args) {
       const Class = target.constructor;
       Class[methodKey] = (a, ...rest) => rest.reduce(
         (acc, elt) => acc[methodKey](elt),
-        new Class().set(a)
+        new Class().copy(a)
       );
 
       return {

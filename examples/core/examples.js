@@ -1,21 +1,21 @@
 /* global window, document, ace, LumaGL, console */
 /* eslint-disable no-var, no-console, max-statements */
-(function() {
+/* eslint-disable quote-props, prefer-template */
+(function main() {
   var loadFiles = LumaGL.loadFiles;
 
   var examples = {
     'instancing': 'Instancing',
     'picking': 'Picking',
     'multicontext': 'Multiple Contexts',
-    'cubemap': 'Cubemap'
-    // 'persistence': 'Persistence',
-    // 'custom-picking': 'Custom Picking',
-    // 'particles': 'Particles',
-    // 'deferred-rendering': 'Deferred Rendering'
+    'cubemap': 'Cubemap',
+    'particles': 'Particles',
+    'deferred-rendering': 'Deferred Rendering',
+    'persistence': 'Persistence',
+    'custom-picking': 'Custom Picking'
   };
 
   window.addEventListener('load', function onLoad() {
-
     loadFiles({urls: [window.location + 'index.js']})
     .then(function onSuccess(files) {
       var data = files[0];
@@ -115,7 +115,6 @@
     .catch(function onError() {
       console.error('Error loading example source.');
     });
-
   });
 
 }());

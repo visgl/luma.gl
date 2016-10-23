@@ -277,6 +277,13 @@ export class Mat4 extends Array {
     return new Array(16);
   }
 
+  copy(src) {
+    for (var i = 0; i < 16; ++i) {
+      this[i] = src[i];
+    }
+    return this;
+  }
+
   get n11() { return this[0]; }
   get n12() { return this[4]; }
   get n13() { return this[8]; }

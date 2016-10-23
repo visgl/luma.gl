@@ -12,25 +12,25 @@ export default class Object3D {
     this.matrix = new Mat4();
 
     // whether to display the object at all
-    this.id = id || uid();
+    this.id = id || uid(this.constructor.name);
     this.display = true;
     this.userData = {};
   }
 
   setPosition(position) {
-    assert(position instanceof Vec3, 'setPosition requires vector argument');
+    assert(position.length === 3, 'setPosition requires vector argument');
     this.position = position;
     return this;
   }
 
   setRotation(rotation) {
-    assert(rotation instanceof Vec3, 'setRotation requires vector argument');
+    assert(rotation.length === 3, 'setRotation requires vector argument');
     this.rotation = rotation;
     return this;
   }
 
   setScale(scale) {
-    assert(scale instanceof Vec3, 'setScale requires vector argument');
+    assert(scale.length === 3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
   }
@@ -57,9 +57,9 @@ export default class Object3D {
     const scale = this.scale;
 
     this.matrix.id();
-    this.matrix.$translate(pos.x, pos.y, pos.z);
-    this.matrix.$rotateXYZ(rot.x, rot.y, rot.z);
-    this.matrix.$scale(scale.x, scale.y, scale.z);
+    this.matrix.$translate(pos[0], pos[1], pos[2]);
+    this.matrix.$rotateXYZ(rot[0], rot[1], rot[2]);
+    this.matrix.$scale(scale[0], scale[1], scale[2]);
     return this;
   }
 
@@ -77,17 +77,19 @@ export default class Object3D {
     return this;
   }
 
-  getCoordinateUniforms(viewMatrix) {
+  getCoordinateUniforms(viewMatrix, modelMatrix) {
     // TODO - solve multiple class problem
     // assert(viewMatrix instanceof Mat4);
     assert(viewMatrix);
-    const {matrix} = this;
-    const worldMatrix = viewMatrix.mulMat4(matrix);
+    modelMatrix = modelMatrix || this.matrix;
+    const worldMatrix = new Mat4().copy(viewMatrix).mulMat4(modelMatrix);
     const worldInverse = worldMatrix.invert();
     const worldInverseTranspose = worldInverse.transpose();
 
     return {
-      objectMatrix: matrix,
+      viewMatrix,
+      modelMatrix,
+      objectMatrix: modelMatrix,
       worldMatrix,
       worldInverseMatrix: worldInverse,
       worldInverseTransposeMatrix: worldInverseTranspose

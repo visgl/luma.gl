@@ -57,7 +57,7 @@
       uniform vec2 uRes;
 
       void main(void) {
-        vec2 p = gl_FragCoord.xy/uRes.xy;
+        vec2 p = gl_FragCoord.xy / uRes.xy;
         vec4 cS = texture2D(uScene, p);
         vec4 cP = texture2D(uPersistence, p);
         gl_FragColor = mix(cS*4.0, cP, 0.9);
@@ -65,8 +65,8 @@
     </script>
 
     <script id="sphere-vs" type="x-shader/x-vertex">
-      attribute vec3 aPosition;
-      attribute vec3 aNormal;
+      attribute vec3 positions;
+      attribute vec3 normals;
 
       uniform mat4 uModel;
       uniform mat4 uView;
@@ -75,8 +75,8 @@
       varying vec3 normal;
 
       void main(void) {
-        gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-        normal = vec3(uModel * vec4(aNormal,1));
+        gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+        normal = vec3(uModel * vec4(normals,1));
       }
     </script>
 
@@ -101,9 +101,5 @@
     </script>
 
   </head>
-
-  <body onload="webGLStart();">
-    <canvas id="render-canvas"></canvas>
-  </body>
 
 </html>
