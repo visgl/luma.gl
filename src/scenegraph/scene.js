@@ -2,7 +2,6 @@
 /* eslint-disable max-statements, no-try-catch */
 
 import * as config from '../core/config';
-import {Camera} from '../core/camera';
 import {Vector3} from '../math';
 import {merge} from '../utils';
 import Group from './group';

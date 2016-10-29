@@ -1,52 +1,63 @@
-import {mat4, vec2, vec3, vec4} from 'gl-matrix';
+import MathArray from './math-array';
+import {checkNumber, glMatrix} from './common';
 import Vector2 from './vector2';
 import Vector3 from './vector3';
 import Vector4 from './vector4';
-
 import {unary, binary, spread} from './utils/decorators';
-import {
-  validateMatrix4,
-  checkMatrix4, checkVector2, checkVector3, checkVector4,
-  checkArguments
-} from './utils/validators';
+import {mat4, vec2, vec3, vec4} from 'gl-matrix';
 
-export default class Matrix4 extends Array {
+import {checkVector2, checkVector3, checkVector4}
+  from './utils/validators';
+
+export default class Matrix4 extends MathArray {
   constructor(...args) {
     super();
-    this.set(...args);
+    if (Array.isArray(args[0]) && arguments.length === 1) {
+      this.copy(args[0]);
+    } else {
+      this.identity();
+    }
+  }
+
+  get ELEMENTS() {
+    return 16;
   }
 
   /* eslint-disable max-params */
-  set(
-    n11 = 1, n12 = 0, n13 = 0, n14 = 0,
-    n21 = 0, n22 = 1, n23 = 0, n24 = 0,
-    n31 = 0, n32 = 0, n33 = 1, n34 = 0,
-    n41 = 0, n42 = 0, n43 = 0, n44 = 1
+  setRowMajor(
+    m00 = 1, m10 = 0, m20 = 0, m30 = 0,
+    m01 = 0, m11 = 1, m21 = 0, m31 = 0,
+    m02 = 0, m12 = 0, m22 = 1, m32 = 0,
+    m03 = 0, m13 = 0, m23 = 0, m33 = 1
   ) {
     mat4.set(
       this,
-      n11, n12, n13, n14,
-      n21, n22, n23, n24,
-      n31, n32, n33, n34,
-      n41, n42, n43, n44
+      m00, m01, m02, m03,
+      m10, m11, m12, m13,
+      m20, m21, m22, m23,
+      m30, m31, m32, m33
     );
-    checkMatrix4(this);
+    this.check();
+    return this;
+  }
+
+  setColumnMajor(
+    m00 = 1, m01 = 0, m02 = 0, m03 = 0,
+    m10 = 0, m11 = 1, m12 = 0, m13 = 0,
+    m20 = 0, m21 = 0, m22 = 1, m23 = 0,
+    m30 = 0, m31 = 0, m32 = 0, m33 = 1
+  ) {
+    mat4.set(
+      this,
+      m00, m01, m02, m03,
+      m10, m11, m12, m13,
+      m20, m21, m22, m23,
+      m30, m31, m32, m33
+    );
+    this.check();
     return this;
   }
   /* eslint-enable max-params */
-
-  copy(mat) {
-    mat4.copy(this, mat);
-    checkMatrix4(this);
-    return this;
-  }
-
-  @unary
-  clone() {
-    const clone = mat4.copy(new Matrix4(), this);
-    checkMatrix4(clone);
-    return clone;
-  }
 
   @binary
   equals(a) {
@@ -59,28 +70,55 @@ export default class Matrix4 extends Array {
   }
 
   @unary
-  validate() {
-    return validateMatrix4(this);
+  toString() {
+    if (glMatrix.printRowMajor) {
+      mat4.str(this);
+    } else {
+      mat4.str(this);
+    }
   }
+
+  // Row major setters and getters
+  /* eslint-disable no-multi-spaces, brace-style, no-return-assign */
+  get m00()      { return this[0]; }
+  set m00(value) { return this[0] = checkNumber(value); }
+  get m01()      { return this[4]; }
+  set m01(value) { return this[4] = checkNumber(value); }
+  get m02()      { return this[8]; }
+  set m02(value) { return this[8] = checkNumber(value); }
+  get m03()      { return this[12]; }
+  set m03(value) { return this[12] = checkNumber(value); }
+  get m10()      { return this[1]; }
+  set m10(value) { return this[1] = checkNumber(value); }
+  get m11()      { return this[5]; }
+  set m11(value) { return this[5] = checkNumber(value); }
+  get m12()      { return this[9]; }
+  set m12(value) { return this[9] = checkNumber(value); }
+  get m13()      { return this[13]; }
+  set m13(value) { return this[13] = checkNumber(value); }
+  get m20()      { return this[2]; }
+  set m20(value) { return this[2] = checkNumber(value); }
+  get m21()      { return this[6]; }
+  set m21(value) { return this[6] = checkNumber(value); }
+  get m22()      { return this[10]; }
+  set m22(value) { return this[10] = checkNumber(value); }
+  get m23()      { return this[14]; }
+  set m23(value) { return this[14] = checkNumber(value); }
+  get m30()      { return this[3]; }
+  set m30(value) { return this[3] = checkNumber(value); }
+  get m31()      { return this[7]; }
+  set m31(value) { return this[7] = checkNumber(value); }
+  get m32()      { return this[11]; }
+  set m32(value) { return this[11] = checkNumber(value); }
+  get m33()      { return this[15]; }
+  set m33(value) { return this[15] = checkNumber(value); }
+  /* eslint-enable no-multi-spaces, brace-style, no-return-assign */
+
+  // Accessors
 
   @unary
   determinant() {
     return mat4.determinant(this);
-  }
-
-  @unary
-  toString() {
-    return mat4.str(this);
-  }
-
-  @unary
-  toArray() {
-    return this;
-  }
-
-  @unary
-  toFloat32Array() {
-    return new Float32Array(this);
   }
 
   getRotation() {
@@ -90,7 +128,7 @@ export default class Matrix4 extends Array {
 
   identity() {
     mat4.identity(this);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -103,7 +141,7 @@ export default class Matrix4 extends Array {
   // far Number  Far bound of the frustum
   frustum({left, right, bottom, top, near, far}) {
     mat4.frustum(this, left, right, bottom, top, near, far);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -119,7 +157,7 @@ export default class Matrix4 extends Array {
     up = [0, 1, 0]
   } = {}) {
     mat4.lookAt(this, eye, center, up);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -137,7 +175,7 @@ export default class Matrix4 extends Array {
     far = 500
   }) {
     mat4.ortho(this, left, right, bottom, top, near, far);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -157,7 +195,7 @@ export default class Matrix4 extends Array {
       throw Error('radians');
     }
     mat4.perspective(this, fov, aspect, near, far);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -171,7 +209,7 @@ export default class Matrix4 extends Array {
   @unary
   perspectiveFromFieldOfView(out, fov, near, far) {
     mat4.perspectiveFromFieldOfView(out, fov, near, far);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -179,13 +217,13 @@ export default class Matrix4 extends Array {
   // q quat  Quaternion to create matrix from
   fromQuaternion(q) {
     mat4.fromQuat(this, q);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   fromQuat(q) {
     mat4.fromQuat(this, q);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -196,7 +234,7 @@ export default class Matrix4 extends Array {
   // axis  vec3  the axis to rotate around
   fromRotation(rad, axis) {
     mat4.fromRotation(this, rad, axis);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -210,7 +248,7 @@ export default class Matrix4 extends Array {
   // v vec3  Translation vector
   fromRotationTranslation(q, v) {
     mat4.fromRotationTranslation(this, q, v);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -228,7 +266,7 @@ export default class Matrix4 extends Array {
   // s vec3  Scaling vector
   fromRotationTranslationScale(q, v, s) {
     mat4.fromRotationTranslationScale(this, q, v, s);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -249,7 +287,7 @@ export default class Matrix4 extends Array {
   // o vec3  The origin vector around which to scale and rotate
   fromRotationTranslationScaleOrigin(q, v, s, o) {
     mat4.fromRotationTranslationScaleOrigin(this, q, v, s, o);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -259,7 +297,7 @@ export default class Matrix4 extends Array {
   // v vec3  Scaling vector
   fromScaling(v) {
     mat4.fromScaling(this, v);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -269,7 +307,7 @@ export default class Matrix4 extends Array {
   // v vec3  Translation vector
   fromTranslation(v) {
     mat4.fromTranslation(this, v);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -292,6 +330,7 @@ export default class Matrix4 extends Array {
   // m33 Number  Component in column 3, row 3 position (index 15)
   // fromValues(m00, m01, m02, m03, m10, m11, m12, m13,
   //   m20, m21, m22, m23, m30, m31, m32, m33) {mat4}
+
   // Creates a matrix from the given angle around the X axis
   // This is equivalent to (but much faster than):
   // mat4.identity(dest);
@@ -299,7 +338,7 @@ export default class Matrix4 extends Array {
   // rad Number  the angle to rotate the matrix by
   fromXRotation(rad) {
     mat4.fromXRotation(this, rad);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -310,7 +349,7 @@ export default class Matrix4 extends Array {
   // rad Number  the angle to rotate the matrix by
   fromYRotation(rad) {
     mat4.fromYRotation(this, rad);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -321,7 +360,7 @@ export default class Matrix4 extends Array {
   // rad Number  the angle to rotate the matrix by
   fromZRotation(rad) {
     mat4.fromZRotation(this, rad);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -330,21 +369,21 @@ export default class Matrix4 extends Array {
   @unary
   transpose() {
     mat4.transpose(this, this);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   @unary
   invert() {
     mat4.invert(this, this);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   @unary
   adjoint() {
     mat4.adjoint(this, this);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -353,14 +392,21 @@ export default class Matrix4 extends Array {
   @spread
   add(a, b) {
     mat4.add(this, this, a);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   @spread
-  multiply(a, b) {
+  multiplyLeft(a) {
+    mat4.multiply(this, a, this);
+    this.check();
+    return this;
+  }
+
+  @spread
+  multiplyRight(a) {
     mat4.multiply(this, this, a);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -368,7 +414,7 @@ export default class Matrix4 extends Array {
   // uses SIMD if available and enabled
   rotateX(radians) {
     mat4.rotateX(this, this, radians);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -376,7 +422,7 @@ export default class Matrix4 extends Array {
   // Uses SIMD if available and enabled
   rotateY(radians) {
     mat4.rotateY(this, this, radians);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -384,7 +430,7 @@ export default class Matrix4 extends Array {
   // Uses SIMD if available and enabled
   rotateZ(radians) {
     mat4.rotateZ(this, this, radians);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
@@ -434,7 +480,7 @@ export default class Matrix4 extends Array {
     this[10] = d13 * m31 + d23 * m32 + d33 * m33;
     this[11] = d14 * m31 + d24 * m32 + d34 * m33;
 
-    checkMatrix4(this);
+    this.check();
     return this;
   }
   /* eslint-enable max-statements */
@@ -442,31 +488,31 @@ export default class Matrix4 extends Array {
   @binary
   scale(vec) {
     mat4.scale(this, this, vec);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   @binary
   translate(vec) {
     mat4.translate(this, this, vec);
-    checkMatrix4(this);
+    this.check();
     return this;
   }
 
   transformVector2(vector, out = new Vector2()) {
-    vec2.transformMat4(vector, out, this);
+    vec2.transformMat4(out, vector, this);
     checkVector2(out);
     return out;
   }
 
   transformVector3(vector, out = new Vector3()) {
-    vec3.transformMat4(vector, out, this);
+    vec3.transformMat4(out, vector, this);
     checkVector3(out);
     return out;
   }
 
   transformVector4(vector, out = new Vector4()) {
-    vec4.transformMat4(vector, out, this);
+    vec4.transformMat4(out, vector, this);
     checkVector4(out);
     return out;
   }

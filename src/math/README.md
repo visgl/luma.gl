@@ -1,28 +1,42 @@
 # Overview
 
-A JavaScript math library primarily intended to support WebGL applications
-that want to work with math objects like arrays and matrices using an object
-oriented (as opposed to procedural or functional) style.
+A JavaScript math library primarily intended to support WebGL applications.
 
 
 ## Who is this for?
 
-- JavaScript WebGL programmers who:
-  - need a solid JavaScript library for basic computional geometry purposes.
-  - prefer an object orientated programming style but still want their
-  - want the ability to activate optional error checking to assist in debugging
-  - do not need to support old (pre-IE10) browsers.
+JavaScript WebGL programmers who want a JavaScript math library for basic
+computional geometry purposes, and prefer an object orientated math
+programming style (ability to chain operations),
+and do not need to support old (pre-IE10) browsers.
+
+
+## Features
+
+- **Array-based**
+    - All math objects can be used directly with any Javascript
+      function that expects array arguments. No need to call `toArray`
+      or similar.
+
+- **Error checking** to assist in debugging.
+    - Can be disabled when performance is critical.
+
+- **WebGL-friendly**
+    - Matrices: while all accessors, `toString()` etc are row-major.
+      matrices are organized internally in the layout expected
+      by WebGL (an array of contiguous floats in column-major order),
+    - `toArray` and `fromArray` functions take optional offsets allowing
+      copying directly to and from vertex attribute array.
+    - GLSL math functions (radians, sin etc) made available in JavaScript
+      and work both on scalars and vectors / math objects.
 
 
 # Design Notes
 
-- Objects are Arrays - All math objects are subclasses of the built-in
+- Math objects are `Arrays` - All math objects are subclasses of the built-in
   JavaScript `Array` class, which means that class instances can be used
   wherever an array is expected. I.e. these classes are not wrappers of
   `Array`s, they **are** `Array`s, just with additional methods.
-
-- Checks - An optional consistency check after every operation can be
-  activated at a small runtime cost.
 
 - Focuses on needs of WebGL based applications and basic computational
   geometry, which includes 4x4 matrices, 2, 3 and 4 dimensional vectors
@@ -47,6 +61,7 @@ oriented (as opposed to procedural or functional) style.
 
 The [gl-matrix docs](http://glmatrix.net/docs/) are a good start.
 Additionally, source code is partially updated with JSDoc.
+
 
 
 ## API differences with gl-matrix

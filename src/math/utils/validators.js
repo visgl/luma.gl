@@ -48,8 +48,8 @@ export function validateQuaternion(q) {
     Number.isFinite(q[2]) && Number.isFinite(q[3]);
 }
 
-export function checkQuaternion(m) {
-  if (glMatrix.debug && !validateQuaternion) {
+export function checkQuaternion(q) {
+  if (glMatrix.debug && !validateQuaternion(q)) {
     throw new Error('Invalid Quaternion');
   }
 }

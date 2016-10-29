@@ -3,7 +3,8 @@
 
 // Define some locals
 import {
-  WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable
+  WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
+  WebGLRenderingContext
 } from '../webgl';
 import Object3D from '../scenegraph/object-3d';
 import {log, formatValue} from '../utils';

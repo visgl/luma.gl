@@ -1,5 +1,6 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
+/* global window */
 import {GL, glContextWithState, Framebuffer} from '../webgl';
 import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
 import Group from './group';
@@ -29,8 +30,6 @@ export function pickModels(gl, {
     width: gl.canvas.width,
     height: gl.canvas.height
   });
-
-  const picked = [];
 
   // Make sure we clear scissor test and fbo bindings in case of exceptions
   return glContextWithState(gl, {

@@ -39,6 +39,20 @@ export function unary(...decoratorArgs) {
     });
 }
 
+export function staticMethod(...decoratorArgs) {
+  return decorate(decoratorArgs,
+    (target, methodKey, descriptor, []) => {
+      const Class = target.constructor;
+      Class[methodKey] = (...args) => (new Class())[methodKey](...args);
+      return {
+        ...descriptor,
+        value: function staticMethodWrapper() {
+          return descriptor.value.apply(this, arguments);
+        }
+      };
+    });
+}
+
 export function binary(...args) {
   return decorate(args,
     (target, methodKey, descriptor, []) => {
