@@ -5,7 +5,7 @@ import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
 import {assertWebGLRenderingContext, isWebGL2RenderingContext}
   from './webgl-checks';
 import queryManager from './helpers/query-manager';
-import {log, isBrowser} from '../utils';
+import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
 import luma from '../globals';
 import assert from 'assert';
 /* global document */
@@ -52,28 +52,24 @@ export function createGLContext({
   let gl;
 
   if (!isBrowser) {
-    // Create headless gl context
-    if (!webGLTypesAvailable) {
-      throw new Error(ERR_WEBGL_MISSING_NODE);
-    }
-    if (!luma.globals.headlessGL) {
-      throw new Error(ERR_HEADLESSGL_NOT_AVAILABLE);
-    }
-    gl = luma.globals.headlessGL(width, height, opts);
-    if (!gl) {
-      throw new Error(ERR_HEADLESSGL_FAILED);
-    }
+    gl = _createHeadlessContext(width, height, opts);
   } else {
     // Create browser gl context
     if (!webGLTypesAvailable) {
       throw new Error(ERR_WEBGL_MISSING_BROWSER);
     }
     // Make sure we have a canvas
+    canvas = canvas;
     if (typeof canvas === 'string') {
+      if (!isPageLoaded) {
+        throw new Error(
+          `createGLContext called on canvas '${canvas}' before page was loaded`
+        );
+      }
       canvas = document.getElementById(canvas);
     }
     if (!canvas) {
-      canvas = document.createElement('canvas');
+      canvas = _createCanvas();
     }
 
     canvas.addEventListener('webglcontextcreationerror', e => {
@@ -105,6 +101,36 @@ export function createGLContext({
     log.log(0, STARTUP_MESSAGE);
   }
 
+  return gl;
+}
+
+// Create a canvas set to 100%
+// TODO - remove
+function _createCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.id = 'lumagl-canvas';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  // adds the canvas to the body element
+  pageLoadPromise.then(document => {
+    const body = document.body;
+    body.insertBefore(canvas, body.firstChild);
+  });
+  return canvas;
+}
+
+function _createHeadlessContext(width, height, opts) {
+  // Create headless gl context
+  if (!webGLTypesAvailable) {
+    throw new Error(ERR_WEBGL_MISSING_NODE);
+  }
+  if (!luma.globals.headlessGL) {
+    throw new Error(ERR_HEADLESSGL_NOT_AVAILABLE);
+  }
+  const gl = luma.globals.headlessGL(width, height, opts);
+  if (!gl) {
+    throw new Error(ERR_HEADLESSGL_FAILED);
+  }
   return gl;
 }
 

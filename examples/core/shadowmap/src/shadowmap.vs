@@ -1,4 +1,4 @@
-#define SHADER_NAME scene.vs
+#define SHADER_NAME shadowmap.vs
 
 attribute vec3 aPosition;
 

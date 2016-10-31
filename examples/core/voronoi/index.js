@@ -44,13 +44,16 @@ uniform mat4 modelMat;
 vec4 sample(float x0, float y0) {
   float minDist = -1., dist;
   vec4 color;
-  float x = (x0 - width * 0.5) / R, y = (y0 - height * 0.5) / R, z = 1.0 - x * x - y * y;
+  float x = (x0 - width * 0.5) / R;
+  float y = (y0 - height * 0.5) / R;
+  float z = 1.0 - x * x - y * y;
   if (z < 0.) {
     color = vec4(0,0,0,1);
   } else {
     z = sqrt(z);
     vec3 v = vec3(x, y, z);
-    float il = clamp(dot(v, vec3(1,1,2)) / sqrt(6.) * 0.7 + dot(v, vec3(0,0,1)) * 0.03, 0., 1.) + 0.3;
+    float il = clamp(dot(v, vec3(1,1,2)) / sqrt(6.) * 0.7 +
+      dot(v, vec3(0,0,1)) * 0.03, 0., 1.) + 0.3;
     color = vec4(il, il, il, 1.0);
     for (int i = 0; i < SITE_MAX; i++) {
       if (i < numberSites) {
@@ -81,19 +84,19 @@ void main(void) {
 }
 `;
 
-window.webGLStart = function() {
-  const numSites = 1;
+window.webGLStart = () => {
+  let numSites = 1;
   const sites = [0, 0, 1];
   const siteColors = [0.5, 0.5, 0.7];
   const width = 800;
   const height = 600;
   const R = 200;
   const weight = [1];
-  const dragStart = [];
-  const matStart = null;
-  const mat = new Mat4();
-  const imat = mat.clone();
-  const weighted = false;
+  let dragStart = [];
+  let matStart = null;
+  let mat = new Mat4();
+  let imat = mat.clone();
+  let weighted = false;
 
   // const vs = [];
   // const fullscreen = false;
@@ -126,9 +129,9 @@ window.webGLStart = function() {
   resize();
 
   function calcXYZ(e) {
-    var x = e.x / R;
-    var y = e.y / R;
-    var z = 1.0 - x * x - y * y;
+    let x = e.x / R;
+    let y = e.y / R;
+    let z = 1.0 - x * x - y * y;
 
     if (z < 0) {
       while (z < 0) {
@@ -140,13 +143,13 @@ window.webGLStart = function() {
     } else {
       z = Math.sqrt(z);
     }
-    var v3 = new Vec3(x, y, z, 1);
+    const v3 = new Vec3(x, y, z, 1);
     imat.$mulVec3(v3);
     return v3;
   }
 
-  var canvas = document.getElementById('voronoi');
-  var gl = createGLContext({canvas});
+  const canvas = document.getElementById('voronoi');
+  const gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 0);
@@ -157,7 +160,7 @@ window.webGLStart = function() {
   gl.cullFace(gl.BACK);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-  var program = new Program(gl, {
+  const program = new Program(gl, {
     id: 'voronoi',
     vs: VERTEX_SHADER,
     fs: FRAGMENT_SHADER
@@ -238,20 +241,20 @@ window.webGLStart = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     Media.Image.postProcess({
       program,
-      width: width,
-      height: height,
+      width,
+      height,
       toScreen: true,
       uniforms: {
         numberSites: numSites,
-        sites: sites,
+        sites,
         ws: weight,
-        siteColors: siteColors,
+        siteColors,
         p: 2,
         modelMat: mat,
-        weighted: weighted,
-        width: width,
-        height: height,
-        R: R
+        weighted,
+        width,
+        height,
+        R
       }
     });
   }

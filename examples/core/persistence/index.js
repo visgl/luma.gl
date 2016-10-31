@@ -1,38 +1,23 @@
-/* global window, document, LumaGL */
-/* eslint-disable no-var, max-statements, object-shorthand */
-var createGLContext = LumaGL.createGLContext;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-var IcoSphere = LumaGL.IcoSphere;
-var Model = LumaGL.Model;
-var Program = LumaGL.Program;
-var Buffer = LumaGL.Buffer;
-var Geometry = LumaGL.Geometry;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var Framebuffer = LumaGL.Framebuffer;
-var Mat4 = LumaGL.Mat4;
-var Vec3 = LumaGL.Vec3;
-var Fx = LumaGL.Fx;
-var GL = LumaGL.GL;
+/* global LumaGL */
+/* eslint-disable max-statements */
+const {createGLContext, AnimationFrame, IcoSphere, Model} = LumaGL;
+const {GL, Program, Buffer, Geometry, Framebuffer, Mat4, Vec3} = LumaGL;
+const {PerspectiveCamera} = LumaGL;
+const {getShadersFromHTML} = LumaGL.addons;
 
-var Renderer = LumaGL.addons.Renderer;
+const ELECTRON_COUNT = 64;
+const ePos = [];
+const eRot = [];
+const nPos = [];
 
-var ELECTRON_COUNT = 64;
-var ePos = [];
-var eRot = [];
-var nPos = [];
+let fbo;
+let pingpongFrameBuffers;
+let quad;
+let persistenceQuad;
+let sphere;
 
-var fbo;
-var pingpongFrameBuffers;
-var quad;
-var persistenceQuad;
-var sphere;
-
-new Renderer()
-.init(function init(context) {
-  var gl = context.gl;
-  var width = context.width;
-  var height = context.height;
-
+new AnimationFrame({gl: createGLContext()})
+.init(({gl, width, height}) => {
   // setGLState(gl, {
   //   clearColor: [0, 0, 0, 0],
   //   clearDepth: 1,
@@ -50,28 +35,19 @@ new Renderer()
   gl.cullFace(GL.BACK);
   gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
-  fbo = new Framebuffer(gl, {
-    width: width,
-    height: height
-  });
+  fbo = new Framebuffer(gl, {width, height});
 
   pingpongFrameBuffers = [
-    new Framebuffer(gl, {
-      width: width,
-      height: height
-    }),
-    new Framebuffer(gl, {
-      width: width,
-      height: height
-    })
+    new Framebuffer(gl, {width, height}),
+    new Framebuffer(gl, {width, height})
   ];
 
-  var QUAD_POSITIONS = [
+  const QUAD_POSITIONS = [
     -1, -1, 1, -1, 1, 1,
     -1, -1, 1, 1, -1, 1
   ];
 
-  var quadGeometry = new Geometry({
+  const quadGeometry = new Geometry({
     attributes: {
       aPosition: {
         value: new Float32Array(QUAD_POSITIONS),
@@ -104,35 +80,35 @@ new Renderer()
       new Program(gl, getShadersFromHTML({vs: 'sphere-vs', fs: 'sphere-fs'}))
   });
 
-  var dt = 0.0125;
+  const dt = 0.0125;
 
-  for (var i = 0; i < ELECTRON_COUNT; i++) {
-    var pos = new Vec3(
+  for (let i = 0; i < ELECTRON_COUNT; i++) {
+    const pos = new Vec3(
       Math.random() - 0.5,
       Math.random() - 0.5,
       Math.random() - 0.5
     );
-    var a = Math.random() + 1.0;
+    const a = Math.random() + 1.0;
     pos.$unit().$scale(a, a, a);
-    var s = 1.25;
+    const s = 1.25;
     pos.$scale(s, s, s);
     ePos.push(pos);
 
-    var q = new Vec3(
+    const q = new Vec3(
       Math.random() - 0.5,
       Math.random() - 0.5,
       Math.random() - 0.5
     );
-    var axis = pos.cross(q);
+    const axis = pos.cross(q);
     axis.$unit();
-    var rot = new Mat4();
-    var theta = 4 / a * dt;
+    const rot = new Mat4();
+    const theta = 4 / a * dt;
     rot.$rotateAxis(theta, axis);
     eRot.push(rot);
   }
 
-  for (var i = 0; i < ELECTRON_COUNT; i++) {
-    var pos = new Vec3(
+  for (let i = 0; i < ELECTRON_COUNT; i++) {
+    let pos = new Vec3(
       Math.random() - 0.5,
       Math.random() - 0.5,
       Math.random() - 0.5
@@ -141,28 +117,16 @@ new Renderer()
     nPos.push(pos);
   }
 })
-.frame(function frame(context) {
-  var gl = context.gl;
-  var tick = context.tick;
-  var width = context.width;
-  var height = context.height;
-
-  var camera = new PerspectiveCamera({
-    fov: 75,
-    aspect: width / height,
-    near: 0.01,
-    far: 100
-  });
+.frame(({gl, tick, width, height, aspect}) => {
+  const camera = new PerspectiveCamera({fov: 75, aspect, near: 0.01, far: 100});
   camera.view.lookAt(new Vec3(0, 0, 4), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
-
-  var modelMatrix;
 
   fbo.bind();
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-  for (var i = 0; i < ELECTRON_COUNT; i++) {
+  for (let i = 0; i < ELECTRON_COUNT; i++) {
     ePos[i] = eRot[i].mulVec3(ePos[i]);
-    modelMatrix = new Mat4()
+    const modelMatrix = new Mat4()
       .$translate(ePos[i][0], ePos[i][1], ePos[i][2])
       .$scale(0.06125, 0.06125, 0.06125);
     sphere.render({
@@ -174,8 +138,8 @@ new Renderer()
     });
   }
 
-  for (var i = 0; i < ELECTRON_COUNT; i++) {
-    modelMatrix = new Mat4()
+  for (let i = 0; i < ELECTRON_COUNT; i++) {
+    const modelMatrix = new Mat4()
       .$rotateXYZ(tick * 0.013, 0, 0)
       .$rotateXYZ(0, tick * 0.021, 0)
       .$translate(nPos[i][0], nPos[i][1], nPos[i][2])
@@ -189,9 +153,9 @@ new Renderer()
     });
   }
 
-  var ppi = tick % 2;
-  var currentFrameBuffer = pingpongFrameBuffers[ppi];
-  var nextFrameBuffer = pingpongFrameBuffers[1 - ppi];
+  const ppi = tick % 2;
+  const currentFrameBuffer = pingpongFrameBuffers[ppi];
+  const nextFrameBuffer = pingpongFrameBuffers[1 - ppi];
 
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 

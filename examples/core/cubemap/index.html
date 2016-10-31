@@ -24,86 +24,14 @@
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
     <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
-    <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
-    <script type="text/javascript" src="../../../dist/lumagl.js"></script>
+    <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript" src="../../lumagl.js"></script>
     <script type="text/javascript" src="../examples.js"></script>
     <script type="text/javascript" src="index.js"></script>
-
-    <script id="cube-vs" type="x-shader/x-vertex">
-      attribute vec3 positions;
-
-      uniform mat4 uModel;
-      uniform mat4 uView;
-      uniform mat4 uProjection;
-
-      varying vec3 position;
-
-      void main(void) {
-        gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-        position = positions;
-      }
-    </script>
-
-    <script id="cube-fs" type="x-shader/x-fragment">
-      #ifdef GL_ES
-      precision highp float;
-      #endif
-
-      uniform samplerCube uTexture;
-
-      varying vec3 position;
-
-      void main(void) {
-        vec4 c = textureCube(uTexture, normalize(position));
-        gl_FragColor = vec4(c);
-      }
-    </script>
-
-    <script id="prism-vs" type="x-shader/x-vertex">
-      attribute vec3 positions;
-      attribute vec3 normals;
-
-      uniform mat4 uModel;
-      uniform mat4 uView;
-      uniform mat4 uProjection;
-
-      varying vec3 position;
-      varying vec3 normal;
-      varying vec3 color;
-
-      void main(void) {
-        gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-        position = vec3(uModel * vec4(positions,1));
-        normal = vec3(uModel * vec4(normals, 1));
-      }
-    </script>
-
-    <script id="prism-fs" type="x-shader/x-fragment">
-      #ifdef GL_ES
-      precision highp float;
-      #endif
-
-      uniform samplerCube uTexture;
-      uniform float uReflect;
-      uniform float uRefract;
-
-      varying vec3 position;
-      varying vec3 normal;
-
-      void main(void) {
-        vec4 color = vec4(1,0,0,1);
-        vec3 n = normalize(normal);
-        vec3 f0 = reflect(position - vec3(0,0,2.5), n);
-        vec3 f1 = refract(position - vec3(0,0,2.5), n, 0.75);
-        vec4 c0 = uReflect * textureCube(uTexture, normalize(f0)) + (1.0 - uReflect) * color;
-        vec4 c1 = uRefract * textureCube(uTexture, normalize(f1)) + (1.0 - uRefract) * color;
-        vec4 c = 0.5 * c0 + 0.5 * c1;
-        gl_FragColor = vec4(c * color);
-      }
-    </script>
   </head>
 
   <body>
+    <canvas id="render-canvas"></canvas>
     <div id="controls">
       reflection
       <input class="valign" id="reflection"

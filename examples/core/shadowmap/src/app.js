@@ -1,20 +1,93 @@
-/* eslint-disable max-statements */
-import 'babel-polyfill';
+// import 'babel-polyfill';
+// import {GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3, Renderer}
+//   from '../../../../src/index.js';
+// const glslify = require('glslify');
 
-import {
-  GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3,
-  Renderer
-} from '../../../../src/index.js';
-// const Renderer = LumaGL.addons.Renderer;
+/* global LumaGL */
+const {AnimationFrame, createGLContext} = LumaGL;
+const {GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3} = LumaGL;
 
-const glslify = require('glslify');
+
+const SCENE_FRAGMENT = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform sampler2D uShadowMap;
+uniform float uShadow;
+
+varying vec4 shadowCoord;
+varying vec3 normal;
+
+void main(void) {
+  float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.25, 1.0);
+  float s = 1.0;
+  if (texture2D(uShadowMap, shadowCoord.xy).z < shadowCoord.z - 0.005) {
+    s -= 0.5 * uShadow;
+  }
+  float c = d * s;
+  gl_FragColor = vec4(c,c,c,1);
+}
+`;
+
+const SCENE_VERTEX = `\
+#define SHADER_NAME scene.vs
+
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
+uniform mat4 uShadowView;
+uniform mat4 uShadowProj;
+
+varying vec4 shadowCoord;
+varying vec3 normal;
+
+void main(void) {
+  gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+  normal = vec3(uModel * vec4(aNormal, 0.0));
+  mat4 bias = mat4(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.5, 0.5, 0.5, 1.0
+  );
+  shadowCoord = bias * uShadowProj * uShadowView * uModel * vec4(aPosition, 1.0);
+}
+`;
+
+const SHADOWMAP_VERTEX = `\
+#define SHADER_NAME shadowmap.vs
+
+attribute vec3 aPosition;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+void main(void) {
+  gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+}
+`;
+
+const SHADOWMAP_FRAGMENT = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+void main(void) {
+  gl_FragColor = vec4(0,0,gl_FragCoord.z,1);
+}
+`;
 
 let fbShadow;
 let programScene;
 let programShadow;
 let cubeBuffers;
 
-new Renderer()
+new AnimationFrame({gl: createGLContext()})
 .init(({gl}) => {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
@@ -39,7 +112,7 @@ new Renderer()
     })
   };
 
-  const cubeModel = new Cube();
+  const cubeModel = new Cube({gl});
 
   cubeBuffers = {
     aPosition: new Buffer(gl).setData({
@@ -58,12 +131,12 @@ new Renderer()
   };
 
   programScene = new Program(gl, {
-    vs: glslify('./scene.vs'),
-    fs: glslify('./scene.fs')
+    vs: SCENE_VERTEX,
+    fs: SCENE_FRAGMENT
   });
   programShadow = new Program(gl, {
-    vs: glslify('./shadowmap.vs'),
-    fs: glslify('./shadowmap.fs')
+    vs: SHADOWMAP_VERTEX,
+    fs: SHADOWMAP_FRAGMENT
   });
 })
 .frame(({gl, tick, width, height}) => {
@@ -114,7 +187,7 @@ new Renderer()
 
   programScene
     .use()
-    .setBuffers(cubeBuffers);
+    .setBuffers(cubeBuffers)
     .setUniforms({
       uModel: model,
       uView: camView,

@@ -22,7 +22,7 @@ export default class Framebuffer {
       new Framebuffer(gl, {handle: object.handle || object});
   }
 
-  constructor(gl, params) {
+  constructor(gl, params = {}) {
     assertWebGLRenderingContext(gl);
 
     const handle = gl.createFramebuffer();

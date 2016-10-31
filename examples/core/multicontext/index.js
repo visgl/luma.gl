@@ -1,61 +1,76 @@
-/* global window, document, LumaGL */
-/* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-var Buffer = LumaGL.Buffer;
-var Program = LumaGL.Program;
-var Fx = LumaGL.Fx;
+/* global LumaGL */
+const {AnimationFrame, createGLContext, ClipSpaceQuad} = LumaGL;
 
-window.webGLStart = function() {
+// CONTEXT 0 - CONCENTRICS
 
-  var positions = [
-    -1, -1,
-     1, -1,
-     1,  1,
-    -1, -1,
-     1,  1,
-    -1,  1
-  ];
+const CONTEXT_0_FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
 
-  function doContext(canvasID, fsID) {
-    var canvas = document.getElementById(canvasID);
-    var gl = createGLContext({canvas});
-    gl.clearColor(1, 0, 1, 1);
+uniform float uTime;
 
-    var quad = new Buffer(gl).setData({
-      attribute: '',
-      data: new Float32Array(positions),
-      size: 2
-    });
+varying vec2 position;
 
-    var program = new Program(gl, getShadersFromHTML({
-      vs: 'quad-vs',
-      fs: fsID
-    }));
+void main(void) {
+  float d = length(position * 64.0);
+  d = 0.5 * sin(d * sin(uTime)) + 0.5 * sin(position.x * 64.0) * sin(position.y * 64.0);
+  gl_FragColor = vec4(1.0-d,0,d, 1);
+}
+`;
 
-    var time = 0;
+new AnimationFrame()
+.context(() => createGLContext({canvas: 'canvas-0'}))
+.init(({gl}) => ({
+  clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
+}))
+.setupFrame(({gl, canvas}) => {
+  canvas.width = canvas.clientWidth;
+  canvas.style.height = `${canvas.width}px`;
+  canvas.height = canvas.width;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+})
+.frame(({tick, clipSpaceQuad}) => {
+  clipSpaceQuad.render({uTime: tick * 0.01});
+});
 
-    function render() {
-      time += 0.01;
-      canvas.width = canvas.clientWidth;
-      canvas.style.height = canvas.width + 'px';
-      canvas.height = canvas.width;
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      program
-        .use()
-        .setBuffers({
-          aPosition: quad
-        })
-        .setUniforms({
-          uTime: time
-        });
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-      Fx.requestAnimationFrame(render);
-    }
+// CONTEXT 1 - RANDOM NOISE
 
-    render();
-  }
+const CONTEXT_1_FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
 
-  doContext('canvas-0', 'c0-fs');
-  doContext('canvas-1', 'c1-fs');
-};
+highp float random(vec2 co) {
+    highp float a = 12.9898;
+    highp float b = 78.233;
+    highp float c = 43758.5453;
+    highp float dt= dot(co.xy ,vec2(a,b));
+    highp float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
+uniform float uTime;
+
+varying vec2 position;
+
+void main(void) {
+  float r = random(position + sin(uTime * 0.01));
+  gl_FragColor = vec4(r,r,r, 1);
+}
+`;
+
+new AnimationFrame()
+.context(() => createGLContext({canvas: 'canvas-1'}))
+.init(({gl}) => ({
+  clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_1_FRAGMENT_SHADER})
+}))
+.setupFrame(({gl, canvas}) => {
+  canvas.width = canvas.clientWidth;
+  canvas.style.height = `${canvas.width}px`;
+  canvas.height = canvas.width;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+})
+.frame(({tick, clipSpaceQuad}) => {
+  clipSpaceQuad.render({uTime: tick * 0.01});
+});

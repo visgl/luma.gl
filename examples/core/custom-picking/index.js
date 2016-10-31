@@ -1,14 +1,8 @@
 /* global document, LumaGL */
 /* eslint-disable no-var, max-statements */
-var GL = LumaGL.GL;
-var Program = LumaGL.Program;
-var Geometry = LumaGL.Geometry;
-var Scene = LumaGL.Scene;
-var Model = LumaGL.Model;
-var Matrix4 = LumaGL.Matrix4;
-var radians = LumaGL.radians;
-
-var Renderer = LumaGL.addons.Renderer;
+const {createGLContext, AnimationFrame} = LumaGL;
+const {GL, Scene, Model, Program, Geometry} = LumaGL;
+const {Matrix4, radians} = LumaGL;
 
 class HeightmapGeometry extends Geometry {
   constructor(opts) {
@@ -85,10 +79,8 @@ var scene;
 var pick = {x: 0, y: 0};
 var heightmap;
 
-new Renderer()
-.init(function init(context) {
-  const gl = context.gl;
-
+new AnimationFrame({gl: createGLContext()})
+.init(({gl}) => {
   gl.enable(GL.DEPTH_TEST);
   gl.depthFunc(GL.LEQUAL);
 
@@ -116,20 +108,14 @@ new Renderer()
   });
 
   scene.add(heightmap);
-
 })
-.frame(function frame(context) {
-  const tick = context.tick;
-  const width = context.width;
-  const height = context.height;
-
+.frame(({tick, aspect}) => {
   const projection = Matrix4.perspective({
-    fov: radians(60), aspect: width / height, near: 0.1, far: 1000
+    fov: radians(60), aspect, near: 0.1, far: 1000
   });
 
-  const view = Matrix4
-    .lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0], up: [0, 1, 0]});
-  const model = Matrix4.clone(view).rotateY(tick * 0.01);
+  const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
+  const model = new Matrix4().clone(view).rotateY(tick * 0.01);
 
   const uniforms = {
     projectionMatrix: projection,
@@ -140,17 +126,17 @@ new Renderer()
 
   scene.render(uniforms);
 
+  var div = document.getElementById('altitude');
   const pickInfo = scene.pickModels({
-    uniforms: uniforms,
+    uniforms,
     x: pick.x,
     y: pick.y
   });
 
-  var div = document.getElementById('altitude');
   if (pickInfo) {
-    div.innerHTML = 'altitude: ' + pickInfo.color[0];
-    div.style.top = pick.y + 'px';
-    div.style.left = pick.x + 'px';
+    div.innerHTML = `altitude: ${pickInfo.color[0]}`;
+    div.style.top = `${pick.y}px`;
+    div.style.left = `${pick.x}px`;
     div.style.display = 'block';
   } else {
     div.style.display = 'none';

@@ -153,7 +153,7 @@ export default class Matrix4 extends MathArray {
   @unary
   lookAt({
     eye,
-    center,
+    center = [0, 0, 0],
     up = [0, 1, 0]
   } = {}) {
     mat4.lookAt(this, eye, center, up);

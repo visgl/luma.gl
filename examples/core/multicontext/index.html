@@ -53,67 +53,13 @@
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
     <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
-    <script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
-    <script type="text/javascript" src="../../../dist/lumagl.js"></script>
+    <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript" src="../../lumagl.js"></script>
     <script type="text/javascript" src="../examples.js"></script>
     <script type="text/javascript" src="index.js"></script>
-
-    <script id="quad-vs" type="x-shader/x-vertex">
-
-      attribute vec2 aPosition;
-
-      varying vec2 position;
-
-      void main(void) {
-        gl_Position = vec4(aPosition, 0, 1);
-        position = aPosition;
-      }
-
-    </script>
-
-    <script id="c0-fs" type="x-shader/x-fragment">
-      #ifdef GL_ES
-      precision highp float;
-      #endif
-
-      uniform float uTime;
-
-      varying vec2 position;
-
-      void main(void) {
-        float d = length(position * 64.0);
-        d = 0.5 * sin(d * sin(uTime)) + 0.5 * sin(position.x * 64.0) * sin(position.y * 64.0);
-        gl_FragColor = vec4(1.0-d,0,d, 1);
-      }
-    </script>
-
-    <script id="c1-fs" type="x-shader/x-fragment">
-      #ifdef GL_ES
-      precision highp float;
-      #endif
-
-      highp float random(vec2 co) {
-          highp float a = 12.9898;
-          highp float b = 78.233;
-          highp float c = 43758.5453;
-          highp float dt= dot(co.xy ,vec2(a,b));
-          highp float sn= mod(dt,3.14);
-          return fract(sin(sn) * c);
-      }
-
-      uniform float uTime;
-
-      varying vec2 position;
-
-      void main(void) {
-        float r = random(position + sin(uTime * 0.01));
-        gl_FragColor = vec4(r,r,r, 1);
-      }
-    </script>
-
   </head>
 
-  <body onload="webGLStart();">
+  <body>
     <div id='container'>
       <div id='title'>Rendering Multiple Contexts with LumaGL</div>
       <div id='text-container'>

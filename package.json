@@ -5,7 +5,7 @@
   "license": "MIT",
   "contributors": [
     "Ib Green <ib@uber.com>",
-    "Nicolas Belomonte <nico@uber.com>",
+    "Nicolas Belmonte <nico@uber.com>",
     "Rye Terrell <ryeterrell@ryeterrell.net",
     "Shan He <shan@uber.com>",
     "Mikola Lysenko <mikolalysenko@gmail.com",
@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/uber//luma.gl"
+    "url": "https://github.com/uber/luma.gl"
   },
   "keywords": [
     "webgl",
@@ -81,6 +81,7 @@
     "build": "npm run build-clean && npm run build-compile && npm run build-script",
     "build-clean": "rm -fr dist/*",
     "build-compile": "babel src -d dist --source-maps inline --copy-files",
+    "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
     "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t glslify && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
@@ -96,7 +97,7 @@
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
-    "start": "budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
+    "start": "npm run build-watch && budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
   },
   "eslintConfig": {
     "parser": "babel-eslint",

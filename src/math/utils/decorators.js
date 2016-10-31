@@ -57,7 +57,7 @@ export function binary(...args) {
   return decorate(args,
     (target, methodKey, descriptor, []) => {
       const Class = target.constructor;
-      Class[methodKey] = (a, b) => new Class().set(a)[methodKey](b);
+      Class[methodKey] = (a, b) => new Class().copy(a)[methodKey](b);
 
       return {
         ...descriptor,

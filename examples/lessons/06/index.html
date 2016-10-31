@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<title>Learning WebGL &mdash; lesson 5</title>
+<title>Learning WebGL &mdash; lesson 6</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
 <link rel="stylesheet"
@@ -10,7 +10,7 @@
   crossorigin="anonymous">
 <link href="../lessons.css" type="text/css" rel="stylesheet" media="screen"/>
 
-<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
 
 <script type="text/javascript" src="../../../dist/lumagl.js"></script>
 
@@ -48,9 +48,17 @@
 </script>
 </head>
 
+<body onload="webGLStart();">
+  <canvas id="lesson06-canvas" style="border: none;" width="500" height="500"></canvas>
+  <div id="controls">
+    <h2>Controls:</h2>
 
-<body>
-  <div id="controls"></div>
+    <ul>
+      <li><code>Page Up</code>/<code>Page Down</code> to zoom out/in
+      <li>Cursor keys: make the cube rotate (the longer you hold down a cursor key, the more it accelerates)
+      <li><code>F</code> to toggle through three different kinds of texture filters
+    </ul>
+  </div>
 </body>
 
 </html>

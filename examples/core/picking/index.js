@@ -1,26 +1,14 @@
 /* global document, LumaGL */
-/* eslint-disable no-var, max-statements, prefer-template, object-shorthand */
-var GL = LumaGL.GL;
-var loadTextures = LumaGL.loadTextures;
-var Program = LumaGL.Program;
-var Buffer = LumaGL.Buffer;
-var Scene = LumaGL.Scene;
-var Sphere = LumaGL.Sphere;
-var Vec3 = LumaGL.Vec3;
-var Matrix4 = LumaGL.Matrix4;
-var radians = LumaGL.radians;
-var pickModels = LumaGL.pickModels;
-var Renderer = LumaGL.addons.Renderer;
+const {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} = LumaGL;
+const {loadTextures, Program, Buffer, Scene, Sphere, Vec3, pickModels} = LumaGL;
 
-var pick = {x: 0, y: 0};
+const pick = {x: 0, y: 0};
 
-var scene;
+let scene;
 
-new Renderer()
-.init(function init(context) {
-  const gl = context.gl;
-  const canvas = context.canvas;
-
+new AnimationFrame()
+.context(() => createGLContext())
+.init(({gl, canvas}) => {
   gl.enable(GL.DEPTH_TEST);
   gl.depthFunc(GL.LEQUAL);
 
@@ -60,7 +48,7 @@ new Renderer()
     }
   })
   .then(function onTexturesLoaded(textures) {
-    var program = new Program(gl);
+    const program = new Program(gl);
 
     const planets = PLANETS.map(function map(planet, i) {
       return new Sphere({
@@ -89,9 +77,9 @@ new Renderer()
       });
     });
 
-    for (var i = 0; i < planets.length; i++) {
-      var planet = planets[i];
-      var theta = i / planets.length * Math.PI * 2;
+    for (let i = 0; i < planets.length; i++) {
+      const planet = planets[i];
+      const theta = i / planets.length * Math.PI * 2;
       planet.update({
         position: new Vec3(Math.cos(theta) * 3, Math.sin(theta) * 3, 0)
       });
@@ -100,44 +88,31 @@ new Renderer()
     scene.add(planets);
   });
 })
-.frame(function frame(context) {
-  const gl = context.gl;
-  const width = context.width;
-  const height = context.height;
-
-  const projection =
-     new Matrix4().perspective({fov: radians(15), aspect: width / height});
-  const view = new Matrix4().lookAt({eye: [0, 0, 32]});
-
-  for (var i = 0; i < scene.children.length; i++) {
-    var item = scene.children[i];
+.frame(({gl, aspect}) => {
+  for (const item of scene.children) {
     item.rotation.y += 0.01;
     item.updateMatrix();
   }
 
   const uniforms = {
-    projectionMatrix: projection,
-    viewMatrix: view
+    projectionMatrix: Matrix4.perspective({fov: radians(15), aspect}),
+    viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
   };
 
   scene.render(uniforms);
 
-  var picked = pickModels(gl, {
+  const pickedModel = pickModels(gl, {
     group: scene,
     uniforms,
     x: pick.x,
     y: pick.y
   });
 
-  var pickedModel = picked.find(function find(model) {
-    return model.isPicked;
-  });
-
-  var div = document.getElementById('planet-name');
+  const div = document.getElementById('planet-name');
   if (pickedModel) {
     div.innerHTML = pickedModel.model.id;
-    div.style.top = pick.y + 'px';
-    div.style.left = pick.x + 'px';
+    div.style.top = `${pick.y}px`;
+    div.style.left = `${pick.x}px`;
     div.style.display = 'block';
   } else {
     div.style.display = 'none';
