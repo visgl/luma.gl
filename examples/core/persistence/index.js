@@ -1,9 +1,84 @@
 /* global LumaGL */
 /* eslint-disable max-statements */
 const {createGLContext, AnimationFrame, IcoSphere, Model} = LumaGL;
-const {GL, Program, Buffer, Geometry, Framebuffer, Mat4, Vec3} = LumaGL;
-const {PerspectiveCamera} = LumaGL;
+const {GL, Program, Buffer, Geometry, Framebuffer} = LumaGL;
+const {Mat4, Vec3, Matrix4, radians} = LumaGL;
 const {getShadersFromHTML} = LumaGL.addons;
+
+const SCREEN_QUAD_VS = `\
+attribute vec2 aPosition;
+
+void main(void) {
+  gl_Position = vec4(aPosition, 0, 1);
+}
+`;
+
+const SCREEN_QUAD_FS = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform sampler2D uTexture;
+uniform vec2 uRes;
+
+void main(void) {
+  vec2 p = gl_FragCoord.xy/uRes.xy;
+  gl_FragColor = texture2D(uTexture, p);
+}
+`;
+
+const PERSISTENCE_FS = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform sampler2D uScene;
+uniform sampler2D uPersistence;
+uniform vec2 uRes;
+
+void main(void) {
+  vec2 p = gl_FragCoord.xy / uRes.xy;
+  vec4 cS = texture2D(uScene, p);
+  vec4 cP = texture2D(uPersistence, p);
+  gl_FragColor = mix(cS*4.0, cP, 0.9);
+}
+`;
+
+const SPHERE_VS = `\
+attribute vec3 positions;
+attribute vec3 normals;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+varying vec3 normal;
+
+void main(void) {
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+  normal = vec3(uModel * vec4(normals,1));
+}
+`;
+
+const SPHERE_FS = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform vec3 uColor;
+uniform bool uLighting;
+
+varying vec3 normal;
+
+void main(void) {
+  float d = 1.0;
+  if (uLighting) {
+    vec3 l = normalize(vec3(1,1,2));
+    d = dot(normal, l);
+  }
+  gl_FragColor = vec4(uColor * d, 1);
+}
+`;
 
 const ELECTRON_COUNT = 64;
 const ePos = [];
@@ -16,7 +91,8 @@ let quad;
 let persistenceQuad;
 let sphere;
 
-new AnimationFrame({gl: createGLContext()})
+new AnimationFrame()
+.context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl, width, height}) => {
   // setGLState(gl, {
   //   clearColor: [0, 0, 0, 0],
@@ -59,25 +135,20 @@ new AnimationFrame({gl: createGLContext()})
 
   quad = new Model({
     id: 'quad',
-    program: new Program(gl,
-      getShadersFromHTML({vs: 'quad-vs', fs: 'quad-fs'})
-    ),
+    program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
     geometry: quadGeometry
   });
 
   persistenceQuad = new Model({
     id: 'persistence-quad',
-    program: new Program(gl,
-      getShadersFromHTML({vs: 'quad-vs', fs: 'persistence-fs'})
-    ),
+    program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
     geometry: quadGeometry
   });
 
   sphere = new IcoSphere({
     id: 'electron',
     iterations: 4,
-    program:
-      new Program(gl, getShadersFromHTML({vs: 'sphere-vs', fs: 'sphere-fs'}))
+    program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
   });
 
   const dt = 0.0125;
@@ -118,11 +189,17 @@ new AnimationFrame({gl: createGLContext()})
   }
 })
 .frame(({gl, tick, width, height, aspect}) => {
-  const camera = new PerspectiveCamera({fov: 75, aspect, near: 0.01, far: 100});
-  camera.view.lookAt(new Vec3(0, 0, 4), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
+  fbo.resize({width, height});
+  pingpongFrameBuffers[0].resize({width, height});
+  pingpongFrameBuffers[1].resize({width, height});
+
+  const projection = Matrix4.perspective({fov: radians(75), aspect});
+  const view = Matrix4.lookAt({eye: [0, 0, 4]});
 
   fbo.bind();
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+  // RENDER ELECTRONS TO FRAMEBUFFER
 
   for (let i = 0; i < ELECTRON_COUNT; i++) {
     ePos[i] = eRot[i].mulVec3(ePos[i]);
@@ -131,12 +208,14 @@ new AnimationFrame({gl: createGLContext()})
       .$scale(0.06125, 0.06125, 0.06125);
     sphere.render({
       uModel: modelMatrix,
-      uView: camera.view,
-      uProjection: camera.projection,
+      uView: view,
+      uProjection: projection,
       uColor: [0.0, 0.5, 1],
       uLighting: 0
     });
   }
+
+  // RENDER CORE TO FRAMEBUFFER
 
   for (let i = 0; i < ELECTRON_COUNT; i++) {
     const modelMatrix = new Mat4()
@@ -146,16 +225,19 @@ new AnimationFrame({gl: createGLContext()})
       .$scale(0.25, 0.25, 0.25);
     sphere.render({
       uModel: modelMatrix,
-      uView: camera.view,
-      uProjection: camera.projection,
+      uView: view,
+      uProjection: projection,
       uColor: [1, 0.25, 0.25],
       uLighting: 1
     });
   }
+  fbo.unbind();
 
   const ppi = tick % 2;
   const currentFrameBuffer = pingpongFrameBuffers[ppi];
   const nextFrameBuffer = pingpongFrameBuffers[1 - ppi];
+
+  // RENDER TO SCREEN
 
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -165,13 +247,11 @@ new AnimationFrame({gl: createGLContext()})
     uPersistence: nextFrameBuffer.texture,
     uRes: [width, height]
   });
-  // gl.drawArrays(gl.TRIANGLES, 0, 6);
-  gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+  currentFrameBuffer.unbind();
 
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
   quad.render({
     uTexture: currentFrameBuffer.texture,
     uRes: [width, height]
   });
-  // gl.drawArrays(gl.TRIANGLES, 0, 6);
 });

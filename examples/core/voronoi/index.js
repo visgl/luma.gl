@@ -1,16 +1,8 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-const createGLContext = LumaGL.createGLContext;
-const IcoSphere = LumaGL.IcoSphere;
-const Program = LumaGL.Program;
-const Buffer = LumaGL.Buffer;
-const PerspectiveCamera = LumaGL.PerspectiveCamera;
-const Framebuffer = LumaGL.Framebuffer;
-const Media = LumaGL.Media;
-const Mat4 = LumaGL.Mat4;
-const Vec3 = LumaGL.Vec3;
-const Fx = LumaGL.Fx;
-const addEvents = LumaGL.addEvents;
+const {createGLContext, IcoSphere, Program, Buffer} = LumaGL;
+const {PerspectiveCamera, Framebuffer, Media} = LumaGL;
+const {Mat4, Vec3, Fx, addEvents} = LumaGL;
 
 const VERTEX_SHADER = `
 attribute vec3 position;

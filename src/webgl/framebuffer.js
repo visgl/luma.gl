@@ -5,6 +5,7 @@ import {glGet, glConstant, glArrayFromType, glTypeFromArray, assertWebGL2}
 import {Texture2D} from './texture';
 import Renderbuffer from './renderbuffer';
 import assert from 'assert';
+import {uid, log} from '../utils';
 
 function glFormatComponents(format) {
   switch (format) {
@@ -22,7 +23,8 @@ export default class Framebuffer {
       new Framebuffer(gl, {handle: object.handle || object});
   }
 
-  constructor(gl, params = {}) {
+  /* eslint-disable max-statements */
+  constructor(gl, {id, ...params} = {}) {
     assertWebGLRenderingContext(gl);
 
     const handle = gl.createFramebuffer();
@@ -31,6 +33,7 @@ export default class Framebuffer {
     }
 
     this.gl = gl;
+    this.id = uid(id);
     this.handle = handle;
     this.colorBuffer = null;
     this.depthBuffer = null;
@@ -43,6 +46,7 @@ export default class Framebuffer {
 
     this.resize(params);
   }
+  /* eslint-enable max-statements */
 
   delete() {
     const {gl} = this;
@@ -70,6 +74,8 @@ export default class Framebuffer {
       return;
     }
 
+    log.log(1, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+
     const {gl} = this;
 
     // TODO - do we need to reallocate the framebuffer?
@@ -82,8 +88,8 @@ export default class Framebuffer {
       data: null,
       width,
       height,
-      type: this.type,
-      format: this.format
+      type,
+      format
     });
 
     this.attachTexture({
@@ -127,13 +133,13 @@ export default class Framebuffer {
 
   bind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), this.handle);
+    gl.bindFramebuffer(target, this.handle);
     return this;
   }
 
   unbind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), null);
+    gl.bindFramebuffer(target, null);
     return this;
   }
 
@@ -206,7 +212,7 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferTexture2D(
-      glGet(gl, target),
+      target,
       glGet(gl, attachment),
       glGet(gl, textureTarget),
       texture.handle,
@@ -239,7 +245,7 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferRenderbuffer(
-      glGet(gl, target),
+      target,
       glGet(gl, attachment),
       glGet(gl, renderbufferTarget),
       renderbuffer.handle
@@ -255,7 +261,7 @@ export default class Framebuffer {
 
     this.bind({target});
 
-    const status = gl.checkFramebufferStatus(glGet(gl, target));
+    const status = gl.checkFramebufferStatus(target);
 
     this.unbind({target});
 

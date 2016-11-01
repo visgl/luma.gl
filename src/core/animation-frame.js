@@ -3,10 +3,6 @@ import autobind from 'autobind-decorator';
 import {isBrowser, pageLoadPromise} from '../utils';
 import {isWebGLRenderingContext} from '../webgl';
 
-const INITIAL_CONTEXT = {
-  tick: 0
-};
-
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export const requestAnimationFrame = callback =>
   isBrowser ?
@@ -82,13 +78,7 @@ export default class AnimationFrame {
       if (!this.gl) {
         throw new Error('AnimationFrame.context - no context provided');
       }
-      this._context = {
-        ...INITIAL_CONTEXT,
-        gl: this.gl,
-        canvas: this.gl.canvas,
-        renderer: this,
-        stop: this.stop
-      };
+      this._initializeContext();
       return onInit(this._context) || {};
     });
 
@@ -151,17 +141,30 @@ export default class AnimationFrame {
 
   // PRIVATE METHODS
 
+  _initializeContext() {
+    this._context = {
+      gl: this.gl,
+      canvas: this.gl.canvas,
+      stop: this.stop,
+      tick: 0,
+      tock: 0
+    };
+    this._updateContext();
+  }
+
+  _updateContext() {
+    // Context width and height represent drawing buffer width and height
+    const {canvas} = this._context;
+    this._context.width = canvas.width;
+    this._context.height = canvas.height;
+    this._context.aspect = canvas.width / canvas.height;
+  }
+
   _restartFrame() {
     this.stop();
     // Wait for start promise before rendering frame
     this._startPromise.then((appContext = {}) => {
-      this._context = {
-        ...INITIAL_CONTEXT,
-        gl: this.gl,
-        canvas: this.gl.canvas,
-        renderer: this,
-        stop: this.stop
-      };
+      this._initializeContext();
 
       if (typeof appContext === 'object' && appContext !== null) {
         this._context = {...appContext, ...this._context};
@@ -188,17 +191,13 @@ export default class AnimationFrame {
       }
     }
 
-    // Context width and height represent drawing buffer width and height
-    this._context.width = canvas.width;
-    this._context.height = canvas.height;
-    this._context.aspect = canvas.width / canvas.height;
-
+    this._updateContext();
     this._onRenderFrame(this._context);
 
     // Increment tick
     this._context.tick++;
 
-    // Request another render frame
+    // Request another render frame (now )
     this._animationFrameId = requestAnimationFrame(this._frame);
   }
 

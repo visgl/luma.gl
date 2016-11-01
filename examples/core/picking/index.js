@@ -89,15 +89,15 @@ new AnimationFrame()
   });
 })
 .frame(({gl, aspect}) => {
-  for (const item of scene.children) {
-    item.rotation.y += 0.01;
-    item.updateMatrix();
-  }
-
   const uniforms = {
     projectionMatrix: Matrix4.perspective({fov: radians(15), aspect}),
     viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
   };
+
+  for (const item of scene.children) {
+    item.rotation.y += 0.01;
+    item.updateMatrix();
+  }
 
   scene.render(uniforms);
 
