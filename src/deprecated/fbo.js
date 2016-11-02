@@ -1,5 +1,5 @@
-import {WebGL} from './webgl-types';
-import {assertWebGLContext} from './webgl-checks';
+import {GL} from './webgl-types';
+import {assertGLContext} from './webgl-checks';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import {Texture2D} from './texture';
@@ -12,12 +12,12 @@ export default class FramebufferObject {
     width = 1,
     height = 1,
     depth = true,
-    minFilter = WebGL.NEAREST,
-    magFilter = WebGL.NEAREST,
-    format = WebGL.RGBA,
-    type = WebGL.UNSIGNED_BYTE
+    minFilter = GL.NEAREST,
+    magFilter = GL.NEAREST,
+    format = GL.RGBA,
+    type = GL.UNSIGNED_BYTE
   } = {}) {
-    assertWebGLContext(gl);
+    assertGLContext(gl);
 
     this.gl = gl;
     this.depth = depth;
@@ -54,7 +54,7 @@ export default class FramebufferObject {
     });
 
     fb.attachTexture({
-      attachment: WebGL.COLOR_ATTACHMENT0,
+      attachment: GL.COLOR_ATTACHMENT0,
       texture: colorBuffer
     });
 
@@ -66,12 +66,12 @@ export default class FramebufferObject {
     // Add a depth buffer if requested
     if (this.depth) {
       const depthBuffer = new Renderbuffer(gl).storage({
-        internalFormat: WebGL.DEPTH_COMPONENT16,
+        internalFormat: GL.DEPTH_COMPONENT16,
         width,
         height
       });
       fb.attachRenderbuffer({
-        attachment: WebGL.DEPTH_ATTACHMENT,
+        attachment: GL.DEPTH_ATTACHMENT,
         renderbuffer: depthBuffer
       });
 

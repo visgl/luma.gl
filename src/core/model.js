@@ -3,7 +3,7 @@
 
 // Define some locals
 import {
-  WebGL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
+  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
   WebGLRenderingContext
 } from '../webgl';
 import Object3D from '../scenegraph/object-3d';
@@ -305,7 +305,7 @@ export default class Model extends Object3D {
           ...attribute,
           data: attribute.value,
           target: attribute.isIndexed ?
-            WebGL.ELEMENT_ARRAY_BUFFER : WebGL.ARRAY_BUFFER
+            GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
         });
       }
     }

@@ -185,51 +185,51 @@ export function getUniformsTable({
 /*
   if (vector) {
     switch (type) {
-    case WebGL.FLOAT:
+    case GL.FLOAT:
       glFunction = gl.uniform1f;
       break;
-    case WebGL.FLOAT_VEC2:
+    case GL.FLOAT_VEC2:
       glFunction = gl.uniform2fv;
       TypedArray = isArray ? Float32Array : new Float32Array(2);
       break;
-    case WebGL.FLOAT_VEC3:
+    case GL.FLOAT_VEC3:
       glFunction = gl.uniform3fv;
       TypedArray = isArray ? Float32Array : new Float32Array(3);
       break;
-    case WebGL.FLOAT_VEC4:
+    case GL.FLOAT_VEC4:
       glFunction = gl.uniform4fv;
       TypedArray = isArray ? Float32Array : new Float32Array(4);
       break;
-    case WebGL.INT:
-    case WebGL.BOOL:
-    case WebGL.SAMPLER_2D:
-    case WebGL.SAMPLER_CUBE:
+    case GL.INT:
+    case GL.BOOL:
+    case GL.SAMPLER_2D:
+    case GL.SAMPLER_CUBE:
       glFunction = gl.uniform1i;
       break;
-    case WebGL.INT_VEC2:
-    case WebGL.BOOL_VEC2:
+    case GL.INT_VEC2:
+    case GL.BOOL_VEC2:
       glFunction = gl.uniform2iv;
       TypedArray = isArray ? Uint16Array : new Uint16Array(2);
       break;
-    case WebGL.INT_VEC3:
-    case WebGL.BOOL_VEC3:
+    case GL.INT_VEC3:
+    case GL.BOOL_VEC3:
       glFunction = gl.uniform3iv;
       TypedArray = isArray ? Uint16Array : new Uint16Array(3);
       break;
-    case WebGL.INT_VEC4:
-    case WebGL.BOOL_VEC4:
+    case GL.INT_VEC4:
+    case GL.BOOL_VEC4:
       glFunction = gl.uniform4iv;
       TypedArray = isArray ? Uint16Array : new Uint16Array(4);
       break;
-    case WebGL.FLOAT_MAT2:
+    case GL.FLOAT_MAT2:
       matrix = true;
       glFunction = gl.uniformMatrix2fv;
       break;
-    case WebGL.FLOAT_MAT3:
+    case GL.FLOAT_MAT3:
       matrix = true;
       glFunction = gl.uniformMatrix3fv;
       break;
-    case WebGL.FLOAT_MAT4:
+    case GL.FLOAT_MAT4:
       matrix = true;
       glFunction = gl.uniformMatrix4fv;
       break;
