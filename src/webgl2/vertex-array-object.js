@@ -1,7 +1,6 @@
 // WebGL2 VertexArray Objects Helper
 import {WebGL2RenderingContext} from '../webgl/webgl-types';
-import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
-import {glCheckError} from '../webgl/context';
+import {assertWebGLContext} from '../webgl/webgl-checks';
 import assert from 'assert';
 
 /* eslint-disable camelcase */
@@ -11,7 +10,7 @@ export default class VertexArrayObject {
 
   // Returns true if VertexArrayObject is supported by implementation
   static isSupported(gl) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
     return (
       gl instanceof WebGL2RenderingContext ||
       gl.getExtension('OES_vertex_array_object')
@@ -27,7 +26,7 @@ export default class VertexArrayObject {
 
   // Create a VertexArrayObject
   constructor(gl, {handle} = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
     assert(VertexArrayObject.isSupported(gl),
       'VertexArrayObject: WebGL2 or OES_vertex_array_object required');
 
@@ -45,21 +44,17 @@ export default class VertexArrayObject {
   }
 
   delete() {
-    const {gl} = this;
-    deleteVertexArray(gl, this.handle);
-    glCheckError(gl);
+    deleteVertexArray(this.gl, this.handle);
     return this;
   }
 
   bind() {
-    const {gl} = this;
-    bindVertexArray(gl, this.handle);
+    bindVertexArray(this.gl, this.handle);
     return this;
   }
 
   unbind() {
-    const {gl} = this;
-    bindVertexArray(gl, null);
+    bindVertexArray(this.gl, null);
     return this;
   }
 }
@@ -83,7 +78,6 @@ function deleteVertexArray(gl, vertexArray) {
   if (ext) {
     ext.deleteVertexArrayOES(vertexArray);
   }
-  glCheckError(gl);
 }
 
 export function isVertexArray(gl, vertexArray) {
@@ -105,5 +99,4 @@ function bindVertexArray(gl, vertexArray) {
   if (ext) {
     ext.bindVertexArrayOES(vertexArray);
   }
-  glCheckError(gl);
 }

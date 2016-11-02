@@ -2,7 +2,7 @@
 /* eslint-disable no-try-catch, no-loop-func */
 import WebGLDebug from 'webgl-debug';
 import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
-import {assertWebGLRenderingContext, isWebGL2RenderingContext}
+import {assertWebGLContext, isWebGL2Context}
   from './webgl-checks';
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
@@ -134,20 +134,9 @@ function _createHeadlessContext(width, height, opts) {
   return gl;
 }
 
-// Resolve a WebGL enumeration name (returns itself if already a number)
-export function glGet(gl, name) {
-  // assertWebGLRenderingContext(gl);
-  let value = name;
-  if (typeof name === 'string') {
-    value = gl[name];
-    assert(value !== undefined, `Accessing gl.${name}`);
-  }
-  return value;
-}
-
 // Returns the extension or throws an error
 export function getGLExtension(gl, extensionName) {
-  // assertWebGLRenderingContext(gl);
+  // assertWebGLContext(gl);
   const ERROR = 'Illegal arg to getExtension';
   assert(gl instanceof WebGLRenderingContext, ERROR);
   assert(typeof extensionName === 'string', ERROR);
@@ -160,7 +149,7 @@ export function getGLExtension(gl, extensionName) {
 
 // Calling this function checks all pending queries for completion
 export function poll(gl) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   queryManager.poll(gl);
 }
 
@@ -169,7 +158,7 @@ export function poll(gl) {
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
 export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
-  // assertWebGLRenderingContext(gl);
+  // assertWebGLContext(gl);
 
   let scissorTestWasEnabled;
   if (scissorTest) {
@@ -218,7 +207,7 @@ export function glGetDebugInfo(gl) {
 }
 
 function logInfo(gl) {
-  const webGL = isWebGL2RenderingContext(gl) ? 'WebGL2' : 'WebGL1';
+  const webGL = isWebGL2Context(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
   const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
   const debug = gl.debug ? 'debug' : '';
@@ -272,55 +261,6 @@ function validateArgsAndLog(functionName, functionArgs) {
       debugger;
     }
     /* eslint-enable no-debugger */
-  }
-}
-
-// Returns an Error representing the Latest webGl error or null
-export function glGetError(gl) {
-  // Loop to ensure all errors are cleared
-  const errorStack = [];
-  let glError = gl.getError();
-  while (glError !== gl.NO_ERROR) {
-    errorStack.push(glGetErrorMessage(gl, glError));
-    glError = gl.getError();
-  }
-  return errorStack.length ? new Error(errorStack.join('\n')) : null;
-}
-
-export function glCheckError(gl) {
-  if (gl.debug) {
-    const error = glGetError(gl);
-    if (error) {
-      throw error;
-    }
-  }
-}
-
-function glGetErrorMessage(gl, glError) {
-  switch (glError) {
-  case gl.CONTEXT_LOST_WEBGL:
-    //  If the WebGL context is lost, this error is returned on the
-    // first call to getError. Afterwards and until the context has been
-    // restored, it returns gl.NO_ERROR.
-    return 'WebGL context lost';
-  case gl.INVALID_ENUM:
-    // An unacceptable value has been specified for an enumerated argument.
-    return 'WebGL invalid enumerated argument';
-  case gl.INVALID_VALUE:
-    // A numeric argument is out of range.
-    return 'WebGL invalid value';
-  case gl.INVALID_OPERATION:
-    // The specified command is not allowed for the current state.
-    return 'WebGL invalid operation';
-  case gl.INVALID_FRAMEBUFFER_OPERATION:
-    // The currently bound framebuffer is not framebuffer complete
-    // when trying to render to or to read from it.
-    return 'WebGL invalid framebuffer operation';
-  case gl.OUT_OF_MEMORY:
-    // Not enough memory is left to execute the command.
-    return 'WebGL out of memory';
-  default:
-    return `WebGL unknown error ${glError}`;
   }
 }
 

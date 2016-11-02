@@ -1,9 +1,7 @@
 // WebGL2 Query Helper
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
-
-import {isWebGL2RenderingContext, assertWebGL2RenderingContext}
+import {isWebGL2Context, assertWebGL2Context, glCheckError}
   from './webgl-checks';
-import {glCheckError} from '../context';
 import queryManager from './helpers/query-manager';
 
 /* eslint-disable max-len */
@@ -17,7 +15,7 @@ import queryManager from './helpers/query-manager';
 export default class Query {
 
   static isSupported(gl) {
-    return isWebGL2RenderingContext(gl);
+    return isWebGL2Context(gl);
   }
 
   /**
@@ -25,7 +23,7 @@ export default class Query {
    * @param {WebGL2RenderingContext} gl
    */
   constructor(gl) {
-    assertWebGL2RenderingContext(gl);
+    assertWebGL2Context(gl);
     const handle = gl.createQuery();
     glCheckError(gl);
 

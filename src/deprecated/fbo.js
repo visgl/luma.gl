@@ -1,5 +1,5 @@
 import {WebGL} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
+import {assertWebGLContext} from './webgl-checks';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import {Texture2D} from './texture';
@@ -17,7 +17,7 @@ export default class FramebufferObject {
     format = WebGL.RGBA,
     type = WebGL.UNSIGNED_BYTE
   } = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     this.gl = gl;
     this.depth = depth;

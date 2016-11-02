@@ -97,7 +97,7 @@
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
-    "start": "npm run build-watch && budo src/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify -t glslify"
+    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t glslify"
   },
   "eslintConfig": {
     "parser": "babel-eslint",

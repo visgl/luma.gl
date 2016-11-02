@@ -1,16 +1,12 @@
-import {GL, WebGL2RenderingContext} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
-import {glCheckError} from './context';
+import {GL} from './webgl';
+import {assertWebGLContext, assertWebGL2Context} from './webgl-checks';
 import * as VertexAttributes from './vertex-attributes';
 import Buffer from './buffer';
-import {Texture} from './texture';
+import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import SHADERS from '../../shaderlib';
 import {log, uid} from '../utils';
-import assert from 'assert';
-
-const ERR_WEBGL2 = 'WebGL2 required';
 
 export default class Program {
 
@@ -49,7 +45,7 @@ export default class Program {
     defaultUniforms,
     handle
   } = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     // Assign default uniforms if any of the default shaders is being used
     if (vs === SHADERS.DEFAULT.vs || fs === SHADERS.DEFAULT.fs &&
@@ -98,7 +94,6 @@ export default class Program {
     const {gl} = this;
     if (this.handle) {
       gl.deleteProgram(this.handle);
-      glCheckError(gl);
     }
     this.handle = null;
     return this;
@@ -325,20 +320,17 @@ export default class Program {
 
   // This may be gl.SEPARATE_ATTRIBS or gl.INTERLEAVED_ATTRIBS.
   getTransformFeedbackBufferMode() {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_BUFFER_MODE);
   }
 
   getTransformFeedbackVaryingsCount() {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_VARYINGS);
   }
 
   getActiveUniformBlocksCount() {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     return this.getProgramParameter(this.gl.ACTIVE_UNIFORM_BLOCKS);
   }
 
@@ -346,11 +338,8 @@ export default class Program {
   // out variable name for program. program must have previously been linked.
   // [WebGLHandlesContextLoss]
   getFragDataLocation(varyingName) {
-    const {gl} = this;
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
-    const location = gl.getFragDataLocation(this.handle, varyingName);
-    glCheckError(gl);
-    return location;
+    assertWebGL2Context(this.gl);
+    return this.gl.getFragDataLocation(this.handle, varyingName);
   }
 
   // Return the value for the passed pname given the passed program.
@@ -367,10 +356,7 @@ export default class Program {
   // TRANSFORM_FEEDBACK_VARYINGS GLint
   // ACTIVE_UNIFORM_BLOCKS GLint
   getProgramParameter(pname) {
-    const {gl} = this;
-    const parameter = gl.getProgramParameter(this.handle, pname);
-    glCheckError(gl);
-    return parameter;
+    return this.gl.getProgramParameter(this.handle, pname);
   }
 
   // PRIVATE METHODS

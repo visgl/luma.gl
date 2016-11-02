@@ -1,8 +1,10 @@
 /* eslint-disable dot-notation*/
-import {WebGL2RenderingContext} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
+import {glGet} from './webgl';
+import {
+  assertWebGLContext,
+  assertWebGL2Context, isWebGL2Context
+} from './webgl-checks';
 import Buffer from './buffer';
-import {glGet} from './context';
 import {log} from '../utils';
 import assert from 'assert';
 
@@ -46,8 +48,6 @@ import assert from 'assert';
  *
  */
 
-const ERR_WEBGL2 = 'WebGL2 required';
-
 function glGetLumaInfo(gl) {
   if (!gl.luma) {
     gl.luma = {extensions: {}};
@@ -68,7 +68,7 @@ function glGetLumaInfo(gl) {
  * @returns {GLuint} - (max) number of attributes in the vertex attribute array
  */
 export function getMaxAttributes(gl) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   return gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
 }
 
@@ -78,9 +78,9 @@ export function getMaxAttributes(gl) {
  * @returns {Boolean} - is divisor available?
  */
 export function hasDivisor(gl) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   return Boolean(
-    gl instanceof WebGL2RenderingContext ||
+    isWebGL2Context(gl) ||
     gl.getExtension(gl, 'ANGLE_instanced_arrays')
   );
 }
@@ -152,7 +152,7 @@ export function isNormalized(gl, location) {
  * vertex attribute array at the given index.
  */
 export function isInteger(gl, location) {
-  assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+  assertWebGL2Context(gl);
   return get(location, gl.VERTEX_ATTRIB_ARRAY_INTEGER);
 }
 
@@ -187,7 +187,7 @@ export function getOffset(
  * @returns {*} - requested vertex attribute information (specified by pname)
  */
 function get(gl, location, pname) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   return gl.getVertexAttrib(location, pname);
 }
 
@@ -229,7 +229,7 @@ export function disable(gl, location) {
  * @param {GLuint} divisor - instances that pass between updates of attribute
  */
 export function setDivisor(gl, location, divisor) {
-  if (gl instanceof WebGL2RenderingContext) {
+  if (isWebGL2Context(gl)) {
     gl.vertexAttribDivisor(location, divisor);
     return;
   }
@@ -252,7 +252,7 @@ export function setDivisor(gl, location, divisor) {
  */
 export function getDivisor(gl, location) {
   assert(location > 0);
-  if (gl instanceof WebGL2RenderingContext) {
+  if (isWebGL2Context(gl)) {
     const divisor = get(location, gl.VERTEX_ATTRIB_ARRAY_DIVISOR);
     return divisor;
   }
@@ -288,11 +288,11 @@ export function setBuffer({
   target,
   layout
 } = {}) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   buffer = Buffer.makeFrom(gl, buffer);
 
   // Copy main data characteristics from buffer
-  target = glGet(gl, target !== undefined ? target : buffer.target);
+  target = glGet(target !== undefined ? target : buffer.target);
   layout = layout !== undefined ? layout : buffer.layout;
   assert(target, 'setBuffer needs target');
   assert(layout, 'setBuffer called on uninitialized buffer');
@@ -305,7 +305,7 @@ export function setBuffer({
     gl.vertexAttribPointer(
       location,
       layout.size,
-      glGet(gl, layout.type),
+      glGet(layout.type),
       layout.normalized,
       layout.stride,
       layout.offset
@@ -315,11 +315,11 @@ export function setBuffer({
     // For glVertexAttribIPointer, Values are always left as integer values.
     // Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE,
     // gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
-    assert(gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(gl);
     gl.vertexAttribIPointer(
       location,
       layout.size,
-      glGet(gl, layout.type),
+      glGet(layout.type),
       layout.stride,
       layout.offset
     );
@@ -344,10 +344,10 @@ export function setGeneric({gl, location, array}) {
   if (array instanceof Float32Array) {
     gl.vertexAttrib4fv(location, array);
   } else if (array instanceof Int32Array) {
-    assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
+    assertWebGL2Context(gl);
     gl.vertexAttribI4iv(location, array);
   } else if (array instanceof Uint32Array) {
-    assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
+    assertWebGL2Context(gl);
     gl.vertexAttribI4uiv(location, array);
   }
 }

@@ -1,8 +1,6 @@
 /* eslint-disable */
-import {GL} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
-import {glGet, glConstant, glArrayFromType, glTypeFromArray,
-  assertWebGL2} from './context';
+import {GL, glGet, glArrayFromType, glTypeFromArray} from './webgl-types';
+import {assertWebGLContext, assertWebGL2Context} from './webgl-checks';
 import {Texture2D} from './texture';
 import Renderbuffer from './renderbuffer';
 
@@ -50,7 +48,7 @@ export default class Framebuffer {
   }
 
   constructor(gl) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     this.gl = gl;
     this.handle = gl.createFramebuffer();
@@ -70,13 +68,13 @@ export default class Framebuffer {
 
   bind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), this.handle);
+    gl.bindFramebuffer(glGet(target), this.handle);
     return this;
   }
 
   unbind({target = GL.FRAMEBUFFER} = {}) {
     const {gl} = this;
-    gl.bindFramebuffer(glGet(gl, target), null);
+    gl.bindFramebuffer(glGet(target), null);
     return this;
   }
 
@@ -150,9 +148,9 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferTexture2D(
-      glGet(gl, target),
-      glGet(gl, attachment),
-      glGet(gl, textureTarget),
+      glGet(target),
+      glGet(attachment),
+      glGet(textureTarget),
       texture.handle,
       mipmapLevel
     );
@@ -183,9 +181,9 @@ export default class Framebuffer {
     this.bind({target});
 
     gl.framebufferRenderbuffer(
-      glGet(gl, target),
-      glGet(gl, attachment),
-      glGet(gl, renderbufferTarget),
+      glGet(target),
+      glGet(attachment),
+      glGet(renderbufferTarget),
       renderbuffer.handle
     );
 
@@ -199,7 +197,7 @@ export default class Framebuffer {
 
     this.bind({target});
 
-    const status = gl.checkFramebufferStatus(glGet(gl, target));
+    const status = gl.checkFramebufferStatus(glGet(target));
 
     this.unbind({target});
 
@@ -219,7 +217,7 @@ export default class Framebuffer {
     filter = GL.NEAREST
   }) {
     const {gl} = this;
-    assertWebGL2(gl);
+    assertWebGL2Context(gl);
     gl.blitFramebuffer(
       srcX0, srcY0, srcX1, srcY1,
       dstX0, dstY0, dstX1, dstY1,
@@ -237,7 +235,7 @@ export default class Framebuffer {
     layer
   } = {}) {
     const {gl} = this;
-    assertWebGL2(gl);
+    assertWebGL2Context(gl);
     gl.framebufferTextureLayer(target, attachment, texture, level, layer);
     return this;
   }
@@ -247,8 +245,8 @@ export default class Framebuffer {
     attachments = []
   }) {
     const {gl} = this;
-    assertWebGL2(gl);
-    gl.invalidateFramebuffer(glConstant(target), attachments);
+    assertWebGL2Context(gl);
+    gl.invalidateFramebuffer(target, attachments);
     return this;
   }
 
@@ -261,10 +259,8 @@ export default class Framebuffer {
     height
   }) {
     const {gl} = this;
-    assertWebGL2(gl);
-    gl.invalidateFramebuffer(
-      glConstant(target), attachments, x, y, width, height
-    );
+    assertWebGL2Context(gl);
+    gl.invalidateFramebuffer(target, attachments, x, y, width, height);
     return this;
   }
 
@@ -276,7 +272,7 @@ export default class Framebuffer {
   //  gl.COLOR_ATTACHMENT{0-15}: Reads from one of 16 color attachment buffers.
   readBuffer({src}) {
     const {gl} = this;
-    assertWebGL2(gl);
+    assertWebGL2Context(gl);
     gl.readBuffer(src);
     return this;
   }
@@ -415,7 +411,7 @@ export default class Framebuffer {
     attachment
   } = {}) {
     const {gl} = this;
-    assertWebGL2(gl);
+    assertWebGL2Context(gl);
     const value = gl.getFramebufferAttachmentParameter(
       target, attachment, pname
     );

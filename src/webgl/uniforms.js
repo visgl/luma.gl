@@ -1,5 +1,5 @@
-import {GL} from './webgl-types';
-import {Texture} from './texture';
+import {GL} from './webgl';
+import Texture from './texture';
 import {formatValue} from '../utils';
 import assert from 'assert';
 

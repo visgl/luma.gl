@@ -1,5 +1,5 @@
 import {GL} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
+import {assertWebGLContext} from './webgl-checks';
 import {glGet, assertWebGL2} from './context';
 
 import assert from 'assert';
@@ -13,7 +13,7 @@ export default class Renderbuffer {
   }
 
   constructor(gl, opts = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     this.gl = gl;
     this.handle = gl.createRenderbuffer();
@@ -51,7 +51,7 @@ export default class Renderbuffer {
     assert(internalFormat, 'Needs internalFormat');
     this.bind();
     gl.renderbufferStorage(
-      GL.RENDERBUFFER, glGet(gl, internalFormat), width, height
+      GL.RENDERBUFFER, glGet(internalFormat), width, height
     );
     this.unbind();
     return this;
@@ -63,7 +63,7 @@ export default class Renderbuffer {
     const {gl} = this;
     this.bind();
     const value =
-      gl.getRenderbufferParameter(GL.RENDERBUFFER, glGet(gl, pname));
+      gl.getRenderbufferParameter(GL.RENDERBUFFER, glGet(pname));
     this.unbind();
     return value;
   }

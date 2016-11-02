@@ -1,7 +1,7 @@
 /* global LumaGL */
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
 /* eslint-disable object-shorthand */
-const {GL, FrameAnimator, Model, Geometry, Program, Matrix4} = LumaGL;
+const {GL, AnimationFrame, Model, Geometry, Program, Matrix4} = LumaGL;
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -30,9 +30,8 @@ void main(void) {
 }
 `;
 
-new FrameAnimator({
-  canvas: 'lesson04-canvas'
-})
+new AnimationFrame()
+.context(() => gl.createGLContext({canvas: 'lesson04-canvas'})
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);
   gl.clearDepth(1);

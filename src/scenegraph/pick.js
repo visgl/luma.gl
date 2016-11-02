@@ -2,7 +2,7 @@
 /* eslint-disable max-statements, no-try-catch */
 /* global window */
 import {GL, glContextWithState, Framebuffer} from '../webgl';
-import {assertWebGLRenderingContext} from '../webgl/webgl-checks';
+import {assertWebGLContext} from '../webgl/webgl-checks';
 import Group from './group';
 import assert from 'assert';
 
@@ -17,7 +17,7 @@ export function pickModels(gl, {
   pickingProgram = null,
   pickingColors = null
 }) {
-  assertWebGLRenderingContext(gl);
+  assertWebGLContext(gl);
   assert(group instanceof Group, ILLEGAL_ARG);
 
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;

@@ -1,13 +1,12 @@
-import {GL} from './webgl-types';
-import {assertWebGLRenderingContext} from './webgl-checks';
-import {glGet, glConstant, glArrayFromType, glTypeFromArray, assertWebGL2}
-  from './context';
-import {Texture2D} from './texture';
+import {GL, glGet, glTypeToArray, glTypeFromArray} from './webgl';
+import {assertWebGLContext, assertWebGL2} from './webgl-checks';
+import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import assert from 'assert';
 import {uid, log} from '../utils';
 
-function glFormatComponents(format) {
+// Returns number of components in a specific WebGL format
+function glFormatToComponents(format) {
   switch (format) {
   case GL.ALPHA: return 1;
   case GL.RGB: return 3;
@@ -25,7 +24,7 @@ export default class Framebuffer {
 
   /* eslint-disable max-statements */
   constructor(gl, {id, ...params} = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     const handle = gl.createFramebuffer();
     if (!handle) {
@@ -163,8 +162,8 @@ export default class Framebuffer {
     if (!pixelArray) {
       // Allocate pixel array if not already available, using supplied type
       type = type || GL.UNSIGNED_BYTE;
-      const ArrayType = glArrayFromType(type);
-      const components = glFormatComponents(format);
+      const ArrayType = glTypeToArray(type);
+      const components = glFormatToComponents(format);
       // TODO - check for composite type (components = 1).
       pixelArray = pixelArray || new ArrayType(width * height * components);
     }
@@ -213,8 +212,8 @@ export default class Framebuffer {
 
     gl.framebufferTexture2D(
       target,
-      glGet(gl, attachment),
-      glGet(gl, textureTarget),
+      glGet(attachment),
+      glGet(textureTarget),
       texture.handle,
       mipmapLevel
     );
@@ -246,8 +245,8 @@ export default class Framebuffer {
 
     gl.framebufferRenderbuffer(
       target,
-      glGet(gl, attachment),
-      glGet(gl, renderbufferTarget),
+      glGet(attachment),
+      glGet(renderbufferTarget),
       renderbuffer.handle
     );
 
@@ -310,7 +309,7 @@ export default class Framebuffer {
   }) {
     const {gl} = this;
     assertWebGL2(gl);
-    gl.invalidateFramebuffer(glConstant(target), attachments);
+    gl.invalidateFramebuffer(target, attachments);
     return this;
   }
 
@@ -324,9 +323,7 @@ export default class Framebuffer {
   }) {
     const {gl} = this;
     assertWebGL2(gl);
-    gl.invalidateFramebuffer(
-      glConstant(target), attachments, x, y, width, height
-    );
+    gl.invalidateFramebuffer(target, attachments, x, y, width, height);
     return this;
   }
 

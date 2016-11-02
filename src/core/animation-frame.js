@@ -1,7 +1,7 @@
 /* global window, setTimeout, clearTimeout */
 import autobind from 'autobind-decorator';
 import {isBrowser, pageLoadPromise} from '../utils';
-import {isWebGLRenderingContext} from '../webgl';
+import {isWebGLContext} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export const requestAnimationFrame = callback =>
@@ -66,7 +66,7 @@ export default class AnimationFrame {
     }
     this._startPromise = this._startPromise.then(() => {
       this.gl = onCreateContext();
-      if (!isWebGLRenderingContext(this.gl)) {
+      if (!isWebGLContext(this.gl)) {
         throw new Error('AnimationFrame.context - illegal context returned');
       }
     });

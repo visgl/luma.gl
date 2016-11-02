@@ -1,12 +1,8 @@
-import {GL, WebGL2RenderingContext, WebGLBuffer}
-  from './webgl-types';
-import {assertWebGLRenderingContext, glTypeFromArray, assertArrayTypeMatch}
-  from './webgl-checks';
+import {GL, WebGLBuffer, glTypeFromArray}
+  from './webgl';
+import {assertWebGLContext, assertWebGL2Context,
+  assertArrayTypeMatch} from './webgl-checks';
 import assert from 'assert';
-
-const ERR_WEBGL2 = 'WebGL2 required';
-
-// Encapsulates a WebGLBuffer object
 
 export class BufferLayout {
   /**
@@ -44,6 +40,8 @@ export class BufferLayout {
   }
 }
 
+// Encapsulates a WebGLBuffer object
+
 export default class Buffer {
 
   /**
@@ -80,7 +78,7 @@ export default class Buffer {
     id,
     handle
   } = {}) {
-    assertWebGLRenderingContext(gl);
+    assertWebGLContext(gl);
 
     handle = handle || gl.createBuffer();
     if (!(handle instanceof WebGLBuffer)) {
@@ -217,13 +215,13 @@ export default class Buffer {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bindBase({target = this.target, index} = {}) {
-    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     this.gl.bindBufferBase(target, index, this.handle);
     return this;
   }
 
   unbindBase({target = this.target, index} = {}) {
-    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     this.gl.bindBufferBase(target, index, null);
     return this;
   }
@@ -239,13 +237,13 @@ export default class Buffer {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bindRange({target = this.target, index, offset = 0, size} = {}) {
-    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     this.gl.bindBufferRange(target, index, this.handle, offset, size);
     return this;
   }
 
   unbindRange({target = this.target, index} = {}) {
-    assert(this.gl instanceof WebGL2RenderingContext, ERR_WEBGL2);
+    assertWebGL2Context(this.gl);
     this.gl.bindBufferBase(target, index, null);
     return this;
   }
