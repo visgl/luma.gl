@@ -13,7 +13,7 @@
   </a>
 </p>
 
-<h1 align="center">luma.gl | <a href="https://uber.github.io/deck.gl">Docs</a></h1>
+<h1 align="center">luma.gl</h1>
 
 <h5 align="center">luma.gl: A JavaScript WebGL Framework for Data Visualization</h5>
 
