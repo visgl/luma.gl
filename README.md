@@ -1,5 +1,21 @@
-luma.gl: A JavaScript WebGL Framework for Data Visualization
-============================================================
+<p align="right">
+  <a href="https://npmjs.org/package/luma.gl">
+    <img src="https://img.shields.io/npm/v/luma.gl.svg?style=flat-square" alt="version" />
+  </a>
+  <a href="https://travis-ci.org/uber/luma.gl">
+    <img src="https://img.shields.io/travis/uber/luma.gl/master.svg?style=flat-square" alt="build" />
+  </a>
+  <a href="https://npmjs.org/package/luma.gl">
+    <img src="https://img.shields.io/npm/dm/luma.gl.svg?style=flat-square" alt="downloads" />
+  </a>
+  <a href="http://starveller.sigsev.io/uber/luma.gl">
+    <img src="http://starveller.sigsev.io/api/repos/uber/luma.gl/badge" alt="stars" />
+  </a>
+</p>
+
+<h1 align="center">luma.gl | <a href="https://uber.github.io/deck.gl">Docs</a></h1>
+
+<h5 align="center">luma.gl: A JavaScript WebGL Framework for Data Visualization</h5>
 
 ## Overview
 
