@@ -23,7 +23,7 @@ export function glTypeFromArray(arrayOrType) {
 }
 
 /* eslint-disable complexity */
-export function glTypeToArray(glType, {clamped = false}) {
+export function glTypeToArray(glType, {clamped = true} = {}) {
   // Sorted in some order of likelihood to reduce amount of comparisons
   switch (glType) {
   case GL.FLOAT:

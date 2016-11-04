@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "3.0.0-beta2",
+  "version": "3.0.0-beta4",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -90,7 +90,7 @@
     "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages",
     "lint": "eslint src",
     "precommit": "npm test",
-    "publish-luma": "npm run build && npm run test && npm publish",
+    "mypublish": "npm run build && npm run test && npm publish",
     "test": "npm run lint && npm run test-headless && npm run test-headless-nowebgl",
     "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-headless-nowebgl": "babel-node --include='' test/headless-nowebgl.js | faucet",

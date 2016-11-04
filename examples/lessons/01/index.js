@@ -1,7 +1,7 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
 
-const {createGLContext, Program, Buffer} = LumaGL;
+const {createGLContext, Program, Buffer, Matrix4} = LumaGL;
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -28,8 +28,9 @@ window.webGLStart = function() {
   var canvas = document.getElementById('lesson01-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
+  const aspect = canvas.width / canvas.height;
 
-  var gl = createGLContext({canvas});
+  const gl = createGLContext({canvas});
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 1);
@@ -37,12 +38,10 @@ window.webGLStart = function() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  var program = new Program(gl, getShadersFromHTML({
+  var program = new Program(gl, {
     vs: VERTEX_SHADER,
     fs: FRAGMENT_SHADER
-  }));
-
-  program.use();
+  });
 
   var trianglePositions = new Buffer(gl).setData({
     data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
@@ -54,31 +53,34 @@ window.webGLStart = function() {
     size: 3
   });
 
-  var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Draw Triangle
-  camera.view.$translate(-1.5, 0, -7);
+  const view = new Matrix4().translate([-1.5, 0, -7]);
+  const projection = Matrix4.perspective({aspect});
+
+
+  program.use();
+
   program
     .setBuffers({
       positions: trianglePositions
     })
     .setUniforms({
-      uMVMatrix: camera.view,
-      uPMatrix: camera.projection
+      uMVMatrix: view,
+      uPMatrix: projection
     });
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
   // Draw Square
-  camera.view.$translate(3, 0, 0);
+  view.translate([3, 0, 0]);
   program
     .setBuffers({
       positions: squarePositions
     })
     .setUniforms({
-      uMVMatrix: camera.view,
-      uPMatrix: camera.projection
+      uMVMatrix: view,
+      uPMatrix: projection
     });
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 };
