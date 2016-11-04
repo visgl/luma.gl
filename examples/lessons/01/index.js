@@ -1,10 +1,28 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-var createGLContext = LumaGL.createGLContext;
-var Program = LumaGL.Program;
-var Buffer = LumaGL.Buffer;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
+
+const {createGLContext, Program, Buffer} = LumaGL;
+
+const VERTEX_SHADER = `\
+attribute vec3 positions;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+}
+`;
+
+const FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+void main(void) {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+`;
 
 window.webGLStart = function() {
   var canvas = document.getElementById('lesson01-canvas');
@@ -20,8 +38,8 @@ window.webGLStart = function() {
   gl.depthFunc(gl.LEQUAL);
 
   var program = new Program(gl, getShadersFromHTML({
-    vs: 'shader-vs',
-    fs: 'shader-fs'
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER
   }));
 
   program.use();

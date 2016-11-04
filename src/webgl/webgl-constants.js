@@ -2,6 +2,7 @@
 import GL from 'gl-constants';
 import assert from 'assert';
 
+export {GL};
 export default GL;
 
 // Resolve a WebGL enumeration name (returns itself if already a number)

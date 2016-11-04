@@ -48,3 +48,6 @@ export function glTypeToArray(glType, {clamped = false}) {
   }
 }
 /* eslint-enable complexity */
+
+// Deprecated
+export {glTypeToArray as glArrayFromType};

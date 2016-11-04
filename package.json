@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "2.9.1",
+  "version": "3.0.0-beta2",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -98,14 +98,5 @@
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t glslify | discify --open",
     "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t glslify"
-  },
-  "eslintConfig": {
-    "parser": "babel-eslint",
-    "extends": [
-      "eslint-config-uber-es2015"
-    ],
-    "rules": {
-      "guard-for-in": 0
-    }
   }
 }

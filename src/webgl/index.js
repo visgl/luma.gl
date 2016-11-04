@@ -4,7 +4,6 @@
 // but make it easier to use.
 // Higher level abstractions can be built on these classes
 export * from './webgl';
-export * from './webgl-checks';
 
 // WebGL1 objects
 export {default as Buffer} from './buffer';

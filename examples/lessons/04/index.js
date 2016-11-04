@@ -1,6 +1,4 @@
 /* global LumaGL */
-/* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-/* eslint-disable object-shorthand */
 const {GL, AnimationFrame, Model, Geometry, Program, Matrix4} = LumaGL;
 
 const VERTEX_SHADER = `\
@@ -31,7 +29,7 @@ void main(void) {
 `;
 
 new AnimationFrame()
-.context(() => gl.createGLContext({canvas: 'lesson04-canvas'})
+.context(() => gl.createGLContext({canvas: 'lesson04-canvas'}))
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);
   gl.clearDepth(1);
@@ -62,10 +60,12 @@ new AnimationFrame()
   const phi = tick * 0.01;
   cube.render({
     uPMatrix: projection,
-    uMVMatrix: view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
+    uMVMatrix:
+      view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
   });
 });
 
+/* eslint-disable indent, no-multi-spaces */
 // Makes a colored pyramid
 function getPyramidGeometry() {
   return new Geometry({

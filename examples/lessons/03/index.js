@@ -1,65 +1,80 @@
 /* global window, document, LumaGL */
 /* eslint-disable max-statements, no-var */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-var getShadersFromHTML = LumaGL.addons.getShadersFromHTML;
-var Program = LumaGL.Program;
-var createGLContext = LumaGL.createGLContext;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var Fx = LumaGL.Fx;
-var Mat4 = LumaGL.Mat4;
-var Model = LumaGL.Model;
-var Geometry = LumaGL.Geometry;
-var Vec3 = LumaGL.Vec3;
+const {AnimationFrame, createGLContext,
+  PerspectiveCamera, Program, Fx, Mat4, Model, Geometry, Vec3} = LumaGL;
 
-window.webGLStart = function() {
-  var triangleGeometry = new Geometry({
-    positions: new Float32Array([
-      0,   1, 0,
-      -1, -1, 0,
-      1,  -1, 0
+const FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec4 vColor;
+
+void main(void) {
+  gl_FragColor = vColor;
+}
+`;
+
+const VERTEX_SHADER = `\
+attribute vec3 positions;
+attribute vec4 colors;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+varying vec4 vColor;
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vColor = colors;
+}
+`;
+
+var triangleGeometry = new Geometry({
+  positions: new Float32Array([
+    0,   1, 0,
+    -1, -1, 0,
+    1,  -1, 0
+  ]),
+  colors: {
+    value: new Float32Array([
+      1, 0, 0, 1,
+      0, 1, 0, 1,
+      0, 0, 1, 1
     ]),
-    colors: {
-      value: new Float32Array([
-        1, 0, 0, 1,
-        0, 1, 0, 1,
-        0, 0, 1, 1
-      ]),
-      size: 4
-    }
-  });
+    size: 4
+  }
+});
 
-  var squareGeometry = new Geometry({
-    positions: new Float32Array([
-      1,   1, 0,
-      -1,  1, 0,
-      1,  -1, 0,
-      -1, -1, 0]),
-    colors: {
-      value: new Float32Array([
-        0.5, 0.5, 1, 1,
-        0.5, 0.5, 1, 1,
-        0.5, 0.5, 1, 1,
-        0.5, 0.5, 1, 1
-      ]),
-      size: 4
-    }
-  });
+var squareGeometry = new Geometry({
+  positions: new Float32Array([
+    1,   1, 0,
+    -1,  1, 0,
+    1,  -1, 0,
+    -1, -1, 0]),
+  colors: {
+    value: new Float32Array([
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1,
+      0.5, 0.5, 1, 1
+    ]),
+    size: 4
+  }
+});
 
-  var canvas = document.getElementById('lesson03-canvas');
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-
-  var gl = createGLContext({canvas});
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
+new AnimationFrame()
+.context(() => gl = createGLContext({canvas: 'lesson03-canvas'}))
+.init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
   var program = new Program(gl, getShadersFromHTML({
-    vs: 'shader-vs',
-    fs: 'shader-fs'
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER
   }));
 
   var triangle = new Model({
@@ -75,54 +90,34 @@ window.webGLStart = function() {
   var camera = new PerspectiveCamera({
     aspect: canvas.width / canvas.height
   });
+})
+.frame(({gl, tick}) => {
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  var rTri = 0.0;
-  var rSquare = 0.0;
+  const rTri = tick * 0.01;
+  const rSquare = tick * 0.1;
 
-  program.use();
+  // get new view matrix out of element and camera matrices
+  var view = new Mat4();
+  view.mulMat42(camera.view, model.matrix);
 
-  function setupModel(model) {
-    // get new view matrix out of element and camera matrices
-    var view = new Mat4();
-    view.mulMat42(camera.view, model.matrix);
-
-    model.setUniforms({
+  // Draw triangle
+  triangle
+    .setPosition(new Vec3(-1.5, 0, -7))
+    .setRotation(new Vec3(0, rTri, 0))
+    .updateMatrix()
+    .render({
       uMVMatrix: view,
       uPMatrix: camera.projection
-    })
-    .setProgramState();
-  }
+    });
 
-  function animate() {
-    rTri += 0.01;
-    rSquare += 0.1;
-  }
-
-  function drawScene() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Draw triangle
-    triangle
-      .setPosition(new Vec3(-1.5, 0, -7))
-      .setRotation(new Vec3(0, rTri, 0))
-      .updateMatrix();
-    setupModel(triangle);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-    // Draw Square
-    square
-      .setPosition(new Vec3(1.5, 0, -7))
-      .setRotation(new Vec3(rSquare, 0, 0))
-      .updateMatrix();
-    setupModel(square);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-
-  function tick() {
-    drawScene();
-    animate();
-    Fx.requestAnimationFrame(tick);
-  }
-
-  tick();
-};
+  // Draw Square
+  square
+    .setPosition(new Vec3(1.5, 0, -7))
+    .setRotation(new Vec3(rSquare, 0, 0))
+    .updateMatrix()
+    .render({
+      uMVMatrix: view,
+      uPMatrix: camera.projection
+    });
+});
