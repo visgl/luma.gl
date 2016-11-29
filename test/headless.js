@@ -8,5 +8,8 @@ require('./webgl');
 
 require('./core');
 
+// experimental
+require('../src/experimental/test');
+
 // deprecated
 require('../src/deprecated/test');

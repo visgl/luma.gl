@@ -7,6 +7,7 @@ import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import SHADERS from '../../shaderlib';
 import {log, uid} from '../utils';
+import assert from 'assert';
 
 export default class Program {
 
@@ -54,9 +55,12 @@ export default class Program {
       defaultUniforms = SHADERS.DEFAULT.defaultUniforms;
     }
 
-    // Create shaders
-    this.vs = new VertexShader(gl, vs);
-    this.fs = new FragmentShader(gl, fs);
+    // Create shaders if needed
+    this.vs = typeof vs === 'string' ? new VertexShader(gl, vs) : vs;
+    this.fs = typeof vs === 'string' ? new FragmentShader(gl, fs) : fs;
+
+    assert(this.vs instanceof VertexShader);
+    assert(this.fs instanceof FragmentShader);
 
     // If program is not named, name it after shader names
     let programName = this.vs.getName() || this.fs.getName();
@@ -68,7 +72,7 @@ export default class Program {
     this.handle = handle;
     if (!this.handle) {
       this.handle = gl.createProgram();
-      this._compileAndLink(vs, fs);
+      this._compileAndLink();
     }
     if (!this.handle) {
       throw new Error('Failed to create program');
@@ -361,7 +365,7 @@ export default class Program {
 
   // PRIVATE METHODS
 
-  _compileAndLink(vs, fs) {
+  _compileAndLink() {
     const {gl} = this;
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
