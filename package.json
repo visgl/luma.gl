@@ -29,7 +29,8 @@
     "shaderlib",
     "src",
     "headless.js",
-    "node-io.js"
+    "node-io.js",
+    "experimental.js"
   ],
   "dependencies": {
     "autobind-decorator": "^1.3.3",
