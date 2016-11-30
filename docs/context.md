@@ -158,9 +158,6 @@ of time during development.
 * Luma has takes care to extract as much information as possible about
   shader compiler errors etc, and will throw exceptions with very detailed
   error strings when shaders fail to compile.
-* Luma also understands `glslify` "names", making it possible to name shaders
-  inside the shader code, which makes it easier to identify which shader
-  is being called.
 * Luma runs checks on attributes and buffers when they are being set,
   catching many trivial errors such as setting uniforms to `undefined`
   or wrong type (scalar vs array etc).

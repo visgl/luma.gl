@@ -21,14 +21,11 @@ will cause any subsequent `draw*` calls to use the shaders from this program.
 ### Notes on Shader Programming
 
 * Shader sources: A Program needs to be constructed with two strings
-  containing source code for vertex and fragment shaders. While it is of course
-  possible to store shader sources inline in JavaScript strings,
-  when doing extensive shader programming, use of a tool like
-  [glslify](https://github.com/stackgl/glslify)
-  is recommended, as it supports organization of shader code
-  directly in an applications source file tree.
-  luma.gl is fully integrated with glslify and the babel plugin
-  babel-plugin-glslify was written specifically to support luma.gl.
+  containing source code for vertex and fragment shaders.
+  We decided to use simple text, but when doing extensive shader programming,
+  you can also use something like
+  [glslify](https://github.com/stackgl/glslify) as it supports organization
+  of shader code directly in an applications source file tree.
 
   Also, for smaller examples, there are functions to help load shaders
   from HTML templates or URLs in `addons/helpers.js`.
