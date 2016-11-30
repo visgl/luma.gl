@@ -1,7 +1,6 @@
 import {GL} from './webgl';
 import {assertWebGLContext} from './webgl-checks';
-import formatCompilerError from './webgl-format-glsl-error';
-import getShaderName from 'glsl-shader-name';
+import {getShaderName, formatCompilerError} from './webgl-format-glsl-error';
 import {log, uid, isBrowser} from '../utils';
 import assert from 'assert';
 

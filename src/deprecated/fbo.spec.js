@@ -1,5 +1,4 @@
 import {createGLContext, FramebufferObject} from '../headless';
-import shaders from '../../shaderlib';
 import test from 'tape-catch';
 
 const fixture = {
@@ -31,7 +30,7 @@ test('WebGL#FramebufferObject construct/delete', t => {
     /.*WebGLRenderingContext.*/,
     'FramebufferObject throws on missing gl context');
 
-  const fbo = new FramebufferObject(gl, shaders);
+  const fbo = new FramebufferObject(gl);
   t.ok(fbo instanceof FramebufferObject,
     'FramebufferObject construction successful');
 

@@ -1,7 +1,6 @@
 // import 'babel-polyfill';
 // import {GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3, Renderer}
 //   from '../../../../src/index.js';
-// const glslify = require('glslify');
 
 /* global LumaGL */
 const {AnimationFrame, createGLContext} = LumaGL;

@@ -1,6 +1,11 @@
 /* eslint-disable no-continue, max-statements */
 import GL from './webgl-constants';
-import shaderName from 'glsl-shader-name';
+
+// import shaderName from 'glsl-shader-name';
+// replace with regexp
+export function getShaderName(shader) {
+  return 'unnamed';
+}
 
 /**
  * Formats a GLSL shader compiler error and generates a string
@@ -47,7 +52,7 @@ export default function formatGLSLCompilerError(errLog, src, shaderType) {
     }
   }
 
-  const name = shaderName(src) || 'unknown name (see npm glsl-shader-name)';
+  const name = getShaderName(src) || 'unknown name';
   const type = getShaderTypeName(shaderType);
   return `GLSL error in ${type} shader ${name}\n${message}`;
 }

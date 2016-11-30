@@ -1,7 +1,6 @@
 /* eslint-disable max-len */
 import {createGLContext} from '../../src/headless';
 import {VertexArrayObject} from '../../src/webgl2';
-import shaders from '../../shaderlib';
 
 import test from 'tape-catch';
 
@@ -23,14 +22,14 @@ test('WebGL#VertexArrayObject construct/delete', t => {
     /.*WebGLRenderingContext.*/,
     'VertexArrayObject throws on missing gl context');
 
-  const program = new VertexArrayObject(gl, shaders);
-  t.ok(program instanceof VertexArrayObject, 'VertexArrayObject construction successful');
+  const vao = new VertexArrayObject(gl);
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject construction successful');
 
-  program.delete();
-  t.ok(program instanceof VertexArrayObject, 'VertexArrayObject delete successful');
+  vao.delete();
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject delete successful');
 
-  program.delete();
-  t.ok(program instanceof VertexArrayObject, 'VertexArrayObject repeated delete successful');
+  vao.delete();
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject repeated delete successful');
 
   t.end();
 });

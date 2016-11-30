@@ -5,7 +5,7 @@ import Buffer from './buffer';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
-import SHADERS from '../../shaderlib';
+import SHADERS from '../shaderlib';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
@@ -59,8 +59,8 @@ export default class Program {
     this.vs = typeof vs === 'string' ? new VertexShader(gl, vs) : vs;
     this.fs = typeof vs === 'string' ? new FragmentShader(gl, fs) : fs;
 
-    assert(this.vs instanceof VertexShader);
-    assert(this.fs instanceof FragmentShader);
+    assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
+    assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
 
     // If program is not named, name it after shader names
     let programName = this.vs.getName() || this.fs.getName();
