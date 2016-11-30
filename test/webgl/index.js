@@ -1,6 +1,3 @@
-// No headless
-// import './context-no-headless.spec';
-
 // helpers & utils
 import './helpers/query-manager.spec';
 
