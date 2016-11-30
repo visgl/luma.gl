@@ -17,6 +17,7 @@ export * from './models';
 
 import * as geometry from './geometry';
 import * as models from './models';
+import * as experimental from './experimental';
 
 // TODO - deprecated
 import {default as Shaders} from './shaderlib';
@@ -37,6 +38,7 @@ Object.assign(luma,
 
   geometry,
   models,
+  experimental,
 
   // Deprecated
   Shaders,
