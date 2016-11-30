@@ -3,7 +3,21 @@
 ### 3.0.0-beta2 - obsolete, folded into master
 ### 3.0.0-beta1 - obsolete, folded into master
 
+
 # Official releases
+
+### 2.10.3
+- FIX: Fix for glGetDebugInfo regression under Node in 2.10.2.
+- FIX: Add "experimental.js" to exported "files" in package.json.
+
+### 2.10.2
+- FEATURE: Introduce experimental ShaderCache
+- FIX: for glGetDebugInfo under Firefox (WEBGL_debug_renderer_info issue)
+- CHANGE: Removes glslify as a dependency, apps that depend on glslify
+  must add it to their own package.json.
+
+### 2.10.1
+- FIX: glslify path.
 
 ### 2.10.0
 - Introduce new gl-matrix based math library.
