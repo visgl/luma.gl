@@ -1,17 +1,23 @@
 import {GL} from './webgl';
-import formatCompilerError from './webgl-format-glsl-error';
-import getShaderName from 'glsl-shader-name';
+import {assertWebGLContext} from './webgl-checks';
+import {getShaderName, formatCompilerError} from './webgl-format-glsl-error';
 import {log, uid, isBrowser} from '../utils';
+import assert from 'assert';
+
+const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
 // For now this is an internal class
 export class Shader {
 
   /* eslint-disable max-statements */
-  constructor(gl, shaderSource, shaderType) {
-    this.id = getShaderName(shaderSource) || uid(this.getTypeName(shaderType));
+  constructor(gl, source, shaderType) {
+    assertWebGLContext(gl);
+    assert(typeof source === 'string', ERR_SOURCE);
+
+    this.id = getShaderName(source) || uid(this.getTypeName(shaderType));
     this.gl = gl;
     this.shaderType = shaderType;
-    this.source = shaderSource;
+    this.source = source;
     this.handle = gl.createShader(shaderType);
     if (this.handle === null) {
       throw new Error(`Error creating shader with type ${shaderType}`);
@@ -25,6 +31,10 @@ export class Shader {
       gl.deleteShader(this.handle);
       this.handle = null;
     }
+  }
+
+  toString() {
+    return `${this.getTypeName(this.shaderType)}:${this.id}`;
   }
 
   getName() {

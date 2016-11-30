@@ -11,20 +11,21 @@ import * as math from './math';
 import * as scenegraph from './scenegraph';
 import * as core from './core';
 
-// Export all modules for luma.gl
-export {default as Shaders} from '../shaderlib';
+// Export support modules for luma.gl
 export * from './geometry';
 export * from './models';
 
-import {default as Shaders} from '../shaderlib';
 import * as geometry from './geometry';
 import * as models from './models';
 
-// TODO - remove
-export {default as Fx} from './addons/fx';
+// TODO - deprecated
+import {default as Shaders} from './shaderlib';
 import {default as Fx} from './addons/fx';
-export * from './deprecated';
 import * as deprecated from './deprecated';
+
+export {default as Shaders} from './shaderlib';
+export {default as Fx} from './addons/fx';
+export * from './deprecated';
 
 import luma from './globals';
 Object.assign(luma,
@@ -34,10 +35,11 @@ Object.assign(luma,
   scenegraph,
   core,
 
-  Shaders,
   geometry,
   models,
 
+  // Deprecated
+  Shaders,
   deprecated,
   {Fx}
 );

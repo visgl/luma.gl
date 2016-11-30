@@ -41,8 +41,8 @@ window.webGLStart = function() {
     }),
     loadProgram(gl, {
       id: 'teapot-program',
-      vs: '../../../shaderlib/frag-lighting.vs.glsl',
-      fs: '../../../shaderlib/frag-lighting.fs.glsl',
+      vs: '../../../src/shaderlib/frag-lighting.vs.glsl',
+      fs: '../../../src/shaderlib/frag-lighting.fs.glsl',
       noCache: true
     }),
     loadTextures(gl, {

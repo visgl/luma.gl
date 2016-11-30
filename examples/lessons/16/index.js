@@ -50,8 +50,8 @@ window.webGLStart = function() {
 
     Promise.all([
       loadProgram(gl, {
-        vs: '../../../shaderlib/render-tex.vs.glsl',
-        fs: '../../../shaderlib/render-tex.fs.glsl'
+        vs: '../../../src/shaderlib/render-tex.vs.glsl',
+        fs: '../../../src/shaderlib/render-tex.fs.glsl'
       }),
       loadTextures(gl, {
         urls: ['moon.gif', 'crate.gif'],

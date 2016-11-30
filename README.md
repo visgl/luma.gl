@@ -42,7 +42,7 @@ Technical Design Goals:
 - Ensure smooth integration in modern applications by leveraging the
   latest JavaScript language standards (ES6+) and build technologies
   (browserify/babel/npm etc).
-- Facilitate Shader Programming - Adapts techniques (such as
+- Facilitate Shader Programming - Supports tools (such as
   [glslify](https://www.npmjs.com/package/glslify) that
   help developers efficiently create, organize and debug shader code.
 - No "magic" global state that gets in the way of interoperability. All

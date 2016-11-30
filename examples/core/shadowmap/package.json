@@ -10,14 +10,11 @@
   "browserify": {
     "transform": [
       "babelify",
-      "glslify"
     ]
   },
   "dependencies": {
     "babel-polyfill": "^6.5.0",
-    "gl-format-compiler-error": "^1.0.2",
-    "global": "^4.3.0",
-    "glslify": "^5.0.2"
+    "global": "^4.3.0"
   },
   "devDependencies": {
     "babel-cli": "^6.5.0",
@@ -32,6 +29,6 @@
   },
   "scripts": {
     "build": "browserify src/app.js > bundle.js",
-    "start": "budo src/app.js:bundle.js -t babelify -t glslify --live --open --port 3001 --watch-glob '**/*.{html,css,js}'"
+    "start": "budo src/app.js:bundle.js -t babelify -t brfs-babel --live --open --port 3001 --watch-glob '**/*.{html,css,js}'"
   }
 }

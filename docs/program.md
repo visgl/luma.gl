@@ -98,8 +98,8 @@ and a WebGLProgram is created and the shaders are linked.
 ### Arguments:
 
 1. **gl** (*WebGLRenderingContext*)
-2. **opts.vs** (*string*) - The vertex shader source as a string.
-3. **opts.fs** (*string*) - The fragment shader source as a string.
+2. **opts.vs** (VertexShader|*string*) - A vertex shader object, or source as a string.
+3. **opts.fs** (FragmentShader|*string*) - A fragment shader object, ot source as a string.
 4. **opts.id** (*string*) - Optional string id to help indentify the program
    during debugging.
 

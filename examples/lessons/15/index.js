@@ -31,8 +31,8 @@ window.webGLStart = function() {
 
   Promise.all([
     loadProgram(gl, {
-      vs: '../../../shaderlib/spec-map.vs.glsl',
-      fs: '../../../shaderlib/spec-map.fs.glsl'
+      vs: '../../../src/shaderlib/spec-map.vs.glsl',
+      fs: '../../../src/shaderlib/spec-map.fs.glsl'
     }),
     loadTextures(gl, {
       urls: ['earth.jpg', 'earth-specular.gif'],

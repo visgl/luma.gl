@@ -65,6 +65,9 @@ class.
 Model constructor {#Model:constructor}
 ----------------------------------------------------------------------
 
+2. **opts.vs** (VertexShader|*string*) - A vertex shader object, or source as a string.
+3. **opts.fs** (FragmentShader|*string*) - A fragment shader object, ot source as a string.
+4. **opts.shaderCache** (ShaderCache|null) - An optional `ShaderCache`, will be used to compile shader source strings.
 * program
 * geometry
 * material = null

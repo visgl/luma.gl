@@ -7,7 +7,7 @@ export * from './webgl';
 
 // WebGL1 objects
 export {default as Buffer} from './buffer';
-export {default as Shader} from './shader';
+export {default as Shader, VertexShader, FragmentShader} from './shader';
 export {default as Program} from './program';
 export {default as Framebuffer} from './framebuffer';
 export {default as Renderbuffer} from './renderbuffer';
