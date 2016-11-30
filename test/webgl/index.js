@@ -1,3 +1,6 @@
+// Note that we do two test runs on luma.gl, with and without headless-gl
+// This file imports tests that should run *with* headless-gl included
+
 // helpers & utils
 import './helpers/query-manager.spec';
 
