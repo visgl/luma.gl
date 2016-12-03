@@ -4,7 +4,7 @@ import {addEvents} from '../../../src/core/event';
 import CrosshairCanvas from '../CrosshairCanvas';
 
 export default {
-  name: '(new) mouse over/move/out',
+  name: '(new) mouse enter/move/leave',
   render(testArea) {
     const containerElement = document.createElement('div');
     const canvasElement = document.createElement('canvas');
@@ -25,11 +25,11 @@ export default {
     `);
     const crosshairCanvas = new CrosshairCanvas(canvasElement);
     addEvents(canvasElement, {
-      onMouseOver(eventInfo) {
+      onMouseEnter(eventInfo) {
         console.log(eventInfo);
         crosshairCanvas.reset();
         crosshairCanvas.setCrosshair({
-          key: 'over', position: eventInfo.pointerPosition, color: 'blue'
+          key: 'enter', position: eventInfo.pointerPosition, color: 'blue'
         });
       },
       onMouseMove(eventInfo) {
@@ -38,10 +38,10 @@ export default {
           key: 'move', position: eventInfo.pointerPosition, color: 'black'
         });
       },
-      onMouseOut(eventInfo) {
+      onMouseLeave(eventInfo) {
         console.log(eventInfo);
         crosshairCanvas.setCrosshair({
-          key: 'out', position: eventInfo.pointerPosition, color: 'red'
+          key: 'leave', position: eventInfo.pointerPosition, color: 'red'
         });
       }
     });

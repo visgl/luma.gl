@@ -4,9 +4,11 @@ import {addEvents as addEventsLegacy} from '../../../src/core/eventLegacy';
 import CrosshairCanvas from '../CrosshairCanvas';
 
 export default {
-  name: '(legacy) mouse click - no cache',
+  name: '(legacy) mouse click (document scroll, no cache)',
   render(testArea) {
     const canvasElement = document.createElement('canvas');
+    canvasElement.height = 2 * document.documentElement.clientHeight;
+    canvasElement.width = 2 * document.documentElement.clientWidth;
     testArea.appendChild(canvasElement);
     const crosshairCanvas = new CrosshairCanvas(canvasElement);
     addEventsLegacy(canvasElement, {
