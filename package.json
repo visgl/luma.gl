@@ -41,6 +41,7 @@
     "gl-constants": "^1.0.0",
     "gl-matrix": "^2.3.2",
     "global": "^4.3.1",
+    "lodash.foreach": "^4.5.0",
     "ndarray": "^1.0.18",
     "save-pixels": "^2.3.2",
     "through": "^2.3.8",
@@ -96,6 +97,7 @@
     "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-headless-nowebgl": "babel-node --include='' test/headless-nowebgl.js | faucet",
     "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
+    "test-browser-interactive": "budo test/browser-interactive.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t brfs-babel | discify --open",
     "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t brfs-babel"
