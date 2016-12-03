@@ -1,1 +1,3 @@
-import './event';
+import renderTestSelectionPage from './renderTestSelectionPage';
+
+renderTestSelectionPage();

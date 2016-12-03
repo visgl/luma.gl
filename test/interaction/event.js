@@ -22,21 +22,6 @@ function getActiveModifierString(eventInfo) {
 
 const testScenarios = [
   {
-    name: '(legacy) basic mouse click',
-    prepare: (testArea) => {
-      const canvasElement = document.createElement('canvas');
-      testArea.appendChild(canvasElement);
-      const crosshairCanvas = new CrosshairCanvas(canvasElement, crosshairCanvasConfig);
-      addEventsLegacy(canvasElement, {
-        onClick: (eventInfo) => {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition({x: eventInfo.x, y: eventInfo.y});
-        },
-        centerOrigin: false,
-      });
-    }
-  },
-  {
     name: '(legacy) basic mouse drag',
     prepare: (testArea) => {
       const canvasElement = document.createElement('canvas');
@@ -91,55 +76,6 @@ const testScenarios = [
     }
   },
   {
-    name: '(legacy) mouse click no cache',
-    prepare: (testArea) => {
-      const canvasElement = document.createElement('canvas');
-      testArea.appendChild(canvasElement);
-      const crosshairCanvas = new CrosshairCanvas(canvasElement, crosshairCanvasConfig);
-      addEventsLegacy(canvasElement, {
-        onClick: (eventInfo) => {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition({x: eventInfo.x, y: eventInfo.y});
-        },
-        centerOrigin: false,
-        cachePosition: false,
-        cacheSize: false
-      });
-    }
-  },
-  {
-    name: '(new) basic mouse click',
-    prepare: (testArea) => {
-      const canvasElement = document.createElement('canvas');
-      testArea.appendChild(canvasElement);
-      const crosshairCanvas = new CrosshairCanvas(canvasElement, crosshairCanvasConfig);
-      addEvents(canvasElement, {
-        onClick(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
-        }
-      });
-    }
-  },
-  {
-    name: '(new) mouse down/up',
-    prepare: (testArea) => {
-      const canvasElement = document.createElement('canvas');
-      testArea.appendChild(canvasElement);
-      const crosshairCanvas = new CrosshairCanvas(canvasElement, crosshairCanvasConfig);
-      addEvents(canvasElement, {
-        onMouseDown(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
-        },
-        onMouseUp(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
-        }
-      });
-    }
-  },
-  {
     name: '(new) mouse move',
     prepare: (testArea) => {
       const canvasElement = document.createElement('canvas');
@@ -170,29 +106,7 @@ const testScenarios = [
         }
       });
     }
-  },
-  {
-    name: '(new) mouse move/over/out',
-    prepare: (testArea) => {
-      const canvasElement = document.createElement('canvas');
-      testArea.appendChild(canvasElement);
-      const crosshairCanvas = new CrosshairCanvas(canvasElement, crosshairCanvasConfig);
-      addEvents(canvasElement, {
-        onMouseMove(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
-        },
-        onMouseOver(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
-        },
-        onMouseOut(eventInfo) {
-          console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition();
-        }
-      });
-    }
   }
 ];
 
-testScenarios[8].prepare(prepareTestArea());
+testScenarios[0].prepare(prepareTestArea());
