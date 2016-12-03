@@ -10,6 +10,16 @@ const crosshairCanvasConfig = {
   crosshairSizePx: 15
 };
 
+function getActiveModifierString(eventInfo) {
+  const activeModifiers = [];
+  for (const modifierName of ['Alt', 'Control', 'Meta', 'Shift']) {
+    if (eventInfo.getModifierState(modifierName)) {
+      activeModifiers.push(modifierName);
+    }
+  }
+  return activeModifiers.join('+');
+}
+
 const testScenarios = [
   {
     name: '(legacy) basic mouse click',
@@ -106,7 +116,7 @@ const testScenarios = [
       addEvents(canvasElement, {
         onClick(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         }
       });
     }
@@ -120,11 +130,11 @@ const testScenarios = [
       addEvents(canvasElement, {
         onMouseDown(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         },
         onMouseUp(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         }
       });
     }
@@ -138,7 +148,7 @@ const testScenarios = [
       addEvents(canvasElement, {
         onMouseMove(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         },
       });
     }
@@ -152,11 +162,11 @@ const testScenarios = [
       addEvents(canvasElement, {
         onMouseOver(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         },
         onMouseOut(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         }
       });
     }
@@ -170,28 +180,15 @@ const testScenarios = [
       addEvents(canvasElement, {
         onMouseMove(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         },
         onMouseOver(eventInfo) {
           console.log(eventInfo);
-          crosshairCanvas.setCrosshairPosition(eventInfo.mouse.position);
+          crosshairCanvas.setCrosshairPosition(eventInfo.pointerPosition);
         },
         onMouseOut(eventInfo) {
           console.log(eventInfo);
           crosshairCanvas.setCrosshairPosition();
-        }
-      });
-    }
-  },
-  {
-    name: '(new) keyboard keyUp',
-    prepare: (testArea) => {
-      const keyInfoElement = document.createElement('div');
-      testArea.appendChild(keyInfoElement);
-      addEvents(keyInfoElement, {
-        onKeyUp(eventInfo) {
-          console.log(eventInfo);
-          keyInfoElement.textContent = JSON.stringify(eventInfo.keyboard);
         }
       });
     }

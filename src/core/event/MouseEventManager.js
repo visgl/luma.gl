@@ -1,5 +1,6 @@
 import autobind from 'autobind-decorator';
 import EventManager from './EventManager';
+import createGetModifierState from './createGetModifierState';
 
 export default class MouseEventManager extends EventManager {
   static handledRawEventTypes = [
@@ -42,11 +43,12 @@ export default class MouseEventManager extends EventManager {
     return {
       rawEvent,
       mouse: {
-        position: this._transformPosition(rawEvent),
         currentPressedButtons: this._getPressedButtons(rawEvent),
         clickButton: this._state.clickButton,
         hovering: this._state.hovering
-      }
+      },
+      pointerPosition: this._transformPosition(rawEvent),
+      getModifierState: createGetModifierState(rawEvent)
     };
   }
 
