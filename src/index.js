@@ -24,11 +24,11 @@ import * as io from './io';
 import * as experimental from './experimental';
 
 // TODO - deprecated
-import {default as Shaders} from './shaderlib';
+import {default as Shaders} from './deprecated/shaderlib';
 import {default as Fx} from './addons/fx';
 import * as deprecated from './deprecated';
 
-export {default as Shaders} from './shaderlib';
+export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';
 export * from './deprecated';
 

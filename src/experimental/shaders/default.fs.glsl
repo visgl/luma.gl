@@ -1,6 +1,7 @@
 #ifdef GL_ES
 precision highp float;
 #endif
+
 #define SHADER_NAME luma-default-fs
 
 varying vec4 vColor;
@@ -19,14 +20,14 @@ uniform vec3 fogColor;
 uniform float fogNear;
 uniform float fogFar;
 
-void main(){
+void main() {
   if(!hasTexture1) {
     gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);
   } else {
     gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0);
   }
 
-  if(enablePicking) {
+  if (enablePicking) {
     gl_FragColor = vec4(pickColor, 1.0);
   }
 
@@ -36,5 +37,4 @@ void main(){
     float fogFactor = smoothstep(fogNear, fogFar, depth);
     gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
   }
-
 }
