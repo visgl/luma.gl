@@ -5,7 +5,7 @@ import Buffer from './buffer';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
-import SHADERS from '../shaderlib';
+import {SHADERS} from '../experimental';
 import {log, uid} from '../utils';
 import assert from 'assert';
 

@@ -1,4 +1,4 @@
-import {VertexShader, FragmentShader} from '../webgl';
+import {VertexShader, FragmentShader} from '../../webgl';
 import assert from 'assert';
 
 const ERR_SOURCE = 'ShaderCache expects source strings';
