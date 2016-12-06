@@ -1,5 +1,5 @@
 import {createGLContext, Program, Buffer} from '../../src/headless';
-import shaders from '../../src/shaderlib';
+import {SHADERS} from '../../src/experimental';
 import test from 'tape-catch';
 
 const fixture = {
@@ -33,7 +33,7 @@ test('WebGL#Program construct/delete', t => {
     /.*WebGLRenderingContext.*/,
     'Program throws on missing gl context');
 
-  const program = new Program(gl, shaders);
+  const program = new Program(gl, SHADERS);
   t.ok(program instanceof Program, 'Program construction successful');
 
   program.delete();
