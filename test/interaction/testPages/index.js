@@ -8,7 +8,7 @@ import newMouseOverMoveOut from './newMouseOverMoveOut';
 import newMouseEnterMoveLeave from './newMouseEnterMoveLeave';
 import newTouch from './newTouch';
 import newTouchGesture from './newTouchGesture';
-import newPointer from './newPointer';
+import newTouchGestureMoreFeatures from './newTouchGestureMoreFeatures';
 
 export default [
   legacyMouseClick,
@@ -21,5 +21,5 @@ export default [
   newMouseEnterMoveLeave,
   newTouch,
   newTouchGesture,
-  newPointer
+  newTouchGestureMoreFeatures
 ];

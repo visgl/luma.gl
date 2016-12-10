@@ -18,29 +18,27 @@ export default class TouchEventManager extends EventManager {
   }
 
   _wrapRawEvent(rawEvent) {
-    const relevantTouches = new Set();
+    const touchesByIdentifier = new Map();
     for (const touch of rawEvent.touches) {
-      relevantTouches.add({touch, wasChanged: false});
+      touchesByIdentifier.set(touch.identifier, touch);
     }
-    // TODO touches should be flagged wasChanged on touchmove
-    if (rawEvent.type === 'touchend' || rawEvent.type === 'touchcancel') {
-      // TODO these could include touches outside target
-      for (const touch of rawEvent.changedTouches) {
-        relevantTouches.add({touch, wasChanged: true});
-      }
+    const changedTouchesByIdentifier = new Map();
+    for (const touch of rawEvent.changedTouches) {
+      touchesByIdentifier.set(touch.identifier, touch);
+      changedTouchesByIdentifier.set(touch.identifier, touch);
     }
     const touchPositions = [];
-    const pointerPosition = {x: 0, y: 0};
-    for (const {touch, wasChanged} of relevantTouches) {
+    for (const touch of touchesByIdentifier.values()) {
       const touchPosition = this._transformPosition(touch);
-      touchPositions.push({identifier: touch.identifier, position: touchPosition, wasChanged});
-      pointerPosition.x += touchPosition.x / relevantTouches.size;
-      pointerPosition.y += touchPosition.y / relevantTouches.size;
+      touchPositions.push({
+        identifier: touch.identifier,
+        position: touchPosition,
+        wasChanged: changedTouchesByIdentifier.has(touch.identifier)
+      });
     }
     return {
       rawEvent,
       touchPositions,
-      pointerPosition: relevantTouches.size ? pointerPosition : undefined,
       getModifierState: createGetModifierState(rawEvent)
     };
   }

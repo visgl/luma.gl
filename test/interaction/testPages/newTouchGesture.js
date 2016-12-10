@@ -4,7 +4,7 @@ import {addEvents} from '../../../src/core/event';
 import CrosshairCanvas from '../CrosshairCanvas';
 
 export default {
-  name: '(new) touch gesture',
+  name: '(new) touch gesture (drag only, no prevent default)',
   render(testArea) {
     const canvasElement = document.createElement('canvas');
     testArea.appendChild(canvasElement);
@@ -13,27 +13,33 @@ export default {
       onTouchGestureStart(eventInfo) {
         console.log(eventInfo);
         crosshairCanvas.reset();
-        crosshairCanvas.setCrosshair({
-          key: 'start',
-          position: eventInfo.pointerPosition,
-          color: 'blue'
-        });
+        if (eventInfo.gesture === 'drag') {
+          crosshairCanvas.setCrosshair({
+            key: 'start',
+            position: eventInfo.pointerPosition,
+            color: 'blue'
+          });
+        }
       },
-      onTouchGestureMove(eventInfo) {
+      onTouchGestureChange(eventInfo) {
         console.log(eventInfo);
-        crosshairCanvas.setCrosshair({
-          key: 'move',
-          position: eventInfo.pointerPosition,
-          color: 'black'
-        });
+        if (eventInfo.gesture === 'drag') {
+          crosshairCanvas.setCrosshair({
+            key: 'move',
+            position: eventInfo.pointerPosition,
+            color: 'black'
+          });
+        }
       },
       onTouchGestureEnd(eventInfo) {
         console.log(eventInfo);
-        crosshairCanvas.setCrosshair({
-          key: 'end',
-          position: eventInfo.pointerPosition,
-          color: 'red'
-        });
+        if (eventInfo.gesture === 'drag') {
+          crosshairCanvas.setCrosshair({
+            key: 'end',
+            position: eventInfo.pointerPosition,
+            color: 'red'
+          });
+        }
       }
     });
   }

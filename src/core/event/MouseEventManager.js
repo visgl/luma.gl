@@ -43,7 +43,7 @@ export default class MouseEventManager extends EventManager {
     return {
       rawEvent,
       mouse: {
-        currentPressedButtons: this._getPressedButtons(rawEvent),
+        pressedButtons: this._getPressedButtons(rawEvent),
         clickButton: this._state.clickButton,
         hovering: this._state.hovering
       },

@@ -1,5 +1,4 @@
 import ElementRelativePositionTransformer from './ElementRelativePositionTransformer';
-import PointerEventManager from './PointerEventManager';
 import TouchGestureEventManager from './TouchGestureEventManager';
 import MouseEventManager from './MouseEventManager';
 import TouchEventManager from './TouchEventManager';
@@ -10,8 +9,6 @@ export default function addEvents(element, userHandlers, options) {
   let mergedHandlers = userHandlers;
 
   // Middlewares
-  const pointerEventManager = new PointerEventManager(mergedHandlers);
-  mergedHandlers = pointerEventManager.getMiddlewareHandlers();
   const touchGestureEventManager = new TouchGestureEventManager(mergedHandlers);
   mergedHandlers = touchGestureEventManager.getMiddlewareHandlers();
 

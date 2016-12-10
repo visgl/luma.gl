@@ -9,33 +9,48 @@ export default {
     const canvasElement = document.createElement('canvas');
     testArea.appendChild(canvasElement);
     const crosshairCanvas = new CrosshairCanvas(canvasElement);
+    let lastFingerReleased = true;
     addEvents(canvasElement, {
       onTouchStart(eventInfo) {
         console.log(eventInfo);
-        if (eventInfo.rawEvent.targetTouches.length === 1) {
+        if (lastFingerReleased) {
           crosshairCanvas.reset();
         }
-        crosshairCanvas.setCrosshair({
-          key: Symbol('start'),
-          position: eventInfo.pointerPosition,
-          color: 'blue'
-        });
+        lastFingerReleased = false;
+        for (const touch of eventInfo.touchPositions) {
+          if (touch.wasChanged) {
+            crosshairCanvas.setCrosshair({
+              key: `start-${touch.identifier}`,
+              position: touch.position,
+              color: 'blue'
+            });
+          }
+        }
       },
       onTouchMove(eventInfo) {
         console.log(eventInfo);
-        crosshairCanvas.setCrosshair({
-          key: 'move',
-          position: eventInfo.pointerPosition,
-          color: 'black'
-        });
+        for (const touch of eventInfo.touchPositions) {
+          crosshairCanvas.setCrosshair({
+            key: `move-${touch.identifier}`,
+            position: touch.position,
+            color: 'black'
+          });
+        }
       },
       onTouchEnd(eventInfo) {
         console.log(eventInfo);
-        crosshairCanvas.setCrosshair({
-          key: Symbol('end'),
-          position: eventInfo.pointerPosition,
-          color: 'red'
-        });
+        if (eventInfo.rawEvent.touches.length === 0) {
+          lastFingerReleased = true;
+        }
+        for (const touch of eventInfo.touchPositions) {
+          if (touch.wasChanged) {
+            crosshairCanvas.setCrosshair({
+              key: `end-${touch.identifier}`,
+              position: touch.position,
+              color: 'red'
+            });
+          }
+        }
       }
     });
   }
