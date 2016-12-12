@@ -22,7 +22,7 @@ export default {
     let lastFingerReleased = true;
     addEvents(canvasElement, {
       onTouchGestureStart(eventInfo) {
-        eventInfo.rawEvent.preventDefault();
+        eventInfo.browserEvent.preventDefault();
         console.log(eventInfo);
         if (lastFingerReleased) {
           crosshairCanvas.reset();
@@ -49,7 +49,7 @@ export default {
         }
       },
       onTouchGestureChange(eventInfo) {
-        eventInfo.rawEvent.preventDefault();
+        eventInfo.browserEvent.preventDefault();
         console.log(eventInfo);
         if (eventInfo.gesture === 'pinch') {
           crosshairCanvas.setCrosshair({
@@ -68,8 +68,8 @@ export default {
         }
       },
       onTouchGestureEnd(eventInfo) {
-        eventInfo.rawEvent.preventDefault();
-        if (eventInfo.rawEvent.touches.length === 0) {
+        eventInfo.browserEvent.preventDefault();
+        if (eventInfo.browserEvent.touches.length === 0) {
           lastFingerReleased = true;
         }
         console.log(eventInfo);

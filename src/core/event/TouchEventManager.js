@@ -3,27 +3,27 @@ import EventManager from './EventManager';
 import createGetModifierState from './createGetModifierState';
 
 export default class TouchEventManager extends EventManager {
-  static handledRawEventTypes = [
+  static incomingEventTypes = [
     'touchstart', 'touchend',
     'touchmove'
   ];
-  static emittedNextEventTypes = [
+  static outgoingEventTypes = [
     'onTouchStart', 'onTouchEnd',
     'onTouchMove'
   ];
 
-  constructor(nextHandlers, transformPosition) {
-    super(nextHandlers);
+  constructor(outgoingHandlers, transformPosition) {
+    super(outgoingHandlers);
     this._transformPosition = transformPosition;
   }
 
-  _wrapRawEvent(rawEvent) {
+  _incomingToOutgoingEvent(incomingEvent) {
     const touchesByIdentifier = new Map();
-    for (const touch of rawEvent.touches) {
+    for (const touch of incomingEvent.touches) {
       touchesByIdentifier.set(touch.identifier, touch);
     }
     const changedTouchesByIdentifier = new Map();
-    for (const touch of rawEvent.changedTouches) {
+    for (const touch of incomingEvent.changedTouches) {
       touchesByIdentifier.set(touch.identifier, touch);
       changedTouchesByIdentifier.set(touch.identifier, touch);
     }
@@ -37,20 +37,20 @@ export default class TouchEventManager extends EventManager {
       });
     }
     return {
-      rawEvent,
+      browserEvent: incomingEvent,
       touchPositions,
-      getModifierState: createGetModifierState(rawEvent)
+      getModifierState: createGetModifierState(incomingEvent)
     };
   }
 
-  @autobind touchstart(rawEvent) {
-    this._emitNextEvent('onTouchStart', rawEvent);
+  @autobind touchstart(incomingEvent) {
+    this._emitOutgoingEvent('onTouchStart', incomingEvent);
   }
 
-  @autobind touchend(rawEvent) {
-    this._emitNextEvent('onTouchEnd', rawEvent);
+  @autobind touchend(incomingEvent) {
+    this._emitOutgoingEvent('onTouchEnd', incomingEvent);
   }
-  @autobind touchmove(rawEvent) {
-    this._emitNextEvent('onTouchMove', rawEvent);
+  @autobind touchmove(incomingEvent) {
+    this._emitOutgoingEvent('onTouchMove', incomingEvent);
   }
 }

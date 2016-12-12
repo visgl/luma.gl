@@ -63,25 +63,25 @@ class PinchGesture extends TouchGesture {
 }
 
 export default class TouchGestureEventManager extends EventManager {
-  static handledRawEventTypes = [
+  static incomingEventTypes = [
     'onTouchStart', 'onTouchEnd',
     'onTouchMove'
     // TODO cancel
   ];
-  static emittedNextEventTypes = [
+  static outgoingEventTypes = [
     'onTouchGestureStart', 'onTouchGestureEnd',
     'onTouchGestureChange'
   ];
 
-  constructor(nextHandlers) {
-    super(nextHandlers);
+  constructor(outgoingHandlers) {
+    super(outgoingHandlers);
     this._state = {gesture: null};
   }
 
-  _wrapRawEvent(rawEvent) {
+  _incomingToOutgoingEvent(incomingEvent) {
     const gestureFields = this._state.gesture.getEventFields();
-    gestureFields.touchEvent = rawEvent.touchEvent;
-    gestureFields.rawEvent = rawEvent.rawEvent;
+    gestureFields.touchEvent = incomingEvent;
+    gestureFields.browserEvent = incomingEvent.browserEvent;
     return gestureFields;
   }
 
@@ -99,37 +99,41 @@ export default class TouchGestureEventManager extends EventManager {
     this._state.gesture = this._state.gesture.update(touches);
   }
 
-  _handleTouchChange(rawEvent, currentTouches, currentAndLeavingTouches) {
+  _handleTouchChange(incomingEvent, currentTouches, currentAndLeavingTouches) {
     const Gesture = this._getMatchingGestureConstructor(currentTouches);
     if (this._state.gesture) {
       // TODO this update could be dangerous,
       // since ammount of touch points might not be whats expected
       this._updateGesture(currentAndLeavingTouches);
       if (this._state.gesture.constructor !== Gesture) {
-        this._emitNextEvent('onTouchGestureEnd', rawEvent);
+        this._emitOutgoingEvent('onTouchGestureEnd', incomingEvent);
         this._state.gesture = null;
       }
     }
     if (!this._state.gesture && Gesture) {
       this._state.gesture = new Gesture(currentTouches);
-      this._emitNextEvent('onTouchGestureStart', rawEvent);
+      this._emitOutgoingEvent('onTouchGestureStart', incomingEvent);
     }
   }
 
-  @autobind onTouchStart(rawEvent) {
-    this._handleTouchChange(rawEvent, rawEvent.touchPositions, rawEvent.touchPositions);
+  @autobind onTouchStart(incomingEvent) {
+    this._handleTouchChange(
+      incomingEvent,
+      incomingEvent.touchPositions,
+      incomingEvent.touchPositions
+    );
   }
 
-  @autobind onTouchEnd(rawEvent) {
-    const currentAndLeavingTouches = rawEvent.touchPositions;
-    const currentTouches = rawEvent.touchPositions.filter(touch => !touch.wasChanged);
-    this._handleTouchChange(rawEvent, currentTouches, currentAndLeavingTouches);
+  @autobind onTouchEnd(incomingEvent) {
+    const currentAndLeavingTouches = incomingEvent.touchPositions;
+    const currentTouches = incomingEvent.touchPositions.filter(touch => !touch.wasChanged);
+    this._handleTouchChange(incomingEvent, currentTouches, currentAndLeavingTouches);
   }
 
-  @autobind onTouchMove(rawEvent) {
+  @autobind onTouchMove(incomingEvent) {
     if (this._state.gesture) {
-      this._updateGesture(rawEvent.touchPositions);
-      this._emitNextEvent('onTouchGestureChange', rawEvent);
+      this._updateGesture(incomingEvent.touchPositions);
+      this._emitOutgoingEvent('onTouchGestureChange', incomingEvent);
     }
   }
 }

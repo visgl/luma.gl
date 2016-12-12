@@ -39,7 +39,7 @@ export default {
       },
       onTouchEnd(eventInfo) {
         console.log(eventInfo);
-        if (eventInfo.rawEvent.touches.length === 0) {
+        if (eventInfo.browserEvent.touches.length === 0) {
           lastFingerReleased = true;
         }
         for (const touch of eventInfo.touchPositions) {

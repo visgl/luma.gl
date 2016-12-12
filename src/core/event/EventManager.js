@@ -1,12 +1,12 @@
 /* global console */
 
 export default class EventManager {
-  constructor(nextHandlers) {
-    this._nextHandlers = nextHandlers;
+  constructor(outgoingHandlers) {
+    this._outgoingHandlers = outgoingHandlers;
   }
 
   attach(element) {
-    for (const eventType of this.constructor.handledRawEventTypes) {
+    for (const eventType of this.constructor.incomingEventTypes) {
       element.addEventListener(eventType, this[eventType]);
     }
   }
@@ -28,32 +28,28 @@ export default class EventManager {
   }
 
   getMiddlewareHandlers() {
-    const mergedHandlers = {...this._nextHandlers};
-    for (const eventType of this.constructor.handledRawEventTypes) {
-      const ownHandler = this[eventType];
+    const mergedHandlers = {...this._outgoingHandlers};
+    for (const eventType of this.constructor.incomingEventTypes) {
+      const incomingHandler = this[eventType];
       if (mergedHandlers[eventType]) {
         mergedHandlers[eventType] =
-          this._mergeHandlers(eventType, mergedHandlers[eventType], ownHandler);
+          this._mergeHandlers(eventType, mergedHandlers[eventType], incomingHandler);
       } else {
-        mergedHandlers[eventType] = ownHandler;
+        mergedHandlers[eventType] = incomingHandler;
       }
     }
     return mergedHandlers;
   }
 
-  _wrapRawEvent(rawEvent) {
-    return {rawEvent};
-  }
-
-  _emitNextEvent(nextEventName, rawEvent) {
-    const nextHandler = this._nextHandlers[nextEventName];
-    if (nextHandler) {
-      const wrappedEvent = this._wrapRawEvent(rawEvent);
+  _emitOutgoingEvent(outgoingEventName, incomingEvent) {
+    const outgoingHandler = this._outgoingHandlers[outgoingEventName];
+    if (outgoingHandler) {
+      const outgoingEvent = this._incomingToOutgoingEvent(incomingEvent);
       try {
-        nextHandler(wrappedEvent);
+        outgoingHandler(outgoingEvent);
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error(`Exception occured in event handler "${nextEventName}": `, err);
+        console.error(`Exception occured in event handler "${outgoingEventName}": `, err);
       }
     }
   }
