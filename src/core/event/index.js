@@ -1,1 +1,1 @@
-export {default as addEvents} from './addEvents';
+export {default as addEvents} from './add-events';

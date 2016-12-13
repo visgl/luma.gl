@@ -1,6 +1,6 @@
 import autobind from 'autobind-decorator';
-import EventManager from './EventManager';
-import createGetModifierState from './createGetModifierState';
+import EventManager from './event-manager';
+import {createGetModifierState} from './util';
 
 export default class TouchEventManager extends EventManager {
   static incomingEventTypes = [

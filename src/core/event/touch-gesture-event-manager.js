@@ -1,5 +1,5 @@
 import autobind from 'autobind-decorator';
-import EventManager from './EventManager';
+import EventManager from './event-manager';
 
 class TouchGesture {
   constructor(touches) {

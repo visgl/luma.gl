@@ -5,7 +5,7 @@ const modifierEventKeyMap = {
   Shift: 'shiftKey'
 };
 
-export default function createGetModifierState(rawEvent) {
+export function createGetModifierState(rawEvent) {
   return function getModifierState(modifierKeyName) {
     if (rawEvent.getModifierState) {
       return rawEvent.getModifierState(modifierKeyName);
@@ -15,5 +15,13 @@ export default function createGetModifierState(rawEvent) {
       return rawEvent[modifierEventKey] || false;
     }
     return false;
+  };
+}
+
+export function getElementRelativePosition(element, eventPosition) {
+  const elementBoundingBox = element.getBoundingClientRect();
+  return {
+    x: eventPosition.clientX - elementBoundingBox.left,
+    y: eventPosition.clientY - elementBoundingBox.top
   };
 }
