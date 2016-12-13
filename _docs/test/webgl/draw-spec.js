@@ -1,6 +1,6 @@
 import {createGLContext, Program} from '../../src/headless';
 import {isWebGLRenderingContext} from '../../src/webgl/webgl-checks';
-import shaders from '../../shaderlib';
+import shaders from '../../src/shaderlib';
 import test from 'tape-catch';
 
 test('WebGL#draw', t => {

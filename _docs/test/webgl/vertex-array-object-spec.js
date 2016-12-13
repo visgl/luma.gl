@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {createGLContext} from '../../src/headless';
 import {VertexArrayObject} from '../../src/webgl2';
-import shaders from '../../shaderlib';
+import shaders from '../../src/shaderlib';
 
 import test from 'tape-catch';
 
