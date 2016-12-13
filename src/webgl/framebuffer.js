@@ -103,7 +103,7 @@ export default class Framebuffer {
     this.texture = colorBuffer;
 
     // Add a depth buffer if requested
-    if (this.depth) {
+    if (depth) {
       const depthBuffer = new Renderbuffer(gl).storage({
         internalFormat: GL.DEPTH_COMPONENT16,
         width,

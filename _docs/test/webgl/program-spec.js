@@ -1,5 +1,5 @@
 import {createGLContext, Program, Buffer} from '../../src/headless';
-import shaders from '../../shaderlib';
+import shaders from '../../src/shaderlib';
 import test from 'tape-catch';
 
 const fixture = {
