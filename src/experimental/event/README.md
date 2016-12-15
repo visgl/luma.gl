@@ -18,6 +18,14 @@
  
  - Removed keyboard event handling
 
+## Usage
+
+The events module exports a single function `addEvents(element, userHandlers)`.
+`element` is a DOM element that event listeners should be attached to.
+`userHandlers` is a plain object, which can contain keys for any of the handlers
+specified below. Each value in `userHandlers` should be a function with a single
+`event` argument. The shape of this `event` can vary and is specified below.
+
 ## Events
 
 ### Mouse events

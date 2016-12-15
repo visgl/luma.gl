@@ -1,10 +1,10 @@
 /* global document */
 
-import {addEvents as addEventsLegacy} from '../../../src/core/eventLegacy';
+import {addEvents as addEventsLegacy} from '../../../../../core/event';
 import CrosshairCanvas from '../CrosshairCanvas';
 
 export default {
-  name: '(legacy) mouse click (document scroll, cache enabled)',
+  name: '(legacy) mouse click (document scroll, no cache)',
   render(testArea) {
     const canvasElement = document.createElement('canvas');
     canvasElement.height = 2 * document.documentElement.clientHeight;
@@ -16,7 +16,9 @@ export default {
         console.log(eventInfo);
         crosshairCanvas.setCrosshair({key: 'click', position: {x: eventInfo.x, y: eventInfo.y}});
       },
-      centerOrigin: false
+      centerOrigin: false,
+      cachePosition: false,
+      cacheSize: false
     });
   }
 };

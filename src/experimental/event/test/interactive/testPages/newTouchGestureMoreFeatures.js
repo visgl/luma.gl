@@ -1,6 +1,6 @@
 /* global document */
 
-import {addEvents} from '../../../src/core/event';
+import addEvents from '../../../add-events';
 import CrosshairCanvas from '../CrosshairCanvas';
 
 function renderPinch(eventInfo, crosshairCanvas) {

@@ -1,1 +1,1 @@
-import './interaction';
+import '../src/experimental/event/test/interactive';
