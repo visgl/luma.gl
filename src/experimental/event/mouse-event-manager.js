@@ -41,7 +41,7 @@ export default class MouseEventManager extends EventManager {
 
   _incomingToOutgoingEvent(incomingEvent) {
     return {
-      rawEvent: incomingEvent,
+      browserEvent: incomingEvent,
       mouse: {
         pressedButtons: this._getPressedButtons(incomingEvent),
         clickButton: this._state.clickButton,
