@@ -1,7 +1,7 @@
 /* global document */
 
 import {addEvents as addEventsLegacy} from '../../../../../core/event';
-import CrosshairCanvas from '../CrosshairCanvas';
+import CrosshairCanvas from '../crosshair-canvas';
 
 export default {
   name: '(legacy) mouse click (document scroll, no cache)',

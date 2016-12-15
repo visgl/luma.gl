@@ -1,7 +1,7 @@
 /* global document */
 
 import addEvents from '../../../add-events';
-import CrosshairCanvas from '../CrosshairCanvas';
+import CrosshairCanvas from '../crosshair-canvas';
 
 export default {
   name: '(new) mouse down/up',
@@ -13,11 +13,19 @@ export default {
       onMouseDown(eventInfo) {
         console.log(eventInfo);
         crosshairCanvas.reset();
-        crosshairCanvas.setCrosshair({key: 'down', position: eventInfo.pointerPosition, color: 'blue'});
+        crosshairCanvas.setCrosshair({
+          key: 'down',
+          position: eventInfo.pointerPosition,
+          color: 'blue'
+        });
       },
       onMouseUp(eventInfo) {
         console.log(eventInfo);
-        crosshairCanvas.setCrosshair({key: 'up', position: eventInfo.pointerPosition, color: 'red'});
+        crosshairCanvas.setCrosshair({
+          key: 'up',
+          position: eventInfo.pointerPosition,
+          color: 'red'
+        });
       }
     });
   }

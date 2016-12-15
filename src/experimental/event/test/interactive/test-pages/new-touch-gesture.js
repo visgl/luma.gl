@@ -1,7 +1,7 @@
 /* global document */
 
 import addEvents from '../../../add-events';
-import CrosshairCanvas from '../CrosshairCanvas';
+import CrosshairCanvas from '../crosshair-canvas';
 
 export default {
   name: '(new) touch gesture (drag only, no prevent default)',
