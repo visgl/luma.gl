@@ -6,6 +6,9 @@
 
 # Official releases
 
+### 2.10.4
+- FIX: Fix for glGetDebugInfo regression on Intel processors.
+
 ### 2.10.3
 - FIX: Fix for glGetDebugInfo regression under Node in 2.10.2.
 - FIX: Add "experimental.js" to exported "files" in package.json.
