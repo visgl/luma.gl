@@ -205,10 +205,10 @@ export function glGetDebugInfo(gl) {
   // specs by returning null for unsupported extension. Instead,
   // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
   return {
-    vendor: (info && info.GL_UNMASKED_VENDOR_WEBGL) ?
-      gl.getParameter(GL_UNMASKED_VENDOR_WEBGL) : 'unknown',
-    renderer: (info && info.GL_UNMASKED_RENDERER_WEBGL) ?
-      gl.getParameter(GL_UNMASKED_RENDERER_WEBGL) : 'unknown'
+    vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
+      gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
+    renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
+      gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
   };
 }
 
