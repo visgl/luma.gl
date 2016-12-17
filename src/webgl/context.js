@@ -10,9 +10,6 @@ import luma from '../globals';
 import assert from 'assert';
 /* global document */
 
-const GL_UNMASKED_VENDOR_WEBGL = 0x9245;
-const GL_UNMASKED_RENDERER_WEBGL = 0x9246;
-
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
 install a recent version of a major browser.`;
@@ -205,10 +202,10 @@ export function glGetDebugInfo(gl) {
   // specs by returning null for unsupported extension. Instead,
   // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
   return {
-    vendor: (info && info.GL_UNMASKED_VENDOR_WEBGL) ?
-      gl.getParameter(GL_UNMASKED_VENDOR_WEBGL) : 'unknown',
-    renderer: (info && info.GL_UNMASKED_RENDERER_WEBGL) ?
-      gl.getParameter(GL_UNMASKED_RENDERER_WEBGL) : 'unknown'
+    vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
+      gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
+    renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
+      gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
   };
 }
 
