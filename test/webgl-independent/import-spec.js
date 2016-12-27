@@ -1,7 +1,7 @@
 import {
   createGLContext, Program,
   loadFiles, loadTextures
-} from '../../without-io';
+} from '../../';
 import test from 'tape-catch';
 
 test('LumaGL#imports are defined', t => {
@@ -10,8 +10,8 @@ test('LumaGL#imports are defined', t => {
   t.end();
 });
 
-test('LumaGL#io imports are not defined', t => {
-  t.notOk(typeof loadFiles === 'function', 'loadFiles is defined');
-  t.notOk(typeof loadTextures === 'function', 'loadTextures is defined');
+test('LumaGL#io imports (basic functions) are defined', t => {
+  t.ok(typeof loadFiles === 'function', 'loadFiles is defined');
+  t.ok(typeof loadTextures === 'function', 'loadTextures is defined');
   t.end();
 });

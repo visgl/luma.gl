@@ -106,7 +106,7 @@ class XHR {
   /* eslint-enable max-statements */
 }
 
-export function loadFile(opts) {
+export function requestFile(opts) {
   const xhr = new XHR(opts);
   return xhr.sendAsync();
 }

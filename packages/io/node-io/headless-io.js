@@ -1,8 +1,8 @@
 // Use stackgl modules for DOM-less reading and writing of images
 // NOTE: These are not dependencies of luma.gl.
 // They need to be imported by the app.
-import getPixels from 'get-pixels';
 import savePixels from 'save-pixels';
+import getPixels from 'get-pixels';
 import ndarray from 'ndarray';
 import {readFile, writeFile} from 'fs';
 
