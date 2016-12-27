@@ -3,6 +3,13 @@
 ### 3.0.0-beta2 - obsolete, folded into master
 ### 3.0.0-beta1 - obsolete, folded into master
 
+# Alpha releases
+
+### 3.0.0-alpha1
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
+
 
 # Official releases
 

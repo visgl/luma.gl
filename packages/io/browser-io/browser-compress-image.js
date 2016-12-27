@@ -35,20 +35,3 @@ export function compressImage(image, type) {
   process.nextTick(() => result.end(new Buffer(data, 'base64')));
   return result;
 }
-
-/*
- * Loads images asynchronously
- * returns a promise tracking the load
- */
-export function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    try {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error(`Could not load image ${url}.`));
-      image.src = url;
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
