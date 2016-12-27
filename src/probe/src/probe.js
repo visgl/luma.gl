@@ -1,9 +1,10 @@
 /* eslint-disable no-console */
-import cookie from 'cookie-cutter';
 import {IS_NODE, logger, timestamp} from './env';
-import d3 from 'd3-format';
 
-const formatSI = d3.format('.3s');
+// TODO - this used to use d3.format(.3s)
+function formatSI(value) {
+  return value.toFixed(3);
+}
 
 // TODO: Currently unused, keeping in case we want it later for log formatting
 export function formatTime(ms) {
@@ -32,8 +33,6 @@ const DEFAULT_CONFIG = {
   // Whether Probe#run executes code
   isRunEnabled: true
 };
-
-const COOKIE_NAME = '__probe__';
 
 function noop() {}
 
@@ -118,10 +117,10 @@ export default class Probe {
   configure(config = {}) {
     const newConfig = {...this._config, ...config};
     this._config = newConfig;
-    if (!IS_NODE) {
-      const serialized = JSON.stringify(newConfig);
-      cookie.set(COOKIE_NAME, serialized);
-    }
+    // if (!IS_NODE) {
+    //   const serialized = JSON.stringify(newConfig);
+    //   cookie.set(COOKIE_NAME, serialized);
+    // }
     // Support chaining
     return this;
   }
@@ -378,7 +377,7 @@ export default class Probe {
   _getConfigFromEnvironment() {
     let customConfig = {};
     if (!IS_NODE) {
-      const serialized = cookie.get(COOKIE_NAME);
+      const serialized = {}; // cookie.get(COOKIE_NAME);
       if (serialized) {
         customConfig = JSON.parse(serialized);
       }
