@@ -24,10 +24,8 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "shaderlib",
     "src",
     "headless.js",
-    "node-io.js",
     "experimental.js"
   ],
   "dependencies": {
