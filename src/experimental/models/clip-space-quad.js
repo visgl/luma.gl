@@ -1,6 +1,6 @@
 // ClipSpaceQuad
-import {Model, Geometry} from '../core';
-import {GL} from '../webgl';
+import {Model, Geometry} from '../../core';
+import {GL} from '../../webgl';
 
 const CLIPSPACE_QUAD_VERTEX_SHADER = `\
 attribute vec2 aClipSpacePosition;

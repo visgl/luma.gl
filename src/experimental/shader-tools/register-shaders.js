@@ -7,14 +7,23 @@ const shaderModules = {};
  * @param {Object[]} shaderModuleList - Array of shader modules
  */
 export function registerShaderModules(shaderModuleList) {
-  for (const shaderModule in shaderModuleList) {
+  for (const shaderModule of shaderModuleList) {
     assert(shaderModule.name, 'shader module has no name');
-    if (!shaderModules[shaderModule.name]) {
+    if (shaderModules[shaderModule.name]) {
       throw new Error(`shader module ${shaderModule.name} already registered`);
     }
     shaderModules[shaderModule.name] = shaderModule;
     shaderModule.dependencies = shaderModule.dependencies || [];
   }
+}
+
+export function getShaderModule(moduleName) {
+  const shaderModule = shaderModules[moduleName];
+  if (!shaderModule) {
+    console.log(`${moduleName} not in registered modules:`, shaderModules);
+    assert(false, `Unknown shader module ${moduleName}`);
+  }
+  return shaderModule;
 }
 
 /**
@@ -44,13 +53,12 @@ function getDependencyGraph({moduleNames, level, result}) {
   if (level >= 5) {
     throw new Error('Possible loop in shader dependency graph');
   }
-  for (const moduleName in moduleNames) {
+  for (const moduleName of moduleNames) {
     result[moduleName] = level;
   }
 
-  for (const moduleName in moduleNames) {
-    const shaderModule = shaderModules[moduleName];
-    assert(shaderModule, 'Unknown shader module');
+  for (const moduleName of moduleNames) {
+    const shaderModule = getShaderModule(moduleName);
 
     getDependencyGraph({
       moduleNames: shaderModule.dependencies,

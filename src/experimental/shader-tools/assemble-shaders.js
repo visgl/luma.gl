@@ -1,5 +1,9 @@
 import {getShaderDependencies, getShaderModule} from './register-shaders';
 import {glGetDebugInfo} from '../../webgl';
+import assert from 'assert';
+
+const VERTEX_SHADER = 'vertexShader';
+const FRAGMENT_SHADER = 'fragmentShader';
 
 export function checkRendererVendor(debugInfo, gpuVendor) {
   const {vendor, renderer} = debugInfo;
@@ -56,7 +60,7 @@ export function getPlatformShaderDefines(gl) {
 function assembleShader(gl, {
   source,
   type,
-  imports = [],
+  modules = [],
   ...opts
 }) {
   assert(typeof source === 'string', 'shader source must be a string');
@@ -65,12 +69,16 @@ function assembleShader(gl, {
   let assembledSource = `${getPlatformShaderDefines(gl)}\n`;
 
   // Add dependent modules in resolved order
-  for (const moduleName of imports) {
+  for (const moduleName of modules) {
     const shaderModule = getShaderModule(moduleName);
     if (!shaderModule) {
       assert(shaderModule, 'shader module is not defined');
     }
-    assembledSource += `${shaderModule.source}\n`;
+    const moduleSource = shaderModule[type];
+    assembledSource += `
+// BEGIN SHADER MODULE ${moduleName}
+${moduleSource}
+// END SHADER MODULE ${moduleName}`;
   }
 
   // Add actual source of shader
@@ -85,13 +93,13 @@ function assembleShader(gl, {
 export function assembleShaders(gl, {
   vs,
   fs,
-  imports = [],
+  modules = [],
   ...opts
 }) {
-  imports = getShaderDependencies(imports);
+  modules = getShaderDependencies(modules);
   return {
     gl,
-    vs: assembleShader(gl, {...opts, source: vs, type: VERTEX_SHADER, imports}),
-    fs: assembleShader(gl, {...opts, source: fs, type: FRAGMENT_SHADER, imports})
+    vs: assembleShader(gl, {...opts, source: vs, type: VERTEX_SHADER, modules}),
+    fs: assembleShader(gl, {...opts, source: fs, type: FRAGMENT_SHADER, modules})
   };
 }
