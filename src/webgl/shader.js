@@ -1,6 +1,6 @@
 import {GL} from './webgl';
 import {assertWebGLContext} from './webgl-checks';
-import {getShaderName, formatCompilerError} from './webgl-format-glsl-error';
+import {getShaderName, formatGLSLCompilerError} from './webgl-format-glsl-error';
 import {uid, isBrowser} from '../utils';
 import assert from 'assert';
 
@@ -56,7 +56,7 @@ export class Shader {
     const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compiled) {
       const infoLog = gl.getShaderInfoLog(this.handle);
-      const error = formatCompilerError(infoLog, this.source, this.shaderType);
+      const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
       this.delete();
       throw new Error(`Error while compiling the shader ${error}`);
     }

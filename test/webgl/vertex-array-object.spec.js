@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import {createGLContext} from '../../src/headless';
-import {VertexArrayObject} from '../../src/webgl2';
+import {VertexArrayObject} from '../../src/webgl';
 
 import test from 'tape-catch';
 

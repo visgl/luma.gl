@@ -1,6 +1,7 @@
 import {readFileSync} from 'fs';
 import {join} from 'path';
 
+export const name = 'fog';
 export const vertexShader = '';
 export const fragmentShader = readFileSync(join(__dirname, './fog-fragment.glsl'));
 

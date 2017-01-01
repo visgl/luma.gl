@@ -24,3 +24,6 @@ export {default as TimerQuery} from './timer-query';
 export * from './context';
 export * from './draw';
 export * from './uniforms';
+
+// WebGL2
+export {default as VertexArrayObject} from './vertex-array-object';

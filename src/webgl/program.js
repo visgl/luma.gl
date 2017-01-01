@@ -41,18 +41,18 @@ export default class Program {
   /* eslint-disable max-statements */
   constructor(gl, {
     id,
-    vs = SHADERS.DEFAULT.vs,
-    fs = SHADERS.DEFAULT.fs,
+    vs = SHADERS.vs,
+    fs = SHADERS.fs,
     defaultUniforms,
     handle
   } = {}) {
     assertWebGLContext(gl);
 
     // Assign default uniforms if any of the default shaders is being used
-    if (vs === SHADERS.DEFAULT.vs || fs === SHADERS.DEFAULT.fs &&
+    if (vs === SHADERS.vs || fs === SHADERS.fs &&
       defaultUniforms === undefined
     ) {
-      defaultUniforms = SHADERS.DEFAULT.defaultUniforms;
+      defaultUniforms = SHADERS.defaultUniforms;
     }
 
     // Create shaders if needed

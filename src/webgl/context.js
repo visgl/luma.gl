@@ -95,7 +95,7 @@ export function createGLContext({
 
     logInfo(gl);
 
-    log.log(0, STARTUP_MESSAGE);
+    log.once(0, STARTUP_MESSAGE);
   }
 
   return gl;
@@ -212,10 +212,9 @@ export function glGetDebugInfo(gl) {
 function logInfo(gl) {
   const webGL = isWebGL2Context(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
-  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
+  const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0,
-    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
+  log.log(0, `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);

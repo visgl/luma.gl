@@ -3,13 +3,13 @@ import {join} from 'path';
 
 import {Vector3} from '../../../math';
 
+const commonShader = readFileSync(join(__dirname, './lighting-common.glsl'));
+
 export const name = 'lighting';
 
 export const config = {
   MAX_POINT_LIGHTS: 4
 };
-
-const commonShader = readFileSync(join(__dirname, './lighting-common.glsl'));
 
 export const vertexShader = `\
 ${commonShader}
