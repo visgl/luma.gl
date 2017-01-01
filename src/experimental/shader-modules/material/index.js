@@ -1,6 +1,7 @@
 import {readFileSync} from 'fs';
 import {join} from 'path';
 
+export const name = 'material';
 export const vertexShader = readFileSync(join(__dirname, './material-vertex.glsl'));
 export const fragmentShader = readFileSync(join(__dirname, './material-fragment.glsl'));
 

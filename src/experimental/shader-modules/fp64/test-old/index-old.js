@@ -22,7 +22,7 @@
 /* eslint-disable */
 
 /* global document, window */
-import {Buffer, createGLContext, Program} from '../../../../../webgl';
+import {Buffer, createGLContext, Program} from '../../../../webgl';
 import {assembleShaders} from '../../../shader-tools';
 
 import {join} from 'path';
@@ -128,8 +128,7 @@ function getMat4Float64() {
   return result;
 }
 
-function initializeGL(canvas)
-{
+function initializeGL(canvas) {
   const gl = createGLContext(canvas);
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clearColor(0, 0, 0, 1);
@@ -245,18 +244,18 @@ function test_float_add(gl, testName) {
   const float1_vec2 = fp64ify(float1);
   const float_ref_vec2 = fp64ify(float_ref);
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_add.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_add.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     b: float1_vec2,
     ONE: 1.0
@@ -284,17 +283,16 @@ function test_float_sub(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
     vs: readFileSync(join(__dirname, './vs_float_sub.glsl'), 'utf8'),
     fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-    fp64: true,
-    project64: true
-  }));
-
-  program.use();
-  program.setBuffers({
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     b: float1_vec2,
     ONE: 1.0
@@ -321,19 +319,18 @@ function test_float_mul(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_mul.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_mul.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     b: float1_vec2,
     ONE: 1.0
@@ -361,17 +358,16 @@ function test_float_div(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
     vs: readFileSync(join(__dirname, './vs_float_div.glsl'), 'utf8'),
     fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-    fp64: true,
-    project64: true
-  }));
-
-  program.use();
-  program.setBuffers({
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     b: float1_vec2,
     ONE: 1.0
@@ -395,19 +391,18 @@ function test_float_sqrt(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_sqrt.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_sqrt.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });
@@ -430,19 +425,18 @@ function test_float_exp(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_exp.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_exp.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });
@@ -465,19 +459,17 @@ function test_float_log(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_log.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_log.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });
@@ -501,19 +493,18 @@ function test_float_sin(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_sin.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_sin.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });
@@ -536,19 +527,18 @@ function test_float_cos(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_cos.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_cos.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });
@@ -571,19 +561,18 @@ function test_float_tan(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: readFileSync(join(__dirname, './vs_float_tan.glsl'), 'utf8'),
-        fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
-        fp64: true,
-        project64: true
-      }));
-
-  program.use();
-  program.setBuffers({
+    vs: readFileSync(join(__dirname, './vs_float_tan.glsl'), 'utf8'),
+    fs: readFileSync(join(__dirname, './fs.glsl'), 'utf8'),
+    modules: ['fp64']
+  }))
+  .use()
+  .setBuffers({
     positions: new Buffer(gl).setData({
       data: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
       size: 2
     })
-  }).setUniforms({
+  })
+  .setUniforms({
     a: float0_vec2,
     ONE: 1.0
   });

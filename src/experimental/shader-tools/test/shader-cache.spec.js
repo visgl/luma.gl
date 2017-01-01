@@ -1,6 +1,6 @@
 import {ShaderCache} from '..';
 import {createGLContext, VertexShader, FragmentShader, Program}
-  from '../../../src/headless';
+  from '../../../headless';
 import test from 'tape-catch';
 
 const fixture = {

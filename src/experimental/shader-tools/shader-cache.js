@@ -12,7 +12,8 @@ export default class ShaderCache {
    * By using this class, the application can ensure that each shader
    * is only compiled once.
    */
-  constructor() {
+  constructor({gl} = {}) {
+    this.gl = gl;
     this.vertexShaders = {};
     this.fragmentShaders = {};
   }
