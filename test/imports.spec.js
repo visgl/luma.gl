@@ -1,7 +1,4 @@
-import {
-  createGLContext, Program,
-  loadFiles, loadTextures
-} from '../../';
+import {createGLContext, Program, loadFiles, loadTextures} from '../index';
 import test from 'tape-catch';
 
 test('LumaGL#imports are defined', t => {

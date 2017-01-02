@@ -1,10 +1,9 @@
 /* eslint-disable no-inline-comments */
+import test from 'tape-catch';
 import {
   createGLContext, Program, Buffer, Texture, Texture2D, TextureCube,
   checkUniformValues
-} from '../../src/headless';
-
-import test from 'tape-catch';
+} from '../../headless';
 
 const gl = createGLContext();
 

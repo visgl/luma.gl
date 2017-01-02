@@ -1,12 +1,10 @@
 // Export core modules for luma.gl
-export * from './webgl';
 export * from './math';
-export * from './scenegraph';
+export * from './webgl';
 export * from './core';
 
-import * as webgl from './webgl';
 import * as math from './math';
-import * as scenegraph from './scenegraph';
+import * as webgl from './webgl';
 import * as core from './core';
 
 // Export support modules for luma.gl
@@ -20,6 +18,8 @@ import * as io from './io';
 import * as experimental from './experimental';
 
 // TODO - deprecated
+export * from './deprecated/scenegraph';
+import * as scenegraph from './deprecated/scenegraph';
 import {default as Shaders} from './deprecated/shaderlib';
 import {default as Fx} from './addons/fx';
 import * as deprecated from './deprecated';
@@ -31,17 +31,18 @@ export * from './deprecated';
 import luma from './globals';
 
 Object.assign(luma,
-  webgl,
   math,
-  scenegraph,
+  geometry,
+
+  webgl,
   core,
 
-  geometry,
   io,
 
   experimental,
 
   // Deprecated
+  scenegraph,
   deprecated,
   Shaders,
   {Fx}

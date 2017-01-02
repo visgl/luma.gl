@@ -1,5 +1,5 @@
-import {createGLContext, Framebuffer} from '../../src/headless';
 import test from 'tape-catch';
+import {createGLContext, Framebuffer} from '../../headless';
 
 const fixture = {
   gl: createGLContext()

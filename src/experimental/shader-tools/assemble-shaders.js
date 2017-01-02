@@ -75,8 +75,9 @@ function assembleShader(gl, {
       assert(shaderModule, 'shader module is not defined');
     }
     const moduleSource = shaderModule[type];
-    assembledSource += `
+    assembledSource += `\
 // BEGIN SHADER MODULE ${moduleName}
+#define MODULE_${moduleName.toUpperCase()}
 ${moduleSource}
 // END SHADER MODULE ${moduleName}`;
   }

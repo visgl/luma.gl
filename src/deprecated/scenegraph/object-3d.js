@@ -1,6 +1,6 @@
-import {Vec3, Mat4} from '../deprecated';
+import {uid} from '../../utils';
+import {Vec3, Mat4} from '../math';
 import assert from 'assert';
-import {uid} from '../utils';
 
 export default class Object3D {
 

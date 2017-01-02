@@ -5,6 +5,10 @@
 // Higher level abstractions can be built on these classes
 export * from './webgl';
 
+// WebGL context functions and helpers
+export * from './context';
+export {isWebGLContext, isWebGL2Context} from './webgl-checks';
+
 // WebGL1 objects
 export {default as Buffer} from './buffer';
 export {default as Shader, VertexShader, FragmentShader} from './shader';
@@ -21,7 +25,6 @@ export {VertexAttributes};
 export {default as TimerQuery} from './timer-query';
 
 // Functions
-export * from './context';
 export * from './draw';
 export * from './uniforms';
 
