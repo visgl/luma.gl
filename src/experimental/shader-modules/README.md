@@ -19,8 +19,6 @@ gl_FragColor = fog_filterColor(gl_FragColor);
 gl_FragColor = picking_filterColor(gl_FragColor);
 ```
 
-This would then depend on 
-
 ## Uniforms
 
 Modules usually have uniforms. These are automatically included in the glsl

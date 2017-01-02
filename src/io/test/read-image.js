@@ -1,5 +1,5 @@
-import '../../../src/headless';
-import {loadImage} from '../../../src/io';
+import '../../../headless';
+import {loadImage} from '../../../dist/io';
 import test from '../../setup';
 
 /* eslint-disable quotes */

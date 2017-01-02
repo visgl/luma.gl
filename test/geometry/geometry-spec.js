@@ -2,7 +2,7 @@
 import {
   ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry,
   PlaneGeometry, SphereGeometry
-} from '../../src/headless';
+} from '../../headless';
 import test from 'tape-catch';
 
 const GEOMETRY_TESTS = [

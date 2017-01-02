@@ -1,9 +1,9 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements, no-try-catch */
 
-import * as config from '../core/config';
+import * as config from '../../core/config';
 import {Vector3} from '../math';
-import {merge} from '../utils';
+import {merge} from '../../utils';
 import Group from './group';
 import {pickModels} from './pick';
 import assert from 'assert';

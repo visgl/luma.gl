@@ -20,7 +20,7 @@ export function registerShaderModules(shaderModuleList) {
 export function getShaderModule(moduleName) {
   const shaderModule = shaderModules[moduleName];
   if (!shaderModule) {
-    console.log(`${moduleName} not in registered modules:`, shaderModules);
+    // console.log(`${moduleName} not in registered modules:`, shaderModules);
     assert(false, `Unknown shader module ${moduleName}`);
   }
   return shaderModule;
