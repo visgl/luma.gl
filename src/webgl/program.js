@@ -5,7 +5,6 @@ import Buffer from './buffer';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
-import {SHADERS} from '../experimental';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
@@ -41,19 +40,12 @@ export default class Program {
   /* eslint-disable max-statements */
   constructor(gl, {
     id,
-    vs = SHADERS.vs,
-    fs = SHADERS.fs,
+    vs,
+    fs,
     defaultUniforms,
     handle
   } = {}) {
     assertWebGLContext(gl);
-
-    // Assign default uniforms if any of the default shaders is being used
-    if (vs === SHADERS.vs || fs === SHADERS.fs &&
-      defaultUniforms === undefined
-    ) {
-      defaultUniforms = SHADERS.defaultUniforms;
-    }
 
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(gl, vs) : vs;

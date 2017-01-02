@@ -1,6 +1,6 @@
 /* eslint-disable max-len, max-statements */
 import test from 'tape-catch';
-import {createGLContext, poll, TimerQuery} from '../../src/headless';
+import {createGLContext, poll, TimerQuery} from '../../dist/headless';
 
 const fixture = {
   gl: createGLContext()

@@ -6,9 +6,10 @@ import {
   GL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
   WebGLRenderingContext
 } from '../webgl';
-import Object3D from '../scenegraph/object-3d';
+import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
 import Geometry from './geometry';
+import {SHADERS} from '../experimental/shaders';
 import assert from 'assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
@@ -41,8 +42,9 @@ export default class Model extends Object3D {
   init({
     program,
     gl = null,
-    vs = null,
-    fs = null,
+    vs = SHADERS.vs,
+    fs = SHADERS.fs,
+    defaultUniforms,
     geometry,
     material = null,
     textures,
@@ -63,6 +65,11 @@ export default class Model extends Object3D {
   } = {}) {
     // assert(program || program instanceof Program);
     assert(geometry instanceof Geometry, 'Model needs a geometry');
+
+    // Assign default uniforms if any of the default shaders is being used
+    if (vs === SHADERS.vs || fs === SHADERS.fs && defaultUniforms === undefined) {
+      defaultUniforms = SHADERS.defaultUniforms;
+    }
 
     // set a custom program per o3d
     this.program = program || new Program(gl, {vs, fs});

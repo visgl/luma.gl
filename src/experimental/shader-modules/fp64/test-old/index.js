@@ -19,7 +19,6 @@
 // THE SOFTWARE.
 
 /* eslint-disable camelcase */
-/* global document */
 import {Buffer, createGLContext, Program} from '../../../../webgl';
 import {assembleShaders} from '../../../shader-tools';
 import {readFileSync} from 'fs';
@@ -65,7 +64,7 @@ const TEST_CASES = {
     return {
       uniforms: {
         a: float0_vec2,
-        b: float1_vec2,
+        b: float1_vec2
       },
       line: `(${float0_vec2}) - (${float1_vec2})`,
       result: float_ref
@@ -210,7 +209,7 @@ function initializeGL(canvas) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   if (!gl.getExtension('OES_texture_float')) {
-    console.error('no floating point texture support!');
+    // console.error('no floating point texture support!');
     throw new Error('no floating point texture support!');
   }
 

@@ -1,8 +1,6 @@
 /* eslint-disable max-len */
-import {createGLContext, VertexAttributes} from '../../src/headless';
-import {WebGL2RenderingContext} from '../../src/webgl/webgl-types';
-
 import test from 'tape-catch';
+import {createGLContext, VertexAttributes, isWebGL2Context} from '../../headless';
 
 test('WebGL#VertexAttributes#enable', t => {
   const gl = createGLContext();
@@ -37,7 +35,7 @@ test('WebGL#VertexAttributes#enable', t => {
 test('WebGL#VertexAttributes#WebGL2 support', t => {
   const gl = createGLContext({webgl2: true});
 
-  if (!(gl instanceof WebGL2RenderingContext)) {
+  if (!isWebGL2Context(gl)) {
     t.comment('- WebGL2 NOT ENABLED: skipping tests');
     t.end();
     return;

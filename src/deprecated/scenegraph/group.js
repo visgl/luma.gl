@@ -1,5 +1,5 @@
 import Object3D from './object-3d';
-import {Mat4} from '../deprecated';
+import {Mat4} from '../math';
 import assert from 'assert';
 
 export default class Group extends Object3D {
