@@ -13,6 +13,7 @@ export function pickModels(gl, {
   uniforms,
   x,
   y,
+  framebuffer = null,
   pickingFBO = null,
   pickingProgram = null,
   pickingColors = null
@@ -26,14 +27,16 @@ export function pickModels(gl, {
 
   // Set up a frame buffer if needed
   // TODO - cache picking fbo (needs to be resized)?
-  pickingFBO = pickingFBO || new Framebuffer(gl, {
+  framebuffer = framebuffer || pickingFBO || new Framebuffer(gl, {
     width: gl.canvas.width,
     height: gl.canvas.height
   });
 
+  framebuffer.resize({width: gl.canvas.width, height: gl.canvas.height});
+
   // Make sure we clear scissor test and fbo bindings in case of exceptions
   return glContextWithState(gl, {
-    frameBuffer: pickingFBO,
+    framebuffer,
     // We are only interested in one pixel, no need to render anything else
     scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
   }, () => {
