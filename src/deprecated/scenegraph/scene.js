@@ -2,7 +2,7 @@
 /* eslint-disable max-statements, no-try-catch */
 
 import * as config from '../../core/config';
-import {Vector3} from '../math';
+import {Vector3} from '../../math';
 import {merge} from '../../utils';
 import Group from './group';
 import {pickModels} from './pick';
