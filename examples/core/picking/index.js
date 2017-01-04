@@ -1,6 +1,8 @@
 /* global document, LumaGL */
-const {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} = LumaGL;
-const {loadTextures, Program, Buffer, Scene, Sphere, Vec3, pickModels} = LumaGL;
+const {GL, AnimationFrame, createGLContext, Matrix4, radians} = LumaGL;
+const {loadTextures, Program, Buffer, Scene, Sphere, pickModels} = LumaGL;
+const {Vec3} = LumaGL;
+const {SHADERS} = LumaGL;
 
 const pick = {x: 0, y: 0};
 
@@ -48,7 +50,7 @@ new AnimationFrame()
     }
   })
   .then(function onTexturesLoaded(textures) {
-    const program = new Program(gl);
+    const program = new Program(gl, SHADERS);
 
     const planets = PLANETS.map(function map(planet, i) {
       return new Sphere({
