@@ -3,8 +3,7 @@
 
 // Define some locals
 import {
-  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
-  WebGLRenderingContext
+  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable, isWebGLContext
 } from '../webgl';
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
@@ -32,7 +31,7 @@ export class Material {
 export default class Model extends Object3D {
 
   constructor(gl, opts = {}) {
-    opts = gl instanceof WebGLRenderingContext ? {...opts, gl} : gl;
+    opts = isWebGLContext(gl) ? {...opts, gl} : gl;
     super(opts);
     this.init(opts);
   }
