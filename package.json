@@ -70,7 +70,7 @@
     "build-clean": "rm -fr dist/*",
     "build-dist": "babel src -d dist --source-maps inline --copy-files",
     "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
-    "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t brfs-babel && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
+    "build-script": "browserify dist/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
     "docs-gh-pages": "git subtree push --prefix _docs origin gh-pages",
