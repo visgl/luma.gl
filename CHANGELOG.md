@@ -5,6 +5,11 @@
 
 # Alpha releases
 
+### 3.0.0-alpha2
+- `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
+- `probe` moved to `/experimental`
+- `webgl` folder now contains both webgl1 and webgl2 classes
+
 ### 3.0.0-alpha1
 - BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
   and into `packages`. This allows luma.gl to drop a number of big dependencies.
