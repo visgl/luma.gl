@@ -24,10 +24,8 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "shaderlib",
     "src",
     "headless.js",
-    "node-io.js",
     "experimental.js"
   ],
   "dependencies": {
@@ -72,7 +70,7 @@
     "build-clean": "rm -fr dist/*",
     "build-dist": "babel src -d dist --source-maps inline --copy-files",
     "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
-    "build-script": "browserify src/bundle.js --debug -o dist/lumagl.js -t babelify -t brfs-babel && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
+    "build-script": "browserify dist/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
     "docs-gh-pages": "git subtree push --prefix _docs origin gh-pages",
@@ -82,11 +80,11 @@
     "precommit": "npm test",
     "publish-prod": "npm run build && npm run test-fast && npm publish",
     "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
-    "test": "npm run lint && npm run build-dist && npm run test-headless && npm run test-headless-nowebgl",
+    "test": "npm run lint && npm run build-dist && npm run test-headless-nowebgl && npm run test-headless",
     "test-fast": "npm run lint && npm run test-headless && npm run test-headless-nowebgl",
     "test-headless": "babel-node --include='' test/headless.js | faucet",
     "test-headless-nowebgl": "babel-node --include='' test/headless-nowebgl.js | faucet",
-    "test-browser": "budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
+    "test-browser": "npm run build-watch && budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t brfs-babel | discify --open",
     "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t brfs-babel"

@@ -1,10 +1,14 @@
 /* global document, LumaGL */
-const {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} = LumaGL;
-const {loadTextures, Program, Buffer, Scene, Sphere, Vec3, pickModels} = LumaGL;
+const {GL, AnimationFrame, createGLContext, Matrix4, radians} = LumaGL;
+const {loadTextures, Program, Buffer, Scene, Sphere} = LumaGL;
+const {Framebuffer, pickModels} = LumaGL;
+const {Vec3} = LumaGL;
+const {SHADERS} = LumaGL;
 
 const pick = {x: 0, y: 0};
 
 let scene;
+let framebuffer = null;
 
 new AnimationFrame()
 .context(() => createGLContext())
@@ -23,6 +27,8 @@ new AnimationFrame()
     },
     backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   });
+
+  framebuffer = new Framebuffer(gl);
 
   canvas.addEventListener('mousemove', function mousemove(e) {
     pick.x = e.offsetX;
@@ -48,10 +54,9 @@ new AnimationFrame()
     }
   })
   .then(function onTexturesLoaded(textures) {
-    const program = new Program(gl);
-
     const planets = PLANETS.map(function map(planet, i) {
       return new Sphere({
+        gl,
         id: planet.name,
         nlat: 32,
         nlong: 32,
@@ -72,8 +77,7 @@ new AnimationFrame()
             size: 3
           })
         },
-        pickable: true,
-        program
+        pickable: true
       });
     });
 
@@ -105,7 +109,8 @@ new AnimationFrame()
     group: scene,
     uniforms,
     x: pick.x,
-    y: pick.y
+    y: pick.y,
+    framebuffer
   });
 
   const div = document.getElementById('planet-name');

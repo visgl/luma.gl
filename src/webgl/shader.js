@@ -1,7 +1,7 @@
 import {GL} from './webgl';
 import {assertWebGLContext} from './webgl-checks';
-import {getShaderName, formatCompilerError} from './webgl-format-glsl-error';
-import {log, uid, isBrowser} from '../utils';
+import {getShaderName, formatGLSLCompilerError} from './webgl-format-glsl-error';
+import {uid, isBrowser} from '../utils';
 import assert from 'assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
@@ -56,14 +56,8 @@ export class Shader {
     const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compiled) {
       const infoLog = gl.getShaderInfoLog(this.handle);
-      const error = formatCompilerError(infoLog, this.source, this.shaderType);
-
-      if (log.priority > 0) {
-        this.copyToClipboard(this.source);
-      }
-
+      const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
       this.delete();
-
       throw new Error(`Error while compiling the shader ${error}`);
     }
   }
