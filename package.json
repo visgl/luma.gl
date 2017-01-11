@@ -82,6 +82,7 @@
     "pre-commit": "^1.2.2",
     "source-map-support": "^0.4.2",
     "tap-browser-color": "^0.1.2",
+    "tape": "^4.6.3",
     "tape-catch": "^1.0.4",
     "tape-promise": "^1.1.0",
     "testron": "^1.2.0",
