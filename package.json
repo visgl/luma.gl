@@ -87,6 +87,6 @@
     "test-browser": "npm run build-watch && budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
     "test-electron": "browserify test/electron.js | testron | faucet",
     "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t brfs-babel | discify --open",
-    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' -- -t brfs-babel"
+    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' "
   }
 }
