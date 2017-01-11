@@ -5,6 +5,10 @@
 
 # Alpha releases
 
+### 3.0.0-alpha.3
+- Changed from `husky` to `pre-commit`
+- Removed `autobind-decorator` dependency
+
 ### 3.0.0-alpha2
 - `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
 - `probe` moved to `/experimental`
