@@ -116,6 +116,12 @@ export default class Model extends Object3D {
 
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
+
+    this.timeElapsedQuery = undefined;
+    this.lastQueryReturned = true;
+    this.accumulatedFrameTime = 0;
+    this.averageFrameTime = 0;
+    this.profileFrameCount = 0;
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -253,6 +259,14 @@ export default class Model extends Object3D {
     }
     const {isIndexed, indexType} = drawParams;
     const {geometry, isInstanced, instanceCount} = this;
+    const ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
+
+    if (this.lastQueryReturned === true) {
+      this.program.gl.getParameter(ext.GPU_DISJOINT_EXT);
+      this.timeElapsedQuery = ext.createQueryEXT();
+      ext.beginQueryEXT(ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
+    }
+
     draw(this.program.gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
@@ -261,6 +275,34 @@ export default class Model extends Object3D {
       isInstanced,
       instanceCount
     });
+
+    if (this.lastQueryReturned === true) {
+      ext.endQueryEXT(ext.TIME_ELAPSED_EXT);
+      this.profileFrameCount++;
+      this.lastQueryReturned = false;
+    }
+// ...at some point in the future, after returning control to the browser and being called again:
+    const disjoint = this.program.gl.getParameter(ext.GPU_DISJOINT_EXT);
+    if (disjoint) {
+      // Have to redo all of the measurements.
+    } else {
+      const available = ext.getQueryObjectEXT(this.timeElapsedQuery, ext.QUERY_RESULT_AVAILABLE_EXT);
+
+      if (available) {
+        const timeElapsed = ext.getQueryObjectEXT(this.timeElapsedQuery, ext.QUERY_RESULT_EXT) / 10e6;
+        this.accumulatedFrameTime += timeElapsed;
+        this.averageFrameTime = this.accumulatedFrameTime / this.profileFrameCount;
+        // Do something useful with the time.  Note that care should be
+        // taken to use all significant bits of the result, not just the
+        // least significant 32 bits.
+        console.log('program.id: ', this.program.id);
+        console.log('last frame time: ', timeElapsed, 'ms');
+        console.log('average frame time: ', this.averageFrameTime, 'ms');
+        console.log('accumulated frame time: ', this.accumulatedFrameTime, 'ms');
+        console.log('profile frame count: ', this.profileFrameCount);
+        this.lastQueryReturned = true;
+      }
+    }
 
     this.onAfterRender();
 
