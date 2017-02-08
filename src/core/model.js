@@ -60,6 +60,7 @@ export default class Model extends Object3D {
     render = null,
     onBeforeRender = () => {},
     onAfterRender = () => {},
+    timerQueryEnabled = false,
     ...opts
   } = {}) {
     // assert(program || program instanceof Program);
@@ -116,6 +117,16 @@ export default class Model extends Object3D {
 
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
+
+    this.timeElapsedQuery = undefined;
+    this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
+
+    this.lastQueryReturned = true;
+    this.accumulatedFrameTime = 0;
+    this.averageFrameTime = 0;
+    this.profileFrameCount = 0;
+
+    this.timerQueryEnabled = timerQueryEnabled && this.ext !== null;
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -253,6 +264,13 @@ export default class Model extends Object3D {
     }
     const {isIndexed, indexType} = drawParams;
     const {geometry, isInstanced, instanceCount} = this;
+
+    if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
+      this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      this.timeElapsedQuery = this.ext.createQueryEXT();
+      this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
+    }
+
     draw(this.program.gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
@@ -262,6 +280,38 @@ export default class Model extends Object3D {
       instanceCount
     });
 
+    if (this.timerQueryEnabled === true) {
+      if (this.lastQueryReturned === true) {
+        this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
+        this.profileFrameCount++;
+        this.lastQueryReturned = false;
+      }
+  // ...at some point in the future, after returning control to the browser and being called again:
+      const disjoint = this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      if (disjoint) {
+        this.lastQueryReturned = true;
+        // Have to redo all of the measurements.
+      } else {
+        const available = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+          this.ext.QUERY_RESULT_AVAILABLE_EXT);
+
+        if (available) {
+          const timeElapsed = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+            this.ext.QUERY_RESULT_EXT) / 1e6;
+          this.accumulatedFrameTime += timeElapsed;
+          this.averageFrameTime = this.accumulatedFrameTime / this.profileFrameCount;
+          // Do something useful with the time.  Note that care should be
+          // taken to use all significant bits of the result, not just the
+          // least significant 32 bits.
+          log.log(2, 'program.id: ', this.program.id);
+          log.log(2, 'last frame time: ', timeElapsed, 'ms');
+          log.log(2, 'average frame time: ', this.averageFrameTime, 'ms');
+          log.log(2, 'accumulated frame time: ', this.accumulatedFrameTime, 'ms');
+          log.log(2, 'profile frame count: ', this.profileFrameCount);
+          this.lastQueryReturned = true;
+        }
+      }
+    }
     this.onAfterRender();
 
     this.unsetProgramState();
