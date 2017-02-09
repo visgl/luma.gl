@@ -5,7 +5,7 @@
 
 # Alpha releases
 
-### 3.0.0-alpha4
+### 3.0.0-alpha.4
 - Performance query using EXT_disjoint_timer_query #121
 
 ### 3.0.0-alpha.3
