@@ -5,6 +5,9 @@
 
 # Alpha releases
 
+### 3.0.0-alpha4
+- Performance query using EXT_disjoint_timer_query #121
+
 ### 3.0.0-alpha.3
 - Changed from `husky` to `pre-commit`
 - Removed `autobind-decorator` dependency
