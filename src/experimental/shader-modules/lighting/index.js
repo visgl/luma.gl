@@ -1,7 +1,6 @@
 import {readFileSync} from 'fs';
 import {join} from 'path';
-
-import {Vector3} from '../../../math';
+import {Vector3} from '../../../packages/math';
 
 const commonShader = readFileSync(join(__dirname, './lighting-common.glsl'));
 

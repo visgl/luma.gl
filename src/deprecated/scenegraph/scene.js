@@ -2,7 +2,7 @@
 /* eslint-disable max-statements, no-try-catch */
 
 import * as config from '../../core/config';
-import {Vector3} from '../../math';
+import {Vector3} from '../../packages/math';
 import {merge} from '../../utils';
 import Group from './group';
 import {pickModels} from './pick';
@@ -97,17 +97,17 @@ export default class Scene extends Group {
 
   renderObject({model, uniforms}) {
     // Setup lighting and scene effects like fog, etc.
-    model.render({...this.getSceneUniforms(), ...uniforms});
+    model.render(Object.assign({}, this.getSceneUniforms(), {uniforms}));
     return this;
   }
 
-  pickModels({x, y, uniforms = {}, ...opts} = {}) {
-    return pickModels(this.gl, {
+  pickModels(opts = {}) {
+    const {x, y, uniforms = {}} = opts;
+    return pickModels(this.gl, Object.assign({
       group: this,
       x, y,
-      uniforms: {...uniforms},
-      ...opts
-    });
+      uniforms
+    }, opts));
   }
 
   // Setup the lighting system: ambient, directional, point lights.
@@ -116,13 +116,13 @@ export default class Scene extends Group {
     const {enable, ambient, directional, points} = this.config.lights;
 
     // Set light uniforms. Ambient and directional lights.
-    return {
-      ...this.getEffectsUniforms(),
-      enableLights: enable,
-      ...(enable && ambient ? this.getAmbientUniforms(ambient) : {}),
-      ...(enable && directional ? this.getDirectionalUniforms(directional) : {}),
-      ...(enable && points ? this.getPointUniforms(points) : {})
-    };
+    return Object.assign({},
+      this.getEffectsUniforms(),
+      {enableLights: enable},
+      (enable && ambient ? this.getAmbientUniforms(ambient) : {}),
+      (enable && directional ? this.getDirectionalUniforms(directional) : {}),
+      (enable && points ? this.getPointUniforms(points) : {})
+    );
   }
 
   getAmbientUniforms(ambient) {

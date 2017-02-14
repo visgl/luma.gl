@@ -1,5 +1,5 @@
-export * from './shader-tools';
-export * from './shader-modules';
-export * from './shaders';
+// Shader Tools
+export {registerShaderModules, assembleShaders, ShaderCache} from './shader-tools';
 
-export * from './models';
+// Register Shader Modules
+import './shader-modules';

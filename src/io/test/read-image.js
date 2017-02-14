@@ -1,4 +1,4 @@
-import '../../../headless';
+import 'luma.gl/headless';
 import {loadImage} from '../../../dist/io';
 import test from '../../setup';
 

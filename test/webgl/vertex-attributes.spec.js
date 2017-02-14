@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {createGLContext, VertexAttributes, isWebGL2Context} from '../../headless';
+import {createGLContext, VertexAttributes, isWebGL2Context} from 'luma.gl/headless';
 
 test('WebGL#VertexAttributes#enable', t => {
   const gl = createGLContext();
@@ -24,7 +24,7 @@ test('WebGL#VertexAttributes#enable', t => {
     VertexAttributes.disable(gl, i);
   }
 
-  t.equal(VertexAttributes.isEnabled(gl, 0), true, `vertex attribute 0 should **NOT** be disabled`);
+  t.equal(VertexAttributes.isEnabled(gl, 0), true, 'vertex attribute 0 should **NOT** be disabled');
   for (let i = 1; i < MAX_ATTRIBUTES; i++) {
     t.equal(VertexAttributes.isEnabled(gl, i), false, `vertex attribute ${i} should now be disabled`);
   }

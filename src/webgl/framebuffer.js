@@ -23,8 +23,10 @@ export default class Framebuffer {
   }
 
   /* eslint-disable max-statements */
-  constructor(gl, {id, ...params} = {}) {
+  constructor(gl, opts = {}) {
     assertWebGLContext(gl);
+
+    const {id} = opts;
 
     const handle = gl.createFramebuffer();
     if (!handle) {
@@ -43,7 +45,7 @@ export default class Framebuffer {
     this.height = 0;
     Object.seal(this);
 
-    this.resize(params);
+    this.resize(opts);
   }
   /* eslint-enable max-statements */
 
