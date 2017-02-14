@@ -1,6 +1,7 @@
 // NOTE: To use this example standalone (e.g. outside of deck.gl repo)
 // delete the local development overrides at the bottom of this file
 const {resolve} = require('path');
+const webpack = require('webpack');
 
 module.exports = {
   // bundle app.js and everything it imports, recursively.
@@ -9,7 +10,7 @@ module.exports = {
   },
 
   // inline source maps seem to work best
-  devtool: '#inline-source-map',
+  // devtool: '#inline-source-map',
 
   resolve: {
     alias: {
@@ -39,7 +40,13 @@ module.exports = {
         exclude: [/node_modules/]
       }
     ]
-  }
+  },
+  plugins: [
+    new webpack.LoaderOptionsPlugin({
+      minimize: true,
+      debug: false
+    })
+  ]
 };
 
 // DELETE THIS LINE WHEN COPYING THIS EXAMPLE FOLDER OUTSIDE OF DECK.GL
