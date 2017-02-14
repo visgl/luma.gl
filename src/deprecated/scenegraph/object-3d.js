@@ -1,5 +1,5 @@
 import {uid} from '../../utils';
-import {Vec3, Mat4} from '../../packages/math';
+import {Vec3, Mat4} from '../math';
 import assert from 'assert';
 
 export default class Object3D {

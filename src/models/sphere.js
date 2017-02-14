@@ -1,5 +1,5 @@
-import Model from '../core/model';
-import SphereGeometry from '../geometry';
+import {Model} from '../core';
+import {SphereGeometry} from '../geometry';
 import {uid} from '../utils';
 
 export default class Sphere extends Model {

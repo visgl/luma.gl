@@ -9,7 +9,7 @@ test('Math#types', t => {
 
 test('Math#construct and isArray check', t => {
   t.ok(isArray([]), 'isArray([])');
-  t.ok(isArray(new Float32Array()), 'isArray(Float32Array)');
+  t.ok(isArray(new Float32Array(1)), 'isArray(Float32Array)');
   t.notOk(isArray(new ArrayBuffer(4)), 'isArray(ArrayBuffer)');
   t.notOk(isArray(new DataView(new ArrayBuffer(16))), 'isArray(DataView)');
 

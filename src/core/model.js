@@ -7,7 +7,7 @@ import {
 } from '../webgl';
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
-import Geometry from '../geometry';
+import {Geometry} from '../geometry';
 import {SHADERS} from '../experimental/shaders';
 import assert from 'assert';
 

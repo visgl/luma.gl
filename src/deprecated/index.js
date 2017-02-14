@@ -1,2 +1,2 @@
-// export * from './math';
+export * from './math';
 export {default as FramebufferObject} from './fbo';

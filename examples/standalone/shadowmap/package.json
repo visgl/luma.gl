@@ -30,5 +30,13 @@
   "scripts": {
     "build": "browserify src/app.js > bundle.js",
     "start": "budo src/app.js:bundle.js -t babelify -t brfs-babel --live --open --port 3001 --watch-glob '**/*.{html,css,js}'"
+  },
+  "babel": {
+    "presets": ["es2015", "stage-2"],
+    "plugins": [
+      ["babel-plugin-transform-builtin-extend", {
+        "globals": ["Array"]
+      }]
+    ]
   }
 }

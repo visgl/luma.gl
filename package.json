@@ -49,30 +49,14 @@
     "test-fast": "npm run lint && node test/node.js | faucet",
     "test-node": "node test/node.js",
     "test-browser": "webpack-dev-server --config webpack.config.test-browser.js --progress --hot --open",
-    "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel"
-  },
-  "old-scripts": {
-    "build": "npm run build-clean && npm run build-dist && npm run build-script",
-    "build-clean": "rm -fr dist/*",
-    "build-dist": "babel src -d dist --source-maps inline --copy-files",
-    "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
-    "build-script": "browserify dist/bundle.js --debug -o dist/lumagl.js && cat dist/lumagl.js | uglifyjs > dist/lumagl.min.js",
+    "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
     "docs-gh-pages": "git subtree push --prefix _docs origin gh-pages",
     "docs-gh-pages-force": "git push origin `git subtree split --prefix _docs dev`:gh-pages --force",
-    "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages",
-    "test": "npm run lint && npm run build-dist && npm run test-headless-nowebgl && npm run test-headless",
-    "test-fast": "npm run lint && npm run test-headless && npm run test-headless-nowebgl",
-    "test-headless": "babel-node --include='' test/headless.js | faucet",
-    "test-headless-nowebgl": "babel-node --include='' test/headless-nowebgl.js | faucet",
-    "test-browser": "npm run build-watch && budo test/browser.js:build/test-bundle.js --dir test --live --open --port 3001 --watch-glob '**/*.{html,css,js,glsl}' -- -t babelify",
-    "test-electron": "browserify test/electron.js | testron | faucet",
-    "profile-disc": "browserify src/bundle.js --full-paths -t babelify -t brfs-babel | discify --open",
-    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' "
+    "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages"
   },
   "dependencies": {
-    "babel-polyfill": "^6.20.0",
     "gl-constants": "^1.0.0",
     "gl-matrix": "^2.3.2",
     "webgl-debug": "^1.0.2"

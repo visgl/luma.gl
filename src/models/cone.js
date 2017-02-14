@@ -1,5 +1,5 @@
-import ConeGeometry from '../geometry';
-import Model from '../core/model';
+import {ConeGeometry} from '../geometry';
+import {Model} from '../core';
 
 export default class Cone extends Model {
   constructor(opts = {}) {

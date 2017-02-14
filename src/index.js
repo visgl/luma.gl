@@ -6,6 +6,7 @@ export {isWebGLContext, isWebGL2Context} from './webgl/webgl-checks';
 export * from './webgl/context';
 
 // WebGL1
+export {default as GL} from './webgl/webgl-constants';
 export {default as Buffer} from './webgl/buffer';
 export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
@@ -50,6 +51,7 @@ export {default as Sphere} from './models/sphere';
 export {default as TruncatedCone} from './models/truncated-cone';
 
 // Math
+export {radians, degrees} from './packages/math/src/common';
 export {default as Vector2} from './packages/math/src/vector2';
 export {default as Vector3} from './packages/math/src/vector3';
 export {default as Vector4} from './packages/math/src/vector4';
@@ -69,6 +71,7 @@ import * as experimental from './experimental';
 export {experimental};
 
 // Deprecated in V3.0
+export {Vec3, Vec4, Mat4} from './deprecated/math';
 export * from './deprecated/scenegraph';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';
