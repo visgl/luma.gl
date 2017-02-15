@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {createGLContext, Program, isWebGLContext} from 'luma.gl/headless';
+import {createGLContext, Program} from 'luma.gl/headless';
 
 const vs = `
 attribute vec3 positions;
@@ -18,7 +18,7 @@ void main(void) {
 
 test('WebGL#draw', t => {
   const gl = createGLContext();
-  t.ok(isWebGLContext(gl), 'Created gl context');
+  t.ok(gl, 'Created gl context');
 
   const program = new Program(gl, {vs, fs});
   t.ok(program instanceof Program, 'Program construction successful');

@@ -1,10 +1,9 @@
 /* eslint-disable no-var, max-statements */
-/* global LumaGL */
 import {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
 
-new AnimationFrame()
+const animationFrame = new AnimationFrame()
 .context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl}) => {
   gl.clearColor(1, 1, 1, 1);
@@ -93,4 +92,11 @@ void main(void) {
 }
 `
   });
+}
+
+export default animationFrame;
+
+/* global window */
+if (typeof window !== 'undefined') {
+  window.app = animationFrame;
 }

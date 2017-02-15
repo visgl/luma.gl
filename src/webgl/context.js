@@ -272,10 +272,3 @@ function validateArgsAndLog(functionName, functionArgs) {
     /* eslint-enable no-debugger */
   }
 }
-
-// Deprecated methods
-
-export function getExtension(gl, extensionName) {
-  log.warn(0, 'luma.gl: getExtension is deprecated');
-  return getGLExtension(gl, extensionName);
-}
