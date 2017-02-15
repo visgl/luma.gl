@@ -17,21 +17,19 @@ class XHR {
     url,
     path = null,
     method = 'GET',
-    async = true,
+    asynchronous = true,
     noCache = false,
     // body = null,
     sendAsBinary = false,
     responseType = false,
     onProgress = noop,
-    onSuccess = noop,
     onError = noop,
     onAbort = noop,
-    onComplete = noop,
-    ...opt
+    onComplete = noop
   }) {
     this.url = path ? path.join(path, url) : url;
     this.method = method;
-    this.async = async;
+    this.async = asynchronous;
     this.noCache = noCache;
     this.sendAsBinary = sendAsBinary;
     this.responseType = responseType;
@@ -55,25 +53,23 @@ class XHR {
     return this;
   }
 
-  /* eslint-disable max-statements */
+  // /* eslint-disable max-statements */
   sendAsync(body = this.body || null) {
     return new Promise((resolve, reject) => {
       try {
-        const {
-          req, method, async, noCache, sendAsBinary, responseType
-        } = this;
+        const {req, method, noCache, sendAsBinary, responseType} = this;
 
         const url = noCache ?
           this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + Date.now() :
           this.url;
 
-        req.open(method, url, async);
+        req.open(method, url, this.async);
 
         if (responseType) {
           req.responseType = responseType;
         }
 
-        if (async) {
+        if (this.async) {
           req.onreadystatechange = e => {
             if (req.readyState === XHR_STATES.COMPLETED) {
               if (req.status === 200) {
@@ -91,7 +87,7 @@ class XHR {
           req.send(body);
         }
 
-        if (!async) {
+        if (!this.async) {
           if (req.status === 200) {
             resolve(req.responseType ? req.response : req.responseText);
           } else {

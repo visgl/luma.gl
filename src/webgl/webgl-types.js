@@ -39,7 +39,7 @@ export const webGLTypesAvailable =
 
 // Ensures that WebGL2RenderingContext is defined in non-WebGL2 environments
 // so that apps can test their gl contexts with instanceof
-// E.g. if (gl instanceof WebGL2RenderingContext) { ... }
+// E.g. if (gl instanceof WebGL2RenderingContext) { }
 function getWebGL2RenderingContext() {
   class WebGL2RenderingContextNotSupported {}
   return global.WebGL2RenderingContext || WebGL2RenderingContextNotSupported;

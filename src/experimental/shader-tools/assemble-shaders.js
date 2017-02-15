@@ -60,8 +60,7 @@ export function getPlatformShaderDefines(gl) {
 function assembleShader(gl, {
   source,
   type,
-  modules = [],
-  ...opts
+  modules = []
 }) {
   assert(typeof source === 'string', 'shader source must be a string');
 
@@ -91,16 +90,12 @@ ${moduleSource}
 /**
  * Apply set of modules
  */
-export function assembleShaders(gl, {
-  vs,
-  fs,
-  modules = [],
-  ...opts
-}) {
-  modules = getShaderDependencies(modules);
+export function assembleShaders(gl, opts = {}) {
+  const {vs, fs} = opts;
+  const modules = getShaderDependencies(opts.modules || []);
   return {
     gl,
-    vs: assembleShader(gl, {...opts, source: vs, type: VERTEX_SHADER, modules}),
-    fs: assembleShader(gl, {...opts, source: fs, type: FRAGMENT_SHADER, modules})
+    vs: assembleShader(gl, Object.assign({}, opts, {source: vs, type: VERTEX_SHADER, modules})),
+    fs: assembleShader(gl, Object.assign({}, opts, {source: fs, type: FRAGMENT_SHADER, modules}))
   };
 }

@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "start": "webpack-dev-server --progress --hot --open",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open"
+  },
+  "dependencies": {
+    "luma.gl": "3.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "buble-loader": "^0.4.0",
+    "json-loader": "^0.5.4",
+    "webpack-dev-server": "^2.2.0",
+    "webpack": "^2.2.1"
+  }
+}
