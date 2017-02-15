@@ -2,7 +2,7 @@
 import {
   ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry,
   PlaneGeometry, SphereGeometry
-} from '../../headless';
+} from 'luma.gl/headless';
 import test from 'tape-catch';
 
 const GEOMETRY_TESTS = [

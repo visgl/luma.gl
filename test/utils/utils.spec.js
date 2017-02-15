@@ -1,4 +1,4 @@
-import {merge, splat, noop, uid} from '../../dist/utils';
+import {merge, splat, noop, uid} from '../../src/utils';
 import test from 'tape-catch';
 
 test('Utils#merge', t => {

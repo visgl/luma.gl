@@ -7,7 +7,7 @@ import {
 } from '../webgl';
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
-import Geometry from './geometry';
+import {Geometry} from '../geometry';
 import {SHADERS} from '../experimental/shaders';
 import assert from 'assert';
 
@@ -31,7 +31,7 @@ export class Material {
 export default class Model extends Object3D {
 
   constructor(gl, opts = {}) {
-    opts = isWebGLContext(gl) ? {...opts, gl} : gl;
+    opts = isWebGLContext(gl) ? Object.assign({}, opts, {gl}) : gl;
     super(opts);
     this.init(opts);
   }
@@ -47,8 +47,8 @@ export default class Model extends Object3D {
     geometry,
     material = null,
     textures,
-    // Enables instanced rendering (needs shader support and extra attributes)
-    isInstanced = false,
+    isInstanced = false, // Enables instanced rendering
+    instanced, // deprecated
     instanceCount = 0,
     vertexCount = undefined,
     // Picking
@@ -60,8 +60,7 @@ export default class Model extends Object3D {
     render = null,
     onBeforeRender = () => {},
     onAfterRender = () => {},
-    timerQueryEnabled = false,
-    ...opts
+    timerQueryEnabled = false
   } = {}) {
     // assert(program || program instanceof Program);
     assert(geometry instanceof Geometry, 'Model needs a geometry');
@@ -75,11 +74,11 @@ export default class Model extends Object3D {
     this.program = program || new Program(gl, {vs, fs});
     assert(this.program instanceof Program, 'Model needs a program');
 
-    if (opts.instanced) {
+    if (instanced) {
       /* global console */
       /* eslint-disable no-console */
       console.warn(MSG_INSTANCED_PARAM_DEPRECATED);
-      isInstanced = isInstanced || opts.instanced;
+      isInstanced = isInstanced || instanced;
     }
 
     if (textures) {
@@ -100,11 +99,9 @@ export default class Model extends Object3D {
     this.attributes = {};
     this.setAttributes(attributes);
 
+    uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
     this.uniforms = {};
-    this.setUniforms({
-      ...this.program.defaultUniforms,
-      ...uniforms
-    });
+    this.setUniforms(uniforms);
 
     // instanced rendering
     this.isInstanced = isInstanced;
@@ -132,7 +129,6 @@ export default class Model extends Object3D {
   /* eslint-enable complexity */
 
   destroy() {
-    // TODO
   }
 
   get hash() {
@@ -226,18 +222,14 @@ export default class Model extends Object3D {
   // At least all special handling is collected here.
   addViewUniforms(uniforms) {
     // TODO - special treatment of these parameters should be removed
-    const {camera, viewMatrix, modelMatrix, ...otherUniforms} = uniforms;
+    const {camera, viewMatrix, modelMatrix} = uniforms;
     // Camera exposes uniforms that can be used directly in shaders
     const cameraUniforms = camera ? camera.getUniforms() : {};
 
     const viewUniforms = viewMatrix ?
       this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
 
-    return {
-      ...cameraUniforms,
-      ...viewUniforms,
-      ...otherUniforms
-    };
+    return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
   /*
@@ -357,12 +349,10 @@ export default class Model extends Object3D {
           this.buffers[attributeName] || new Buffer(gl);
 
         const buffer = this.buffers[attributeName];
-        buffer.setData({
-          ...attribute,
+        buffer.setData(Object.assign({}, attribute, {
           data: attribute.value,
-          target: attribute.isIndexed ?
-            GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
-        });
+          target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
+        }));
       }
     }
 
@@ -374,17 +364,14 @@ export default class Model extends Object3D {
       const attributeTable = this._getAttributesTable({
         header: `Attributes ${this.id}`,
         program: this.program,
-        attributes: {
-          ...this.geometry.attributes,
-          ...this.attributes
-        }
+        attributes: Object.assign({}, this.geometry.attributes, this.attributes)
       });
       log.table(priority, attributeTable);
 
       const {table, unusedTable, unusedCount} = getUniformsTable({
         header: `Uniforms ${this.id}`,
         program: this.program,
-        uniforms: {...this.uniforms, ...uniforms}
+        uniforms: Object.assign({}, this.uniforms, uniforms)
       });
       log.table(priority, table);
       log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
@@ -466,7 +453,6 @@ export default class Model extends Object3D {
 
   // DEPRECATED / REMOVED
   setTextures(textures = []) {
-    throw new Error(
-      'model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
+    throw new Error('model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
   }
 }
