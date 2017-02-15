@@ -81,6 +81,9 @@ export function createGLContext(opts = {}) {
     if (webgl2) {
       gl = canvas.getContext('webgl2', opts);
       gl = gl || canvas.getContext('experimental-webgl2', opts);
+      if (gl) {
+        gl.webgl2 = true;
+      }
     }
     gl = gl || canvas.getContext('webgl', opts);
     gl = gl || canvas.getContext('experimental-webgl', opts);
