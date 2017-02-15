@@ -1,15 +1,20 @@
-# Beta releases
+# Prereleases
 
-# Pre releases
+Note: Unfortunately 3.0.0-beta6 was published without beta tag and takes
+precedence when using wildcard installs.
+
+### 3.0.0-beta.7
+- Bump version to avoid confusion with older incorrectly numbered beta versions
+- Replace wildcard exports with named exports in index.js
+- Remove all Work In Progress Examples - Focus on working code
+- Multiple examples now work standalone
 
 ### 3.0.0-beta.3
 - ES6 Conformant code base: stage-2 extensions removed
 - Experimental tree-shaking support: dist and dist-es6 directories
 - Webpack based build
 
-### 3.0.0-beta2 - obsolete, folded into master
-
-### 3.0.0-beta1 - obsolete, folded into master
+### 3.0.0-beta1 - 3.0.0-beta6 obsolete, folded into master
 
 ### 3.0.0-alpha.4
 - Performance query using EXT_disjoint_timer_query #121

@@ -2,10 +2,10 @@
 // export * from './math';
 
 // WebGL
-export {createGLContext, getGLExtension, glContextWithState, glGetDebugInfo} from './webgl/context';
+export {default as GL} from './webgl/webgl-constants';
 
 // WebGL1
-export {default as GL} from './webgl/webgl-constants';
+export {createGLContext, getGLExtension, glContextWithState, glGetDebugInfo} from './webgl/context';
 export {default as Buffer} from './webgl/buffer';
 export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
@@ -14,6 +14,7 @@ export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 export {draw} from './webgl/draw';
+export {isWebGLContext, isWebGL2Context} from './webgl/webgl-checks';
 
 // WebGL2 & Extensions
 export {default as TimerQuery} from './webgl/timer-query';
@@ -43,6 +44,8 @@ export {default as Plane} from './models/plane';
 export {default as Sphere} from './models/sphere';
 export {default as TruncatedCone} from './models/truncated-cone';
 
+export {default as ClipSpaceQuad} from './models/clip-space-quad';
+
 // Math
 export {radians, degrees} from './packages/math/src/common';
 export {default as Vector2} from './packages/math/src/vector2';
@@ -68,12 +71,14 @@ import {registerShaderModules, assembleShaders, ShaderCache}
 import './experimental/shader-modules';
 
 export const experimental = {
-  registerShaderModules, assembleShaders, ShaderCache
+  registerShaderModules,
+  assembleShaders,
+  ShaderCache
 };
 
 // DEPRECATED IN V3.0
 export {Vec3, Vec4, Mat4} from './deprecated/math';
-export * from './deprecated/scenegraph';
+export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
+export {default as FramebufferObject} from './deprecated/fbo';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';
-export * from './deprecated';
