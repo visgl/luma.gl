@@ -1,5 +1,4 @@
-/* global LumaGL */
-const {AnimationFrame, createGLContext, ClipSpaceQuad} = LumaGL;
+import {AnimationFrame, createGLContext, ClipSpaceQuad} from 'luma.gl';
 
 // CONTEXT 0 - CONCENTRICS
 
@@ -19,7 +18,7 @@ void main(void) {
 }
 `;
 
-new AnimationFrame()
+const animationFrame2 = new AnimationFrame()
 .context(() => createGLContext({canvas: 'canvas-0'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
@@ -60,7 +59,7 @@ void main(void) {
 }
 `;
 
-new AnimationFrame()
+const animationFrame1 = new AnimationFrame()
 .context(() => createGLContext({canvas: 'canvas-1'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_1_FRAGMENT_SHADER})
@@ -74,3 +73,13 @@ new AnimationFrame()
 .frame(({tick, clipSpaceQuad}) => {
   clipSpaceQuad.render({uTime: tick * 0.01});
 });
+
+export default animationFrame1;
+
+/* global window */
+if (typeof window !== 'undefined') {
+  window.startApp = function startApp() {
+    animationFrame1.start();
+    animationFrame2.start();
+  };
+}

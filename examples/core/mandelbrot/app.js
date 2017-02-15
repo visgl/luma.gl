@@ -1,5 +1,5 @@
-/* global LumaGL, document */
-const {AnimationFrame, createGLContext, ClipSpaceQuad} = LumaGL;
+/* global document */
+import {AnimationFrame, createGLContext, ClipSpaceQuad} from 'luma.gl';
 
 // CONTEXT 0 - CONCENTRICS
 
@@ -19,7 +19,7 @@ void main(void) {
 }
 `;
 
-new AnimationFrame()
+const animationFrame1 = new AnimationFrame()
 .context(() => createGLContext({canvas: 'canvas-0'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
@@ -91,7 +91,7 @@ const zoomThreshold = 1e5;
 const zoomCenterX = -0.0150086889504513;
 const zoomCenterY = 0.78186693904085048;
 
-new AnimationFrame()
+const animationFrame2 = new AnimationFrame()
 .context(() => createGLContext({canvas: 'canvas-1'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_1_FRAGMENT_SHADER})
@@ -140,68 +140,12 @@ new AnimationFrame()
     .render();
 });
 
-/* SHADERTOY SMOOTH SHADER
-<script id="shader-fs" type="x-shader/x-fragment">
-  precision mediump float
+export default animationFrame1;
 
-  varying vec2 vPosition;
-
-  void main(void) {
-    float cx = vPosition.x;
-    float cy = vPosition.y;
-
-    float hue;
-    float saturation;
-    float value;
-    float hueRound;
-    int hueIndex;
-    float f;
-    float p;
-    float q;
-    float t;
-
-    float x = 0.0;
-    float y = 0.0;
-    float tempX = 0.0;
-    int i = 0;
-    int runaway = 0;
-    for (int i=0; i < 100; i++) {
-      tempX = x * x - y * y + float(cx);
-      y = 2.0 * x * y + float(cy);
-      x = tempX;
-      if (runaway == 0 && x * x + y * y > 100.0) {
-        runaway = i;
-      }
-    }
-
-    if (runaway != 0) {
-      hue = float(runaway) / 200.0;
-      saturation = 0.6;
-      value = 1.0;
-
-      hueRound = hue * 6.0;
-      hueIndex = int(mod(float(int(hueRound)), 6.0));
-      f = fract(hueRound);
-      p = value * (1.0 - saturation);
-      q = value * (1.0 - f * saturation);
-      t = value * (1.0 - (1.0 - f) * saturation);
-
-      if (hueIndex == 0)
-        gl_FragColor = vec4(value, t, p, 1.0);
-      else if (hueIndex == 1)
-        gl_FragColor = vec4(q, value, p, 1.0);
-      else if (hueIndex == 2)
-        gl_FragColor = vec4(p, value, t, 1.0);
-      else if (hueIndex == 3)
-        gl_FragColor = vec4(p, q, value, 1.0);
-      else if (hueIndex == 4)
-        gl_FragColor = vec4(t, p, value, 1.0);
-      else if (hueIndex == 5)
-        gl_FragColor = vec4(value, p, q, 1.0);
-
-    } else {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    }
-  }
-</script>
-*/
+/* global window */
+if (typeof window !== 'undefined') {
+  window.startApp = function startApp() {
+    animationFrame1.start();
+    animationFrame2.start();
+  };
+}

@@ -20,8 +20,6 @@
     <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
     <script type="text/javascript" src="../../../dist/lumagl.js"></script>
     <script type="text/javascript" src="../examples.js"></script>
-    <script type="text/javascript" src="noise.js"></script>
-    <script type="text/javascript" src="index.js"></script>
 
     <script id="lights-vs" type="x-shader/x-vertex">
       precision highp float;
@@ -137,6 +135,9 @@
 
   <body>
     <canvas id="render-canvas"></canvas>
+    <script type="text/javascript" src="noise.js"></script>
+    <script type="text/javascript" src="bundle.js"></script>
+    <script>window.app.start(); // eslint-disable-line</script>
   </body>
 
 </html>

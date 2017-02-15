@@ -1,9 +1,8 @@
-/* global document, LumaGL */
-const {GL, AnimationFrame, createGLContext, Matrix4, radians} = LumaGL;
-const {loadTextures, Program, Buffer, Scene, Sphere} = LumaGL;
-const {Framebuffer, pickModels} = LumaGL;
-const {Vec3} = LumaGL;
-const {SHADERS} = LumaGL;
+/* global document */
+import {
+  GL, AnimationFrame, createGLContext, Matrix4, Vec3, radians,
+  loadTextures, Buffer, Sphere, Framebuffer, Scene, pickModels
+} from 'luma.gl';
 
 const pick = {x: 0, y: 0};
 

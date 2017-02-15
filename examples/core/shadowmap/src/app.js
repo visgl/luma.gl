@@ -1,11 +1,7 @@
-// import 'babel-polyfill';
-// import {GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3, Renderer}
-//   from '../../../../src/index.js';
-
-/* global LumaGL */
-const {AnimationFrame, createGLContext} = LumaGL;
-const {GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3} = LumaGL;
-
+import {
+  AnimationFrame, createGLContext,
+  GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3
+} from 'luma.gl';
 
 const SCENE_FRAGMENT = `\
 #ifdef GL_ES

@@ -100,7 +100,6 @@ export default class AnimationFrame {
    */
   frame(onRenderFrame) {
     this._onRenderFrame = onRenderFrame;
-    this._restartFrame();
     return this;
   }
 
@@ -108,7 +107,9 @@ export default class AnimationFrame {
    * Starts a render loop if not already running
    */
   start() {
-    this._startPromise.then(() => {
+    // Wait for start promise before rendering frame
+    this._startPromise.then((appContext = {}) => {
+      this._initializeContext(appContext);
       if (!this._animationFrameId) {
         this._animationFrameId = requestAnimationFrame(this._frame);
       }
@@ -141,15 +142,20 @@ export default class AnimationFrame {
 
   // PRIVATE METHODS
 
-  _initializeContext() {
-    this._context = {
-      gl: this.gl,
-      canvas: this.gl.canvas,
-      stop: this.stop,
-      tick: 0,
-      tock: 0
-    };
+  _initializeContext(appContext) {
+    if (!this._context) {
+      this._context = {
+        gl: this.gl,
+        canvas: this.gl.canvas,
+        stop: this.stop,
+        tick: 0,
+        tock: 0
+      };
+    }
     this._updateContext();
+    if (typeof appContext === 'object' && appContext !== null) {
+      this._context = Object.assign({}, appContext, this._context);
+    }
   }
 
   _updateContext() {
@@ -158,19 +164,6 @@ export default class AnimationFrame {
     this._context.width = canvas.width;
     this._context.height = canvas.height;
     this._context.aspect = canvas.width / canvas.height;
-  }
-
-  _restartFrame() {
-    this.stop();
-    // Wait for start promise before rendering frame
-    this._startPromise.then((appContext = {}) => {
-      this._initializeContext();
-
-      if (typeof appContext === 'object' && appContext !== null) {
-        this._context = Object.assign({}, appContext, this._context);
-      }
-      this.start();
-    });
   }
 
   /**
