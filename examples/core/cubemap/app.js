@@ -1,9 +1,7 @@
-/* global LumaGL, document */
-const {createGLContext, AnimationFrame} = LumaGL;
-const {GL, TextureCube, Cube} = LumaGL;
-const {Matrix4, radians} = LumaGL;
+/* global document */
+import {createGLContext, AnimationFrame, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
 
-new AnimationFrame()
+const animationFrame = new AnimationFrame()
 .context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);
@@ -168,4 +166,11 @@ function drawTexture({ctx, sign, axis, size}) {
   ctx.fillText(`${sign}-${axis}`, size / 2, size / 2);
   ctx.strokeStyle = color;
   ctx.strokeRect(0, 0, size, size);
+}
+
+export default animationFrame;
+
+/* global window */
+if (typeof window !== 'undefined') {
+  window.app = animationFrame;
 }

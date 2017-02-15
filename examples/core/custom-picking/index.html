@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
   <script type="text/javascript" src="../../lumagl.js"></script>
   <script type="text/javascript" src="../examples.js"></script>
-  <script type="text/javascript" src="index.js"></script>
 
   <style>
     body {
@@ -38,8 +37,10 @@
 </head>
 
 
-<body>
-  <div id='altitude'></div>
-</body>
+  <body>
+    <div id='altitude'></div>
+    <script type="text/javascript" src="bundle.js"></script>
+    <script>window.app.start(); // eslint-disable-line</script>
+  </body>
 
 </html>

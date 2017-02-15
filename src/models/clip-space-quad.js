@@ -1,5 +1,6 @@
 // ClipSpaceQuad
-import {Model, Geometry} from '../core';
+import {Model} from '../core';
+import {Geometry} from '../geometry';
 import {GL} from '../webgl';
 
 const CLIPSPACE_QUAD_VERTEX_SHADER = `\
