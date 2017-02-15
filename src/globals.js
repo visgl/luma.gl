@@ -32,4 +32,4 @@ if (_global.luma && _global.luma.VERSION !== luma.VERSION) {
 }
 _global.luma = luma;
 
-module.exports = luma;
+export default luma;

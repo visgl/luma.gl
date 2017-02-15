@@ -61,7 +61,7 @@ export default class Probe {
     this._iterationsTs = null;
     // Configuration
     this._config = config.ignoreEnvironment ?
-      {...DEFAULT_CONFIG} :
+      Object.assign({}, DEFAULT_CONFIG) :
       this._getConfigFromEnvironment();
     // Override with new configuration, if any
     this.configure(config);
@@ -115,7 +115,7 @@ export default class Probe {
    * @return {Probe} self, to support chaining
    */
   configure(config = {}) {
-    const newConfig = {...this._config, ...config};
+    const newConfig = Object.assign({}, this._config, config);
     this._config = newConfig;
     // if (!IS_NODE) {
     //   const serialized = JSON.stringify(newConfig);
@@ -204,7 +204,7 @@ export default class Probe {
 
   _log(level, name, meta = {}) {
     const times = this._getElapsedTime();
-    const logRow = {level, name, ...times, ...meta};
+    const logRow = Object.assign({level, name}, times, meta);
     // duration handling
     if (meta.start) {
       this._startStore[name] = timestamp();
@@ -282,7 +282,7 @@ export default class Probe {
       probeData.count += 1;
       probeData.averageTime = probeData.timeSum / probeData.count;
 
-      this._log(level, name, {...meta, averageTime: probeData.averageTime});
+      this._log(level, name, Object.assign({}, meta, {averageTime: probeData.averageTime}));
 
       // Weight more heavily on later samples. Otherwise it gets almost
       // impossible to see outliers after a while.
@@ -314,7 +314,8 @@ export default class Probe {
     this._fps(3, ...args);
   }
 
-  _fps(level, name = 'default', {count = 10, ...meta} = {}) {
+  _fps(level, name = 'default', opts = {}) {
+    const {count = 10} = opts;
     if (this._shouldLog(level)) {
       const fpsLog = this._fpsStore;
       const fpsData = fpsLog[name];
@@ -324,7 +325,7 @@ export default class Probe {
         const fps = fpsData.count / (timestamp() - fpsData.time);
         fpsData.count = 0;
         fpsData.time = timestamp();
-        this._log(level, name, {...meta, fps});
+        this._log(level, name, Object.assign({fps}, opts));
       }
     }
   }
@@ -354,7 +355,7 @@ export default class Probe {
       // External probes are expected to provide epoch timestamps
       const total = timeStart - this._startEpochTs;
       const delta = timeSpent;
-      this._log(level, name, {total, delta, ...meta});
+      this._log(level, name, Object.assign({total, delta}, meta));
     }
   }
 
@@ -382,7 +383,7 @@ export default class Probe {
         customConfig = JSON.parse(serialized);
       }
     }
-    return {...DEFAULT_CONFIG, ...customConfig};
+    return Object.assign({}, DEFAULT_CONFIG, customConfig);
   }
 
   /* Count iterations per second. Runs the provided function a

@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {createGLContext, Texture2D} from '../../dist/headless';
+import {createGLContext, Texture2D} from 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()
