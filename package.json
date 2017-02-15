@@ -24,11 +24,10 @@
   "main": "dist/index.js",
   "module": "dist-es6/index.js",
   "files": [
+    "src",
     "dist",
     "dist-es6",
-    "src",
-    "headless.js",
-    "experimental.js"
+    "headless.js"
   ],
   "scripts": {
     "start-webpack": "(cd examples/main && yarn && npm run start-local)",

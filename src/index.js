@@ -2,8 +2,7 @@
 // export * from './math';
 
 // WebGL
-export {isWebGLContext, isWebGL2Context} from './webgl/webgl-checks';
-export * from './webgl/context';
+export {createGLContext, getGLExtension, glContextWithState, glGetDebugInfo} from './webgl/context';
 
 // WebGL1
 export {default as GL} from './webgl/webgl-constants';
@@ -14,17 +13,11 @@ export {default as Framebuffer} from './webgl/framebuffer';
 export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
-
-import * as VertexAttributes from './webgl/vertex-attributes';
-export {VertexAttributes};
+export {draw} from './webgl/draw';
 
 // WebGL2 & Extensions
 export {default as TimerQuery} from './webgl/timer-query';
 export {default as VertexArrayObject} from './webgl/vertex-array-object';
-
-// Functions
-export * from './webgl/draw';
-export * from './webgl/uniforms';
 
 // Core
 export {default as Model} from './core/model';
@@ -66,20 +59,21 @@ export {
   loadProgram, loadModel, parseModel
 } from './io';
 
-// Experimental modules
-import * as experimental from './experimental';
-export {experimental};
+// EXPERIMENTAL MODULES
 
-// Deprecated in V3.0
+// Shader Tools
+import {registerShaderModules, assembleShaders, ShaderCache}
+  from './experimental/shader-tools';
+// Register Shader Modules
+import './experimental/shader-modules';
+
+export const experimental = {
+  registerShaderModules, assembleShaders, ShaderCache
+};
+
+// DEPRECATED IN V3.0
 export {Vec3, Vec4, Mat4} from './deprecated/math';
 export * from './deprecated/scenegraph';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';
 export * from './deprecated';
-
-// import * as scenegraph from './deprecated/scenegraph';
-// import {default as Shaders} from './deprecated/shaderlib';
-// import {default as Fx} from './addons/fx';
-// import * as deprecated from './deprecated';
-// import * as io from './io';
-// import luma from './globals';
