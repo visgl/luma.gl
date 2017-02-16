@@ -1199,9 +1199,9 @@ longest@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/longest/-/longest-1.0.1.tgz#30a0b2da38f73770e8294a0d22e6625ed77d0097"
 
-luma.gl@3.0.0-beta.3:
-  version "3.0.0-beta.3"
-  resolved "https://registry.yarnpkg.com/luma.gl/-/luma.gl-3.0.0-beta.3.tgz#290d9b9c9a3664698f9b26abe4911be7e0e32837"
+luma.gl@3.0.0-beta.7:
+  version "3.0.0-beta.7"
+  resolved "https://registry.yarnpkg.com/luma.gl/-/luma.gl-3.0.0-beta.7.tgz#d0bbe67781de81c3c07da0ae94c3ad5875920199"
   dependencies:
     gl-constants "^1.0.0"
     gl-matrix "^2.3.2"

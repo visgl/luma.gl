@@ -1,7 +1,8 @@
 /* eslint-disable max-len, max-statements */
 /* global setInterval, clearInterval */
 import test from 'tape-catch';
-import {createGLContext, poll, TimerQuery} from 'luma.gl/headless';
+import {createGLContext, poll, TimerQuery} from 'luma.gl';
+import 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()

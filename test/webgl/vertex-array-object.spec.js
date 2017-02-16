@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {createGLContext} from 'luma.gl/headless';
+import {createGLContext} from 'luma.gl';
+import 'luma.gl/headless';
 import {VertexArrayObject} from 'luma.gl';
 
 const fixture = {

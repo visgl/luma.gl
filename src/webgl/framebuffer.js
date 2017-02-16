@@ -75,7 +75,7 @@ export default class Framebuffer {
       return;
     }
 
-    log.log(1, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+    log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
 
     const {gl} = this;
 
