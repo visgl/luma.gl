@@ -3,6 +3,9 @@
 Note: Unfortunately 3.0.0-beta6 was published without beta tag and takes
 precedence when using wildcard installs.
 
+### 3.0.0-beta.9
+- FIX: Additional fix for regression in geometry constructor
+
 ### 3.0.0-beta.8
 - FIX: Regression in geometry constructor (support deprecated mode)
 - FIX: Initialization of global and startup logging
