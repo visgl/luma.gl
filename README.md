@@ -60,8 +60,8 @@ even machines that do not have GPUs.
 
 To do this, your application should import 'luma.gl/headless':
 ```js
-import {createGLContext, Model, ...} from 'luma.gl/headless';
-
+import 'luma.gl/headless';
+import {createGLContext, Model, ...} from 'luma.gl';
 const gl = createGLContext({width, height, ...});
 ```
 

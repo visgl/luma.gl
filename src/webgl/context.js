@@ -6,9 +6,11 @@ import {assertWebGLContext, isWebGL2Context}
   from './webgl-checks';
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
-import luma from '../globals';
+import {global} from '../utils/globals';
 import assert from 'assert';
 /* global document */
+
+const {luma} = global;
 
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
@@ -23,11 +25,6 @@ const ERR_HEADLESSGL_NOT_AVAILABLE =
 
 const ERR_HEADLESSGL_FAILED =
 'headlessGL failed to create headless WebGL context';
-
-const STARTUP_MESSAGE = `\
-Assign luma.log.priority in console to control logging: \
-0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
-luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
@@ -99,8 +96,6 @@ export function createGLContext(opts = {}) {
     log.priority = log.priority < 1 ? 1 : log.priority;
 
     logInfo(gl);
-
-    log.once(0, STARTUP_MESSAGE);
   }
 
   return gl;
@@ -219,7 +214,7 @@ function logInfo(gl) {
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0, `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
+  log.log(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);

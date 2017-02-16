@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {createGLContext, isWebGL2Context} from 'luma.gl/headless';
+import 'luma.gl/headless';
+import {createGLContext, isWebGL2Context} from 'luma.gl';
 import * as VertexAttributes from 'luma.gl/webgl/vertex-attributes';
 
 test('WebGL#VertexAttributes#enable', t => {

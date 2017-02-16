@@ -1,4 +1,5 @@
-import {createGLContext, Buffer, isWebGLContext} from 'luma.gl/headless';
+import {createGLContext, Buffer, isWebGLContext} from 'luma.gl';
+import 'luma.gl/headless';
 import test from 'tape-catch';
 
 const fixture = {

@@ -6,9 +6,8 @@
 //      library code.
 //    - Exports types from headless gl when running under Node.js
 
-import luma from '../globals';
-
-const global = luma.global;
+import {global} from '../utils/globals';
+const {luma} = global;
 
 class DummyType {}
 

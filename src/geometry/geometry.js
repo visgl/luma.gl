@@ -1,16 +1,19 @@
 import {uid} from '../utils';
+import {log} from '../utils';
 import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
 
 export default class Geometry {
 
-  constructor({
-    id,
-    drawMode = 'TRIANGLES',
-    vertexCount = undefined,
-    attributes = {}
-  } = {}) {
+  constructor(opts = {}) {
+    const {
+      id,
+      drawMode = 'TRIANGLES',
+      vertexCount = undefined,
+      attributes = {}
+    } = opts;
+
     assert(drawMode, ILLEGAL_ARG);
 
     this.id = id || uid(this.constructor.name);
@@ -21,7 +24,17 @@ export default class Geometry {
     this.userData = {};
     Object.seal(this);
 
-    this.setAttributes(attributes);
+    if (attributes) {
+      this.setAttributes(attributes);
+    } else {
+      log.once('Geometry: top-level attributes are deprecated, use "attributes" param');
+      // TODO this is deprecated
+      delete opts.id;
+      delete opts.drawMode;
+      delete opts.vertexCount;
+      delete opts.attributes;
+      this.setAttributes(opts);
+    }
   }
 
   setNeedsRedraw(redraw = true) {
