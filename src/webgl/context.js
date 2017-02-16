@@ -79,14 +79,12 @@ export function createGLContext(opts = {}) {
 
     // Prefer webgl2 over webgl1, prefer conformant over experimental
     if (webgl2) {
-      gl = canvas.getContext('webgl2', opts);
+      gl = gl || canvas.getContext('webgl2', opts);
       gl = gl || canvas.getContext('experimental-webgl2', opts);
-      if (gl) {
-        gl.webgl2 = true;
-      }
+    } else {    
+      gl = gl || canvas.getContext('webgl', opts);
+      gl = gl || canvas.getContext('experimental-webgl', opts);
     }
-    gl = gl || canvas.getContext('webgl', opts);
-    gl = gl || canvas.getContext('experimental-webgl', opts);
 
     assert(gl, 'Failed to create WebGLRenderingContext');
   }

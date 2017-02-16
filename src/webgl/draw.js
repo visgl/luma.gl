@@ -3,8 +3,7 @@
 // One of the good things about GL is that there are so many ways to draw things
 import {getExtension} from './context';
 import {GL, glGet} from './webgl';
-import {assertWebGLContext, assertDrawMode, assertIndexType}
-  from './webgl-checks';
+import {assertWebGLContext, assertDrawMode, assertIndexType, isWebGL2Context} from './webgl-checks';
 import assert from 'assert';
 
 // A good thing about webGL is that there are so many ways to draw things,
@@ -32,9 +31,10 @@ export function draw(gl, {
 
   // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
   if (isInstanced) {
+    const webgl2 = isWebGL2Context(gl);
     const extension = gl.getExtension('ANGLE_instanced_arrays');
-    const context = gl.webgl2 ? gl : extension;
-    const suffix = gl.webgl2 ? '' : 'ANGLE';
+    const context = webgl2 ? gl : extension;
+    const suffix = webgl2 ? '' : 'ANGLE';
     const drawElements = 'drawElementsInstanced' + suffix;
     const drawArrays = 'drawArraysInstanced' + suffix;
     
