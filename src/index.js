@@ -1,5 +1,7 @@
 // Export core modules for luma.gl
-// export * from './math';
+
+// Initialize any global state
+import './init';
 
 // WebGL
 export {default as GL} from './webgl/webgl-constants';
