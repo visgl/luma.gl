@@ -11,7 +11,7 @@ export default class Geometry {
       id,
       drawMode = 'TRIANGLES',
       vertexCount = undefined,
-      attributes = {}
+      attributes
     } = opts;
 
     assert(drawMode, ILLEGAL_ARG);
