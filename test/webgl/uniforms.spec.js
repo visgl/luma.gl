@@ -1,6 +1,7 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-catch';
-import {createGLContext, Program, Texture2D} from 'luma.gl/headless';
+import {createGLContext, Program, Texture2D} from 'luma.gl';
+import 'luma.gl/headless';
 import {checkUniformValues} from 'luma.gl/webgl/uniforms';
 
 const gl = createGLContext();

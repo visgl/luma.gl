@@ -3,6 +3,11 @@
 Note: Unfortunately 3.0.0-beta6 was published without beta tag and takes
 precedence when using wildcard installs.
 
+### 3.0.0-beta.8
+- FIX: Regression in geometry constructor (support deprecated mode)
+- FIX: Initialization of global and startup logging
+- FIX: Ensure framebuffer resize logging is not visible by default
+
 ### 3.0.0-beta.7
 - Bump version to avoid confusion with older incorrectly numbered beta versions
 - Replace wildcard exports with named exports in index.js

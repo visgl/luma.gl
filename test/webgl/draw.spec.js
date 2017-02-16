@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {createGLContext, Program} from 'luma.gl/headless';
+import 'luma.gl/headless';
+import {createGLContext, Program} from 'luma.gl';
 
 const vs = `
 attribute vec3 positions;

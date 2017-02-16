@@ -1,7 +1,5 @@
 /* eslint-disable no-console */
 /* global console */
-import luma from '../globals';
-
 const cache = {};
 
 const log = {
@@ -65,8 +63,5 @@ export function formatValue(v, opts = {}) {
   const decimal = string.indexOf('.0');
   return decimal === string.length - 2 ? string.slice(0, -1) : string;
 }
-
-// Make available in browser console
-luma.log = log;
 
 export default log;
