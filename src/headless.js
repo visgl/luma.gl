@@ -1,11 +1,11 @@
 import './init';
 import isBrowser from './utils/is-browser';
-import {global} from './utils/globals';
+import luma from './init';
 
 if (!isBrowser) {
-  global.luma.globals.headlessGL = require('gl');
-  global.luma.globals.headlessTypes = require('gl/wrap');
-  if (!global.luma.globals.headlessTypes.WebGLRenderingContext) {
+  luma.globals.headlessGL = require('gl');
+  luma.globals.headlessTypes = require('gl/wrap');
+  if (!luma.globals.headlessTypes.WebGLRenderingContext) {
     throw new Error('Could not access headless WebGL type definitions');
   }
 }
