@@ -7,8 +7,7 @@ import ndarray from 'ndarray';
 import {readFile, writeFile} from 'fs';
 
 import {promisify} from '../../utils';
-import {global} from '../../utils/globals';
-const {luma} = global;
+import luma from '../../init';
 
 /**
  * Returns data bytes representing a compressed image in PNG or JPG format,
