@@ -1,0 +1,8 @@
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+}
