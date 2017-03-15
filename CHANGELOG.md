@@ -1,8 +1,32 @@
 # Beta releases
 
+# Pre releases
+
+### 3.0.0-beta.3
+- ES6 Conformant code base: stage-2 extensions removed
+- Experimental tree-shaking support: dist and dist-es6 directories
+- Webpack based build
+
 ### 3.0.0-beta2 - obsolete, folded into master
+
 ### 3.0.0-beta1 - obsolete, folded into master
 
+### 3.0.0-alpha.4
+- Performance query using EXT_disjoint_timer_query #121
+
+### 3.0.0-alpha.3
+- Changed from `husky` to `pre-commit`
+- Removed `autobind-decorator` dependency
+
+### 3.0.0-alpha2
+- `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
+- `probe` moved to `/experimental`
+- `webgl` folder now contains both webgl1 and webgl2 classes
+
+### 3.0.0-alpha1
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
 
 # Official releases
 

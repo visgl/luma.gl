@@ -31,21 +31,25 @@ luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
-export function createGLContext({
-  // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
-  canvas,
-  // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
-  width = 800,
-  height = 600,
-  // COMMON CONTEXT PARAMETERS
-  // Attempt to allocate WebGL2 context
-  webgl2 = false,
-  // Instrument context (at the expense of performance)
-  // Note: currently defaults to true and needs to be explicitly turned off
-  debug = true,
-  // Other options are passed through to context creator
-  ...opts
-} = {}) {
+export function createGLContext(opts = {}) {
+  let {
+    // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
+    canvas
+  } = opts;
+
+  const {
+    // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
+    width = 800,
+    height = 600,
+    // COMMON CONTEXT PARAMETERS
+    // Attempt to allocate WebGL2 context
+    webgl2 = false,
+    // Instrument context (at the expense of performance)
+    // Note: currently defaults to true and needs to be explicitly turned off
+    debug = true
+    // Other options are passed through to context creator
+  } = opts;
+
   let gl;
 
   if (!isBrowser) {
@@ -95,7 +99,7 @@ export function createGLContext({
 
     logInfo(gl);
 
-    log.log(0, STARTUP_MESSAGE);
+    log.once(0, STARTUP_MESSAGE);
   }
 
   return gl;
@@ -212,10 +216,9 @@ export function glGetDebugInfo(gl) {
 function logInfo(gl) {
   const webGL = isWebGL2Context(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
-  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
+  const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0,
-    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
+  log.log(0, `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);

@@ -1,9 +1,6 @@
 import {GL} from './webgl';
 import {assertWebGLContext} from './webgl-checks';
 import Texture from './texture';
-import Buffer from './buffer';
-// TODO - looks like circular include?
-import Framebuffer from './framebuffer';
 
 export default class Texture2D extends Texture {
 
@@ -23,15 +20,16 @@ export default class Texture2D extends Texture {
     });
   }
 
-  static makeFromPixelArray(gl, {dataArray, format, width, height, ...opts}) {
+  static makeFromPixelArray(gl, opts) {
+    const {dataArray, format = GL.RGBA, width = 1, height} = opts;
     // Don't need to do this if the data is already in a typed array
     const dataTypedArray = new Uint8Array(dataArray);
-    return new Texture2D(gl, {
+    return new Texture2D(gl, Object.assign({
       pixels: dataTypedArray,
-      width: 1,
-      format: gl.RGBA,
-      ...opts
-    });
+      width,
+      height,
+      format
+    }, opts));
   }
 
   /**
@@ -49,7 +47,7 @@ export default class Texture2D extends Texture {
   constructor(gl, opts = {}) {
     assertWebGLContext(gl);
 
-    super(gl, {...opts, target: gl.TEXTURE_2D});
+    super(gl, Object.assign({}, opts, {target: gl.TEXTURE_2D}));
 
     this.width = null;
     this.height = null;
@@ -98,22 +96,20 @@ export default class Texture2D extends Texture {
   }
 
   // WebGL2
-  setPixels({
-    buffer,
-    offset = 0,
-    width = null,
-    height = null,
-    mipmapLevel = 0,
-    internalFormat = GL.RGBA,
-    format = GL.RGBA,
-    type = GL.UNSIGNED_BYTE,
-    border = 0,
-    ...opts
-  }) {
+  setPixels(opts = {}) {
+    const {
+      buffer,
+      width = null,
+      height = null,
+      mipmapLevel = 0,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE,
+      border = 0
+    } = opts;
+
     const {gl} = this;
 
     // This signature of texImage2D uses currently bound GL_PIXEL_UNPACK_BUFFER
-    buffer = Buffer.makeFrom(buffer);
     gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.target);
     // And as always, we must also bind the texture itself
     this.bind();
@@ -126,18 +122,19 @@ export default class Texture2D extends Texture {
     return this;
   }
 
-  setImageDataFromCompressedBuffer({
-    buffer,
-    offset = 0,
-    width = null,
-    height = null,
-    mipmapLevel = 0,
-    internalFormat = GL.RGBA,
-    format = GL.RGBA,
-    type = GL.UNSIGNED_BYTE,
-    border = 0,
-    ...opts
-  }) {
+  setImageDataFromCompressedBuffer(opts) {
+    const {
+      buffer,
+      // offset = 0,
+      width = null,
+      height = null,
+      mipmapLevel = 0,
+      internalFormat = GL.RGBA,
+      // format = GL.RGBA,
+      // type = GL.UNSIGNED_BYTE,
+      border = 0
+    } = opts;
+
     const {gl} = this;
     gl.compressedTexImage2D(this.target,
       mipmapLevel, internalFormat, width, height, border, buffer);
@@ -151,21 +148,21 @@ export default class Texture2D extends Texture {
    * pixels from the current framebuffer (rather than from client memory).
    * (gl.copyTexImage2D wrapper)
    */
-  copyImageFromFramebuffer({
-    framebuffer,
-    offset = 0,
-    x,
-    y,
-    width,
-    height,
-    mipmapLevel = 0,
-    internalFormat = GL.RGBA,
-    type = GL.UNSIGNED_BYTE,
-    border = 0,
-    ...opts
-  }) {
+  copyImageFromFramebuffer(opts) {
+    const {
+      framebuffer,
+      // offset = 0,
+      x,
+      y,
+      width,
+      height,
+      mipmapLevel = 0,
+      internalFormat = GL.RGBA,
+      // type = GL.UNSIGNED_BYTE,
+      border = 0
+    } = opts;
+
     const {gl} = this;
-    framebuffer = Framebuffer.makeFrom(framebuffer);
     framebuffer.bind();
 
     // target
@@ -177,18 +174,20 @@ export default class Texture2D extends Texture {
     framebuffer.unbind();
   }
 
-  copySubImage({
-    pixels,
-    offset = 0,
-    x,
-    y,
-    width,
-    height,
-    mipmapLevel = 0,
-    internalFormat = GL.RGBA,
-    type = GL.UNSIGNED_BYTE,
-    border = 0
-  }) {
+  copySubImage(opts) {
+    const {
+      // pixels,
+      // offset = 0,
+      // x,
+      // y,
+      // width,
+      // height,
+      // mipmapLevel = 0,
+      // internalFormat = GL.RGBA,
+      // type = GL.UNSIGNED_BYTE,
+      // border = 0
+    } = opts;
+
     // if (pixels instanceof ArrayBufferView) {
     //   gl.texSubImage2D(target, level, x, y, width, height, format, type, pixels);
     // }

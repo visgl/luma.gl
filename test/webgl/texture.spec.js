@@ -1,11 +1,9 @@
 import test from 'tape-catch';
-import {createGLContext, Texture2D, Buffer} from '../../src/headless';
+import {createGLContext, Texture2D} from 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()
 };
-
-const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
 test('WebGL#Texture2D construct/delete', t => {
   const {gl} = fixture;

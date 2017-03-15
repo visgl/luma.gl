@@ -1,8 +1,6 @@
-/* eslint-disable max-len */
-import {createGLContext} from '../../src/headless';
-import {VertexArrayObject} from '../../src/webgl2';
-
 import test from 'tape-catch';
+import {createGLContext} from 'luma.gl/headless';
+import {VertexArrayObject} from 'luma.gl';
 
 const fixture = {
   gl: createGLContext()

@@ -1,6 +1,8 @@
-import luma from '../globals';
 /* eslint-disable no-console */
 /* global console */
+import luma from '../globals';
+
+const cache = {};
 
 const log = {
   priority: 0,
@@ -23,6 +25,12 @@ const log = {
     if (priority <= log.priority) {
       console.warn(...args);
     }
+  },
+  once(priority, arg, ...args) {
+    if (!cache[arg]) {
+      log.log(priority, arg, ...args);
+    }
+    cache[arg] = true;
   }
 };
 

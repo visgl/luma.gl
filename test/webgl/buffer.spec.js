@@ -1,5 +1,4 @@
-import {createGLContext, Buffer} from '../../src/headless';
-import {isWebGLContext} from '../../src/webgl/webgl-checks';
+import {createGLContext, Buffer, isWebGLContext} from 'luma.gl/headless';
 import test from 'tape-catch';
 
 const fixture = {
@@ -30,9 +29,7 @@ test('WebGL#Buffer constructor/delete', t => {
 test('WebGL#Buffer bind/unbind', t => {
   const {gl} = fixture;
 
-  let buffer;
-
-  buffer = new Buffer(gl)
+  const buffer = new Buffer(gl)
     .bind()
     .unbind()
     .delete();

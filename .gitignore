@@ -1,5 +1,7 @@
 build/*
 dist/*
+dist-es6/*
+dist-buble/*
 .project
 .DS_Store
 *.zip

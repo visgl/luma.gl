@@ -3,12 +3,12 @@
 
 // Define some locals
 import {
-  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable,
-  WebGLRenderingContext
+  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable, isWebGLContext
 } from '../webgl';
-import Object3D from '../scenegraph/object-3d';
+import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
-import Geometry from './geometry';
+import {Geometry} from '../geometry';
+import {SHADERS} from '../experimental/shaders';
 import assert from 'assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
@@ -31,7 +31,7 @@ export class Material {
 export default class Model extends Object3D {
 
   constructor(gl, opts = {}) {
-    opts = gl instanceof WebGLRenderingContext ? {...opts, gl} : gl;
+    opts = isWebGLContext(gl) ? Object.assign({}, opts, {gl}) : gl;
     super(opts);
     this.init(opts);
   }
@@ -41,13 +41,14 @@ export default class Model extends Object3D {
   init({
     program,
     gl = null,
-    vs = null,
-    fs = null,
+    vs = SHADERS.vs,
+    fs = SHADERS.fs,
+    defaultUniforms,
     geometry,
     material = null,
     textures,
-    // Enables instanced rendering (needs shader support and extra attributes)
-    isInstanced = false,
+    isInstanced = false, // Enables instanced rendering
+    instanced, // deprecated
     instanceCount = 0,
     vertexCount = undefined,
     // Picking
@@ -59,20 +60,25 @@ export default class Model extends Object3D {
     render = null,
     onBeforeRender = () => {},
     onAfterRender = () => {},
-    ...opts
+    timerQueryEnabled = false
   } = {}) {
     // assert(program || program instanceof Program);
     assert(geometry instanceof Geometry, 'Model needs a geometry');
+
+    // Assign default uniforms if any of the default shaders is being used
+    if (vs === SHADERS.vs || fs === SHADERS.fs && defaultUniforms === undefined) {
+      defaultUniforms = SHADERS.defaultUniforms;
+    }
 
     // set a custom program per o3d
     this.program = program || new Program(gl, {vs, fs});
     assert(this.program instanceof Program, 'Model needs a program');
 
-    if (opts.instanced) {
+    if (instanced) {
       /* global console */
       /* eslint-disable no-console */
       console.warn(MSG_INSTANCED_PARAM_DEPRECATED);
-      isInstanced = isInstanced || opts.instanced;
+      isInstanced = isInstanced || instanced;
     }
 
     if (textures) {
@@ -93,11 +99,9 @@ export default class Model extends Object3D {
     this.attributes = {};
     this.setAttributes(attributes);
 
+    uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
     this.uniforms = {};
-    this.setUniforms({
-      ...this.program.defaultUniforms,
-      ...uniforms
-    });
+    this.setUniforms(uniforms);
 
     // instanced rendering
     this.isInstanced = isInstanced;
@@ -110,12 +114,21 @@ export default class Model extends Object3D {
 
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
+
+    this.timeElapsedQuery = undefined;
+    this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
+
+    this.lastQueryReturned = true;
+    this.accumulatedFrameTime = 0;
+    this.averageFrameTime = 0;
+    this.profileFrameCount = 0;
+
+    this.timerQueryEnabled = timerQueryEnabled && this.ext !== null;
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
 
   destroy() {
-    // TODO
   }
 
   get hash() {
@@ -209,18 +222,14 @@ export default class Model extends Object3D {
   // At least all special handling is collected here.
   addViewUniforms(uniforms) {
     // TODO - special treatment of these parameters should be removed
-    const {camera, viewMatrix, modelMatrix, ...otherUniforms} = uniforms;
+    const {camera, viewMatrix, modelMatrix} = uniforms;
     // Camera exposes uniforms that can be used directly in shaders
     const cameraUniforms = camera ? camera.getUniforms() : {};
 
     const viewUniforms = viewMatrix ?
       this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
 
-    return {
-      ...cameraUniforms,
-      ...viewUniforms,
-      ...otherUniforms
-    };
+    return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
   /*
@@ -247,6 +256,13 @@ export default class Model extends Object3D {
     }
     const {isIndexed, indexType} = drawParams;
     const {geometry, isInstanced, instanceCount} = this;
+
+    if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
+      this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      this.timeElapsedQuery = this.ext.createQueryEXT();
+      this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
+    }
+
     draw(this.program.gl, {
       drawMode: geometry.drawMode,
       vertexCount: this.getVertexCount(),
@@ -256,6 +272,38 @@ export default class Model extends Object3D {
       instanceCount
     });
 
+    if (this.timerQueryEnabled === true) {
+      if (this.lastQueryReturned === true) {
+        this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
+        this.profileFrameCount++;
+        this.lastQueryReturned = false;
+      }
+  // ...at some point in the future, after returning control to the browser and being called again:
+      const disjoint = this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      if (disjoint) {
+        this.lastQueryReturned = true;
+        // Have to redo all of the measurements.
+      } else {
+        const available = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+          this.ext.QUERY_RESULT_AVAILABLE_EXT);
+
+        if (available) {
+          const timeElapsed = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+            this.ext.QUERY_RESULT_EXT) / 1e6;
+          this.accumulatedFrameTime += timeElapsed;
+          this.averageFrameTime = this.accumulatedFrameTime / this.profileFrameCount;
+          // Do something useful with the time.  Note that care should be
+          // taken to use all significant bits of the result, not just the
+          // least significant 32 bits.
+          log.log(2, 'program.id: ', this.program.id);
+          log.log(2, 'last frame time: ', timeElapsed, 'ms');
+          log.log(2, 'average frame time: ', this.averageFrameTime, 'ms');
+          log.log(2, 'accumulated frame time: ', this.accumulatedFrameTime, 'ms');
+          log.log(2, 'profile frame count: ', this.profileFrameCount);
+          this.lastQueryReturned = true;
+        }
+      }
+    }
     this.onAfterRender();
 
     this.unsetProgramState();
@@ -301,12 +349,10 @@ export default class Model extends Object3D {
           this.buffers[attributeName] || new Buffer(gl);
 
         const buffer = this.buffers[attributeName];
-        buffer.setData({
-          ...attribute,
+        buffer.setData(Object.assign({}, attribute, {
           data: attribute.value,
-          target: attribute.isIndexed ?
-            GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
-        });
+          target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
+        }));
       }
     }
 
@@ -318,17 +364,14 @@ export default class Model extends Object3D {
       const attributeTable = this._getAttributesTable({
         header: `Attributes ${this.id}`,
         program: this.program,
-        attributes: {
-          ...this.geometry.attributes,
-          ...this.attributes
-        }
+        attributes: Object.assign({}, this.geometry.attributes, this.attributes)
       });
       log.table(priority, attributeTable);
 
       const {table, unusedTable, unusedCount} = getUniformsTable({
         header: `Uniforms ${this.id}`,
         program: this.program,
-        uniforms: {...this.uniforms, ...uniforms}
+        uniforms: Object.assign({}, this.uniforms, uniforms)
       });
       log.table(priority, table);
       log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
@@ -410,7 +453,6 @@ export default class Model extends Object3D {
 
   // DEPRECATED / REMOVED
   setTextures(textures = []) {
-    throw new Error(
-      'model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
+    throw new Error('model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
   }
 }

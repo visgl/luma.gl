@@ -1,5 +1,5 @@
-import {createGLContext, Renderbuffer} from '../../src/headless';
 import test from 'tape-catch';
+import {createGLContext, Renderbuffer} from 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()

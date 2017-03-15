@@ -1,1 +1,5 @@
-export {default as ShaderCache} from './shader-cache';
+// Shader Tools
+export {registerShaderModules, assembleShaders, ShaderCache} from './shader-tools';
+
+// Register Shader Modules
+import './shader-modules';
