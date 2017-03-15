@@ -1,6 +1,8 @@
 /* eslint-disable max-len, max-statements */
+/* global setInterval, clearInterval */
 import test from 'tape-catch';
-import {createGLContext, poll, TimerQuery} from '../../src/headless';
+import {createGLContext, poll, TimerQuery} from 'luma.gl';
+import 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()
@@ -30,7 +32,7 @@ test('WebGL#TimerQuery construct/delete', t => {
   timerQuery.delete();
   t.ok(timerQuery instanceof TimerQuery, 'TimerQuery repeated delete successful');
 
-  t.end()
+  t.end();
 });
 
 test('WebGL#TimerQuery begin/cancel', t => {
@@ -53,11 +55,10 @@ test('WebGL#TimerQuery begin/cancel', t => {
   t.ok(timerQuery instanceof TimerQuery, 'TimerQuery multiple cancel successful');
 
   timerQuery.promise.catch(error => {
-    t.pass('TimerQuery promise reset by cancel or lack of implementation');
+    t.pass(`TimerQuery promise reset by cancel or lack of implementation ${error}`);
     t.end();
   });
 });
-
 
 test('WebGL#TimerQuery completed/failed queries', t => {
   const {gl} = fixture;

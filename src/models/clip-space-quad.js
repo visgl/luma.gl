@@ -1,5 +1,6 @@
 // ClipSpaceQuad
-import {Model, Geometry} from '../core';
+import {Model} from '../core';
+import {Geometry} from '../geometry';
 import {GL} from '../webgl';
 
 const CLIPSPACE_QUAD_VERTEX_SHADER = `\
@@ -37,10 +38,9 @@ const TEX_COORDS = POSITIONS.map(coord => coord === -1 ? 0 : coord);
 /* eslint-enable indent, no-multi-spaces */
 
 export default class ClipSpaceQuad extends Model {
-  constructor({gl, ...opts}) {
-    super({
-      gl,
-      ...opts,
+  constructor(opts) {
+
+    super(Object.assign({}, opts, {
       vs: CLIPSPACE_QUAD_VERTEX_SHADER,
       geometry: new Geometry({
         drawMode: GL.TRIANGLE_STRIP,
@@ -59,7 +59,7 @@ export default class ClipSpaceQuad extends Model {
           }
         }
       })
-    });
+    }));
     this.setVertexCount(4);
   }
 }

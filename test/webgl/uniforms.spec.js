@@ -1,10 +1,8 @@
 /* eslint-disable no-inline-comments */
-import {
-  createGLContext, Program, Buffer, Texture, Texture2D, TextureCube,
-  checkUniformValues
-} from '../../src/headless';
-
 import test from 'tape-catch';
+import {createGLContext, Program, Texture2D} from 'luma.gl';
+import 'luma.gl/headless';
+import {checkUniformValues} from 'luma.gl/webgl/uniforms';
 
 const gl = createGLContext();
 
@@ -82,69 +80,69 @@ const WEBGL1_GOOD_UNIFORMS = {
   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
 };
 
-const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
-#ifdef GL_ES
-precision highp float;
-#endif
+// const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
+// #ifdef GL_ES
+// precision highp float;
+// #endif
 
-uniform float f[3];
-uniform int i[3];
-uniform bool b[3];
-uniform vec2 v2[3];
-uniform vec3 v3[3];
-uniform vec4 v4[3];
-// int vectors
-// bool vectors
-uniform mat2 m2[3];
-uniform mat3 m3[3];
-uniform mat4 m4[3];
+// uniform float f[3];
+// uniform int i[3];
+// uniform bool b[3];
+// uniform vec2 v2[3];
+// uniform vec3 v3[3];
+// uniform vec4 v4[3];
+// // int vectors
+// // bool vectors
+// uniform mat2 m2[3];
+// uniform mat3 m3[3];
+// uniform mat4 m4[3];
 
-uniform sampler2D s2d[5];
-// uniform samplerCube sCube;
+// uniform sampler2D s2d[5];
+// // uniform samplerCube sCube;
 
-void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
+// void main(void) {
+//   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+// }
+// `;
 
-const WEBGL1_ARRAYS_GOOD_UNIFORMS = {
-  f: 1.0,
-  i: 1,
-  b: true,
-  v2: new Float32Array([...[1, 2], ...[1, 2], ...[1, 2]]),
-  v3: new Float32Array([...[1, 2, 3], ...[1, 2, 3], ...[1, 2, 3]]),
-  v4: new Float32Array([...[1, 2, 3, 4], ...[1, 2, 3, 4], ...[1, 2, 3, 4]]),
-  // INT_VEC2  0x8B53
-  // INT_VEC3  0x8B54
-  // INT_VEC4  0x8B55
-  // BOOL  0x8B56
-  // BOOL_VEC2 0x8B57
-  // BOOL_VEC3 0x8B58
-  // BOOL_VEC4 0x8B59
-  m2: new Float32Array([...MATRIX_2, ...MATRIX_2, ...MATRIX_2]),
-  m3: new Float32Array([...MATRIX_3, ...MATRIX_3, ...MATRIX_3]),
-  m4: new Float32Array([...MATRIX_4, ...MATRIX_4, ...MATRIX_4]),
+// const WEBGL1_ARRAYS_GOOD_UNIFORMS = {
+//   f: 1.0,
+//   i: 1,
+//   b: true,
+//   v2: new Float32Array([...[1, 2], ...[1, 2], ...[1, 2]]),
+//   v3: new Float32Array([...[1, 2, 3], ...[1, 2, 3], ...[1, 2, 3]]),
+//   v4: new Float32Array([...[1, 2, 3, 4], ...[1, 2, 3, 4], ...[1, 2, 3, 4]]),
+//   // INT_VEC2  0x8B53
+//   // INT_VEC3  0x8B54
+//   // INT_VEC4  0x8B55
+//   // BOOL  0x8B56
+//   // BOOL_VEC2 0x8B57
+//   // BOOL_VEC3 0x8B58
+//   // BOOL_VEC4 0x8B59
+//   m2: new Float32Array([...MATRIX_2, ...MATRIX_2, ...MATRIX_2]),
+//   m3: new Float32Array([...MATRIX_3, ...MATRIX_3, ...MATRIX_3]),
+//   m4: new Float32Array([...MATRIX_4, ...MATRIX_4, ...MATRIX_4]),
 
-  s2d: [new Texture2D(gl), new Texture2D(gl), new Texture2D(gl)]
-  // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
-};
+//   s2d: [new Texture2D(gl), new Texture2D(gl), new Texture2D(gl)]
+//   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
+// };
 
-const WEBGL2_FRAGMENT_SHADER = `
-#ifdef GL_ES
-precision highp float;
-#endif
-uniform sampler1D;
-uniform sampler3D;
+// const WEBGL2_FRAGMENT_SHADER = `
+// #ifdef GL_ES
+// precision highp float;
+// #endif
+// uniform sampler1D;
+// uniform sampler3D;
 
-void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
+// void main(void) {
+//   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+// }
+// `;
 
-const WEBGL2_GOOD_UNIFORMS = {
-  s1d: 2, // SAMPLER_1D  0x8B5E
-  s3d: 3  // SAMPLER_3D  0x8B60
-};
+// const WEBGL2_GOOD_UNIFORMS = {
+//   s1d: 2, // SAMPLER_1D  0x8B5E
+//   s3d: 3  // SAMPLER_3D  0x8B60
+// };
 
 // const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
