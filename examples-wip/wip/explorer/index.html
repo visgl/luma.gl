@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PhiloGL - Surface Explorer</title>
+    <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script type="text/javascript" src="../../build/PhiloGL.js"></script>
+    <script type="text/javascript" src="explorer.js"></script>
+  </head>
+  <body>
+    <div id="container">
+      
+      <div id="title">
+        <h1>Surface Explorer</h1>
+      </div>
+      
+      <div class="controls">
+        Explore parametric equations.
+        <div class="description">
+          Drag and drop the surface to rotate it. 
+          Use your mouse wheel to zoom in/out. Enable the <em>t</em> parameter to run 
+          parametric equations. Most <a href="https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Math#Methods">Math methods</a> are global.
+        </div>
+        <table>
+          <tr>
+            <td>f(x, y)</td>
+            <td><input id="fxy" type="text" value="sin(4 * x) * cos(2 * y) * cos(t * 2 * PI)" /></td>
+          </tr>
+          <tr>
+            <td><input id="t" type="checkbox" /> t</td>
+            <td>
+              from: <input id="tfrom" type="number" value="0" step="0.1" disabled /> 
+              to: <input id="tto" type="number" value="1" step="0.1" disabled /> 
+              loop: <input id="tloop" type="checkbox" disabled /> 
+              <input id="tplay" type="button" value="Play" disabled />
+            </td>
+          </tr>
+          <tr>
+            <td>display</td>
+            <td>
+              grid: <input id="grid" type="checkbox" /> 
+              surface colors: R 
+              <select id="scolorR">
+                <option>0.0</option>
+                <option>0.1</option>
+                <option>0.2</option>
+                <option>0.3</option>
+                <option>0.4</option>
+                <option selected>0.5</option>
+                <option>0.6</option>
+                <option>0.7</option>
+                <option>0.8</option>
+                <option>0.9</option>
+                <option>1.0</option>
+              </select>
+              G 
+              <select id="scolorG">
+                <option>0.0</option>
+                <option>0.1</option>
+                <option>0.2</option>
+                <option selected>0.3</option>
+                <option>0.4</option>
+                <option>0.5</option>
+                <option>0.6</option>
+                <option>0.7</option>
+                <option>0.8</option>
+                <option>0.9</option>
+                <option>1.0</option>
+              </select>
+              B
+              <select id="scolorB">
+                <option>0.0</option>
+                <option>0.1</option>
+                <option>0.2</option>
+                <option>0.3</option>
+                <option>0.4</option>
+                <option>0.5</option>
+                <option>0.6</option>
+                <option>0.7</option>
+                <option selected>0.8</option>
+                <option>0.9</option>
+                <option>1.0</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>examples</td>
+            <td>
+              <a id="example1" title="sin(PI * abs(1 - 2 * t) * x * 2) / (PI * x * 2) * sin(PI * abs(1 - 2 * t) * y * 2) / (PI * y * 2)" href="#">Sa(2x) * Sa(2y)</a> | 
+              <a id="example2" title="sin(4 * x) * cos(2 * y) * cos(2 * t * PI)" href="#">sin(4x).cos(2y)</a> | 
+              <a id="example3" title="sqrt(1 - x * x - y * y) * abs(1 - 2 * t)" href="#">sphere</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div id="canvas-container">
+        <canvas id="surface-explorer-canvas" width="900" height="450"></canvas>
+      </div>
+
+      <div class="footer">
+        Copyright &copy; <a href="http://blog.thejit.org/">Nicolas Garcia Belmonte</a> - Inspired by Dean McNamee's <a href="http://graphycalc.com/">GraphyCalc</a>.
+      </div>
+
+    </div>
+    
+    <div id="fallback" class="fallback"></div>
+
+  <script>
+    if (!PhiloGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +  ' <iframe title="YouTube video player" width="640" height="510" src="http://www.youtube.com/embed/J6IM1QS2l10" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+  </body>
+</html>

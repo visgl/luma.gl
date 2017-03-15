@@ -12,7 +12,8 @@ export default class TextureCube extends Texture {
 
   constructor(gl, opts = {}) {
     assertWebGLContext(gl);
-    super(gl, Object.assign({}, opts, {target: GL.TEXTURE_CUBE_MAP}));
+
+    super(gl, {...opts, target: GL.TEXTURE_CUBE_MAP});
     this.setCubeMapImageData(opts);
   }
 
@@ -43,7 +44,8 @@ export default class TextureCube extends Texture {
     border = 0,
     format = GL.RGBA,
     type = GL.UNSIGNED_BYTE,
-    generateMipmap = false
+    generateMipmap = false,
+    ...opts
   }) {
     const {gl} = this;
     pixels = pixels || data;

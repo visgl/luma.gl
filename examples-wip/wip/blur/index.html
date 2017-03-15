@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Image post-processing API example</title>
+<link href='http://fonts.googleapis.com/css?family=Crimson+Text'
+	rel='stylesheet' type='text/css'>
+<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+<style type="text/css">
+canvas {
+	background: black;
+}
+</style>
+
+
+<script id="shader-vs" type="x-shader/x-vertex"> 
+  attribute vec3 position;
+  attribute vec2 texCoord1;
+  
+  uniform mat4 worldMatrix;
+  uniform mat4 projectionMatrix;
+  
+  varying   vec2 pixel;
+  void main(void) {
+     gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.);
+     pixel = texCoord1;
+  }
+</script>
+
+<script id="shader-fs-copy" type="x-shader/x-fragment"> 
+#ifdef GL_ES
+precision highp float;
+#endif
+    uniform sampler2D sampler_prev;
+    varying vec2 pixel;
+void main(void) {
+    gl_FragColor = texture2D(sampler_prev, pixel);
+    gl_FragColor.a = 1.;
+}
+</script>
+
+<script id="shader-fs-blur-horizontal" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+#endif
+// original shader from http://www.gamerendering.com/2008/10/11/gaussian-blur-filter-shader/
+// horizontal blur fragment shader
+uniform sampler2D sampler1;//src_tex;
+varying vec2 pixel;
+uniform vec2 pixelSize;
+void main(void) // fragment
+{
+    float h = pixelSize.x;
+    vec4 sum = vec4(0.0);
+    sum += texture2D(sampler1, vec2(pixel.x - 4.0*h, pixel.y) ) * 0.05;
+    sum += texture2D(sampler1, vec2(pixel.x - 3.0*h, pixel.y) ) * 0.09;
+    sum += texture2D(sampler1, vec2(pixel.x - 2.0*h, pixel.y) ) * 0.12;
+    sum += texture2D(sampler1, vec2(pixel.x - 1.0*h, pixel.y) ) * 0.15;
+    sum += texture2D(sampler1, vec2(pixel.x + 0.0*h, pixel.y) ) * 0.16;
+    sum += texture2D(sampler1, vec2(pixel.x + 1.0*h, pixel.y) ) * 0.15;
+    sum += texture2D(sampler1, vec2(pixel.x + 2.0*h, pixel.y) ) * 0.12;
+    sum += texture2D(sampler1, vec2(pixel.x + 3.0*h, pixel.y) ) * 0.09;
+    sum += texture2D(sampler1, vec2(pixel.x + 4.0*h, pixel.y) ) * 0.05;
+    gl_FragColor.xyz = sum.xyz/0.98; // normalize
+    gl_FragColor.a = 1.;
+} 
+</script>
+
+<script id="shader-fs-blur-vertical" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+#endif
+// original shader from http://www.gamerendering.com/2008/10/11/gaussian-blur-filter-shader/
+// vertical blur fragment shader
+uniform sampler2D sampler1;//src_tex;
+varying vec2 pixel;
+uniform vec2 pixelSize;
+void main(void) // fragment
+{
+    float v = pixelSize.y;
+    vec4 sum = vec4(0.0);
+    sum += texture2D(sampler1, vec2(pixel.x, - 4.0*v + pixel.y) ) * 0.05;
+    sum += texture2D(sampler1, vec2(pixel.x, - 3.0*v + pixel.y) ) * 0.09;
+    sum += texture2D(sampler1, vec2(pixel.x, - 2.0*v + pixel.y) ) * 0.12;
+    sum += texture2D(sampler1, vec2(pixel.x, - 1.0*v + pixel.y) ) * 0.15;
+    sum += texture2D(sampler1, vec2(pixel.x, + 0.0*v + pixel.y) ) * 0.16;
+    sum += texture2D(sampler1, vec2(pixel.x, + 1.0*v + pixel.y) ) * 0.15;
+    sum += texture2D(sampler1, vec2(pixel.x, + 2.0*v + pixel.y) ) * 0.12;
+    sum += texture2D(sampler1, vec2(pixel.x, + 3.0*v + pixel.y) ) * 0.09;
+    sum += texture2D(sampler1, vec2(pixel.x, + 4.0*v + pixel.y) ) * 0.05;
+    gl_FragColor.xyz = sum.xyz/0.98;
+    gl_FragColor.a = 1.;
+}
+</script>
+<script id="shader-fs-advance" type="x-shader/x-fragment"> 
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  uniform sampler2D sampler1; // prev;
+  uniform sampler2D sampler2; // blur1;
+  uniform sampler2D sampler3; // blur2;
+  uniform sampler2D sampler4; // blur3;
+  uniform sampler2D sampler5; // blur4;
+  uniform sampler2D sampler6; // blur5;
+
+  varying vec2 pixel;
+  uniform vec2 mouse;
+
+  bool is_onscreen(vec2 uv){
+    return (uv.x < 1.) && (uv.x > 0.) && (uv.y < 1.) && (uv.y > 0.);
+  }
+
+  void main(void) {
+    vec2 c = vec2(-0.226,0.087);
+    vec2 tuning =  vec2(1.77);
+    vec2 complexSquaredPlusC; // One steps towards the Julia Attractor
+    vec2 uv = (pixel - vec2(0.5))*tuning;
+    complexSquaredPlusC.x = (uv.x * uv.x - uv.y * uv.y + c.x + 0.5);
+    complexSquaredPlusC.y = (2. * uv.x * uv.y + c.y + 0.5);
+    
+    if(is_onscreen(complexSquaredPlusC)){
+      vec4 old = texture2D(sampler1, complexSquaredPlusC);
+      gl_FragColor = old + vec4( -.0035, .0, .0, 1.); // decrement the red channel
+    }else{
+      // return border color
+      gl_FragColor = vec4(1., 0., 0., 1.); // out is red
+    }
+
+	// Do not dare to try a McCabeism implementation in the green or the blue channel here, Fnord.
+	// http://www.wblut.com/2011/07/13/mccabeism-turning-noise-into-a-thing-of-beauty/
+
+    gl_FragColor.a = 1.;
+  }
+</script>
+
+<script id="shader-fs-composite" type="x-shader/x-fragment"> 
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  // e^5
+  #define E5 147.413159102576
+
+  uniform sampler2D sampler1; // plain
+  uniform sampler2D sampler2; // blur1
+  uniform sampler2D sampler3; // blur2
+  uniform sampler2D sampler4; // blur3
+  uniform sampler2D sampler5; // blur4
+  uniform sampler2D sampler6; // blur5
+
+    varying vec2 pixel;
+    uniform vec2 mouse;
+
+/**
+ * Blur with a fake linearly adjustable strength. Made for a smooth transistion through the blur levels.
+ * This function was considered as a simple demo and not a productive blur function first. It turned out quite nice though ^^
+ * @arg blur : blur strength, 0 no blur ..1 max
+ */
+vec4 lerp_blur(vec2 uv, float blur){
+
+	vec4 plain = texture2D(sampler1,uv);
+	vec4 blur1 = texture2D(sampler2,uv); // (1x) blur result from the two-pass algorithm shader program
+	vec4 blur2 = texture2D(sampler3,uv); // (2x) each blur texture has half the side length of its predecessor
+	vec4 blur3 = texture2D(sampler4,uv); // (4x) iteratively, we have an exponential increase of blur strength
+	vec4 blur4 = texture2D(sampler5,uv); // (8x)
+	vec4 blur5 = texture2D(sampler6,uv); // (16x)
+
+	blur = log(clamp(blur, 0., 1.)*E5+1.)/5.; // linearization of the exponential blur radius growth
+
+	blur *= 5.;
+	if(blur < 1.){
+		return mix( plain, blur1, vec4(blur)); // linear interpolation between the first two textures
+	}else if(blur < 2.) {
+		return mix( blur1, blur2, vec4(blur-1.)); // and so on...
+	}else if(blur < 3.) {
+		return mix( blur2, blur3, vec4(blur-2.)); // see, this is not a change in radius at all
+	}else if(blur < 4.) {
+		return mix( blur3, blur4, vec4(blur-3.)); // just blending one texture over the other
+	}else {
+		return mix( blur4, blur5, vec4(blur-4.)); // fakey fog magic hurrah \:D/
+	}
+}
+
+  void main(void) {
+	gl_FragColor = vec4(lerp_blur(pixel, mouse.x).x); // masking the red channel
+    gl_FragColor.a = 1.;
+  }
+</script>
+
+<script src="../../build/PhiloGL.js"></script>
+<script src="index.js"></script>
+
+</head>
+<body onload="load()">
+	<div id="container">
+		<div id="title">
+			<h1>Image post-processing API</h1>
+		</div>
+
+		<div class="controls">
+			Progressive Julia Fractal + multi-scale Gaussian blur - Original work
+			by <a href="http://twitter.com/Flexi23/">Felix Woitzel</a> - Ported
+			to <a href="http://http://uber.github.io/luma.gl/">PhiloGL API</a> -
+			<a id="fullscreen" href="#">Go fullscreen</a>
+		</div>
+		<canvas id="c" width="900" height="550"></canvas>
+	</div>
+</body>
+</html>
+
+

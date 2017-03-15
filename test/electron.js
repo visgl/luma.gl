@@ -1,3 +1,10 @@
 require('babel-polyfill');
 
-require('./index-webgl-dependent-tests');
+require('./webgl-independent');
+require('./webgl');
+
+// experimental
+require('../src/experimental/test');
+
+// deprecated
+require('../src/deprecated/test');

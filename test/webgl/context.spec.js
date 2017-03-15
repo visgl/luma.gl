@@ -1,6 +1,7 @@
+const {createGLContext, glGetDebugInfo} = require('../../src/headless');
+const {isWebGLContext} = require('../../src/webgl/webgl-checks');
+
 const test = require('tape-catch');
-const {createGLContext, glGetDebugInfo, isWebGLContext} = require('luma.gl');
-require('luma.gl/headless');
 
 test('WebGL#headless context creation', t => {
   const gl = createGLContext();

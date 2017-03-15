@@ -1,6 +1,6 @@
 /* eslint-disable guard-for-in, complexity, no-try-catch */
 import assert from 'assert';
-import {loadFile, loadImage} from './browser-load';
+import {loadFile, loadImage} from './platform';
 import {Program, Texture2D} from '../webgl';
 import {Geometry, Model} from '../core';
 
@@ -9,13 +9,13 @@ function noop() {}
 /*
  * Loads (Requests) multiple files asynchronously
  */
-export function loadFiles(opts = {}) {
-  const {urls, onProgress = noop} = opts;
-  assert(urls.every(url => typeof url === 'string'), 'loadImages: {urls} must be array of strings');
+export function loadFiles({urls, onProgress = noop, ...opts}) {
+  assert(urls.every(url => typeof url === 'string'),
+    'loadImages: {urls} must be array of strings');
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      const promise = loadFile(Object.assign({url}, opts));
+      const promise = loadFile({url, ...opts});
       promise.then(file => onProgress({
         progress: ++count / urls.length,
         count,
@@ -30,9 +30,9 @@ export function loadFiles(opts = {}) {
 /*
  * Loads (requests) multiple images asynchronously
  */
-export function loadImages(opts = {}) {
-  const {urls, onProgress = noop} = opts;
-  assert(urls.every(url => typeof url === 'string'), 'loadImages: {urls} must be array of strings');
+export function loadImages({urls, onProgress = noop, ...opts}) {
+  assert(urls.every(url => typeof url === 'string'),
+    'loadImages: {urls} must be array of strings');
   let count = 0;
   return Promise.all(urls.map(
     url => {
@@ -48,36 +48,44 @@ export function loadImages(opts = {}) {
   ));
 }
 
-export function loadTextures(gl, opts = {}) {
-  const {urls, onProgress = noop} = opts;
+export function loadTextures(gl, {urls, onProgress = noop, ...opts}) {
   assert(urls.every(url => typeof url === 'string'),
     'loadTextures: {urls} must be array of strings');
-
-  return loadImages(Object.assign({urls, onProgress}, opts))
+  return loadImages({urls, onProgress, ...opts})
   .then(images => images.map((img, i) => {
-    let params = Array.isArray(opts.parameters) ? opts.parameters[i] : opts.parameters;
+    let params = Array.isArray(opts.parameters) ?
+      opts.parameters[i] : opts.parameters;
     params = params === undefined ? {} : params;
-    return new Texture2D(gl, Object.assign({id: urls[i]}, params, {data: img}));
+    return new Texture2D(gl, {
+      id: urls[i],
+      ...params,
+      data: img
+    });
   }));
 }
 
-export function loadProgram(gl, opts = {}) {
-  const {vs, fs, onProgress = noop} = opts;
-  return loadFiles(Object.assign({urls: [vs, fs], onProgress}, opts))
+export function loadProgram(gl, {vs, fs, onProgress = noop, ...opts}) {
+  return loadFiles({urls: [vs, fs], onProgress, ...opts})
   .then(
-    ([vsText, fsText]) => new Program(gl, Object.assign({vs: vsText, fs: fsText}, opts))
+    ([vsText, fsText]) => new Program(gl, {vs: vsText, fs: fsText, ...opts})
   );
 }
 
 // Loads a simple JSON format
-export function loadModel(gl, opts = {}) {
-  const {url, onProgress = noop} = opts;
-  return loadFiles(Object.assign({urls: [url], onProgress}, opts))
-  .then(([file]) => parseModel(gl, Object.assign({file}, opts)));
+export function loadModel(gl, {
+  url,
+  onProgress = noop,
+  ...opts
+}) {
+  return loadFiles({urls: [url], onProgress, ...opts})
+  .then(([file]) => parseModel(gl, {file, ...opts}));
 }
 
-export function parseModel(gl, opts = {}) {
-  const {file, program = new Program(gl)} = opts;
+export function parseModel(gl, {
+  file,
+  program = new Program(gl),
+  ...opts
+}) {
   const json = typeof file === 'string' ? parseJSON(file) : file;
   // Remove any attributes so that we can create a geometry
   // TODO - change format to put these in geometry sub object?
@@ -86,17 +94,19 @@ export function parseModel(gl, opts = {}) {
   for (const key in json) {
     const value = json[key];
     if (Array.isArray(value)) {
-      attributes[key] = key === 'indices' ? new Uint16Array(value) : new Float32Array(value);
+      attributes[key] = key === 'indices' ?
+        new Uint16Array(value) : new Float32Array(value);
     } else {
       modelOptions[key] = value;
     }
   }
 
-  return new Model(Object.assign(
-    {program, geometry: new Geometry({attributes})},
-    modelOptions,
-    opts
-  ));
+  return new Model({
+    program,
+    geometry: new Geometry({attributes}),
+    ...modelOptions,
+    ...opts
+  });
 }
 
 function parseJSON(file) {

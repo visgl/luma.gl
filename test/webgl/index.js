@@ -22,3 +22,6 @@ import './timer-query.spec';
 
 // webgl2
 import './vertex-array-object.spec';
+
+// misc
+import './io-spec';
