@@ -302,6 +302,7 @@ export default class Program extends Resource {
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
     gl.linkProgram(this.handle);
+
     // Avoid checking program linking error in production
     if (gl.debug || log.priority > 0) {
       gl.validateProgram(this.handle);

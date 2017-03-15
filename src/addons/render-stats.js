@@ -232,12 +232,12 @@ export class RendererStats {
     this.lastTime = Date.now();
 
     let i = 0;
-    this.msTexts[i++].textContent = `== Memory =====`;
+    this.msTexts[i++].textContent = `== Memory ==`;
     this.msTexts[i++].textContent = `Programs: ${info.memory.programs}`;
     this.msTexts[i++].textContent = `Geometries: ${info.memory.geometries}`;
     this.msTexts[i++].textContent = `Textures: ${info.memory.textures}`;
 
-    this.msTexts[i++].textContent = `== Render =====`;
+    this.msTexts[i++].textContent = `== Render ==`;
     this.msTexts[i++].textContent = `Calls: ${info.render.calls}`;
     this.msTexts[i++].textContent = `Vertices: ${info.render.vertices}`;
     this.msTexts[i++].textContent = `Faces: ${info.render.faces}`;

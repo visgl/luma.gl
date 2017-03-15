@@ -1,5 +1,6 @@
 import GL from './api';
 import {assertWebGLContext, assertWebGL2Context} from './context';
+import {getContextCaps} from './context-limits';
 import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
@@ -332,15 +333,15 @@ export default class Framebuffer extends Resource {
     attachment = GL.COLOR_ATTACHMENT0,
     pname
   } = {}) {
-    // const caps = getContextCaps(this.gl);
+    const caps = getContextCaps(this.gl);
 
     switch (pname) {
     // EXT_sRGB or WebGL2
     case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-      // if (!caps.EXT_sRGB) {
-      return GL.LINEAR;
-      // }
-      // break;
+      if (!caps.EXT_sRGB) {
+        return GL.LINEAR;
+      }
+      break;
     // WebGL2
     case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
     case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
@@ -349,16 +350,17 @@ export default class Framebuffer extends Resource {
     case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
     case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
     case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
-      // if (!caps.webgl2) {
-      return 8;
-      // }
-      // break;
+      if (!caps.webgl2) {
+        return 8;
+      }
+      break;
     case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE:
       // GL.FLOAT, GL.INT, GL.UNSIGNED_INT, GL.SIGNED_NORMALIZED, OR GL.UNSIGNED_NORMALIZED.
-      // if (!caps.webgl2) {
-      return GL.UNSIGNED_INT;
-      // }
-      // break;
+      if (!caps.webgl2) {
+        return GL.UNSIGNED_INT;
+      }
+      break;
+
     default:
     }
 
