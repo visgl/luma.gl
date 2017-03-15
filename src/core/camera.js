@@ -16,7 +16,6 @@ export class Camera {
       target: new Vec3(0, 0, -1),
       up: new Vec3(0, 1, 0)
     }, opts);
-
     this.fov = opts.fov;
     this.near = opts.near;
     this.far = opts.far;
@@ -26,6 +25,7 @@ export class Camera {
     this.up = opts.up;
     this.view = new Mat4();
     this.uniforms = {};
+
     this.projection = new Mat4();
     Object.seal(this);
 

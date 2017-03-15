@@ -1,0 +1,154 @@
+@font-face {
+  font-family: 'Crimson Text';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Crimson Text'), local('CrimsonText-Roman'), url(font.woff) format('woff');
+}
+
+html, body {
+  text-align: center;
+  font-family: 'Crimson Text', Times, Verdana;
+  margin: 0;
+  padding: 0;
+}
+
+#container {
+  width: 1000px;
+  margin: auto;
+}
+
+body.no-webgl #container {
+  display: none;
+}
+
+div.fallback {
+  display: none;
+}
+
+body.no-webgl div.fallback {
+  display: block;
+}
+
+.description {
+  font-size: 14px;
+  text-align: center;
+  margin: 10px auto;
+  padding: 3px;
+  background-color: rgb(255, 241, 168);
+  border: 1px solid #ccc;
+}
+
+img.legend {
+  margin: 9px auto;
+  width: 190px;
+  background: #444;
+}
+
+h1 {
+  text-shadow: rgba(0, 0, 0, 0.2) 0 0 3px;
+  margin: 5px;
+}
+
+#map {
+  -webkit-box-shadow: #333 0 0 10px;
+  -o-box-shadow: #333 0 0 10px;
+  -moz-box-shadow: #333 0 0 10px;
+  box-shadow: #333 0 0 10px;
+  position: relative;
+  height: 575px;
+}
+
+#controls {
+  position: absolute;
+  width: 200px;
+  top:0;
+  right:0;
+  overflow: hidden;
+}
+
+#controls .title {
+  color: #ccc;
+  -webkit-box-shadow: #333 0 0 5px;
+  -o-box-shadow: #333 0 0 5px;
+  -moz-box-shadow: #333 0 0 5px;
+  box-shadow: #333 0 0 5px;
+  background-color: #000;
+}
+
+#controls ul {
+  margin:0;
+  padding:0;
+}
+
+#controls ul li {
+  position: relative;
+  display: block;
+  list-style-type: none;
+  background-color: white;
+  cursor: pointer;
+}
+
+#controls ul li:hover {
+  background-color:  #E0ECFF;
+}
+
+#controls ul li.selected {
+  background-color: rgb(255, 241, 168);
+}
+
+#controls ul li.selected:hover {
+ background-color: rgb(255, 241, 168);
+}
+
+#controls ul li .square {
+  width: 15px;
+  height: 15px;
+  margin: 4px;
+  position: absolute;
+  top:0;
+  left:6px;
+  border: 1px solid #555;
+}
+
+#controls img {
+  -webkit-box-shadow: #333 0 0 3px;
+  -o-box-shadow: #333 0 0 3px;
+  -moz-box-shadow: #333 0 0 3px;
+  box-shadow: #333 0 0 3px;
+}
+
+#controls .title {
+  font-size: 16px;
+  margin: 5px 0;
+}
+
+#canvas-container {
+  margin: auto;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+}
+
+.footer {
+  margin: 4px;
+  font-size: 13px;
+}
+
+#log-panel {
+  font-family: Arial;
+  margin: 0;
+  position: fixed;
+  top: 0;
+  right: 0;
+  padding: 5px;
+  color: white;
+  background-color: red;
+  font-weight: bold;
+  font-size: 1em;
+  z-index: 4000;
+}
+

@@ -18,7 +18,7 @@ export function getShaderName(shader) {
  * @param {Number} shaderType - shader type (GL constant)
  * @return {String} - Formatted strings has the error marked inline with src.
  */
-export function formatGLSLCompilerError(errLog, src, shaderType) {
+export default function formatGLSLCompilerError(errLog, src, shaderType) {
   const errorStrings = errLog.split(/\r?\n/);
   const errors = {};
 

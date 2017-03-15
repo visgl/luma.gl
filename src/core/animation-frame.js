@@ -1,35 +1,35 @@
 /* global window, setTimeout, clearTimeout */
+import autobind from 'autobind-decorator';
 import {isBrowser, pageLoadPromise} from '../utils';
 import {isWebGLContext} from '../webgl/webgl-checks';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export const requestAnimationFrame = callback =>
-  isBrowser ? window.requestAnimationFrame(callback) : setTimeout(callback, 1000 / 60);
+  isBrowser ?
+    window.requestAnimationFrame(callback) :
+    setTimeout(callback, 1000 / 60);
 
 export const cancelAnimationFrame = timerId =>
-  isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
+  isBrowser ?
+    window.cancelAnimationFrame(timerId) :
+    clearTimeout(timerId);
 
 export default class AnimationFrame {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, with and height will be
    *   passed to context
    */
-  constructor(opts = {}) {
-    const {
-      gl = null,
-      // canvas = null,
-      width = null,
-      height = null,
-      autoResizeViewport = true,
-      autoResizeCanvas = true,
-      autoResizeDrawingBuffer = true,
-      useDevicePixelRatio = true
-    } = opts;
-
-    this.start = this.start.bind(this);
-    this.stop = this.stop.bind(this);
-    this._frame = this._frame.bind(this);
-
+  constructor({
+    gl = null,
+    canvas = null,
+    width = null,
+    height = null,
+    autoResizeViewport = true,
+    autoResizeCanvas = true,
+    autoResizeDrawingBuffer = true,
+    useDevicePixelRatio = true,
+    ...glOpts
+  } = {}) {
     this.update({
       autoResizeViewport,
       autoResizeCanvas,
@@ -60,7 +60,7 @@ export default class AnimationFrame {
     return this;
   }
 
-  context(onCreateContext) {
+  @autobind context(onCreateContext) {
     if (this.gl) {
       throw new Error('AnimationFrame.context - context already provided');
     }
@@ -73,7 +73,7 @@ export default class AnimationFrame {
     return this;
   }
 
-  init(onInit) {
+  @autobind init(onInit) {
     this._startPromise = this._startPromise.then(() => {
       if (!this.gl) {
         throw new Error('AnimationFrame.context - no context provided');
@@ -85,7 +85,7 @@ export default class AnimationFrame {
     return this;
   }
 
-  setupFrame(onSetupFrame) {
+  @autobind setupFrame(onSetupFrame) {
     this._onSetupFrame = onSetupFrame;
     return this;
   }
@@ -98,18 +98,17 @@ export default class AnimationFrame {
    *  (E.g. tick, width, height, etc)
    * @return {Renderer} - returns self for chaining
    */
-  frame(onRenderFrame) {
+  @autobind frame(onRenderFrame) {
     this._onRenderFrame = onRenderFrame;
+    this._restartFrame();
     return this;
   }
 
   /**
    * Starts a render loop if not already running
    */
-  start() {
-    // Wait for start promise before rendering frame
-    this._startPromise.then((appContext = {}) => {
-      this._initializeContext(appContext);
+  @autobind start() {
+    this._startPromise.then(() => {
       if (!this._animationFrameId) {
         this._animationFrameId = requestAnimationFrame(this._frame);
       }
@@ -120,7 +119,7 @@ export default class AnimationFrame {
   /**
    * Stops a render loop if already running
    */
-  stop() {
+  @autobind stop() {
     if (this._animationFrameId) {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
@@ -142,20 +141,15 @@ export default class AnimationFrame {
 
   // PRIVATE METHODS
 
-  _initializeContext(appContext) {
-    if (!this._context) {
-      this._context = {
-        gl: this.gl,
-        canvas: this.gl.canvas,
-        stop: this.stop,
-        tick: 0,
-        tock: 0
-      };
-    }
+  _initializeContext() {
+    this._context = {
+      gl: this.gl,
+      canvas: this.gl.canvas,
+      stop: this.stop,
+      tick: 0,
+      tock: 0
+    };
     this._updateContext();
-    if (typeof appContext === 'object' && appContext !== null) {
-      this._context = Object.assign({}, appContext, this._context);
-    }
   }
 
   _updateContext() {
@@ -166,12 +160,25 @@ export default class AnimationFrame {
     this._context.aspect = canvas.width / canvas.height;
   }
 
+  _restartFrame() {
+    this.stop();
+    // Wait for start promise before rendering frame
+    this._startPromise.then((appContext = {}) => {
+      this._initializeContext();
+
+      if (typeof appContext === 'object' && appContext !== null) {
+        this._context = {...appContext, ...this._context};
+      }
+      this.start();
+    });
+  }
+
   /**
    * @private
    * Handles a render loop frame- updates context and calls the application
    * callback
    */
-  _frame() {
+  @autobind _frame() {
     const {canvas} = this._context;
 
     if (this._onSetupFrame) {

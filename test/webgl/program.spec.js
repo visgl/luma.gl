@@ -1,21 +1,23 @@
+import {createGLContext, Program, Buffer} from '../../src/headless';
+import shaders from '../../src/shaderlib';
 import test from 'tape-catch';
-import {createGLContext, Program, Buffer} from 'luma.gl';
-import 'luma.gl/headless';
 
 const fixture = {
   gl: createGLContext()
 };
 
-const vs = `
+const VS = `
 attribute vec3 positions;
+
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
+
 void main(void) {
   gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
 }
 `;
 
-const fs = `
+const FS = `
 void main(void) {
   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
@@ -31,12 +33,7 @@ test('WebGL#Program construct/delete', t => {
     /.*WebGLRenderingContext.*/,
     'Program throws on missing gl context');
 
-  t.throws(
-    () => new Program(gl),
-    /.*shader*/,
-    'Program throws on missing shader');
-
-  const program = new Program(gl, {vs, fs});
+  const program = new Program(gl, shaders);
   t.ok(program instanceof Program, 'Program construction successful');
 
   program.delete();
@@ -51,7 +48,7 @@ test('WebGL#Program construct/delete', t => {
 test('WebGL#Program buffer update', t => {
   const {gl} = fixture;
 
-  let program = new Program(gl, {fs, vs});
+  let program = new Program(gl, {fs: FS, vs: VS});
   t.ok(program instanceof Program, 'Program construction successful');
 
   program = program.setBuffers({

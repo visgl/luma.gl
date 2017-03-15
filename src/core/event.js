@@ -380,52 +380,39 @@ Object.assign(EventsProxy.prototype, {
   moved: false
 });
 
-const DEFAULT_OPTS = {
-  cachePosition: true,
-  cacheSize: true,
-  relative: true,
-  centerOrigin: true,
-  disableContextMenu: true,
-  bind: false,
-  picking: false,
-
-  enableTouch: true,
-  enableMouse: true,
-  enableKeyboard: true,
-
-  onClick: noop,
-  onRightClick: noop,
-  onDragStart: noop,
-  onDragMove: noop,
-  onDragEnd: noop,
-  onDragCancel: noop,
-  onTouchStart: noop,
-  onTouchMove: noop,
-  onTouchEnd: noop,
-  onTouchCancel: noop,
-  onTap: noop,
-  onMouseMove: noop,
-  onMouseEnter: noop,
-  onMouseLeave: noop,
-  onMouseWheel: noop,
-  onKeyDown: noop,
-  onKeyUp: noop
-};
-
-export const Keys = KEYS;
-
-function keyOf(code) {
-  const keyMap = Keys;
-  for (const name in keyMap) {
-    if (keyMap[name] === code) {
-      return name;
-    }
-  }
-  return null;
-}
-
 export function addEvents(domElement, opt = {}) {
-  opt = Object.assign({}, DEFAULT_OPTS, opt);
+  opt = {
+    cachePosition: true,
+    cacheSize: true,
+    relative: true,
+    centerOrigin: true,
+    disableContextMenu: true,
+    bind: false,
+    picking: false,
+
+    enableTouch: true,
+    enableMouse: true,
+    enableKeyboard: true,
+
+    onClick: noop,
+    onRightClick: noop,
+    onDragStart: noop,
+    onDragMove: noop,
+    onDragEnd: noop,
+    onDragCancel: noop,
+    onTouchStart: noop,
+    onTouchMove: noop,
+    onTouchEnd: noop,
+    onTouchCancel: noop,
+    onTap: noop,
+    onMouseMove: noop,
+    onMouseEnter: noop,
+    onMouseLeave: noop,
+    onMouseWheel: noop,
+    onKeyDown: noop,
+    onKeyUp: noop,
+    ...opt
+  };
 
   const bind = opt.bind;
   if (bind) {
@@ -441,4 +428,16 @@ export function addEvents(domElement, opt = {}) {
   }
 
   return new EventsProxy(domElement, opt);
+}
+
+export const Keys = KEYS;
+
+function keyOf(code) {
+  const keyMap = Keys;
+  for (const name in keyMap) {
+    if (keyMap[name] === code) {
+      return name;
+    }
+  }
+  return null;
 }

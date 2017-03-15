@@ -1,5 +1,5 @@
 import {GL, glGet, glTypeToArray, glTypeFromArray} from './webgl';
-import {assertWebGLContext, assertWebGL2Context} from './webgl-checks';
+import {assertWebGLContext, assertWebGL2} from './webgl-checks';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import assert from 'assert';
@@ -23,10 +23,8 @@ export default class Framebuffer {
   }
 
   /* eslint-disable max-statements */
-  constructor(gl, opts = {}) {
+  constructor(gl, {id, ...params} = {}) {
     assertWebGLContext(gl);
-
-    const {id} = opts;
 
     const handle = gl.createFramebuffer();
     if (!handle) {
@@ -45,7 +43,7 @@ export default class Framebuffer {
     this.height = 0;
     Object.seal(this);
 
-    this.resize(opts);
+    this.resize(params);
   }
   /* eslint-enable max-statements */
 
@@ -75,7 +73,7 @@ export default class Framebuffer {
       return;
     }
 
-    log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+    log.log(1, `Resizing framebuffer ${this.id} to ${width}x${height}`);
 
     const {gl} = this;
 
@@ -282,7 +280,7 @@ export default class Framebuffer {
     filter = GL.NEAREST
   }) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     gl.blitFramebuffer(
       srcX0, srcY0, srcX1, srcY1,
       dstX0, dstY0, dstX1, dstY1,
@@ -300,7 +298,7 @@ export default class Framebuffer {
     layer
   } = {}) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     gl.framebufferTextureLayer(target, attachment, texture, level, layer);
     return this;
   }
@@ -310,7 +308,7 @@ export default class Framebuffer {
     attachments = []
   }) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     gl.invalidateFramebuffer(target, attachments);
     return this;
   }
@@ -324,7 +322,7 @@ export default class Framebuffer {
     height
   }) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     gl.invalidateFramebuffer(target, attachments, x, y, width, height);
     return this;
   }
@@ -337,7 +335,7 @@ export default class Framebuffer {
   //  gl.COLOR_ATTACHMENT{0-15}: Reads from one of 16 color attachment buffers.
   readBuffer({src}) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     gl.readBuffer(src);
     return this;
   }
@@ -478,7 +476,7 @@ export default class Framebuffer {
     attachment
   } = {}) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assertWebGL2(gl);
     const value = gl.getFramebufferAttachmentParameter(
       target, attachment, pname
     );

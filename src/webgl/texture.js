@@ -7,21 +7,24 @@ import assert from 'assert';
 
 export default class Texture {
 
-  constructor(gl, opts) {
-    const {
-      id = uid('texture'),
-      unpackFlipY = true,
-      magFilter = GL.NEAREST,
-      minFilter = GL.NEAREST,
-      wrapS = GL.CLAMP_TO_EDGE,
-      wrapT = GL.CLAMP_TO_EDGE,
-      target = GL.TEXTURE_2D,
-      handle
-    } = opts;
-
+  /* eslint-disable max-statements */
+  constructor(gl, {
+    id = uid('texture'),
+    unpackFlipY = true,
+    magFilter = GL.NEAREST,
+    minFilter = GL.NEAREST,
+    wrapS = GL.CLAMP_TO_EDGE,
+    wrapT = GL.CLAMP_TO_EDGE,
+    target = GL.TEXTURE_2D,
+    handle,
+    ...opts
+  }) {
     assertWebGLContext(gl);
 
     this.handle = handle || gl.createTexture();
+    // if (!this.handle) {
+    // }
+
     this.id = id;
     this.gl = gl;
     this.target = target;
@@ -31,9 +34,10 @@ export default class Texture {
     this.textureUnit = undefined;
     this.userData = {};
 
-    this.setPixelStorageModes(Object.assign({}, opts, {unpackFlipY}));
-    this.setParameters(Object.assign({}, opts, {magFilter, minFilter, wrapS, wrapT}));
+    this.setPixelStorageModes({...opts, unpackFlipY});
+    this.setParameters({...opts, magFilter, minFilter, wrapS, wrapT});
   }
+  /* eslint-enable max-statements */
 
   delete() {
     if (this.handle) {
@@ -84,7 +88,8 @@ export default class Texture {
     format = GL.RGBA,
     type,
     offset = 0,
-    border = 0
+    border = 0,
+    ...opts
   }) {
     const {gl} = this;
 

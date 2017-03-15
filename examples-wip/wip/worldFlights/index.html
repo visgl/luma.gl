@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PhiloGL - World Flights</title>
+    <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+    <script src="../../build/PhiloGL.js"></script>
+    <script src="classes.js"></script>
+    <script src="index.js"></script>
+  </head>
+  <body>
+    <div id="log-panel" style="display:none;">
+      <span id="log-message"></span>
+    </div>
+  
+    <div id="fallback" class="fallback"></div>
+    
+    <div id="container">
+      <div id="title">
+        <h1>World Flights</h1>
+        <div class="description">Visualize major airlines flight routes</div>
+      </div>
+
+      <div class="canvas-container">
+        <div id="canvas-wrapper">
+          <canvas id="map-canvas" width="1024" height="1024"></canvas>
+        </div>
+        <div id="list-wrapper" class="list-wrapper" style="display:none;">
+          <input type="text" id="search" placeholder="Search for an Airline" />
+          <ul id="selected-airlines">
+          </ul>
+          <div class="list-container">
+            <ul id="airline-list"></ul>
+          </div>
+        </div>
+        <div style="clear:both;"></div>
+      </div>
+    </div>
+  </div>
+  
+  
+  <div class="footer">
+    Authors: <a href='http://twitter.com/gerbille/'>Luz Caballero</a> &amp; <a href="http://philogb.github.com/">Nicolas Garcia
+      Belmonte</a>.
+  </div>
+  
+  <div class="tooltip hide" id="tooltip" style="width:auto;"></div>
+  
+  <script>
+    if (!PhiloGL.hasWebGL()) {
+      document.body.className = 'no-webgl';
+      document.getElementById('fallback').innerHTML = ''
+        +  '<div style="margin:10px;">'
+        +   'Your browser (or hardware) does not support WebGL. Go <a href="http://get.webgl.org">here</a> to find more information.'
+        +  '</div>'
+        +   '<iframe width="853" height="510" src="http://www.youtube.com/embed/b263ETg5zqI" frameborder="0" allowfullscreen></iframe>';
+    }
+  </script>
+</body>
+</html>

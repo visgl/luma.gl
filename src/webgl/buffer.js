@@ -1,5 +1,7 @@
-import {GL, WebGLBuffer, glTypeFromArray} from './webgl';
-import {assertWebGLContext, assertWebGL2Context, assertArrayTypeMatch} from './webgl-checks';
+import {GL, WebGLBuffer, glTypeFromArray}
+  from './webgl';
+import {assertWebGLContext, assertWebGL2Context,
+  assertArrayTypeMatch} from './webgl-checks';
 import assert from 'assert';
 
 export class BufferLayout {
@@ -66,7 +68,7 @@ export default class Buffer {
    * Mainly used for uploading VertexAttributes to GPU
    * Setting data on a buffers (arrays) uploads it to the GPU.
    *
-   * Holds an attribute name as a convenience
+   * Holds an attribute name as a convenience...
    * setData - Initializes size of buffer and sets
    *
    * @param {WebGLRenderingContext} gl - gl context

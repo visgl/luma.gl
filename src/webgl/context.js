@@ -6,11 +6,9 @@ import {assertWebGLContext, isWebGL2Context}
   from './webgl-checks';
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
-import {global} from '../utils/globals';
+import luma from '../globals';
 import assert from 'assert';
 /* global document */
-
-const {luma} = global;
 
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
@@ -26,27 +24,28 @@ const ERR_HEADLESSGL_NOT_AVAILABLE =
 const ERR_HEADLESSGL_FAILED =
 'headlessGL failed to create headless WebGL context';
 
+const STARTUP_MESSAGE = `\
+Assign luma.log.priority in console to control logging: \
+0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
+luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
+
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
-export function createGLContext(opts = {}) {
-  let {
-    // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
-    canvas
-  } = opts;
-
-  const {
-    // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
-    width = 800,
-    height = 600,
-    // COMMON CONTEXT PARAMETERS
-    // Attempt to allocate WebGL2 context
-    webgl2 = false,
-    // Instrument context (at the expense of performance)
-    // Note: currently defaults to true and needs to be explicitly turned off
-    debug = true
-    // Other options are passed through to context creator
-  } = opts;
-
+export function createGLContext({
+  // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
+  canvas,
+  // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
+  width = 800,
+  height = 600,
+  // COMMON CONTEXT PARAMETERS
+  // Attempt to allocate WebGL2 context
+  webgl2 = false,
+  // Instrument context (at the expense of performance)
+  // Note: currently defaults to true and needs to be explicitly turned off
+  debug = true,
+  // Other options are passed through to context creator
+  ...opts
+} = {}) {
   let gl;
 
   if (!isBrowser) {
@@ -76,12 +75,11 @@ export function createGLContext(opts = {}) {
 
     // Prefer webgl2 over webgl1, prefer conformant over experimental
     if (webgl2) {
-      gl = gl || canvas.getContext('webgl2', opts);
+      gl = canvas.getContext('webgl2', opts);
       gl = gl || canvas.getContext('experimental-webgl2', opts);
-    } else {
-      gl = gl || canvas.getContext('webgl', opts);
-      gl = gl || canvas.getContext('experimental-webgl', opts);
     }
+    gl = gl || canvas.getContext('webgl', opts);
+    gl = gl || canvas.getContext('experimental-webgl', opts);
 
     assert(gl, 'Failed to create WebGLRenderingContext');
   }
@@ -96,6 +94,8 @@ export function createGLContext(opts = {}) {
     log.priority = log.priority < 1 ? 1 : log.priority;
 
     logInfo(gl);
+
+    log.log(0, STARTUP_MESSAGE);
   }
 
   return gl;
@@ -212,9 +212,10 @@ export function glGetDebugInfo(gl) {
 function logInfo(gl) {
   const webGL = isWebGL2Context(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
-  const driver = info ? `(${info.vendor} ${info.renderer})` : '';
+  const driver = info ? `using driver: ${info.vendor} ${info.renderer}` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
+  log.log(0,
+    `luma.gl ${luma.VERSION}: ${webGL} ${debug} context ${driver}`, gl);
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
@@ -264,4 +265,11 @@ function validateArgsAndLog(functionName, functionArgs) {
     }
     /* eslint-enable no-debugger */
   }
+}
+
+// Deprecated methods
+
+export function getExtension(gl, extensionName) {
+  log.warn(0, 'luma.gl: getExtension is deprecated');
+  return getGLExtension(gl, extensionName);
 }
