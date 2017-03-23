@@ -9,7 +9,6 @@ export function loadFile(opts) {
 /*
  * Loads images asynchronously
  * returns a promise tracking the load
- * TODO - CORS support
  */
 export function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -17,6 +16,7 @@ export function loadImage(url) {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error(`Could not load image ${url}.`));
+      image.crossOrigin = 'anonymous';
       image.src = url;
     } catch (error) {
       reject(error);
