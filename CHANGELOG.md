@@ -1,5 +1,8 @@
 # Official releases
 
+### 3.0.1
+- Add CORD setting to allow loading image from a different domain
+
 ## 3.0.0
 
 Codebase/Build tooling improvements
@@ -183,4 +186,3 @@ precedence when using wildcard installs.
 - BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
   and into `packages`. This allows luma.gl to drop a number of big dependencies.
   The node IO code may be published as a separate module later.
-
