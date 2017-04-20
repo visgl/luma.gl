@@ -49,7 +49,7 @@ export default class Program {
 
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(gl, vs) : vs;
-    this.fs = typeof vs === 'string' ? new FragmentShader(gl, fs) : fs;
+    this.fs = typeof fs === 'string' ? new FragmentShader(gl, fs) : fs;
 
     assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
     assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
