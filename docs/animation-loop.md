@@ -1,11 +1,11 @@
 ---
 layout: docs
-title: AnimationFrame
+title: AnimationLoop
 categories: [Documentation]
 ---
 
 While this class is named to suggest that it is a wrapper for
-`requestAnimationFrame`, it provides a number of features related
+`requestAnimationLoop`, it provides a number of features related
 to initialization and animation of a WebGLRenderingContext.
 
 * Makes it easy to wait for the HTML page to load before creating resources.
@@ -15,11 +15,11 @@ to initialization and animation of a WebGLRenderingContext.
   that simpler apps and demos need. Advanced apps can override.
 
 Remarks:
-* You can instantiate multiple `AnimationFrame` classes in parallel,
+* You can instantiate multiple `AnimationLoop` classes in parallel,
   rendering into the same or different `WebGLRenderingContext`s. See
   the multicontext example for one way to do this.
 * Works both in browser and under Node.js.
-* All `AnimationFrame` methods can be chained.
+* All `AnimationLoop` methods can be chained.
 
 
 ## Callbacks and the `context` Object
@@ -27,13 +27,13 @@ Remarks:
 The callbacks that the app supplies will be called with a context object.
 The context object will contain the following values:
 
-* `gl` - This `AnimationFrame`'s `WebGLRenderingContext`.
+* `gl` - This `AnimationLoop`'s `WebGLRenderingContext`.
 * `canvas` - The canvas associated with the rendering context.
 * `width`: The canvas width, in device pixels.
 * `height`: The canvas height, in device pixels.
 * `aspect`: The canvas aspect ratio (width/height) to update projection matrices
 * `pixelRatio`: Pixel ratio of the canvas drawingBuffer.
-* `time`: A monotonic value in milliseconds since `AnimationFrame` was created.
+* `time`: A monotonic value in milliseconds since `AnimationLoop` was created.
 * `tick`: A monotonic counter that updates 60 times per second.
 * `tock`: A monotonic counter that updates for every frame rendered.
 
@@ -42,7 +42,7 @@ The context object will contain the following values:
 
 Short example:
 ```
-new AnimationFrame({gl: createGLContext({canvas: 'canvas-0'}))
+new AnimationLoop({gl: createGLContext({canvas: 'canvas-0'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
 }))
@@ -55,7 +55,7 @@ To avoid problems with page load timing, move context creation to
 the `initContext` method. Also the `setupFrame` method enables the app
 to control the resizing of canvas, framebuffer and viewport.
 ```
-new AnimationFrame()
+new AnimationLoop()
 .initContext(() => createGLContext({canvas: 'canvas-0'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
@@ -72,13 +72,13 @@ new AnimationFrame()
 ```
 
 
-## AnimationFrame Methods
+## AnimationLoop Methods
 
 
-### constructor
+### `AnimationLoop` constructor
 
 Parameters:
-* `gl` - Sets this `AnimationFrame`'s `WebGLRenderingContext`.
+* `gl` - Sets this `AnimationLoop`'s `WebGLRenderingContext`.
 
 Remarks:
 * If creating a context using a canvas element specified in HTML, it
@@ -87,7 +87,7 @@ Remarks:
   been fully loaded.
 
 
-### initContext
+### `AnimationLoop.initContext`
 
 Postpones context creation until the page (i.e. all HTML) has been loaded.
 At this time it is safe to specify canvas ids when calling `createGLContext`.
@@ -100,10 +100,10 @@ Remarks:
 * The supplied callback function must return a WebGLRenderingContext or
   an error will be thrown.
 * This callback registration function should not be called if a
-  `WebGLRenderingContext` was supplied to the AnimationFrame constructor.
+  `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
 
 
-### init(callback)
+### `AnimationLoop.init`(callback)
 
 * `callback` - function that takes a context object. It will be called
   exactly once, after page load completes and a context has been created.
@@ -111,7 +111,7 @@ Remarks:
 The callback will be called with an initial context object, containing
 
 
-### setupFrame(callback)
+### `AnimationLoop.setupFrame`(callback)
 
 Supplying this callback overrides the default frame setup code, which
 resizes the canvas and the viewport after the window size.
@@ -120,17 +120,17 @@ For applications that use a single full screen canvas, this function is
 usually not needed.
 
 
-### frame(callback)
+### `AnimationLoop.frame`(callback)
 
 Calling `frame` will automatically start the animation. If this is not
 desired, follow immediately with a stop.
 
 
-### stop
+### `AnimationLoop.stop`
 
 Stops the animation
 
 
-### start
+### `AnimationLoop.start`
 
 Restarts the animation
