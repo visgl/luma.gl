@@ -1,11 +1,10 @@
 ---
 layout: docs
-title: Framebuffer
+title: Renderbuffer
 categories: [Documentation]
 ---
 
-Class: Renderbuffer {#Framebuffer}
-===========================
+# Renderbuffer
 
 From [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object):
 

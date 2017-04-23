@@ -4,6 +4,48 @@ title: Shaders
 categories: [Documentation]
 ---
 
+## Shader Module System
+
+Core Requirements
+* Support modules exporting
+* Support dynamic registry of GLSL modules with dependencies (per vertex and fragment)
+* Resolve dependency graphs.
+
+Long Term Requirements
+* Eventually support dynamic composition.
+
+Optional Requirements
+* Support 'interfaces' - set of functions expected from module (e.g. lighting)
+* Several concrete modules could implement an interface.
+* App shaders can be written towards an interface, app can change implementation
+  module easily.
+
+References
+* [deck.gl assembleShaders](https://github.com/uber/deck.gl/blob/master/src/shader-utils/assemble-shaders.js)
+* [shadergraph](https://github.com/unconed/shadergraph)
+  + Graph structure
+  - Coffee Script
+  - Hard to understand?
+* [glslify](https://github.com/stackgl/glslify)
+  + supports import statements in GLSL code.
+  + Supports node modules, shader-name etc
+  - One function per import
+  - Renames uniforms and secondary functions
+* [Per file parsing of shader errors](http://codeflow.org/entries/2013/feb/22/how-to-write-portable-webgl/#shader-problems)
+  - Our import system could track files and generate correct line numbers!
+
+## GPGPU Computing
+
+References:
+* [GPU Gems Article](http://http.developer.nvidia.com/GPUGems/gpugems_ch37.html)
+
+* Handle a number of cases (set up arrays as textures, clip space rectangles)
+* Blend modes for accumulate
+* Reduction algorithms for e.g. Max and Min.
+* WebGL2, transform feedback, disable rasterizers etc.
+* Perf tests, based on Query class, vs JavaScript counterparts.
+
+
 Object: Shaders {#Shaders}
 ===============================
 

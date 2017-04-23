@@ -90,7 +90,6 @@ import {createGLContext} from 'luma.gl';
 const gl = createGLContext({headlessGL})
 ```
 
-
 Static Method: getGLExtension {#getGLExtension}
 -----------------------------------------------------------
 
@@ -110,43 +109,80 @@ More info [here](http://www.khronos.org/registry/webgl/extensions/).
 1. **name** (*string*) - The name of the extension.
 
 
-## luma.gl WebGL Wrappers - Design Goals
----------------------------------
 
-luma.gl provides JavaScript classes that manage core WebGL object types,
-with the intention of making these WebGL objects easier to work with in
-JavaScript, without adding an abstraction layer.
+## WebGL State Management
 
-* *Boilerplate reduction* - These classes provide an API that closely matches
-  the operations supported by the underlying WebGL object, while reducing
-  the boilerplate often required by low-level WebGL functions (such as long,
-  repeated argument lists, or the multiple WebGL calls that are often
-  necessary to bind and configure parameters before doing an actual operation).
+WebGL State Management can be quite complicated.
 
-* *Parameter checking* - Parameter checks help catch a number of common
-  WebGL coding mistakes, which is important since bad parameters in WebGL
-  often lead to silent failure to render, or to inscrutable error messages
-  in the console, both of which can be hard to debug. As an example,
-  setting uniforms to illegal values now throws an exception containing a
-  helpful error message including the name of the problematic uniform.
+| blend         | false | GL.BLEND | gl.enable |
+| blendColor    | [] |
+| blendEquation | [GL.FUNC_ADD, GL.FUNC_ADD] | [GL.BLEND_EQUATION_RGB, GL.BLEND_EQUATION_ALPHA] |
+  blendFunc     | [GL.ONE, GL.ZERO, GL.ONE, GL.ZERO] |  |
 
-* *Error handling* - Methods carefully check WebGL return values and
-  throw exceptions when things go wrong, taking care to extract helpful
-  information into the error message.
-  As an example, a failed shader compilation will throw an Error with a
-  message indicating the problem inline in the shader's GLSL source.
+  colorClearValue: ,
+  colorMask: ,
+  colorWritemask: ,
 
-To maximize interoperability with WebGL code that does not use luma.gl, the
-WebGLRendingContexttype does not have a corresponding luma.gl wrapper class,
-but is instead used directly by the luma.gl API.
-A simple global function is provided to help in creating gl contexts.
+  cullFace: false,
+  cullFaceMode: ,
+
+  depthTest: false,
+  depthClearValue: ,
+  depthFunc: ,
+  depthRange: ,
+  depthWritemask: ,
+
+  dither: true,
+
+  frontFace: ,
+
+  generateMipmapHint: ,
+
+  lineWidth: ,
+
+  polygonOffsetFill: false,
+  polygonOffset: ,
+
+  sampleCoverage: ,
+
+  scissorTest: false,
+  scissorBox: ,
+
+  stencilTest: false,
+  stencilClearValue: ,
+  stencilMask: ,
+  stencilFunc: ,
+  stencilOp: ,
+
+  viewport:
 
 
-## Debugging
----------------------------------
+### setGLParameter(gl, key, value)
 
-Luma has a number of provisions for debugging that can help you save a lot
-of time during development.
+### getGLParameter(gl, key)
+
+* Luma checks the gl error status after each WebGL call and throws an
+  exception if an error was reported. Raw WebGL calls tend to either fail
+  silently or log something cryptic in the console without making it clear
+  what call generated the warning, so being able to break
+  on exceptions where they happen in the luma code can be very helpful.
+* Luma allows you to set `id`s on many classes, which allows you to easily
+  check in the debugger which object is involved in a stack trace.
+* Luma has takes care to extract as much information as possible about
+  shader compiler errors etc, and will throw exceptions with very detailed
+  error strings when shaders fail to compile.
+* Luma also understands `glslify` "names", making it possible to name shaders
+  inside the shader code, which makes it easier to identify which shader
+  is being called.
+* Luma runs checks on attributes and buffers when they are being set,
+  catching many trivial errors such as setting uniforms to `undefined`
+  or wrong type (scalar vs array etc).
+* Luma has a logging mechanism. Set the global variable lumaLog.priority to 3
+  (can be done in the browser console at any time) and luma will print
+  tables for uniforms and attributes providing information
+  about their values and types before each render call. This can be extremely
+  helpful for checking that shaders are getting valid inputs.
+### withGLState(gl, params, function);
 
 * Luma checks the gl error status after each WebGL call and throws an
   exception if an error was reported. Raw WebGL calls tend to either fail

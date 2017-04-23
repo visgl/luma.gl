@@ -78,7 +78,7 @@ Else you should provide an object with the same options as in `setTexture`.
 * bindToRenderBuffer - (*boolean*) Whether to bind the framebuffer to a renderbuffer. The `width` and `height` of the renderbuffer are the same as the ones specified above.
 * renderBufferOptions - (*object*, optional) Some extra options for binding the framebuffer to the renderbuffer. Default's `{ attachment: gl.DEPTH_ATTACHMENT }`.
 
-### Examples:
+Examples:
 
 Using a frambuffer to render a scene into a texture. Taken from
 [lesson 16]http://uber.github.io/luma.gl/examples/lessons/16/).
@@ -103,23 +103,17 @@ program.setFramebuffer('monitor', {
 {% endhighlight %}
 
 
-Framebuffer Method: update {#Framebuffer:destroy}
------------------------------------------------------------
+### `Framebuffer.update`
 
-size, which effectively reallocates all framebuffers.
+Syntax:
+    program.setFramebuffers(object);
 
-### Syntax:
-
-	program.setFramebuffers(object);
-
-### Arguments:
-
+Arguments:
 1. object - (*object*) An object with key value pairs matching a
    buffer name and its value respectively.
 
 
-Framebuffer Method: destroy {#Framebuffer:destroy}
------------------------------------------------------------
+### `Framebuffer:delete`
 
 Destroys the underlying WebGL object. When destroying Framebuffers it can
 be important to consider that a Framebuffer can manage other objects that
