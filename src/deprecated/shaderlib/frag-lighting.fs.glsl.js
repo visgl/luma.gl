@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME luma-frag-lighting-fs
 
 #ifdef GL_ES
@@ -94,3 +95,4 @@ void main(void) {
   }
   gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
+`;

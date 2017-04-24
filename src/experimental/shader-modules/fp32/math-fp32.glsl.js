@@ -1,3 +1,4 @@
+export default `\
 #ifdef INTEL_TAN_WORKAROUND
 
 // All these functions are for substituting tan() function from Intel GPU only
@@ -148,3 +149,4 @@ float tan_fp32(float angle) {
 }
 
 #endif
+`;

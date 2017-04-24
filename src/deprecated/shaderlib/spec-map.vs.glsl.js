@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME spec-map-vs
 
 attribute vec3 positions;
@@ -18,7 +19,6 @@ varying vec4 vTransformedNormal;
 varying vec4 vPosition;
 varying vec4 vColor;
 
-
 void main(void) {
   vPosition = worldMatrix * vec4(positions, 1.0);
   vTransformedNormal = worldInverseTransposeMatrix * vec4(normals, 1.0);
@@ -28,4 +28,4 @@ void main(void) {
   vColor = colors;
   gl_Position = projectionMatrix * vPosition;
 }
-
+`;

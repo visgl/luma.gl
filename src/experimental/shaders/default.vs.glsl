@@ -1,3 +1,4 @@
+export default `
 #define SHADER_NAME luma-default-vs
 
 #define LIGHT_MAX 4
@@ -51,3 +52,4 @@ void main(void) {
   vTexCoord = texCoord1;
   gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
 }
+`;

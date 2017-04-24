@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME spec-map-fs
 
 #ifdef GL_ES
@@ -72,7 +73,8 @@ void main(void) {
 
         if (enableSpecular[i] > 0.0) {
           reflectionDirection = reflect(-lightDirection, normal);
-          specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininessVal);
+          specularLightWeighting =
+            pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininessVal);
           specularLight += specularLightWeighting * pointSpecularColor[i];
         }
 
@@ -94,4 +96,4 @@ void main(void) {
   }
   gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
-
+`;

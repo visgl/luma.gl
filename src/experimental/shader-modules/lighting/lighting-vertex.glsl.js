@@ -1,4 +1,4 @@
-
+export default `\
 #define LIGHT_MAX 4
 
 /*
@@ -76,3 +76,4 @@ void lighting_set_reflection(vec3 position) {
     lighting_vReflection = vec3(1., 1., 1.);
   }
 }
+`;

@@ -1,9 +1,6 @@
-import {readFileSync} from 'fs';
-import {join} from 'path';
-
 // Default Shaders
-const vs = readFileSync(join(__dirname, './default-vertex.glsl'), 'utf8');
-const fs = readFileSync(join(__dirname, './default-fragment.glsl'), 'utf8');
+import vs from './default-vertex.glsl';
+import fs from './default-fragment.glsl';
 const defaultUniforms = require('./default-uniforms');
 
 module.exports = {

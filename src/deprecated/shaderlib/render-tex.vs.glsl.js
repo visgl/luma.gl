@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME luma-frag-lighting-vs
 
 attribute vec3 position;
@@ -28,3 +29,4 @@ void main(void) {
   vColor = color;
   gl_Position = projectionMatrix * vPosition;
 }
+`;

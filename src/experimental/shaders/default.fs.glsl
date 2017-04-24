@@ -1,3 +1,4 @@
+export default `
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -38,3 +39,4 @@ void main() {
     gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
   }
 }
+`;

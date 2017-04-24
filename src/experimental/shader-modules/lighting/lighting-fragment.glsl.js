@@ -1,3 +1,4 @@
+export default `\
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -53,7 +54,8 @@ vec3 lighting__calculate_light_weighting(shininess) {
 
       if (lighting_uPointSpecularEnable > 0.) {
         vec3 reflectionDirection = reflect(-lightDirection, normal);
-        float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininessVal);
+        float specularLightWeighting =
+          pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininessVal);
         specularLight += specularLightWeighting * lighting_uPointSpecularColor[i];
       }
 
@@ -104,7 +106,8 @@ void apply_lighting(color) {
 
       if (enableSpecularHighlights) {
         vec3 reflectionDirection = reflect(-lightDirection, normal);
-        float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininess);
+        float specularLightWeighting =
+          pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininess);
         specularLight += specularLightWeighting * pointSpecularColor[i];
       }
 
@@ -189,4 +192,4 @@ uniform float refraction;
   //       vec3(-reflectionValue.x, -reflectionValue.y, reflectionValue.z));
   //   gl_FragColor = vec4(mix(gl_FragColor.xyz, cubeColor.xyz, reflection), 1.0);
   // }
-
+`;
