@@ -1,3 +1,4 @@
+export * from './event';
 import {default as Fx} from './fx';
 import {default as WorkerGroup} from './workers';
 import * as helpers from './helpers';
