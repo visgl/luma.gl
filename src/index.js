@@ -24,8 +24,7 @@ export {default as VertexArrayObject} from './webgl/vertex-array-object';
 
 // Core
 export {default as Model} from './core/model';
-export {default as AnimationFrame} from './core/animation-frame';
-export {addEvents} from './core/event';
+export {default as AnimationLoop} from './core/animation-loop';
 
 // Geometry
 export {default as Geometry} from './geometry/geometry';
@@ -57,6 +56,8 @@ export {default as Matrix4} from './packages/math/src/matrix4';
 export {default as Quaternion} from './packages/math/src/quaternion';
 export {default as Euler} from './packages/math/src/euler';
 
+export {addEvents} from './addons/event';
+
 // IO
 export {
   loadFile, loadImage,
@@ -79,8 +80,7 @@ export const experimental = {
 };
 
 // DEPRECATED IN V3.0
-export {Vec3, Vec4, Mat4} from './deprecated/math';
+export {Vec3, Vec4, Mat4, Quat} from './deprecated/math';
 export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
-export {default as FramebufferObject} from './deprecated/fbo';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';
