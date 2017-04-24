@@ -1,5 +1,5 @@
 /* eslint-disable max-statements */
-import {Vec3, Mat4, Quat} from './math';
+import {Vec3, Mat4, Quat} from 'luma.gl';
 import test from 'tape-catch';
 
 const abs = Math.abs;

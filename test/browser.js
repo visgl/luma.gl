@@ -1,4 +1,3 @@
-require('babel-polyfill');
 require('tap-browser-color')();
 
 require('./index-webgl-independent-tests');

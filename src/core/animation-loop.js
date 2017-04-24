@@ -1,6 +1,6 @@
 /* global window, setTimeout, clearTimeout */
 import {isBrowser, pageLoadPromise} from '../utils';
-import {isWebGLContext} from '../webgl/webgl-checks';
+import {isWebGLContext} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export const requestAnimationFrame = callback =>
@@ -9,7 +9,7 @@ export const requestAnimationFrame = callback =>
 export const cancelAnimationFrame = timerId =>
   isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
 
-export default class AnimationFrame {
+export default class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, with and height will be
    *   passed to context
@@ -62,12 +62,12 @@ export default class AnimationFrame {
 
   context(onCreateContext) {
     if (this.gl) {
-      throw new Error('AnimationFrame.context - context already provided');
+      throw new Error('AnimationLoop.context - context already provided');
     }
     this._startPromise = this._startPromise.then(() => {
       this.gl = onCreateContext();
       if (!isWebGLContext(this.gl)) {
-        throw new Error('AnimationFrame.context - illegal context returned');
+        throw new Error('AnimationLoop.context - illegal context returned');
       }
     });
     return this;
@@ -76,7 +76,7 @@ export default class AnimationFrame {
   init(onInit) {
     this._startPromise = this._startPromise.then(() => {
       if (!this.gl) {
-        throw new Error('AnimationFrame.context - no context provided');
+        throw new Error('AnimationLoop.context - no context provided');
       }
       this._initializeContext();
       return onInit(this._context) || {};

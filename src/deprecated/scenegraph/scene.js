@@ -1,7 +1,5 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements, no-try-catch */
-
-import * as config from '../../core/config';
 import {Vector3} from '../../packages/math';
 import {merge} from '../../utils';
 import Group from './group';
@@ -199,6 +197,6 @@ export default class Scene extends Group {
   }
 }
 
-Scene.MAX_TEXTURES = config.MAX_TEXTURES;
-Scene.MAX_POINT_LIGHTS = config.MAX_POINT_LIGHTS;
-Scene.PICKING_RES = config.PICKING_RES;
+Scene.MAX_TEXTURES = 4;
+Scene.MAX_POINT_LIGHTS = 4;
+Scene.PICKING_RES = 4;
