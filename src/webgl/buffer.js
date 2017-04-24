@@ -1,5 +1,7 @@
-import {GL, WebGLBuffer, glTypeFromArray} from './webgl';
-import {assertWebGLContext, assertWebGL2Context, assertArrayTypeMatch} from './webgl-checks';
+import GL from './api';
+import {assertWebGL2Context} from './context';
+import {getGLTypeFromTypedArray} from '../utils/typed-array-utils';
+import Resource from './resource';
 import assert from 'assert';
 
 export class BufferLayout {
@@ -38,25 +40,12 @@ export class BufferLayout {
   }
 }
 
-// Encapsulates a WebGLBuffer object
+const PARAMETERS = [
+  GL.BUFFER_SIZE, // GLint indicating the size of the buffer in bytes.
+  GL.BUFFER_USAGE // GLenum indicating the usage pattern of the buffer.
+];
 
-export default class Buffer {
-
-  /**
-   * Returns a Buffer wrapped WebGLBuffer from a variety of inputs.
-   * Allows other functions to transparently accept raw WebGLBuffers etc
-   * and manipulate them using the methods in the `Buffer` class.
-   * Checks for ".handle" (allows use of stack.gl's gl-buffer)
-   *
-   * @param {WebGLRenderingContext} gl - if a new buffer needs to be initialized
-   * @param {*} object - candidate that will be coerced to a buffer
-   * @returns {Buffer} - Buffer object that wraps the buffer parameter
-   */
-  static makeFrom(gl, object = {}) {
-    return object instanceof Buffer ? object :
-      // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
-      new Buffer(gl).setData({handle: object.handle || object});
-  }
+export default class Buffer extends Resource {
 
   /*
    * @classdesc
@@ -72,36 +61,10 @@ export default class Buffer {
    * @param {WebGLRenderingContext} gl - gl context
    * @param {string} opt.id - id for debugging
    */
-  constructor(gl = {}, {
-    id,
-    handle
-  } = {}) {
-    assertWebGLContext(gl);
-
-    handle = handle || gl.createBuffer();
-    if (!(handle instanceof WebGLBuffer)) {
-      throw new Error('Failed to create WebGLBuffer');
-    }
-
-    this.gl = gl;
-    this.handle = handle;
-    this.id = id;
-    this.bytes = undefined;
-    this.data = null;
-    this.target = GL.ARRAY_BUFFER;
-    this.layout = null;
-
-    this.userData = {};
+  constructor(gl, opts = {}) {
+    super(gl, opts);
+    this.setData(opts);
     Object.seal(this);
-  }
-
-  delete() {
-    const {gl} = this;
-    if (this.handle) {
-      gl.deleteBuffer(this.handle);
-      this.handle = null;
-    }
-    return this;
   }
 
   /**
@@ -120,7 +83,7 @@ export default class Buffer {
   setData({
     data,
     bytes,
-    target = GL.ARRAY_BUFFER,
+    target = this.target || GL.ARRAY_BUFFER,
     usage = GL.STATIC_DRAW,
     // Characteristics of stored data
     layout,
@@ -132,12 +95,11 @@ export default class Buffer {
     integer = false,
     instanced = 0
   } = {}) {
-    const {gl} = this;
-    assert(data || bytes >= 0, 'Buffer.setData needs data or bytes');
-    type = type || glTypeFromArray(data);
-
-    if (data) {
-      assertArrayTypeMatch(data, type, 'in Buffer.setData');
+    if (!data) {
+      bytes = bytes || 0;
+    } else {
+      type = type || getGLTypeFromTypedArray(data);
+      assert(type, 'Unknown type in Buffer');
     }
 
     this.bytes = bytes;
@@ -153,11 +115,8 @@ export default class Buffer {
       instanced
     });
 
-    // Note: When we are just creating and/or filling the buffer with data,
-    // the target we use doesn't technically matter, so use ARRAY_BUFFER
-    // https://www.opengl.org/wiki/Buffer_Object
     this.bind({target});
-    gl.bufferData(target, data || bytes, usage);
+    this.gl.bufferData(target, data || bytes, usage);
     this.unbind({target});
 
     return this;
@@ -169,20 +128,87 @@ export default class Buffer {
    * @returns {Buffer} Returns itself for chaining.
    */
   subData({
-    data,
-    offset = 0
+    data,          // Data (Typed Array or ArrayBuffer), length is inferred unless provided
+    offset = 0,    // Offset into buffer
+    srcOffset = 0, // WebGL2 only: Offset into srcData
+    length         // WebGL2 only: Number of bytes to be copied
   } = {}) {
-    const {gl} = this;
     assert(data, 'Buffer.updateData needs data');
 
-    // Note: When we are just creating and/or filling the buffer with data,
-    // the target we use doesn't technically matter, so use ARRAY_BUFFER
-    // https://www.opengl.org/wiki/Buffer_Object
-    this.bind({target: GL.ARRAY_BUFFER});
-    gl.bufferSubData(GL.ARRAY_BUFFER, offset, data);
-    this.unbind({target: GL.ARRAY_BUFFER});
+    // WebGL2: subData supports additional srcOffset and length parameters
+    if (srcOffset !== 0 || length !== undefined) {
+      assertWebGL2Context(this.gl);
+      this.bind({target: this.target});
+      this.gl.bufferSubData(GL.ARRAY_BUFFER, offset, data, srcOffset, length || 0);
+      this.unbind({target: this.target});
+      return this;
+    }
 
+    this.bind({target: this.target});
+    this.gl.bufferSubData(GL.ARRAY_BUFFER, offset, data);
+    this.unbind({target: this.target});
     return this;
+  }
+
+  /**
+   * WEBGL2 ONLY
+   * Copies part of the data of a buffer to another buffer.
+   *
+   * @param {Buffer} writeTarget
+   * A GLenum specifying the binding point (target) from whose data store should be read or written.
+   * Possible values:
+   *   GL.ARRAY_BUFFER: Buffer containing vertex attributes, such as
+   *     vertex coordinates, texture coordinate data, or vertex color data.
+   *   GL.ELEMENT_ARRAY_BUFFER: Buffer used for element indices.
+   *   GL.COPY_READ_BUFFER: Buffer for copying from one buffer object to another
+   *     (provided specifically for copy operations).
+   *   GL.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another
+   *     (provided specifically for copy operations).
+   *   GL.TRANSFORM_FEEDBACK_BUFFER: Buffer for transform feedback operations.
+   *   GL.UNIFORM_BUFFER: Buffer used for storing uniform blocks.
+   *   GL.PIXEL_PACK_BUFFER: Buffer used for pixel transfer operations.
+   *   GL.PIXEL_UNPACK_BUFFER: Buffer used for pixel transfer operations.
+   * @param {GLintptr} readOffset - byte offset from which to start reading from the buffer.
+   * @param {GLintptr} writeOffset - byte offset from which to start writing to the buffer.
+   * @param {GLsizei}  size - bytes specifying the size of the data to be copied
+   */
+  copySubData({
+    readTarget,
+    writeTarget,
+    readOffset = 0,
+    writeOffset = 0,
+    size
+  }) {
+    this.gl.copyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size);
+  }
+
+  /**
+   * WEBGL2 ONLY
+   * Reads data from a buffer binding point and writes them to an ArrayBuffer or SharedArrayBuffer.
+   *
+   * @param {GLenum} target - The binding point (target). Possible values:
+   *   GL.ARRAY_BUFFER: Buffer containing vertex attributes, such as
+   *     vertex coordinates, texture coordinate data, or vertex color data.
+   *   GL.ELEMENT_ARRAY_BUFFER: Buffer used for element indices.
+   *   GL.COPY_READ_BUFFER: Buffer for copying from one buffer object to another.
+   *   GL.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another.
+   *   GL.TRANSFORM_FEEDBACK_BUFFER: Buffer for transform feedback operations.
+   *   GL.UNIFORM_BUFFER: Buffer used for storing uniform blocks.
+   *   GL.PIXEL_PACK_BUFFER: Buffer used for pixel transfer operations.
+   *   GL.PIXEL_UNPACK_BUFFER: Buffer used for pixel transfer operations.
+   * @param {GLintptr} srcByteOffset - byte offset from which to start reading from the buffer.
+   * @param {ArrayBufferView | ArrayBuffer | SharedArrayBuffer} dstData -
+   *   memory to which to write the buffer data.
+   * @param {GLuint} srcOffset=0 - element index offset where to start reading the buffer.
+   * @param {GLuint} length=0  Optional, defaulting to 0.
+   */
+  getSubData({
+    dstData,
+    srcByteOffset = 0,
+    dstOffset = 0,
+    length = 0
+  }) {
+    this.gl.getBufferSubData(this.target, srcByteOffset, dstData, dstOffset, length);
   }
 
   /**
@@ -246,4 +272,22 @@ export default class Buffer {
     return this;
   }
 
+  getParameter(pname) {
+    this.bind();
+    const value = this.gl.getBufferParameter(this.target, pname);
+    this.unbind();
+    return value;
+  }
+
+  // PRIVATE METHODS
+
+  _createHandle() {
+    return this.gl.createBuffer();
+  }
+
+  _deleteHandle() {
+    this.gl.deleteBuffer(this.handle);
+  }
 }
+
+Buffer.PARAMETERS = PARAMETERS;

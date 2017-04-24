@@ -44,19 +44,11 @@ export default class ClipSpaceQuad extends Model {
       vs: CLIPSPACE_QUAD_VERTEX_SHADER,
       geometry: new Geometry({
         drawMode: GL.TRIANGLE_STRIP,
+        vertexCount: 4,
         attributes: {
-          aClipSpacePosition: {
-            value: new Float32Array(POSITIONS),
-            size: 2
-          },
-          aTexCoord: {
-            value: new Float32Array(TEX_COORDS),
-            size: 2
-          },
-          aCoordinate: {
-            value: new Float32Array(TEX_COORDS),
-            size: 2
-          }
+          aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
+          aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
+          aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
         }
       })
     }));

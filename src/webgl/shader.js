@@ -1,36 +1,55 @@
-import {GL} from './webgl';
-import {assertWebGLContext} from './webgl-checks';
-import {getShaderName, formatGLSLCompilerError} from './webgl-format-glsl-error';
-import {uid, isBrowser} from '../utils';
+import GL, {formatGLSLCompilerError, getShaderName} from './api';
+import {assertWebGLContext} from './context';
+import Resource from './resource';
+import {log, uid} from '../utils';
 import assert from 'assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
+const PARAMETERS = [
+  GL.DELETE_STATUS, // GLboolean - whether shader is flagged for deletion.
+  GL.COMPILE_STATUS, // GLboolean - was last shader compilation successful.
+  GL.SHADER_TYPE // GLenum - GL.VERTEX_SHADER or GL.FRAGMENT_SHADER.
+];
+
 // For now this is an internal class
-export class Shader {
+export class Shader extends Resource {
+
+  static getTypeName(shaderType) {
+    switch (shaderType) {
+    case GL.VERTEX_SHADER: return 'vertex-shader';
+    case GL.FRAGMENT_SHADER: return 'fragment-shader';
+    default: return 'unknown-shader';
+    }
+  }
 
   /* eslint-disable max-statements */
   constructor(gl, source, shaderType) {
     assertWebGLContext(gl);
     assert(typeof source === 'string', ERR_SOURCE);
 
-    this.id = getShaderName(source) || uid(this.getTypeName(shaderType));
-    this.gl = gl;
+    super(gl, {id: getShaderName(source) || uid(Shader.getTypeName(shaderType))});
+
     this.shaderType = shaderType;
     this.source = source;
-    this.handle = gl.createShader(shaderType);
-    if (this.handle === null) {
-      throw new Error(`Error creating shader with type ${shaderType}`);
-    }
-    this.compile();
+
+    this.opts.source = source;
+    this.initialize(this.opts);
   }
 
-  delete() {
-    const {gl} = this;
-    if (this.handle) {
-      gl.deleteShader(this.handle);
-      this.handle = null;
+  initialize({source}) {
+    const shaderName = getShaderName(source);
+    if (shaderName) {
+      this.id = uid(shaderName);
     }
+    this._compile(source);
+    this.opts.source = source;
+  }
+
+  // Accessors
+
+  getParameter(pname) {
+    return this.gl.getShaderParameter(this.handle, pname);
   }
 
   toString() {
@@ -38,51 +57,52 @@ export class Shader {
   }
 
   getName() {
-    return getShaderName(this.source);
+    return getShaderName(this.opts.source) || 'unnamed-shader';
   }
 
-  getTypeName(shaderType) {
-    switch (shaderType) {
-    case GL.VERTEX_SHADER: return 'vertex-shader';
-    case GL.FRAGMENT_SHADER: return 'fragment-shader';
-    default: return 'shader';
-    }
+  getSource() {
+    return this.gl.getShaderSource(this.handle);
   }
 
-  compile() {
-    const {gl} = this;
-    gl.shaderSource(this.handle, this.source);
-    gl.compileShader(this.handle);
+  // Debug method - Returns translated source if available
+  getTranslatedSource() {
+    const extension = this.gl.getExtension('WEBGL_debug_shaders');
+    return extension ?
+      extension.getTranslatedShaderSource(this.handle) :
+      'No translated source available. WEBGL_debug_shaders not implemented';
+  }
 
-    // Shader compilation error is checked only when debug context is used
-    if (gl.debug) {
-      const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
-      if (!compiled) {
-        const infoLog = gl.getShaderInfoLog(this.handle);
+  // PRIVATE METHODS
+  _compile() {
+    this.gl.shaderSource(this.handle, this.source);
+    this.gl.compileShader(this.handle);
+
+    // Avoid checking shader compilation errors on production
+    if (this.gl.debug || log.priority > 0) {
+      // Throw if compilation failed
+      const compileStatus = this.getParameter(GL.COMPILE_STATUS);
+      if (!compileStatus) {
+        const infoLog = this.gl.getShaderInfoLog(this.handle);
         const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
-        this.delete();
         throw new Error(`Error while compiling the shader ${error}`);
       }
     }
-  }
-  /* eslint-enable max-statements */
 
-  // TODO - move to debug utils?
-  copyToClipboard(text) {
-    if (isBrowser) {
-      /* global document */
-      const input = document.createElement('textarea');
-      document.body.appendChild(input);
-      input.value = text;
-      input.focus();
-      input.select();
-      if (!document.execCommand('copy')) {
-        /* eslint-disable no-console */
-        /* global console */
-        console.log('Failed to copy to clipboard');
-      }
-      input.remove();
+    // Log translated source, if compilation succeeded
+    if (log.priority >= 3) {
+      log.log(3, this.getTranslatedSource());
     }
+  }
+
+  _deleteHandle() {
+    this.gl.deleteShader(this.handle);
+  }
+
+  _getOptsFromHandle() {
+    return {
+      type: this.getParameter(GL.SHADER_TYPE),
+      source: this.getSource()
+    };
   }
 }
 
@@ -90,10 +110,22 @@ export class VertexShader extends Shader {
   constructor(gl, source) {
     super(gl, source, GL.VERTEX_SHADER);
   }
+
+  // PRIVATE METHODS
+  _createHandle() {
+    return this.gl.createShader(GL.VERTEX_SHADER);
+  }
 }
 
 export class FragmentShader extends Shader {
   constructor(gl, source) {
     super(gl, source, GL.FRAGMENT_SHADER);
   }
+
+  // PRIVATE METHODS
+  _createHandle() {
+    return this.gl.createShader(GL.FRAGMENT_SHADER);
+  }
 }
+
+Shader.PARAMETERS = PARAMETERS;

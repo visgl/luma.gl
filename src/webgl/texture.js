@@ -1,60 +1,341 @@
-import {GL, WebGL2RenderingContext, WebGLBuffer, glTypeFromArray}
-  from './webgl';
-import {assertWebGLContext} from './webgl-checks';
+/* eslint-disable no-inline-comments, max-len */
+import GL, {WebGLBuffer, WebGL2RenderingContext} from './api';
+import {withParameters, assertWebGL2Context} from './context';
+import Resource from './resource';
 import Buffer from './buffer';
 import {uid} from '../utils';
 import assert from 'assert';
 
-export default class Texture {
+// Legal combinations for internalFormat, format and type
+const TEXTURE_FORMATS = {
+  [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
+  [GL.RGBA]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
+  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
+  [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
+  [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE]},
+  [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT]},
+  [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE]},
+  [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE]},
+  [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT]},
+  [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE]},
+  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE]},
+  [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE]},
+  [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
+  [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.RGB16FG]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT]},
+  [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE]},
+  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE]},
+  [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE]},
+  [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1]},
+  [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4]},
+  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT]},
+  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT]},
+  [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE]},
 
+  // WEBGL_compressed_texture_s3tc
+
+  [GL.COMPRESSED_RGB_S3TC_DXT1_EXT]: {compressed: true},
+  [GL.COMPRESSED_RGBA_S3TC_DXT1_EXT]: {compressed: true},
+  [GL.COMPRESSED_RGBA_S3TC_DXT3_EXT]: {compressed: true},
+  [GL.COMPRESSED_RGBA_S3TC_DXT5_EXT]: {compressed: true},
+
+  // WEBGL_compressed_texture_es3
+
+  [GL.COMPRESSED_R11_EAC]: {compressed: true},
+  [GL.COMPRESSED_SIGNED_R11_EAC]: {compressed: true},
+  [GL.COMPRESSED_RG11_EAC]: {compressed: true},
+  [GL.COMPRESSED_SIGNED_RG11_EAC]: {compressed: true},
+  [GL.COMPRESSED_RGB8_ETC2]: {compressed: true},
+  [GL.COMPRESSED_RGBA8_ETC2_EAC]: {compressed: true},
+  [GL.COMPRESSED_SRGB8_ETC2]: {compressed: true},
+  [GL.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC]: {compressed: true},
+  [GL.COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true},
+  [GL.COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true},
+
+  // WEBGL_compressed_texture_pvrtc
+
+  [GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG]: {compressed: true},
+  [GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG]: {compressed: true},
+  [GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG]: {compressed: true},
+  [GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG]: {compressed: true},
+
+  // WEBGL_compressed_texture_etc1
+
+  [GL.COMPRESSED_RGB_ETC1_WEBGL]: {compressed: true},
+
+  // WEBGL_compressed_texture_atc
+
+  [GL.COMPRESSED_RGB_ATC_WEBGL]: {compressed: true},
+  [GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL]: {compressed: true},
+  [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true}
+};
+
+// These are sampler parameters
+const PARAMETERS = {
+  // WEBGL1
+  [GL.TEXTURE_MAG_FILTER]: {type: 'GLenum', webgl1: GL.LINEAR}, // texture magnification filter
+  [GL.TEXTURE_MIN_FILTER]: {type: 'GLenum', webgl1: GL.NEAREST_MIPMAP_LINEAR}, // texture minification filter
+  [GL.TEXTURE_WRAP_S]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate s
+  [GL.TEXTURE_WRAP_T]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate t
+
+  // Emulated parameters - These OpenGL parameters are not supported by OpenGL ES
+  [GL.TEXTURE_WIDTH]: {webgl1: 0},
+  [GL.TEXTURE_HEIGHT]: {webgl1: 0},
+
+  // WebGL Extensions
+  [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
+
+  // WEBGL2
+  [GL.TEXTURE_WRAP_R]: {type: 'GLenum', webgl2: GL.REPEAT}, // texture wrapping function for texture coordinate r
+  [GL.TEXTURE_BASE_LEVEL]: {webgl2: 0}, // Texture mipmap level
+  [GL.TEXTURE_MAX_LEVEL]: {webgl2: 1000}, // Maximum texture mipmap array level
+  [GL.TEXTURE_COMPARE_FUNC]: {type: 'GLenum', webgl2: GL.LEQUAL}, // texture comparison function
+  [GL.TEXTURE_COMPARE_MODE]: {type: 'GLenum', webgl2: GL.NONE}, // texture comparison mode
+  [GL.TEXTURE_MIN_LOD]: {webgl2: -1000}, // minimum level-of-detail value
+  [GL.TEXTURE_MAX_LOD]: {webgl2: 1000} // maximum level-of-detail value
+};
+
+export default class Texture extends Resource {
+
+  // target cannot be modified by bind:
+  // textures are special because when you first bind them to a target,
+  // they get special information. When you first bind a texture as a
+  // GL_TEXTURE_2D, you are actually setting special state in the texture.
+  // You are saying that this texture is a 2D texture.
+  // And it will always be a 2D texture; this state cannot be changed ever.
+  // If you have a texture that was first bound as a GL_TEXTURE_2D,
+  // you must always bind it as a GL_TEXTURE_2D;
+  // attempting to bind it as GL_TEXTURE_1D will give rise to an error
+  // (while run-time).
   constructor(gl, opts) {
     const {
       id = uid('texture'),
-      unpackFlipY = true,
-      magFilter = GL.NEAREST,
-      minFilter = GL.NEAREST,
-      wrapS = GL.CLAMP_TO_EDGE,
-      wrapT = GL.CLAMP_TO_EDGE,
-      target = GL.TEXTURE_2D,
-      handle
+      handle,
+      target
+      // , magFilter, minFilter, wrapS, wrapT
     } = opts;
 
-    assertWebGLContext(gl);
+    super(gl, {id, handle});
 
-    this.handle = handle || gl.createTexture();
-    this.id = id;
-    this.gl = gl;
     this.target = target;
     this.hasFloatTexture = gl.getExtension('OES_texture_float');
-    this.width = null;
-    this.height = null;
     this.textureUnit = undefined;
-    this.userData = {};
-
-    this.setPixelStorageModes(Object.assign({}, opts, {unpackFlipY}));
-    this.setParameters(Object.assign({}, opts, {magFilter, minFilter, wrapS, wrapT}));
-  }
-
-  delete() {
-    if (this.handle) {
-      this.gl.deleteTexture(this.handle);
-      this.handle = null;
-    }
-    return this;
   }
 
   toString() {
     return `Texture(${this.id},${this.width}x${this.height})`;
   }
 
-  generateMipmap() {
+  /* eslint-disable brace-style */
+  get width() { return this.opts.width; }
+  get height() { return this.opts.width; }
+  get format() { return this.opts.format; }
+  get type() { return this.opts.type; }
+  get dataFormat() { return this.opts.dataFormat; }
+  get border() { return this.opts.border; }
+  get mipmaps() { return this.opts.mipmaps; }
+
+  /* eslint-disable max-len, max-statements */
+  initialize(opts = {}) {
+    const {
+      data = null,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE,
+      dataFormat,
+      border = 0,
+      mipmaps = false,
+      recreate = false,
+      parameters = {},
+      pixelStore = {}
+    } = opts;
+
+    let {
+      width = 1,
+      height = 1
+    } = opts;
+
+    // Deduce width and height
+    ({width, height} = this._deduceParameters({data, width, height}));
+
+    // Temporarily apply any pixel store settings and build textures
+    withParameters(this.gl, pixelStore, () => {
+      this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
+
+      if (mipmaps) {
+        this.generateMipmap();
+      }
+    });
+
+    // Set texture sampler parameters
+    this.setParameters(parameters);
+
+    // Store opts for accessors
+    this.opts.width = width;
+    this.opts.height = height;
+    this.opts.format = format;
+    this.opts.type = type;
+    this.opts.dataFormat = dataFormat;
+    this.opts.border = border;
+
+    // TODO - Store data to enable auto recreate on context loss
+    if (recreate) {
+      this.opts.data = data;
+    }
+  }
+
+  // Call to regenerate mipmaps after modifying texture(s)
+  generateMipmap(params = {}) {
     this.gl.bindTexture(this.target, this.handle);
-    this.gl.generateMipmap(this.target);
+    withParameters(this.gl, params, () => {
+      this.gl.generateMipmap(this.target);
+    });
     this.gl.bindTexture(this.target, null);
     return this;
   }
 
+  /**
+   * Redefines an area of an existing texture
+   * Note: does not allocate storage
+   */
+  subImage({
+    target = this.target,
+    pixels = null,
+    data = null,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0,
+    format = GL.RGBA,
+    type,
+    dataFormat,
+    compressed = false,
+    offset = 0,
+    border = 0
+  }) {
+    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
+      format, type, dataFormat, compressed, data, width, height}));
+
+    // Support ndarrays
+    if (data && data.data) {
+      const ndarray = data;
+      data = ndarray.data;
+      width = ndarray.shape[0];
+      height = ndarray.shape[1];
+    }
+
+    // Support buffers
+    if (data instanceof Buffer) {
+      data = data.handle;
+    }
+
+    this.gl.bindTexture(this.target, this.handle);
+
+    // TODO - x,y parameters
+    if (compressed) {
+      this.gl.compressedTexSubImage2D(target,
+        level, x, y, width, height, format, data);
+    } else if (data === null) {
+      this.gl.texSubImage2D(target,
+        level, format, width, height, border, dataFormat, type, null);
+    } else if (ArrayBuffer.isView(data)) {
+      this.gl.texSubImage2D(target,
+        level, format, width, height, border, dataFormat, type, data);
+    } else if (data instanceof WebGLBuffer) {
+      // WebGL2 allows us to create texture directly from a WebGL buffer
+      assertWebGL2Context(this.gl);
+      // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
+      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
+      this.gl.texSubImage2D(target,
+        level, format, width, height, border, format, type, offset);
+      this.gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
+    } else {
+      // Assume data is a browser supported object (ImageData, Canvas, ...)
+      this.gl.texSubImage2D(target, level, x, y, format, type, data);
+    }
+
+    this.gl.bindTexture(this.target, null);
+  }
+  /* eslint-enable max-len, max-statements, complexity */
+
+  /**
+   * Defines a two-dimensional texture image or cube-map texture image with
+   * pixels from the current framebuffer (rather than from client memory).
+   * (gl.copyTexImage2D wrapper)
+   *
+   * Note that binding a texture into a Framebuffer's color buffer and
+   * rendering can be faster.
+   */
+  copyFramebuffer({
+    target = this.target,
+    framebuffer,
+    offset = 0,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0,
+    internalFormat = GL.RGBA,
+    border = 0
+  }) {
+    if (framebuffer) {
+      framebuffer.bind();
+    }
+
+    // target
+    this.bind();
+    this.gl.copyTexImage2D(
+      this.target, level, internalFormat, x, y, width, height, border);
+    this.unbind();
+
+    if (framebuffer) {
+      framebuffer.unbind();
+    }
+  }
+
+  getActiveUnit() {
+    return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;
+  }
+
+  // target cannot be modified by bind:
+  // textures are special because when you first bind them to a target,
+  // they get special information. When you first bind a texture as a
+  // GL_TEXTURE_2D, you are actually setting special state in the texture.
+  // You are saying that this texture is a 2D texture.
+  // And it will always be a 2D texture; this state cannot be changed ever.
+  // If you have a texture that was first bound as a GL_TEXTURE_2D,
+  // you must always bind it as a GL_TEXTURE_2D;
+  // attempting to bind it as GL_TEXTURE_1D will give rise to an error
+  // (while run-time).
+
+  bind(textureUnit = this.textureUnit) {
+    if (textureUnit === undefined) {
+      throw new Error('Texture.bind: must specify texture unit');
+    }
+    this.textureUnit = textureUnit;
+    this.gl.activeTexture(GL.TEXTURE0 + textureUnit);
+    this.gl.bindTexture(this.target, this.handle);
+    return textureUnit;
+  }
+
+  unbind() {
+    if (this.textureUnit === undefined) {
+      throw new Error('Texture.unbind: texture unit not specified');
+    }
+    this.gl.activeTexture(GL.TEXTURE0 + this.textureUnit);
+    this.gl.bindTexture(this.target, null);
+    return this.textureUnit;
+  }
+
+  // PRIVATE METHODS
+
   /*
+   * Allocates storage
    * @param {*} pixels -
    *  null - create empty texture of specified format
    *  Typed array - init from image data in typed array
@@ -80,303 +361,153 @@ export default class Texture {
     data = null,
     width,
     height,
-    mipmapLevel = 0,
+    level = 0,
     format = GL.RGBA,
     type,
+    dataFormat,
     offset = 0,
-    border = 0
+    border = 0,
+    compressed = false
   }) {
-    const {gl} = this;
-
-    pixels = pixels || data;
+    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
+      format, type, dataFormat, compressed, data, width, height}));
 
     // Support ndarrays
-    if (pixels && pixels.data) {
-      const ndarray = pixels;
-      pixels = ndarray.data;
+    if (data && data.data) {
+      const ndarray = data;
+      data = ndarray.data;
       width = ndarray.shape[0];
       height = ndarray.shape[1];
     }
 
+    // Support buffers
+    if (data instanceof Buffer) {
+      data = data.handle;
+    }
+
+    const {gl} = this;
     gl.bindTexture(this.target, this.handle);
 
-    if (pixels === null) {
-
-      // Create an minimal texture
-      width = width || 1;
-      height = height || 1;
-      type = type || GL.UNSIGNED_BYTE;
-      // pixels = new Uint8Array([255, 0, 0, 1]);
+    if (compressed) {
+      gl.compressedTexImage2D(this.target,
+        level, format, width, height, border, data);
+    } else if (data === null) {
       gl.texImage2D(target,
-        mipmapLevel, format, width, height, border, format, type, pixels);
-      this.width = width;
-      this.height = height;
-
-    } else if (ArrayBuffer.isView(pixels)) {
-
-      // Create from a typed array
-      assert(width > 0 && height > 0, 'Texture2D: Width and height required');
-      type = type || glTypeFromArray(pixels);
-      // TODO - WebGL2 check?
-      if (type === gl.FLOAT && !this.hasFloatTexture) {
-        throw new Error('floating point textures are not supported.');
-      }
+        level, format, width, height, border, dataFormat, type, null);
+    } else if (ArrayBuffer.isView(data)) {
       gl.texImage2D(target,
-        mipmapLevel, format, width, height, border, format, type, pixels);
-      this.width = width;
-      this.height = height;
-
-    } else if (pixels instanceof WebGLBuffer || pixels instanceof Buffer) {
-
+        level, format, width, height, border, dataFormat, type, data);
+    } else if (data instanceof WebGLBuffer) {
       // WebGL2 allows us to create texture directly from a WebGL buffer
       assert(gl instanceof WebGL2RenderingContext, 'Requires WebGL2');
-      type = type || GL.UNSIGNED_BYTE;
       // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
-      const buffer = Buffer.makeFrom(pixels);
-      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
       gl.texImage2D(target,
-        mipmapLevel, format, width, height, border, format, type, offset);
+        level, format, width, height, border, format, type, offset);
       gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
-      this.width = width;
-      this.height = height;
-
     } else {
-
-      const imageSize = this._deduceImageSize(pixels);
-      // Assume pixels is a browser supported object (ImageData, Canvas, ...)
-      assert(width === undefined && height === undefined,
-        'Texture2D.setImageData: Width and height must not be provided');
-      type = type || GL.UNSIGNED_BYTE;
-      gl.texImage2D(target, mipmapLevel, format, format, type, pixels);
-      this.width = imageSize.width;
-      this.height = imageSize.height;
+      // Assume data is a browser supported object (ImageData, Canvas, ...)
+      gl.texImage2D(target, level, format, format, type, data);
     }
 
     gl.bindTexture(this.target, null);
-
-    return this;
   }
   /* eslint-enable max-len, max-statements, complexity */
 
+  // HELPER METHODS
+
+  _deduceParameters(opts) {
+    const {format, data} = opts;
+    let {width, height, dataFormat, type, compressed} = opts;
+
+    // Deduce format and type from format
+    const textureFormat = TEXTURE_FORMATS[format];
+    dataFormat = dataFormat || (textureFormat && textureFormat.dataFormat);
+    type = type || (textureFormat && textureFormat.types[0]);
+
+    // Deduce compression from format
+    compressed = compressed || (textureFormat && textureFormat.compressed);
+
+    ({width, height} = this._deduceImageSize({data, width, height}));
+
+    return {dataFormat, type, compressed, width, height, format, data};
+  }
+
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
-  _deduceImageSize(image) {
-    if (typeof ImageData !== 'undefined' && image instanceof ImageData) {
-      return {width: image.width, height: image.height};
-    } else if (typeof HTMLImageElement !== 'undefined' &&
-      image instanceof HTMLImageElement) {
-      return {width: image.naturalWidth, height: image.naturalHeight};
-    } else if (typeof HTMLCanvasElement !== 'undefined' &&
-      image instanceof HTMLCanvasElement) {
-      return {width: image.width, height: image.height};
-    } else if (typeof HTMLVideoElement !== 'undefined' &&
-      image instanceof HTMLVideoElement) {
-      return {width: image.videoWidth, height: image.videoHeight};
+  _deduceImageSize({data, width, height}) {
+    let size;
+    if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
+      size = {width: data.width, height: data.height};
     }
-    throw new Error('Unknown image data format. Failed to deduce image size');
+    else if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
+      size = {width: data.naturalWidth, height: data.naturalHeight};
+    }
+    else if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
+      size = {width: data.width, height: data.height};
+    }
+    else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
+      size = {width: data.videoWidth, height: data.videoHeight};
+    }
+    if (width !== undefined || height !== undefined) {
+      if (size && (size.width !== width || size.height !== height)) {
+        throw new Error('Deduced size does not match supplied data element size');
+      }
+      size = {width, height};
+    }
+    assert(size && Number.isFinite(size.width) && Number.isFinite(size.height),
+      'Failed to deduce texture size');
+
+    return size;
   }
 
-  /**
-   * Batch update pixel storage modes
-   * @param {GLint} packAlignment - Packing of pixel data in memory (1,2,4,8)
-   * @param {GLint} unpackAlignment - Unpacking pixel data from memory(1,2,4,8)
-   * @param {GLboolean} unpackFlipY -  Flip source data along its vertical axis
-   * @param {GLboolean} unpackPremultiplyAlpha -
-   *   Multiplies the alpha channel into the other color channels
-   * @param {GLenum} unpackColorspaceConversion -
-   *   Default color space conversion or no color space conversion.
-   *
-   * @param {GLint} packRowLength -
-   *  Number of pixels in a row.
-   * @param {} packSkipPixels -
-   *   Number of pixels skipped before the first pixel is written into memory.
-   * @param {} packSkipRows -
-   *   Number of rows of pixels skipped before first pixel is written to memory.
-   * @param {} unpackRowLength -
-   *   Number of pixels in a row.
-   * @param {} unpackImageHeight -
-   *   Image height used for reading pixel data from memory
-   * @param {} unpackSkipPixels -
-   *   Number of pixel images skipped before first pixel is read from memory
-   * @param {} unpackSkipRows -
-   *   Number of rows of pixels skipped before first pixel is read from memory
-   * @param {} unpackSkipImages -
-   *   Number of pixel images skipped before first pixel is read from memory
-   */
-  /* eslint-disable complexity, max-statements */
-  setPixelStorageModes({
-    packAlignment,
-    unpackAlignment,
-    unpackFlipY,
-    unpackPremultiplyAlpha,
-    unpackColorspaceConversion,
-    // WEBGL2
-    packRowLength,
-    packSkipPixels,
-    packSkipRows,
-    unpackRowLength,
-    unpackImageHeight,
-    unpackSkipPixels,
-    unpackSkipRows,
-    unpackSkipImages
-  } = {}) {
-    const {gl} = this;
+  // RESOURCE METHODS
 
-    gl.bindTexture(this.target, this.handle);
-
-    if (packAlignment) {
-      gl.pixelStorei(gl.PACK_ALIGNMENT, packAlignment);
-    }
-    if (unpackAlignment) {
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, unpackAlignment);
-    }
-    if (unpackFlipY) {
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, unpackFlipY);
-    }
-    if (unpackPremultiplyAlpha) {
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, unpackPremultiplyAlpha);
-    }
-    if (unpackColorspaceConversion) {
-      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,
-        unpackColorspaceConversion);
-    }
-
-    // WEBGL2
-    if (packRowLength) {
-      gl.pixelStorei(gl.PACK_ROW_LENGTH, packRowLength);
-    }
-    if (packSkipPixels) {
-      gl.pixelStorei(gl.PACK_SKIP_PIXELS, packSkipPixels);
-    }
-    if (packSkipRows) {
-      gl.pixelStorei(gl.PACK_SKIP_ROWS, packSkipRows);
-    }
-    if (unpackRowLength) {
-      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, unpackRowLength);
-    }
-    if (unpackImageHeight) {
-      gl.pixelStorei(gl.UNPACK_IMAGE_HEIGHT, unpackImageHeight);
-    }
-    if (unpackSkipPixels) {
-      gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, unpackSkipPixels);
-    }
-    if (unpackSkipRows) {
-      gl.pixelStorei(gl.UNPACK_SKIP_ROWS, unpackSkipRows);
-    }
-    if (unpackSkipImages) {
-      gl.pixelStorei(gl.UNPACK_SKIP_IMAGES, unpackSkipImages);
-    }
-
-    gl.bindTexture(this.target, null);
-    return this;
-  }
-  /* eslint-enable complexity, max-statements */
-
-  /**
-   * Batch update sampler settings
-   *
-   * @param {GLenum} magFilter - texture magnification filter.
-   * @param {GLenum} minFilter - texture minification filter
-   * @param {GLenum} wrapS - texture wrapping function for texture coordinate s.
-   * @param {GLenum} wrapT - texture wrapping function for texture coordinate t.
-   * WEBGL2 only:
-   * @param {GLenum} wrapR - texture wrapping function for texture coordinate r.
-   * @param {GLenum} compareFunc - texture comparison function.
-   * @param {GLenum} compareMode - texture comparison mode.
-   * @param {GLfloat} minLOD - minimum level-of-detail value.
-   * @param {GLfloat} maxLOD - maximum level-of-detail value.
-   * @param {GLfloat} baseLevel - Texture mipmap level
-   * @param {GLfloat} maxLevel - Maximum texture mipmap array level
-   */
-  /* eslint-disable complexity, max-statements */
-  setParameters({
-    magFilter,
-    minFilter,
-    wrapS,
-    wrapT,
-    // WEBGL2
-    wrapR,
-    baseLevel,
-    maxLevel,
-    minLOD,
-    maxLOD,
-    compareFunc,
-    compareMode
-  }) {
-    const {gl} = this;
-    gl.bindTexture(this.target, this.handle);
-
-    if (magFilter) {
-      gl.texParameteri(this.target, gl.TEXTURE_MAG_FILTER, magFilter);
-    }
-    if (minFilter) {
-      gl.texParameteri(this.target, gl.TEXTURE_MIN_FILTER, minFilter);
-    }
-    if (wrapS) {
-      gl.texParameteri(this.target, gl.TEXTURE_WRAP_S, wrapS);
-    }
-    if (wrapT) {
-      gl.texParameteri(this.target, gl.TEXTURE_WRAP_T, wrapT);
-    }
-    // WEBGL2
-    if (wrapR) {
-      gl.texParameteri(this.target, gl.TEXTURE_WRAP_R, wrapR);
-    }
-    if (baseLevel) {
-      gl.texParameteri(this.target, gl.TEXTURE_BASE_LEVEL, baseLevel);
-    }
-    if (maxLevel) {
-      gl.texParameteri(this.target, gl.TEXTURE_MAX_LEVEL, maxLevel);
-    }
-    if (compareFunc) {
-      gl.texParameteri(this.target, gl.TEXTURE_COMPARE_FUNC, compareFunc);
-    }
-    if (compareMode) {
-      gl.texParameteri(this.target, gl.TEXTURE_COMPARE_MODE, compareMode);
-    }
-    if (minLOD) {
-      gl.texParameterf(this.target, gl.TEXTURE_MIN_LOD, minLOD);
-    }
-    if (maxLOD) {
-      gl.texParameterf(this.target, gl.TEXTURE_MAX_LOD, maxLOD);
-    }
-
-    gl.bindTexture(this.target, null);
-    return this;
-  }
-  /* eslint-enable complexity, max-statements */
-
-  getParameters() {
-    const {gl} = this;
-    gl.bindTexture(this.target, this.handle);
-    const webglParams = {
-      magFilter: gl.getTexParameter(this.target, gl.TEXTURE_MAG_FILTER),
-      minFilter: gl.getTexParameter(this.target, gl.TEXTURE_MIN_FILTER),
-      wrapS: gl.getTexParameter(this.target, gl.TEXTURE_WRAP_S),
-      wrapT: gl.getTexParameter(this.target, gl.TEXTURE_WRAP_T)
-    };
-    gl.bindTexture(this.target, null);
-    return webglParams;
+  _createHandle() {
+    return this.gl.createTexture();
   }
 
-  // Deprecated methods
+  _deleteHandle() {
+    this.gl.deleteTexture(this.handle);
+  }
 
-  image2D({
-    pixels,
-    format = GL.RGBA,
-    type = GL.UNSIGNED_BYTE
-  }) {
-    // TODO - WebGL2 check?
-    if (type === GL.FLOAT && !this.hasFloatTexture) {
-      throw new Error('floating point textures are not supported.');
+  _getParameter(pname) {
+    switch (pname) {
+    case GL.TEXTURE_WIDTH:
+      return this.opts.width;
+    case GL.TEXTURE_HEIGHT:
+      return this.opts.height;
+    default:
+      this.gl.bindTexture(this.target, this.handle);
+      const value = this.gl.getTexParameter(this.target, pname);
+      this.gl.bindTexture(this.target, null);
+      return value;
     }
+  }
 
+  _setParameter(pname, param) {
     this.gl.bindTexture(this.target, this.handle);
-    this.gl.texImage2D(GL.TEXTURE_2D, 0, format, format, type, pixels);
+
+    // Apparently there are some integer/float conversion rules that made
+    // the WebGL committe expose two parameter setting functions in JavaScript.
+    // For now, pick the float version for parameters specified as GLfloat.
+    switch (pname) {
+    case GL.TEXTURE_MIN_LOD:
+    case GL.TEXTURE_MAX_LOD:
+      this.gl.texParameterf(this.handle, pname, param);
+      break;
+
+    case GL.TEXTURE_WIDTH:
+    case GL.TEXTURE_HEIGHT:
+      throw new Error('Cannot set emulated parameter');
+
+    default:
+      this.gl.texParameteri(this.handle, pname, param);
+      break;
+    }
+
     this.gl.bindTexture(this.target, null);
     return this;
   }
-
-  update(opts) {
-    throw new Error('Texture.update() is deprecated()');
-  }
 }
+
+Texture.PARAMETERS = PARAMETERS;

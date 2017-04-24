@@ -1,5 +1,5 @@
 /* eslint-disable no-continue, max-statements */
-import GL from './webgl-constants';
+import GL from '../api';
 
 // import shaderName from 'glsl-shader-name';
 // replace with regexp

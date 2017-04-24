@@ -1,31 +1,75 @@
-// WebGL2 Sampler Helper
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
+/* eslint-disable no-inline-comments */
+import GL from './api';
+import {assertWebGL2Context} from './context';
+import Resource from './resource';
 
-import {assertWebGL2Context, glCheckError} from '../webgl-checks';
+const PARAMETERS = [
+  GL.TEXTURE_MAG_FILTER, // texture magnification filter
+  GL.TEXTURE_MIN_FILTER, // texture minification filter
+  GL.TEXTURE_WRAP_S, // texture wrapping function for texture coordinate s
+  GL.TEXTURE_WRAP_T, // texture wrapping function for texture coordinate t
+  // EXT_texture_filter_anisotropic
+  GL.TEXTURE_MAX_ANISOTROPY_EXT,
+  // WEBGL2
+  GL.TEXTURE_WRAP_R, // texture wrapping function for texture coordinate r
+  GL.TEXTURE_BASE_LEVEL, // Texture mipmap level
+  GL.TEXTURE_MAX_LEVEL, // Maximum texture mipmap array level
+  GL.TEXTURE_COMPARE_FUNC, // texture comparison function
+  GL.TEXTURE_COMPARE_MODE, // texture comparison mode
+  GL.TEXTURE_MIN_LOD, // minimum level-of-detail value
+  GL.TEXTURE_MAX_LOD // maximum level-of-detail value
+];
 
-export default class Sampler {
-
-  /**
+export default class Sampler extends Resource {
+  /*
    * @class
    * @param {WebGL2RenderingContext} gl
    */
-  constructor(gl) {
+  constructor(gl, opts) {
     assertWebGL2Context(gl);
-    this.gl = gl;
-    this.handle = gl.createSampler();
-    glCheckError(gl);
-    this.userData = {};
+    super(gl, opts);
     Object.seal(this);
   }
 
+  /*
+   * Batch update sampler settings
+   */
+  setParameters(parameters) {
+    this.gl.bindSampler(this.target, this.handle);
+    for (const pname in parameters) {
+      this.gl.texParameteri(this.target, pname, parameters[pname]);
+    }
+    this.gl.bindSampler(this.target, null);
+    return this;
+  }
+
+  getParameter(pname) {
+    this.gl.bindSampler(this.target, this.handle);
+    const value = this.gl.getSamplerParameter(this.target, pname);
+    this.gl.bindSampler(this.target, null);
+    return value;
+  }
+
   /**
+   * @param {GLenum} pname
+   * @param {GLint|GLfloat|GLenum} param
    * @return {Sampler} returns self to enable chaining
    */
-  delete() {
-    const {gl} = this;
-    gl.deleteSampler(this.handle);
-    this.handle = null;
-    glCheckError(gl);
+  setParameter(pname, param) {
+    this.gl.bindSampler(this.target, this.handle);
+    // Apparently there are some conversion integer/float rules that made
+    // the WebGL committe expose two parameter setting functions in JavaScript.
+    // For now, pick the float version for parameters specified as GLfloat.
+    switch (pname) {
+    case GL.TEXTURE_MIN_LOD:
+    case GL.TEXTURE_MAX_LOD:
+      this.gl.samplerParameterf(this.handle, pname, param);
+      break;
+    default:
+      this.gl.samplerParameteri(this.handle, pname, param);
+      break;
+    }
+    this.gl.bindSampler(this.target, null);
     return this;
   }
 
@@ -34,9 +78,7 @@ export default class Sampler {
    * @return {Sampler} returns self to enable chaining
    */
   bind(unit) {
-    const {gl} = this;
-    gl.bindSampler(unit, this.handle);
-    glCheckError(gl);
+    this.gl.bindSampler(unit, this.handle);
     return this;
   }
 
@@ -45,99 +87,19 @@ export default class Sampler {
    * @return {Sampler} returns self to enable chaining
    */
   unbind(unit) {
-    const {gl} = this;
-    gl.bindSampler(unit, null);
-    glCheckError(gl);
+    this.gl.bindSampler(unit, null);
     return this;
   }
 
-  /**
-   * Batch update sampler settings
-   *
-   * @param {GLenum} compare_func - texture comparison function.
-   * @param {GLenum} compare_mode - texture comparison mode.
-   * @param {GLenum} mag_filter - texture magnification filter.
-   * @param {GLenum} MIN_FILTER - texture minification filter
-   * @param {GLfloat} MAX_LOD: maximum level-of-detail value.
-   * @param {GLfloat} MIN_LOD: minimum level-of-detail value.
-   * @param {GLenum} WRAP_R: texture wrapping function for texture coordinate r.
-   * @param {GLenum} WRAP_S: texture wrapping function for texture coordinate s.
-   * @param {GLenum} WRAP_T: texture wrapping function for texture coordinate t.
-   */
-  /* eslint-disable max-statements */
-  setParameters({
-    compareFunc,
-    compareMode,
-    magFilter,
-    minFilter,
-    minLOD,
-    maxLOD,
-    wrapR,
-    wrapS,
-    wrapT
-  }) {
-    const {gl} = this;
-    if (compareFunc) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_COMPARE_FUNC, compareFunc);
-    }
-    if (compareMode) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_COMPARE_MODE, compareMode);
-    }
-    if (magFilter) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_MAG_FILTER, magFilter);
-    }
-    if (minFilter) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_MIN_FILTER, minFilter);
-    }
-    if (minLOD) {
-      gl.samplerParameterf(this.handle, gl.TEXTURE_MIN_LOD, minLOD);
-    }
-    if (maxLOD) {
-      gl.samplerParameterf(this.handle, gl.TEXTURE_MAX_LOD, maxLOD);
-    }
-    if (wrapR) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_R, wrapR);
-    }
-    if (wrapS) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_S, wrapS);
-    }
-    if (wrapT) {
-      gl.samplerParameteri(this.handle, gl.TEXTURE_WRAP_T, wrapT);
-    }
-  }
-  /* eslint-enable max-statements */
+  // PRIVATE METHODS
 
-  /**
-   * @param {GLenum} pname
-   * @param {GLint} param
-   * @return {Sampler} returns self to enable chaining
-   */
-  parameteri(pname, param) {
-    const {gl} = this;
-    gl.samplerParameteri(this.handle, pname, param);
-    glCheckError(gl);
-    return this;
+  _createHandle() {
+    return this.gl.createSampler();
   }
 
-  /**
-   * @param {GLenum} pname
-   * @param {GLfloat} param
-   * @return {Sampler} returns self to enable chaining
-   */
-  parameterf(pname, param) {
-    const {gl} = this;
-    gl.samplerParameterf(this.handle, pname, param);
-    glCheckError(gl);
-    return this;
+  _deleteHandle() {
+    this.gl.deleteSampler(this.handle);
   }
-
-  // @param {GLenum} pname
-  // @return {*} result
-  getParameter(pname) {
-    const {gl} = this;
-    const result = gl.getSamplerParameter(this.handle, pname);
-    glCheckError(gl);
-    return result;
-  }
-
 }
+
+Sampler.PARAMETERS = PARAMETERS;

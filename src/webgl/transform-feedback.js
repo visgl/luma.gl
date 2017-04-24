@@ -1,61 +1,16 @@
-// WebGL2 Transform Feedback Helper
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
+import Resource from './resource';
+import {assertWebGL2Context} from './context';
 
-import {WebGL2RenderingContext} from './webgl-types';
-import {glCheckError} from '../context';
-import assert from 'assert';
-
-/* eslint-disable max-len */
-// void bindTransformFeedback (GLenum target, WebGLTransformFeedback? id);
-// void beginTransformFeedback(GLenum primitiveMode);
-// void endTransformFeedback();
-// void transformFeedbackVaryings(WebGLProgram? program, sequence<DOMString> varyings, GLenum bufferMode);
-// WebGLActiveInfo? getTransformFeedbackVarying(WebGLProgram? program, GLuint index);
-// void pauseTransformFeedback();
-// void resumeTransformFeedback();
-
-export default class TranformFeedback {
-
+export default class TranformFeedback extends Resource {
   /**
    * @class
-   * @param {WebGL2RenderingContext} gl
+   * @param {WebGL2RenderingContext} gl - context
+   * @param {Object} opts - options
    */
-  constructor(gl) {
-    assert(gl instanceof WebGL2RenderingContext);
-    this.gl = gl;
-    this.handle = gl.createTransformFeedback();
-    this.userData = {};
+  constructor(gl, opts) {
+    assertWebGL2Context(gl);
+    super(gl, opts);
     Object.seal(this);
-  }
-
-  /**
-   * @param {GLenum} target
-   * @return {TransformFeedback} returns self to enable chaining
-   */
-  delete() {
-    const {gl} = this;
-    gl.deleteTransformFeedback(this.handle);
-    this.handle = null;
-    glCheckError(gl);
-    return this;
-  }
-
-  /**
-   * @param {GLenum} target
-   * @return {TransformFeedback} returns self to enable chaining
-   */
-  bind(target) {
-    const {gl} = this;
-    gl.bindTransformFeedback(target, this.handle);
-    glCheckError(gl);
-    return this;
-  }
-
-  unbind(target) {
-    const {gl} = this;
-    gl.bindTransformFeedback(target, null);
-    glCheckError(gl);
-    return this;
   }
 
   /**
@@ -63,9 +18,7 @@ export default class TranformFeedback {
    * @return {TransformFeedback} returns self to enable chaining
    */
   begin(primitiveMode) {
-    const {gl} = this;
-    gl.beginTransformFeedback(primitiveMode);
-    glCheckError(gl);
+    this.gl.beginTransformFeedback(primitiveMode);
     return this;
   }
 
@@ -73,9 +26,7 @@ export default class TranformFeedback {
    * @return {TransformFeedback} returns self to enable chaining
    */
   pause() {
-    const {gl} = this;
-    gl.pauseTransformFeedback();
-    glCheckError(gl);
+    this.gl.pauseTransformFeedback();
     return this;
   }
 
@@ -83,9 +34,7 @@ export default class TranformFeedback {
    * @return {TransformFeedback} returns self to enable chaining
    */
   resume() {
-    const {gl} = this;
-    gl.resumeTransformFeedback();
-    glCheckError(gl);
+    this.gl.resumeTransformFeedback();
     return this;
   }
 
@@ -93,9 +42,7 @@ export default class TranformFeedback {
    * @return {TransformFeedback} returns self to enable chaining
    */
   end() {
-    const {gl} = this;
-    gl.endTransformFeedback();
-    glCheckError(gl);
+    this.gl.endTransformFeedback();
     return this;
   }
 
@@ -108,7 +55,6 @@ export default class TranformFeedback {
   varyings(program, varyings, bufferMode) {
     const {gl} = this;
     const result = gl.transformFeedbackVaryings(program, varyings, bufferMode);
-    glCheckError(gl);
     return result;
   }
 
@@ -118,10 +64,35 @@ export default class TranformFeedback {
    * @return {WebGLActiveInfo} - object with {name, size, type}
    */
   getVarying(program, index) {
-    const {gl} = this;
-    const result = gl.getTransformFeedbackVarying(program, index);
-    glCheckError(gl);
+    const result = this.gl.getTransformFeedbackVarying(program, index);
     return result;
   }
 
+  /**
+   * @param {GLenum} target
+   * @return {TransformFeedback} returns self to enable chaining
+   */
+  bind(target) {
+    this.gl.bindTransformFeedback(target, this.handle);
+    return this;
+  }
+
+  unbind(target) {
+    this.gl.bindTransformFeedback(target, null);
+    return this;
+  }
+
+  // PRIVATE METHODS
+
+  _createHandle() {
+    return this.gl.createTransformFeedback();
+  }
+
+  _deleteHandle() {
+    this.gl.deleteTransformFeedback(this.handle);
+  }
+
+  static checkHandle(handle) {
+    return this.gl.isTransformFeedback(this.handle);
+  }
 }

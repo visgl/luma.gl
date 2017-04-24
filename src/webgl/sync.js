@@ -1,68 +1,67 @@
-// WebGL2 Sync Object Helper
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery
-import {assertWebGL2Context, glCheckError} from '../webgl/webgl-checks';
-import queryManager from './queryManager';
+import GL from './api';
+import {assertWebGL2Context} from './context';
+import Resource from './resource';
+import queryManager from './helpers/query-manager';
 
-// WebGLSync? fenceSync(GLenum condition, GLbitfield flags);
-// [WebGLHandlesContextLoss] GLboolean isSync(WebGLSync? sync);
-// void deleteSync(WebGLSync? sync);
-// GLenum clientWaitSync(WebGLSync? sync, GLbitfield flags, GLint64 timeout);
-// void waitSync(WebGLSync? sync, GLbitfield flags, GLint64 timeout);
-// any getSyncParameter(WebGLSync? sync, GLenum pname);
+const PARAMETERS = [
+  GL.OBJECT_TYPE, // GLenum, type of sync object (always GL.SYNC_FENCE).
+  GL.SYNC_STATUS, // GLenum, status of sync object (GL.SIGNALED/GL.UNSIGNALED)
+  GL.SYNC_CONDITION, // GLenum. object condition (always GL.SYNC_GPU_COMMANDS_COMPLETE).
+  GL.SYNC_FLAGS // GLenum, flags sync object was created with (always 0)
+];
 
-export default class Sync {
-  /**
+export default class FenceSync extends Resource {
+  /*
    * @class
    * @param {WebGL2RenderingContext} gl
    */
-  constructor(gl) {
+  constructor(gl, opts) {
     assertWebGL2Context(gl);
-
-    const handle = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-    glCheckError(gl);
-
-    this.gl = gl;
-    this.handle = handle;
-    this.userData = {};
-
+    super(gl, opts);
     // query manager needs a promise field
     this.promise = null;
-
     Object.seal(this);
   }
 
   /**
-   * @return {Sync} returns self to enable chaining
-   */
-  delete() {
-    queryManager.deleteQuery(this);
-    if (this.handle) {
-      this.gl.deleteSync(this.handle);
-      this.handle = null;
-      glCheckError(this.gl);
-    }
-    return this;
-  }
-
-  /**
+   * The method is a no-op in the absence of the possibility of
+   * synchronizing between multiple GL contexts.
+   * Prevent commands from being added to GPU command queue.
+   * Note: commands can still be buffered in driver.
+   *
    * @param {GLbitfield} flags
    * @param {GLint64} timeout
-   * @return {Sync} returns self to enable chaining
+   * @return {Sync} status
    */
-  wait(flags, timeout) {
+  wait({flags = 0, timeout = GL.TIMEOUT_IGNORED} = {}) {
     this.gl.waitSync(this.handle, flags, timeout);
-    glCheckError(this.gl);
     return this;
   }
 
   /**
+   * Block all CPU operations until fence is signalled
    * @param {GLbitfield} flags
    * @param {GLint64} timeout
    * @return {GLenum} result
    */
-  clientWait(flags, timeout) {
+  clientWait({flags = GL.SYNC_FLUSH_COMMANDS_BIT, timeout}) {
     const result = this.gl.clientWaitSync(this.handle, flags, timeout);
-    glCheckError(this.gl);
+    // TODO - map to boolean?
+    switch (result) {
+    case GL.ALREADY_SIGNALED:
+      // Indicates that sync object was signaled when this method was called.
+      break;
+    case GL.TIMEOUT_EXPIRED:
+      // Indicates that timeout time passed, sync object did not become signaled
+      break;
+    case GL.CONDITION_SATISFIED:
+      // Indicates that sync object was signaled before timeout expired.
+      break;
+    case GL.WAIT_FAILED:
+      // Indicates that an error occurred during execution.
+      break;
+    default:
+    }
     return result;
   }
 
@@ -70,13 +69,33 @@ export default class Sync {
     queryManager.cancelQuery(this);
   }
 
+  isSignaled() {
+    return this.getParameter(GL.SYNC_STATUS) === GL.SIGNALED;
+  }
+
+  // TODO - Query manager needs these?
   isResultAvailable() {
-    const status = this.gl.getSyncParameter(this.handle, this.gl.SYNC_STATUS);
-    return status === this.gl.SIGNALED;
+    return this.isSignaled();
   }
 
   getResult() {
-    return this.gl.SIGNALED;
+    return this.isSignaled();
+  }
+
+  getParameter(pname) {
+    return this.gl.getSyncParameter(this.handle, pname);
+  }
+
+  // PRIVATE METHODS
+
+  _createHandle() {
+    return this.gl.fenceSync(GL.SYNC_GPU_COMMANDS_COMPLETE, 0);
+  }
+
+  _deleteHandle() {
+    queryManager.deleteQuery(this);
+    this.gl.deleteSync(this.handle);
   }
 }
 
+FenceSync.PARAMETERS = PARAMETERS;

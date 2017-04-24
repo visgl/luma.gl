@@ -1,10 +1,6 @@
 /* eslint-disable dot-notation*/
-import {glGet} from './webgl';
-import {
-  assertWebGLContext,
-  assertWebGL2Context, isWebGL2Context
-} from './webgl-checks';
-import Buffer from './buffer';
+import {glGet} from './api';
+import {assertWebGLContext, assertWebGL2Context, isWebGL2Context} from './context';
 import {log} from '../utils';
 import assert from 'assert';
 
@@ -289,7 +285,6 @@ export function setBuffer({
   layout
 } = {}) {
   assertWebGLContext(gl);
-  buffer = Buffer.makeFrom(gl, buffer);
 
   // Copy main data characteristics from buffer
   target = glGet(target !== undefined ? target : buffer.target);

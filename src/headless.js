@@ -1,6 +1,5 @@
-import './init';
-import isBrowser from './utils/is-browser';
 import luma from './init';
+import isBrowser from './utils/is-browser';
 
 if (!isBrowser) {
   luma.globals.headlessGL = require('gl');
@@ -11,7 +10,7 @@ if (!isBrowser) {
 }
 
 // Make sure luma.gl initializes with valid types
-require('./webgl/webgl-types');
+require('./webgl/api/webgl-types');
 
 // Now import standard luma.gl package
 // module.exports = require('./index');
