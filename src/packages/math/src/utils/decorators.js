@@ -30,12 +30,11 @@ export function unary(...decoratorArgs) {
     (target, methodKey, descriptor, []) => {
       const Class = target.constructor;
       Class[methodKey] = (...args) => (new Class())[methodKey](...args);
-      return {
-        ...descriptor,
+      return Object.assing({}, descriptor, {
         value: function unaryWrapper() {
           return descriptor.value.apply(this, arguments);
         }
-      };
+      });
     });
 }
 
@@ -44,12 +43,11 @@ export function staticMethod(...decoratorArgs) {
     (target, methodKey, descriptor, []) => {
       const Class = target.constructor;
       Class[methodKey] = (...args) => (new Class())[methodKey](...args);
-      return {
-        ...descriptor,
+      return Object.assign({}, descriptor, {
         value: function staticMethodWrapper() {
           return descriptor.value.apply(this, arguments);
         }
-      };
+      });
     });
 }
 
@@ -59,12 +57,11 @@ export function binary(...args) {
       const Class = target.constructor;
       Class[methodKey] = (a, b) => new Class().copy(a)[methodKey](b);
 
-      return {
-        ...descriptor,
+      return Object.assign({}, descriptor, {
         value: function binaryWrapper() {
           return descriptor.value.apply(this, arguments);
         }
-      };
+      });
     });
 }
 
@@ -77,11 +74,10 @@ export function spread(...args) {
         new Class().copy(a)
       );
 
-      return {
-        ...descriptor,
+      return Object.assign({}, descriptor, {
         value: function spreadWrapper() {
           return descriptor.value.apply(this, arguments);
         }
-      };
+      });
     });
 }
