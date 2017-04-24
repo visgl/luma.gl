@@ -1,24 +1,24 @@
-import {readFileSync} from 'fs';
-import {join} from 'path';
 import {Vector3} from '../../../packages/math';
 
-const commonShader = readFileSync(join(__dirname, './lighting-common.glsl'));
+import commonShader from './lighting-common.glsl';
+import vertexShader1 from './lighting-vertex.glsl';
+import fragmentShader1 from './lighting-fragment.glsl';
+
+export const vertexShader = `\
+${commonShader}
+${vertexShader1}
+`;
+
+export const fragmentShader = `\
+${commonShader}
+${fragmentShader1}
+`;
 
 export const name = 'lighting';
 
 export const config = {
   MAX_POINT_LIGHTS: 4
 };
-
-export const vertexShader = `\
-${commonShader}
-${readFileSync(join(__dirname, './lighting-vertex.glsl'))}
-`;
-
-export const fragmentShader = `\
-${commonShader}
-${readFileSync(join(__dirname, './lighting-fragment.glsl'))}
-`;
 
 // Setup the lighting system: ambient, directional, point lights.
 export function getUniforms({
@@ -35,13 +35,15 @@ export function getUniforms({
   lightingPointLights = []
 }) {
   // Set light uniforms. Ambient, directional and point lights.
-  return {
-    lightingEnable,
-    // Ambient
-    lightingAmbientColor,
-    ...getDirectionalUniforms(lightingDirection),
-    ...getPointUniforms(lightingPointLights)
-  };
+  return Object.assign(
+    {
+      lightingEnable,
+      // Ambient
+      lightingAmbientColor
+    },
+    getDirectionalUniforms(lightingDirection),
+    getPointUniforms(lightingPointLights)
+  );
 }
 
 function getDirectionalUniforms({color, direction}) {

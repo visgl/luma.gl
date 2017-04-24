@@ -1,3 +1,4 @@
+export default `\
 // fog configuration
 uniform bool fog_uEnable;
 uniform vec3 fog_uColor;
@@ -21,3 +22,4 @@ vec4 fog_filterColor(vec4 color) {
 
 // Other fog shaders, exponential etc, see
 // http://in2gpu.com/2014/07/22/create-fog-shader/
+`;

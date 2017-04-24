@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME luma-default-fragment
 
 #ifdef GL_ES
@@ -75,3 +76,4 @@ void main(){
   //   gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
   // }
 }
+`;

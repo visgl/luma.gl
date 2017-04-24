@@ -1,3 +1,4 @@
+export default `\
 // picking configs
 uniform bool picking_uEnabled;
 varying vec3 picking_vPickingColor;
@@ -14,3 +15,4 @@ vec4 picking_filterColor(vec4 color) {
   	return color;
   }
 }
+`;

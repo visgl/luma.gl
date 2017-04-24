@@ -1,3 +1,4 @@
+export default `\
 varying vec4 vColor;
 varying vec4 picking_vColor;
 
@@ -5,3 +6,4 @@ varying vec4 picking_vColor;
 void picking_setPickingColor(vec3 pickingColor) {
   vPickingColor = pickingColors;
 }
+`;

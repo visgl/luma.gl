@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME luma-default-vertex
 
 #define LIGHT_MAX 4
@@ -86,3 +87,4 @@ void main(void) {
   vNormal = transformedNormal;
   gl_Position = projectionMatrix * worldMatrix * vec4(positions, 1.0);
 }
+`;

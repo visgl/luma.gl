@@ -1,3 +1,4 @@
+export default `\
 #define SHADER_NAME luma-render-tex-fs
 
 #ifdef GL_ES
@@ -88,6 +89,4 @@ void main(void) {
     alpha
   );
 }
-
-
-
+`;

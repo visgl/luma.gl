@@ -1,9 +1,6 @@
-import {readFileSync} from 'fs';
-import {join} from 'path';
-
 export const name = 'fog';
 export const vertexShader = '';
-export const fragmentShader = readFileSync(join(__dirname, './fog-fragment.glsl'));
+export {default as fragmentShader} from './fog-fragment.glsl';
 
 /* eslint-disable camelcase */
 export function getUniforms({

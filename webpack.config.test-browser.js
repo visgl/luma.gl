@@ -21,18 +21,17 @@ module.exports = {
     filename: '[name]-bundle.js'
   },
 
-  devtool: '#inline-source-maps',
+  devtool: '#source-maps',
 
   resolve: {
     alias: {
-      'deck.gl': resolve('./src')
+      'luma.gl': resolve('./src')
     }
   },
 
   module: {
     rules: [
       {
-        // Mapbox has some unresolved fs calls
         include: [resolve('./src')],
         loader: 'transform-loader',
         options: 'brfs-babel'

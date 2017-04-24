@@ -1,3 +1,4 @@
+export default `\
 uniform vec3 material_uAmbientColor;
 uniform vec3 material_uDiffuseColor;
 uniform vec3 material_uSpecularColor;
@@ -63,3 +64,4 @@ vec4 material_filterColor(vec4 color) {
   color = material_filterColor_environmentMap(color);
   return color;
 }
+`;
