@@ -2,7 +2,7 @@
 /* eslint-disable max-statements, no-try-catch */
 /* global window */
 import {GL, glContextWithState, Framebuffer} from '../../webgl';
-import {assertWebGLContext} from '../../webgl/webgl-checks';
+import {assertWebGLContext} from '../../webgl/api';
 import Group from './group';
 import assert from 'assert';
 
