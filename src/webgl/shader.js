@@ -53,12 +53,16 @@ export class Shader {
     const {gl} = this;
     gl.shaderSource(this.handle, this.source);
     gl.compileShader(this.handle);
-    const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
-    if (!compiled) {
-      const infoLog = gl.getShaderInfoLog(this.handle);
-      const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
-      this.delete();
-      throw new Error(`Error while compiling the shader ${error}`);
+
+    // Shader compilation error is checked only when debug context is used
+    if (gl.debug) {
+      const compiled = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
+      if (!compiled) {
+        const infoLog = gl.getShaderInfoLog(this.handle);
+        const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
+        this.delete();
+        throw new Error(`Error while compiling the shader ${error}`);
+      }
     }
   }
   /* eslint-enable max-statements */
