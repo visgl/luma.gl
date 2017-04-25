@@ -1,5 +1,8 @@
 {
-  "presets": ["es2015"],
+  "presets": [
+  	["es2015", {modules: false}],
+  	"stage-2"
+  ],
   "plugins": [
     ["transform-builtin-extend", {"globals": ["Array"]}]
   ]

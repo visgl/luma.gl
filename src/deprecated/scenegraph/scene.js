@@ -1,10 +1,15 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements, no-try-catch */
+
 import {Vector3} from '../../packages/math';
 import {merge} from '../../utils';
 import Group from './group';
 import {pickModels} from './pick';
 import assert from 'assert';
+
+export const MAX_TEXTURES = 10;
+export const MAX_POINT_LIGHTS = 4;
+export const PICKING_RES = 4;
 
 const INVALID_ARGUMENT = 'LumaGL.Scene invalid argument';
 

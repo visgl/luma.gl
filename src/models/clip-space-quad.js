@@ -1,44 +1,36 @@
 // ClipSpaceQuad
 import {Model} from '../core';
 import {Geometry} from '../geometry';
-import {GL} from '../webgl';
-
-const CLIPSPACE_QUAD_VERTEX_SHADER = `\
-attribute vec2 aClipSpacePosition;
-attribute vec2 aTexCoord;
-attribute vec2 aCoordinate;
-
-varying vec2 position;
-varying vec2 coordinate;
-varying vec2 uv;
-
-void main(void) {
-  gl_Position = vec4(aClipSpacePosition, 0., 1.);
-  position = aClipSpacePosition;
-  coordinate = aCoordinate;
-  uv = aTexCoord;
-}
-`;
-
-/* eslint-disable indent, no-multi-spaces */
-const POSITIONS = [
-  -1, -1,
-   1, -1,
-  -1,  1,
-   1,  1
-  // -1, -1,
-  //  1, -1,
-  //  1,  1,
-  // -1, -1,
-  //  1,  1,
-  // -1,  1
-];
-
-const TEX_COORDS = POSITIONS.map(coord => coord === -1 ? 0 : coord);
-/* eslint-enable indent, no-multi-spaces */
+import {GL} from '../webgl/webgl';
 
 export default class ClipSpaceQuad extends Model {
   constructor(opts) {
+    const CLIPSPACE_QUAD_VERTEX_SHADER = `\
+    attribute vec2 aClipSpacePosition;
+    attribute vec2 aTexCoord;
+    attribute vec2 aCoordinate;
+
+    varying vec2 position;
+    varying vec2 coordinate;
+    varying vec2 uv;
+
+    void main(void) {
+      gl_Position = vec4(aClipSpacePosition, 0., 1.);
+      position = aClipSpacePosition;
+      coordinate = aCoordinate;
+      uv = aTexCoord;
+    }
+    `;
+
+    /* eslint-disable indent, no-multi-spaces */
+    const POSITIONS = [
+      -1, -1,
+       1, -1,
+      -1,  1,
+       1,  1
+    ];
+
+    const TEX_COORDS = POSITIONS.map(coord => coord === -1 ? 0 : coord);
 
     super(Object.assign({}, opts, {
       vs: CLIPSPACE_QUAD_VERTEX_SHADER,

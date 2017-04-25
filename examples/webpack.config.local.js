@@ -6,7 +6,6 @@
 // without publishing or npm linking, with conveniences such hot reloading etc.
 
 const {resolve} = require('path');
-const webpack = require('webpack');
 
 const LIB_DIR = resolve(__dirname, '..');
 const SRC_DIR = resolve(LIB_DIR, './src');
@@ -38,10 +37,13 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   ]
 };
 
-function addLocalDevSettings(config) {
+function addLocalDevSettings(config, {libAlias}) {
   config.resolve = config.resolve || {};
   config.resolve.alias = config.resolve.alias || {};
   Object.assign(config.resolve.alias, LOCAL_DEVELOPMENT_CONFIG.resolve.alias);
+  if (libAlias) {
+    config.resolve.alias['luma.gl'] = libAlias;
+  }
 
   config.module = config.module || {};
   config.module.rules = config.module.rules || [];
@@ -49,11 +51,11 @@ function addLocalDevSettings(config) {
   return config;
 }
 
-module.exports = baseConfig => env => {
+module.exports = (baseConfig, opts = {}) => env => {
   const config = baseConfig;
   if (env && env.local) {
-    addLocalDevSettings(config);
+    addLocalDevSettings(config, opts);
   }
-  // console.log(JSON.stringify(config, null, 2));
+  // console.warn(JSON.stringify(config, null, 2));
   return config;
 };

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "4.0.0-alpha.6",
+  "version": "4.0.0-alpha.7",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "gl-constants": "^1.0.0",
+    "gl-mat4-esm": "^1.1.4",
     "gl-matrix": "^2.3.2",
     "seer": "^0.1.0",
     "webgl-debug": "^1.0.2"
