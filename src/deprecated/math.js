@@ -1097,7 +1097,7 @@ generics = {
 
 // add generics and instance methods
 
-proto = Quat.prototype = {};
+proto = Quat.prototype;
 
 for (method in generics) {
   Quat[method] = generics[method];

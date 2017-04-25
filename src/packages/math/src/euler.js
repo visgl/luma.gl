@@ -1,8 +1,8 @@
 import MathArray from './math-array';
 import {checkNumber, clamp} from './common';
-import {Matrix4} from './matrix4';
-import {Quaternion} from './quaternion';
-import {Vector3} from './vector3';
+import Matrix4 from './matrix4';
+import Quaternion from './quaternion';
+import Vector3 from './vector3';
 
 // Internal constants
 const ERR_UNKNOWN_ORDER = 'Unknown Euler angle order';

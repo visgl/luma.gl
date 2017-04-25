@@ -31,11 +31,6 @@ module.exports = {
 
   module: {
     rules: [
-      {
-        include: [resolve('./src')],
-        loader: 'transform-loader',
-        options: 'brfs-babel'
-      }
     ]
   },
 
