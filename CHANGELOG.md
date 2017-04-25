@@ -1,9 +1,12 @@
 # Official releases
 
+### 3.0.2
+- Check compilation and linking status only when debug WebGL context is used to improve performance (#144)
+
 ### 3.0.1
 - Add CORD setting to allow loading image from a different domain
 
-## 3.0.0
+### 3.0.0
 
 Codebase/Build tooling improvements
 - Replace wildcard exports with named exports in index.js
