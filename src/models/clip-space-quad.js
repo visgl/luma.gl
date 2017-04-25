@@ -1,7 +1,7 @@
 // ClipSpaceQuad
 import {Model} from '../core';
 import {Geometry} from '../geometry';
-import {GL} from '../webgl';
+import {GL} from '../webgl/webgl';
 
 export default class ClipSpaceQuad extends Model {
   constructor(opts) {
