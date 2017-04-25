@@ -17,6 +17,13 @@ export function configure(options) {
   }
 }
 
+export function checkNumber(value) {
+  if (!Number.isFinite(value)) {
+    throw new Error(`Invalid number ${value}`);
+  }
+  return value;
+}
+
 export function formatValue(value, precision = glMatrix.precision || 4) {
   return parseFloat(value.toPrecision(precision));
 }
