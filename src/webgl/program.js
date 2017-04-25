@@ -362,10 +362,13 @@ export default class Program {
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
     gl.linkProgram(this.handle);
-    gl.validateProgram(this.handle);
-    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
-    if (!linked) {
-      throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
+    // Program linking error is checked only when debug context is used
+    if (gl.debug) {
+      gl.validateProgram(this.handle);
+      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+      if (!linked) {
+        throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
+      }
     }
   }
 
