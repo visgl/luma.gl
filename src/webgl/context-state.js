@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments, max-len */
-import GL from './webgl-constants';
+import GL from './gl-constants';
 import assert from 'assert';
 
 // WebGL specification 'types'
