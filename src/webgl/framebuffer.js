@@ -32,7 +32,6 @@ export default class Framebuffer extends Resource {
     super(gl, opts);
     this.initialize(opts);
     Object.seal(this);
-    this.resize(opts);
   }
 
   // SIMPLIFIED INTERFACE

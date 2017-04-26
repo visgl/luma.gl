@@ -1,8 +1,7 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
 /* global window */
-import {GL, glContextWithState, Framebuffer} from '../../webgl';
-import {assertWebGLContext} from '../../webgl/api';
+import {GL, glContextWithState, Framebuffer, isWebGLContext} from '../../webgl';
 import Group from './group';
 import assert from 'assert';
 
@@ -18,7 +17,7 @@ export function pickModels(gl, {
   pickingProgram = null,
   pickingColors = null
 }) {
-  assertWebGLContext(gl);
+  assert(isWebGLContext(gl), ILLEGAL_ARG);
   assert(group instanceof Group, ILLEGAL_ARG);
 
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;

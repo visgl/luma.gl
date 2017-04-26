@@ -47,7 +47,10 @@ export {VertexAttributes};
 
 // Functions
 export {
-  draw,
+  draw
+} from './draw';
+
+export {
   clear,
   readPixels,
   readPixelsFromBuffer
