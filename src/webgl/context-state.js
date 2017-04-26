@@ -452,7 +452,7 @@ class GLState {
     } else {
       this._getInitialState();
     }
-    this.overrides = [];
+    this.stateStack = [];
   }
 
   pushValues(gl, values) {
@@ -463,12 +463,12 @@ class GLState {
       // Set the new value
       this.setValue(gl, key, values[key]);
     }
-    this.overrides.push({oldValues});
+    this.stateStack.push({oldValues});
   }
 
   popValues(gl) {
-    assert(this.overrides.length > 0);
-    const {oldValues} = this.overrides.pop();
+    assert(this.stateStack.length > 0);
+    const {oldValues} = this.stateStack.pop();
     for (const key in oldValues) {
       // Set the old value
       this.setValue(gl, key, oldValues[key]);
