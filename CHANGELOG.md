@@ -1,9 +1,24 @@
 # Official releases
 
-### 3.0.1
-- Add CORD setting to allow loading image from a different domain
+## 4.0.0-dev
+
+- Refactor WebGL classes
+- `Resource.getParameters` for ease of debugging
 
 ## 3.0.0
+
+### 3.0.1
+- Add CORS setting to allow loading image from a different domain
+
+### 3.0.0 Pure ES6 Codebase/Build tooling improvements
+
+Feature Improvements
+- Performance query using EXT_disjoint_timer_query #121
+
+Breaking Changes:
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
 
 Codebase/Build tooling improvements
 - Replace wildcard exports with named exports in index.js
@@ -16,14 +31,6 @@ Codebase/Build tooling improvements
 - `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
 - `probe` moved to `/experimental`
 - `webgl` folder now contains both webgl1 and webgl2 classes
-
-Feature Improvements
-- Performance query using EXT_disjoint_timer_query #121
-
-Breaking Changes:
-- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
-  and into `packages`. This allows luma.gl to drop a number of big dependencies.
-  The node IO code may be published as a separate module later.
 
 
 ### 2.10.4
@@ -46,7 +53,7 @@ Breaking Changes:
 - Introduce new gl-matrix based math library.
 - Move old math lib to deprecated folder.
 - Move FBO to deprecated folder.
-- Examples converted to ES6. AnimationFrame class updates.
+- Examples converted to ES6. AnimationLoop class updates.
 - Add back persistence example
 - WebGL type and constant cleanup
 - Fix glTypeToArray and use clamped arrays by default
@@ -134,12 +141,6 @@ headless-gl.
   - Don't use. This was a misnamed beta release.
 
 ### 2.0.0 - Major API refactoring
-
-### 2.0.0-beta series
-  - layer architecture refactored to improve performance
-  - updated to handle perspective mode
-  - shaderlib
-  - Beta releases, don't use.
 
 ### 1.0.1 - Initial release.
 

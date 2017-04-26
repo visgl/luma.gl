@@ -1,31 +1,27 @@
-import {GL} from './webgl';
-import {assertWebGLContext, assertWebGL2Context} from './webgl-checks';
+/* eslint-disable no-inline-comments */
+import GL from './api';
+import {assertWebGL2Context, isWebGL2Context} from './context';
 import * as VertexAttributes from './vertex-attributes';
-import Buffer from './buffer';
+import Resource from './resource';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
-export default class Program {
+const PARAMETERS = [
+  GL.DELETE_STATUS, // GLboolean
+  GL.LINK_STATUS, // GLboolean
+  GL.VALIDATE_STATUS, // GLboolean
+  GL.ATTACHED_SHADERS, // GLint
+  GL.ACTIVE_ATTRIBUTES, // GLint
+  GL.ACTIVE_UNIFORMS, // GLint
+  GL.TRANSFORM_FEEDBACK_BUFFER_MODE, // SEPARATE_ATTRIBS/INTERLEAVED_ATTRIBS
+  GL.TRANSFORM_FEEDBACK_VARYINGS, // GLint
+  GL.ACTIVE_UNIFORM_BLOCKS // GLint
+];
 
-  /**
-   * Returns a Program wrapped WebGLProgram from a variety of inputs.
-   * Allows other functions to transparently accept raw WebGLPrograms etc
-   * and manipulate them using the methods in the `Program` class.
-   * Checks for ".handle"
-   *
-   * @param {WebGLRenderingContext} gl - if a new buffer needs to be initialized
-   * @param {*} object - candidate that will be coerced to a buffer
-   * @returns {Program} - Program object that wraps the buffer parameter
-   */
-  static makeFrom(gl, object = {}) {
-    return object instanceof Program ? object :
-      // Use .handle if available, else use 'program' directly
-      new Program(gl).setData({handle: object.handle || object});
-  }
-
+export default class Program extends Resource {
   /*
    * @classdesc
    * Handles creation of programs, mapping of attributes and uniforms
@@ -37,38 +33,32 @@ export default class Program {
    * @param {String} opts.fs - Fragment shader source
    * @param {String} opts.id= - Id
    */
-  /* eslint-disable max-statements */
-  constructor(gl, {
-    id,
-    vs,
-    fs,
-    defaultUniforms,
-    handle
-  } = {}) {
-    assertWebGLContext(gl);
+  constructor(gl, opts = {}) {
+    super(gl, opts);
+    this.initialize(opts);
+    Object.seal(this);
 
+    // If program is not named, name it after shader names
+    if (!opts.id) {
+      let programName = this.vs.getName() || this.fs.getName();
+      programName = programName.replace(/shader/i, '');
+      programName = programName ? `${programName}-program` : 'program';
+      // TODO - this.id will already have been initialized
+      this.id = uid(programName);
+    }
+  }
+
+  initialize({vs, fs, defaultUniforms} = {}) {
     // Create shaders if needed
-    this.vs = typeof vs === 'string' ? new VertexShader(gl, vs) : vs;
-    this.fs = typeof fs === 'string' ? new FragmentShader(gl, fs) : fs;
+    this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
+    this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
 
     assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
     assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
 
-    // If program is not named, name it after shader names
-    let programName = this.vs.getName() || this.fs.getName();
-    programName = programName ? `${programName}-program` : 'program';
-    this.id = id || uid(programName);
-
-    this.gl = gl;
     this.defaultUniforms = defaultUniforms;
-    this.handle = handle;
-    if (!this.handle) {
-      this.handle = gl.createProgram();
-      this._compileAndLink();
-    }
-    if (!this.handle) {
-      throw new Error('Failed to create program');
-    }
+
+    this._compileAndLink(this.vs, this.fs);
 
     // determine attribute locations (i.e. indices)
     this._attributeLocations = this._getAttributeLocations();
@@ -81,34 +71,48 @@ export default class Program {
     this._uniformCount = this.getUniformCount();
     this._textureIndexCounter = 0;
 
-    this.userData = {};
     Object.seal(this);
-  }
-  /* eslint-enable max-statements */
 
-  delete() {
-    const {gl} = this;
-    if (this.handle) {
-      gl.deleteProgram(this.handle);
-    }
-    this.handle = null;
     return this;
   }
 
   use() {
-    const {gl} = this;
-    gl.useProgram(this.handle);
+    this.gl.useProgram(this.handle);
     return this;
   }
 
-  // DEPRECATED METHODS
-  clearBuffers() {
-    this._filledLocations = {};
-    return this;
-  }
+  // A good thing about webGL is that there are so many ways to draw things,
+  // e.g. depending on whether data is indexed and/or isInstanced.
+  // This function unifies those into a single call with simple parameters
+  // that have sane defaults.
+  draw(gl, {
+    drawMode = GL.TRIANGLES,
+    vertexCount,
+    offset = 0,
+    isIndexed = false,
+    indexType = GL.UNSIGNED_SHORT,
+    isInstanced = false,
+    instanceCount = 0
+  }) {
+    this.use();
 
-  _print(bufferName) {
-    return `Program ${this.id}: Attribute ${bufferName}`;
+    const extension = gl.getExtension('ANGLE_instanced_arrays');
+
+    // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+    if (isInstanced && isIndexed) {
+      extension.drawElementsInstancedANGLE(
+        drawMode, vertexCount, indexType, offset, instanceCount
+      );
+    } else if (isInstanced) {
+      extension.drawArraysInstancedANGLE(
+        drawMode, offset, vertexCount, instanceCount
+      );
+    } else if (isIndexed) {
+      gl.drawElements(drawMode, vertexCount, indexType, offset);
+    } else {
+      gl.drawArrays(drawMode, offset, vertexCount);
+    }
+    return this;
   }
 
   /**
@@ -122,13 +126,12 @@ export default class Program {
    */
   /* eslint-disable max-statements */
   setBuffers(buffers, {clear = true, check = true, drawParams = {}} = {}) {
-    const {gl} = this;
     if (Array.isArray(buffers)) {
       throw new Error('Program.setBuffers expects map of buffers');
     }
 
     if (clear) {
-      this.clearBuffers();
+      this._filledLocations = {};
     }
 
     // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
@@ -138,6 +141,8 @@ export default class Program {
     drawParams.indexType = null;
 
     const {locations, elements} = this._sortBuffersByLocation(buffers);
+
+    const {gl} = this;
 
     // Process locations in order
     for (let location = 0; location < locations.length; ++location) {
@@ -165,38 +170,23 @@ export default class Program {
     }
 
     if (check) {
-      this.checkBuffers();
+      this._checkBuffers();
     }
 
     return this;
   }
   /* eslint-enable max-statements */
 
-  checkBuffers() {
-    for (const attributeName in this._attributeLocations) {
-      if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
-        const location = this._attributeLocations[attributeName];
-        // throw new Error(`Program ${this.id}: ` +
-        //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(0, `Program ${this.id}: ` +
-          `Attribute ${location}:${attributeName} not supplied`);
-        this._warn[attributeName] = true;
-      }
-    }
-    return this;
-  }
-
   /*
    * @returns {Program} Returns itself for chaining.
    */
   unsetBuffers() {
-    const {gl} = this;
     const length = this._attributeCount;
     for (let i = 1; i < length; ++i) {
       // VertexAttributes.setDivisor(gl, i, 0);
-      VertexAttributes.disable(gl, i);
+      VertexAttributes.disable(this.gl, i);
     }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    this.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
     return this;
   }
 
@@ -235,17 +225,23 @@ export default class Program {
   }
   /* eslint-enable max-depth */
 
-  // RAW WEBGL METHODS
-
-  getAttachedShadersCount() {
-    return this.getProgramParameter(GL.ATTACHED_SHADERS);
+  /**
+   * ATTRIBUTES API
+   * (Locations are numeric indices)
+   * @return {Number} count
+   */
+  getAttributeCount() {
+    return this.getParameter(GL.ACTIVE_ATTRIBUTES);
   }
 
-  // ATTRIBUTES API
-  // Note: Locations are numeric indices
-
-  getAttributeCount() {
-    return this.getProgramParameter(GL.ACTIVE_ATTRIBUTES);
+  /**
+   * Returns location (index) of a name
+   * @param {String} attributeName - name of an attribute
+   *   (matches name in a linked shader)
+   * @returns {Number} - // array of actual attribute names from shader linking
+   */
+  getAttributeLocation(attributeName) {
+    return this.gl.getAttribLocation(this.handle, attributeName);
   }
 
   /**
@@ -258,25 +254,13 @@ export default class Program {
     return this.gl.getActiveAttrib(this.handle, location);
   }
 
-  getAttributeName(location) {
-    return this.getAttributeInfo(location).name;
-  }
-
   /**
-   * Returns location (index) of a name
-   * @param {String} attributeName - name of an attribute
-   *   (matches name in a linked shader)
-   * @returns {String[]} - array of actual attribute names from shader linking
+   * UNIFORMS API
+   * (Locations are numeric indices)
+   * @return {Number} count
    */
-  getAttributeLocation(attributeName) {
-    return this.gl.getAttribLocation(this.handle, attributeName);
-  }
-
-  // UNIFORMS API
-  // Note: locations are opaque structures
-
   getUniformCount() {
-    return this.getProgramParameter(GL.ACTIVE_UNIFORMS);
+    return this.getParameter(GL.ACTIVE_UNIFORMS);
   }
 
   /*
@@ -298,41 +282,9 @@ export default class Program {
     return this.gl.getUniform(this.handle, location);
   }
 
-  // PROGRAM API
-
-  isFlaggedForDeletion() {
-    return this.getProgramParameter(GL.DELETE_STATUS);
-  }
-
-  getLastLinkStatus() {
-    return this.getProgramParameter(GL.LINK_STATUS);
-  }
-
-  getLastValidationStatus() {
-    return this.getProgramParameter(GL.VALIDATE_STATUS);
-  }
-
-  // WEBGL2 INTERFACE
-
-  // This may be gl.SEPARATE_ATTRIBS or gl.INTERLEAVED_ATTRIBS.
-  getTransformFeedbackBufferMode() {
-    assertWebGL2Context(this.gl);
-    return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_BUFFER_MODE);
-  }
-
-  getTransformFeedbackVaryingsCount() {
-    assertWebGL2Context(this.gl);
-    return this.getProgramParameter(this.gl.TRANSFORM_FEEDBACK_VARYINGS);
-  }
-
-  getActiveUniformBlocksCount() {
-    assertWebGL2Context(this.gl);
-    return this.getProgramParameter(this.gl.ACTIVE_UNIFORM_BLOCKS);
-  }
-
+  // WebGL2
   // Retrieves the assigned color number binding for the user-defined varying
   // out variable name for program. program must have previously been linked.
-  // [WebGLHandlesContextLoss]
   getFragDataLocation(varyingName) {
     assertWebGL2Context(this.gl);
     return this.gl.getFragDataLocation(this.handle, varyingName);
@@ -341,18 +293,23 @@ export default class Program {
   // Return the value for the passed pname given the passed program.
   // The type returned is the natural type for the requested pname,
   // as given in the following table:
-  // pname returned type
-  // DELETE_STATUS GLboolean
-  // LINK_STATUS GLboolean
-  // VALIDATE_STATUS GLboolean
-  // ATTACHED_SHADERS  GLint
-  // ACTIVE_ATTRIBUTES GLint
-  // ACTIVE_UNIFORMS GLint
-  // TRANSFORM_FEEDBACK_BUFFER_MODE  GLenum
-  // TRANSFORM_FEEDBACK_VARYINGS GLint
-  // ACTIVE_UNIFORM_BLOCKS GLint
-  getProgramParameter(pname) {
+  getParameter(pname) {
+    // Return default values for WebGL2 parameters under WebGL1
+    if (!isWebGL2Context(this.gl)) {
+      switch (pname) {
+      case GL.ACTIVE_UNIFORMS: return 0;
+      case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
+      case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
+      case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
+      default:
+      }
+    }
     return this.gl.getProgramParameter(this.handle, pname);
+  }
+
+  // @returns {WebGLShader[]} - array of attached WebGLShader objects
+  getAttachedShaders() {
+    return this.gl.getAttachedShaders(this.handle);
   }
 
   // PRIVATE METHODS
@@ -362,8 +319,8 @@ export default class Program {
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
     gl.linkProgram(this.handle);
-    // Program linking error is checked only when debug context is used
-    if (gl.debug) {
+    // Avoid checking program linking error in production
+    if (gl.debug || log.priority > 0) {
       gl.validateProgram(this.handle);
       const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
       if (!linked) {
@@ -372,17 +329,31 @@ export default class Program {
     }
   }
 
+  _checkBuffers() {
+    for (const attributeName in this._attributeLocations) {
+      if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
+        const location = this._attributeLocations[attributeName];
+        // throw new Error(`Program ${this.id}: ` +
+        //   `Attribute ${location}:${attributeName} not supplied`);
+        log.warn(0, `Program ${this.id}: ` +
+          `Attribute ${location}:${attributeName} not supplied`);
+        this._warn[attributeName] = true;
+      }
+    }
+    return this;
+  }
+
   _sortBuffersByLocation(buffers) {
     let elements = null;
     const locations = new Array(this._attributeCount);
 
     for (const bufferName in buffers) {
-      const buffer = Buffer.makeFrom(this.gl, buffers[bufferName]);
+      const buffer = buffers[bufferName];
       const location = this._attributeLocations[bufferName];
       if (location === undefined) {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
           throw new Error(
-            `${this._print(bufferName)} duplicate gl.ELEMENT_ARRAY_BUFFER`);
+            `${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
         } else if (!this._warn[bufferName]) {
@@ -397,7 +368,6 @@ export default class Program {
         locations[location] = bufferName;
       }
     }
-
     return {locations, elements};
   }
 
@@ -418,7 +388,7 @@ export default class Program {
     const attributeLocations = {};
     const length = this.getAttributeCount();
     for (let location = 0; location < length; location++) {
-      const name = this.getAttributeName(location);
+      const name = this.getAttributeInfo(location).name;
       attributeLocations[name] = this.getAttributeLocation(name);
     }
     return attributeLocations;
@@ -439,6 +409,36 @@ export default class Program {
     }
     return uniformSetters;
   }
+
+  _print(bufferName) {
+    return `Program ${this.id}: Attribute ${bufferName}`;
+  }
+
+  _createHandle() {
+    return this.gl.createProgram();
+  }
+
+  _deleteHandle() {
+    this.gl.deleteProgram(this.handle);
+  }
+
+  _getOptionsFromHandle(handle) {
+    const shaderHandles = this.gl.getAttachedShaders(handle);
+    const opts = {};
+    for (const shaderHandle of shaderHandles) {
+      const type = this.gl.getShaderParameter(this.handle, GL.SHADER_TYPE);
+      switch (type) {
+      case GL.VERTEX_SHADER:
+        opts.vs = new VertexShader({handle: shaderHandle});
+        break;
+      case GL.FRAGMENT_SHADER:
+        opts.fs = new FragmentShader({handle: shaderHandle});
+        break;
+      default:
+      }
+    }
+    return opts;
+  }
 }
 
 // create uniform setters
@@ -455,3 +455,4 @@ export function getUniformDescriptors(gl, program) {
   return uniformDescriptors;
 }
 
+Program.PARAMETERS = PARAMETERS;

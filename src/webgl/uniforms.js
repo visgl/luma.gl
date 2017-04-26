@@ -1,4 +1,4 @@
-import {GL} from './webgl';
+import GL from './api';
 import Texture from './texture';
 import {formatValue} from '../utils';
 import assert from 'assert';

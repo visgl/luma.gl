@@ -1,5 +1,6 @@
 // WebGL2 VertexArray Objects Helper
-import {assertWebGLContext, glCheckError} from '../webgl/webgl-checks';
+import {assertWebGLContext} from '../webgl/api';
+import {glCheckError} from '../webgl/checks';
 import queryManager from './helpers/query-manager';
 
 /* eslint-disable no-multi-spaces */

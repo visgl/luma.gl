@@ -1,16 +1,25 @@
 // WebGLRenderingContext related methods
-/* eslint-disable no-try-catch, no-loop-func */
-import WebGLDebug from 'webgl-debug';
-import {WebGLRenderingContext, webGLTypesAvailable} from './webgl-types';
-import {assertWebGLContext, isWebGL2Context}
-  from './webgl-checks';
+
+/* global document */
+import GL from './api';
+import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
+import {makeDebugContext} from './context-debug';
+
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
-import {global} from '../utils/globals';
+import luma from '../init';
 import assert from 'assert';
-/* global document */
 
-const {luma} = global;
+const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
+const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.
+
+// Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
+const GL_ARRAY_BUFFER = 0x8892;
+const GL_TEXTURE_BINDING_3D = 0x806A;
+
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+
+const ERR_WEBGL2 = 'Requires WebGL2';
 
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
@@ -23,21 +32,46 @@ and import 'luma.gl/headless' before importing 'luma.gl'.`;
 const ERR_HEADLESSGL_NOT_AVAILABLE =
 'Cannot create headless WebGL context, headlessGL not available';
 
-const ERR_HEADLESSGL_FAILED =
-'headlessGL failed to create headless WebGL context';
+const ERR_HEADLESSGL_FAILED = 'headlessGL failed to create headless WebGL context';
+
+export function isWebGLContext(gl) {
+  return gl && (gl instanceof WebGLRenderingContext ||
+    gl.ARRAY_BUFFER === GL_ARRAY_BUFFER);
+}
+
+export function isWebGL2Context(gl) {
+  return gl && (gl instanceof WebGL2RenderingContext ||
+    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D);
+}
+
+export function assertWebGLContext(gl) {
+  // Need to handle debug context
+  assert(isWebGLContext(gl), ERR_CONTEXT);
+}
+
+export function assertWebGL2Context(gl) {
+  // Need to handle debug context
+  assert(isWebGL2Context(gl), ERR_WEBGL2);
+}
+
+let defaultWidth = null;
+let defaultHeight = null;
+
+export function setContextDefaults({width = 1, height = 1}) {
+  defaultWidth = width;
+  defaultHeight = height;
+}
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
 /* eslint-disable complexity, max-statements */
 export function createGLContext(opts = {}) {
-  let {
-    // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
-    canvas
-  } = opts;
+  // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
+  let {canvas} = opts;
 
   const {
     // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
-    width = 800,
-    height = 600,
+    width = defaultWidth || 800,
+    height = defaultHeight || 600,
     // COMMON CONTEXT PARAMETERS
     // Attempt to allocate WebGL2 context
     webgl2 = false,
@@ -67,7 +101,7 @@ export function createGLContext(opts = {}) {
       canvas = document.getElementById(canvas);
     }
     if (!canvas) {
-      canvas = _createCanvas();
+      canvas = _createCanvas({width, height});
     }
 
     canvas.addEventListener('webglcontextcreationerror', e => {
@@ -87,14 +121,12 @@ export function createGLContext(opts = {}) {
   }
 
   if (isBrowser && debug) {
-    const debugGL =
-      WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
-    class WebGLDebugContext {}
-    Object.assign(WebGLDebugContext.prototype, debugGL);
-    gl = debugGL;
-    gl.debug = true;
-    log.priority = log.priority < 1 ? 1 : log.priority;
+    gl = makeDebugContext(gl);
 
+    // Debug forces log level to at least 1
+    log.priority = Math.max(log.priority, 1);
+
+    // Log some debug info
     logInfo(gl);
   }
 
@@ -103,11 +135,11 @@ export function createGLContext(opts = {}) {
 
 // Create a canvas set to 100%
 // TODO - remove
-function _createCanvas() {
+function _createCanvas({width, height}) {
   const canvas = document.createElement('canvas');
   canvas.id = 'lumagl-canvas';
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
+  canvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
+  canvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
   // adds the canvas to the body element
   pageLoadPromise.then(document => {
     const body = document.body;
@@ -129,25 +161,6 @@ function _createHeadlessContext(width, height, opts) {
     throw new Error(ERR_HEADLESSGL_FAILED);
   }
   return gl;
-}
-
-// Returns the extension or throws an error
-export function getGLExtension(gl, extensionName) {
-  // assertWebGLContext(gl);
-  const ERROR = 'Illegal arg to getExtension';
-  assert(gl instanceof WebGLRenderingContext, ERROR);
-  assert(typeof extensionName === 'string', ERROR);
-  const extension = gl.getExtension(extensionName);
-  assert(extension, `${extensionName} not supported!`);
-  return extension;
-}
-
-// POLLING FOR PENDING QUERIES
-
-// Calling this function checks all pending queries for completion
-export function poll(gl) {
-  assertWebGLContext(gl);
-  queryManager.poll(gl);
 }
 
 // VERY LIMITED / BASIC GL STATE MANAGEMENT
@@ -187,6 +200,32 @@ export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
   return value;
 }
 
+export function getGLContextInfo(gl) {
+  const vendorMasked = gl.getParameter(GL.VENDOR);
+  const rendererMasked = gl.getParameter(GL.RENDERER);
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const vendorUnmasked = info && gl.getParameter(GL_UNMASKED_VENDOR_WEBGL);
+  const rendererUnmasked = info && gl.getParameter(GL_UNMASKED_RENDERER_WEBGL);
+  return {
+    vendor: vendorUnmasked || vendorMasked,
+    renderer: rendererUnmasked || rendererMasked,
+    vendorMasked,
+    rendererMasked,
+    version: gl.getParameter(GL.VERSION),
+    shadingLanguageVersion: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
+  };
+}
+
+// POLLING FOR PENDING QUERIES
+// Calling this function checks all pending queries for completion
+export function pollContext(gl) {
+  queryManager.poll(gl);
+}
+
+export function withParameters(...args) {
+  return glContextWithState(...args);
+}
+
 // DEBUG INFO
 
 /**
@@ -196,17 +235,18 @@ export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
  * @return {Object} - 'vendor' and 'renderer' string fields.
  */
 export function glGetDebugInfo(gl) {
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
-  // We can't determine if 'WEBGL_debug_renderer_info' is supported by
-  // checking whether info is null here. Firefox doesn't follow the
-  // specs by returning null for unsupported extension. Instead,
-  // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
-  return {
-    vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
-      gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
-    renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
-      gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
-  };
+  return getGLContextInfo(gl);
+  // const info = gl.getExtension('WEBGL_debug_renderer_info');
+  // // We can't determine if 'WEBGL_debug_renderer_info' is supported by
+  // // checking whether info is null here. Firefox doesn't follow the
+  // // specs by returning null for unsupported extension. Instead,
+  // // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
+  // return {
+  //   vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
+  //     gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
+  //   renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
+  //     gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
+  // };
 }
 
 function logInfo(gl) {
@@ -218,50 +258,4 @@ function logInfo(gl) {
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
-}
-
-// DEBUG TRACING
-
-function getFunctionString(functionName, functionArgs) {
-  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
-  args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
-  return `gl.${functionName}(${args})`;
-}
-
-function throwOnError(err, functionName, args) {
-  const errorMessage = WebGLDebug.glEnumToString(err);
-  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
-  throw new Error(`${errorMessage} was caused by call to: ` +
-    `gl.${functionName}(${functionArgs})`);
-}
-
-// Don't generate function string until it is needed
-function validateArgsAndLog(functionName, functionArgs) {
-  let functionString;
-  if (log.priority >= 4) {
-    functionString = getFunctionString(functionName, functionArgs);
-    log.info(4, `${functionString}`);
-  }
-
-  for (const arg of functionArgs) {
-    if (arg === undefined) {
-      functionString = functionString ||
-        getFunctionString(functionName, functionArgs);
-      throw new Error(`Undefined argument: ${functionString}`);
-    }
-  }
-
-  if (log.break) {
-    functionString = functionString ||
-      getFunctionString(functionName, functionArgs);
-    const isBreakpoint = log.break && log.break.every(
-      breakString => functionString.indexOf(breakString) !== -1
-    );
-
-    /* eslint-disable no-debugger */
-    if (isBreakpoint) {
-      debugger;
-    }
-    /* eslint-enable no-debugger */
-  }
 }

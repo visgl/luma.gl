@@ -26,6 +26,10 @@ if (!global.luma) {
     version,
     log,
 
+    // A global stats object that various components can add information to
+    // E.g. see webgl/resource.js
+    stats: {},
+
     // Keep some luma globals in a sub-object
     // This allows us to dynamically detect if certain modules have been
     // included (such as IO and headless) and enable related functionality,

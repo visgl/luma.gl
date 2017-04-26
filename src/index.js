@@ -1,10 +1,11 @@
 // Export core modules for luma.gl
 
 // Initialize any global state
-import './init';
+require('./init');
 
 // WebGL
-export {default as GL} from './webgl/webgl-constants';
+export {default as GL} from './webgl/gl-constants';
+export {isWebGLContext, isWebGL2Context} from './webgl/context';
 
 // WebGL1
 export {createGLContext, getGLExtension, glContextWithState, glGetDebugInfo} from './webgl/context';
@@ -15,14 +16,20 @@ export {default as Framebuffer} from './webgl/framebuffer';
 export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
+
 export {draw} from './webgl/draw';
-export {isWebGLContext, isWebGL2Context} from './webgl/webgl-checks';
+export {clear, readPixels} from './webgl/functions';
 
 // WebGL2 & Extensions
-export {default as TimerQuery} from './webgl/timer-query';
+export {default as Query} from './webgl/query';
+export {default as Sampler} from './webgl/sampler';
+export {default as Sync} from './webgl/sync';
+export {default as Texture3D} from './webgl/texture-3d';
+// export {default as Texture2DArray} from './webgl/texture-2d-array';
+export {default as TransformFeedback} from './webgl/transform-feedback';
 export {default as VertexArrayObject} from './webgl/vertex-array-object';
 
-// Core
+// Core Classes
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 
@@ -60,16 +67,25 @@ export {addEvents} from './addons/event';
 
 // IO
 export {
-  loadFile, loadImage,
-  loadFiles, loadImages, loadTextures,
-  loadProgram, loadModel, parseModel
+  loadFile,
+  loadImage,
+  loadFiles,
+  loadImages,
+  loadTextures,
+  loadProgram,
+  loadModel,
+  parseModel
 } from './io';
 
 // EXPERIMENTAL MODULES
 
 // Shader Tools
-import {registerShaderModules, assembleShaders, ShaderCache}
-  from './experimental/shader-tools';
+import {
+  registerShaderModules,
+  assembleShaders,
+  ShaderCache
+} from './experimental/shader-tools';
+
 // Register Shader Modules
 import './experimental/shader-modules';
 

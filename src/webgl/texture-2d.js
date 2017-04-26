@@ -1,14 +1,8 @@
-import {GL} from './webgl';
-import {assertWebGLContext} from './webgl-checks';
+import {GL} from './api';
+import {assertWebGLContext} from './context';
 import Texture from './texture';
 
 export default class Texture2D extends Texture {
-
-  static makeFrom(gl, object = {}) {
-    return object instanceof Texture2D ? object :
-      // Use .handle (e.g from stack.gl's gl-buffer), else use buffer directly
-      new Texture2D(gl, {handle: object.handle || object});
-  }
 
   static makeFromSolidColor(gl, [r = 0, g = 0, b = 0, a = 1]) {
     return new Texture2D(gl, {
@@ -49,14 +43,9 @@ export default class Texture2D extends Texture {
 
     super(gl, Object.assign({}, opts, {target: gl.TEXTURE_2D}));
 
-    this.width = null;
-    this.height = null;
-    Object.seal(this);
+    this.initialize(opts);
 
-    this.setImageData(opts);
-    if (opts.generateMipmap) {
-      this.generateMipmap();
-    }
+    Object.seal(this);
   }
 
   // target cannot be modified by bind:

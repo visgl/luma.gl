@@ -3,11 +3,24 @@
 
 // Define some locals
 import {
-  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable, isWebGLContext
+  GL,
+  Buffer,
+  Program,
+  draw,
+  checkUniformValues,
+  isWebGLContext
 } from '../webgl';
+
+import {
+  getUniformsTable
+} from '../webgl/uniforms';
+
+import {
+  glGet
+} from '../webgl/api';
+
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
-import {Geometry} from '../geometry';
 import {SHADERS} from '../experimental/shaders';
 import assert from 'assert';
 
@@ -15,21 +28,10 @@ const MSG_INSTANCED_PARAM_DEPRECATED = `\
 Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
 This will become a hard error in a future version of luma.gl.`;
 
-const MSG_TEXTURES_PARAM_REMOVED =
-  'Model: parameter "textures" removed. Use uniforms to set textures';
-
-// TODO - experimental, not yet used
-export class Material {
-  constructor({shininess = 0, reflection = 0, refraction = 0} = {}) {
-    this.shininess = shininess;
-    this.reflection = reflection;
-    this.refraction = refraction;
-  }
-}
+const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
 // Model abstract O3D Class
 export default class Model extends Object3D {
-
   constructor(gl, opts = {}) {
     opts = isWebGLContext(gl) ? Object.assign({}, opts, {gl}) : gl;
     super(opts);
@@ -44,27 +46,29 @@ export default class Model extends Object3D {
     vs = SHADERS.vs,
     fs = SHADERS.fs,
     defaultUniforms,
-    geometry,
-    material = null,
-    textures,
+    shaderlibs = {},
+
     isInstanced = false, // Enables instanced rendering
     instanced, // deprecated
-    instanceCount = 0,
     vertexCount = undefined,
+    instanceCount = 0,
+
+    // Extra uniforms and attributes (beyond geometry, material, camera)
+    drawMode,
+    uniforms = {},
+    attributes = {},
+    geometry = null,
+
     // Picking
     pickable = true,
     pick = null,
-    // Extra uniforms and attributes (beyond geometry, material, camera)
-    uniforms = {},
-    attributes = {},
     render = null,
     onBeforeRender = () => {},
     onAfterRender = () => {},
+
+    // Other opts
     timerQueryEnabled = false
   } = {}) {
-    // assert(program || program instanceof Program);
-    assert(geometry instanceof Geometry, 'Model needs a geometry');
-
     // Assign default uniforms if any of the default shaders is being used
     if (vs === SHADERS.vs || fs === SHADERS.fs && defaultUniforms === undefined) {
       defaultUniforms = SHADERS.defaultUniforms;
@@ -81,10 +85,6 @@ export default class Model extends Object3D {
       isInstanced = isInstanced || instanced;
     }
 
-    if (textures) {
-      throw new Error(MSG_TEXTURES_PARAM_REMOVED);
-    }
-
     // TODO - remove?
     this.buffers = {};
     this.userData = {};
@@ -92,10 +92,9 @@ export default class Model extends Object3D {
     this.dynamic = false;
     this.needsRedraw = true;
 
-    this.material = material;
-
     // Attributes and buffers
     this.setGeometry(geometry);
+
     this.attributes = {};
     this.setAttributes(attributes);
 
@@ -103,10 +102,15 @@ export default class Model extends Object3D {
     this.uniforms = {};
     this.setUniforms(uniforms);
 
-    // instanced rendering
+    // geometry might have set drawMode and vertexCount
+    if (drawMode !== undefined) {
+      this.drawMode = drawMode;
+    }
+    if (vertexCount !== undefined) {
+      this.vertexCount = vertexCount;
+    }
     this.isInstanced = isInstanced;
     this.instanceCount = instanceCount;
-    this.vertexCount = vertexCount;
 
     // picking options
     this.pickable = Boolean(pickable);
@@ -115,6 +119,9 @@ export default class Model extends Object3D {
     this.onBeforeRender = onBeforeRender;
     this.onAfterRender = onAfterRender;
 
+    // assert(program || program instanceof Program);
+    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount),
+      ERR_MODEL_PARAMS);
     this.timeElapsedQuery = undefined;
     this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
 
@@ -131,10 +138,6 @@ export default class Model extends Object3D {
   destroy() {
   }
 
-  get hash() {
-    return `${this.id} ${this.$pickingIndex}`;
-  }
-
   setNeedsRedraw(redraw = true) {
     this.needsRedraw = redraw;
     return this;
@@ -148,8 +151,27 @@ export default class Model extends Object3D {
     return redraw;
   }
 
+  setDrawMode(drawMode) {
+    this.drawMode = drawMode;
+    return this;
+  }
+
+  getDrawMode() {
+    return this.drawMode;
+  }
+
+  setVertexCount(vertexCount) {
+    assert(Number.isFinite(vertexCount));
+    this.vertexCount = vertexCount;
+    return this;
+  }
+
+  getVertexCount() {
+    return this.vertexCount;
+  }
+
   setInstanceCount(instanceCount) {
-    assert(instanceCount !== undefined);
+    assert(Number.isFinite(instanceCount));
     this.instanceCount = instanceCount;
     return this;
   }
@@ -158,35 +180,15 @@ export default class Model extends Object3D {
     return this.instanceCount;
   }
 
-  setVertexCount(vertexCount) {
-    this.vertexCount = vertexCount;
-    return this;
-  }
-
-  getVertexCount() {
-    return this.vertexCount === undefined ?
-      this.geometry.getVertexCount() : this.vertexCount;
-  }
-
-  isPickable() {
-    return this.pickable;
-  }
-
-  setPickable(pickable = true) {
-    this.pickable = Boolean(pickable);
-    return this;
-  }
-
   getProgram() {
     return this.program;
   }
 
-  getGeometry() {
-    return this.geometry;
-  }
-
+  // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
     this.geometry = geometry;
+    this.vertexCount = geometry.getVertexCount();
+    this.drawMode = glGet(geometry.drawMode);
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.setNeedsRedraw();
     return this;
@@ -207,6 +209,7 @@ export default class Model extends Object3D {
     return this.uniforms;
   }
 
+  // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
     checkUniformValues(uniforms, this.id);
     Object.assign(this.uniforms, uniforms);
@@ -255,7 +258,7 @@ export default class Model extends Object3D {
       log.warn(0, 'Found instanced attributes on non-instanced model');
     }
     const {isIndexed, indexType} = drawParams;
-    const {geometry, isInstanced, instanceCount} = this;
+    const {isInstanced, instanceCount} = this;
 
     if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
       this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
@@ -264,7 +267,7 @@ export default class Model extends Object3D {
     }
 
     draw(this.program.gl, {
-      drawMode: geometry.drawMode,
+      drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
       isIndexed,
       indexType,
@@ -454,5 +457,18 @@ export default class Model extends Object3D {
   // DEPRECATED / REMOVED
   setTextures(textures = []) {
     throw new Error('model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
+  }
+
+  isPickable() {
+    return this.pickable;
+  }
+
+  setPickable(pickable = true) {
+    this.pickable = Boolean(pickable);
+    return this;
+  }
+
+  getGeometry() {
+    return this.geometry;
   }
 }

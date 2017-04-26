@@ -17,6 +17,8 @@ test('WebGL#Texture2D construct/delete', t => {
   const texture = new Texture2D(gl);
   t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
 
+  t.comment(JSON.stringify(texture.getParameters({keys: true})));
+
   texture.delete();
   t.ok(texture instanceof Texture2D, 'Texture2D delete successful');
 
