@@ -28,3 +28,21 @@ test('WebGL#Framebuffer construct/delete', t => {
 
   t.end();
 });
+
+test('WebGL#Framebuffer resize', t => {
+  const {gl} = fixture;
+
+  const framebuffer = new Framebuffer(gl);
+  t.ok(framebuffer instanceof Framebuffer,
+    'Framebuffer construction successful');
+
+  framebuffer.resize({width: 1000, height: 1000});
+  t.ok(framebuffer instanceof Framebuffer,
+    'Framebuffer resize successful');
+
+  framebuffer.resize({width: 100, height: 100});
+  t.ok(framebuffer instanceof Framebuffer,
+    'Framebuffer resize successful');
+
+  t.end();
+});

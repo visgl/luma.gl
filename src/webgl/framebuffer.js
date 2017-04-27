@@ -31,6 +31,8 @@ export default class Framebuffer extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
     this.initialize(opts);
+    this._width = null;
+    this._height = null;
     Object.seal(this);
   }
 
@@ -51,7 +53,7 @@ export default class Framebuffer extends Resource {
     type = GL.UNSIGNED_BYTE
   }) {
     assert(width >= 0 && height >= 0, 'Width and height need to be integers');
-    if (width === this.width && height === this.height) {
+    if (width === this._width && height === this._height) {
       return;
     }
 
@@ -79,7 +81,7 @@ export default class Framebuffer extends Resource {
     });
 
     if (this.opts.colorBuffer) {
-      this.opts.colorBuffer.delete();
+      // this.opts.colorBuffer.delete();
     }
     this.opts.colorBuffer = colorBuffer;
     this.opts.texture = colorBuffer;
@@ -97,13 +99,19 @@ export default class Framebuffer extends Resource {
       });
 
       if (this.opts.depthBuffer) {
-        this.opts.depthBuffer.delete();
+        // this.opts.depthBuffer.delete();
       }
       this.opts.depthBuffer = depthBuffer;
     }
 
+    // Save in opts so that we can reinitialize
     this.opts.width = width;
     this.opts.height = height;
+
+    // Store actual width and height for diffing
+    // Note: A framebuffer has no separate size it is defined by its attachments
+    this._width = width;
+    this._height = height;
 
     // Checks that framebuffer was properly set up,
     // if not, throws an explanatory error
@@ -114,8 +122,8 @@ export default class Framebuffer extends Resource {
   // ACCESSORS
 
   /* eslint-disable brace-style */
-  get width() { return this.opts.width; }
-  get height() { return this.opts.height; }
+  get width() { return this._width; }
+  get height() { return this._height; }
   get colorBuffer() { return this.opts.colorBuffer; }
   get depthBuffer() { return this.opts.depthBuffer; }
   get stencilBuffer() { return this.opts.stencilBuffer; }
