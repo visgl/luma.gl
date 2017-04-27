@@ -6,6 +6,8 @@ import './helpers/query-manager.spec';
 
 // webgl
 import './context.spec.js';
+import './context-limits.spec.js';
+import './context-state.spec.js';
 
 import './buffer.spec';
 import './program.spec';
