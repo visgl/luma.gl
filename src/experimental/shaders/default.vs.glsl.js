@@ -38,7 +38,8 @@ void main(void) {
     float directionalLightWeighting = max(dot(transformedNormal.xyz, lightingDirection), 0.0);
     for (int i = 0; i < LIGHT_MAX; i++) {
       if (i < numberPoints) {
-        plightDirection = normalize((viewMatrix * vec4(pointLocation[i], 1.0)).xyz - mvPosition.xyz);
+        plightDirection =
+          normalize((viewMatrix * vec4(pointLocation[i], 1.0)).xyz - mvPosition.xyz);
         pointWeight += max(dot(transformedNormal.xyz, plightDirection), 0.0) * pointColor[i];
       } else {
         break;

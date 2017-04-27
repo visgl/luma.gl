@@ -25,7 +25,8 @@ void main() {
   if(!hasTexture1) {
     gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);
   } else {
-    gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0);
+    gl_FragColor =
+      vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0);
   }
 
   if (enablePicking) {

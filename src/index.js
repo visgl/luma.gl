@@ -96,6 +96,7 @@ export const experimental = {
 };
 
 // DEPRECATED IN V3.0
+export {Framebuffer as FramebufferObject} from './webgl/framebuffer';
 export {Vec3, Vec4, Mat4, Quat} from './deprecated/math';
 export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
 export {default as Shaders} from './deprecated/shaderlib';
