@@ -65,25 +65,21 @@ export default class Buffer extends Resource {
    */
   constructor(gl, opts = {}) {
     super(gl, opts);
-
-    // luma.gl v4 - Fix the target at construction time:
-    //
-    // Differences between WebGL and OpenGL ES 2.0
-    //
-    // In the WebGL API, a given buffer object may only be bound to one of the
-    // ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER binding points in its lifetime.
-    // This restriction implies that a given buffer object may contain either
-    // vertices or indices, but not both.
-    //
-    // The type of a WebGLBuffer is initialized the first time it is passed as
-    // an argument to bindBuffer. A subsequent call to bindBuffer which attempts
-    // to bind the same WebGLBuffer to the other binding point will generate an
-    // INVALID_OPERATION error, and the state of the binding point will remain untouched.
-
-    assert(opts.target, 'Buffer constructor now requires target to be specified');
-    this.target = opts.target;
+    this.target = null;
+    this.index = null;
     this.setData(opts);
     Object.seal(this);
+  }
+
+  /**
+   * Updates a data buffer, reallocating if necessary
+   */
+  update({data}) {
+    if (data.byteLength > this.bytes) {
+      this.setData({data});
+    } else {
+      this.subData({data});
+    }
   }
 
   /**
@@ -100,10 +96,12 @@ export default class Buffer extends Resource {
    * @returns {Buffer} Returns itself for chaining.
    */
   setData({
+    target,
+    index,
     data,
     bytes,
     usage = GL.STATIC_DRAW,
-    // Characteristics of stored data
+    // Layout of stored data
     layout,
     type,
     size = 1,
@@ -111,28 +109,34 @@ export default class Buffer extends Resource {
     stride = 0,
     normalized = false,
     integer = false,
-    instanced = 0,
-    target // No longer supported - must be supplied in constructor
+    instanced = 0
   } = {}) {
+    const opts = arguments[0];
+
+    this.setDefaultTarget(opts);
+
     if (!data) {
       bytes = bytes || 0;
     } else {
       type = type || getGLTypeFromTypedArray(data);
+      bytes = data.byteLength;
       assert(type, ERR_BUFFER_PARAMS);
     }
 
     this.bytes = bytes;
+    this.bytesUsed = bytes;
     this.data = data;
     this.type = type;
+    this.usage = usage;
 
     // Call after type is set
-    const opts = arguments[0];
     this.setDataLayout(Object.assign(opts));
 
-    // Create the buffer
-    this.gl.bindBuffer(this.target, this.handle);
-    this.gl.bufferData(this.target, data || bytes, usage);
-    this.gl.bindBuffer(this.target, null);
+    // Create the buffer - binding it here for the first time locks the type
+    target = this.target || GL.ARRAY_BUFFER;
+    this.gl.bindBuffer(target, this.handle);
+    this.gl.bufferData(target, data || bytes, usage);
+    this.gl.bindBuffer(target, null);
 
     return this;
   }
@@ -152,7 +156,7 @@ export default class Buffer extends Resource {
     instanced = 0
   }) {
     this.layout = layout || new BufferLayout({
-      type: type || this.type,
+      type: type || this.type, // Use autodeduced type if available
       size,
       offset,
       stride,
@@ -192,52 +196,41 @@ export default class Buffer extends Resource {
   }
 
   /**
-   * WEBGL2 ONLY
-   * Copies part of the data of a buffer to another buffer.
+   * WEBGL2 ONLY: Copies part of the data of another buffer into this buffer
    *
-   * @param {Buffer} writeTarget
-   * A GLenum specifying the binding point (target) from whose data store should be read or written.
-   * Possible values:
-   *   GL.ARRAY_BUFFER: Buffer containing vertex attributes, such as
-   *     vertex coordinates, texture coordinate data, or vertex color data.
-   *   GL.ELEMENT_ARRAY_BUFFER: Buffer used for element indices.
-   *   GL.COPY_READ_BUFFER: Buffer for copying from one buffer object to another
-   *     (provided specifically for copy operations).
-   *   GL.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another
-   *     (provided specifically for copy operations).
-   *   GL.TRANSFORM_FEEDBACK_BUFFER: Buffer for transform feedback operations.
-   *   GL.UNIFORM_BUFFER: Buffer used for storing uniform blocks.
-   *   GL.PIXEL_PACK_BUFFER: Buffer used for pixel transfer operations.
-   *   GL.PIXEL_UNPACK_BUFFER: Buffer used for pixel transfer operations.
+   * Note: readOffset, writeOffset and size must all be greater than or equal to zero.
+   * Furthermore, readOffset+sizereadOffset+size must not exceeed the size of
+   * the source buffer object, and writeOffset+sizewriteOffset+size must not
+   * exceeed the size of the buffer bound to writeTarget. If the source and
+   * destination are the same buffer object, then the source and destination
+   * ranges must not overlap.
+   *
    * @param {GLintptr} readOffset - byte offset from which to start reading from the buffer.
    * @param {GLintptr} writeOffset - byte offset from which to start writing to the buffer.
    * @param {GLsizei}  size - bytes specifying the size of the data to be copied
    */
   copySubData({
-    readTarget,
-    writeTarget,
+    sourceBuffer,
     readOffset = 0,
     writeOffset = 0,
     size
   }) {
     assertWebGL2Context(this.gl);
-    this.gl.copyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size);
+    // GL.COPY_READ_BUFFER GL.COPY_WRITE_BUFFER exist to avoid disturbing other targets, so use them
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, sourceBuffer.handle);
+    this.gl.bindBuffer(GL.COPY_WRITE_BUFFER, this.handle);
+
+    this.gl.copyBufferSubData(
+      GL.COPY_READ_BUFFER, GL.COPY_WRITE_BUFFER,
+      readOffset, writeOffset, size);
+
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
+    this.gl.bindBuffer(GL.COPY_WRITE_BUFFER, null);
   }
 
   /**
-   * WEBGL2 ONLY
-   * Reads data from a buffer binding point and writes them to an ArrayBuffer or SharedArrayBuffer.
+   * WEBGL2 ONLY: Reads data from buffer into an ArrayBuffer or SharedArrayBuffer.
    *
-   * @param {GLenum} target - The binding point (target). Possible values:
-   *   GL.ARRAY_BUFFER: Buffer containing vertex attributes, such as
-   *     vertex coordinates, texture coordinate data, or vertex color data.
-   *   GL.ELEMENT_ARRAY_BUFFER: Buffer used for element indices.
-   *   GL.COPY_READ_BUFFER: Buffer for copying from one buffer object to another.
-   *   GL.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another.
-   *   GL.TRANSFORM_FEEDBACK_BUFFER: Buffer for transform feedback operations.
-   *   GL.UNIFORM_BUFFER: Buffer used for storing uniform blocks.
-   *   GL.PIXEL_PACK_BUFFER: Buffer used for pixel transfer operations.
-   *   GL.PIXEL_UNPACK_BUFFER: Buffer used for pixel transfer operations.
    * @param {GLintptr} srcByteOffset - byte offset from which to start reading from the buffer.
    * @param {ArrayBufferView | ArrayBuffer | SharedArrayBuffer} dstData -
    *   memory to which to write the buffer data.
@@ -252,68 +245,77 @@ export default class Buffer extends Resource {
   }) {
     // TODO optimize dstData according to offset and length
     dstData = dstData || new ArrayBuffer(this.bytes);
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
     this.gl.getBufferSubData(this.target, srcByteOffset, dstData, dstOffset, length);
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
     return dstData;
   }
 
   /**
+   * Sets the default target of the buffer for bind operations
+   *
+   * Note: Cannot change between ELEMENT_ARRAY_BUFFER and other targets:
+   * In the WebGL API, a given buffer object may only be bound to one of the
+   * other data or ELEMENT_ARRAY_BUFFER binding points in its lifetime.
+   * This restriction implies that a given buffer object may contain either
+   * vertices/data or indices, but not both.
+   */
+  setDefaultTarget({target, index}) {
+    // If target is supplied, overwrite it
+    if (target) {
+      this.target = target;
+      this.index = index;
+    }
+  }
+
+  /**
    * Binds a buffer to a given binding point (target).
+   *   GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER take an index, and optionally a range.
    *
    * @param {Glenum} target - target for the bind operation.
-   *  Possible values: gl.TRANSFORM_FEEDBACK_BUFFER and gl.UNIFORM_BUFFER
-   * @param {GLuint} index - the index of the target.
-   * @returns {Buffer} - Returns itself for chaining.
-   */
-  bind() {
-    this.gl.bindBuffer(this.target, this.handle);
-    return this;
-  }
-
-  unbind() {
-    this.gl.bindBuffer(this.target, null);
-    return this;
-  }
-
-  /**
-   * Note: WEBGL2
-   * Binds a buffer to a given binding point (target) at a given index.
    *
-   * @param {Glenum} target - target for the bind operation.
-   *  Possible values: gl.TRANSFORM_FEEDBACK_BUFFER and gl.UNIFORM_BUFFER
-   * @param {GLuint} index - the index of the target.
+   * @param {GLuint} index= - the index of the target.
+   *   - GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER need an index to affect state
+   * @param {GLuint} offset=0 - the index of the target.
+   *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
+   * @param {GLuint} size= - the index of the target.
+   *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bindBase({index} = {}) {
-    assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(this.target, index, this.handle);
+  bind({target = this.target, index = this.index, offset = 0, size} = {}) {
+    // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
+    // be used as direct binding points, they will not affect transform feedback or
+    // uniform buffer state. Instead indexed bindings need to be made.
+    const type = (target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER) ?
+      (size !== undefined ? 'ranged' : ' indexed') : 'non-indexed';
+
+    switch (type) {
+    case 'non-indexed':
+      this.gl.bindBuffer(target, this.handle);
+      break;
+    case 'indexed':
+      assertWebGL2Context(this.gl);
+      assert(offset === 0, ERR_BUFFER_PARAMS); // Make sure offset wasn't supplied
+      this.gl.bindBufferBase(target, index, this.handle);
+      break;
+    case 'ranged':
+      assertWebGL2Context(this.gl);
+      this.gl.bindBufferRange(target, index, this.handle, offset, size);
+      break;
+    default:
+      throw new Error(ERR_BUFFER_PARAMS);
+    }
+
     return this;
   }
 
-  unbindBase({index} = {}) {
-    assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(this.target, index, null);
-    return this;
-  }
-
-  /**
-   * Note: WEBGL2
-   * binds a range of a given WebGLBuffer to a given binding point (target)
-   * at a given index.
-   *
-   * @param {Glenum} target - target for the bind operation.
-   *  Possible values: gl.TRANSFORM_FEEDBACK_BUFFER and gl.UNIFORM_BUFFER
-   * @param {GLuint} index - the index of the target.
-   * @returns {Buffer} - Returns itself for chaining.
-   */
-  bindRange({index, offset = 0, size} = {}) {
-    assertWebGL2Context(this.gl);
-    this.gl.bindBufferRange(this.target, index, this.handle, offset, size);
-    return this;
-  }
-
-  unbindRange({index} = {}) {
-    assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(this.target, index, null);
+  unbind({target = this.target, index = this.index} = {}) {
+    const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
+    if (!isIndexedBuffer) {
+      this.gl.bindBuffer(target, null);
+    } else {
+      this.gl.bindBufferBase(target, index, null);
+    }
     return this;
   }
 
@@ -335,4 +337,49 @@ export default class Buffer extends Resource {
   }
 }
 
+export class ElementArrayBuffer extends Buffer {
+  constructor(gl, opts) {
+    super(gl, Object.assign(opts, {target: GL.ELEMENT_ARRAY_BUFFER}));
+  }
+}
+
 Buffer.PARAMETERS = PARAMETERS;
+
+/*
+export class Attribute {
+  /**
+   * @classdesc
+   * Store characteristics of a data layout
+   * This data can be used when updating vertex attributes with
+   * the associated buffer, freeing the application from keeping
+   * track of this metadata.
+   *
+   * @class
+   * @param {GLuint} size - number of values per element (1-4)
+   * @param {GLuint} type - type of values (e.g. gl.FLOAT)
+   * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
+   * @param {GLuint} integer=false - WebGL2 only, int-to-float conversion
+   * @param {GLuint} stride=0 - supports strided arrays
+   * @param {GLuint} offset=0 - supports strided arrays
+   *
+  constructor({
+    // Characteristics of stored data
+    buffer,
+    type,
+    size = 1,
+    offset = 0,
+    stride = 0,
+    normalized = false,
+    integer = false,
+    instanced = 0
+  } = {}) {
+    this.type = type;
+    this.size = size;
+    this.offset = offset;
+    this.stride = stride;
+    this.normalized = normalized;
+    this.integer = integer;
+    this.instanced = instanced;
+  }
+}
+  */
