@@ -2,16 +2,20 @@ build/*
 dist/*
 dist-es6/*
 dist-buble/*
+.coverage
+.nyc_output
+_docs
+node_modules
+npm-debug.log
+
+examples/winds/data/*.html
+test/data/test.png
+
 .project
 .DS_Store
 *.zip
 *.rar
 TODO
-_docs
-examples/winds/data/*.html
-node_modules
-npm-debug.log
-test/data/test.png
 
 # editor files
 .idea
