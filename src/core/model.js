@@ -21,8 +21,11 @@ import {
 
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
+import {window} from '../utils/globals';
 import {SHADERS} from '../experimental/shaders';
+import {addModel, removeModel} from '../debug/seer-integration';
 import assert from 'assert';
+import seer from 'seer';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
 Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
@@ -136,6 +139,7 @@ export default class Model extends Object3D {
   /* eslint-enable complexity */
 
   destroy() {
+    removeModel(this.id);
   }
 
   setNeedsRedraw(redraw = true) {
@@ -241,6 +245,9 @@ export default class Model extends Object3D {
    */
   /* eslint-disable max-statements */
   render(uniforms = {}) {
+    if (window.__SEER_INITIALIZED__) {
+      addModel(this);
+    }
     const resolvedUniforms = this.addViewUniforms(uniforms);
 
     this.setUniforms(resolvedUniforms);
@@ -377,8 +384,14 @@ export default class Model extends Object3D {
         program: this.program,
         uniforms: Object.assign({}, this.uniforms, uniforms)
       });
+
       log.table(priority, table);
       log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
+    }
+
+    if (window.__SEER_INITIALIZED__) {
+      const uniformsObject = Object.assign({}, this.uniforms, uniforms);
+      seer.indexedListItem('luma.gl', this.id, uniformsObject);
     }
   }
 

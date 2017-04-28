@@ -1,6 +1,10 @@
 // Enables ES2015 import/export in Node.js
 require('reify');
 
+// Mock addEventListener on window, required for seer
+const {window} = require('../src/utils/globals');
+window.addEventListener = () => {};
+
 // Registers an alias for this module
 const path = require('path');
 const moduleAlias = require('module-alias');
