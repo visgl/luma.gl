@@ -9,17 +9,17 @@ import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
-const PARAMETERS = [
-  GL.DELETE_STATUS, // GLboolean
-  GL.LINK_STATUS, // GLboolean
-  GL.VALIDATE_STATUS, // GLboolean
-  GL.ATTACHED_SHADERS, // GLint
-  GL.ACTIVE_ATTRIBUTES, // GLint
-  GL.ACTIVE_UNIFORMS, // GLint
-  GL.TRANSFORM_FEEDBACK_BUFFER_MODE, // SEPARATE_ATTRIBS/INTERLEAVED_ATTRIBS
-  GL.TRANSFORM_FEEDBACK_VARYINGS, // GLint
-  GL.ACTIVE_UNIFORM_BLOCKS // GLint
-];
+const PARAMETERS = {
+  [GL.DELETE_STATUS]: {webgl1: 0}, // GLboolean
+  [GL.LINK_STATUS]: {webgl1: 0}, // GLboolean
+  [GL.VALIDATE_STATUS]: {webgl1: 0}, // GLboolean
+  [GL.ATTACHED_SHADERS]: {webgl1: 0}, // GLint
+  [GL.ACTIVE_ATTRIBUTES]: {webgl1: 0}, // GLint
+  [GL.ACTIVE_UNIFORMS]: {webgl1: 0}, // GLint
+  [GL.TRANSFORM_FEEDBACK_BUFFER_MODE]: {webgl2: 0}, // SEPARATE_ATTRIBS/INTERLEAVED_ATTRIBS
+  [GL.TRANSFORM_FEEDBACK_VARYINGS]: {webgl2: 0}, // GLint
+  [GL.ACTIVE_UNIFORM_BLOCKS]: {webgl2: 0} // GLint
+};
 
 export default class Program extends Resource {
   /*
@@ -231,7 +231,7 @@ export default class Program extends Resource {
    * @return {Number} count
    */
   getAttributeCount() {
-    return this.getParameter(GL.ACTIVE_ATTRIBUTES);
+    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
   }
 
   /**
@@ -260,7 +260,7 @@ export default class Program extends Resource {
    * @return {Number} count
    */
   getUniformCount() {
-    return this.getParameter(GL.ACTIVE_UNIFORMS);
+    return this._getParameter(GL.ACTIVE_UNIFORMS);
   }
 
   /*
@@ -288,23 +288,6 @@ export default class Program extends Resource {
   getFragDataLocation(varyingName) {
     assertWebGL2Context(this.gl);
     return this.gl.getFragDataLocation(this.handle, varyingName);
-  }
-
-  // Return the value for the passed pname given the passed program.
-  // The type returned is the natural type for the requested pname,
-  // as given in the following table:
-  getParameter(pname) {
-    // Return default values for WebGL2 parameters under WebGL1
-    if (!isWebGL2Context(this.gl)) {
-      switch (pname) {
-      case GL.ACTIVE_UNIFORMS: return 0;
-      case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
-      case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
-      case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
-      default:
-      }
-    }
-    return this.gl.getProgramParameter(this.handle, pname);
   }
 
   // @returns {WebGLShader[]} - array of attached WebGLShader objects
@@ -438,6 +421,22 @@ export default class Program extends Resource {
       }
     }
     return opts;
+  }
+
+  // Return the value for the passed pname given the passed program.
+  // The type returned is the natural type for the requested pname,
+  // as given in the following table:
+  _getParameter(pname) {
+    // Return default values for WebGL2 parameters under WebGL1
+    if (!isWebGL2Context(this.gl)) {
+      switch (pname) {
+      case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
+      case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
+      case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
+      default:
+      }
+    }
+    return this.gl.getProgramParameter(this.handle, pname);
   }
 }
 

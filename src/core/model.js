@@ -349,13 +349,14 @@ export default class Model extends Object3D {
       } else {
         // Autocreate a buffer
         this.buffers[attributeName] =
-          this.buffers[attributeName] || new Buffer(gl);
+          this.buffers[attributeName] || new Buffer(gl, {
+            target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
+          });
 
         const buffer = this.buffers[attributeName];
-        buffer.setData(Object.assign({}, attribute, {
-          data: attribute.value,
-          target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
-        }));
+        buffer
+          .setData({data: attribute.value})
+          .setDataLayout(attribute);
       }
     }
 

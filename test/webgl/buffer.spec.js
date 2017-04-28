@@ -15,7 +15,7 @@ test('WebGL#Buffer constructor/delete', t => {
     /.*WebGLRenderingContext.*/,
     'Buffer throws on missing gl context');
 
-  const buffer = new Buffer(gl);
+  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER});
   t.ok(buffer instanceof Buffer, 'Buffer construction successful');
 
   buffer.delete();
@@ -30,7 +30,7 @@ test('WebGL#Buffer constructor/delete', t => {
 test('WebGL#Buffer bind/unbind', t => {
   const {gl} = fixture;
 
-  const buffer = new Buffer(gl)
+  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER})
     .bind()
     .unbind()
     .delete();
@@ -44,7 +44,7 @@ test('WebGL#Buffer construction', t => {
 
   let buffer;
 
-  buffer = new Buffer(gl, {data: new Float32Array([1, 2, 3])})
+  buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER, data: new Float32Array([1, 2, 3])})
     .bind()
     .unbind()
     .delete();
@@ -82,7 +82,6 @@ test('WebGL#Buffer setData/subData', t => {
     .delete();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_BUFFER) successful');
 
-  // TODO- buffer could check for integer ELEMENT_ARRAY_BUFFER types
   buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
     .setData({data: new Float32Array([1, 2, 3])})
     .bind()
@@ -90,8 +89,7 @@ test('WebGL#Buffer setData/subData', t => {
     .delete();
   t.ok(buffer instanceof Buffer, 'Buffer.setData(ELEMENT_ARRAY_BUFFER) successful');
 
-  // TODO- buffer could check for integer ARRAY_ELEMENT_BUFFER types
-  buffer = new Buffer(gl, {target: GL.ARRAY_ELEMENT_BUFFER})
+  buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
     .setData({data: new Float32Array([1, 2, 3])})
     .subData({data: new Float32Array([1, 1, 1])})
     .bind()

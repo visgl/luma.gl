@@ -6,6 +6,7 @@ const SIDE = 256;
 const animationFrame = new AnimationFrame()
 .context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl}) => {
+  debugger
   gl.clearColor(1, 1, 1, 1);
   gl.clearDepth(1);
   gl.enable(GL.DEPTH_TEST);

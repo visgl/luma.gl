@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {createGLContext, Program, Buffer} from 'luma.gl';
+import {GL, createGLContext, Program, Buffer} from 'luma.gl';
 import 'luma.gl/headless';
 
 const fixture = {
@@ -55,8 +55,8 @@ test('WebGL#Program buffer update', t => {
   t.ok(program instanceof Program, 'Program construction successful');
 
   program = program.setBuffers({
-    positions: new Buffer(gl).setData({data: BUFFER_DATA, size: 3}),
-    unusedAttributeName: new Buffer(gl).setData({data: BUFFER_DATA, size: 3})
+    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
+    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
   });
   t.ok(program instanceof Program, 'Program set buffers successful');
 
