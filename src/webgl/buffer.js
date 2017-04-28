@@ -4,6 +4,13 @@ import {getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import Resource from './resource';
 import assert from 'assert';
 
+const ERR_BUFFER_PARAMS = 'Illegal or missing parameter to Buffer';
+
+const PARAMETERS = {
+  [GL.BUFFER_SIZE]: {webgl1: 0}, // GLint indicating the size of the buffer in bytes.
+  [GL.BUFFER_USAGE]: {webgl1: 0} // GLenum indicating the usage pattern of the buffer.
+};
+
 export class BufferLayout {
   /**
    * @classdesc
@@ -40,11 +47,6 @@ export class BufferLayout {
   }
 }
 
-const PARAMETERS = [
-  GL.BUFFER_SIZE, // GLint indicating the size of the buffer in bytes.
-  GL.BUFFER_USAGE // GLenum indicating the usage pattern of the buffer.
-];
-
 export default class Buffer extends Resource {
 
   /*
@@ -63,6 +65,23 @@ export default class Buffer extends Resource {
    */
   constructor(gl, opts = {}) {
     super(gl, opts);
+
+    // luma.gl v4 - Fix the target at construction time:
+    //
+    // Differences between WebGL and OpenGL ES 2.0
+    //
+    // In the WebGL API, a given buffer object may only be bound to one of the
+    // ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER binding points in its lifetime.
+    // This restriction implies that a given buffer object may contain either
+    // vertices or indices, but not both.
+    //
+    // The type of a WebGLBuffer is initialized the first time it is passed as
+    // an argument to bindBuffer. A subsequent call to bindBuffer which attempts
+    // to bind the same WebGLBuffer to the other binding point will generate an
+    // INVALID_OPERATION error, and the state of the binding point will remain untouched.
+
+    assert(opts.target, 'Buffer constructor now requires target to be specified');
+    this.target = opts.target;
     this.setData(opts);
     Object.seal(this);
   }
@@ -83,7 +102,6 @@ export default class Buffer extends Resource {
   setData({
     data,
     bytes,
-    target = this.target || GL.ARRAY_BUFFER,
     usage = GL.STATIC_DRAW,
     // Characteristics of stored data
     layout,
@@ -93,20 +111,48 @@ export default class Buffer extends Resource {
     stride = 0,
     normalized = false,
     integer = false,
-    instanced = 0
+    instanced = 0,
+    target // No longer supported - must be supplied in constructor
   } = {}) {
     if (!data) {
       bytes = bytes || 0;
     } else {
       type = type || getGLTypeFromTypedArray(data);
-      assert(type, 'Unknown type in Buffer');
+      assert(type, ERR_BUFFER_PARAMS);
     }
 
     this.bytes = bytes;
     this.data = data;
-    this.target = target;
+    this.type = type;
+
+    // Call after type is set
+    const opts = arguments[0];
+    this.setDataLayout(Object.assign(opts));
+
+    // Create the buffer
+    this.gl.bindBuffer(this.target, this.handle);
+    this.gl.bufferData(this.target, data || bytes, usage);
+    this.gl.bindBuffer(this.target, null);
+
+    return this;
+  }
+
+  /*
+   * Stores the layout of data with the buffer which makes it easy to
+   * set it as an attribute later
+   */
+  setDataLayout({
+    layout,
+    type,
+    size = 1,
+    offset = 0,
+    stride = 0,
+    normalized = false,
+    integer = false,
+    instanced = 0
+  }) {
     this.layout = layout || new BufferLayout({
-      type,
+      type: type || this.type,
       size,
       offset,
       stride,
@@ -114,11 +160,6 @@ export default class Buffer extends Resource {
       integer,
       instanced
     });
-
-    this.bind({target});
-    this.gl.bufferData(target, data || bytes, usage);
-    this.unbind({target});
-
     return this;
   }
 
@@ -133,20 +174,20 @@ export default class Buffer extends Resource {
     srcOffset = 0, // WebGL2 only: Offset into srcData
     length         // WebGL2 only: Number of bytes to be copied
   } = {}) {
-    assert(data, 'Buffer.updateData needs data');
+    assert(data, ERR_BUFFER_PARAMS);
 
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || length !== undefined) {
       assertWebGL2Context(this.gl);
-      this.bind({target: this.target});
-      this.gl.bufferSubData(GL.ARRAY_BUFFER, offset, data, srcOffset, length || 0);
-      this.unbind({target: this.target});
+      this.gl.bindBuffer(this.target, this.handle);
+      this.gl.bufferSubData(this.target, offset, data, srcOffset, length || 0);
+      this.gl.bindBuffer(this.target, null);
       return this;
     }
 
-    this.bind({target: this.target});
-    this.gl.bufferSubData(GL.ARRAY_BUFFER, offset, data);
-    this.unbind({target: this.target});
+    this.gl.bindBuffer(this.target, this.handle);
+    this.gl.bufferSubData(this.target, offset, data);
+    this.gl.bindBuffer(this.target, null);
     return this;
   }
 
@@ -179,6 +220,7 @@ export default class Buffer extends Resource {
     writeOffset = 0,
     size
   }) {
+    assertWebGL2Context(this.gl);
     this.gl.copyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size);
   }
 
@@ -208,7 +250,10 @@ export default class Buffer extends Resource {
     dstOffset = 0,
     length = 0
   }) {
+    // TODO optimize dstData according to offset and length
+    dstData = dstData || new ArrayBuffer(this.bytes);
     this.gl.getBufferSubData(this.target, srcByteOffset, dstData, dstOffset, length);
+    return dstData;
   }
 
   /**
@@ -219,13 +264,13 @@ export default class Buffer extends Resource {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bind({target = this.target} = {}) {
-    this.gl.bindBuffer(target, this.handle);
+  bind() {
+    this.gl.bindBuffer(this.target, this.handle);
     return this;
   }
 
-  unbind({target = this.target} = {}) {
-    // this.gl.bindBuffer(target, null);
+  unbind() {
+    this.gl.bindBuffer(this.target, null);
     return this;
   }
 
@@ -238,15 +283,15 @@ export default class Buffer extends Resource {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bindBase({target = this.target, index} = {}) {
+  bindBase({index} = {}) {
     assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(target, index, this.handle);
+    this.gl.bindBufferBase(this.target, index, this.handle);
     return this;
   }
 
-  unbindBase({target = this.target, index} = {}) {
+  unbindBase({index} = {}) {
     assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(target, index, null);
+    this.gl.bindBufferBase(this.target, index, null);
     return this;
   }
 
@@ -260,23 +305,16 @@ export default class Buffer extends Resource {
    * @param {GLuint} index - the index of the target.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bindRange({target = this.target, index, offset = 0, size} = {}) {
+  bindRange({index, offset = 0, size} = {}) {
     assertWebGL2Context(this.gl);
-    this.gl.bindBufferRange(target, index, this.handle, offset, size);
+    this.gl.bindBufferRange(this.target, index, this.handle, offset, size);
     return this;
   }
 
-  unbindRange({target = this.target, index} = {}) {
+  unbindRange({index} = {}) {
     assertWebGL2Context(this.gl);
-    this.gl.bindBufferBase(target, index, null);
+    this.gl.bindBufferBase(this.target, index, null);
     return this;
-  }
-
-  getParameter(pname) {
-    this.bind();
-    const value = this.gl.getBufferParameter(this.target, pname);
-    this.unbind();
-    return value;
   }
 
   // PRIVATE METHODS
@@ -287,6 +325,13 @@ export default class Buffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteBuffer(this.handle);
+  }
+
+  _getParameter(pname) {
+    this.bind();
+    const value = this.gl.getBufferParameter(this.target, pname);
+    this.unbind();
+    return value;
   }
 }
 

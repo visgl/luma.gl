@@ -1,13 +1,13 @@
 {
   "scripts": {
-    "start": "webpack-dev-server --progress --hot --open",
-    "start-local": "webpack-dev-server --env.local --progress --hot --open"
+    "start": "webpack-dev-server --progress --hot --open -d",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
     "luma.gl": "3.0.0-beta.7"
   },
   "devDependencies": {
-    "webpack-dev-server": "^2.2.0",
-    "webpack": "^2.2.0"
+    "webpack-dev-server": "^2.4.0",
+    "webpack": "^2.4.0"
   }
 }

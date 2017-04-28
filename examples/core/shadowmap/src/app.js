@@ -110,19 +110,9 @@ new AnimationFrame({gl: createGLContext()})
   const cubeModel = new Cube({gl});
 
   cubeBuffers = {
-    aPosition: new Buffer(gl).setData({
-      data: new Float32Array(cubeModel.vertices),
-      size: 3
-    }),
-    aNormal: new Buffer(gl).setData({
-      data: new Float32Array(cubeModel.normals),
-      size: 3
-    }),
-    indices: new Buffer(gl).setData({
-      target: GL.ELEMENT_ARRAY_BUFFER,
-      data: cubeModel.indices,
-      size: 1
-    })
+    aPosition: new Buffer(gl, {data: new Float32Array(cubeModel.vertices), size: 3}),
+    aNormal: new Buffer(gl, {data: new Float32Array(cubeModel.normals), size: 3}),
+    indices: new Buffer(gl).setData({target: GL.ELEMENT_ARRAY_BUFFER, data: cubeModel.indices})
   };
 
   programScene = new Program(gl, {

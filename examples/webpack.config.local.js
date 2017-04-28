@@ -13,6 +13,9 @@ const SRC_DIR = resolve(LIB_DIR, './src');
 
 // Support for hot reloading changes to the deck.gl library:
 const LOCAL_DEVELOPMENT_CONFIG = {
+
+  devtool: '#inline-source-map',
+
   // suppress warnings about bundle size
   devServer: {
     stats: {
@@ -27,20 +30,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
     }
   },
   module: {
-    rules: [
-      {
-        // Inline shaders
-        test: /\.glsl$/,
-        loader: 'raw-loader',
-        exclude: [/node_modules/]
-      },
-      {
-        // Needed to inline deck.gl GLSL shaders
-        include: [SRC_DIR],
-        loader: 'transform-loader',
-        options: 'brfs-babel'
-      }
-    ]
+    rules: []
   },
   // Optional: Enables reading mapbox token from environment variable
   plugins: [
