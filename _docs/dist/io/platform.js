@@ -1,7 +1,0 @@
-'use strict';
-
-var _utils = require('../utils');
-
-module.exports = _utils.isBrowser ? require('./browser') : require('./node'); // Use require instead of import/export to dynamically export the right set
-// of functions
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9pby9wbGF0Zm9ybS5qcyJdLCJuYW1lcyI6WyJtb2R1bGUiLCJleHBvcnRzIiwicmVxdWlyZSJdLCJtYXBwaW5ncyI6Ijs7QUFFQTs7QUFFQUEsT0FBT0MsT0FBUCxHQUFpQixtQkFBWUMsUUFBUSxXQUFSLENBQVosR0FBbUNBLFFBQVEsUUFBUixDQUFwRCxDLENBSkE7QUFDQSIsImZpbGUiOiJwbGF0Zm9ybS5qcyIsInNvdXJjZXNDb250ZW50IjpbIi8vIFVzZSByZXF1aXJlIGluc3RlYWQgb2YgaW1wb3J0L2V4cG9ydCB0byBkeW5hbWljYWxseSBleHBvcnQgdGhlIHJpZ2h0IHNldFxuLy8gb2YgZnVuY3Rpb25zXG5pbXBvcnQge2lzQnJvd3Nlcn0gZnJvbSAnLi4vdXRpbHMnO1xuXG5tb2R1bGUuZXhwb3J0cyA9IGlzQnJvd3NlciA/IHJlcXVpcmUoJy4vYnJvd3NlcicpIDogcmVxdWlyZSgnLi9ub2RlJyk7XG4iXX0=
