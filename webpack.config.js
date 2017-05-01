@@ -11,7 +11,7 @@ module.exports = {
   output: {
     path: resolve('./dist'),
     filename: '[name]-bundle.js',
-    library: 'deck.gl',
+    library: 'luma.gl',
     libraryTarget: 'umd'
   },
 

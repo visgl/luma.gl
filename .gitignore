@@ -11,6 +11,9 @@ npm-debug.log
 examples/winds/data/*.html
 test/data/test.png
 
+yarn.lock
+yarn-error.log
+
 .project
 .DS_Store
 *.zip
@@ -19,3 +22,4 @@ TODO
 
 # editor files
 .idea
+

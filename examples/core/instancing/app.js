@@ -2,36 +2,44 @@
 import {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
+let animationFrame;
 
-const animationFrame = new AnimationFrame()
-.context(() => createGLContext({canvas: 'render-canvas'}))
-.init(({gl}) => {
-  debugger
-  gl.clearColor(1, 1, 1, 1);
-  gl.clearDepth(1);
-  gl.enable(GL.DEPTH_TEST);
-  gl.depthFunc(GL.LEQUAL);
+const initExample = (contextName='lumagl-canvas') => {
+  if (!animationFrame) {
+    animationFrame = new AnimationFrame();
 
-  return {cube: makeInstancedCube(gl)};
-})
-.frame(({gl, tick, aspect, cube}) => {
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    animationFrame
+      .context(() => createGLContext({canvas: contextName}))
+      .init(({gl}) => {
+        gl.clearColor(1, 1, 1, 1);
+        gl.clearDepth(1);
+        gl.enable(GL.DEPTH_TEST);
+        gl.depthFunc(GL.LEQUAL);
 
-  cube.render({
-    uTime: tick * 0.1,
-    uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-    uView: Matrix4.lookAt({
-      center: [0, 0, 0],
-      eye: [
-        Math.cos(tick * 0.005) * SIDE / 2,
-        Math.sin(tick * 0.006) * SIDE / 2,
-        (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-      ]
-    }),
-    uProjection:
-      Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
-  });
-});
+        return {cube: makeInstancedCube(gl)};
+      })
+      .frame(({gl, tick, aspect, cube}) => {
+        gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+        cube.render({
+          uTime: tick * 0.1,
+          uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+          uView: Matrix4.lookAt({
+            center: [0, 0, 0],
+            eye: [
+              Math.cos(tick * 0.005) * SIDE / 2,
+              Math.sin(tick * 0.006) * SIDE / 2,
+              (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+            ]
+          }),
+          uProjection:
+            Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
+        });
+      });
+  }
+
+  return animationFrame;
+};
 
 function makeInstancedCube(gl) {
   let offsets = [];
@@ -95,9 +103,10 @@ void main(void) {
   });
 }
 
-export default animationFrame;
+export default initExample;
 
+/* expose on Window for standalone example */
 /* global window */
 if (typeof window !== 'undefined') {
-  window.app = animationFrame;
+  window.initExample = initExample;
 }
