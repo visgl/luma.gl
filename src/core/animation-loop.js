@@ -11,7 +11,7 @@ export const cancelAnimationFrame = timerId =>
 
 export default class AnimationLoop {
   /*
-   * @param {HTMLCanvasElement} canvas - if provided, with and height will be
+   * @param {HTMLCanvasElement} canvas - if provided, width and height will be
    *   passed to context
    */
   constructor(opts = {}) {

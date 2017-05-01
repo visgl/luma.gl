@@ -7,19 +7,6 @@
       body {
         margin: 0px;
       }
-      #render-canvas {
-        width: 100%;
-        height: 100%;
-      }
-      #controls {
-        position: fixed;
-        bottom: 40px;
-        right: 8px;
-        background: rgba(255,255,255,0.9);
-        padding: 8px;
-        font-family: sans;
-        text-align: center;
-      }
     </style>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -30,20 +17,9 @@
   </head>
 
   <body>
-    <canvas id="render-canvas"></canvas>
-    <div id="controls">
-      reflection
-      <input class="valign" id="reflection"
-        type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-      <br>
-      refraction
-      <input class="valign" id="refraction"
-        type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-      <br>
-    </div>
-
+    <canvas id="lumagl-canvas"></canvas>
     <script type="text/javascript" src="bundle.js"></script>
-    <script>window.app.start(); // eslint-disable-line</script>
+    <script>window.initExample(); // eslint-disable-line</script>
   </body>
 
 </html>
