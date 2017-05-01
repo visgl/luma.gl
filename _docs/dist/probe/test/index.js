@@ -1,5 +1,0 @@
-'use strict';
-
-require('babel-polyfill');
-require('./probe-spec');
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9wcm9iZS90ZXN0L2luZGV4LmpzIl0sIm5hbWVzIjpbInJlcXVpcmUiXSwibWFwcGluZ3MiOiI7O0FBQUFBLFFBQVEsZ0JBQVI7QUFDQUEsUUFBUSxjQUFSIiwiZmlsZSI6ImluZGV4LmpzIiwic291cmNlc0NvbnRlbnQiOlsicmVxdWlyZSgnYmFiZWwtcG9seWZpbGwnKTtcbnJlcXVpcmUoJy4vcHJvYmUtc3BlYycpO1xuIl19
