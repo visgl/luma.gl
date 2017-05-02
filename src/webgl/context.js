@@ -122,10 +122,8 @@ export function createGLContext(opts = {}) {
 
   if (isBrowser && debug) {
     gl = makeDebugContext(gl);
-
     // Debug forces log level to at least 1
     log.priority = Math.max(log.priority, 1);
-
     // Log some debug info
     logInfo(gl);
   }

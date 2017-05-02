@@ -73,6 +73,35 @@ const animationLoop = new AnimationLoop({
   }
 });
 
+const animationFrame = new AnimationLoop()
+.context(() => createGLContext({canvas: 'render-canvas'}))
+.init(({gl}) => {
+  gl.clearColor(1, 1, 1, 1);
+  gl.clearDepth(1);
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
+
+  return {cube: makeInstancedCube(gl)};
+})
+.frame(({gl, tick, aspect, cube}) => {
+  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+  cube.render({
+    uTime: tick * 0.1,
+    uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+    uView: Matrix4.lookAt({
+      center: [0, 0, 0],
+      eye: [
+        Math.cos(tick * 0.005) * SIDE / 2,
+        Math.sin(tick * 0.006) * SIDE / 2,
+        (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+      ]
+    }),
+    uProjection:
+      Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
+  });
+});
+
 function makeInstancedCube(gl) {
   let offsets = [];
   for (let i = 0; i < SIDE; i++) {
@@ -135,18 +164,11 @@ void main(void) {
   });
 }
 
-<<<<<<< b31ee625481f1e0ff046ccb11f2e9d640d76d99d
 export default initExample;
-=======
-export default animationLoop;
->>>>>>> Integrate documentation into demo
+export {animationLoop};
 
 /* expose on Window for standalone example */
 /* global window */
 if (typeof window !== 'undefined') {
-<<<<<<< b31ee625481f1e0ff046ccb11f2e9d640d76d99d
   window.initExample = initExample;
-=======
-  window.initExample = animationLoop;
->>>>>>> Integrate documentation into demo
 }

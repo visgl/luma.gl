@@ -2,7 +2,7 @@
 
 ## 4.0.0-dev
 
-- Refactor WebGL classes
+- Refactor WebGL classes using new `Resource` base class
 - `Resource.getParameters` for ease of debugging
 
 ## 3.0.0
@@ -11,14 +11,6 @@
 - Add CORS setting to allow loading image from a different domain
 
 ### 3.0.0 Pure ES6 Codebase/Build tooling improvements
-
-Feature Improvements
-- Performance query using EXT_disjoint_timer_query #121
-
-Breaking Changes:
-- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
-  and into `packages`. This allows luma.gl to drop a number of big dependencies.
-  The node IO code may be published as a separate module later.
 
 Codebase/Build tooling improvements
 - Replace wildcard exports with named exports in index.js
@@ -32,6 +24,13 @@ Codebase/Build tooling improvements
 - `probe` moved to `/experimental`
 - `webgl` folder now contains both webgl1 and webgl2 classes
 
+Feature Improvements
+- Performance query using EXT_disjoint_timer_query #121
+
+Breaking Changes:
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
 
 ### 2.10.4
 - FIX: Fix for glGetDebugInfo regression on Intel processors.

@@ -1,8 +1,7 @@
 /* global document */
 /* eslint-disable no-var, max-statements */
 import {
-  GL, createGLContext, AnimationLoop,
-  Scene, Model, Program, Geometry,
+  GL, createGLContext, AnimationLoop, Scene, Model, Program, Geometry,
   Matrix4, radians
 } from 'luma.gl';
 

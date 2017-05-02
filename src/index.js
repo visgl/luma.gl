@@ -36,6 +36,9 @@ export {default as VertexArrayObject} from './webgl/vertex-array-object';
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 
+// Addons
+export {addEvents} from './addons/event';
+
 // Geometry
 export {default as Geometry} from './geometry/geometry';
 export {default as ConeGeometry} from './geometry/cone-geometry';
@@ -65,8 +68,6 @@ export {default as Vector4} from './packages/math/src/vector4';
 export {default as Matrix4} from './packages/math/src/matrix4';
 export {default as Quaternion} from './packages/math/src/quaternion';
 export {default as Euler} from './packages/math/src/euler';
-
-export {addEvents} from './addons/event';
 
 // IO
 export {
