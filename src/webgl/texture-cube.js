@@ -84,6 +84,7 @@ export default class TextureCube extends Texture {
     this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, this.handle);
     return index;
   }
+
   unbind() {
     this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, null);
     return this;
@@ -117,18 +118,12 @@ export default class TextureCube extends Texture {
       gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
         0, format, width, height, border, format, type, pixels.neg.z);
     } else {
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X,
-        0, format, format, type, pixels.pos.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
-        0, format, format, type, pixels.pos.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
-        0, format, format, type, pixels.pos.z);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
-        0, format, format, type, pixels.neg.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        0, format, format, type, pixels.neg.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-        0, format, format, type, pixels.neg.z);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X, 0, format, format, type, pixels.pos.x);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Y, 0, format, format, type, pixels.pos.y);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Z, 0, format, format, type, pixels.pos.z);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_X, 0, format, format, type, pixels.neg.x);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, format, format, type, pixels.neg.y);
+      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, format, format, type, pixels.neg.z);
     }
   }
 }

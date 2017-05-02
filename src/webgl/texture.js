@@ -75,31 +75,6 @@ const TEXTURE_FORMATS = {
   [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true}
 };
 
-// These are sampler parameters
-const PARAMETERS = {
-  // WEBGL1
-  [GL.TEXTURE_MAG_FILTER]: {type: 'GLenum', webgl1: GL.LINEAR}, // texture magnification filter
-  [GL.TEXTURE_MIN_FILTER]: {type: 'GLenum', webgl1: GL.NEAREST_MIPMAP_LINEAR}, // texture minification filter
-  [GL.TEXTURE_WRAP_S]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate s
-  [GL.TEXTURE_WRAP_T]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate t
-
-  // Emulated parameters - These OpenGL parameters are not supported by OpenGL ES
-  [GL.TEXTURE_WIDTH]: {webgl1: 0},
-  [GL.TEXTURE_HEIGHT]: {webgl1: 0},
-
-  // WebGL Extensions
-  [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
-
-  // WEBGL2
-  [GL.TEXTURE_WRAP_R]: {type: 'GLenum', webgl2: GL.REPEAT}, // texture wrapping function for texture coordinate r
-  [GL.TEXTURE_BASE_LEVEL]: {webgl2: 0}, // Texture mipmap level
-  [GL.TEXTURE_MAX_LEVEL]: {webgl2: 1000}, // Maximum texture mipmap array level
-  [GL.TEXTURE_COMPARE_FUNC]: {type: 'GLenum', webgl2: GL.LEQUAL}, // texture comparison function
-  [GL.TEXTURE_COMPARE_MODE]: {type: 'GLenum', webgl2: GL.NONE}, // texture comparison mode
-  [GL.TEXTURE_MIN_LOD]: {webgl2: -1000}, // minimum level-of-detail value
-  [GL.TEXTURE_MAX_LOD]: {webgl2: 1000} // maximum level-of-detail value
-};
-
 export default class Texture extends Resource {
 
   // target cannot be modified by bind:
@@ -509,5 +484,3 @@ export default class Texture extends Resource {
     return this;
   }
 }
-
-Texture.PARAMETERS = PARAMETERS;

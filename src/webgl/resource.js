@@ -199,6 +199,11 @@ export default class Resource {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
+  /**
+   * @param {GLenum} pname
+   * @param {GLint|GLfloat|GLenum} param
+   * @return {Sampler} returns self to enable chaining
+   */
   _setParameter(pname, value) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }

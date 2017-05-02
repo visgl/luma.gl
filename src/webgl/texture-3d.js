@@ -1,9 +1,14 @@
 import GL from './api';
-import {assertWebGL2Context, withParameters} from './context';
+import {isWebGL2Context, assertWebGL2Context, withParameters} from './context';
 import Texture from '../webgl/texture';
 import Buffer from './buffer';
 
 export default class Texture3D extends Texture {
+
+  static isSupported(gl) {
+    return isWebGL2Context(gl) || gl.getExtension('OES_vertex_array_object');
+  }
+
   /**
    * @classdesc
    * 3D WebGL Texture

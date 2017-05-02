@@ -1,7 +1,16 @@
 import Resource from './resource';
-import {assertWebGL2Context} from './context';
+import {isWebGL2Context, assertWebGL2Context} from './context';
 
 export default class TranformFeedback extends Resource {
+
+  static isSupported(gl) {
+    return isWebGL2Context(gl) || gl.getExtension('OES_vertex_array_object');
+  }
+
+  static isHandle(handle) {
+    return this.gl.isTransformFeedback(this.handle);
+  }
+
   /**
    * @class
    * @param {WebGL2RenderingContext} gl - context
@@ -90,9 +99,5 @@ export default class TranformFeedback extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTransformFeedback(this.handle);
-  }
-
-  static checkHandle(handle) {
-    return this.gl.isTransformFeedback(this.handle);
   }
 }

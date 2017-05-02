@@ -9,18 +9,6 @@ import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
-const PARAMETERS = {
-  [GL.DELETE_STATUS]: {webgl1: 0}, // GLboolean
-  [GL.LINK_STATUS]: {webgl1: 0}, // GLboolean
-  [GL.VALIDATE_STATUS]: {webgl1: 0}, // GLboolean
-  [GL.ATTACHED_SHADERS]: {webgl1: 0}, // GLint
-  [GL.ACTIVE_ATTRIBUTES]: {webgl1: 0}, // GLint
-  [GL.ACTIVE_UNIFORMS]: {webgl1: 0}, // GLint
-  [GL.TRANSFORM_FEEDBACK_BUFFER_MODE]: {webgl2: 0}, // SEPARATE_ATTRIBS/INTERLEAVED_ATTRIBS
-  [GL.TRANSFORM_FEEDBACK_VARYINGS]: {webgl2: 0}, // GLint
-  [GL.ACTIVE_UNIFORM_BLOCKS]: {webgl2: 0} // GLint
-};
-
 export default class Program extends Resource {
   /*
    * @classdesc
@@ -186,6 +174,8 @@ export default class Program extends Resource {
       // VertexAttributes.setDivisor(gl, i, 0);
       VertexAttributes.disable(this.gl, i);
     }
+
+    // Clear elements buffer
     this.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
     return this;
   }
@@ -200,20 +190,30 @@ export default class Program extends Resource {
    * @returns {Program} - returns itself for chaining.
    */
   /* eslint-disable max-depth */
-  setUniforms(uniforms) {
+  setUniforms(uniforms, samplers = {}) {
     for (const uniformName in uniforms) {
       const uniform = uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
+      const sampler = samplers[uniformName];
+
       if (uniformSetter) {
         if (uniform instanceof Texture) {
           if (uniformSetter.textureIndex === undefined) {
             uniformSetter.textureIndex = this._textureIndexCounter++;
           }
-          // Bind texture to index, and set the uniform sampler to the index
+
+          // Bind texture to index
           const texture = uniform;
           const {textureIndex} = uniformSetter;
-          // console.debug('setting texture', textureIndex, texture);
+
           texture.bind(textureIndex);
+
+          // Bind a sampler (if supplied) to index
+          if (sampler) {
+            sampler.bind(textureIndex);
+          }
+
+          // Set the uniform sampler to the texture index
           uniformSetter(textureIndex);
         } else {
           // Just set the value
@@ -221,6 +221,7 @@ export default class Program extends Resource {
         }
       }
     }
+
     return this;
   }
   /* eslint-enable max-depth */
@@ -454,5 +455,3 @@ export function getUniformDescriptors(gl, program) {
   }
   return uniformDescriptors;
 }
-
-Program.PARAMETERS = PARAMETERS;

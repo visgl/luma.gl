@@ -6,12 +6,6 @@ import assert from 'assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
-const PARAMETERS = [
-  GL.DELETE_STATUS, // GLboolean - whether shader is flagged for deletion.
-  GL.COMPILE_STATUS, // GLboolean - was last shader compilation successful.
-  GL.SHADER_TYPE // GLenum - GL.VERTEX_SHADER or GL.FRAGMENT_SHADER.
-];
-
 // For now this is an internal class
 export class Shader extends Resource {
 
@@ -127,5 +121,3 @@ export class FragmentShader extends Shader {
     return this.gl.createShader(GL.FRAGMENT_SHADER);
   }
 }
-
-Shader.PARAMETERS = PARAMETERS;
