@@ -1,11 +1,11 @@
 /* global document */
-import {createGLContext, AnimationFrame, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
+import {createGLContext, AnimationLoop, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
 
 let animationFrame;
 
-const initExample = (contextName='lumagl-canvas') => {
+const initExample = (contextName = 'lumagl-canvas') => {
   if (!animationFrame) {
-    animationFrame = new AnimationFrame();
+    animationFrame = new AnimationLoop();
 
     animationFrame
       .context(() => createGLContext({canvas: contextName}))
@@ -180,7 +180,13 @@ function drawTexture({ctx, sign, axis, size}) {
 }
 
 function renderControls(canvasId) {
+<<<<<<< b31ee625481f1e0ff046ccb11f2e9d640d76d99d
   if (document.querySelector('#controls')) return;
+=======
+  if (document.querySelector('#controls')) {
+    return;
+  }
+>>>>>>> Integrate documentation into demo
 
   const canvas = document.querySelector(`#${ canvasId }`);
   const controls = document.createElement('div');

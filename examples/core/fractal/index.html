@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image post-processing API example</title>
+  <link href='http://fonts.googleapis.com/css?family=Crimson+Text' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" media="all" type="text/css" href="style.css" />
+  <style type="text/css">
+    html, body {
+      text-align: center;
+      font-family: 'Crimson Text', Verdana;
+      margin: 0;
+      padding: 0;
+    }
+    input, select {
+      font-size: 15px;
+      font-family: 'Crimson Text', Verdana;
+      max-width: 80px;
+    }
+    #fxy {
+      width: 550px;
+      max-width: 550px;
+    }
+    input.error {
+      background: #ffdddd;
+    }
+    #container {
+      width: 900px;
+      margin: auto;
+    }
+    body.no-webgl #container {
+      display: none;
+    }
+    div.fallback {
+      display: none;
+    }
+    body.no-webgl div.fallback {
+      display: block;
+    }
+    .description {
+      width: 200px;
+      font-size: 13px;
+      position: absolute;
+      padding: 5px;
+      text-align: left;
+      right: 8px;
+      top: 8px;
+      border: 1px solid #ccc;
+      background-color: rgb(255, 241, 168);
+    }
+    #title {
+    }
+    h1 {
+      text-shadow: rgba(0, 0, 0, 0.2) 0 0 3px;
+      margin: 5px;
+    }
+    .controls {
+      position: relative;
+      background: #E0ECFF;
+      padding: 7px;
+      border: 1px solid #ccc;
+      margin: 7px 0;
+    /*  text-align: left;*/
+    }
+    .controls table tr td {
+      text-align: left;
+      margin: auto;
+      font-size: 15px;
+    }
+    #canvas-container {
+      margin: auto;
+    }
+    canvas {
+      background: black;
+      -webkit-box-shadow: #333 0 0 10px;
+      -o-box-shadow: #333 0 0 10px;
+      -moz-box-shadow: #333 0 0 10px;
+      box-shadow: #333 0 0 10px;
+    }
+    .footer {
+      margin: 4px;
+      font-size: 13px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  <link href="../examples.css" type="text/css" rel="stylesheet" media="screen" />
+  <script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script type="text/javascript" src="../../lumagl.js"></script>
+  <script type="text/javascript" src="../examples.js"></script>
+  <script type="text/javascript" src="index.js"></script>
+</head>
+<body onresize="setMaximalSize()">
+  <div id="container">
+    <div id="title">
+      <h1>Image post-processing API</h1>
+    </div>
+    <div class="controls">
+      Progressive Julia Fractal/Attractor - Original work by <a
+        href="http://twitter.com/Flexi23/">Felix Woitzel</a> - Ported to
+      <a href="http://http://uber.github.io/luma.gl/">luma.gl</a>
+    </div>
+    <canvas id="render-canvas" width="900" height="550"></canvas>
+  </div>xw
+</body>
+</html>
+
+

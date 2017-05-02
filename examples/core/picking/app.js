@@ -1,6 +1,6 @@
 /* global document */
 import {
-  GL, AnimationFrame, createGLContext, Matrix4, Vec3, radians,
+  GL, AnimationLoop, createGLContext, Matrix4, Vec3, radians,
   loadTextures, Buffer, Sphere, Framebuffer, Scene, pickModels
 } from 'luma.gl';
 
@@ -9,7 +9,7 @@ const pick = {x: 0, y: 0};
 let scene;
 let framebuffer = null;
 
-new AnimationFrame()
+new AnimationLoop()
 .context(() => createGLContext())
 .init(({gl, canvas}) => {
   gl.enable(GL.DEPTH_TEST);

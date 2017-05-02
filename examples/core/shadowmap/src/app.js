@@ -1,5 +1,5 @@
 import {
-  AnimationFrame, createGLContext,
+  AnimationLoop, createGLContext,
   GL, Program, Buffer, Framebuffer, Cube, Mat4, Vec3
 } from 'luma.gl';
 
@@ -82,7 +82,7 @@ let programScene;
 let programShadow;
 let cubeBuffers;
 
-new AnimationFrame({gl: createGLContext()})
+new AnimationLoop({gl: createGLContext()})
 .init(({gl}) => {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);

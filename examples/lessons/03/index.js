@@ -1,6 +1,6 @@
 /* global LumaGL */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-const {AnimationFrame, createGLContext,
+const {AnimationLoop, createGLContext,
   PerspectiveCamera, Program, Model, Geometry, Vec3} = LumaGL;
 
 const FRAGMENT_SHADER = `\
@@ -63,7 +63,7 @@ const squareGeometry = new Geometry({
   }
 });
 
-new AnimationFrame()
+new AnimationLoop()
 .context(() => createGLContext({canvas: 'lesson03-canvas'}))
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);

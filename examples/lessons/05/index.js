@@ -1,6 +1,6 @@
 /* global LumaGL */
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-const {GL, AnimationFrame, createGLContext, loadTextures} = LumaGL;
+const {GL, AnimationLoop, createGLContext, loadTextures} = LumaGL;
 const {Cube, Matrix4} = LumaGL;
 
 const VERTEX_SHADER = `\
@@ -31,7 +31,7 @@ void main(void) {
 }
 `;
 
-new AnimationFrame()
+new AnimationLoop()
 .context(() => createGLContext({canvas: 'lesson05-canvas'}))
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);

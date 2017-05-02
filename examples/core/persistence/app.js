@@ -1,6 +1,6 @@
 /* global LumaGL */
 /* eslint-disable max-statements */
-const {createGLContext, AnimationFrame, IcoSphere, Model} = LumaGL;
+const {createGLContext, AnimationLoop, IcoSphere, Model} = LumaGL;
 const {GL, Program, Buffer, Geometry, Framebuffer} = LumaGL;
 const {Mat4, Vec3, Matrix4, radians} = LumaGL;
 const {getShadersFromHTML} = LumaGL.addons;
@@ -91,7 +91,7 @@ let quad;
 let persistenceQuad;
 let sphere;
 
-new AnimationFrame()
+new AnimationLoop()
 .context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl, width, height}) => {
   // setGLState(gl, {

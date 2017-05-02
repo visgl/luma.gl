@@ -30,8 +30,7 @@ module.exports = {
   },
 
   module: {
-    rules: [
-    ]
+    rules: []
   },
 
   node: {
