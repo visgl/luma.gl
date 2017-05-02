@@ -1,18 +1,10 @@
----
-layout: docs
-title: Fx
-categories: [Documentation]
----
-
-Class: Fx {#Fx}
-===========================
+# Fx
 
 Fx is the module that provides effects and tweening functions, as well as wrappers for eficient timer based animations
 like `animationTime` and `requestAnimationFrame` wrappers.
 
 
-Fx Method: constructor {#Fx:constructor}
-----------------------------------------------------
+Fx constructor
 
 The main constructor function for the Fx class. Use this to create a new animation effect.
 
@@ -52,8 +44,7 @@ In this example we also use `LumaGL.Fx.compute` method to to linear interpolatio
   });
 {% endhighlight %}
 
-Fx Method: start {#Fx:start}
-------------------------------------
+Fx start
 
 In order to trigger/start the animation we call the `start` method on the animation instance `fx`.
 
@@ -96,8 +87,7 @@ In this example we also use `LumaGL.Fx.compute` method to to linear interpolatio
 
 {% endhighlight %}
 
-Fx Method: step {#Fx:step}
-------------------------------------
+Fx step
 
 This method should be called at each frame to compute a new step for the animation. If the animation is over then this method 
 will not have any effect on the `fx` instance.
@@ -150,8 +140,7 @@ automatically. The only methods generally used are then the `Fx`
 constructor and the `start` method.
 
 
-Fx Method: compute {#Fx:compute}
-------------------------------------
+Fx compute
 
 `Fx.compute` is a static method that performs a linear number interpolation (lerp) for a given delta value.
 
@@ -183,8 +172,7 @@ We use `LumaGL.Fx.compute` to interpolate between two number values.
   });
 {% endhighlight %}
 
-Fx Method: animationTime {#Fx:animationTime}
-------------------------------------
+Fx animationTime
 
 `Fx.animationTime` is a static method that performs (if possible) high performance interface to `Date.now` or `new Date.getTime()`. 
 You can read more about `animationTime` [here](https://developer.mozilla.org/en/DOM/window.mozAnimationStartTime).
@@ -204,8 +192,7 @@ Log the number of milliseconds passed since the beginning of the interval.
   }, 1000 / 60);
 {% endhighlight %}
 
-Fx Method: requestAnimationFrame {#Fx:requestAnimationFrame}
-------------------------------------
+Fx requestAnimationFrame
 
 `Fx.requestAnimationFrame` is a static method that receives a callback to be executed when the next frame for an animation is ready. 
 In most cases this method is recommended over simple `setTimeout`s because of various reasons exposed in the [Mozilla]() and [Chrome]() articles. 
@@ -264,74 +251,62 @@ Create a new animation object that has a `Quart.easeInOut` transition.
 
 The possible objects for transitions are described below.
 
-Fx.Transition Method: linear {#Fx-Transition:linear}
-------------------------------------------------------
+Fx.Transition linear
 
 Displays a linear transition.
 
-Fx.Transition Method: Quad {#Fx-Transition:Quad}
---------------------------------------------------
+Fx.Transition Quad
 
 Displays a quadratic transition. Must be used as Quad.easeIn or Quad.easeOut or Quad.easeInOut.
 
-Fx.Transition Method: Cubic {#Fx-Transition:Cubic}
-----------------------------------------------------
+Fx.Transition Cubic
 
 Displays a cubicular transition. Must be used as Cubic.easeIn or Cubic.easeOut or Cubic.easeInOut.
 
 
-Fx.Transition Method: Quart {#Fx-Transition:Quart}
-----------------------------------------------------
+Fx.Transition Quart
 
 Displays a quartetic transition. Must be used as Quart.easeIn or Quart.easeOut or Quart.easeInOut.
 
-Fx.Transition Method: Quint {#Fx-Transition:Quint}
-----------------------------------------------------
+Fx.Transition Quint
 
 Displays a quintic transition. Must be used as Quint.easeIn or Quint.easeOut or Quint.easeInOut
 
-Fx.Transition Method: Pow {#Fx-Transition:Pow}
-------------------------------------------------
+Fx.Transition Pow
 
 - The default is `p^6`.
 
-Fx.Transition Method: Expo {#Fx-Transition:Expo}
---------------------------------------------------
+Fx.Transition Expo
 
 Displays a exponential transition. Must be used as Expo.easeIn or Expo.easeOut or Expo.easeInOut.
 
 
 
-Fx.Transition Method: Circ {#Fx-Transition:Circ}
---------------------------------------------------
+Fx.Transition Circ
 
 Displays a circular transition. Must be used as Circ.easeIn or Circ.easeOut or Circ.easeInOut.
 
 
 
-Fx.Transition Method: Sine {#Fx-Transition:Sine}
---------------------------------------------------
+Fx.Transition Sine
 
 Displays a sineousidal transition. Must be used as Sine.easeIn or Sine.easeOut or Sine.easeInOut.
 
 
 
-Fx.Transition Method: Back {#Fx-Transition:Back}
---------------------------------------------------
+Fx.Transition Back
 
 Makes the transition go back, then all forth. Must be used as Back.easeIn or Back.easeOut or Back.easeInOut.
 
 
 
-Fx.Transition Method: Bounce {#Fx-Transition:Bounce}
-------------------------------------------------------
+Fx.Transition Bounce
 
 Makes the transition bouncy. Must be used as Bounce.easeIn or Bounce.easeOut or Bounce.easeInOut.
 
 
 
-Fx.Transition Method: Elastic {#Fx-Transition:Elastic}
---------------------------------------------------------
+Fx.Transition Elastic
 
 Elastic curve. Must be used as Elastic.easeIn or Elastic.easeOut or Elastic.easeInOut
 

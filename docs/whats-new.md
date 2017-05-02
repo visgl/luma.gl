@@ -1,69 +1,12 @@
-# Version 3.2
+# Version 4.0
 
 Release Date: TBD - Q2 2017?
-
-## Major Updates
-
-* GPGPU support
-
-
-
-# Version 3.1
-
-Release Date: TBD - Q1 2017?
 
 ## Major Updates
 
 * WebGL2 support
 * Experimental GPGPU support
 
-## WebGL2
-
-### WebGL2 - New classes with documentation and examples
-
-* `Texture2DArray`, `Texture3D` - for e.g. "texture atlases"
-* `Query` - Asynchronously query for occlusions, transform feedback, timings
-* `Sampler` - Let's shaders sample same texture in different ways
-* `Sync` - Get notified when GPU reaches certain point in command stream
-* `TransformFeedback` - Get output from vertex shaders
-* `VertexArrayObject` - Stores multiple attribute bindings
-
-Note that `VertexArrayObject` and `Query` can be used in WebGL1 with certain
-restrictions.
-
-### WebGL2 - Features added to existing API
-
-* WebGL2 constants added to `GL` export
-
-* Textures
-    * Can now created from `WebGLBuffers` in addition to typed arrays
-    * Tons of new texture formats
-    * Compressed textures from 
-
-    * GLSL `dFdx`, `dFdy` Texture derivatives - (e.g. to compute normals in fragment shader)
-    * GLSL `texelFetch` - (e.g. for manual bilinear filtering)
-    * GLSL `textureGrad` - (e.g. for tweaking mipmap levels)
-    * Immutable texture?
-    * Integer texture - uint sampler
-    * Texture LOD
-    * GLSL `textureOffset`
-    * pixelStore
-    * srbg
-    * texture vertex (e.g. for displacement mapping)
-
-* Vertex Formats (GL.HALF_FLOAT)
-
-* GLSL
-    * centroid
-    * discard
-    * flat_smooth_interpolators
-    * non_square_matrix
-
-* TBD
-    * Uniform buffers
-
-* Misc
-    * New blending modes: `GL.MIN` and `GL.MAX`
 
 
 
@@ -73,17 +16,35 @@ restrictions.
   either through WebGL2 or through a WebGL1 extension.
 
 
+# What's New
 
-# v3.0
+## v4.0
 
-Release Date TBD (December 2016?)
+### WebGL2 Support
+* New classes for all new WebGL2 objects
+* Existing Classes have additional methods that expose WebGL2 functionality
+* GL State and Limit Management
+* `ShaderAssembler` GLSL Module System
 
-## Library Size
+### Documentation Improvements
+* New documentation site, aligned with deck.gl and react-vis.
+* Extensive overhaul of documentation structure contents
+
+### Library Improvements
+* GLSL code now stored as JavaScript strings. Makes it possible to directly import luma.gl as pure ES6 code from 'luma.gl/src' without having to setup additional transforms in your bundler (webpack/browserify).
+* Code Size Improvements - Debug code is only imported when used (requires tree-shaking bundler).
+
+### Internal Improvements
+* Coverage Integration with Coveralls
+* Many new Test Cases
+
+
+## v3.0
+
+### Library Size
 * Reorganized to only export a minimal surface of functions/classes.
 * Tree-shaking support (package.json module keyword and dist-es6 distribution)
 * Significant reduction of module dependencies.
-
-
 
 ## Major News
 
@@ -129,7 +90,33 @@ Release Date TBD (December 2016?)
 - `Scene` class removed, for effects use - TBD
 
 
+- Add CORS setting to allow loading image from a different domain
 
+Internal improvements
+- Replace wildcard exports with named exports in index.js
+- ES6 Conformant code base: stage-2 extensions removed
+- Webpack based build
+- Multiple examples now work standalone
+- Experimental tree-shaking support: dist and dist-es6 directories
+- Dependency removal, including removal of `autobind-decorator` dependency
+- Changed precommit hook from `husky` to `pre-commit`
+- `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
+- `probe` moved to `/experimental`
+- `webgl` folder now contains both webgl1 and webgl2 classes
+
+Feature Improvements
+- Performance query using EXT_disjoint_timer_query #121
+
+Breaking Changes:
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
+
+
+### 2.0.0 - Major API refactoring
+
+- CHANGE: Removes glslify as a dependency, apps that depend on glslify
+  must add it to their own package.json.
 # Version 2
 
 Release Date: Gradual releases during 2015
@@ -154,6 +141,36 @@ Release Date: Gradual releases during 2015
 
 ### Linux support
 - Add missing call to getAttribLocation.
+
+
+### Introduce new gl-matrix based math library.
+- Move old math lib to deprecated folder.
+- Move FBO to deprecated folder.
+- Examples converted to ES6. AnimationFrame class updates.
+- Add back persistence example
+- WebGL type and constant cleanup
+- Fix glTypeToArray and use clamped arrays by default
+
+### TimerQuery, WebGL Extension doc, fix crash on Travis CI
+- Support EXT_disjoint_timer_query
+- Document luma.gl use of WebGL extensions.
+- Fix: context creation crash when WEBGL_debug_info extension was undefined
+
+### Debug log improvements, import fix
+- Debug logs now print unused attributes more compactly, number formatting
+improved.
+
+### Add ability to import luma without io
+- import "luma.gl/luma" will import luma without io functions
+- import "luma.gl/io" will import luma io functions only
+- omitting io functions significantly reduces dependencies
+- Makes the luma object available in console for debugging.
+- Some polish on luma's built-in attribute/uniform logging
+
+
+### Node.js/AttributeManager/Renderer/Program.render()/Examples
+
+- Ensure luma.gl does not fail under node until createGLContext is called.
 
 - Program.render() now takes a map of uniforms,
   reducing need to "set" uniforms before render.
@@ -193,3 +210,21 @@ Release Date: Gradual releases during 2015
 
 - ES6 port of PhiloGL.
 
+### Decoupled headless-gl dependency
+- It is now necessary to import luma.gl through `luma.gl/headless` to get
+headless integration.
+  When using the basic `luma.gl` import, the app no longer needs to
+have `gl` as a dependency.
+ This should simplify build and setup for applications that don't use
+headless-gl.
+
+### Improve change detection
+- Redraw flag management improvements
+
+- New experimental Renderer class - `requestAnimationFrame` replacement.
+
+
+
+## v1.0
+
+* Initial ES6 Port from PhiloGL

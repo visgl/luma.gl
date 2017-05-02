@@ -1,8 +1,4 @@
----
-layout: docs
-title: WebGL Context
-categories: [Documentation]
----
+# WebGL Context
 
 Provides functions to create and initialize a WebGL context, and
 to check for presence of WebGL and extensions.
@@ -21,17 +17,17 @@ In fact, luma.gl is explicitly designed to work with any WebGL context, and
 in contrast to some other approaches, luma.gl maintains no "hidden state"
 that might complicate composing your code with other WebGL based modules.
 
+## Functions
 
-Function: createGLContext {#createGLContext}
-------------------------------------------------
+### createGLContext
 
 Creates and returns a WebGL context, both in browsers and in Node.js.
 
-### Syntax:
-
+```
   const gl = createGLContext(options);
+```
 
-### Arguments:
+Arguments:
 
 1. **options** (*object*) - An object with the following properties:
 
@@ -90,8 +86,7 @@ import {createGLContext} from 'luma.gl';
 const gl = createGLContext({headlessGL})
 ```
 
-Static Method: getGLExtension {#getGLExtension}
------------------------------------------------------------
+### getGLExtension
 
 Returns the WebGL extension with the given name,
 For example `OES_texture_float`.

@@ -1,5 +1,4 @@
-## Debugging
----------------------------------
+# Debugging
 
 Luma has a number of provisions for debugging that can help you save a lot
 of time during development.

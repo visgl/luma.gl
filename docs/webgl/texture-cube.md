@@ -1,15 +1,11 @@
 # TextureCube
 
-## Methods
+For more background and details on parameters, see [Textures and Samplers](textures-and-samplers.md).
 
-### TextureCube constructor
+# Usage
 
-* Needs to supply 6 images all of same size and format.
-* Images all need to be of the same square size, i.e. `width` and `height` must be the same.
-* If not supplied, `width` and `height` will be autodeduced from `GL.TEXTURE_CUBE_MAP_POSITIVE_X`.
-* The same `format`, `type` etc parameters will be applied to each cube face.
-`
-```
+Creating a `TextureCube`
+```js
 const textureCube = new TextureCube(gl, {
   [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: imagePosX,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: imagePosY,
@@ -19,6 +15,25 @@ const textureCube = new TextureCube(gl, {
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: imageNegZ
 });
 ```
+
+Sub Images
+
+It is possible to replace part of a face texture image using `subImage`}
+
+```js
+textureCube.subImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_X, data, x, y, mipmapLevel});
+```
+
+## Remarks
+
+* Needs to supply 6 images all of same size and format.
+* Images all need to be of the same square size, i.e. `width` and `height` must be the same.
+* If not supplied, `width` and `height` will be autodeduced from `GL.TEXTURE_CUBE_MAP_POSITIVE_X`.
+* The same `format`, `type` etc parameters will be applied to each cube face.
+
+## Methods
+
+### TextureCube constructor
 
 ### Accessors
 
@@ -44,12 +59,4 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 
 TBD - how to retrieve?
 
-
-### Sub Images
-
-It is possible to replace part of a face texture image using `subImage`}
-
-```
-textureCube.subImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_X, data, x, y, mipmapLevel});
-```
 

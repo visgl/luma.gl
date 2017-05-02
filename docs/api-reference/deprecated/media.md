@@ -1,11 +1,4 @@
----
-layout: docs
-title: Media
-categories: [Documentation]
----
-
-Script: Media {#Media}
-===========================
+# Media
 
 The goal of this module is to provide utility functions for media like audio, 
 video, or image post-processing among others things (for example other devices, camera, etc.). 

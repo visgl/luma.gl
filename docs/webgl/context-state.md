@@ -1,12 +1,10 @@
-# GL State
-
-# Overview
+# WebGL State Management
 
 luma.gl manages WebGL state and enables 'stateless' WebGL programming,
 in which settings are passed to rendering commands rather than being set
 directly on the global state.
 
-Remarks:
+WebGL State Management can be quite complicated.
 * A large part of the WebGL API is devoted to settings.
   When reading, querying individual values using GL constants is the norm,
   and when writing, special purpose functions are provided for most settings.
@@ -18,11 +16,66 @@ Remarks:
   of luma.gl.
 
 
-## Overview
+## Usage
 
-## Getters and Setters
+Setting parameters temporarily, restoring them
 
-### `getGLParameter`(gl, key)
+```js
+withParameters(gl, {
+  blend: false,
+  blendColor: [],
+  blendEquation: [GL.FUNC_ADD, GL.FUNC_ADD], // [GL.BLEND_EQUATION_RGB, GL.BLEND_EQUATION_ALPHA],
+  blendFunc: [GL.ONE, GL.ZERO, GL.ONE, GL.ZERO],
+
+  colorClearValue: ,
+  colorMask: ,
+  colorWritemask: ,
+
+  cullFace: false,
+  cullFaceMode: ,
+
+  depthTest: false,
+  depthClearValue: ,
+  depthFunc: ,
+  depthRange: ,
+  depthWritemask: ,
+
+  dither: true,
+
+  frontFace: ,
+
+  generateMipmapHint: ,
+
+  lineWidth: ,
+
+  polygonOffsetFill: false,
+  polygonOffset: ,
+
+  sampleCoverage: ,
+
+  scissorTest: false,
+  scissorBox: ,
+
+  stencilTest: false,
+  stencilClearValue: ,
+  stencilMask: ,
+  stencilFunc: ,
+  stencilOp: ,
+
+  viewport:
+}, () = {
+  // execute code with settings temporarily applied
+});
+```
+
+
+## Functions
+
+### getGLParameter
+
+```js
+getGLParameter(gl, key)
+```
 
 Sets value with key to context.
 Value may be "normalized" (in case a short form is supported). In that case
@@ -33,7 +86,12 @@ the normalized value is retured.
 * value {*}  - parameter value
 Returns {*} - "normalized" parameter value after assignment
 
-### `setGLParameter(gl, key, value)`
+
+### setGLParameter
+
+```js
+setGLParameter(gl, key, value)
+```
 
 Sets value with key to context.
 Value may be "normalized" (in case a short form is supported). In that case
@@ -45,31 +103,36 @@ the normalized value is retured.
 Returns {*} - "normalized" parameter value after assignment
 
 
-### `withGLState`(gl, {frameBuffer, ...params}, func)
+### withGLState
+
+```js
+withGLState(gl, {frameBuffer, ...params}, func)
+```
 Executes a function with gl states temporarily set
 Exception safe
-
 
 
 ## Parameters
 
 ### Blending
 
-| Function style      | Sets parameter(s)      |
-| ------------------- | ---------------------- |
+| Function style        | Sets parameter(s)      |
+| --------------------- | ---------------------- |
 | [blendColor]()        | `GL.BLEND_COLOR`       |
 | [blendEquation]()     | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`] |
 | [blendFunc]()         | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`] |
 | [blendFuncSeparate]() | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
 
+| Parameter                 | Type            | Default         | Description |
+| ------------------------- | --------------- | --------------- | -------- |
 | `GL.BLEND`                | GLboolean       | `false`         | Blending enabled |
-| `GL.BLEND_COLOR`          | Float32Array(4) | `[0, 0, 0, 0]` | |
-| `GL.BLEND_EQUATION_RGB`   | GLenum          | `GL.FUNC_ADD` | |
-| `GL.BLEND_EQUATION_ALPHA` | GLenum          | `GL.FUNC_ADD` | |
-| `GL.BLEND_SRC_RGB`        | GLenum          | `GL.ONE` | srcRgb |
-| `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO` | srcAlpha |
-| `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE` | dstRgb |
-| `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO` | dstAlpha |
+| `GL.BLEND_COLOR`          | Float32Array(4) | `[0, 0, 0, 0]`  | |
+| `GL.BLEND_EQUATION_RGB`   | GLenum          | `GL.FUNC_ADD`   | |
+| `GL.BLEND_EQUATION_ALPHA` | GLenum          | `GL.FUNC_ADD`   | |
+| `GL.BLEND_SRC_RGB`        | GLenum          | `GL.ONE`        | srcRgb |
+| `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO`       | srcAlpha |
+| `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE`        | dstRgb |
+| `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO`       | dstAlpha |
 
 
 ### Clear Color
@@ -78,7 +141,9 @@ Exception safe
 | --------- | ---------------------------------- |
 | [clearColor]() | GL.COLOR_CLEAR_VALUE |
 
-| `GL.COLOR_CLEAR_VALUE` | new Float32Array(4) | [0, 0, 0, 0] |
+| Parameter              | Type            | Default  | Description |
+| ---------------------- | --------------- | -------- | -------- |
+| `GL.COLOR_CLEAR_VALUE` | new Float32Array(4) | [0, 0, 0, 0] | . |
 
 
 ### Color Mask
@@ -87,7 +152,9 @@ Exception safe
 | --------- | ---------------------------------- |
 | [colorMask]() | GL.COLOR_WRITEMASK |
 
-| `GL.COLOR_WRITEMASK` | [GLboolean, GLboolean, GLboolean, GLboolean] | [true, true, true, true] | |
+| Parameter              | Type            | Default  | Description |
+| ---------------------- | --------------- | -------- | -------- |
+| `GL.COLOR_WRITEMASK` | [GLboolean, GLboolean, GLboolean, GLboolean] | [true, true, true, true] | . |
 
 
 ### Depth Test
@@ -112,9 +179,14 @@ Exception safe
 
 Requires WebGL2 or `OES_standard_derivatives`.
 
+| Parameter              | Type            | Default | Description |
+| ---------------------- | --------------- | -------- | -------- |
 | `GL.FRAGMENT_SHADER_DERIVATIVE_HINT` | GLenum     | `GL.DONT_CARE` | Accuracy of derivates in built-in GLSL functions |
 
-Hints
+#### Hints
+
+| Value          | Description        |
+| -------------- | ---------------------- |
 | `GL.FASTEST`   | The most efficient behavior should be used |
 | `GL.NICEST`    | The most correct or the highest quality option should be used |
 | `GL.DONT_CARE` | There is no preference for this behavior |
@@ -122,6 +194,8 @@ Hints
 
 ### Dithering
 
+| Parameter              | Type            | Default | Description |
+| ---------------------- | --------------- | -------- | -------- |
 | `GL.DITHER` | GLboolean | `true` | Enable dithering of color components before they get written to the color buffer |
 
 Remarks:
@@ -133,30 +207,43 @@ Remarks:
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [cullFace]() | `GL.CULL_FACE_MODE` |
+| [cullFace]()  | `GL.CULL_FACE_MODE` |
 | [frontFace]() | `GL.FRONT_FACE` |
 
-| `GL.CULL_FACE` |  GLboolean | false | Enable face culling |
-| `GL.CULL_FACE_MODE` | GLenum | `GL.BACK` | Which face to cull |
-| `GL.FRONT_FACE` | GLenum | `GL.CCW` | Which face is front |
+| Parameter              | Type            | Default | Description |
+| ---------------------- | --------------- | -------- | -------- |
+| `GL.CULL_FACE`         | GLboolean | `false` | Enable face culling |
+| `GL.CULL_FACE_MODE`    | GLenum    | `GL.BACK` | Which face to cull |
+| `GL.FRONT_FACE`        | GLenum    | `GL.CCW` | Which face is front |
 
-Cull Face Modes
-| `GL.FRONT`          | Clock wise         |
-| `GL.BACK`           | Counter clock wise |
+#### Cull Face Modes
+
+| Value               | Description            |
+| ------------------- | ---------------------- |
+| `GL.FRONT`          | Clock wise             |
+| `GL.BACK`           | Counter clock wise     |
 | `GL.FRONT_AND_BACK` | No polygons are drawn (but LINES and POINTS are) |
 
-Face orientation
-| `GL.CW`  | Clock wise         |
-| `GL.CCW` | Counter clock wise |
+#### Face orientation
+
+| Value          | Description        |
+| -------------- | ------------------ |
+| `GL.CW`        | Clock wise         |
+| `GL.CCW`       | Counter clock wise |
 
 
 ### MipmapHint
 
 Hint for quality of images generated with glGenerateMipmap
 
-| `GL.GENERATE_MIPMAP_HINT` | GLenum | `GL.DONT_CARE` |
+| Parameter              | Type            | Default | Description |
+| ---------------------- | --------------- | -------- | -------- |
+| `GL.GENERATE_MIPMAP_HINT` | GLenum | `GL.DONT_CARE` | . |
 
-Hints
+#### Mipmap Hints
+
+| Value          | Description            |
+| -------------- | ---------------------- |
 | `GL.FASTEST`   | The most efficient behavior should be used |
 | `GL.NICEST`    | The most correct or the highest quality option should be used |
 | `GL.DONT_CARE` | There is no preference for this behavior |
@@ -170,7 +257,9 @@ Line widths are between 1 and GL.ALIASED_LINE_WIDTH_RANGE.
 | --------- | ---------------------------------- |
 | [lineWidth](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glLineWidth.xml) | `GL.LINE_WIDTH` |
 
-| `GL.LINE_WIDTH` | GLfloat | 1 |
+| Parameter              | Type            | Default | Description |
+| ---------------------- | --------------- | -------- | -------- |
+| `GL.LINE_WIDTH` | GLfloat | 1 | . |
 
 Example:
 ```js
@@ -182,10 +271,8 @@ setState(gl, {
 ```
 
 Remarks:
-* Line widths will be clamped to [1, `GL.ALIASED_LINE_WIDTH_RANGE`].
-  This is different from `gl.lineWidth` which generates errors on lineWidth 0.
-* Caution: line aliasing is driver dependent and `GL.LINES` may not
-  give desired results.
+* Line widths will be clamped to [1, `GL.ALIASED_LINE_WIDTH_RANGE`]. This is different from `gl.lineWidth` which generates errors on lineWidth 0.
+* Caution: line aliasing is driver dependent and `GL.LINES` may not give desired results.
 
 
 ### PolygonOffset
@@ -198,14 +285,25 @@ and for rendering solids with highlighted edges.
 | --------- | ---------------------------------- |
 | [polygonOffset](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glPolygonOffset.xml) | [GL.POLYGON_OFFSET_FACTOR, GL.POLYGON_OFFSET_UNITS] |
 
-| `GL.POLYGON_OFFSET_FILL`   | GLboolean | `false` |
-| `GL.POLYGON_OFFSET_FACTOR` | GLfloat   |     `0` |
-| `GL.POLYGON_OFFSET_UNITS`  | GLfloat   |     `0` |
+| Parameter                  | Type          | Default  | Description             |
+| -------------------------- | ------------- | -------- | ----------------------- |
+| `GL.POLYGON_OFFSET_FILL`   | GLboolean     |  `false` | . |
+| `GL.POLYGON_OFFSET_FACTOR` | GLfloat       |      `0` | . |
+| `GL.POLYGON_OFFSET_UNITS`  | GLfloat       |      `0` | . |
 
 
 Remarks:
 * Polygon offsets are loosely specified and results can thus be
   driver dependent.
+
+
+### Rasterization (WebGL2)
+
+Primitives are discarded immediately before the rasterization stage, but after the optional transform feedback stage. `gl.clear()` commands are ignored.
+
+| Parameter                           | Type          | Default  | Description             |
+| ----------------------------------- | ------------- | -------- | ----------------------- |
+| `GL.RASTERIZER_DISCARD`             | GLboolean     | `false`  | Disable rasterization |
 
 
 ### Sampling
@@ -216,19 +314,12 @@ Specify multisample coverage parameters
 | --------- | ---------------------------------- |
 | [sampleCoverage](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glSampleCoverage.xml) | [`GL.SAMPLE_COVERAGE_VALUE`, `GL.SAMPLE_COVERAGE_INVERT`] |
 
-| `GL_SAMPLE_COVERAGE` | GLboolean | `false` | Activates the computation of a temporary coverage value determined by the alpha value. |
-| `GL_SAMPLE_ALPHA_TO_COVERAGE` | GLboolean | `false` | Activates ANDing the fragment's coverage with the temporary coverage value |
-| `GL.SAMPLE_COVERAGE_VALUE`   | GLfloat   | 1.0     |  |
-| `GL.SAMPLE_COVERAGE_INVERT`  | GLboolean | `false` |  |
-
-
-## Rasterization (**WebGL2**)
-
-Primitives are discarded immediately before the rasterization stage,
-but after the optional transform feedback stage.
-`gl.clear()` commands are ignored.
-
-| `GL.RASTERIZER_DISCARD` | GLboolean | `false` | Disable rasterization |
+| Parameter                          | Type          | Default  | Description             |
+| ---------------------------------- | ------------- | -------- | ----------------------- |
+| `GL_SAMPLE_COVERAGE`               | GLboolean | `false` | Activates the computation of a temporary coverage value determined by the alpha value. |
+| `GL_SAMPLE_ALPHA_TO_COVERAGE`      | GLboolean | `false` | Activates ANDing the fragment's coverage with the temporary coverage value |
+| `GL.SAMPLE_COVERAGE_VALUE`         | GLfloat   | 1.0     |  |
+| `GL.SAMPLE_COVERAGE_INVERT`        | GLboolean | `false` |  |
 
 
 ### Scissor Test
@@ -241,7 +332,7 @@ Setting scissor box value will enable scissor testing.
 
 | Parameter                          | Type          | Default  | Description             |
 | ---------------------------------- | ------------- | -------- | ----------------------- |
-| `GL.SCISSOR_TEST`                  | GLboolean     | false    |
+| `GL.SCISSOR_TEST`                  | GLboolean     | `false`  |
 | `GL.SCISSOR_BOX`                   | Int32Array(4) | [null, null, null, null]), // TBD |
 
 
@@ -278,17 +369,25 @@ Setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
 | `GL.STENCIL_BACK_PASS_DEPTH_FAIL` | GLenum    | `GL.KEEP`    | depth test fail action, back |
 | `GL.STENCIL_BACK_PASS_DEPTH_PASS` | GLenum    | `GL.KEEP`    | depth test pass action, back |
 
-Test functions
-| `GL.NEVER`    | Never pass |
-| `GL.LESS`     | Pass if (ref & mask) <  (stencil & mask) |
-| `GL.EQUAL`    | Pass if (ref & mask) =  (stencil & mask) |
-| `GL.LEQUAL`   | Pass if (ref & mask) <= (stencil & mask) |
-| `GL.GREATER`  | Pass if (ref & mask) >  (stencil & mask) |
-| `GL.NOTEQUAL` | Pass if (ref & mask) != (stencil & mask) |
-| `GL.GEQUAL`   | Pass if (ref & mask) >= (stencil & mask) |
-| `GL.ALWAYS`   | Always pass |
+#### Stencil Test Functions
 
-Stencil ops
+Values for `GL.STENCIL_TEST`
+
+| Value          | Description            |
+| -------------- | ---------------------- |
+| `GL.NEVER`     | Never pass |
+| `GL.LESS`      | Pass if (ref & mask) <  (stencil & mask) |
+| `GL.EQUAL`     | Pass if (ref & mask) =  (stencil & mask) |
+| `GL.LEQUAL`    | Pass if (ref & mask) <= (stencil & mask) |
+| `GL.GREATER`   | Pass if (ref & mask) >  (stencil & mask) |
+| `GL.NOTEQUAL`  | Pass if (ref & mask) != (stencil & mask) |
+| `GL.GEQUAL`    | Pass if (ref & mask) >= (stencil & mask) |
+| `GL.ALWAYS`    | Always pass |
+
+#### Stencil Operations
+
+| Value          | Description            |
+| -------------- | ---------------------- |
 | `GL.KEEP`      | Keeps the current value |
 | `GL.ZERO`      | Sets the stencil buffer value to 0 |
 | `GL.REPLACE`   | Sets the stencil buffer value to the reference value as specified by `stencilFunc` |
@@ -299,9 +398,9 @@ Stencil ops
 | `GL.INVERT`    | Inverts the current stencil buffer value bitwise |
 
 Action when the stencil test fails, front and back.
-  stencil test fail action,
-  depth test fail action,
-  pass action
+* stencil test fail action,
+* depth test fail action,
+* pass action
 
 
 ## Viewport

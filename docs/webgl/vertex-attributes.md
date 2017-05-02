@@ -1,17 +1,9 @@
----
-layout: docs
-title: Vertex Attributes
-categories: [Documentation]
----
+# Vertex Attributes
 
 WebGL provides an API to manipulate the global "vertex attributes array",
 which is where vertex data is staged for vertex shader execution. This API is
 somewhat hard to learn for OpenGL newcomers so luma.gl provides this thin
 wrapper module to simplify its use.
-
-
-Module: VertexAttributes {#VertexAttributes}
-============================================
 
 This module offers set of functions for manipulating WebGL's global
 "vertex attributes array". Essentially, this module collects all
@@ -96,15 +88,13 @@ Instancing requires a WebGL extension or WebGL2.
 
 ## Functions
 
-|========|========|========|
 | **Function** | **WebGL Counterpart** | **Description** |
-|========|========|========|
+| --- | --- | --- |
 | [`setBuffer`](#setBuffer) | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
 | [`setGeneric`](#setGeneric) | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
 | `enable` | `enableVertexAttribArray` | attribute visible to shader |
 | `disable` | `disableVertexAttribArray` | not visible to shader |
 | `setDivisor` <sub>**WebGL2/ext**</sub> | `vertexAttribDivisor` | (un)marks as instanced |
-|========|========|========|
 | `getMaxAttributes` | `MAX_VERTEX_ATTRIBS` | Length of array (>=8) |
 | `hasDivisor` | `ANGLE_instanced_arrays` | Instancing supported? |
 | `isEnabled` | `..._ARRAY_ENABLED` | Is attribute enabled? |
@@ -156,8 +146,7 @@ so no further documentation is provided.
   The improvements cover both generic and buffered attributes.
 
 
-Function: VertexAttributes.setBuffer {#setBuffer}
---------------------------------------------------
+## VertexAttributes.setBuffer
 
 Assigns a buffer a vertex attribute. Vertex Shader will be invoked once
 (not considering indexing and instancing) with each value in the buffer's
@@ -188,8 +177,7 @@ array.
   when running under WebGL2, by setting the `integer` flag to `true`.
 
 
-Function: VertexAttributes.setGeneric {#setGeneric}
---------------------------------------------------
+## VertexAttributes.setGeneric
 
 Sets a constant (i.e. generic) value for a vertex attribute. All Vertex
 Shader invocations will get the same value.
@@ -209,8 +197,7 @@ Shader invocations will get the same value.
 {% endhighlight %}
 
 
-Function: VertexAttributes.setDivisor {#setDivisor}
---------------------------------------------------
+## VertexAttributes.setDivisor
 
 Sets the instance divisor. 0 disables instancing, >=1 enables it.
 

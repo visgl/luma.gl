@@ -1,8 +1,4 @@
----
-layout: docs
-title: Shaders
-categories: [Documentation]
----
+# Shader
 
 ## Shader Module System
 

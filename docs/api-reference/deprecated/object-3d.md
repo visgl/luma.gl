@@ -1,11 +1,4 @@
----
-layout: docs
-title: Models & Primitives
-categories: [Documentation]
----
-
-Class: Model {Model}
-----------------------------------
+# Object3d
 
 The Model class enables you to create 3D models which are compatible with the
 [Scene](scene.html) class. All primitives (Sphere, etc) inherit from Model.
