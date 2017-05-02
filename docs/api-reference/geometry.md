@@ -1,18 +1,82 @@
----
-layout: docs
-title: Geometry & Geometry Primitives
-categories: [Documentation]
----
-
-Class: Geometry {Geometry}
-----------------------------------
+# Geometry
 
 The Geometry class enables you to create a collection of
 vertex array attribute buffers representing a geometric primitive.
 
+## Methods
 
-Geometry Method: constructor {Geometry:constructor}
--------------------------------------------------------
+### Examples:
+
+Create a pyramid model (used in lesson 4 of learning WebGL examples).
+
+```js
+var pyramid = new Model({
+    vertices: [ 0,  1,  0,
+               -1, -1,  1,
+                1, -1,  1,
+                0,  1,  0,
+                1, -1,  1,
+                1, -1, -1,
+                0,  1,  0,
+                1, -1, -1,
+               -1, -1, -1,
+                0,  1,  0,
+               -1, -1, -1,
+               -1, -1,  1],
+
+    colors: [1, 0, 0, 1,
+             0, 1, 0, 1,
+             0, 0, 1, 1,
+             1, 0, 0, 1,
+             0, 0, 1, 1,
+             0, 1, 0, 1,
+             1, 0, 0, 1,
+             0, 1, 0, 1,
+             0, 0, 1, 1,
+             1, 0, 0, 1,
+             0, 0, 1, 1,
+             0, 1, 0, 1]
+  });
+```
+
+Create a pyramid model and add some extra buffer information and uniform
+color to be set before rendering the model.
+
+```js
+var fromVertices =  [ 0,  1,  0,
+                     -1, -1,  1,
+                      1, -1,  1,
+                      0,  1,  0,
+                      1, -1,  1,
+                      1, -1, -1,
+                      0,  1,  0,
+                      1, -1, -1,
+                     -1, -1, -1,
+                      0,  1,  0,
+                     -1, -1, -1,
+                     -1, -1,  1];
+
+var toVertices = fromVertices.map(function(value) { return value * 2; });
+
+var pyramid = new Model({
+    vertices: fromVertices,
+
+    uniforms: {
+        colorUfm: [0.3, 0.2, 0.7, 1]
+    },
+
+    attributes: {
+        endPosition: {
+          //default is type: gl.FLOAT
+          attribute: 'endPosition',
+          size: 3,
+          value: new Float32Array(toVertices)
+        }
+    }
+  });
+```
+
+### Geometry constructor
 
 The main constructor function for the Geometry class. Use this to create a new Geometry.
 
@@ -57,115 +121,14 @@ array of floats as values (to handle multiple textures).
    served as an attribute. The getter for this property will return the
    cloned typed array.
 
-### Examples:
-
-Create a pyramid model (used in lesson 4 of learning WebGL examples).
-
-{% highlight js %}
-var pyramid = new Model({
-    vertices: [ 0,  1,  0,
-               -1, -1,  1,
-                1, -1,  1,
-                0,  1,  0,
-                1, -1,  1,
-                1, -1, -1,
-                0,  1,  0,
-                1, -1, -1,
-               -1, -1, -1,
-                0,  1,  0,
-               -1, -1, -1,
-               -1, -1,  1],
-
-    colors: [1, 0, 0, 1,
-             0, 1, 0, 1,
-             0, 0, 1, 1,
-             1, 0, 0, 1,
-             0, 0, 1, 1,
-             0, 1, 0, 1,
-             1, 0, 0, 1,
-             0, 1, 0, 1,
-             0, 0, 1, 1,
-             1, 0, 0, 1,
-             0, 0, 1, 1,
-             0, 1, 0, 1]
-  });
-{% endhighlight %}
 
 
-Create a pyramid model and add some extra buffer information and uniform
-color to be set before rendering the model.
-
-{% highlight js %}
-
-var fromVertices =  [ 0,  1,  0,
-                     -1, -1,  1,
-                      1, -1,  1,
-                      0,  1,  0,
-                      1, -1,  1,
-                      1, -1, -1,
-                      0,  1,  0,
-                      1, -1, -1,
-                     -1, -1, -1,
-                      0,  1,  0,
-                     -1, -1, -1,
-                     -1, -1,  1];
-
-var toVertices = fromVertices.map(function(value) { return value * 2; });
-
-var pyramid = new Model({
-    vertices: fromVertices,
-
-    uniforms: {
-        colorUfm: [0.3, 0.2, 0.7, 1]
-    },
-
-    attributes: {
-        endPosition: {
-          //default is type: gl.FLOAT
-          attribute: 'endPosition',
-          size: 3,
-          value: new Float32Array(toVertices)
-        }
-    }
-  });
-{% endhighlight %}
-
-
-Model Method: update {Model:update}
----------------------------------------------
-
-Update the model matrix. Useful to update changes to the `position`, `rotation` or `scale` properties.
-
-### Syntax:
-
-	model.update();
-
-### Examples:
-
-Change the position of the pyramid model and update its matrix.
-
-{% highlight js %}
-  pyramid.position = new Vec3(10, 10, 20);
-
-  pyramid.update();
-{% endhighlight %}
-
-
-Class: Cube {Cube}
-------------------
+## Cube
 
 Creates a Cube model. Inherits methods from [Model](Model).
 
-### Extends
 
-Model
-
-
-Cube Method: constructor {Cube:constructor}
--------------------------------------------
-
-The main constructor function for the Cube class. Use this to create a new Cube. Accepts the same properties and
-options as Model constructor but has preset for `vertices`, `normals` and `indices`.
+Use this to create a new Cube. Accepts the same properties and options as Model constructor but has preset for `vertices`, `normals` and `indices`.
 
 ### Syntax:
 
@@ -186,18 +149,9 @@ var whiteCube = new Cube({
 {% endhighlight %}
 
 
-Class: Sphere {Sphere}
-------------------------------------
+## Sphere
 
 Creates a Sphere model. Inherits methods from [Model](Model).
-
-### Extends
-
-Model
-
-
-Sphere Method: constructor {Sphere:constructor}
----------------------------------------------------------
 
 The main constructor function for the Sphere class. Use this to create a new Sphere.
 
@@ -227,18 +181,9 @@ var whiteSphere = new Sphere({
 {% endhighlight %}
 
 
-Class: IcoSphere {IcoSphere}
------------------------------------------
+## IcoSphere
 
 Creates a Sphere model by subdividing an Icosahedron. Inherits methods from [Model](Model).
-
-### Extends
-
-Model
-
-
-IcoSphere Method: constructor {IcoSphere:constructor}
----------------------------------------------------------------
 
 The main constructor function for the IcoSphere class. Use this to create a new IcoSphere.
 
@@ -266,18 +211,9 @@ var whiteSphere = new IcoSphere({
 {% endhighlight %}
 
 
-Class: Plane {Plane}
-----------------------------------
+## Plane
 
 Creates a plane. Inherits methods from [Model](Model).
-
-### Extends
-
-Model
-
-
-Plane Method: constructor {Plane:constructor}
----------------------------------------------------------
 
 The main constructor function for the Plane class. Use this to create a new Plane.
 
@@ -318,18 +254,9 @@ var whitePlane = new Plane({
 
 
 
-Class: Cylinder {Cylinder}
-----------------------------------------
+## Cylinder
 
 Creates a Cylinder model. Inherits methods from [Model](Model).
-
-### Extends
-
-Model
-
-
-Cylinder Method: constructor {Cylinder:constructor}
--------------------------------------------------------------
 
 The main constructor function for the Cylinder class. Use this to create a new Cylinder.
 
@@ -363,18 +290,9 @@ var whiteCylinder = new Cylinder({
 {% endhighlight %}
 
 
-Class: Cone {Cone}
----------------------------------
+## Cone
 
 Creates a Cone model. Inherits methods from [Model](Model).
-
-### Extends
-
-Model
-
-
-Cone Method: constructor {Cone:constructor}
------------------------------------------------------
 
 The main constructor function for the Cone class. Use this to create a new Cone.
 

@@ -1,37 +1,50 @@
----
-layout: docs
-title: Texture
-categories: [Documentation]
----
+# Texture Class
 
-Class: Texture {#Texture}
-===========================
+`Texture` is a base class for
+* [`Texture2D`](./texture-2d.md),
+* [TextureCube],
+* [`Texture2DArray`](./texture-2d-array.md) and
+* [`Texture3D`](./texture-3d.md).
 
-**TODO** - texture support has been broken out into separate Texture classes,
-but documentation is not yet up to date.
-For now, please refer directly to src/webgl/texture.js
+Also note that in WebGL2 it is possible to specify sampling parameters independently from the texture. See [`Sampler`](./sampler.md).
 
-Program Method: setTexture {#Program:setTexture}
--------------------------------------------------
+## Usage
 
-This method is used to either bind/unbind an existing texture or also
-to create a new texture form an `Image` element or
-to create an empty texture with specified dimensions.
-Also, for all properties set to a texture, these properties are
-remembered so they're optional for later calls.
+* For additional usage examples, `Texture` inherits from [`Resource`](./resource.md).
 
-### Syntax:
+Configuring a Texture
+```js
+const sampler = new Texture2D(gl);
+sampler.setParameters({
+  [GL.TEXTURE_WRAP_S]: GL.CLAMP
+});
+```
 
-	program.setTexture(name[, options]);
+Using Textures
+```js
+// Create two samplers to sample the same texture in different ways
+const texture = new Texture2D(gl, ...);
 
-### Arguments:
+// For ease of use, the `Model` class can bind textures for a draw call
+model.draw({
+  uniforms({texture1: texture, texture2: texture})
+});
 
-1. name - (*string*) The name (unique id) of the texture.
-2. options - (*mixed*) Can be a boolean or enum used to bind/unbind the
-   texture (or set the enum as active texture) or an object with options/data
-   described below:
+// Alternatively, bind the textures using the `Texture` API directly
+texture.bind(0);
+texture.bind(1);
+```
 
-### Options:
+## Remarks
+
+* Textures are special because when you first bind them to a target, they get special information. When you first bind a texture as a GL_TEXTURE_2D, you are actually setting special state in the texture. You are saying that this texture is a 2D texture. And it will always be a 2D texture; this state cannot be changed ever. If you have a texture that was first bound as a GL_TEXTURE_2D, you must always bind it as a GL_TEXTURE_2D; attempting to bind it as GL_TEXTURE_1D will give rise to an error (while run-time).
+
+
+## Methods
+
+### Constructor
+
+Note that in WebGL2 it is possible to specify sampling parameters independently from the texture. See [`Sampler`](./sampler.md).
 
 * textureType - (*enum*, optional) The texture type used to call `gl.bindTexture` with. Default's `gl.TEXTURE_2D`.
 * pixelStore - (*array*, optional) An array of objects with name, value options to be set with `gl.pixelStorei` calls. 
@@ -45,83 +58,114 @@ Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTU
   * height - (*number*, optional) The height of the texture. Default's 0.
   * border - (*number*, optional) The border of the texture. Default's 0.
 
-### Examples:
 
-Setting a texture for a box. Adapted from
-[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).
+### generateMipmap
 
-{% highlight js %}
-var img = new Image();
+Call to regenerate mipmaps after modifying texture(s)
 
-img.onload = function() {
-  program.setTexture('nearest', {
-    data: {
-      value: img
-    }
+WebGL References [gl.generateMipmap]()
+
+### setImageData
+
+Allocates storage
+
+```js
+  setImageData({
+    target = this.target,
+    pixels = null,
+    data = null,
+    width,
+    height,
+    level = 0,
+    format = GL.RGBA,
+    type,
+    dataFormat,
+    offset = 0,
+    border = 0,
+    compressed = false
   });
-};
+```
 
-img.src = 'path/to/image.png';
-{% endhighlight %}
+* `pixels` (*) -
+ null - create empty texture of specified format
+ Typed array - init from image data in typed array
+ Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+ HTMLImageElement|Image - Inits with content of image. Auto width/height
+ HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+ HTMLVideoElement - Creates video texture. Auto width/height
+* `width` (GLint) -
+* `height` (GLint) -
+* `mipMapLevel` (GLint) -
+* `format` (GLenum) - format of image data.
+* `type` (GLenum)
+ - format of array (autodetect from type) or
+ - (WEBGL2) format of buffer
+* `offset` (Number) - (WEBGL2) offset from start of buffer
+* `border` (GLint) - must be 0.
 
+### subImage
 
-Program Method: setTextures {#Program:setTextures}
-----------------------------------------------------
+Redefines an area of an existing texture
+Note: does not allocate storage
 
-For each `key, value` of the object passed in it executes `setTexture(key, value)`.
-
-### Syntax:
-
-	program.setTextures(object);
-
-### Arguments:
-
-1. object - (*object*) An object with key value pairs matching a texture name and its value respectively.
-
-### Examples:
-
-Set multiple type of textures from the same image. Taken from
-[lesson 6]http://uber.github.io/luma.gl/examples/lessons/6/).
-
-{% highlight js %}
-//load textures from image
-var img = new Image();
-img.onload = function() {
-  program.setTextures({
-    'nearest': {
-      data: {
-        value: img
-      }
-    },
-
-    'linear': {
-      data: {
-        value: img
-      },
-      parameters: [{
-        name: gl.TEXTURE_MAG_FILTER,
-        value: gl.LINEAR
-      }, {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR
-      }]
-    },
-
-    'mipmap': {
-      data: {
-        value: img
-      },
-      parameters: [{
-        name: gl.TEXTURE_MAG_FILTER,
-        value: gl.LINEAR
-      }, {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR_MIPMAP_NEAREST,
-        generateMipmap: true
-      }]
-    }
+```
+  subImage({
+    target = this.target,
+    pixels = null,
+    data = null,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0,
+    format = GL.RGBA,
+    type,
+    dataFormat,
+    compressed = false,
+    offset = 0,
+    border = 0
   });
-};
+```
 
-img.src = 'path/to/image.png';
-{% endhighlight %}
+WebGL References [gl.compressedTexSubImage2D](), [gl.texSubImage2D](), [gl.bindTexture](), [gl.bindBuffer]()
+
+
+### copyFramebuffer
+
+Defines a two-dimensional texture image or cube-map texture image with pixels from the current framebuffer (rather than from client memory). (gl.copyTexImage2D wrapper)
+
+Note that binding a texture into a Framebuffer's color buffer and rendering can be faster than `copyFramebuffer`.
+
+```js
+  copyFramebuffer
+    target = this.target,
+    framebuffer,
+    offset = 0,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0,
+    internalFormat = GL.RGBA,
+    border = 0
+  });
+```
+
+WebGL References [copyTexImage2D](), [gl.bindFramebuffer]()
+
+
+### getActiveUnit
+
+[gl.getParameter]()
+
+
+### bind
+
+ * textureUnit
+
+WebGL References [gl.activeTexture](), [gl.bindTexture]()
+
+
+### unbind()
+
+WebGL References [gl.activeTexture](), [gl.bindTexture]()

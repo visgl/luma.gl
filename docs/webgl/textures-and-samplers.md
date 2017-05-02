@@ -1,9 +1,3 @@
----
-layout: docs
-title: Texture
-categories: [Documentation]
----
-
 # Textures and Samplers
 
 Textures allows elements of an image array to be read by shaders.
@@ -11,11 +5,11 @@ Samplers specify how texels should be interpolated.
 
 There are several types of types of texture objects
 
-* [`Texture2D`](webgl/texture-2d.md) - Contains
+* [`Texture2D`](webgl/texture-2d.md) - Contains a "normal" image texture
 * [`TextureCube`](webgl/texture-cube.md) - Holds 6 textures representing sides of a cube.
-* [`Texture2DArray`](webgl/texture-2d-array.md) **WebGL2** - Holds an array of textures, similar to a texture atlas.
-* [`Texture3D`](webgl/texture-3d.md) **WebGL2** - Holds an array of textures representing depth.
-* [`Sampler`](webgl/sampler.md) **WebGL2** - References a texture with a separate set of texture parameters
+* [`Texture2DArray`](webgl/texture-2d-array.md) **WebGL2** - Holds an array of textures that can be referenced by index.
+* [`Texture3D`](webgl/texture-3d.md) **WebGL2** - Holds an array of textures representing depth. Similar to a texture array in one sense but does mipmapping between textures.
+* [`Sampler`](webgl/sampler.md) **WebGL2** - A standalone, separate set of texture parameters.
 
 `getPixel` is used to read data from textures.
 
@@ -171,10 +165,10 @@ Describes the layout of each color component in memory.
 | `GL.UNSIGNED_INT_24_8` (WebGL2, WEBGL_depth_texture) | |
 | `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` (WebGL2) | (pixels must be null) |
 
-### Legal combinations
+### Legal Format Combinations
 
 This a simplified table illustrating what combinations of internal formats
-work with what formats and types. Also, luma.gl autodeduces `format` and `type`
+work with what formats and types. Also, luma.gl auto deduces `format` and `type`
 from `internalFormat` by taking the first value from the format and type
 entries in this table.
 

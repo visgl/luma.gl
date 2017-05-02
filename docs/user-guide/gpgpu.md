@@ -1,7 +1,6 @@
-# WebGL GPGPU Overview
+# GPGPU Programming
 
-A number of luma.gl classes and methods are valuable for GPGPU computing,
-this is a quick overview.
+A number of luma.gl classes and methods are valuable for GPGPU computing, this is a quick overview.
 
 
 ## Memory Management

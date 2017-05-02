@@ -1,9 +1,6 @@
 # Query
 
-A `Query` object
-
-* Provides a way to measure the duration of a set of GL commands,
-  without stalling the rendering pipeline.
+* A `Query` object provides a way to measure the duration of a set of GL commands, without stalling the rendering pipeline.
 
 Exposes a `promise` member that tracks the state of the query
 when `poll` is used to update queries.

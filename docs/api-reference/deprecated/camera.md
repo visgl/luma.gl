@@ -1,16 +1,11 @@
----
-layout: docs
-title: Camera
-categories: [Documentation]
----
+# Camera (Deprecated)
 
 LumaGL provides two camera classes - `PerspectiveCamera` and `OrthoCamera`.
 They are used to prepare perspective and orthographic projection matrices
 when rendering your scene.
 
 
-Class: PerspectiveCamera {#PerspectiveCamera}
-===========================
+## PerspectiveCamera
 
 Used to calculate view and perspective projection matrices when rendering
 your scene.
@@ -25,9 +20,7 @@ your scene.
 * target - (*object*) Vec3 representing the point the camera is looking at.
 * up - (*object*) Vec3 representing the up direction.
 
-PerspectiveCamera Method: constructor {#PerspectiveCamera:constructor}
-----------------------------------------------------
-
+### PerspectiveCamera constructor
 ### Syntax:
 
 	var camera = new PerspectiveCamera([options]);
@@ -58,8 +51,7 @@ Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
 {% endhighlight %}
 
 
-PerspectiveCamera Method: update {#PerspectiveCamera:update}
-------------------------------------
+PerspectiveCamera update
 
 Updates the PerspectiveCamera *view* matrix with the information provided
 on *position* and *target*.
@@ -101,8 +93,7 @@ rendering your scene.
 * target - (*object*) Vec3 representing the point the camera is looking at.
 * up - (*object*) Vec3 representing the up direction.
 
-OrthoCamera Method: constructor {#OrthoCamera:constructor}
-----------------------------------------------------
+OrthoCamera constructor--
 
 ### Syntax:
 
@@ -134,8 +125,7 @@ Creates a camera with position (0, 0, 10) pointing to a target in (0, 0, 0).
 {% endhighlight %}
 
 
-OrthoCamera Method: update {#OrthoCamera:update}
-------------------------------------
+OrthoCamera update
 
 Updates the OrthoCamera *view* matrix with the information provided on
 *position* and *target*.

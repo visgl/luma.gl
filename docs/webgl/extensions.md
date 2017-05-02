@@ -1,41 +1,24 @@
----
-layout: docs
-title: WebGL Extensions
-categories: [Documentation]
----
+# WebGL Extensions
 
-This section describes luma's builtin support for WebGL extensions.
+This section provides an overview of WebGL extensions and describes luma's builtin support for them.
 
-While the Khronos group's official list of
-[WebGL Extensions](https://www.khronos.org/registry/webgl/extensions/)
-is intimidatingly long, the extensions can be categorized into a few
-basic categories:
+While the Khronos group's official list of [WebGL Extensions](https://www.khronos.org/registry/webgl/extensions/) is intimidatingly long, the extensions can be categorized into a few basic categories:
 
-* **General Extensions** - These extensions expose some optional general
-    capability that was not included in the initial standards perhaps due to
-    performance or security concerns.
-* **Debug Extensions** - These extensions expose additional information and
-    capabilities that help debug and profile a WebGL program.
-* **WebGL1 Feature Extensions** - These extensions expose various OpenGL ES 3.0
-    features that are often available on the target devices that run the
-    OpenGL ES 2.0 based WebGL1 standard today.
-* **WebGL2 Feature Extensions** - These extensions expose various
-    OpenGL ES 3.1 and 3.2 features that are occasionally available on target
-    devices that run the OpenGL ES 3.0 based WebGL2 standard today.
-* **Compressed Texture Extensions** - Used to query if the GPU supports
-    specific proprietary compressed texture formats.
+* **General Extensions** - These extensions expose some optional general capability that was not included in the initial standards perhaps due to performance or security concerns.
+* **Debug Extensions** - These extensions expose additional information and capabilities that help debug and profile a WebGL program.
+* **WebGL1 Feature Extensions** - These extensions expose various OpenGL ES 3.0 features that are often available on the target devices that run the OpenGL ES 2.0 based WebGL1 standard today.
+* **WebGL2 Feature Extensions** - These extensions expose various OpenGL ES 3.1 and 3.2 features that are occasionally available on target devices that run the OpenGL ES 3.0 based WebGL2 standard today.
+* **Compressed Texture Extensions** - Used to query if the GPU supports specific proprietary compressed texture formats.
 
-Also note that because luma.gl gives the application direct access to the WebGL
-context, the application can always work directly with any extensions it needs.
-Using the support that luma.gl provides for a specific extension is optional.
+Also note that because luma.gl gives the application direct access to the WebGL context, the application can always work directly with any extensions it needs.
 
 
 ## General Extensions
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
-| [WEBGL_shared_resources](https://www.khronos.org/registry/webgl/WEBGL_shared_resources/) | Share resource between WebGL contexts | TBD |
-| [WEBGL_security_sensitive_resources](https://www.khronos.org/registry/webgl/WEBGL_security_sensitive_resources/) | Cross-origin resource loading | TBD |
+| [WEBGL_shared_resources](https://www.khronos.org/registry/webgl/WEBGL_shared_resources/) | Share resource between WebGL contexts | N/A |
+| [WEBGL_security_sensitive_resources](https://www.khronos.org/registry/webgl/WEBGL_security_sensitive_resources/) | Cross-origin resource loading | N/A |
 
 
 ## Debug Extensions
@@ -45,11 +28,11 @@ debug experience.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
-| [WEBGL_lose_context](https://www.khronos.org/registry/webgl/extensions/WEBGL_lose_context/) | Simulate context loss | TBD |
+| [WEBGL_lose_context](https://www.khronos.org/registry/webgl/extensions/WEBGL_lose_context/) | Simulate context loss | N/A |
 | [WEBGL_debug_renderer_info](https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/) | Returns strings identifying GPU | glGetDebugInfo, logged to console on startup |
-| WEBGL_debug_shaders | TBD |
-| EXT_disjoint_timer_query | Enables async queries of GPU timings | Luma offers TimerQueryObjects under WebGL1 |
-| EXT_disjoint_timer_query_webgl2 | Will soon be implemented, probably merging the WebGL1 TimerQueryObject with WebGL2 Queries |
+| WEBGL_debug_shaders | Gives access to translated shader source | `Shader` class method |
+| EXT_disjoint_timer_query | Enables async queries of GPU timings | Used to implement `Query` under WebGL1 |
+| EXT_disjoint_timer_query_webgl2 | Enables async queries of GPU timings | Built into WebGL2 `Query` object |
 
 
 ## WebGL1 Extensions
@@ -63,7 +46,6 @@ functionality they enable is provided by default in WebGL2
 | --- | --- | --- |
 | OES_vertex_array_object | WebGL2 VertexArrayObjects | `VertexArrayObject` uses this extension under WebGL1 |
 | ANGLE_instanced_arrays | Offers WebGL2 instanced draw functions and instance divisor | luma's draw function automatically uses this extension when required |
-| --- | --- | --- |
 | OES_texture_float | Enables Float32Array textures | |
 | OES_texture_half_float | Enables Uint16Array / HALF_FLOAT_OES textures | |
 | OES_standard_derivatives | Enables derivative functions in GLSL | |
@@ -86,6 +68,8 @@ functionality they enable is provided by default in WebGL2
 These extensions can bring OpenGL ES 3.1 or 3.2 capabilities to WebGL2 contexts,
 if the device supports them.
 
+| Extension | Enables | luma.gl support |
+| --- | --- | --- |
 | EXT_color_buffer_float | framebuffer render to float color buffer | |
 | WEBGL_color_buffer_float | frame buffer render of various floating point format | |
 
@@ -97,12 +81,12 @@ luma.gl as they become available in browsers.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
-| EXT_clip_cull_distance (WebGL2) | hardware clip/cull planes (ES3.2) |  |
-| EXT_float_blend | 32 bit color blending | |
-| EXT_texture_storage | texture storage effiency | |
-| WEBGL_debug | Debug events | |
-| WEBGL_dynamic_texture | frequently changin textures | |
-| WEBGL_subarray_uploads | Efficient buffer update | |
+| EXT_clip_cull_distance (WebGL2) | hardware clip/cull planes (ES3.2) | N/A |
+| EXT_float_blend | 32 bit color blending | N/A |
+| EXT_texture_storage | texture storage effiency | N/A |
+| WEBGL_debug | Debug events | N/A |
+| WEBGL_dynamic_texture | frequently changin textures | N/A |
+| WEBGL_subarray_uploads | Efficient buffer update | N/A |
 
 
 ## Compressed Texture Format Extensions
@@ -131,10 +115,10 @@ to the application.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
-| WEBGL_compressed_texture_s3tc | Certain S3TC compressed texture formats | None |
-| WEBGL_compressed_texture_atc | Certain AMD compressed texture formats | None |
-| WEBGL_compressed_texture_pvrtc | Certain IMG compressed texture formats | None |
-| WEBGL_compressed_texture_etc1 | Certain compressed texture formats | None |
-| WEBGL_compressed_texture_etc | Certaincompressed texture formats | None |
-| WEBGL_compressed_texture_astc | Certain compressed texture formats | None |
-| WEBGL_compressed_texture_s3tc_srgb | Certain compressed texture formats | None |
+| WEBGL_compressed_texture_s3tc | Certain S3TC compressed texture formats | N/A |
+| WEBGL_compressed_texture_atc | Certain AMD compressed texture formats | N/A |
+| WEBGL_compressed_texture_pvrtc | Certain IMG compressed texture formats | N/A |
+| WEBGL_compressed_texture_etc1 | Certain compressed texture formats | N/A |
+| WEBGL_compressed_texture_etc | Certaincompressed texture formats | N/A |
+| WEBGL_compressed_texture_astc | Certain compressed texture formats | N/A |
+| WEBGL_compressed_texture_s3tc_srgb | Certain compressed texture formats | N/A |

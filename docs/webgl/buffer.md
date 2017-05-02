@@ -1,14 +1,10 @@
----
-layout: docs
-title: Buffer
-categories: [Documentation]
----
+# Buffer
 
 
 ### Buffer Methods
 
 | **Method** | **Description** |
-|====|====|
+| --- | --- |
 | `constructor` | creates a Buffer|
 | `delete` | Destroys buffer |
 | `initializeData` | Creates and initializes the buffer object's data store. |

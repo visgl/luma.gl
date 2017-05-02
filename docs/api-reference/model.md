@@ -1,20 +1,11 @@
----
-layout: docs
-title: Model
-categories: [Documentation]
----
+# Model
 
 The `Model` class holds all the data necessary to draw an object in
 luma.gl: **shaders** (via a `Program` instance), **vertex attributes**
 (a `Geometry` instance), **uniforms** and **textures**.
 
-Class: Model {#Model}
-===========================
-
 For most applications, the `Model` class is probably the most central luma.gl
 class.
-
-### Model Overview:
 
 - `Model` is a subclass of Object3D, meaning that it can be used in scene graphs
   (by adding it to a [`Group`](group.html) or a [`Scene`](scene.html)),
@@ -31,11 +22,26 @@ class.
 - Setting textures and more.
 
 
-### Remarks
+## Usage
+
+Set matrix information for the projection matrix and element matrix of the
+camera and world.
+The context of this example can be seen
+[here]http://uber.github.io/luma.gl/examples/lessons/3/).
+
+{% highlight js %}
+program.setUniforms({
+  'uMVMatrix': view,
+  'uPMatrix': camera.projection
+});
+{% endhighlight %}
+
+
+## Remarks
 * All instance methods in `Model` are chainable
   (unless they return a documented value).
 
-### Methods
+## Methods
 
 | **Method** | **Description** |
 |====|====|
@@ -62,8 +68,8 @@ class.
 | `bindTextures` | binds textures |
 
 
-Model constructor {#Model:constructor}
-----------------------------------------------------------------------
+
+### Model constructor
 
 2. **opts.vs** (VertexShader|*string*) - A vertex shader object, or source as a string.
 3. **opts.fs** (FragmentShader|*string*) - A fragment shader object, ot source as a string.
@@ -84,8 +90,7 @@ Model constructor {#Model:constructor}
 * onAfterRender = null
 
 
-Model Method: setUniforms {#Model:setUniforms}
---------------------------------------------------
+### Model.setUniforms
 
 For each `key, value` of the object passed in it executes `setUniform(key, value)`.
 
@@ -111,75 +116,60 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
                      There's no need to convert arrays into a typed array,
                      that's done automatically.
 
-### Examples:
 
-Set matrix information for the projection matrix and element matrix of the
-camera and world.
-The context of this example can be seen
-[here]http://uber.github.io/luma.gl/examples/lessons/3/).
+### Model.setInstanceCount
 
-{% highlight js %}
-program.setUniforms({
-  'uMVMatrix': view,
-  'uPMatrix': camera.projection
-});
-{% endhighlight %}
-
-
-
-
-Model method setInstanceCount
---------------------------
 * instanceCount
 
-Model method getInstanceCount
---------------------------
 
-Model method setVertexCount
---------------------------
+### Model.getInstanceCount
+
+
+### Model.setVertexCount
+
 * vertexCount
 
-Model method getVertexCount
---------------------------
+### Model.getVertexCount
 
-Model method isPickable
---------------------------
 
-Model method setPickable
---------------------------
+### Model.isPickable
 
-Model method getProgram
---------------------------
 
-Model method getGeometry
---------------------------
+### Model.setPickable
 
-Model method getAttributes
---------------------------
 
-Model method setAttributes
---------------------------
+### Model.getProgram
+
+
+### Model.getGeometry
+
+
+### Model.getAttributes
+
+
+### Model.setAttributes
+
 * attributes = {}
 
-Model method getUniforms
---------------------------
+### Model.getUniforms
+
 Sets uniforms to be used. Note that uniforms are stored in a map so uniform
 values not present in the argument map won't be overwritten.
 
 
-Model method setUniforms
---------------------------
+### Model.setUniforms
+
 Sets uniforms to be used. Note that uniforms are stored in a map so uniform
 values not present in the argument map won't be overwritten.
 
 
-Model method setTextures
---------------------------
+### Model.setTextures
+
 Sets textures to be used.
 
 
-Model method render
---------------------------
+### Model.render
+
 Draws the model (i.e. binds all the attributes textures and uniforms and runs
 the shaders in attached program). Can be called directly but is usually called
 during by Scene.render traversing the models in the scene.
@@ -188,30 +178,23 @@ during by Scene.render traversing the models in the scene.
 * viewMatrix
 
 
-### Less commonly used methods
+### Model.onBeforeRender()
 
-Model method onBeforeRender()
---------------------------
 Attaches attributes
 
 
-Model method onAfterRender()
---------------------------
+### Model.onAfterRender()
+
 Detaches attributes
 
 
-Model method setProgramState
---------------------------
+### Model.setProgramState
+
 Attaches attributes for primitive (from geometry) and instances (from model),
 Sets uniforms and textures
 
 
-Model method unsetProgramState
---------------------------
+### Model.unsetProgramState
+
 Reverses setProgramState
 
-
-Model method bindTextures
---------------------------
-
-(force = false)

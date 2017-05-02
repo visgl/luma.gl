@@ -1,6 +1,6 @@
-#  Addons
+# Addons
 
-## makeProgramFromShaderURIs
+## makeProgramFromShaderURIs {#
 
 Creates a new program by asynchronously fetching the source contained
 in the files pointed by the given urls. This method is enables you to
@@ -87,7 +87,7 @@ Create a Program from the given script ids.
 
 HTML code:
 
-{% highlight html %}
+```html
 <script id="shader-fs" type="x-shader/x-fragment">
   #ifdef GL_ES
   precision highp float;
@@ -108,14 +108,13 @@ HTML code:
     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
   }
 </script>
-{% endhighlight %}
+```
 
 JavaScript code:
 
-{% highlight js %}
+```js
 var program = LumaGL.Program.fromShaderIds('shader-vs', 'shader-fs');
-{% endhighlight %}
-
+```
 
 ## makeProgramFromDefaultShaders
 
