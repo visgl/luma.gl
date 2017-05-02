@@ -1,6 +1,8 @@
-/* global document, LumaGL */
-const {GL, AnimationFrame, createGLContext} = LumaGL;
-const {Program, Buffer, Framebuffer, Mat4, Vec3, Texture2D} = LumaGL;
+/* global document */
+import {
+  GL, AnimationLoop, createGLContext,
+  Program, Buffer, Framebuffer, Mat4, Vec3, Texture2D
+} from 'luma.gl';
 
 const SCENE_VERTEX = `\
 precision highp float;
@@ -259,7 +261,9 @@ function dataTexture(gl, size, fill) {
     format: GL.RGBA,
     type: GL.FLOAT,
     data: temp,
-    flipY: false
+    pixelStore: {
+      [GL.WEBGL_FLIP_Y]: false
+    }
   });
 }
 
@@ -300,11 +304,13 @@ function begin() {
   });
   var tMarble = new Texture2D(gl, {
     data: marbleImg,
-    wrapS: GL.REPEAT,
-    wrapT: GL.REPEAT,
-    magFilter: GL.LINEAR,
-    minFilter: GL.LINEAR_MIPMAP_LINEAR,
-    generateMipmap: true
+    generateMipmap: true,
+    parameters: {
+      [GL.WRAP_S]: GL.REPEAT,
+      [GL.WRAP_T]: GL.REPEAT,
+      [GL.MAG_FILTER]: GL.LINEAR,
+      [GL.MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR
+    }
   });
 
   var quadpos = [

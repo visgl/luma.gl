@@ -1,15 +1,12 @@
-/* global window, document, LumaGL */
+/* global window, document */
 /* eslint-disable no-var, max-statements */
 
-var createGLContext = LumaGL.createGLContext;
-var Program = LumaGL.Program;
-var Buffer = LumaGL.Buffer;
-var Framebuffer = LumaGL.Framebuffer;
-var Mat4 = LumaGL.Mat4;
-var Vec3 = LumaGL.Vec3;
+import {
+  createGLContext, Program, Buffer, Framebuffer, Mat4, Vec3,
+  Fx, addons
+} from 'luma.gl';
 
-var Fx = LumaGL.Fx;
-var getHTMLTemplate = LumaGL.addons.getHTMLTemplate;
+const {getHTMLTemplate} = addons;
 
 /* global Noise */
 var noise = new Noise();

@@ -1,8 +1,10 @@
-/* global document, LumaGL */
+/* global document */
 /* eslint-disable no-var, max-statements */
-const {createGLContext, AnimationFrame} = LumaGL;
-const {GL, Scene, Model, Program, Geometry} = LumaGL;
-const {Matrix4, radians} = LumaGL;
+import {
+  GL, createGLContext, AnimationLoop,
+  Scene, Model, Program, Geometry,
+  Matrix4, radians
+} from 'luma.gl';
 
 class HeightmapGeometry extends Geometry {
   constructor(opts) {
@@ -79,7 +81,7 @@ var scene;
 var pick = {x: 0, y: 0};
 var heightmap;
 
-new AnimationFrame({gl: createGLContext()})
+new AnimationLoop({gl: createGLContext()})
 .init(({gl}) => {
   gl.enable(GL.DEPTH_TEST);
   gl.depthFunc(GL.LEQUAL);

@@ -1,4 +1,4 @@
-import {AnimationFrame, createGLContext, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, createGLContext, ClipSpaceQuad} from 'luma.gl';
 
 // CONTEXT 0 - CONCENTRICS
 
@@ -18,7 +18,7 @@ void main(void) {
 }
 `;
 
-const animationFrame2 = new AnimationFrame()
+const animationFrame2 = new AnimationLoop()
 .context(() => createGLContext({canvas: 'canvas-0'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
@@ -59,7 +59,7 @@ void main(void) {
 }
 `;
 
-const animationFrame1 = new AnimationFrame()
+const animationFrame1 = new AnimationLoop()
 .context(() => createGLContext({canvas: 'canvas-1'}))
 .init(({gl}) => ({
   clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_1_FRAGMENT_SHADER})

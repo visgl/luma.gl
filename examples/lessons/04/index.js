@@ -1,5 +1,5 @@
 /* global LumaGL */
-const {GL, AnimationFrame, createGLContext} = LumaGL;
+const {GL, AnimationLoop, createGLContext} = LumaGL;
 const {Model, Geometry, Program, Matrix4} = LumaGL;
 
 const VERTEX_SHADER = `\
@@ -29,7 +29,7 @@ void main(void) {
 }
 `;
 
-new AnimationFrame()
+new AnimationLoop()
 .context(() => createGLContext({canvas: 'lesson04-canvas'}))
 .init(({gl}) => {
   gl.clearColor(0, 0, 0, 1);

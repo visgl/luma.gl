@@ -1,3 +1,8 @@
+/* global LumaGL */
+/* eslint-disable no-var, max-statements, indent, no-multi-spaces */
+const {GL, AnimationLoop, createGLContext, loadTextures} = LumaGL;
+const {Cube, Matrix4} = LumaGL;
+
 /* global window, document, Image, LumaGL */
 /* eslint-disable max-statements, no-var, no-multi-spaces */
 var createGLContext = LumaGL.createGLContext;
@@ -14,100 +19,37 @@ var Texture2D = LumaGL.Texture2D;
 var addEvents = LumaGL.addEvents;
 var loadImages = LumaGL.loadImages;
 
+const FRAGMENT_SHADER = `\
+attribute vec3 positions;
+attribute vec2 texCoords;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+varying vec2 vTextureCoord;
+
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vTextureCoord = texCoords;
+}
+`;
+
+const FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec2 vTextureCoord;
+
+uniform sampler2D uSampler;
+
+void main(void) {
+  gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+}
+`;
+
 window.webGLStart = function() {
-
-  var cubeGeometry = new Geometry({
-    positions: new Float32Array([
-      -1, -1,  1,
-      1, -1,  1,
-      1,  1,  1,
-      -1,  1,  1,
-
-      -1, -1, -1,
-      -1,  1, -1,
-      1,  1, -1,
-      1, -1, -1,
-
-      -1,  1, -1,
-      -1,  1,  1,
-      1,  1,  1,
-      1,  1, -1,
-
-      -1, -1, -1,
-      1, -1, -1,
-      1, -1,  1,
-      -1, -1,  1,
-
-      1, -1, -1,
-      1,  1, -1,
-      1,  1,  1,
-      1, -1,  1,
-
-      -1, -1, -1,
-      -1, -1,  1,
-      -1,  1,  1,
-      -1,  1, -1
-    ]),
-
-    texCoords: new Float32Array([
-      // Front face
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-
-      // Back face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Top face
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-
-      // Bottom face
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-
-      // Right face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Left face
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0
-    ]),
-
-    indices: new Uint16Array([
-      0, 1, 2, 0, 2, 3,
-      4, 5, 6, 4, 6, 7,
-      8, 9, 10, 8, 10, 11,
-      12, 13, 14, 12, 14, 15,
-      16, 17, 18, 16, 18, 19,
-      20, 21, 22, 20, 22, 23
-    ])
-  });
-
-  var canvas = document.getElementById('lesson06-canvas');
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-
-  var gl = createGLContext({canvas});
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clearDepth(1);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
 
   var xRot = 0;
   var xSpeed = 0.01;
@@ -117,25 +59,28 @@ window.webGLStart = function() {
   var filter = 0;
   var textures = {};
   var filters = ['nearest', 'linear', 'mipmap'];
-  var view = new Mat4();
+};
 
-  var camera = new PerspectiveCamera({aspect: canvas.width / canvas.height});
 
-  var program = new Program(gl, getShadersFromHTML({
-    vs: 'shader-vs',
-    fs: 'shader-fs'
-  }));
+new AnimationLoop()
+.context(() => createGLContext({canvas: 'lesson05-canvas'}))
+.init(({gl}) => {
+  // context.set(gl, {
+  //   clearColor: [0, 0, 0, 1],
+  //   clearDepth: 1,
+  //   depthTest: true,
+  //   depthFunc: GL.LEQUAL,
+  //   [GL.UNPACK_FLIP_Y_WEBGL]: true
+  // });
+  gl.clearColor(0, 0, 0, 1);
+  gl.clearDepth(1);
+  gl.enable(GL.DEPTH_TEST);
+  gl.depthFunc(GL.LEQUAL);
 
-  program.use();
-
-  // Create object
-  var cube = new Model({
-    geometry: cubeGeometry,
-    program
-  });
+  const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
   addEvents(canvas, {
-    onKeyDown: function(e) {
+    onKeyDown(e) {
       switch (e.key) {
       case 'f':
         filter = (filter + 1) % 3;
@@ -168,14 +113,57 @@ window.webGLStart = function() {
     yRot += ySpeed;
   }
 
-  function tick() {
-    drawScene();
-    animate();
-    Fx.requestAnimationFrame(tick);
-  }
+  // load image
+  return loadImage('crate.gif')
+  .then(image => {
+
+    const textures = {};
+    textures.nearest = new Texture2D(gl, {
+      data: image,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: true
+      }
+    });
+    textures.linear = new Texture2D(gl, {
+      data: image,
+      parameters: {
+        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
+        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
+      },
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: true
+      }
+    });
+
+    textures.mipmap = new Texture2D(gl, {
+      data: image,
+      generateMipmap: true,
+      parameters: {
+        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
+        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
+      },
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: true
+      }
+    });
+
+    return {cube, textures};
+  });
+})
+.frame(({gl, tick, aspect, cube, textures}) => {
+  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+  cube.render({
+    uSampler: textures[filters[filter]],
+    uPMatrix: Matrix4.perspective({aspect}),
+    uMVMatrix: Matrix4
+      .lookAt({eye: [0, 0, 0]})
+      .translate([0, 0, -5])
+      .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
+  });
+});
 
   function drawScene() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // get new view matrix out of element and camera matrices
     view.mulMat42(camera.view, cube.matrix);
 
@@ -194,26 +182,5 @@ window.webGLStart = function() {
       })
       .render();
   }
-
-  // load image
-  loadImages({urls: ['crate.gif']}).then(images => {
-    var img = images[0];
-
-    textures.nearest = new Texture2D(gl, {
-      data: img
-    });
-    textures.linear = new Texture2D(gl, {
-      data: img,
-      minFilter: gl.LINEAR,
-      magFilter: gl.LINEAR
-    });
-    textures.mipmap = new Texture2D(gl, {
-      data: img,
-      minFilter: gl.LINEAR_MIPMAP_LINEAR,
-      magFilter: gl.LINEAR,
-      generateMipmap: true
-    });
-
-    tick();
   });
-};
+

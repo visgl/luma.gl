@@ -1,12 +1,12 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
+import {GL, AnimationLoop, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
 let animationFrame;
 
-const initExample = (contextName='lumagl-canvas') => {
+const initExample = (contextName = 'lumagl-canvas') => {
   if (!animationFrame) {
-    animationFrame = new AnimationFrame();
+    animationFrame = new AnimationLoop();
 
     animationFrame
       .context(() => createGLContext({canvas: contextName}))
@@ -40,6 +40,38 @@ const initExample = (contextName='lumagl-canvas') => {
 
   return animationFrame;
 };
+
+const animationLoop = new AnimationLoop({
+  onCreateContext({canvas = 'lumagl-canvas'}) {
+    return createGLContext({canvas});
+  },
+  onInitializeAnimation({gl}) {
+    gl.clearColor(1, 1, 1, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+    return {
+      cube: makeInstancedCube(gl)
+    };
+  },
+  onRenderFrame({gl, tick, aspect, cube}) {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    cube.render({
+      uTime: tick * 0.1,
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      uView: Matrix4.lookAt({
+        center: [0, 0, 0],
+        eye: [
+          Math.cos(tick * 0.005) * SIDE / 2,
+          Math.sin(tick * 0.006) * SIDE / 2,
+          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+        ]
+      })
+    });
+  }
+});
 
 function makeInstancedCube(gl) {
   let offsets = [];
@@ -103,10 +135,18 @@ void main(void) {
   });
 }
 
+<<<<<<< b31ee625481f1e0ff046ccb11f2e9d640d76d99d
 export default initExample;
+=======
+export default animationLoop;
+>>>>>>> Integrate documentation into demo
 
 /* expose on Window for standalone example */
 /* global window */
 if (typeof window !== 'undefined') {
+<<<<<<< b31ee625481f1e0ff046ccb11f2e9d640d76d99d
   window.initExample = initExample;
+=======
+  window.initExample = animationLoop;
+>>>>>>> Integrate documentation into demo
 }
