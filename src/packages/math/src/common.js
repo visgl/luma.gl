@@ -7,6 +7,10 @@ glMatrix.printRowMajor = true;
 
 export {glMatrix};
 
+export function checkNumber(value) {
+  return Number.isFinite(value);
+}
+
 export function configure(options) {
   if ('epsilon' in options) {
     glMatrix.EPSILON = options.epsilon;

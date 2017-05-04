@@ -6,20 +6,12 @@
 // without publishing or npm linking, with conveniences such hot reloading etc.
 
 const {resolve} = require('path');
-const webpack = require('webpack');
 
 const LIB_DIR = resolve(__dirname, '..');
-const SRC_DIR = resolve(LIB_DIR, './src');
+const SRC_DIR = resolve(LIB_DIR, './dist-es6');
 
 // Support for hot reloading changes to the deck.gl library:
 const LOCAL_DEVELOPMENT_CONFIG = {
-  // suppress warnings about bundle size
-  devServer: {
-    stats: {
-      warnings: false
-    }
-  },
-
   resolve: {
     alias: {
       // Imports the deck.gl library from the src directory in this repo
@@ -41,11 +33,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
         options: 'brfs-babel'
       }
     ]
-  },
-  // Optional: Enables reading mapbox token from environment variable
-  plugins: [
-    new webpack.EnvironmentPlugin(['MAPBOX_ACCESS_TOKEN', 'MapboxAccessToken'])
-  ]
+  }
 };
 
 function addLocalDevSettings(config) {
@@ -64,6 +52,6 @@ module.exports = baseConfig => env => {
   if (env && env.local) {
     addLocalDevSettings(config);
   }
-  // console.log(JSON.stringify(config, null, 2));
+  console.log(JSON.stringify(config, null, 2));
   return config;
 };

@@ -1,17 +1,27 @@
 build/*
 dist/*
 dist-es6/*
+dist-min/*
 dist-buble/*
+demo/dist/*
+.coverage
+.nyc_output
+_docs
+node_modules
+npm-debug.log
+
+examples/winds/data/*.html
+test/data/test.png
+
+*/**/yarn.lock
+yarn-error.log
+
 .project
 .DS_Store
 *.zip
 *.rar
 TODO
-_docs
-examples/winds/data/*.html
-node_modules
-npm-debug.log
-test/data/test.png
 
 # editor files
 .idea
+

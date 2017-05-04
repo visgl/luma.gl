@@ -5,5 +5,5 @@
   "plugins": [
   	"transform-decorators-legacy"
   ],
-  "compact": "false"
+  "comments": false
 }
