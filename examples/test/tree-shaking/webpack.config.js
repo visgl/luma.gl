@@ -3,8 +3,7 @@
 const {resolve} = require('path');
 const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer');
 const webpack = require('webpack');
-// const BabiliWebpackPlugin = require('babili-webpack-plugin');
-// ...
+const BabiliWebpackPlugin = require('babili-webpack-plugin');
 
 module.exports = {
   entry: {
@@ -15,32 +14,22 @@ module.exports = {
   },
   devtool: false,
   module: {
-    // rules: [
-    //   {
-    //     test: /\.js$/,
-    //     use: 'babel-loader?presets[]=es2015',
-    //     exclude: /node_modules/
-    //   }
-    // ]
+    rules: [
+      // {
+      //   test: /\.js$/,
+      //   use: 'babel-loader',
+      //   include: [resolve('.'), resolve('../../../src')],
+      //   exclude: /node_modules/
+      // }
+    ]
   },
   plugins: [
-    // new BabiliWebpackPlugin({
-    //   babili: {
-    //     presets: [
-    //       [
-    //         require('babel-preset-babili'), {
-    //           mangle: {topLevel: true},
-    //           deadcode: false
-    //           // removeConsole: process.env.NODE_ENV === 'production',
-    //         }
-    //       ]
-    //     ],
-    //     plugins: [
-    //       // 'transform-inline-environment-variables',
-    //     ]
-    //   }
-    // }),
+    // new BabiliWebpackPlugin({}, {verbose: true, warn: true, warnings: true}),
     /* eslint-disable camelcase */
+    // new webpack.LoaderOptionsPlugin({
+    //   minimize: true,
+    //   debug: false
+    // }),
     new webpack.optimize.UglifyJsPlugin({
       test: /\.js/,
       exclude: /node_modules/,
@@ -66,9 +55,7 @@ module.exports = {
 
 // DELETE THIS LINE WHEN COPYING THIS EXAMPLE FOLDER OUTSIDE OF DECK.GL
 // It enables bundling against src in this repo rather than installed deck.gl module
-module.exports = require('../../webpack.config.local')(module.exports);
-
-// Import the deck.gl library from the dist-es6 directory in this repo to test shaking
-const LIB_DIR = resolve(__dirname, '../..');
-const DIST_ES6_DIR = resolve(LIB_DIR, './dist-es6');
-module.exports.resolve.alias['luma.gl'] = DIST_ES6_DIR;
+module.exports = require('../../webpack.config.local')(module.exports, {
+  // Import the deck.gl library from the dist-es6 directory in this repo to test shaking
+  libAlias: resolve(__dirname, '../../../dist-es6')
+});

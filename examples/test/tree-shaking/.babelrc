@@ -1,0 +1,13 @@
+{
+  "presets": [
+  	["es2015", {modules: false}],
+  	"stage-2"
+  ],
+  "plugins": [
+  	"./babel-plugin-tree-shaking.js",
+    "transform-decorators-legacy",
+    ["transform-builtin-extend", {"globals": ["Array"]}],
+  ]
+}
+
+

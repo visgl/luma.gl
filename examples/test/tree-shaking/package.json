@@ -1,7 +1,7 @@
     {
   "scripts": {
     "rollup": "rollup --config rollup.config.js",
-    "webpack": "mkdir -p dist && webpack --env.local --profile --json > dist/stats.json",
+    "webpack": "mkdir -p dist && webpack --env.local",
     "start": "webpack-dev-server --progress --hot --open",
     "start-local": "webpack-dev-server --env.local --progress --hot --open"
   },
