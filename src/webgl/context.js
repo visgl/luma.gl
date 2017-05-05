@@ -195,18 +195,24 @@ export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
  * @param {WebGLRenderingContext} gl - context
  * @return {Object} - 'vendor' and 'renderer' string fields.
  */
+let lastGLContext = null;
+let lastDebugInfo = null;
 export function glGetDebugInfo(gl) {
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
-  // We can't determine if 'WEBGL_debug_renderer_info' is supported by
-  // checking whether info is null here. Firefox doesn't follow the
-  // specs by returning null for unsupported extension. Instead,
-  // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
-  return {
-    vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
-      gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
-    renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
-      gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
-  };
+  if (gl !== lastGLContext || lastDebugInfo === null) {
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    // We can't determine if 'WEBGL_debug_renderer_info' is supported by
+    // checking whether info is null here. Firefox doesn't follow the
+    // specs by returning null for unsupported extension. Instead,
+    // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
+    lastDebugInfo = {
+      vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
+        gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
+      renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
+        gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
+    };
+    lastGLContext = gl;
+  }
+  return lastDebugInfo;
 }
 
 function logInfo(gl) {

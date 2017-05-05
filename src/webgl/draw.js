@@ -23,12 +23,12 @@ export function draw(gl, {
 
   drawMode = glGet(drawMode);
   indexType = glGet(indexType);
-
-  assertDrawMode(drawMode, 'in draw');
-  if (isIndexed) {
-    assertIndexType(indexType, 'in draw');
+  if (gl.debug) {
+    assertDrawMode(drawMode, 'in draw');
+    if (isIndexed) {
+      assertIndexType(indexType, 'in draw');
+    }
   }
-
   // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
   if (isInstanced) {
     const webgl2 = isWebGL2Context(gl);
@@ -37,7 +37,7 @@ export function draw(gl, {
     const suffix = webgl2 ? '' : 'ANGLE';
     const drawElements = 'drawElementsInstanced' + suffix;
     const drawArrays = 'drawArraysInstanced' + suffix;
-    
+
     if (isIndexed) {
       context[drawElements](
         drawMode, vertexCount, indexType, offset, instanceCount
