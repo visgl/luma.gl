@@ -8,7 +8,7 @@
 const {resolve} = require('path');
 
 const LIB_DIR = resolve(__dirname, '..');
-const SRC_DIR = resolve(LIB_DIR, './dist-es6');
+const SRC_DIR = resolve(LIB_DIR, './src');
 
 // Support for hot reloading changes to the deck.gl library:
 const LOCAL_DEVELOPMENT_CONFIG = {

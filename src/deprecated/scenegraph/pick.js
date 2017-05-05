@@ -1,7 +1,7 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
 /* global window */
-import {GL, glContextWithState, Framebuffer} from '../../webgl';
+import {GL, glContextWithState, Framebuffer} from '../../webgl/webgl';
 import {assertWebGLContext} from '../../webgl/webgl-checks';
 import Group from './group';
 import assert from 'assert';

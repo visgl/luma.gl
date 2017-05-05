@@ -4,6 +4,7 @@ dist-es6/*
 dist-min/*
 dist-buble/*
 demo/dist/*
+**/dist/*
 .coverage
 .nyc_output
 _docs

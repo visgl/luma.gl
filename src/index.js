@@ -58,11 +58,10 @@ export {default as Quaternion} from './packages/math/src/quaternion';
 export {default as Euler} from './packages/math/src/euler';
 
 // IO
-export {
-  loadFile, loadImage,
-  loadFiles, loadImages, loadTextures,
-  loadProgram, loadModel, parseModel
-} from './io';
+// Call a require based helper to select platform to export
+export {loadFile, loadImage} from './io/browser-load';
+export {loadFiles, loadImages, loadTextures} from './io/load-files';
+export {loadProgram, loadModel, parseModel} from './io/load-files';
 
 // EXPERIMENTAL MODULES
 
@@ -79,8 +78,11 @@ export const experimental = {
 };
 
 // DEPRECATED IN V3.0
-export {Vec3, Vec4, Mat4} from './deprecated/math';
-export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
+export {Vec3, Mat4, Quat} from './deprecated/math';
+export {default as Object3D} from './deprecated/scenegraph/object-3d';
+export {default as Group} from './deprecated/scenegraph/group';
+export {default as Scene} from './deprecated/scenegraph/scene';
+export {pickModels} from './deprecated/scenegraph/pick';
 export {default as FramebufferObject} from './deprecated/fbo';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './addons/fx';

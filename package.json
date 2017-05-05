@@ -56,7 +56,9 @@
   },
   "dependencies": {
     "gl-constants": "^1.0.0",
+    "gl-mat4-esm": "^1.1.4",
     "gl-matrix": "^2.3.2",
+    "gl-vec2-esm": "^1.0.0",
     "webgl-debug": "^1.0.2"
   },
   "devDependencies": {

@@ -1,7 +1,6 @@
 /* eslint-disable */
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
-import {getExtension} from './context';
 import {GL, glGet} from './webgl';
 import {assertWebGLContext, assertDrawMode, assertIndexType, isWebGL2Context} from './webgl-checks';
 import assert from 'assert';
@@ -37,7 +36,7 @@ export function draw(gl, {
     const suffix = webgl2 ? '' : 'ANGLE';
     const drawElements = 'drawElementsInstanced' + suffix;
     const drawArrays = 'drawArraysInstanced' + suffix;
-    
+
     if (isIndexed) {
       context[drawElements](
         drawMode, vertexCount, indexType, offset, instanceCount

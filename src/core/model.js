@@ -1,10 +1,14 @@
 // A scenegraph object node
 /* eslint-disable guard-for-in */
 
-// Define some locals
-import {
-  GL, Buffer, Program, draw, checkUniformValues, getUniformsTable, isWebGLContext
-} from '../webgl';
+import {GL} from '../webgl/webgl';
+import {isWebGLContext} from '../webgl/webgl-checks';
+import Buffer from '../webgl/buffer';
+import Program from '../webgl/program';
+import {draw} from '../webgl/draw';
+import {checkUniformValues, getUniformsTable} from '../webgl/uniforms';
+// export {default as TimerQuery} from '../webgl/timer-query';
+
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
 import {Geometry} from '../geometry';
