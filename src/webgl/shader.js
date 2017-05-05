@@ -7,7 +7,7 @@ import assert from 'assert';
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
 // For now this is an internal class
-export class Shader {
+export default class Shader {
 
   /* eslint-disable max-statements */
   constructor(gl, source, shaderType) {

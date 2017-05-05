@@ -1,5 +1,10 @@
 # Official releases
 
+### 3.1.0-alpha.1
+- NEW: examples/tree-shaking with analysis configs for webpack and rollup.
+- NEW: updates to library to minimize size based on iterating new example.
+- NEW: Source maps are no longer inline, to reduce bundle size during debug.
+
 ### 3.0.2
 - Check compilation and linking status only when debug WebGL context is used to improve performance (#144)
 

@@ -3,7 +3,7 @@
   	["es2015", {modules: false}]
   ],
   "plugins": [
+  	"./babel-plugin-tree-shaking.js",
   	"transform-decorators-legacy"
-  ],
-  "compact": "false"
+  ]
 }

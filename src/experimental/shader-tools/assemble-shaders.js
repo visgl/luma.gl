@@ -1,5 +1,5 @@
 import {getShaderDependencies, getShaderModule} from './register-shaders';
-import {glGetDebugInfo} from '../../webgl';
+import {glGetDebugInfo} from '../../webgl/context';
 import assert from 'assert';
 
 const VERTEX_SHADER = 'vertexShader';

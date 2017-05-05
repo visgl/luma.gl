@@ -1,7 +1,7 @@
 // camera.js
 // Provides a Camera with ModelView and Projection matrices
 
-import {Vec3, Mat4} from '../deprecated';
+import {Vec3, Mat4} from '../deprecated/math';
 import {merge} from '../utils';
 
 export class Camera {

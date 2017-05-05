@@ -4,7 +4,10 @@
   	"stage-2"
   ],
   "plugins": [
+  	"./babel-plugin-tree-shaking.js",
     "transform-decorators-legacy",
-    ["transform-builtin-extend", {"globals": ["Array"]}]
+    ["transform-builtin-extend", {"globals": ["Array"]}],
   ]
 }
+
+
