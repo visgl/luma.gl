@@ -42,6 +42,14 @@ References:
 * Perf tests, based on Query class, vs JavaScript counterparts.
 
 
+### Notes on Shader Programming
+
+* Shader sources: A Program needs to be constructed with two strings containing source code for vertex and fragment shaders. We decided to use simple text, but when doing extensive shader programming, you can also use something like [glslify](https://github.com/stackgl/glslify) as it supports organization of shader code directly in an applications source file tree.
+
+
+* Default Shaders: luma.gl comes with a set of default shaders that can be used for basic rendering and picking.
+
+
 Object: Shaders {#Shaders}
 ===============================
 
