@@ -1,7 +1,9 @@
 build/*
 dist/*
 dist-es6/*
+dist-min/*
 dist-buble/*
+**/dist/*
 .coverage
 .nyc_output
 _docs
@@ -11,7 +13,7 @@ npm-debug.log
 examples/winds/data/*.html
 test/data/test.png
 
-yarn.lock
+*/**/yarn.lock
 yarn-error.log
 
 .project

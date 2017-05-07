@@ -30,17 +30,12 @@
     "headless.js"
   ],
   "scripts": {
-    "start-webpack": "(cd examples/main && yarn && npm run start-local)",
-    "start": "npm run build-watch && budo dist/bundle.js:dist/lumagl.js --live --open --port 3000 --watch-glob '**/*.{html,css,js,glsl}' ",
-    "build-watch": "babel src -d dist --source-maps inline --copy-files --watch & babel examples -d dist --source-maps inline --copy-files --watch &",
+    "start": "cat < docs/get-started/examples.md",
     "build-clean": "rm -fr dist dist-es6 && mkdir -p dist dist-es6 ",
     "build-es6": "rm -fr dist-es6 && babel src --out-dir dist-es6 --source-maps inline",
     "build-es5": "rm -fr dist && babel src --out-dir dist --plugins=transform-es2015-modules-commonjs --source-maps inline",
     "build-buble": "rm -fr dist-buble && mkdir -p dist-buble && buble src -o dist-buble --no modules --y dangerousForOf --objectAssign",
     "build": "npm run build-es6 && npm run build-es5",
-    "build-shaders": "find . -name '*.glsl' -type f -exec bash -c 'echo \"export default `\\\" \"$1\" \"`;\"' -- {} \\;",
-    "build-shaders2": "find . -name '*.glsl' -type f -exec bash -c 'echo \"export default `\\\" ; cat \"$1\" ; echo \"`;\" \"${1/glsl/glsl.js}\"' -- {} \\;",
-    "build-shader": "echo 'export default `\\' ; cat \"$1\" ; echo '`;'",
     "cover": "NODE_ENV=test nyc --reporter html --reporter cobertura --reporter=lcov npm run test-cover",
     "lint": "eslint src test && npm run lint-yarn",
     "lint-examples": "eslint examples",
