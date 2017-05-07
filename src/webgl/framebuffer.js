@@ -12,9 +12,18 @@ export default class Framebuffer extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
+
+    // Public members
+    this.width = null;
+    this.height = null;
+    this.attachments = {};
+    this.colorBuffer = null;
+    this.depthBuffer = null;
+    this.stencilBuffer = null;
+    this.texture = null;
+
     this.initialize(opts);
-    this._width = null;
-    this._height = null;
+
     Object.seal(this);
   }
 
@@ -26,13 +35,17 @@ export default class Framebuffer extends Resource {
 
   /* eslint-disable max-statements */
   initialize({
+    attachments = {},
     width = 1,
     height = 1,
-    depth = true,
-    minFilter = GL.NEAREST,
-    magFilter = GL.NEAREST,
+    color = true,
     format = GL.RGBA,
-    type = GL.UNSIGNED_BYTE
+    type = GL.UNSIGNED_BYTE,
+    parameters = {
+      [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+      [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
+    },
+    depth = true
   }) {
     const {gl} = this;
 
@@ -43,61 +56,53 @@ export default class Framebuffer extends Resource {
 
     log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
 
-    this.opts.colorBuffer = null;
-    this.opts.depthBuffer = null;
-    this.opts.stencilBuffer = null;
-    this.opts.texture = null;
+    this.colorBuffer = null;
+    this.depthBuffer = null;
+    this.stencilBuffer = null;
+    this.texture = null;
 
-    // TODO - do we need to reallocate the framebuffer?
-    const colorBuffer = new Texture2D(this.gl, {
-      data: null,
-      format,
-      type,
-      width,
-      height,
-      parameters: {
-        [gl.TEXTURE_MIN_FILTER]: this.minFilter,
-        [gl.TEXTURE_MAG_FILTER]: this.magFilter
+    attachments = Object.assign({}, attachments);
+
+    // Add a color buffer if requested and not supplied
+    if (color && !attachments[gl.COLOR_ATTACHMENT0]) {
+      const colorBuffer = new Texture2D(this.gl, {
+        data: null,
+        format,
+        type,
+        width,
+        height,
+        parameters
+      });
+
+      attachments[gl.COLOR_ATTACHMENT0] = colorBuffer;
+
+      if (this.texture) {
+        // this.texture.delete();
       }
-    });
-
-    this.attachTexture({
-      attachment: gl.COLOR_ATTACHMENT0,
-      texture: colorBuffer
-    });
-
-    if (this.opts.colorBuffer) {
-      // this.opts.colorBuffer.delete();
+      this.texture = colorBuffer;
     }
-    this.opts.colorBuffer = colorBuffer;
-    this.opts.texture = colorBuffer;
 
-    // Add a depth buffer if requested
-    if (depth) {
+    // Add a depth buffer if requested and not supplied
+    if (depth && !attachments[gl.DEPTH_ATTACHMENT]) {
       const depthBuffer = new Renderbuffer(this.gl, {
         format: gl.DEPTH_COMPONENT16,
         width,
         height
       });
-      this.attachRenderbuffer({
-        attachment: gl.DEPTH_ATTACHMENT,
-        renderbuffer: depthBuffer
-      });
+      attachments[gl.DEPTH_ATTACHMENT] = depthBuffer;
 
-      if (this.opts.depthBuffer) {
-        // this.opts.depthBuffer.delete();
+      if (this.depthBuffer) {
+        // this.depthBuffer.delete();
       }
-      this.opts.depthBuffer = depthBuffer;
+      this.depthBuffer = depthBuffer;
     }
-
-    // Save in opts so that we can reinitialize
-    this.opts.width = width;
-    this.opts.height = height;
 
     // Store actual width and height for diffing
     // Note: A framebuffer has no separate size it is defined by its attachments
-    this._width = width;
-    this._height = height;
+    this.width = width;
+    this.height = height;
+
+    this.attach(attachments);
 
     // Checks that framebuffer was properly set up,
     // if not, throws an explanatory error
@@ -105,15 +110,24 @@ export default class Framebuffer extends Resource {
   }
   /* eslint-enable max-statements */
 
-  // ACCESSORS
+  // Attach from a map of attachments
+  attach(attachments) {
+    for (const attachmentId in attachments) {
+      const attachment = attachments[attachmentId];
+      if (!attachment) {
+        this.unattach({attachment: attachmentId});
+      } else if (attachment instanceof Renderbuffer) {
+        this.attachRenderbuffer({renderbuffer: attachment, attachment: attachmentId});
+      } else {
+        this.attachTexture({texture: attachment, attachment: attachmentId});
+      }
+    }
+    Object.assign(this.attachments, attachments);
+  }
 
-  /* eslint-disable brace-style */
-  get width() { return this._width; }
-  get height() { return this._height; }
-  get colorBuffer() { return this.opts.colorBuffer; }
-  get depthBuffer() { return this.opts.depthBuffer; }
-  get stencilBuffer() { return this.opts.stencilBuffer; }
-  get texture() { return this.opts.texture; }
+  unattach(attachment) {
+
+  }
 
   // Used to attach a renderbuffer to a framebuffer
   attachRenderbuffer({
@@ -127,12 +141,7 @@ export default class Framebuffer extends Resource {
       renderbuffer.bind();
     }
 
-    this.gl.framebufferRenderbuffer(
-      target,
-      attachment,
-      GL.RENDERBUFFER,
-      renderbuffer.handle
-    );
+    this.gl.framebufferRenderbuffer(target, attachment, GL.RENDERBUFFER, renderbuffer.handle);
 
     if (renderbuffer) {
       renderbuffer.unbind();
@@ -146,9 +155,7 @@ export default class Framebuffer extends Resource {
     texture = null,
     target = GL.FRAMEBUFFER,
     attachment = GL.COLOR_ATTACHMENT0,
-    textureTarget = GL.TEXTURE_2D,
-    // mipmapLevel, currently only 0 is supported by WebGL
-    mipmapLevel = 0
+    textureTarget = GL.TEXTURE_2D
   } = {}) {
     this.bind({target});
     if (texture) {
@@ -160,7 +167,7 @@ export default class Framebuffer extends Resource {
       attachment,
       texture && texture.target,
       texture && texture.handle,
-      mipmapLevel
+      0 // mipmapLevel, currently only 0 is supported by WebGL
     );
 
     if (texture) {

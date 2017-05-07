@@ -6,7 +6,8 @@ import {glGet} from '../webgl/api';
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
 import {window} from '../utils/globals';
-import {SHADERS} from '../experimental/shaders';
+import SHADERS from '../deprecated/shaderlib';
+// import {SHADERS} from '../experimental/shaders';
 import {addModel, removeModel} from '../debug/seer-integration';
 import assert from 'assert';
 import seer from 'seer';
@@ -468,10 +469,6 @@ export default class Model extends Object3D {
   }
 
   // DEPRECATED / REMOVED
-  setTextures(textures = []) {
-    throw new Error('model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
-  }
-
   isPickable() {
     return this.pickable;
   }

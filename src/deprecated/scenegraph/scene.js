@@ -56,9 +56,9 @@ export default class Scene extends Group {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
     this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    for (const model of this.traverse()) {
+    this.traverse(model => {
       redraw = redraw || model.getNeedsRedraw({clearRedrawFlags});
-    }
+    });
     return redraw;
   }
 
@@ -85,17 +85,18 @@ export default class Scene extends Group {
   render(uniforms = {}) {
     this.clear();
     // Go through each model and render it.
-    for (const model of this.traverse()) {
+    this.traverse(model => {
       if (model.display) {
         this.renderObject({model, uniforms});
       }
-    }
+    });
     return this;
   }
 
   renderObject({model, uniforms}) {
     // Setup lighting and scene effects like fog, etc.
-    model.render(Object.assign({}, this.getSceneUniforms(), {uniforms}));
+    uniforms = Object.assign({}, this.getSceneUniforms(), uniforms);
+    model.render(uniforms);
     return this;
   }
 

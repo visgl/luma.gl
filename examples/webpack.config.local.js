@@ -14,7 +14,7 @@ const SRC_DIR = resolve(LIB_DIR, './src');
 // Support for hot reloading changes to the deck.gl library:
 const LOCAL_DEVELOPMENT_CONFIG = {
 
-  devtool: '#inline-source-map',
+  devtool: 'source-map',
 
   // suppress warnings about bundle size
   devServer: {

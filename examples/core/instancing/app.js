@@ -1,107 +1,9 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
-let animationFrame;
 
-const initExample = (contextName = 'lumagl-canvas') => {
-  if (!animationFrame) {
-    animationFrame = new AnimationLoop();
-
-    animationFrame
-      .context(() => createGLContext({canvas: contextName}))
-      .init(({gl}) => {
-        gl.clearColor(1, 1, 1, 1);
-        gl.clearDepth(1);
-        gl.enable(GL.DEPTH_TEST);
-        gl.depthFunc(GL.LEQUAL);
-
-        return {cube: makeInstancedCube(gl)};
-      })
-      .frame(({gl, tick, aspect, cube}) => {
-        gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-        cube.render({
-          uTime: tick * 0.1,
-          uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-          uView: Matrix4.lookAt({
-            center: [0, 0, 0],
-            eye: [
-              Math.cos(tick * 0.005) * SIDE / 2,
-              Math.sin(tick * 0.006) * SIDE / 2,
-              (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-            ]
-          }),
-          uProjection:
-            Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
-        });
-      });
-  }
-
-  return animationFrame;
-};
-
-const animationLoop = new AnimationLoop({
-  onCreateContext({canvas = 'lumagl-canvas'}) {
-    return createGLContext({canvas});
-  },
-  onInitializeAnimation({gl}) {
-    gl.clearColor(1, 1, 1, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    return {
-      cube: makeInstancedCube(gl)
-    };
-  },
-  onRenderFrame({gl, tick, aspect, cube}) {
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-    cube.render({
-      uTime: tick * 0.1,
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-      uView: Matrix4.lookAt({
-        center: [0, 0, 0],
-        eye: [
-          Math.cos(tick * 0.005) * SIDE / 2,
-          Math.sin(tick * 0.006) * SIDE / 2,
-          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-        ]
-      })
-    });
-  }
-});
-
-const animationFrame = new AnimationLoop()
-.context(() => createGLContext({canvas: 'render-canvas'}))
-.init(({gl}) => {
-  gl.clearColor(1, 1, 1, 1);
-  gl.clearDepth(1);
-  gl.enable(GL.DEPTH_TEST);
-  gl.depthFunc(GL.LEQUAL);
-
-  return {cube: makeInstancedCube(gl)};
-})
-.frame(({gl, tick, aspect, cube}) => {
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-  cube.render({
-    uTime: tick * 0.1,
-    uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-    uView: Matrix4.lookAt({
-      center: [0, 0, 0],
-      eye: [
-        Math.cos(tick * 0.005) * SIDE / 2,
-        Math.sin(tick * 0.006) * SIDE / 2,
-        (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-      ]
-    }),
-    uProjection:
-      Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
-  });
-});
-
+// Make a cube with 65K instances and attributes to control offset and color of each instance
 function makeInstancedCube(gl) {
   let offsets = [];
   for (let i = 0; i < SIDE; i++) {
@@ -164,11 +66,46 @@ void main(void) {
   });
 }
 
-export default initExample;
-export {animationLoop};
+const animationLoop = new AnimationLoop({
+  onInitialize({gl}) {
+    // White background color
+    gl.clearColor(1, 1, 1, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+    return {
+      cube: makeInstancedCube(gl)
+    };
+  },
+  onFinalize({cube}) {
+    cube.delete();
+  },
+  onRender({gl, tick, aspect, cube}) {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    cube.render({
+      uTime: tick * 0.1,
+      // Basic projection matrix
+      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      // Move the eye around the plane
+      uView: Matrix4.lookAt({
+        center: [0, 0, 0],
+        eye: [
+          Math.cos(tick * 0.005) * SIDE / 2,
+          Math.sin(tick * 0.006) * SIDE / 2,
+          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+        ]
+      }),
+      // Rotate all the individual cubes
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    });
+  }
+});
+
+export default animationLoop;
 
 /* expose on Window for standalone example */
 /* global window */
 if (typeof window !== 'undefined') {
-  window.initExample = initExample;
+  window.animationLoop = animationLoop;
 }

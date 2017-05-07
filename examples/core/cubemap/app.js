@@ -1,101 +1,43 @@
 /* global document */
-import {createGLContext, AnimationLoop, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
+import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
 
-let animationFrame;
+const animationLoop = new AnimationLoop({
+  onInitialize: ({gl}) => {
+    gl.clearColor(0, 0, 0, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+    gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
-const initExample = (contextName = 'lumagl-canvas') => {
-  if (!animationFrame) {
-    animationFrame = new AnimationLoop();
-
-    animationFrame
-      .context(() => createGLContext({canvas: contextName}))
-      .init(({gl}) => {
-        gl.clearColor(0, 0, 0, 1);
-        gl.clearDepth(1);
-        gl.enable(GL.DEPTH_TEST);
-        gl.depthFunc(GL.LEQUAL);
-        gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
-
-        return {
-          cube: getCube(gl),
-          prism: getPrism(gl),
-          cubemap: new TextureCube(gl, {
-            minFilter: gl.LINEAR_MIPMAP_LINEAR,
-            magFilter: gl.LINEAR,
-            data: genTextures(512),
-            flipY: true,
-            generateMipmap: true
-          })
-        };
+    return {
+      cube: getCube(gl),
+      prism: getPrism(gl),
+      cubemap: new TextureCube(gl, {
+        minFilter: gl.LINEAR_MIPMAP_LINEAR,
+        magFilter: gl.LINEAR,
+        data: genTextures(512),
+        flipY: true,
+        generateMipmap: true
       })
-      .frame(({gl, tick, aspect, cube, prism, cubemap}) => {
-        gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    };
+  },
+  onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-        const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
-        const projection = Matrix4.perspective({fov: radians(75), aspect});
+    const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
+    const projection = Matrix4.perspective({fov: radians(75), aspect});
 
-        cube.render({
-          uTexture: cubemap,
-          uModel: new Matrix4().scale([5, 5, 5]),
-          uView: view,
-          uProjection: projection
-        });
+    cube.render({
+      uTexture: cubemap,
+      uModel: new Matrix4().scale([5, 5, 5]),
+      uView: view,
+      uProjection: projection
+    });
 
-        const reflection = parseFloat(document.getElementById('reflection').value);
-        const refraction = parseFloat(document.getElementById('refraction').value);
-
-      });
+    // const reflection = parseFloat(document.getElementById('reflection').value);
+    // const refraction = parseFloat(document.getElementById('refraction').value);
+    // renderControls(contextName);
   }
-  renderControls(contextName);
-}
-
-const animationFrame = new AnimationLoop()
-.context(() => createGLContext({canvas: 'render-canvas'}))
-.init(({gl}) => {
-  gl.clearColor(0, 0, 0, 1);
-  gl.clearDepth(1);
-  gl.enable(GL.DEPTH_TEST);
-  gl.depthFunc(GL.LEQUAL);
-  gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
-
-  return {
-    cube: getCube(gl),
-    prism: getPrism(gl),
-    cubemap: new TextureCube(gl, {
-      minFilter: gl.LINEAR_MIPMAP_LINEAR,
-      magFilter: gl.LINEAR,
-      data: genTextures(512),
-      flipY: true,
-      generateMipmap: true
-    })
-  };
-})
-.frame(({gl, tick, aspect, cube, prism, cubemap}) => {
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-  const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
-  const projection = Matrix4.perspective({fov: radians(75), aspect});
-
-  cube.render({
-    uTexture: cubemap,
-    uModel: new Matrix4().scale([5, 5, 5]),
-    uView: view,
-    uProjection: projection
-  });
-
-  const reflection = parseFloat(document.getElementById('reflection').value);
-  const refraction = parseFloat(document.getElementById('refraction').value);
-
-  prism.render({
-    uTexture: cubemap,
-    uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-    uView: view,
-    uProjection: projection,
-    uReflect: reflection,
-    uRefract: refraction
-  });
-
-  return animationFrame;
 });
 
 function getCube(gl) {
@@ -247,10 +189,10 @@ refraction
   canvas.parentElement.appendChild(controls);
 }
 
-export default initExample;
+export default animationLoop;
 
 /* expose on Window for standalone example */
 /* global window */
 if (typeof window !== 'undefined') {
-  window.initExample = initExample;
+  window.animationLoop = animationLoop;
 }

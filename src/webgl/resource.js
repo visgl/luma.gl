@@ -163,7 +163,7 @@ export default class Resource {
 
     // If unknown parameter - Could be a valid parameter not covered by PARAMS
     // attempt to set it and let WebGL report errors
-    this._setParameter(value);
+    this._setParameter(pname, value);
     return this;
   }
 

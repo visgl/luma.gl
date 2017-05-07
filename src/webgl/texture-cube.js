@@ -1,7 +1,16 @@
-import GL from './api';
+import {GL} from './gl-constants';
 import Texture from './texture';
 import {withParameters} from './context';
 import assert from 'assert';
+
+const CUBE_MAP_FACES = [
+  GL.TEXTURE_CUBE_MAP_POSITIVE_X,
+  GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
+  GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_Z
+];
 
 export default class TextureCube extends Texture {
   constructor(gl, opts = {}) {
@@ -13,12 +22,6 @@ export default class TextureCube extends Texture {
   /* eslint-disable max-len, max-statements */
   initialize(opts = {}) {
     const {
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: dataPosX,
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: dataPosY,
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: dataPosZ,
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: dataNegX,
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: dataNegY,
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: dataNegZ,
       format = GL.RGBA,
       border = 0,
       mipmaps = false
@@ -31,22 +34,26 @@ export default class TextureCube extends Texture {
       dataFormat
     } = opts;
 
-    // Deduce width and height
-    ({type, dataFormat} = this._deduceTypeAndDataFormat({format, type, dataFormat}));
-    ({width, height} = this._deduceSize({data: dataPosX, width, height}));
+    // Deduce width and height based on one of the faces
+    ({type, dataFormat} = this._deduceParameters({format, type, dataFormat}));
+    ({width, height} = this._deduceSize({
+      data: opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X], width, height
+    }));
 
     // Enforce cube
     assert(width === height);
 
     // Temporarily apply any pixel store settings and build textures
     withParameters(this.gl, opts, () => {
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_X, data: dataPosX, width, height, format, type, dataFormat, border, mipmaps});
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_Y, data: dataPosY, width, height, format, type, dataFormat, border, mipmaps});
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_Z, data: dataPosZ, width, height, format, type, dataFormat, border, mipmaps});
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_NEGATIVE_X, data: dataNegX, width, height, format, type, dataFormat, border, mipmaps});
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_NEGATIVE_Y, data: dataNegY, width, height, format, type, dataFormat, border, mipmaps});
-      this._setImage({target: GL.TEXTURE_CUBE_MAP_NEGATIVE_Z, data: dataNegZ, width, height, format, type, dataFormat, border, mipmaps});
+      for (const face of CUBE_MAP_FACES) {
+        this._setImage({
+          target: face,
+          data: opts[face],
+          width, height, format, type, dataFormat, border, mipmaps
+        });
+      }
     });
+
     this.setCubeMapImageData(opts);
 
     // Called here so that GL.
@@ -56,38 +63,11 @@ export default class TextureCube extends Texture {
     }
 
     // Store opts for accessors
-    this.opts.width = width;
-    this.opts.height = height;
-    this.opts.format = format;
-    this.opts.type = type;
-    this.opts.dataFormat = dataFormat;
-    this.opts.border = border;
-
-    // TODO - Store data to enable auto recreate on context loss
-    if (opts.recreate) {
-      this.opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X] = dataPosX;
-      this.opts[GL.TEXTURE_CUBE_MAP_POSITIVE_Y] = dataPosY;
-      this.opts[GL.TEXTURE_CUBE_MAP_POSITIVE_Z] = dataPosZ;
-      this.opts[GL.TEXTURE_CUBE_MAP_NEGATIVE_X] = dataNegX;
-      this.opts[GL.TEXTURE_CUBE_MAP_NEGATIVE_Y] = dataNegY;
-      this.opts[GL.TEXTURE_CUBE_MAP_NEGATIVE_Z] = dataNegZ;
-    }
+    this.opts = opts;
   }
 
-  subImage(face, {data, x = 0, y = 0, mipmapLevel = 0}) {
+  subImage({face, data, x = 0, y = 0, mipmapLevel = 0}) {
     return this._subImage({target: face, data, x, y, mipmapLevel});
-  }
-
-  bind({index} = {}) {
-    assert(index !== undefined);
-    this.gl.activeTexture(GL.TEXTURE0 + index);
-    this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, this.handle);
-    return index;
-  }
-
-  unbind() {
-    this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, null);
-    return this;
   }
 
   /* eslint-disable max-statements, max-len */
@@ -105,25 +85,25 @@ export default class TextureCube extends Texture {
     pixels = pixels || data;
     this.bind();
     if (this.width || this.height) {
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X,
-        0, format, width, height, border, format, type, pixels.pos.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
-        0, format, width, height, border, format, type, pixels.pos.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
-        0, format, width, height, border, format, type, pixels.pos.z);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
-        0, format, width, height, border, format, type, pixels.neg.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        0, format, width, height, border, format, type, pixels.neg.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-        0, format, width, height, border, format, type, pixels.neg.z);
+      for (const face of CUBE_MAP_FACES) {
+        gl.texImage2D(face, 0, format, width, height, border, format, type, pixels.pos.x);
+      }
     } else {
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_X, 0, format, format, type, pixels.pos.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Y, 0, format, format, type, pixels.pos.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_POSITIVE_Z, 0, format, format, type, pixels.pos.z);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_X, 0, format, format, type, pixels.neg.x);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, format, format, type, pixels.neg.y);
-      gl.texImage2D(GL.TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, format, format, type, pixels.neg.z);
+      for (const face of CUBE_MAP_FACES) {
+        gl.texImage2D(face, 0, format, format, type, pixels.pos.x);
+      }
     }
+  }
+
+  bind({index} = {}) {
+    assert(index !== undefined);
+    this.gl.activeTexture(GL.TEXTURE0 + index);
+    this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, this.handle);
+    return index;
+  }
+
+  unbind() {
+    this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, null);
+    return this;
   }
 }

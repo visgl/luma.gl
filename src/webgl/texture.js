@@ -129,10 +129,7 @@ export default class Texture extends Resource {
       pixelStore = {}
     } = opts;
 
-    let {
-      width = 1,
-      height = 1
-    } = opts;
+    let {width, height} = opts;
 
     // Deduce width and height
     ({width, height} = this._deduceParameters({data, width, height}));
@@ -411,6 +408,7 @@ export default class Texture extends Resource {
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
   _deduceImageSize({data, width, height}) {
     let size;
+
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
       size = {width: data.width, height: data.height};
     }
@@ -423,14 +421,13 @@ export default class Texture extends Resource {
     else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       size = {width: data.videoWidth, height: data.videoHeight};
     }
-    if (width !== undefined || height !== undefined) {
-      if (size && (size.width !== width || size.height !== height)) {
-        throw new Error('Deduced size does not match supplied data element size');
-      }
-      size = {width, height};
+    else if (!data) {
+      size = {width: width >= 0 ? width : 1, height: height >= 0 ? height : 1};
     }
-    assert(size && Number.isFinite(size.width) && Number.isFinite(size.height),
-      'Failed to deduce texture size');
+
+    assert(size, 'Could not deduced texture size');
+    assert(width === undefined || size.width === width, 'Deduced texture width does not match supplied width');
+    assert(height === undefined || size.height === height, 'Deduced texture height does not match supplied height');
 
     return size;
   }
@@ -476,7 +473,8 @@ export default class Texture extends Resource {
       throw new Error('Cannot set emulated parameter');
 
     default:
-      this.gl.texParameteri(this.handle, pname, param);
+      this.gl.bindTexture(this.target, this.handle);
+      this.gl.texParameteri(this.target, pname, param);
       break;
     }
 

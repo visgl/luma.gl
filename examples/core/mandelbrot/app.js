@@ -1,42 +1,9 @@
 /* global document */
 import {AnimationLoop, createGLContext, ClipSpaceQuad} from 'luma.gl';
 
-// CONTEXT 0 - CONCENTRICS
-
-const CONTEXT_0_FRAGMENT_SHADER = `\
-#ifdef GL_ES
-precision highp float;
-#endif
-
-uniform float uTime;
-
-varying vec2 position;
-
-void main(void) {
-  float d = length(position * 64.0);
-  d = 0.5 * sin(d * sin(uTime)) + 0.5 * sin(position.x * 64.0) * sin(position.y * 64.0);
-  gl_FragColor = vec4(1.0-d,0,d, 1);
-}
-`;
-
-const animationFrame1 = new AnimationLoop()
-.context(() => createGLContext({canvas: 'canvas-0'}))
-.init(({gl}) => ({
-  clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
-}))
-.setupFrame(({gl, canvas}) => {
-  canvas.width = canvas.clientWidth;
-  canvas.style.height = `${canvas.width}px`;
-  canvas.height = canvas.width;
-  gl.viewport(0, 0, canvas.width, canvas.height);
-})
-.frame(({tick, clipSpaceQuad}) => {
-  clipSpaceQuad.render({uTime: tick * 0.01});
-});
-
 // CONTEXT 1 - 32 bit mandelbrot
 
-const CONTEXT_1_FRAGMENT_SHADER = `\
+const MANDELBROT_FRAGMENT_SHADER = `\
 #define SHADER_NAME mandelbrot32
 
 #ifdef GL_ES
@@ -91,61 +58,58 @@ const zoomThreshold = 1e5;
 const zoomCenterX = -0.0150086889504513;
 const zoomCenterY = 0.78186693904085048;
 
-const animationFrame2 = new AnimationLoop()
-.context(() => createGLContext({canvas: 'canvas-1'}))
-.init(({gl}) => ({
-  clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_1_FRAGMENT_SHADER})
-}))
-.setupFrame(({gl, canvas}) => {
-  canvas.width = canvas.clientWidth;
-  canvas.style.height = `${canvas.width}px`;
-  canvas.height = canvas.width;
-  gl.viewport(0, 0, canvas.width, canvas.height);
-})
-.frame(({tick, clipSpaceQuad}) => {
-  const baseCorners = [
-    [-2.2, -1.2],
-    [0.7, -1.2],
-    [-2.2, 1.2],
-    [0.7, 1.2]
-  ];
+const animationLoop = new AnimationLoop({
+  onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
+  onInitialize: ({gl}) => ({
+    clipSpaceQuad: new ClipSpaceQuad({gl, fs: MANDELBROT_FRAGMENT_SHADER})
+  }),
+  onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
+    canvas.width = canvas.clientWidth;
+    canvas.style.height = `${canvas.width}px`;
+    canvas.height = canvas.width;
+    gl.viewport(0, 0, canvas.width, canvas.height);
 
-  zoom *= 1.01;
-  if (zoom > zoomThreshold) {
-    zoom = 1;
+    const baseCorners = [
+      [-2.2, -1.2],
+      [0.7, -1.2],
+      [-2.2, 1.2],
+      [0.7, 1.2]
+    ];
+
+    zoom *= 1.01;
+    if (zoom > zoomThreshold) {
+      zoom = 1;
+    }
+
+    const div = document.getElementById('zoom');
+    div.innerHTML = `Zoom ${zoom.toPrecision(2)}`;
+
+    const corners = [];
+    for (const corner of baseCorners) {
+      corners.push(
+        corner[0] / zoom + centerOffsetX,
+        corner[1] / zoom + centerOffsetY
+      );
+    }
+
+    if (centerOffsetX !== zoomCenterX) {
+      centerOffsetX += (zoomCenterX - centerOffsetX) / 20;
+    }
+    if (centerOffsetY !== zoomCenterY) {
+      centerOffsetY += (zoomCenterY - centerOffsetY) / 20;
+    }
+
+    clipSpaceQuad
+      .setAttributes({
+        aCoordinate: {value: new Float32Array(corners), size: 2}
+      })
+      .render();
   }
-
-  const div = document.getElementById('zoom');
-  div.innerHTML = `Zoom ${zoom.toPrecision(2)}`;
-
-  const corners = [];
-  for (const corner of baseCorners) {
-    corners.push(
-      corner[0] / zoom + centerOffsetX,
-      corner[1] / zoom + centerOffsetY
-    );
-  }
-
-  if (centerOffsetX !== zoomCenterX) {
-    centerOffsetX += (zoomCenterX - centerOffsetX) / 20;
-  }
-  if (centerOffsetY !== zoomCenterY) {
-    centerOffsetY += (zoomCenterY - centerOffsetY) / 20;
-  }
-
-  clipSpaceQuad
-    .setAttributes({
-      aCoordinate: {value: new Float32Array(corners), size: 2}
-    })
-    .render();
 });
 
-export default animationFrame1;
+export default animationLoop;
 
 /* global window */
 if (typeof window !== 'undefined') {
-  window.startApp = function startApp() {
-    animationFrame1.start();
-    animationFrame2.start();
-  };
+  window.animationLoop = animationLoop;
 }

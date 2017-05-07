@@ -114,10 +114,6 @@ export default class Program extends Resource {
    */
   /* eslint-disable max-statements */
   setBuffers(buffers, {clear = true, check = true, drawParams = {}} = {}) {
-    if (Array.isArray(buffers)) {
-      throw new Error('Program.setBuffers expects map of buffers');
-    }
-
     if (clear) {
       this._filledLocations = {};
     }
