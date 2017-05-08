@@ -3,13 +3,6 @@ import {assertWebGL2Context} from './context';
 import Resource from './resource';
 import queryManager from './helpers/query-manager';
 
-const PARAMETERS = [
-  GL.OBJECT_TYPE, // GLenum, type of sync object (always GL.SYNC_FENCE).
-  GL.SYNC_STATUS, // GLenum, status of sync object (GL.SIGNALED/GL.UNSIGNALED)
-  GL.SYNC_CONDITION, // GLenum. object condition (always GL.SYNC_GPU_COMMANDS_COMPLETE).
-  GL.SYNC_FLAGS // GLenum, flags sync object was created with (always 0)
-];
-
 export default class FenceSync extends Resource {
   /*
    * @class
@@ -97,5 +90,3 @@ export default class FenceSync extends Resource {
     this.gl.deleteSync(this.handle);
   }
 }
-
-FenceSync.PARAMETERS = PARAMETERS;

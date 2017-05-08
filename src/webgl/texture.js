@@ -75,31 +75,6 @@ const TEXTURE_FORMATS = {
   [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true}
 };
 
-// These are sampler parameters
-const PARAMETERS = {
-  // WEBGL1
-  [GL.TEXTURE_MAG_FILTER]: {type: 'GLenum', webgl1: GL.LINEAR}, // texture magnification filter
-  [GL.TEXTURE_MIN_FILTER]: {type: 'GLenum', webgl1: GL.NEAREST_MIPMAP_LINEAR}, // texture minification filter
-  [GL.TEXTURE_WRAP_S]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate s
-  [GL.TEXTURE_WRAP_T]: {type: 'GLenum', webgl1: GL.REPEAT}, // texture wrapping function for texture coordinate t
-
-  // Emulated parameters - These OpenGL parameters are not supported by OpenGL ES
-  [GL.TEXTURE_WIDTH]: {webgl1: 0},
-  [GL.TEXTURE_HEIGHT]: {webgl1: 0},
-
-  // WebGL Extensions
-  [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
-
-  // WEBGL2
-  [GL.TEXTURE_WRAP_R]: {type: 'GLenum', webgl2: GL.REPEAT}, // texture wrapping function for texture coordinate r
-  [GL.TEXTURE_BASE_LEVEL]: {webgl2: 0}, // Texture mipmap level
-  [GL.TEXTURE_MAX_LEVEL]: {webgl2: 1000}, // Maximum texture mipmap array level
-  [GL.TEXTURE_COMPARE_FUNC]: {type: 'GLenum', webgl2: GL.LEQUAL}, // texture comparison function
-  [GL.TEXTURE_COMPARE_MODE]: {type: 'GLenum', webgl2: GL.NONE}, // texture comparison mode
-  [GL.TEXTURE_MIN_LOD]: {webgl2: -1000}, // minimum level-of-detail value
-  [GL.TEXTURE_MAX_LOD]: {webgl2: 1000} // maximum level-of-detail value
-};
-
 export default class Texture extends Resource {
 
   // target cannot be modified by bind:
@@ -154,10 +129,7 @@ export default class Texture extends Resource {
       pixelStore = {}
     } = opts;
 
-    let {
-      width = 1,
-      height = 1
-    } = opts;
+    let {width, height} = opts;
 
     // Deduce width and height
     ({width, height} = this._deduceParameters({data, width, height}));
@@ -436,6 +408,7 @@ export default class Texture extends Resource {
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
   _deduceImageSize({data, width, height}) {
     let size;
+
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
       size = {width: data.width, height: data.height};
     }
@@ -448,14 +421,13 @@ export default class Texture extends Resource {
     else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       size = {width: data.videoWidth, height: data.videoHeight};
     }
-    if (width !== undefined || height !== undefined) {
-      if (size && (size.width !== width || size.height !== height)) {
-        throw new Error('Deduced size does not match supplied data element size');
-      }
-      size = {width, height};
+    else if (!data) {
+      size = {width: width >= 0 ? width : 1, height: height >= 0 ? height : 1};
     }
-    assert(size && Number.isFinite(size.width) && Number.isFinite(size.height),
-      'Failed to deduce texture size');
+
+    assert(size, 'Could not deduced texture size');
+    assert(width === undefined || size.width === width, 'Deduced texture width does not match supplied width');
+    assert(height === undefined || size.height === height, 'Deduced texture height does not match supplied height');
 
     return size;
   }
@@ -501,7 +473,8 @@ export default class Texture extends Resource {
       throw new Error('Cannot set emulated parameter');
 
     default:
-      this.gl.texParameteri(this.handle, pname, param);
+      this.gl.bindTexture(this.target, this.handle);
+      this.gl.texParameteri(this.target, pname, param);
       break;
     }
 
@@ -509,5 +482,3 @@ export default class Texture extends Resource {
     return this;
   }
 }
-
-Texture.PARAMETERS = PARAMETERS;

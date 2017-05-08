@@ -39,7 +39,7 @@ export function pickModels(gl, {
     // We are only interested in one pixel, no need to render anything else
     scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
   }, () => {
-    for (const model of group.traverseReverse()) {
+    return group.traverseReverse(model => {
       if (model.isPickable()) {
 
         // Clear the frame buffer, render and sample
@@ -78,8 +78,7 @@ export function pickModels(gl, {
           };
         }
       }
-    }
-
-    return null;
+      return null;
+    });
   });
 }

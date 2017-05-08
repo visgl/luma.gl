@@ -5,12 +5,22 @@ require('./init');
 
 // WebGL
 export {default as GL} from './webgl/gl-constants';
-export {isWebGLContext, isWebGL2Context} from './webgl/context';
+export {
+  isWebGLContext,
+  isWebGL2Context} from './webgl/context';
 
-// WebGL1
-export {createGLContext, getGLExtension, glContextWithState, glGetDebugInfo} from './webgl/context';
-export {getGLParameter, setGLParameter, withGLState} from './webgl/context-state';
-export {getGLContextInfo, getContextLimits} from './webgl/context-limits';
+export {
+  createGLContext,
+  getGLExtension,
+  glContextWithState,
+  glGetDebugInfo} from './webgl/context';
+export {
+  getGLParameter,
+  setGLParameter,
+  withGLState} from './webgl/context-state';
+export {
+  getGLContextInfo,
+  getContextLimits} from './webgl/context-limits';
 
 export {default as Buffer} from './webgl/buffer';
 export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';
@@ -20,15 +30,18 @@ export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 
-export {draw} from './webgl/draw';
-export {clear, readPixels} from './webgl/functions';
+export {
+  draw} from './webgl/draw';
+export {
+  clear,
+  readPixels} from './webgl/functions';
 
 // WebGL2 & Extensions
+export {default as FenceSync} from './webgl/fence-sync';
 export {default as Query} from './webgl/query';
 export {default as Sampler} from './webgl/sampler';
-export {default as Sync} from './webgl/sync';
 export {default as Texture3D} from './webgl/texture-3d';
-// export {default as Texture2DArray} from './webgl/texture-2d-array';
+export {default as Texture2DArray} from './webgl/texture-2d-array';
 export {default as TransformFeedback} from './webgl/transform-feedback';
 export {default as VertexArrayObject} from './webgl/vertex-array-object';
 
@@ -61,7 +74,9 @@ export {default as TruncatedCone} from './models/truncated-cone';
 export {default as ClipSpaceQuad} from './models/clip-space-quad';
 
 // Math
-export {radians, degrees} from './packages/math/src/common';
+export {
+  radians,
+  degrees} from './packages/math/src/common';
 export {default as Vector2} from './packages/math/src/vector2';
 export {default as Vector3} from './packages/math/src/vector3';
 export {default as Vector4} from './packages/math/src/vector4';

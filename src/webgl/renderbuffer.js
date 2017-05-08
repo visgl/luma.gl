@@ -1,33 +1,11 @@
 /* eslint-disable no-inline-comments */
-import GL from './api';
 import {assertWebGL2Context, isWebGL2Context} from './context';
 import Resource from './resource';
 import assert from 'assert';
 
-// Renderbuffer parameters
-const PARAMETERS = {
-  // WebGL1 parameters
-  [GL.RENDERBUFFER_WIDTH]: {webgl1: 0}, // {GLint} - height of the image of renderbuffer.
-  [GL.RENDERBUFFER_HEIGHT]: {webgl1: 0}, // {GLint} - height of the image of renderbuffer.
-
-  // Internal format of the currently bound renderbuffer.
-  // The default is GL.RGBA4. Possible return values:
-  // GL.RGBA4: 4 red bits, 4 green bits, 4 blue bits 4 alpha bits.
-  // GL.RGB565: 5 red bits, 6 green bits, 5 blue bits.
-  // GL.RGB5_A1: 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit.
-  // GL.DEPTH_COMPONENT16: 16 depth bits.
-  // GL.STENCIL_INDEX8: 8 stencil bits.
-  [GL.RENDERBUFFER_INTERNAL_FORMAT]: {type: 'GLenum', webgl1: GL.RGBA4},
-
-  [GL.RENDERBUFFER_GREEN_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of green color
-  [GL.RENDERBUFFER_BLUE_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of blue color
-  [GL.RENDERBUFFER_RED_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of red color
-  [GL.RENDERBUFFER_ALPHA_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of alpha component
-  [GL.RENDERBUFFER_DEPTH_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of depth component
-  [GL.RENDERBUFFER_STENCIL_SIZE]: {webgl1: 0}, // {GLint} - resolution (bits) of stencil component
-
-  // When using a WebGL 2 context, the following value is available
-  [GL.RENDERBUFFER_SAMPLES]: {webgl2: 1}
+const GL = {
+  RENDERBUFFER: 0x8D41,
+  SAMPLES: 0x80A9
 };
 
 export default class Renderbuffer extends Resource {
@@ -44,14 +22,16 @@ export default class Renderbuffer extends Resource {
 
   // Accessors
 
-  // @returns {GLint} - width of the image of the currently bound renderbuffer.
-  get width() {
-    return this.getParameter(GL.RENDERBUFFER_WIDTH);
+  get format() {
+    return this.opts.format;
   }
 
-  // @returns {GLint} - height of the image of the currently bound renderbuffer.
+  get width() {
+    return this.opts.width;
+  }
+
   get height() {
-    return this.getParameter(GL.RENDERBUFFER_HEIGHT);
+    return this.opts.height;
   }
 
   // Modifiers
@@ -66,26 +46,17 @@ export default class Renderbuffer extends Resource {
     return this;
   }
 
-  /**
-   * Creates and initializes a renderbuffer object's data store
-   *
-   * @param {GLenum} opt.format - format of the renderbuffer (often GL.DEPTH_COMPONENT16)
-   * @param {GLint} opt.width - width of renderbuffer
-   * @param {GLint} opt.height - height of renderbuffer
-   * @param {GLint} opt.samples=0 - (WebGL2) number of samples to be used for storage.
-   * @returns {Renderbuffer} returns itself to enable chaining
-   */
+  // Creates and initializes a renderbuffer object's data store
   storage({
-    format,
-    width,
-    height,
-    samples = 0 // WebGL2 only
+    format,     // internal format of the renderbuffer (often GL.DEPTH_COMPONENT16)
+    width,      // width of renderbuffer
+    height,     // height of renderbuffer
+    samples = 0 // WebGL2 only -  number of samples to be used for storage
   }) {
     assert(format, 'Needs format');
     this.bind();
 
     if (samples !== 0 && isWebGL2Context(this.gl)) {
-      // (OpenGL ES 3.0.4 §4.4.2)
       this.gl.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, format, width, height);
     } else {
       this.gl.renderbufferStorage(GL.RENDERBUFFER, format, width, height);
@@ -109,7 +80,6 @@ export default class Renderbuffer extends Resource {
     }
 
     assertWebGL2Context(this.gl);
-    // (OpenGL ES 3.0.4 §6.1.15)
     return this.gl.getInternalformatParameter(GL.RENDERBUFFER, format, pname);
   }
 
@@ -122,22 +92,25 @@ export default class Renderbuffer extends Resource {
     this.gl.deleteRenderbuffer(this.handle);
   }
 
-  _getOptsFromHandle() {
-    return {
-      format: this.getParameter(GL.RENDERBUFFER_INTERNAL_FORMAT),
-      width: this.getParameter(GL.RENDERBUFFER_WIDTH),
-      height: this.getParameter(GL.RENDERBUFFER_HEIGHT)
+  _syncHandle(handle) {
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, handle);
+    this.opts = {
+      format: this.getParameter(this.gl.RENDERBUFFER_INTERNAL_FORMAT),
+      width: this.getParameter(this.gl.RENDERBUFFER_WIDTH),
+      height: this.getParameter(this.gl.RENDERBUFFER_HEIGHT)
     };
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+    this._format = this.opts.format;
+    this._width = this.opts.width;
+    this._height = this.opts.height;
   }
 
   // @param {Boolean} opt.autobind=true - method call will bind/unbind object
   // @returns {GLenum|GLint} - depends on pname
   _getParameter(pname) {
-    this.bind();
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
-    this.unbind();
+    this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
     return value;
   }
 }
-
-Renderbuffer.PARAMETERS = PARAMETERS;

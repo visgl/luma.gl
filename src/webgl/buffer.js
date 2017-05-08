@@ -6,11 +6,6 @@ import assert from 'assert';
 
 const ERR_BUFFER_PARAMS = 'Illegal or missing parameter to Buffer';
 
-const PARAMETERS = {
-  [GL.BUFFER_SIZE]: {webgl1: 0}, // GLint indicating the size of the buffer in bytes.
-  [GL.BUFFER_USAGE]: {webgl1: 0} // GLenum indicating the usage pattern of the buffer.
-};
-
 export class BufferLayout {
   /**
    * @classdesc
@@ -295,7 +290,7 @@ export default class Buffer extends Resource {
     return this.gl.getIndexedParameter(binding, index);
   }
 
-  // PRIVATE METHODS
+  // RESOURCE METHODS
 
   _createHandle() {
     return this.gl.createBuffer();
@@ -312,5 +307,3 @@ export default class Buffer extends Resource {
     return value;
   }
 }
-
-Buffer.PARAMETERS = PARAMETERS;

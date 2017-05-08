@@ -1,6 +1,6 @@
 /* global window, setTimeout, clearTimeout */
 import {isBrowser, pageLoadPromise} from '../utils';
-import {isWebGLContext} from '../webgl';
+import {createGLContext, isWebGLContext} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export const requestAnimationFrame = callback =>
@@ -11,24 +11,25 @@ export const cancelAnimationFrame = timerId =>
 
 export default class AnimationLoop {
   /*
-   * @param {HTMLCanvasElement} canvas - if provided, width and height will be
-   *   passed to context
+   * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor(opts = {}) {
-    const {
-      gl = null,
-      // canvas = null,
-      width = null,
-      height = null,
-      autoResizeViewport = true,
-      autoResizeCanvas = true,
-      autoResizeDrawingBuffer = true,
-      useDevicePixelRatio = true
-    } = opts;
+  constructor({
+    onCreateContext = opts => createGLContext(opts),
+    onInitialize = null,
+    onRender = null,
+    onFinalize = null,
 
+    gl = null,
+    width = null,
+    height = null,
+    autoResizeViewport = true,
+    autoResizeCanvas = true,
+    autoResizeDrawingBuffer = true,
+    useDevicePixelRatio = true
+  } = {}) {
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
-    this._frame = this._frame.bind(this);
+    this._renderFrame = this._renderFrame.bind(this);
 
     this.update({
       autoResizeViewport,
@@ -37,16 +38,21 @@ export default class AnimationLoop {
       useDevicePixelRatio
     });
 
+    this._onCreateContext = onCreateContext;
+
+    this._onInitialize = onInitialize;
+    this._onRender = onRender;
+    this._onFinalize = onFinalize;
+
     this.width = width;
     this.height = height;
 
-    // Don't do a
-    this._startPromise = pageLoadPromise.then(page => {
-      this.gl = gl;
-      return page;
-    });
+    this.gl = gl;
+
+    return this;
   }
 
+  // Update parameters (TODO - should these be specified in `start`?)
   update({
     autoResizeDrawingBuffer = true,
     autoResizeCanvas = true,
@@ -60,81 +66,47 @@ export default class AnimationLoop {
     return this;
   }
 
-  context(onCreateContext) {
-    if (this.gl) {
-      throw new Error('AnimationLoop.context - context already provided');
+  // Starts a render loop if not already running
+  // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
+  start(contextParams = {}) {
+    if (!this._animationFrameId) {
+
+      // Wait for start promise before rendering frame
+      this._startPromise = pageLoadPromise
+      .then(() => {
+        // Create the context
+        this.gl = this.gl || contextParams.gl || this._onCreateContext(contextParams);
+        if (!isWebGLContext(this.gl)) {
+          throw new Error('AnimationLoop.onCreateContext - illegal context returned');
+        }
+        this._initializeContext();
+        // Note: onIntialize can return a promise (in case it needs to load resources)
+        return this._onInitialize(this._context) || {};
+      })
+      .then((appContext = {}) => {
+        this._addAppDataToContext(appContext);
+        if (!this._animationFrameId) {
+          this._animationFrameId = requestAnimationFrame(this._renderFrame);
+        }
+      });
+
     }
-    this._startPromise = this._startPromise.then(() => {
-      this.gl = onCreateContext();
-      if (!isWebGLContext(this.gl)) {
-        throw new Error('AnimationLoop.context - illegal context returned');
-      }
-    });
     return this;
   }
 
-  init(onInit) {
-    this._startPromise = this._startPromise.then(() => {
-      if (!this.gl) {
-        throw new Error('AnimationLoop.context - no context provided');
-      }
-      this._initializeContext();
-      return onInit(this._context) || {};
-    });
-
-    return this;
-  }
-
-  setupFrame(onSetupFrame) {
-    this._onSetupFrame = onSetupFrame;
-    return this;
-  }
-
-  /**
-   * Starts a global render loop with the given frame function
-   * @param {Function} onRenderFrame - application frame renderer function
-   *  expected to take a context parameter
-   * @param {Object} context - contains frame specific info
-   *  (E.g. tick, width, height, etc)
-   * @return {Renderer} - returns self for chaining
-   */
-  frame(onRenderFrame) {
-    this._onRenderFrame = onRenderFrame;
-    return this;
-  }
-
-  /**
-   * Starts a render loop if not already running
-   */
-  start() {
-    // Wait for start promise before rendering frame
-    this._startPromise.then((appContext = {}) => {
-      this._initializeContext(appContext);
-      if (!this._animationFrameId) {
-        this._animationFrameId = requestAnimationFrame(this._frame);
-      }
-    });
-    return this;
-  }
-
-  /**
-   * Stops a render loop if already running
-   */
+  // Stops a render loop if already running, finalizing
   stop() {
     if (this._animationFrameId) {
+      this._finalizeContext();
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
     }
     return this;
   }
 
-  /**
-   * Resize canvas in "CSS coordinates" (may be different from device coords)
-   * NOTE: No effect on headless contexts
-   * @param {Number} width - new width of canvas in CSS coordinates
-   * @param {Number} height - new height of canvas in CSS coordinates
-   * @return {Renderer} - returns self for chaining
-   */
+  // Resize canvas in "CSS coordinates" (may be different from device coords)
+  // NOTE: No effect on headless contexts
+  // @param {Number} width, height - new width and height of canvas in CSS coordinates
   resizeCanvas(width, height) {
     this._resizeCanvas(width, height);
     return this;
@@ -142,7 +114,8 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
-  _initializeContext(appContext) {
+  // Initialize the context object that will be passed to app callbacks
+  _initializeContext() {
     if (!this._context) {
       this._context = {
         gl: this.gl,
@@ -153,11 +126,9 @@ export default class AnimationLoop {
       };
     }
     this._updateContext();
-    if (typeof appContext === 'object' && appContext !== null) {
-      this._context = Object.assign({}, appContext, this._context);
-    }
   }
 
+  // Update the context object that will be passed to app callbacks
   _updateContext() {
     // Context width and height represent drawing buffer width and height
     const {canvas} = this._context;
@@ -166,12 +137,19 @@ export default class AnimationLoop {
     this._context.aspect = canvas.width / canvas.height;
   }
 
+  // Add application's data to the app context object
+  _addAppDataToContext(appContext) {
+    if (typeof appContext === 'object' && appContext !== null) {
+      this._context = Object.assign({}, appContext, this._context);
+    }
+  }
+
   /**
    * @private
    * Handles a render loop frame- updates context and calls the application
    * callback
    */
-  _frame() {
+  _renderFrame() {
     const {canvas} = this._context;
 
     if (this._onSetupFrame) {
@@ -185,22 +163,18 @@ export default class AnimationLoop {
     }
 
     this._updateContext();
-    this._onRenderFrame(this._context);
+    this._onRender(this._context);
 
     // Increment tick
     this._context.tick++;
 
     // Request another render frame (now )
-    this._animationFrameId = requestAnimationFrame(this._frame);
+    this._animationFrameId = requestAnimationFrame(this._renderFrame);
   }
 
-  /**
-   * Resize canvas in "CSS coordinates" (may be different from device coords)
-   * NOTE: No effect on headless contexts
-   * @param {Number} width - new width of canvas in CSS coordinates
-   * @param {Number} height - new height of canvas in CSS coordinates
-   * @return {Renderer} - returns self for chaining
-   */
+  // Resize canvas in "CSS coordinates" (may be different from device coords)
+  // NOTE: No effect on headless contexts
+  // @param {Number} width, height - new width and height of canvas in CSS coordinates
   _resizeCanvas(width, height) {
     const {canvas} = this._context;
     if (canvas) {

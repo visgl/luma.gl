@@ -163,7 +163,7 @@ export default class Resource {
 
     // If unknown parameter - Could be a valid parameter not covered by PARAMS
     // attempt to set it and let WebGL report errors
-    this._setParameter(value);
+    this._setParameter(pname, value);
     return this;
   }
 
@@ -199,6 +199,11 @@ export default class Resource {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
+  /**
+   * @param {GLenum} pname
+   * @param {GLint|GLfloat|GLenum} param
+   * @return {Sampler} returns self to enable chaining
+   */
   _setParameter(pname, value) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }

@@ -1,9 +1,8 @@
 /* global document */
 /* eslint-disable no-var, max-statements */
 import {
-  GL, createGLContext, AnimationLoop, Scene, Model, Program, Geometry,
-  Matrix4, radians
-} from 'luma.gl';
+  GL, AnimationLoop, Scene, Model, Program,
+  Shaders, Geometry, Matrix4, radians} from 'luma.gl';
 
 class HeightmapGeometry extends Geometry {
   constructor(opts) {
@@ -80,66 +79,76 @@ var scene;
 var pick = {x: 0, y: 0};
 var heightmap;
 
-new AnimationLoop({gl: createGLContext()})
-.init(({gl}) => {
-  gl.enable(GL.DEPTH_TEST);
-  gl.depthFunc(GL.LEQUAL);
+const animationLoop = new AnimationLoop({
+  onInitialize: ({gl}) => {
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
 
-  scene = new Scene(gl, {
-    lights: {
-      points: {
-        color: {r: 1, g: 1, b: 1},
-        position: {x: 0, y: 0, z: 32}
+    scene = new Scene(gl, {
+      lights: {
+        points: {
+          color: {r: 1, g: 1, b: 1},
+          position: {x: 0, y: 0, z: 32}
+        },
+        ambient: {r: 0.25, g: 0.25, b: 0.25},
+        enable: true
       },
-      ambient: {r: 0.25, g: 0.25, b: 0.25},
-      enable: true
-    },
-    backgroundColor: {r: 0, g: 0, b: 0, a: 0}
-  });
+      backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+    });
 
-  gl.canvas.addEventListener('mousemove', function mousemove(e) {
-    pick.x = e.offsetX;
-    pick.y = e.offsetY;
-  });
+    gl.canvas.addEventListener('mousemove', function mousemove(e) {
+      pick.x = e.offsetX;
+      pick.y = e.offsetY;
+    });
 
-  heightmap = new Model({
-    id: 'heightmap',
-    program: new Program(gl),
-    geometry: new HeightmapGeometry()
-  });
+    heightmap = new Model({
+      id: 'heightmap',
+      program: new Program(gl, Shaders),
+      geometry: new HeightmapGeometry()
+    });
 
-  scene.add(heightmap);
-})
-.frame(({tick, aspect}) => {
-  const projection = Matrix4.perspective({
-    fov: radians(60), aspect, near: 0.1, far: 1000
-  });
+    scene.add(heightmap);
+  },
+  onRender: ({tick, aspect}) => {
+    const projection = Matrix4.perspective({
+      fov: radians(60), aspect, near: 0.1, far: 1000
+    });
 
-  const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
-  const model = new Matrix4().clone(view).rotateY(tick * 0.01);
+    const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
+    const model = new Matrix4().clone(view).rotateY(tick * 0.01);
 
-  const uniforms = {
-    projectionMatrix: projection,
-    viewMatrix: view,
-    modelMatrix: model,
-    hasPickingColors: true
-  };
+    const uniforms = {
+      projectionMatrix: projection,
+      viewMatrix: view,
+      modelMatrix: model,
+      hasPickingColors: true
+    };
 
-  scene.render(uniforms);
+    scene.render(uniforms);
 
-  var div = document.getElementById('altitude');
-  const pickInfo = scene.pickModels({
-    uniforms,
-    x: pick.x,
-    y: pick.y
-  });
+    var div = document.getElementById('altitude');
+    const pickInfo = scene.pickModels({
+      uniforms,
+      x: pick.x,
+      y: pick.y
+    });
 
-  if (pickInfo) {
-    div.innerHTML = `altitude: ${pickInfo.color[0]}`;
-    div.style.top = `${pick.y}px`;
-    div.style.left = `${pick.x}px`;
-    div.style.display = 'block';
-  } else {
-    div.style.display = 'none';
+    if (pickInfo) {
+      div.innerHTML = `altitude: ${pickInfo.color[0]}`;
+      div.style.top = `${pick.y}px`;
+      div.style.left = `${pick.x}px`;
+      div.style.display = 'block';
+    } else {
+      div.style.display = 'none';
+    }
   }
 });
+
+export default animationLoop;
+
+/* expose on Window for standalone example */
+/* global window */
+if (typeof window !== 'undefined') {
+  window.animationLoop = animationLoop;
+}
+

@@ -1,28 +1,13 @@
 // A scenegraph object node
-/* eslint-disable guard-for-in */
-
-// Define some locals
-import {
-  GL,
-  Buffer,
-  Program,
-  draw,
-  checkUniformValues,
-  isWebGLContext
-} from '../webgl';
-
-import {
-  getUniformsTable
-} from '../webgl/uniforms';
-
-import {
-  glGet
-} from '../webgl/api';
+import {GL, Buffer, Program, draw, checkUniformValues, isWebGLContext} from '../webgl';
+import {getUniformsTable} from '../webgl/uniforms';
+import {glGet} from '../webgl/api';
 
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
 import {window} from '../utils/globals';
-import {SHADERS} from '../experimental/shaders';
+import SHADERS from '../deprecated/shaderlib';
+// import {SHADERS} from '../experimental/shaders';
 import {addModel, removeModel} from '../debug/seer-integration';
 import assert from 'assert';
 import seer from 'seer';
@@ -125,15 +110,18 @@ export default class Model extends Object3D {
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount),
       ERR_MODEL_PARAMS);
-    this.timeElapsedQuery = undefined;
+
+    // TimerQuery - TODO replace with Query class
     this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
-
-    this.lastQueryReturned = true;
-    this.accumulatedFrameTime = 0;
-    this.averageFrameTime = 0;
-    this.profileFrameCount = 0;
-
     this.timerQueryEnabled = timerQueryEnabled && this.ext !== null;
+    this.timeElapsedQuery = undefined;
+    this.lastQueryReturned = true;
+
+    this.stats = {
+      accumulatedFrameTime: 0,
+      averageFrameTime: 0,
+      profileFrameCount: 0
+    };
   }
   /* eslint-enable max-statements */
   /* eslint-enable complexity */
@@ -221,10 +209,6 @@ export default class Model extends Object3D {
     return this;
   }
 
-  draw({uniforms = {}, attributes = {}, settings = {}} = {}) {
-    return this.render(uniforms);
-  }
-
   // TODO - uniform names are too strongly linked camera <=> default shaders
   // At least all special handling is collected here.
   addViewUniforms(uniforms) {
@@ -239,15 +223,15 @@ export default class Model extends Object3D {
     return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
-  /*
-   * @param {Camera} opt.camera=
-   * @param {Camera} opt.viewMatrix=
-   */
-  /* eslint-disable max-statements */
-  render(uniforms = {}) {
+  draw({uniforms = {}, attributes = {}, settings = {}, samplers = {}}) {
+    return this.render(uniforms, attributes, samplers, settings);
+  }
+
+  render(uniforms = {}, attributes = {}, settings = {}, samplers = {}) {
     if (window.__SEER_INITIALIZED__) {
       addModel(this);
     }
+
     const resolvedUniforms = this.addViewUniforms(uniforms);
 
     this.setUniforms(resolvedUniforms);
@@ -267,11 +251,7 @@ export default class Model extends Object3D {
     const {isIndexed, indexType} = drawParams;
     const {isInstanced, instanceCount} = this;
 
-    if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
-      this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
-      this.timeElapsedQuery = this.ext.createQueryEXT();
-      this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
-    }
+    this._timerQueryStart();
 
     draw(this.program.gl, {
       drawMode: this.getDrawMode(),
@@ -282,38 +262,8 @@ export default class Model extends Object3D {
       instanceCount
     });
 
-    if (this.timerQueryEnabled === true) {
-      if (this.lastQueryReturned === true) {
-        this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
-        this.profileFrameCount++;
-        this.lastQueryReturned = false;
-      }
-  // ...at some point in the future, after returning control to the browser and being called again:
-      const disjoint = this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
-      if (disjoint) {
-        this.lastQueryReturned = true;
-        // Have to redo all of the measurements.
-      } else {
-        const available = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
-          this.ext.QUERY_RESULT_AVAILABLE_EXT);
+    this._timerQueryEnd();
 
-        if (available) {
-          const timeElapsed = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
-            this.ext.QUERY_RESULT_EXT) / 1e6;
-          this.accumulatedFrameTime += timeElapsed;
-          this.averageFrameTime = this.accumulatedFrameTime / this.profileFrameCount;
-          // Do something useful with the time.  Note that care should be
-          // taken to use all significant bits of the result, not just the
-          // least significant 32 bits.
-          log.log(2, 'program.id: ', this.program.id);
-          log.log(2, 'last frame time: ', timeElapsed, 'ms');
-          log.log(2, 'average frame time: ', this.averageFrameTime, 'ms');
-          log.log(2, 'accumulated frame time: ', this.accumulatedFrameTime, 'ms');
-          log.log(2, 'profile frame count: ', this.profileFrameCount);
-          this.lastQueryReturned = true;
-        }
-      }
-    }
     this.onAfterRender();
 
     this.unsetProgramState();
@@ -330,7 +280,7 @@ export default class Model extends Object3D {
     program.use();
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
-    program.setUniforms(this.uniforms);
+    program.setUniforms(this.uniforms, this.samplers);
     return this;
   }
 
@@ -339,6 +289,58 @@ export default class Model extends Object3D {
     // is unbound
     this.program.unsetBuffers();
     return this;
+  }
+
+  // PROFILING - TODO - rebuild using Query class
+  _timerQueryStart() {
+    if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
+      this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      this.timeElapsedQuery = this.ext.createQueryEXT();
+      this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
+    }
+  }
+
+  _timerQueryEnd() {
+    if (this.timerQueryEnabled === true) {
+      if (this.lastQueryReturned === true) {
+        this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
+        this.profileFrameCount++;
+        this.lastQueryReturned = false;
+      }
+      // ...at some point in the future, after returning control to the browser
+      // and being called again:
+      const disjoint = this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
+      if (disjoint) {
+        this.lastQueryReturned = true;
+        // Have to redo all of the measurements.
+      } else {
+        const available = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+          this.ext.QUERY_RESULT_AVAILABLE_EXT);
+
+        if (available) {
+          const timeElapsed = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
+            this.ext.QUERY_RESULT_EXT) / 1e6;
+          this.lastQueryReturned = true;
+
+          // Do something useful with the time.  Note that care should be
+          // taken to use all significant bits of the result, not just the
+          // least significant 32 bits.
+
+          // Update stats (e.g. for seer)
+          this.stats.lastFrameTime = timeElapsed;
+          this.stats.accumulatedTimeFrame += timeElapsed;
+          this.stats.averageFrameTime =
+            this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
+
+          // Log stats
+          log.log(2, 'program.id: ', this.program.id);
+          log.log(2, `last frame time: ${this.stats.lastFrameTime}ms`);
+          log.log(2, `average frame time ${this.stats.averageFrameTime}ms`);
+          log.log(2, `accumulated frame time: ${this.stats.accumulatedFrameTime}ms`);
+          log.log(2, `profile frame count: ${this.stats.profileFrameCount}`);
+        }
+      }
+    }
   }
 
   // Makes sure buffers are created for all attributes
@@ -459,20 +461,14 @@ export default class Model extends Object3D {
     // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
     const isInteger = type.indexOf('nt') !== -1;
 
-    location = `${location}${instanced ? ' [instanced]' : ''}`;
-
     return {
-      Location: location,
+      Location: `${location}${instanced ? ' [instanced]' : ''}`,
       'Type Size x Verts = Bytes': `${type} ${size} x ${verts} = ${bytes}`,
       Value: formatValue(value, {size, isInteger})
     };
   }
 
   // DEPRECATED / REMOVED
-  setTextures(textures = []) {
-    throw new Error('model.setTextures replaced: setUniforms({sampler2D: new Texture2D})');
-  }
-
   isPickable() {
     return this.pickable;
   }
