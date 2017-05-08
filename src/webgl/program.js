@@ -36,7 +36,7 @@ export default class Program extends Resource {
     }
   }
 
-  initialize({vs, fs, defaultUniforms} = {}) {
+  initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL.SEPARATE_ATTRIBS} = {}) {
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
     this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
@@ -46,7 +46,14 @@ export default class Program extends Resource {
 
     this.defaultUniforms = defaultUniforms;
 
-    this._compileAndLink(this.vs, this.fs);
+    // Setup varyings if supplied
+    if (varyings) {
+      assertWebGL2Context(this.gl);
+      this.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
+      this.varyings = getVaryingMap(varyings, bufferMode);
+    }
+
+    this._compileAndLink();
 
     // determine attribute locations (i.e. indices)
     this._attributeLocations = this._getAttributeLocations();
@@ -80,9 +87,14 @@ export default class Program extends Resource {
     isIndexed = false,
     indexType = GL.UNSIGNED_SHORT,
     isInstanced = false,
-    instanceCount = 0
+    instanceCount = 0,
+    transformFeedback
   }) {
-    this.use();
+    this.gl.useProgram(this.handle);
+
+    if (transformFeedback) {
+      transformFeedback.begin();
+    }
 
     const extension = gl.getExtension('ANGLE_instanced_arrays');
 
@@ -100,6 +112,11 @@ export default class Program extends Resource {
     } else {
       gl.drawArrays(drawMode, offset, vertexCount);
     }
+
+    if (transformFeedback) {
+      transformFeedback.end();
+    }
+
     return this;
   }
 
@@ -222,6 +239,12 @@ export default class Program extends Resource {
   }
   /* eslint-enable max-depth */
 
+  // setTransformFeedbackBuffers(buffers) {
+  //   for (const buffer of buffers) {
+  //     buffer.bindBase()
+  //   }
+  // }
+
   /**
    * ATTRIBUTES API
    * (Locations are numeric indices)
@@ -280,6 +303,15 @@ export default class Program extends Resource {
   }
 
   // WebGL2
+  /**
+   * @param {GLuint} index
+   * @return {WebGLActiveInfo} - object with {name, size, type}
+   */
+  getVarying(program, index) {
+    const result = this.gl.getTransformFeedbackVarying(program, index);
+    return result;
+  }
+
   // Retrieves the assigned color number binding for the user-defined varying
   // out variable name for program. program must have previously been linked.
   getFragDataLocation(varyingName) {
@@ -316,8 +348,7 @@ export default class Program extends Resource {
         const location = this._attributeLocations[attributeName];
         // throw new Error(`Program ${this.id}: ` +
         //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(0, `Program ${this.id}: ` +
-          `Attribute ${location}:${attributeName} not supplied`);
+        log.warn(0, `Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
         this._warn[attributeName] = true;
       }
     }
@@ -333,8 +364,7 @@ export default class Program extends Resource {
       const location = this._attributeLocations[bufferName];
       if (location === undefined) {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
-          throw new Error(
-            `${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
+          throw new Error(`${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
         } else if (!this._warn[bufferName]) {
@@ -450,4 +480,23 @@ export function getUniformDescriptors(gl, program) {
     uniformDescriptors[descriptor.name] = descriptor;
   }
   return uniformDescriptors;
+}
+
+// Get a map of buffer indices
+export function getVaryingMap(varyings, bufferMode) {
+  const varyingMap = {};
+  let index = 0;
+  for (const varying of varyings) {
+    if (bufferMode === GL.SEPARATE_ATTRIBS) {
+      varyingMap[varyings] = {index};
+      index++;
+    } else if (varying === 'gl_NextBuffer') {
+      index++;
+    } else {
+      // Add a "safe" offset as fallback unless app specifies it
+      // Could query
+      varyingMap[varyings] = {index, offset: 16};
+    }
+  }
+  return varyingMap;
 }
