@@ -113,7 +113,7 @@ The native `WebGLProgram` instance.
 
 ### `constructor`
 
-Creates a new program using the supplied vertex and fragment sshaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
+Creates a new program using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
 Syntax:
 
@@ -151,7 +151,7 @@ Relinks a program
     * `id` (`string`, optional) - string id (to help indentify the program during debugging).
     * `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
     * `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-    * `varyings` WebGL2 (`String`) - a list of names of varyings.
+    * `varyings` WebGL2 (`String[]`) - a list of names of varyings.
     * `bufferMode` WebGL2 (`GLenum`=`GL.SEPARATE_ATTRIBS`) - Optional, specifies how transform feedback should store the varyings.
 
 

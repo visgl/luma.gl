@@ -1,8 +1,6 @@
 import GL from './gl-constants';
 import Resource from './resource';
-<<<<<<< b609d1d2ebca41908f562062f9b7f9d8a7283481
 import {isWebGL2Context, assertWebGL2Context} from './context';
-import {assertWebGL2Context} from './context';
 import assert from 'assert';
 
 const GL_TRANSFORM_FEEDBACK_BUFFER = 0;

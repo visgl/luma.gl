@@ -8,7 +8,7 @@ The `TransformFeedback` also stores current count of primitives recorded in the 
 
 When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`) before it can be used. There a number of caveats to be aware of when manually managing `TransformFeedback` object activation, see the remarks. For this reason, luma.gl [`Program.draw`]() call takes an optional `TransformFeedback` object as a parameter and activates and deactivates it before and after the draw call.
 
-Finally, note that when using transform feedback it is frequently desirable to turn of rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
+Finally, note that when using transform feedback it is frequently desirable to turn off rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
 
 References:
 * [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Transform_Feedback).
