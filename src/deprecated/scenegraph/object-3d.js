@@ -1,15 +1,15 @@
 import {uid} from '../../utils';
-import {Vec3, Mat4} from '../math';
+import {Vector3, Matrix4} from '../../packages/math';
 import assert from 'assert';
 
 export default class Object3D {
 
   constructor({id, display = true}) {
     // model position, rotation, scale and all in all matrix
-    this.position = new Vec3();
-    this.rotation = new Vec3();
-    this.scale = new Vec3(1, 1, 1);
-    this.matrix = new Mat4();
+    this.position = new Vector3();
+    this.rotation = new Vector3();
+    this.scale = new Vector3(1, 1, 1);
+    this.matrix = new Matrix4();
 
     // whether to display the object at all
     this.id = id || uid(this.constructor.name);
@@ -79,10 +79,10 @@ export default class Object3D {
 
   getCoordinateUniforms(viewMatrix, modelMatrix) {
     // TODO - solve multiple class problem
-    // assert(viewMatrix instanceof Mat4);
+    // assert(viewMatrix instanceof Matrix4);
     assert(viewMatrix);
     modelMatrix = modelMatrix || this.matrix;
-    const worldMatrix = new Mat4().copy(viewMatrix).mulMat4(modelMatrix);
+    const worldMatrix = new Matrix4(viewMatrix).multiplyRight(modelMatrix);
     const worldInverse = worldMatrix.invert();
     const worldInverseTranspose = worldInverse.transpose();
 
@@ -100,14 +100,14 @@ export default class Object3D {
   transform() {
 
     if (!this.parent) {
-      this.endPosition.setVec3(this.position);
-      this.endRotation.setVec3(this.rotation);
-      this.endScale.setVec3(this.scale);
+      this.endPosition.set(this.position);
+      this.endRotation.set(this.rotation);
+      this.endScale.set(this.scale);
     } else {
       const parent = this.parent;
-      this.endPosition.setVec3(this.position.add(parent.endPosition));
-      this.endRotation.setVec3(this.rotation.add(parent.endRotation));
-      this.endScale.setVec3(this.scale.add(parent.endScale));
+      this.endPosition.set(this.position.add(parent.endPosition));
+      this.endRotation.set(this.rotation.add(parent.endRotation));
+      this.endScale.set(this.scale.add(parent.endScale));
     }
 
     const ch = this.children;

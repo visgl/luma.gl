@@ -35,8 +35,8 @@ Release Date: TBD - Q2 2017?
 * Code Size Improvements - Debug code is only imported when used (requires tree-shaking bundler).
 
 ### Internal Improvements
-* Coverage Integration with Coveralls
 * Many new Test Cases
+* Coverage Integration with Coveralls
 
 
 ## v3.0

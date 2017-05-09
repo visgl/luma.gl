@@ -50,7 +50,7 @@ export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 
 // Addons
-export {addEvents} from './addons/event';
+export {addEvents} from './packages/events';
 
 // Geometry
 export {default as Geometry} from './geometry/geometry';
@@ -114,9 +114,10 @@ export const experimental = {
   ShaderCache
 };
 
-// DEPRECATED IN V3.0
+// Alias for FramebufferObject (deprecated in v3). Framebuffer API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';
-export {Vec3, Vec4, Mat4, Quat} from './deprecated/math';
+
+// DEPRECATED IN V3.0
 export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
 export {default as Shaders} from './deprecated/shaderlib';
-export {default as Fx} from './addons/fx';
+export {default as Fx} from './deprecated/fx';

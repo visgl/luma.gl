@@ -23,15 +23,13 @@ export const examplePages = generatePath([
   {
     name: 'Cubemap',
     content: {
-      demo: 'CubemapDemo',
-      code: 'code-markdown/scatterplot.md'
+      demo: 'CubemapDemo'
     }
   },
   {
     name: 'Instancing',
     content: {
-      demo: 'InstancingDemo',
-      code: 'code-markdown/scatterplot.md'
+      demo: 'InstancingDemo'
     }
   }
 ]);
@@ -109,67 +107,67 @@ export const docPages = generatePath([
     children: [
       {
         name: 'Context',
-        content: getDocUrl('webgl/context.md')
+        content: getDocUrl('api-reference/webgl/context.md')
       },
       {
         name: 'Resource',
-        content: getDocUrl('webgl/resource.md')
+        content: getDocUrl('api-reference/webgl/resource.md')
       },
       {
         name: 'Buffer',
-        content: getDocUrl('webgl/buffer.md')
+        content: getDocUrl('api-reference/webgl/buffer.md')
       },
       {
         name: 'FenceSync',
-        content: getDocUrl('webgl/fence-sync.md')
+        content: getDocUrl('api-reference/webgl/fence-sync.md')
       },
       {
         name: 'Framebuffer',
-        content: getDocUrl('webgl/framebuffer.md')
+        content: getDocUrl('api-reference/webgl/framebuffer.md')
       },
       {
         name: 'Renderbuffer',
-        content: getDocUrl('webgl/renderbuffer.md')
+        content: getDocUrl('api-reference/webgl/renderbuffer.md')
       },
       {
         name: 'Program',
-        content: getDocUrl('webgl/program.md')
+        content: getDocUrl('api-reference/webgl/program.md')
       },
       {
         name: 'Shader',
-        content: getDocUrl('webgl/shader.md')
+        content: getDocUrl('api-reference/webgl/shader.md')
       },
       {
         name: 'Texture2D',
-        content: getDocUrl('webgl/texture-2d.md')
+        content: getDocUrl('api-reference/webgl/texture-2d.md')
       },
       {
         name: 'Texture2DArray (WebGL2)',
-        content: getDocUrl('webgl/texture-2d-array.md')
+        content: getDocUrl('api-reference/webgl/texture-2d-array.md')
       },
       {
         name: 'Texture3D (WebGL2)',
-        content: getDocUrl('webgl/texture-3d.md')
+        content: getDocUrl('api-reference/webgl/texture-3d.md')
       },
       {
         name: 'TextureCube',
-        content: getDocUrl('webgl/texture-cube.md')
+        content: getDocUrl('api-reference/webgl/texture-cube.md')
       },
       {
         name: 'TransformFeedback (WebGL2)',
-        content: getDocUrl('webgl/transform-feedback.md')
+        content: getDocUrl('api-reference/webgl/transform-feedback.md')
       },
       {
         name: 'Query (WebGL2)',
-        content: getDocUrl('webgl/query.md')
+        content: getDocUrl('api-reference/webgl/query.md')
       },
       {
         name: 'Sampler (WebGL2)',
-        content: getDocUrl('webgl/sampler')
+        content: getDocUrl('api-reference/webgl/sampler')
       },
       {
         name: 'VertexArrayObject',
-        content: getDocUrl('webgl/vertex-array-object.md')
+        content: getDocUrl('api-reference/webgl/vertex-array-object.md')
       }
     ]
   },
@@ -178,27 +176,27 @@ export const docPages = generatePath([
     children: [
       {
         name: 'Animation Frame',
-        content: getDocUrl('api-reference/animation-frame.md')
+        content: getDocUrl('api-reference/core/animation-frame.md')
       },
       {
         name: 'Model',
-        content: getDocUrl('api-reference/model.md')
-      },
-      {
-        name: 'Addons',
-        content: getDocUrl('api-reference/addons.md')
-      },
-      {
-        name: 'Event',
-        content: getDocUrl('api-reference/event.md')
+        content: getDocUrl('api-reference/core/model.md')
       },
       {
         name: 'Geometry',
-        content: getDocUrl('api-reference/geometry.md')
+        content: getDocUrl('api-reference/core/geometry.md')
       },
       {
         name: 'Shader Cache (Experimental)',
         content: getDocUrl('api-reference/experimental/shader-cache.md')
+      },
+      {
+        name: 'Group (Deprecated)',
+        content: getDocUrl('api-reference/deprecated/group.md')
+      },
+      {
+        name: 'Events Package',
+        content: getDocUrl('api-reference/events/event.md')
       },
       {
         name: 'Camera (Deprecated)',
@@ -207,10 +205,6 @@ export const docPages = generatePath([
       {
         name: 'Effects (Deprecated)',
         content: getDocUrl('api-reference/deprecated/fx.md')
-      },
-      {
-        name: 'Group (Deprecated)',
-        content: getDocUrl('api-reference/deprecated/group.md')
       }
     ]
   }]);
