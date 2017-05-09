@@ -60,34 +60,6 @@ const FS_FEEDBACK = `#version 300 es
   }
 `;
 
-const createShader = (gl, source, type) => {
-  const shader = gl.createShader(type);
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  return shader;
-};
-
-const createProgram = (gl, vsSource, fsSource) => {
-  const program = gl.createProgram();
-  const vShader = createShader(gl, vsSource, gl.VERTEX_SHADER);
-  const fShader = createShader(gl, fsSource, gl.FRAGMENT_SHADER);
-  gl.attachShader(program, vShader);
-  gl.deleteShader(vShader);
-  gl.attachShader(program, fShader);
-  gl.deleteShader(fShader);
-  // gl.linkProgram(program);
-
-  const log = gl.getProgramInfoLog(program) ||
-    gl.getShaderInfoLog(vShader) ||
-    gl.getShaderInfoLog(fShader);
-
-  if (log) {
-    console.log(log);
-  }
-
-  return program;
-};
-
 class Root extends PureComponent {
   constructor(props) {
     super(props);
@@ -134,11 +106,44 @@ class Root extends PureComponent {
       -1.0, -1.0, 0.0, 1.0
     ]);
 
+<<<<<<< HEAD
     const bufferVertex = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferVertex);
     // initialize and create the buffer object's data store
     gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
+=======
+    const VERTEX = 0;
+    const POSITION = 1;
+    const COLOR = 2;
+
+    const buffers = [
+      // VERTEX
+      new Buffer(gl).setData({data: positions}),
+      // POSITION
+      new Buffer(gl).setData({
+        bytes: positions.length * BYTE_SIZE,
+        usage: gl.STATIC_COPY,
+        type: gl.FLOAT
+      }),
+      // COLOR
+      new Buffer(gl).setData({
+        bytes: positions.length * BYTE_SIZE,
+        usage: gl.STATIC_COPY,
+        type: gl.FLOAT
+      })
+    ];
+
+    // ---- SETUP VERTEX ARRAYS ---- //
+    const vaoTransform = new VertexArrayObject(gl).bind();
+
+    // TODO how to use setBuffers for copied data?
+
+    buffers[VERTEX].bind();
+    gl.enableVertexAttribArray(POSITION_LOCATION);
+    gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
+    buffers[VERTEX].unbind();
+>>>>>>> some cleanup before rebase
 
     const bufferPosition = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferPosition);
@@ -236,10 +241,17 @@ class Root extends PureComponent {
 
   render() {
     const {width, height} = this.state;
+<<<<<<< HEAD
     return width && height && <canvas ref={canvas => {
       this.canvas = canvas;
     }}
       style={{width, height}} onMouseMove={this._onMouseMove}/>;
+=======
+    return width && height && <canvas style={{width, height}}
+      onMouseMove={this._onMouseMove} ref={canvas => {
+        this.canvas = canvas;
+      }}/>;
+>>>>>>> some cleanup before rebase
   }
 }
 
