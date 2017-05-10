@@ -4,7 +4,7 @@
 
 /* eslint-disable dot-notation, max-statements, no-loop-func */
 /* global window, document */
-import {noop} from '../utils';
+function noop() {}
 
 const KEYS = {
   enter: 13,
