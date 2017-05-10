@@ -3,8 +3,8 @@ import Resource from './resource';
 import {isWebGL2Context, assertWebGL2Context} from './context';
 import assert from 'assert';
 
-const GL_TRANSFORM_FEEDBACK_BUFFER = 0;
-const GL_TRANSFORM_FEEDBACK = 0;
+// const GL.TRANSFORM_FEEDBACK_BUFFER = 0;
+// const GL.TRANSFORM_FEEDBACK = 0;
 
 export default class TranformFeedback extends Resource {
 
@@ -38,42 +38,44 @@ export default class TranformFeedback extends Resource {
   // }
 
   bindBuffer({index, buffer, offset = 0, size}) {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     if (size === undefined) {
-      this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle);
+      this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle);
     } else {
-      this.gl.bindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle, offset, size);
+      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle, offset, size);
     }
+    return this;
   }
 
   unbindBuffer({index}) {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
-    this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, null);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, null);
+    return this;
   }
 
   begin(primitiveMode) {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
   }
 
   pause() {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.pauseTransformFeedback();
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     return this;
   }
 
   resume() {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.resumeTransformFeedback();
     return this;
   }
 
   end() {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.endTransformFeedback();
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     return this;
   }
 

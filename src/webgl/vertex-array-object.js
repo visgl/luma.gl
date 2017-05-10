@@ -73,6 +73,7 @@ export default class VertexArrayObject extends Resource {
   _bindVertexArray(gl, vertexArray) {
     if (isWebGL2Context(gl)) {
       gl.bindVertexArray(vertexArray);
+      return;
     }
     const ext = gl.getExtension(OES_vertex_array_object);
     if (ext) {
