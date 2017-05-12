@@ -68,26 +68,24 @@ console.log(
 
 ### Texture2D constructor
 
-`new Texture2D(gl, options)`
+```
+new Texture2D(gl, {
+  data=, width=, height=, mipmaps=, format=, type=, dataFormat=,
+  parameters=, pixelStore=
+})
+```
 
 * `gl` (WebGLRenderingContext) - gl context
-* `options`
-    * `data`=null (*) - If not provided (null), a solid color texture will be allocated of the specified size.
-    * `width` (*Number*, default 0) - The width of the texture.
-    * `height` (*Number*, default 0) - The height of the texture.
-    * `mipmaps` (*Array* | *Boolean* | *Enum*, default false) - `n`th mipmap reduction level, 0 represents base image
-    * `format` (*enum*, default `GL.RGBA`) - internal format that WebGL should use.
-    * `type` (*enum*, default is autodeduced from format) - type of pixel data (GL.UNSIGNED_BYTE, GL.FLOAT etc).
-    * `dataFormat` (*enum*, default is autodeduced from `format`) - internal format that WebGL should use.
-    * `parameters`=`{}` (object) - texture sampler parameters (see separate article)
-    * `pixelStore`=`{}` (object) - pixel store parameters (see separate article)
+* `data`=null (*) - If not provided (null), a solid color texture will be allocated of the specified size.
+* `width` (*Number*, default 0) - The width of the texture.
+* `height` (*Number*, default 0) - The height of the texture.
+* `mipmaps` (*Array* | *Boolean* | *Enum*, default false) - `n`th mipmap reduction level, 0 represents base image
+* `format` (*enum*, default `GL.RGBA`) - internal format that WebGL should use.
+* `type` (*enum*, default is autodeduced from format) - type of pixel data (GL.UNSIGNED_BYTE, GL.FLOAT etc).
+* `dataFormat` (*enum*, default is autodeduced from `format`) - internal format that WebGL should use.
+* `parameters`=`{}` (object) - texture sampler parameters (see [Sampler](./sampler.md)
+* `pixelStore`=`{}` (object) - pixel store parameters (see separate article)
 
-For details on possible values for these parameters, see [Textures And Samplers](docs/webgl-textures-and-samplers.md).
-
-### `Texture2D.update`
-
-
-### Texture Constructor
 
 
 | Type                               | Description  |
@@ -133,17 +131,6 @@ Note: luma.gl attempts to autodeduce `type` from the `format` parameter, so for 
 
 
 #### Texture Sampler Parameters
-
-```js
-{..., [GL.TEXTURE_MAG_FILTER]: GL.NEAREST, [GL.TEXTURE_MIN_FILTER]: GL.NEAREST}
-```.
-
-| Sampler Parameter                    | Default        | Description |
-| ------------------------------------ | -------------- | ----------- |
-| `GL.TEXTURE_MAG_FILTER`              | `GL.LINEAR`    | texture magnification filter |
-| `GL.TEXTURE_MIN_FILTER`              | `GL.NEAREST_MIPMAP_LINEAR` | texture minification filter |
-| `GL.TEXTURE_WRAP_S`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `s` |
-| `GL.TEXTURE_WRAP_T`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `t` |
 
 Texture parameters control how textures are sampled in the shaders.
 Also see [`Sampler`](sampler.md).

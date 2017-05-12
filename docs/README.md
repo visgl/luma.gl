@@ -136,5 +136,3 @@ Will be removed in next major version of luma.gl
 | [`PerspectiveCamera`](camera.html#PerspectiveCamera) | Generates uniform matrices for perspective viewing |
 | [`OrthoCamera`](camera.html#OrthoCamera)  | Generates uniform matrices for orthographic viewing |
 | [`Scene`](scene.html) | A Group with settings that can be rendered using default shaders |
-| [`Math`](math.html) | Old math library, Vec3, Vec4, Mat4, Quat |
-| [`Fx`](fx.html) | render loop support (or use `window.requestAnimationFrame`) |

@@ -46,3 +46,12 @@ Note that `VertexArrayObject` and `Query` can be used in WebGL1 with certain res
 
 * Misc
     * New blending modes: `GL.MIN` and `GL.MAX`
+
+* Efficiency
+
+WebGL2 introduces objects that collect state allowing applications to switch state with a single call:
+
+* `VertexArrayObject`s - holds a set of vertex array buffer bindings
+* Uniform Buffers - holds a set of uniforms
+* `Sampler` - holds a set of texture sampling parameters
+* `TransformFeedback` - holds a set of transform feedback output buffer bindings.

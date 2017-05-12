@@ -2,18 +2,14 @@
 
 This section provides an overview of WebGL extensions and describes luma's builtin support for them.
 
-While the Khronos group's official list of [WebGL Extensions](https://www.khronos.org/registry/webgl/extensions/) is intimidatingly long, the extensions can be categorized into a few basic categories:
+While the Khronos group's official list of [WebGL Extensions](https://www.khronos.org/registry/webgl/extensions/) is intimidatingly long, the extensions can be categorized into a few basic categories
 
-* **General Extensions** - These extensions expose some optional general capability that was not included in the initial standards perhaps due to performance or security concerns.
-* **Debug Extensions** - These extensions expose additional information and capabilities that help debug and profile a WebGL program.
-* **WebGL1 Feature Extensions** - These extensions expose various OpenGL ES 3.0 features that are often available on the target devices that run the OpenGL ES 2.0 based WebGL1 standard today.
-* **WebGL2 Feature Extensions** - These extensions expose various OpenGL ES 3.1 and 3.2 features that are occasionally available on target devices that run the OpenGL ES 3.0 based WebGL2 standard today.
-* **Compressed Texture Extensions** - Used to query if the GPU supports specific proprietary compressed texture formats.
-
-Also note that because luma.gl gives the application direct access to the WebGL context, the application can always work directly with any extensions it needs.
+Note that because luma.gl gives the application direct access to the WebGL context, the application can always work directly with any extensions it needs.
 
 
 ## General Extensions
+
+These extensions expose optional general capability that was not included in the initial standard perhaps due to performance or security concerns.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
@@ -23,7 +19,7 @@ Also note that because luma.gl gives the application direct access to the WebGL 
 
 ## Debug Extensions
 
-luma carefully uses these extensions under the hood to provide a better
+These extensions expose additional information and capabilities that help debug and profile a WebGL program. luma.gl carefully uses these extensions under the hood to provide a better
 debug experience.
 
 | Extension | Enables | luma.gl support |
@@ -37,10 +33,9 @@ debug experience.
 
 ## WebGL1 Extensions
 
-These extensions expose selected OpenGL ES 3.0 functionality to WebGL1 apps.
-Note that these extensions are no longer available in WebGL2 as the
-functionality they enable is provided by default in WebGL2
-(which requires an OpenGL ES 3.0 compliant device).
+These extensions expose various OpenGL ES 3.0 features that are often available on the target devices that run the OpenGL ES 2.0 based WebGL1 standard today.
+
+Note that many of these extensions are no longer available in WebGL2 as the functionality they enable is provided by default in WebGL2 (which requires an OpenGL ES 3.0 compliant device).
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
@@ -65,6 +60,7 @@ functionality they enable is provided by default in WebGL2
 
 ## WebGL2 Extensions
 
+These extensions expose various OpenGL ES 3.1 and 3.2 features that are often available on target devices that run the OpenGL ES 3.0 based WebGL2 standard today.
 These extensions can bring OpenGL ES 3.1 or 3.2 capabilities to WebGL2 contexts,
 if the device supports them.
 
@@ -90,6 +86,8 @@ luma.gl as they become available in browsers.
 
 
 ## Compressed Texture Format Extensions
+
+Used to query if the GPU supports specific proprietary compressed texture formats.
 
 These enable various proprietary (patent-encumbered) compressed texture formats.
 

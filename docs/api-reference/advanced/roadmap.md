@@ -1,4 +1,4 @@
-# Planned Features
+# WebGL Feature Ideas
 
 ## Resource
 
@@ -31,3 +31,9 @@ extension becomes available in a major browser.
 
 The assumption is that an async `aquire` method will be available that will
 change the gl context stored in the `Resource`.
+
+
+
+### Vertex Attributes
+
+* Consolidate vertex attributes and VertexAttributeObjects

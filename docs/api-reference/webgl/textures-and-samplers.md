@@ -1,7 +1,11 @@
 # Textures and Samplers
 
-Textures allows elements of an image array to be read by shaders.
-Samplers specify how texels should be interpolated.
+A texture is a WebGL Object that contains one or more images that all have the same image format. A texture can be used in two ways:
+* It can be the source of a texture access from a Shader (through a sampler uniform)
+* It can be used as a render target (by attaching it to a framebuffer)
+[OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture)).
+
+Samplers specify how texels should be interpolated. WebGL textures 
 
 There are several types of types of texture objects
 
@@ -30,68 +34,9 @@ Notes:
 ## Texture Sampler Parameters
 
 Texture parameters control how textures are sampled in the shaders.
+
 Also see [`Sampler`](sampler.md).
 
-| Sampler Parameter                    | Default        | Description |
-| ------------------------------------ | -------------- | ----------- |
-| `GL.TEXTURE_MAG_FILTER`              | `GL.LINEAR`    | texture magnification filter |
-| `GL.TEXTURE_MIN_FILTER`              | `GL.NEAREST_MIPMAP_LINEAR` | texture minification filter |
-| `GL.TEXTURE_WRAP_S`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `s` |
-| `GL.TEXTURE_WRAP_T`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `t` |
-| ------------------------------------ | -------------- | ----------- |
-| `GL.TEXTURE_WRAP_R` **WebGL2**       | `GL.REPEAT`    | texture wrapping function for texture coordinate `r` |
-| `GL.TEXTURE_BASE_LEVEL` **WebGL2**   | `0`            | Texture mipmap level |
-| `GL.TEXTURE_MAX_LEVEL` **WebGL2**    | `1000`         | Maximum texture mipmap array level |
-| `GL.TEXTURE_COMPARE_FUNC` **WebGL2** | `GL.LEQUAL`    | texture comparison function |
-| `GL.TEXTURE_COMPARE_MODE` **WebGL2** | `GL.NONE`      | whether r tex coord should be compared to depth texture |
-| `GL.TEXTURE_MIN_LOD` **WebGL2**      | `-1000`        | minimum level-of-detail value |
-| `GL.TEXTURE_MAX_LOD` **WebGL2**      | `1000`         | maximum level-of-detail value |
-
-* `GL.TEXTURE_MAG_FILTER` can take the following values
-
-| `GL.TEXTURE_MAG_FILTER`     | Description                     |
-| --------------------------- | ------------------------------- |
-| `GL.LINEAR` (default)       | interpolated texel              |
-| `GL.NEAREST`                | nearest texel                   |
-
-* `GL.TEXTURE_MIN_FILTER` can take the following values
-
-| `GL.TEXTURE_MIN_FILTER`     | Description                     |
-| --------------------------- | ------------------------------- |
-| `GL.LINEAR`                 | interpolated texel              |
-| `GL.NEAREST`                | nearest texel                   |
-| `GL.NEAREST_MIPMAP_NEAREST` | nearest texel in closest mipmap |
-| `GL.LINEAR_MIPMAP_NEAREST`  | interpolated texel in closest mipmap |
-| `GL.NEAREST_MIPMAP_LINEAR` (default) | average texel from two closest mipmaps |
-| `GL.LINEAR_MIPMAP_LINEAR`   | interpolated texel from two closest mipmaps |
-
-* `GL.TEXTURE_WRAP_S`, `GL.TEXTURE_WRAP_S`, `GL.TEXTURE_WRAP_R` can take the following values
-
-| `GL.TEXTURE_WRAP_`*         | Description                     |
-| --------------------------- | ------------------------------- |
-| `GL.REPEAT` (default)       | use fractional part of texture coordinates |
-| `GL.CLAMP_TO_EDGE`          | clamp texture coordinates                |
-| `GL.MIRRORED_REPEAT`        | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
-
-* `GL.TEXTURE_COMPARE_MODE` can take the following values
-
-| `GL.TEXTURE_COMPARE_MODE`   | Description                     |
-| --------------------------- | ------------------------------- |
-| `GL.NONE` (default)         | no comparison of `r` coordinate is performed |
-| `GL.COMPARE_REF_TO_TEXTURE` | interpolated and clamped `r` texture coordinate is compared to currently bound depth texture, result is assigned to the red channel |
-
-* `GL.TEXTURE_COMPARE_FUNC` can take the following values
-
-| `GL.TEXTURE_COMPARE_FUNC`   | Computed result                    |
-| --------------------------- | ---------------------------------- |
-| `GL.LEQUAL` (default)       | result = 1.0 0.0, r <= D t r > D t |
-| `GL.GEQUAL`                 | result = 1.0 0.0, r >= D t r < D t |
-| `GL.LESS`                   | result = 1.0 0.0, r < D t r >= D t |
-| `GL.GREATER`                | result = 1.0 0.0, r > D t r <= D t |
-| `GL.EQUAL`                  | result = 1.0 0.0, r = D t r ≠ D t  |
-| `GL.NOTEQUAL`               | result = 1.0 0.0, r ≠ D t r = D t  |
-| `GL.ALWAYS`                 | result = 1.0                       |
-| `GL.NEVER`                  | result = 0.0                       |
 
 ## Formats
 

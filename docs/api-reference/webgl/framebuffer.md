@@ -1,47 +1,21 @@
 # Framebuffer
 
-Encapsulates a WebGLFramebuffer object. In WebGL/OpenGL, a framebuffer is an
-object that the application can use for "off screen" rendering. A framebuffer
-can optionally contain color buffers, a depth buffer and a stencil buffer.
+In WebGL/OpenGL, a framebuffer is a container object that the application can use for "off screen" rendering. A framebuffer does not actually contain any image data but can optionally contain attachments (color buffers, a depth buffer and a stencil buffer) that store data. Attachments must be in the form of `Texture`s and `Renderbuffer`s.
 
-Note that in spite of its name, a Framebuffer does not actually contain
-any image data. It relies on attachments in the form of Textures and
-Renderbuffers to store data.
+The luma.gl `Framebuffer` constructor enables the creation of a WebGLFramebuffer with all the proper attachments in a single step and also the `resize` method makes it easy to resize a Framebuffer together with all its attachments.
 
-In the raw WebGL API, creating a set of properly configured and matching
-textures and renderbuffers can require a lot of careful coding and boilerplate,
-which is further complicated by many capabilities (such as support for
-multiple color buffers and various image formats) depend on WebGL extensions.
-
-Some of the main advantages of the luma.gl Framebuffer class is that it
-makes it easy to create a WebGLFramebuffer with all the proper attachments,
-(automatically using extensions or WebGL2 features when available)
-and also makes it easy to resize a Framebuffer together with all its
-attachments.
-
-Resizing Framebuffers, which comes in handy for instance when the app is
-keeping a framebuffer the same size as the window, can be achieved by
-calling the Framebuffer.update methods with just the width and height
-parameters.
 
 ## Usage
 
 Creating a framebuffer
 ```js
-const framebuffer = new Framebuffer('monitor', {
-  width: screenWidth,
-  height: screenHeight,
-  bindToTexture: {
-    parameters: [{
-      name: 'TEXTURE_MAG_FILTER',
-      value: 'LINEAR'
-    }, {
-      name: 'TEXTURE_MIN_FILTER',
-      value: 'LINEAR_MIPMAP_NEAREST',
-      generateMipmap: false
-    }]
+const framebuffer = new Framebuffer(gl, {
+  width: window.innerWidth,
+  height: window.innerHeight,
+  colorBufferParameters: {
+    [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
+    [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST,
   },
-  bindToRenderBuffer: true
 });
 ```
 
@@ -51,8 +25,28 @@ framebuffer.attachTexture...
 framebuffer.checkStatus()
 ```
 
-Selecting a framebuffer for rendering
+Resizing a framebuffers to the size of a window
+```js
+framebuffer.resize({width: window.innerWidth, height: window.innerHeight});
+```
 
+Specifying a framebuffer for rendering
+```js
+const offScreenBuffer = new Framebuffer();
+program1.draw({
+  // ...
+  settings: {framebuffer: offScreenBuffer}
+});
+```
+
+Selecting a framebuffer for rendering
+```js
+import {withState} from 'luma.gl';
+withState(gl, {framebuffer}, () => {
+  program1.draw(...);
+  program2.draw(...);
+});
+```
 
 Blitting between framebuffers (WebGL2)
 ```js
@@ -61,7 +55,7 @@ framebuffer.blit({srcFramebuffer, ...});
 
 Invalidating framebuffers (WebGL2)
 ```js
-framebuffer.invalidate({attachments: [...]});
+framebuffer.invalidate({attachments: [...]}); // GPU can now release the data
 ```
 
 
@@ -69,12 +63,7 @@ framebuffer.invalidate({attachments: [...]});
 
 ### Framebuffer Constructor
 
-Creates or binds/unbinds a framebuffer. You can also use this method to
-bind the framebuffer to a texture and renderbuffers. If the
-framebuffer already exists then calling `setFramebuffer` with
-`true` or `false` as options will bind/unbind the framebuffer.
-Also, for all properties set to a buffer, these properties are
-remembered so they're optional for later calls.
+Creates a new framebuffer, optionally creating and attaching `Texture` and `Renderbuffer` attachments
 
   new Framebuffer(gl, {
     id,
@@ -82,56 +71,43 @@ remembered so they're optional for later calls.
     height,
     depth
   })
-	program.setFramebuffer(name[, options]);
 
-### Arguments:
-
-1. gl - (*WebGLContext*) - context
-2. options - (*mixed*) Can be a boolean used to bind/unbind
-   the framebuffer or an object with options/data described below:
-
-### Options:
-
-* id - (*String*, optional) - The name (unique id) of the buffer.
-* width - (*number*, optional, default 1) The width of the framebuffer.
-* height - (*number*, optional, default 1) The height of the framebuffer.
-* colorAttachments - (*Texture|Textures[]|Renderbuffer|Renderbuffer[]*, optional) -
-  an optional array of either Textures or Renderbuffers.
-* stencilAttachment -
-* depthAttachment -
-* depthStencilAttachment -
-* colorFormat -
-* depthTexture -
-
-bindToTexture - (*mixed*, optional) Whether to bind the framebufferx`x`
-  onto a texture. If false the framebuffer wont be bound to a texture.
-Else you should provide an object with the same options as in `setTexture`.
-* textureOptions - (*object*, optional) Some extra options for binding the framebuffer to the texture. Default's `{ attachment: gl.COLOR_ATTACHMENT0 }`.
-* bindToRenderBuffer - (*boolean*) Whether to bind the framebuffer to a renderbuffer. The `width` and `height` of the renderbuffer are the same as the ones specified above.
-* renderBufferOptions - (*object*, optional) Some extra options for binding the framebuffer to the renderbuffer. Default's `{ attachment: gl.DEPTH_ATTACHMENT }`.
+* `gl` - (*WebGLContext*) - context
+* `id` - (*String*, optional) - The name (unique id) of the buffer.
+* `width` - (*number*, optional, default 1) The width of the framebuffer.
+* `height` - (*number*, optional, default 1) The height of the framebuffer.
+* `colorAttachments` - (*Texture|Textures[]|Renderbuffer|Renderbuffer[]*, optional) - an optional array of either Textures or Renderbuffers.
+* `stencilAttachment` -
+* `depthAttachment` -
+* `depthStencilAttachment` -
+* `colorFormat` -
+* `depthTexture` -
 
 
-### `Framebuffer.update`
-
-Syntax:
-    program.setFramebuffers(object);
-
-Arguments:
-1. object - (*object*) An object with key value pairs matching a
-   buffer name and its value respectively.
-
-
-### `Framebuffer:delete`
+### delete
 
 Destroys the underlying WebGL object. When destroying Framebuffers it can
 be important to consider that a Framebuffer can manage other objects that
 also need to be destroyed.
 
 
-### Framebuffer.attachRenderbuffer
+### resize
+
+Framebuffer will only be resized if the size has actually changed. Calling resize multiple times with the same width and height does not work.
+
+`framebuffer.resize({width, height})`
+
+Arguments:
+* `width` (*number*) - An object with key value pairs matching a buffer name and its value respectively.
+* `height` (*number*) - An object with key value pairs matching a buffer name and its value respectively.
+
+
+### attachRenderbuffer
 
 Used to attach a framebuffer to a framebuffer, the textures will store
 the various buffers.
+
+`framebuffer.attachRenderbuffer({...})`
 
 * `opts.renderbuffer=null` {RenderBuffer|WebGLRenderBuffer|null} - renderbuffer to bind. default is null which unbinds the renderbuffer for the attachment
 * `opts.attachment=` {String|Number} - which buffer to bind
@@ -140,7 +116,7 @@ the various buffers.
 WebGL calls [`gl.framebufferRenderbuffer`](), [`gl.bindFramebuffer`]()
 
 
-### Framebuffer.attachTexture
+### attachTexture
 
 Used to attach textures to a framebuffer, the attached textures will store the various buffers.
 
@@ -159,18 +135,18 @@ returns {FrameBuffer} returns itself to enable chaining
 WebGL calls [`gl.framebufferTexture2D`](), [`gl.bindFramebuffer`]()
 
 
-### Framebuffer.attachTextureLayer (WebGL2)
+### attachTextureLayer (WebGL2)
 
 WebGL calls [`gl.framebufferTextureLayer`](), [`gl.bindFramebuffer`]()
 
 
-### Framebuffer.checkStatus
+### checkStatus
 
 Check that the framebuffer contains a valid combination of attachments
 
 [`gl.framebufferCheckStatus`](), [`gl.bindFramebuffer`]()
 
-### Framebuffer.readPixels
+### readPixels
 
 App can provide pixelArray or have it auto allocated by this method
     x = 0,
@@ -185,7 +161,7 @@ NOTE: Slow requires roundtrip to GPU
 
 [gl.readPixels](), [`gl.bindFramebuffer`]()
 
-### Framebuffer.readBuffer
+### readBuffer
 
 Selects a color buffer as the source for pixels for subsequent calls to
 copyTexImage2D, copyTexSubImage2D, copyTexSubImage3D or readPixels.
@@ -196,7 +172,7 @@ Parameters: src
 * `gl.COLOR_ATTACHMENT{0-15}` - Reads from one of 16 color attachment buffers.
 
 
-### Framebuffer.blit (WebGL2)
+### blit (WebGL2)
 
 Copies a rectangle of pixels between framebuffers
 
@@ -225,3 +201,11 @@ Parameters
 * attachments - list of attachments to invalidate
 
 [`gl.invalidateFramebuffer`](), [`gl.invalidateSubFramebuffer`](), [`gl.bindFramebuffer`]()
+
+
+## Remarks
+
+* In the raw WebGL API, creating a set of properly configured and matching textures and renderbuffers can require a lot of careful coding and boilerplate.
+* This is further complicated by many capabilities (such as support for multiple color buffers and various image formats) depending on WebGL extensions or WebGL versions.
+
+
