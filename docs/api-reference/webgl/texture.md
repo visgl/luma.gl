@@ -47,9 +47,9 @@ texture.bind(1);
 Note that in WebGL2 it is possible to specify sampling parameters independently from the texture. See [`Sampler`](./sampler.md).
 
 * textureType - (*enum*, optional) The texture type used to call `gl.bindTexture` with. Default's `gl.TEXTURE_2D`.
-* pixelStore - (*array*, optional) An array of objects with name, value options to be set with `gl.pixelStorei` calls. 
+* pixelStore - (*array*, optional) An array of objects with name, value options to be set with `gl.pixelStorei` calls.
 Default's `[{ name: gl.UNPACK_FLIP_Y_WEBGL, value: true }]`.
-* parameters - (*array*, optional) An array of objects with nane, value options to be set with `gl.texParameteri`. 
+* parameters - (*array*, optional) An array of objects with nane, value options to be set with `gl.texParameteri`.
 Default's `[{ name: gl.TEXTURE_MAG_FILTER, value: gl.NEAREST }, { name: gl.TEXTURE_MIN_FILTER, value: gl.NEAREST }]`.
 * data - (*object*, optional) An object with properties described below:
   * format - (*enum*, optional) The format used for `gl.texImage2D` calls. Default's `gl.RGBA`.

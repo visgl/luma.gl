@@ -89,10 +89,6 @@ export const docPages = generatePath([
         content: getDocUrl('user-guide/debugging.md')
       },
       {
-        name: 'Extensions',
-        content: getDocUrl('user-guide/extensions.md')
-      },
-      {
         name: 'WebGL2',
         content: getDocUrl('user-guide/webgl2.md')
       },
@@ -105,6 +101,14 @@ export const docPages = generatePath([
   {
     name: 'WebGL Reference',
     children: [
+      {
+        name: 'Capability Management',
+        content: getDocUrl('api-reference/webgl/context-caps.md')
+      },
+      {
+        name: 'State Management',
+        content: getDocUrl('api-reference/webgl/context-state.md')
+      },
       {
         name: 'Context',
         content: getDocUrl('api-reference/webgl/context.md')
@@ -183,6 +187,10 @@ export const docPages = generatePath([
         content: getDocUrl('api-reference/core/model.md')
       },
       {
+        name: 'Group',
+        content: getDocUrl('api-reference/scenegraph/group.md')
+      },
+      {
         name: 'Geometry',
         content: getDocUrl('api-reference/core/geometry.md')
       },
@@ -191,20 +199,27 @@ export const docPages = generatePath([
         content: getDocUrl('api-reference/experimental/shader-cache.md')
       },
       {
-        name: 'Group (Deprecated)',
-        content: getDocUrl('api-reference/deprecated/group.md')
-      },
-      {
         name: 'Events Package',
         content: getDocUrl('api-reference/events/event.md')
       },
       {
         name: 'Camera (Deprecated)',
         content: getDocUrl('api-reference/deprecated/camera.md')
-      },
-      {
-        name: 'Effects (Deprecated)',
-        content: getDocUrl('api-reference/deprecated/fx.md')
       }
     ]
-  }]);
+  }
+  // ,
+  // {
+  //   name: 'Advanced',
+  //   children: [
+  //     {
+  //       name: 'Roadmap',
+  //       content: getDocUrl('user-guide/extensions.md')
+  //     },
+  //     {
+  //       name: 'Extensions',
+  //       content: getDocUrl('user-guide/extensions.md')
+  //     },
+  //   ]
+  // }
+]);

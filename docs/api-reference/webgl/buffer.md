@@ -3,13 +3,14 @@
 luma.gl class managing a `WebGLBuffer` and related WebGL APIs.
 
 From the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Buffer_Object):
-Buffer Objects are OpenGL Objects that store an array of unformatted memory allocated by the OpenGL context (aka: the GPU). These can be used to store vertex data, pixel data retrieved from images or the framebuffer, and a variety of other things.
+Buffer Objects are OpenGL Objects that store an array of unformatted memory allocated by the GPU. These can be used to store vertex data, pixel data retrieved from images or the framebuffer, and a variety of other things.
 
 So, a `Buffer` (`WebGLBuffer`) is essentially a mechanism for allocating memory on the GPU, together with facilities for uploading, copying and downloading chunks of contiguous memory to and from that memory chunk on the GPU. While transferring memory between CPU and GPU takes some time, once the memory is available as a buffer on the GPU it can be very efficiently used as inputs and outputs by the GPU.
 
 Note that in WebGL, there are two types of buffers:
-* "element" buffers. These can only store vertex attributes with indices (a.k.a elements) and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
+* "element" buffers. These can only store vertex attributes with indices (a.k.a "elements") and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
 * "generic" buffers. These can be used interchangeably to store different types of data, including (non-index) vertex attributes.
+
 
 ### Usage
 
@@ -129,58 +130,63 @@ Params:
 
 Allocates and optionally initializes buffer memory/data store (releasing any previously allocated memory).
 
-* opt.data (ArrayBufferView) - contents
-* opt.bytes (GLsizeiptr) - the size of the buffer object's data store.
-* opt.usage (GLenum)=gl.STATIC_DRAW - Allocation hint for GPU driver Characteristics of stored data, hints for vertex attribute
-* opt.dataType (GLenum)=gl.FLOAT - type of data stored in buffer
-* opt.size (GLuint)=1 - number of values per vertex
+Also extracts characteristics of stored data, hints for vertex attribute.
+
+`Buffer.setData({data, bytes, usage=, dataType=, size=})`
+
+* `data` (ArrayBufferView) - contents
+* `bytes` (GLsizeiptr) - the size of the buffer object's data store.
+* `usage`=`GL.STATIC_DRAW` (GLenum) - Allocation hint for GPU driver.
+* `dataType`=`GL.FLOAT` (GLenum) - type of data stored in buffer
+* `size`=`1` (GLuint) - number of values per vertex
 
 Returns {Buffer} Returns itself for chaining.
 
-
-### Buffer.subData
+### subData
 
 Updates part of a buffer's allocated memory.
 
+`Buffer.subData({data, offset=, srcOffset=, length})`
+
 Params
-* {ArrayBufferView} opt.data - contents
-* `data`      // Data (Typed Array or ArrayBuffer), length is inferred unless provided
-* `offset`    // Offset into buffer
-* `srcOffset` // WebGL2: Offset into srcData
-* `length`    // WebGL2: Number of bytes to be copied
+* `data` (`ArrayBufferView`) - length is inferred unless provided
+* `offset`=`0` - Offset into buffer
+* `srcOffset`=`0` -  WebGL2: Offset into srcData
+* `length` - WebGL2: Number of bytes to be copied
 
 Returns
 * Buffer - Returns itself for chaining.
 
 
-### Buffer.copySubData (WEBGL2)
+### copySubData (WEBGL2)
 
 Copies part of the data of another buffer into this buffer
 
+`Buffer.copySubData({sourceBuffer, readOffset=, writeOffset=, size})`
+
 Params:
 * `sourceBuffer`
-* `readOffset` {GLintptr} - byte offset from which to start reading from the buffer.
-* `writeOffset` {GLintptr} - byte offset from which to start writing to the buffer.
-* `size` {GLsizei} - bytes specifying the size of the data to be copied
+* `readOffset`=`0` (GLint) - byte offset from which to start reading from the buffer.
+* `writeOffset`=`0` (GLint) - byte offset from which to start writing to the buffer.
+* `size` (GLsizei) - bytes specifying the size of the data to be copied
 
 Remarks:
 * `readOffset`, `writeOffset` and `size` must all be greater than or equal to zero.
-* `readOffset+sizereadOffset+size` must not exceeed the size of the source buffer object
-* `writeOffset+sizewriteOffset+size` must not exceeed the size of the buffer bound to writeTarget.
-* If the source and destination are the same buffer object, then the source and destination
-ranges must not overlap.
+* `readOffset + sizereadOffset + size` must not exceeed the size of the source buffer object
+* `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
+* If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
 
 
-### Buffer.getSubData (WEBGL2)
+### getSubData (WEBGL2)
 
-Reads data from buffer into an ArrayBuffer or SharedArrayBuffer.
+Reads data from buffer into an `ArrayBuffer` or `SharedArrayBuffer`.
 
-Params
-* {GLintptr} srcByteOffset - byte offset from which to start reading from the buffer.
-* {ArrayBufferView | ArrayBuffer | SharedArrayBuffer} dstData -
-   memory to which to write the buffer data.
-* {GLuint} srcOffset=0 - element index offset where to start reading the buffer.
-* {GLuint} length=0  Optional, defaulting to 0.
+`Buffer.getSubData({dstData, srcByteOffset, srcOffset, length})`
+
+* `srcByteOffset`=`0` (GLintptr) - byte offset from which to start reading from the buffer.
+* `dstData`=`null` (`ArrayBufferView` | `ArrayBuffer` | `SharedArrayBuffer`)  - memory to which to write the buffer data.
+* `srcOffset`=`0` (GLuint) - element index offset where to start reading the buffer.
+* `length`=`0` (GLuint)  Optional, defaulting to 0.
 
 Returns a buffer (provided or allocated)
 
@@ -190,33 +196,3 @@ Returns a buffer (provided or allocated)
 * All instance methods in a buffer (unless they return some documented value) are chainable.
 * The cost of tranferring memory back and forth between the GPU and CPU will vary between systems (e.g. depending on whether the system uses a unified memory architecture or not).
 * For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [WebGL1](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) and [WebGL2](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences).
-
-
-### WebGL Notes (Advanced)
-
-#### About Buffer Binding Points
-
-This section can be skipped as the luma.gl API will handle binding (and unbinding) of buffers to the appropriate "targets". Still it can be good to have some understanding of buffer binding points as these feature prominently in the WebGL API.
-
-Rather than taking buffers as arguments, WebGL functions that operate on buffers expect any necessary buffers to have been bound to various specific "binding points" or "targets" before the function is called.
-
-In WebGL1 there are only two binding points:
-
-* `GL.ELEMENT_ARRAY_BUFFER` - used by `drawElements` (and `drawElementsInstanced`)
-* `GL.ARRAY_BUFFER` - used by `vertexAttribPointer` (and `vertexAttribIPointer`)
-
-However, WebGL2 allows buffers to be used in a number of additional contexts:
-
-* `GL.PIXEL_PACK_BUFFER` - used by `readPixels`
-* `GL.PIXEL_UNPACK_BUFFER` - used by `texImage2D`, `texSubImage2D`, `texImage3D`, `texSubImage3D`
-* `GL.TRANSFORM_FEEDBACK_BUFFER` - `beginTransformFeedback`
-* `GL.UNIFORM_BUFFER` - `drawArrays` and `drawArraysInstanced`, `drawElements` and `drawElementsInstanced` (requires `uniformBlockBinding` to have been called).
-
-In addition, some WebGL2 functions (such as `copyBufferSubData`, `getBufferSubData`) allow the app to specify which buffer binding point to use. For these applications WebGL2 also provides two extra, "virtual" binding points (in the sense that no WebGL function unconditionally uses them).
-
-* `GL.COPY_READ_BUFFER`: Buffer for copying from one buffer object to another.
-* `GL.COPY_WRITE_BUFFER`: Buffer for copying from one buffer object to another.
-
-A primary reason to use these targets is to avoid overwriting other binding points (which can be important when integrating with external WebGL code), so luma.gl will use these bindings when possible (but only for methods that are WebGL2 specific).
-
-Also note that `GL.TRANSFORM_FEEDBACK_BUFFER` and `GL.UNIFORM_BUFFER` bindings are special in that they have multiple binding points and they need to be bound to a certain "index" to affect WebGL state (using `bindBufferBase` or `bindBufferRange`)
