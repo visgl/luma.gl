@@ -66,7 +66,7 @@ class Page extends Component {
 
       const src = content[key];
       if (typeof src === 'string') {
-        // this.props.loadContent(src);
+        this.props.loadContent(src);
       }
     });
 

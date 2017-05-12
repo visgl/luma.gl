@@ -4,7 +4,7 @@
 
 Release Date: Target early Q3 2017
 
-A big release that brings full WebGL2 support to luma.gl, as well as support for GL state management and a shader module system.
+A major release that brings full WebGL2 support to luma.gl, as well as support for GL state management and a shader module system.
 
 
 ## Major Updates
@@ -23,22 +23,22 @@ A big release that brings full WebGL2 support to luma.gl, as well as support for
 * luma.gl classes for the new WebGL2 objects (`FenceSync`, `Query`, `Sampler`, `Texture2DArray`, `Texture3D`, `TransformFeedback`).
 * New `UniformBufferLayout` helper class to make uniform buffer usage easy.
 * `Textures`, `Renderbuffers` and `Framebuffers` updated to handle all the new WebGL2 image formats, including floating point textures, and multiple rendertargets.
-* Existing WebGL1 classes have additional methods that expose WebGL2 functionality when available.
+* Every existing WebGL class has been overhauled and has received additional methods that expose WebGL2 functionality whenever available.
 
 
 ### WebGL Capability Management
 
-* Simplifies building apps that run on both WebGL1 and WebGL2
+* Dramatically simplifies building apps that run on both WebGL1 and WebGL2, seamlessly leveraging extensions when available.
 * Helps apps to query if a WebGL feature is available on the current platform - regardless of whether it is available through WebGL2 or through a WebGL extension.
 * When a feature can be provided either through WebGL2 or through a WebGL1 extension, luma.gl provides a single API that transparently uses the available implementation.
 
 
-### GL State Management
+### WebGL State Management
 
-* Handles global WebGL context state and limits
+* Enables apps to work with WebGL context state without having to worry about global side effects, addressing one of the major weak spots of the WebGL API.
 * Lets apps temporarily change global context state without having to do expensive queries to remember what values to restore it to.
 * Tracks changes to the context happening outside of luma.gl to ensure that global state always remains synchronized.
-* Prevents nnecessary calls to set state to current value.
+* Prevents unnecessary calls to set state to current value.
 
 
 ### GLSL Module System
@@ -56,9 +56,9 @@ A big release that brings full WebGL2 support to luma.gl, as well as support for
 
 ### Library Improvements
 
-* Code Size - luma.gl has been fine tuned for code size (both before and after minification) and Tree Shaking (minimizing "side effects"
-* Deprecated Code Removed - Aggressively removes deprecated features to help reduce library size.
-* Conditional code - Temoving unnecessary internal imports lets application decide what features are used. E.g. Debug code is now only imported when used. (Note: this requires tree-shaking bundler).
+* Code Size - luma.gl has been fine tuned for code size (both before and after minification) and Tree Shaking (special care have been taken to avoid so called "side effects" that defeat dependency analysis during tree shaking).
+* Deprecated Code Removed - "Aggressive" removal of deprecated features to help reduce library size.
+* Conditional code - Removing unnecessary internal imports lets application decide what features are used. E.g. Debug code is now only imported when used (caveat: requires tree-shaking bundler).
 * Separate npm packages split out (math, shader-assembler, ...)
 
 

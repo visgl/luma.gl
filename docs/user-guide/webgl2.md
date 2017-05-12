@@ -4,7 +4,8 @@ A short overview of WebGL2 and some of the additions to the luma.gl API that hav
 
 ## New Classes
 
-* `Texture2DArray`, `Texture3D` - for e.g. "texture atlases"
+* `Texture2DArray`, - e.g. for texture atlases
+* `Texture3D` - for volumetric rendering or 3D lookup tables
 * `Query` - Asynchronously query for occlusions, transform feedback, timings
 * `Sampler` - Let's shaders sample same texture in different ways
 * `FenceSync` - Get notified when GPU reaches certain point in command stream
@@ -12,6 +13,7 @@ A short overview of WebGL2 and some of the additions to the luma.gl API that hav
 * `VertexArrayObject` - Stores multiple attribute bindings
 
 Note that `VertexArrayObject` and `Query` can be used in WebGL1 with certain restrictions.
+
 
 ## WebGL2 - Features added to existing API
 

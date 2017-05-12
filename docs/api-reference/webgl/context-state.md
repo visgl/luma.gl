@@ -1,24 +1,30 @@
-# WebGL State Management
+# State Management
 
-luma.gl manages WebGL state and enables 'stateless' WebGL programming,
-in which settings are passed to rendering commands rather than being set
-directly on the global state.
+luma.gl provides WebGL state management which enabling a 'stateless' and 'conflict-free' WebGL programming model. In the stateless model, settings can be passed as parameters to rendering commands rather than being set directly on the global state. And in the conflict-free model, even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
 
-WebGL State Management can be quite complicated.
-* A large part of the WebGL API is devoted to settings.
-  When reading, querying individual values using GL constants is the norm,
-  and when writing, special purpose functions are provided for most settings.
-  luma.gl supports both forms for both reading and writing settings.
-* Reading values from WebGL can be very slow if it requires a GPU roundtrip.
-  To get around this, luma.gl reads values once, caches them and tracks
-  them as they are changed through luma functions.
-  The cached values can get out of sync if the context is shared outside
-  of luma.gl.
-
+Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
 
 ## Usage
 
-Setting parameters temporarily, restoring them
+Set up state tracking for a context (not required to use other state management functions)
+```js
+import {trackState} from 'luma.gl';
+const gl = ...
+trackState(gl);
+```
+
+Get a global parameter value
+```js
+const value = getParameter();
+```
+
+Set a global parameter value
+```js
+const value = getParameter();
+```
+
+
+Setting parameters temporarily for a function call, restoring them after the call
 
 ```js
 withParameters(gl, {
@@ -64,17 +70,23 @@ withParameters(gl, {
 
   viewport:
 }, () = {
-  // execute code with settings temporarily applied
+  // execute code with new settings temporarily applied
+  program.draw(...);
+  ...
+  // previous parameters will be restored even if an exception is thrown
+  throw new Error('Exception after setting parameters');
 });
+// previous parameters are restored here
+program.draw(...);
 ```
 
 
 ## Functions
 
-### getGLParameter
+### getParameter
 
 ```js
-getGLParameter(gl, key)
+getParameter(gl, key)
 ```
 
 Sets value with key to context.
@@ -87,10 +99,10 @@ the normalized value is retured.
 Returns {*} - "normalized" parameter value after assignment
 
 
-### setGLParameter
+### setParameter
 
 ```js
-setGLParameter(gl, key, value)
+setParameter(gl, key, value)
 ```
 
 Sets value with key to context.
@@ -103,10 +115,10 @@ the normalized value is retured.
 Returns {*} - "normalized" parameter value after assignment
 
 
-### withGLState
+### withParameters
 
 ```js
-withGLState(gl, {frameBuffer, ...params}, func)
+withState(gl, {frameBuffer, ...params}, func)
 ```
 Executes a function with gl states temporarily set
 Exception safe
@@ -199,9 +211,7 @@ Requires WebGL2 or `OES_standard_derivatives`.
 | ---------------------- | --------------- | -------- | -------- |
 | `GL.DITHER` | GLboolean | `true` | Enable dithering of color components before they get written to the color buffer |
 
-Remarks:
-* Dithering is driver dependent and typically has a stronger effect when the
-  color components have a lower number of bits.
+* Note: Dithering is driver dependent and typically has a stronger effect when the color components have a lower number of bits.
 
 
 ### Face Culling
@@ -271,8 +281,7 @@ setState(gl, {
 });
 ```
 
-Remarks:
-* Line widths will be clamped to [1, `GL.ALIASED_LINE_WIDTH_RANGE`]. This is different from `gl.lineWidth` which generates errors on lineWidth 0.
+* Note: Line widths will be clamped to [1, `GL.ALIASED_LINE_WIDTH_RANGE`]. This is different from `gl.lineWidth` which generates errors on lineWidth 0.
 * Caution: line aliasing is driver dependent and `GL.LINES` may not give desired results.
 
 
@@ -292,10 +301,7 @@ and for rendering solids with highlighted edges.
 | `GL.POLYGON_OFFSET_FACTOR` | GLfloat       |      `0` | . |
 | `GL.POLYGON_OFFSET_UNITS`  | GLfloat       |      `0` | . |
 
-
-Remarks:
-* Polygon offsets are loosely specified and results can thus be
-  driver dependent.
+* Note: The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
 
 
 ### Rasterization (WebGL2)
@@ -454,3 +460,18 @@ Specifies how bitmaps are written to and read from memory
 | `GL.UNPACK_SKIP_PIXELS`            | GLint         |      `0` | Number of pixel images skipped before first pixel is read from memory |
 | `GL.UNPACK_SKIP_ROWS`              | GLint         |      `0` | Number of rows of pixels skipped before first pixel is read from memory |
 | `GL.UNPACK_SKIP_IMAGES`            | GLint         |      `0` | Number of pixel images skipped before first pixel is read from memory |
+
+
+## Remarks
+
+WebGL State Management can be quite complicated.
+* A large part of the WebGL API is devoted to settings.
+  When reading, querying individual values using GL constants is the norm,
+  and when writing, special purpose functions are provided for most settings.
+  luma.gl supports both forms for both reading and writing settings.
+* Reading values from WebGL can be very slow if it requires a GPU roundtrip.
+  To get around this, luma.gl reads values once, caches them and tracks
+  them as they are changed through luma functions.
+  The cached values can get out of sync if the context is shared outside
+  of luma.gl.
+

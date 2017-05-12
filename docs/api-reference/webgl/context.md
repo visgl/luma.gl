@@ -1,4 +1,4 @@
-# Context Management
+# WebGL Context
 
 Provides functions to create and initialize a WebGL context, and to check for presence of WebGL and extensions.
 
@@ -41,24 +41,9 @@ Creates and returns a WebGL context, both in browsers and in Node.js.
 * `headlessGL` (*function*, null) - In Node.js environments, contexts are created using [headless-gl](https://www.npmjs.com/package/gl). To avoid including the `headless-gl` module in applications that don't use it, luma.gl requires the app to install and import headless-gl itself, and pass headless-gl as an argument to `createGLContext`.
 
 
-### getExtension
-
-More info [here](http://www.khronos.org/registry/webgl/extensions/).
-
-`getGLExtension(gl, name);`
-
-* `gl` (`WebGLRenderingContext`) - gl context
-* `name` (`String`) - The name of the extension.
-
-Returns the WebGL extension with the given name, for example `OES_texture_float`.
-Throws an Error if the extension is not available.
-
-
 ### clear
 
 Clears the drawing buffer (the default framebuffer) or the currently bound framebuffer.
-
-
 
 
 ## Remarks

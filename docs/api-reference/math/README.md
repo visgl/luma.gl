@@ -1,8 +1,3 @@
----
-layout: docs
-title: Math
-categories: [Documentation]
----
 
 Script: Math {#Math}
 ===========================

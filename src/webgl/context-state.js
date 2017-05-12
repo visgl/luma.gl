@@ -9,6 +9,16 @@ const GLint = 'GLint';
 const GLuint = 'GLint';
 const GLboolean = 'GLboolean';
 
+// Helper to get shared context data
+function getContextData(gl) {
+  gl.luma = gl.luma || {};
+  return gl.luma;
+}
+
+function getRealContext(gl) {
+  return gl.realContext ? gl.realContext : null;
+}
+
 /*
 State management
 - camelCased versions of the GL constants
@@ -298,31 +308,31 @@ const GL_STATE = {
   // WEBGL1 PIXEL PACK/UNPACK MODES
 
   // Packing of pixel data in memory (1,2,4,8)
-  packAlignment: {
+  [GL.PACK_ALIGNMENT]: {
     type: GLint,
     params: GL.PACK_ALIGNMENT,
     setter: (gl, value) => gl.pixelStorei(value)
   },
   // Unpacking pixel data from memory(1,2,4,8)
-  unpackAlignment: {
+  [GL.UNPACK_ALIGNMENT]: {
     type: GLint,
     params: GL.UNPACK_ALIGNMENT,
     setter: (gl, value) => gl.pixelStorei(value)
   },
   // Flip source data along its vertical axis
-  unpackFlipY: {
+  [GL.UNPACK_FLIP_Y_WEBGL]: {
     type: GLboolean,
     params: GL.UNPACK_FLIP_Y_WEBGL,
     setter: (gl, value) => gl.pixelStorei(value)
   },
   // Multiplies the alpha channel into the other color channels
-  unpackPremultiplyAlpha: {
+  [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: {
     type: GLboolean,
     params: GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
     setter: (gl, value) => gl.pixelStorei(value)
   },
   // Default color space conversion or no color space conversion.
-  unpackColorspaceConversion: {
+  [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: {
     type: GLenum,
     params: GL.UNPACK_COLORSPACE_CONVERSION_WEBGL,
     setter: (gl, value) => gl.pixelStorei(value)
@@ -331,50 +341,50 @@ const GL_STATE = {
   // WEBGL2 PIXEL PACK/UNPACK MODES
 
   // Number of pixels in a row.
-  packRowLength: {
+  [GL.PACK_ROW_LENGTH]: {
     type: GLint,
     params: GL.PACK_ROW_LENGTH,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of pixels skipped before the first pixel is written into memory.
-  packSkipPixels: {
+  // Number of pixels skipped before the first pixel is written into memory.
+  [GL.PACK_SKIP_PIXELS]: {
     params: GL.PACK_SKIP_PIXELS,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of rows of pixels skipped before first pixel is written to memory.
-  packSkipRows: {
+  // Number of rows of pixels skipped before first pixel is written to memory.
+  [GL.PACK_SKIP_ROWS]: {
     params: GL.PACK_SKIP_ROWS,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of pixels in a row.
-  unpackRowLength: {
+  // Number of pixels in a row.
+  [GL.UNPACK_ROW_LENGTH]: {
     params: GL.UNPACK_ROW_LENGTH,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Image height used for reading pixel data from memory
-  unpackImageHeight: {
+  // Image height used for reading pixel data from memory
+  [GL.UNPACK_IMAGE_HEIGHT]: {
     params: GL.UNPACK_IMAGE_HEIGHT,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of pixel images skipped before first pixel is read from memory
-  unpackSkipPixels: {
+  // Number of pixel images skipped before first pixel is read from memory
+  [GL.UNPACK_SKIP_PIXELS]: {
     params: GL.UNPACK_SKIP_PIXELS,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of rows of pixels skipped before first pixel is read from memory
-  unpackSkipRows: {
+  // Number of rows of pixels skipped before first pixel is read from memory
+  [GL.UNPACK_SKIP_ROWS]: {
     params: GL.UNPACK_SKIP_ROWS,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
   },
-  //  Number of pixel images skipped before first pixel is read from memory
-  unpackSkipImages: {
+  // Number of pixel images skipped before first pixel is read from memory
+  [GL.UNPACK_SKIP_IMAGES]: {
     params: GL.UNPACK_SKIP_IMAGES,
     setter: (gl, value) => gl.pixelStorei(value),
     webgl2: true
@@ -397,52 +407,6 @@ function unpackStateParams() {
 
 unpackStateParams();
 
-// GETTERS AND SETTERS
-
-/**
- * Sets value with key to context.
- * Value may be "normalized" (in case a short form is supported). In that case
- * the normalized value is retured.
- *
- * @param {WebGLRenderingContext} gl - context
- * @param {String} key - parameter name
- * @param {*} value - parameter value
- * @return {*} - "normalized" parameter value after assignment
- */
-export function getGLParameter(gl, key) {
-  const parameterDefinition = GL_STATE[key];
-  if (!parameterDefinition) {
-    throw new Error(`Unknown GL state parameter ${key}`);
-  }
-  // Get the parameter value(s) from the context
-  const {params} = parameterDefinition;
-  const value = isArray(params) ?
-    params.map(param => gl.getParameter(param)) :
-    gl.getParameter(params);
-  return value;
-}
-
-/**
- * Sets value with key to context.
- * Value may be "normalized" (in case a short form is supported). In that case
- * the normalized value is retured.
- *
- * @param {WebGLRenderingContext} gl - context
- * @param {String} key - parameter name
- * @param {*} value - parameter value
- * @return {*} - "normalized" parameter value after assignment
- */
-export function setGLParameter(gl, key, value) {
-  const parameterDefinition = GL_STATE[key];
-  if (!parameterDefinition) {
-    throw new Error(`Unknown GL state parameter ${key}`);
-  }
-  const {setter, normalizeValue} = parameterDefinition;
-  const adjustedValue = normalizeValue ? normalizeValue(value) : value;
-  setter(gl, adjustedValue);
-  return adjustedValue;
-}
-
 // HELPERS
 
 function isArray(array) {
@@ -456,9 +420,9 @@ class GLState {
   constructor(gl, {copyState = false} = {}) {
     this.state = {};
     if (copyState) {
-      this._copyWebGLState(gl);
+      this.copyWebGLState(gl);
     } else {
-      this._getInitialState();
+      this.initializeState();
     }
     this.stateStack = [];
   }
@@ -488,39 +452,89 @@ class GLState {
   }
 
   setValue(gl, key, value) {
-    const actualValue = setGLParameter(gl, key, value);
+    const actualValue = setParameter(gl, key, value);
     this.state[key] = actualValue;
   }
 
-  // Copies entire WebGL state to an object.
-  // This generates a huge amount of asynchronous requests and should be
-  // considered a very slow operation, to be done once at program startup.
-  _copyWebGLState(gl) {
+  // Reads the entire WebGL state from a context.
+  // Caveat: This generates a huge amount of driver roundtrips and should be
+  // considered a very slow operation, to be done only if/when a context created
+  // by an external library is being passed to luma.gl for the first time
+  copyWebGLState(gl) {
     for (const parameterKey in GL_STATE) {
-      this.state[parameterKey] = getGLParameter(gl, parameterKey);
+      this.state[parameterKey] = getParameter(gl, parameterKey);
     }
   }
 
-  _getInitialState() {
+  // Copies  WebGL state to an object.
+  // This generates a huge amount of asynchronous requests and should be
+  // considered a very slow operation, to be done once at program startup.
+  initializeState() {
     for (const parameterKey in GL_STATE) {
       this.state[parameterKey] = GL_STATE[parameterKey].value;
     }
   }
 }
 
-function getGLState(gl, {copyState = false} = {}) {
-  gl.luma = gl.luma || {};
-  gl.luma.state = gl.luma.state || new GLState(gl, {copyState});
-  return gl.luma.state;
+function getState(gl, {copyState = false} = {}) {
+  const data = getContextData(gl);
+  data.state = data.state || new GLState(gl, {copyState});
+  return data.state;
+}
+
+// GETTERS AND SETTERS
+
+/**
+ * Sets value with key to context.
+ * Value may be "normalized" (in case a short form is supported). In that case
+ * the normalized value is retured.
+ *
+ * @param {WebGLRenderingContext} gl - context
+ * @param {String} key - parameter name
+ * @param {*} value - parameter value
+ * @return {*} - "normalized" parameter value after assignment
+ */
+export function getParameter(gl, key) {
+  const parameterDefinition = GL_STATE[key];
+  if (!parameterDefinition) {
+    throw new Error(`Unknown GL state parameter ${key}`);
+  }
+  // Get the parameter value(s) from the context
+  const {params} = parameterDefinition;
+  const value = isArray(params) ?
+    params.map(param => gl.getParameter(param)) :
+    gl.getParameter(params);
+  return value;
+}
+
+/**
+ * Sets value with key to context.
+ * Value may be "normalized" (in case a short form is supported). In that case
+ * the normalized value is retured.
+ *
+ * @param {WebGLRenderingContext} gl - context
+ * @param {String} key - parameter name
+ * @param {*} value - parameter value
+ * @return {*} - "normalized" parameter value after assignment
+ */
+export function setParameter(gl, key, value) {
+  const parameterDefinition = GL_STATE[key];
+  if (!parameterDefinition) {
+    throw new Error(`Unknown GL state parameter ${key}`);
+  }
+  const {setter, normalizeValue} = parameterDefinition;
+  const adjustedValue = normalizeValue ? normalizeValue(value) : value;
+  setter(gl, adjustedValue);
+  return adjustedValue;
 }
 
 /*
  * Executes a function with gl states temporarily set
  * Exception safe
  */
-export function withGLState(gl, params, func) {
+export function withState(gl, params, func) {
   // assertWebGLContext(gl);
-  const state = getGLState(gl);
+  const state = getState(gl);
 
   const {frameBuffer} = params;
   // TODO - was there any previously set frame buffer we need to remember?
@@ -541,6 +555,61 @@ export function withGLState(gl, params, func) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
+}
+
+function getFuncFromWebGLParameter(glParameter) {
+  return glParameter;
+}
+
+export function trackState(gl) {
+  gl = getRealContext(gl);
+
+  // Intercept any setters and getters not in the table
+  const enable = gl.prototype.enable.bind(gl);
+  gl.prototype.enable = function enable_(glParameter) {
+    const state = getState(this);
+    const func = getFuncFromWebGLParameter(glParameter);
+    if (state.setValue(func)) {
+      enable(glParameter);
+    }
+  };
+
+  const disable = gl.prototype.disable.bind(gl);
+  gl.prototype.disable = function disable_(glParameter) {
+    const state = getState(this);
+    const func = getFuncFromWebGLParameter(glParameter);
+    if (state.setValue(func, false)) {
+      disable(glParameter);
+    }
+  };
+
+  const pixelStorei = gl.prototype.pixelStorei.bind(gl);
+  gl.prototype.pixelStorei = function pixelStorei_(glParameter, value) {
+    const state = getState(this);
+    if (state.setValue(glParameter, value)) {
+      pixelStorei(glParameter, value);
+    }
+  };
+
+  // const getParameter_ = gl.prototype.getParameter.bind(gl);
+  gl.prototype.getParameter = function getParameter_(glParameter) {
+    const state = getState(this);
+    return state.getParameter(glParameter);
+  };
+
+  gl.prototype.isEnabled = function isEnabled(glParameter) {
+    const state = getState(this);
+    const func = getFuncFromWebGLParameter(glParameter);
+    return state.getValue(func);
+  };
+
+  // intercept all setter functions in the table
+  // for (const key in GL_STATE) {
+  //   const parameterDef = GL_STATE[key];
+  //   const originalFunc = gl.prototype[key].bind(gl);
+  //   gl.prototype[key] = function() {
+  //   };
+  // }
 }
 
 export const TEST_EXPORTS = {

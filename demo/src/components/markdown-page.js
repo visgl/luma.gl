@@ -12,13 +12,13 @@ import marked from 'marked';
  * text, in case you don't want this link to point to anything.
  */
 const urlRewrites = {
-  '/docs/layers/base-layer.md': '#/layers/catalog/layer-base-class',
-  '/docs/custom-layers.md#layerencodepickingcolorindex--number': false,
-  '/docs/layers/arc-layer.md': '#/layers/core-layers/arc-layer',
-  '/docs/layers/line-layer.md': '#/layers/core-layers/line-layer',
-  '/docs/layers/choropleth-layer.md': '#/layers/core-layers/choropleth-layer',
-  '/docs/layers/scatterplot-layer.md': '#/layers/core-layers/scatterplot-layer',
-  '/docs/64-bits.md': '#/documentation/advanced-topics/64-layers'
+  // '/docs/layers/base-layer.md': '#/layers/catalog/layer-base-class',
+  // '/docs/custom-layers.md#layerencodepickingcolorindex--number': false,
+  // '/docs/layers/arc-layer.md': '#/layers/core-layers/arc-layer',
+  // '/docs/layers/line-layer.md': '#/layers/core-layers/line-layer',
+  // '/docs/layers/choropleth-layer.md': '#/layers/core-layers/choropleth-layer',
+  // '/docs/layers/scatterplot-layer.md': '#/layers/core-layers/scatterplot-layer',
+  // '/docs/64-bits.md': '#/documentation/advanced-topics/64-layers'
 };
 
 /**

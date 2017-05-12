@@ -9,13 +9,13 @@ export const EXAMPLE_PAGES = [
       demo: 'CubemapDemo'
     }
   },
-  {
-    name: 'Custom Picking',
-    content: {
-      demo: 'CustomPickingDemo',
-      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
-    }
-  },
+  // {
+  //   name: 'Custom Picking',
+  //   content: {
+  //     demo: 'CustomPickingDemo',
+  //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
+  //   }
+  // },
   {
     name: 'Instancing',
     content: {
@@ -34,13 +34,13 @@ export const EXAMPLE_PAGES = [
       demo: 'MulticontextDemo'
     }
   },
-  {
-    name: 'Picking',
-    content: {
-      demo: 'PickingDemo',
-      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
-    }
-  },
+  // {
+  //   name: 'Picking',
+  //   content: {
+  //     demo: 'PickingDemo',
+  //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
+  //   }
+  // },
   // {
   //   name: 'DeferredRendering',
   //   content: {
@@ -53,12 +53,12 @@ export const EXAMPLE_PAGES = [
   //     demo: 'ParticlesDemo'
   //   }
   // },
-  {
-    name: 'Persistence',
-    content: {
-      demo: 'PersistenceDemo'
-    }
-  },
+  // {
+  //   name: 'Persistence',
+  //   content: {
+  //     demo: 'PersistenceDemo'
+  //   }
+  // },
   // {
   //   name: 'Shadowmap',
   //   content: {
@@ -74,18 +74,18 @@ export const EXAMPLE_PAGES = [
   {
     name: 'WebGL Lessons',
     children: [
-      {
-        name: 'Lesson 01',
-        content: {
-          demo: 'Lesson01'
-        }
-      },
-      {
-        name: 'Lesson 02',
-        content: {
-          demo: 'Lesson02'
-        }
-      },
+      // {
+      //   name: 'Lesson 01',
+      //   content: {
+      //     demo: 'Lesson01'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 02',
+      //   content: {
+      //     demo: 'Lesson02'
+      //   }
+      // },
       {
         name: 'Lesson 03',
         content: {
@@ -104,35 +104,35 @@ export const EXAMPLE_PAGES = [
           demo: 'Lesson05',
           path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/05/'
         }
-      },
-      {
-        name: 'Lesson 06',
-        content: {
-          demo: 'Lesson06',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/06/'
-        }
-      },
-      {
-        name: 'Lesson 07',
-        content: {
-          demo: 'Lesson07',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/07/'
-        }
-      },
-      {
-        name: 'Lesson 08',
-        content: {
-          demo: 'Lesson08',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/08/'
-        }
-      },
-      {
-        name: 'Lesson 09',
-        content: {
-          demo: 'Lesson09',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/09/'
-        }
-      },
+      }
+      // {
+      //   name: 'Lesson 06',
+      //   content: {
+      //     demo: 'Lesson06',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/06/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 07',
+      //   content: {
+      //     demo: 'Lesson07',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/07/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 08',
+      //   content: {
+      //     demo: 'Lesson08',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/08/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 09',
+      //   content: {
+      //     demo: 'Lesson09',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/09/'
+      //   }
+      // },
       // {
       //   name: 'Lesson 10',
       //   content: {
@@ -205,6 +205,10 @@ export const DOC_PAGES = [
         content: 'get-started/README.md'
       },
       {
+        name: 'Examples',
+        content: 'get-started/examples.md'
+      },
+      {
         name: 'Using with deck.gl',
         content: 'get-started/using-with-deckgl.md'
       },
@@ -213,8 +217,8 @@ export const DOC_PAGES = [
         content: 'get-started/using-with-node.md'
       },
       {
-        name: 'Using with other WebGL Libraries',
-        content: 'get-started/using-with-other-libs.md'
+        name: 'Using with other Frameworks',
+        content: 'get-started/using-with-other-frameworks.md'
       }
     ]
   },
@@ -224,10 +228,6 @@ export const DOC_PAGES = [
       {
         name: 'Overview',
         content: 'user-guide/README.md'
-      },
-      {
-        name: 'Math Libraries',
-        content: 'user-guide/math.md'
       },
       {
         name: 'Debugging',
