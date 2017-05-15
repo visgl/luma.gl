@@ -1,162 +1,195 @@
 # Renderbuffer
 
-From [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object):
+`Renderbuffer`s are WebGL Objects that contain images. They are optimized for use as render targets, while `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use `Texture`s instead. In addition, in WebGL2, `Renderbuffer`'s natively accommodate Multisampling (MSAA).
 
-Renderbuffer Objects are OpenGL Objects that contain images. They are created and used specifically with Framebuffer Objects. They are optimized for use as render targets, while Textures may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image.
-If you need to resample (such as when reading depth back in a second shader pass), use Textures instead.
-Renderbuffer objects also natively accommodate Multisampling (MSAA).
+For additional information, see [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object)
+
 
 ## Usage
 
-Creating a Renderbuffer
+Creating a `Renderbuffer`
 ```js
 const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4, width: 100, height: 100});
 ```
 
-Reformatting/Resizing a Renderbuffer
+Reformatting/reinitializing a `Renderbuffer`
 ```js
 const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4, width: 100, height: 100});
 renderbuffer.storage({format: GL.RGBA4, width: 100, height: 100});
 ```
 
-Attaching a renderbuffer to a Framebuffer
+Resizing a `Renderbuffer`
 ```js
-const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4, width: 100, height: 100});
-framebuffer.attachRenderbuffer({attachment, renderbuffer});
+const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4});
+renderbuffer.resize({width: 200, height: 200});
 ```
 
-## Remarks
+Attaching a `Renderbuffer` to a `Framebuffer` (automatically resizes the `Renderbuffer`)
+```js
+framebuffer.attach({
+  [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16})
+ });
+```
 
-* Renderbuffers cannot be accessed by Shaders in any way. The only way to work with a renderbuffer, besides creating it, is to attach it to a Framebuffer.
-=======
-Remarks:
-* Renderbuffers cannot be accessed by Shaders in any way. The only way to work
-  with a renderbuffer, besides creating it, is to attach it to a Framebuffer.
->>>>>>> 88036ab... Texture docs
-* The luma.gl Framebuffer class can autocreate Renderbuffers for you.
-* Multisampling is only available in WebGL2
+## Members
 
-## Types
-
-### Formats
-
-| Value | Description |
-| --- | --- |
-| `GL.RGBA4` |  4 red bits, 4 green bits, 4 blue bits 4 alpha bits |
-| `GL.RGB565` |  5 red bits, 6 green bits, 5 blue bits |
-| `GL.RGB5_A1` |  5 red bits, 5 green bits, 5 blue bits, 1 alpha bit |
-| `GL.DEPTH_COMPONENT16` |  16 depth bits |
-| `GL.STENCIL_INDEX8` |  8 stencil bits |
-
-This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/docs/webgl/texture.md).
-
-### Parameters
-
-| Parameter | Types | Read/Write |Description |
-| --- | --- | --- |
-| `GL.RENDERBUFFER_WIDTH` | GLint | Read | height of the image of renderbuffer |
-| `GL.RENDERBUFFER_HEIGHT` | GLint | Read | height of the image of renderbuffer |
-| `GL.RENDERBUFFER_INTERNAL_FORMAT` | GLenum | Read | See below |
-| `GL.RENDERBUFFER_GREEN_SIZE` | GLint | Read | resolution (bits) of green color |
-| `GL.RENDERBUFFER_BLUE_SIZE` | GLint | Read | resolution (bits) of blue color |
-| `GL.RENDERBUFFER_RED_SIZE` | GLint | Read | resolution (bits) of red color |
-| `GL.RENDERBUFFER_ALPHA_SIZE` | GLint | Read | resolution (bits) of alpha component |
-| `GL.RENDERBUFFER_DEPTH_SIZE` | GLint | Read | resolution (bits) of depth component |
-| `GL.RENDERBUFFER_STENCIL_SIZE` | GLint | Read | resolution (bits) of stencil component |
-| `GL.RENDERBUFFER_SAMPLES` **`WebGL2`** |  | R | samples |
+* `id` (string) - id for debugging
+* `handle` (`WebGLRenderbuffer`) - the underlying WebGLRenderbuffer object
+* `width` (number) - width of renderbuffer in pixels
+* `height` (number) - height of renderbuffer in pixels
+* `format` (number) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
+* `samples` (number) - samples (always `0` in non-WebGL2 contexts)
 
 
 ## Methods
 
-### Renderbuffer constructor
+### getSamplesForFormat (static method)
 
-Parameters
+Queries valid sample counts for a `Renderbuffer` format. The sample counts can be provided as a parameter to the `Renderbuffer` constructor.
+
+`Renderbuffer.getSamplesForFormat({format})`
+
+* `format` (GLenum) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
+
+Returns (Number[]) - An list of valid sample counts in descending order.
+
+If multisampling is not supported the returned value will be `[0]`, e.g. signed and unsigned integer internal formats in WebGL2. Note that this method always returns `[0]` in WebGL1.
+
+
+### constructor
+
+Creates a new `Renderbuffer` and initalizes it by calling `initialize` with the provided parameters.
+
+`new Renderbuffer(gl, {id=, format, width, height, samples=})`
+
 * `gl` (WebGLRenderingContext) - gl context
-* `options`
-    * `format` (GLenum) - internal format of the renderbuffer (often GL.DEPTH_COMPONENT16)
-    * `width` (GLint) - width of renderbuffer
-    * `height` (GLint) - height of renderbuffer
-    * `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
+* `id`= (String) - optional string id
+* `format` (GLenum) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
+* `width`=`1` (GLint) - width of renderbuffer in pixels
+* `height`=`1` (GLint) - height of renderbuffer in pixels
+* `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
 
-WebGL References [gl.createRenderbuffer](), [gl.renderbufferStorage](), [gl.bindRenderbuffer]()
+WebGL References [gl.createRenderbuffer](), also see `initialize`.
 
-### Renderbuffer.storage
 
-Creates and initializes a renderbuffer object's data store. Can be used to update a renderbuffers format and size after it was initially created.
+### initialize
 
-Parameters
-* `options`
-    * `format` (GLenum) - internal format of the renderbuffer (often GL.DEPTH_COMPONENT16)
-    * `width` (GLint) - width of renderbuffer
-    * `height` (GLint) - height of renderbuffer
-    * `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
+Creates and initializes a renderbuffer object's data store. Used to update a `Renderbuffer`s format and size after it was initially created.
 
-Returns:
-* itself (`Renderbuffer`) to enable chaining
+`Renderbuffer.initialize({format, width, height, samples=})`
 
-WebGL References [gl.renderbufferStorage](), [gl.bindRenderbuffer]()
+* `format` (GLenum) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
+* `width`=`1` (GLint) - width of renderbuffer in pixels
+* `height`=`1` (GLint) - height of renderbuffer in pixels
+* `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
 
-### Renderbuffer.bind
+Returns itself to enable chaining
 
-Returns:
-* itself (`Renderbuffer`) to enable chaining
+* `initialize` erases the current content of the `Renderbuffer`.
 
-Note: Applications typically would not use this method. Binding and unbinding is done automatically by luma.gl.
 
-WebGL References [gl.bindRenderbuffer]()
+WebGL References [gl.renderbufferStorage](), [gl.renderbufferStorageMultisample](), [gl.bindRenderbuffer]()
 
-### Renderbuffer.unbind
 
-Returns:
-* itself (`Renderbuffer`) to enable chaining
+### resize
 
-Note: Applications typically would not use this method. Binding and unbinding is done automatically by luma.gl.
+Reinitializes the `Renderbuffer`'s data store with the new `width` and `height` but unchanged `format` (and `samples`, if available).
 
-WebGL References [gl.bindRenderbuffer]()
+`Renderbuffer.resize({width, height})`
 
-=======
-* opt.format (GLenum) - internal format of the renderbuffer (often GL.DEPTH_COMPONENT16)
-* opt.width (GLint) - width of renderbuffer
-* opt.height (GLint) - height of renderbuffer
-* opt.samples=0 (GLint) - (WebGL2) number of samples to be used for storage.
+* `width` (GLint) - width of `Renderbuffer` in pixels
+* `height` (GLint) - height of `Renderbuffer` in pixels
 
-### Renderbuffer.storage
+Returns itself to enable chaining
 
-Creates and initializes a renderbuffer object's data store
+* Checks if `width` or `height` have actually changed before calling `initialize`.
+* If a resize happens, `resize` erases the current content of the `Renderbuffer`.
 
-Parameters
-* opt.format (GLenum) - internal format of the renderbuffer (often GL.DEPTH_COMPONENT16)
-* opt.width (GLint) - width of renderbuffer
-* opt.height (GLint) - height of renderbuffer
-* opt.samples=0 (GLint) - (WebGL2) number of samples to be used for storage.
+WebGL References see `initialize`.
 
-Returns
-* (Renderbuffer) - returns itself to enable chaining
 
-### Renderbuffer.bind
+## Renderbuffer Formats
 
-### Renderbuffer.unbind
+The "internal" format of the `Renderbuffer`.
+
+| Value                  | Description |
+| ---                    | --- |
+| `GL.RGBA4`             |  4 red bits, 4 green bits, 4 blue bits 4 alpha bits |
+| `GL.RGB565`            |  5 red bits, 6 green bits, 5 blue bits |
+| `GL.RGB5_A1`           |  5 red bits, 5 green bits, 5 blue bits, 1 alpha bit |
+| `GL.DEPTH_COMPONENT16` |  16 depth bits |
+| `GL.STENCIL_INDEX8`    |  8 stencil bits |
+
+This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/docs/webgl/texture.md).
+
+| Sized Internal Format   | Format               | Type | Depth Bits | Stencil Bits |
+| ---                     | ---                  | ---  | ---        | --- |
+| `GL.DEPTH_COMPONENT16`  | `GL.DEPTH_COMPONENT` | `GL.UNSIGNED_SHORT`, `GL.UNSIGNED_INT` | 16 | 0 |
+| `GL.DEPTH_COMPONENT24`  | `GL.DEPTH_COMPONENT` | `GL.UNSIGNED_INT | 24 | 0 |
+| `GL.DEPTH_COMPONENT32F` | `GL.DEPTH_COMPONENT` | `GL.FLOAT | f32 | 0 |
+| `GL.DEPTH24_STENCIL8`   | `GL.DEPTH_STENCIL`   | `GL.UNSIGNED_INT_24_8 | 24 | 8 |
+| `GL.DEPTH32F_STENCIL8`  | `GL.DEPTH_STENCIL`   | `GL.FLOAT_32_UNSIGNED_INT_24_8_REV | f32 | 8 |
+
+
+When using the WEBGL_depth_texture extension:
+`GL.DEPTH_COMPONENT`
+`GL.DEPTH_STENCIL`
+When using the EXT_sRGB extension:
+`EXT.SRGB_EXT`
+`EXT.SRGB_ALPHA_EXT`
+
+When using a WebGL 2 context, the following values are available additionally:
+* `GL.R8`
+* `GL.R16F`
+* `GL.R32F`
+* `GL.R8UI`
+* `GL.RG8`
+* `GL.RG16F`
+* `GL.RG32F`
+* `GL.RGUI`
+* `GL.RGB8`
+* `GL.SRGB8`
+* `GL.RGB565`
+* `GL.R11F_G11F_B10F`
+* `GL.RGB9_E5`
+* `GL.RGB16F`
+* `GL.RGB32F`
+* `GL.RGB8UI`
+* `GL.RGBA8`
+* `GL.SRGB_APLHA8`
+* `GL.RGB5_A1`
+* `GL.RGBA4444`
+* `GL.RGBA16F`
+* `GL.RGBA32F`
+* `GL.RGBA8UI`
+
 
 ## Parameters
 
-| Parameter | Types | Read/Write |Description |
-| --- | --- | --- |
-| `GL.RENDERBUFFER_WIDTH` | GLint | R | height of the image of renderbuffer |
-| `GL.RENDERBUFFER_HEIGHT` | GLint | R | height of the image of renderbuffer |
-| `GL.RENDERBUFFER_INTERNAL_FORMAT` | GLenum | R | See below |
-| `GL.RENDERBUFFER_GREEN_SIZE` | GLint | R | resolution (bits) of green color |
-| `GL.RENDERBUFFER_BLUE_SIZE` | GLint | R | resolution (bits) of blue color |
-| `GL.RENDERBUFFER_RED_SIZE` | GLint | R | resolution (bits) of red color |
-| `GL.RENDERBUFFER_ALPHA_SIZE` | GLint | R | resolution (bits) of alpha component |
-| `GL.RENDERBUFFER_DEPTH_SIZE` | GLint | R | resolution (bits) of depth component |
-| `GL.RENDERBUFFER_STENCIL_SIZE` | GLint | R | resolution (bits) of stencil component |
-| `GL.RENDERBUFFER_SAMPLES` (WebGL2) | R | |
+| Parameter                          | Type   | Read/Write |Description |
+| ---                                | ---    | ---        | --- |
+| `GL.RENDERBUFFER_WIDTH`            | GLint  | R | height of the image of renderbuffer |
+| `GL.RENDERBUFFER_HEIGHT`           | GLint  | R | height of the image of renderbuffer |
+| `GL.RENDERBUFFER_INTERNAL_FORMAT`  | GLenum | R | See below |
+| `GL.RENDERBUFFER_GREEN_SIZE`       | GLint  | R | resolution (bits) of green color |
+| `GL.RENDERBUFFER_BLUE_SIZE`        | GLint  | R | resolution (bits) of blue color |
+| `GL.RENDERBUFFER_RED_SIZE`         | GLint  | R | resolution (bits) of red color |
+| `GL.RENDERBUFFER_ALPHA_SIZE`       | GLint  | R | resolution (bits) of alpha component |
+| `GL.RENDERBUFFER_DEPTH_SIZE`       | GLint  | R | resolution (bits) of depth component |
+| `GL.RENDERBUFFER_STENCIL_SIZE`     | GLint  | R | resolution (bits) of stencil component |
+| `GL.RENDERBUFFER_SAMPLES` (WebGL2) | GLint  | R | |
 
-`GL.RENDERBUFFER_INTERNAL_FORMAT` is the "internal" format of the currently bound renderbuffer. The default is `GL.RGBA4`.
-| Value | Description |
-| --- | --- |
-| `GL.RGBA4` |  4 red bits, 4 green bits, 4 blue bits 4 alpha bits |
-| `GL.RGB565` |  5 red bits, 6 green bits, 5 blue bits |
-| `GL.RGB5_A1` |  5 red bits, 5 green bits, 5 blue bits, 1 alpha bit |
-| `GL.DEPTH_COMPONENT16` |  16 depth bits |
-| `GL.STENCIL_INDEX8` |  8 stencil bits |
+
+## Limits
+
+| Limit                      |                               | WebGL2   | WebGL1 |
+| ---                        |---                            | ---      | ---    |
+| `GL.MAX_RENDERBUFFER_SIZE` | Max renderbuffer width/height | `>=2048` | `>=1`  |
+| `GL.MAX_SAMPLES`           | Max samples for multisampling | `>=4`    | `0`    |
+
+
+## Remarks
+
+* The only way to work with a renderbuffer, besides creating it, is to attach it to a `Framebuffer`.
+* A `Renderbuffer` cannot be accessed by a shader in any way.
+* Multisampling is only available in WebGL2

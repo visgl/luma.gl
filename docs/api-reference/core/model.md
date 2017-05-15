@@ -7,35 +7,24 @@ luma.gl: **shaders** (via a `Program` instance), **vertex attributes**
 For most applications, the `Model` class is probably the most central luma.gl
 class.
 
-- `Model` is a subclass of Object3D, meaning that it can be used in scene graphs
-  (by adding it to a [`Group`](group.html) or a [`Scene`](scene.html)),
-  and it can be positioned, rotated and scaled.
-- `Model` contains a [`Program`](program.html) (the shaders),
-  a [`Geometry`](geometry.html) (containing the attributes
-  for the primitive), any additional attributes for instanced rendering,
-  and also stores textures and uniforms.
+- `Model` is a subclass of Object3D, meaning that it can be used in scene graphs (by adding it to a [`Group`](group.html) or a [`Scene`](scene.html)), and it can be positioned, rotated and scaled.
+- `Model` contains a [`Program`](program.html) (the shaders), a [`Geometry`](geometry.html) (containing the attributes for the primitive), any additional attributes for instanced rendering, and also stores textures and uniforms.
 - Has simple boolean flags for selecting indexed and/or instanced rendering.
-- Offers a simple render method that binds all attributes, uniforms and
-  textures, selects (uses) the program, and calls the right gl draw call for
-  the model.
+- Offers a simple render method that binds all attributes, uniforms and textures, selects (uses) the program, and calls the right gl draw call for the model.
 - Setting buffers
 - Setting textures and more.
 
 
 ## Usage
 
-Set matrix information for the projection matrix and element matrix of the
-camera and world.
-The context of this example can be seen
-[here]http://uber.github.io/luma.gl/examples/lessons/3/).
+Set matrix information for the projection matrix and element matrix of the camera and world.
 
-{% highlight js %}
+```js
 program.setUniforms({
   'uMVMatrix': view,
   'uPMatrix': camera.projection
 });
-{% endhighlight %}
-
+```
 
 ## Remarks
 * All instance methods in `Model` are chainable
@@ -44,7 +33,7 @@ program.setUniforms({
 ## Methods
 
 | **Method** | **Description** |
-|====|====|
+| --- | --- |
 | `constructor` | creates a Model|
 | `hash` | Return a "unique" integer |
 | `setInstanceCount` | How many instances |

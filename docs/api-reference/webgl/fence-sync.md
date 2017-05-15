@@ -1,10 +1,6 @@
 # Fence Sync
 
-
 ## Usage
-
-
-
 
 ## Methods
 

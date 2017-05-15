@@ -1,14 +1,11 @@
 # Sampler
 
-[OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object): A Sampler Object is an OpenGL Object that stores the sampling parameters for a Texture access inside of a shader.
+A Sampler Object is an OpenGL Object that stores the sampling parameters for a Texture access inside of a shader. While texture sampling parameters can be specified directly on textures, samplers allow them to be specified independently. Thus, by using samplers an application can render the same texture with different parameters without duplicating the texture or modifying the texture parameters.
 
-`Sampler` allow texture sampling and filtering parameters to be specified independently from a texture. By using samplers an application can render the same texture with different parameters without duplicating the texture or modifying the texture parameters.
+To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture. When using the higher level [`Model`]('./model.md') class, samplers can be specified using uniform names instead of texture indices.
 
-The sampling parameters available are the same as on the [`Texture`](./texture.md) classes.
+For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).
 
-To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture.
-
-Note: When using the higher level [`Model`]('./model.md') class, samplers can be specified using uniform names instead of texture indices.
 
 ## Usage
 
@@ -24,7 +21,7 @@ const sampler = new Sampler(gl, {
 });
 ```
 
-Configuring a Sampler
+Reconfiguring a Sampler
 ```js
 const sampler = new Sampler(gl);
 sampler.setParameters({
@@ -32,38 +29,49 @@ sampler.setParameters({
 });
 ```
 
-Using Samplers
+Using Samplers via `Model.draw`
 ```js
-// Create two samplers to sample the same texture in different ways
+// Create a texture
 const texture = new Texture2D(gl, ...);
-const sampler1 = new Sampler(gl, ...);
-const sampler2 = new Sampler(gl, ...);
 
-// For ease of use, the `Model` class can bind samplers for a draw call
+// Create two samplers to sample the same texture in different ways
+const sampler1 = new Sampler(gl, {parameters: {[GL.MIN_FILTER]: GL.LINEAR, ...}});
+const sampler2 = new Sampler(gl, {parameters: {[GL.MIN_FILTER]: GL.NEAREST, ...}});
+
+// The `Model` class can optionally bind samplers for each draw call
 model.draw({
-  uniforms({texture1: texture, texture2: texture}),
-  samplers({texture1: sampler1, texture2: sampler2})
+  uniforms: {texture1: texture, texture2: texture, ...},
+  samplers: {texture1: sampler1, texture2: sampler2}
 });
-
-// Alternatively, bind the samplers using the `Sampler` API directly
-texture.bind(0);
-sampler1.bind(0);
-texture.bind(1);
-sampler2.bind(1);
 ```
 
-## Members
+Using Samplers via direct bindings
 
-`Sampler` inherits methods and members from [Resource](./resource).
+```js
+const texture = new Texture2D(gl, ...);
+texture.bind(0);
+texture.bind(1);
 
-### handle
-
-Handle to the underlying `WebGLSampler` object.
+// Create two samplers to sample the same texture in different ways
+const sampler1 = new Sampler(gl, {parameters: {[GL.MIN_FILTER]: GL.LINEAR, ...}});
+const sampler2 = new Sampler(gl, {parameters: {[GL.MIN_FILTER]: GL.NEAREST, ...}});
+sampler1.bind(0);
+sampler2.bind(1);
+```
 
 
 ## Methods
 
-### Sampler Constructor
+### Base Class
+
+`Sampler` inherits methods and members from [Resource](./resource), with the following remarks:
+
+* `handle` - Handle to the underlying `WebGLSampler` object
+* `getParameters` uses WebGL APIs [gl.getSamplerParameter]()
+* `setParameters` see below.
+
+
+### Constructor
 
 `new Sampler(gl, {parameters: {...}})`
 
@@ -80,16 +88,28 @@ Frees the underlying WebGL resource
 WebGL APIs [gl.deleteSampler]()
 
 
-### Sampler.bind
+### setParameters
 
-Note: Normally not called by the application.
+`Sampler.setParameters(parameters)`
+
+* `parameters` (Object) - keys are parameters, value are values to be assigned
+
+WebGL APIs [gl.getSamplerParameteri](), [gl.getSamplerParameterf]()
+
+
+
+### bind
+
+Note: Normally not called by the application. Instead use the samplers Model
+
+`Sampler.bind(unit)`
 
 * param {GLuint} unit - texture unit index
 return {Sampler} - returns self to enable chaining
 
 WebGL APIs [gl.bindSampler]()
 
-### Sampler.unbind
+### unbind
 
 Note: Normally not called by the application
 
@@ -106,15 +126,14 @@ return {Sampler} - returns self to enable chaining
 | `GL.TEXTURE_MIN_FILTER`              | `GL.NEAREST_MIPMAP_LINEAR` | texture minification filter |
 | `GL.TEXTURE_WRAP_S`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `s` |
 | `GL.TEXTURE_WRAP_T`                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `t` |
-| ------------------------------------ | -------------- | ----------- |
 | `GL.TEXTURE_WRAP_R` **WebGL2**       | `GL.REPEAT`    | texture wrapping function for texture coordinate `r` |
+| `GL_TEXTURE_MAX_ANISOTROPY           | fLargest
 | `GL.TEXTURE_BASE_LEVEL` **WebGL2**   | `0`            | Texture mipmap level |
 | `GL.TEXTURE_MAX_LEVEL` **WebGL2**    | `1000`         | Maximum texture mipmap array level |
 | `GL.TEXTURE_COMPARE_FUNC` **WebGL2** | `GL.LEQUAL`    | texture comparison function |
 | `GL.TEXTURE_COMPARE_MODE` **WebGL2** | `GL.NONE`      | whether r tex coord should be compared to depth texture |
 | `GL.TEXTURE_MIN_LOD` **WebGL2**      | `-1000`        | minimum level-of-detail value |
 | `GL.TEXTURE_MAX_LOD` **WebGL2**      | `1000`         | maximum level-of-detail value |
-
 
 ### Texture Magnification Filter
 

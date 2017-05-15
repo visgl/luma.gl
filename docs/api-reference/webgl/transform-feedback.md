@@ -10,8 +10,7 @@ When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`)
 
 Finally, note that when using transform feedback it is frequently desirable to turn off rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
 
-References:
-* [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Transform_Feedback).
+For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Transform_Feedback).
 
 
 ## Usage

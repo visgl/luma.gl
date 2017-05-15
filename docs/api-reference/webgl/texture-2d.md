@@ -1,8 +1,11 @@
 # Texture2D
 
-For more background and details on parameters, see [Textures and Samplers](textures-and-samplers.md).
+2D textures hold basic "single image" textures (although technically they can contain multiple mimap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
 
-# Usage
+Most texture related functionality is implemented by and documented on the [Texture](texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+
+
+## Usage
 
 Construct a new texture from an image
 ```js
@@ -63,77 +66,32 @@ console.log(
 );
 ```
 
-
 ## Methods
 
 ### Texture2D constructor
 
 ```
 new Texture2D(gl, {
-  data=, width=, height=, mipmaps=, format=, type=, dataFormat=,
+  data=,
+  width=,
+  height=,
+  mipmaps=,
+  format=,
+  type=,
+  dataFormat=,
   parameters=, pixelStore=
 })
 ```
 
 * `gl` (WebGLRenderingContext) - gl context
 * `data`=null (*) - If not provided (null), a solid color texture will be allocated of the specified size.
-* `width` (*Number*, default 0) - The width of the texture.
-* `height` (*Number*, default 0) - The height of the texture.
-* `mipmaps` (*Array* | *Boolean* | *Enum*, default false) - `n`th mipmap reduction level, 0 represents base image
-* `format` (*enum*, default `GL.RGBA`) - internal format that WebGL should use.
-* `type` (*enum*, default is autodeduced from format) - type of pixel data (GL.UNSIGNED_BYTE, GL.FLOAT etc).
-* `dataFormat` (*enum*, default is autodeduced from `format`) - internal format that WebGL should use.
-* `parameters`=`{}` (object) - texture sampler parameters (see [Sampler](./sampler.md)
-* `pixelStore`=`{}` (object) - pixel store parameters (see separate article)
+* `width`=`0` (*Number*) - The width of the texture.
+* `height`=`0` (*Number*) - The height of the texture.
+* `mipmaps`= - (*GLenum*) - How mipmaps should be created.
+* `format`=`GL.RGBA` (*GLenum* ) - internal format that WebGL should use.
+* `type`= (*enum*) - type of pixel data (`GL.UNSIGNED_BYTE`, `GL.FLOAT` etc). Default is autodeduced from `format`.
+* `dataFormat`= (*GLenum*) - internal format that WebGL should use. Default is autodeduced from `format`.
+* `parameters`=`{}` (*object*) - map of texture sampler parameters
+* `pixelStore`=`{}` (*object*) - map of pixel store settings (controls how `data` is interpreted)
 
-
-
-| Type                               | Description  |
-| ---------------------------------- | -----------  |
-| `null`                             | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
-| `typed array`                      | Bytes will be interpreted according to format/type parameters and pixel store settings. |
-| `Buffer` or `WebGLBuffer` (`WebGL2`) | Bytes will be interpreted according to format/type parameters and pixel store settings. |
-| `Image` (`HTMLImageElement`)       | image will be used to fill the texture. width and height will be deduced. |
-| `Video` (`HTMLVideoElement`)       | video will be played, continously updating the texture. width and height will be deduced. |
-| `Canvas` (`HTMLCanvasElement`)     | canvas will be used to fill the texture. width and height will be deduced. |
-| `ImageData`                        | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced. |
-
-#### format
-
-The internal format of the texture. WebGL will unpack `data` into this format. Defaults to `GL.RGBA`.
-
-Some common formats are listed here. See tables below for additional supported formats
-
-| Format                  | Components | Description |
-| ----------------------- | ---------- | ----------- |
-| `GL.RGB`                |          3 | sampler reads the red, green and blue components, alpha is 1.0 |
-| `GL.RGBA`               |          4 | Red, green, blue and alpha components are sampled from the color buffer. |
-| `GL.LUMINANCE`          |          1 | Red, green, blue components are sampled from a single luminance value. alpha is 1.0. |
-| `GL.LUMINANCE_ALPHA`    |          2 | Each component is a luminance/alpha double. When sampled, rgb are all set to luminance, alpha from component. |
-| `GL.ALPHA`              |          1 | Discards the red, green and blue components and reads the alpha component. |
-
-#### type
-
-Format of pixel data (i.e. format of color components in the `data` memory block (only applies to typed arrays/WebGL buffers).
-
-Some common types are listed here. See tables below for additional supported types.
-
-| Type | Description |
-| --- | --- |
-| `GL.UNSIGNED_BYTE` | 8 bits per channel for `GL.RGBA` |
-| `GL.HALF_FLOAT` (WebGL2, OES_texture_half_float) | |
-| `GL.FLOAT` (WebGL2, OES_texture_float) | |
-
-Note: luma.gl attempts to autodeduce `type` from the `format` parameter, so for common formats you would not need to specify this parameter.
-
-`dataFormat` - Normally autodeduced from the `format` parameter. Does
-  not need to be specified for any texture format specified in the WebGL standard.
-
-
-#### Texture Sampler Parameters
-
-Texture parameters control how textures are sampled in the shaders.
-Also see [`Sampler`](sampler.md).
-
-
-
+Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](texture.md). Sampler parameters are specified in [Sampler](./sampler.md), and pixel store parameters are specified in [State Management](./context-state.md)

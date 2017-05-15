@@ -97,15 +97,15 @@ const animationLoop = new AnimationLoop({
       framebuffer
     });
 
-    const div = document.getElementById('planet-name');
-    if (pickedModel) {
-      div.innerHTML = pickedModel.model.id;
-      div.style.top = `${pick.y}px`;
-      div.style.left = `${pick.x}px`;
-      div.style.display = 'block';
-    } else {
-      div.style.display = 'none';
-    }
+    // const div = document.getElementById('planet-name');
+    // if (pickedModel) {
+    //   div.innerHTML = pickedModel.model.id;
+    //   div.style.top = `${pick.y}px`;
+    //   div.style.left = `${pick.x}px`;
+    //   div.style.display = 'block';
+    // } else {
+    //   div.style.display = 'none';
+    // }
   }
 });
 

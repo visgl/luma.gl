@@ -2,7 +2,7 @@ import concentricsAnimationLoop from './concentrics-demo';
 import randomNoiseAnimationLoop from './random-noise-demo';
 
 // Pick one to fit with demo framework (until it can handle multiple exports)
-export default randomNoiseAnimationLoop;
+export default concentricsAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined') {

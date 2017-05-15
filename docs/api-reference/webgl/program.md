@@ -1,14 +1,14 @@
-The `Program` class encapsulates a `WebGLProgram` object. It contains a matched pair of vertex and fragment shaders.
+A `Program` contains a matched pair of vertex and fragment shaders. Programs handle compilation and linking of shaders, setting and unsetting buffers (attributes), setting uniform values etc.
 
-`Program` handles
-- Compilation and linking of shaders
-- Setting and unsetting buffers (attributes)
-- Setting uniform values
-- Setting buffers
-- Setting textures
-and more.
+| **Method** | **Description** |
+| --- | --- |
+| `constructor` | creates a Program |
+| `initialze` | reinitializes (relinks) a Program |
+| `delete` | deletes resources held by program |
+| `setAttributes` | Sets named uniforms from a map, ignoring names |
+| `setUniforms` | Sets named uniforms from a map, ignoring names |
+| `draw` | Runs the shaders to render or compute |
 
-Calling `Program.use()` after construction will cause any subsequent `draw*` calls to use the shaders from this program.
 
 ## Usage
 
@@ -45,56 +45,7 @@ Creating a program for transform feedback, specifying which varyings to use
 ```
 
 
-## Methods
-
-| **Method** | **Description** |
-|====|====|
-| `constructor` | creates a Program |
-| `initialze` | reinitializes (relinks) a Program |
-| `delete` | deletes resources held by program |
-| `setAttributes` | Sets named uniforms from a map, ignoring names |
-| `setUniforms` | Sets named uniforms from a map, ignoring names |
-| `draw` | Runs the shaders to render or compute |
-
-| **Method** | **Description** |
-| `getAttributeCount` | Gets number of active attributes |
-| `getAttributeInfo` | Gets {name, type, size} for attribute at index |
-| `getAttributeName` | Gets name for attribute at index |
-| `getAttributeLocation` | Gets index for attribute with name |
-| `getAttributeNames` |  |
-| `getAttributeLocations` |  |
-| `getUniformCount` | Gets number of active uniforms |
-| `getUniformInfo` | Gets {name, type, size} for uniform at index |
-
-## Limits
-
-| Limit | Value | Description |
-| --- | --- | --- |
-| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS` | >= 0 (GLint) | |
-| `GL.MAX_RENDERBUFFER_SIZE` | >= 1 (GLint) | |
-| `GL.MAX_VARYING_VECTORS` | >= 8 (GLint) | |
-| `GL.MAX_VERTEX_ATTRIBS` | >= 8 (GLint) | |
-| `GL.MAX_VERTEX_UNIFORM_VECTORS` | >= 128 (GLint) | |
-| `GL.MAX_FRAGMENT_UNIFORM_VECTORS` | >= 16 (GLint) | |
-| WebGL2 | | |
-| GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH | | |
-
-## Parameters
-
-| Parameter | Type | Description
-| `GL.DELETE_STATUS` | GLboolean | |
-| `GL.LINK_STATUS` | GLboolean | |
-| `GL.VALIDATE_STATUS` | GLboolean | |
-| `GL.ATTACHED_SHADERS` | GLint | |
-| `GL.ACTIVE_ATTRIBUTES` | GLint | |
-| `GL.ACTIVE_UNIFORMS` | GLint | |
-| WebGL2 | | |
-| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | GLenum | Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS` |
-| `GL.TRANSFORM_FEEDBACK_VARYINGS` | GLint | |
-| `GL.ACTIVE_UNIFORM_BLOCKS` | GLint | |
-
-
-## Properties
+## Members
 
 A program instance has as public properties:
 
@@ -258,3 +209,32 @@ Gets number of active uniforms
 Gets {name, type, size} for uniform at index
 
 ### `getFragDataLocation` WebGL2
+
+
+## Limits
+
+| Limit | Value | Description |
+| --- | --- | --- |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS` | >= 0 (GLint) | |
+| `GL.MAX_RENDERBUFFER_SIZE` | >= 1 (GLint) | |
+| `GL.MAX_VARYING_VECTORS` | >= 8 (GLint) | |
+| `GL.MAX_VERTEX_ATTRIBS` | >= 8 (GLint) | |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS` | >= 128 (GLint) | |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS` | >= 16 (GLint) | |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2) | - | - |
+
+## Parameters
+
+| Parameter | Type | Description
+| --- | --- | --- |
+| `GL.DELETE_STATUS` | GLboolean | |
+| `GL.LINK_STATUS` | GLboolean | |
+| `GL.VALIDATE_STATUS` | GLboolean | |
+| `GL.ATTACHED_SHADERS` | GLint | |
+| `GL.ACTIVE_ATTRIBUTES` | GLint | |
+| `GL.ACTIVE_UNIFORMS` | GLint | |
+| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` (WebGL2) | GLenum | Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS` |
+| `GL.TRANSFORM_FEEDBACK_VARYINGS` (WebGL2) | GLint | |
+| `GL.ACTIVE_UNIFORM_BLOCKS` (WebGL2) | GLint | - |
+
+

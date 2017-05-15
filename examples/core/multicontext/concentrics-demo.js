@@ -17,7 +17,7 @@ void main(void) {
 `;
 
 export default new AnimationLoop({
-  onCreateContext: () => createGLContext({canvas: 'canvas-0'}),
+  // onCreateContext: () => createGLContext({canvas: 'canvas-0'}),
   onInitialize: ({gl}) => ({
     clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})
   }),

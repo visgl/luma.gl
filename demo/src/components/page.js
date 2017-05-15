@@ -8,6 +8,18 @@ import InfoPanel from './info-panel';
 import MarkdownPage from './markdown-page';
 import {loadContent, updateContext} from '../actions/app-actions';
 
+const contextTypes = {
+  router: PropTypes.object
+};
+
+const propTypes = {
+  route: PropTypes.any,
+  location: PropTypes.any,
+  loadContent: PropTypes.any,
+  updateContext: PropTypes.any,
+  contents: PropTypes.any
+};
+
 class Page extends Component {
 
   constructor(props) {
@@ -55,7 +67,7 @@ class Page extends Component {
 
     return content;
   }
-  
+
   @autobind _resizeContext() {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -154,9 +166,7 @@ class Page extends Component {
   }
 }
 
-Page.contextTypes = {
-  router: PropTypes.object
-};
+Page.contextTypes = contextTypes;
 
 function mapStateToProps(state) {
   return {

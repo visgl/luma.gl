@@ -1,6 +1,4 @@
-/* global LumaGL */
-const {GL, AnimationLoop, createGLContext} = LumaGL;
-const {Model, Geometry, Program, Matrix4} = LumaGL;
+import {GL, AnimationLoop, Model, Geometry, Program, Matrix4} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -29,42 +27,45 @@ void main(void) {
 }
 `;
 
-new AnimationLoop()
-.context(() => createGLContext({canvas: 'lesson04-canvas'}))
-.init(({gl}) => {
-  gl.clearColor(0, 0, 0, 1);
-  gl.clearDepth(1);
-  gl.enable(GL.DEPTH_TEST);
-  gl.depthFunc(GL.LEQUAL);
+const animationLoop = new AnimationLoop({
+  // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
+  onInitialize({gl}) {
+    gl.clearColor(0, 0, 0, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
 
-  const program = new Program(gl, {
-    vs: VERTEX_SHADER,
-    fs: FRAGMENT_SHADER
-  });
+    const program = new Program(gl, {
+      vs: VERTEX_SHADER,
+      fs: FRAGMENT_SHADER
+    });
 
-  return {
-    pyramid: new Model({program, geometry: getPyramidGeometry()}),
-    cube: new Model({program, geometry: getCubeGeometry()})
-  };
-})
-.frame(({gl, tick, aspect, pyramid, cube}) => {
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    return {
+      pyramid: new Model({program, geometry: getPyramidGeometry()}),
+      cube: new Model({program, geometry: getCubeGeometry()})
+    };
+  },
+  onRender({gl, tick, aspect, pyramid, cube}) {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-  const projection = Matrix4.perspective({aspect});
-  const view = Matrix4.lookAt({eye: [0, 0, 0]});
+    const projection = Matrix4.perspective({aspect});
+    const view = Matrix4.lookAt({eye: [0, 0, 0]});
 
-  pyramid.render({
-    uPMatrix: projection,
-    uMVMatrix: view.clone().translate([-1.5, 0, -8]).rotateY(tick * 0.01)
-  });
+    pyramid.render({
+      uPMatrix: projection,
+      uMVMatrix: view.clone().translate([-1.5, 0, -8]).rotateY(tick * 0.01)
+    });
 
-  const phi = tick * 0.01;
-  cube.render({
-    uPMatrix: projection,
-    uMVMatrix:
-      view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
-  });
+    const phi = tick * 0.01;
+    cube.render({
+      uPMatrix: projection,
+      uMVMatrix:
+        view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
+    });
+  }
 });
+
+export default animationLoop;
 
 /* eslint-disable indent, no-multi-spaces */
 // Makes a colored pyramid

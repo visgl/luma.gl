@@ -8,7 +8,10 @@ import Gallery from './components/gallery';
 import Page from './components/page';
 import Blog from './components/blog';
 
-import {examplePages, docPages} from './constants/pages';
+import {EXAMPLE_PAGES, DOC_PAGES} from '../contents/pages';
+import {generatePaths} from './utils/page-path-utils';
+export const examplePages = generatePaths(EXAMPLE_PAGES);
+export const docPages = generatePaths(DOC_PAGES, {docUrls: true});
 
 const appHistory = useRouterHistory(createHashHistory)({queryKey: false});
 
