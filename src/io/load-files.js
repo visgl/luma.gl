@@ -7,6 +7,15 @@ import {Geometry} from '../geometry';
 
 function noop() {}
 
+let pathPrefix = '';
+
+/*
+ * Set a relative path prefix
+ */
+export function setPathPrefix(prefix) {
+  pathPrefix = prefix;
+}
+
 /*
  * Loads (Requests) multiple files asynchronously
  */
@@ -16,6 +25,7 @@ export function loadFiles(opts = {}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
+      url = pathPrefix + url;
       const promise = loadFile(Object.assign({url}, opts));
       promise.then(file => onProgress({
         progress: ++count / urls.length,
@@ -37,6 +47,7 @@ export function loadImages(opts = {}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
+      url = pathPrefix + url;
       const promise = loadImage(url);
       promise.then(file => onProgress({
         progress: ++count / urls.length,

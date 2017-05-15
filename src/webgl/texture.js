@@ -344,47 +344,77 @@ export default class Texture extends Resource {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format, type, dataFormat, compressed, data, width, height}));
 
-    // Support ndarrays
-    if (data && data.data) {
-      const ndarray = data;
-      data = ndarray.data;
-      width = ndarray.shape[0];
-      height = ndarray.shape[1];
-    }
-
-    // Support buffers
-    if (data instanceof Buffer) {
-      data = data.handle;
-    }
-
     const {gl} = this;
     gl.bindTexture(this.target, this.handle);
 
-    if (compressed) {
-      gl.compressedTexImage2D(this.target,
-        level, format, width, height, border, data);
-    } else if (data === null) {
-      gl.texImage2D(target,
-        level, format, width, height, border, dataFormat, type, null);
-    } else if (ArrayBuffer.isView(data)) {
-      gl.texImage2D(target,
-        level, format, width, height, border, dataFormat, type, data);
-    } else if (data instanceof WebGLBuffer) {
-      // WebGL2 allows us to create texture directly from a WebGL buffer
+    let dataType = null;
+    ({data, dataType} = this._getDataType({data, compressed}));
+    switch (dataType) {
+    case 'compressed':
+      gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
+      break;
+    case 'typed-array':
+      gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+      break;
+    case 'buffer':
+      // WebGL2 enables creating textures directly from a WebGL buffer
       assert(gl instanceof WebGL2RenderingContext, 'Requires WebGL2');
-      // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
-      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
-      gl.texImage2D(target,
-        level, format, width, height, border, format, type, offset);
-      gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
-    } else {
-      // Assume data is a browser supported object (ImageData, Canvas, ...)
+      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
+      gl.texImage2D(target, level, format, width, height, border, format, type, offset);
+      break;
+    case 'browser-obejct':
+    default:
       gl.texImage2D(target, level, format, format, type, data);
     }
-
-    gl.bindTexture(this.target, null);
   }
   /* eslint-enable max-len, max-statements, complexity */
+
+  _getDataType({data, compressed = false}) {
+    if (compressed) {
+      return {data, dataType: 'compressed'};
+    }
+    if (data === null || ArrayBuffer.isView(data)) {
+      return {data, dataType: 'typed-array'};
+    }
+    if (data instanceof Buffer) {
+      return {data: data.handle, dataType: 'buffer'};
+    }
+    if (data instanceof WebGLBuffer) {
+      return {data, dataType: 'buffer'};
+    }
+    // Assume data is a browser supported object (ImageData, Canvas, ...)
+    return {data, dataType: 'browser-object'};
+  }
+
+  // Image 3D copies from Typed Array or WebGLBuffer
+  setImage3D({
+    level = 0,
+    internalformat = GL.RGBA,
+    width,
+    height,
+    depth = 1,
+    border = 0,
+    format,
+    type = GL.UNSIGNED_BYTE,
+    offset = 0,
+    pixels
+  }) {
+    if (ArrayBuffer.isView(pixels)) {
+      this.gl.texImage3D(
+        this.target, level, internalformat,
+        width, height, depth, border, format, type, pixels);
+      return this;
+    }
+
+    if (pixels instanceof Buffer) {
+      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
+      this.gl.texImage3D(
+        this.target, level, internalformat,
+        width, height, depth, border, format, type, offset);
+    }
+
+    return this;
+  }
 
   // HELPER METHODS
 

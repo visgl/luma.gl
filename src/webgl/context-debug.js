@@ -1,9 +1,11 @@
 // Khronos Debug support module
 import WebGLDebug from 'webgl-debug';
 import {log} from '../utils';
+import {installParameterDefinitions} from './debug-parameters';
 
 // Uses webgl-debug
 export function makeDebugContext(gl) {
+  installParameterDefinitions();
   const debugGL = WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
   class WebGLDebugContext {}
   Object.assign(WebGLDebugContext.prototype, debugGL);
