@@ -137,6 +137,9 @@ export default class AnimationLoop {
     this._context.aspect = canvas.width / canvas.height;
   }
 
+  _finalizeContext() {
+  }
+
   // Add application's data to the app context object
   _addAppDataToContext(appContext) {
     if (typeof appContext === 'object' && appContext !== null) {
@@ -177,6 +180,18 @@ export default class AnimationLoop {
   // @param {Number} width, height - new width and height of canvas in CSS coordinates
   _resizeCanvas(width, height) {
     const {canvas} = this._context;
+    // if (canvas) {
+    //   // Lookup the size the browser is displaying the canvas.
+    //   var displayWidth = canvas.clientWidth;
+    //   var displayHeight = canvas.clientHeight;
+
+    //   // Check if the canvas is not the same size.
+    //   if (canvas.width  !== displayWidth || canvas.height !== displayHeight) {
+    //     // Make the canvas the same size
+    //     canvas.width  = displayWidth;
+    //     canvas.height = displayHeight;
+    //   }
+    // }
     if (canvas) {
       if (this.autoResizeDrawingBuffer) {
         const cssToDevicePixels = this.useDevicePixelRatio ?
@@ -234,8 +249,8 @@ export default class AnimationLoop {
    * Resize canvas drawing buffer
    * NOTE: The drawing buffer will be scaled to the viewport
    * for best visual results, usually set to either:
-   *  canvas CSS width x CSS height
-   *  canvas CSS width * devicePixelRatio x CSS height * devicePixelRatio
+   *  canvas CSS width x canvas CSS height
+   *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
    * TODO - add separate call for headless contexts
    * @param {Number} width - new width of canvas in CSS coordinates
    * @param {Number} height - new height of canvas in CSS coordinates

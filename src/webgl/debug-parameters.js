@@ -10,7 +10,7 @@ import Framebuffer from './framebuffer';
 import Program from './program';
 import Renderbuffer from './renderbuffer';
 import Sampler from './sampler';
-import Shader from './shader';
+// import Shader from './shader';
 import Texture from './texture';
 
 const BUFFER_PARAMETERS = {
@@ -48,20 +48,16 @@ const FRAMEBUFFER_STATUS = {
   [GL.FRAMEBUFFER_COMPLETE]:
     'Success. Framebuffer is correctly set up',
   [GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT]:
-    'Attachment types are mismatched or \
-not all framebuffer attachment points are framebuffer attachment complete.',
+    'Attachment types are mismatched or not all attachment points are attachment complete.',
   [GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT]:
     'There is no attachment.',
   [GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS]:
-    'Height and width of the attachment are not the same.',
+    'Attachments do not have the same size.',
   [GL.FRAMEBUFFER_UNSUPPORTED]:
-    'Format of attachment is not supported or \
-depth and stencil attachments are not the same renderbuffer.',
-    // When using a WebGL 2 context, the following values can be returned
+    'Attachment format not supported or depth and stencil attachments are not same renderbuffer.',
+  // When using a WebGL 2 context, the following values can be returned
   [GL.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE]:
-    'Values of GL.RENDERBUFFER_SAMPLES are different among attached \
-renderbuffers, or are non-zero if the attached images are a mix of \
-renderbuffers and textures.'
+    'SAMPLES differs among attached renderbuffers, or non-zero SAMPLES are mixed with textures.'
 };
 
 const PROGRAM_PARAMETERS = {
@@ -118,11 +114,11 @@ const SAMPLER_PARAMETERS = {
   [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl2: 'EXT_texture_filter_anisotropic'}
 };
 
-const SHADER_PARAMETERS = [
-  GL.DELETE_STATUS, // GLboolean - whether shader is flagged for deletion.
-  GL.COMPILE_STATUS, // GLboolean - was last shader compilation successful.
-  GL.SHADER_TYPE // GLenum - GL.VERTEX_SHADER or GL.FRAGMENT_SHADER.
-];
+// const SHADER_PARAMETERS = [
+//   GL.DELETE_STATUS, // GLboolean - whether shader is flagged for deletion.
+//   GL.COMPILE_STATUS, // GLboolean - was last shader compilation successful.
+//   GL.SHADER_TYPE // GLenum - GL.VERTEX_SHADER or GL.FRAGMENT_SHADER.
+// ];
 
 const TEXTURE_PARAMETERS = {
   // WEBGL1
@@ -156,6 +152,6 @@ export function installParameterDefinitions() {
   Program.PARAMETERS = PROGRAM_PARAMETERS;
   Renderbuffer.PARAMETERS = RENDERBUFFER_PARAMETERS;
   Sampler.PARAMETERS = SAMPLER_PARAMETERS;
-  Shader.PARAMETERS = SHADER_PARAMETERS;
+  // Shader.PARAMETERS = SHADER_PARAMETERS;
   Texture.PARAMETERS = TEXTURE_PARAMETERS;
 }

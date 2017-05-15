@@ -8,6 +8,24 @@ import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-a
 import {log} from '../utils';
 import assert from 'assert';
 
+// Local constants - will collapse during minification
+const GL_FRAMEBUFFER = 0x8D40;
+const GL_RENDERBUFFER = 0x8D41;
+const GL_DRAW_FRAMEBUFFER = 0;
+const GL_READ_FRAMEBUFFER = 0;
+
+const GL_COLOR_ATTACHMENT0 = 0x8CE0;
+const GL_DEPTH_ATTACHMENT = 0x8D00;
+const GL_STENCIL_ATTACHMENT = 0x8D20;
+// const GL_DEPTH_STENCIL_ATTACHMENT = 0x821A;
+
+const GL_TEXTURE_3D = 0x806F;
+const GL_TEXTURE_2D_ARRAY = 0x8C1A;
+const GL_TEXTURE_2D = 0x0DE1;
+const GL_TEXTURE_CUBE_MAP = 0x8513;
+
+const GL_TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
+
 export default class Framebuffer extends Resource {
 
   constructor(gl, opts = {}) {
@@ -17,196 +35,111 @@ export default class Framebuffer extends Resource {
     this.width = null;
     this.height = null;
     this.attachments = {};
-    this.colorBuffer = null;
-    this.depthBuffer = null;
-    this.stencilBuffer = null;
-    this.texture = null;
-
     this.initialize(opts);
 
     Object.seal(this);
   }
 
-  // SIMPLIFIED INTERFACE
-
-  resize({width, height}) {
-    this.initialize(Object.assign({}, this.opts, {width, height}));
-  }
-
-  /* eslint-disable max-statements */
   initialize({
-    attachments = {},
     width = 1,
     height = 1,
+    attachments = null,
     color = true,
-    format = GL.RGBA,
-    type = GL.UNSIGNED_BYTE,
-    parameters = {
-      [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-      [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
-    },
-    depth = true
+    depth = true,
+    stencil = false,
+    check = true
   }) {
-    const {gl} = this;
-
     assert(width >= 0 && height >= 0, 'Width and height need to be integers');
-    if (width === this._width && height === this._height) {
-      return;
-    }
-
-    log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
-
-    this.colorBuffer = null;
-    this.depthBuffer = null;
-    this.stencilBuffer = null;
-    this.texture = null;
-
-    attachments = Object.assign({}, attachments);
-
-    // Add a color buffer if requested and not supplied
-    if (color && !attachments[gl.COLOR_ATTACHMENT0]) {
-      const colorBuffer = new Texture2D(this.gl, {
-        data: null,
-        format,
-        type,
-        width,
-        height,
-        parameters
-      });
-
-      attachments[gl.COLOR_ATTACHMENT0] = colorBuffer;
-
-      if (this.texture) {
-        // this.texture.delete();
-      }
-      this.texture = colorBuffer;
-    }
-
-    // Add a depth buffer if requested and not supplied
-    if (depth && !attachments[gl.DEPTH_ATTACHMENT]) {
-      const depthBuffer = new Renderbuffer(this.gl, {
-        format: gl.DEPTH_COMPONENT16,
-        width,
-        height
-      });
-      attachments[gl.DEPTH_ATTACHMENT] = depthBuffer;
-
-      if (this.depthBuffer) {
-        // this.depthBuffer.delete();
-      }
-      this.depthBuffer = depthBuffer;
-    }
 
     // Store actual width and height for diffing
-    // Note: A framebuffer has no separate size it is defined by its attachments
     this.width = width;
     this.height = height;
 
-    this.attach(attachments);
+    // Resize any provided attachments - note that resize only resizes if needed
+    // Note: A framebuffer has no separate size, it is defined by its attachments (which must agree)
+    if (attachments) {
+      for (const attachment in attachments) {
+        const target = attachments[attachment];
+        const object = Array.isArray(target) ? target[0] : target;
+        object.resize({width, height});
+      }
+    } else {
+      // Create any requested default attachments
+      attachments = this._createDefaultAttachments({color, depth, stencil});
+    }
 
-    // Checks that framebuffer was properly set up,
-    // if not, throws an explanatory error
-    this.checkStatus();
+    // Any current attachments need to be removed, create a map with null values
+    const attachmentsToRemove = Object.keys(this.attachments).reduce((map, key) => {
+      map[key] = null;
+      return map;
+    }, {});
+
+    // Unattach/attach the attachments
+    this.attach(Object.assign(attachmentsToRemove, attachments));
+
+    // Checks that framebuffer was properly set up, if not, throws an explanatory error
+    if (check) {
+      this.checkStatus();
+    }
   }
-  /* eslint-enable max-statements */
+
+  resize({width, height}) {
+    if (width === this.width && height === this.height) {
+      return this;
+    }
+    log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+    return this.initialize(Object.assign({}, this.opts, {width, height}));
+  }
 
   // Attach from a map of attachments
   attach(attachments) {
-    for (const attachmentId in attachments) {
-      const attachment = attachments[attachmentId];
-      if (!attachment) {
-        this.unattach({attachment: attachmentId});
-      } else if (attachment instanceof Renderbuffer) {
-        this.attachRenderbuffer({renderbuffer: attachment, attachment: attachmentId});
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
+
+    for (const attachment in attachments) {
+      const object = attachments[attachment];
+      if (!object) {
+        this._unattach({attachment});
+      } else if (object instanceof Renderbuffer) {
+        this._attachRenderbuffer({attachment, renderbuffer: object});
+      } else if (Array.isArray(object)) {
+        const [texture, layer = 0, level = 0] = object;
+        this._attachTexture({attachment, texture, layer, level});
       } else {
-        this.attachTexture({texture: attachment, attachment: attachmentId});
+        this._attachTexture({attachment, texture: object, layer: 0, level: 0});
       }
     }
     Object.assign(this.attachments, attachments);
-  }
 
-  unattach(attachment) {
-
-  }
-
-  // Used to attach a renderbuffer to a framebuffer
-  attachRenderbuffer({
-    renderbuffer = null,
-    attachment = GL.COLOR_ATTACHMENT0,
-    target = GL.FRAMEBUFFER,
-    renderbufferTarget = GL.RENDERBUFFER
-  } = {}) {
-    this.bind({target});
-    if (renderbuffer) {
-      renderbuffer.bind();
-    }
-
-    this.gl.framebufferRenderbuffer(target, attachment, GL.RENDERBUFFER, renderbuffer.handle);
-
-    if (renderbuffer) {
-      renderbuffer.unbind();
-    }
-    this.unbind({target});
-    return this;
-  }
-
-  // Used to attach textures to a framebuffer, the textures will store the various buffers.
-  attachTexture({
-    texture = null,
-    target = GL.FRAMEBUFFER,
-    attachment = GL.COLOR_ATTACHMENT0,
-    textureTarget = GL.TEXTURE_2D
-  } = {}) {
-    this.bind({target});
-    if (texture) {
-      this.gl.bindTexture(texture.target, texture.handle);
-    }
-
-    this.gl.framebufferTexture2D(
-      target,
-      attachment,
-      texture && texture.target,
-      texture && texture.handle,
-      0 // mipmapLevel, currently only 0 is supported by WebGL
-    );
-
-    if (texture) {
-      this.gl.bindTexture(texture.target, null);
-    }
-    this.unbind();
-    return this;
-  }
-
-  // WebGL2 only
-  // Similar to attachTexture but only a given single layer of the texture
-  // level is attached to the attachment point.
-  attachTextureLayer({
-    attachment = GL.COLOR_ATTACHMENT0,
-    texture,
-    level,
-    layer
-  } = {}) {
-    const {gl} = this;
-    assertWebGL2Context(gl);
-
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.handle);
-    gl.framebufferTextureLayer(gl.READ_FRAMEBUFFER, attachment, texture, level, layer);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-    return this;
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, null);
   }
 
   checkStatus() {
     const {gl} = this;
-    gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-    gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
+    const status = gl.checkFramebufferStatus(GL_FRAMEBUFFER);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, null);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error(_getFrameBufferStatus(status));
     }
     return this;
   }
 
-  //
+  get color() {
+    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
+  }
+
+  get texture() {
+    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
+  }
+
+  get depth() {
+    return this.attachments[GL_DEPTH_ATTACHMENT] || null;
+  }
+
+  get stencil() {
+    return this.attachments[GL_STENCIL_ATTACHMENT] || null;
+  }
+
   // NOTE: Slow requires roundtrip to GPU
   // App can provide pixelArray or have it auto allocated by this method
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
@@ -267,23 +200,22 @@ export default class Framebuffer extends Resource {
     const {gl} = this;
     assertWebGL2Context(gl);
 
-    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.handle);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, srcFramebuffer.handle);
+    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, this.handle);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, srcFramebuffer.handle);
     gl.blitFramebuffer(
       srcX0, srcY0, srcX1, srcY1,
       dstX0, dstY0, dstX1, dstY1,
       mask,
       filter
     );
-    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, null);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, null);
     return this;
   }
 
   // signals to the GL that it need not preserve all pixels of a specified region
   // of the framebuffer
   invalidate({
-    target = GL.FRAMEBUFFER,
     attachments = [],
     x = 0,
     y = 0,
@@ -292,14 +224,14 @@ export default class Framebuffer extends Resource {
   }) {
     const {gl} = this;
     assertWebGL2Context(this.gl);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.handle);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, this.handle);
     const invalidateAll = x === 0 && y === 0 && width === undefined && height === undefined;
     if (invalidateAll) {
-      gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, attachments);
+      gl.invalidateFramebuffer(GL_READ_FRAMEBUFFER, attachments);
     } else {
-      this.gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, attachments, x, y, width, height);
+      this.gl.invalidateFramebuffer(GL_READ_FRAMEBUFFER, attachments, x, y, width, height);
     }
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, null);
     return this;
   }
 
@@ -310,7 +242,7 @@ export default class Framebuffer extends Resource {
   /* eslint-disable complexity */
   getAttachmentParameter({
     target = this.target,
-    attachment = GL.COLOR_ATTACHMENT0,
+    attachment = GL_COLOR_ATTACHMENT0,
     pname
   } = {}) {
     const caps = getContextCaps(this.gl);
@@ -349,7 +281,7 @@ export default class Framebuffer extends Resource {
   /* eslint-enable complexity */
 
   getAttachmentParameters(
-    attachment = GL.COLOR_ATTACHMENT0,
+    attachment = GL_COLOR_ATTACHMENT0,
     parameters = this.constructor.ATTACHMENT_PARAMETERS || {}
   ) {
     const values = {};
@@ -361,17 +293,98 @@ export default class Framebuffer extends Resource {
 
   // WEBGL INTERFACE
 
-  bind({target = GL.FRAMEBUFFER} = {}) {
+  bind({target = GL_FRAMEBUFFER} = {}) {
     this.gl.bindFramebuffer(target, this.handle);
     return this;
   }
 
-  unbind({target = GL.FRAMEBUFFER} = {}) {
+  unbind({target = GL_FRAMEBUFFER} = {}) {
     this.gl.bindFramebuffer(target, null);
     return this;
   }
 
   // PRIVATE METHODS
+
+  _createDefaultAttachments({color, depth, stencil, width, height}) {
+    const defaultAttachments = {};
+
+    // Add a color buffer if requested and not supplied
+    if (color) {
+      defaultAttachments[GL_COLOR_ATTACHMENT0] = new Texture2D(this.gl, {
+        data: null,
+        format: GL.RGBA,
+        type: GL.UNSIGNED_BYTE,
+        width,
+        height,
+        parameters: {
+          [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
+        }
+      });
+    }
+
+    // Add a depth buffer if requested and not supplied
+    if (depth) {
+      defaultAttachments[GL_DEPTH_ATTACHMENT] = new Renderbuffer(this.gl, {
+        format: GL.DEPTH_COMPONENT16,
+        width,
+        height
+      });
+    }
+
+    // TODO - handle stencil and combined depth and stencil
+
+    return defaultAttachments;
+  }
+
+  _unattach({attachment}) {
+    this.gl.bindRenderbuffer(GL_RENDERBUFFER, this.handle);
+    this.gl.framebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, null);
+    delete this.attachments[attachment];
+  }
+
+  _attachRenderbuffer({attachment = GL_COLOR_ATTACHMENT0, renderbuffer}) {
+    const {gl} = this;
+    // TODO - is the bind needed?
+    // gl.bindRenderbuffer(GL_RENDERBUFFER, renderbuffer.handle);
+    gl.framebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, renderbuffer.handle);
+    // TODO - is the unbind needed?
+    // gl.bindRenderbuffer(GL_RENDERBUFFER, null);
+
+    this.attachments[attachment] = renderbuffer;
+  }
+
+  // layer = 0 - index into Texture2DArray and Texture3D or face for `TextureCubeMap`
+  // level = 0 - mipmapLevel (must be 0 in WebGL1)
+  _attachTexture({attachment = GL_COLOR_ATTACHMENT0, texture, layer, level}) {
+    const {gl} = this;
+    gl.bindTexture(texture.target, texture.handle);
+
+    switch (texture.target) {
+    case GL_TEXTURE_2D_ARRAY:
+    case GL_TEXTURE_3D:
+      gl.framebufferTextureLayer(GL_FRAMEBUFFER, attachment, texture.target, level, layer);
+      break;
+
+    case GL_TEXTURE_CUBE_MAP:
+      // layer must be a cubemap face (or if index, converted to cube map face)
+      const face = mapIndexToCubeMapFace(layer);
+      gl.framebufferTexture2D(GL_FRAMEBUFFER, attachment, face, texture.handle, level);
+      break;
+
+    case GL_TEXTURE_2D:
+      gl.framebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, texture.handle, level);
+      break;
+
+    default:
+      assert(false, 'Illegal texture type');
+    }
+
+    gl.bindTexture(texture.target, null);
+    this.attachments[attachment] = texture;
+  }
+
+  // RESOURCE METHODS
 
   _createHandle() {
     return this.gl.createFramebuffer();
@@ -380,6 +393,15 @@ export default class Framebuffer extends Resource {
   _deleteHandle() {
     this.gl.deleteFramebuffer(this.handle);
   }
+}
+
+// Map an index to a cube map face constant
+function mapIndexToCubeMapFace(layer) {
+  // TEXTURE_CUBE_MAP_POSITIVE_X is a big value (0x8515)
+  // if smaller assume layer is index, otherwise assume it is already a cube map face constant
+  return layer < GL_TEXTURE_CUBE_MAP_POSITIVE_X ?
+    layer + GL_TEXTURE_CUBE_MAP_POSITIVE_X :
+    layer;
 }
 
 // Returns number of components in a specific WebGL format
@@ -392,7 +414,9 @@ function glFormatToComponents(format) {
   }
 }
 
+// Get a string describing the framebuffer error if installed
 function _getFrameBufferStatus(status) {
   // Use error mapping if installed
-  return Framebuffer.STATUS[status] || `Framebuffer error ${status}`;
+  const STATUS = Framebuffer.STATUS || {};
+  return STATUS[status] || `Framebuffer error ${status}`;
 }

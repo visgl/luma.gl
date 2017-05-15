@@ -56,10 +56,10 @@ export default class Object3D {
     const rot = this.rotation;
     const scale = this.scale;
 
-    this.matrix.id();
-    this.matrix.$translate(pos[0], pos[1], pos[2]);
-    this.matrix.$rotateXYZ(rot[0], rot[1], rot[2]);
-    this.matrix.$scale(scale[0], scale[1], scale[2]);
+    this.matrix.identity();
+    this.matrix.translate(pos);
+    this.matrix.rotateXYZ(rot);
+    this.matrix.scale(scale);
     return this;
   }
 

@@ -1,9 +1,9 @@
 import {GL} from './gl-constants';
 import Texture from './texture';
-import {withParameters} from './context';
+// import {withParameters} from './context';
 import assert from 'assert';
 
-const CUBE_MAP_FACES = [
+const FACES = [
   GL.TEXTURE_CUBE_MAP_POSITIVE_X,
   GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
   GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
@@ -23,7 +23,6 @@ export default class TextureCube extends Texture {
   initialize(opts = {}) {
     const {
       format = GL.RGBA,
-      border = 0,
       mipmaps = false
     } = opts;
 
@@ -36,7 +35,7 @@ export default class TextureCube extends Texture {
 
     // Deduce width and height based on one of the faces
     ({type, dataFormat} = this._deduceParameters({format, type, dataFormat}));
-    ({width, height} = this._deduceSize({
+    ({width, height} = this._deduceImageSize({
       data: opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X], width, height
     }));
 
@@ -44,15 +43,15 @@ export default class TextureCube extends Texture {
     assert(width === height);
 
     // Temporarily apply any pixel store settings and build textures
-    withParameters(this.gl, opts, () => {
-      for (const face of CUBE_MAP_FACES) {
-        this._setImage({
-          target: face,
-          data: opts[face],
-          width, height, format, type, dataFormat, border, mipmaps
-        });
-      }
-    });
+    // withParameters(this.gl, opts, () => {
+    //   for (const face of CUBE_MAP_FACES) {
+    //     this.setImageData({
+    //       target: face,
+    //       data: opts[face],
+    //       width, height, format, type, dataFormat, border, mipmaps
+    //     });
+    //   }
+    // });
 
     this.setCubeMapImageData(opts);
 
@@ -85,19 +84,20 @@ export default class TextureCube extends Texture {
     pixels = pixels || data;
     this.bind();
     if (this.width || this.height) {
-      for (const face of CUBE_MAP_FACES) {
-        gl.texImage2D(face, 0, format, width, height, border, format, type, pixels.pos.x);
+      for (const face of FACES) {
+        gl.texImage2D(face, 0, format, width, height, border, format, type, pixels[face]);
       }
     } else {
-      for (const face of CUBE_MAP_FACES) {
-        gl.texImage2D(face, 0, format, format, type, pixels.pos.x);
+      for (const face of FACES) {
+        gl.texImage2D(face, 0, format, format, type, pixels[face]);
       }
     }
   }
 
   bind({index} = {}) {
-    assert(index !== undefined);
-    this.gl.activeTexture(GL.TEXTURE0 + index);
+    if (index !== undefined) {
+      this.gl.activeTexture(GL.TEXTURE0 + index);
+    }
     this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, this.handle);
     return index;
   }
@@ -107,3 +107,5 @@ export default class TextureCube extends Texture {
     return this;
   }
 }
+
+TextureCube.FACES = FACES;

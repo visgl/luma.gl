@@ -21,6 +21,10 @@ export {
 export {
   getGLContextInfo,
   getContextLimits} from './webgl/context-limits';
+export {
+  makeDebugContext} from './webgl/context-debug';
+export {
+  installParameterDefinitions} from './webgl/debug-parameters';
 
 export {default as Buffer} from './webgl/buffer';
 export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';

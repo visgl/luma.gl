@@ -1,9 +1,9 @@
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {createGLContext, Framebuffer} from 'luma.gl';
+import {createGLContext, Framebuffer, makeDebugContext} from 'luma.gl';
 
 const fixture = {
-  gl: createGLContext()
+  gl: makeDebugContext(createGLContext())
 };
 
 test('WebGL#Framebuffer construct/delete', t => {
@@ -37,11 +37,11 @@ test('WebGL#Framebuffer resize', t => {
     'Framebuffer construction successful');
 
   framebuffer.resize({width: 1000, height: 1000});
-  t.ok(framebuffer instanceof Framebuffer,
+  t.doesNotThrow(() => framebuffer.checkStatus(),
     'Framebuffer resize successful');
 
   framebuffer.resize({width: 100, height: 100});
-  t.ok(framebuffer instanceof Framebuffer,
+  t.doesNotThrow(() => framebuffer.checkStatus(),
     'Framebuffer resize successful');
 
   t.end();
