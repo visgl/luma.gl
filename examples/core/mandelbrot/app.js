@@ -59,7 +59,7 @@ const zoomCenterX = -0.0150086889504513;
 const zoomCenterY = 0.78186693904085048;
 
 const animationLoop = new AnimationLoop({
-  onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
+  // onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
   onInitialize: ({gl}) => ({
     clipSpaceQuad: new ClipSpaceQuad({gl, fs: MANDELBROT_FRAGMENT_SHADER})
   }),
@@ -81,8 +81,8 @@ const animationLoop = new AnimationLoop({
       zoom = 1;
     }
 
-    const div = document.getElementById('zoom');
-    div.innerHTML = `Zoom ${zoom.toPrecision(2)}`;
+    // const div = document.getElementById('zoom');
+    // div.innerHTML = `Zoom ${zoom.toPrecision(2)}`;
 
     const corners = [];
     for (const corner of baseCorners) {

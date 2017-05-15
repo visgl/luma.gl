@@ -1,43 +1,42 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux';
-import autobind from 'autobind-decorator';
 
-import * as Demos from '../example-demos.js';
+import * as Demos from '../../contents/demos.js';
 
 import {updateMeta, useParams} from '../actions/app-actions';
 
 class Context extends Component {
 
   componentDidMount() {
-    this._loadDemo(this.props.demo, false);
+    const demo = Demos[this.props.demo];
+    if (demo) {
+      demo.start({canvas: 'lumagl-canvas'});
+    }
   }
 
   componentWillReceiveProps(nextProps) {
-    const {demo} = nextProps;
-    if (demo !== this.props.demo) {
-      this._loadDemo(demo, true);
+    if (nextProps.demo !== this.props.demo) {
+      let demo = Demos[this.props.demo];
+      if (demo) {
+        demo.stop();
+      }
+      demo = Demos[nextProps.demo];
+      if (demo) {
+        demo.start({canvas: 'lumagl-canvas'});
+      }
     }
   }
 
   componentWillUnmount() {
-    const Demo = Demos[this.props.demo];
-    if (Demo) Demo().stop();
-  }
-
-  _loadDemo(demo, useTransition) {
-    const Demo = Demos[demo];
-
-    if (Demo) {
-      // this.props.useParams(Demo.parameters);
-      Demo().start();
+    const demo = Demos[this.props.demo];
+    if (demo) {
+      demo.stop();
     }
   }
 
   render() {
     return (
-      <div className="luma-context">
-        <canvas id="lumagl-canvas"></canvas>
-      </div>
+      <canvas id="lumagl-canvas" style={{width: '100%', height: '100%', padding: 0, border: 0}}/>
     );
   }
 

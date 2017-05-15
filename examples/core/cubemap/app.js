@@ -13,11 +13,15 @@ const animationLoop = new AnimationLoop({
       cube: getCube(gl),
       prism: getPrism(gl),
       cubemap: new TextureCube(gl, {
-        minFilter: gl.LINEAR_MIPMAP_LINEAR,
-        magFilter: gl.LINEAR,
         data: genTextures(512),
-        flipY: true,
-        generateMipmap: true
+        generateMipmap: true,
+        parameters: {
+          [gl.MIN_FILTER]: gl.LINEAR_MIPMAP_LINEAR,
+          [gl.MAG_FILTER]: gl.LINEAR
+        },
+        pixelStore: {
+          [gl.UNPACK_FLIP_Y_WEBGL]: true
+        }
       })
     };
   },
@@ -27,16 +31,48 @@ const animationLoop = new AnimationLoop({
     const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
     const projection = Matrix4.perspective({fov: radians(75), aspect});
 
+    // Red uniforms
+    const reflectionElement = document.getElementById('reflection');
+    const refractionElement = document.getElementById('refraction');
+
+    const uReflect = reflectionElement ? parseFloat(reflectionElement.value) : 1;
+    const uRefract = refractionElement ? parseFloat(refractionElement.value) : 1;
+
     cube.render({
       uTexture: cubemap,
       uModel: new Matrix4().scale([5, 5, 5]),
       uView: view,
       uProjection: projection
+      // ,
+      // uReflect,
+      // uRefract
     });
+  },
+  onAddControls({parent}) {
+    if (document.querySelector(parent)) {
+      return;
+    }
 
-    // const reflection = parseFloat(document.getElementById('reflection').value);
-    // const refraction = parseFloat(document.getElementById('refraction').value);
-    // renderControls(contextName);
+    const controls = document.createElement('div');
+    controls.id = 'controls';
+    controls.innerHTML = `
+  reflection
+  <input class="valign" id="reflection"
+    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  <br>
+  refraction
+  <input class="valign" id="refraction"
+    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  <br>
+    `;
+    controls.style.position = 'fixed';
+    controls.style.bottom = '40px';
+    controls.style.right = '8px';
+    controls.style.background = 'rgba(255,255,255,0.9)';
+    controls.style.padding = '8px';
+    controls.style.fontFamily = 'sans';
+    controls.style.textAlign = 'center';
+    parent.appendChild(controls);
   }
 });
 
@@ -128,6 +164,9 @@ function genTextures(size) {
     pos: {},
     neg: {}
   };
+
+  let face = 0;
+
   for (const sign of signs) {
     for (const axis of axes) {
       const canvas = document.createElement('canvas');
@@ -135,7 +174,7 @@ function genTextures(size) {
       canvas.height = size;
       const ctx = canvas.getContext('2d');
       drawTexture({ctx, sign, axis, size});
-      textures[sign][axis] = canvas;
+      textures[TextureCube.FACES[face++]] = canvas;
     }
   }
   return textures;
@@ -158,35 +197,6 @@ function drawTexture({ctx, sign, axis, size}) {
   ctx.fillText(`${sign}-${axis}`, size / 2, size / 2);
   ctx.strokeStyle = color;
   ctx.strokeRect(0, 0, size, size);
-}
-
-function renderControls(canvasId) {
-  if (document.querySelector('#controls')) {
-    return;
-  }
-
-  const canvas = document.querySelector(`#${ canvasId }`);
-  const controls = document.createElement('div');
-  controls.id = 'controls';
-  controls.innerHTML = `
-reflection
-<input class="valign" id="reflection"
-  type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-<br>
-refraction
-<input class="valign" id="refraction"
-  type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-<br>
-  `;
-  controls.style.position = 'fixed';
-  controls.style.bottom = '40px';
-  controls.style.right = '8px';
-  controls.style.background = 'rgba(255,255,255,0.9)';
-  controls.style.padding = '8px';
-  controls.style.fontFamily = 'sans';
-  controls.style.textAlign = 'center';
-
-  canvas.parentElement.appendChild(controls);
 }
 
 export default animationLoop;

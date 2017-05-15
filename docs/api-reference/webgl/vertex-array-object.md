@@ -1,7 +1,9 @@
-# VertexArrayObject
+# VertexArrayObject (EXT)
 
+A vertex array object is a WebGL object that stores all of the state needed to supply vertex data. While `VertexArrayObject`s are not available in basic WebGL1 environments, they are available by default in WebGL2 and via a commonly supported extension under WebGL1.
 
-* `VertexArrayObject`s are not available in basic WebGL1 environments. They are available by default in WebGL2 and via a commonly supported extension under WebGL1.
+For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
+
 
 ## Usage
 
@@ -27,16 +29,18 @@ vertexArrayObject.delete();
 
 ## Methods
 
-`VertexArrayObject` inherits from `Resource` and has all the methods
+`VertexArrayObject` inherits from `Resource`.
 
-### `VertexArrayObject.isSupported`
+
+### isSupported (static method)
 
 Parameters:
 * gl (WebGLRenderingContext) - gl context
 Returns:
-* Boolean - true if VertexArrayObjects are supported on the environment
+* Boolean - true if VertexArrayObjects are supported in the current environment.
 
-### `VertexArrayObject` constructor
+
+### constructor
 
 Creates a new VertexArrayObject
 
@@ -45,6 +49,4 @@ Parameters:
 
 
 ## Remarks
-* The raw WebGL APIs for are working with `WebGLVertexArrayObject`s are exposed differently in the WebGL1 extension and WebGL2. The luma.gl `VertexArrayObject` class transparently handles the necessary API detection and selection.
-
-
+* The raw WebGL APIs for are working with `WebGLVertexArrayObject`s are exposed differently in the WebGL1 extension and WebGL2. As always, the luma.gl `VertexArrayObject` class transparently handles the necessary API detection and selection.

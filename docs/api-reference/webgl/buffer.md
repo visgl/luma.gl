@@ -1,33 +1,42 @@
 # Buffer
 
-luma.gl class managing a `WebGLBuffer` and related WebGL APIs.
+A `Buffer` is a WebGL object that stores an chunk of memory allocated by the GPU. This memory can be accessed directly by the GPU and is used to store things like vertex data, pixel data retrieved from images or the framebuffer, etc. The `Buffer` class provides mechanism for allocating such memory, together with facilities for copying data to and from the GPU (usually via JavaScript typed arrays).
 
-From the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Buffer_Object):
-Buffer Objects are OpenGL Objects that store an array of unformatted memory allocated by the GPU. These can be used to store vertex data, pixel data retrieved from images or the framebuffer, and a variety of other things.
-
-So, a `Buffer` (`WebGLBuffer`) is essentially a mechanism for allocating memory on the GPU, together with facilities for uploading, copying and downloading chunks of contiguous memory to and from that memory chunk on the GPU. While transferring memory between CPU and GPU takes some time, once the memory is available as a buffer on the GPU it can be very efficiently used as inputs and outputs by the GPU.
-
-Note that in WebGL, there are two types of buffers:
-* "element" buffers. These can only store vertex attributes with indices (a.k.a "elements") and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
-* "generic" buffers. These can be used interchangeably to store different types of data, including (non-index) vertex attributes.
+For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Buffer_Object).
 
 
-### Usage
+## Buffer Methods
+
+| **Method** | **Description** |
+| --- | --- |
+| `constructor` | Creates a Buffer|
+| `delete` | Destroys buffer |
+| `initialize` | Allocates and optionally initializes the buffer object's data store on GPU. |
+| `subData` | Updates a subset of a buffer object's data store. |
+| `copySubData` (WebGL2) | Copies part of the data of another buffer into this buffer |
+| `getSubData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. |
+
+
+## Usage
 
 ```
 import {Buffer} from 'luma.gl';
 ```
 
-Creating a buffer
+Creating a generic buffer
 ```js
 const buffer = new Buffer(gl);
+```
+
+Creating an elements buffer
+```js
 const buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER});
 ```
 
 Allocating memory in a buffer
 ```js
 const buffer = new Buffer(gl, {bytes: 200});
-const buffer = new Buffer(gl).setData({bytes: 200});
+const buffer = new Buffer(gl).initialize({bytes: 200});
 ```
 
 Allocating and initializating a buffer
@@ -37,7 +46,7 @@ const buffer = new Buffer(gl, {
   data: new Uint32Array([1, 2, 3])
 });
 const buffer = new Buffer(gl, {size: 3, data: new Float32Array([1, 2, 3])});
-const buffer = new Buffer(gl).setData({bytes: 200});
+const buffer = new Buffer(gl).initialize({bytes: 200});
 ```
 
 Updating a buffer
@@ -75,22 +84,15 @@ buffer.unbind({target: GL.UNIFORM_BUFFER, index: 0});
 ```
 Note: buffer binding and unbinding is handled internal by luma.gl methods so the application will typically not need to bind buffers unless integrating with external libraries or raw webgl code).
 
-### Buffer Methods
 
-| **Method** | **Description** |
-| --- | --- |
-| `constructor` | creates a Buffer|
-| `delete` | Destroys buffer |
-| `setData` | Allocates and optionally initializes the buffer object's data store on GPU. |
-| `subData` | Updates a subset of a buffer object's data store. |
-| `copySubData` (WebGL2) | Copies part of the data of another buffer into this buffer |
-| `getSubData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. |
-| `bind` | Binds a buffer to a given binding point (target) and optionally index and range.  |
-| `unbind` | Unbinds a buffer from a given binding (and optionally index) |
+## Members
 
-### Remarks
+* `handle` - holds the underlying `WebGLBuffer`
 
-### Buffer Constructor
+
+## Methods
+
+### Constructor
 
 Creates a new WebGLBuffer. Also, for all properties set to a buffer, these properties are remembered so they're optional for later calls.
 
@@ -111,7 +113,7 @@ const buffer = new Buffer(gl, options);
 * `usage` - (*enum*, optional) The access pattern used when setting the `gl.bufferData`. Default's `gl.STATIC_DRAW`.
 
 
-### Buffer.setDataLayout
+### setDataLayout
 
 Stores the layout of data with the buffer which makes it easy to e.g. set it as an attribute later.
 
@@ -126,7 +128,7 @@ Params:
 * `instanced` = 0
 
 
-### Buffer.setData
+### initialize
 
 Allocates and optionally initializes buffer memory/data store (releasing any previously allocated memory).
 
@@ -191,8 +193,12 @@ Reads data from buffer into an `ArrayBuffer` or `SharedArrayBuffer`.
 Returns a buffer (provided or allocated)
 
 
-### Remarks
+## Remarks
 
 * All instance methods in a buffer (unless they return some documented value) are chainable.
-* The cost of tranferring memory back and forth between the GPU and CPU will vary between systems (e.g. depending on whether the system uses a unified memory architecture or not).
-* For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [WebGL1](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) and [WebGL2](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences).
+* While transferring memory between CPU and GPU takes some time, once the memory is available as a buffer on the GPU it can be very efficiently used as inputs and outputs by the GPU.
+
+Note that in WebGL, there are two types of buffers:
+* "element" buffers. These can only store vertex attributes with indices (a.k.a "elements") and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
+* "generic" buffers. These can be used interchangeably to store different types of data, including (non-index) vertex attributes.
+For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [WebGL1](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) and [WebGL2](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences).
