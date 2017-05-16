@@ -4,7 +4,7 @@ import {glMatrix} from 'gl-matrix';
 // TODO - remove
 glMatrix.debug = true;
 glMatrix.printRowMajor = true;
-
+glMatrix.precision = 4;
 export {glMatrix};
 
 export function configure(options) {

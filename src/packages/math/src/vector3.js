@@ -45,16 +45,16 @@ export default class Vector3 extends MathArray {
   set z(value) { return this[2] = checkNumber(value); }
   /* eslint-enable no-multi-spaces, brace-style, no-return-assign */
 
-  distance(vector) {
-    return vec3.distance(vector);
+  len() {
+    return vec3.len(this);
   }
 
-  dist(vector) {
-    return vec3.dist(vector);
+  distance(vector) {
+    return vec3.distance(this. vector);
   }
 
   angle(vector) {
-    return vec3.angle(vector);
+    return vec3.angle(this, vector);
   }
 
   // MODIFIERS
@@ -91,32 +91,12 @@ export default class Vector3 extends MathArray {
     return this;
   }
 
-  ceil() {
-    vec3.ceil(this, this);
-    this.check();
-    return this;
-  }
-
-  floor() {
-    vec3.floor(this, this);
-    this.check();
-    return this;
-  }
-
-  min() {
-    vec3.min(this, this);
-    this.check();
-    return this;
-  }
-
-  max() {
-    vec3.max(this, this);
-    this.check();
-    return this;
-  }
-
   scale(scale) {
-    vec3.scale(this, this, scale);
+    if (Number.isFinite(scale)) {
+      vec3.scale(this, this, scale);
+    } else {
+      vec3.dot(this, this, scale);
+    }
     this.check();
     return this;
   }
@@ -139,11 +119,11 @@ export default class Vector3 extends MathArray {
     return this;
   }
 
-  normalize() {
-    vec3.normalize(this, this);
-    this.check();
-    return this;
-  }
+  // normalize() {
+  //   vec3.normalize(this, this);
+  //   this.check();
+  //   return this;
+  // }
 
   dot(vector) {
     vec3.dot(this, this, vector);
@@ -171,20 +151,21 @@ export default class Vector3 extends MathArray {
     return this;
   }
 
-  hermite(scale) {
-    vec3.hermite(this, this, scale);
+  operation(operation, ...args) {
+    operation(this, this, ...args);
     this.check();
     return this;
   }
 
-  bezier(scale) {
-    vec3.bezier(this, this, scale);
+  /*
+  min() {
+    vec3.min(this, this);
     this.check();
     return this;
   }
 
-  random(scale) {
-    vec3.cross(this, this, scale);
+  max() {
+    vec3.max(this, this);
     this.check();
     return this;
   }
@@ -206,4 +187,35 @@ export default class Vector3 extends MathArray {
     this.check();
     return this;
   }
+
+  ceil() {
+    vec3.ceil(this, this);
+    this.check();
+    return this;
+  }
+
+  floor() {
+    vec3.floor(this, this);
+    this.check();
+    return this;
+  }
+
+  hermite(scale) {
+    vec3.hermite(this, this, scale);
+    this.check();
+    return this;
+  }
+
+  bezier(scale) {
+    vec3.bezier(this, this, scale);
+    this.check();
+    return this;
+  }
+
+  random(scale) {
+    vec3.random(this, this, scale);
+    this.check();
+    return this;
+  }
+  */
 }

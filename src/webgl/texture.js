@@ -121,18 +121,19 @@ export default class Texture extends Resource {
       data = null,
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE,
-      dataFormat,
       border = 0,
-      mipmaps = false,
+      mipmaps = true,
       recreate = false,
       parameters = {},
       pixelStore = {}
     } = opts;
 
-    let {width, height} = opts;
+    let {width, height, dataFormat} = opts;
 
     // Deduce width and height
-    ({width, height} = this._deduceParameters({data, width, height}));
+    ({width, height, dataFormat} = this._deduceParameters({
+      format, type, dataFormat, compressed: false, data, width, height
+    }));
 
     // Temporarily apply any pixel store settings and build textures
     withParameters(this.gl, pixelStore, () => {

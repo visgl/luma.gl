@@ -90,6 +90,7 @@ export {default as Euler} from './packages/math/src/euler';
 
 // IO
 export {
+  setPathPrefix,
   loadFile,
   loadImage,
   loadFiles,
