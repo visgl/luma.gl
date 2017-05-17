@@ -4,8 +4,8 @@ export {default as CustomPickingDemo} from '../../examples/core/custom-picking/a
 // export {default as DeferredRenderingDemo} from '../../examples/core/deferred-rendering/app.js';
 export {default as MandelbrotDemo} from '../../examples/core/mandelbrot/app.js';
 export {default as MulticontextDemo} from '../../examples/core/multicontext/app.js';
-export {default as ParticlesDemo} from '../../examples/core/particles/app.js';
-// export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
+// export {default as ParticlesDemo} from '../../examples/core/particles/app.js';
+export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
 export {default as PickingDemo} from '../../examples/core/picking/app.js';
 // export {default as ShadowmapDemo} from '../../examples/core/shadowmap/src/app.js';
 

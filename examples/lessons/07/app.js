@@ -1,23 +1,15 @@
 /* eslint-disable max-statements, no-var */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-/* global window, document, LumaGL */
-var createGLContext = LumaGL.createGLContext;
-var loadTextures = LumaGL.loadTextures;
-var Model = LumaGL.Model;
-var Geometry = LumaGL.Geometry;
-var Program = LumaGL.Program;
-var PerspectiveCamera = LumaGL.PerspectiveCamera;
-var Scene = LumaGL.Scene;
-var addEvents = LumaGL.addEvents;
-var Fx = LumaGL.Fx;
+/* global window, document */
+import {AnimationLoop, loadTextures, Model, Geometry, Program, PerspectiveCamera, Scene, addEvents, Fx} from 'luma.gl';
 
 // Lighting form elements variables
 var $id = function(d) {
   return document.getElementById(d);
 };
 
-window.webGLStart = function() {
-
+const animationLoop = new AnimationLoop({
+  onInitialize() {
   var canvas = document.getElementById('lesson07-canvas');
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
@@ -33,7 +25,6 @@ window.webGLStart = function() {
     }]
   })
   .then(textures => {
-
     var crate = textures[0];
 
     var xRot = 0;
@@ -60,132 +51,12 @@ window.webGLStart = function() {
     };
 
     // Create object
-    /* eslint-disable indent */
-    var cubeGeometry = new Geometry({
-      positions: new Float32Array([
-        -1, -1,  1,
-         1, -1,  1,
-         1,  1,  1,
-        -1,  1,  1,
-
-        -1, -1, -1,
-        -1,  1, -1,
-         1,  1, -1,
-         1, -1, -1,
-
-        -1,  1, -1,
-        -1,  1,  1,
-         1,  1,  1,
-         1,  1, -1,
-
-        -1, -1, -1,
-         1, -1, -1,
-         1, -1,  1,
-        -1, -1,  1,
-
-         1, -1, -1,
-         1,  1, -1,
-         1,  1,  1,
-         1, -1,  1,
-
-        -1, -1, -1,
-        -1, -1,  1,
-        -1,  1,  1,
-        -1,  1, -1
-      ]),
-      /* eslint-enable indent */
-
-      texCoords: new Float32Array([
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-
-        // Back face
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-
-        // Top face
-        0.0, 1.0,
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-
-        // Bottom face
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-        1.0, 0.0,
-
-        // Right face
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-
-        // Left face
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0
-      ]),
-
-      normals: new Float32Array([
-        // Front face
-        0.0,  0.0,  1.0,
-        0.0,  0.0,  1.0,
-        0.0,  0.0,  1.0,
-        0.0,  0.0,  1.0,
-
-        // Back face
-        0.0,  0.0, -1.0,
-        0.0,  0.0, -1.0,
-        0.0,  0.0, -1.0,
-        0.0,  0.0, -1.0,
-
-        // Top face
-        0.0,  1.0,  0.0,
-        0.0,  1.0,  0.0,
-        0.0,  1.0,  0.0,
-        0.0,  1.0,  0.0,
-
-        // Bottom face
-        0.0, -1.0,  0.0,
-        0.0, -1.0,  0.0,
-        0.0, -1.0,  0.0,
-        0.0, -1.0,  0.0,
-
-        // Right face
-        1.0,  0.0,  0.0,
-        1.0,  0.0,  0.0,
-        1.0,  0.0,  0.0,
-        1.0,  0.0,  0.0,
-
-        // Left face
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0,
-        -1.0,  0.0,  0.0
-      ]),
-
-      indices: new Uint16Array([
-        0, 1, 2, 0, 2, 3,
-        4, 5, 6, 4, 6, 7,
-        8, 9, 10, 8, 10, 11,
-        12, 13, 14, 12, 14, 15,
-        16, 17, 18, 16, 18, 19,
-        20, 21, 22, 20, 22, 23
-      ])
-    });
-
     var program = new Program(gl);
     program.use();
 
     var cube = new Model({
-      geometry: cubeGeometry,
-      program: program,
+      geometry: createCubeGeometry(),
+      program,
       uniforms: {
         hasTexture1: true,
         sampler1: crate
@@ -281,4 +152,126 @@ function drawScene(scene, cube, camera, lighting, ambient,
 
   // Render all elements in the Scene
   scene.render({camera});
+}
+
+function createCubeGeometry() {
+  /* eslint-disable indent */
+  return new Geometry({
+    positions: new Float32Array([
+      -1, -1,  1,
+       1, -1,  1,
+       1,  1,  1,
+      -1,  1,  1,
+
+      -1, -1, -1,
+      -1,  1, -1,
+       1,  1, -1,
+       1, -1, -1,
+
+      -1,  1, -1,
+      -1,  1,  1,
+       1,  1,  1,
+       1,  1, -1,
+
+      -1, -1, -1,
+       1, -1, -1,
+       1, -1,  1,
+      -1, -1,  1,
+
+       1, -1, -1,
+       1,  1, -1,
+       1,  1,  1,
+       1, -1,  1,
+
+      -1, -1, -1,
+      -1, -1,  1,
+      -1,  1,  1,
+      -1,  1, -1
+    ]),
+    /* eslint-enable indent */
+
+    texCoords: new Float32Array([
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+
+      // Back face
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+
+      // Top face
+      0.0, 1.0,
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+
+      // Bottom face
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+      1.0, 0.0,
+
+      // Right face
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+
+      // Left face
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0
+    ]),
+
+    normals: new Float32Array([
+      // Front face
+      0.0,  0.0,  1.0,
+      0.0,  0.0,  1.0,
+      0.0,  0.0,  1.0,
+      0.0,  0.0,  1.0,
+
+      // Back face
+      0.0,  0.0, -1.0,
+      0.0,  0.0, -1.0,
+      0.0,  0.0, -1.0,
+      0.0,  0.0, -1.0,
+
+      // Top face
+      0.0,  1.0,  0.0,
+      0.0,  1.0,  0.0,
+      0.0,  1.0,  0.0,
+      0.0,  1.0,  0.0,
+
+      // Bottom face
+      0.0, -1.0,  0.0,
+      0.0, -1.0,  0.0,
+      0.0, -1.0,  0.0,
+      0.0, -1.0,  0.0,
+
+      // Right face
+      1.0,  0.0,  0.0,
+      1.0,  0.0,  0.0,
+      1.0,  0.0,  0.0,
+      1.0,  0.0,  0.0,
+
+      // Left face
+      -1.0,  0.0,  0.0,
+      -1.0,  0.0,  0.0,
+      -1.0,  0.0,  0.0,
+      -1.0,  0.0,  0.0
+    ]),
+
+    indices: new Uint16Array([
+      0, 1, 2, 0, 2, 3,
+      4, 5, 6, 4, 6, 7,
+      8, 9, 10, 8, 10, 11,
+      12, 13, 14, 12, 14, 15,
+      16, 17, 18, 16, 18, 19,
+      20, 21, 22, 20, 22, 23
+    ])
+  });
 }

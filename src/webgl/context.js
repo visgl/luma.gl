@@ -77,7 +77,7 @@ export function createGLContext(opts = {}) {
     webgl2 = false,
     // Instrument context (at the expense of performance)
     // Note: currently defaults to true and needs to be explicitly turned off
-    debug = true
+    debug = false
     // Other options are passed through to context creator
   } = opts;
 

@@ -1,5 +1,5 @@
 import MathArray from './math-array';
-import {checkNumber, glMatrix} from './common';
+import {checkNumber} from './common';
 import Vector2 from './vector2';
 import Vector3 from './vector3';
 import Vector4 from './vector4';
@@ -72,13 +72,13 @@ export default class Matrix4 extends MathArray {
     return mat4.exactEquals(a, b);
   }
 
-  toString() {
-    if (glMatrix.printRowMajor) {
-      mat4.str(this);
-    } else {
-      mat4.str(this);
-    }
-  }
+  // toString() {
+  //   if (glMatrix.printRowMajor) {
+  //     mat4.str(this);
+  //   } else {
+  //     mat4.str(this);
+  //   }
+  // }
 
   // Row major setters and getters
   /* eslint-disable no-multi-spaces, brace-style, no-return-assign */
@@ -447,53 +447,15 @@ export default class Matrix4 extends MathArray {
   // TODO - may not be needed
   /* eslint-disable max-statements */
   rotateXYZ([rx, ry, rz]) {
-    const d11 = this[0];
-    const d12 = this[1];
-    const d13 = this[2];
-    const d14 = this[3];
-    const d21 = this[4];
-    const d22 = this[5];
-    const d23 = this[6];
-    const d24 = this[7];
-    const d31 = this[8];
-    const d32 = this[9];
-    const d33 = this[10];
-    const d34 = this[11];
-    const crx = Math.cos(rx);
-    const cry = Math.cos(ry);
-    const crz = Math.cos(rz);
-    const srx = Math.sin(rx);
-    const sry = Math.sin(ry);
-    const srz = Math.sin(rz);
-    const m11 = cry * crz;
-    const m21 = -crx * srz + srx * sry * crz;
-    const m31 = srx * srz + crx * sry * crz;
-    const m12 = cry * srz;
-    const m22 = crx * crz + srx * sry * srz;
-    const m32 = -srx * crz + crx * sry * srz;
-    const m13 = -sry;
-    const m23 = srx * cry;
-    const m33 = crx * cry;
+    return this.rotateX(rx).rotateY(ry).rotateZ(rz);
+  }
+  /* eslint-enable max-statements */
 
-    this[0] = d11 * m11 + d21 * m12 + d31 * m13;
-    this[1] = d12 * m11 + d22 * m12 + d32 * m13;
-    this[2] = d13 * m11 + d23 * m12 + d33 * m13;
-    this[3] = d14 * m11 + d24 * m12 + d34 * m13;
-
-    this[4] = d11 * m21 + d21 * m22 + d31 * m23;
-    this[5] = d12 * m21 + d22 * m22 + d32 * m23;
-    this[6] = d13 * m21 + d23 * m22 + d33 * m23;
-    this[7] = d14 * m21 + d24 * m22 + d34 * m23;
-
-    this[8] = d11 * m31 + d21 * m32 + d31 * m33;
-    this[9] = d12 * m31 + d22 * m32 + d32 * m33;
-    this[10] = d13 * m31 + d23 * m32 + d33 * m33;
-    this[11] = d14 * m31 + d24 * m32 + d34 * m33;
-
+  rotateAxis(theta, axis) {
+    mat4.rotate(this, this, theta, axis);
     this.check();
     return this;
   }
-  /* eslint-enable max-statements */
 
   scale(vec) {
     mat4.scale(this, this, vec);
@@ -507,19 +469,22 @@ export default class Matrix4 extends MathArray {
     return this;
   }
 
-  transformVector2(vector, out = new Vector2()) {
+  transformVector2(vector, out) {
+    out = out || new Vector2();
     vec2.transformMat4(out, vector, this);
     checkVector2(out);
     return out;
   }
 
   transformVector3(vector, out = new Vector3()) {
+    out = out || new Vector3();
     vec3.transformMat4(out, vector, this);
     checkVector3(out);
     return out;
   }
 
   transformVector4(vector, out = new Vector4()) {
+    out = out || new Vector4();
     vec4.transformMat4(out, vector, this);
     checkVector4(out);
     return out;
@@ -527,11 +492,11 @@ export default class Matrix4 extends MathArray {
 
   // Transforms any 2, 3 or 4 element vector
   // returns a newly minted Vector2, Vector3 or Vector4
-  transformVector(vector) {
+  transformVector(vector, out) {
     switch (vector.length) {
-    case 2: return this.transformVector2(vector);
-    case 3: return this.transformVector3(vector);
-    case 4: return this.transformVector4(vector);
+    case 2: return this.transformVector2(vector, out);
+    case 3: return this.transformVector3(vector, out);
+    case 4: return this.transformVector4(vector, out);
     default: throw new Error('Illegal vector');
     }
   }

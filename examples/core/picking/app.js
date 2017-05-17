@@ -1,6 +1,6 @@
 /* global document */
 import {
-  GL, AnimationLoop, Matrix4, Vec3, radians,
+  GL, AnimationLoop, Matrix4, Vector3, radians,
   loadTextures, Buffer, Sphere, Framebuffer, Scene, pickModels
 } from 'luma.gl';
 
@@ -63,7 +63,7 @@ const animationLoop = new AnimationLoop({
           hasTexture1: true,
           hasTextureCube1: false,
           colors: [1, 1, 1, 1],
-          position: new Vec3(
+          position: new Vector3(
             Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
             Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
             0)

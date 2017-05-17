@@ -3,18 +3,19 @@ export const EXAMPLE_PAGES = [
     name: 'Overview',
     content: 'code-markdown/examples.md'
   },
-  // {
-  //   name: 'Cubemap',
-  //   content: {
-  //     demo: 'CubemapDemo'
-  //   }
-  // },
-  // {
-  //   name: 'Custom Picking',
-  //   content: {
-  //     demo: 'CustomPickingDemo'
-  //   }
-  // },
+  {
+    name: 'Cubemap',
+    content: {
+      demo: 'CubemapDemo'
+    }
+  },
+  {
+    name: 'Custom Picking',
+    content: {
+      demo: 'CustomPickingDemo',
+      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
+    }
+  },
   {
     name: 'Instancing',
     content: {
@@ -33,12 +34,13 @@ export const EXAMPLE_PAGES = [
       demo: 'MulticontextDemo'
     }
   },
-  // {
-  //   name: 'Picking',
-  //   content: {
-  //     demo: 'PickingDemo',
-  //   }
-  // },
+  {
+    name: 'Picking',
+    content: {
+      demo: 'PickingDemo',
+      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
+    }
+  },
   // {
   //   name: 'DeferredRendering',
   //   content: {
@@ -51,12 +53,12 @@ export const EXAMPLE_PAGES = [
   //     demo: 'ParticlesDemo'
   //   }
   // },
-  // {
-  //   name: 'Persistence',
-  //   content: {
-  //     demo: 'PersistenceDemo'
-  //   }
-  // },
+  {
+    name: 'Persistence',
+    content: {
+      demo: 'PersistenceDemo'
+    }
+  },
   // {
   //   name: 'Shadowmap',
   //   content: {
@@ -89,37 +91,42 @@ export const EXAMPLE_PAGES = [
         content: {
           demo: 'Lesson04'
         }
-      }
-      // {
-      //   name: 'Lesson 05',
-      //   content: {
-      //     demo: 'Lesson05'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 06',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 07',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 08',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 09',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
+      },
+      {
+        name: 'Lesson 05',
+        content: {
+          demo: 'Lesson05',
+          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/05/'
+        }
+      },
+      {
+        name: 'Lesson 06',
+        content: {
+          demo: 'Lesson06',
+          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/06/'
+        }
+      },
+      {
+        name: 'Lesson 07',
+        content: {
+          demo: 'Lesson07',
+          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/07/'
+        }
+      },
+      {
+        name: 'Lesson 08',
+        content: {
+          demo: 'Lesson08',
+          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/08/'
+        }
+      },
+      {
+        name: 'Lesson 09',
+        content: {
+          demo: 'Lesson09',
+          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/09/'
+        }
+      },
       // {
       //   name: 'Lesson 10',
       //   content: {

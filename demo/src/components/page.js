@@ -8,6 +8,8 @@ import InfoPanel from './info-panel';
 import MarkdownPage from './markdown-page';
 import {loadContent, updateContext} from '../actions/app-actions';
 
+import {setPathPrefix} from 'luma.gl';
+
 const contextTypes = {
   router: PropTypes.object
 };
@@ -52,16 +54,19 @@ class Page extends Component {
       content = {content};
     }
 
+    if (content.path) {
+      setPathPrefix(content.path);
+    }
+
     // grab text contents
     Object.keys(content).forEach(key => {
-
       if (key === 'demo') {
         return;
       }
 
       const src = content[key];
       if (typeof src === 'string') {
-        this.props.loadContent(src);
+        // this.props.loadContent(src);
       }
     });
 

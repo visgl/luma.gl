@@ -89,4 +89,15 @@ export default class MathArray extends Array {
       throw new Error(`Invalid ${this.constructor.name}`);
     }
   }
+
+  normalize() {
+    const length = this.len();
+    if (length !== 0) {
+      for (let i = 0; i < this.ELEMENTS; ++i) {
+        this[i] /= length;
+      }
+    }
+    this.check();
+    return this;
+  }
 }
