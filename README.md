@@ -12,7 +12,6 @@
     <img src="http://starveller.sigsev.io/api/repos/uber/luma.gl/badge" alt="stars" />
   </a>
 </p>
-[![Build Status](https://travis-ci.org/uber/luma.gl.svg?branch=master)](https://travis-ci.org/uber/luma.gl)
 
 <h1 align="center">luma.gl</h1>
 
