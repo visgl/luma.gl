@@ -59,7 +59,7 @@
   "dependencies": {
     "gl-constants": "^1.0.0",
     "gl-matrix": "^2.3.2",
-    "seer": "^0.0.4",
+    "seer": "^0.1.0",
     "webgl-debug": "^1.0.2"
   },
   "devDependencies": {
