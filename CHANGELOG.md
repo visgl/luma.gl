@@ -1,9 +1,39 @@
-# Official releases
+# Pre-releases
 
-## 4.0.0-dev
+## 4.0.0-alpha.4
+- Remove null params given to Float32Array constructor (#176)
+- Fix framebuffer creation error (#177)
+
+## 4.0.0-alpha.3
+- bump seer
+- remove duplicate info from readme
+
+## 4.0.0-alpha.2
+
+- Reorgnize files (#168)
+- Transform feedback improvement (#165)
+- WebGL2 updates (#160)
+- Buffer refactor (#156)
+- Fix examples (#161, #149, #172, #173)
+- Adding new docs for WebGL2 (#159)
+- Demo site creation (#158)
+- Docs cleanup and updates (#157, #169, #170)
+- seer integration
+- Add coverage support (#155)
+
+## 4.0.0-alpha.1
 
 - Refactor WebGL classes using new `Resource` base class
 - `Resource.getParameters` for ease of debugging
+- Fix FramebufferObject export
+- GL state and limit management (#146)
+- Fix shader file name (#151)
+- Refactor many classes in the webgl folder (#136, #154)
+- Check compilation and linking status only with debug WebGL context (#144)
+- Add benchmarking scaffolding and a benchmark test for Program constructor (#142)
+- Docs update (#137)
+
+# Official releases
 
 ## 3.0.0
 
