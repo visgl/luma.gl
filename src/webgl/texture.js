@@ -122,7 +122,7 @@ export default class Texture extends Resource {
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE,
       border = 0,
-      mipmaps = true,
+      mipmaps = false,
       recreate = false,
       parameters = {},
       pixelStore = {}
