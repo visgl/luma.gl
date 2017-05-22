@@ -65,7 +65,7 @@ export default class Framebuffer extends Resource {
       }
     } else {
       // Create any requested default attachments
-      attachments = this._createDefaultAttachments({color, depth, stencil});
+      attachments = this._createDefaultAttachments({color, depth, stencil, width, height});
     }
 
     // Any current attachments need to be removed, create a map with null values
