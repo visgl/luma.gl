@@ -106,7 +106,7 @@ const GL_STATE = {
 
   depthRange: {
     type: new Float32Array(2),
-    value: new Float32Array(2), // TBD
+    value: new Float32Array([0, 1]), // TBD
     object: ['min', 'max'],
     params: GL.DEPTH_RANGE,
     setter: (gl, value) => gl.depthRange(...value)
