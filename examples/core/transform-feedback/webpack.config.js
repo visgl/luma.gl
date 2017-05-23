@@ -21,3 +21,5 @@ module.exports = {
     new webpack.HotModuleReplacementPlugin()
   ]
 };
+
+module.exports = require('../../webpack.config.local')(module.exports);

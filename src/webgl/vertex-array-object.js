@@ -42,6 +42,10 @@ export default class VertexArrayObject extends Resource {
     return this;
   }
 
+  delete() {
+    this._deleteHandle(this.handle);
+  }
+
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {

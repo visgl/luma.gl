@@ -7,7 +7,7 @@ import {render} from 'react-dom';
 import {
   createGLContext, Buffer, Program, TransformFeedback, VertexArrayObject,
   Matrix4
-} from 'luma.gl';
+} from '../../../src';
 
 const BYTE_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
@@ -93,22 +93,14 @@ class Root extends PureComponent {
     // ---- SETUP PROGRAMS ---- //
     const programTransform = new Program(gl, {
       vs: VS_TRANSFORM,
-      fs: FS_TRANSFORM
+      fs: FS_TRANSFORM,
+      varyings: VARYINGS
     });
 
     const programFeedback = new Program(gl, {
       vs: VS_FEEDBACK,
-      fs: FS_FEEDBACK,
-      varyings: VARYINGS
+      fs: FS_FEEDBACK
     });
-
-    // const transformFeedback = new TransformFeedback(gl);
-
-    // TODO remove, the following is already implemented in luma.gl
-    // const transformFeedback = new TransformFeedback(gl).bind();
-    // // TODO the followings -> luma.gl
-    // transformFeedback.varyings(programTransform.handle, VARYINGS, gl.SEPARATE_ATTRIBS);
-    // gl.linkProgram(programTransform.handle);
 
     // ---- SETUP BUFFERS ---- //
     const VERTEX_COUNT = 6;
@@ -121,59 +113,50 @@ class Root extends PureComponent {
       -1.0, -1.0, 0.0, 1.0
     ]);
 
-    const VERTEX = 0;
-    const POSITION = 1;
-    const COLOR = 2;
-
-    const buffers = [
-      // VERTEX
-      new Buffer(gl).setData({data: positions}),
-      // POSITION
-      new Buffer(gl).setData({
-        bytes: positions.length * BYTE_SIZE,
-        usage: gl.STATIC_COPY,
-        type: gl.FLOAT
-      }),
-      // COLOR
-      new Buffer(gl).setData({
-        bytes: positions.length * BYTE_SIZE,
-        usage: gl.STATIC_COPY,
-        type: gl.FLOAT
-      })
-    ];
+    const bufferVertex = new Buffer(gl).setData({data: positions});
+    const bufferPosition = new Buffer(gl).setData({
+      bytes: positions.length * BYTE_SIZE,
+      usage: gl.STATIC_COPY,
+      type: gl.FLOAT
+    });
+    const bufferColor = new Buffer(gl).setData({
+      bytes: positions.length * BYTE_SIZE,
+      usage: gl.STATIC_COPY,
+      type: gl.FLOAT
+    });
 
     // ---- SETUP VERTEX ARRAYS ---- //
-    // const vaoTransform = new VertexArrayObject(gl).bind();
-    const vaoTransform = new VertexArrayObject(gl);
+    const vaoTransform = new VertexArrayObject(gl).bind();
 
-    // TODO how to use setBuffers for copied data?
-
-    buffers[VERTEX].bind();
+    bufferVertex.bind();
     gl.enableVertexAttribArray(POSITION_LOCATION);
     gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
-    buffers[VERTEX].unbind();
+    bufferVertex.unbind();
 
     vaoTransform.unbind();
 
     const vaoFeedback = new VertexArrayObject(gl).bind();
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, bufferPosition);
-    buffers[POSITION].bind();
+    bufferPosition.bind();
     gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(POSITION_LOCATION);
-    buffers[POSITION].unbind();
+    bufferPosition.unbind();
 
-    buffers[COLOR].bind();
+    bufferColor.bind();
     gl.vertexAttribPointer(COLOR_LOCATION, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(COLOR_LOCATION);
-    buffers[COLOR].unbind();
+    bufferColor.unbind();
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
     vaoFeedback.unbind();
 
     // ---- RENDERING ---- //
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const transformFeedback = new TransformFeedback(gl);
+    transformFeedback.bindBuffer({index: 0, buffer: bufferPosition});
+    transformFeedback.bindBuffer({index: 1, buffer: bufferColor});
 
     // first pass, offscreen, no rasterization, vertices processing only
     programTransform.use();
@@ -183,41 +166,20 @@ class Root extends PureComponent {
 
     vaoTransform.bind();
 
-    const transformFeedback = new TransformFeedback(gl);
-    transformFeedback.bindBuffer({index: 0, buffer: buffers[POSITION]});
-    transformFeedback.bindBuffer({index: 1, buffer: buffers[COLOR]});
-
-    // buffers[POSITION].bind({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 0});
-    // buffers[COLOR].bind({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 1});
-    // buffers[POSITION].bindBase({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 0});
-    // buffers[COLOR].bindBase({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 1});
-
-    // gl.enable(gl.RASTERIZER_DISCARD);
-    // transformFeedback.begin(gl.TRIANGLES);
-    // gl.drawArrays(gl.TRIANGLES, 0, VERTEX_COUNT, 1);
-    // transformFeedback.end();
-    // gl.disable(gl.RASTERIZER_DISCARD);
-
     programTransform.draw(gl, {
       drawMode: gl.TRIANGLES,
       vertexCount: VERTEX_COUNT,
       transformFeedback
     });
 
-    transformFeedback.unbind({index: 0});
-    transformFeedback.unbind({index: 1});
-
-    // buffers[COLOR].unbind({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 1});
-    // buffers[POSITION].unbind({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 0});
-    // buffers[COLOR].unbindBase({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 1});
-    // buffers[POSITION].unbindBase({target: gl.TRANSFORM_FEEDBACK_BUFFER, index: 0});
+    transformFeedback.unbindBuffer({index: 0});
+    transformFeedback.unbindBuffer({index: 1});
 
     vaoTransform.unbind();
 
     // second pass, render to screen
     programFeedback.use();
     vaoFeedback.bind();
-    // gl.drawArrays(gl.TRIANGLE_FAN, 0, VERTEX_COUNT, 1);
     programTransform.draw(gl, {
       drawMode: gl.TRIANGLES,
       vertexCount: VERTEX_COUNT
@@ -225,12 +187,11 @@ class Root extends PureComponent {
     vaoFeedback.unbind();
 
     // ---- CLEAN UP ---- //
-    transformFeedback.unbind();
     transformFeedback.delete();
 
-    buffers[VERTEX].delete();
-    buffers[POSITION].delete();
-    buffers[COLOR].delete();
+    bufferVertex.delete();
+    bufferPosition.delete();
+    bufferColor.delete();
 
     programTransform.delete();
     programFeedback.delete();
