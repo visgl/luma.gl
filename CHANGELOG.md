@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 4.0.0-alpha.NEXT
+- NEW: `UniformBufferLayout` class
+
 ## 4.0.0-alpha.4
 - Remove null params given to Float32Array constructor (#176)
 - Fix framebuffer creation error (#177)

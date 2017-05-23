@@ -55,3 +55,7 @@ WebGL2 introduces objects that collect state allowing applications to switch sta
 * Uniform Buffers - holds a set of uniforms
 * `Sampler` - holds a set of texture sampling parameters
 * `TransformFeedback` - holds a set of transform feedback output buffer bindings.
+
+* Uniform Buffers
+
+luma.gl provides a `UniformBufferLayout` helper class to make manipulation of uniform values in an `std140 memory layout easy.

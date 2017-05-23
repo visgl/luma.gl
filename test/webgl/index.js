@@ -16,6 +16,7 @@ import './framebuffer.spec';
 import './renderbuffer.spec';
 import './draw.spec';
 import './uniforms.spec';
+import './uniform-buffer-layout.spec';
 
 // import './vertex-attributes.spec';
 
