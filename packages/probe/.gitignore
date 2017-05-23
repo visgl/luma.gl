@@ -1,0 +1,13 @@
+.sass-cache/
+node_modules/
+coverage/
+dist/
+build/
+docs/
+.idea
+npm-debug.log
+
+# temporary jenkins files
+test/test.js.tap
+jshint.xml
+jshint-proper.xml

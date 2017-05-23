@@ -1,0 +1,14 @@
+{
+  "parser": "babel-eslint",
+  "extends": [
+    "@uber/eslint-config",
+    "@uber/eslint-config-es6"
+  ],
+  "rules": {
+    "guard-for-in": 0
+  },
+  "ecmaFeatures": {
+    "objectLiteralComputedProperties": true,
+    "experimentalObjectRestSpread": true
+  }
+}
