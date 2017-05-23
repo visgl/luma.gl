@@ -20,8 +20,10 @@ A big release that brings full WebGL2 support to luma.gl, as well as support for
 
 ### WebGL2 Support
 
-* Classes for the new WebGL2 objects (`FenceSync`, `Query`, `Sampler`, `Texture2DArray`, `Texture3D`, `TransformFeedback`).
-* WebGL1 classes have additional methods that expose WebGL2 functionality when available.
+* luma.gl classes for the new WebGL2 objects (`FenceSync`, `Query`, `Sampler`, `Texture2DArray`, `Texture3D`, `TransformFeedback`).
+* New `UniformBufferLayout` helper class to make uniform buffer usage easy.
+* `Textures`, `Renderbuffers` and `Framebuffers` updated to handle all the new WebGL2 image formats, including floating point textures, and multiple rendertargets.
+* Existing WebGL1 classes have additional methods that expose WebGL2 functionality when available.
 
 
 ### WebGL Capability Management
