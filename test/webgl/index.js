@@ -11,12 +11,14 @@ import './context-state.spec.js';
 
 import './buffer.spec';
 import './program.spec';
+import './renderbuffer.spec';
 import './texture.spec';
 import './framebuffer.spec';
-import './renderbuffer.spec';
 import './draw.spec';
 import './uniforms.spec';
 import './uniform-buffer-layout.spec';
+
+import './sampler.spec';
 
 // import './vertex-attributes.spec';
 

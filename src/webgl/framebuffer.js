@@ -1,5 +1,6 @@
 import GL from './api';
-import {assertWebGLContext, assertWebGL2Context} from './context';
+import {isWebGL2, ERR_WEBGL2} from './context';
+import {clear, clearBuffer} from './clear';
 import {getContextCaps} from './context-limits';
 import Resource from './resource';
 import Texture2D from './texture-2d';
@@ -10,14 +11,15 @@ import assert from 'assert';
 
 // Local constants - will collapse during minification
 const GL_FRAMEBUFFER = 0x8D40;
-const GL_RENDERBUFFER = 0x8D41;
-const GL_DRAW_FRAMEBUFFER = 0;
-const GL_READ_FRAMEBUFFER = 0;
+const GL_DRAW_FRAMEBUFFER = 0x8CA8;
+const GL_READ_FRAMEBUFFER = 0x8CA9;
 
 const GL_COLOR_ATTACHMENT0 = 0x8CE0;
 const GL_DEPTH_ATTACHMENT = 0x8D00;
 const GL_STENCIL_ATTACHMENT = 0x8D20;
 // const GL_DEPTH_STENCIL_ATTACHMENT = 0x821A;
+
+const GL_RENDERBUFFER = 0x8D41;
 
 const GL_TEXTURE_3D = 0x806F;
 const GL_TEXTURE_2D_ARRAY = 0x8C1A;
@@ -26,7 +28,25 @@ const GL_TEXTURE_CUBE_MAP = 0x8513;
 
 const GL_TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
 
+const GL_DEPTH_BUFFER_BIT = 0x00000100;
+const GL_STENCIL_BUFFER_BIT = 0x00000400;
+const GL_COLOR_BUFFER_BIT = 0x00004000;
+
+const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
+
 export default class Framebuffer extends Resource {
+
+  static isSupported(gl, {
+    colorBufferFloat,    // Whether floating point textures can be rendered and read
+    colorBufferHalfFloat // Whether half float textures can be rendered and read
+  } = {}) {
+    let supported = true;
+    supported = colorBufferFloat &&
+      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'WEBGL_color_buffer_float');
+    supported = colorBufferHalfFloat &&
+      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'EXT_color_buffer_half_float');
+    return supported;
+  }
 
   constructor(gl, opts = {}) {
     super(gl, opts);
@@ -35,9 +55,27 @@ export default class Framebuffer extends Resource {
     this.width = null;
     this.height = null;
     this.attachments = {};
+    this.readBuffer = GL_COLOR_ATTACHMENT0;
+    this.drawBuffers = [GL_COLOR_ATTACHMENT0];
     this.initialize(opts);
 
     Object.seal(this);
+  }
+
+  get color() {
+    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
+  }
+
+  get texture() {
+    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
+  }
+
+  get depth() {
+    return this.attachments[GL_DEPTH_ATTACHMENT] || null;
+  }
+
+  get stencil() {
+    return this.attachments[GL_STENCIL_ATTACHMENT] || null;
   }
 
   initialize({
@@ -47,7 +85,9 @@ export default class Framebuffer extends Resource {
     color = true,
     depth = true,
     stencil = false,
-    check = true
+    check = true,
+    readBuffer,
+    drawBuffers
   }) {
     assert(width >= 0 && height >= 0, 'Width and height need to be integers');
 
@@ -68,49 +108,105 @@ export default class Framebuffer extends Resource {
       attachments = this._createDefaultAttachments({color, depth, stencil, width, height});
     }
 
-    // Any current attachments need to be removed, create a map with null values
-    const attachmentsToRemove = Object.keys(this.attachments).reduce((map, key) => {
-      map[key] = null;
-      return map;
-    }, {});
-
-    // Unattach/attach the attachments
-    this.attach(Object.assign(attachmentsToRemove, attachments));
+    this.update({clearAttachments: true, attachments, readBuffer, drawBuffers});
 
     // Checks that framebuffer was properly set up, if not, throws an explanatory error
-    if (check) {
+    if (attachments && check) {
       this.checkStatus();
     }
   }
 
-  resize({width, height}) {
-    if (width === this.width && height === this.height) {
-      return this;
+  update({
+    attachments = {},
+    readBuffer,
+    drawBuffers,
+    clearAttachments = false
+  }) {
+    this.attach(attachments, {clearAttachments});
+
+    const {gl} = this;
+    // Multiple render target support, set read buffer and draw buffers
+    gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
+    if (readBuffer) {
+      this._setReadBuffer(readBuffer);
     }
+    if (drawBuffers) {
+      this._setDrawBuffers(drawBuffers);
+    }
+    gl.bindFramebuffer(GL_FRAMEBUFFER, null);
+
+    return this;
+  }
+
+  // Attachment resize is expected to be a noop if size is same
+  resize({width, height}) {
     log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
-    return this.initialize(Object.assign({}, this.opts, {width, height}));
+    for (const attachmentPoint in this.attachments) {
+      this.attachments[attachmentPoint].resize({width, height});
+    }
+    return this;
   }
 
   // Attach from a map of attachments
-  attach(attachments) {
+  attach(attachments, {
+    clearAttachments = false,
+    setFilteringParameters = true
+  } = {}) {
+    const newAttachments = {};
+
+    // Any current attachments need to be removed, add null values to map
+    if (clearAttachments) {
+      Object.keys(this.attachments).forEach(key => {
+        newAttachments[key] = null;
+      });
+    }
+
+    // Overlay the new attachments
+    Object.assign(newAttachments, attachments);
+
     this.gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
 
-    for (const attachment in attachments) {
-      const object = attachments[attachment];
+    // Walk the attachments
+    for (const attachment in newAttachments) {
+      // Ensure key is not undefined
+      assert(attachment !== 'undefined', 'Misspelled framebuffer binding point?');
+
+      const descriptor = newAttachments[attachment];
+      let object = descriptor;
       if (!object) {
         this._unattach({attachment});
       } else if (object instanceof Renderbuffer) {
         this._attachRenderbuffer({attachment, renderbuffer: object});
-      } else if (Array.isArray(object)) {
-        const [texture, layer = 0, level = 0] = object;
+      } else if (Array.isArray(descriptor)) {
+        const [texture, layer = 0, level = 0] = descriptor;
+        object = texture;
         this._attachTexture({attachment, texture, layer, level});
       } else {
         this._attachTexture({attachment, texture: object, layer: 0, level: 0});
       }
+
+      if (setFilteringParameters && object instanceof Texture2D) {
+        object.setParameters({
+          [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+          [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+          [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+        });
+      }
+
+      // Resize objects
+      if (object) {
+        object.resize({width: this.width, height: this.height});
+      }
     }
-    Object.assign(this.attachments, attachments);
 
     this.gl.bindFramebuffer(GL_FRAMEBUFFER, null);
+
+    // Assign to attachments and remove any nulls to get a clean attachment map
+    Object.assign(this.attachments, attachments);
+    Object.keys(this.attachments).filter(key => !this.attachments[key]).forEach(key => {
+      delete this.attachments[key];
+    });
   }
 
   checkStatus() {
@@ -124,20 +220,26 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  get color() {
-    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
-  }
+  clear({
+    color,
+    depth,
+    stencil,
+    drawBuffers = []
+  } = {}) {
+    // Bind framebuffer and delegate to global clear functions
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
 
-  get texture() {
-    return this.attachments[GL_COLOR_ATTACHMENT0] || null;
-  }
+    if (color || depth || stencil) {
+      clear({color, depth, stencil});
+    }
 
-  get depth() {
-    return this.attachments[GL_DEPTH_ATTACHMENT] || null;
-  }
+    drawBuffers.forEach((value, drawBuffer) => {
+      clearBuffer({drawBuffer, value});
+    });
 
-  get stencil() {
-    return this.attachments[GL_STENCIL_ATTACHMENT] || null;
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, null);
+
+    return this;
   }
 
   // NOTE: Slow requires roundtrip to GPU
@@ -175,15 +277,56 @@ export default class Framebuffer extends Resource {
     return pixelArray;
   }
 
-  // Selects a color buffer as the source for pixels for subsequent calls to
-  // copyTexImage2D, copyTexSubImage2D, copyTexSubImage3D or readPixels.
-  // src
-  //  gl.BACK: Reads from the back color buffer.
-  //  gl.NONE: Reads from no color buffer.
-  //  gl.COLOR_ATTACHMENT{0-15}: Reads from one of 16 color attachment buffers.
-  readBuffer({src}) {
-    assertWebGLContext(this.gl);
-    this.gl.readBuffer(src);
+  /**
+   * Copy from framebuffer into a texture
+   */
+  copyToTexture({
+    srcFramebuffer,
+    x,
+    y,
+    width,
+    height,
+    texture,
+    xoffset = 0,
+    yoffset = 0,
+    zoffset = 0,
+    mipmapLevel = 0,
+    internalFormat = GL.RGBA,
+    // offset = 0,
+    // type = GL.UNSIGNED_BYTE,
+    border = 0
+  }) {
+    const {gl} = this;
+    gl.bindFramebuffer(GL_FRAMEBUFFER, srcFramebuffer.handle);
+
+    // target
+    switch (texture.target) {
+    case GL_TEXTURE_2D:
+    case GL_TEXTURE_CUBE_MAP:
+      gl.copyTexSubImage2D(
+        texture.target,
+        mipmapLevel,
+        internalFormat,
+        x, y,
+        texture.width,
+        texture.height
+      );
+      break;
+    case GL_TEXTURE_2D_ARRAY:
+    case GL_TEXTURE_3D:
+      gl.copyTexSubImage3D(
+        texture.target,
+        mipmapLevel,
+        internalFormat,
+        x, y,
+        texture.width,
+        texture.height
+      );
+      break;
+    default:
+    }
+
+    gl.bindFramebuffer(GL_FRAMEBUFFER, null);
     return this;
   }
 
@@ -194,14 +337,27 @@ export default class Framebuffer extends Resource {
     srcFramebuffer,
     srcX0, srcY0, srcX1, srcY1,
     dstX0, dstY0, dstX1, dstY1,
-    mask,
+    color,
+    depth,
+    stencil,
+    mask = 0,
     filter = GL.NEAREST
   }) {
     const {gl} = this;
-    assertWebGL2Context(gl);
+    assert(isWebGL2(gl), ERR_WEBGL2);
 
-    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, this.handle);
+    if (color) {
+      mask |= GL_COLOR_BUFFER_BIT;
+    }
+    if (depth) {
+      mask |= GL_DEPTH_BUFFER_BIT;
+    }
+    if (stencil) {
+      mask |= GL_STENCIL_BUFFER_BIT;
+    }
+
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, srcFramebuffer.handle);
+    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, this.handle);
     gl.blitFramebuffer(
       srcX0, srcY0, srcX1, srcY1,
       dstX0, dstY0, dstX1, dstY1,
@@ -223,13 +379,13 @@ export default class Framebuffer extends Resource {
     height
   }) {
     const {gl} = this;
-    assertWebGL2Context(this.gl);
+    assert(isWebGL2(gl, ERR_WEBGL2));
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, this.handle);
     const invalidateAll = x === 0 && y === 0 && width === undefined && height === undefined;
     if (invalidateAll) {
       gl.invalidateFramebuffer(GL_READ_FRAMEBUFFER, attachments);
     } else {
-      this.gl.invalidateFramebuffer(GL_READ_FRAMEBUFFER, attachments, x, y, width, height);
+      gl.invalidateFramebuffer(GL_READ_FRAMEBUFFER, attachments, x, y, width, height);
     }
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, null);
     return this;
@@ -239,46 +395,16 @@ export default class Framebuffer extends Resource {
   // The type returned is the natural type for the requested pname:
   // pname returned type
   // If an OpenGL error is generated, returns null.
-  /* eslint-disable complexity */
   getAttachmentParameter({
     target = this.target,
     attachment = GL_COLOR_ATTACHMENT0,
     pname
   } = {}) {
-    const caps = getContextCaps(this.gl);
-
-    switch (pname) {
-    // EXT_sRGB or WebGL2
-    case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-      if (!caps.EXT_sRGB) {
-        return GL.LINEAR;
-      }
-      break;
-    // WebGL2
-    case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
-      if (!caps.webgl2) {
-        return 8;
-      }
-      break;
-    case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE:
-      // GL.FLOAT, GL.INT, GL.UNSIGNED_INT, GL.SIGNED_NORMALIZED, OR GL.UNSIGNED_NORMALIZED.
-      if (!caps.webgl2) {
-        return GL.UNSIGNED_INT;
-      }
-      break;
-
-    default:
-    }
-
-    return this.gl.getFramebufferAttachmentParameter(target, attachment, pname);
+    const fallback = this._getAttachmentParameterFallback(pname);
+    return fallback !== null ?
+      fallback :
+      this.gl.getFramebufferAttachmentParameter(target, attachment, pname);
   }
-  /* eslint-enable complexity */
 
   getAttachmentParameters(
     attachment = GL_COLOR_ATTACHMENT0,
@@ -292,7 +418,6 @@ export default class Framebuffer extends Resource {
   }
 
   // WEBGL INTERFACE
-
   bind({target = GL_FRAMEBUFFER} = {}) {
     this.gl.bindFramebuffer(target, this.handle);
     return this;
@@ -306,26 +431,32 @@ export default class Framebuffer extends Resource {
   // PRIVATE METHODS
 
   _createDefaultAttachments({color, depth, stencil, width, height}) {
-    const defaultAttachments = {};
+    let defaultAttachments = null;
 
     // Add a color buffer if requested and not supplied
     if (color) {
+      defaultAttachments = defaultAttachments || {};
       defaultAttachments[GL_COLOR_ATTACHMENT0] = new Texture2D(this.gl, {
-        data: null,
+        data: null, // reserves texture memory, but texels are undefined
         format: GL.RGBA,
         type: GL.UNSIGNED_BYTE,
         width,
         height,
+        // Only power of two sized textures can have mipmaps in WebGL1
+        mipmaps: false,
+        // Use poor filtering, and clamp
         parameters: {
           [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
-        },
-        mipmaps: false
+          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+          [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+          [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+        }
       });
     }
 
     // Add a depth buffer if requested and not supplied
     if (depth) {
+      defaultAttachments = defaultAttachments || {};
       defaultAttachments[GL_DEPTH_ATTACHMENT] = new Renderbuffer(this.gl, {
         format: GL.DEPTH_COMPONENT16,
         width,
@@ -385,6 +516,62 @@ export default class Framebuffer extends Resource {
     this.attachments[attachment] = texture;
   }
 
+  // Expects framebuffer to be bound
+  _setReadBuffer(gl, readBuffer) {
+    if (isWebGL2(gl)) {
+      gl.readBuffer(readBuffer);
+    } else {
+      // Setting to color attachment 0 is a noop, so allow it in WebGL1
+      assert(readBuffer === GL_COLOR_ATTACHMENT0 || readBuffer === GL.BACK,
+        ERR_MULTIPLE_RENDERTARGETS);
+    }
+    this.readBuffer = readBuffer;
+  }
+
+  // Expects framebuffer to be bound
+  _setDrawBuffers(gl, drawBuffers) {
+    if (isWebGL2(gl)) {
+      gl.drawBuffers(drawBuffers);
+    } else {
+      const ext = gl.getExtension('WEBGL_draw_buffers');
+      if (ext) {
+        ext.drawBuffersWEBGL(drawBuffers);
+      } else {
+        // Setting a single draw buffer to color attachment 0 is a noop, allow in WebGL1
+        assert(drawBuffers.length === 1 &&
+          (drawBuffers[0] === GL_COLOR_ATTACHMENT0 || drawBuffers[0] === GL.BACK),
+          ERR_MULTIPLE_RENDERTARGETS);
+      }
+    }
+    this.drawBuffers = drawBuffers;
+  }
+
+  // Attempt to provide workable defaults for WebGL2 symbols under WebGL1
+  // null means OK to query
+  /* eslint-disable complexity */
+  _getAttachmentParameterFallback(pname) {
+    const caps = getContextCaps(this.gl);
+
+    switch (pname) {
+    case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
+      return !caps.webgl2 ? 0 : null;
+    case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
+    case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
+    case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
+    case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
+    case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
+    case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
+      return !caps.webgl2 ? 8 : null;
+    case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
+      return !caps.webgl2 ? GL.UNSIGNED_INT : null;
+    case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
+      return !caps.webgl2 && !caps.EXT_sRGB ? GL.LINEAR : null;
+    default:
+      return null;
+    }
+  }
+  /* eslint-enable complexity */
+
   // RESOURCE METHODS
 
   _createHandle() {
@@ -395,6 +582,8 @@ export default class Framebuffer extends Resource {
     this.gl.deleteFramebuffer(this.handle);
   }
 }
+
+// PUBLIC METHODS
 
 // Map an index to a cube map face constant
 function mapIndexToCubeMapFace(layer) {

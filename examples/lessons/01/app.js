@@ -1,6 +1,6 @@
 /* eslint-disable no-var, max-statements */
 
-import {createGLContext, AnimationLoop, Program, Buffer, Matrix4} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, Matrix4} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -19,18 +19,13 @@ precision highp float;
 #endif
 
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
 }
 `;
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl, canvas, aspect}) {
-    // var canvas = document.getElementById('lesson01-canvas');
-    // canvas.width = canvas.clientWidth;
-    // canvas.height = canvas.clientHeight;
-    // const aspect = canvas.width / canvas.height;
-
-    // const gl = createGLContext({canvas});
+    addControls();
 
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 1);
@@ -43,23 +38,20 @@ const animationLoop = new AnimationLoop({
       fs: FRAGMENT_SHADER
     });
 
-    var trianglePositions = new Buffer(gl, {
-      data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
-      size: 3
-    });
+    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
+    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
 
-    var squarePositions = new Buffer(gl, {
-      data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
-      size: 3
-    });
+    var trianglePositions = new Buffer(gl, {size: 3, data: new Float32Array(TRIANGLE_VERTS)});
+    var squarePositions = new Buffer(gl, {size: 3, data: new Float32Array(SQUARE_VERTS)});
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Draw Triangle
     const view = new Matrix4().translate([-1.5, 0, -7]);
     const projection = Matrix4.perspective({aspect});
 
     program.use();
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Draw Triangle
     program
       .setBuffers({
         positions: trianglePositions
@@ -81,9 +73,22 @@ const animationLoop = new AnimationLoop({
         uPMatrix: projection
       });
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  },
-  onRender({gl}) {
   }
 });
+
+function addControls({controlPanel} = {}) {
+  /* global document */
+  controlPanel = controlPanel || document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=28" target="_blank">
+      A Triangle and a Square
+    </a>
+  <p>
+    The classic WebGL Lessons in luma.gl
+    `;
+  }
+}
 
 export default animationLoop;

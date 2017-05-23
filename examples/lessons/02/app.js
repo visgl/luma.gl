@@ -1,7 +1,6 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-const {createGLContext, Program, Buffer} = LumaGL;
-const {PerspectiveCamera} = LumaGL;
+import {AnimationLoop, Program, Buffer, Matrix4} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -30,13 +29,9 @@ void main(void) {
 }
 `;
 
-const app = {
-  start({canvas}) {
-    var canvas = canvas || document.getElementById('lesson02-canvas');
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-
-    var gl = createGLContext({canvas});
+const animationLoop = new AnimationLoop({
+  onInitialize({gl, aspect, canvas}) {
+    addControls();
 
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 1);
@@ -44,58 +39,66 @@ const app = {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    var program = new Program(gl, {
-      vs: VERTEX_SHADER,
-      fs: FRAGMENT_SHADER
-    });
-
+    const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
     program.use();
 
-    var camera = new PerspectiveCamera({
-      aspect: canvas.width / canvas.height
-    });
+    const projection = new Matrix4().perspective({aspect});
+    const view = new Matrix4().translate(-1.5, 0, -7);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Draw Triangle
-    camera.view.$translate(-1.5, 0, -7);
     program
       .setBuffers({
-        positions: new Buffer(gl).setData({
-          data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
-          size: 3
+        positions: new Buffer(gl, {
+          size: 3,
+          data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])
         }),
-        colors: new Buffer(gl).setData({
-          data: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]),
-          size: 4
+        colors: new Buffer(gl, {
+          size: 4,
+          data: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
         })
       })
       .setUniforms({
-        uMVMatrix: camera.view,
-        uPMatrix: camera.projection
+        uMVMatrix: view,
+        uPMatrix: projection
       });
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // Draw Square
-    camera.view.$translate(3, 0, 0);
+    view.translate([3, 0, 0]);
     program
       .setBuffers({
-        positions: new Buffer(gl).setData({
-          data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
-          size: 3
+        positions: new Buffer(gl, {
+          size: 3,
+          data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0])
         }),
         colors: new Buffer(gl).setData({
-          data: new Float32Array(
-            [0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1]),
-          size: 4
+          size: 4,
+          data: new Float32Array([0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1])
         })
       })
       .setUniforms({
-        uMVMatrix: camera.view,
-        uPMatrix: camera.projection
+        uMVMatrix: view,
+        uPMatrix: projection
       });
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
-};
+});
 
-exorrt default app;
+function addControls({controlPanel} = {}) {
+  /* global document */
+  controlPanel = controlPanel || document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=134" target="_blank">
+      Adding Color
+    </a>
+  <p>
+    The classic WebGL Lessons in luma.gl
+    `;
+  }
+}
+
+export default animationLoop;

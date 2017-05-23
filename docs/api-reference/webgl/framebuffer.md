@@ -2,7 +2,7 @@
 
 A `Framebuffer` is a WebGL container object that the application can use for "off screen" rendering. A framebuffer does not itself contain any image data but can optionally contain attachments (one or more color buffers, a depth buffer and a stencil buffer) that store data. Attachments must be in the form of `Texture`s and `Renderbuffer`s.
 
-For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Framebuffer)
+For additional information, see OpenGL Wiki [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) and [Framebuffer Object](https://www.khronos.org/opengl/wiki/Framebuffer_Object)
 
 
 ## Usage
@@ -32,25 +32,43 @@ framebuffer.checkStatus(); // optional
 
 Resizing a framebuffer to the size of a window
 ```js
+// Note: this resizes (and possibly clears) all attachments
 framebuffer.resize({width: window.innerWidth, height: window.innerHeight});
 ```
 
-Specifying a framebuffer for rendering
+Clearing a framebuffer
+```js
+framebuffer.clear();
+framebuffer.clear({color: [0, 0, 0, 0], depth: 1, stencil: 0});
+```
+
+Specifying a framebuffer for rendering in each render calls
 ```js
 const offScreenBuffer = new Framebuffer();
 program1.draw({
   framebuffer: offScreenBuffer,
   settings: {}
 });
+model.draw({
+  framebuffer: null, // the default drawing buffer
+  settings: {}
+});
 ```
 
-Selecting a framebuffer for rendering
+Binding a framebuffer for multiple render calls
 ```js
 import {withState} from 'luma.gl';
-withState(gl, {framebuffer}, () => {
-  program1.draw(...);
-  program2.draw(...);
+const framebuffer1 = ...;
+const framebuffer2 = ...;
+withState(gl, {framebuffer: framebuffer1}, () => {
+  // Any draw call that doesn't specify a framebuffer will now draw into framebuffer1
+  program1.draw({...}); // -> framebuffer1
+  program2.draw({...}); // -> framebuffer1
+  // Explicit specification of framebuffer overrides (for that call only)
+  program2.draw({framebuffer: framebuffer1, ...); // -> framebuffer2
+  program2.draw({...}); // -> framebuffer1
 });
+// framebuffer1 is not longer bound
 ```
 
 Blitting between framebuffers (WebGL2)
@@ -63,8 +81,49 @@ framebuffer.blit({
 
 Invalidating framebuffers (WebGL2)
 ```js
-framebuffer.invalidate({}); // GPU can release the data for all attachments
+framebuffer.invalidate(); // GPU can release the data for all attachments
 framebuffer.invalidate({attachments: [...]}); // GPU can release the data for specified attachments
+```
+
+
+### Using Multiple Render Targets
+
+Specify which framebuffer attachments the fragment shader will be writing to when assigning to `gl_FragData[]`
+```js
+framebuffer.configure({
+  drawBuffers: [
+    GL.COLOR_ATTACHMENT0, // gl_FragData[0]
+    GL.COLOR_ATTACHMENT1, // gl_FragData[1]
+    GL.COLOR_ATTACHMENT2, // gl_FragData[2]
+    GL.COLOR_ATTACHMENT3  // gl_FragData[3]
+  ]
+})
+```
+
+Writing to multiple framebuffer attachments in GLSL fragment shader
+```
+#extension GL_EXT_draw_buffers : require
+precision highp float;
+void main(void) {
+  gl_FragData[0] = vec4(0.25);
+  gl_FragData[1] = vec4(0.5);
+  gl_FragData[2] = vec4(0.75);
+  gl_FragData[3] = vec4(1.0);
+}
+```
+
+Clearing a specific draw buffer in a framebuffer (WebGL2)
+```js
+framebuffer.clear({
+  [GL.COLOR]: [0, 0, 1, 1], // Blue
+  [GL.COLOR]: new Float32Array([0, 0, 0, 0]), // Black/transparent
+  [GL.DEPTH_BUFFER]: 1, // Infinity
+  [GL.STENCIL_BUFFER]: 0, // no stencil
+});
+
+framebuffer.clear({
+  [GL.DEPTH_STENCIL_BUFFER]: [1, 0], // Infinity, no stencil
+});
 ```
 
 
@@ -166,6 +225,33 @@ Check that the framebuffer contains a valid combination of attachments
 [`gl.framebufferCheckStatus`](), [`gl.bindFramebuffer`]()
 
 
+### clear
+
+Clears the contents (pixels) of the framebuffer attachments.
+
+* `color` (Boolean or Array) - clears all active color buffers (any selected `drawBuffer`s) with either the provided color or the default color.
+* `depth`
+* `stencil`
+* `drawBuffers`=`[]` - An array of color values, with indices matching the buffers selected by `drawBuffers` argument.
+
+* The scissor box bounds the cleared region.
+* The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect the operation of `clear`.
+* Alpha function, blend function, logical operation, stenciling, texture mapping, and depth-buffering are ignored by `clear`.
+
+
+### clearBuffer
+
+Clears a single draw buffer, specified using a draw buffer index matching the `drawBuffers` (Note: this is not the attachment point).
+
+`framebuffer.clearBuffer({buffer, drawBuffer, value})`
+
+* `buffer`=`GL.COLOR`
+* `drawBuffer`=`0`
+* `value`=`[0, 0, 0, 0]`
+
+* Note that `value` can be `Float32Array`, `Int32Array` and `Uint32Array` for more control when using signed and unsigned integer color formats.
+
+
 ### readPixels
 
 App can provide pixelArray or have it auto allocated by this method
@@ -177,20 +263,11 @@ App can provide pixelArray or have it auto allocated by this method
     type,
     pixelArray = null
 
-NOTE: Slow requires roundtrip to GPU
+* Readpixels can be slow as it requires a roundtrip to the GPU
+* Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
+* When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
 [gl.readPixels](), [`gl.bindFramebuffer`]()
-
-
-### readBuffer
-
-Selects a color buffer as the source for pixels for subsequent calls to
-copyTexImage2D, copyTexSubImage2D, copyTexSubImage3D or readPixels.
-
-Parameters: src
-* `gl.BACK` - Reads from the back color buffer.
-* `gl.NONE` - Reads from no color buffer.
-* `gl.COLOR_ATTACHMENT{0-15}` - Reads from one of 16 color attachment buffers.
 
 
 ### blit (WebGL2)
@@ -198,30 +275,90 @@ Parameters: src
 Copies a rectangle of pixels between framebuffers
 
 Parameters
-* `srcFramebuffer`
-* `srcX0`
-* `srcY0`
+* `srcFramebuffer` - which source framebuffer to blit from
+* `readBuffer`=`GL.COLOR_ATTACHMENT0` - which color attachment to blit from
+* `drawBuffers`=`[GL.COLOR_ATTACHMENT0]` - which attachments to blit to
+* `srcX0`=`0`
+* `srcY0`=`0`
 * `srcX1`
 * `srcY1`
-* `dstX0`
-* `dstY0`
+* `dstX0`=`0`
+* `dstY0`=`0`
 * `dstX1`
 * `dstY1`
-* `mask`
-* `filter` = GL.NEAREST
+* `mask`=`GL.COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT`
+* `filter`=`GL.NEAREST` - specifies interpolation mode if stretching is needed. `GL.LINEAR` can be used exclusively for color buffers.
 
-[`gl.blitFramebuffer`](), [`gl.bindFramebuffer`]()
+* There are a number of restrictions when blitting between integer and floating point formats.
+
+[`gl.blitFramebuffer`](), [`gl.readBuffer`](), [`gl.writeBuffers`](), [`gl.bindFramebuffer`]()
 
 
 ### invalidate (WebGL2)
 
-Signals to the GL that it need not preserve the pixels of a specified region of the framebuffer
-(by default all pixels of the specified framebuffer attachments are invalidated).
+Signals to the GL that it need not preserve the pixels of a specified region of the framebuffer (by default all pixels of the specified framebuffer attachments are invalidated).
 
 Parameters
 * attachments - list of attachments to invalidate
 
 [`gl.invalidateFramebuffer`](), [`gl.invalidateSubFramebuffer`](), [`gl.bindFramebuffer`]()
+
+
+### clearBuffers (WebGL2)
+
+Use to clear specific buffers
+
+* `GL.COLOR` - Color buffer
+* `GL.DEPTH` - Depth buffer
+* `GL.STENCIL` - Stencil buffer
+* `GL.DEPTH_STENCIL` - clears depth and stencil buffers (used with `clearBufferfi`)
+
+[`gl.clearBufferfv`](), [`gl.clearBufferiv`](), [`gl.clearBufferuiv`](), [`gl.clearBufferf`](), [`gl.bindFramebuffer`]()
+
+| `GL.COLOR_ATTACHMENT`{0-15}   | Attaches the texture to one of the framebuffer's color buffers |
+
+
+### configure (WebGL2)
+
+* `readBuffer`= (GLenum) - If supplied, sets the target color buffer for reading.
+* `drawBuffers`= (GLEnum[]) - If supplied, sets the first draw buffer indices to the color attachments in the supplied array.
+
+* Read buffers are `gl.COLOR_ATTACHMENT{0-15}` - Reads from one of 16 color attachment buffers.
+* `readBuffer` selects a color buffer as the source for pixels for subsequent calls to `Framebuffer.readPixels`, `Framebuffer.copyToTexture`, `Framebuffer.blit`.
+
+Parameters: src
+* `gl.BACK` - Reads from the back color buffer.
+* `gl.NONE` - Reads from no color buffer.
+
+
+
+### drawBuffers (WebGL2 or WebGL_draw_buffers)
+
+glDrawBuffers defines an array of buffers into which outputs from the fragment shader data will be written. If a fragment shader writes a value to one or more user defined output variables, then the value of each variable will be written into the buffer specified at a location within bufs corresponding to the location assigned to that user defined output. The draw buffer used for user defined outputs assigned to locations greater than or equal to n is implicitly set to GL_NONE and any data written to such an output is discarded.
+
+Parameters
+* `buffers` (Array) - Array of GLenum specifying the buffers into which fragment colors will be written.
+
+| Value     | Fragment shader output is: |
+| ---       | --- |
+| `GL.NONE` | not written into any color buffer. |
+| `GL.BACK` | written into the back color buffer. |
+| `GL.COLOR_ATTACHMENT{0-15}` |: written in the nth color attachment of the current framebuffer. |
+
+* Except for `GL_NONE`, a constants may not appear more than once.
+* The maximum number of draw buffers.
+
+
+
+[`gl.drawBuffers`](), [`gl.bindFramebuffer`]()
+
+
+## Limits
+
+* `GL.MAX_COLOR_ATTACHMENTS` - The maximum number of color attachments supported. Can be `0` in WebGL1.
+* `GL.MAX_DRAW_BUFFERS` - The maximum number of draw buffers supported. Can be `0` in WebGL1, which means that `gl_FragData[]` is not available in shaders.
+
+It is possible that you can have a certain number of attachments, but you can't draw to all of them at the same time.
 
 
 ## Framebuffer Parameters
@@ -230,12 +367,15 @@ Parameters
 
 | Attachment Point              | Description |
 | ---                           | --- |
-| `GL.COLOR_ATTACHMENT`{0-15}   | Attaches the texture to one of the framebuffer's color buffers |
+| `GL.COLOR_ATTACHMENT0`   | Attaches the texture to one of the framebuffer's color buffers |
+| `GL.COLOR_ATTACHMENT`{1-15}   | Attaches the texture to one of the framebuffer's color buffers |
 | `GL.DEPTH_ATTACHMENT`         | Attaches the texture to the framebuffer's depth buffer |
 | `GL.STENCIL_ATTACHMENT`       | Attaches the texture to the framebuffer's stencil buffer |
 | `GL.DEPTH_STENCIL_ATTACHMENT` | Combined depth and stencil buffer |
 
-The set of available attachments is larger in WebGL2, and also the extensions WEBGL_draw_buffers and WEBGL_depth_texture provide additional attachments that match or exceed the WebGL2 set.
+* The attachment point `GL.BACK` refersn to the default framebuffer's back buffer.
+
+* The set of available attachments is larger in WebGL2, and also the extensions `WEBGL_draw_buffers` and `WEBGL_depth_texture` provide additional attachments that match or exceed the WebGL2 set.
 
 
 ### Framebuffer Attachment Values

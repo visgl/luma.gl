@@ -4,14 +4,15 @@
 require('./init');
 
 // WebGL
-export {default as GL} from './webgl/gl-constants';
+export {default as GL, glGet, glKey} from './webgl/gl-constants';
 export {
   isWebGLContext,
-  isWebGL2Context} from './webgl/context';
+  isWebGL2Context,
+  isWebGL2,
 
-export {
   createGLContext,
   getGLExtension,
+  withParameters,
   glContextWithState,
   glGetDebugInfo} from './webgl/context';
 export {
@@ -34,11 +35,8 @@ export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 
-export {
-  draw} from './webgl/draw';
-export {
-  clear,
-  readPixels} from './webgl/functions';
+export {draw} from './webgl/draw';
+export {clear} from './webgl/clear';
 
 // WebGL2 & Extensions
 export {default as FenceSync} from './webgl/fence-sync';
@@ -103,6 +101,9 @@ export {
 } from './io';
 
 // EXPERIMENTAL MODULES
+import {
+  clearBuffer
+} from './webgl/clear';
 
 // Shader Tools
 import {
@@ -115,6 +116,7 @@ import {
 import './experimental/shader-modules';
 
 export const experimental = {
+  clearBuffer,
   registerShaderModules,
   assembleShaders,
   ShaderCache
@@ -124,6 +126,7 @@ export const experimental = {
 export {default as FramebufferObject} from './webgl/framebuffer';
 
 // DEPRECATED IN V3.0
+export {readPixels} from './webgl/functions';
 export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './deprecated/fx';

@@ -30,7 +30,7 @@ const renderRoute = (page, i) => {
   const {children, path, content, embedded} = page;
   if (!children) {
     return (<Route key={i} path={path} component={Page}
-      content={content} embedded={embedded} />);
+      content={{...content, name: page.name}} embedded={embedded} />);
   }
 
   return (

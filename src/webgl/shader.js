@@ -72,14 +72,14 @@ export class Shader extends Resource {
     this.gl.compileShader(this.handle);
 
     // Avoid checking shader compilation errors on production
-    if (this.gl.debug || log.priority > 0) {
-      // Throw if compilation failed
-      const compileStatus = this.getParameter(GL.COMPILE_STATUS);
-      if (!compileStatus) {
-        const infoLog = this.gl.getShaderInfoLog(this.handle);
-        const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
-        throw new Error(`Error while compiling the shader ${error}`);
-      }
+    // if (this.gl.debug || log.priority > 0) {
+    // }
+    // Throw if compilation failed
+    const compileStatus = this.getParameter(GL.COMPILE_STATUS);
+    if (!compileStatus) {
+      const infoLog = this.gl.getShaderInfoLog(this.handle);
+      const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
+      throw new Error(error);
     }
 
     // Log translated source, if compilation succeeded

@@ -95,3 +95,6 @@ new Texture2D(gl, {
 * `pixelStore`=`{}` (*object*) - map of pixel store settings (controls how `data` is interpreted)
 
 Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](texture.md). Sampler parameters are specified in [Sampler](./sampler.md), and pixel store parameters are specified in [State Management](./context-state.md)
+
+
+## Limits

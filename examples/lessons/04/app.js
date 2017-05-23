@@ -30,15 +30,14 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
   onInitialize({gl}) {
+    addControls();
+
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
 
-    const program = new Program(gl, {
-      vs: VERTEX_SHADER,
-      fs: FRAGMENT_SHADER
-    });
+    const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
     return {
       pyramid: new Model({program, geometry: getPyramidGeometry()}),
@@ -178,4 +177,19 @@ function getCubeGeometry() {
       20, 21, 22, 20, 22, 23
     ])
   });
+}
+
+function addControls({controlPanel} = {}) {
+  /* global document */
+  controlPanel = controlPanel || document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=370" target="_blank">
+      Some Real 3D Objects
+    </a>
+  <p>
+    The classic WebGL Lessons in luma.gl
+    `;
+  }
 }

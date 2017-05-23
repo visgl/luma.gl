@@ -2,27 +2,18 @@
 import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({gl}) => {
+  onInitialize: ({gl, canvas}) => {
+    addControls(canvas);
+
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
-    gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
     return {
       cube: getCube(gl),
       prism: getPrism(gl),
-      cubemap: new TextureCube(gl, {
-        data: genTextures(512),
-        generateMipmap: true,
-        parameters: {
-          [gl.MIN_FILTER]: gl.LINEAR_MIPMAP_LINEAR,
-          [gl.MAG_FILTER]: gl.LINEAR
-        },
-        pixelStore: {
-          [gl.UNPACK_FLIP_Y_WEBGL]: true
-        }
-      })
+      cubemap: new TextureCube(gl, {data: getFaceTextures({size: 512})})
     };
   },
   onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
@@ -39,23 +30,34 @@ const animationLoop = new AnimationLoop({
     const uRefract = refractionElement ? parseFloat(refractionElement.value) : 1;
 
     cube.render({
-      uTexture: cubemap,
+      uTextureCube: cubemap,
       uModel: new Matrix4().scale([5, 5, 5]),
       uView: view,
       uProjection: projection
-      // ,
-      // uReflect,
-      // uRefract
     });
-  },
-  onAddControls({parent}) {
-    if (document.querySelector(parent)) {
-      return;
-    }
 
-    const controls = document.createElement('div');
-    controls.id = 'controls';
-    controls.innerHTML = `
+    prism.render({
+      uTextureCube: cubemap,
+      uReflect,
+      uRefract,
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+      uView: view,
+      uProjection: projection
+    });
+  }
+});
+
+function addControls() {
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+  A <code>cubemapped</code> prism within a larger cubemapped cube
+  <p>
+  Uses a luma.gl <code>TextureCube</code> and
+  the GLSL <code>reflect</code> and <code>refract</code> builtin functions
+  to calculate reflection and refraction directions from the prism normals
+  </p>
   reflection
   <input class="valign" id="reflection"
     type="range" min="0.0" max="1.0" value="1.0" step="0.01">
@@ -65,46 +67,40 @@ const animationLoop = new AnimationLoop({
     type="range" min="0.0" max="1.0" value="1.0" step="0.01">
   <br>
     `;
-    controls.style.position = 'fixed';
-    controls.style.bottom = '40px';
-    controls.style.right = '8px';
-    controls.style.background = 'rgba(255,255,255,0.9)';
-    controls.style.padding = '8px';
-    controls.style.fontFamily = 'sans';
-    controls.style.textAlign = 'center';
-    parent.appendChild(controls);
   }
-});
+}
 
 function getCube(gl) {
   return new Cube({
     gl,
     vs: `\
+#define SHADER_NAME cube_vertex
+
 attribute vec3 positions;
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 
-varying vec3 position;
+varying vec3 vPosition;
 
 void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-  position = positions;
+  vPosition = positions;
 }
 `,
     fs: `\
+#define SHADER_NAME cube_fragment
 #ifdef GL_ES
 precision highp float;
 #endif
 
-uniform samplerCube uTexture;
-
-varying vec3 position;
+uniform samplerCube uTextureCube;
+varying vec3 vPosition;
 
 void main(void) {
-  vec4 c = textureCube(uTexture, normalize(position));
-  gl_FragColor = vec4(c);
+  // The outer cube just samples the texture cube directly
+  gl_FragColor = textureCube(uTextureCube, normalize(vPosition));
 }
 `
   });
@@ -114,6 +110,8 @@ function getPrism(gl) {
   return new Cube({
     gl,
     vs: `\
+#define SHADER_NAME prism_vertex
+
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -121,43 +119,50 @@ uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 
-varying vec3 position;
-varying vec3 normal;
-varying vec3 color;
+varying vec3 vPosition;
+varying vec3 vNormal;
 
 void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-  position = vec3(uModel * vec4(positions,1));
-  normal = vec3(uModel * vec4(normals, 1));
+  vPosition = vec3(uModel * vec4(positions,1));
+  vNormal = vec3(uModel * vec4(normals, 1));
 }
 `,
     fs: `\
+#define SHADER_NAME prism_fragment
+
 #ifdef GL_ES
 precision highp float;
 #endif
 
-uniform samplerCube uTexture;
+uniform samplerCube uTextureCube;
 uniform float uReflect;
 uniform float uRefract;
 
-varying vec3 position;
-varying vec3 normal;
+varying vec3 vPosition;
+varying vec3 vNormal;
 
 void main(void) {
-  vec4 color = vec4(1,0,0,1);
-  vec3 n = normalize(normal);
-  vec3 f0 = reflect(position - vec3(0,0,2.5), n);
-  vec3 f1 = refract(position - vec3(0,0,2.5), n, 0.75);
-  vec4 c0 = uReflect * textureCube(uTexture, normalize(f0)) + (1.0 - uReflect) * color;
-  vec4 c1 = uRefract * textureCube(uTexture, normalize(f1)) + (1.0 - uRefract) * color;
-  vec4 c = 0.5 * c0 + 0.5 * c1;
-  gl_FragColor = vec4(c * color);
+  vec4 color = vec4(1, 0, 0, 1); // Prism color is red
+
+  // TODO - why is this needed?
+  vec3 offsetPosition = vPosition - vec3(0, 0, 2.5);
+
+  // The inner prism samples the texture cube in refract and reflect directions
+  vec3 reflectedDir = normalize(reflect(offsetPosition, vNormal));
+  vec3 refractedDir = normalize(refract(offsetPosition, vNormal, 0.75));
+  vec4 reflectedColor = mix(color, textureCube(uTextureCube, reflectedDir), uReflect);
+  vec4 refractedColor = mix(color, textureCube(uTextureCube, refractedDir), uRefract);
+
+  // Mix and multiply to keep it red
+  gl_FragColor = color * mix(reflectedColor, refractedColor, 0.5);
 }
 `
   });
 }
 
-function genTextures(size) {
+// Create six textures for the cube map sides
+function getFaceTextures({size}) {
   const signs = ['pos', 'neg'];
   const axes = ['x', 'y', 'z'];
   const textures = {
@@ -180,6 +185,7 @@ function genTextures(size) {
   return textures;
 }
 
+// Use canvas API to generate a texture for each side
 function drawTexture({ctx, sign, axis, size}) {
   if (axis === 'x' || axis === 'z') {
     ctx.translate(size, size);

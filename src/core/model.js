@@ -1,5 +1,6 @@
 // A scenegraph object node
-import {GL, Buffer, Program, draw, checkUniformValues, isWebGLContext} from '../webgl';
+import {
+  GL, Buffer, Program, draw, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
 import {getUniformsTable} from '../webgl/uniforms';
 import {glGet} from '../webgl/api';
 
@@ -223,8 +224,20 @@ export default class Model extends Object3D {
     return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
-  draw({uniforms = {}, attributes = {}, settings = {}, samplers = {}}) {
-    return this.render(uniforms, attributes, samplers, settings);
+  draw({
+    uniforms = {},
+    attributes = {},
+    samplers = {},
+    settings = {},
+    framebuffer = null
+  } = {}) {
+    const {program: {gl}} = this;
+    if (framebuffer) {
+      settings = Object.assign(settings, {framebuffer});
+    }
+    return withParameters(gl, settings,
+      () => this.render(uniforms, attributes, samplers)
+    );
   }
 
   render(uniforms = {}, attributes = {}, settings = {}, samplers = {}) {

@@ -1,9 +1,10 @@
 /* eslint-disable no-inline-comments */
-import {isWebGL2Context} from './context';
+import GL from './gl-constants';
+import {isWebGL2} from './context';
 import Resource from './resource';
 import assert from 'assert';
 
-// Local constants for optimal minification
+// Define local GL constants to optimize minification
 const GL_RENDERBUFFER = 0x8D41;
 const GL_SAMPLES = 0x80A9;
 const GL_RENDERBUFFER_WIDTH = 0x8D42;
@@ -11,10 +12,85 @@ const GL_RENDERBUFFER_HEIGHT = 0x8D43;
 const GL_RENDERBUFFER_INTERNAL_FORMAT = 0x8D44;
 const GL_RENDERBUFFER_SAMPLES = 0x8CAB;
 
+// Define local extension strings to optimize minification
+const SRGB = 'EXT_sRGB';
+const CB_FLOAT = 'WEBGL_color_buffer_float';
+const CB_HALF_FLOAT = 'EXT_color_buffer_half_float';
+const CB_FLOAT2 = 'EXT_color_buffer_float';
+
+export const RENDERBUFFER_FORMATS = {
+  [GL.DEPTH_COMPONENT16]: {}, // 16 depth bits.
+  [GL.DEPTH_COMPONENT24]: {gl2: true},
+  [GL.DEPTH_COMPONENT32F]: {gl2: true},
+
+  [GL.STENCIL_INDEX8]: {}, // 8 stencil bits.
+
+  [GL.DEPTH_STENCIL]: {},
+  [GL.DEPTH24_STENCIL8]: {gl2: true},
+  [GL.DEPTH32F_STENCIL8]: {gl2: true},
+
+  // When using a WebGL 1 context, color renderbuffer formats are limited
+  [GL.RGBA4]: {},
+  [GL.RGB565]: {},
+  [GL.RGB5_A1]: {},
+
+  // When using a WebGL 2 context, the following values are available additionally:
+  [GL.R8]: {gl2: true},
+  [GL.R8UI]: {gl2: true},
+  [GL.R8I]: {gl2: true},
+  [GL.R16UI]: {gl2: true},
+  [GL.R16I]: {gl2: true},
+  [GL.R32UI]: {gl2: true},
+  [GL.R32I]: {gl2: true},
+  [GL.RG8]: {gl2: true},
+  [GL.RG8UI]: {gl2: true},
+  [GL.RG8I]: {gl2: true},
+  [GL.RG16UI]: {gl2: true},
+  [GL.RG16I]: {gl2: true},
+  [GL.RG32UI]: {gl2: true},
+  [GL.RG32I]: {gl2: true},
+  [GL.RGB8]: {gl2: true},
+  [GL.RGBA8]: {gl2: true},
+  [GL.SRGB8_ALPHA8]: {gl2: true, gl1: SRGB}, // When using the EXT_sRGB WebGL1 extension
+  [GL.RGB10_A2]: {gl2: true},
+  [GL.RGBA8UI]: {gl2: true},
+  [GL.RGBA8I]: {gl2: true},
+  [GL.RGB10_A2UI]: {gl2: true},
+  [GL.RGBA16UI]: {gl2: true},
+  [GL.RGBA16I]: {gl2: true},
+  [GL.RGBA32I]: {gl2: true},
+  [GL.RGBA32UI]: {gl2: true},
+
+  // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
+  [GL.R16F]: {gl2: CB_FLOAT2},
+  [GL.RG16F]: {gl2: CB_FLOAT2},
+  [GL.RGBA16F]: {gl2: CB_FLOAT2, gl1: CB_HALF_FLOAT},
+  [GL.R32F]: {gl2: CB_FLOAT2},
+  [GL.RG32F]: {gl2: CB_FLOAT2},
+  [GL.RGBA32F]: {gl2: CB_FLOAT2, gl1: CB_FLOAT},
+  [GL.R11F_G11F_B10F]: {gl2: CB_FLOAT2}
+};
+
+function isFormatSupported(gl, format, formats) {
+  // assert(isWebGL(gl), ERR_WEBGL);
+  const info = formats[format];
+  if (!info) {
+    return false;
+  }
+  const value =
+    (info.gl1 === undefined && info.gl2 === undefined) || // No info => always supported
+    (isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1);
+  return typeof value === 'string' ? gl.getExtension(value) : value;
+}
+
 export default class Renderbuffer extends Resource {
 
+  static isSupported(gl, {format} = {}) {
+    return !format || isFormatSupported(gl, format, RENDERBUFFER_FORMATS);
+  }
+
   static getSamplesForFormat({format}) {
-    return isWebGL2Context(this.gl) ?
+    return isWebGL2(this.gl) ?
       this.gl.getInternalformatParameter(GL_RENDERBUFFER, format, GL_SAMPLES) :
       [0];
   }
@@ -30,7 +106,7 @@ export default class Renderbuffer extends Resource {
     assert(format, 'Needs format');
     this.gl.bindRenderbuffer(GL_RENDERBUFFER, this.handle);
 
-    if (samples !== 0 && isWebGL2Context(this.gl)) {
+    if (samples !== 0 && isWebGL2(this.gl)) {
       this.gl.renderbufferStorageMultisample(GL_RENDERBUFFER, samples, format, width, height);
     } else {
       this.gl.renderbufferStorage(GL_RENDERBUFFER, format, width, height);
@@ -48,10 +124,10 @@ export default class Renderbuffer extends Resource {
 
   resize({width, height}) {
     // Don't resize if width/height haven't changed
-    if (width === this.width && height === this.height) {
-      return this;
+    if (width !== this.width || height !== this.height) {
+      return this.initialize({width, height, format: this.format, samples: this.samples});
     }
-    return this.initialize({format: this.format, width, height, samples: this.samples});
+    return this;
   }
 
   // PRIVATE METHODS

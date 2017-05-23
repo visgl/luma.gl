@@ -23,7 +23,7 @@
 | `FRAG_DEPTH` | `EXT_frag_depth` | `ES300` |
 | `SHADER_TEXTURE_LOD` | `EXT_shader_texture_lod` | `ES300` |
 | `STANDARD_DERIVATIVES` | `OES_standard_derivatives` | `ES300` |
-| `DRAW_BUFFERS` | `WEBGL_draw_buffers` | `ES300` |
+| `MULTIPLE_RENDER_TARGETS` | `WEBGL_draw_buffers` | `ES300` |
 | DEBUG CAPABILITIES | |
 | `DEBUG_RENDERER_INFO` | `WEBGL_debug_renderer_info` | <- |
 | `DEBUG_SHADERS` | `WEBGL_debug_shaders` | <- |

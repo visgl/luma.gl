@@ -9,34 +9,34 @@ import {updateParam} from '../actions/app-actions';
 class InfoPanel extends Component {
 
   componentDidMount() {
-    const demo = Demos[this.props.demo];
-    if (demo && demo.addControls) {
-      demo.addControls({parent: 'options-panel'});
-    }
+    // const demo = Demos[this.props.demo];
+    // if (demo && demo.addControls) {
+    //   demo.addControls({parent: 'options-panel'});
+    // }
   }
 
   componentWillReceiveProps(nextProps) {
-    if (nextProps.demo !== this.props.demo) {
-      let demo = Demos[this.props.demo];
+    // if (nextProps.demo !== this.props.demo) {
+    //   let demo = Demos[this.props.demo];
 
-      /* global document */
-      const node = document.getElementById('options-panel');
-      while (node && node.firstChild) {
-        node.removeChild(node.firstChild);
-      }
+    //   /* global document */
+    //   const node = document.getElementById('options-panel');
+    //   while (node && node.firstChild) {
+    //     node.removeChild(node.firstChild);
+    //   }
 
-      demo = Demos[nextProps.demo];
-      if (demo && demo.addControls) {
-        demo.addControls({parent: 'options-panel'});
-      }
-    }
+    //   demo = Demos[nextProps.demo];
+    //   if (demo && demo.addControls) {
+    //     demo.addControls({parent: 'options-panel'});
+    //   }
+    // }
   }
 
   componentWillUnmount() {
-    const demo = Demos[this.props.demo];
-    if (demo) {
-      demo.stop();
-    }
+    // const demo = Demos[this.props.demo];
+    // if (demo) {
+    //   demo.stop();
+    // }
   }
 
   render() {
@@ -51,12 +51,14 @@ class InfoPanel extends Component {
         onClick={onInteract}>
 
         <h2>{demo}</h2>
+        <br/>
 
-        { demo_.onAddControls &&
-          demo_.onAddControls({metaLoaded, div: 'options-panel'}) }
+        <div className="control-panel" id="control-panel"/>
 
         {
         /*
+        { demo_.onAddControls &&
+          demo_.onAddControls({metaLoaded, div: 'options-panel'}) }
         {Object.keys(params).length > 0 && <hr />}
 
         {Object.keys(params).map((name, i) => (

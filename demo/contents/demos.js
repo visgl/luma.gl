@@ -10,6 +10,11 @@ export {default as PickingDemo} from '../../examples/core/picking/app.js';
 // export {default as ShadowmapDemo} from '../../examples/core/shadowmap/src/app.js';
 
 export {default as Lesson01} from '../../examples/lessons/01/app.js';
+export {default as Lesson02} from '../../examples/lessons/02/app.js';
 export {default as Lesson03} from '../../examples/lessons/03/app.js';
 export {default as Lesson04} from '../../examples/lessons/04/app.js';
 export {default as Lesson05} from '../../examples/lessons/05/app.js';
+// export {default as Lesson06} from '../../examples/lessons/06/app.js';
+// export {default as Lesson07} from '../../examples/lessons/07/app.js';
+// export {default as Lesson08} from '../../examples/lessons/08/app.js';
+// export {default as Lesson09} from '../../examples/lessons/09/app.js';

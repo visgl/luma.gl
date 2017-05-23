@@ -50,14 +50,11 @@ export default class Sampler extends Resource {
   }
 
   _getParameter(pname) {
-    this.gl.bindSampler(this.target, this.handle);
-    const value = this.gl.getSamplerParameter(this.target, pname);
-    this.gl.bindSampler(this.target, null);
+    const value = this.gl.getSamplerParameter(this.handle, pname);
     return value;
   }
 
   _setParameter(pname, param) {
-    this.gl.bindSampler(this.target, this.handle);
     // Apparently there are some conversion integer/float rules that made
     // the WebGL committe expose two parameter setting functions in JavaScript.
     // For now, pick the float version for parameters specified as GLfloat.
@@ -70,7 +67,6 @@ export default class Sampler extends Resource {
       this.gl.samplerParameteri(this.handle, pname, param);
       break;
     }
-    this.gl.bindSampler(this.target, null);
     return this;
   }
 

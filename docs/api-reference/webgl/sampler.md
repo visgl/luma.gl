@@ -16,7 +16,7 @@ Create a new Sampler
 import {Sampler} from 'luma.gl';
 const sampler = new Sampler(gl, {
   parameters: {
-  	[GL.TEXTURE_WRAP_S]: GL.CLAMP
+  	[GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE
   }
 });
 ```
@@ -25,7 +25,7 @@ Reconfiguring a Sampler
 ```js
 const sampler = new Sampler(gl);
 sampler.setParameters({
-  [GL.TEXTURE_WRAP_S]: GL.CLAMP
+  [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE
 });
 ```
 

@@ -17,9 +17,9 @@ const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics dr
 const GL_ARRAY_BUFFER = 0x8892;
 const GL_TEXTURE_BINDING_3D = 0x806A;
 
-const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
-
-const ERR_WEBGL2 = 'Requires WebGL2';
+export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+export const ERR_WEBGL = ERR_CONTEXT;
+export const ERR_WEBGL2 = 'Requires WebGL2';
 
 const ERR_WEBGL_MISSING_BROWSER = `\
 WebGL API is missing. Check your if your browser supports WebGL or
@@ -34,14 +34,22 @@ const ERR_HEADLESSGL_NOT_AVAILABLE =
 
 const ERR_HEADLESSGL_FAILED = 'headlessGL failed to create headless WebGL context';
 
-export function isWebGLContext(gl) {
+export function isWebGL(gl) {
   return gl && (gl instanceof WebGLRenderingContext ||
     gl.ARRAY_BUFFER === GL_ARRAY_BUFFER);
 }
 
-export function isWebGL2Context(gl) {
+export function isWebGL2(gl) {
   return gl && (gl instanceof WebGL2RenderingContext ||
     gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D);
+}
+
+export function isWebGLContext(gl) {
+  return isWebGL(gl);
+}
+
+export function isWebGL2Context(gl) {
+  return isWebGL2(gl);
 }
 
 export function assertWebGLContext(gl) {
@@ -54,12 +62,23 @@ export function assertWebGL2Context(gl) {
   assert(isWebGL2Context(gl), ERR_WEBGL2);
 }
 
-let defaultWidth = null;
-let defaultHeight = null;
+const contextDefaults = {
+  // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
+  width: 800,
+  height: 600,
+  // COMMON CONTEXT PARAMETERS
+  // Attempt to allocate WebGL2 context
+  webgl2: false,
+  webgl1: true,
+  throwOnFailure: true,
+  // Instrument context (at the expense of performance)
+  // Note: currently defaults to true and needs to be explicitly turned off
+  debug: false
+};
 
-export function setContextDefaults({width = 1, height = 1}) {
-  defaultWidth = width;
-  defaultHeight = height;
+// Change default context creation parameters. Main use case is regression test suite.
+export function setContextDefaults(opts = {}) {
+  Object.assign(contextDefaults, {width: 1, height: 1}, opts);
 }
 
 // Checks if WebGL is enabled and creates a context for using WebGL.
@@ -68,35 +87,48 @@ export function createGLContext(opts = {}) {
   // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
   let {canvas} = opts;
 
+  opts = Object.assign({}, contextDefaults, opts);
   const {
     // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
-    width = defaultWidth || 800,
-    height = defaultHeight || 600,
+    width,
+    height,
     // COMMON CONTEXT PARAMETERS
     // Attempt to allocate WebGL2 context
-    webgl2 = false,
+    webgl2,
+    webgl1,
+    throwOnError,
     // Instrument context (at the expense of performance)
     // Note: currently defaults to true and needs to be explicitly turned off
-    debug = false
+    debug
     // Other options are passed through to context creator
   } = opts;
 
   let gl;
 
+  function error(message) {
+    // log(0, error);
+    console.error(error); // eslint-disable-line
+    if (throwOnError) {
+      throw new Error(message);
+    }
+    return null;
+  }
+
   if (!isBrowser) {
-    gl = _createHeadlessContext(width, height, opts);
+    if (webgl2 && !webgl1) {
+      return error('headless-gl does not support WebGL2');
+    }
+    gl = _createHeadlessContext(width, height, opts, error);
   } else {
     // Create browser gl context
     if (!webGLTypesAvailable) {
-      throw new Error(ERR_WEBGL_MISSING_BROWSER);
+      return error(ERR_WEBGL_MISSING_BROWSER);
     }
     // Make sure we have a canvas
     canvas = canvas;
     if (typeof canvas === 'string') {
       if (!isPageLoaded) {
-        throw new Error(
-          `createGLContext called on canvas '${canvas}' before page was loaded`
-        );
+        return error(`createGLContext called on canvas '${canvas}' before page was loaded`);
       }
       canvas = document.getElementById(canvas);
     }
@@ -112,12 +144,14 @@ export function createGLContext(opts = {}) {
     if (webgl2) {
       gl = gl || canvas.getContext('webgl2', opts);
       gl = gl || canvas.getContext('experimental-webgl2', opts);
-    } else {
+    }
+    if (webgl1) {
       gl = gl || canvas.getContext('webgl', opts);
       gl = gl || canvas.getContext('experimental-webgl', opts);
     }
-
-    assert(gl, 'Failed to create WebGLRenderingContext');
+    if (!gl) {
+      return error(`Failed to create ${webgl2 ? 'WebGL2' : 'WebGL'} context`);
+    }
   }
 
   if (isBrowser && debug) {
@@ -146,17 +180,17 @@ function _createCanvas({width, height}) {
   return canvas;
 }
 
-function _createHeadlessContext(width, height, opts) {
+function _createHeadlessContext(width, height, opts, error) {
   // Create headless gl context
   if (!webGLTypesAvailable) {
-    throw new Error(ERR_WEBGL_MISSING_NODE);
+    return error(ERR_WEBGL_MISSING_NODE);
   }
   if (!luma.globals.headlessGL) {
-    throw new Error(ERR_HEADLESSGL_NOT_AVAILABLE);
+    return error(ERR_HEADLESSGL_NOT_AVAILABLE);
   }
   const gl = luma.globals.headlessGL(width, height, opts);
   if (!gl) {
-    throw new Error(ERR_HEADLESSGL_FAILED);
+    return error(ERR_HEADLESSGL_FAILED);
   }
   return gl;
 }
@@ -165,7 +199,7 @@ function _createHeadlessContext(width, height, opts) {
 
 // Executes a function with gl states temporarily set, exception safe
 // Currently support scissor test and framebuffer binding
-export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
+export function withParameters(gl, {scissorTest, framebuffer, nocatch = true}, func) {
   // assertWebGLContext(gl);
 
   let scissorTestWasEnabled;
@@ -181,10 +215,7 @@ export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
     framebuffer.bind();
   }
 
-  let value;
-  try {
-    value = func(gl);
-  } finally {
+  function finalize() {
     if (!scissorTestWasEnabled) {
       gl.disable(gl.SCISSOR_TEST);
     }
@@ -195,6 +226,17 @@ export function glContextWithState(gl, {scissorTest, framebuffer}, func) {
     }
   }
 
+  let value;
+  if (nocatch) {
+    value = func(gl);
+    finalize();
+  } else {
+    try {
+      value = func(gl);
+    } finally {
+      finalize();
+    }
+  }
   return value;
 }
 
@@ -218,10 +260,6 @@ export function getGLContextInfo(gl) {
 // Calling this function checks all pending queries for completion
 export function pollContext(gl) {
   queryManager.poll(gl);
-}
-
-export function withParameters(...args) {
-  return glContextWithState(...args);
 }
 
 // DEBUG INFO
@@ -256,4 +294,10 @@ function logInfo(gl) {
 
   // const extensions = gl.getSupportedExtensions();
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
+}
+
+// DEPRECATED
+
+export function glContextWithState(...args) {
+  return withParameters(...args);
 }

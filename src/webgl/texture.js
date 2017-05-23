@@ -1,81 +1,147 @@
 /* eslint-disable no-inline-comments, max-len */
-import GL, {WebGLBuffer, WebGL2RenderingContext} from './api';
-import {withParameters, assertWebGL2Context} from './context';
+import GL from './gl-constants';
+import {WebGLBuffer} from './api';
+import {withParameters, isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
 import Resource from './resource';
 import Buffer from './buffer';
 import {uid} from '../utils';
 import assert from 'assert';
 
+// const S3TC = 'WEBGL_compressed_texture_s3tc';
+// const PVRTC = 'WEBGL_compressed_texture_pvrtc';
+// const ES3 = 'WEBGL_compressed_texture_es3';
+// const ETC1 = 'WEBGL_compressed_texture_etc1';
+const SRGB = 'EXT_sRGB';
+// const DEPTH = 'WEBGL_depth_texture';
+
 // Legal combinations for internalFormat, format and type
-const TEXTURE_FORMATS = {
+export const TEXTURE_FORMATS = {
+  // Unsized texture format - more performance
   [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
   [GL.RGBA]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
-  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
-  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
   [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
-  [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE]},
-  [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT]},
-  [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE]},
-  [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE]},
-  [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT]},
-  [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE]},
-  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE]},
-  [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE]},
-  [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
-  [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.RGB16FG]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT]},
-  [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE]},
-  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE]},
-  [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE]},
-  [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1]},
-  [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4]},
-  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT]},
-  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT]},
-  [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
+
+  // [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8], gl1: DEPTH},
+  // [GL.DEPTH_STENCIL]: {gl1: DEPTH},
+
+  // Sized texture format - more performance
+  // R
+  [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
+  [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  // RG
+  [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
+  [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  // RGB
+  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
+  [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_half_float'},
+  [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_float'},
+  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
+  [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  // RGBA
+  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
+  [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
+  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true},
+  [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
+
+  // Compressed formats
 
   // WEBGL_compressed_texture_s3tc
 
-  [GL.COMPRESSED_RGB_S3TC_DXT1_EXT]: {compressed: true},
-  [GL.COMPRESSED_RGBA_S3TC_DXT1_EXT]: {compressed: true},
-  [GL.COMPRESSED_RGBA_S3TC_DXT3_EXT]: {compressed: true},
-  [GL.COMPRESSED_RGBA_S3TC_DXT5_EXT]: {compressed: true},
+  // [GL.COMPRESSED_RGB_S3TC_DXT1_EXT]: {compressed: true, gl1: S3TC},
+  // [GL.COMPRESSED_RGBA_S3TC_DXT1_EXT]: {compressed: true, gl1: S3TC},
+  // [GL.COMPRESSED_RGBA_S3TC_DXT3_EXT]: {compressed: true, gl1: S3TC},
+  // [GL.COMPRESSED_RGBA_S3TC_DXT5_EXT]: {compressed: true, gl1: S3TC},
 
   // WEBGL_compressed_texture_es3
 
-  [GL.COMPRESSED_R11_EAC]: {compressed: true},
-  [GL.COMPRESSED_SIGNED_R11_EAC]: {compressed: true},
-  [GL.COMPRESSED_RG11_EAC]: {compressed: true},
-  [GL.COMPRESSED_SIGNED_RG11_EAC]: {compressed: true},
-  [GL.COMPRESSED_RGB8_ETC2]: {compressed: true},
-  [GL.COMPRESSED_RGBA8_ETC2_EAC]: {compressed: true},
-  [GL.COMPRESSED_SRGB8_ETC2]: {compressed: true},
-  [GL.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC]: {compressed: true},
-  [GL.COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true},
-  [GL.COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true},
+  // [GL.COMPRESSED_R11_EAC]: {compressed: true, gl1: ES3}, // RED
+  // [GL.COMPRESSED_SIGNED_R11_EAC]: {compressed: true, gl1: ES3}, // RED
+  // [GL.COMPRESSED_RG11_EAC]: {compressed: true, gl1: ES3}, // RG
+  // [GL.COMPRESSED_SIGNED_RG11_EAC]: {compressed: true, gl1: ES3}, // RG
+  // [GL.COMPRESSED_RGB8_ETC2]: {compressed: true, gl1: ES3}, // RGB
+  // [GL.COMPRESSED_RGBA8_ETC2_EAC]: {compressed: true, gl1: ES3}, // RBG
+  // [GL.COMPRESSED_SRGB8_ETC2]: {compressed: true, gl1: ES3}, // RGB
+  // [GL.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC]: {compressed: true, gl1: ES3}, // RGBA
+  // [GL.COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true, gl1: ES3}, // RGBA
+  // [GL.COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2]: {compressed: true, gl1: ES3}, // RGBA
+  /* WebGL2 guaranteed availability compressed formats?
+  COMPRESSED_R11_EAC RED
+  COMPRESSED_SIGNED_R11_EAC RED
+  COMPRESSED_RG11_EAC RG
+  COMPRESSED_SIGNED_RG11_EAC RG
+  COMPRESSED_RGB8_ETC2 RGB
+  COMPRESSED_SRGB8_ETC2 RGB
+  COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 RGBA
+  COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 RGBA
+  COMPRESSED_RGBA8_ETC2_EAC RGBA
+  COMPRESSED_SRGB8_ALPHA8_ETC2_EAC
+  */
 
   // WEBGL_compressed_texture_pvrtc
 
-  [GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG]: {compressed: true},
-  [GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG]: {compressed: true},
-  [GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG]: {compressed: true},
-  [GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG]: {compressed: true},
+  // [GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG]: {compressed: true, gl1: PVRTC},
+  // [GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG]: {compressed: true, gl1: PVRTC},
+  // [GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG]: {compressed: true, gl1: PVRTC},
+  // [GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG]: {compressed: true, gl1: PVRTC},
 
   // WEBGL_compressed_texture_etc1
 
-  [GL.COMPRESSED_RGB_ETC1_WEBGL]: {compressed: true},
+  // [GL.COMPRESSED_RGB_ETC1_WEBGL]: {compressed: true, gl1: ETC1},
 
   // WEBGL_compressed_texture_atc
 
-  [GL.COMPRESSED_RGB_ATC_WEBGL]: {compressed: true},
-  [GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL]: {compressed: true},
-  [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true}
+  // [GL.COMPRESSED_RGB_ATC_WEBGL]: {compressed: true, gl1: ETC1},
+  // [GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL]: {compressed: true, gl1: ETC1},
+  // [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true, gl1: ETC1}
 };
 
+function isFormatSupported(gl, format) {
+  assert(isWebGL(gl), ERR_WEBGL);
+  const info = TEXTURE_FORMATS[format];
+  if (!info) {
+    return false;
+  }
+  if (info.gl1 === undefined && info.gl2 === undefined) { // No info - always supported
+    return true;
+  }
+  const value = isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1;
+  return typeof value === 'string' ? gl.getExtension(value) : value;
+}
+
+function isLinearFilteringSupported(gl, format) {
+  const info = TEXTURE_FORMATS[format];
+  switch (info && info.types[0]) {
+  // Both WebGL1 and WebGL2?
+  case GL.FLOAT: return gl.getExtension('OES_texture_float_linear');
+  // Not in WebGL2?
+  case GL.HALF_FLOAT: return gl.getExtension('OES_texture_half_float_linear');
+  default: return true;
+  }
+}
+
 export default class Texture extends Resource {
+
+  static isSupported(gl, {format, linearFiltering} = {}) {
+    assert(isWebGL(gl), ERR_WEBGL);
+    let supported = true;
+    if (format) {
+      supported = supported && isFormatSupported(gl, format);
+      supported = supported && (!linearFiltering || isLinearFilteringSupported(gl, format));
+    }
+    return supported;
+  }
 
   // target cannot be modified by bind:
   // textures are special because when you first bind them to a target,
@@ -106,15 +172,6 @@ export default class Texture extends Resource {
     return `Texture(${this.id},${this.width}x${this.height})`;
   }
 
-  /* eslint-disable brace-style */
-  get width() { return this.opts.width; }
-  get height() { return this.opts.width; }
-  get format() { return this.opts.format; }
-  get type() { return this.opts.type; }
-  get dataFormat() { return this.opts.dataFormat; }
-  get border() { return this.opts.border; }
-  get mipmaps() { return this.opts.mipmaps; }
-
   /* eslint-disable max-len, max-statements */
   initialize(opts = {}) {
     const {
@@ -125,7 +182,9 @@ export default class Texture extends Resource {
       mipmaps = true,
       recreate = false,
       parameters = {},
-      pixelStore = {}
+      pixelStore = {},
+      // Deprecated parameters
+      unpackFlipY = true
     } = opts;
 
     let {width, height, dataFormat} = opts;
@@ -135,30 +194,50 @@ export default class Texture extends Resource {
       format, type, dataFormat, compressed: false, data, width, height
     }));
 
-    // Temporarily apply any pixel store settings and build textures
-    withParameters(this.gl, pixelStore, () => {
-      this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
+    // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
+    const glPixelStore = Object.assign({[GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY}, pixelStore);
 
-      if (mipmaps) {
-        this.generateMipmap();
-      }
+    // Temporarily apply any pixel store settings and build textures
+    withParameters(this.gl, glPixelStore, () => {
+      this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
     });
+    if (mipmaps) {
+      this.generateMipmap();
+    }
 
     // Set texture sampler parameters
     this.setParameters(parameters);
 
     // Store opts for accessors
-    this.opts.width = width;
-    this.opts.height = height;
-    this.opts.format = format;
-    this.opts.type = type;
-    this.opts.dataFormat = dataFormat;
-    this.opts.border = border;
+    this.width = width;
+    this.height = height;
+    this.format = format;
+    this.type = type;
+    this.dataFormat = dataFormat;
+    this.border = border;
+    this.mipmaps = mipmaps;
 
     // TODO - Store data to enable auto recreate on context loss
     if (recreate) {
-      this.opts.data = data;
+      this.data = data;
     }
+  }
+
+  // If size has changed, reinitializes with current format
+  // note clears image and mipmaps
+  resize({width, height}) {
+    if (width !== this.width || height !== this.height) {
+      return this.initialize({
+        width,
+        height,
+        format: this.format,
+        type: this.type,
+        dataFormat: this.dataFormat,
+        border: this.border,
+        mipmaps: false
+      });
+    }
+    return this;
   }
 
   // Call to regenerate mipmaps after modifying texture(s)
@@ -221,7 +300,7 @@ export default class Texture extends Resource {
         level, format, width, height, border, dataFormat, type, data);
     } else if (data instanceof WebGLBuffer) {
       // WebGL2 allows us to create texture directly from a WebGL buffer
-      assertWebGL2Context(this.gl);
+      assert(isWebGL2(this.gl), ERR_WEBGL2);
       // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
       this.gl.texSubImage2D(target,
@@ -351,21 +430,24 @@ export default class Texture extends Resource {
     let dataType = null;
     ({data, dataType} = this._getDataType({data, compressed}));
     switch (dataType) {
-    case 'compressed':
-      gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
-      break;
     case 'typed-array':
+    case 'null':
       gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
       break;
     case 'buffer':
       // WebGL2 enables creating textures directly from a WebGL buffer
-      assert(gl instanceof WebGL2RenderingContext, 'Requires WebGL2');
+      assert(isWebGL2(gl), ERR_WEBGL2);
       gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
       gl.texImage2D(target, level, format, width, height, border, format, type, offset);
       break;
-    case 'browser-obejct':
-    default:
+    case 'browser-object':
       gl.texImage2D(target, level, format, format, type, data);
+      break;
+    case 'compressed':
+      gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
+      break;
+    default:
+      assert(false, 'Unknown image data type');
     }
   }
   /* eslint-enable max-len, max-statements, complexity */
@@ -374,7 +456,10 @@ export default class Texture extends Resource {
     if (compressed) {
       return {data, dataType: 'compressed'};
     }
-    if (data === null || ArrayBuffer.isView(data)) {
+    if (data === null) {
+      return {data, dataType: 'null'};
+    }
+    if (ArrayBuffer.isView(data)) {
       return {data, dataType: 'typed-array'};
     }
     if (data instanceof Buffer) {
@@ -417,6 +502,81 @@ export default class Texture extends Resource {
     return this;
   }
 
+  /* Copied from texture-2d.js
+  // WebGL2
+  setPixels(opts = {}) {
+    const {
+      buffer,
+      width = null,
+      height = null,
+      mipmapLevel = 0,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE,
+      border = 0
+    } = opts;
+
+    const {gl} = this;
+
+    // This signature of texImage2D uses currently bound GL_PIXEL_UNPACK_BUFFER
+    gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.target);
+    // And as always, we must also bind the texture itself
+    this.bind();
+
+    gl.texImage2D(gl.TEXTURE_2D,
+      mipmapLevel, format, width, height, border, format, type, buffer.target);
+
+    this.unbind();
+    gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
+    return this;
+  }
+
+  setImageDataFromCompressedBuffer(opts) {
+    const {
+      buffer,
+      // offset = 0,
+      width = null,
+      height = null,
+      mipmapLevel = 0,
+      internalFormat = GL.RGBA,
+      // format = GL.RGBA,
+      // type = GL.UNSIGNED_BYTE,
+      border = 0
+    } = opts;
+
+    const {gl} = this;
+    gl.compressedTexImage2D(this.target,
+      mipmapLevel, internalFormat, width, height, border, buffer);
+    // gl.compressedTexSubImage2D(target,
+    //   level, xoffset, yoffset, width, height, format, ArrayBufferView? pixels);
+    return this;
+  }
+
+  copySubImage(opts) {
+    const {
+      // pixels,
+      // offset = 0,
+      // x,
+      // y,
+      // width,
+      // height,
+      // mipmapLevel = 0,
+      // internalFormat = GL.RGBA,
+      // type = GL.UNSIGNED_BYTE,
+      // border = 0
+    } = opts;
+
+    // if (pixels instanceof ArrayBufferView) {
+    //   gl.texSubImage2D(target, level, x, y, width, height, format, type, pixels);
+    // }
+    // gl.texSubImage2D(target, level, x, y, format, type, ? pixels);
+    // gl.texSubImage2D(target, level, x, y, format, type, HTMLImageElement pixels);
+    // gl.texSubImage2D(target, level, x, y, format, type, HTMLCanvasElement pixels);
+    // gl.texSubImage2D(target, level, x, y, format, type, HTMLVideoElement pixels);
+    // // Additional signature in a WebGL 2 context:
+    // gl.texSubImage2D(target, level, x, y, format, type, GLintptr offset);
+  }
+  */
+
   // HELPER METHODS
 
   _deduceParameters(opts) {
@@ -442,18 +602,16 @@ export default class Texture extends Resource {
 
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
       size = {width: data.width, height: data.height};
-    }
-    else if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
+    } else if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
       size = {width: data.naturalWidth, height: data.naturalHeight};
-    }
-    else if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
+    } else if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
       size = {width: data.width, height: data.height};
-    }
-    else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
+    } else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       size = {width: data.videoWidth, height: data.videoHeight};
-    }
-    else if (!data) {
+    } else if (!data) {
       size = {width: width >= 0 ? width : 1, height: height >= 0 ? height : 1};
+    } else {
+      size = {width, height};
     }
 
     assert(size, 'Could not deduced texture size');
@@ -476,9 +634,9 @@ export default class Texture extends Resource {
   _getParameter(pname) {
     switch (pname) {
     case GL.TEXTURE_WIDTH:
-      return this.opts.width;
+      return this.width;
     case GL.TEXTURE_HEIGHT:
-      return this.opts.height;
+      return this.height;
     default:
       this.gl.bindTexture(this.target, this.handle);
       const value = this.gl.getTexParameter(this.target, pname);

@@ -1,4 +1,4 @@
-import {AnimationLoop, IcoSphere, Model} from 'luma.gl';
+import {AnimationLoop, IcoSphere, Model, clear} from 'luma.gl';
 import {GL, Program, Geometry, Framebuffer} from 'luma.gl';
 import {Matrix4, Vector3, radians} from 'luma.gl';
 
@@ -82,8 +82,8 @@ const ePos = [];
 const eRot = [];
 const nPos = [];
 
-let fbo;
-let pingpongFrameBuffers;
+let mainFramebuffer;
+let pingpongFramebuffers;
 let quad;
 let persistenceQuad;
 let sphere;
@@ -92,6 +92,8 @@ let sphere;
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'render-canvas'}))
   onInitialize: ({gl, width, height}) => {
+
+    addControls();
     // setGLState(gl, {
     //   clearColor: [0, 0, 0, 0],
     //   clearDepth: 1,
@@ -107,7 +109,7 @@ const animationLoop = new AnimationLoop({
     gl.depthFunc(GL.LEQUAL);
     gl.enable(GL.CULL_FACE);
     gl.cullFace(GL.BACK);
-    gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
+    // gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
     /*
     withParameters({
@@ -123,9 +125,9 @@ const animationLoop = new AnimationLoop({
     });
     */
 
-    fbo = new Framebuffer(gl, {width, height});
+    mainFramebuffer = new Framebuffer(gl, {width, height});
 
-    pingpongFrameBuffers = [
+    pingpongFramebuffers = [
       new Framebuffer(gl, {width, height}),
       new Framebuffer(gl, {width, height})
     ];
@@ -215,30 +217,31 @@ const animationLoop = new AnimationLoop({
     });
     */
 
-    fbo.resize({width, height});
-    pingpongFrameBuffers[0].resize({width, height});
-    pingpongFrameBuffers[1].resize({width, height});
+    mainFramebuffer.resize({width, height});
+    pingpongFramebuffers[0].resize({width, height});
+    pingpongFramebuffers[1].resize({width, height});
 
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
     const view = new Matrix4().lookAt({eye: [0, 0, 4]});
 
-    // fbo.bind();
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    mainFramebuffer.clear({color: [0, 0, 0, 0], depth: 1});
 
     // RENDER ELECTRONS TO FRAMEBUFFER
-
     for (let i = 0; i < ELECTRON_COUNT; i++) {
-      const original = ePos[i];
       ePos[i] = eRot[i].transformVector(ePos[i]);
       const modelMatrix = new Matrix4()
         .translate(ePos[i])
         .scale([0.06125, 0.06125, 0.06125]);
-      sphere.render({
-        uModel: modelMatrix,
-        uView: view,
-        uProjection: projection,
-        uColor: [0.0, 0.5, 1],
-        uLighting: 0
+
+      sphere.draw({
+        framebuffer: mainFramebuffer,
+        uniforms: {
+          uModel: modelMatrix,
+          uView: view,
+          uProjection: projection,
+          uColor: [0.0, 0.5, 1],
+          uLighting: 0
+        }
       });
     }
 
@@ -250,38 +253,60 @@ const animationLoop = new AnimationLoop({
         .rotateXYZ([0, tick * 0.021, 0])
         .translate(nPos[i])
         .scale([0.25, 0.25, 0.25]);
-      sphere.render({
-        uModel: modelMatrix,
-        uView: view,
-        uProjection: projection,
-        uColor: [1, 0.25, 0.25],
-        uLighting: 1
+      sphere.draw({
+        framebuffer: mainFramebuffer,
+        uniforms: {
+          uModel: modelMatrix,
+          uView: view,
+          uProjection: projection,
+          uColor: [1, 0.25, 0.25],
+          uLighting: 1
+        }
       });
     }
-    // fbo.unbind();
+    mainFramebuffer.unbind();
 
     const ppi = tick % 2;
-    const currentFrameBuffer = pingpongFrameBuffers[ppi];
-    const nextFrameBuffer = pingpongFrameBuffers[1 - ppi];
+    const currentFramebuffer = pingpongFramebuffers[ppi];
+    const nextFramebuffer = pingpongFramebuffers[1 - ppi];
 
     // RENDER TO SCREEN
 
-    // gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    persistenceQuad.draw({
+      framebuffer: currentFramebuffer,
+      uniforms: {
+        uScene: mainFramebuffer.texture,
+        uPersistence: nextFramebuffer.texture,
+        uRes: [width, height]
+      }
+    });
 
-    // // currentFrameBuffer.bind();
-    // persistenceQuad.render({
-    //   uScene: fbo.texture,
-    //   uPersistence: nextFrameBuffer.texture,
-    //   uRes: [width, height]
-    // });
-    // // currentFrameBuffer.unbind();
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    quad.render({
+      uTexture: currentFramebuffer.texture,
+      uRes: [width, height]
+    });
 
     // gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
     // quad.render({
-    //   uTexture: currentFrameBuffer.texture,
+    //   uTexture: currentFramebuffer.texture,
     //   uRes: [width, height]
     // });
   }
 });
+
+function addControls() {
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+  Electron trails renderings persist across multiple frames.
+  <p>
+  Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered
+  data between frames.
+    `;
+  }
+}
 
 export default animationLoop;

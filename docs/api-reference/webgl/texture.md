@@ -10,6 +10,8 @@ Note: This section describes the `Texture` base class that implements functional
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
+Note that textures have a lot of optional capabilities made available by extensions, see the Limits section below.
+
 
 ## Usage
 
@@ -347,6 +349,21 @@ For more details, see tables in:
 | `GL.RGBA16F`             | `GL.RGBA`         | `GL.HALF_FLOAT` `GL.FLOAT` |
 | `GL.RGBA32F`             | `GL.RGBA`         | `GL.FLOAT`         |
 | `GL.RGBA8UI`             | `GL.RGBA_INTEGER` | `GL.UNSIGNED_BYTE` |
+
+
+## Limits and Capabilities
+
+| Optional capabilities  | controlled by extensions |
+| ---                    | --- |
+| Create floating point textures (`GL.NEAREST` sampling only) | `TEXTURE_FLOAT` |
+| Create half-floating point textures (`GL.NEAREST` sampling) | `TEXTURE_HALF_FLOAT` |
+| Floating point textures are color-renderable and readable   | `COLOR_BUFFER_FLOAT |
+| Half float textures are color-renderable and readable       | `COLOR_BUFFER_HALF_FLOAT` |
+| sRGB format support                                         | `SRGB` |
+| depth texture support                                       | `DEPTH_TEXTURE` |
+| anisotropic filtering                                       | `TEXTURE_FILTER_ANISOTROPIC` |
+| `GL.LINEAR_*` sampling of floating point textures           | `TEXTURE_FILTER_LINEAR_FLOAT` |
+| `GL.LINEAR_*` sampling of half-floating point textures      | `TEXTURE_FILTER_LINEAR_HALF_FLOAT` |
 
 
 ## Remarks

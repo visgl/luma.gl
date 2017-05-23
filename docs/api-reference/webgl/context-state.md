@@ -183,6 +183,7 @@ Requires WebGL2 or `OES_standard_derivatives`.
 | ---------------------- | --------------- | -------- | -------- |
 | `GL.FRAGMENT_SHADER_DERIVATIVE_HINT` | GLenum     | `GL.DONT_CARE` | Accuracy of derivates in built-in GLSL functions |
 
+
 #### Hints
 
 | Value          | Description        |

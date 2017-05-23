@@ -19,10 +19,7 @@ const WEBGL_LIMITS = {
   [GL.MAX_VIEWPORT_DIMS]: {webgl1: new Int32Array([0, 0])},
 
   // Extensions
-  [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: {
-    webgl1: 1.0,
-    extension: 'EXT_texture_filter_anisotropic'
-  },
+  [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
 
   // WebGL2 Limits
   [GL.MAX_3D_TEXTURE_SIZE]: {webgl1: 0, webgl2: 256}, //  GLint
@@ -32,7 +29,7 @@ const WEBGL_LIMITS = {
   [GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS]: {webgl1: 0, webgl2: 0}, // GLint64
   [GL.MAX_COMBINED_UNIFORM_BLOCKS]: {webgl1: 0, webgl2: 0}, //  GLint
   [GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS]: {webgl1: 0, webgl2: 0}, // GLint64
-  [GL.MAX_DRAW_BUFFERS]: {webgl1: 0, webgl2: 4}, // GLint
+  [GL.MAX_DRAW_BUFFERS]: {webgl1: 0, webgl2: 4, extension: 'WEBGL_draw_buffers'}, // GLint
   [GL.MAX_ELEMENT_INDEX]: {webgl1: 0, webgl2: 0}, //  GLint64
   [GL.MAX_ELEMENTS_INDICES]: {webgl1: 0, webgl2: 0}, // GLint
   [GL.MAX_ELEMENTS_VERTICES]: {webgl1: 0, webgl2: 0}, //  GLint
@@ -152,11 +149,11 @@ const WEBGL_CAPS = {
     webgl1: 'EXT_shader_texture_lod',
     webgl2: ES300
   },
-  STANDARD_DERIVATIVES: {
+  FRAGMENT_SHADER_DERIVATIVES: {
     webgl1: 'OES_standard_derivatives',
     webgl2: ES300
   },
-  DRAW_BUFFERS: {
+  MULTIPLE_RENDER_TARGETS: {
     webgl1: 'WEBGL_draw_buffers',
     webgl2: ES300
   },
