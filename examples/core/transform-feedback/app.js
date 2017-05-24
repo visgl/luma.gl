@@ -12,7 +12,7 @@ import {
 const BYTE_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
 const POSITION_LOCATION = 0;
-const COLOR_LOCATION = 3;
+const COLOR_LOCATION = 1;
 const VARYINGS = ['gl_Position', 'v_color'];
 
 const VS_TRANSFORM = `#version 300 es
@@ -114,6 +114,7 @@ class Root extends PureComponent {
     ]);
 
     const bufferVertex = new Buffer(gl).setData({data: positions});
+    // only draw once, use STATIC_COPY for position and color
     const bufferPosition = new Buffer(gl).setData({
       bytes: positions.length * BYTE_SIZE,
       usage: gl.STATIC_COPY,
@@ -125,7 +126,7 @@ class Root extends PureComponent {
       type: gl.FLOAT
     });
 
-    // ---- SETUP VERTEX ARRAYS ---- //
+    // ---- SETUP VAO/VBOs ---- //
     const vaoTransform = new VertexArrayObject(gl).bind();
 
     bufferVertex.bind();
@@ -137,7 +138,6 @@ class Root extends PureComponent {
 
     const vaoFeedback = new VertexArrayObject(gl).bind();
 
-    // gl.bindBuffer(gl.ARRAY_BUFFER, bufferPosition);
     bufferPosition.bind();
     gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(POSITION_LOCATION);
@@ -154,14 +154,14 @@ class Root extends PureComponent {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    const transformFeedback = new TransformFeedback(gl);
-    transformFeedback.bindBuffer({index: 0, buffer: bufferPosition});
-    transformFeedback.bindBuffer({index: 1, buffer: bufferColor});
+    const transformFeedback = new TransformFeedback(gl)
+      .bindBuffer({index: 0, buffer: bufferPosition})
+      .bindBuffer({index: 1, buffer: bufferColor});
 
     // first pass, offscreen, no rasterization, vertices processing only
     programTransform.use();
     const mvpLocation = programTransform.getUniformLocation('MVP');
-    const mvp = (new Matrix4()).identity();
+    const mvp = new Matrix4().identity();
     gl.uniformMatrix4fv(mvpLocation, false, mvp);
 
     vaoTransform.bind();
