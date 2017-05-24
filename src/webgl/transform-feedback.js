@@ -3,9 +3,6 @@ import Resource from './resource';
 import {isWebGL2Context, assertWebGL2Context} from './context';
 import assert from 'assert';
 
-// const GL.TRANSFORM_FEEDBACK_BUFFER = 0;
-// const GL.TRANSFORM_FEEDBACK = 0;
-
 export default class TranformFeedback extends Resource {
 
   static isSupported(gl) {
