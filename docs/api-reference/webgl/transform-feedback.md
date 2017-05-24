@@ -30,13 +30,6 @@ const program = new Program(gl, {
   fs,
   varyings: ['gl_Position'],
 });
-
-[//]: # transformFeedback is not defined yet
-
-transformFeedback.bindBuffers(program.varyings, {
-  gl_Position: {buffer, offset},
-  normals: {buffer: buffer, offset}
-})
 ```
 
 ```js

@@ -1,6 +1,6 @@
 /* global document, window,*/
 /* eslint-disable no-console */
-// /* global console */
+/* eslint max-statements: ["error", 100] */
 import React, {PureComponent} from 'react';
 import {render} from 'react-dom';
 
@@ -9,13 +9,10 @@ import {
   Matrix4
 } from '../../../src';
 
-const BYTE_SIZE = Float32Array.BYTES_PER_ELEMENT;
-
 const POSITION_LOCATION = 0;
 const COLOR_LOCATION = 1;
-const VARYINGS = ['gl_Position', 'v_color'];
 
-const VS_TRANSFORM = `#version 300 es
+const VS_TRANSFORM_FEEDBACK = `#version 300 es
   precision highp float;
   precision highp int;
 
@@ -30,7 +27,7 @@ const VS_TRANSFORM = `#version 300 es
   }
 `;
 
-const FS_TRANSFORM = `#version 300 es
+const FS_TRANSFORM_FEEDBACK = `#version 300 es
   precision highp float;
   precision highp int;
 
@@ -42,7 +39,7 @@ const FS_TRANSFORM = `#version 300 es
   }
 `;
 
-const VS_FEEDBACK = `#version 300 es
+const VS_RENDERING = `#version 300 es
   precision highp float;
   precision highp int;
 
@@ -56,7 +53,7 @@ const VS_FEEDBACK = `#version 300 es
   }
 `;
 
-const FS_FEEDBACK = `#version 300 es
+const FS_RENDERING = `#version 300 es
   precision highp float;
   precision highp int;
 
@@ -91,19 +88,21 @@ class Root extends PureComponent {
     const gl = createGLContext({canvas: this.canvas, webgl2: true});
 
     // ---- SETUP PROGRAMS ---- //
-    const programTransform = new Program(gl, {
-      vs: VS_TRANSFORM,
-      fs: FS_TRANSFORM,
-      varyings: VARYINGS
+    const programTransformFeedback = new Program(gl, {
+      vs: VS_TRANSFORM_FEEDBACK,
+      fs: FS_TRANSFORM_FEEDBACK,
+      // specify the array of output variables in the TF vertex shader
+      varyings: ['gl_Position', 'v_color']
     });
 
-    const programFeedback = new Program(gl, {
-      vs: VS_FEEDBACK,
-      fs: FS_FEEDBACK
+    const programRendering = new Program(gl, {
+      vs: VS_RENDERING,
+      fs: FS_RENDERING
     });
 
-    // ---- SETUP BUFFERS ---- //
+    // ---- SETUP BUFFERS/VBOs ---- //
     const VERTEX_COUNT = 6;
+    // a rectangle consist of two triangles
     const positions = new Float32Array([
       -1.0, -1.0, 0.0, 1.0,
       1.0, -1.0, 0.0, 1.0,
@@ -116,27 +115,27 @@ class Root extends PureComponent {
     const bufferVertex = new Buffer(gl).setData({data: positions});
     // only draw once, use STATIC_COPY for position and color
     const bufferPosition = new Buffer(gl).setData({
-      bytes: positions.length * BYTE_SIZE,
+      bytes: positions.length * Float32Array.BYTES_PER_ELEMENT,
       usage: gl.STATIC_COPY,
       type: gl.FLOAT
     });
     const bufferColor = new Buffer(gl).setData({
-      bytes: positions.length * BYTE_SIZE,
+      bytes: positions.length * Float32Array.BYTES_PER_ELEMENT,
       usage: gl.STATIC_COPY,
       type: gl.FLOAT
     });
 
-    // ---- SETUP VAO/VBOs ---- //
-    const vaoTransform = new VertexArrayObject(gl).bind();
+    // ---- SETUP VAOs ---- //
+    const vaoTransformFeedback = new VertexArrayObject(gl).bind();
 
     bufferVertex.bind();
     gl.enableVertexAttribArray(POSITION_LOCATION);
     gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
     bufferVertex.unbind();
 
-    vaoTransform.unbind();
+    vaoTransformFeedback.unbind();
 
-    const vaoFeedback = new VertexArrayObject(gl).bind();
+    const vaoRendering = new VertexArrayObject(gl).bind();
 
     bufferPosition.bind();
     gl.vertexAttribPointer(POSITION_LOCATION, 4, gl.FLOAT, false, 0, 0);
@@ -148,7 +147,7 @@ class Root extends PureComponent {
     gl.enableVertexAttribArray(COLOR_LOCATION);
     bufferColor.unbind();
 
-    vaoFeedback.unbind();
+    vaoRendering.unbind();
 
     // ---- RENDERING ---- //
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -159,14 +158,14 @@ class Root extends PureComponent {
       .bindBuffer({index: 1, buffer: bufferColor});
 
     // first pass, offscreen, no rasterization, vertices processing only
-    programTransform.use();
-    const mvpLocation = programTransform.getUniformLocation('MVP');
+    programTransformFeedback.use();
+    const mvpLocation = programTransformFeedback.getUniformLocation('MVP');
     const mvp = new Matrix4().identity();
     gl.uniformMatrix4fv(mvpLocation, false, mvp);
 
-    vaoTransform.bind();
+    vaoTransformFeedback.bind();
 
-    programTransform.draw(gl, {
+    programTransformFeedback.draw(gl, {
       drawMode: gl.TRIANGLES,
       vertexCount: VERTEX_COUNT,
       transformFeedback
@@ -175,29 +174,32 @@ class Root extends PureComponent {
     transformFeedback.unbindBuffer({index: 0});
     transformFeedback.unbindBuffer({index: 1});
 
-    vaoTransform.unbind();
+    vaoTransformFeedback.unbind();
 
     // second pass, render to screen
-    programFeedback.use();
-    vaoFeedback.bind();
-    programTransform.draw(gl, {
+    programRendering.use();
+    vaoRendering.bind();
+    // with the current API, it does not matter which program to use
+    // as long as we do not pass in transformFeedback
+    // it calls the same gl.draw* function
+    programRendering.draw(gl, {
       drawMode: gl.TRIANGLES,
       vertexCount: VERTEX_COUNT
     });
-    vaoFeedback.unbind();
+    vaoRendering.unbind();
 
     // ---- CLEAN UP ---- //
-    transformFeedback.delete();
-
     bufferVertex.delete();
     bufferPosition.delete();
     bufferColor.delete();
 
-    programTransform.delete();
-    programFeedback.delete();
+    transformFeedback.delete();
 
-    vaoTransform.delete();
-    vaoFeedback.delete();
+    programTransformFeedback.delete();
+    programRendering.delete();
+
+    vaoTransformFeedback.delete();
+    vaoRendering.delete();
   }
 
   componentWillUnmount() {
