@@ -1,6 +1,7 @@
 # Pre-releases
 
-## 4.0.0-alpha.NEXT
+## 4.0.0-alpha.6
+- Fix framebuffer creation error AGAIN (#183)
 - NEW: `UniformBufferLayout` class
 
 ## 4.0.0-alpha.4
