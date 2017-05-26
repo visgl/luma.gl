@@ -319,7 +319,8 @@ export default class Framebuffer extends Resource {
         parameters: {
           [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
           [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
-        }
+        },
+        mipmaps: false
       });
     }
 
