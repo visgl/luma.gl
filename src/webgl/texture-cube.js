@@ -23,7 +23,7 @@ export default class TextureCube extends Texture {
   initialize(opts = {}) {
     const {
       format = GL.RGBA,
-      mipmaps = false
+      mipmaps = true
     } = opts;
 
     let {
