@@ -14,14 +14,16 @@ export {
   getGLExtension,
   withParameters,
   glContextWithState,
-  glGetDebugInfo} from './webgl/context';
+  glGetDebugInfo,
+  pollContext} from './webgl/context';
 export {
   getGLParameter,
   setGLParameter,
   withGLState} from './webgl/context-state';
 export {
   getGLContextInfo,
-  getContextLimits} from './webgl/context-limits';
+  getContextLimits,
+  hasFeatures} from './webgl/context-limits';
 export {
   makeDebugContext} from './webgl/context-debug';
 export {

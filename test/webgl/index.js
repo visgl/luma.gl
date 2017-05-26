@@ -6,6 +6,8 @@ import './helpers/query-manager.spec';
 
 // webgl
 import './context.spec.js';
+import './context-extensions.spec.js';
+import './context-features.spec.js';
 import './context-limits.spec.js';
 import './context-state.spec.js';
 
@@ -15,13 +17,10 @@ import './renderbuffer.spec';
 import './texture.spec';
 import './framebuffer.spec';
 import './draw.spec';
+import './sampler.spec';
 import './uniforms.spec';
 import './uniform-buffer-layout.spec';
 
-import './sampler.spec';
-
-// import './vertex-attributes.spec';
-
 // Extensions / webgl2
-// import './timer-query.spec';
+import './query.spec';
 // import './vertex-array-object.spec';
