@@ -1,7 +1,9 @@
 import luma from '../init';
-import {assertWebGLContext, isWebGL2Context} from './context';
+import {assertWebGLContext, isWebGL2} from './context';
+import {polyfillExtensions} from './context-extensions';
 import {glGet, glKey} from './gl-constants';
 import {uid} from '../utils';
+import assert from 'assert';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -16,7 +18,7 @@ export default class Resource {
 
     const {id, userData = {}} = opts;
     this.gl = gl;
-    this.ext = null;
+    this.ext = polyfillExtensions(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this.opts = opts;
@@ -26,7 +28,12 @@ export default class Resource {
 
     // TODO - Stores the handle with context loss information
     // this.glCount = glGetContextLossCount(this.gl);
-    this._handle = opts.handle || this._createHandle();
+
+    // Default VertexArrayObject needs to be created with null handle, so compare against undefined
+    this._handle = opts.handle;
+    if (this._handle === undefined) {
+      this._handle = this._createHandle();
+    }
 
     this._addStats();
   }
@@ -48,13 +55,23 @@ export default class Resource {
     return this._handle;
   }
 
-  delete() {
-    if (this._handle) {
-      this._deleteHandle();
-      this._handle = null;
-      // this.glCount = undefined;
+  delete({deleteChildren = false} = {}) {
+    // Delete this object, and get refs to any children
+    const children = this._handle && this._deleteHandle();
+    this._handle = null;
+
+    // Optionally, recursively delete the children
+    if (children && deleteChildren) {
+      children.filter(Boolean).forEach(child => {
+        child.delete();
+      });
     }
+
     return this;
+  }
+
+  unbind() {
+    this.bind(null);
   }
 
   /**
@@ -65,15 +82,16 @@ export default class Resource {
    * @param {GLenum} pname
    * @return {GLint|GLfloat|GLenum} param
    */
-  getParameter(pname) {
+  getParameter(pname, opts = {}) {
     pname = glGet(pname);
+    assert(pname);
 
     const parameters = this.constructor.PARAMETERS || {};
 
     // Use parameter definitions to handle unsupported parameters
     const parameter = parameters[pname];
     if (parameter) {
-      const isWebgl2 = isWebGL2Context(this.gl);
+      const isWebgl2 = isWebGL2(this.gl);
 
       // Check if we can query for this parameter
       const parameterAvailable =
@@ -90,24 +108,26 @@ export default class Resource {
 
     // If unknown parameter - Could be a valid parameter not covered by PARAMS
     // Attempt to query for it and let WebGL report errors
-    return this._getParameter(pname);
+    return this._getParameter(pname, opts);
   }
 
   // Many resources support a getParameter call -
   // getParameters will get all parameters - slow but useful for debugging
-  getParameters({parameters, keys} = {}) {
+  getParameters(opts = {}) {
+    const {parameters, keys} = {};
+
     // Get parameter definitions for this Resource
     const PARAMETERS = this.constructor.PARAMETERS || {};
 
-    // Query all parameters if no list provided
-    parameters = parameters || Object.keys(PARAMETERS);
-
-    const isWebgl2 = isWebGL2Context(this.gl);
+    const isWebgl2 = isWebGL2(this.gl);
 
     const values = {};
 
+    // Query all parameters if no list provided
+    const parameterKeys = parameters || Object.keys(PARAMETERS);
+
     // WEBGL limits
-    for (const pname of parameters) {
+    for (const pname of parameterKeys) {
       const parameter = PARAMETERS[pname];
 
       // Check if this parameter is available on this platform
@@ -118,7 +138,7 @@ export default class Resource {
 
       if (parameterAvailable) {
         const key = keys ? glKey(pname) : pname;
-        values[key] = this.getParameter(pname);
+        values[key] = this.getParameter(pname, opts);
         if (keys && parameter.type === 'GLenum') {
           values[key] = glKey(values[key]);
         }
@@ -139,12 +159,13 @@ export default class Resource {
    */
   setParameter(pname, value) {
     pname = glGet(pname);
+    assert(pname);
 
     const parameters = this.constructor.PARAMETERS || {};
 
     const parameter = parameters[pname];
     if (parameter) {
-      const isWebgl2 = isWebGL2Context(this.gl);
+      const isWebgl2 = isWebGL2(this.gl);
 
       // Check if this parameter is available on this platform
       const parameterAvailable =
@@ -195,7 +216,7 @@ export default class Resource {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  _getParameter(pname) {
+  _getParameter(pname, opts) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
@@ -209,6 +230,11 @@ export default class Resource {
   }
 
   // PRIVATE METHODS
+
+  _context() {
+    this.gl.luma = this.gl.luma || {};
+    return this.gl.luma;
+  }
 
   _addStats() {
     const name = this.constructor.name;

@@ -45,13 +45,10 @@ import assert from 'assert';
  */
 
 function glGetLumaInfo(gl) {
-  if (!gl.luma) {
-    gl.luma = {extensions: {}};
-  }
-  if (gl.luma.extensions['ANGLE_instanced_arrays'] === undefined) {
-    gl.luma.extensions['ANGLE_instanced_arrays'] =
-      gl.getExtension('ANGLE_instanced_arrays');
-  }
+  gl.luma = gl.luma || {};
+  gl.luma.extensions = gl.luma.extensions || {};
+  gl.luma.extensions['ANGLE_instanced_arrays'] =
+    gl.luma.extensions['ANGLE_instanced_arrays'] || gl.getExtension('ANGLE_instanced_arrays');
   return gl.luma;
 }
 
