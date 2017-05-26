@@ -1,7 +1,7 @@
 /* eslint-disable no-inline-comments */
 import GL from './api';
 import {assertWebGL2Context, isWebGL2Context} from './context';
-import * as VertexAttributes from './vertex-attributes';
+import VertexArrayObject from './vertex-array-object';
 import Resource from './resource';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -24,6 +24,7 @@ export default class Program extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
     this.initialize(opts);
+    this.vertexAttributes = VertexArrayObject.getDefaultObject(gl);
     Object.seal(this);
 
     // If program is not named, name it after shader names
@@ -65,8 +66,6 @@ export default class Program extends Resource {
     this._uniformSetters = this._getUniformSetters();
     this._uniformCount = this.getUniformCount();
     this._textureIndexCounter = 0;
-
-    Object.seal(this);
 
     return this;
   }
@@ -143,20 +142,18 @@ export default class Program extends Resource {
 
     const {locations, elements} = this._sortBuffersByLocation(buffers);
 
-    const {gl} = this;
-
     // Process locations in order
     for (let location = 0; location < locations.length; ++location) {
       const bufferName = locations[location];
       const buffer = buffers[bufferName];
       // DISABLE MISSING ATTRIBUTE
       if (!buffer) {
-        VertexAttributes.disable(gl, location);
+        this.vertexAttributes.disable(location);
       } else {
         const divisor = buffer.layout.instanced ? 1 : 0;
-        VertexAttributes.enable(gl, location);
-        VertexAttributes.setBuffer({gl, location, buffer});
-        VertexAttributes.setDivisor(gl, location, divisor);
+        this.vertexAttributes.enable(location);
+        this.vertexAttributes.setBuffer({location, buffer});
+        this.vertexAttributes.setDivisor(location, divisor);
         drawParams.isInstanced = buffer.layout.instanced > 0;
         this._filledLocations[bufferName] = true;
       }
@@ -184,8 +181,8 @@ export default class Program extends Resource {
   unsetBuffers() {
     const length = this._attributeCount;
     for (let i = 1; i < length; ++i) {
-      // VertexAttributes.setDivisor(gl, i, 0);
-      VertexAttributes.disable(this.gl, i);
+      // this.vertexAttributes.setDivisor(i, 0);
+      this.vertexAttributes.disable(i);
     }
 
     // Clear elements buffer
@@ -384,10 +381,9 @@ export default class Program extends Resource {
 
   // Check that all active attributes are enabled
   _areAllAttributesEnabled() {
-    const {gl} = this;
     const length = this._attributeCount;
     for (let i = 0; i < length; ++i) {
-      if (!VertexAttributes.isEnabled(gl, i)) {
+      if (!this.vertexAttributes.isEnabled(i)) {
         return false;
       }
     }

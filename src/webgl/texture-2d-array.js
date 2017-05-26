@@ -6,7 +6,7 @@ import Texture from '../webgl/texture';
 
 export default class Texture2DArray extends Texture {
   static isSupported(gl) {
-    return isWebGL2Context(gl) || gl.getExtension('OES_vertex_array_object');
+    return isWebGL2Context(gl);
   }
 
   constructor(gl, opts = {}) {

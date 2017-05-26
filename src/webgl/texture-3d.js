@@ -6,7 +6,7 @@ import Buffer from './buffer';
 export default class Texture3D extends Texture {
 
   static isSupported(gl) {
-    return isWebGL2Context(gl) || gl.getExtension('OES_vertex_array_object');
+    return isWebGL2Context(gl);
   }
 
   /**
