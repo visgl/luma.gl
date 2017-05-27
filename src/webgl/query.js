@@ -3,7 +3,7 @@
 import Resource from './resource';
 import queryManager from './helpers/query-manager';
 import {polyfillExtensions} from './context-extensions';
-import {FEATURES, hasWebGLFeatures} from './context-limits';
+import {FEATURE, hasFeatures} from './context-features';
 import {isWebGL2} from './context';
 
 const noop = x => x;
@@ -34,14 +34,15 @@ export default class Query extends Resource {
     timestamps = false
   } = {}) {
     const webgl2 = isWebGL2(gl);
+    const hasTimerQueries = hasFeatures(gl, FEATURE.TIMER_QUERY);
 
-    let supported = true;
+    let supported = webgl2 || hasTimerQueries;
     if (queries) {
-      supported = supported || webgl2;
+      supported = supported && webgl2;
     }
 
     if (timers) {
-      supported = supported || hasWebGLFeatures(FEATURES.TIMER_QUERIES);
+      supported = supported && hasTimerQueries;
     }
 
     if (timestamps) {
@@ -155,7 +156,7 @@ export default class Query extends Resource {
   }
 
   _createHandle() {
-    return this.ext.createQuery();
+    return Query.isSupported(this.gl) ? this.ext.createQuery() : null;
   }
 
   _deleteHandle() {

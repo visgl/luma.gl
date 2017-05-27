@@ -23,6 +23,7 @@ export {
 export {
   getGLContextInfo,
   getContextLimits,
+  FEATURE,
   hasFeatures} from './webgl/context-limits';
 export {
   makeDebugContext} from './webgl/context-debug';

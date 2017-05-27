@@ -53,7 +53,11 @@ test('WebGL#Query begin/cancel', t => {
   timerQuery.cancel().cancel().cancel();
   t.ok(timerQuery instanceof Query, 'Query multiple cancel successful');
 
-  timerQuery.promise.catch(error => {
+  timerQuery.promise
+  .then(_ => {
+    t.end();
+  })
+  .catch(error => {
     t.pass(`Query promise reset by cancel or not implemented ${error}`);
     t.end();
   });

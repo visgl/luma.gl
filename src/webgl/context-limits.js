@@ -66,8 +66,8 @@ export function getContextLimits(gl) {
     for (const parameter in WEBGL_LIMITS) {
       const limit = WEBGL_LIMITS[parameter];
 
-      const webgl1MinLimit = limit.webgl1;
-      const webgl2MinLimit = 'webgl2' in limit ? limit.webgl2 : limit.webgl1;
+      const webgl1MinLimit = limit.gl1;
+      const webgl2MinLimit = 'gl2' in limit ? limit.gl2 : limit.gl1;
       const minLimit = isWebgl2 ? webgl2MinLimit : webgl1MinLimit;
 
       // Check if we can query for this limit

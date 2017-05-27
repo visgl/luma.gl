@@ -10,15 +10,15 @@ import assert from 'assert';
 export const ES300 = 'ES300';
 const WEBGL1 = 'WEBGL1';
 
-export const FEATURES = {
+export const FEATURE = {
   // DEBUG CAPABILITIS
   DEBUG_RENDERER_INFO: 'DEBUG_RENDERER_INFO',
   DEBUG_SHADERS: 'DEBUG_SHADERS',
   DEBUG_LOSE_CONTEXT: 'DEBUG_LOSE_CONTEXT',
 
   // API SUPPORT
-  VERTEX_ARRAY_OBJECTS: 'VERTEX_ARRAY_OBJECTS',
-  TIMER_QUERIES: 'TIMER_QUERIES',
+  VERTEX_ARRAY_OBJECT: 'VERTEX_ARRAY_OBJECT',
+  TIMER_QUERY: 'TIMER_QUERY',
   INSTANCED_RENDERING: 'INSTANCED_ARRAYS',
   MULTIPLE_RENDER_TARGETS: 'MULTIPLE_RENDER_TARGETS',
 
@@ -26,11 +26,12 @@ export const FEATURES = {
   ELEMENT_INDEX_UINT32: 'ELEMENT_INDEX_UINT32',
   BLEND_MINMAX: 'BLEND_MINMAX',
   SRGB: 'SRGB',
+
   TEXTURE_FILTER_ANISOTROPIC: 'TEXTURE_FILTER_ANISOTROPIC',
+  TEXTURE_FILTER_LINEAR_FLOAT: 'TEXTURE_FILTER_LINEAR_FLOAT',
+  TEXTURE_FILTER_LINEAR_HALF_FLOAT: 'TEXTURE_FILTER_LINEAR_HALF_FLOAT',
   TEXTURE_FLOAT: 'TEXTURE_FLOAT',
   TEXTURE_HALF_FLOAT: 'TEXTURE_HALF_FLOAT',
-  TEXTURE_LINEAR_FILTERING_FLOAT: 'TEXTURE_LINEAR_FILTERING_FLOAT',
-  TEXTURE_LINEAR_FILTERING_HALF_FLOAT: 'TEXTURE_LINEAR_FILTERING_HALF_FLOAT',
   DEPTH_TEXTURE: 'DEPTH_TEXTURE',
   COLOR_ATTACHMENT_RGBA32F: 'COLOR_ATTACHMENT_RGBA32F',
   COLOR_ATTACHMENT_FLOAT: 'COLOR_ATTACHMENT_FLOAT',
@@ -50,7 +51,7 @@ export const FEATURES = {
   COMPRESSED_TEXTURE_PVRTC: 'COMPRESSED_TEXTURE_PVRTC'
 };
 
-const F = FEATURES;
+const F = FEATURE;
 
 // Defines luma.gl "feature" names and semantics
 const WEBGL_FEATURES = {
@@ -93,19 +94,26 @@ const WEBGL_FEATURES = {
 };
 
 function getFeature({gl, cap, webglVersion}) {
-  // Get extension name, and replace if webgl2 uses the webgl1 extension
-  let extensionName = WEBGL_FEATURES[cap][webglVersion];
-  if (extensionName === WEBGL1) {
-    extensionName = WEBGL_FEATURES[cap].webgl1;
-  }
+  const feature = WEBGL_FEATURES[cap];
+  assert(feature, cap);
 
-  let value = extensionName;
-  // Check if the value is dependent on checking an extension
-  if (typeof extensionName === 'string' && extensionName !== ES300) {
-    value = Boolean(gl.getExtension(extensionName));
+  if (!feature.value) {
+    // Get extension name, and replace if webgl2 uses the webgl1 extension
+    let extensionName = feature[webglVersion];
+    if (extensionName === WEBGL1) {
+      extensionName = feature.gl1;
+    }
+
+    let value = extensionName;
+    // Check if the value is dependent on checking an extension
+    if (typeof extensionName === 'string' && extensionName !== ES300) {
+      value = Boolean(gl.getExtension(extensionName));
+    }
+    assert(value === false || value === true || value === ES300);
+
+    feature.value = value;
   }
-  assert(value === false || value === true || value === ES300);
-  return value;
+  return feature.value;
 }
 
 // capability can be a WebGL extension name or a luma capability name
@@ -115,8 +123,7 @@ export function hasFeatures(gl, features) {
     if (gl.getExtension(feature)) {
       return true;
     }
-    const webglVersion = isWebGL2(gl) ? 'webgl2' : 'webgl1';
-    gl.luma.caps = {};
+    const webglVersion = isWebGL2(gl) ? 'gl2' : 'gl1';
     return getFeature({gl, feature, webglVersion});
   });
 }
@@ -125,8 +132,8 @@ export function getFeatures(gl) {
   gl.luma = gl.luma || {};
 
   if (!gl.luma.caps) {
-    const webglVersion = isWebGL2(gl) ? 'webgl2' : 'webgl1';
     gl.luma.caps = {};
+    const webglVersion = isWebGL2(gl) ? 'webgl2' : 'webgl1';
     for (const cap in WEBGL_FEATURES) {
       gl.luma.caps[cap] = getFeature({gl, cap, webglVersion});
     }

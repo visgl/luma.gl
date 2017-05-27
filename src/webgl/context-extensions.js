@@ -116,7 +116,7 @@ const EXTENSION_DEFAULTS = {
     // WebGL1: Polyfills the WebGL2 Query API
     createQuery: () => { assert(false); },
     deleteQuery: () => { assert(false); },
-    beginQuery: () => {},
+    beginQuery: () => { assert(false); },
     endQuery: () => {},
     getQuery(handle, pname) { return this.getQueryObject(handle, pname); },
     // The WebGL1 extension uses getQueryObject rather then getQueryParameter

@@ -1,5 +1,5 @@
 import {createGLContext} from 'luma.gl';
-import {getContextInfo, ES300, TEST_EXPORTS} from '../../src/webgl/context-limits';
+import {getContextInfo, TEST_EXPORTS} from '../../src/webgl/context-limits';
 import test from 'tape-catch';
 
 const fixture = {
@@ -10,12 +10,10 @@ test('WebGL#getContextInfo', t => {
   const {gl} = fixture;
 
   t.ok(getContextInfo, 'getContextInfo defined');
-  t.ok(ES300, 'ES300 defined');
 
   const info = getContextInfo(gl);
 
   t.ok('limits' in info, 'info has limits');
-  t.ok('caps' in info, 'info has caps');
   t.ok('info' in info, 'info has info');
 
   t.end();
