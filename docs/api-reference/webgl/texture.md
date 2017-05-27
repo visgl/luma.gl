@@ -253,61 +253,63 @@ specific components sizes and types (float and integer formats). While sized for
 
 | Unsized Internal Format | Components | Description |
 | ----------------------- | ---------- | ----------- |
-| `GL.RGB`                |          3 | sampler reads the red, green and blue components, alpha is 1.0 |
-| `GL.RGBA`               |          4 | Red, green, blue and alpha components are sampled from the color buffer. |
-| `GL.LUMINANCE`          |          1 | Each color contains a single luminance value. When sampled, rgb are all set to this luminance, alpha is 1.0. |
-| `GL.LUMINANCE_ALPHA`    |          2 | Each component is a luminance/alpha double. When sampled, rgb are all set to luminance, alpha from component. |
-| `GL.ALPHA`              |          1 | Discards the red, green and blue components and reads the alpha component. |
-| `GL.DEPTH_COMPONENT` (WebGL2, WEBGL_depth_texture) | 1 |
-| `GL.DEPTH_STENCIL` (WebGL2, WEBGL_depth_texture)   | 2 |
+| `GL.RGB`                | 3          | sampler reads the red, green and blue components, alpha is 1.0 |
+| `GL.RGBA`               | 4          | Red, green, blue and alpha components are sampled from the color buffer. |
+| `GL.LUMINANCE`          | 1          | Each color contains a single luminance value. When sampled, rgb are all set to this luminance, alpha is 1.0. |
+| `GL.LUMINANCE_ALPHA`    | 2          | Each component is a luminance/alpha double. When sampled, rgb are all set to luminance, alpha from component. |
+| `GL.ALPHA`              | 1          | Discards the red, green and blue components and reads the alpha component. |
+| `GL.DEPTH_COMPONENT`    | 1          | WebGL2 or `WEBGL_depth_texture` |
+| `GL.DEPTH_STENCIL`      | 2          | WebGL2 or `WEBGL_depth_texture` |
 
-| Sized Internal Format   | Components |   Size   | Description   |
-| ----------------------- | ---------- | -------- | ------------- |
-| `GL.R8` (WebGL2)        |          1 | 8 bits   | red component |
-| `GL.R16F` (WebGL2)      |          1 | 16 bits  | half float red component |
-| `GL.R32F` (WebGL2)      |            | 32 bits | float red component |
-| `GL.R8UI` (WebGL2)      |            | 8 bits | unsigned int red component, `usampler`, no filtering |
-| `GL.RG8` (WebGL2)       | 16 bits | red and green components |
-| `GL.RG16F` (WebGL2)     | 32 bits | red and green components, half float |
-| `GL.RG32F` (WebGL2)     | 64 bits | red and green components, float |
-| `GL.RGUI` (WebGL2)      | 16 bits | red and green components, `usampler`, no filtering |
-| `GL.RGB8` (WebGL2)      | 24 bits | red, green and blue components |
-| `GL.SRGB8` (WebGL2, EXT_sRGB) | 24 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
-| `GL.RGB565` (WebGL2)    | 16 bits | 5 bit red, 6 bit green, 5 bit blue |
-| `GL.R11F_G11F_B10F` (WebGL2) | 32 bits | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats) |
-| `GL.RGB9_E5` (WebGL2)   | 32 bits | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
-| `GL.RGB16F` (WebGL2)    | 48 bits | half float RGB |
-| `GL.RGB32F` (WebGL2)    | 96 bits | float RBG |
-| `GL.RGB8UI` (WebGL2)    | 24 bits | unsigned integer 8 bit RGB: use `usampler`, no filtering |
-| `GL.RGBA8` (WebGL2)     | 32 bits | 8 bit RGBA, typically what `GL.RGBA` "resolves" to |
-| `GL.SRGB_APLHA8` (WebGL2, EXT_sRGB) | 32 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
-| `GL.RGB5_A1` (WebGL2)   | 16 bits | 5 bit RGB, 1 bit alpha |
-| `GL.RGBA4444` (WebGL2)  | 16 bits | 4 bit RGBA |
-| `GL.RGBA16F` (WebGL2)   | 64 bits | half float RGBA |
-| `GL.RGBA32F` (WebGL2)   | 128 bits | float RGA |
-| `GL.RGBA8UI` (WebGL2)   | 32 bits | unsigned integer 8 bit RGBA, `usampler`, no filtering |
+| Sized Internal Format   | Comp. |   Size   | Description   |
+| ----------------------- | ----- | -------- | ------------- |
+| `GL.R8` (WebGL2)        | 1     | 8 bits   | red component |
+| `GL.R16F` (WebGL2)      | 1     | 16 bits  | half float red component |
+| `GL.R32F` (WebGL2)      | 1     | 32 bits | float red component |
+| `GL.R8UI` (WebGL2)      | 1     | 8 bits | unsigned int red component, `usampler`, no filtering |
+| `GL.RG8` (WebGL2)       | 1     | 16 bits | red and green components |
+| `GL.RG16F` (WebGL2)     | 2     | 32 bits | red and green components, half float |
+| `GL.RG32F` (WebGL2)     | 2     | 64 bits | red and green components, float |
+| `GL.RGUI` (WebGL2)      | 2     | 16 bits | red and green components, `usampler`, no filtering |
+| `GL.RGB8` (WebGL2)      | 3     | 24 bits | red, green and blue components |
+| `GL.SRGB8` (WebGL2, EXT_sRGB) |3| 24 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
+| `GL.RGB565` (WebGL2)    | 3     | 16 bits | 5 bit red, 6 bit green, 5 bit blue |
+| `GL.R11F_G11F_B10F` (WebGL2) | 3| 32 bits | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB9_E5` (WebGL2)   | 3     | 32 bits | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB16F` (WebGL2)    | 3     | 48 bits | half float RGB |
+| `GL.RGB32F` (WebGL2)    | 3     | 96 bits | float RBG |
+| `GL.RGB8UI` (WebGL2)    | 3     | 24 bits | unsigned integer 8 bit RGB: use `usampler`, no filtering |
+| `GL.RGBA8` (WebGL2)     | 4     | 32 bits | 8 bit RGBA, typically what `GL.RGBA` "resolves" to |
+| `GL.SRGB_APLHA8` (WebGL2, EXT_sRGB) | 4 | 32 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
+| `GL.RGB5_A1` (WebGL2)   | 4     | 16 bits | 5 bit RGB, 1 bit alpha |
+| `GL.RGBA4444` (WebGL2)  | 4     | 16 bits | 4 bit RGBA |
+| `GL.RGBA16F` (WebGL2)   | 4     | 64 bits | half float RGBA |
+| `GL.RGBA32F` (WebGL2)   | 4     | 128 bits | float RGA |
+| `GL.RGBA8UI` (WebGL2)   | 4     | 32 bits | unsigned integer 8 bit RGBA, `usampler`, no filtering |
 
 
 ### Texture Component Type
 
 Describes the layout of each color component in memory.
 
-| `GL.UNSIGNED_BYTE`          | GLbyte 8 bits per channel for `GL.RGBA` |
-| `GL.UNSIGNED_SHORT_5_6_5`   | 5 red bits, 6 green bits, 5 blue bits |
-| `GL.UNSIGNED_SHORT_4_4_4_4` | 4 red bits, 4 green bits, 4 blue bits, 4 alpha bits |
-| `GL.UNSIGNED_SHORT_5_5_5_1` | 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit |
-| `GL.BYTE` (WebGL2)          | |
-| `GL.UNSIGNED_SHORT`(WebGL2, WEBGL_depth_texture) | |
-| `GL.SHORT` (WebGL2)         | |
-| `GL.UNSIGNED_INT` (WebGL2, WEBGL_depth_texture) | |
-| `GL.INT` (WebGL2)           | |
-| `GL.HALF_FLOAT` (WebGL2, OES_texture_half_float) | |
-| `GL.FLOAT` (WebGL2, OES_texture_float) | |
-| `GL.UNSIGNED_INT_2_10_10_10_REV` (WebGL2) | |
-| `GL.UNSIGNED_INT_10F_11F_11F_REV` (WebGL2) | |
-| `GL.UNSIGNED_INT_5_9_9_9_REV` (WebGL2) | |
-| `GL.UNSIGNED_INT_24_8` (WebGL2, WEBGL_depth_texture) | |
-| `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` (WebGL2) | (pixels must be null) |
+| Value                         | WebGL2 | WebGL1 | Description |
+| ---                           | ---    | ---    | --- |
+| `GL.UNSIGNED_BYTE`            | Yes    | Yes    | GLbyte 8 bits per channel for `GL.RGBA` |
+| `GL.UNSIGNED_SHORT_5_6_5`     | Yes    | Yes    | 5 red bits, 6 green bits, 5 blue bits |
+| `GL.UNSIGNED_SHORT_4_4_4_4`   | Yes    | Yes    | 4 red bits, 4 green bits, 4 blue bits, 4 alpha bits |
+| `GL.UNSIGNED_SHORT_5_5_5_1`   | Yes    | Yes    | 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit |
+| `GL.BYTE`                     | Yes    | No     | |
+| `GL.UNSIGNED_SHORT`           | Yes    | `WEBGL_depth_texture` | |
+| `GL.SHORT`                    | Yes    | No     | |
+| `GL.UNSIGNED_INT`             | Yes    | `WEBGL_depth_texture` | |
+| `GL.INT`                      | Yes    | No     | |
+| `GL.HALF_FLOAT`               | Yes    | `OES_texture_half_float` | |
+| `GL.FLOAT`                    | Yes    | `OES_texture_float` |
+| `GL.UNSIGNED_INT_2_10_10_10_REV`   |Yes| No     | |
+| `GL.UNSIGNED_INT_10F_11F_11F_REV`  |Yes| No     | |
+| `GL.UNSIGNED_INT_5_9_9_9_REV`      |Yes| No     | |
+| `GL.UNSIGNED_INT_24_8`             |Yes| `WEBGL_depth_texture` | |
+| `GL.FLOAT_32_UNSIGNED_INT_24_8_REV`|Yes| No     | (pixels must be null) |
 
 
 ### Texture Format Combinations
@@ -353,11 +355,11 @@ For more details, see tables in:
 
 ## Limits and Capabilities
 
-| Optional capabilities  | controlled by extensions |
-| ---                    | --- |
+| Optional capabilities                                       | controlled by extensions |
+| ---                                                         | --- |
 | Create floating point textures (`GL.NEAREST` sampling only) | `TEXTURE_FLOAT` |
 | Create half-floating point textures (`GL.NEAREST` sampling) | `TEXTURE_HALF_FLOAT` |
-| Floating point textures are color-renderable and readable   | `COLOR_BUFFER_FLOAT |
+| Floating point textures are color-renderable and readable   | `COLOR_BUFFER_FLOAT` |
 | Half float textures are color-renderable and readable       | `COLOR_BUFFER_HALF_FLOAT` |
 | sRGB format support                                         | `SRGB` |
 | depth texture support                                       | `DEPTH_TEXTURE` |

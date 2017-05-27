@@ -300,16 +300,24 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/framebuffer.md'
       },
       {
-        name: 'Renderbuffer',
-        content: 'api-reference/webgl/renderbuffer.md'
-      },
-      {
         name: 'Program',
         content: 'api-reference/webgl/program.md'
       },
       {
+        name: 'Query (WebGL2)',
+        content: 'api-reference/webgl/query.md'
+      },
+      {
+        name: 'Renderbuffer',
+        content: 'api-reference/webgl/renderbuffer.md'
+      },
+      {
         name: 'Resource',
         content: 'api-reference/webgl/resource.md'
+      },
+      {
+        name: 'Sampler (WebGL2)',
+        content: 'api-reference/webgl/sampler.md'
       },
       {
         name: 'Shader',
@@ -340,12 +348,8 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/transform-feedback.md'
       },
       {
-        name: 'Query (WebGL2)',
-        content: 'api-reference/webgl/query.md'
-      },
-      {
-        name: 'Sampler (WebGL2)',
-        content: 'api-reference/webgl/sampler.md'
+        name: 'UniformBufferLayout',
+        content: 'api-reference/webgl/uniform-buffer-layout.md'
       },
       {
         name: 'VertexArray (EXT)',
