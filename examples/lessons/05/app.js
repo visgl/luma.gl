@@ -32,6 +32,8 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize({gl}) {
+    addControls();
+
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
@@ -62,5 +64,20 @@ const animationLoop = new AnimationLoop({
     });
   }
 });
+
+function addControls({controlPanel} = {}) {
+  /* global document */
+  controlPanel = controlPanel || document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=507" target="_blank">
+      Introducing Textures
+    </a>
+  <p>
+    The classic WebGL Lessons in luma.gl
+    `;
+  }
+}
 
 export default animationLoop;

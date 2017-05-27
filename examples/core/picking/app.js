@@ -14,18 +14,6 @@ const animationLoop = new AnimationLoop({
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
 
-    scene = new Scene(gl, {
-      lights: {
-        points: {
-          color: {r: 1, g: 1, b: 1},
-          position: {x: 0, y: 0, z: 32}
-        },
-        ambient: {r: 0.25, g: 0.25, b: 0.25},
-        enable: true
-      },
-      backgroundColor: {r: 0, g: 0, b: 0, a: 0}
-    });
-
     framebuffer = new Framebuffer(gl);
 
     canvas.addEventListener('mousemove', function mousemove(e) {
@@ -43,7 +31,7 @@ const animationLoop = new AnimationLoop({
       {name: 'Venus', textureUrl: 'venus.jpg'}
     ];
 
-    loadTextures(gl, {
+    return loadTextures(gl, {
       urls: PLANETS.map(planet => planet.textureUrl),
       parameters: {
         magFilter: gl.LINEAR,
@@ -51,13 +39,14 @@ const animationLoop = new AnimationLoop({
         generateMipmap: true
       }
     })
-    .then(textures => {
-      scene.add(PLANETS.map((planet, i) => new Sphere({
+    .then(textures => PLANETS.map(
+      (planet, i) => new Sphere({
         gl,
         id: planet.name,
         nlat: 32,
         nlong: 32,
         radius: 1,
+        pickable: true,
         uniforms: {
           sampler1: textures[i],
           hasTexture1: true,
@@ -66,36 +55,37 @@ const animationLoop = new AnimationLoop({
           position: new Vector3(
             Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
             Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
-            0)
+            0
+          )
         },
         attributes: {
-          colors: new Buffer(gl).setData({size: 4, data: new Float32Array(10000)}),
-          pickingColors: new Buffer(gl).setData({size: 3, data: new Float32Array(10000)})
-        },
-        pickable: true
-      })));
-    });
+          colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
+          pickingColors: new Buffer(gl, {size: 3, data: new Float32Array(10000)})
+        }
+      })
+    ))
+    .then(planets => ({planets}));
   },
-  onRender: ({gl, aspect}) => {
+  onRender: ({gl, aspect, planets}) => {
     const uniforms = {
       projectionMatrix: Matrix4.perspective({fov: radians(15), aspect}),
       viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
     };
 
-    for (const item of scene.children) {
-      item.rotation.y += 0.01;
-      item.updateMatrix();
-    }
+    // for (const item of scene.children) {
+    //   item.rotation.y += 0.01;
+    //   item.updateMatrix();
+    // }
 
-    scene.render(uniforms);
+    planets.forEach(planet => planet.render(uniforms));
 
-    const pickedModel = pickModels(gl, {
-      group: scene,
-      uniforms,
-      x: pick.x,
-      y: pick.y,
-      framebuffer
-    });
+    // const pickedModel = pickModels(gl, {
+    //   group: scene,
+    //   uniforms,
+    //   x: pick.x,
+    //   y: pick.y,
+    //   framebuffer
+    // });
 
     // const div = document.getElementById('planet-name');
     // if (pickedModel) {

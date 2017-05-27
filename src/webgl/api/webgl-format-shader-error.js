@@ -4,7 +4,9 @@ import GL from '../api';
 // import shaderName from 'glsl-shader-name';
 // replace with regexp
 export function getShaderName(shader) {
-  return 'unnamed';
+  const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_]+)\s/;
+  const match = shader.match(SHADER_NAME_REGEXP);
+  return match ? match[1] : 'unnamed';
 }
 
 /**
@@ -54,7 +56,7 @@ export function formatGLSLCompilerError(errLog, src, shaderType) {
 
   const name = getShaderName(src) || 'unknown name';
   const type = getShaderTypeName(shaderType);
-  return `GLSL error in ${type} shader ${name}\n${message}`;
+  return `GLSL compilation error in ${type} shader ${name}\n${message}`;
 }
 
 /**

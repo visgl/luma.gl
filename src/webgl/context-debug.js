@@ -3,6 +3,8 @@ import WebGLDebug from 'webgl-debug';
 import {log} from '../utils';
 import {installParameterDefinitions} from './debug-parameters';
 
+installParameterDefinitions();
+
 // Uses webgl-debug
 export function makeDebugContext(gl) {
   installParameterDefinitions();

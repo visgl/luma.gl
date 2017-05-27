@@ -77,7 +77,7 @@ export const EXAMPLE_PAGES = [
       {
         name: 'Lesson 02',
         content: {
-          demo: 'Lesson01'
+          demo: 'Lesson02'
         }
       },
       {

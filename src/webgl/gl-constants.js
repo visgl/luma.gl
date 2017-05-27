@@ -34,6 +34,17 @@ export function glKey(value) {
   return String(value);
 }
 
+export function glKeyType(value) {
+  assert(value !== undefined, 'undefined key');
+  value = Number(value);
+  for (const key in GL) {
+    if (GL[key] === value) {
+      return `GL.${key}`;
+    }
+  }
+  return String(value);
+}
+
 // GL constants, copied from Mozilla documentation
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
 
@@ -395,6 +406,9 @@ Object.assign(GL, {
   RENDERBUFFER_BINDING:  0x8CA7,
   MAX_RENDERBUFFER_SIZE: 0x84E8,
   INVALID_FRAMEBUFFER_OPERATION: 0x0506,
+
+  READ_FRAMEBUFFER: 0x8CA8,
+  DRAW_FRAMEBUFFER: 0x8CA9,
 
   // Pixel storage modes
   // Constants passed to pixelStorei().

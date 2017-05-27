@@ -3,30 +3,8 @@
 // One of the good things about GL is that there are so many ways to draw things
 import GL, {glGet} from './api';
 import {assertWebGLContext, assertWebGL2Context} from './context';
-import {glContextWithState} from './context';
+import {withParameters} from './context';
 import assert from 'assert';
-
-const ERR_ARGUMENTS = 'clear called without arguments';
-
-/**
- * Optionally clears depth, color and stencil buffers
- * @param {WebGLRenderingContext} gl - context
- * @param {Object} options
- */
-export function clear(gl, {
-  color,
-  depth,
-  stencil
-} = {}) {
-  glContextWithState(gl, {color, depth, stencil}, () => {
-    const clearFlags =
-      (color ? GL.COLOR_BUFFER_BIT : 0) |
-      (depth ? GL.COLOR_BUFFER_BIT : 0) |
-      (stencil ? gl.DEPTH_BUFFER_BIT : 0);
-    assert(clearFlags, ERR_ARGUMENTS);
-    gl.clear(clearFlags);
-  });
-}
 
 /**
  * Read pixels from a target

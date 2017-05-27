@@ -3,6 +3,45 @@ import {GL, AnimationLoop, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
 
+const animationLoop = new AnimationLoop({
+  onInitialize({gl}) {
+    addControls();
+
+    // White background color
+    gl.clearColor(1, 1, 1, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+
+    return {
+      cube: makeInstancedCube(gl)
+    };
+  },
+  onFinalize({cube}) {
+    cube.delete();
+  },
+  onRender({gl, tick, aspect, cube}) {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    cube.render({
+      uTime: tick * 0.1,
+      // Basic projection matrix
+      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      // Move the eye around the plane
+      uView: Matrix4.lookAt({
+        center: [0, 0, 0],
+        eye: [
+          Math.cos(tick * 0.005) * SIDE / 2,
+          Math.sin(tick * 0.006) * SIDE / 2,
+          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+        ]
+      }),
+      // Rotate all the individual cubes
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    });
+  }
+});
+
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 function makeInstancedCube(gl) {
   let offsets = [];
@@ -60,47 +99,26 @@ varying vec3 normal;
 
 void main(void) {
   float d = abs(dot(normalize(normal), normalize(vec3(1,1,2))));
-  gl_FragColor = vec4(d * color,1);
+  gl_FragColor = vec4(d * color, 1);
 }
 `
   });
 }
 
-const animationLoop = new AnimationLoop({
-  onInitialize({gl}) {
-    // White background color
-    gl.clearColor(1, 1, 1, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    return {
-      cube: makeInstancedCube(gl)
-    };
-  },
-  onFinalize({cube}) {
-    cube.delete();
-  },
-  onRender({gl, tick, aspect, cube}) {
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-    cube.render({
-      uTime: tick * 0.1,
-      // Basic projection matrix
-      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-      // Move the eye around the plane
-      uView: Matrix4.lookAt({
-        center: [0, 0, 0],
-        eye: [
-          Math.cos(tick * 0.005) * SIDE / 2,
-          Math.sin(tick * 0.006) * SIDE / 2,
-          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-        ]
-      }),
-      // Rotate all the individual cubes
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-    });
+function addControls() {
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+      <p>
+      A cube drawn with <b>instanced rendering</b>.
+      <p>
+      Draws a single luma.gl <code>Cube</code> with instanced attributes to control relative
+      <code>x,y</code> offsets and <code>colors</code> for 64K instances.
+      <p>
+      Animation is trivial, just updating a few uniforms and the view matrix each frame.
+    `;
   }
-});
+}
 
 export default animationLoop;
 

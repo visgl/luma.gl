@@ -48,16 +48,16 @@ const FRAMEBUFFER_STATUS = {
   [GL.FRAMEBUFFER_COMPLETE]:
     'Success. Framebuffer is correctly set up',
   [GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT]:
-    'Attachment types are mismatched or not all attachment points are attachment complete.',
+    'Framebuffer attachment types mismatched or some attachment point not attachment complete',
   [GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT]:
-    'There is no attachment.',
+    'Framebuffer has no attachment',
   [GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS]:
-    'Attachments do not have the same size.',
+    'Framebuffer attachments do not have the same size',
   [GL.FRAMEBUFFER_UNSUPPORTED]:
-    'Attachment format not supported or depth and stencil attachments are not same renderbuffer.',
+    'Framebuffer attachment format not supported or depth and stencil attachments are not same',
   // When using a WebGL 2 context, the following values can be returned
   [GL.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE]:
-    'SAMPLES differs among attached renderbuffers, or non-zero SAMPLES are mixed with textures.'
+    'Framebuffer attachement SAMPLES differs among renderbuffers, or are mixed with textures'
 };
 
 const PROGRAM_PARAMETERS = {

@@ -126,6 +126,14 @@ const GL_STATE = {
     setter: (gl, value) => gl.enable(GL.DITHER, value)
   },
 
+  fragmentShaderDerivativeHint: {
+    type: GLenum,
+    value: GL.DONT_CARE,
+    params: GL.FRAGMENT_SHADER_DERIVATIVE_HINT,
+    setter: (gl, value) => gl.hint(GL.FRAGMENT_SHADER_DERIVATIVE_HINT, value),
+    gl1: 'OES_standard_derivatives'
+  },
+
   frontFace: {
     type: GLenum,
     value: GL.CCW,

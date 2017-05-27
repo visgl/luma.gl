@@ -14,10 +14,10 @@ export default class AnimationLoop {
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor({
-    onCreateContext = opts => createGLContext(opts),
-    onInitialize = null,
-    onRender = null,
-    onFinalize = null,
+    onCreateContext = opts => createGLContext(Object.assign({preserveDrawingBuffer: true}, opts)),
+    onInitialize = () => {},
+    onRender = () => {},
+    onFinalize = () => {},
 
     gl = null,
     width = null,
@@ -194,8 +194,7 @@ export default class AnimationLoop {
     // }
     if (canvas) {
       if (this.autoResizeDrawingBuffer) {
-        const cssToDevicePixels = this.useDevicePixelRatio ?
-          window.devicePixelRatio || 1 : 1;
+        const cssToDevicePixels = this.useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
 
         // Lookup the size the browser is displaying the canvas in CSS pixels
         // and compute a size needed to make our drawingbuffer match it in
