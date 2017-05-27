@@ -6,6 +6,7 @@ import Resource from './resource';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
+import {getTransformFeedbackMode} from './transform-feedback';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
@@ -93,7 +94,11 @@ export default class Program extends Resource {
     this.gl.useProgram(this.handle);
 
     if (transformFeedback) {
-      transformFeedback.begin();
+      // bypass fragment shader
+      gl.enable(gl.RASTERIZER_DISCARD);
+
+      const primitiveMode = getTransformFeedbackMode({drawMode});
+      transformFeedback.begin(primitiveMode);
     }
 
     const extension = gl.getExtension('ANGLE_instanced_arrays');
@@ -115,6 +120,8 @@ export default class Program extends Resource {
 
     if (transformFeedback) {
       transformFeedback.end();
+      // resume fragment shader
+      gl.disable(gl.RASTERIZER_DISCARD);
     }
 
     return this;

@@ -30,11 +30,6 @@ const program = new Program(gl, {
   fs,
   varyings: ['gl_Position'],
 });
-
-transformFeedback.bindBuffers(program.varyings, {
-  gl_Position: {buffer, offset},
-  normals: {buffer: buffer, offset}
-})
 ```
 
 ```js
@@ -146,7 +141,7 @@ WebGL APIs [gl.endTransformFeedback](), [gl.bindTransformFeedback]()
 ## See also
 
 * `Program` constructor - `varyings` argument to specify which  
-* `Program.varyings` - contains a map of the indices of 
+* `Program.varyings` - contains a map of the indices of
 
 
 ## Parameters
@@ -176,4 +171,3 @@ None
 ## API Audit Notes
 
 * Activation is tightly coupled to the current program. Since we try to encapsulate program.use, should we move these methods (begin/pause/resume/end) to the Program?
-
