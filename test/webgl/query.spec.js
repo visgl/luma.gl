@@ -1,7 +1,7 @@
 /* eslint-disable max-len, max-statements */
 /* global setInterval, clearInterval */
 import test from 'tape-catch';
-import {createGLContext, poll, Query} from '../../src/headless';
+import {createGLContext, pollContext, Query} from 'luma.gl';
 
 const fixture = {
   gl: createGLContext()
@@ -53,7 +53,11 @@ test('WebGL#Query begin/cancel', t => {
   timerQuery.cancel().cancel().cancel();
   t.ok(timerQuery instanceof Query, 'Query multiple cancel successful');
 
-  timerQuery.promise.catch(error => {
+  timerQuery.promise
+  .then(_ => {
+    t.end();
+  })
+  .catch(error => {
     t.pass(`Query promise reset by cancel or not implemented ${error}`);
     t.end();
   });
@@ -73,7 +77,7 @@ test('WebGL#Query completed/failed queries', t => {
   timerQuery.begin().end();
   t.ok(timerQuery.promise instanceof Promise, 'Query begin/end successful');
 
-  const interval = setInterval(() => poll(gl), 20);
+  const interval = setInterval(() => pollContext(gl), 20);
 
   function finalizer() {
     clearInterval(interval);
