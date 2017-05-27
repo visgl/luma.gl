@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, createGLContext, makeDebugContext, glKey} from 'luma.gl';
+import {GL, createGLContext, makeDebugContext} from 'luma.gl';
 import {Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
 const fixture = {
