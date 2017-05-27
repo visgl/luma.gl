@@ -12,6 +12,8 @@ import './context-limits.spec.js';
 import './context-state.spec.js';
 
 import './buffer.spec';
+import './vertex-array-object.spec';
+
 import './program.spec';
 import './renderbuffer.spec';
 import './texture.spec';
@@ -23,4 +25,3 @@ import './uniform-buffer-layout.spec';
 
 // Extensions / webgl2
 import './query.spec';
-// import './vertex-array-object.spec';

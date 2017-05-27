@@ -42,9 +42,6 @@ export {default as Renderbuffer} from './renderbuffer';
 export {default as Texture2D} from './texture-2d';
 export {default as TextureCube} from './texture-cube';
 
-import * as VertexAttributes from './vertex-attributes';
-export {VertexAttributes};
-
 // Functions
 export {
   draw
