@@ -1,4 +1,4 @@
-import {createGLContext, isWebGL2Context} from 'luma.gl';
+import {isWebGL2Context} from 'luma.gl';
 import {getGLParameter, withGLState, TEST_EXPORTS} from '../../src/webgl/context-state';
 import test from 'tape-catch';
 
@@ -9,9 +9,7 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../setup';
 
 test('WebGL#state', t => {
   t.ok(GL_STATE, 'TEST_EXPORTS ok');

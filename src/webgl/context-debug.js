@@ -7,11 +7,15 @@ installParameterDefinitions();
 
 // Uses webgl-debug
 export function makeDebugContext(gl) {
+  if (gl === null) { // Return to ensure we don't create a context in this case.
+    return null;
+  }
   installParameterDefinitions();
   const debugGL = WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
   class WebGLDebugContext {}
   Object.assign(WebGLDebugContext.prototype, debugGL);
   debugGL.debug = true;
+  debugGL.gl = gl;
   return debugGL;
 }
 

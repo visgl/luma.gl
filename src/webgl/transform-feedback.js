@@ -3,8 +3,8 @@ import Resource from './resource';
 import {isWebGL2Context, assertWebGL2Context} from './context';
 import assert from 'assert';
 
-const GL_TRANSFORM_FEEDBACK_BUFFER = 0;
-const GL_TRANSFORM_FEEDBACK = 0;
+const GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E;
+const GL_TRANSFORM_FEEDBACK = 0x8E22;
 
 export default class TranformFeedback extends Resource {
 
@@ -24,34 +24,32 @@ export default class TranformFeedback extends Resource {
   constructor(gl, opts) {
     assertWebGL2Context(gl);
     super(gl, opts);
+    this.buffers = {};
     Object.seal(this);
+
+    this.initialize(opts);
   }
 
-  // bindBuffers(varyingMap = {}, buffers = {}, bufferOffsets = {}) {
-  //   for (const bufferName in buffers) {
-  //     const buffer = buffers[bufferName];
-  //     const varying = varyingMap[bufferName];
-  //     const bufferOffset = bufferOffsets[];
-  //     assert(varying);
-  //     this.bindBuffer(Object.assign({buffer}, varying));
-  //   }
-  // }
+  initialize({buffers = {}}) {
+    this.bindBuffers(buffers, {clear: true});
+  }
 
-  bindBuffer({index, buffer, offset = 0, size}) {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
-    if (size === undefined) {
-      this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle);
-    } else {
-      this.gl.bindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle, offset, size);
+  bindBuffers(buffers = {}, {clear, varyingMap = {}}) {
+    if (clear) {
+      this._unbindBuffers();
+      this.buffers = {};
+    }
+    let bufferIndex = 0;
+    for (const bufferName in buffers) {
+      const buffer = buffers[bufferName];
+      const index = bufferIndex++;
+      assert(Number.isFinite(index));
+      this.buffers[index] = buffer;
     }
   }
 
-  unbindBuffer({index}) {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
-    this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, null);
-  }
-
   begin(primitiveMode) {
+    this._bindBuffers();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
@@ -61,10 +59,12 @@ export default class TranformFeedback extends Resource {
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.pauseTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
+    this._unbindBuffers();
     return this;
   }
 
   resume() {
+    this._bindBuffers();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.resumeTransformFeedback();
     return this;
@@ -74,10 +74,54 @@ export default class TranformFeedback extends Resource {
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.endTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
+    this._unbindBuffers();
+    return this;
+  }
+
+  bindBuffer({index, buffer, offset = 0, size}) {
+    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    if (size === undefined) {
+      this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle);
+    } else {
+      this.gl.bindBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle, offset, size);
+    }
+    return this;
+  }
+
+  unbindBuffer({index}) {
+    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, null);
     return this;
   }
 
   // PRIVATE METHODS
+
+  // See https://github.com/KhronosGroup/WebGL/issues/2346
+  // If it was true that having a buffer on an unused TF was a problem
+  // it would make the entire concept of transform feedback objects pointless.
+  // The whole point of them is like VertexArrayObjects.
+  // You set them up with all in outputs at init time and
+  // then in one call you can setup all the outputs just before drawing.
+  // Since the point of transform feedback is to generate data that will
+  // then be used as inputs to attributes it makes zero sense you'd
+  // have to unbind them from every unused transform feedback object
+  // before you could use them in an attribute. If that was the case
+  // there would be no reason to setup transform feedback objects ever.
+  // You'd always use the default because you'd always have to bind and
+  // unbind all the buffers.
+  _bindBuffers() {
+    for (const bufferIndex in this.buffers) {
+      this.bindBuffer({buffer: this.buffers[bufferIndex], index: Number(bufferIndex)});
+    }
+  }
+
+  _unbindBuffers() {
+    for (const bufferIndex in this.buffers) {
+      this.unbindBuffer({buffer: this.buffers[bufferIndex], index: Number(bufferIndex)});
+    }
+  }
+
+  // RESOURCE METHODS
 
   _createHandle() {
     return this.gl.createTransformFeedback();

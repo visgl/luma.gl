@@ -60,4 +60,4 @@ export {
 } from './uniforms';
 
 // WebGL2
-export {default as VertexArrayObject} from './vertex-array-object';
+export {default as VertexArray} from './vertex-array';

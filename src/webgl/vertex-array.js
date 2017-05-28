@@ -1,4 +1,5 @@
 // WebGL2 VertexArray Objects Helper
+import {glKey} from './gl-constants';
 import {isWebGL2} from './context';
 import Resource from './resource';
 import assert from 'assert';
@@ -11,31 +12,42 @@ const GL_ELEMENT_ARRAY_BUFFER = 0x8893;
 
 // const GL_CURRENT_VERTEX_ATTRIB = 0x8626;
 
-// const GL_VERTEX_ATTRIB_ARRAY_ENABLED = 0x8622;
-// const GL_VERTEX_ATTRIB_ARRAY_SIZE = 0x8623;
-// const GL_VERTEX_ATTRIB_ARRAY_STRIDE = 0x8624;
-// const GL_VERTEX_ATTRIB_ARRAY_TYPE = 0x8625;
-// const GL_VERTEX_ATTRIB_ARRAY_NORMALIZED = 0x886A;
-// const GL_VERTEX_ATTRIB_ARRAY_POINTER = 0x8645;
-// const GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING = 0x889F;
+const GL_VERTEX_ATTRIB_ARRAY_ENABLED = 0x8622;
+const GL_VERTEX_ATTRIB_ARRAY_SIZE = 0x8623;
+const GL_VERTEX_ATTRIB_ARRAY_STRIDE = 0x8624;
+const GL_VERTEX_ATTRIB_ARRAY_TYPE = 0x8625;
+const GL_VERTEX_ATTRIB_ARRAY_NORMALIZED = 0x886A;
+const GL_VERTEX_ATTRIB_ARRAY_POINTER = 0x8645;
+const GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING = 0x889F;
 
-// const GL_VERTEX_ATTRIB_ARRAY_INTEGER = 0x88FD;
-// const GL_VERTEX_ATTRIB_ARRAY_DIVISOR = 0x88FE;
+const GL_VERTEX_ATTRIB_ARRAY_INTEGER = 0x88FD;
+const GL_VERTEX_ATTRIB_ARRAY_DIVISOR = 0x88FE;
+
+const PARAMETERS = [
+  GL_VERTEX_ATTRIB_ARRAY_ENABLED,
+  GL_VERTEX_ATTRIB_ARRAY_SIZE,
+  GL_VERTEX_ATTRIB_ARRAY_STRIDE,
+  GL_VERTEX_ATTRIB_ARRAY_TYPE,
+  GL_VERTEX_ATTRIB_ARRAY_NORMALIZED,
+  GL_VERTEX_ATTRIB_ARRAY_POINTER,
+  GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+
+  GL_VERTEX_ATTRIB_ARRAY_INTEGER,
+  GL_VERTEX_ATTRIB_ARRAY_DIVISOR
+];
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
-export default class VertexArrayObject extends Resource {
+export default class VertexArray extends Resource {
 
   static isSupported(gl) {
     return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
   }
 
-  static getDefaultObject(gl) {
+  static getDefaultArray(gl) {
     gl.luma = gl.luma || {};
     if (!gl.luma.defaultVertexArray) {
-      console.error('Creating getDefaultObject'); // eslint-disable-line
-      gl.luma.defaultVertexArray = new VertexArrayObject(gl, {handle: null});
-      console.error('Created getDefaultObject'); // eslint-disable-line
+      gl.luma.defaultVertexArray = new VertexArray(gl, {handle: null});
     }
     return gl.luma.defaultVertexArray;
   }
@@ -44,7 +56,11 @@ export default class VertexArrayObject extends Resource {
     return gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
   }
 
-  // Create a VertexArrayObject
+  get MAX_ATTRIBUTES() {
+    return this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
+  }
+
+  // Create a VertexArray
   constructor(gl, opts = {}) {
     super(gl, opts);
 
@@ -95,23 +111,36 @@ export default class VertexArrayObject extends Resource {
   // @param {Object} buffers - An object map with attribute names being keys
   //   and values are expected to be instances of Buffer.
 
+  _getBufferAndLayout(bufferData) {
+    // Check if buffer was supplied
+    let buffer;
+    let layout;
+    if (bufferData.handle) {
+      buffer = bufferData;
+      layout = bufferData.layout;
+    } else {
+      buffer = bufferData.buffer;
+      layout = Object.assign({}, buffer.layout, bufferData.layout || {}, bufferData);
+    }
+    return {buffer, layout};
+  }
+
   setBuffers(buffers, {clear, check}) {
     const {locations, elements} = this._getLocations(buffers);
 
     this.ext.bindVertexArray(this.handle);
 
     // Process locations in order
-    for (let location = 0; location < locations.length; ++location) {
-      const buffer = locations[location];
-
-      // DISABLE MISSING ATTRIBUTE
-      if (buffer) {
-        const divisor = buffer.layout.instanced ? 1 : 0;
-        this.vertexAttributes.enable(location);
-        this.vertexAttributes.setBuffer({location, buffer});
-        this.vertexAttributes.setDivisor(location, divisor);
+    for (const location in locations) {
+      const bufferData = locations[location];
+      if (bufferData) {
+        const {buffer, layout} = this._getBufferAndLayout(bufferData);
+        this.setBuffer({location, buffer, layout});
+        this.setDivisor(location, layout.instanced ? 1 : 0);
+        this.enable(location);
       } else {
-        this.vertexAttributes.disable(location);
+        // DISABLE MISSING ATTRIBUTE
+        this.disable(location);
       }
     }
     this.buffers = buffers;
@@ -376,14 +405,27 @@ export default class VertexArrayObject extends Resource {
     this.ext.bindVertexArray(this.handle);
 
     // Let the polyfill intercept the query
-    let result = this.ext.getVertexAttrib(location, pname);
-    if (result === undefined) {
-      result = this.gl.getVertexAttrib(location, pname);
+    let result;
+    switch (pname) {
+    case GL_VERTEX_ATTRIB_ARRAY_POINTER:
+      result = this.gl.getVertexAttribOffset(location, pname);
+      break;
+    default:
+      result = this.ext.getVertexAttrib(location, pname);
     }
 
     this.ext.bindVertexArray(null);
     return result;
+  }
 
+  _getData() {
+    return new Array(this.MAX_ATTRIBUTES).fill(0).map((_, location) => {
+      const result = {};
+      PARAMETERS.forEach(parameter => {
+        result[glKey(parameter)] = this.getParameter(parameter, {location});
+      });
+      return result;
+    });
   }
 
   _bind(handle) {

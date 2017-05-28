@@ -14,7 +14,7 @@ import assert from 'assert';
  *
  * Note: The global state contains an implicit vertex attribute array which
  * the methods in this class manipulate by default. It is also possible to
- * create and bind a VertexArrayObject to manage multiple arrays.
+ * create and bind a VertexArray to manage multiple arrays.
  *
  * Each vertex attribute has these properties:
  * - Can be enabled or disabled (Only enable attrs actually used by a program)

@@ -1,10 +1,10 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-catch';
-import {createGLContext, Program, Texture2D} from 'luma.gl';
+import {Program, Texture2D} from 'luma.gl';
 import 'luma.gl/headless';
 import {checkUniformValues} from 'luma.gl/webgl/uniforms';
 
-const gl = createGLContext();
+import {fixture} from '../setup';
 
 const MATRIX_2 = [
   1, 0,
@@ -76,7 +76,7 @@ const WEBGL1_GOOD_UNIFORMS = {
   m3: new Float32Array(MATRIX_3), // FLOAT_MAT3  0x8B5B
   m4: new Float32Array(MATRIX_4), // FLOAT_MAT4  0x8B5C
 
-  s2d: new Texture2D(gl)    // SAMPLER_2D  0x8B5E
+  s2d: new Texture2D(fixture.gl)    // SAMPLER_2D  0x8B5E
   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
 };
 
@@ -156,6 +156,8 @@ test('WebGL#Uniforms pre verify uniforms', t => {
 });
 
 test('WebGL#Uniforms Program construct/delete', t => {
+  const {gl} = fixture;
+
   const program = new Program(gl, {
     vs: VERTEX_SHADER,
     fs: WEBGL1_FRAGMENT_SHADER

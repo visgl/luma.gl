@@ -66,6 +66,12 @@ export const EXAMPLE_PAGES = [
   //   }
   // },
   {
+    name: 'Tranform Feedback',
+    content: {
+      demo: 'TransformFeedbackDemo'
+    }
+  },
+  {
     name: 'WebGL Lessons',
     children: [
       {
@@ -342,8 +348,8 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/sampler.md'
       },
       {
-        name: 'VertexArrayObject (EXT)',
-        content: 'api-reference/webgl/vertex-array-object.md'
+        name: 'VertexArray (EXT)',
+        content: 'api-reference/webgl/vertex-array.md'
       }
     ]
   }

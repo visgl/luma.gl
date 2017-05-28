@@ -1,13 +1,9 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, createGLContext, makeDebugContext} from 'luma.gl';
-import {Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
-const fixture = {
-  gl: makeDebugContext(createGLContext()),
-  gl2: makeDebugContext(createGLContext()) // createGLContext({webgl2: true, webgl1: false, throwOnFailure: false})
-};
+import {fixture} from '../setup';
 
 const TEST_CASES = [
   {

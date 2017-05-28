@@ -18,7 +18,7 @@ const WEBGL_LIMITS = {
   [GL.MAX_VIEWPORT_DIMS]: {gl1: new Int32Array([0, 0])},
 
   // Extensions
-  [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: {gl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
+  // [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: {gl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
 
   // WebGL2 Limits
   [GL.MAX_3D_TEXTURE_SIZE]: {gl1: 0, gl2: 256}, //  GLint
@@ -35,7 +35,6 @@ const WEBGL_LIMITS = {
   [GL.MAX_FRAGMENT_INPUT_COMPONENTS]: {gl1: 0, gl2: 0}, //  GLint
   [GL.MAX_FRAGMENT_UNIFORM_BLOCKS]: {gl1: 0, gl2: 0}, //  GLint
   [GL.MAX_FRAGMENT_UNIFORM_COMPONENTS]: {gl1: 0, gl2: 0}, //  GLint
-  [GL.MAX_PROGRAM_TEXEL_OFFSET]: {gl1: 0, gl2: 0}, // GLint
   [GL.MAX_SAMPLES]: {gl1: 0, gl2: 0}, //  GLint
   [GL.MAX_SERVER_WAIT_TIMEOUT]: {gl1: 0, gl2: 0}, //  GLint64
   [GL.MAX_TEXTURE_LOD_BIAS]: {gl1: 0, gl2: 0}, // GLfloat
@@ -48,7 +47,8 @@ const WEBGL_LIMITS = {
   [GL.MAX_VERTEX_OUTPUT_COMPONENTS]: {gl1: 0, gl2: 0}, // GLint
   [GL.MAX_VERTEX_UNIFORM_BLOCKS]: {gl1: 0, gl2: 0}, //  GLint
   [GL.MAX_VERTEX_UNIFORM_COMPONENTS]: {gl1: 0, gl2: 0}, //  GLint
-  [GL.MIN_PROGRAM_TEXEL_OFFSET]: {gl1: 0, gl2: 0}, // GLint
+  [GL.MIN_PROGRAM_TEXEL_OFFSET]: {gl1: 0, gl2: -8, negative: true}, // GLint
+  [GL.MAX_PROGRAM_TEXEL_OFFSET]: {gl1: 0, gl2: 7}, // GLint
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: {gl1: 0, gl2: 0} // GLint
 };
 
@@ -72,11 +72,10 @@ export function getContextLimits(gl) {
 
       // Check if we can query for this limit
       const limitNotAvailable =
-        ('webgl2' in limit && !isWebgl2) ||
+        ('gl2' in limit && !isWebgl2) ||
         ('extension' in limit && !gl.getExtension(limit.extension));
 
       const value = limitNotAvailable ? minLimit : gl.getParameter(parameter);
-
       gl.luma.limits[parameter] = value;
       gl.luma.webgl1MinLimits[parameter] = webgl1MinLimit;
       gl.luma.webgl2MinLimits[parameter] = webgl2MinLimit;
@@ -95,9 +94,9 @@ export function getGLContextInfo(gl) {
       [GL.VENDOR]: gl.getParameter(GL.VENDOR),
       [GL.RENDERER]: gl.getParameter(GL.RENDERER),
       [GL.UNMASKED_VENDOR_WEBGL]:
-        gl.getParameter(info ? GL.UNMASKED_VENDOR_WEBGL : GL.VENDOR),
+        gl.getParameter((info && info.UNMASKED_VENDOR_WEBGL) || GL.VENDOR),
       [GL.UNMASKED_RENDERER_WEBGL]:
-        gl.getParameter(info ? GL.UNMASKED_RENDERER_WEBGL : GL.RENDERER),
+        gl.getParameter((info && info.UNMASKED_RENDERER_WEBGL) || GL.RENDERER),
       [GL.VERSION]: gl.getParameter(GL.VERSION),
       [GL.SHADING_LANGUAGE_VERSION]: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
     };
@@ -106,13 +105,32 @@ export function getGLContextInfo(gl) {
   return gl.luma.info;
 }
 
+const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
+const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.
+
+export function getGLContextInfo2(gl) {
+  const vendorMasked = gl.getParameter(GL.VENDOR);
+  const rendererMasked = gl.getParameter(GL.RENDERER);
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const vendorUnmasked = ext && gl.getParameter(ext.UNMASKED_VENDOR_WEBGL || GL.VENDOR);
+  const rendererUnmasked = ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL || GL.RENDERER);
+  return {
+    vendor: vendorUnmasked || vendorMasked,
+    renderer: rendererUnmasked || rendererMasked,
+    vendorMasked,
+    rendererMasked,
+    version: gl.getParameter(GL.VERSION),
+    shadingLanguageVersion: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
+  };
+}
+
 export function getContextInfo(gl) {
-  const info = getGLContextInfo(gl);
   const limits = getContextLimits(gl);
+  const info = getGLContextInfo(gl);
   return {
     // basic information
-    vendor: info[GL.UNMASKED_VENDOR_WEBGL] || info[GL.VENDOR],
-    renderer: info[GL.UNMASKED_RENDERER_WEBGL] || info[GL.RENDERER],
+    vendor: info[GL_UNMASKED_VENDOR_WEBGL] || info[GL.VENDOR],
+    renderer: info[GL_UNMASKED_RENDERER_WEBGL] || info[GL.RENDERER],
     version: info[GL.VERSION],
     shadingLanguageVersion: info[GL.SHADING_LANGUAGE_VERSION],
     // info, caps and limits
@@ -121,6 +139,29 @@ export function getContextInfo(gl) {
     webgl1MinLimits: gl.luma.webgl1MinLimits,
     webgl2MinLimits: gl.luma.webgl2MinLimits
   };
+}
+
+// DEBUG INFO
+
+/**
+ * Provides strings identifying the GPU vendor and driver.
+ * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @param {WebGLRenderingContext} gl - context
+ * @return {Object} - 'vendor' and 'renderer' string fields.
+ */
+export function glGetDebugInfo(gl) {
+  return getGLContextInfo2(gl);
+  // const info = gl.getExtension('WEBGL_debug_renderer_info');
+  // // We can't determine if 'WEBGL_debug_renderer_info' is supported by
+  // // checking whether info is null here. Firefox doesn't follow the
+  // // specs by returning null for unsupported extension. Instead,
+  // // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
+  // return {
+  //   vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
+  //     gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
+  //   renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
+  //     gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
+  // };
 }
 
 export const TEST_EXPORTS = {

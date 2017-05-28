@@ -1,32 +1,32 @@
 import test from 'tape-catch';
 import {GL, createGLContext} from 'luma.gl';
-import {VertexArrayObject} from 'luma.gl';
+import {VertexArray} from 'luma.gl';
 
 const fixture = {
   gl: createGLContext()
 };
 
-test('WebGL#VertexArrayObject construct/delete', t => {
+test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
 
-  if (!VertexArrayObject.isSupported(gl)) {
-    t.comment('- VertexArrayObject not supported, skipping tests');
+  if (!VertexArray.isSupported(gl)) {
+    t.comment('- VertexArray not supported, skipping tests');
     t.end();
     return;
   }
 
   t.throws(
-    () => new VertexArrayObject(),
-    'VertexArrayObject throws on missing gl context');
+    () => new VertexArray(),
+    'VertexArray throws on missing gl context');
 
-  const vao = new VertexArrayObject(gl);
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject construction successful');
-
-  vao.delete();
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject delete successful');
+  const vao = new VertexArray(gl);
+  t.ok(vao instanceof VertexArray, 'VertexArray construction successful');
 
   vao.delete();
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject repeated delete successful');
+  t.ok(vao instanceof VertexArray, 'VertexArray delete successful');
+
+  vao.delete();
+  t.ok(vao instanceof VertexArray, 'VertexArray repeated delete successful');
 
   t.end();
 });
@@ -34,9 +34,9 @@ test('WebGL#VertexArrayObject construct/delete', t => {
 test('WebGL#VertexAttributes#enable', t => {
   const gl = createGLContext();
 
-  const vertexAttributes = VertexArrayObject.getDefaultObject(gl);
+  const vertexAttributes = VertexArray.getDefaultArray(gl);
 
-  const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
+  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl);
   t.ok(MAX_ATTRIBUTES >= 8, 'vertexAttributes.getMaxAttributes() >= 8');
 
   for (let i = 0; i < MAX_ATTRIBUTES; i++) {
@@ -70,15 +70,15 @@ test('WebGL#VertexAttributes#enable', t => {
 test('WebGL#vertexAttributes#WebGL2 support', t => {
   const gl = createGLContext({webgl2: true});
 
-  if (!VertexArrayObject.isSupported(gl, {instancedArrays: true})) {
+  if (!VertexArray.isSupported(gl, {instancedArrays: true})) {
     t.comment('- instanced arrays not enabled: skipping tests');
     t.end();
     return;
   }
 
-  const vertexAttributes = VertexArrayObject.getDefaultObject(gl);
+  const vertexAttributes = VertexArray.getDefaultArray(gl);
 
-  const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
+  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl);
 
   for (let i = 0; i < MAX_ATTRIBUTES; i++) {
     t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_DIVISOR, {location: i}), 0,

@@ -14,7 +14,6 @@ export {
   getGLExtension,
   withParameters,
   glContextWithState,
-  glGetDebugInfo,
   pollContext} from './webgl/context';
 export {
   getGLParameter,
@@ -23,6 +22,7 @@ export {
 export {
   getGLContextInfo,
   getContextLimits,
+  glGetDebugInfo,
   FEATURE,
   hasFeatures} from './webgl/context-limits';
 export {
@@ -48,7 +48,7 @@ export {default as Sampler} from './webgl/sampler';
 export {default as Texture3D} from './webgl/texture-3d';
 export {default as Texture2DArray} from './webgl/texture-2d-array';
 export {default as TransformFeedback} from './webgl/transform-feedback';
-export {default as VertexArrayObject} from './webgl/vertex-array-object';
+export {default as VertexArray} from './webgl/vertex-array';
 export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 
 // Core Classes

@@ -8,6 +8,7 @@ export {default as MulticontextDemo} from '../../examples/core/multicontext/app.
 export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
 export {default as PickingDemo} from '../../examples/core/picking/app.js';
 // export {default as ShadowmapDemo} from '../../examples/core/shadowmap/src/app.js';
+export {default as TransformFeedbackDemo} from '../../examples/core/transform-feedback/app.js';
 
 export {default as Lesson01} from '../../examples/lessons/01/app.js';
 export {default as Lesson02} from '../../examples/lessons/02/app.js';

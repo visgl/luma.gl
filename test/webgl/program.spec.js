@@ -1,10 +1,8 @@
 import test from 'tape-catch';
-import {GL, createGLContext, Program, Buffer} from 'luma.gl';
+import {GL, Program, Buffer} from 'luma.gl';
 import 'luma.gl/headless';
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../setup';
 
 const vs = `
 attribute vec3 positions;

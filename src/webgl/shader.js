@@ -1,7 +1,7 @@
 import GL, {formatGLSLCompilerError, getShaderName} from './api';
 import {assertWebGLContext} from './context';
 import Resource from './resource';
-import {log, uid} from '../utils';
+import {uid} from '../utils';
 import assert from 'assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
@@ -80,11 +80,6 @@ export class Shader extends Resource {
       const infoLog = this.gl.getShaderInfoLog(this.handle);
       const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
       throw new Error(error);
-    }
-
-    // Log translated source, if compilation succeeded
-    if (log.priority >= 3) {
-      log.log(3, this.getTranslatedSource());
     }
   }
 

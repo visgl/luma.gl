@@ -13,10 +13,10 @@ const GL_RENDERBUFFER_INTERNAL_FORMAT = 0x8D44;
 const GL_RENDERBUFFER_SAMPLES = 0x8CAB;
 
 // Define local extension strings to optimize minification
-const SRGB = 'EXT_sRGB';
-const CB_FLOAT = 'WEBGL_color_buffer_float';
-const CB_HALF_FLOAT = 'EXT_color_buffer_half_float';
-const CB_FLOAT2 = 'EXT_color_buffer_float';
+// const SRGB = 'EXT_sRGB';
+// const CB_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
+const CB_FLOAT_WEBGL2 = 'EXT_color_buffer_float';
+// const CB_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
 export const RENDERBUFFER_FORMATS = {
   [GL.DEPTH_COMPONENT16]: {}, // 16 depth bits.
@@ -51,7 +51,7 @@ export const RENDERBUFFER_FORMATS = {
   [GL.RG32I]: {gl2: true},
   [GL.RGB8]: {gl2: true},
   [GL.RGBA8]: {gl2: true},
-  [GL.SRGB8_ALPHA8]: {gl2: true, gl1: SRGB}, // When using the EXT_sRGB WebGL1 extension
+  // [GL.SRGB8_ALPHA8]: {gl2: true, gl1: SRGB}, // When using the EXT_sRGB WebGL1 extension
   [GL.RGB10_A2]: {gl2: true},
   [GL.RGBA8UI]: {gl2: true},
   [GL.RGBA8I]: {gl2: true},
@@ -62,13 +62,15 @@ export const RENDERBUFFER_FORMATS = {
   [GL.RGBA32UI]: {gl2: true},
 
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
-  [GL.R16F]: {gl2: CB_FLOAT2},
-  [GL.RG16F]: {gl2: CB_FLOAT2},
-  [GL.RGBA16F]: {gl2: CB_FLOAT2, gl1: CB_HALF_FLOAT},
-  [GL.R32F]: {gl2: CB_FLOAT2},
-  [GL.RG32F]: {gl2: CB_FLOAT2},
-  [GL.RGBA32F]: {gl2: CB_FLOAT2, gl1: CB_FLOAT},
-  [GL.R11F_G11F_B10F]: {gl2: CB_FLOAT2}
+  [GL.R16F]: {gl2: CB_FLOAT_WEBGL2},
+  [GL.RG16F]: {gl2: CB_FLOAT_WEBGL2},
+  [GL.RGBA16F]: {gl2: CB_FLOAT_WEBGL2},
+  [GL.R32F]: {gl2: CB_FLOAT_WEBGL2},
+  [GL.RG32F]: {gl2: CB_FLOAT_WEBGL2},
+  // TODO - can't get WEBGL_color_buffer_float to work on renderbuffers
+  [GL.RGBA32F]: {gl2: CB_FLOAT_WEBGL2},
+  // [GL.RGBA32F]: {gl2: CB_FLOAT_WEBGL2, gl1: CB_FLOAT_WEBGL1},
+  [GL.R11F_G11F_B10F]: {gl2: CB_FLOAT_WEBGL2}
 };
 
 function isFormatSupported(gl, format, formats) {
@@ -77,10 +79,11 @@ function isFormatSupported(gl, format, formats) {
   if (!info) {
     return false;
   }
-  const value =
-    (info.gl1 === undefined && info.gl2 === undefined) || // No info => always supported
-    (isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1);
-  return typeof value === 'string' ? gl.getExtension(value) : value;
+  const value = isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1;
+  if (typeof value === 'string') {
+    return gl.getExtension(value);
+  }
+  return value;
 }
 
 export default class Renderbuffer extends Resource {
@@ -89,10 +92,9 @@ export default class Renderbuffer extends Resource {
     return !format || isFormatSupported(gl, format, RENDERBUFFER_FORMATS);
   }
 
-  static getSamplesForFormat({format}) {
-    return isWebGL2(this.gl) ?
-      this.gl.getInternalformatParameter(GL_RENDERBUFFER, format, GL_SAMPLES) :
-      [0];
+  static getSamplesForFormat(gl, {format}) {
+    // Polyfilled to return [0] under WebGL1
+    return gl.getInternalformatParameter(GL_RENDERBUFFER, format, GL_SAMPLES);
   }
 
   constructor(gl, opts = {}) {

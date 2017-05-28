@@ -1,6 +1,6 @@
 import luma from '../init';
 import {assertWebGLContext, isWebGL2} from './context';
-import {polyfillExtensions} from './context-extensions';
+import {polyfillWebGLContext} from './context-polyfill';
 import {glGet, glKey} from './gl-constants';
 import {uid} from '../utils';
 import assert from 'assert';
@@ -18,7 +18,7 @@ export default class Resource {
 
     const {id, userData = {}} = opts;
     this.gl = gl;
-    this.ext = polyfillExtensions(gl);
+    this.ext = polyfillWebGLContext(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this.opts = opts;
@@ -29,7 +29,7 @@ export default class Resource {
     // TODO - Stores the handle with context loss information
     // this.glCount = glGetContextLossCount(this.gl);
 
-    // Default VertexArrayObject needs to be created with null handle, so compare against undefined
+    // Default VertexArray needs to be created with null handle, so compare against undefined
     this._handle = opts.handle;
     if (this._handle === undefined) {
       this._handle = this._createHandle();
@@ -57,7 +57,7 @@ export default class Resource {
 
   delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
-    const children = this._handle && this._deleteHandle();
+    const children = this._handle && this._deleteHandle(this._handle);
     this._handle = null;
 
     // Optionally, recursively delete the children
