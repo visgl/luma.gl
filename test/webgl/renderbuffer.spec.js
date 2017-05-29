@@ -1,15 +1,12 @@
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, createGLContext, Renderbuffer, glKey} from 'luma.gl';
+import {GL, Renderbuffer, glKey} from 'luma.gl';
 
 import {RENDERBUFFER_FORMATS} from '../../src/webgl/renderbuffer';
 
-// const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
+import {fixture} from '../setup';
 
-const fixture = {
-  gl: createGLContext(),
-  gl2: createGLContext({webgl2: true, webgl1: false, throwOnFailure: false})
-};
+// const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
 
 test('WebGL#Renderbuffer construct/delete', t => {
   const {gl} = fixture;

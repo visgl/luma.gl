@@ -1,17 +1,14 @@
 // WebGLRenderingContext related methods
 
 /* global document */
-import GL from './api';
 import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
 import {makeDebugContext} from './context-debug';
+import {glGetDebugInfo} from './context-limits';
 
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
 import luma from '../init';
 import assert from 'assert';
-
-const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
-const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
 const GL_ARRAY_BUFFER = 0x8892;
@@ -107,7 +104,6 @@ export function createGLContext(opts = {}) {
 
   function error(message) {
     // log(0, error);
-    console.error(error); // eslint-disable-line
     if (throwOnError) {
       throw new Error(message);
     }
@@ -240,49 +236,10 @@ export function withParameters(gl, {scissorTest, framebuffer, nocatch = true}, f
   return value;
 }
 
-export function getGLContextInfo(gl) {
-  const vendorMasked = gl.getParameter(GL.VENDOR);
-  const rendererMasked = gl.getParameter(GL.RENDERER);
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
-  const vendorUnmasked = info && gl.getParameter(GL_UNMASKED_VENDOR_WEBGL);
-  const rendererUnmasked = info && gl.getParameter(GL_UNMASKED_RENDERER_WEBGL);
-  return {
-    vendor: vendorUnmasked || vendorMasked,
-    renderer: rendererUnmasked || rendererMasked,
-    vendorMasked,
-    rendererMasked,
-    version: gl.getParameter(GL.VERSION),
-    shadingLanguageVersion: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
-  };
-}
-
 // POLLING FOR PENDING QUERIES
 // Calling this function checks all pending queries for completion
 export function pollContext(gl) {
   queryManager.poll(gl);
-}
-
-// DEBUG INFO
-
-/**
- * Provides strings identifying the GPU vendor and driver.
- * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
- * @param {WebGLRenderingContext} gl - context
- * @return {Object} - 'vendor' and 'renderer' string fields.
- */
-export function glGetDebugInfo(gl) {
-  return getGLContextInfo(gl);
-  // const info = gl.getExtension('WEBGL_debug_renderer_info');
-  // // We can't determine if 'WEBGL_debug_renderer_info' is supported by
-  // // checking whether info is null here. Firefox doesn't follow the
-  // // specs by returning null for unsupported extension. Instead,
-  // // it returns an object without GL_UNMASKED_VENDOR_WEBGL and GL_UNMASKED_RENDERER_WEBGL.
-  // return {
-  //   vendor: (info && info.UNMASKED_VENDOR_WEBGL) ?
-  //     gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : 'unknown',
-  //   renderer: (info && info.UNMASKED_RENDERER_WEBGL) ?
-  //     gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
-  // };
 }
 
 function logInfo(gl) {

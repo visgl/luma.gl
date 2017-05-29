@@ -1,10 +1,7 @@
-import {createGLContext} from 'luma.gl';
 import {hasFeatures, FEATURES} from '../../src/webgl/context-features';
 import test from 'tape-catch';
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../setup';
 
 test('WebGL#hasFeatures', t => {
   const {gl} = fixture;

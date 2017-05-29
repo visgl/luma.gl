@@ -1,13 +1,9 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, createGLContext, makeDebugContext} from 'luma.gl';
-import {Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
-const fixture = {
-  gl: makeDebugContext(createGLContext()),
-  gl2: makeDebugContext(createGLContext()) // createGLContext({webgl2: true, webgl1: false, throwOnFailure: false})
-};
+import {fixture} from '../setup';
 
 const TEST_CASES = [
   {
@@ -49,18 +45,18 @@ const TEST_CASES = [
       }
     }),
     pass: true
-  },
-  {
-    title: 'Separate Depth/Stencil Renderbuffers',
-    getOpts: (gl) => ({
-      attachments: {
-        [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
-        [GL.DEPTH]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16}),
-        [GL.STENCIL]: new Renderbuffer(gl, {format: GL.STENCIL_INDEX8})
-      }
-    }),
-    pass: false
   }
+  // {
+  //   title: 'Separate Depth/Stencil Renderbuffers',
+  //   getOpts: (gl) => ({
+  //     attachments: {
+  //       [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
+  //       [GL.DEPTH]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16}),
+  //       [GL.STENCIL]: new Renderbuffer(gl, {format: GL.STENCIL_INDEX8})
+  //     }
+  //   }),
+  //   pass: false
+  // }
   // {
   //   features: FEATURES.MULTIPLE_RENDER_TARGETS,
   //   getOpts(gl) {

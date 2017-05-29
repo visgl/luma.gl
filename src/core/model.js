@@ -1,6 +1,5 @@
 // A scenegraph object node
-import {
-  GL, Buffer, Program, draw, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
+import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
 import {getUniformsTable} from '../webgl/uniforms';
 import {glGet} from '../webgl/api';
 
@@ -266,7 +265,7 @@ export default class Model extends Object3D {
 
     this._timerQueryStart();
 
-    draw(this.program.gl, {
+    this.program.draw({
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
       isIndexed,

@@ -1,138 +1,35 @@
 # Overview
 
-This is the main page of the reference documentation for luma.gl.
-
-As a guide for getting started, for most applications,
-the [`Model`](model.html), is likely the primary luma.gl class.
-It ties together many concepts in luma.gl and is a good place
-to start reading.
-
-## Core Classes
-
-The basic building blocks of most applications.
-
-| **Class** | **Description** |
-| --- | --- |
-| [`Model`](model.html) | A renderable object with attributes and uniforms. |
-| [`Geometry`](geometry.html) | Holds attributes and drawType for a geometric primitive |
-| [`Group`](group.html) | Supports recursive travesal and matrix transformation |
-| [`AnimationFrame`](animation-frame.html) | render loop / app life cycle support |
-| [`Object3D`](object3d.html) | Base class, golds position, rotation, scale (TBD) |
-
-## WebGL Classes
-
-luma.gl is built on top of a set of JavaScript classes that wrap the WebGL API objects, making WebGL easier to work with in JavaScript.
-
-| **Class/Module** | **WebGL Type** | **Description** |
-| --- | --- | --- |
-| [`createGLContext`](context.html#createGLContext) | [`WebGLRenderingContext`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext) | The main GL context. |
-| [`Buffer`](buffer.html)  | [`WebGLBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLBuffer) | Holds memory on GPU |
-| [`FrameBuffer`](frame-buffer.html) | [`WebGLFrameBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLFrameBuffer) | Holds a framebuffer |
-| [`RenderBuffer`](render-buffer.html) | [`WebGLRenderBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderBuffer) | Holds a renderbuffer |
-| [`Program`](program.html)  | [`WebGLProgram`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram) | Shaders, attributes and uniforms.
-| [`Shader`](shader.html)  | [`WebGLShader`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram) | Shaders, attributes and uniforms.
-| [`Texture2D`](texture.html)  | [`WebGLTexture(GL.TEXTURE_2D)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a loaded texture |
-| [`TextureCube`](texture.html) | [`WebGLTexture(GL.TEXTURE_CUBE)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a loaded texture |
-| [`Texture2DArray`](texture.html) **`WebGL2`** | [`WebGLTexture(GL.TEXTURE_2D_ARRAY)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a loaded texture |
-| [`Texture3D`](texture.html) **`WebGL2`** | [`WebGLTexture(GL.TEXTURE_3D)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a loaded texture |
-| [`Query`](query.html) **`WebGL2`/`ext`** | [`WebGLQuery`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery) | Occlusion, Tranform Feedback and Performance Queries |
-| [`Sampler`](sampler.html) **`WebGL2`** | [`WebGLSampler`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSampler) | Stores texture sampling params  |
-| [`Sync`](sync.html) **`WebGL2`** | [`WebGLSync`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSync) | Synchronize GPU and app. |
-| [`TransformFeedback`](transform-feedback.html) **`WebGL2`** | [`WebGLTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) | Capture Vertex Shader output |
-| [`VertexArrayObject`](vertex-array-object.html) **`WebGL2`/`ext`** | [`WebGLVertexArrayObject`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject) | Save global vertex attribute array. |
-| [`VertexAttributes`](vertex-attributes.html) | [`gl.vertexAttrib*`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttribPointer)  | Manipulates shader attributes (TBD merge with VAO?) |
-| [`VertexAttributes`](vertex-attributes.html) | [`gl.vertexAttrib*`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttribPointer)  | Manipulates shader attributes |
-
-## WebGL2 Classes
-
-luma.gl is designed to facilitate use of the latest WebGL features, so
-wrapper classes are provided for the new objects in WebGL2.
-
-| **Class/Module** | **WebGL Type** | **Description** |
-| --- | --- | --- |
-| `Query` | [`WebGLQuery`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery) | Occlusion, performance queries |
-| `Sampler` | [`WebGLSampler`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSampler) | Stores texture sampling params  |
-| `Sync` | [`WebGLSync`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSync) | Synchronize GPU and app. |
-| `TransformFeedback` | [`WebGLTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) | Capture Vertex Shader output |
-| `VertexArrayObject` | [`WebGLVertexArrayObject`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject) | Save global vertex attribute array. |
-
-## WebGL Extensions
-
-luma.gl uses [`WebGL Extensions`](extensions.html) to make WebGL 2 features
-(conditionally) available under WebGL1 and to enable an improved
-debugging/profiling experience.
-
-## Supporting Modules
-
-| **Module** | **Description** |
-| --- | --- | --- |
-| [`Math`](math.html) | Small math library, Vec3, Vec4, Mat4, Quat |
-| [`IO`](io.html)     | Node.js loader support. Also enables using streams in browser. |
+luma.gl is a JavaScript framework intended for programmers who want full access to GPU-based computing and rendering in the browser using the capabilities of the WebGL2 API.
 
 
-## Geometric Primitives
+## High Level Design Goals
 
-A geometry holds a set of attributes (native JavaScript arrays)
-(vertices, normals, texCoords, indices) and a drawType.
-
-| **Class** | **Description** |
-| --- | --- | --- |
-| [`Geometry`](geometry.html#Geometry) | Base class, holds vertex attributes and drawType |
-| [`ConeGeometry`](geometry.html#ConeGeometry) | Vertex attributes for a cone |
-| [`CubeGeometry`](geometry.html#CubeGeometry) | Vertex attributes for a cube |
-| [`IcoSphereGeometry`](geometry.html#IcoSphereGeometry) | Vertex attributes for an icosahedron |
-| [`PlaneGeometry`](geometry.html#PlaneGeometry) | Vertex attributes for a plane |
-| [`SphereGeometry`](geometry.html#SphereGeometry) | Vertex attributes for a sphere |
-
-## Geometric Primitives
-
-A geometry holds a set of attributes (native JavaScript arrays)
-(vertices, normals, texCoords, indices) and a drawType.
-
-| **Class** | **Description** |
-| --- | --- |
-| [`Geometry`](geometry.html#Geometry) | Base class, holds vertex attributes and drawType |
-| [`ConeGeometry`](geometry.html#ConeGeometry) | Vertex attributes for a cone |
-| [`CubeGeometry`](geometry.html#CubeGeometry) | Vertex attributes for a cube |
-| [`IcoSphereGeometry`](geometry.html#IcoSphereGeometry) | Vertex attributes for an icosahedron |
-| [`PlaneGeometry`](geometry.html#PlaneGeometry) | Vertex attributes for a plane |
-| [`SphereGeometry`](geometry.html#SphereGeometry) | Vertex attributes for a sphere |
-
-It is straightforward to use other primitives, e.g. from npm modules.
-As long as you have a number of attributes you can wrap them in a `Geometry`
-or set them directly on a `Model` or a `Program`.
+- **Advanced GPU Programming** - whether you need *instanced rendering* for extremely large data sets, or GPU based computing using *transform feedback*, or other WebGL2 / GPGPU techniques, luma.gl has you covered.
+- **Performance First** - A strong focus on performance, complete with lower abstraction level APIs.
+- **No hiding of WebGL** - Unlike many WebGL frameworks, luma.gl simplifies the use of WebGL2 but does not hide it. Learn luma.gl and you will learn WebGL2, all WebGL2 concepts are exposed.
+- **Shader Programming** - Extensive facilities for modularizing, debugging and profiling your WebGL2 objects and your GLSL shaders.
 
 
-## Scene Graph
+## History
 
-A basic hierarchy of 3D objects with positioning, grouping, traversal and
-scene support.
+luma.gl was originally created to be a high performance WebGL rendering engine for [deck.gl](https://github.com/uber/deck.gl), which is an advanced 3D geospatial visualization framework that does all its rendering using luma.gl. Due to the adoption of deck.gl, luma.gl became increasingly important as a foundation library, but saw mostly indirect use.
 
-| **Class** | **Description** |
-| --- | --- |
-| [`Object3D`](object3d.html) | Base class, golds position, rotation, scale |
-| [`Group`](group.html) | Supports recursive travesal and matrix transformation |
-| [`Scene`](scene.html) | A Group with settings that can be rendered using default shaders |
+The arrival of WebGL2 has changed the landscape, and luma.gl is a natural focal point for developing APIs and capabilities for high-performance GPU usage in browsers
+
+luma.gl started out as a fork of [PhiloGL](https://github.com/philogb/philogl) however no effort has been made to maintain compatibility with PhiloGL-based applications.
 
 
-## Addons
+## Module Structure
 
-Functions that are not considered a core part of the library are
-collected in the `addons` folder. These are not guaranteed to remain in future
-versions of the library, but in such cases they can be copied into the
-application if still useful.
+luma.gl is a somewhat large framework, but it is divided into a set of independent, well-defined submodules.
+See the User's Guide for more information on luma.gl's module structure.
 
-| **Class** | **Description** |
-| --- | --- |
-| [`Event`](event.html)  | Event handling |
-
-
-## Deprecated Classes
-
-Will be removed in next major version of luma.gl
-
-| **Class** | **Description** |
-| --- | --- |
-| [`PerspectiveCamera`](camera.html#PerspectiveCamera) | Generates uniform matrices for perspective viewing |
-| [`OrthoCamera`](camera.html#OrthoCamera)  | Generates uniform matrices for orthographic viewing |
-| [`Scene`](scene.html) | A Group with settings that can be rendered using default shaders |
+| Module                         | Description |
+| ---                            | --- |
+| [core](api-reference/core)     | A set of "traditional" 3D library classes on a slightly higher abstraction level than the WebGL2 API, that can serve as the basic building blocks for most applications. Contains luma.gl's signature [`Model`](model) class. |
+| [webgl2](api-reference/webgl2) | The heart of luma.gl is the WebGL2 module, a set of classes covering all OpenGL objects exposed by the WebGL2 API. These classes organize the sprawling WebGL2 API and makes it easy to work with in JavaScript. |
+| [geometry]()                   | Provides a collection of geometric primitives, including `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry` |
+| [math](math.html)              | Small math library, `Vector3`, `Vector4`, `Matrix4`, `Quaternion` |
+| [io](io.html)                  | Node.js loader support. Also enables using streams in browser. |
+| [event](event.html)            | Browser Event handling |

@@ -120,11 +120,8 @@ function getFeature({gl, cap, webglVersion}) {
 export function hasFeatures(gl, features) {
   features = Array.isArray(features) ? features : [features];
   return features.every(feature => {
-    if (gl.getExtension(feature)) {
-      return true;
-    }
     const webglVersion = isWebGL2(gl) ? 'gl2' : 'gl1';
-    return getFeature({gl, feature, webglVersion});
+    return getFeature({gl, feature, webglVersion}) || gl.getExtension(feature);
   });
 }
 

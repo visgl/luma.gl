@@ -1,10 +1,8 @@
-import {createGLContext} from 'luma.gl';
+import {glKey} from 'luma.gl';
 import {getContextInfo, TEST_EXPORTS} from '../../src/webgl/context-limits';
 import test from 'tape-catch';
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../setup';
 
 test('WebGL#getContextInfo', t => {
   const {gl} = fixture;
@@ -19,16 +17,49 @@ test('WebGL#getContextInfo', t => {
   t.end();
 });
 
-test('getContextInfo#limits', t => {
+test('WebGL1#getContextInfo#limits', t => {
   const {gl} = fixture;
 
   const info = getContextInfo(gl);
 
   for (const limit in TEST_EXPORTS.WEBGL_LIMITS) {
-    t.ok(info.limits[limit] >= info.webgl1MinLimits[limit],
-      `${limit}: actual limit larger than or equal to webgl1 limit`);
-    t.ok(info.webgl2MinLimits[limit] >= info.webgl1MinLimits[limit],
-      `${limit}: webgl2 limit larger than or equal to webgl1 limit`);
+    const actual = info.limits[limit];
+    const webgl1 = info.webgl1MinLimits[limit];
+    const webgl2 = info.webgl2MinLimits[limit];
+
+    if (Number.isFinite(actual)) {
+      t.ok(actual >= webgl1,
+        `${glKey(limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
+      t.ok(Math.abs(webgl2) >= Math.abs(webgl1),
+        `${glKey(limit)}: webgl2 limit ${webgl2} >= webgl1 limit ${webgl1}`);
+    } else {
+      t.pass(`${glKey(limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
+    }
+  }
+
+  t.end();
+});
+
+test('WebGL2#getContextInfo#limits', t => {
+  const {gl2} = fixture;
+
+  if (gl2) {
+    const info = getContextInfo(gl2);
+
+    for (const limit in TEST_EXPORTS.WEBGL_LIMITS) {
+      const actual = info.limits[limit];
+      const webgl1 = info.webgl1MinLimits[limit];
+      const webgl2 = info.webgl2MinLimits[limit];
+
+      if (Number.isFinite(actual)) {
+        t.ok(Math.abs(actual) >= Math.abs(webgl1),
+          `${glKey(limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
+        t.ok(Math.abs(actual) >= Math.abs(webgl2),
+          `${glKey(limit)}: actual limit ${actual} >= webgl2 limit ${webgl2}`);
+      } else {
+        t.pass(`${glKey(limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
+      }
+    }
   }
 
   t.end();

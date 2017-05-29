@@ -110,12 +110,9 @@ function addControls() {
   if (controlPanel) {
     controlPanel.innerHTML = `
       <p>
-      A cube drawn with <b>instanced rendering</b>.
+      Cube drawn with <b>instanced rendering</b>.
       <p>
-      Draws a single luma.gl <code>Cube</code> with instanced attributes to control relative
-      <code>x,y</code> offsets and <code>colors</code> for 64K instances.
-      <p>
-      Animation is trivial, just updating a few uniforms and the view matrix each frame.
+      A luma.gl <code>Cube</code>, rendering 65,536 instances in a single GPU draw call using instanced vertex attributes.
     `;
   }
 }

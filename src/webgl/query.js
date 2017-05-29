@@ -2,7 +2,7 @@
 
 import Resource from './resource';
 import queryManager from './helpers/query-manager';
-import {polyfillExtensions} from './context-extensions';
+import {polyfillWebGLContext} from './context-polyfill';
 import {FEATURE, hasFeatures} from './context-features';
 import {isWebGL2} from './context';
 
@@ -46,8 +46,8 @@ export default class Query extends Resource {
     }
 
     if (timestamps) {
-      const ext = polyfillExtensions(gl);
-      const queryCounterBits = ext.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
+      polyfillWebGLContext(gl);
+      const queryCounterBits = gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
       supported = supported && (queryCounterBits > 0);
     }
 
@@ -96,7 +96,7 @@ export default class Query extends Resource {
   getTimestamp() {
     queryManager.beginQuery(this, this.onComplete, this.onError);
     try {
-      this.ext.queryCounter(this.handle, GL_TIMESTAMP_EXT);
+      this.gl.queryCounter(this.handle, GL_TIMESTAMP_EXT);
     } catch (error) {
       queryManager.rejectQuery(this, ERR_TIMER_QUERY_NOT_SUPPORTED);
     }
@@ -115,7 +115,7 @@ export default class Query extends Resource {
     this.target = target;
 
     try {
-      this.ext.beginQuery(target, this.handle);
+      this.gl.beginQuery(this.target, this.handle);
     } catch (error) {
       queryManager.rejectQuery(this, 'Query not supported');
     }
@@ -141,13 +141,13 @@ export default class Query extends Resource {
 
   // Returns true if the query result is available
   isResultAvailable() {
-    return this.ext.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
   }
 
   // Returns the query result, converted to milliseconds to match JavaScript conventions.
   // TODO - what about non-timer queries
   getResult() {
-    const result = this.ext.getQueryParameter(this.handle, GL_QUERY_RESULT);
+    const result = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
     return Number.isFinite(result) ? result / 1e6 : 0;
   }
 
@@ -156,12 +156,12 @@ export default class Query extends Resource {
   }
 
   _createHandle() {
-    return Query.isSupported(this.gl) ? this.ext.createQuery() : null;
+    return Query.isSupported(this.gl) ? this.gl.createQuery() : null;
   }
 
   _deleteHandle() {
     queryManager.deleteQuery(this);
-    this.ext.deleteQuery(this.handle);
+    this.gl.deleteQuery(this.handle);
   }
 }
 

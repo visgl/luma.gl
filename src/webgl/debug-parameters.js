@@ -109,9 +109,9 @@ const SAMPLER_PARAMETERS = {
   [GL.TEXTURE_COMPARE_FUNC]: {webgl2: true}, // texture comparison function
   [GL.TEXTURE_COMPARE_MODE]: {webgl2: true}, // texture comparison mode
   [GL.TEXTURE_MIN_LOD]: {webgl2: true}, // minimum level-of-detail value
-  [GL.TEXTURE_MAX_LOD]: {webgl2: true}, // maximum level-of-detail value
+  [GL.TEXTURE_MAX_LOD]: {webgl2: true} // maximum level-of-detail value
 
-  [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl2: 'EXT_texture_filter_anisotropic'}
+  // [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl2: 'EXT_texture_filter_anisotropic'}
 };
 
 // const SHADER_PARAMETERS = [
@@ -137,7 +137,7 @@ const TEXTURE_PARAMETERS = {
   [GL.TEXTURE_MAX_LOD]: {webgl2: 1000}, // maximum level-of-detail value
 
   // WebGL Extensions
-  [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
+  // [GL.TEXTURE_MAX_ANISOTROPY_EXT]: {webgl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
 
   // Emulated parameters - These OpenGL parameters are not supported by OpenGL ES
   [GL.TEXTURE_WIDTH]: {webgl1: 0},

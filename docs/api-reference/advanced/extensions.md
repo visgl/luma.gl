@@ -19,8 +19,7 @@ These extensions expose optional general capability that was not included in the
 
 ## Debug Extensions
 
-These extensions expose additional information and capabilities that help debug and profile a WebGL program. luma.gl carefully uses these extensions under the hood to provide a better
-debug experience.
+These extensions expose additional information and capabilities that help debug and profile a WebGL program. luma.gl carefully uses these extensions under the hood to provide a better debug experience.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
@@ -61,8 +60,7 @@ Note that many of these extensions are no longer available in WebGL2 as the func
 ## WebGL2 Extensions
 
 These extensions expose various OpenGL ES 3.1 and 3.2 features that are often available on target devices that run the OpenGL ES 3.0 based WebGL2 standard today.
-These extensions can bring OpenGL ES 3.1 or 3.2 capabilities to WebGL2 contexts,
-if the device supports them.
+These extensions can bring OpenGL ES 3.1 or 3.2 capabilities to WebGL2 contexts, if the device supports them.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
@@ -72,8 +70,7 @@ if the device supports them.
 
 ## Proposed Extensions
 
-Khronos lists a couple of proposed extensions. They will be considered by
-luma.gl as they become available in browsers.
+Khronos lists a couple of proposed extensions. They will be considered by luma.gl as they become available in browsers.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |
@@ -91,25 +88,16 @@ Used to query if the GPU supports specific proprietary compressed texture format
 
 These enable various proprietary (patent-encumbered) compressed texture formats.
 
-The primary advantage of compressed texture formats is that in contrast to
-JPGs or PNGs, they do not have to be decompressed to be used by the GPU.
-As a non-scientific guideline, compressed texture formats might achieve about 4x
-compression, compared to say 16x compression for JPEG. So while they might be
-slower to load, they could allow 4x more textures to be uploaded in the same
-amount of GPU memory.
+The primary advantage of compressed texture formats is that in contrast to JPGs or PNGs, they do not have to be decompressed to be used by the GPU. As a non-scientific guideline, compressed texture formats might achieve about 4x compression, compared to say 16x compression for JPEG. So while they are usually slower to load, but they could allow 4x more textures to be stored in the same amount of GPU memory.
 
 Because of patent issues, to use these formats an application would typically:
-1. generate these in external commercial applications (which have already
-   licensed any supported formats).
+1. generate these in external commercial applications (which have already licensed any supported formats).
 2. load them in binary form without touching the content
-3. Pass them directly to a texture, so that they are processed inside the
-   GPU driver (which also has licensed the formats).
+3. Pass them directly to a texture, so that they are processed inside the GPU driver (which also has licensed the formats).
 
-Also note that due to the patent issues, finding a compressed texture format
-which is supported across a range of target devices can be challenging.
+Also note that due to the patent issues, finding a compressed texture format which is supported across a range of target devices can be challenging.
 
-For these reasons, luma.gl leaves the handling of these formats (and extensions)
-to the application.
+For these reasons, luma.gl leaves the handling of these formats (and extensions) to the application.
 
 | Extension | Enables | luma.gl support |
 | --- | --- | --- |

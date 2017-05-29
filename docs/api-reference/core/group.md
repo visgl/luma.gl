@@ -1,17 +1,16 @@
 # Group
 
+Holds a list of `Object3d`s. Since `Group` is a subclass of `Object3D` you can place groups inside groups and create hierarchical scene graphs.
+
 ## Usage
 
-Add a moon and a box models to the group. Taken from
-[lesson 12]http://uber.github.io/luma.gl/examples/lessons/12/).
-http://uber.github.io/luma.gl/examples/lessons/12/
+Add a moon and a box models to the group.
 ```js
 // Add objects to the group
 group.add(moon, box);
 ```
 
 Add a moon and a box models to the group. Then remove them.
-
 ```js
 // Add objects to the group
 group.add(moon, box);
@@ -25,11 +24,7 @@ group.remove(moon);
 
 Add an [Object3D](object-3d.html) object to the Group.
 
-Syntax:
-
     group.add(o[, ...]);
-
-Arguments:
 
 A variable argument list of [Object3D](object-3d.html) instances.
 
@@ -39,10 +34,6 @@ Examples:
 
 Removes an [Object3D](object-3d.html) object from the Group.
 
-Syntax:
-
     group.remove(model);
-
-Arguments:
 
 * model - (*object*) The model to be removed.

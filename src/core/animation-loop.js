@@ -3,11 +3,17 @@ import {isBrowser, pageLoadPromise} from '../utils';
 import {createGLContext, isWebGLContext} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
-export const requestAnimationFrame = callback =>
-  isBrowser ? window.requestAnimationFrame(callback) : setTimeout(callback, 1000 / 60);
+export function requestAnimationFrame(callback) {
+  return isBrowser ?
+    window.requestAnimationFrame(callback) :
+    setTimeout(callback, 1000 / 60);
+}
 
-export const cancelAnimationFrame = timerId =>
-  isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
+export function cancelAnimationFrame(timerId) {
+  return isBrowser ?
+    window.cancelAnimationFrame(timerId) :
+    clearTimeout(timerId);
+}
 
 export default class AnimationLoop {
   /*
@@ -20,6 +26,7 @@ export default class AnimationLoop {
     onFinalize = () => {},
 
     gl = null,
+    glOptions = {},
     width = null,
     height = null,
     autoResizeViewport = true,
@@ -39,6 +46,7 @@ export default class AnimationLoop {
     });
 
     this._onCreateContext = onCreateContext;
+    this.glOptions = glOptions;
 
     this._onInitialize = onInitialize;
     this._onRender = onRender;
@@ -69,23 +77,25 @@ export default class AnimationLoop {
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
   start(contextParams = {}) {
+    // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
 
       // Wait for start promise before rendering frame
       this._startPromise = pageLoadPromise
       .then(() => {
         // Create the context
+        contextParams = Object.assign({}, contextParams, this.glOptions);
         this.gl = this.gl || contextParams.gl || this._onCreateContext(contextParams);
         if (!isWebGLContext(this.gl)) {
           throw new Error('AnimationLoop.onCreateContext - illegal context returned');
         }
         this._initializeContext();
         // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this._onInitialize(this._context) || {};
+        return this._onInitialize(this._context);
       })
-      .then((appContext = {}) => {
-        this._addAppDataToContext(appContext);
-        if (!this._animationFrameId) {
+      .then((appContext) => {
+        this._addAppDataToContext(appContext || {});
+        if (appContext !== false && !this._animationFrameId) {
           this._animationFrameId = requestAnimationFrame(this._renderFrame);
         }
       });
@@ -96,6 +106,7 @@ export default class AnimationLoop {
 
   // Stops a render loop if already running, finalizing
   stop() {
+    // console.debug(`Stopping ${this.constructor.name}`);
     if (this._animationFrameId) {
       this._finalizeContext();
       cancelAnimationFrame(this._animationFrameId);

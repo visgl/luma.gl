@@ -1,13 +1,24 @@
 /* eslint-disable no-inline-comments */
 import GL from './api';
-import {assertWebGL2Context, isWebGL2Context} from './context';
-import VertexArrayObject from './vertex-array-object';
+import {assertWebGL2Context, isWebGL2} from './context';
+import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
 import assert from 'assert';
+
+// const GL_TRANSFORM_FEEDBACK_BUFFER_MODE = 0x8C7F;
+// const GL_TRANSFORM_FEEDBACK_VARYINGS = 0x8C83;
+// MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS : 0x8C80,
+// TRANSFORM_FEEDBACK_BUFFER_START: 0x8C84,
+// TRANSFORM_FEEDBACK_BUFFER_SIZE : 0x8C85,
+// TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN: 0x8C88,
+// MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS: 0x8C8A,
+// MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS: 0x8C8B,
+// INTERLEAVED_ATTRIBS: 0x8C8C,
+// SEPARATE_ATTRIBS : 0x8C8D,
 
 export default class Program extends Resource {
   /*
@@ -24,7 +35,7 @@ export default class Program extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
     this.initialize(opts);
-    this.vertexAttributes = VertexArrayObject.getDefaultObject(gl);
+    this.vertexAttributes = VertexArray.getDefaultArray(gl);
     Object.seal(this);
 
     // If program is not named, name it after shader names
@@ -79,42 +90,52 @@ export default class Program extends Resource {
   // e.g. depending on whether data is indexed and/or isInstanced.
   // This function unifies those into a single call with simple parameters
   // that have sane defaults.
-  draw(gl, {
+  draw({
     drawMode = GL.TRIANGLES,
     vertexCount,
     offset = 0,
+    start,
+    end,
     isIndexed = false,
     indexType = GL.UNSIGNED_SHORT,
     isInstanced = false,
     instanceCount = 0,
-    transformFeedback
+    vertexArray = null,
+    transformFeedback = null,
+    uniforms = {},
+    samplers = {}
   }) {
-    this.gl.useProgram(this.handle);
+    vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
+    vertexArray.bind(() => {
 
-    if (transformFeedback) {
-      transformFeedback.begin();
-    }
+      this.gl.useProgram(this.handle);
 
-    const extension = gl.getExtension('ANGLE_instanced_arrays');
+      if (transformFeedback) {
+        transformFeedback.begin(drawMode);
+      }
 
-    // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-    if (isInstanced && isIndexed) {
-      extension.drawElementsInstancedANGLE(
-        drawMode, vertexCount, indexType, offset, instanceCount
-      );
-    } else if (isInstanced) {
-      extension.drawArraysInstancedANGLE(
-        drawMode, offset, vertexCount, instanceCount
-      );
-    } else if (isIndexed) {
-      gl.drawElements(drawMode, vertexCount, indexType, offset);
-    } else {
-      gl.drawArrays(drawMode, offset, vertexCount);
-    }
+      this.setUniforms(uniforms, samplers);
 
-    if (transformFeedback) {
-      transformFeedback.end();
-    }
+      // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+      if (isIndexed && isInstanced) {
+        this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+      } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+        this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
+      } else if (isIndexed) {
+        this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+      } else if (isInstanced) {
+        this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+      } else {
+        this.gl.drawArrays(drawMode, offset, vertexCount);
+      }
+
+      // this.gl.useProgram(null);
+
+      if (transformFeedback) {
+        transformFeedback.end();
+      }
+
+    });
 
     return this;
   }
@@ -447,19 +468,7 @@ export default class Program extends Resource {
     return opts;
   }
 
-  // Return the value for the passed pname given the passed program.
-  // The type returned is the natural type for the requested pname,
-  // as given in the following table:
   _getParameter(pname) {
-    // Return default values for WebGL2 parameters under WebGL1
-    if (!isWebGL2Context(this.gl)) {
-      switch (pname) {
-      case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
-      case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
-      case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
-      default:
-      }
-    }
     return this.gl.getProgramParameter(this.handle, pname);
   }
 }

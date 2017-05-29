@@ -1,85 +1,98 @@
 export const EXAMPLE_PAGES = [
   {
-    name: 'Overview',
-    content: 'code-markdown/examples.md'
+    name: 'Core Examples',
+    children: [
+      {
+        name: 'Overview',
+        content: {
+          path: 'markdown/examples.md'
+        }
+      },
+      {
+        name: 'Cubemap',
+        content: {
+          demo: 'CubemapDemo'
+        }
+      },
+      // {
+      //   name: 'Custom Picking',
+      //   content: {
+      //     demo: 'CustomPickingDemo',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
+      //   }
+      // },
+      {
+        name: 'Instancing',
+        content: {
+          demo: 'InstancingDemo'
+        }
+      },
+      {
+        name: 'Mandelbrot',
+        content: {
+          demo: 'MandelbrotDemo'
+        }
+      },
+      {
+        name: 'Concentrics',
+        content: {
+          demo: 'MulticontextDemo'
+        }
+      },
+      // {
+      //   name: 'Picking',
+      //   content: {
+      //     demo: 'PickingDemo',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
+      //   }
+      // },
+      // {
+      //   name: 'DeferredRendering',
+      //   content: {
+      //     demo: 'DeferredRenderingDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Particles',
+      //   content: {
+      //     demo: 'ParticlesDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Persistence',
+      //   content: {
+      //     demo: 'PersistenceDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Shadowmap',
+      //   content: {
+      //     demo: 'ShadowmapDemo'
+      //   }
+      // },
+      {
+        name: 'Tranform Feedback',
+        content: {
+          demo: 'TransformFeedbackDemo'
+        }
+      }
+    ]
   },
-  {
-    name: 'Cubemap',
-    content: {
-      demo: 'CubemapDemo'
-    }
-  },
-  {
-    name: 'Custom Picking',
-    content: {
-      demo: 'CustomPickingDemo',
-      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
-    }
-  },
-  {
-    name: 'Instancing',
-    content: {
-      demo: 'InstancingDemo'
-    }
-  },
-  {
-    name: 'Mandelbrot',
-    content: {
-      demo: 'MandelbrotDemo'
-    }
-  },
-  {
-    name: 'Concentrics',
-    content: {
-      demo: 'MulticontextDemo'
-    }
-  },
-  {
-    name: 'Picking',
-    content: {
-      demo: 'PickingDemo',
-      path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
-    }
-  },
-  // {
-  //   name: 'DeferredRendering',
-  //   content: {
-  //     demo: 'DeferredRenderingDemo'
-  //   }
-  // },
-  // {
-  //   name: 'Particles',
-  //   content: {
-  //     demo: 'ParticlesDemo'
-  //   }
-  // },
-  {
-    name: 'Persistence',
-    content: {
-      demo: 'PersistenceDemo'
-    }
-  },
-  // {
-  //   name: 'Shadowmap',
-  //   content: {
-  //     demo: 'ShadowmapDemo'
-  //   }
-  // },
   {
     name: 'WebGL Lessons',
     children: [
-      {
-        name: 'Lesson 01',
-        content: {
-          demo: 'Lesson01'
-        }
-      },
-      {
-        name: 'Lesson 02',
-        content: {
-          demo: 'Lesson02'
-        }
-      },
+      // {
+      //   name: 'Lesson 01',
+      //   content: {
+      //     demo: 'Lesson01'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 02',
+      //   content: {
+      //     demo: 'Lesson02'
+      //   }
+      // },
       {
         name: 'Lesson 03',
         content: {
@@ -98,35 +111,35 @@ export const EXAMPLE_PAGES = [
           demo: 'Lesson05',
           path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/05/'
         }
-      },
-      {
-        name: 'Lesson 06',
-        content: {
-          demo: 'Lesson06',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/06/'
-        }
-      },
-      {
-        name: 'Lesson 07',
-        content: {
-          demo: 'Lesson07',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/07/'
-        }
-      },
-      {
-        name: 'Lesson 08',
-        content: {
-          demo: 'Lesson08',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/08/'
-        }
-      },
-      {
-        name: 'Lesson 09',
-        content: {
-          demo: 'Lesson09',
-          path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/09/'
-        }
-      },
+      }
+      // {
+      //   name: 'Lesson 06',
+      //   content: {
+      //     demo: 'Lesson06',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/06/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 07',
+      //   content: {
+      //     demo: 'Lesson07',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/07/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 08',
+      //   content: {
+      //     demo: 'Lesson08',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/08/'
+      //   }
+      // },
+      // {
+      //   name: 'Lesson 09',
+      //   content: {
+      //     demo: 'Lesson09',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/lessons/09/'
+      //   }
+      // },
       // {
       //   name: 'Lesson 10',
       //   content: {
@@ -195,8 +208,16 @@ export const DOC_PAGES = [
     name: 'Getting Started',
     children: [
       {
-        name: 'Installation',
+        name: 'Overview',
         content: 'get-started/README.md'
+      },
+      {
+        name: 'Installation',
+        content: 'get-started/installation.md'
+      },
+      {
+        name: 'Examples',
+        content: 'get-started/examples.md'
       },
       {
         name: 'Using with deck.gl',
@@ -207,8 +228,8 @@ export const DOC_PAGES = [
         content: 'get-started/using-with-node.md'
       },
       {
-        name: 'Using with other WebGL Libraries',
-        content: 'get-started/using-with-other-libs.md'
+        name: 'Using with other Frameworks',
+        content: 'get-started/using-with-other-frameworks.md'
       }
     ]
   },
@@ -220,8 +241,8 @@ export const DOC_PAGES = [
         content: 'user-guide/README.md'
       },
       {
-        name: 'Math Libraries',
-        content: 'user-guide/math.md'
+        name: 'Modules',
+        content: 'user-guide/modules.md'
       },
       {
         name: 'Debugging',
@@ -250,7 +271,7 @@ export const DOC_PAGES = [
       },
       {
         name: 'Group',
-        content: 'api-reference/scenegraph/group.md'
+        content: 'api-reference/core/group.md'
       },
       {
         name: 'Geometry',
@@ -294,16 +315,24 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/framebuffer.md'
       },
       {
-        name: 'Renderbuffer',
-        content: 'api-reference/webgl/renderbuffer.md'
-      },
-      {
         name: 'Program',
         content: 'api-reference/webgl/program.md'
       },
       {
+        name: 'Query (WebGL2)',
+        content: 'api-reference/webgl/query.md'
+      },
+      {
+        name: 'Renderbuffer',
+        content: 'api-reference/webgl/renderbuffer.md'
+      },
+      {
         name: 'Resource',
         content: 'api-reference/webgl/resource.md'
+      },
+      {
+        name: 'Sampler (WebGL2)',
+        content: 'api-reference/webgl/sampler.md'
       },
       {
         name: 'Shader',
@@ -334,16 +363,12 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/transform-feedback.md'
       },
       {
-        name: 'Query (WebGL2)',
-        content: 'api-reference/webgl/query.md'
+        name: 'UniformBufferLayout',
+        content: 'api-reference/webgl/uniform-buffer-layout.md'
       },
       {
-        name: 'Sampler (WebGL2)',
-        content: 'api-reference/webgl/sampler.md'
-      },
-      {
-        name: 'VertexArrayObject (EXT)',
-        content: 'api-reference/webgl/vertex-array-object.md'
+        name: 'VertexArray (EXT)',
+        content: 'api-reference/webgl/vertex-array.md'
       }
     ]
   }

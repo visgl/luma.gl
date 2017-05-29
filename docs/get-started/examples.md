@@ -1,4 +1,4 @@
-# EXAMPLES
+# Examples
 
 luma.gl contains a suite of stand-alone examples that can be used to test various features of the library
 

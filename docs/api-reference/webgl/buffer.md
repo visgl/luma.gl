@@ -10,8 +10,8 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 | **Method** | **Description** |
 | --- | --- |
 | `constructor` | Creates a Buffer|
-| `delete` | Destroys buffer |
 | `initialize` | Allocates and optionally initializes the buffer object's data store on GPU. |
+| `delete` | Destroys buffer |
 | `subData` | Updates a subset of a buffer object's data store. |
 | `copySubData` (WebGL2) | Copies part of the data of another buffer into this buffer |
 | `getSubData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. |
@@ -94,38 +94,20 @@ Note: buffer binding and unbinding is handled internal by luma.gl methods so the
 
 ### Constructor
 
-Creates a new WebGLBuffer. Also, for all properties set to a buffer, these properties are remembered so they're optional for later calls.
-
-Note: Specify `target: GL.ELEMENT_ARRAY_BUFFER` To create an element buffer. Otherwise it will be a generic buffer that can be used in a variety of situations.
+Creates a new Buffer, which will either be a an "element" buffer used for indices, or a generic buffer. To create an element buffer, simply specify `target: GL.ELEMENT_ARRAY_BUFFER`. If not, it will be a generic buffer that can be used in a variety of situations.
 
 ```
-const buffer = new Buffer(gl, options);
+const buffer = new Buffer(gl, {target, ...initOptions, ...layoutOptions});
 ```
 
-1. gl - WebGLContext
-2. options - (*object*) An object with options/data described below:
+* `gl` (`WebGLRenderingContext`) - gl context
+* `target`=`GL.ARRAY_BUFFER`|`GL.COPY_READ_BUFFER` (*GLenum*, optional) - the type of the buffer, see notes.
+* `...initOptions` (*Object*) - options passed on to `initialize`.
+* `...layoutOptions` - options passed on to `setLayout`
 
-* `target` - (*enum*, optional) The type of the buffer. Specify `GL.ELEMENT_ARRAY_BUFFER` To create an element buffer. Default is `GL.ARRAY_BUFFER` which indicates a generic buffer
-* `size` - (*numer*, optional) The size of the components in the buffer. Default is 1.
-* `type` - (*enum*, optional) The type of the data being stored in the buffer. Default's `gl.FLOAT`.
-* `stride` - (*number*, optional) The `stride` parameter when calling `gl.vertexAttribPointer`. Default 0.
-* `offset` - (*number*, optional) The `offset` parameter when calling `gl.vertexAttribPointer`. Default 0.
-* `usage` - (*enum*, optional) The access pattern used when setting the `gl.bufferData`. Default's `gl.STATIC_DRAW`.
-
-
-### setDataLayout
-
-Stores the layout of data with the buffer which makes it easy to e.g. set it as an attribute later.
-
-Params:
-* `layout`
-* `type`
-* `size` = 1
-* `offset` = 0
-* `stride` = 0
-* `normalized` = false
-* `integer` = false
-* `instanced` = 0
+Note:
+* In WebGL1, the default is `GL.ARRAY_BUFFER` which will work as a generic buffer.
+* In WebGL2, the default is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used (bound). From that point on, WebGL will consider it either as an element buffer or a generic buffer.
 
 
 ### initialize
@@ -134,63 +116,107 @@ Allocates and optionally initializes buffer memory/data store (releasing any pre
 
 Also extracts characteristics of stored data, hints for vertex attribute.
 
-`Buffer.setData({data, bytes, usage=, dataType=, size=})`
+`Buffer.initialize({data, bytes, usage=, dataType=, size=, ...layoutOptions})`
 
 * `data` (ArrayBufferView) - contents
 * `bytes` (GLsizeiptr) - the size of the buffer object's data store.
 * `usage`=`GL.STATIC_DRAW` (GLenum) - Allocation hint for GPU driver.
-* `dataType`=`GL.FLOAT` (GLenum) - type of data stored in buffer
-* `size`=`1` (GLuint) - number of values per vertex
+* `type`=Inferred (GLenum) - type of data stored in buffer. Inferred from `data` if supplied, otherwise `GL.FLOAT`.
+* `size`=`1` (GLuint) - number of components per vertex, e.g. a `vec2` has 2 components.
+* `...layoutOptions` -  parameters passed to `setLayout`
 
-Returns {Buffer} Returns itself for chaining.
+Returns itself for chaining.
+
+
+### setLayout
+
+Allows you to optionally describe the layout of the data in the buffer. This does not affect the buffer itself, but enables you can to avoid having to supply this data again (You might use it as an attribute later, see `VertexArray`).
+
+`Buffer.setLayout({bytes, usage=, dataType=, size=, type=})`
+
+* `type`= type of the data being stored in the buffer. Usually not needed, when inferred by the typed array supplied as `data`.
+* `size`=`1` (*number*, optional) - The number of components in each element the buffer (typically 1-4).
+* `normalized`=`false` (*boolean*, optional) -
+* `integer`=`false` (*boolean*, optional) -
+* `instanced`= `0` (*number*, optional) - whether buffer contains instance data
+* `offset`=`0` (*number*, optional) - the `offset`, where the data starts in the buffer.
+* `stride`=`0` (*number*, optional) - the `stride` represents an additional offset between each element in the buffer.
+
+Notes:
+* `offset` and `stride` are typically used to interleave data in buffers.
+
 
 ### subData
 
-Updates part of a buffer's allocated memory.
+Updates part or all of a buffer's allocated memory.
 
-`Buffer.subData({data, offset=, srcOffset=, length})`
+`Buffer.subData({data, offset=, srcOffset=, length=})`
 
-Params
 * `data` (`ArrayBufferView`) - length is inferred unless provided
 * `offset`=`0` - Offset into buffer
 * `srcOffset`=`0` -  WebGL2: Offset into srcData
 * `length` - WebGL2: Number of bytes to be copied
 
-Returns
-* Buffer - Returns itself for chaining.
+Returns itself for chaining.
 
 
-### copySubData (WEBGL2)
+### copyData (WEBGL2)
 
-Copies part of the data of another buffer into this buffer
+Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
 
-`Buffer.copySubData({sourceBuffer, readOffset=, writeOffset=, size})`
+`Buffer.copyData({sourceBuffer, readOffset=, writeOffset=, size})`
 
-Params:
-* `sourceBuffer`
+* `sourceBuffer` (`Buffer`) - the buffer to read data from.
 * `readOffset`=`0` (GLint) - byte offset from which to start reading from the buffer.
 * `writeOffset`=`0` (GLint) - byte offset from which to start writing to the buffer.
-* `size` (GLsizei) - bytes specifying the size of the data to be copied
+* `size` (GLsizei) - byte count, specifying the size of the data to be copied.
 
-Remarks:
+Returns itself for chaining.
+
+Note:
 * `readOffset`, `writeOffset` and `size` must all be greater than or equal to zero.
 * `readOffset + sizereadOffset + size` must not exceeed the size of the source buffer object
 * `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
 * If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
 
 
-### getSubData (WEBGL2)
+### getData (WEBGL2)
 
 Reads data from buffer into an `ArrayBuffer` or `SharedArrayBuffer`.
 
-`Buffer.getSubData({dstData, srcByteOffset, srcOffset, length})`
+`Buffer.getData({dstData, srcByteOffset, srcOffset, length})`
 
+* `dstData`=`null` (`ArrayBufferView` | `ArrayBuffer` | `SharedArrayBuffer` | `null`)  - memory to which to write the buffer data.
 * `srcByteOffset`=`0` (GLintptr) - byte offset from which to start reading from the buffer.
-* `dstData`=`null` (`ArrayBufferView` | `ArrayBuffer` | `SharedArrayBuffer`)  - memory to which to write the buffer data.
 * `srcOffset`=`0` (GLuint) - element index offset where to start reading the buffer.
 * `length`=`0` (GLuint)  Optional, defaulting to 0.
 
-Returns a buffer (provided or allocated)
+Returns a typed array containing the data from the buffer (if `dstData` was supplied it will be returned, otherwise this will be a freshly allocated array).
+
+
+## Types
+
+### Usage
+
+| Usage             | WebGL2 | WebGL1 | Description |
+| ---               | ---    | ---    | ---         |
+| `GL.STATIC_DRAW`  | Yes    | Yes    | Buffer will be used often and not change often. Contents are written to the buffer, but not read. |
+| `GL.DYNAMIC_DRAW` | Yes    | Yes    | Buffer will be used often and change often. Contents are written to the buffer, but not read. |
+| `GL.STREAM_DRAW`  | Yes    | Yes    | Buffer will not be used often. Contents are written to the buffer, but not read. |
+| `GL.STATIC_READ`  | Yes    | No     | Buffer will be used often and not change often. Contents are read from the buffer, but not written. |
+| `GL.DYNAMIC_READ` | Yes    | No     | Buffer will be used often and change often. Contents are read from the buffer, but not written. |
+| `GL.STREAM_READ`  | Yes    | No     | Buffer will not be used often. Contents are read from the buffer, but not written. |
+| `GL.STATIC_COPY`  | Yes    | No     | Buffer will be used often and not change often. Contents are neither written or read by the user. |
+| `GL.DYNAMIC_COPY` | Yes    | No     | Buffer will be used often and change often. Contents are neither written or read by the user. |
+| `GL.STREAM_COPY`  | Yes    | No     | Buffer will be used often and not change often. Contents are neither written or read by the user. |
+
+
+### Parameters
+
+| Parameter         | Type   | Value |
+| ---               | ---    | ---   |
+| `GL.BUFFER_SIZE`  | GLint  | The size of the buffer in bytes   |
+| `GL.BUFFER_USAGE` | GLenum | The `usage` pattern of the buffer |
 
 
 ## Remarks

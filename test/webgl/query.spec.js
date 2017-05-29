@@ -1,14 +1,16 @@
 /* eslint-disable max-len, max-statements */
 /* global setInterval, clearInterval */
 import test from 'tape-catch';
-import {createGLContext, pollContext, Query} from 'luma.gl';
-
-const fixture = {
-  gl: createGLContext()
-};
+import {pollContext, Query} from 'luma.gl';
+import util from 'util';
+import {fixture} from '../setup';
 
 test('WebGL#Query construct/delete', t => {
   const {gl} = fixture;
+
+  const ext = gl.getExtension('EXT_disjoint_timer_query');
+  t.comment(`EXT_disjoint_timer_query is ${Boolean(ext)} ${ext}`, ext);
+  util.inspect(ext, {showHidden: true});
 
   const supported = Query.isSupported(gl);
   if (supported) {
@@ -22,8 +24,12 @@ test('WebGL#Query construct/delete', t => {
     /.*WebGLRenderingContext.*/,
     'Query throws on missing gl context');
 
-  const timerQuery = new Query(gl);
-  t.ok(timerQuery instanceof Query, 'Query construction successful');
+  let timerQuery;
+  t.doesNotThrow(
+    () => {
+      timerQuery = new Query(gl);
+    },
+    'Query construction successful');
 
   timerQuery.delete();
   t.ok(timerQuery instanceof Query, 'Query delete successful');
@@ -47,7 +53,7 @@ test('WebGL#Query begin/cancel', t => {
   timerQuery.cancel().cancel().cancel();
   t.ok(timerQuery instanceof Query, 'Query multiple cancel successful');
 
-  timerQuery.begin();
+  timerQuery.beginTimeElapsedQuery();
   t.ok(timerQuery instanceof Query, 'Query begin successful');
 
   timerQuery.cancel().cancel().cancel();
@@ -74,7 +80,7 @@ test('WebGL#Query completed/failed queries', t => {
     }) :
     new Query(gl);
 
-  timerQuery.begin().end();
+  timerQuery.beginTimeElapsedQuery().end();
   t.ok(timerQuery.promise instanceof Promise, 'Query begin/end successful');
 
   const interval = setInterval(() => pollContext(gl), 20);

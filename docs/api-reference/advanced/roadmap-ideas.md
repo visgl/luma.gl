@@ -1,5 +1,7 @@
 # WebGL Feature Ideas
 
+A scratchpad for roadmap ideas...
+
 ## Resource
 
 ### Stats

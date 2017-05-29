@@ -1,8 +1,8 @@
-# Installation
+# Getting Started
 
-Use npm or yarn to install luma.gl
-```js
-npm install --save luma.gl
-yarn add luma.gl
-```
+Welcome to luma.gl!
 
+This section has information about:
+* how to install luma.gl
+* how to run, copy, and modify the many luma.gl examples
+* How to use luma.gl with other frameworks in different environments.

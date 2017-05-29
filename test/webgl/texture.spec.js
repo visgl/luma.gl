@@ -1,17 +1,14 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, createGLContext, Texture2D, glKey} from 'luma.gl';
+import {GL, Texture2D, glKey} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from '../../src/webgl/texture';
 import {
   testSamplerParameters, SAMPLER_PARAMETERS, SAMPLER_PARAMETERS_WEBGL2
 } from './sampler.utils';
 
-const fixture = {
-  gl: createGLContext(),
-  gl2: createGLContext({webgl2: true, webgl1: false, throwOnFailure: false})
-};
+import {fixture} from '../setup';
 
 test('WebGL#Texture2D construct/delete', t => {
   const {gl} = fixture;
@@ -75,19 +72,24 @@ test('WebGL#Texture2D format creation', t => {
   t.end();
 });
 
-const RGB_TO = {
-  [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
-  [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
-};
+// const RGB_TO = {
+//   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
+//   [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
+// };
 // const RGB_FROM = {
 //   [GL.UNSIGNED_BYTE]: v => [v[0] / 256, v[1] / 256, v[2] / 256],
 //   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
 // };
 
 const DATA = [1, 0.5, 0.25, 0.125];
+const UINT8_DATA = new Uint8Array(DATA);
+const UINT16_DATA = new Uint16Array(DATA);
+
 const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: new Uint8Array(RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: new Uint16Array(RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
+  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
 };
 const DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
@@ -116,10 +118,15 @@ test('WebGL2#Texture2D format creation', t => {
         //   `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) created`);
         // texture.delete()
         const data = TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA;
-        texture = new Texture2D(gl2, {format, dataFormat, type, data, width: 1, height: 1});
-        t.equals(texture.format, format,
-          `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) created`);
-        texture.delete();
+        if (data) { // eslint-disable-line
+          texture = new Texture2D(gl2, {format, dataFormat, type, data, width: 1, height: 1});
+          t.equals(texture.format, format,
+            `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) created`);
+          texture.delete();
+        } else {
+          t.equals(texture.format, format,
+            `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) skipped`);
+        }
       }
     }
   }

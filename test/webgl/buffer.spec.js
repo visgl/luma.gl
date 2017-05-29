@@ -1,10 +1,8 @@
-import {GL, createGLContext, Buffer, isWebGLContext} from 'luma.gl';
+import {GL, Buffer, isWebGLContext} from 'luma.gl';
 import 'luma.gl/headless';
 import test from 'tape-catch';
 
-const fixture = {
-  gl: createGLContext({debug: true})
-};
+import {fixture} from '../setup';
 
 test('WebGL#Buffer constructor/delete', t => {
   const {gl} = fixture;

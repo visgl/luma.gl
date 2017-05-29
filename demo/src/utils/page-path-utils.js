@@ -1,5 +1,10 @@
 function getDocUrl(filename) {
-  return `docs/${filename}`;
+  let url = `docs/${filename}`;
+  if (filename.indexOf('markdown') !== -1) {
+    url = filename;
+  }
+  console.log(url);
+  return url;
 }
 
 export function generatePaths(tree, {docUrls = false} = {}) {
@@ -13,7 +18,7 @@ export function generatePaths(tree, {docUrls = false} = {}) {
     tree.path = tree.name.match(/(([A-Z]|^)[a-z]+|\d+)/g).join('-').toLowerCase();
   }
   if (docUrls && typeof tree.content === 'string') {
-    tree.content = getDocUrl(tree.content);
+    tree.content = {path: getDocUrl(tree.content)};
   }
   return tree;
 }
