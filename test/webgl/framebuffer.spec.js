@@ -45,7 +45,7 @@ const TEST_CASES = [
       }
     }),
     pass: true
-  },
+  }
   // {
   //   title: 'Separate Depth/Stencil Renderbuffers',
   //   getOpts: (gl) => ({

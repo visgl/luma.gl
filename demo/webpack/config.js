@@ -16,9 +16,11 @@ module.exports = {
       loader: 'babel-loader'
     }, {
       test: /\.scss$/,
+      exclude: [/node_modules/],
       loaders: ['style-loader', 'css-loader', 'sass-loader', 'autoprefixer-loader']
     }, {
       test: /\.(eot|svg|ttf|woff|woff2|gif|jpe?g|png)$/,
+      exclude: [/node_modules/],
       loader: 'url-loader'
     }]
   },

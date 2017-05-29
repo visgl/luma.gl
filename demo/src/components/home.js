@@ -3,35 +3,25 @@ import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import Stats from 'stats.js';
 
+import Context from './context';
+
 import {updateMap, setHeaderOpacity} from '../actions/app-actions';
-// import Map from './map';
-// import ViewportAnimation from '../utils/map-utils';
 
 class Home extends Component {
   constructor(props) {
     super(props);
     this.state = {};
-    /*
-    this.cameraAnimation = ViewportAnimation.fly(
-      {bearing: 0},
-      {bearing: -15},
-      29000,
-      this.props.updateMap
-    ).easing(ViewportAnimation.Easing.Sinusoidal.InOut)
-    .repeat(Infinity)
-    .yoyo(true);
-    */
   }
 
   componentDidMount() {
     window.onscroll = this._onScroll.bind(this);
-    // window.onresize = this._resizeMap.bind(this);
     this._onScroll();
-    // this._resizeMap();
 
     this._stats = new Stats();
     this._stats.showPanel(0);
-    this.refs.fps && this.refs.fps.appendChild(this._stats.dom);
+    if (this.refs.fps) {
+      this.refs.fps.appendChild(this._stats.dom);
+    }
 
     const calcFPS = () => {
       this._stats.begin();
@@ -40,14 +30,11 @@ class Home extends Component {
     };
 
     this._animateRef = window.requestAnimationFrame(calcFPS);
-
-    // this.cameraAnimation.start();
   }
 
   componentWillUnmount() {
     window.onscroll = null;
     window.onresize = null;
-    // this.cameraAnimation.stop();
     window.cancelAnimationFrame(this._animateRef);
   }
 
@@ -73,14 +60,20 @@ class Home extends Component {
 
         <section ref="banner" id="banner">
           <div className="hero">
-            {/* <Map demo="HomeDemo" isInteractive={false} /> */}
+            <Context demo="InstancingDemo" isInteractive={false}/>
           </div>
-          <div className="container soft-left">
-            <h1>luma.gl</h1>
-            <p>A JavaScript WebGL Framework for Data Visualization</p>
-            <a href="#/documentation/overview/getting-started" className="btn">Get started</a>
+          <div className="container soft-left" style={{opacity: 0.8, backgroundColor: '#000000'}}>
+            <h1 style={{opacity: 1}}>luma.gl</h1>
+            <p style={{opacity: 1}}>
+              A WebGL2-Powered Framework for GPU-based Visualization and Computation
+            </p>
+            <a style={{opacity: 1}} href="#/documentation/overview/getting-started" className="btn">
+              Get started
+            </a>
           </div>
-          {/* <div ref="fps" className="fps" /> */}
+          {
+            /* <div ref="fps" className="fps" /> */
+          }
         </section>
 
         <section id="features">
@@ -88,45 +81,41 @@ class Home extends Component {
           <div className="container soft-left texts">
             <div>
               <h2>
-                LumaGL's primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.
+                luma.gl provides easy-to-use WebGL2-based building blocks that enable
+                high-performance GPU-powered data visualizations and computations in the browser.
               </h2>
-              {/*
+
               <hr className="short" />
               <h3>
                 <img src="images/icon-layers.svg" />
-                A Layered Approach to Data Visualization
+                Advanced GPU Usage
               </h3>
               <p>
-              deck.gl allows complex visualizations to be constructed by
-              composing existing layers, and makes it easy to package and
-              share new visulizations as reusable layers. We already offer
-              a <a href="#/layers/catalog/overview">catalog of proven layers</a> and
-              we have many more in the works.
+                luma.gl brings support for new advanced GPU techniques to JavaScript,
+                including instanced rendering, GPGPU computing
+                and WebGL2-based rendering techniques.
               </p>
 
               <h3>
                 <img src="images/icon-high-precision.svg" />
-                High-Precision Computations in the GPU
+                Shader Power Programming
               </h3>
               <p>
-              By emulating 64 bit floating point computations in the GPU,
-              deck.gl renders datasets with unparalleled accuracy and
-              performance.
+                luma.gl takes browser-based GLSL shader programming to the next level.
+                Modularized shader code, powerful JavaScript classes for setting up
+                GPU inputs and receiving GPU outputs, together with extensive support
+                for debugging and profiling of your GLSL shaders and WebGL2 objects.
               </p>
 
               <h3>
                 <img src="images/icon-react.svg" />
-                React and Mapbox GL Integrations
+                Performance
               </h3>
               <p>
-              deck.gl is a great match with React, supporting
-              efficient WebGL rendering under the Reactive programming
-              paradigm. And when used with Mapbox GL it automatically
-              coordinates with the Mapbox camera system to provide
-              compelling 2D and 3D visualizations on top of your Mapbox
-              based maps.
+              A strong focus on performance. Sue to this focus, luma.gl provides a
+              somewhat lower abstraction level than some other WebGL frameworks.
               </p>
-              */}
+
             </div>
           </div>
 

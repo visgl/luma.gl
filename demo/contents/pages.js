@@ -1,75 +1,82 @@
 export const EXAMPLE_PAGES = [
   {
-    name: 'Overview',
-    content: 'code-markdown/examples.md'
-  },
-  {
-    name: 'Cubemap',
-    content: {
-      demo: 'CubemapDemo'
-    }
-  },
-  // {
-  //   name: 'Custom Picking',
-  //   content: {
-  //     demo: 'CustomPickingDemo',
-  //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
-  //   }
-  // },
-  {
-    name: 'Instancing',
-    content: {
-      demo: 'InstancingDemo'
-    }
-  },
-  {
-    name: 'Mandelbrot',
-    content: {
-      demo: 'MandelbrotDemo'
-    }
-  },
-  {
-    name: 'Concentrics',
-    content: {
-      demo: 'MulticontextDemo'
-    }
-  },
-  // {
-  //   name: 'Picking',
-  //   content: {
-  //     demo: 'PickingDemo',
-  //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
-  //   }
-  // },
-  // {
-  //   name: 'DeferredRendering',
-  //   content: {
-  //     demo: 'DeferredRenderingDemo'
-  //   }
-  // },
-  // {
-  //   name: 'Particles',
-  //   content: {
-  //     demo: 'ParticlesDemo'
-  //   }
-  // },
-  // {
-  //   name: 'Persistence',
-  //   content: {
-  //     demo: 'PersistenceDemo'
-  //   }
-  // },
-  // {
-  //   name: 'Shadowmap',
-  //   content: {
-  //     demo: 'ShadowmapDemo'
-  //   }
-  // },
-  {
-    name: 'Tranform Feedback',
-    content: {
-      demo: 'TransformFeedbackDemo'
-    }
+    name: 'Core Examples',
+    children: [
+      {
+        name: 'Overview',
+        content: {
+          path: 'markdown/examples.md'
+        }
+      },
+      {
+        name: 'Cubemap',
+        content: {
+          demo: 'CubemapDemo'
+        }
+      },
+      // {
+      //   name: 'Custom Picking',
+      //   content: {
+      //     demo: 'CustomPickingDemo',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/custom-picking/'
+      //   }
+      // },
+      {
+        name: 'Instancing',
+        content: {
+          demo: 'InstancingDemo'
+        }
+      },
+      {
+        name: 'Mandelbrot',
+        content: {
+          demo: 'MandelbrotDemo'
+        }
+      },
+      {
+        name: 'Concentrics',
+        content: {
+          demo: 'MulticontextDemo'
+        }
+      },
+      // {
+      //   name: 'Picking',
+      //   content: {
+      //     demo: 'PickingDemo',
+      //     path: 'https://raw.githubusercontent.com/uber/luma.gl/master/examples/core/picking/'
+      //   }
+      // },
+      // {
+      //   name: 'DeferredRendering',
+      //   content: {
+      //     demo: 'DeferredRenderingDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Particles',
+      //   content: {
+      //     demo: 'ParticlesDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Persistence',
+      //   content: {
+      //     demo: 'PersistenceDemo'
+      //   }
+      // },
+      // {
+      //   name: 'Shadowmap',
+      //   content: {
+      //     demo: 'ShadowmapDemo'
+      //   }
+      // },
+      {
+        name: 'Tranform Feedback',
+        content: {
+          demo: 'TransformFeedbackDemo'
+        }
+      }
+    ]
   },
   {
     name: 'WebGL Lessons',

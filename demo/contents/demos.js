@@ -1,3 +1,6 @@
+import {setContextDefaults} from 'luma.gl';
+setContextDefaults({webgl2: true});
+
 export {default as InstancingDemo} from '../../examples/core/instancing/app.js';
 export {default as CubemapDemo} from '../../examples/core/cubemap/app.js';
 export {default as CustomPickingDemo} from '../../examples/core/custom-picking/app.js';

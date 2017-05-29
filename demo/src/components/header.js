@@ -7,7 +7,7 @@ export default class Header extends Component {
     const {isMenuOpen, opacity, toggleMenu} = this.props;
 
     return (
-      <header className={ isMenuOpen ? 'open' : '' }>
+      <header className={ isMenuOpen ? 'open' : '' } style={{opacity: 1, backgroundColor: '#000'}}>
         <div className="bg" style={{opacity}} />
         <div className="container">
           <a className="logo" href="#">luma.gl</a>

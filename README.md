@@ -19,7 +19,7 @@
 
 ## Overview
 
-luma.gl's primary focus is to provide a set of efficient and easy-to-use WebGL building blocks enabling high-performance browser-based data visualizations.
+luma.gl's provides efficient and easy-to-use WebGL2-based building blocks enabling high-performance GPU-based data visualizations and computations on your browser.
 
 See
 [**Examples**](http://uber.github.io/luma.gl/) and
@@ -42,8 +42,7 @@ Secondary Design Goals:
 
 ## Usage
 
-* [deck.gl](https://github.com/uber/deck.gl) builds 3D map visualization
-  overlays on luma.gl.
+* [deck.gl](https://github.com/uber/deck.gl) builds 3D map visualization overlays on luma.gl.
 
 
 ## History

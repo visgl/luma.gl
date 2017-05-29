@@ -10,6 +10,7 @@ export {
   isWebGL2Context,
   isWebGL2,
 
+  setContextDefaults,
   createGLContext,
   getGLExtension,
   withParameters,

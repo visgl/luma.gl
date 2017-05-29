@@ -1,5 +1,8 @@
 function getDocUrl(filename) {
-  const url = `docs/${filename}`;
+  let url = `docs/${filename}`;
+  if (filename.indexOf('markdown') !== -1) {
+    url = filename;
+  }
   console.log(url);
   return url;
 }
