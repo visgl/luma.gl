@@ -77,6 +77,7 @@ export default class AnimationLoop {
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
   start(contextParams = {}) {
+    console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
 
       // Wait for start promise before rendering frame
@@ -105,6 +106,7 @@ export default class AnimationLoop {
 
   // Stops a render loop if already running, finalizing
   stop() {
+    console.debug(`Stopping ${this.constructor.name}`);
     if (this._animationFrameId) {
       this._finalizeContext();
       cancelAnimationFrame(this._animationFrameId);

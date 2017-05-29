@@ -17,7 +17,9 @@ export default class Header extends Component {
           <div className="links">
             <Link activeClassName="active" to="examples">Examples</Link>
             <Link activeClassName="active" to="documentation">Documentation</Link>
-            <Link activeClassName="active" href="https://github.com/uber/luma.gl">Github</Link>
+            <Link activeClassName="active" href="https://github.com/uber/luma.gl">
+              Github<i className="icon icon-github" />
+            </Link>
           </div>
         </div>
       </header>

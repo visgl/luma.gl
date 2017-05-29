@@ -208,8 +208,12 @@ export const DOC_PAGES = [
     name: 'Getting Started',
     children: [
       {
-        name: 'Installation',
+        name: 'Overview',
         content: 'get-started/README.md'
+      },
+      {
+        name: 'Installation',
+        content: 'get-started/installation.md'
       },
       {
         name: 'Examples',
@@ -235,6 +239,10 @@ export const DOC_PAGES = [
       {
         name: 'Overview',
         content: 'user-guide/README.md'
+      },
+      {
+        name: 'Modules',
+        content: 'user-guide/modules.md'
       },
       {
         name: 'Debugging',
@@ -263,7 +271,7 @@ export const DOC_PAGES = [
       },
       {
         name: 'Group',
-        content: 'api-reference/scenegraph/group.md'
+        content: 'api-reference/core/group.md'
       },
       {
         name: 'Geometry',

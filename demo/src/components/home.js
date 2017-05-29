@@ -67,22 +67,21 @@ class Home extends Component {
             <p style={{opacity: 1}}>
               A WebGL2-Powered Framework for GPU-based Visualization and Computation
             </p>
-            <a style={{opacity: 1}} href="#/documentation/overview/getting-started" className="btn">
+            <a style={{opacity: 1}} href="#/documentation/getting-started/overview" className="btn">
               Get started
             </a>
           </div>
-          {
-            /* <div ref="fps" className="fps" /> */
-          }
+          <div ref="fps" className="fps" /> */
         </section>
 
         <section id="features">
+          <div style={{height: 100}}/>
           <div className="image" />
           <div className="container soft-left texts">
             <div>
               <h2>
-                luma.gl provides easy-to-use WebGL2-based building blocks that enable
-                high-performance GPU-powered data visualizations and computations in the browser.
+                luma.gl provides high-performance WebGL2-based components for
+                 GPU-powered data visualizations and computations.
               </h2>
 
               <hr className="short" />
@@ -91,44 +90,33 @@ class Home extends Component {
                 Advanced GPU Usage
               </h3>
               <p>
-                luma.gl brings support for new advanced GPU techniques to JavaScript,
-                including instanced rendering, GPGPU computing
-                and WebGL2-based rendering techniques.
+                luma.gl simplifies the use of advanced GPU techniques,
+                including instanced rendering for extremely large data sets,
+                and GPU based computing using Transform Feedback
+                and other WebGL2 features.
               </p>
 
               <h3>
                 <img src="images/icon-high-precision.svg" />
-                Shader Power Programming
+                Shader Programming Power
               </h3>
               <p>
-                luma.gl takes browser-based GLSL shader programming to the next level.
+                luma.gl takes GLSL shader programming for the Web to the next level.
                 Modularized shader code, powerful JavaScript classes for setting up
-                GPU inputs and receiving GPU outputs, together with extensive support
-                for debugging and profiling of your GLSL shaders and WebGL2 objects.
+                GPU inputs and receiving GPU outputs, and extensive support
+                for debugging and profiling GLSL shaders.
               </p>
 
               <h3>
                 <img src="images/icon-react.svg" />
-                Performance
+                Performance Focus
               </h3>
               <p>
-              A strong focus on performance. Sue to this focus, luma.gl provides a
+              A strong focus on performance. Due to this focus, luma.gl provides a
               somewhat lower abstraction level than some other WebGL frameworks.
               </p>
 
             </div>
-          </div>
-
-          <div className="container text-center buttons">
-            <a href="#/documentation/" className="btn">
-              Get Started <i className="icon icon-arrow-right" />
-            </a>
-            <a href="https://github.com/uber/luma.gl" className="btn">
-              View on Github <i className="icon icon-github" />
-            </a>
-            <a href="#/examples" className="btn">
-              See examples <i className="icon icon-gallery" />
-            </a>
           </div>
         </section>
 
