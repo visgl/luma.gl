@@ -131,7 +131,6 @@ export {default as FramebufferObject} from './webgl/framebuffer';
 
 // DEPRECATED IN V3.0
 export {readPixels} from './webgl/functions';
-export {Vec3, Mat4, Quat} from './deprecated/math';
 export {default as Object3D} from './deprecated/scenegraph/object-3d';
 export {default as Group} from './deprecated/scenegraph/group';
 export {default as Scene} from './deprecated/scenegraph/scene';

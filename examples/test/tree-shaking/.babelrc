@@ -1,11 +1,9 @@
 {
   "presets": [
-  	["es2015", {modules: false}],
-  	"stage-2"
+  	["es2015", {modules: false}]
   ],
   "plugins": [
   	"./babel-plugin-tree-shaking.js",
-    "transform-decorators-legacy",
     ["transform-builtin-extend", {"globals": ["Array"]}],
   ]
 }
