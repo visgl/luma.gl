@@ -126,11 +126,15 @@ export const experimental = {
   ShaderCache
 };
 
+// DEPRECATED IN V4.0
 // Alias for FramebufferObject (deprecated in v3). Framebuffer API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';
 
 // DEPRECATED IN V3.0
 export {readPixels} from './webgl/functions';
-export {Object3D, Group, Scene, pickModels} from './deprecated/scenegraph';
+export {default as Object3D} from './deprecated/scenegraph/object-3d';
+export {default as Group} from './deprecated/scenegraph/group';
+export {default as Scene} from './deprecated/scenegraph/scene';
+export {pickModels} from './deprecated/scenegraph/pick';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './deprecated/fx';

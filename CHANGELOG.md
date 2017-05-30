@@ -1,5 +1,11 @@
 # Pre-releases
 
+## 4.0.0-alpha.7
+
+* size improvemnts to transpiled code (dist)
+* tree-shaking improvements - carefully avoid dependencies that defeat tree shaking.
+
+
 ## 4.0.0-alpha.6
 - Fix framebuffer creation error AGAIN (#183)
 - NEW: `UniformBufferLayout` class
@@ -37,14 +43,21 @@
 - Add benchmarking scaffolding and a benchmark test for Program constructor (#142)
 - Docs update (#137)
 
+
 # Official releases
 
-## 3.0.0
+
+## v3
+
+Theme: Pure ES6 Codebase/Build tooling improvements
+
+### 3.0.2
+- Check compilation and linking status only when debug WebGL context is used to improve performance (#144)
 
 ### 3.0.1
 - Add CORS setting to allow loading image from a different domain
 
-### 3.0.0 Pure ES6 Codebase/Build tooling improvements
+## 3.0.0
 
 Codebase/Build tooling improvements
 - Replace wildcard exports with named exports in index.js

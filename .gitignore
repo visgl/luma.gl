@@ -4,9 +4,10 @@ dist-es6/*
 dist-min/*
 dist-buble/*
 **/dist/*
+
+_docs
 .coverage
 .nyc_output
-_docs
 node_modules
 npm-debug.log
 

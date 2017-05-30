@@ -1,7 +1,7 @@
 /* eslint-disable */
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
-import GL, {glGet} from './api';
+import GL, {glGet} from './gl-constants';
 import {assertWebGLContext, assertWebGL2Context} from './context';
 import {glContextWithState} from './context';
 import assert from 'assert';
@@ -24,14 +24,23 @@ export function draw(gl, {
   const extension = gl.getExtension('ANGLE_instanced_arrays');
 
   // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-  if (isInstanced && isIndexed) {
-    extension.drawElementsInstancedANGLE(
-      drawMode, vertexCount, indexType, offset, instanceCount
-    );
-  } else if (isInstanced) {
-    extension.drawArraysInstancedANGLE(
-      drawMode, offset, vertexCount, instanceCount
-    );
+  if (isInstanced) {
+    const webgl2 = isWebGL2Context(gl);
+    const extension = gl.getExtension('ANGLE_instanced_arrays');
+    const context = webgl2 ? gl : extension;
+    const suffix = webgl2 ? '' : 'ANGLE';
+    const drawElements = 'drawElementsInstanced' + suffix;
+    const drawArrays = 'drawArraysInstanced' + suffix;
+
+    if (isIndexed) {
+      context[drawElements](
+        drawMode, vertexCount, indexType, offset, instanceCount
+      );
+    } else {
+      context[drawArrays](
+        drawMode, offset, vertexCount, instanceCount
+      );
+    }
   } else if (isIndexed) {
     gl.drawElements(drawMode, vertexCount, indexType, offset);
   } else {
