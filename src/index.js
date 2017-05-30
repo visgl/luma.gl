@@ -126,6 +126,7 @@ export const experimental = {
   ShaderCache
 };
 
+// DEPRECATED IN V4.0
 // Alias for FramebufferObject (deprecated in v3). Framebuffer API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';
 
