@@ -304,7 +304,7 @@ function begin() {
   });
   var tMarble = new Texture2D(gl, {
     data: marbleImg,
-    generateMipmap: true,
+    mipmap: true,
     parameters: {
       [GL.WRAP_S]: GL.REPEAT,
       [GL.WRAP_T]: GL.REPEAT,

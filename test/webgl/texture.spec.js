@@ -16,7 +16,8 @@ test('WebGL#Texture2D construct/delete', t => {
   t.throws(
     () => new Texture2D(),
     /.*WebGLRenderingContext.*/,
-    'Texture2D throws on missing gl context');
+    'Texture2D throws on missing gl context'
+  );
 
   const texture = new Texture2D(gl);
   t.ok(texture instanceof Texture2D, 'Texture2D construction successful');

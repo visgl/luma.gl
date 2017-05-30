@@ -57,13 +57,13 @@ window.webGLStart = function() {
   loadTextures(gl, {
     urls: ['moon.gif', 'crate.gif'],
     parameters: [{
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
+      [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+      [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+      mipmap: true
     }, {
-      magFilter: gl.LINEAR,
-      minFilter: gl.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
+      [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+      [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+      mipmap: true
     }]
   })
   .then(function(textures) {

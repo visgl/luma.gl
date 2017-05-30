@@ -1,7 +1,7 @@
 import GL from './api';
 import {isWebGL2, ERR_WEBGL2} from './context';
 import {clear, clearBuffer} from './clear';
-import {getContextCaps} from './context-limits';
+import {getFeatures} from './context-features';
 import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
@@ -550,7 +550,7 @@ export default class Framebuffer extends Resource {
   // null means OK to query
   /* eslint-disable complexity */
   _getAttachmentParameterFallback(pname) {
-    const caps = getContextCaps(this.gl);
+    const caps = getFeatures(this.gl);
 
     switch (pname) {
     case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint

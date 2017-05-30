@@ -11,6 +11,7 @@ attribute vec4 pickingColors;
 attribute vec2 texCoords;
 
 // camera and object matrices
+uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 viewInverseMatrix;
 uniform mat4 projectionMatrix;
@@ -46,6 +47,7 @@ varying vec4 vNormal;
 varying vec3 lightWeighting;
 
 void main(void) {
+
   vec4 mvPosition = worldMatrix * vec4(positions, 1.0);
   vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normals, 1.0);
 
@@ -84,7 +86,7 @@ void main(void) {
   vColor = colors;
   vPickingColor = pickingColors;
   vTexCoord = texCoords;
-  vNormal = transformedNormal;
-  gl_Position = projectionMatrix * worldMatrix * vec4(positions, 1.0);
+  // vNormal = transformedNormal;
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(positions, 1.0);
 }
 `;

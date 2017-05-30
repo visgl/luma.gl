@@ -117,6 +117,10 @@ function getFeature({gl, cap, webglVersion}) {
 }
 
 // capability can be a WebGL extension name or a luma capability name
+export function hasFeature(gl, feature) {
+  return hasFeatures(feature);
+}
+
 export function hasFeatures(gl, features) {
   features = Array.isArray(features) ? features : [features];
   return features.every(feature => {
@@ -130,6 +134,7 @@ export function getFeatures(gl) {
 
   if (!gl.luma.caps) {
     gl.luma.caps = {};
+    gl.luma.caps.webgl2 = isWebGL2(gl);
     const webglVersion = isWebGL2(gl) ? 'webgl2' : 'webgl1';
     for (const cap in WEBGL_FEATURES) {
       gl.luma.caps[cap] = getFeature({gl, cap, webglVersion});

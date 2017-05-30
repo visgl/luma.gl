@@ -1,5 +1,5 @@
 import {getShaderDependencies, getShaderModule} from './register-shaders';
-import {glGetDebugInfo} from '../../webgl/context';
+import {getContextInfo} from '../../webgl';
 import assert from 'assert';
 
 const VERTEX_SHADER = 'vertexShader';
@@ -29,7 +29,7 @@ export function checkRendererVendor(debugInfo, gpuVendor) {
 export function getPlatformShaderDefines(gl) {
   /* eslint-disable */
   let platformDefines = '';
-  const debugInfo = glGetDebugInfo(gl);
+  const debugInfo = getContextInfo(gl);
 
   if (checkRendererVendor(debugInfo, 'nvidia')) {
     platformDefines += `\

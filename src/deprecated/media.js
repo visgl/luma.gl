@@ -69,7 +69,7 @@ export function postProcessImage({
       }, {
         name: 'TEXTURE_MIN_FILTER',
         value: 'LINEAR',
-        generateMipmap: false
+        mipmap: false
       }]
     },
     bindToRenderBuffer: false

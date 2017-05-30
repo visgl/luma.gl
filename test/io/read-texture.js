@@ -44,7 +44,7 @@ test('WebGL#read-texture', t => {
 
   return loadImage(DATA_URL)
   .then(image => {
-    const texture = new Texture2D(gl, {pixels: image, generateMipmap: true});
+    const texture = new Texture2D(gl, {pixels: image, mipmap: true});
     t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
 
     program

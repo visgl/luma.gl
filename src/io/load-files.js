@@ -7,13 +7,14 @@ import {Geometry} from '../geometry';
 
 function noop() {}
 
-let pathPrefix = '';
+export function loadTexture(gl, url, opts = {}) {
+  const {urls, onProgress = noop} = opts;
+  assert(typeof url === 'string', 'loadTexture: url must be string');
 
-/*
- * Set a relative path prefix
- */
-export function setPathPrefix(prefix) {
-  pathPrefix = prefix;
+  return loadImages(Object.assign({urls, onProgress}, opts))
+  .then(images => images.map((img, i) => {
+    return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
+  }));
 }
 
 /*
@@ -25,7 +26,6 @@ export function loadFiles(opts = {}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      url = pathPrefix + url;
       const promise = loadFile(Object.assign({url}, opts));
       promise.then(file => onProgress({
         progress: ++count / urls.length,
@@ -47,7 +47,6 @@ export function loadImages(opts = {}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      url = pathPrefix + url;
       const promise = loadImage(url);
       promise.then(file => onProgress({
         progress: ++count / urls.length,

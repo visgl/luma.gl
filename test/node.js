@@ -16,6 +16,6 @@ require('babel-polyfill');
 require('luma.gl/headless');
 
 // Run the tests
-require('./index-webgl-independent-tests');
+// require('./index-webgl-independent-tests');
 require('./index-webgl-dependent-tests');
 

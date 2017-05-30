@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, Cube, Matrix4, Vec3, Texture2D, addEvents, loadImage} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage} from 'luma.gl';
 
 /* global window */
 /* eslint-disable max-statements, no-var, no-multi-spaces */
@@ -39,25 +39,11 @@ var yRot = 0;
 var ySpeed = 0.013;
 var z = -5.0;
 var filter = 0;
-var textures = {};
 var filters = ['nearest', 'linear', 'mipmap'];
 
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize: ({canvas, gl}) => {
-    // context.set(gl, {
-    //   clearColor: [0, 0, 0, 1],
-    //   clearDepth: 1,
-    //   depthTest: true,
-    //   depthFunc: GL.LEQUAL,
-    //   [GL.UNPACK_FLIP_Y_WEBGL]: true
-    // });
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-
-    const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
     addEvents(canvas, {
       onKeyDown(e) {
@@ -88,38 +74,54 @@ const animationLoop = new AnimationLoop({
       }
     });
 
+    // context.set(gl, {
+    //   clearColor: [0, 0, 0, 1],
+    //   clearDepth: 1,
+    //   depthTest: true,
+    //   depthFunc: GL.LEQUAL,
+    //   [GL.UNPACK_FLIP_Y_WEBGL]: true
+    // });
+
+    gl.clearColor(0, 0, 0, 1);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+
+    const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
+
     // load image
     return loadImage('crate.gif')
     .then(image => {
 
-      textures.nearest = new Texture2D(gl, {
-        data: image,
-        pixelStore: {
-          [GL.UNPACK_FLIP_Y_WEBGL]: true
-        }
-      });
-      textures.linear = new Texture2D(gl, {
-        data: image,
-        parameters: {
-          [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
-          [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
-        },
-        pixelStore: {
-          [GL.UNPACK_FLIP_Y_WEBGL]: true
-        }
-      });
-
-      textures.mipmap = new Texture2D(gl, {
-        data: image,
-        generateMipmap: true,
-        parameters: {
-          [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
-          [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
-        },
-        pixelStore: {
-          [GL.UNPACK_FLIP_Y_WEBGL]: true
-        }
-      });
+      const textures = {
+        nearest: new Texture2D(gl, {
+          data: image,
+          pixelStore: {
+            [GL.UNPACK_FLIP_Y_WEBGL]: true
+          }
+        }),
+        linear: new Texture2D(gl, {
+          data: image,
+          parameters: {
+            [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
+            [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
+          },
+          pixelStore: {
+            [GL.UNPACK_FLIP_Y_WEBGL]: true
+          }
+        }),
+        mipmap: new Texture2D(gl, {
+          data: image,
+          mipmap: true,
+          parameters: {
+            [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
+            [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
+          },
+          pixelStore: {
+            [GL.UNPACK_FLIP_Y_WEBGL]: true
+          }
+        })
+      };
 
       return {cube, textures};
     });
@@ -131,32 +133,33 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    cube.render({
-      uSampler: textures[filters[filter]],
-      uPMatrix: Matrix4.perspective({aspect}),
-      uMVMatrix: Matrix4
-        .lookAt({eye: [0, 0, 0]})
-        .translate([0, 0, -5])
-        .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
-    });
-
-    // get new view matrix out of element and camera matrices
-    view.mulMat42(camera.view, cube.matrix);
+    // cube.render({
+    //   uSampler: textures[filters[filter]],
+    //   uPMatrix: Matrix4.perspective({aspect}),
+    //   uMVMatrix: Matrix4
+    //     .lookAt({eye: [0, 0, 0]})
+    //     .translate([0, 0, -5])
+    // });
 
     // draw Cube
+
+    // update element matrix
     cube
-      // update element matrix
-      .setPosition(new Vec3(0, 0, z))
-      .setRotation(new Vec3(xRot, yRot, 0))
-      .updateMatrix()
-      // set attributes, indices and textures
-      // set uniforms
-      .setUniforms({
-        uMVMatrix: view,
-        uPMatrix: camera.projection,
-        uSampler: textures[filters[filter]]
-      })
-      .render();
+      .setPosition([0, 0, z])
+      .setRotation([xRot, yRot, 0])
+      .updateMatrix();
+
+    const uMVMatrix = Matrix4
+      .lookAt({eye: [0, 0, 0]})
+      .translate([0, 0, -5])
+      .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
+      .multiplyRight(cube.matrix);
+
+    cube.render({
+      uMVMatrix,
+      uPMatrix: Matrix4.perspective({aspect}),
+      uSampler: textures[filters[filter]]
+    });
   }
 });
 
