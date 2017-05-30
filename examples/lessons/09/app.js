@@ -1,12 +1,14 @@
 /* eslint-disable no-var, max-statements */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global document */
-import {AnimationLoop, loadTextures, PerspectiveCamera, Scene, addEvents} from 'luma.gl';
+import {AnimationLoop, loadTextures, PerspectiveCamera, Group, addEvents} from 'luma.gl';
 import {Star} from './star';
 
-var $id = function(d) {
-  return document.getElementById(d);
-};
+var tStar;
+var twinkle = $id('twinkle');
+
+var zoom = -15;
+var tilt = 90;
 
 const animationLoop = new AnimationLoop({
   // var canvas = document.getElementById('lesson09-canvas');
@@ -14,22 +16,11 @@ const animationLoop = new AnimationLoop({
   // canvas.height = canvas.clientHeight;
   // var gl = createGLContext({canvas});
 
-  onInitialize: ({gl}) => {
-    var tStar;
-    var twinkle = $id('twinkle');
-
-    var zoom = -15;
-    var tilt = 90;
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
+  onInitialize: ({gl, canvas}) => {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.enable(gl.BLEND);
 
-    var camera = new PerspectiveCamera({
-      aspect: canvas.width / canvas.height
-    });
-
-    var scene = new Scene(gl);
+    var scene = new Group(gl);
 
     addEvents(canvas, {
       onKeyDown(e) {
@@ -53,10 +44,10 @@ const animationLoop = new AnimationLoop({
 
     loadTextures(gl, {
       urls: ['star.gif'],
+      mipmap: true,
       parameters: [{
-        magFilter: gl.LINEAR,
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        generateMipmap: true
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
       }]
     })
     .then(textures => {
@@ -70,6 +61,10 @@ const animationLoop = new AnimationLoop({
     });
   },
   onRender() {
+    var camera = new PerspectiveCamera({
+      aspect: canvas.width / canvas.height
+    });
+
     // Update Camera Position
     var radTilt = tilt / 180 * Math.PI;
     camera.position.set(0, Math.cos(radTilt) * zoom,

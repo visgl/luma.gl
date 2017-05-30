@@ -1,7 +1,6 @@
-/* global document */
 import {
   GL, AnimationLoop, Matrix4, Vector3, radians,
-  loadTextures, Buffer, Sphere, Framebuffer, Scene, pickModels
+  loadTextures, Buffer, Sphere, Framebuffer, pickModels
 } from 'luma.gl';
 
 const pick = {x: 0, y: 0};
@@ -33,10 +32,10 @@ const animationLoop = new AnimationLoop({
 
     return loadTextures(gl, {
       urls: PLANETS.map(planet => planet.textureUrl),
+      mipmaps: true,
       parameters: {
-        magFilter: gl.LINEAR,
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        generateMipmap: true
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
       }
     })
     .then(textures => PLANETS.map(
@@ -47,37 +46,42 @@ const animationLoop = new AnimationLoop({
         nlong: 32,
         radius: 1,
         pickable: true,
+        attributes: {
+          colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
+          pickingColors: new Buffer(gl, {size: 3, data: new Float32Array(10000)})
+        },
         uniforms: {
           sampler1: textures[i],
           hasTexture1: true,
           hasTextureCube1: false,
-          colors: [1, 1, 1, 1],
-          position: new Vector3(
-            Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
-            Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
-            0
-          )
-        },
-        attributes: {
-          colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
-          pickingColors: new Buffer(gl, {size: 3, data: new Float32Array(10000)})
+          colors: [1, 1, 1, 1]
         }
       })
+      .setPosition([
+        Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
+        Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
+        0
+      ])
+      .updateMatrix()
     ))
-    .then(planets => ({planets}));
+    .then(planets => ({
+      planets
+    }));
   },
   onRender: ({gl, aspect, planets}) => {
     const uniforms = {
-      projectionMatrix: Matrix4.perspective({fov: radians(15), aspect}),
+      projectionMatrix: Matrix4.perspective({fov: radians(75), aspect}),
       viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
     };
 
-    // for (const item of scene.children) {
-    //   item.rotation.y += 0.01;
-    //   item.updateMatrix();
-    // }
+    for (const planet of planets) {
+      planet.rotation.y += 0.01;
+      planet.updateMatrix();
+    }
 
-    planets.forEach(planet => planet.render(uniforms));
+    planets.forEach(planet => planet.render(
+      Object.assign({}, uniforms, {modelMatrix: planet.matrix})
+    ));
 
     // const pickedModel = pickModels(gl, {
     //   group: scene,

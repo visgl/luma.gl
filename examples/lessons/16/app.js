@@ -35,13 +35,13 @@ export const animation = new AnimationLoop()
       loadTextures(gl, {
         urls: ['moon.gif', 'crate.gif'],
         parameters: [{
-          magFilter: gl.LINEAR,
-          minFilter: gl.LINEAR_MIPMAP_NEAREST,
-          generateMipmap: true
+          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+          mipmap: true
         }, {
-          magFilter: gl.LINEAR,
-          minFilter: gl.LINEAR_MIPMAP_NEAREST,
-          generateMipmap: true
+          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+          mipmap: true
         }]
       })
     ])
@@ -99,8 +99,8 @@ export const animation = new AnimationLoop()
       const fb = new Framebuffer(gl, {
         width: screenWidth,
         height: screenHeight,
-        minFilter: gl.LINEAR,
-        magFilter: gl.LINEAR
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR
       });
 
       macbookscreen.textures = fb.texture;
@@ -129,14 +129,14 @@ function setupInnerScene(gl) {
       url: 'moon.gif',
       [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
       [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
+      mipmap: true
     }),
 
     loadTexture({
       url: 'crate.gif',
       [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
       [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST,
-      generateMipmap: true
+      mipmap: true
     })
   ])
   .then([tMoon, tCrate] => {

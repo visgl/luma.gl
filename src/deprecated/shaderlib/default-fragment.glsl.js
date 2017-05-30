@@ -37,12 +37,12 @@ uniform float fogFar;
 void main(){
   // set color from texture
   if (!hasTexture1) {
-    gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);
+    gl_FragColor = vec4(vColor.rgb, vColor.a);
   } else {
     gl_FragColor =
-      vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb *
-      lightWeighting, 1.0);
+      vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb, 1.0);
   }
+  // gl_FragColor.rgba *= lightWeighting
 
   // has cube texture then apply reflection
   // if (hasTextureCube1) {
@@ -61,13 +61,13 @@ void main(){
   // }
 
   // set picking
-  if (enablePicking) {
-    if (hasPickingColors) {
-      gl_FragColor = vPickingColor;
-    } else {
-      gl_FragColor = vec4(pickColor, 1.0);
-    }
-  }
+  // if (enablePicking) {
+  //   if (hasPickingColors) {
+  //     gl_FragColor = vPickingColor;
+  //   } else {
+  //     gl_FragColor = vec4(pickColor, 1.0);
+  //   }
+  // }
 
   // handle fog
   // if (hasFog) {

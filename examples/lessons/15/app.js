@@ -24,7 +24,7 @@ export const animation = new AnimationLoop()
 
     var tDiffuse = new Texture2D({
       image: results[1][0],
-      generateMipmap: true,
+      mipmap: true,
       parameters: {
         [GL.MAG_FILTER]: GL.LINEAR,
         [GL.MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST
@@ -32,7 +32,7 @@ export const animation = new AnimationLoop()
     });
     var tSpecular = new Texture2D({
       image: results[1][1],
-      generateMipmap: true,
+      mipmap: true,
       parameters: {
         [GL.MAG_FILTER]: GL.LINEAR,
         [GL.MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST

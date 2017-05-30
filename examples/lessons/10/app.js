@@ -37,12 +37,12 @@ window.webGLStart = function() {
     loadFiles({urls: ['world.txt']}),
     loadTextures(gl, {
       urls: ['mud.gif'],
+      mipmap: true,
       parameters: [{
-        magFilter: gl.LINEAR,
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        wrapS: gl.REPEAT,
-        wrapT: gl.REPEAT,
-        generateMipmap: true
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT
       }]
     })
   ])

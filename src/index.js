@@ -6,10 +6,9 @@ require('./init');
 // WebGL
 export {default as GL, glGet, glKey} from './webgl/gl-constants';
 export {
+  isWebGL2,
   isWebGLContext,
   isWebGL2Context,
-  isWebGL2,
-
   setContextDefaults,
   createGLContext,
   getGLExtension,

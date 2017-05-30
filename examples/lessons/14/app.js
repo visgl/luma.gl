@@ -48,17 +48,17 @@ window.webGLStart = function() {
     loadTextures(gl, {
       urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
       parameters: [{
-        magFilter: gl.LINEAR,
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        wrapS: gl.REPEAT,
-        wrapT: gl.REPEAT,
-        generateMipmap: true
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
+        mipmap: true
       }, {
-        magFilter: gl.LINEAR,
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        wrapS: gl.REPEAT,
-        wrapT: gl.REPEAT,
-        generateMipmap: true
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
+        mipmap: true
       }]
     })
   ])

@@ -1,6 +1,21 @@
 import {requestFile} from './browser-request-file';
 
-export function loadFile(opts) {
+let pathPrefix = '';
+
+/*
+ * Set a relative path prefix
+ */
+export function setPathPrefix(prefix) {
+  pathPrefix = prefix;
+}
+
+export function loadFile(url, opts) {
+  if (typeof url !== 'string' && !opts) {
+    // TODO - warn for deprecated mode
+    opts = url;
+    url = opts.url;
+  }
+  opts.url = pathPrefix ? pathPrefix + url : url;
   return requestFile(opts);
 }
 
@@ -14,6 +29,8 @@ export function loadFile(opts) {
 export function loadImage(url, opts = {
   crossOrigin: 'anonymous'
 }) {
+  url = pathPrefix ? pathPrefix + url : url;
+
   return new Promise((resolve, reject) => {
     try {
       const image = new Image();

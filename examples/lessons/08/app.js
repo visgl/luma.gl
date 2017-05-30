@@ -1,63 +1,10 @@
 /* eslint-disable no-var */
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 /* global window, document */
-import {createGLContext, loadTextures, Model, Geometry, Program, PerspectiveCamera,
-  Scene, addEvents, Fx, Vec3} from 'luma.gl';
+import {createGLContext, loadTextures, Cube, Program, addEvents, Fx} from 'luma.gl';
 
-// Lighting form elements variables
-var $id = function(d) {
-  return document.getElementById(d);
-};
-
-const animationLoop({
-  // var canvas = document.getElementById('lesson08-canvas');
-  // canvas.width = canvas.clientWidth;
-  // canvas.height = canvas.clientHeight;
-
-  // var gl = createGLContext({canvas});
-
-  onInitialize({gl}) {
-    loadTextures(gl, {
-      urls: ['glass.gif'],
-      parameters: [{
-        minFilter: gl.LINEAR_MIPMAP_NEAREST,
-        magFilter: gl.LINEAR,
-        generateMipmap: true
-      }]
-    })
-    .then(textures => {
-
-      var glass = textures[0];
-
-      var xRot = 0;
-      var xSpeed = 0.01;
-      var yRot = 0;
-      var ySpeed = 0.013;
-      var z = -5.0;
-
-      // Get lighting form elements
-      var lighting = $id('lighting');
-      var ambient = {
-        r: $id('ambientR'),
-        g: $id('ambientG'),
-        b: $id('ambientB')
-      };
-      var direction = {
-        x: $id('lightDirectionX'),
-        y: $id('lightDirectionY'),
-        z: $id('lightDirectionZ'),
-
-        r: $id('directionalR'),
-        g: $id('directionalG'),
-        b: $id('directionalB')
-      };
-      var blending = $id('blending');
-      var alpha = $id('alpha');
-
-      // Create object
-
-      // Blend Fragment Shader
-      var blendFS = `\
+// Blend Fragment Shader
+const blendFS = `\
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -77,6 +24,29 @@ void main() {
   }
 }
 `;
+
+const animationLoop = new AnimationLoop({
+  onInitialize({gl}) {
+    loadTextures(gl, {
+      urls: ['glass.gif'],
+      mipmap: true,
+      parameters: [{
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+      }]
+    })
+    .then(textures => {
+
+      var glass = textures[0];
+
+      var xRot = 0;
+      var xSpeed = 0.01;
+      var yRot = 0;
+      var ySpeed = 0.013;
+      var z = -5.0;
+
+      // Create object
+
 
     var program = new Program(gl, {fs: blendFS});
 
@@ -181,124 +151,31 @@ void main() {
   });
 };
 
-export default animationLoop;
+function getControls() {
+  // Lighting form elements variables
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
 
-function makeCubeGeometry() {
-  return new Geometry({
-    positions: new Float32Array([
-      -1, -1,  1,
-      1, -1,  1,
-      1,  1,  1,
-     -1,  1,  1,
+  // Get lighting form elements
+  var lighting = $id('lighting');
+  var ambient = {
+    r: $id('ambientR'),
+    g: $id('ambientG'),
+    b: $id('ambientB')
+  };
+  var direction = {
+    x: $id('lightDirectionX'),
+    y: $id('lightDirectionY'),
+    z: $id('lightDirectionZ'),
 
-     -1, -1, -1,
-     -1,  1, -1,
-      1,  1, -1,
-      1, -1, -1,
-
-     -1,  1, -1,
-     -1,  1,  1,
-      1,  1,  1,
-      1,  1, -1,
-
-     -1, -1, -1,
-      1, -1, -1,
-      1, -1,  1,
-     -1, -1,  1,
-
-      1, -1, -1,
-      1,  1, -1,
-      1,  1,  1,
-      1, -1,  1,
-
-     -1, -1, -1,
-     -1, -1,  1,
-     -1,  1,  1,
-     -1,  1, -1
-    ]),
-
-    texCoords: new Float32Array([
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-
-      // Back face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Top face
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-
-      // Bottom face
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-
-      // Right face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Left face
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0
-    ]),
-
-    normals: new Float32Array([
-      // Front face
-      0.0,  0.0,  1.0,
-      0.0,  0.0,  1.0,
-      0.0,  0.0,  1.0,
-      0.0,  0.0,  1.0,
-
-      // Back face
-      0.0,  0.0, -1.0,
-      0.0,  0.0, -1.0,
-      0.0,  0.0, -1.0,
-      0.0,  0.0, -1.0,
-
-      // Top face
-      0.0,  1.0,  0.0,
-      0.0,  1.0,  0.0,
-      0.0,  1.0,  0.0,
-      0.0,  1.0,  0.0,
-
-      // Bottom face
-      0.0, -1.0,  0.0,
-      0.0, -1.0,  0.0,
-      0.0, -1.0,  0.0,
-      0.0, -1.0,  0.0,
-
-      // Right face
-      1.0,  0.0,  0.0,
-      1.0,  0.0,  0.0,
-      1.0,  0.0,  0.0,
-      1.0,  0.0,  0.0,
-
-      // Left face
-      -1.0,  0.0,  0.0,
-      -1.0,  0.0,  0.0,
-      -1.0,  0.0,  0.0,
-      -1.0,  0.0,  0.0
-    ]),
-
-    indices: new Uint16Array([
-      0, 1, 2, 0, 2, 3,
-      4, 5, 6, 4, 6, 7,
-      8, 9, 10, 8, 10, 11,
-      12, 13, 14, 12, 14, 15,
-      16, 17, 18, 16, 18, 19,
-      20, 21, 22, 20, 22, 23
-    ])
-  });
+    r: $id('directionalR'),
+    g: $id('directionalG'),
+    b: $id('directionalB')
+  };
+  var blending = $id('blending');
+  var alpha = $id('alpha');
 }
+
+
+export default animationLoop;

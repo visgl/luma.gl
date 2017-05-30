@@ -54,7 +54,7 @@ export function postProcessImage({
     bindToTexture: {
       [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
       [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
-      generateMipmap: false
+      mipmap: false
     },
     bindToRenderBuffer: false
   });
@@ -199,7 +199,7 @@ new AnimationLoop()
       }, {
         name: GL.TEXTURE_MIN_FILTER,
         value: GL.LINEAR,
-        generateMipmap: false
+        mipmap: false
       }]
     },
     bindToRenderBuffer: false
@@ -214,7 +214,7 @@ new AnimationLoop()
       }, {
         name: GL.TEXTURE_MIN_FILTER,
         value: GL.LINEAR,
-        generateMipmap: false
+        mipmap: false
       }]
     },
     bindToRenderBuffer: false
