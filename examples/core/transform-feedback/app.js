@@ -6,7 +6,7 @@ import {AnimationLoop, Buffer, Program, TransformFeedback, VertexArray, Matrix4}
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
 const POSITION_LOCATION = 0;
-const COLOR_LOCATION = 3;
+const COLOR_LOCATION = 1;
 const VARYINGS = ['gl_Position', 'v_color'];
 
 const VS_TRANSFORM = `#version 300 es
@@ -95,7 +95,7 @@ const animationLoop = new AnimationLoop({
 
     const transformVertexArray = new VertexArray(gl, {
       buffers: {
-        [POSITION_LOCATION]: {buffer: buffers.vertex, size: 4, normalized: false}
+        [POSITION_LOCATION]: {buffer: buffers.vertex, size: 4}
       }
     });
 
@@ -128,8 +128,8 @@ const animationLoop = new AnimationLoop({
 
     const renderVertexArray = new VertexArray(gl, {
       buffers: {
-        [POSITION_LOCATION]: {buffer: buffers.position, size: 4, normalized: false},
-        [COLOR_LOCATION]: {buffer: buffers.color, size: 4, normalized: false}
+        [POSITION_LOCATION]: {buffer: buffers.position, size: 4},
+        [COLOR_LOCATION]: {buffer: buffers.color, size: 4}
       }
     });
 
