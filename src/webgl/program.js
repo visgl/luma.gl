@@ -4,6 +4,7 @@ import {assertWebGL2Context, isWebGL2} from './context';
 import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
+import {getTransformFeedbackMode} from './transform-feedback';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
@@ -103,7 +104,8 @@ export default class Program extends Resource {
     vertexArray = null,
     transformFeedback = null,
     uniforms = {},
-    samplers = {}
+    samplers = {},
+    settings = {}
   }) {
     vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
     vertexArray.bind(() => {
@@ -111,7 +113,13 @@ export default class Program extends Resource {
       this.gl.useProgram(this.handle);
 
       if (transformFeedback) {
-        transformFeedback.begin(drawMode);
+        if (settings[GL.RASTERIZER_DISCARD]) {
+          // bypass fragment shader
+          this.gl.enable(GL.RASTERIZER_DISCARD);
+        }
+
+        const primitiveMode = getTransformFeedbackMode({drawMode});
+        transformFeedback.begin(primitiveMode);
       }
 
       this.setUniforms(uniforms, samplers);
@@ -133,6 +141,11 @@ export default class Program extends Resource {
 
       if (transformFeedback) {
         transformFeedback.end();
+
+        if (settings[GL.RASTERIZER_DISCARD]) {
+          // resume fragment shader
+          this.gl.disable(GL.RASTERIZER_DISCARD);
+        }
       }
 
     });

@@ -30,11 +30,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   },
   module: {
     rules: []
-  },
-  // Optional: Enables reading mapbox token from environment variable
-  plugins: [
-    new webpack.EnvironmentPlugin(['MAPBOX_ACCESS_TOKEN', 'MapboxAccessToken'])
-  ]
+  }
 };
 
 function addLocalDevSettings(config, {libAlias}) {
