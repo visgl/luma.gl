@@ -197,7 +197,7 @@ function drawInnerScene({gl, tick}) {
 
   gl.viewport(0, 0, screenWidth, screenHeight);
 
-  withState(gl, {
+  withParameters(gl, {
     framebuffer: fb,
     viewport: [0, 0, screenWidth, screenHeight]
   }, () => {

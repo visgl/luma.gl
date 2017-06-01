@@ -60,7 +60,7 @@ Binding a framebuffer for multiple render calls
 import {withState} from 'luma.gl';
 const framebuffer1 = ...;
 const framebuffer2 = ...;
-withState(gl, {framebuffer: framebuffer1}, () => {
+withParameters(gl, {framebuffer: framebuffer1}, () => {
   // Any draw call that doesn't specify a framebuffer will now draw into framebuffer1
   program1.draw({...}); // -> framebuffer1
   program2.draw({...}); // -> framebuffer1
