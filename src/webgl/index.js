@@ -27,7 +27,9 @@ export {
 
 export {
   isWebGLContext,
-  isWebGL2Context
+  isWebGL2Context,
+  withParameters,
+  createGLContext
 } from './context';
 
 export {
