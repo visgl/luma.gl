@@ -4,6 +4,7 @@
 import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
 import {makeDebugContext} from './context-debug';
 import {glGetDebugInfo} from './context-limits';
+import {withState} from './context-state';
 
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
@@ -194,8 +195,8 @@ function _createHeadlessContext(width, height, opts, error) {
 // VERY LIMITED / BASIC GL STATE MANAGEMENT
 
 // Executes a function with gl states temporarily set, exception safe
-// Currently support scissor test and framebuffer binding
-export function withParameters(gl, {scissorTest, framebuffer, nocatch = true}, func) {
+// Currently support glPixelStorage, scissor test and framebuffer binding
+export function withParameters(gl, {pixelStore, scissorTest, framebuffer}, func) {
   // assertWebGLContext(gl);
 
   let scissorTestWasEnabled;
@@ -218,21 +219,17 @@ export function withParameters(gl, {scissorTest, framebuffer, nocatch = true}, f
     if (framebuffer) {
       // TODO - was there any previously set frame buffer?
       // TODO - delegate "unbind" to Framebuffer object?
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      framebuffer.unbind();
     }
   }
 
   let value;
-  if (nocatch) {
-    value = func(gl);
+  try {
+    value = withState(gl, pixelStore, func);
+  } finally {
     finalize();
-  } else {
-    try {
-      value = func(gl);
-    } finally {
-      finalize();
-    }
   }
+
   return value;
 }
 

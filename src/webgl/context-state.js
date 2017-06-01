@@ -205,6 +205,7 @@ const GL_STATE = {
     params: GL.SCISSOR_TEST,
     setter: (gl, value) => gl.enable(GL.SCISSOR_TEST, value)
   },
+
   scissorBox: {
     type: new Int32Array(4),
     value: new Int32Array([null, null, null, null]), // TBD
@@ -317,25 +318,25 @@ const GL_STATE = {
   [GL.UNPACK_ALIGNMENT]: {
     type: GLint,
     params: GL.UNPACK_ALIGNMENT,
-    setter: (gl, value) => gl.pixelStorei(value)
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_ALIGNMENT, value)
   },
   // Flip source data along its vertical axis
   [GL.UNPACK_FLIP_Y_WEBGL]: {
     type: GLboolean,
     params: GL.UNPACK_FLIP_Y_WEBGL,
-    setter: (gl, value) => gl.pixelStorei(value)
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, value)
   },
   // Multiplies the alpha channel into the other color channels
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: {
     type: GLboolean,
     params: GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-    setter: (gl, value) => gl.pixelStorei(value)
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, value)
   },
   // Default color space conversion or no color space conversion.
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: {
     type: GLenum,
     params: GL.UNPACK_COLORSPACE_CONVERSION_WEBGL,
-    setter: (gl, value) => gl.pixelStorei(value)
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_COLORSPACE_CONVERSION_WEBGL, value)
   },
 
   // WEBGL2 PIXEL PACK/UNPACK MODES
@@ -344,49 +345,49 @@ const GL_STATE = {
   [GL.PACK_ROW_LENGTH]: {
     type: GLint,
     params: GL.PACK_ROW_LENGTH,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.PACK_ROW_LENGTH, value),
     webgl2: true
   },
   // Number of pixels skipped before the first pixel is written into memory.
   [GL.PACK_SKIP_PIXELS]: {
     params: GL.PACK_SKIP_PIXELS,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.PACK_SKIP_PIXELS, value),
     webgl2: true
   },
   // Number of rows of pixels skipped before first pixel is written to memory.
   [GL.PACK_SKIP_ROWS]: {
     params: GL.PACK_SKIP_ROWS,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.PACK_SKIP_ROWS, value),
     webgl2: true
   },
   // Number of pixels in a row.
   [GL.UNPACK_ROW_LENGTH]: {
     params: GL.UNPACK_ROW_LENGTH,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_ROW_LENGTH, value),
     webgl2: true
   },
   // Image height used for reading pixel data from memory
   [GL.UNPACK_IMAGE_HEIGHT]: {
     params: GL.UNPACK_IMAGE_HEIGHT,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_IMAGE_HEIGHT, value),
     webgl2: true
   },
   // Number of pixel images skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_PIXELS]: {
     params: GL.UNPACK_SKIP_PIXELS,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_PIXELS, value),
     webgl2: true
   },
   // Number of rows of pixels skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_ROWS]: {
     params: GL.UNPACK_SKIP_ROWS,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_ROWS, value),
     webgl2: true
   },
   // Number of pixel images skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_IMAGES]: {
     params: GL.UNPACK_SKIP_IMAGES,
-    setter: (gl, value) => gl.pixelStorei(value),
+    setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_IMAGES, value),
     webgl2: true
   }
 };
@@ -535,26 +536,15 @@ export function setParameter(gl, key, value) {
 export function withState(gl, params, func) {
   // assertWebGLContext(gl);
   const state = getState(gl);
-
-  const {frameBuffer} = params;
-  // TODO - was there any previously set frame buffer we need to remember?
-  if (frameBuffer) {
-    frameBuffer.bind();
-  }
-
   state.pushValues(gl, params);
-
+  let value;
   try {
-    func(gl);
+    value = func(gl);
   } finally {
     state.popValues(gl);
-
-    if (params.frameBuffer) {
-      // TODO - was there any previously set frame buffer?
-      // TODO - delegate "unbind" to Framebuffer object?
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
   }
+
+  return value;
 }
 
 function getFuncFromWebGLParameter(glParameter) {

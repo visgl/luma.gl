@@ -198,7 +198,7 @@ export default class Texture extends Resource {
     const glPixelStore = Object.assign({[GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY}, pixelStore);
 
     // Temporarily apply any pixel store settings and build textures
-    withParameters(this.gl, glPixelStore, () => {
+    withParameters(this.gl, {pixelStore: glPixelStore}, () => {
       this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
     });
     if (mipmaps) {
