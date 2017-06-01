@@ -536,12 +536,26 @@ export function setParameter(gl, key, value) {
 export function withState(gl, params, func) {
   // assertWebGLContext(gl);
   const state = getState(gl);
+
+  // TODO (@ibgreen): Make GL state manager tracking framebuffer state and
+  // Combine withParameters and withState functions
+
+  // const {frameBuffer} = params;
+  // if (frameBuffer) {
+  //   frameBuffer.bind();
+  // }
+
   state.pushValues(gl, params);
   let value;
   try {
     value = func(gl);
   } finally {
     state.popValues(gl);
+  // if (params.frameBuffer) {
+  //   // TODO - was there any previously set frame buffer?
+  //   // TODO - delegate "unbind" to Framebuffer object?
+  //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  // }
   }
 
   return value;

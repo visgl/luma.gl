@@ -196,7 +196,7 @@ function _createHeadlessContext(width, height, opts, error) {
 
 // Executes a function with gl states temporarily set, exception safe
 // Currently support pixelStorage, scissor test and framebuffer binding
-export function withParameters(gl, {pixelStore, scissorTest, framebuffer}, func) {
+export function withParameters(gl, {pixelStore, scissorTest, framebuffer, nocatch = true}, func) {
   // assertWebGLContext(gl);
 
   let scissorTestWasEnabled;
@@ -224,11 +224,19 @@ export function withParameters(gl, {pixelStore, scissorTest, framebuffer}, func)
   }
 
   let value;
+
+// Comment out the nocatch path as withState does not support
+// nocatch
+// if (nocatch) {
+//   value = func(gl);
+// } else {
+
   try {
     value = withState(gl, pixelStore, func);
   } finally {
     finalize();
   }
+// }
 
   return value;
 }
