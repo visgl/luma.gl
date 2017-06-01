@@ -115,10 +115,10 @@ the normalized value is retured.
 Returns {*} - "normalized" parameter value after assignment
 
 
-### withParameters
+### withState
 
 ```js
-withState(gl, {frameBuffer, ...params}, func)
+withState(gl, {...params}, func)
 ```
 Executes a function with gl states temporarily set
 Exception safe
