@@ -43,7 +43,7 @@ const animationLoop = new AnimationLoop({
     program.use();
 
     const projection = new Matrix4().perspective({aspect});
-    const view = new Matrix4().translate(-1.5, 0, -7);
+    const view = new Matrix4().translate([-1.5, 0, -7]);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

@@ -83,18 +83,18 @@ export const EXAMPLE_PAGES = [
   {
     name: 'WebGL Lessons',
     children: [
-      // {
-      //   name: 'Lesson 01',
-      //   content: {
-      //     demo: 'Lesson01'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 02',
-      //   content: {
-      //     demo: 'Lesson02'
-      //   }
-      // },
+      {
+        name: 'Lesson 01',
+        content: {
+          demo: 'Lesson01'
+        }
+      },
+      {
+        name: 'Lesson 02',
+        content: {
+          demo: 'Lesson02'
+        }
+      },
       {
         name: 'Lesson 03',
         content: {

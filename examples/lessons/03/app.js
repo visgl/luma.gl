@@ -1,5 +1,5 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-import {AnimationLoop, Program, Model, Geometry, Matrix4} from 'luma.gl';
+import {GL, AnimationLoop, Program, Model, Geometry, Matrix4} from 'luma.gl';
 
 const FRAGMENT_SHADER = `\
 #ifdef GL_ES
@@ -34,6 +34,7 @@ const triangleGeometry = new Geometry({
 });
 
 const squareGeometry = new Geometry({
+  drawMode: GL.TRIANGLE_STRIP,
   positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
   colors: {
     size: 4,
