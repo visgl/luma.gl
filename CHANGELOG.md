@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 4.0.0-alpha.8
+
+- FIX: Remove duplicate export that fails deck.gl tests (#191)
+
 ## 4.0.0-alpha.7
 
 - FIX: Fix the texture storage mode settings (#189)
