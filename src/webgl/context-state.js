@@ -312,7 +312,7 @@ const GL_STATE = {
   [GL.PACK_ALIGNMENT]: {
     type: GLint,
     params: GL.PACK_ALIGNMENT,
-    setter: (gl, value) => gl.pixelStorei(value)
+    setter: (gl, value) => gl.pixelStorei(GL.PACK_ALIGNMENT, value)
   },
   // Unpacking pixel data from memory(1,2,4,8)
   [GL.UNPACK_ALIGNMENT]: {
