@@ -44,6 +44,7 @@ var filters = ['nearest', 'linear', 'mipmap'];
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize: ({canvas, gl}) => {
+    addControls();
 
     addEvents(canvas, {
       onKeyDown(e) {
@@ -162,6 +163,21 @@ const animationLoop = new AnimationLoop({
     });
   }
 });
+
+function addControls({controlPanel} = {}) {
+  /* global document */
+  controlPanel = controlPanel || document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=571" target="_blank">
+      Keyboard input and texture filters
+    </a>
+  <p>
+    The classic WebGL Lessons in luma.gl
+    `;
+  }
+}
 
 export default animationLoop;
 
