@@ -34,10 +34,6 @@ export {
   getContextInfo
 } from './context-limits';
 
-// WebGL context functions and helpers
-// TODO -remove * exports
-export * from './context';
-
 // WebGL1 objects
 export {default as Buffer} from './buffer';
 export {default as Shader, VertexShader, FragmentShader} from './shader';
