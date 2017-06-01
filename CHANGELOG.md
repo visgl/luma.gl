@@ -2,9 +2,12 @@
 
 ## 4.0.0-alpha.7
 
-* size improvemnts to transpiled code (dist)
-* tree-shaking improvements - carefully avoid dependencies that defeat tree shaking.
-
+- FIX: Fix the texture storage mode settings (#189)
+- FIX: examples/lessons (#188)
+- Transform feedback fixes (#187)
+- FIX: Example updates and fixes for textures (#186)
+- Size improvements to transpiled code (dist)
+- Tree-shaking improvements - carefully avoid dependencies that defeat tree shaking (#185)
 
 ## 4.0.0-alpha.6
 - Fix framebuffer creation error AGAIN (#183)
