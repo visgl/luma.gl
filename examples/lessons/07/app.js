@@ -149,6 +149,7 @@ function addControls({controlPanel} = {}) {
   }
 }
 
+// TODO: Use following addControls/getControls method and update lighting uniforms
 // function addControls() {
 //   return `
 //     <div id="controls">
