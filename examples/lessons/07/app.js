@@ -29,7 +29,9 @@ void main(void) {
   } else {
       // Perform lighting in world space
       // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
-      // 'inverse' matrix operation not supported in GLSL 1.0
+      // 'inverse' matrix operation not supported in GLSL 1.0, for now use
+      // upper-left 3X3 matrix of model view matrix, it works since we are not
+      // doing any non-uniform scaling transormations in this example.
       mat3 normalMatrix = mat3(uMVMatrix);
       vec3 transformedNormal = normalMatrix * normals;
       float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
@@ -63,32 +65,7 @@ var z = -5.0;
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
     addControls();
-
-    addEvents(canvas, {
-      onKeyDown: function(e) {
-        switch (e.key) {
-        case 'up':
-          xSpeed -= 0.02;
-          break;
-        case 'down':
-          xSpeed += 0.02;
-          break;
-        case 'left':
-          ySpeed -= 0.02;
-          break;
-        case 'right':
-          ySpeed += 0.02;
-          break;
-        default:
-          // handle page up/down
-          if (e.code === 33) {
-            z -= 0.05;
-          } else if (e.code === 34) {
-            z += 0.05;
-          }
-        }
-      }
-    });
+    addKeyboardHandler(canvas);
 
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
@@ -115,6 +92,11 @@ const animationLoop = new AnimationLoop({
     yRot += ySpeed;
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    // update element matrix to rotate cube on its center
+    cube
+      .setRotation([xRot, yRot, 0])
+      .updateMatrix();
 
     const uMVMatrix = Matrix4
       .lookAt({eye: [0, 0, 0]})
@@ -147,6 +129,35 @@ function addControls({controlPanel} = {}) {
     The classic WebGL Lessons in luma.gl
     `;
   }
+}
+
+function addKeyboardHandler(canvas) {
+
+  addEvents(canvas, {
+    onKeyDown: function(e) {
+      switch (e.key) {
+      case 'up':
+        xSpeed -= 0.02;
+        break;
+      case 'down':
+        xSpeed += 0.02;
+        break;
+      case 'left':
+        ySpeed -= 0.02;
+        break;
+      case 'right':
+        ySpeed += 0.02;
+        break;
+      default:
+        // handle page up/down
+        if (e.code === 33) {
+          z -= 0.05;
+        } else if (e.code === 34) {
+          z += 0.05;
+        }
+      }
+    }
+  });
 }
 
 // TODO: Use following addControls/getControls method and update lighting uniforms

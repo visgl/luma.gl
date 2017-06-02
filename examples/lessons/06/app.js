@@ -45,35 +45,7 @@ const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize: ({canvas, gl}) => {
     addControls();
-
-    addEvents(canvas, {
-      onKeyDown(e) {
-        switch (e.key) {
-        case 'f':
-          filter = (filter + 1) % 3;
-          break;
-        case 'up':
-          xSpeed -= 0.02;
-          break;
-        case 'down':
-          xSpeed += 0.02;
-          break;
-        case 'left':
-          ySpeed -= 0.02;
-          break;
-        case 'right':
-          ySpeed += 0.02;
-          break;
-        // andle page up/down
-        default:
-          if (e.code === 33) {
-            z -= 0.05;
-          } else if (e.code === 34) {
-            z += 0.05;
-          }
-        }
-      }
-    });
+    addKeyboardHandler(canvas);
 
     // context.set(gl, {
     //   clearColor: [0, 0, 0, 1],
@@ -144,9 +116,8 @@ const animationLoop = new AnimationLoop({
 
     // draw Cube
 
-    // update element matrix
+    // update element matrix to rotate cube on its center
     cube
-      .setPosition([0, 0, z])
       .setRotation([xRot, yRot, 0])
       .updateMatrix();
 
@@ -185,3 +156,35 @@ window.webGLStart = function() {
   animationLoop.start();
 
 };
+
+function addKeyboardHandler(canvas) {
+
+  addEvents(canvas, {
+    onKeyDown(e) {
+      switch (e.key) {
+      case 'f':
+        filter = (filter + 1) % 3;
+        break;
+      case 'up':
+        xSpeed -= 0.02;
+        break;
+      case 'down':
+        xSpeed += 0.02;
+        break;
+      case 'left':
+        ySpeed -= 0.02;
+        break;
+      case 'right':
+        ySpeed += 0.02;
+        break;
+      // andle page up/down
+      default:
+        if (e.code === 33) {
+          z -= 0.05;
+        } else if (e.code === 34) {
+          z += 0.05;
+        }
+      }
+    }
+  });
+}
