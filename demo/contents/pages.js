@@ -127,21 +127,21 @@ export const EXAMPLE_PAGES = [
           demo: 'Lesson07',
           path: `${RAW_GITHUB}/examples/lessons/07/`
         }
+      },
+      {
+        name: 'Lesson 08',
+        content: {
+          demo: 'Lesson08',
+          path: `${RAW_GITHUB}/examples/lessons/08/`
+        }
+      },
+      {
+        name: 'Lesson 09',
+        content: {
+          demo: 'Lesson09',
+          path: `${RAW_GITHUB}/examples/lessons/09/`
+        }
       }
-      // {
-      //   name: 'Lesson 08',
-      //   content: {
-      //     demo: 'Lesson08',
-      //     path: `${RAW_GITHUB}/examples/lessons/08/`
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 09',
-      //   content: {
-      //     demo: 'Lesson09',
-      //     path: `${RAW_GITHUB}/examples/lessons/09/`
-      //   }
-      // },
       // {
       //   name: 'Lesson 10',
       //   content: {
