@@ -1,28 +1,42 @@
-import {Program, Geometry, Model, Vec3} from 'luma.gl';
+import {Program, Geometry, Model} from 'luma.gl';
 
-export default class Star extends Model {
-  constructor(gl, {startingDistance, rotationSpeed}) {
-    const program = new Program(gl, {fs: `\
+const VERTEX_SHADER = `\
+attribute vec3 positions;
+attribute vec2 texCoords;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+varying vec2 vTextureCoord;
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vTextureCoord = texCoords;
+}
+`;
+
+const FRAGMENT_SHADER = `\
 #ifdef GL_ES
 precision highp float;
 #endif
 
-varying vec4 vColor;
-varying vec2 vTexCoord;
-varying vec3 lightWeighting;
+varying vec2 vTextureCoord;
 
-uniform bool hasTexture1;
-uniform sampler2D sampler1;
+uniform sampler2D uSampler;
 uniform vec3 uColor;
 
-void main(){
-  if (hasTexture1) {
-    gl_FragColor = vec4(texture2D(sampler1,
-      vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0) *
-      vec4(uColor, 1.0);
-  }
+void main(void) {
+  vec4 textureColor = vec4(texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t)).rgb, 1.0);
+  gl_FragColor = textureColor * vec4(uColor, 1.0);
 }
-`});
+`;
+
+export class Star extends Model {
+  constructor(opts = {}) {
+    const program = new Program(opts.gl, {
+      fs: FRAGMENT_SHADER,
+      vs: VERTEX_SHADER
+    });
 
     super({
       program,
@@ -42,29 +56,28 @@ void main(){
         indices: new Uint16Array([0, 1, 3, 3, 2, 0])
       }),
       uniforms: {
-        hasTexture1: true,
-        sampler1: tStar
+        uSampler: opts.texture
       },
       onBeforeRender() {
-        var min = Math.min;
-        var isTwinkle = twinkle.checked;
-        var r = isTwinkle ? min(1, this.r + this.twinklerR) : this.r;
-        var g = isTwinkle ? min(1, this.g + this.twinklerG) : this.g;
-        var b = isTwinkle ? min(1, this.b + this.twinklerB) : this.b;
+        // TODO: Fix this so user can control this with a check-box
+        const isTwinkle = false; // twinkle.checked;
+        const r = isTwinkle ? Math.min(1, this.r + this.twinklerR) : this.r;
+        const g = isTwinkle ? Math.min(1, this.g + this.twinklerG) : this.g;
+        const b = isTwinkle ? Math.min(1, this.b + this.twinklerB) : this.b;
         this.setUniforms({uColor: [r, g, b]});
       }
     });
 
     this.angle = 0;
-    this.dist = startingDistance;
-    this.rotationSpeed = rotationSpeed;
+    this.dist = opts.startingDistance;
+    this.rotationSpeed = opts.rotationSpeed;
     this.spin = 0;
 
     this.randomiseColors();
   }
 
   randomiseColors() {
-    var rd = Math.random;
+    const rd = Math.random;
 
     this.r = rd();
     this.g = rd();
@@ -77,7 +90,6 @@ void main(){
 
   animate(elapsedTime, twinkle) {
     this.angle += this.rotationSpeed / 10;
-
     this.dist -= 0.001;
 
     if (this.dist < 0) {
@@ -85,13 +97,12 @@ void main(){
       this.randomiseColors();
     }
 
-    // update position
     this.position.set(
       Math.cos(this.angle) * this.dist,
       Math.sin(this.angle) * this.dist,
       0
     );
-    this.setRotation(new Vec3(0, 0, this.spin));
+    this.setRotation([0, 0, this.spin]);
     this.spin += 0.1;
     this.updateMatrix();
   }
