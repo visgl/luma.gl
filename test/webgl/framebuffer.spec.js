@@ -146,7 +146,7 @@ function testFramebufferResize(t, gl) {
       [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
       [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
     }
-  }
+  };
 
   const framebuffer = new Framebuffer(gl, frameBufferOptions);
 
