@@ -144,6 +144,8 @@ export default class Framebuffer extends Resource {
     for (const attachmentPoint in this.attachments) {
       this.attachments[attachmentPoint].resize({width, height});
     }
+    this.width = width;
+    this.height = height;
     return this;
   }
 
