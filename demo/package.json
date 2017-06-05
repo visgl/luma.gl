@@ -11,7 +11,7 @@
     "build-clean": "rm -rf ./dist && mkdir dist",
     "build-static": "cp -r ./src/static/* dist && npm run build-images && cd `git rev-parse --show-toplevel`",
     "build-script": "webpack -p --config webpack/prod",
-    "build": "npm run build-clean && npm run build-static && npm run build-script",
+    "build": "npm run build-clean && npm run build-script",
     "lint": "eslint src --ignore-pattern workers"
   },
   "dependencies": {
