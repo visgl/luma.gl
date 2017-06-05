@@ -174,8 +174,10 @@ export default class Texture extends Resource {
 
   /* eslint-disable max-len, max-statements */
   initialize(opts = {}) {
+    let data = opts.data;
+
     const {
-      data = null,
+      pixels = null,
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE,
       border = 0,
@@ -186,6 +188,11 @@ export default class Texture extends Resource {
       // Deprecated parameters
       unpackFlipY = true
     } = opts;
+
+    // pixels variable is  for API compatibility purpose
+    if (!data) {
+      data = pixels;
+    }
 
     let {width, height, dataFormat} = opts;
 
@@ -421,6 +428,11 @@ export default class Texture extends Resource {
     border = 0,
     compressed = false
   }) {
+    // pixels variable is  for API compatibility purpose
+    if (!data) {
+      data = pixels;
+    }
+
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format, type, dataFormat, compressed, data, width, height}));
 
