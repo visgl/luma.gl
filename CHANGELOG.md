@@ -1,5 +1,13 @@
 # Pre-releases
 
+## 4.0.0-alpha.10
+
+- FIX: Framebuffer resize & add unit test (#200)
+- Add the pixel parameter back in texture class for compatibility with v3 (#198)
+- FIX: 'npm run build' for demos (#195)
+- FIX: Lesson 08 (#196)
+- FIX: Lesson 07 (#194)
+
 ## 4.0.0-alpha.9
 
 - FIX: Some leftover export fix and storage mode fix (#192)
