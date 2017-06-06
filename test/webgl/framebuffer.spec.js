@@ -140,6 +140,33 @@ test('WebGL2#Framebuffer attachments', t => {
   t.end();
 });
 
+function testFramebufferResize(t, gl) {
+  const frameBufferOptions = {
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
+      [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
+    }
+  };
+
+  const framebuffer = new Framebuffer(gl, frameBufferOptions);
+
+  framebuffer.resize({width: 1000, height: 1000});
+  t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
+  t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
+  framebuffer.checkStatus();
+
+  framebuffer.resize({width: 100, height: 100});
+  t.equals(framebuffer.width, 100, 'Framebuffer width updated correctly on resize');
+  t.equals(framebuffer.height, 100, 'Framebuffer height updated correctly on resize');
+  framebuffer.checkStatus();
+}
+
+test('WebGL1#Framebuffer resize', t => {
+  const {gl} = fixture;
+  testFramebufferResize(t, gl);
+  t.end();
+});
+
 /*
 
 import {TEXTURE_FORMATS} from '../../src/webgl/texture';
