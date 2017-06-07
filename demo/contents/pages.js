@@ -141,7 +141,7 @@ export const EXAMPLE_PAGES = [
           demo: 'Lesson09',
           path: `${RAW_GITHUB}/examples/lessons/09/`
         }
-      }
+      },
       // {
       //   name: 'Lesson 10',
       //   content: {
@@ -178,12 +178,13 @@ export const EXAMPLE_PAGES = [
       //     demo: 'Lesson03'
       //   }
       // },
-      // {
-      //   name: 'Lesson 16',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // }
+      {
+        name: 'Lesson 16',
+        content: {
+          demo: 'Lesson16',
+          path: `${RAW_GITHUB}/examples/lessons/16/`
+        }
+      }
     ]
   }
 ];
