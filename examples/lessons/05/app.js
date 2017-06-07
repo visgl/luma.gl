@@ -38,6 +38,7 @@ const animationLoop = new AnimationLoop({
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
+    gl.disable(gl.BLEND);
     gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
     return loadTextures(gl, {

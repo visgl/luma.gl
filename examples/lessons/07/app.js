@@ -71,6 +71,7 @@ const animationLoop = new AnimationLoop({
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
+    gl.disable(gl.BLEND);
 
     return loadTextures(gl, {
       urls: ['crate.gif']

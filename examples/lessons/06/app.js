@@ -59,6 +59,7 @@ const animationLoop = new AnimationLoop({
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
+    gl.disable(gl.BLEND);
 
     const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
