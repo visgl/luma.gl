@@ -36,6 +36,7 @@ const animationLoop = new AnimationLoop({
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
+    gl.disable(gl.BLEND);
 
     const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 

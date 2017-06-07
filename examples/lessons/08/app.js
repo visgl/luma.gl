@@ -71,8 +71,6 @@ const animationLoop = new AnimationLoop({
 
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
