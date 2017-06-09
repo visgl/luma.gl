@@ -154,7 +154,7 @@ export default class AnimationLoop {
   // Add application's data to the app context object
   _addAppDataToContext(appContext) {
     if (typeof appContext === 'object' && appContext !== null) {
-      this._context = Object.assign({}, appContext, this._context);
+      this._context = Object.assign({}, this._context, appContext);
     }
   }
 

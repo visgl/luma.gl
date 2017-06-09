@@ -19,7 +19,7 @@ const UNIFORM_BASE_DESCRIPTORS = {
   [GL.BOOL_VEC3]: {function: 'uniform3fv', type: Uint16Array, elements: 3},
   [GL.BOOL_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
   [GL.FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
-  [GL.FLOAT_MAT3]: {mfunction: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
+  [GL.FLOAT_MAT3]: {function: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
   [GL.FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
   [GL.SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
   [GL.SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
