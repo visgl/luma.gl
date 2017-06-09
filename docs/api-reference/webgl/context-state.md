@@ -37,7 +37,7 @@ withParameters(gl, {
   colorMask: ,
   colorWritemask: ,
 
-  cullFace: false,
+  cullFace: GL.BACK,
   cullFaceMode: ,
 
   depthTest: false,
@@ -122,6 +122,16 @@ withState(gl, {...params}, func)
 ```
 Executes a function with gl states temporarily set
 Exception safe
+
+### resetContext
+
+```js
+resetContext(gl)
+```
+Resets gl state to default values.
+
+* `gl` {WebGLRenderingContext} - context
+Returns no value.
 
 
 ## Parameters
@@ -474,4 +484,3 @@ WebGL State Management can be quite complicated.
   them as they are changed through luma functions.
   The cached values can get out of sync if the context is shared outside
   of luma.gl.
-

@@ -2,7 +2,7 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 /* global window, document */
 import {GL, AnimationLoop, Cube, Matrix4, Texture2D,
-  addEvents, loadTextures, Model} from 'luma.gl';
+  addEvents, loadTextures, Model, resetContext} from 'luma.gl';
 
 // Vertex shader with lighting
 const VERTEX_SHADER = `\
@@ -69,6 +69,7 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
+    resetContext(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);

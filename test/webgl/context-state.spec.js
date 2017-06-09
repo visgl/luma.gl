@@ -1,5 +1,6 @@
 import {isWebGL2Context} from 'luma.gl';
-import {getParameter, withState, TEST_EXPORTS} from '../../src/webgl/context-state';
+import {getParameter, setParameter, withState, resetContext, TEST_EXPORTS}
+  from '../../src/webgl/context-state';
 
 import test from 'tape-catch';
 
@@ -65,3 +66,20 @@ test('WebGLState#withState', t => {
   t.end();
 });
 
+test('WebGLState#resetContext', t => {
+  const {gl} = fixture;
+
+  setParameter(gl, 'clearColor', [0, 1, 0, 1]);
+
+  let value = getParameter(gl, 'clearColor');
+  t.deepEqual(value, [0, 1, 0, 1],
+    `got expected value ${stringifyTypedArray(value)}`);
+
+  resetContext(gl);
+
+  value = getParameter(gl, 'clearColor');
+  t.deepEqual(value, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(value)}`);
+
+  t.end();
+});

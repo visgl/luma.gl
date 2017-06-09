@@ -33,14 +33,14 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.BLEND,
-    setter: (gl, value) => gl.enable(GL.BLEND, value)
+    setter: (gl, value) => glSetState(gl, GL.BLEND, value)
   },
 
   blendColor: {
     type: new Float32Array(4),
     value: new Float32Array([0, 0, 0, 0]),
     params: GL.BLEND_COLOR,
-    setter: (gl, value) => gl.blendColor(value)
+    setter: (gl, value) => gl.blendColor(...value)
   },
 
   blendEquation: {
@@ -49,18 +49,15 @@ const GL_STATE = {
     params: [GL.BLEND_EQUATION_RGB, GL.BLEND_EQUATION_ALPHA],
     object: ['rgb', 'alpha'],
     setter: (gl, value) => gl.blendEquationSeparate(...value),
-    normalizeArgs:
-      args => isArray(args) ? args : [args, args]
+    normalizeArgs: args => isArray(args) ? args : [args, args]
   },
 
   // blend func
   blendFunc: {
     type: [GLenum, GLenum, GLenum, GLenum],
     value: [GL.ONE, GL.ZERO, GL.ONE, GL.ZERO],
-    params: [
-      GL.BLEND_SRC_RGB, GL.BLEND_SRC_ALPHA, GL.BLEND_DST_RGB, GL.BLEND_DST_ALPHA
-    ],
-    object: ['srcRgb', 'srcAlpha', 'dstRgb', 'dstAlpha'],
+    params: [GL.BLEND_SRC_RGB, GL.BLEND_DST_RGB, GL.BLEND_SRC_ALPHA, GL.BLEND_DST_ALPHA],
+    object: ['srcRgb', 'dstRgb', 'srcAlpha', 'dstAlpha'],
     setter: (gl, value) => gl.blendFuncSeparate(...value),
     normalizeArgs:
       args => isArray(args) && args.length === 3 ? [...args, ...args] : args
@@ -84,11 +81,12 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.CULL_FACE,
-    setter: (gl, value) => gl.enable(GL.CULL_FACE, value)
+    setter: (gl, value) => glSetState(gl, GL.CULL_FACE, value)
   },
 
   cullFaceMode: {
     type: GLenum,
+    value: GL.BACK,
     params: GL.CULL_FACE_MODE,
     setter: (gl, value) => gl.cullFace(value)
   },
@@ -97,19 +95,19 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.DEPTH_TEST,
-    setter: (gl, value) => gl.enable(GL.DEPTH_TEST, value)
+    setter: (gl, value) => glSetState(gl, GL.DEPTH_TEST, value)
   },
 
   depthClearValue: {
     type: GLfloat,
-    value: true,
+    value: 1,
     params: GL.DEPTH_CLEAR_VALUE,
     setter: (gl, value) => gl.clearDepth(value)
   },
 
   depthFunc: {
     type: GLenum,
-    value: null,
+    value: GL.LESS,
     params: GL.DEPTH_FUNC,
     setter: (gl, value) => gl.depthFunc(value)
   },
@@ -124,7 +122,7 @@ const GL_STATE = {
 
   depthWritemask: {
     type: GLboolean,
-    value: null,
+    value: true,
     params: GL.DEPTH_WRITEMASK,
     setter: (gl, value) => gl.depthMask(value)
   },
@@ -133,7 +131,7 @@ const GL_STATE = {
     type: GLboolean,
     value: true,
     params: GL.DITHER,
-    setter: (gl, value) => gl.enable(GL.DITHER, value)
+    setter: (gl, value) => glSetState(gl, GL.DITHER, value)
   },
 
   fragmentShaderDerivativeHint: {
@@ -170,7 +168,7 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.POLYGON_OFFSET_FILL,
-    setter: (gl, value) => gl.enable(GL.POLYGON_OFFSET_FILL, value)
+    setter: (gl, value) => glSetState(gl, GL.POLYGON_OFFSET_FILL, value)
   },
 
   // Add small offset to fragment depth values (by factor × DZ + r × units)
@@ -203,12 +201,14 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.SCISSOR_TEST,
-    setter: (gl, value) => gl.enable(GL.SCISSOR_TEST, value)
+    setter: (gl, value) => glSetState(gl, GL.SCISSOR_TEST, value)
   },
 
   scissorBox: {
     type: new Int32Array(4),
-    value: new Int32Array([null, null, null, null]), // TBD
+    // When scissor test enabled we expect users to set correct scissor box,
+    // otherwise we default to following value array.
+    value: new Int32Array([0, 0, 1024, 1024]),
     object: ['x', 'y', 'width', 'height'],
     params: GL.SCISSOR_BOX,
     setter: (gl, value) => gl.scissor(...value)
@@ -218,14 +218,14 @@ const GL_STATE = {
     type: GLboolean,
     value: false,
     params: GL.STENCIL_TEST,
-    setter: (gl, value) => gl.enable(GL.STENCIL_TEST, value)
+    setter: (gl, value) => glSetState(gl, GL.STENCIL_TEST, value)
   },
 
   // Sets index used when stencil buffer is cleared.
   stencilClearValue: {
     type: GLint,
     value: 0,
-    params: GL.STENCIL_CLEAR_VALUE, // GLint
+    params: GL.STENCIL_CLEAR_VALUE,
     setter: (gl, value) => gl.clearStencil(value)
   },
 
@@ -276,7 +276,7 @@ const GL_STATE = {
   // https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOpSeparate.xml
   stencilOp: {
     type: [GLenum, GLenum, GLenum, GLenum, GLenum, GLenum],
-    values: [GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP],
+    value: [GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP],
     params: [
       // front
       GL.STENCIL_FAIL,
@@ -300,7 +300,8 @@ const GL_STATE = {
 
   viewport: {
     type: new Int32Array(4),
-    value: new Int32Array([]),
+    // We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
+    value: new Int32Array([0, 0, 1024, 1024]),
     params: GL.VIEWPORT,
     object: ['x', 'y', 'width', 'height'],
     setter: (gl, value) => gl.viewport(...value)
@@ -311,30 +312,35 @@ const GL_STATE = {
   // Packing of pixel data in memory (1,2,4,8)
   [GL.PACK_ALIGNMENT]: {
     type: GLint,
+    value: 4,
     params: GL.PACK_ALIGNMENT,
     setter: (gl, value) => gl.pixelStorei(GL.PACK_ALIGNMENT, value)
   },
   // Unpacking pixel data from memory(1,2,4,8)
   [GL.UNPACK_ALIGNMENT]: {
     type: GLint,
+    value: 4,
     params: GL.UNPACK_ALIGNMENT,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_ALIGNMENT, value)
   },
   // Flip source data along its vertical axis
   [GL.UNPACK_FLIP_Y_WEBGL]: {
     type: GLboolean,
+    value: false,
     params: GL.UNPACK_FLIP_Y_WEBGL,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, value)
   },
   // Multiplies the alpha channel into the other color channels
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: {
     type: GLboolean,
+    value: false,
     params: GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, value)
   },
   // Default color space conversion or no color space conversion.
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: {
     type: GLenum,
+    value: GL.BROWSER_DEFAULT_WEBGL,
     params: GL.UNPACK_COLORSPACE_CONVERSION_WEBGL,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_COLORSPACE_CONVERSION_WEBGL, value)
   },
@@ -344,48 +350,63 @@ const GL_STATE = {
   // Number of pixels in a row.
   [GL.PACK_ROW_LENGTH]: {
     type: GLint,
+    value: 0,
     params: GL.PACK_ROW_LENGTH,
     setter: (gl, value) => gl.pixelStorei(GL.PACK_ROW_LENGTH, value),
     webgl2: true
   },
   // Number of pixels skipped before the first pixel is written into memory.
   [GL.PACK_SKIP_PIXELS]: {
+    type: GLint,
+    value: 0,
     params: GL.PACK_SKIP_PIXELS,
     setter: (gl, value) => gl.pixelStorei(GL.PACK_SKIP_PIXELS, value),
     webgl2: true
   },
   // Number of rows of pixels skipped before first pixel is written to memory.
   [GL.PACK_SKIP_ROWS]: {
+    type: GLint,
+    value: 0,
     params: GL.PACK_SKIP_ROWS,
     setter: (gl, value) => gl.pixelStorei(GL.PACK_SKIP_ROWS, value),
     webgl2: true
   },
   // Number of pixels in a row.
   [GL.UNPACK_ROW_LENGTH]: {
+    type: GLint,
+    value: 0,
     params: GL.UNPACK_ROW_LENGTH,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_ROW_LENGTH, value),
     webgl2: true
   },
   // Image height used for reading pixel data from memory
   [GL.UNPACK_IMAGE_HEIGHT]: {
+    type: GLint,
+    value: 0,
     params: GL.UNPACK_IMAGE_HEIGHT,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_IMAGE_HEIGHT, value),
     webgl2: true
   },
   // Number of pixel images skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_PIXELS]: {
+    type: GLint,
+    value: 0,
     params: GL.UNPACK_SKIP_PIXELS,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_PIXELS, value),
     webgl2: true
   },
   // Number of rows of pixels skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_ROWS]: {
+    type: GLint,
+    value: 0,
     params: GL.UNPACK_SKIP_ROWS,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_ROWS, value),
     webgl2: true
   },
   // Number of pixel images skipped before first pixel is read from memory
   [GL.UNPACK_SKIP_IMAGES]: {
+    type: GLint,
+    value: 0,
     params: GL.UNPACK_SKIP_IMAGES,
     setter: (gl, value) => gl.pixelStorei(GL.UNPACK_SKIP_IMAGES, value),
     webgl2: true
@@ -412,6 +433,11 @@ unpackStateParams();
 
 function isArray(array) {
   return Array.isArray(array) || ArrayBuffer.isView(array);
+}
+
+// Enable or disable gl state.
+function glSetState(gl, key, value) {
+  return value ? gl.enable(key) : gl.disable(key);
 }
 
 // GLState
@@ -559,6 +585,13 @@ export function withState(gl, params, func) {
   }
 
   return value;
+}
+
+// Resets gl state to default values.
+export function resetContext(gl) {
+  for (const parameterKey in GL_STATE) {
+    setParameter(gl, parameterKey, GL_STATE[parameterKey].value);
+  }
 }
 
 function getFuncFromWebGLParameter(glParameter) {

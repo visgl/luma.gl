@@ -3,7 +3,7 @@
 /* global document */
 
 import {GL, AnimationLoop, Cube, Matrix4, Texture2D,
-  addEvents, loadTextures, Model} from 'luma.gl';
+  addEvents, loadTextures, Model, resetContext} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -67,11 +67,11 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
+    resetContext(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
-    gl.disable(gl.BLEND);
 
     return loadTextures(gl, {
       urls: ['crate.gif']
