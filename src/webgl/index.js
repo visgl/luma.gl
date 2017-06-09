@@ -23,7 +23,7 @@ export {
   WebGL2RenderingContext,
 
   webGLTypesAvailable
-} from './api/webgl-types';
+} from './api/types';
 
 export {
   isWebGLContext,

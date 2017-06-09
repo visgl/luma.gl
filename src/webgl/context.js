@@ -4,7 +4,6 @@
 import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
 import {makeDebugContext} from './context-debug';
 import {glGetDebugInfo} from './context-limits';
-import {withState} from './context-state';
 
 import queryManager from './helpers/query-manager';
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
@@ -192,55 +191,6 @@ function _createHeadlessContext(width, height, opts, error) {
   return gl;
 }
 
-// VERY LIMITED / BASIC GL STATE MANAGEMENT
-
-// Executes a function with gl states temporarily set, exception safe
-// Currently support pixelStorage, scissor test and framebuffer binding
-export function withParameters(gl, {pixelStore, scissorTest, framebuffer, nocatch = true}, func) {
-  // assertWebGLContext(gl);
-
-  let scissorTestWasEnabled;
-  if (scissorTest) {
-    scissorTestWasEnabled = gl.isEnabled(gl.SCISSOR_TEST);
-    const {x, y, w, h} = scissorTest;
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(x, y, w, h);
-  }
-
-  if (framebuffer) {
-    // TODO - was there any previously set frame buffer we need to remember?
-    framebuffer.bind();
-  }
-
-  function finalize() {
-    if (!scissorTestWasEnabled) {
-      gl.disable(gl.SCISSOR_TEST);
-    }
-    if (framebuffer) {
-      // TODO - was there any previously set frame buffer?
-      // TODO - delegate "unbind" to Framebuffer object?
-      framebuffer.unbind();
-    }
-  }
-
-  let value;
-
-// Comment out the nocatch path as withState does not support
-// nocatch
-// if (nocatch) {
-//   value = func(gl);
-// } else {
-
-  try {
-    value = withState(gl, pixelStore, func);
-  } finally {
-    finalize();
-  }
-// }
-
-  return value;
-}
-
 // POLLING FOR PENDING QUERIES
 // Calling this function checks all pending queries for completion
 export function pollContext(gl) {
@@ -258,8 +208,3 @@ function logInfo(gl) {
   // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
 }
 
-// DEPRECATED
-
-export function glContextWithState(...args) {
-  return withParameters(...args);
-}

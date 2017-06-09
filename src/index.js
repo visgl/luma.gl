@@ -12,14 +12,16 @@ export {
   setContextDefaults,
   createGLContext,
   getGLExtension,
-  withParameters,
-  glContextWithState,
   pollContext} from './webgl/context';
 export {
+  resetParameters,
   getParameter,
+  getParameters,
   setParameter,
+  setParameters,
   withState,
-  resetContext} from './webgl/context-state';
+  withParameters,
+  glContextWithState} from './webgl/context-state';
 export {
   getGLContextInfo,
   getContextLimits,
@@ -29,7 +31,7 @@ export {
 export {
   makeDebugContext} from './webgl/context-debug';
 export {
-  installParameterDefinitions} from './webgl/debug-parameters';
+  installParameterDefinitions} from './webgl/api/debug-parameters';
 
 export {default as Buffer} from './webgl/buffer';
 export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';

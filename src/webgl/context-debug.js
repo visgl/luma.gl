@@ -1,7 +1,7 @@
 // Khronos Debug support module
 import WebGLDebug from 'webgl-debug';
 import {log} from '../utils';
-import {installParameterDefinitions} from './debug-parameters';
+import {installParameterDefinitions} from './api/debug-parameters';
 
 installParameterDefinitions();
 

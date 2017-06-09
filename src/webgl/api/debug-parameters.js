@@ -3,15 +3,17 @@
 // with resource.getParameters(). This is mainly useful during debugging.
 // Note: Kept separate to avoid bundling in production applications
 
-import GL from './gl-constants';
-import Buffer from './buffer';
-import FenceSync from './fence-sync';
-import Framebuffer from './framebuffer';
-import Program from './program';
-import Renderbuffer from './renderbuffer';
-import Sampler from './sampler';
+import GL from './constants';
+
+// TODO - separate install parameter definitions function from api metadata
+import Buffer from '../buffer';
+import FenceSync from '../fence-sync';
+import Framebuffer from '../framebuffer';
+import Program from '../program';
+import Renderbuffer from '../renderbuffer';
+import Sampler from '../sampler';
 // import Shader from './shader';
-import Texture from './texture';
+import Texture from '../texture';
 
 const BUFFER_PARAMETERS = {
   [GL.BUFFER_SIZE]: {webgl1: 0}, // GLint indicating the size of the buffer in bytes.

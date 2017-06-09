@@ -14,7 +14,7 @@ export {
   WebGL2RenderingContext,
 
   webGLTypesAvailable
-} from './webgl-types';
+} from './types';
 
 export {
   formatGLSLCompilerError,
@@ -22,5 +22,6 @@ export {
 } from './webgl-format-shader-error';
 
 // TODO - avoid importing GL as it is a big file
-export {GL, glGet, glKey} from '../gl-constants';
-export {default as default} from '../gl-constants';
+import GL from './constants';
+export {GL};
+export default GL;
