@@ -18,7 +18,8 @@ export {
 export {
   getParameter,
   setParameter,
-  withState} from './webgl/context-state';
+  withState,
+  resetContext} from './webgl/context-state';
 export {
   getGLContextInfo,
   getContextLimits,

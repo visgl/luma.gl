@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, loadTextures, Cube, Matrix4} from 'luma.gl';
+import {GL, AnimationLoop, loadTextures, Cube, Matrix4, resetContext} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -34,11 +34,11 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     addControls();
 
+    resetContext(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
-    gl.disable(gl.BLEND);
     gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
     return loadTextures(gl, {
