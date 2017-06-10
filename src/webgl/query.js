@@ -2,9 +2,9 @@
 
 import Resource from './resource';
 import queryManager from './helpers/query-manager';
-import {polyfillWebGLContext} from './context-polyfill';
 import {FEATURE, hasFeatures} from './context-features';
 import {isWebGL2} from './context';
+import {polyfillContext} from '../webgl-utils';
 
 const noop = x => x;
 
@@ -46,7 +46,7 @@ export default class Query extends Resource {
     }
 
     if (timestamps) {
-      polyfillWebGLContext(gl);
+      polyfillContext(gl);
       const queryCounterBits = gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
       supported = supported && (queryCounterBits > 0);
     }

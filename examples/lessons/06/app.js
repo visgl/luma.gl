@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage, resetContext}
+import {GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage, resetParameters}
   from 'luma.gl';
 
 /* global window */
@@ -56,7 +56,7 @@ const animationLoop = new AnimationLoop({
     //   [GL.UNPACK_FLIP_Y_WEBGL]: true
     // });
 
-    resetContext(gl);
+    resetParameters(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);

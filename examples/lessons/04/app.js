@@ -1,4 +1,4 @@
-import {GL, AnimationLoop, Model, Geometry, Program, Matrix4, resetContext} from 'luma.gl';
+import {GL, AnimationLoop, Model, Geometry, Program, Matrix4, resetParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -32,7 +32,7 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     addControls();
 
-    resetContext(gl);
+    resetParameters(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);

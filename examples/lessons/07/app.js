@@ -3,7 +3,7 @@
 /* global document */
 
 import {GL, AnimationLoop, Cube, Matrix4, Texture2D,
-  addEvents, loadTextures, Model, resetContext} from 'luma.gl';
+  addEvents, loadTextures, Model, resetParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -67,7 +67,7 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
-    resetContext(gl);
+    resetParameters(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);

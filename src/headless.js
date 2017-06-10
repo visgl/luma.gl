@@ -10,7 +10,7 @@ if (!isBrowser) {
 }
 
 // Make sure luma.gl initializes with valid types
-require('./webgl/api/webgl-types');
+require('./webgl/api/types');
 
 // Now import standard luma.gl package
 // module.exports = require('./index');

@@ -2,7 +2,13 @@
 
 luma.gl provides WebGL state management which enabling a 'stateless' and 'conflict-free' WebGL programming model. In the stateless model, settings can be passed as parameters to rendering commands rather than being set directly on the global state. And in the conflict-free model, even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
 
-Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
+The following functions are provided:
+* `getParameter` - Returns the value(s) of a GL context parameter
+* `getParameters` - Returns the values of some or all GL context parameters
+* `setParameters` - Sets a the value(s) of the specified GL context parameters
+* `withParameters` - Runs a function with a set of parameters temporarily applied
+* `resetParameters` - Resets some or all GL context parameters to their default values
+
 
 ## Usage
 
@@ -13,69 +19,57 @@ const gl = ...
 trackState(gl);
 ```
 
-Get a global parameter value
+Get a global parameter value using a WebGL parameter constant
 ```js
-const value = getParameter();
+const value = getParameter(gl, gl.DEPTH_TEST);
 ```
 
-Set a global parameter value
+Get a global parameter value using a luma.gl parameter constant
 ```js
-const value = getParameter();
+const value = getParameter(gl, 'depthTest');
 ```
 
-
-Setting parameters temporarily for a function call, restoring them after the call
-
+Set a global parameter value using a WebGL parameter constant
 ```js
-withParameters(gl, {
-  blend: false,
-  blendColor: [],
-  blendEquation: [GL.FUNC_ADD, GL.FUNC_ADD], // [GL.BLEND_EQUATION_RGB, GL.BLEND_EQUATION_ALPHA],
-  blendFunc: [GL.ONE, GL.ZERO, GL.ONE, GL.ZERO],
+const value = setParameters(gl, {
+  [gl.DEPTH_TEST]: true,
+});
+```
 
-  colorClearValue: ,
-  colorMask: ,
-  colorWritemask: ,
+Set a global parameter value using a luma.gl parameter constant
+```js
+const value = setParameters(gl, {
+  depthTest: true,
+});
+```
 
-  cullFace: GL.BACK,
-  cullFaceMode: ,
+Get all gl parameter values (values will be an object map keyed with parameter names)
+```js
+const values = getParameters(gl);
+```
 
-  depthTest: false,
-  depthClearValue: ,
-  depthFunc: ,
-  depthRange: ,
-  depthWritemask: ,
+Reset all parameters to their default values
+```js
+resetParameters(gl);
+```
 
-  dither: true,
-
-  frontFace: ,
-
-  generateMipmapHint: ,
-
-  lineWidth: ,
-
-  polygonOffsetFill: false,
-  polygonOffset: ,
-
-  sampleCoverage: ,
-
-  scissorTest: false,
-  scissorBox: ,
-
-  stencilTest: false,
-  stencilClearValue: ,
-  stencilMask: ,
-  stencilFunc: ,
-  stencilOp: ,
-
-  viewport:
+Set parameters temporarily for a function call (automatically restoring them after the call)
+```js
+const returnValue = withParameters(gl, {
+  depthTest: true
 }, () = {
   // execute code with new settings temporarily applied
   program.draw(...);
   ...
-  // previous parameters will be restored even if an exception is thrown
-  throw new Error('Exception after setting parameters');
+  // parameters will be restored even the function throws an exception
+  if (...) {
+    throw new Error('Exception after setting parameters');
+  }
+
+  // Return value of the function will be returned from `withParameters`
+  return true;
 });
+
 // previous parameters are restored here
 program.draw(...);
 ```
@@ -85,53 +79,60 @@ program.draw(...);
 
 ### getParameter
 
+Gets the value(s) of a "single" gl context parameter.
+
 ```js
 getParameter(gl, key)
 ```
 
-Sets value with key to context.
-Value may be "normalized" (in case a short form is supported). In that case
-the normalized value is retured.
-
 * gl {WebGLRenderingContext} - context
-* key {String}  - parameter name
+* key {String}  - parameter name, either luma.gl parameter name or a GL parameter constants
 * value {*}  - parameter value
-Returns {*} - "normalized" parameter value after assignment
+Returns {*} - value(s) of this parameter
 
 
-### setParameter
+### setParameters
+
+Sets a number of parameters.
 
 ```js
-setParameter(gl, key, value)
+setParameters(gl, {key: value, ...})
 ```
 
-Sets value with key to context.
-Value may be "normalized" (in case a short form is supported). In that case
-the normalized value is retured.
-
 * `gl` {WebGLRenderingContext} - context
-* `key` {String} - parameter name
+* `key` {String} - parameter names, (, either )luma.gl parameter name or a GL parameter constants
 * `value` {*} - parameter value
 Returns {*} - "normalized" parameter value after assignment
 
+Note:
+* If both luma.gl parameter names and GL parameter constants representing the same value are submitted the results are undefined.
+* value may be "normalized" (in case a short form is supported). In that case the normalized value is retured.
 
-### withState
 
-```js
-withState(gl, {...params}, func)
-```
-Executes a function with gl states temporarily set
-Exception safe
+### withParameters
 
-### resetContext
+Executes a function after temporarily setting the parameters. Will restore the parameters to their previously value after the completion of the function, even if the function exits with an exception.
 
 ```js
-resetContext(gl)
+withParameters(gl, {...params}, func)
 ```
-Resets gl state to default values.
+* `gl` {WebGLRenderingContext} - context
+* `params` {Object} - any parameter names accepted by `setParameters`
+
+Returns: the value returned by `func`, if any.
+
+
+### resetParameters
+
+```js
+resetParameters(gl)
+```
+Resets all gl context parameters to default values.
 
 * `gl` {WebGLRenderingContext} - context
 Returns no value.
+
+Note that technically, resetting context parameters does not fully reset the context, as buffer binding, z buffer values etc are not reset.
 
 
 ## Parameters
@@ -475,12 +476,8 @@ Specifies how bitmaps are written to and read from memory
 ## Remarks
 
 WebGL State Management can be quite complicated.
-* A large part of the WebGL API is devoted to settings.
-  When reading, querying individual values using GL constants is the norm,
-  and when writing, special purpose functions are provided for most settings.
-  luma.gl supports both forms for both reading and writing settings.
-* Reading values from WebGL can be very slow if it requires a GPU roundtrip.
-  To get around this, luma.gl reads values once, caches them and tracks
-  them as they are changed through luma functions.
-  The cached values can get out of sync if the context is shared outside
-  of luma.gl.
+* A large part of the WebGL API is devoted to settings. When reading, querying individual values using GL constants is the norm, and when writing, special purpose functions are provided for most settings. luma.gl supports both forms for both reading and writing settings.
+* Reading values from WebGL can be very slow if it requires a GPU roundtrip. To get around this, luma.gl reads values once, caches them and tracks them as they are changed through luma functions. The cached values can get out of sync if the context is shared outside of luma.gl.
+* Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
+
+

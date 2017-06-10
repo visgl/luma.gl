@@ -1,7 +1,8 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from './gl-constants';
 import {WebGLBuffer} from './api';
-import {withParameters, isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
+import {isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
+import {withParameters} from './context-state';
 import Resource from './resource';
 import Buffer from './buffer';
 import {uid} from '../utils';
@@ -202,10 +203,15 @@ export default class Texture extends Resource {
     }));
 
     // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
-    const glPixelStore = Object.assign({[GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY}, pixelStore);
+    // TODO - compare v4 and v3
+    const DEFAULT_TEXTURE_SETTINGS = {
+      // Pixel store
+      [GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY
+    };
+    const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
 
     // Temporarily apply any pixel store settings and build textures
-    withParameters(this.gl, {pixelStore: glPixelStore}, () => {
+    withParameters(this.gl, glSettings, () => {
       this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
     });
     if (mipmaps) {
