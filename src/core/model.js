@@ -1,7 +1,7 @@
 // A scenegraph object node
 import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
 import {getUniformsTable} from '../webgl/uniforms';
-import {glGet} from '../webgl/api';
+import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
@@ -92,7 +92,7 @@ export default class Model extends Object3D {
 
     // geometry might have set drawMode and vertexCount
     if (drawMode !== undefined) {
-      this.drawMode = drawMode;
+      this.drawMode = getDrawMode(drawMode);
     }
     if (vertexCount !== undefined) {
       this.vertexCount = vertexCount;
@@ -144,7 +144,7 @@ export default class Model extends Object3D {
   }
 
   setDrawMode(drawMode) {
-    this.drawMode = drawMode;
+    this.drawMode = getDrawMode(drawMode);
     return this;
   }
 
@@ -180,7 +180,7 @@ export default class Model extends Object3D {
   setGeometry(geometry) {
     this.geometry = geometry;
     this.vertexCount = geometry.getVertexCount();
-    this.drawMode = glGet(geometry.drawMode);
+    this.drawMode = geometry.drawMode;
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.setNeedsRedraw();
     return this;

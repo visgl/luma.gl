@@ -1,5 +1,6 @@
 /* eslint-disable no-inline-comments, max-len */
 import assert from 'assert';
+import {log} from '../utils';
 
 // WebGL specification 'types'
 import GL_PARAMETERS from './api/parameters';
@@ -13,9 +14,9 @@ function getContextData(gl) {
 }
 
 // Helper to get the real webgl context (from a debug context)
-function getRealContext(gl) {
-  return gl.realContext ? gl.realContext : null;
-}
+// function getRealContext(gl) {
+//   return gl.realContext ? gl.realContext : null;
+// }
 
 function isArray(array) {
   return Array.isArray(array) || ArrayBuffer.isView(array);
@@ -126,7 +127,7 @@ export function setParameter(gl, key, valueOrValues) {
 
   // Call the normalization function (in case the parameter accepts short forms)
   const {normalizeValue = x => x} = parameterDefinition;
-  const adjustedValue = normalizeValue;
+  const adjustedValue = normalizeValue(valueOrValues);
 
   // Call the setter
   parameterDefinition.setter(gl, adjustedValue);
@@ -152,38 +153,6 @@ export function getParameters(gl, parameters, {keys} = {}) {
   return values;
 }
 
-/*
- * Executes a function with gl states temporarily set
- * Exception safe
- */
-export function withState(gl, params, func) {
-  // assertWebGLContext(gl);
-  const state = getState(gl);
-
-  // TODO (@ibgreen): Make GL state manager tracking framebuffer state and
-  // Combine withParameters and withState functions
-
-  // const {frameBuffer} = params;
-  // if (frameBuffer) {
-  //   frameBuffer.bind();
-  // }
-
-  state.pushValues(gl, params);
-  let value;
-  try {
-    value = func(gl);
-  } finally {
-    state.popValues(gl);
-  // if (params.frameBuffer) {
-  //   // TODO - was there any previously set frame buffer?
-  //   // TODO - delegate "unbind" to Framebuffer object?
-  //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  // }
-  }
-
-  return value;
-}
-
 // Resets gl state to default values.
 export function resetParameters(gl) {
   for (const parameterKey in GL_PARAMETERS) {
@@ -191,67 +160,13 @@ export function resetParameters(gl) {
   }
 }
 
-function getFuncFromWebGLParameter(glParameter) {
-  return glParameter;
-}
-
-export function trackState(gl) {
-  gl = getRealContext(gl);
-
-  // Intercept any setters and getters not in the table
-  const enable = gl.prototype.enable.bind(gl);
-  gl.prototype.enable = function enable_(glParameter) {
-    const state = getState(this);
-    const func = getFuncFromWebGLParameter(glParameter);
-    if (state.setValue(func)) {
-      enable(glParameter);
-    }
-  };
-
-  const disable = gl.prototype.disable.bind(gl);
-  gl.prototype.disable = function disable_(glParameter) {
-    const state = getState(this);
-    const func = getFuncFromWebGLParameter(glParameter);
-    if (state.setValue(func, false)) {
-      disable(glParameter);
-    }
-  };
-
-  const pixelStorei = gl.prototype.pixelStorei.bind(gl);
-  gl.prototype.pixelStorei = function pixelStorei_(glParameter, value) {
-    const state = getState(this);
-    if (state.setValue(glParameter, value)) {
-      pixelStorei(glParameter, value);
-    }
-  };
-
-  // const getParameter_ = gl.prototype.getParameter.bind(gl);
-  gl.prototype.getParameter = function getParameter_(glParameter) {
-    const state = getState(this);
-    return state.getParameter(glParameter);
-  };
-
-  gl.prototype.isEnabled = function isEnabled(glParameter) {
-    const state = getState(this);
-    const func = getFuncFromWebGLParameter(glParameter);
-    return state.getValue(func);
-  };
-
-  // intercept all setter functions in the table
-  // for (const key in GL_PARAMETERS) {
-  //   const parameterDef = GL_PARAMETERS[key];
-  //   const originalFunc = gl.prototype[key].bind(gl);
-  //   gl.prototype[key] = function() {
-  //   };
-  // }
-}
-
 // VERY LIMITED / BASIC GL STATE MANAGEMENT
-
 // Executes a function with gl states temporarily set, exception safe
 // Currently support pixelStorage, scissor test and framebuffer binding
-export function withParameters(gl, {pixelStore, scissorTest, framebuffer, nocatch = true}, func) {
+export function withParameters(gl, params, func) {
   // assertWebGLContext(gl);
+
+  const {scissorTest, framebuffer, nocatch = true} = params;
 
   let scissorTestWasEnabled;
   if (scissorTest) {
@@ -266,7 +181,11 @@ export function withParameters(gl, {pixelStore, scissorTest, framebuffer, nocatc
     framebuffer.bind();
   }
 
-  function finalize() {
+  const state = getState(gl);
+
+  // Define a helper function that will reset state after the function call
+  function resetStateAfterCall() {
+    state.popValues(gl);
     if (!scissorTestWasEnabled) {
       gl.disable(gl.SCISSOR_TEST);
     }
@@ -277,27 +196,34 @@ export function withParameters(gl, {pixelStore, scissorTest, framebuffer, nocatc
     }
   }
 
+  state.pushValues(gl, params);
+
+  // Setup is done, call the function
   let value;
 
-// Comment out the nocatch path as withState does not support
-// nocatch
-// if (nocatch) {
-//   value = func(gl);
-// } else {
-
-  try {
-    value = withState(gl, pixelStore, func);
-  } finally {
-    finalize();
+  if (nocatch) {
+    // Avoid try catch to minimize debugging impact for safe execution paths
+    value = func(gl);
+    resetStateAfterCall();
+  } else {
+    // Wrap in a try-catch to ensure that parameters are restored on exceptions
+    try {
+      value = func(gl);
+    } finally {
+      resetStateAfterCall();
+    }
   }
-// }
-
   return value;
 }
 
 // DEPRECATED
 
-export function glContextWithState(...args) {
+export function withState(...args) {
+  log.once(0, '"withState" deprecated in luma.gl v4, please use "withParameters" instead');
   return withParameters(...args);
 }
 
+export function glContextWithState(...args) {
+  log.once(0, '"glContextWithState" deprecated in luma.gl v4, please use "withParameters" instead');
+  return withParameters(...args);
+}

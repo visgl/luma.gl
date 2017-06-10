@@ -1,13 +1,7 @@
-/* eslint-disable no-continue, max-statements */
-import GL from '../api';
+import GL from './constants';
 
-// import shaderName from 'glsl-shader-name';
-// replace with regexp
-export function getShaderName(shader) {
-  const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_]+)\s/;
-  const match = shader.match(SHADER_NAME_REGEXP);
-  return match ? match[1] : 'unnamed';
-}
+// TODO - formatGLSLCompilerError should not depend on this
+import getShaderName from './get-shader-name';
 
 /**
  * Formats a GLSL shader compiler error and generates a string
@@ -20,7 +14,8 @@ export function getShaderName(shader) {
  * @param {Number} shaderType - shader type (GL constant)
  * @return {String} - Formatted strings has the error marked inline with src.
  */
-export function formatGLSLCompilerError(errLog, src, shaderType) {
+/* eslint-disable no-continue, max-statements */
+export default function formatGLSLCompilerError(errLog, src, shaderType) {
   const errorStrings = errLog.split(/\r?\n/);
   const errors = {};
 

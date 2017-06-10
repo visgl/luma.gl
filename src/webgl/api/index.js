@@ -19,9 +19,9 @@ export {
 export {
   formatGLSLCompilerError,
   getShaderName
-} from './webgl-format-shader-error';
+} from '../../webgl-utils';
 
 // TODO - avoid importing GL as it is a big file
-import GL from './constants';
+import GL from '../../webgl-utils/constants';
 export {GL};
 export default GL;

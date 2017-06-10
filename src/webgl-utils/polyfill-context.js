@@ -258,7 +258,7 @@ function installOverrides(gl, {target, target2}) {
 }
 
 // Registers polyfill or mock functions for all known extensions
-export function polyfillWebGLContext(gl) {
+export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
   getExtensions(gl);
   if (!gl.luma.polyfilled) {

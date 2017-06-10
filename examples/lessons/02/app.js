@@ -1,6 +1,6 @@
 /* global window, document, LumaGL */
 /* eslint-disable no-var, max-statements */
-import {AnimationLoop, Program, Buffer, Matrix4, resetContext} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, Matrix4, resetParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -33,7 +33,7 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl, aspect, canvas}) {
     addControls();
 
-    resetContext(gl);
+    resetParameters(gl);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);

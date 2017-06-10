@@ -5,7 +5,6 @@
 import './helpers/query-manager.spec';
 
 // webgl
-import './context-polyfill.spec.js';
 import './context.spec.js';
 import './context-features.spec.js';
 import './context-limits.spec.js';

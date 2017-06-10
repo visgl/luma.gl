@@ -1,5 +1,5 @@
 // WEBGL BUILT-IN CONSTANTS
-import GL from './api/constants';
+import GL from '../webgl-utils/constants';
 import assert from 'assert';
 
 export {GL};

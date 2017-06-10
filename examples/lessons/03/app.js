@@ -1,5 +1,5 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-import {GL, AnimationLoop, Program, Model, Geometry, Matrix4, resetContext} from 'luma.gl';
+import {GL, AnimationLoop, Program, Model, Geometry, Matrix4, resetParameters} from 'luma.gl';
 
 const FRAGMENT_SHADER = `\
 #ifdef GL_ES
@@ -48,7 +48,7 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     addControls();
 
-    resetContext(gl);
+    resetParameters(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);

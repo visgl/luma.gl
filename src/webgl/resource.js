@@ -1,9 +1,9 @@
 import luma from '../init';
 import {assertWebGLContext, isWebGL2} from './context';
-import {polyfillWebGLContext} from './context-polyfill';
 import {glGet, glKey} from './gl-constants';
 import {uid} from '../utils';
 import assert from 'assert';
+import {polyfillContext} from '../webgl-utils';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -18,7 +18,7 @@ export default class Resource {
 
     const {id, userData = {}} = opts;
     this.gl = gl;
-    this.ext = polyfillWebGLContext(gl);
+    this.ext = polyfillContext(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this.opts = opts;

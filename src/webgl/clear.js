@@ -1,4 +1,5 @@
-import {withParameters, isWebGL2, ERR_WEBGL2} from './context';
+import {isWebGL2, ERR_WEBGL2} from './context';
+import {withParameters} from './context-state';
 import {assert} from 'assert';
 
 // Should collapse during minification

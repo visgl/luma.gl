@@ -4,12 +4,34 @@ import assert from 'assert';
 
 const ILLEGAL_ARG = 'Geometry: Illegal argument';
 
+// Rendering primitives - specify how to extract primitives from vertices.
+// NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants
+export const DRAW_MODE = {
+  POINTS: 0x0000, // draw single points.
+  LINES: 0x0001, // draw lines. Each vertex connects to the one after it.
+  LINE_LOOP: 0x0002, // draw lines. Each set of two vertices is treated as a separate line segment.
+  LINE_STRIP: 0x0003, // draw a connected group of line segments from the first vertex to the last
+  TRIANGLES: 0x0004, // draw triangles. Each set of three vertices creates a separate triangle.
+  TRIANGLE_STRIP: 0x0005, // draw a connected group of triangles.
+  TRIANGLE_FAN: 0x0006 // draw a connected group of triangles.
+                       // Each vertex connects to the previous and the first vertex in the fan.
+};
+
+// Helper function to handle string draw modes - when using this library without WebGL constants
+export function getDrawMode(drawMode) {
+  const mode = typeof drawMode === 'string' ?
+    DRAW_MODE[drawMode] || DRAW_MODE.TRIANGLES :
+    drawMode;
+  assert(mode >= 0 && mode <= DRAW_MODE.TRIANGLE_FAN, 'Illegal drawMode');
+  return mode;
+}
+
 export default class Geometry {
 
   constructor(opts = {}) {
     const {
       id,
-      drawMode = 'TRIANGLES',
+      drawMode = DRAW_MODE.TRIANGLES,
       vertexCount = undefined,
       attributes
     } = opts;
@@ -17,7 +39,7 @@ export default class Geometry {
     assert(drawMode, ILLEGAL_ARG);
 
     this.id = id || uid(this.constructor.name);
-    this.drawMode = drawMode;
+    this.drawMode = getDrawMode(drawMode);
     this.vertexCount = vertexCount;
     this.attributes = {};
     this.needsRedraw = true;

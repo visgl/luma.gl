@@ -5,4 +5,3 @@ import '../src/packages/math/test';
 import './geometry';
 
 // import '../src/probe/test';
-// import '../src/geometry/test';
