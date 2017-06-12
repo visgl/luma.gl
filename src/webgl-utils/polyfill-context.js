@@ -34,6 +34,12 @@ function getExtensionData(gl, extension) {
   };
 }
 
+// function mapExtensionConstant(gl, constant) {
+//   switch (constant) {
+//   case ext.FRAGMENT_SHADER_DERIVATIVE_HINT_OES: return GL.FRAGMENT_SHADER_DERIVATIVE_HINT;
+//   }
+// }
+
 const WEBGL_CONTEXT_POLYFILLS = {
   // POLYFILL TABLE
   [OES_vertex_array_object]: {
@@ -198,6 +204,13 @@ const WEBGL_CONTEXT_POLYFILLS = {
 
       const result = override(pname);
       return result !== undefined ? result : originalFunc(pname);
+    },
+    hint(gl, originalFunc, pname, value) {
+      // TODO - handle GL.FRAGMENT_SHADER_DERIVATIVE_HINT:
+      // switch (pname) {
+      // case GL.FRAGMENT_SHADER_DERIVATIVE_HINT:
+      // }
+      return originalFunc(pname, value);
     }
   }
 };

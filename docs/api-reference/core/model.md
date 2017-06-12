@@ -110,35 +110,44 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 
 * instanceCount
 
+`instanceCount` is used during draw and render
 
 ### Model.getInstanceCount
 
+Returns the current instanceCount
 
 ### Model.setVertexCount
 
-* vertexCount
+* vertexCount.
+
+`vertexCount` is used during draw and render
 
 ### Model.getVertexCount
 
 
 ### Model.isPickable
 
+* Unused
 
 ### Model.setPickable
 
+* Unused
 
 ### Model.getProgram
 
+Returns the program set on the model if any
 
 ### Model.getGeometry
 
+Returns the geometry set on the model if any
 
 ### Model.getAttributes
 
+Returns the attributes set on the model if any
 
 ### Model.setAttributes
 
-* attributes = {}
+* sets a number of attributes
 
 ### Model.getUniforms
 
@@ -152,9 +161,12 @@ Sets uniforms to be used. Note that uniforms are stored in a map so uniform
 values not present in the argument map won't be overwritten.
 
 
-### Model.setTextures
+### Model.draw
 
-Sets textures to be used.
+* `uniforms`
+* `attributes`
+* `settings`
+* `samplers`
 
 
 ### Model.render
@@ -169,12 +181,13 @@ during by Scene.render traversing the models in the scene.
 
 ### Model.onBeforeRender()
 
-Attaches attributes
-
+Callback before `render`, can be used to adust settings that affect the draw call.
+It is recommended to use parameters on `render` instead.
 
 ### Model.onAfterRender()
 
-Detaches attributes
+Callback after `render`, can be used to adust settings that affect the draw call.
+It is recommended to use parameters on `render` instead.
 
 
 ### Model.setProgramState
