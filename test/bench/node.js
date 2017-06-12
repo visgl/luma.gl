@@ -26,8 +26,6 @@ const path = require('path');
 const moduleAlias = require('module-alias');
 moduleAlias.addAlias('luma.gl', path.resolve('./src'));
 
-require('babel-polyfill');
-
 // Import headless luma support
 require('../../headless');
 

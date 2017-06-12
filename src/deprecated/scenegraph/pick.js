@@ -1,7 +1,7 @@
 // TODO - this is the new picking for deck.gl
 /* eslint-disable max-statements, no-try-catch */
 /* global window */
-import {GL, glContextWithState, Framebuffer, isWebGLContext} from '../../webgl';
+import {GL, withParameters, Framebuffer, isWebGLContext} from '../../webgl';
 import Group from './group';
 import assert from 'assert';
 
@@ -34,7 +34,7 @@ export function pickModels(gl, {
   framebuffer.resize({width: gl.canvas.width, height: gl.canvas.height});
 
   // Make sure we clear scissor test and fbo bindings in case of exceptions
-  return glContextWithState(gl, {
+  return withParameters(gl, {
     framebuffer,
     // We are only interested in one pixel, no need to render anything else
     scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
