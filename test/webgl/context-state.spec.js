@@ -1,6 +1,6 @@
 import {GL, isWebGL2Context} from 'luma.gl';
-import {getParameter, setParameter, withParameters, resetParameters} from 'luma.gl';
-import GL_PARAMETERS from '../../src/webgl/api/parameters';
+import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
+import GL_PARAMETERS from '../../src/webgl/context-state';
 
 import test from 'tape-catch';
 
@@ -74,6 +74,13 @@ function stringifyTypedArray(v) {
 import {fixture} from '../setup';
 
 test('WebGL#state', t => {
+  t.ok(getParameter, 'getParameter imported ok');
+  t.ok(getParameters, 'getParameters imported ok');
+  t.ok(setParameters, 'setParameters imported ok');
+  t.ok(withParameters, 'withParameters imported ok');
+  t.ok(resetParameters, 'resetParameters imported ok');
+  t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
+  t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
   t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
   t.end();
 });
