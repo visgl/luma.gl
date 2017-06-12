@@ -233,7 +233,7 @@ function interceptSetter(gl, key, setter, updateCache) {
 /* eslint-disable no-shadow */
 class GLState {
   constructor(gl, {copyState = false, enable} = {}) {
-    // Note: does not maintain a gl reference
+    this.gl = gl;
     this.state = copyState ? glCopyParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
     this.stateStack = [];
     this.enable = enable !== undefined ? enable : true;
@@ -243,24 +243,25 @@ class GLState {
     Object.seal(this);
   }
 
-  push(gl, values = {}) {
+  push(values = {}) {
     this.stateStack.push({});
-    this.setValues(values);
+    // this.setValues(values);
+    // glSetParameters(this.gl, oldValues, this.state);
   }
 
-  pop(gl) {
+  pop() {
     assert(this.stateStack.length > 0);
     const oldValues = this.stateStack.pop();
-    glSetParameters(gl, oldValues, this.state);
+    glSetParameters(this.gl, oldValues, this.state);
   }
 
-  getParameter(gl, key) {
+  getParameter(key) {
     // TODO - value should be cloned
     return this.state[key];
   }
 
-  setParameters(gl, values) {
-    glSetParameters(gl, values, this.state);
+  setParameters(values) {
+    glSetParameters(this.gl, values, this.state);
   }
 
   // interceptor for context get functions - just read value from our cache
@@ -324,4 +325,14 @@ export default function trackContextState(gl, {enable, copyState = true} = {}) {
   }
 
   return gl;
+}
+
+export function pushContextState(gl) {
+  assert(gl.state);
+  gl.state.push();
+}
+
+export function popContextState(gl) {
+  assert(gl.state);
+  gl.state.pop();
 }

@@ -28,8 +28,11 @@ export {
 export {
   isWebGLContext,
   isWebGL2Context,
-  withParameters,
   createGLContext
+} from './context';
+
+export {
+  withParameters
 } from './context';
 
 export {

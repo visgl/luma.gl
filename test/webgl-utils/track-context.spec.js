@@ -1,5 +1,6 @@
-import {GL, createGLContext} from 'luma.gl';
-import trackContext from '../../src/webgl-utils/track-context';
+import {createTestContext} from '../setup';
+import {GL} from 'luma.gl';
+import trackContext, {pushContextState, popContextState} from '../../src/webgl-utils/track-context';
 // import {trackContext, TEST_EXPORTS} from '../../src/webgl///';
 // import {getParameter, setParameter, withParameters, resetParameters} from 'luma.gl';
 
@@ -7,7 +8,7 @@ import test from 'tape-catch';
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createGLContext()
+  gl: createTestContext({debug: true})
 };
 
 import GL_PARAMETERS from '../../src/webgl/api/parameters';
@@ -89,46 +90,18 @@ test('WebGL#trackContext', t => {
     'trackContext call succeeded'
   );
 
-  // if (gl2) {
-  //   const extensions2 = trackContext(gl2);
-  //   t.ok(extensions2, 'extensions were returned');
-  // }
-
   t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
 
   t.end();
 });
 
-/*
-test('WebGLState#getParameter', t => {
+test('WebGLState#push & pop', t => {
   const {gl} = fixture;
-  for (const setting in GL_PARAMETERS) {
-    if (!GL_PARAMETERS[setting].webgl2) {
-      const value = getParameter(gl, setting);
-      t.ok(value !== undefined,
-        `${setting}: got a value ${stringifyTypedArray(value)}`);
-    }
-  }
-  t.end();
-});
 
-test('WebGLState#getParameter (WebGL2)', t => {
-  const {gl} = fixture;
-  if (isWebGL2Context(gl)) {
-    for (const setting in GL_PARAMETERS) {
-      if (GL_PARAMETERS[setting].webgl2) {
-        const value = getParameter(gl, setting);
-        t.ok(value !== undefined,
-          `${setting}: got a value ${stringifyTypedArray(value)}`);
-      }
-    }
-  }
-  t.end();
-});
-*/
-
-test('WebGLState#set and get', t => {
-  const {gl} = fixture;
+  t.doesNotThrow(
+    () => trackContext(gl),
+    'trackContext call succeeded'
+  );
 
   t.doesNotThrow(
     () => trackContext(gl),
@@ -139,18 +112,29 @@ test('WebGLState#set and get', t => {
   t.deepEqual(value, [0, 0, 0, 0],
     `got expected value ${stringifyTypedArray(value)}`);
 
+  pushContextState(gl);
+
   gl.clearColor(0, 1, 0, 1);
 
   value = gl.getParameter(GL.COLOR_CLEAR_VALUE);
   t.deepEqual(value, [0, 1, 0, 1],
     `got expected value ${stringifyTypedArray(value)}`);
 
-  t.doesNotThrow(
-    () => trackContext(gl),
-    'trackContext call succeeded'
-  );
+  pushContextState(gl);
 
-  // setDefaults(gl);
+  gl.clearColor(1, 1, 1, 1);
+
+  value = gl.getParameter(GL.COLOR_CLEAR_VALUE);
+  t.deepEqual(value, [1, 1, 1, 1],
+    `got expected value ${stringifyTypedArray(value)}`);
+
+  popContextState(gl);
+
+  value = gl.getParameter(GL.COLOR_CLEAR_VALUE);
+  t.deepEqual(value, [0, 1, 0, 1],
+    `got expected value ${stringifyTypedArray(value)}`);
+
+  popContextState(gl);
 
   value = gl.getParameter(GL.COLOR_CLEAR_VALUE);
   t.deepEqual(value, [0, 0, 0, 0],
@@ -158,28 +142,3 @@ test('WebGLState#set and get', t => {
 
   t.end();
 });
-
-/*
-test('WebGLState#resetParameters', t => {
-  const {gl} = fixture;
-
-  t.doesNotThrow(
-    () => trackContext(gl),
-    'trackContext call succeeded'
-  );
-
-  setParameter(gl, 'clearColor', [0, 1, 0, 1]);
-
-  let value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 1, 0, 1],
-    `got expected value ${stringifyTypedArray(value)}`);
-
-  resetParameters(gl);
-
-  value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 0, 0, 0],
-    `got expected value ${stringifyTypedArray(value)}`);
-
-  t.end();
-});
-*/
