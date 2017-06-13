@@ -1,7 +1,7 @@
 /* eslint-disable max-statements, indent, no-multi-spaces */
 import {GL, AnimationLoop, Cube, Sphere, Matrix4, Texture2D,
   loadTextures, Model, loadFiles, parseModel,
-  Program, Renderbuffer, Framebuffer, Geometry} from 'luma.gl';
+  Program, Renderbuffer, Framebuffer, Geometry, resetParameters} from 'luma.gl';
 
 // TODO: Remaining issues
 // 1. Specular highlights don not match with example:
@@ -140,56 +140,25 @@ void main(void) {
 }
 `;
 
-var rttFramebuffer;
-var rttTexture;
+let rttFramebuffer;
+let rttTexture;
 
 const DISABLE_FB = false;
 const FB_WIDTH = 512;
 const FB_HEIGHT = 512;
 
-var moonAngle = 0.0;
-var cubeAngle = Math.PI;
-var laptopAngle = 0.0;
-var moonAngleDelta = 0.01; // * Math.PI / 180.0;
-var cubeAngleDelta = 0.01; // * Math.PI / 180.0;
-var laptopAngleDelta = -0.005; // * Math.PI / 180.0;
-const moonCubeMaterial = {
-  ambientColor: [1.0, 1.0, 1.0],
-  diffuseColor: [1.0, 1.0, 1.0],
-  specularColor: [0.0, 0.0, 0.0],
-  shininess: 0.0,
-  emissiveColor: [0.0, 0.0, 0.0],
-  lightLocation: [0, 0, -5],
-  showSpecularHighlights: false
-};
-const laptopMaterial = {
-  ambientColor: [1.0, 1.0, 1.0],
-  diffuseColor: [1.0, 1.0, 1.0],
-  specularColor: [1.5, 1.5, 1.5],
-  shininess: 5.0,
-  emissiveColor: [0, 0, 0],
-  lightLocation: [-1, 2, -1],
-  showSpecularHighlights: true
-};
-const laptopScreenMaterial = {
-  ambientColor: [1.0, 1.0, 1.0], // [0, 0, 0],
-  diffuseColor: [1.0, 1.0, 1.0], // [0, 0, 0],
-  specularColor: [0.5, 0.5, 0.5],
-  shininess: 20.0,
-  emissiveColor: [0, 0, 0],
-  lightLocation: [1.5, 1.5, 1.5],
-  showSpecularHighlights: true
-};
-const lightUniforms = {
-  ambientColor: [0.2, 0.2, 0.2],
-  diffuseColor: [0.8, 0.8, 0.8],
-  specularColor: [0.8, 0.8, 0.8]
-};
+let moonAngle = 0.0;
+let cubeAngle = Math.PI;
+let laptopAngle = 0.0;
+const moonAngleDelta = 0.01; // * Math.PI / 180.0;
+const cubeAngleDelta = 0.01; // * Math.PI / 180.0;
+const laptopAngleDelta = -0.002; // * Math.PI / 180.0;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
     addControls();
 
+    resetParameters(gl);
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
@@ -213,12 +182,8 @@ const animationLoop = new AnimationLoop({
       })
     ])
     .then(function(results) {
-      let resultIndex = 0;
-      let macbookJSON = results[resultIndex][0];
-      resultIndex++;
-      const tMoon = results[resultIndex][0];
-      const tCrate = results[resultIndex][1];
-
+      let [macbookJSON] = results[0];
+      const [tMoon, tCrate] = results[1];
       // Fix attribute name to match with Shaders
       macbookJSON = macbookJSON.replace('vertices', 'positions');
       const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
@@ -226,18 +191,11 @@ const animationLoop = new AnimationLoop({
         id: 'macbook',
         file: macbookJSON,
         program,
-        uniforms: {
-          uMaterialAmbientColor: laptopMaterial.ambientColor,
-          uMaterialDiffuseColor: laptopMaterial.diffuseColor,
-          uMaterialSpecularColor: laptopMaterial.specularColor,
-          uMaterialShininess: laptopMaterial.shininess,
-          uMaterialEmissiveColor: laptopMaterial.emissiveColor,
-          uShowSpecularHighlights: laptopMaterial.showSpecularHighlights,
-          uAmbientLightingColor: lightUniforms.ambientColor,
-          uPointLightingLocation: laptopMaterial.lightLocation,
-          uPointLightingDiffuseColor: lightUniforms.diffuseColor,
-          uPointLightingSpecularColor: lightUniforms.specularColor
-        }
+        uniforms: Object.assign(
+          {},
+          getLaptopUniforms(),
+          getLightUniforms()
+        )
       });
 
       const moon = new Sphere({
@@ -247,40 +205,22 @@ const animationLoop = new AnimationLoop({
         nlat: 30,
         nlong: 30,
         radius: 2,
-        uniforms: {
-          uMaterialAmbientColor: moonCubeMaterial.ambientColor,
-          uMaterialDiffuseColor: moonCubeMaterial.diffuseColor,
-          uMaterialSpecularColor: moonCubeMaterial.specularColor,
-          uMaterialShininess: moonCubeMaterial.shininess,
-          uMaterialEmissiveColor: moonCubeMaterial.emissiveColor,
-          uShowSpecularHighlights: moonCubeMaterial.showSpecularHighlights,
-          uUseTextures: true,
-          uAmbientLightingColor: lightUniforms.ambientColor,
-          uPointLightingLocation: moonCubeMaterial.lightLocation,
-          uPointLightingDiffuseColor: lightUniforms.diffuseColor,
-          uPointLightingSpecularColor: lightUniforms.specularColor,
-          uSampler: tMoon
-        }
+        uniforms: Object.assign(
+          {uUseTextures: true, uSampler: tMoon},
+          getMoonCubeUniforms(),
+          getLightUniforms()
+        )
       });
 
       const cube = new Cube({
         gl,
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        uniforms: {
-          uMaterialAmbientColor: moonCubeMaterial.ambientColor,
-          uMaterialDiffuseColor: moonCubeMaterial.diffuseColor,
-          uMaterialSpecularColor: moonCubeMaterial.specularColor,
-          uMaterialShininess: moonCubeMaterial.shininess,
-          uMaterialEmissiveColor: moonCubeMaterial.emissiveColor,
-          uShowSpecularHighlights: moonCubeMaterial.showSpecularHighlights,
-          uUseTextures: true,
-          uAmbientLightingColor: lightUniforms.ambientColor,
-          uPointLightingLocation: moonCubeMaterial.lightLocation,
-          uPointLightingDiffuseColor: lightUniforms.diffuseColor,
-          uPointLightingSpecularColor: lightUniforms.specularColor,
-          uSampler: tCrate
-        }
+        uniforms: Object.assign(
+          {uUseTextures: true, uSampler: tCrate},
+          getMoonCubeUniforms(),
+          getLightUniforms()
+        )
       });
       setupFramebuffer(gl);
       const laptopScreenModel = generateLaptopScreenModel(gl);
@@ -318,6 +258,49 @@ function addControls({controlPanel} = {}) {
   }
 }
 
+function getLaptopUniforms() {
+  return {
+    uMaterialAmbientColor: [1.0, 1.0, 1.0],
+    uMaterialDiffuseColor: [1.0, 1.0, 1.0],
+    uMaterialSpecularColor: [1.5, 1.5, 1.5],
+    uMaterialShininess: 5.0,
+    uMaterialEmissiveColor: [0, 0, 0],
+    uShowSpecularHighlights: true,
+    uPointLightingLocation: [-1, 2, -1]
+  };
+}
+
+function getMoonCubeUniforms() {
+  return {
+    uMaterialAmbientColor: [1.0, 1.0, 1.0],
+    uMaterialDiffuseColor: [1.0, 1.0, 1.0],
+    uMaterialSpecularColor: [0.0, 0.0, 0.0],
+    uMaterialShininess: 0.0,
+    uMaterialEmissiveColor: [0.0, 0.0, 0.0],
+    uShowSpecularHighlights: false,
+    uPointLightingLocation: [0, 0, -5]
+  };
+}
+
+function getLaptopScreenUniforms() {
+  return {
+    uMaterialAmbientColor: [1.0, 1.0, 1.0], // [0, 0, 0],
+    uMaterialDiffuseColor: [1.0, 1.0, 1.0], // [0, 0, 0],
+    uMaterialSpecularColor: [0.5, 0.5, 0.5],
+    uMaterialShininess: 20.0,
+    uMaterialEmissiveColor: [0.0, 0.0, 0.0],
+    uShowSpecularHighlights: true,
+    uPointLightingLocation: [1.5, 1.5, 1.5]
+  };
+}
+function getLightUniforms() {
+  return {
+    uAmbientLightingColor: [0.2, 0.2, 0.2],
+    uPointLightingDiffuseColor: [0.8, 0.8, 0.8],
+    uPointLightingSpecularColor: [0.8, 0.8, 0.8]
+  };
+}
+
 function generateLaptopScreenModel(gl) {
   const POSITIONS = new Float32Array([
     0.580687, 0.659, 0.813106,
@@ -338,7 +321,7 @@ function generateLaptopScreenModel(gl) {
     0.0, 0.0
   ]);
 
-  var geometry = new Geometry({
+  const geometry = new Geometry({
     id: 'laptopscreen-geometry',
     attributes: {
       positions: POSITIONS,
@@ -348,25 +331,17 @@ function generateLaptopScreenModel(gl) {
     drawMode: GL.TRIANGLE_STRIP
   });
 
-  var model = new Model({
+  const model = new Model({
     gl,
     id: 'laptopscreen-model',
-    geometry: geometry,
+    geometry,
     vs: VERTEX_SHADER,
     fs: FRAGMENT_SHADER,
-    uniforms: {
-      uMaterialAmbientColor: laptopScreenMaterial.ambientColor,
-      uMaterialDiffuseColor: laptopScreenMaterial.diffuseColor,
-      uMaterialSpecularColor: laptopScreenMaterial.specularColor,
-      uMaterialShininess: laptopScreenMaterial.shininess,
-      uMaterialEmissiveColor: laptopScreenMaterial.emissiveColor,
-      uShowSpecularHighlights: laptopScreenMaterial.showSpecularHighlights,
-      uUseTextures: true,
-      uAmbientLightingColor: lightUniforms.ambientColor,
-      uPointLightingLocation: laptopScreenMaterial.lightLocation,
-      uPointLightingDiffuseColor: lightUniforms.diffuseColor,
-      uPointLightingSpecularColor: lightUniforms.specularColor
-    }
+    uniforms: Object.assign(
+      {uUseTextures: true},
+      getLaptopScreenUniforms(),
+      getLightUniforms()
+    )
   });
 
   return model;
@@ -424,7 +399,6 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
     // Draw Square
     tSquare
       .setPosition([0, 0, -1])
-      //.setRotation([tick * 0.1, 0, 0])
       .updateMatrix()
       .render({
         uMVMatrix: tSquare.matrix,
@@ -432,7 +406,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
       });
   } else {
 
-  var uMVMatrix = Matrix4
+  let uMVMatrix = Matrix4
     .lookAt({eye: [0, 0, 20]})
     .translate([2, 0, 0])
     .rotateY(moonAngle)
@@ -468,7 +442,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
 }
 
 function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tCrate) {
-  laptopAngle -= laptopAngleDelta;
+  laptopAngle += laptopAngleDelta;
 
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
@@ -477,7 +451,7 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
     .lookAt({eye: [0, 0, 0]})
     .translate([0, -0.5, -3])
     .rotateY(laptopAngle)
-    .rotateX(-80.0 * Math.PI / 180.0)
+    .rotateX(-80.0 * Math.PI / 180.0);
 
   macbook.render({
     uMVMatrix,
