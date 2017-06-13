@@ -33,7 +33,7 @@ export {
 
 export {
   withParameters
-} from './context';
+} from './context-state';
 
 export {
   getContextInfo

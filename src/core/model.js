@@ -1,5 +1,6 @@
 // A scenegraph object node
 import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
+// import {withParameters} from '../webgl/context-state';
 import {getUniformsTable} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 
