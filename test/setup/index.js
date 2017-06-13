@@ -9,7 +9,12 @@ setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, thr
 
 import {createGLContext, makeDebugContext} from 'luma.gl';
 
+export function createTestContext(opts = {}) {
+  return makeDebugContext(createGLContext(opts));
+}
+
 export const fixture = {
-  gl: makeDebugContext(createGLContext()),
-  gl2: makeDebugContext(createGLContext({webgl2: true, webgl1: false}))
+  gl: createTestContext(),
+  gl2: createTestContext({webgl2: true, webgl1: false})
 };
+
