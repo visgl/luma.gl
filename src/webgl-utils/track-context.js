@@ -124,12 +124,6 @@ export const GL_STATE_SETTERS = {
     });
   },
 
-  viewport(setter, x, y, width, height) {
-    setter({
-      [GL.VIEWPORT]: new Int32Array([x, y, width, height])
-    });
-  },
-
   stencilMask(setter, mask) {
     setter({
       [GL.STENCIL_WRITEMASK]: mask,
@@ -178,6 +172,12 @@ export const GL_STATE_SETTERS = {
       [face === GL.FRONT ? GL.STENCIL_FAIL : GL.STENCIL_BACK_FAIL]: fail,
       [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_FAIL : GL.STENCIL_BACK_PASS_DEPTH_FAIL]: zfail,
       [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_PASS : GL.STENCIL_BACK_PASS_DEPTH_PASS]: zpass
+    });
+  },
+
+  viewport(setter, x, y, width, height) {
+    setter({
+      [GL.VIEWPORT]: new Int32Array([x, y, width, height])
     });
   }
 };

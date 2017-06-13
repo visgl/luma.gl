@@ -10,7 +10,7 @@ const fixture = {
   gl: createTestContext({debug: true})
 };
 
-import {GL_PARAMETER_DEFAULTS} from '../../src/webgl-utils/parameters';
+import {GL_PARAMETER_DEFAULTS, GL_PARAMETER_SETTERS} from '../../src/webgl-utils/parameters';
 
 // eslint-disable-next-line
 const GL_PARAMETER_SETTINGS_ONE = {
@@ -214,6 +214,53 @@ test('WebGLState#push & pop', t => {
     const value = glGetParameter(gl, key);
     t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
       `got expected value ${stringifyTypedArray(value)}`);
+  }
+
+  popContextState(gl);
+
+  for (const key in GL_PARAMETER_DEFAULTS) {
+    const value = glGetParameter(gl, key);
+    t.deepEqual(value, GL_PARAMETER_DEFAULTS[key],
+      `got expected value ${stringifyTypedArray(value)}`);
+  }
+
+  t.end();
+});
+
+test('WebGLState#gl API', t => {
+  const {gl} = fixture;
+
+  t.doesNotThrow(
+    () => trackContext(gl, {copyState: false}),
+    'trackContext call succeeded'
+  );
+
+  // Verify default values.
+  for (const key in GL_PARAMETER_DEFAULTS) {
+    const value = glGetParameter(gl, key);
+    t.deepEqual(value, GL_PARAMETER_DEFAULTS[key],
+      `got expected value ${stringifyTypedArray(value)}`);
+  }
+
+  pushContextState(gl);
+
+  // TODO: test gl calls for compsite setters too (may be just call all gl calls).
+  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+    const value = GL_PARAMETER_SETTINGS_ONE[key];
+    const glSetter = GL_PARAMETER_SETTERS[key];
+    // Skipping composite setters
+    if (typeof glSetter !== 'string') {
+      glSetter(gl, value, key);
+    }
+  }
+
+  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+    // Skipping composite setters
+    if (typeof GL_PARAMETER_SETTERS[key] !== 'string') {
+      const value = glGetParameter(gl, key);
+      t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
+        `got expected value ${stringifyTypedArray(value)}`);
+    }
   }
 
   popContextState(gl);

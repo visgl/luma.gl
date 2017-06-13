@@ -97,7 +97,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.DEPTH_CLEAR_VALUE]: (gl, value) => gl.clearDepth(value),
   [GL.DEPTH_FUNC]: (gl, value) => gl.depthFunc(value),
   [GL.DEPTH_RANGE]: (gl, value) => gl.depthRange(...value),
-  [GL.DEPTH_WRITEMASK]: enable,
+  [GL.DEPTH_WRITEMASK]: (gl, value) => gl.depthMask(value),
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
   [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
