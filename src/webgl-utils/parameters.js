@@ -78,6 +78,8 @@ const enable = (gl, value, key) => value ? gl.enable(key) : gl.disable(key);
 const hint = (gl, value, key) => gl.hint(key, value);
 const pixelStorei = (gl, value, key) => gl.pixelStorei(key, value);
 
+// NOTE: When value type is a string, it will be handled by 'GL_PARAMETER_COMPOSITE_SETTERS'
+
 export const GL_PARAMETER_SETTERS = {
   [GL.BLEND]: enable,
   [GL.BLEND_COLOR]: (gl, value) => gl.blendColor(...value),
@@ -92,13 +94,13 @@ export const GL_PARAMETER_SETTERS = {
   [GL.CULL_FACE]: enable,
   [GL.CULL_FACE_MODE]: (gl, value) => gl.cullFace(value),
   [GL.DEPTH_TEST]: enable,
-  [GL.DEPTH_CLEAR_VALUE]: 1,
+  [GL.DEPTH_CLEAR_VALUE]: (gl, value) => gl.clearDepth(value),
   [GL.DEPTH_FUNC]: (gl, value) => gl.depthFunc(value),
-  [GL.DEPTH_RANGE]: (gl, value) => gl.depthRange(value),
-  [GL.DEPTH_WRITEMASK]: true,
+  [GL.DEPTH_RANGE]: (gl, value) => gl.depthRange(...value),
+  [GL.DEPTH_WRITEMASK]: enable,
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
-  [GL.FRONT_FACE]: (gl, value) => gl.frontFace,
+  [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl, value) => gl.lineWidth(value),
   [GL.POLYGON_OFFSET_FILL]: enable,
@@ -107,9 +109,9 @@ export const GL_PARAMETER_SETTERS = {
   [GL.SAMPLE_COVERAGE_VALUE]: 'sampleCoverage',
   [GL.SAMPLE_COVERAGE_INVERT]: 'sampleCoverage',
   [GL.SCISSOR_TEST]: enable,
-  [GL.SCISSOR_BOX]: (gl, value) => gl.scissor(value),
+  [GL.SCISSOR_BOX]: (gl, value) => gl.scissor(...value),
   [GL.STENCIL_TEST]: enable,
-  [GL.STENCIL_CLEAR_VALUE]: (gl, value) => gl.stencilClear(value),
+  [GL.STENCIL_CLEAR_VALUE]: (gl, value) => gl.clearStencil(value),
   [GL.STENCIL_WRITEMASK]: (gl, value) => gl.stencilMaskSeparate(GL.FRONT, value),
   [GL.STENCIL_BACK_WRITEMASK]: (gl, value) => gl.stencilMaskSeparate(GL.BACK, value),
   [GL.STENCIL_FUNC]: 'stencilFuncFront',
@@ -124,7 +126,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.STENCIL_BACK_FAIL]: 'stencilOpBack',
   [GL.STENCIL_BACK_PASS_DEPTH_FAIL]: 'stencilOpBack',
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: 'stencilOpBack',
-  [GL.VIEWPORT]: (gl, value) => gl.viewport(value),
+  [GL.VIEWPORT]: (gl, value) => gl.viewport(...value),
 
   // WEBGL1 PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: pixelStorei,
@@ -206,19 +208,19 @@ export const GL_PARAMETER_GETTERS = {
   [GL.RASTERIZER_DISCARD]: isEnabled
 };
 
-// PUBLICH METHODS
+// PUBLIC METHODS
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Needs `cache` parameter to fill in any missing values for composite setter functions
 export function glSetParameters(gl, values, cache) {
-  const compositeSetters = new Map();
+  const compositeSetters = {};
 
   // Call primitive setters and make note of any composite setters
   for (const key in values) {
     const setter = GL_PARAMETER_SETTERS[key];
     // Composite setters should only be called once, so save them
-    if (typeof setter === 'string' && !compositeSetters[setter]) {
-      compositeSetters[setter] = GL_PARAMETER_COMPOSITE_SETTERS[setter];
+    if (typeof setter === 'string') {
+      compositeSetters[setter] = true;
     // only call setter if value has changed
     // TODO - deep equal on values?
     } else if (values[key] !== cache[key]) {
@@ -229,14 +231,13 @@ export function glSetParameters(gl, values, cache) {
 
   // Handle composite setters
   // Ensure that any non-provided values needed by composite setters are filled in from state
-  let mergedValues = null;
-  for (const setter in compositeSetters) {
+  const mergedValues = Object.assign({}, cache, values);
+  for (const key in compositeSetters) {
     assert(cache);
-    // merge with current state values
-    mergedValues = mergedValues || Object.assign({}, cache, values);
-    // Note - the setter will automatically update this.state
     // TODO - avoid calling composite setters if values have not changed.
-    setter(gl, mergedValues);
+    const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
+    // Note - the setter will automatically update this.state
+    compositeSetter(gl, mergedValues);
   }
 }
 
