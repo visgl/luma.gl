@@ -5,19 +5,6 @@ import GL from './constants';
 import {glSetParameters, glCopyParameters, GL_PARAMETER_DEFAULTS} from './parameters';
 import assert from 'assert';
 
-// interceptors for WEBGL FUNCTIONS that query WebGLRenderingContext state
-
-export const GL_STATE_GETTERS = {
-  getParameter(get, pname) {
-    // TODO - value should be cloned
-    return get(pname);
-  },
-  isEnabled(get, pname) {
-    // TODO - value should be cloned
-    return get(pname);
-  }
-};
-
 // interceptors for WEBGL FUNCTIONS that set WebGLRenderingContext state
 
 export const GL_STATE_SETTERS = {
@@ -84,7 +71,7 @@ export const GL_STATE_SETTERS = {
   },
 
   colorMask(setter, r, g, b, a) {
-    setter({[GL.COLOR_MASK]: [r, g, b, a]});
+    setter({[GL.COLOR_WRITEMASK]: [r, g, b, a]});
   },
 
   cullFace(setter, mode) {
@@ -186,6 +173,12 @@ export const GL_STATE_SETTERS = {
       [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_FAIL : GL.STENCIL_BACK_PASS_DEPTH_FAIL]: zfail,
       [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_PASS : GL.STENCIL_BACK_PASS_DEPTH_PASS]: zpass
     });
+  },
+
+  viewport(setter, x, y, width, height) {
+    setter({
+      [GL.VIEWPORT]: new Int32Array([x, y, width, height])
+    });
   }
 };
 
@@ -193,29 +186,31 @@ export const GL_STATE_SETTERS = {
 
 // Overrides a WebGLRenderingContext state "getter" function
 //
-function interceptGetter(gl, key, getter, readFromCache) {
+function interceptGetter(gl, functionName) {
   // Get the original function from the WebGLRenderingContext
-  const originalFunc = gl[key].bind(gl);
+  const originalFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
-  gl[key] = function(...params) {
+  gl[functionName] = function(...params) {
+    const pname = params[0];
     return gl.state.enable ?
       // Call the getter the params so that it can e.g. serve from a cache
-      readFromCache(...params) :
+      gl.state.cache[pname] :
       // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
       originalFunc(...params);
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
-  Object.defineProperty(gl[key], 'name', {value: `${key}-spy`, configurable: true});
+  Object.defineProperty(
+    gl[functionName], 'name', {value: `${functionName}-spy`, configurable: true});
 }
 
-function interceptSetter(gl, key, setter, updateCache) {
+function interceptSetter(gl, functionName, setter, updateCache) {
   // Get the original function from the WebGLRenderingContext
-  const originalFunc = gl[key].bind(gl);
+  const originalFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
-  gl[key] = function(...params) {
+  gl[functionName] = function(...params) {
     // Update the value
     // Call the setter with the state cache and the params so that it can store the settings
     setter(updateCache, ...params);
@@ -225,7 +220,8 @@ function interceptSetter(gl, key, setter, updateCache) {
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
-  Object.defineProperty(gl[key], 'name', {value: `${key}-spy`, configurable: true});
+  Object.defineProperty(
+    gl[functionName], 'name', {value: `${functionName}-spy`, configurable: true});
 }
 
 // HELPER CLASS - GLState
@@ -234,12 +230,11 @@ function interceptSetter(gl, key, setter, updateCache) {
 class GLState {
   constructor(gl, {copyState = false, enable} = {}) {
     this.gl = gl;
-    this.state = copyState ? glCopyParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
+    this.cache = copyState ? glCopyParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
     this.stateStack = [];
     this.enable = enable !== undefined ? enable : true;
 
-    this._interceptSetValues = this._interceptSetValues.bind(this);
-    this._interceptGetValue = this._interceptGetValue.bind(this);
+    this._updateCache = this._updateCache.bind(this);
     Object.seal(this);
   }
 
@@ -252,27 +247,20 @@ class GLState {
   pop() {
     assert(this.stateStack.length > 0);
     const oldValues = this.stateStack.pop();
-    glSetParameters(this.gl, oldValues, this.state);
+    glSetParameters(this.gl, oldValues, this.cache);
   }
 
   getParameter(key) {
     // TODO - value should be cloned
-    return this.state[key];
+    return this.cache[key];
   }
 
   setParameters(values) {
-    glSetParameters(this.gl, values, this.state);
-  }
-
-  // interceptor for context get functions - just read value from our cache
-  _interceptGetValue(key) {
-    assert(key !== undefined);
-    // TODO - value should be cloned
-    return this.state[key];
+    glSetParameters(this.gl, values, this.cache);
   }
 
   // interceptor for context set functions - update our cache and our stack
-  _interceptSetValues(values) {
+  _updateCache(values) {
     // If a state stack frame is active, save the changed settings
     if (this.stateStack.length > 0) {
       const oldValues = this.stateStack[this.stateStack.length - 1];
@@ -281,13 +269,13 @@ class GLState {
         // Check that value hasn't already been shadowed
         if (!(key in oldValues)) {
           // Save current value being shadowed
-          oldValues[key] = this.state[key];
+          oldValues[key] = this.cache[key];
         }
       }
     }
 
     // Set the new values
-    Object.assign(this.state, values);
+    Object.assign(this.cache, values);
   }
 }
 
@@ -301,7 +289,8 @@ class GLState {
 // After calling this function, context state will be cached
 // gl.state.push() and gl.state.pop() will be available for saving,
 // temporarily modifying, and then restoring state.
-export default function trackContextState(gl, {enable, copyState = true} = {}) {
+export default function trackContextState(gl, {enable, copyState} = {}) {
+  assert(copyState !== undefined);
   if (!gl.state) {
     // Create a state cache
     gl.state = new GLState(gl, {copyState, enable});
@@ -313,15 +302,13 @@ export default function trackContextState(gl, {enable, copyState = true} = {}) {
 
     // intercept all setter functions in the table
     for (const key in GL_STATE_SETTERS) {
-      const parameterDef = GL_STATE_SETTERS[key];
-      interceptSetter(gl, key, parameterDef, gl.state._interceptSetValues);
+      const setter = GL_STATE_SETTERS[key];
+      interceptSetter(gl, key, setter, gl.state._updateCache);
     }
 
     // intercept all getter functions in the table
-    for (const key in GL_STATE_GETTERS) {
-      const parameterDef = GL_STATE_GETTERS[key];
-      interceptGetter(gl, key, parameterDef, gl.state._interceptGetValue);
-    }
+    interceptGetter(gl, 'getParameter');
+    interceptGetter(gl, 'isEnabled');
   }
 
   return gl;
@@ -335,4 +322,11 @@ export function pushContextState(gl) {
 export function popContextState(gl) {
   assert(gl.state);
   gl.state.pop();
+}
+
+export function setParameters(gl, params) {
+  assert(gl.state);
+  // Note: should we not pass gl.state.cache and let glSetParameters
+  // get it from gl?
+  return glSetParameters(gl, params, gl.state.cache);
 }
