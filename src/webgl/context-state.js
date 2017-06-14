@@ -1,11 +1,7 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from '../webgl-utils/constants';
+import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
 import {log} from '../utils';
-import assert from 'assert';
-
-import trackContext, {
-  pushContextState, popContextState, GL_PARAMETER_DEFAULTS
-} from '../../src/webgl-utils/track-context';
 
 // map of parameter setter function names, parameter constants, default values and types
 // - Uses gl function names, except when setter function exist that are named differently
@@ -58,10 +54,8 @@ export const LUMA_SETTERS = {
 
   sampleCoverage: (gl, value) => gl.sampleCoverage(...value),
 
-  scissor: (gl, value) => {
-    gl.enable(GL.SCISSOR_TEST);
-    gl.scissor(...value);
-  },
+  scissorTest: (gl, value) => value ? gl.enable(GL.SCISSOR_TEST) : gl.disable(GL.SCISSOR_TEST),
+  scissor: (gl, value) => gl.scissor(...value),
 
   stencilTest: (gl, value) => value ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST),
   stencilMask: (gl, value) => {
@@ -95,63 +89,38 @@ function isArray(array) {
 // GETTERS AND SETTERS
 
 // Get the parameter value(s) from the context
-// Might return an array of multiple values.
-// The return value will be acceptable input to setParameter
-export function getParameter(gl, key) {
-  return glGetParameter(gl, key);
-}
+export {getParameter} from '../webgl-utils/parameter-access';
 
-export function getParameters(gl, parameters, {keys} = {}) {
-  // Query all parameters if no list provided
-  const parameterKeys = parameters || Object.keys(GL_DEFAULT_PARAMETERS);
+// Get the parameters from the context
+export {getParameters} from '../webgl-utils/parameter-access';
 
-  const values = {};
-  for (const pname of parameterKeys) {
-    const key = pname;
-    // const key = keys ? glKey(pname) : pname;
-    const isEnum = false; // parameter.type === 'GLenum'
-    values[key] = glGetParameter(gl, pname);
-    if (keys && isEnum) {
-      // values[key] = glKey(values[key]);
-    }
-  }
-  return values;
-}
+// Resets gl state to default values.
+export {resetParameters} from '../webgl-utils/parameter-access';
+
+// Get the parameter value(s) from the context
+import {setParameters as glSetParameters} from '../webgl-utils/parameter-access';
 
 // Set the parameter value(s) by key to the context
 // Sets value with key to context.
 // Value may be "normalized" (in case a short form is supported). In that case
 // the normalized value is retured.
-export function setParameters(gl, key, valueOrValues) {
-  glSetParameters()
-  // Get the parameter definition for the key
-  const parameterDefinition = GL_PARAMETERS[key];
-  assert(parameterDefinition, key);
-
-  // Call the normalization function (in case the parameter accepts short forms)
-  const {normalizeValue = x => x} = parameterDefinition;
-  const adjustedValue = normalizeValue(valueOrValues);
-
-  // Call the setter
-  parameterDefinition.setter(gl, adjustedValue);
-  return adjustedValue;
-}
-
-
-// Resets gl state to default values.
-export function resetParameters(gl) {
-  for (const parameterKey in GL_PARAMETERS) {
-    setParameter(gl, parameterKey, GL_PARAMETERS[parameterKey].value);
+export function setParameters(gl, parameters) {
+  glSetParameters(gl, parameters);
+  for (const key in parameters) {
+    const setter = LUMA_SETTERS[key];
+    if (setter) {
+      setter(gl, parameters[key], key);
+    }
   }
 }
 
 // VERY LIMITED / BASIC GL STATE MANAGEMENT
 // Executes a function with gl states temporarily set, exception safe
 // Currently support pixelStorage, scissor test and framebuffer binding
-export function withParameters(gl, params, func) {
+export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  const {framebuffer, nocatch = true} = params;
+  const {framebuffer, nocatch = true} = parameters;
 
   // Define a helper function that will reset state after the function call
   function resetStateAfterCall() {
@@ -167,6 +136,8 @@ export function withParameters(gl, params, func) {
   }
 
   pushContextState(gl);
+
+  setParameters(gl, parameters);
 
   if (framebuffer) {
     // TODO - was there any previously set frame buffer we need to remember?

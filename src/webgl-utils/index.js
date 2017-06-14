@@ -5,7 +5,7 @@ export {
 
 export {
   default as trackContext
-} from './track-context';
+} from './track-context-state';
 
 export {
   default as formatGLSLCompilerError
