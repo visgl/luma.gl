@@ -1,5 +1,5 @@
 /* global document */
-import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, ClipSpaceQuad, resetParameters} from 'luma.gl';
 
 // CONTEXT 1 - 32 bit mandelbrot
 
@@ -62,6 +62,7 @@ const animationLoop = new AnimationLoop({
   // onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
   onInitialize: ({gl}) => {
     addControls();
+    resetParameters(gl);
     return {
       clipSpaceQuad: new ClipSpaceQuad({gl, fs: MANDELBROT_FRAGMENT_SHADER})
     };

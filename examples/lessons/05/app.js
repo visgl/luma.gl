@@ -1,5 +1,8 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, loadTextures, Cube, Matrix4, resetParameters} from 'luma.gl';
+import {
+  GL, AnimationLoop, loadTextures, Cube, Matrix4,
+  resetParameters, setParameters
+} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -35,11 +38,13 @@ const animationLoop = new AnimationLoop({
     addControls();
 
     resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL,
+      [GL.UNPACK_FLIP_Y_WEBGL]: true
+    });
 
     return loadTextures(gl, {
       urls: ['nehe.gif']

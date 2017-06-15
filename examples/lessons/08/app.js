@@ -1,8 +1,9 @@
 /* eslint-disable no-var */
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
-/* global window, document */
-import {GL, AnimationLoop, Cube, Matrix4, Texture2D,
-  addEvents, loadTextures, Model, resetParameters} from 'luma.gl';
+import {
+  GL, AnimationLoop, Cube, Matrix4,
+  addEvents, loadTextures, resetParameters, setParameters
+} from 'luma.gl';
 
 // Vertex shader with lighting
 const VERTEX_SHADER = `\
@@ -70,18 +71,19 @@ const animationLoop = new AnimationLoop({
     addKeyboardHandler(canvas);
 
     resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.enable(gl.BLEND);
-    gl.disable(gl.DEPTH_TEST);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      blendFunc: [gl.SRC_ALPHA, gl.ONE],
+      blend: true
+    });
 
     return loadTextures(gl, {
       urls: ['glass.gif'],
       mipmap: true,
       parameters: [{
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR
       }]
     })
     .then(textures => ({
@@ -115,9 +117,9 @@ const animationLoop = new AnimationLoop({
     cube.render({
       uMVMatrix,
       uPMatrix: Matrix4.perspective({aspect}),
-      uAmbientColor: [0.2,0.2,0.2],
-      uLightingDirection: [0,0,1],
-      uDirectionalColor: [0.8,0.8,0.8],
+      uAmbientColor: [0.2, 0.2, 0.2],
+      uLightingDirection: [0, 0, 1],
+      uDirectionalColor: [0.8, 0.8, 0.8],
       uUseLighting: true,
       uAlpha: Number(0.5)
     });
@@ -190,9 +192,9 @@ function addKeyboardHandler(canvas) {
       // handle page up/down
       default:
         if (e.code === 33) {
-          z -= 0.05;
+          cubePositionZ -= 0.05;
         } else if (e.code === 34) {
-          z += 0.05;
+          cubePositionZ += 0.05;
         }
       }
     }

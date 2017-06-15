@@ -1,6 +1,6 @@
 /* eslint-disable no-var, max-statements */
 
-import {AnimationLoop, Program, Buffer, Matrix4, resetParameters} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, Matrix4, resetParameters, setParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -28,11 +28,13 @@ const animationLoop = new AnimationLoop({
     addControls();
 
     resetParameters(gl);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+    setParameters(gl, {
+      viewport: [0, 0, canvas.width, canvas.height],
+      clearColor: [0, 0, 0, 1],
+      clearDepth: [1],
+      depthTest: true,
+      depthFunc: gl.LEQUAL
+    });
 
     var program = new Program(gl, {
       vs: VERTEX_SHADER,

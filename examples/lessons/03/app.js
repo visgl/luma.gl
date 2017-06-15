@@ -1,5 +1,8 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-import {GL, AnimationLoop, Program, Model, Geometry, Matrix4, resetParameters} from 'luma.gl';
+import {
+  GL, AnimationLoop, Program, Model, Geometry, Matrix4,
+  resetParameters, setParameters
+} from 'luma.gl';
 
 const FRAGMENT_SHADER = `\
 #ifdef GL_ES
@@ -49,10 +52,12 @@ const animationLoop = new AnimationLoop({
     addControls();
 
     resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: [1],
+      depthTest: true,
+      depthFunc: gl.LEQUAL
+    });
 
     const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
     const triangle = new Model({geometry: triangleGeometry, program});

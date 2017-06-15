@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, Cube, Matrix4, radians} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, radians, resetParameters, setParameters} from 'luma.gl';
 
 const SIDE = 256;
 
@@ -7,11 +7,13 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     addControls();
 
-    // White background color
-    gl.clearColor(1, 1, 1, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    resetParameters(gl);
+    setParameters(gl, {
+      clearColor: [1, 1, 1, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
 
     return {
       cube: makeInstancedCube(gl)
