@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.0.0-alpha.
+
+- Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
+- `shadertools` module no longer experimental
+
 ## 4.0.0-alpha.10
 
 - FIX: Framebuffer resize & add unit test (#200)
