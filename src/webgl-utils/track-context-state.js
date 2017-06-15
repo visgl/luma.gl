@@ -257,8 +257,6 @@ class GLState {
 
   push(values = {}) {
     this.stateStack.push({});
-    // this.setValues(values);
-    // setParameters(this.gl, oldValues, this.state);
   }
 
   pop() {

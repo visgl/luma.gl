@@ -284,6 +284,9 @@ export function getParameters(gl, parameters) {
 export function getDefaultParameters(gl) {
   // TODO - Query GL.VIEWPORT and GL.SCISSOR_BOX since these are dynamic
   return Object.assign({}, GL_PARAMETER_DEFAULTS, {
+    // TODO: For viewport and scissor default values are set at the time of
+    // context creation based on canvas size, we can query them here but it will
+    // not match with what we have in GL_PARAMETER_DEFAULTS table, we should revisit.
     // [GL.VIEWPORT]: gl.constructor.prototype.getParameter.call(gl, GL.VIEWPORT),
     // [GL.SCISSOR_BOX]: gl.constructor.prototype.getParameter.call(gl, GL.SCISSOR_BOX)
   });
