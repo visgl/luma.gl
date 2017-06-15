@@ -17,41 +17,6 @@ export const addModel = model => {
 };
 
 /**
- * Retrieve the type of an object
- */
-export const getType = obj => Object.prototype.toString.call(obj).slice(8, -1);
-
-/**
- * Get an attribute and slice to transform typed arrays
- */
-const getAttribute = (key, attr) => {
-  const isArray = getType(attr).includes('Array');
-  if (isArray) {
-    return Array.prototype.slice.call(attr);
-  }
-  return attr;
-};
-
-/**
- * Trim functions properties and convert typed arrays into simple ones
- * to be able to pass the payload through postMessage.
- */
-export const transformPayload = payload => Object.keys(payload)
-  .reduce((acc, attrKey) => {
-
-    const attr = payload[attrKey];
-    acc[attrKey] = getType(attr) === 'Object' ? Object.keys(attr).reduce((out, key) => {
-      if (typeof attr[key] !== 'function') {
-        out[key] = getAttribute(key, attr[key]);
-      }
-      return out;
-    }, {}) : getAttribute(attrKey, attr);
-
-    return acc;
-
-  }, {});
-
-/**
  * Log a model uniforms and attributes.
  */
 export const logModel = (model, uniforms) => {
@@ -63,8 +28,8 @@ export const logModel = (model, uniforms) => {
   const uniformsObject = Object.assign({}, model.uniforms, uniforms);
 
   seer.multiUpdate('luma.gl', model.id, [
-    {path: 'objects.uniforms', data: transformPayload(uniformsObject)},
-    {path: 'objects.attributes', data: transformPayload(attributesObject)}
+    {path: 'objects.uniforms', data: uniformsObject},
+    {path: 'objects.attributes', data: attributesObject}
   ]);
 };
 
