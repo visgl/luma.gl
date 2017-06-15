@@ -5,10 +5,10 @@ dist-min/*
 dist-buble/*
 **/dist/*
 
-_docs
-.coverage
-.nyc_output
-node_modules
+_docs/
+.nyc_output/
+coverage/
+node_modules/
 npm-debug.log
 
 examples/winds/data/*.html

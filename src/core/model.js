@@ -6,12 +6,10 @@ import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../deprecated/scenegraph/object-3d';
 import {log, formatValue} from '../utils';
-import {window} from '../utils/globals';
 import SHADERS from '../deprecated/shaderlib';
 // import {SHADERS} from '../experimental/shaders';
-import {addModel, removeModel} from '../debug/seer-integration';
+import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import assert from 'assert';
-import seer from 'seer';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
 Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
@@ -241,11 +239,10 @@ export default class Model extends Object3D {
   }
 
   render(uniforms = {}, attributes = {}, settings = {}, samplers = {}) {
-    if (window.__SEER_INITIALIZED__) {
-      addModel(this);
-    }
+    addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
+    getOverrides(this.id, resolvedUniforms);
 
     this.setUniforms(resolvedUniforms);
 
@@ -404,10 +401,7 @@ export default class Model extends Object3D {
       log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
     }
 
-    if (window.__SEER_INITIALIZED__) {
-      const uniformsObject = Object.assign({}, this.uniforms, uniforms);
-      seer.indexedListItem('luma.gl', this.id, uniformsObject);
-    }
+    logModel(this, uniforms);
   }
 
   // Todo move to attributes manager
