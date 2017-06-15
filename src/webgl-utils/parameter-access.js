@@ -1,3 +1,6 @@
+// Provides a unified API for getting and setting any WebGL parameter
+// Also knows default values of all parameters, enabling fast cache initialization
+// Provides base functionality for the state caching.
 import GL from './constants';
 import assert from 'assert';
 
@@ -61,7 +64,7 @@ export const GL_PARAMETER_DEFAULTS = {
   // WEBGL2 / EXTENSIONS
   // gl1: 'OES_standard_derivatives'
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.DONT_CARE,
-  // RASTERIZER_DISCARD ...
+  [GL.RASTERIZER_DISCARD]: false,
   [GL.PACK_ROW_LENGTH]: 0,
   [GL.PACK_SKIP_PIXELS]: 0,
   [GL.PACK_SKIP_ROWS]: 0,
@@ -106,6 +109,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.POLYGON_OFFSET_FILL]: enable,
   [GL.POLYGON_OFFSET_FACTOR]: 'polygonOffset',
   [GL.POLYGON_OFFSET_UNITS]: 'polygonOffset',
+  [GL.RASTERIZER_DISCARD]: enable,
   [GL.SAMPLE_COVERAGE_VALUE]: 'sampleCoverage',
   [GL.SAMPLE_COVERAGE_INVERT]: 'sampleCoverage',
   [GL.SCISSOR_TEST]: enable,
@@ -211,38 +215,49 @@ export const GL_PARAMETER_GETTERS = {
 // PUBLIC METHODS
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
-// Needs `cache` parameter to fill in any missing values for composite setter functions
-export function glSetParameters(gl, values, cache) {
+// Note: requires a `cache` object to be set on the context (gl.state.cache)
+// This object is used to fill in any missing values for composite setter functions
+export function setParameters(gl, values) {
   const compositeSetters = {};
 
-  // Call primitive setters and make note of any composite setters
+  // HANDLE PRIMITIVE SETTERS (and make note of any composite setters)
+
   for (const key in values) {
     const setter = GL_PARAMETER_SETTERS[key];
-    // Composite setters should only be called once, so save them
-    if (typeof setter === 'string') {
-      compositeSetters[setter] = true;
-    // only call setter if value has changed
-    // TODO - deep equal on values?
-    } else if (values[key] !== cache[key]) {
-      // Note - the setter will automatically update this.state
-      setter(gl, values[key], key);
+    if (setter) {
+      // Composite setters should only be called once, so save them
+      if (typeof setter === 'string') {
+        compositeSetters[setter] = true;
+      // only call setter if value has changed
+      // TODO - deep equal on values?
+      } else if (values[key] !== gl.state.cache[key]) {
+        // Note - the setter will automatically update this.state
+        setter(gl, values[key], key);
+      }
     }
   }
 
-  // Handle composite setters
-  // Ensure that any non-provided values needed by composite setters are filled in from state
-  const mergedValues = Object.assign({}, cache, values);
+  // HANDLE COMPOSITE SETTERS
+
+  // NOTE: any non-provided values needed by composite setters are filled in from state cache
+  // The cache parameter is automatically retrieved from the context
+  // This depends on `trackContextState`, which is technically a "circular" dependency.
+  // But it is too inconvenient to always require a cache parameter here.
+  // This is the ONLY external dependency in this module/
+  const mergedValues = Object.assign({}, gl.state.cache, values);
+
   for (const key in compositeSetters) {
-    assert(cache);
+    assert(gl.state.cache);
     // TODO - avoid calling composite setters if values have not changed.
     const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
-    // Note - the setter will automatically update this.state
+    // Note - if `trackContextState` has been called,
+    // the setter will automatically update this.state.cache
     compositeSetter(gl, mergedValues);
   }
 }
 
-// Queries any GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
-export function glGetParameter(gl, key) {
+// Queries any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
+export function getParameter(gl, key) {
   const getter = GL_PARAMETER_GETTERS[key];
   return getter ? getter(gl, key) : gl.getParameter(key);
 }
@@ -253,10 +268,30 @@ export function glGetParameter(gl, key) {
 // considered a very slow operation, to be used only if/when a context already manipulated
 // by external code needs to be synchronized for the first time
 // @return {Object} - a newly created map, with values keyed by GL parameters
-export function glCopyParameters(gl) {
+export function getParameters(gl, parameters) {
+  // default to querying all parameters
+  parameters = parameters || GL_PARAMETER_DEFAULTS;
+  // support both arrays of parameters and objects (keys represent parameters)
+  const parameterKeys = Array.isArray(parameters) ? parameters : Object.keys(parameters);
+
   const state = {};
-  for (const key in GL_PARAMETER_DEFAULTS) {
-    state[key] = glGetParameter(gl, key);
+  for (const key of parameterKeys) {
+    state[key] = getParameter(gl, key);
   }
   return state;
+}
+
+export function getDefaultParameters(gl) {
+  // TODO - Query GL.VIEWPORT and GL.SCISSOR_BOX since these are dynamic
+  return Object.assign({}, GL_PARAMETER_DEFAULTS, {
+    // TODO: For viewport and scissor default values are set at the time of
+    // context creation based on canvas size, we can query them here but it will
+    // not match with what we have in GL_PARAMETER_DEFAULTS table, we should revisit.
+    // [GL.VIEWPORT]: gl.constructor.prototype.getParameter.call(gl, GL.VIEWPORT),
+    // [GL.SCISSOR_BOX]: gl.constructor.prototype.getParameter.call(gl, GL.SCISSOR_BOX)
+  });
+}
+
+export function resetParameters(gl) {
+  setParameters(gl, getDefaultParameters(gl));
 }

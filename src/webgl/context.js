@@ -2,10 +2,12 @@
 
 /* global document */
 import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
+import trackContextState from '../webgl-utils/track-context-state';
+
 import {makeDebugContext} from './context-debug';
 import {glGetDebugInfo} from './context-limits';
-
 import queryManager from './helpers/query-manager';
+
 import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
 import luma from '../init';
 import assert from 'assert';
@@ -91,16 +93,12 @@ export function createGLContext(opts = {}) {
     height,
     // COMMON CONTEXT PARAMETERS
     // Attempt to allocate WebGL2 context
-    webgl2,
-    webgl1,
     throwOnError,
     // Instrument context (at the expense of performance)
     // Note: currently defaults to true and needs to be explicitly turned off
     debug
     // Other options are passed through to context creator
   } = opts;
-
-  let gl;
 
   function error(message) {
     // log(0, error);
@@ -110,59 +108,40 @@ export function createGLContext(opts = {}) {
     return null;
   }
 
+  let gl;
+
   if (!isBrowser) {
-    if (webgl2 && !webgl1) {
-      return error('headless-gl does not support WebGL2');
-    }
     gl = _createHeadlessContext(width, height, opts, error);
   } else {
-    // Create browser gl context
-    if (!webGLTypesAvailable) {
-      return error(ERR_WEBGL_MISSING_BROWSER);
-    }
     // Make sure we have a canvas
-    canvas = canvas;
-    if (typeof canvas === 'string') {
-      if (!isPageLoaded) {
-        return error(`createGLContext called on canvas '${canvas}' before page was loaded`);
-      }
-      canvas = document.getElementById(canvas);
-    }
     if (!canvas) {
-      canvas = _createCanvas({width, height});
+      canvas = _createCanvas({id: canvas, width, height});
+    } else if (typeof canvas === 'string') {
+      canvas = _getCanvasFromId(canvas);
     }
-
-    canvas.addEventListener('webglcontextcreationerror', e => {
-      log.log(0, e.statusMessage || 'Unknown error');
-    }, false);
-
-    // Prefer webgl2 over webgl1, prefer conformant over experimental
-    if (webgl2) {
-      gl = gl || canvas.getContext('webgl2', opts);
-      gl = gl || canvas.getContext('experimental-webgl2', opts);
-    }
-    if (webgl1) {
-      gl = gl || canvas.getContext('webgl', opts);
-      gl = gl || canvas.getContext('experimental-webgl', opts);
-    }
-    if (!gl) {
-      return error(`Failed to create ${webgl2 ? 'WebGL2' : 'WebGL'} context`);
-    }
+    // Create a browser context in the canvas
+    gl = _createBrowserContext(canvas, opts);
   }
 
-  if (isBrowser && debug) {
-    gl = makeDebugContext(gl);
-    // Debug forces log level to at least 1
-    log.priority = Math.max(log.priority, 1);
-    // Log some debug info
-    logInfo(gl);
+  if (gl) {
+    // Install context state tracking
+    trackContextState(gl, {copyState: false});
+
+    // Add debug instrumentation to the context
+    // TODO - why only on browser
+    if (isBrowser && debug) {
+      gl = makeDebugContext(gl);
+      // Debug forces log level to at least 1
+      log.priority = Math.max(log.priority, 1);
+      // Log some debug info
+      logInfo(gl);
+    }
   }
 
   return gl;
 }
 
 // Create a canvas set to 100%
-// TODO - remove
 function _createCanvas({width, height}) {
   const canvas = document.createElement('canvas');
   canvas.id = 'lumagl-canvas';
@@ -176,7 +155,20 @@ function _createCanvas({width, height}) {
   return canvas;
 }
 
+function _getCanvasFromId(id) {
+  if (!isPageLoaded) {
+    throw new Error(`createGLContext called on canvas '${id}' before page was loaded`);
+  }
+  return document.getElementById(id);
+}
+
 function _createHeadlessContext(width, height, opts, error) {
+  const {webgl1, webgl2} = opts;
+
+  if (webgl2 && !webgl1) {
+    return error('headless-gl does not support WebGL2');
+  }
+
   // Create headless gl context
   if (!webGLTypesAvailable) {
     return error(ERR_WEBGL_MISSING_NODE);
@@ -188,6 +180,35 @@ function _createHeadlessContext(width, height, opts, error) {
   if (!gl) {
     return error(ERR_HEADLESSGL_FAILED);
   }
+  return gl;
+}
+
+function _createBrowserContext(canvas, opts, error) {
+  const {webgl1, webgl2} = opts;
+
+  // Create browser gl context
+  if (!webGLTypesAvailable) {
+    return error(ERR_WEBGL_MISSING_BROWSER);
+  }
+
+  canvas.addEventListener('webglcontextcreationerror', e => {
+    log.log(0, e.statusMessage || 'Unknown error');
+  }, false);
+
+  let gl = null;
+  // Prefer webgl2 over webgl1, prefer conformant over experimental
+  if (webgl2) {
+    gl = gl || canvas.getContext('webgl2', opts);
+    gl = gl || canvas.getContext('experimental-webgl2', opts);
+  }
+  if (webgl1) {
+    gl = gl || canvas.getContext('webgl', opts);
+    gl = gl || canvas.getContext('experimental-webgl', opts);
+  }
+  if (!gl) {
+    return error(`Failed to create ${webgl2 ? 'WebGL2' : 'WebGL'} context`);
+  }
+
   return gl;
 }
 

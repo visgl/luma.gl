@@ -1,79 +1,30 @@
-import {GL, isWebGL2Context} from 'luma.gl';
-import {getParameter, setParameter, withParameters, resetParameters} from 'luma.gl';
-import GL_PARAMETERS from '../../src/webgl/api/parameters';
+import {GL} from 'luma.gl';
+import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/parameter-access';
+import {
+  GL_PARAMETER_SETTINGS_TWO,
+  GL_PARAMETER_SETTINGS_TWO_ENUM_FUNCTION
+} from './../webgl-utils/custom-parameter-settings';
 
 import test from 'tape-catch';
-
-// eslint-disable-next-line
-const SETTINGS = {
-  blend: false,
-  blendColor: [0, 0, 0, 0],
-  blendEquation: [GL.FUNC_ADD, GL.FUNC_ADD], // [GL.BLEND_EQUATION_RGB, GL.BLEND_EQUATION_ALPHA],
-  blendFunc: [GL.ONE, GL.ZERO, GL.ONE, GL.ZERO],
-
-  clearColor: [0, 0, 0, 0],
-  colorMask: [true, true, true, true],
-  // colorWritemask: ,
-
-  cullFace: false,
-  cullFaceMode: GL.BACK,
-
-  depthTest: false,
-  depthClearValue: 1,
-  depthFunc: GL.LESS,
-  depthRange: [0, 1],
-  depthWritemask: true,
-
-  dither: true,
-
-  frontFace: GL.CCW,
-
-  generateMipmapHint: GL.DONT_CARE,
-
-  lineWidth: 1,
-
-  polygonOffsetFill: false,
-  polygonOffset: [0, 0],
-
-  // sampleCoverage: GL.SAMPLE_COVERAGE,
-
-  scissorTest: false,
-  scissorBox: [0, 0, 1024, 1024],
-
-  stencilTest: false,
-  stencilClearValue: 0,
-  stencilMask: [0xFFFFFFFF, 0xFFFFFFFF],
-  stencilFunc: [GL.ALWAYS, 0, 0xFFFFFFFF, GL.ALWAYS, 0, 0xFFFFFFFF],
-  stencilOp: [GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP, GL.KEEP],
-
-  viewport: [0, 0, 1024, 1024],
-
-  [GL.PACK_ALIGNMENT]: 4,
-  [GL.UNPACK_ALIGNMENT]: 4,
-  [GL.UNPACK_FLIP_Y_WEBGL]: false,
-  [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-  [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.BROWSER_DEFAULT_WEBGL
-
-  // WEBGL2 PIXEL PACK/UNPACK MODES
-
-  // [GL.PACK_ROW_LENGTH]: 0,
-  // [GL.PACK_SKIP_PIXELS]: 0,
-  // [GL.PACK_SKIP_ROWS]: 0,
-  // [GL.UNPACK_ROW_LENGTH]: 0,
-  // [GL.UNPACK_IMAGE_HEIGHT]: 0,
-  // [GL.UNPACK_SKIP_PIXELS]: 0,
-  // [GL.UNPACK_SKIP_ROWS]: 0,
-  // [GL.UNPACK_SKIP_IMAGES]: 0
-};
 
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
   return JSON.stringify(v);
 }
 
-import {fixture} from '../setup';
+import {createTestContext} from '../setup';
+const fixture = {
+  gl: createTestContext(),
+  gl2: createTestContext({webgl2: true, webgl1: false})
+};
 
 test('WebGL#state', t => {
+  t.ok(getParameter, 'getParameter imported ok');
+  t.ok(getParameters, 'getParameters imported ok');
+  t.ok(setParameters, 'setParameters imported ok');
+  t.ok(withParameters, 'withParameters imported ok');
+  t.ok(resetParameters, 'resetParameters imported ok');
   t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
   t.end();
 });
@@ -81,8 +32,18 @@ test('WebGL#state', t => {
 test('WebGLState#getParameter', t => {
   const {gl} = fixture;
   for (const setting in GL_PARAMETERS) {
-    if (!GL_PARAMETERS[setting].webgl2) {
-      const value = getParameter(gl, setting);
+    const value = getParameter(gl, setting);
+    t.ok(value !== undefined,
+      `${setting}: got a value ${stringifyTypedArray(value)}`);
+  }
+  t.end();
+});
+
+test('WebGLState#getParameter (WebGL2)', t => {
+  const {gl2} = fixture;
+  if (gl2) {
+    for (const setting in GL_PARAMETERS) {
+      const value = getParameter(gl2, setting);
       t.ok(value !== undefined,
         `${setting}: got a value ${stringifyTypedArray(value)}`);
     }
@@ -90,16 +51,15 @@ test('WebGLState#getParameter', t => {
   t.end();
 });
 
-test('WebGLState#getParameter (WebGL2)', t => {
+test('WebGLState#setParameters', t => {
   const {gl} = fixture;
-  if (isWebGL2Context(gl)) {
-    for (const setting in GL_PARAMETERS) {
-      if (GL_PARAMETERS[setting].webgl2) {
-        const value = getParameter(gl, setting);
-        t.ok(value !== undefined,
-          `${setting}: got a value ${stringifyTypedArray(value)}`);
-      }
-    }
+
+  setParameters(gl, GL_PARAMETER_SETTINGS_TWO_ENUM_FUNCTION);
+
+  for (const key in GL_PARAMETER_SETTINGS_TWO) {
+    const value = getParameter(gl, key);
+    t.deepEqual(value, GL_PARAMETER_SETTINGS_TWO[key],
+      `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
   }
   t.end();
 });
@@ -107,51 +67,36 @@ test('WebGLState#getParameter (WebGL2)', t => {
 test('WebGLState#withParameters', t => {
   const {gl} = fixture;
 
-  let value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 0, 0, 0],
-    `got expected value ${stringifyTypedArray(value)}`);
-
-  withParameters(gl, {
-    clearColor: [0, 1, 0, 1]
-  }, () => {
-    value = getParameter(gl, 'clearColor');
-    t.deepEqual(value, [0, 1, 0, 1],
-      `got expected value ${stringifyTypedArray(value)}`);
+  setParameters(gl, {
+    clearColor: [0, 0, 0, 0],
+    [GL.BLEND]: false
   });
 
-  value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 0, 0, 0],
-    `got expected value ${stringifyTypedArray(value)}`);
+  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  let blendState = getParameter(gl, GL.BLEND);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
+
+  withParameters(gl, {
+    clearColor: [0, 1, 0, 1],
+    [GL.BLEND]: true
+  }, () => {
+    clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+    blendState = getParameter(gl, GL.BLEND);
+    t.deepEqual(clearColor, [0, 1, 0, 1],
+      `got expected value ${stringifyTypedArray(clearColor)}`);
+    t.deepEqual(blendState, true,
+      `got expected value ${stringifyTypedArray(blendState)}`);
+  });
+
+  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  blendState = getParameter(gl, GL.BLEND);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
 
   t.end();
 });
-
-test('WebGLState#resetParameters', t => {
-  const {gl} = fixture;
-
-  setParameter(gl, 'clearColor', [0, 1, 0, 1]);
-
-  let value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 1, 0, 1],
-    `got expected value ${stringifyTypedArray(value)}`);
-
-  resetParameters(gl);
-
-  value = getParameter(gl, 'clearColor');
-  t.deepEqual(value, [0, 0, 0, 0],
-    `got expected value ${stringifyTypedArray(value)}`);
-
-  t.end();
-});
-
-// test('WebGLState#setParameters', t => {
-//   const {gl} = fixture;
-
-//   setParameter(gl, SETTINGS);
-
-//   const value = getParameter(gl, 'scissorBox');
-//   t.deepEqual(value, SETTINGS.scissorBox,
-//     `got expected value ${stringifyTypedArray(value)}`);
-
-//   t.end();
-// });
