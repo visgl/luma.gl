@@ -1,7 +1,7 @@
 import {GL} from 'luma.gl';
 
 // eslint-disable-next-line
-export const GL_PARAMETER_SETTINGS_ONE = {
+export const ENUM_STYLE_SETTINGS_SET1 = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([0.5, 0.5, 0.5, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_SUBTRACT,
@@ -71,7 +71,7 @@ export const GL_PARAMETER_SETTINGS_ONE = {
 };
 
 // eslint-disable-next-line
-export const GL_PARAMETER_SETTINGS_TWO = {
+export const ENUM_STYLE_SETTINGS_SET2 = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([1, 1, 0.5, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_REVERSE_SUBTRACT,
@@ -140,9 +140,9 @@ export const GL_PARAMETER_SETTINGS_TWO = {
   [GL.UNPACK_SKIP_IMAGES]: 32
 };
 
-// Note: These settings are same as GL_PARAMETER_SETTINGS_ONE
+// Note: These settings are same as ENUM_STYLE_SETTINGS_SET1
 // keep the entries in sync.
-export const GL_PARAMETER_SETTINGS_ONE_ENUM_FUNCTION = {
+export const FUNCTION_STYLE_SETTINGS_SET1 = {
   blend: true,
   blendColor: new Float32Array([0.5, 0.5, 0.5, 0]),
   blendEquation: [GL.FUNC_SUBTRACT, GL.MIN],
@@ -166,15 +166,10 @@ export const GL_PARAMETER_SETTINGS_ONE_ENUM_FUNCTION = {
   scissorTest: true,
   // Note: Dynamic value. If scissor test enabled we expect users to set correct scissor box
   scissor: new Int32Array([0, 0, 100, 100]),
-  [GL.STENCIL_TEST]: true,
+  stencilTest: true,
   clearStencil: 0.5,
   stencilMask: [0xCCCCCCCC, 0xDDDDDDDD],
-  [GL.STENCIL_FUNC]: GL.NEVER,
-  [GL.STENCIL_REF]: 0.5,
-  [GL.STENCIL_VALUE_MASK]: 0xBBBBBBBB,
-  [GL.STENCIL_BACK_FUNC]: GL.LEQUAL,
-  [GL.STENCIL_BACK_REF]: 0.5,
-  [GL.STENCIL_BACK_VALUE_MASK]: 0x11111111,
+  stencilFunc: [GL.NEVER, 0.5, 0xBBBBBBBB, GL.LEQUAL, 0.5, 0x11111111],
   stencilOp: [GL.REPLACE, GL.INCR, GL.DECR, GL.REPLACE, GL.INCR, GL.DECR],
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   viewport: new Int32Array([0, 0, 100, 100]),

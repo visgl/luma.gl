@@ -32,7 +32,6 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl, aspect, canvas}) {
     addControls();
 
-    resetParameters(gl);
     setParameters(gl, {
       viewport: [0, 0, canvas.width, canvas.height],
       clearColor: [0, 0, 0, 1],

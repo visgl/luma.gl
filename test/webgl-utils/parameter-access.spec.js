@@ -4,7 +4,7 @@ import {setParameters, getParameter, getParameters, resetParameters, GL_PARAMETE
   from '../../src/webgl-utils/parameter-access';
 import trackContextState from '../../src/webgl-utils/track-context-state';
 import test from 'tape-catch';
-import {GL_PARAMETER_SETTINGS_ONE} from './custom-parameter-settings';
+import {ENUM_STYLE_SETTINGS_SET1} from './../webgl/sample-state-settings';
 
 // Settings test, don't reuse a context
 const fixture = {
@@ -77,17 +77,17 @@ test('WebGLState#get all parameters', t => {
   resetParameters(gl);
 
   // Set custom values.
-  setParameters(gl, GL_PARAMETER_SETTINGS_ONE, {});
-  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1, {});
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
       `got expected value ${stringifyTypedArray(value)}`);
   }
 
   const copy = getParameters(gl);
-  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = copy[key];
-    t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
       `got expected value ${stringifyTypedArray(value)}`);
   }
 
@@ -103,10 +103,10 @@ test('WebGL#reset', t => {
   );
 
   // Set custom values and verify.
-  setParameters(gl, GL_PARAMETER_SETTINGS_ONE);
-  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
       `got expected value ${stringifyTypedArray(value)} after setParameters for ${key}`);
   }
 

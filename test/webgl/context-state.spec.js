@@ -2,9 +2,9 @@ import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/parameter-access';
 import {
-  GL_PARAMETER_SETTINGS_ONE,
-  GL_PARAMETER_SETTINGS_ONE_ENUM_FUNCTION
-} from './../webgl-utils/custom-parameter-settings';
+  ENUM_STYLE_SETTINGS_SET1,
+  FUNCTION_STYLE_SETTINGS_SET1
+} from './sample-state-settings';
 
 import test from 'tape-catch';
 
@@ -57,22 +57,22 @@ test('WebGLState#getParameter (WebGL2)', t => {
   t.end();
 });
 
-test('WebGLState#setParameters with enum and functions keys', t => {
+test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
 
-  setParameters(gl, GL_PARAMETER_SETTINGS_ONE_ENUM_FUNCTION);
+  setParameters(gl, FUNCTION_STYLE_SETTINGS_SET1);
 
-  for (const key in GL_PARAMETER_SETTINGS_ONE) {
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, GL_PARAMETER_SETTINGS_ONE[key],
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
       `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
   }
   t.end();
 });
 
-test('WebGLState#setParameters function with \'seperate\' versions', t => {
+test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))', t => {
   const {gl} = fixture;
   const parameters = {
     blendFunc: [GL.SRC_ALPHA, GL.ONE],

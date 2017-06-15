@@ -7,7 +7,6 @@ const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     addControls();
 
-    resetParameters(gl);
     setParameters(gl, {
       clearColor: [1, 1, 1, 1],
       clearDepth: 1,

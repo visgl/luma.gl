@@ -1,7 +1,10 @@
 /* global window,*/
 /* eslint-disable no-console */
 
-import {AnimationLoop, Buffer, Program, TransformFeedback, VertexArray, Matrix4} from 'luma.gl';
+import {
+  AnimationLoop, Buffer, Program, TransformFeedback, VertexArray, Matrix4,
+  setParameters
+} from 'luma.gl';
 
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
@@ -79,7 +82,7 @@ const animationLoop = new AnimationLoop({
     debug: true
   },
   // eslint-disable-next-line
-  onInitialize({gl}) {
+  onInitialize({canvas, gl}) {
     // ---- SETUP BUFFERS ---- //
     const bytes = POSITIONS.length * FLOAT_SIZE;
     const buffers = {
@@ -122,8 +125,12 @@ const animationLoop = new AnimationLoop({
     });
 
     // second pass, render to screen
-
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    setParameters(gl, {
+      clearColor: [0.0, 0.0, 0.0, 1.0],
+      // Viewport is set by animation loop before every frame
+      // Since we are not setting up rendering frame, set viewport here.
+      viewport: [0, 0, canvas.width, canvas.height]
+    });
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const renderVertexArray = new VertexArray(gl, {
