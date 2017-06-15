@@ -67,10 +67,7 @@ const animationLoop = new AnimationLoop({
     };
   },
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
-    canvas.width = canvas.clientWidth;
-    canvas.style.height = `${canvas.width}px`;
-    canvas.height = canvas.width;
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     const baseCorners = [
       [-2.2, -1.2],

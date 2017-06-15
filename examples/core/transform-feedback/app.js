@@ -126,10 +126,7 @@ const animationLoop = new AnimationLoop({
 
     // second pass, render to screen
     setParameters(gl, {
-      clearColor: [0.0, 0.0, 0.0, 1.0],
-      // Viewport is set by animation loop before every frame
-      // Since we are not setting up rendering frame, set viewport here.
-      viewport: [0, 0, canvas.width, canvas.height]
+      clearColor: [0.0, 0.0, 0.0, 1.0]
     });
     gl.clear(gl.COLOR_BUFFER_BIT);
 

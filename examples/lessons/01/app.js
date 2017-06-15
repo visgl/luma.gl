@@ -28,7 +28,6 @@ const animationLoop = new AnimationLoop({
     addControls();
 
     setParameters(gl, {
-      viewport: [0, 0, canvas.width, canvas.height],
       clearColor: [0, 0, 0, 1],
       clearDepth: [1],
       depthTest: true,

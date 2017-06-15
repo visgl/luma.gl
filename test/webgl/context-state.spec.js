@@ -1,10 +1,8 @@
 import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/parameter-access';
-import {
-  ENUM_STYLE_SETTINGS_SET1,
-  FUNCTION_STYLE_SETTINGS_SET1
-} from './sample-state-settings';
+import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/sample-enum-settings';
+import {FUNCTION_STYLE_SETTINGS_SET1} from './sample-function-settings';
 
 import test from 'tape-catch';
 

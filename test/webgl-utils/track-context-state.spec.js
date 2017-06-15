@@ -4,7 +4,7 @@ import trackContextState, {pushContextState, popContextState}
 import {getParameter, setParameters, resetParameters} from '../../src/webgl-utils/parameter-access';
 import test from 'tape-catch';
 import {GL_PARAMETER_DEFAULTS, GL_PARAMETER_SETTERS} from '../../src/webgl-utils/parameter-access';
-import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './../webgl/sample-state-settings';
+import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './sample-enum-settings';
 
 // Settings test, don't reuse a context
 const fixture = {
