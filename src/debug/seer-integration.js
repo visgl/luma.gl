@@ -16,8 +16,14 @@ export const addModel = model => {
   seer.listItem('luma.gl', model.id);
 };
 
-const getType = obj => Object.prototype.toString.call(obj).slice(8, -1);
+/**
+ * Retrieve the type of an object
+ */
+export const getType = obj => Object.prototype.toString.call(obj).slice(8, -1);
 
+/**
+ * Get an attribute and slice to transform typed arrays
+ */
 const getAttribute = (key, attr) => {
   const isArray = getType(attr).includes('Array');
   if (isArray) {
@@ -30,7 +36,7 @@ const getAttribute = (key, attr) => {
  * Trim functions properties and convert typed arrays into simple ones
  * to be able to pass the payload through postMessage.
  */
-const transformPayload = payload => Object.keys(payload)
+export const transformPayload = payload => Object.keys(payload)
   .reduce((acc, attrKey) => {
 
     const attr = payload[attrKey];
@@ -90,7 +96,7 @@ const overrides = new Map();
  * Create an override on the specify layer, indexed by a valuePath array.
  * Do nothing in case Seer as not been initialized to prevent any preformance drawback.
  */
-const setOverride = (id, valuePath, value) => {
+export const setOverride = (id, valuePath, value) => {
   if (!window.__SEER_INITIALIZED__) {
     return;
   }
