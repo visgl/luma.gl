@@ -1,7 +1,8 @@
 import {GL} from 'luma.gl';
 
 // eslint-disable-next-line
-export const GL_PARAMETER_SETTINGS_ONE = {
+// NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1
+export const ENUM_STYLE_SETTINGS_SET1 = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([0.5, 0.5, 0.5, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_SUBTRACT,
@@ -59,7 +60,7 @@ export const GL_PARAMETER_SETTINGS_ONE = {
   // WEBGL2 / EXTENSIONS
   // gl1: 'OES_standard_derivatives'
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.FASTEST,
-  // RASTERIZER_DISCARD ...
+  [GL.RASTERIZER_DISCARD]: true,
   [GL.PACK_ROW_LENGTH]: 2,
   [GL.PACK_SKIP_PIXELS]: 4,
   [GL.PACK_SKIP_ROWS]: 8,
@@ -71,7 +72,7 @@ export const GL_PARAMETER_SETTINGS_ONE = {
 };
 
 // eslint-disable-next-line
-export const GL_PARAMETER_SETTINGS_TWO = {
+export const ENUM_STYLE_SETTINGS_SET2 = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([1, 1, 0.5, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_REVERSE_SUBTRACT,
@@ -129,71 +130,7 @@ export const GL_PARAMETER_SETTINGS_TWO = {
   // WEBGL2 / EXTENSIONS
   // gl1: 'OES_standard_derivatives'
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.NICEST,
-  // RASTERIZER_DISCARD ...
-  [GL.PACK_ROW_LENGTH]: 64,
-  [GL.PACK_SKIP_PIXELS]: 128,
-  [GL.PACK_SKIP_ROWS]: 512,
-  [GL.UNPACK_ROW_LENGTH]: 2,
-  [GL.UNPACK_IMAGE_HEIGHT]: 4,
-  [GL.UNPACK_SKIP_PIXELS]: 8,
-  [GL.UNPACK_SKIP_ROWS]: 16,
-  [GL.UNPACK_SKIP_IMAGES]: 32
-};
-
-// Note: These settings are same as GL_PARAMETER_SETTINGS_TWO
-// When changing change objects.
-export const GL_PARAMETER_SETTINGS_TWO_ENUM_FUNCTION = {
-  blend: true,
-  blendColor: new Float32Array([1, 1, 0.5, 0]),
-  blendEquation: [GL.FUNC_REVERSE_SUBTRACT, GL.MAX],
-  [GL.BLEND_SRC_RGB]: GL.ONE_MINUS_SRC_COLOR,
-  [GL.BLEND_DST_RGB]: GL.ONE_MINUS_DST_COLOR,
-  [GL.BLEND_SRC_ALPHA]: GL.ONE_MINUS_SRC_ALPHA,
-  [GL.BLEND_DST_ALPHA]: GL.ONE_MINUS_DST_ALPHA,
-  [GL.COLOR_CLEAR_VALUE]: new Float32Array([1, 1, 0.5, 0]), // TBD
-  [GL.COLOR_WRITEMASK]: [false, false, true, true],
-  [GL.CULL_FACE]: false,
-  cullFace: GL.FRONT_AND_BACK,
-  depthTest: false,
-  [GL.DEPTH_CLEAR_VALUE]: 0.5,
-  [GL.DEPTH_FUNC]: GL.ALWAYS,
-  [GL.DEPTH_RANGE]: new Float32Array([1, 1]), // TBD
-  [GL.DEPTH_WRITEMASK]: true,
-  [GL.DITHER]: true,
-  [GL.FRONT_FACE]: GL.CCW,
-  [GL.GENERATE_MIPMAP_HINT]: GL.NICEST,
-  lineWidth: 3,
-  [GL.POLYGON_OFFSET_FILL]: false,
-  [GL.POLYGON_OFFSET_FACTOR]: 2,
-  [GL.POLYGON_OFFSET_UNITS]: 2,
-  [GL.SAMPLE_COVERAGE_VALUE]: 0.5,
-  [GL.SAMPLE_COVERAGE_INVERT]: false,
-  scissorTest: false,
-  // Note: Dynamic value. If scissor test enabled we expect users to set correct scissor box
-  [GL.SCISSOR_BOX]: new Int32Array([0, 0, 200, 200]),
-  [GL.STENCIL_TEST]: false,
-  [GL.STENCIL_CLEAR_VALUE]: 1.0,
-  stencilMask: [0xEEEEEEEE, 0xAAAAAAAA],
-  [GL.STENCIL_FUNC]: GL.LESS,
-  [GL.STENCIL_REF]: 1,
-  [GL.STENCIL_VALUE_MASK]: 0xEEEEEEEE,
-  [GL.STENCIL_BACK_FUNC]: GL.GREATER,
-  [GL.STENCIL_BACK_REF]: 1,
-  [GL.STENCIL_BACK_VALUE_MASK]: 0x22222222,
-  stencilOp: [GL.INCR, GL.DECR, GL.INCR, GL.INCR, GL.DECR, GL.INCR],
-  // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
-  viewport: new Int32Array([0, 0, 200, 200]),
-  // WEBGL1 PIXEL PACK/UNPACK MODES
-  [GL.PACK_ALIGNMENT]: 16,
-  [GL.UNPACK_ALIGNMENT]: 8,
-  [GL.UNPACK_FLIP_Y_WEBGL]: false,
-  [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: false,
-  [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.BROWSER_DEFAULT_WEBGL,
-
-  // WEBGL2 / EXTENSIONS
-  // gl1: 'OES_standard_derivatives'
-  [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.NICEST,
-  // RASTERIZER_DISCARD ...
+  [GL.RASTERIZER_DISCARD]: false,
   [GL.PACK_ROW_LENGTH]: 64,
   [GL.PACK_SKIP_PIXELS]: 128,
   [GL.PACK_SKIP_ROWS]: 512,

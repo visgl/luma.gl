@@ -1,14 +1,19 @@
 /* global document */
-import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians} from 'luma.gl';
+import {
+  AnimationLoop, GL, TextureCube, Cube, Matrix4, radians,
+  resetParameters, setParameters
+} from 'luma.gl';
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
     addControls(canvas);
 
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
 
     return {
       cube: getCube(gl),

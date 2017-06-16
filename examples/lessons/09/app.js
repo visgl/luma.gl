@@ -1,7 +1,10 @@
 /* eslint-disable no-var, max-statements */
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global document */
-import {GL, AnimationLoop, loadTextures, addEvents, Matrix4, resetParameters} from 'luma.gl';
+import {
+  GL, AnimationLoop, loadTextures, addEvents, Matrix4,
+  resetParameters, setParameters
+} from 'luma.gl';
 import {Star} from './star';
 
 var zoom = -15;
@@ -12,11 +15,12 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
-    resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.enable(gl.BLEND);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      blendFunc: [gl.SRC_ALPHA, gl.ONE],
+      blend: true
+    });
 
     return loadTextures(gl, {
       urls: ['star.gif']

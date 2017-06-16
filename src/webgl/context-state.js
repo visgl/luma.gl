@@ -17,7 +17,7 @@ export const LUMA_SETTERS = {
     gl.blendEquationSeparate(...args);
   },
   blendFunc: (gl, args) => {
-    args = isArray(args) && args.length === 3 ? [...args, ...args] : args;
+    args = isArray(args) && args.length === 2 ? [...args, ...args] : args;
     gl.blendFuncSeparate(...args);
   },
 

@@ -16,19 +16,19 @@ The following functions are provided:
 
 ## Usage
 
-Get a global parameter value using a WebGL parameter constant
+Get a global parameter value using a WebGL GLenum
 ```js
 const value = getParameter(gl, gl.DEPTH_TEST);
 ```
 
-Set a global parameter value using a WebGL parameter constant
+Set a global parameter value using a WebGL GLenum
 ```js
 const value = setParameters(gl, {
   [gl.DEPTH_TEST]: true
 });
 ```
 
-Set a global parameter value using a luma.gl setting name
+Set a global parameter value using a luma.gl setting function name
 ```js
 const value = setParameters(gl, {
   depthTest: true
@@ -117,7 +117,7 @@ Returns {*} - "normalized" parameter value after assignment
 
 Note:
 * If both luma.gl setting names and GL parameter constants representing the same value are submitted the results are undefined.
-* value may be "normalized" (in case a short form is supported). In that case the normalized value is retured.
+* value may be "normalized" (in case a short form is supported). In that case the normalized value is returned.
 
 
 ### withParameters
@@ -493,5 +493,3 @@ WebGL State Management can be quite complicated.
 * Reading values from WebGL can be very slow if it requires a GPU roundtrip. To get around this, luma.gl reads values once, caches them and tracks them as they are changed through luma functions. The cached values can get out of sync if the context is shared outside of luma.gl.
 * luma.gl's state management enables "conflict-free" programming, so that even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
 * Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
-
-

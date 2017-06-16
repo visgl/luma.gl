@@ -1,4 +1,4 @@
-import {AnimationLoop, createGLContext, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
 
 const CONCENTRICS_FRAGMENT_SHADER = `\
 #ifdef GL_ES

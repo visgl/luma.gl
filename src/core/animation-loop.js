@@ -1,6 +1,7 @@
 /* global window, setTimeout, clearTimeout */
 import {isBrowser, pageLoadPromise} from '../utils';
 import {createGLContext, isWebGLContext} from '../webgl';
+import {resetParameters} from 'luma.gl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export function requestAnimationFrame(callback) {
@@ -89,7 +90,20 @@ export default class AnimationLoop {
         if (!isWebGLContext(this.gl)) {
           throw new Error('AnimationLoop.onCreateContext - illegal context returned');
         }
+
         this._initializeContext();
+
+        // Unless reset is set to false, reset the context.
+        if ((contextParams.reset !== false)) {
+          resetParameters(this.gl);
+        }
+
+        // Default viewport setup
+        const {canvas} = this._context;
+        this._resizeCanvasDrawingBuffer(canvas);
+        if (this.autoResizeViewport) {
+          this.gl.viewport(0, 0, canvas.width, canvas.height);
+        }
         // Note: onIntialize can return a promise (in case it needs to load resources)
         return this._onInitialize(this._context);
       })

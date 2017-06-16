@@ -2,8 +2,8 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global document */
 
-import {GL, AnimationLoop, Cube, Matrix4, Texture2D,
-  addEvents, loadTextures, Model, resetParameters} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4,
+  addEvents, loadTextures, resetParameters, setParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -67,11 +67,12 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
-    resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
 
     return loadTextures(gl, {
       urls: ['crate.gif']
@@ -101,21 +102,20 @@ const animationLoop = new AnimationLoop({
 
     const uMVMatrix = Matrix4
       .lookAt({eye: [0, 0, 0]})
-      .translate([0, 0, -5])
+      .translate([0, 0, z])
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
       .multiplyRight(cube.matrix);
 
     cube.render({
       uMVMatrix,
       uPMatrix: Matrix4.perspective({aspect}),
-      uAmbientColor: [0.2,0.2,0.2],
-      uLightingDirection: [0,0,1],
-      uDirectionalColor: [0.8,0.8,0.8],
+      uAmbientColor: [0.2, 0.2, 0.2],
+      uLightingDirection: [0, 0, 1],
+      uDirectionalColor: [0.8, 0.8, 0.8],
       uUseLighting: true
     });
   }
 });
-
 
 function addControls({controlPanel} = {}) {
   /* global document */
@@ -246,8 +246,3 @@ function addKeyboardHandler(canvas) {
 // }
 
 export default animationLoop;
-
-window.webGLStart = function() {
-  animationLoop.start();
-
-};

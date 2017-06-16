@@ -1,7 +1,9 @@
 /* eslint-disable max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, Cube, Sphere, Matrix4, Texture2D,
+import {
+  GL, AnimationLoop, Cube, Sphere, Matrix4, Texture2D,
   loadTextures, Model, loadFiles, parseModel,
-  Program, Renderbuffer, Framebuffer, Geometry, resetParameters} from 'luma.gl';
+  Program, Renderbuffer, Framebuffer, Geometry, resetParameters, setParameters
+} from 'luma.gl';
 
 // TODO: Remaining issues
 // 1. Specular highlights don not match with example:
@@ -158,11 +160,12 @@ const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
     addControls();
 
-    resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
 
     return Promise.all([
       loadFiles({

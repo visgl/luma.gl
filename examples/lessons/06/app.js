@@ -1,6 +1,8 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage, resetParameters}
-  from 'luma.gl';
+import {
+  GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage,
+  resetParameters, setParameters
+} from 'luma.gl';
 
 /* global window */
 /* eslint-disable max-statements, no-var, no-multi-spaces */
@@ -48,19 +50,13 @@ const animationLoop = new AnimationLoop({
     addControls();
     addKeyboardHandler(canvas);
 
-    // context.set(gl, {
-    //   clearColor: [0, 0, 0, 1],
-    //   clearDepth: 1,
-    //   depthTest: true,
-    //   depthFunc: GL.LEQUAL,
-    //   [GL.UNPACK_FLIP_Y_WEBGL]: true
-    // });
-
-    resetParameters(gl);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL,
+      [GL.UNPACK_FLIP_Y_WEBGL]: true
+    });
 
     const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
@@ -125,7 +121,7 @@ const animationLoop = new AnimationLoop({
 
     const uMVMatrix = Matrix4
       .lookAt({eye: [0, 0, 0]})
-      .translate([0, 0, -5])
+      .translate([0, 0, z])
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
       .multiplyRight(cube.matrix);
 

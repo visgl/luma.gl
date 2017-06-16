@@ -1,10 +1,8 @@
 import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/parameter-access';
-import {
-  GL_PARAMETER_SETTINGS_TWO,
-  GL_PARAMETER_SETTINGS_TWO_ENUM_FUNCTION
-} from './../webgl-utils/custom-parameter-settings';
+import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/sample-enum-settings';
+import {FUNCTION_STYLE_SETTINGS_SET1} from './sample-function-settings';
 
 import test from 'tape-catch';
 
@@ -31,6 +29,9 @@ test('WebGL#state', t => {
 
 test('WebGLState#getParameter', t => {
   const {gl} = fixture;
+
+  resetParameters(gl);
+
   for (const setting in GL_PARAMETERS) {
     const value = getParameter(gl, setting);
     t.ok(value !== undefined,
@@ -42,6 +43,9 @@ test('WebGLState#getParameter', t => {
 test('WebGLState#getParameter (WebGL2)', t => {
   const {gl2} = fixture;
   if (gl2) {
+
+    resetParameters(gl2);
+
     for (const setting in GL_PARAMETERS) {
       const value = getParameter(gl2, setting);
       t.ok(value !== undefined,
@@ -51,14 +55,57 @@ test('WebGLState#getParameter (WebGL2)', t => {
   t.end();
 });
 
-test('WebGLState#setParameters', t => {
+test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
   const {gl} = fixture;
 
-  setParameters(gl, GL_PARAMETER_SETTINGS_TWO_ENUM_FUNCTION);
+  resetParameters(gl);
 
-  for (const key in GL_PARAMETER_SETTINGS_TWO) {
+  setParameters(gl, FUNCTION_STYLE_SETTINGS_SET1);
+
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, GL_PARAMETER_SETTINGS_TWO[key],
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
+      `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
+  }
+  t.end();
+});
+
+test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))', t => {
+  const {gl} = fixture;
+  const parameters = {
+    blendFunc: [GL.SRC_ALPHA, GL.ONE],
+    stencilFunc: [GL.LEQUAL, 0.5, 0xBBBBBBBB],
+    stencilOp: [GL.REPLACE, GL.INCR, GL.DECR]
+  };
+  const expectedValues = {
+    // blendFunc
+    [GL.BLEND_SRC_RGB]: GL.SRC_ALPHA,
+    [GL.BLEND_DST_RGB]: GL.ONE,
+    [GL.BLEND_SRC_ALPHA]: GL.SRC_ALPHA,
+    [GL.BLEND_DST_ALPHA]: GL.ONE,
+    // stencilFunc
+    [GL.STENCIL_FUNC]: GL.LEQUAL,
+    [GL.STENCIL_REF]: 0.5,
+    [GL.STENCIL_VALUE_MASK]: 0xBBBBBBBB,
+    [GL.STENCIL_BACK_FUNC]: GL.LEQUAL,
+    [GL.STENCIL_BACK_REF]: 0.5,
+    [GL.STENCIL_BACK_VALUE_MASK]: 0xBBBBBBBB,
+    // stencilOp
+    [GL.STENCIL_FAIL]: GL.REPLACE,
+    [GL.STENCIL_PASS_DEPTH_FAIL]: GL.INCR,
+    [GL.STENCIL_PASS_DEPTH_PASS]: GL.DECR,
+    [GL.STENCIL_BACK_FAIL]: GL.REPLACE,
+    [GL.STENCIL_BACK_PASS_DEPTH_FAIL]: GL.INCR,
+    [GL.STENCIL_BACK_PASS_DEPTH_PASS]: GL.DECR
+  };
+
+  resetParameters(gl);
+
+  setParameters(gl, parameters);
+
+  for (const key in expectedValues) {
+    const value = getParameter(gl, key);
+    t.deepEqual(value, expectedValues[key],
       `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
   }
   t.end();
@@ -66,6 +113,8 @@ test('WebGLState#setParameters', t => {
 
 test('WebGLState#withParameters', t => {
   const {gl} = fixture;
+
+  resetParameters(gl);
 
   setParameters(gl, {
     clearColor: [0, 0, 0, 0],
