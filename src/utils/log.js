@@ -9,19 +9,14 @@ const log = {
       console.table(table);
     }
   },
-  log(priority, ...args) {
+  log(priority, arg, ...args) {
     if (priority <= log.priority) {
-      console.debug(...args);
+      console.debug(`luma.gl: ${arg}`, ...args);
     }
   },
-  info(priority, ...args) {
+  info(priority, arg, ...args) {
     if (priority <= log.priority) {
-      console.log(...args);
-    }
-  },
-  warn(priority, ...args) {
-    if (priority <= log.priority) {
-      console.warn(...args);
+      console.log(`luma.gl: ${arg}`, ...args);
     }
   },
   once(priority, arg, ...args) {
@@ -29,6 +24,16 @@ const log = {
       log.log(priority, arg, ...args);
     }
     cache[arg] = true;
+  },
+  warn(priority, arg, ...args) {
+    if (!cache[arg]) {
+      console.warn(`luma.gl: ${arg}`, ...args);
+    }
+    cache[arg] = true;
+  },
+  deprecated(oldUsage, newUsage) {
+    log.warn(0, `luma.gl: \`${oldUsage}\` is deprecated and will be removed \
+in a later version. Use \`${newUsage}\` instead`);
   }
 };
 

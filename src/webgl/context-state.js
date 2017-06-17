@@ -120,17 +120,18 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  const {framebuffer, nocatch = true} = parameters;
+  const {frameBuffer, nocatch = true} = parameters;
+  let {framebuffer} = parameters;
+  if (frameBuffer) {
+    log.deprecated('withParameters({frameBuffer})', 'withParameters({framebuffer})');
+    framebuffer = frameBuffer;
+  }
 
   // Define a helper function that will reset state after the function call
   function resetStateAfterCall() {
     popContextState(gl);
-    // if (!scissorTestWasEnabled) {
-    //   gl.disable(gl.SCISSOR_TEST);
-    // }
     if (framebuffer) {
       // TODO - was there any previously set frame buffer?
-      // TODO - delegate "unbind" to Framebuffer object?
       framebuffer.unbind();
     }
   }
@@ -165,11 +166,11 @@ export function withParameters(gl, parameters, func) {
 // DEPRECATED
 
 export function withState(...args) {
-  log.once(0, '"withState" deprecated in luma.gl v4, please use "withParameters" instead');
+  log.deprecated('withState', 'withParameters');
   return withParameters(...args);
 }
 
 export function glContextWithState(...args) {
-  log.once(0, '"glContextWithState" deprecated in luma.gl v4, please use "withParameters" instead');
+  log.deprecated('glContextWithState', 'withParameters');
   return withParameters(...args);
 }

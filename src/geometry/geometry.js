@@ -49,7 +49,7 @@ export default class Geometry {
     if (attributes) {
       this.setAttributes(attributes);
     } else {
-      log.once('Geometry: top-level attributes are deprecated, use "attributes" param');
+      log.deprecated('inline attributes', 'attributes parameter');
       // TODO this is deprecated
       delete opts.id;
       delete opts.drawMode;
