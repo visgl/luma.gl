@@ -16,17 +16,14 @@ void main(void) {
 }
 `;
 
+luma.log.priority = 1;
+
 export default new AnimationLoop({
   // onCreateContext: () => createGLContext({canvas: 'canvas-0'}),
   onInitialize: ({gl}) => ({
     clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})
   }),
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
-    canvas.width = canvas.clientWidth;
-    canvas.style.height = `${canvas.width}px`;
-    canvas.height = canvas.width;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-
     clipSpaceQuad.render({uTime: tick * 0.01});
   }
 });

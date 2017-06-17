@@ -28,7 +28,7 @@ test('WebGL1#getContextInfo#limits', t => {
     const webgl2 = info.webgl2MinLimits[limit];
 
     if (Number.isFinite(actual)) {
-      t.ok(actual >= webgl1,
+      t.ok(Math.abs(actual) >= Math.abs(webgl1),
         `${glKey(limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
       t.ok(Math.abs(webgl2) >= Math.abs(webgl1),
         `${glKey(limit)}: webgl2 limit ${webgl2} >= webgl1 limit ${webgl1}`);

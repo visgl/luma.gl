@@ -4,4 +4,4 @@
 // import './get-shader-name.spec';
 import './polyfill-context.spec';
 import './track-context-state.spec';
-import './parameter-access.spec';
+import './set-parameters.spec';

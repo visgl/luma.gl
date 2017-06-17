@@ -89,16 +89,16 @@ function isArray(array) {
 // GETTERS AND SETTERS
 
 // Get the parameter value(s) from the context
-export {getParameter} from '../webgl-utils/parameter-access';
+export {getParameter} from '../webgl-utils/set-parameters';
 
 // Get the parameters from the context
-export {getParameters} from '../webgl-utils/parameter-access';
+export {getParameters} from '../webgl-utils/set-parameters';
 
 // Resets gl state to default values.
-export {resetParameters} from '../webgl-utils/parameter-access';
+export {resetParameters} from '../webgl-utils/set-parameters';
 
 // Get the parameter value(s) from the context
-import {setParameters as glSetParameters} from '../webgl-utils/parameter-access';
+import {setParameters as glSetParameters} from '../webgl-utils/set-parameters';
 
 // Set the parameter value(s) by key to the context
 // Sets value with key to context.
