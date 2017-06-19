@@ -38,6 +38,7 @@ export const logModel = (model, uniforms) => {
  */
 export const removeModel = id => {
   delete models[id];
+  seer.deleteItem('luma.gl', id);
 };
 
 /**
