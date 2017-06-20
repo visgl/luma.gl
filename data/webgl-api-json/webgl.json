@@ -29,7 +29,7 @@
     "ONE_MINUS_CONSTANT_ALPHA": {"v": "0x8004"}, // Passed to blendFunc or blendFuncSeparate to specify one minus a constant alpha blend function.
 
     "FUNC_ADD": {"v": "0x8006"}, // Passed to blendEquation or blendEquationSeparate to set an addition blend function.
-    "FUNC_SUBSTRACT": {"v": "0x800A"}, // Passed to blendEquation or blendEquationSeparate to specify a subtraction blend function (source - destination).
+    "FUNC_SUBTRACT": {"v": "0x800A"}, // Passed to blendEquation or blendEquationSeparate to specify a subtraction blend function (source - destination).
     "FUNC_REVERSE_SUBTRACT": {"v": "0x800B"}, // Passed to blendEquation or blendEquationSeparate to specify a reverse subtraction blend function (destination - source).
 
     "BLEND_EQUATION": {"v": "0x8009"}, // Passed to getParameter to get the current RGB blend function.

@@ -151,3 +151,90 @@ test('WebGLState#withParameters', t => {
 
   t.end();
 });
+
+test('WebGLState#withParameters: recursive', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+
+  setParameters(gl, {
+    clearColor: [0, 0, 0, 0],
+    [GL.BLEND]: false,
+    blendFunc: [GL.ONE_MINUS_SRC_ALPHA, GL.ZERO, GL.CONSTANT_ALPHA, GL.ZERO],
+    blendEquation: GL.FUNC_ADD
+  });
+
+  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  let blendState = getParameter(gl, GL.BLEND);
+  let blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
+  let blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
+  t.deepEqual(blendFuncSrcRGB, GL.ONE_MINUS_SRC_ALPHA,
+    `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`);
+  t.deepEqual(blendEquation, GL.FUNC_ADD,
+    `got expected value ${stringifyTypedArray(blendEquation)}`);
+  withParameters(gl, {
+    clearColor: [0, 1, 0, 1],
+    [GL.BLEND]: true
+  }, () => {
+    clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+    blendState = getParameter(gl, GL.BLEND);
+    blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
+    blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+    // Verify changed state
+    t.deepEqual(clearColor, [0, 1, 0, 1],
+      `got expected value ${stringifyTypedArray(clearColor)}`);
+    t.deepEqual(blendState, true,
+      `got expected value ${stringifyTypedArray(blendState)}`);
+    // Verify un-changed state
+    t.deepEqual(blendFuncSrcRGB, GL.ONE_MINUS_SRC_ALPHA,
+      `got expected un changed value ${stringifyTypedArray(blendFuncSrcRGB)}`);
+    t.deepEqual(blendEquation, GL.FUNC_ADD,
+      `got expected un changed value ${stringifyTypedArray(blendEquation)}`);
+
+    withParameters(gl, {
+      blendFunc: [GL.ZERO, GL.ZERO, GL.CONSTANT_ALPHA, GL.ZERO],
+      blendEquation: GL.FUNC_SUBTRACT
+    }, () => {
+      clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+      blendState = getParameter(gl, GL.BLEND);
+      blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
+      blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+      // Verify un-changed state
+      t.deepEqual(clearColor, [0, 1, 0, 1],
+        `got expected value ${stringifyTypedArray(clearColor)}`);
+      t.deepEqual(blendState, true,
+        `got expected value ${stringifyTypedArray(blendState)}`);
+      // Verify changed state
+      t.deepEqual(blendFuncSrcRGB, GL.ZERO,
+        `got expected changed value ${stringifyTypedArray(blendFuncSrcRGB)}`);
+      t.deepEqual(blendEquation, GL.FUNC_SUBTRACT,
+        `got expected changed value ${stringifyTypedArray(blendEquation)}`);
+    });
+
+    blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
+    blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+    t.deepEqual(blendFuncSrcRGB, GL.ONE_MINUS_SRC_ALPHA,
+      `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`);
+    t.deepEqual(blendEquation, GL.FUNC_ADD,
+      `got expected value ${stringifyTypedArray(blendEquation)}`);
+  });
+
+  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  blendState = getParameter(gl, GL.BLEND);
+  blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
+  blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
+  t.deepEqual(blendFuncSrcRGB, GL.ONE_MINUS_SRC_ALPHA,
+    `got expected initial value ${stringifyTypedArray(blendFuncSrcRGB)}`);
+  t.deepEqual(blendEquation, GL.FUNC_ADD,
+    `got expected initial value ${stringifyTypedArray(blendEquation)}`);
+
+  t.end();
+});
