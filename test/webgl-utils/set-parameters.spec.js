@@ -1,14 +1,18 @@
-import {createTestContext} from '../setup';
-import {GL} from 'luma.gl';
-import {setParameters, getParameter, getParameters, resetParameters, GL_PARAMETER_DEFAULTS}
-  from '../../src/webgl-utils/parameter-access';
-import trackContextState from '../../src/webgl-utils/track-context-state';
 import test from 'tape-catch';
-import {ENUM_STYLE_SETTINGS_SET1} from './sample-enum-settings';
+import {createTestContext} from '../setup';
+
+import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './sample-enum-settings';
+import {GL_PARAMETER_DEFAULTS} from '../../src/webgl-utils/set-parameters';
+
+import GL from '../../src/webgl-utils/constants';
+import {getKey} from '../../src/webgl-utils/constants-to-keys';
+
+import {setParameters, getParameter, getParameters, resetParameters}
+  from '../../src/webgl-utils/set-parameters';
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createTestContext({debug: true})
+  gl: createTestContext({debug: true, manageState: false})
 };
 
 function stringifyTypedArray(v) {
@@ -34,6 +38,7 @@ test('WebGL#set and get', t => {
   t.end();
 });
 
+/*
 test('WebGL#composite setter', t => {
   const {gl} = fixture;
   const compositeStateKeys = [
@@ -70,6 +75,7 @@ test('WebGL#composite setter', t => {
 
   t.end();
 });
+*/
 
 test('WebGLState#get all parameters', t => {
   const {gl} = fixture;
@@ -77,18 +83,18 @@ test('WebGLState#get all parameters', t => {
   resetParameters(gl);
 
   // Set custom values.
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET1, {});
-  for (const key in ENUM_STYLE_SETTINGS_SET1) {
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE, {});
+  for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)}`);
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`);
   }
 
   const copy = getParameters(gl);
-  for (const key in ENUM_STYLE_SETTINGS_SET1) {
+  for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = copy[key];
-    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)}`);
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
+      `got expected value ${stringifyTypedArray(value)} after getParameters for ${getKey(GL, key)}`);
   }
 
   t.end();
@@ -97,27 +103,22 @@ test('WebGLState#get all parameters', t => {
 test('WebGL#reset', t => {
   const {gl} = fixture;
 
-  t.doesNotThrow(
-    () => trackContextState(gl, {copyState: false}),
-    'trackContextState call succeeded'
-  );
-
   // Set custom values and verify.
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
-  for (const key in ENUM_STYLE_SETTINGS_SET1) {
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
+  for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameter(gl, key);
-    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)} after setParameters for ${key}`);
+    t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`);
   }
 
   // reset
   resetParameters(gl);
 
   // Verify default values.
-  for (const key in GL_PARAMETER_DEFAULTS) {
+  for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameter(gl, key);
     t.deepEqual(value, GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)} after reset for ${key}`);
+      `got expected value ${stringifyTypedArray(value)} after resetParameters for ${getKey(GL, key)}`);
   }
 
   t.end();

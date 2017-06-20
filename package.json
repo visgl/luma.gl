@@ -39,7 +39,7 @@
     "cover": "NODE_ENV=test nyc --reporter html --reporter cobertura --reporter=lcov npm run test-cover",
     "lint": "eslint src test && npm run lint-yarn",
     "lint-examples": "eslint examples",
-    "lint-yarn": "!(find . -name yarn.lock -exec grep -l unpm.u {} \\; | egrep '.*')",
+    "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
     "publish-prod": "npm run build && npm run test-fast && npm publish",
     "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
     "bench": "node test/bench/node.js",

@@ -13,32 +13,76 @@ In fact, luma.gl is explicitly designed to work with any WebGL context, and in c
 
 ## Usage
 
+Create a WebGL context, autocreating a canvas
 ```js
-import headlessGL from 'gl';
 import {createGLContext} from 'luma.gl';
-const gl = createGLContext({headlessGL})
+const gl = createGLContext(); // Prefers WebGL2 but falls back to WebGL1
+```
+
+Create a WebGL2 context, failing gracefully if WebGL2 is not supported.
+```js
+import {createGLContext} from 'luma.gl';
+const gl = createGLContext({
+  webgl1: false,
+  throwOnError: false
+});
+if (!gl) {
+  console.error('WebGL2 not supported');
+}
+```
+
+Create a WebGL context in an existing canvas, setting WebGL context attributes
+```js
+import {createGLContext} from 'luma.gl';
+const gl = createGLContext({
+  canvas: 'my-canvas-id',
+  stencil: true,       // Default render target gets a stencil buffer of at least 8 bits.
+  antialias: false,    // Turn of antialiasing
+  premultipliedAlpha: false, // turn off pre-multiplied alpha.
+  preserveDrawingBuffer: true, // Default render target buffers will not be automatically cleared
+});
+```
+
+Create a headless WebGL context (under Node.js).
+```js
+import 'luma.gl/headless';
+import {createGLContext} from 'luma.gl';
+const gl = createGLContext({width: 100, height: 100});
 ```
 
 
 ## Functions
+
 
 ### createGLContext
 
 Creates and returns a WebGL context, both in browsers and in Node.js.
 
 ```
-  const gl = createGLContext(options);
+const gl = createGLContext(options);
 ```
 
-* `canvas` (*string*|*DOMElement*, required for browser contexts, ignored for headless contexts) Can be a string with the canvas id or the canvas element itself.
-* `width` (*number*, required for headless contexts, ignored for browser contexts) - width of the "virtual screen" render target
-* `height` (*number*, required for headless contexts, ignored for browser contexts) - height of the "virtual screen" render target
-* `debug` (*boolean*, `true`) - Unless set to false, all gl calls will be `console.log`-ged and errors thrown to the console. Note that catching webgl errors has a performance impact as it requires a GPU sync after each operation, so make sure to pass `false` in production environments.
-* `webgl2` (*boolean*, `false`) - If true, will attempt to create a WebGL2 context (not supported on headless environments). Will fall back to WebGL1 contexts. Use `gl instanceof WebGL2RenderingContext` to determine what type of context was actually returned.
-* `webgl2`=`false` (*boolean*) - If `true`, will attempt to create a WebGL2 context (not supported on headless environments). Will fall back to WebGL1 contexts if `webgl1` is true. Use `isWebGL2` or `getCaps` to determine what type of context was actually returned.
-* `webgl1`=`true` (*boolean*) - If `true`, will attempt to create a WebGL1 context. Set to false if `webgl2` is `true` to force failure on `webgl2` contexts.
-* `throwOnError`=`true` (*boolean*) - Normally `createGLContext` will throw an error on failure. With this flag set, it will return `null` instead.
-* `headlessGL` (*function*, null) - In Node.js environments, contexts are created using [headless-gl](https://www.npmjs.com/package/gl). To avoid including the `headless-gl` module in applications that don't use it, luma.gl requires the app to install and import headless-gl itself, and pass headless-gl as an argument to `createGLContext`.
+* `options` (*Object*) - key/value pairs containing context creation options
+
+| Parameter               | Browser | Headless | Description |
+| ---                     | ---     | ---    | ---         |
+| `webgl2`                | `true`  | N/A    | If `true`, will attempt to create a WebGL2 context. Will silently fall back to WebGL1 contexts unless `webgl1` is set to `false`. |
+| `webgl1`                | `true`  | `true` | If `true`, will attempt to create a WebGL1 context. The `webgl2` flag has higher priority. |
+| `throwOnError`          | `true`  | `true` | Normally `createGLContext` will throw an error on failure. If `false`, it will return `null` instead. |
+| `debug`                 | `false` | N/A    | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. Note the enabling debug mode has a signficant performance impact. |
+| `manageState`           | `true`  | `true` | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to. |
+| Browser-only            |         |        | |
+| `canvas`                | `null`  | N/A    | A *string* containing the `id` of an existing HTML element or a *DOMElement* instance. If `null` or not provided, a new canvas will be created. |
+| `alpha`                 | `true`  | -      | Default render target has an alpha buffer. |
+| `depth`                 | `true`  | -      | Default render target has a depth buffer of at least 16 bits. |
+| `stencil`               | `false` | -      | Default render target has a stencil buffer of at least 8 bits. |
+| `antialias`             | `true`  | -      | Boolean that indicates whether or not to perform anti-aliasing. |
+| `premultipliedAlpha`    | `true`  | -      | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
+| `preserveDrawingBuffer` | `false` | -      | Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten |
+| `failIfMajorPerformanceCaveat` |`false`| - | Do not create if the system performance is low.
+| Headless-only           |         |        | |
+| `width`                 | N/A     | `800`  | width (*number*) of the headless "virtual screen" render target. Ignored for browser contexts |
+| `height`                | N/A     | `600`  | height (*number*) of the headless "virtual screen" render target. Ignored for browser contexts |
 
 
 ### clear
@@ -48,5 +92,5 @@ Clears the drawing buffer (the default framebuffer) or the currently bound frame
 
 ## Remarks
 
-* In browser environments, contexts are created via `HTMLCanvasElement.getContext`, first using `webgl` and then falls back to `experimental-webgl`. If `webgl2` option is set, this function will first try `webgl2` and then `experimental-webgl2`, before falling back to webgl1.
+* In browser environments, contexts are created via `HTMLCanvasElement.getContext`. If the `webgl2` option is set, this function will first try `webgl2` and then `experimental-webgl2`, before falling back to webgl1.
 * In Node.js environments, the context is created using headless-gl. In this case width and height options must be supplied as there is no canvas element to use as reference.

@@ -1,33 +1,70 @@
-import {createTestContext} from '../setup';
-import trackContextState, {pushContextState, popContextState}
-  from '../../src/webgl-utils/track-context-state';
-import {getParameter, setParameters, resetParameters} from '../../src/webgl-utils/parameter-access';
 import test from 'tape-catch';
-import {GL_PARAMETER_DEFAULTS, GL_PARAMETER_SETTERS} from '../../src/webgl-utils/parameter-access';
+import {createTestContext} from '../setup';
+
+import trackContextState, {pushContextState, popContextState, deepEqual} // clone,
+  from '../../src/webgl-utils/track-context-state';
+
+import {getParameter, setParameters, resetParameters, GL_PARAMETER_DEFAULTS, GL_PARAMETER_SETTERS}
+  from '../../src/webgl-utils/set-parameters';
+
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './sample-enum-settings';
+
+// utils
+function stringifyTypedArray(v) {
+  v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
+  return JSON.stringify(v);
+}
 
 // Settings test, don't reuse a context
 const fixture = {
   gl: createTestContext({debug: true})
 };
 
-function stringifyTypedArray(v) {
-  v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
-  return JSON.stringify(v);
-}
+test('WebGLState#imports', t => {
+  t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
+  t.ok(typeof pushContextState === 'function', 'trackContextState imported OK');
+  t.ok(typeof popContextState === 'function', 'trackContextState imported OK');
+  t.end();
+});
 
-test('WebGL#trackContextState', t => {
+test('WebGLState#deepEqual', t => {
+  const TEST_CASES = [
+    {title: 'null', x: null, y: null, result: true},
+    {title: 'number', x: null, y: null, result: true},
+    {title: 'shallow-equal array 1', x: null, y: null, result: true},
+    {title: 'deep-equal array', x: null, y: null, result: true},
+    {title: 'deep-equal array/typed array', x: null, y: null, result: true},
+    {title: 'different arrays', x: null, y: null, result: true}
+  ];
+
+  for (const tc of TEST_CASES) {
+    t.equals(deepEqual(tc.x, tc.y), tc.result, tc.title);
+  }
+  t.end();
+});
+
+// test('WebGLState#clone', t => {
+//   const TEST_CASES = [
+//     {title: 'null', x: null, y: null, result: true}
+//     {title: 'number', x: null, y: null, result: true}
+//     {title: 'shallow-equal array 1', x: null, y: null, result: true}
+//     {title: 'deep-equal array', x: null, y: null, result: true}
+//     {title: 'deep-equal array/typed array', x: null, y: null, result: true}
+//     {title: 'different arrays', x: null, y: null, result: true}
+//   ];
+
+//   for (const tc of TEST_CASES) {
+//     t.equals(deepEqual(tc.x, tc.y) tc.result, tc.title);
+//   }
+//   t.end();
+// });
+
+test('WebGLState#trackContextState', t => {
   const {gl} = fixture;
-
-  t.ok(typeof trackContextState === 'function', 'trackContextState defined');
-
   t.doesNotThrow(
     () => trackContextState(gl, {copyState: false}),
     'trackContextState call succeeded'
   );
-
-  t.ok(GL_PARAMETER_DEFAULTS, 'TEST_EXPORTS ok');
-
   t.end();
 });
 

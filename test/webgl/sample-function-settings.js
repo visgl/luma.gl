@@ -28,7 +28,7 @@ export const FUNCTION_STYLE_SETTINGS_SET1 = {
   // Note: Dynamic value. If scissor test enabled we expect users to set correct scissor box
   scissor: new Int32Array([0, 0, 100, 100]),
   stencilTest: true,
-  clearStencil: 0.5,
+  clearStencil: 0xF,
   stencilMask: [0xCCCCCCCC, 0xDDDDDDDD],
   stencilFunc: [GL.NEVER, 0.5, 0xBBBBBBBB, GL.LEQUAL, 0.5, 0x11111111],
   stencilOp: [GL.REPLACE, GL.INCR, GL.DECR, GL.REPLACE, GL.INCR, GL.DECR],
@@ -36,7 +36,7 @@ export const FUNCTION_STYLE_SETTINGS_SET1 = {
   viewport: new Int32Array([0, 0, 100, 100]),
   // WEBGL1 PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: 8,
-  [GL.UNPACK_ALIGNMENT]: 16,
+  [GL.UNPACK_ALIGNMENT]: 8,
   [GL.UNPACK_FLIP_Y_WEBGL]: true,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: true,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.NONE,

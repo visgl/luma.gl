@@ -62,17 +62,23 @@ export function assertWebGL2Context(gl) {
 }
 
 const contextDefaults = {
-  // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
-  width: 800,
-  height: 600,
   // COMMON CONTEXT PARAMETERS
   // Attempt to allocate WebGL2 context
-  webgl2: false,
-  webgl1: true,
+  webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
+  webgl1: true,  // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   throwOnFailure: true,
-  // Instrument context (at the expense of performance)
-  // Note: currently defaults to true and needs to be explicitly turned off
-  debug: false
+  manageState: true,
+
+  // BROWSER CONTEXT PARAMETERS
+  canvas: null, // A canvas element or a canvas string id
+  debug: false, // Instrument context (at the expense of performance)
+
+  // HEADLESS CONTEXT PARAMETERS
+  width: 800, // width are height are only used by headless gl
+  height: 600
+
+  // WEBGL/HEADLESS CONTEXT PARAMETERS
+  // Remaining options are passed through to context creator
 };
 
 // Change default context creation parameters. Main use case is regression test suite.
@@ -88,16 +94,11 @@ export function createGLContext(opts = {}) {
 
   opts = Object.assign({}, contextDefaults, opts);
   const {
-    // HEADLESS CONTEXT PARAMETERS: width are height are only used by headless gl
     width,
     height,
-    // COMMON CONTEXT PARAMETERS
-    // Attempt to allocate WebGL2 context
     throwOnError,
-    // Instrument context (at the expense of performance)
-    // Note: currently defaults to true and needs to be explicitly turned off
+    manageState,
     debug
-    // Other options are passed through to context creator
   } = opts;
 
   function error(message) {
@@ -125,7 +126,12 @@ export function createGLContext(opts = {}) {
 
   if (gl) {
     // Install context state tracking
-    trackContextState(gl, {copyState: false});
+    if (manageState) {
+      trackContextState(gl, {
+        copyState: false,
+        log: (...args) => log.log(1, ...args)
+      });
+    }
 
     // Add debug instrumentation to the context
     // TODO - why only on browser

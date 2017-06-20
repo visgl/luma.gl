@@ -1,10 +1,12 @@
+import test from 'tape-catch';
+
 import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
-import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/parameter-access';
+import {getKey} from '../../src/webgl-utils/constants-to-keys';
+
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/set-parameters';
 import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './sample-function-settings';
-
-import test from 'tape-catch';
 
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
@@ -49,7 +51,7 @@ test('WebGLState#getParameter (WebGL2)', t => {
     for (const setting in GL_PARAMETERS) {
       const value = getParameter(gl2, setting);
       t.ok(value !== undefined,
-        `${setting}: got a value ${stringifyTypedArray(value)}`);
+        `${getKey(GL, setting)}: got a value ${stringifyTypedArray(value)}`);
     }
   }
   t.end();
@@ -65,7 +67,7 @@ test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = getParameter(gl, key);
     t.deepEqual(value, ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
+      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(GL, key)}`);
   }
   t.end();
 });
@@ -106,7 +108,7 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
   for (const key in expectedValues) {
     const value = getParameter(gl, key);
     t.deepEqual(value, expectedValues[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${key}`);
+      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(GL, key)}`);
   }
   t.end();
 });

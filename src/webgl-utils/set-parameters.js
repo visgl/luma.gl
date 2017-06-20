@@ -2,7 +2,6 @@
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
 import GL from './constants';
-import assert from 'assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
@@ -230,9 +229,9 @@ export function setParameters(gl, values) {
         compositeSetters[setter] = true;
       // only call setter if value has changed
       // TODO - deep equal on values?
-      } else if (values[key] !== gl.state.cache[key]) {
+      } else {
         // Note - the setter will automatically update this.state
-        setter(gl, values[key], key);
+        setter(gl, values[key], Number(key));
       }
     }
   }
@@ -244,22 +243,25 @@ export function setParameters(gl, values) {
   // This depends on `trackContextState`, which is technically a "circular" dependency.
   // But it is too inconvenient to always require a cache parameter here.
   // This is the ONLY external dependency in this module/
-  const mergedValues = Object.assign({}, gl.state.cache, values);
+  const cache = gl.state && gl.state.cache;
+  if (cache) {
+    const mergedValues = Object.assign({}, cache, values);
 
-  for (const key in compositeSetters) {
-    assert(gl.state.cache);
-    // TODO - avoid calling composite setters if values have not changed.
-    const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
-    // Note - if `trackContextState` has been called,
-    // the setter will automatically update this.state.cache
-    compositeSetter(gl, mergedValues);
+    for (const key in compositeSetters) {
+      // TODO - avoid calling composite setters if values have not changed.
+      const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
+      // Note - if `trackContextState` has been called,
+      // the setter will automatically update this.state.cache
+      compositeSetter(gl, mergedValues);
+    }
   }
+  // Add a log for the else case?
 }
 
 // Queries any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
 export function getParameter(gl, key) {
   const getter = GL_PARAMETER_GETTERS[key];
-  return getter ? getter(gl, key) : gl.getParameter(key);
+  return getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
 }
 
 // Copies the state from a context (gl.getParameter should not be overriden)
