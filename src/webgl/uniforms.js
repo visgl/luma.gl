@@ -43,49 +43,21 @@ const GL_FLOAT_MAT3x4 = 0x8B68;
 const GL_FLOAT_MAT4x2 = 0x8B69;
 const GL_FLOAT_MAT4x3 = 0x8B6A;
 
-const GL_SAMPLER_3D =  0x8B5F;
-const GL_SAMPLER_2D_SHADOW =  0x8B62;
-const GL_SAMPLER_2D_ARRAY =  0x8DC1;
-const GL_SAMPLER_2D_ARRAY_SHADOW =  0x8DC4;
-const GL_SAMPLER_CUBE_SHADOW =  0x8DC5;
-const GL_INT_SAMPLER_2D =  0x8DCA;
-const GL_INT_SAMPLER_3D =  0x8DCB;
-const GL_INT_SAMPLER_CUBE =  0x8DCC;
-const GL_INT_SAMPLER_2D_ARRAY =  0x8DCF;
-const GL_UNSIGNED_INT_SAMPLER_2D =  0x8DD2;
-const GL_UNSIGNED_INT_SAMPLER_3D =  0x8DD3;
-const GL_UNSIGNED_INT_SAMPLER_CUBE =  0x8DD4;
-const GL_UNSIGNED_INT_SAMPLER_2D_ARRAY =  0x8DD7;
+const GL_SAMPLER_3D = 0x8B5F;
+const GL_SAMPLER_2D_SHADOW = 0x8B62;
+const GL_SAMPLER_2D_ARRAY = 0x8DC1;
+const GL_SAMPLER_2D_ARRAY_SHADOW = 0x8DC4;
+const GL_SAMPLER_CUBE_SHADOW = 0x8DC5;
+const GL_INT_SAMPLER_2D = 0x8DCA;
+const GL_INT_SAMPLER_3D = 0x8DCB;
+const GL_INT_SAMPLER_CUBE = 0x8DCC;
+const GL_INT_SAMPLER_2D_ARRAY = 0x8DCF;
+const GL_UNSIGNED_INT_SAMPLER_2D = 0x8DD2;
+const GL_UNSIGNED_INT_SAMPLER_3D = 0x8DD3;
+const GL_UNSIGNED_INT_SAMPLER_CUBE = 0x8DD4;
+const GL_UNSIGNED_INT_SAMPLER_2D_ARRAY = 0x8DD7;
 
-/* eslint-disable max-len */
-
-/*
-// TODO - use tables to reduce complexity of method below
-const UNIFORM_BASE_DESCRIPTORS = {
-  [GL_FLOAT]: {function: 'uniform1f', type: Float32Array},
-  [GL_FLOAT_VEC2]: {function: 'uniform2fv', type: Float32Array, elements: 2},
-  [GL_FLOAT_VEC3]: {function: 'uniform3fv', type: Float32Array, elements: 3},
-  [GL_FLOAT_VEC4]: {function: 'uniform4fv', type: Float32Array, elements: 4},
-
-  [GL_INT]: {function: 'uniform1i', type: Uint32Array},
-  [GL_INT_VEC2]: {function: 'uniform2iv', type: Uint32Array, elements: 2},
-  [GL_INT_VEC3]: {function: 'uniform3iv', type: Uint32Array, elements: 3},
-  [GL_INT_VEC4]: {function: 'uniform4iv', type: Uint32Array, elements: 4},
-
-  [GL_BOOL]: {function: 'uniform1i', type: Uint32Array},
-  [GL_BOOL_VEC2]: {function: 'uniform2iv', type: Uint32Array, elements: 2},
-  [GL_BOOL_VEC3]: {function: 'uniform3fv', type: Uint32Array, elements: 3},
-  [GL_BOOL_VEC4]: {function: 'uniform4iv', type: Uint32Array, elements: 4},
-
-  [GL_FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
-  [GL_FLOAT_MAT3]: {function: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
-  [GL_FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
-
-  [GL_SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
-  [GL_SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
-};
-
-// TODO - create static Float32...Arrays and copy into those instead of minting new ones?
+/* TODO - create static Float32...Arrays and copy into those instead of minting new ones?
 const arrays = {};
 function getTypedArray(type, data) {
   if (flatArrayLength > 1) {
@@ -96,16 +68,9 @@ function getTypedArray(type, data) {
         val = typedArray;
       }
       assert(val.length === flatArrayLength);
-      if (descriptor.matrix) {
-        // Second param: whether to transpose the matrix. Must be false.
-        glFunction(location, false, val);
-      } else {
-        glFunction(location, val);
-      }
     };
   }
 }
-
 // TODO - handle array uniforms
 */
 
@@ -113,6 +78,7 @@ const UNIFORM_SETTERS = {
 
   // WEBGL1
 
+  /* eslint-disable max-len */
   [GL_FLOAT]: (gl, location, value) => gl.uniform1f(location, value),
   [GL_FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, new Float32Array(value)),
   [GL_FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, new Float32Array(value)),
@@ -136,7 +102,7 @@ const UNIFORM_SETTERS = {
   [GL_SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
 
-  // WEBGL2
+  // WEBGL2 - unsigned integers, irregular matrices, additional texture samplers
 
   [GL_UNSIGNED_INT]: (gl, location, value) => gl.uniform1ui(location, value),
   [GL_UNSIGNED_INT_VEC2]: (gl, location, value) => gl.uniform2uiv(location, new Uint32Array(value)),
@@ -164,10 +130,8 @@ const UNIFORM_SETTERS = {
   [GL_UNSIGNED_INT_SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_UNSIGNED_INT_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_UNSIGNED_INT_SAMPLER_2D_ARRAY]: (gl, location, value) => gl.uniform1i(location, value)
+  /* eslint-enable max-len */
 };
-
-
-/* eslint-enable max-len */
 
 export function parseUniformName(name) {
   // name = name[name.length - 1] === ']' ?
