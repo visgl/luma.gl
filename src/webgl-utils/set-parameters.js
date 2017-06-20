@@ -249,7 +249,6 @@ export function setParameters(gl, values) {
     const mergedValues = Object.assign({}, cache, values);
 
     for (const key in compositeSetters) {
-      assert(gl.state.cache);
       // TODO - avoid calling composite setters if values have not changed.
       const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
       // Note - if `trackContextState` has been called,
@@ -257,6 +256,7 @@ export function setParameters(gl, values) {
       compositeSetter(gl, mergedValues);
     }
   }
+  // Add a log for the else case?
 }
 
 // Queries any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
