@@ -214,3 +214,66 @@ test('WebGL2#Texture2D setParameters', t => {
 
   t.end();
 });
+
+test('WebGL#Texture2D NPOT Workaround: texture creation', t => {
+  const {gl} = fixture;
+
+  // Create NPOT texture with no parameters
+  let texture = new Texture2D(gl, {data: null, width: 500, height: 512});
+  t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
+
+  let minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
+  t.equals(minFilter, GL.LINEAR, 'NPOT textuer min filter is set to LINEAR');
+  let wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  let wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+
+  const parameters = {
+    [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+    [GL.TEXTURE_WRAP_S]: GL.REPEAT,
+    [GL.TEXTURE_WRAP_T]: GL.MIRRORED_REPEAT
+  };
+
+  // Create NPOT texture with parameters
+  texture = new Texture2D(gl, {
+    data: null,
+    width: 512,
+    height: 600,
+    parameters
+  });
+  t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
+
+  minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
+  t.equals(minFilter, GL.NEAREST, 'NPOT textuer min filter is set to NEAREST');
+  wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+
+  t.end();
+});
+
+test('WebGL#Texture2D NPOT Workaround: setParameters', t => {
+  const {gl} = fixture;
+
+  // Create NPOT texture
+  const texture = new Texture2D(gl, {data: null, width: 100, height: 100});
+  t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
+
+  const invalidNPOTParameters = {
+    [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST,
+    [GL.TEXTURE_WRAP_S]: GL.MIRRORED_REPEAT,
+    [GL.TEXTURE_WRAP_T]: GL.REPEAT
+  };
+  texture.setParameters(invalidNPOTParameters);
+
+  const minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
+  t.equals(minFilter, GL.LINEAR, 'NPOT textuer min filter is set to LINEAR');
+  const wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  const wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+
+  t.end();
+});

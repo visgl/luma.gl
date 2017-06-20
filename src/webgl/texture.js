@@ -5,8 +5,9 @@ import {isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
 import {withParameters} from './context-state';
 import Resource from './resource';
 import Buffer from './buffer';
-import {uid} from '../utils';
+import {uid, isPowerOfTwo, log} from '../utils';
 import assert from 'assert';
+import {glKey} from './gl-constants';
 
 // const S3TC = 'WEBGL_compressed_texture_s3tc';
 // const PVRTC = 'WEBGL_compressed_texture_pvrtc';
@@ -182,13 +183,14 @@ export default class Texture extends Resource {
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE,
       border = 0,
-      mipmaps = true,
       recreate = false,
       parameters = {},
       pixelStore = {},
       // Deprecated parameters
       unpackFlipY = true
     } = opts;
+
+    let {mipmaps = true} = opts;
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
@@ -202,6 +204,15 @@ export default class Texture extends Resource {
       format, type, dataFormat, compressed: false, data, width, height
     }));
 
+    // Store opts for accessors
+    this.width = width;
+    this.height = height;
+    this.format = format;
+    this.type = type;
+    this.dataFormat = dataFormat;
+    this.border = border;
+    this.mipmaps = mipmaps;
+
     // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
     // TODO - compare v4 and v3
     const DEFAULT_TEXTURE_SETTINGS = {
@@ -209,6 +220,25 @@ export default class Texture extends Resource {
       [GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY
     };
     const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
+
+    // NOTE: NPOT workaround: Force update default settings.
+    if (this._isNPOTWorkaroundApplicable()) {
+
+      log.warn(0, 'NPOT (non power of two) texture found, disabling mipmaping');
+      mipmaps = false;
+      if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
+        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_MIN_FILTER to LINEAR');
+        parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
+      }
+      if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
+        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE');
+        parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
+      }
+      if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
+        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE');
+        parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
+      }
+    }
 
     // Temporarily apply any pixel store settings and build textures
     withParameters(this.gl, glSettings, () => {
@@ -220,15 +250,6 @@ export default class Texture extends Resource {
 
     // Set texture sampler parameters
     this.setParameters(parameters);
-
-    // Store opts for accessors
-    this.width = width;
-    this.height = height;
-    this.format = format;
-    this.type = type;
-    this.dataFormat = dataFormat;
-    this.border = border;
-    this.mipmaps = mipmaps;
 
     // TODO - Store data to enable auto recreate on context loss
     if (recreate) {
@@ -666,6 +687,27 @@ export default class Texture extends Resource {
   _setParameter(pname, param) {
     this.gl.bindTexture(this.target, this.handle);
 
+    // NOTE: Apply NPOT workaround
+    if (this._isNPOTWorkaroundApplicable()) {
+      const supportedMinFilters = [GL.LINEAR, GL.NEAREST];
+      switch (pname) {
+      case GL.TEXTURE_MIN_FILTER:
+        if (supportedMinFilters.indexOf(param) === -1) {
+          log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_MIN_FILTER to LINEAR');
+          param = GL.LINEAR;
+        }
+        break;
+      case GL.TEXTURE_WRAP_S:
+      case GL.TEXTURE_WRAP_T:
+        if (param !== GL.CLAMP_TO_EDGE) {
+          log.warn(0, `NPOT (non power of two) texture found, ${glKey(pname)} to CLAMP_TO_EDGE`);
+          param = GL.CLAMP_TO_EDGE;
+        }
+        break;
+      default:
+        break;
+      }
+    }
     // Apparently there are some integer/float conversion rules that made
     // the WebGL committe expose two parameter setting functions in JavaScript.
     // For now, pick the float version for parameters specified as GLfloat.
@@ -680,12 +722,15 @@ export default class Texture extends Resource {
       throw new Error('Cannot set emulated parameter');
 
     default:
-      this.gl.bindTexture(this.target, this.handle);
       this.gl.texParameteri(this.target, pname, param);
       break;
     }
 
     this.gl.bindTexture(this.target, null);
     return this;
+  }
+
+  _isNPOTWorkaroundApplicable() {
+    return (isWebGL(this.gl) && (!isPowerOfTwo(this.width) || (!isPowerOfTwo(this.height))));
   }
 }

@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 /**
  * Wraps the argument in an array if it is not one.
  * @param {object} a - The object to wrap.
@@ -75,4 +77,14 @@ function detach(elem) {
   }
 
   return ans;
+}
+
+/**
+ * Verifies if a given number is power of two or not.
+ * @param {object} n - The number to check.
+ * @return {Array} Returns true if the given number is power of 2, false otherwise.
+ **/
+export function isPowerOfTwo(n) {
+  assert((typeof n === 'number'), 'Input must be a number');
+  return n && ((n & (n - 1)) === 0);
 }

@@ -39,6 +39,7 @@ export class Star extends Model {
     });
 
     super({
+      gl: opts.gl,
       program,
       geometry: new Geometry({
         positions: new Float32Array([
