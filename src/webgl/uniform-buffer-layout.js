@@ -5,28 +5,28 @@ const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 
 // Local constants - these will "collapse" during minification
 const GL_INT = 0x1404;
-const GL_UNSIGNED_INT = 0x1405;
-const GL_FLOAT = 0x1406;
-
-const GL_FLOAT_VEC2 = 0x8B50;
-const GL_FLOAT_VEC3 = 0x8B51;
-const GL_FLOAT_VEC4 = 0x8B52;
 const GL_INT_VEC2 = 0x8B53;
 const GL_INT_VEC3 = 0x8B54;
 const GL_INT_VEC4 = 0x8B55;
+
+const GL_FLOAT = 0x1406;
+const GL_FLOAT_VEC2 = 0x8B50;
+const GL_FLOAT_VEC3 = 0x8B51;
+const GL_FLOAT_VEC4 = 0x8B52;
 
 const GL_BOOL = 0x8B56;
 const GL_BOOL_VEC2 = 0x8B57;
 const GL_BOOL_VEC3 = 0x8B58;
 const GL_BOOL_VEC4 = 0x8B59;
 
-const GL_FLOAT_MAT2 = 0x8B5A;
-const GL_FLOAT_MAT3 = 0x8B5B;
-const GL_FLOAT_MAT4 = 0x8B5C;
-
+const GL_UNSIGNED_INT = 0x1405;
 const GL_UNSIGNED_INT_VEC2 = 0x8DC6;
 const GL_UNSIGNED_INT_VEC3 = 0x8DC7;
 const GL_UNSIGNED_INT_VEC4 = 0x8DC8;
+
+const GL_FLOAT_MAT2 = 0x8B5A;
+const GL_FLOAT_MAT3 = 0x8B5B;
+const GL_FLOAT_MAT4 = 0x8B5C;
 
 const GL_FLOAT_MAT2x3 = 0x8B65;
 const GL_FLOAT_MAT2x4 = 0x8B66;

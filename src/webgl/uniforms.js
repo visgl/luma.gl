@@ -1,29 +1,172 @@
-import GL from './api';
 import Texture from './texture';
 import {formatValue} from '../utils';
 import assert from 'assert';
 
-// TODO - use tables to reduce complexity of method below
+// Local constants, will be "collapsed" during minification
+
+// WebGL1
+
+const GL_FLOAT = 0x1406;
+const GL_FLOAT_VEC2 = 0x8B50;
+const GL_FLOAT_VEC3 = 0x8B51;
+const GL_FLOAT_VEC4 = 0x8B52;
+
+const GL_INT = 0x1404;
+const GL_INT_VEC2 = 0x8B53;
+const GL_INT_VEC3 = 0x8B54;
+const GL_INT_VEC4 = 0x8B55;
+
+const GL_BOOL = 0x8B56;
+const GL_BOOL_VEC2 = 0x8B57;
+const GL_BOOL_VEC3 = 0x8B58;
+const GL_BOOL_VEC4 = 0x8B59;
+
+const GL_FLOAT_MAT2 = 0x8B5A;
+const GL_FLOAT_MAT3 = 0x8B5B;
+const GL_FLOAT_MAT4 = 0x8B5C;
+
+const GL_SAMPLER_2D = 0x8B5E;
+const GL_SAMPLER_CUBE = 0x8B60;
+
+// WebGL2
+
+const GL_UNSIGNED_INT = 0x1405;
+const GL_UNSIGNED_INT_VEC2 = 0x8DC6;
+const GL_UNSIGNED_INT_VEC3 = 0x8DC7;
+const GL_UNSIGNED_INT_VEC4 = 0x8DC8;
+
+/* eslint-disable camelcase */
+const GL_FLOAT_MAT2x3 = 0x8B65;
+const GL_FLOAT_MAT2x4 = 0x8B66;
+const GL_FLOAT_MAT3x2 = 0x8B67;
+const GL_FLOAT_MAT3x4 = 0x8B68;
+const GL_FLOAT_MAT4x2 = 0x8B69;
+const GL_FLOAT_MAT4x3 = 0x8B6A;
+
+const GL_SAMPLER_3D =  0x8B5F;
+const GL_SAMPLER_2D_SHADOW =  0x8B62;
+const GL_SAMPLER_2D_ARRAY =  0x8DC1;
+const GL_SAMPLER_2D_ARRAY_SHADOW =  0x8DC4;
+const GL_SAMPLER_CUBE_SHADOW =  0x8DC5;
+const GL_INT_SAMPLER_2D =  0x8DCA;
+const GL_INT_SAMPLER_3D =  0x8DCB;
+const GL_INT_SAMPLER_CUBE =  0x8DCC;
+const GL_INT_SAMPLER_2D_ARRAY =  0x8DCF;
+const GL_UNSIGNED_INT_SAMPLER_2D =  0x8DD2;
+const GL_UNSIGNED_INT_SAMPLER_3D =  0x8DD3;
+const GL_UNSIGNED_INT_SAMPLER_CUBE =  0x8DD4;
+const GL_UNSIGNED_INT_SAMPLER_2D_ARRAY =  0x8DD7;
+
 /* eslint-disable max-len */
+
+/*
+// TODO - use tables to reduce complexity of method below
 const UNIFORM_BASE_DESCRIPTORS = {
-  [GL.FLOAT]: {function: 'uniform1f', type: Float32Array},
-  [GL.INT]: {function: 'uniform1i', type: Uint16Array},
-  [GL.BOOL]: {function: 'uniform1i', type: Uint16Array},
-  [GL.FLOAT_VEC2]: {function: 'uniform2fv', type: Float32Array, elements: 2},
-  [GL.FLOAT_VEC3]: {function: 'uniform3fv', type: Float32Array, elements: 3},
-  [GL.FLOAT_VEC4]: {function: 'uniform4fv', type: Float32Array, elements: 4},
-  [GL.INT_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
-  [GL.INT_VEC3]: {function: 'uniform3iv', type: Uint16Array, elements: 3},
-  [GL.INT_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
-  [GL.BOOL_VEC2]: {function: 'uniform2iv', type: Uint16Array, elements: 2},
-  [GL.BOOL_VEC3]: {function: 'uniform3fv', type: Uint16Array, elements: 3},
-  [GL.BOOL_VEC4]: {function: 'uniform4iv', type: Uint16Array, elements: 4},
-  [GL.FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
-  [GL.FLOAT_MAT3]: {function: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
-  [GL.FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
-  [GL.SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
-  [GL.SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
+  [GL_FLOAT]: {function: 'uniform1f', type: Float32Array},
+  [GL_FLOAT_VEC2]: {function: 'uniform2fv', type: Float32Array, elements: 2},
+  [GL_FLOAT_VEC3]: {function: 'uniform3fv', type: Float32Array, elements: 3},
+  [GL_FLOAT_VEC4]: {function: 'uniform4fv', type: Float32Array, elements: 4},
+
+  [GL_INT]: {function: 'uniform1i', type: Uint32Array},
+  [GL_INT_VEC2]: {function: 'uniform2iv', type: Uint32Array, elements: 2},
+  [GL_INT_VEC3]: {function: 'uniform3iv', type: Uint32Array, elements: 3},
+  [GL_INT_VEC4]: {function: 'uniform4iv', type: Uint32Array, elements: 4},
+
+  [GL_BOOL]: {function: 'uniform1i', type: Uint32Array},
+  [GL_BOOL_VEC2]: {function: 'uniform2iv', type: Uint32Array, elements: 2},
+  [GL_BOOL_VEC3]: {function: 'uniform3fv', type: Uint32Array, elements: 3},
+  [GL_BOOL_VEC4]: {function: 'uniform4iv', type: Uint32Array, elements: 4},
+
+  [GL_FLOAT_MAT2]: {function: 'uniformMatrix2fv', type: Float32Array, matrix: true, elements: 4},
+  [GL_FLOAT_MAT3]: {function: 'uniformMatrix3fv', type: Float32Array, matrix: true, elements: 9},
+  [GL_FLOAT_MAT4]: {function: 'uniformMatrix4fv', type: Float32Array, matrix: true, elements: 16},
+
+  [GL_SAMPLER_2D]: {function: 'uniform1i', type: Uint16Array, texture: true},
+  [GL_SAMPLER_CUBE]: {function: 'uniform1i', type: Uint16Array, texture: true}
 };
+
+// TODO - create static Float32...Arrays and copy into those instead of minting new ones?
+const arrays = {};
+function getTypedArray(type, data) {
+  if (flatArrayLength > 1) {
+    setter = val => {
+      if (!(val instanceof TypedArray)) {
+        const typedArray = new TypedArray(flatArrayLength);
+        typedArray.set(val);
+        val = typedArray;
+      }
+      assert(val.length === flatArrayLength);
+      if (descriptor.matrix) {
+        // Second param: whether to transpose the matrix. Must be false.
+        glFunction(location, false, val);
+      } else {
+        glFunction(location, val);
+      }
+    };
+  }
+}
+
+// TODO - handle array uniforms
+*/
+
+const UNIFORM_SETTERS = {
+
+  // WEBGL1
+
+  [GL_FLOAT]: (gl, location, value) => gl.uniform1f(location, value),
+  [GL_FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, new Float32Array(value)),
+  [GL_FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, new Float32Array(value)),
+  [GL_FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, new Float32Array(value)),
+
+  [GL_INT]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, new Int32Array(value)),
+  [GL_INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, new Int32Array(value)),
+  [GL_INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, new Int32Array(value)),
+
+  [GL_BOOL]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, new Int32Array(value)),
+  [GL_BOOL_VEC3]: (gl, location, value) => gl.uniform3fv(location, new Int32Array(value)),
+  [GL_BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, new Int32Array(value)),
+
+  // uniformMatrix(false): don't transpose the matrix
+  [GL_FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, new Float32Array(value)),
+
+  [GL_SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
+
+  // WEBGL2
+
+  [GL_UNSIGNED_INT]: (gl, location, value) => gl.uniform1ui(location, value),
+  [GL_UNSIGNED_INT_VEC2]: (gl, location, value) => gl.uniform2uiv(location, new Uint32Array(value)),
+  [GL_UNSIGNED_INT_VEC3]: (gl, location, value) => gl.uniform3uiv(location, new Uint32Array(value)),
+  [GL_UNSIGNED_INT_VEC4]: (gl, location, value) => gl.uniform4uiv(location, new Uint32Array(value)),
+
+  // uniformMatrix(false): don't transpose the matrix
+  [GL_FLOAT_MAT2x3]: (gl, location, value) => gl.uniformMatrix2x3fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT2x4]: (gl, location, value) => gl.uniformMatrix2x4fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT3x2]: (gl, location, value) => gl.uniformMatrix3x2fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT3x4]: (gl, location, value) => gl.uniformMatrix3x4fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT4x2]: (gl, location, value) => gl.uniformMatrix4x2fv(location, false, new Float32Array(value)),
+  [GL_FLOAT_MAT4x3]: (gl, location, value) => gl.uniformMatrix4x3fv(location, false, new Float32Array(value)),
+
+  [GL_SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_SAMPLER_2D_SHADOW]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_SAMPLER_2D_ARRAY]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_SAMPLER_2D_ARRAY_SHADOW]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_SAMPLER_CUBE_SHADOW]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_INT_SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_INT_SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_INT_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_INT_SAMPLER_2D_ARRAY]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_UNSIGNED_INT_SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_UNSIGNED_INT_SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_UNSIGNED_INT_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL_UNSIGNED_INT_SAMPLER_2D_ARRAY]: (gl, location, value) => gl.uniform1i(location, value)
+};
+
+
 /* eslint-enable max-len */
 
 export function parseUniformName(name) {
@@ -47,42 +190,11 @@ export function parseUniformName(name) {
 // Returns a Magic Uniform Setter
 /* eslint-disable complexity */
 export function getUniformSetter(gl, location, info) {
-  const descriptor = UNIFORM_BASE_DESCRIPTORS[info.type];
-  if (!descriptor) {
+  const setter = UNIFORM_SETTERS[info.type];
+  if (!setter) {
     throw new Error(`Unknown GLSL uniform type ${info.type}`);
   }
-
-  const glFunction = gl[descriptor.function].bind(gl);
-  const TypedArray = descriptor.type;
-
-  // How many data elements does app need to provide
-  const flatArrayLength = info.size * (descriptor.elements || 1);
-
-  // console.log('getSetter', location, info, flatArrayLength);
-
-  // Set a uniform array
-  let setter;
-  if (flatArrayLength > 1) {
-    setter = val => {
-      if (!(val instanceof TypedArray)) {
-        const typedArray = new TypedArray(flatArrayLength);
-        typedArray.set(val);
-        val = typedArray;
-      }
-      assert(val.length === flatArrayLength);
-      if (descriptor.matrix) {
-        // Second param: whether to transpose the matrix. Must be false.
-        glFunction(location, false, val);
-      } else {
-        glFunction(location, val);
-      }
-    };
-  } else {
-    setter = val => glFunction(location, val);
-  }
-
-  // Set a primitive-valued uniform
-  return setter;
+  return setter.bind(null, gl, location);
 }
 
 // Basic checks of uniform values without knowledge of program
@@ -93,10 +205,8 @@ export function checkUniformValues(uniforms, source) {
     if (!checkUniformValue(value)) {
       // Add space to source
       source = source ? `${source} ` : '';
-      /* eslint-disable no-console */
-      /* global console */
       // Value could be unprintable so write the object on console
-      console.error(`${source} Bad uniform ${uniformName}`, value);
+      console.error(`${source} Bad uniform ${uniformName}`, value); // eslint-disable-line
       /* eslint-enable no-console */
       throw new Error(`${source} Bad uniform ${uniformName}`);
     }
@@ -181,60 +291,3 @@ export function getUniformsTable({
 
   return {table, unusedTable, unusedCount};
 }
-
-/*
-  if (vector) {
-    switch (type) {
-    case GL.FLOAT:
-      glFunction = gl.uniform1f;
-      break;
-    case GL.FLOAT_VEC2:
-      glFunction = gl.uniform2fv;
-      TypedArray = isArray ? Float32Array : new Float32Array(2);
-      break;
-    case GL.FLOAT_VEC3:
-      glFunction = gl.uniform3fv;
-      TypedArray = isArray ? Float32Array : new Float32Array(3);
-      break;
-    case GL.FLOAT_VEC4:
-      glFunction = gl.uniform4fv;
-      TypedArray = isArray ? Float32Array : new Float32Array(4);
-      break;
-    case GL.INT:
-    case GL.BOOL:
-    case GL.SAMPLER_2D:
-    case GL.SAMPLER_CUBE:
-      glFunction = gl.uniform1i;
-      break;
-    case GL.INT_VEC2:
-    case GL.BOOL_VEC2:
-      glFunction = gl.uniform2iv;
-      TypedArray = isArray ? Uint16Array : new Uint16Array(2);
-      break;
-    case GL.INT_VEC3:
-    case GL.BOOL_VEC3:
-      glFunction = gl.uniform3iv;
-      TypedArray = isArray ? Uint16Array : new Uint16Array(3);
-      break;
-    case GL.INT_VEC4:
-    case GL.BOOL_VEC4:
-      glFunction = gl.uniform4iv;
-      TypedArray = isArray ? Uint16Array : new Uint16Array(4);
-      break;
-    case GL.FLOAT_MAT2:
-      matrix = true;
-      glFunction = gl.uniformMatrix2fv;
-      break;
-    case GL.FLOAT_MAT3:
-      matrix = true;
-      glFunction = gl.uniformMatrix3fv;
-      break;
-    case GL.FLOAT_MAT4:
-      matrix = true;
-      glFunction = gl.uniformMatrix4fv;
-      break;
-    default:
-      break;
-    }
-  }
-*/
