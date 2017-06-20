@@ -4,10 +4,11 @@ import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGLContext}
 import {getUniformsTable} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 
-import Object3D from '../deprecated/scenegraph/object-3d';
+import Object3D from '../core/object-3d';
 import {log, formatValue} from '../utils';
-import SHADERS from '../deprecated/shaderlib';
-// import {SHADERS} from '../experimental/shaders';
+import {MONOLITHIC_SHADERS, MODULAR_SHADERS} from '../shadertools/shaders';
+import {assembleShaders} from '../shadertools';
+
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import assert from 'assert';
 
@@ -20,8 +21,16 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 // Model abstract O3D Class
 export default class Model extends Object3D {
   constructor(gl, opts = {}) {
-    opts = isWebGLContext(gl) ? Object.assign({}, opts, {gl}) : gl;
     super(opts);
+    if (isWebGLContext(gl)) {
+      // constructor signature 1: (gl, {...opts})
+      this.gl = gl;
+    } else {
+      // constructor signature 2: ({gl, ...opts})
+      opts = gl;
+      this.gl = opts.gl;
+    }
+    assert(isWebGLContext(this.gl));
     this.init(opts);
   }
 
@@ -29,9 +38,9 @@ export default class Model extends Object3D {
   /* eslint-disable complexity  */
   init({
     program,
-    gl = null,
-    vs = SHADERS.vs,
-    fs = SHADERS.fs,
+    vs = null,
+    fs = null,
+    modules = null,
     defaultUniforms,
     shaderlibs = {},
 
@@ -56,10 +65,26 @@ export default class Model extends Object3D {
     // Other opts
     timerQueryEnabled = false
   } = {}) {
-    // Assign default uniforms if any of the default shaders is being used
-    if (vs === SHADERS.vs || fs === SHADERS.fs && defaultUniforms === undefined) {
-      defaultUniforms = SHADERS.defaultUniforms;
+    const {gl} = this;
+
+    if (!vs) {
+      vs = modules ? MODULAR_SHADERS.vs : MONOLITHIC_SHADERS.vs;
     }
+    if (!fs) {
+      fs = modules ? MODULAR_SHADERS.fs : MONOLITHIC_SHADERS.fs;
+    }
+
+    // Assign default uniforms if any default shaders are being used
+    if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
+      defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
+    }
+
+    // Call assembleShaders if `modules` were supplied
+    let getUniforms;
+    if (modules && typeof vs === 'string' && typeof fs === 'string') {
+      ({vs, fs, getUniforms} = assembleShaders(gl, {vs, fs, modules}));
+    }
+    this.getModuleUniforms = getUniforms || (x => {});
 
     // set a custom program per o3d
     this.program = program || new Program(gl, {vs, fs});

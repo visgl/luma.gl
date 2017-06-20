@@ -54,6 +54,10 @@ suite
 .add('Program from cached shaders', () => {
   return new Program(gl, {vs, fs});
 })
+// .add('encoding picking color', () => {
+//   testIdx++;
+//   testLayer.encodePickingColor(testIdx);
+// })
 // add listeners
 .on('start', (event) => {
   console.log('Starting bench...');

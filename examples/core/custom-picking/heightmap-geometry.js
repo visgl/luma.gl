@@ -1,5 +1,15 @@
 import {Geometry} from 'luma.gl';
 
+const RESOLUTION = 128;
+
+// const rowColToIndex = ([row, col]) => {
+//   return row * RESOLUTION + col;
+// };
+
+// const indexToRowCol = (index) => {
+//   return [Math.round(index / RESOLUTION), index % RESOLUTION];
+// };
+
 export default class HeightmapGeometry extends Geometry {
   constructor(opts) {
     super(opts);
@@ -18,13 +28,11 @@ export default class HeightmapGeometry extends Geometry {
         (Math.sin(d * 24) + Math.cos((x + 8) * 12) + Math.tanh(z * 6)) * 0.125;
     }
 
-    const res = 128;
-
-    const s = 1 / res;
-    for (let i = 0; i < res; i++) {
-      const x = s * (i - res / 2);
-      for (let k = 0; k < res; k++) {
-        const z = s * (k - res / 2);
+    const s = 1 / RESOLUTION;
+    for (let i = 0; i < RESOLUTION; i++) {
+      const x = s * (i - RESOLUTION / 2);
+      for (let k = 0; k < RESOLUTION; k++) {
+        const z = s * (k - RESOLUTION / 2);
 
         const h0 = height(x + 0, z + 0);
         const h1 = height(x + s, z + 0);
@@ -57,6 +65,8 @@ export default class HeightmapGeometry extends Geometry {
         colors.push(h0, h0, h0, 1);
         colors.push(h2, h2, h2, 1);
         colors.push(h3, h3, h3, 1);
+
+        // const pickingColors(encodePickingColor);
       }
     }
 

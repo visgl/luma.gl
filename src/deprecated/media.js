@@ -4,8 +4,8 @@
 /* eslint-disable */ // TODO - this file needs cleanup
 import {Program} from '../webgl';
 import {Plane} from '../models';
-import {PerspectiveCamera} from '../deprecated/camera';
-import Scene from '../deprecated/scene';
+import {PerspectiveCamera} from './camera';
+import Scene from './scene';
 import {splat} from '../utils';
 
 // length given a 45 fov angle, and 0.2 distance to camera

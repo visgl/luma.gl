@@ -57,6 +57,13 @@ export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 // Core Classes
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
+export {default as Object3D} from './core/object-3d';
+export {default as Group} from './core/group';
+export {default as pickModels} from './core/pick-models';
+export {
+  encodePickingColor,
+  decodePickingColor,
+  getNullPickingColor} from './core/picking-colors';
 
 // Addons
 export {addEvents} from './packages/events';
@@ -106,37 +113,35 @@ export {
   parseModel
 } from './io';
 
-// EXPERIMENTAL MODULES
+// shadertools
+export {default as ShaderCache} from './shadertools/lib/shader-cache';
+export {assembleShaders} from './shadertools/lib/assemble-shaders';
+// shader modules
+export {default as lighting} from './shadertools/modules/lighting/lighting';
+export {default as picking} from './shadertools/modules/picking/picking';
+export {default as project} from './shadertools/modules/project/project';
+
+// EXPERIMENTAL EXPORTS
+
 import {
   clearBuffer
 } from './webgl/clear';
 
-// Shader Tools
+// Shader Tools - Some exports are still considered xperimental
 import {
-  registerShaderModules,
-  assembleShaders,
-  ShaderCache
-} from './experimental/shader-tools';
-
-// Register Shader Modules
-import './experimental/shader-modules';
+  registerShaderModules
+} from './shadertools';
 
 export const experimental = {
   clearBuffer,
-  registerShaderModules,
-  assembleShaders,
-  ShaderCache
+  registerShaderModules
 };
 
-// DEPRECATED IN V4.0
+// DEPRECATED EXPORTS
 // Alias for FramebufferObject (deprecated in v3). Framebuffer API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';
-
+export {default as Scene} from './deprecated/scene';
 // DEPRECATED IN V3.0
 export {readPixels} from './webgl/functions';
-export {default as Object3D} from './deprecated/scenegraph/object-3d';
-export {default as Group} from './deprecated/scenegraph/group';
-export {default as Scene} from './deprecated/scenegraph/scene';
-export {pickModels} from './deprecated/scenegraph/pick';
 export {default as Shaders} from './deprecated/shaderlib';
 export {default as Fx} from './deprecated/fx';

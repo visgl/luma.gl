@@ -1,42 +1,39 @@
 /* global document */
-import {GL, AnimationLoop, Scene, Model, Program, Shaders, Matrix4, radians} from 'luma.gl';
+import {
+  GL, AnimationLoop, setParameters, Matrix4, radians,
+  Model, project, picking, pickModels} from 'luma.gl';
 import HeightmapGeometry from './heightmap-geometry';
 
-let scene;
-let heightmap;
 const pick = {x: 0, y: 0};
+
+function mousemove(e) {
+  pick.x = e.offsetX;
+  pick.y = e.offsetY;
+}
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    addControls();
 
-    scene = new Scene(gl, {
-      lights: {
-        points: {
-          color: {r: 1, g: 1, b: 1},
-          position: {x: 0, y: 0, z: 32}
-        },
-        ambient: {r: 0.25, g: 0.25, b: 0.25},
-        enable: true
-      },
-      backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+    setParameters(gl, {
+      depthTest: true,
+      depthFunc: GL.LEQUAL
     });
 
-    gl.canvas.addEventListener('mousemove', function mousemove(e) {
-      pick.x = e.offsetX;
-      pick.y = e.offsetY;
-    });
+    gl.canvas.addEventListener('mousemove', mousemove);
 
-    heightmap = new Model({
+    const heightmap = new Model(gl, {
       id: 'heightmap',
-      program: new Program(gl, Shaders),
+      modules: [project, picking],
       geometry: new HeightmapGeometry()
     });
 
-    scene.add(heightmap);
+    return {heightmap};
   },
-  onRender: ({tick, aspect}) => {
+  onFinalize({gl}) {
+    gl.canvas.removeEventListener(mousemove);
+  },
+  onRender: ({gl, tick, aspect, heightmap}) => {
     const projection = Matrix4.perspective({
       fov: radians(60), aspect, near: 0.1, far: 1000
     });
@@ -44,39 +41,54 @@ const animationLoop = new AnimationLoop({
     const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
     const model = new Matrix4().clone(view).rotateY(tick * 0.01);
 
-    const uniforms = {
+    heightmap.setUniforms({
       projectionMatrix: projection,
       viewMatrix: view,
       modelMatrix: model,
       hasPickingColors: true
-    };
+    });
 
-    // var div = document.getElementById('altitude');
-    // if (div)
-    const pickInfo = scene.pickModels({
-      uniforms,
+    const pickInfo = pickModels(gl, {
+      models: [heightmap],
       x: pick.x,
       y: pick.y
     });
 
-    // if (pickInfo) {
-    //   div.innerHTML = `altitude: ${pickInfo.color[0]}`;
-    //   div.style.top = `${pick.y}px`;
-    //   div.style.left = `${pick.x}px`;
-    //   div.style.display = 'block';
-    // } else {
-    //   div.style.display = 'none';
-    // }
+    updatePickInfo(gl, pickInfo);
 
-    scene.render(uniforms);
-  },
-  onAddControls: ({parent}) => {
-    const controls = document.createElement('div');
-    controls.id = 'controls';
-    controls.innerHTML = `title`;
-    parent.appendChild(controls);
+    heightmap.render();
   }
 });
+
+function updatePickInfo(gl, pickInfo) {
+  const div = document.getElementById('pick-info') ||
+    gl.canvas.appendChild(document.createElement('div'));
+  div.id = 'pick-info';
+
+  if (pickInfo && div) {
+    div.innerHTML = `altitude: ${pickInfo.color[0]}`;
+    div.style.top = `${pick.y}px`;
+    div.style.left = `${pick.x}px`;
+    div.style.display = 'block';
+  } else {
+    div.style.display = 'none';
+  }
+}
+
+function addControls() {
+  /* global document */
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+      <p>
+      Custom Picking on a grid
+      <p>
+      Uses the luma.gl <code>picking</code> shader module,
+      adding detailed picking capabilities to a complex model with
+      a few lines of code.
+    `;
+  }
+}
 
 export default animationLoop;
 

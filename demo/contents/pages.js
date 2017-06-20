@@ -273,6 +273,10 @@ export const DOC_PAGES = [
         content: 'api-reference/core/model.md'
       },
       {
+        name: 'Object3d',
+        content: 'api-reference/core/object-3d.md'
+      },
+      {
         name: 'Group',
         content: 'api-reference/core/group.md'
       },
@@ -282,11 +286,15 @@ export const DOC_PAGES = [
       },
       {
         name: 'Shader Cache',
-        content: 'api-reference/shader-tools/shader-cache.md'
+        content: 'api-reference/shadertools/shader-cache.md'
       },
       {
         name: 'Events Package',
         content: 'api-reference/events/event.md'
+      },
+      {
+        name: 'Picking',
+        content: 'api-reference/picking/picking.md'
       }
     ]
   },

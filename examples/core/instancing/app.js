@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, Cube, Matrix4, radians, resetParameters, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, radians, setParameters} from 'luma.gl';
 
 const SIDE = 256;
 
@@ -59,14 +59,7 @@ function makeInstancedCube(gl) {
     () => Math.random() * 0.75 + 0.25
   );
 
-  return new Cube({
-    gl,
-    isInstanced: 1,
-    instanceCount: SIDE * SIDE,
-    attributes: {
-      instanceOffsets: {value: offsets, size: 2, instanced: 1},
-      instanceColors: {value: colors, size: 3, instanced: 1}
-    },
+  const {vs, fs} = {
     vs: `\
 attribute vec3 positions;
 attribute vec3 normals;
@@ -103,17 +96,31 @@ void main(void) {
   gl_FragColor = vec4(d * color, 1);
 }
 `
+  };
+
+  return new Cube({
+    gl,
+    vs,
+    fs,
+    isInstanced: 1,
+    instanceCount: SIDE * SIDE,
+    attributes: {
+      instanceOffsets: {value: offsets, size: 2, instanced: 1},
+      instanceColors: {value: colors, size: 3, instanced: 1}
+    }
   });
 }
 
 function addControls() {
+  /* global document */
   const controlPanel = document.querySelector('.control-panel');
   if (controlPanel) {
     controlPanel.innerHTML = `
       <p>
       Cube drawn with <b>instanced rendering</b>.
       <p>
-      A luma.gl <code>Cube</code>, rendering 65,536 instances in a single GPU draw call using instanced vertex attributes.
+      A luma.gl <code>Cube</code>, rendering 65,536 instances in a
+      single GPU draw call using instanced vertex attributes.
     `;
   }
 }
