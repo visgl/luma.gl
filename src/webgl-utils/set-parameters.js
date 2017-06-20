@@ -2,7 +2,6 @@
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
 import GL from './constants';
-import assert from 'assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
