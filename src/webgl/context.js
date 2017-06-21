@@ -34,13 +34,17 @@ const ERR_HEADLESSGL_NOT_AVAILABLE =
 const ERR_HEADLESSGL_FAILED = 'headlessGL failed to create headless WebGL context';
 
 export function isWebGL(gl) {
-  return gl && (gl instanceof WebGLRenderingContext ||
-    gl.ARRAY_BUFFER === GL_ARRAY_BUFFER);
+  return Boolean(gl && (
+    gl instanceof WebGLRenderingContext ||
+    gl.ARRAY_BUFFER === GL_ARRAY_BUFFER
+  ));
 }
 
 export function isWebGL2(gl) {
-  return gl && (gl instanceof WebGL2RenderingContext ||
-    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D);
+  return Boolean(gl && (
+    gl instanceof WebGL2RenderingContext ||
+    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D
+  ));
 }
 
 export function isWebGLContext(gl) {

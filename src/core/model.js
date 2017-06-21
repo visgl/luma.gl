@@ -30,7 +30,7 @@ export default class Model extends Object3D {
       opts = gl;
       this.gl = opts.gl;
     }
-    assert(isWebGLContext(this.gl));
+    assert(isWebGLContext(this.gl), 'Not a WebGL context');
     this.init(opts);
   }
 
