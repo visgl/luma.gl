@@ -1,9 +1,19 @@
 # Pre-releases
 
-## 4.0.0-alpha.
+## 4.0.0-alpha.13
 
 - Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
 - `shadertools` module no longer experimental
+- webgl2 uniform support
+
+## 4.0.0-alpha.12
+
+- FIX: Seer integration
+
+## 4.0.0-alpha.11
+
+- State and Parameter support
+- Many fixes to examples
 
 ## 4.0.0-alpha.10
 
