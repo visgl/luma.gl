@@ -328,7 +328,7 @@ export default class Model extends Object3D {
 
   // PROFILING - TODO - rebuild using Query class
   _timerQueryStart() {
-    if (this.timerQueryEnabled === true && this.lastQueryReturned === true) {
+    if (this.timerQueryEnabled === true && this.lastQueryReturned === true && this.ext) {
       this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
       this.timeElapsedQuery = this.ext.createQueryEXT();
       this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
@@ -336,7 +336,7 @@ export default class Model extends Object3D {
   }
 
   _timerQueryEnd() {
-    if (this.timerQueryEnabled === true) {
+    if (this.timerQueryEnabled === true && this.ext) {
       if (this.lastQueryReturned === true) {
         this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
         this.profileFrameCount++;
