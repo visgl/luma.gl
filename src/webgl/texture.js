@@ -9,6 +9,9 @@ import {uid, isPowerOfTwo, log} from '../utils';
 import assert from 'assert';
 import {glKey} from './gl-constants';
 
+// Supported min filters for NPOT texture.
+const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
+
 // const S3TC = 'WEBGL_compressed_texture_s3tc';
 // const PVRTC = 'WEBGL_compressed_texture_pvrtc';
 // const ES3 = 'WEBGL_compressed_texture_es3';
@@ -221,23 +224,12 @@ export default class Texture extends Resource {
     };
     const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
 
-    // NOTE: NPOT workaround: Force update default settings.
-    if (this._isNPOTWorkaroundApplicable()) {
+    if (this._isNPOT()) {
 
-      log.warn(0, 'NPOT (non power of two) texture found, disabling mipmaping');
+      log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, disabling mipmaping`);
       mipmaps = false;
-      if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
-        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_MIN_FILTER to LINEAR');
-        parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
-      }
-      if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
-        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE');
-        parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
-      }
-      if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
-        log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE');
-        parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
-      }
+
+      this._updateForNPOT(parameters);
     }
 
     // Temporarily apply any pixel store settings and build textures
@@ -688,26 +680,8 @@ export default class Texture extends Resource {
     this.gl.bindTexture(this.target, this.handle);
 
     // NOTE: Apply NPOT workaround
-    if (this._isNPOTWorkaroundApplicable()) {
-      const supportedMinFilters = [GL.LINEAR, GL.NEAREST];
-      switch (pname) {
-      case GL.TEXTURE_MIN_FILTER:
-        if (supportedMinFilters.indexOf(param) === -1) {
-          log.warn(0, 'NPOT (non power of two) texture found, forcing TEXTURE_MIN_FILTER to LINEAR');
-          param = GL.LINEAR;
-        }
-        break;
-      case GL.TEXTURE_WRAP_S:
-      case GL.TEXTURE_WRAP_T:
-        if (param !== GL.CLAMP_TO_EDGE) {
-          log.warn(0, `NPOT (non power of two) texture found, ${glKey(pname)} to CLAMP_TO_EDGE`);
-          param = GL.CLAMP_TO_EDGE;
-        }
-        break;
-      default:
-        break;
-      }
-    }
+    param = this._getNPOTParam(pname, param);
+
     // Apparently there are some integer/float conversion rules that made
     // the WebGL committe expose two parameter setting functions in JavaScript.
     // For now, pick the float version for parameters specified as GLfloat.
@@ -730,7 +704,46 @@ export default class Texture extends Resource {
     return this;
   }
 
-  _isNPOTWorkaroundApplicable() {
-    return (isWebGL(this.gl) && (!isPowerOfTwo(this.width) || (!isPowerOfTwo(this.height))));
+  _isNPOT() {
+    return (!isWebGL2(this.gl) && (!isPowerOfTwo(this.width) || (!isPowerOfTwo(this.height))));
+  }
+
+  // Update default settings which are not supported by NPOT textures.
+  _updateForNPOT(parameters) {
+    if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
+      log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`);
+      parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
+    }
+    if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
+      log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`);
+      parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
+    }
+    if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
+      log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE`);
+      parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
+    }
+  }
+
+  _getNPOTParam(pname, param) {
+    if (this._isNPOT()) {
+      switch (pname) {
+      case GL.TEXTURE_MIN_FILTER:
+        if (NPOT_MIN_FILTERS.indexOf(param) === -1) {
+          log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`);
+          param = GL.LINEAR;
+        }
+        break;
+      case GL.TEXTURE_WRAP_S:
+      case GL.TEXTURE_WRAP_T:
+        if (param !== GL.CLAMP_TO_EDGE) {
+          log.warn(0, `texture: ${this.handle} is Non-Power-Of-Two, ${glKey(pname)} to CLAMP_TO_EDGE`);
+          param = GL.CLAMP_TO_EDGE;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    return param;
   }
 }

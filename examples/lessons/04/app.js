@@ -44,8 +44,8 @@ const animationLoop = new AnimationLoop({
     const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
     return {
-      pyramid: new Model({program, geometry: getPyramidGeometry()}),
-      cube: new Model({program, geometry: getCubeGeometry()})
+      pyramid: new Model(gl, {program, geometry: getPyramidGeometry()}),
+      cube: new Model(gl, {program, geometry: getCubeGeometry()})
     };
   },
   onRender({gl, tick, aspect, pyramid, cube}) {
