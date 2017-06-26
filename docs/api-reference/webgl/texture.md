@@ -367,6 +367,19 @@ For more details, see tables in:
 | `GL.LINEAR_*` sampling of floating point textures           | `TEXTURE_FILTER_LINEAR_FLOAT` |
 | `GL.LINEAR_*` sampling of half-floating point textures      | `TEXTURE_FILTER_LINEAR_HALF_FLOAT` |
 
+## NPOT Textures (WebGL1)
+
+* Any texture with a `non power of two` dimension (width or height) is referred as `NPOT` texture, under WebGL1 NPOT textures have following limitations.
+
+| State              | Limitation |
+| ---                | --- |
+| Mipmapping         | Should be disabled |
+| `GL.TEXTURE_MIN_FILTER` | Must be either `GL.LINEAR` or `GL.NEAREST` |
+| `GL.TEXTURE_WRAP_S`     | Must be `GL.CLAMP_TO_EDGE` |
+| `GL.TEXTURE_WRAP_T`     | Must be `GL.CLAMP_TO_EDGE` |
+
+* 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
+
 
 ## Remarks
 
