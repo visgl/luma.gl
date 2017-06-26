@@ -7,7 +7,7 @@ import getShaderName from './get-shader-name';
  * Formats a GLSL shader compiler error and generates a string
  * showing the source code around the error.
  *
- * From https://github.com/wwwtyro/gl-format-compiler-error (public domain)
+ * Based on https://github.com/wwwtyro/gl-format-compiler-error (public domain)
  *
  * @param {String} errLog - error log from gl.getShaderInfoLog
  * @param {String} src - original shader source code
