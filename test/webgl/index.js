@@ -24,4 +24,4 @@ import './sampler.spec';
 import './uniform-buffer-layout.spec';
 
 // Extensions / webgl2
-// import './query.spec';
+import './query.spec';

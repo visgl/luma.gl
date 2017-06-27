@@ -1,6 +1,6 @@
 # Query
 
-A `Query` object provides a way to measure the duration of a set of GL commands, without stalling the rendering pipeline. Exposes a `promise` member that tracks the state of the query when `poll` is used to update queries.
+A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries (WebGL1: 'EXT_disjoint_timer_query', WebGL2: 'EXT_disjoint_timer_query_webgl2'). Exposes a `promise` member that tracks the state of the query and `poll` is used to update queries.
 
 
 ## Usage
@@ -42,8 +42,10 @@ Can also check whether timestamp queries are available.
 
 * gl {WebGLRenderingContext} - gl context
 * opts= {Object}  - options
-* opts.requireTimestamps=false {Object}  - If true, checks if timestamps are supported
-return {Boolean} - TimerQueries are supported with specified configuration
+* opts.queries=false {Object}  - If true, checks if Query objects (occlusion/transform feedback) are supported
+* opts.timers=false {Object}  - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
+* opts.timestamps=false {Object}  - If true, checks if 'TIMESTAMP_EXT' queries are supported
+return {Boolean} - Query API is supported with specified configuration
 
 Options
 * queries = false,
