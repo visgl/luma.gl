@@ -6,7 +6,7 @@ import {fixture} from '../setup';
 // true: always supported in WebGL2, false: never supported in WebGL1
 const WEBGL_FEATURES = {
   // API SUPPORT
-  VERTEX_ARRAY_OBJECTS: true,
+  VERTEX_ARRAY_OBJECT: true,
   INSTANCED_ARRAYS: true,
   MULTIPLE_RENDER_TARGETS: true,
 

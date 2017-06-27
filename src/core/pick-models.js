@@ -1,6 +1,6 @@
 // TODO - this is the new picking for deck.gl
 /* global window */
-import {GL, withParameters, Framebuffer, isWebGLContext} from '../webgl';
+import {GL, withParameters, Framebuffer, isWebGL} from '../webgl';
 import Group from './group';
 import assert from 'assert';
 
@@ -14,7 +14,7 @@ export default function pickModels(gl, {
   settings = {},
   framebuffer = null
 }) {
-  assert(isWebGLContext(gl), ILLEGAL_ARG);
+  assert(isWebGL(gl), ILLEGAL_ARG);
 
   // Compensate for devicePixelRatio and reverse y coordinate
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;

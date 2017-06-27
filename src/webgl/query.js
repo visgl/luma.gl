@@ -2,7 +2,7 @@
 
 import Resource from './resource';
 import queryManager from './helpers/query-manager';
-import {FEATURE, hasFeatures} from './context-features';
+import {FEATURES, hasFeatures} from './context-features';
 import {isWebGL2} from './context';
 import {polyfillContext} from '../webgl-utils';
 
@@ -34,7 +34,7 @@ export default class Query extends Resource {
     timestamps = false
   } = {}) {
     const webgl2 = isWebGL2(gl);
-    const hasTimerQueries = hasFeatures(gl, FEATURE.TIMER_QUERY);
+    const hasTimerQueries = hasFeatures(gl, FEATURES.TIMER_QUERY);
 
     let supported = webgl2 || hasTimerQueries;
     if (queries) {
