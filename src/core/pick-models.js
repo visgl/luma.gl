@@ -1,6 +1,6 @@
 // TODO - this is the new picking for deck.gl
 /* global window */
-import {GL, withParameters, Framebuffer, isWebGL} from '../webgl';
+import {GL, withParameters, isWebGL} from '../webgl';
 import Group from './group';
 import assert from 'assert';
 
@@ -8,28 +8,29 @@ const ILLEGAL_ARG = 'Illegal argument to pick';
 
 export default function pickModels(gl, {
   models,
-  x,
-  y,
-  uniforms = {picking_uActive: true}, // eslint-disable-line
+  position,
+  uniforms = {}, // eslint-disable-line
   settings = {},
-  framebuffer = null
+  useDevicePixelRatio = true,
+  framebuffer
 }) {
   assert(isWebGL(gl), ILLEGAL_ARG);
+  assert(framebuffer, ILLEGAL_ARG);
+
+  const [x, y] = position;
 
   // Compensate for devicePixelRatio and reverse y coordinate
-  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+  const devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+  const dpr = useDevicePixelRatio ? devicePixelRatio : 1;
   const deviceX = x * dpr;
   const deviceY = gl.canvas.height - y * dpr;
-
-  // Set up a frame buffer if not supplied
-  framebuffer = framebuffer || new Framebuffer(gl);
 
   framebuffer.resize({width: gl.canvas.width, height: gl.canvas.height});
 
   return withParameters(gl, {
-    framebuffer,
-    // We are only interested in one pixel, no need to render anything else
-    scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
+    // framebuffer,
+    // // We are only interested in one pixel, no need to render anything else
+    // scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
   }, () => {
     const group = new Group({children: models});
     return group.traverseReverse(model => {
@@ -39,7 +40,10 @@ export default function pickModels(gl, {
         gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
         // Render picking colors
+        /* eslint-disable camelcase */
+        model.setUniforms({picking_uActive: 1});
         model.draw({uniforms, settings});
+        model.setUniforms({picking_uActive: 0});
 
         // Sample Read color in the central pixel, to be mapped as a picking color
         const color = new Uint8Array(4);

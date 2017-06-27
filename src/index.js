@@ -119,11 +119,11 @@ export {
 export {default as ShaderCache} from './shadertools/lib/shader-cache';
 export {assembleShaders} from './shadertools/lib/assemble-shaders';
 // shader modules
-// export {default as project} from './shadertools/modules/project/project';
-// export {default as lighting} from './shadertools/modules/lighting/lighting';
-// export {default as dirlight} from './shadertools/modules/dirlight/dirlight';
-// export {default as picking} from './shadertools/modules/picking/picking';
-// export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
+export {default as project} from './shadertools/modules/project/project';
+export {default as lighting} from './shadertools/modules/lighting/lighting';
+export {default as dirlight} from './shadertools/modules/dirlight/dirlight';
+export {default as picking} from './shadertools/modules/picking/picking';
+export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
 
 // EXPERIMENTAL EXPORTS
 

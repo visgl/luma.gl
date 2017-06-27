@@ -15,9 +15,9 @@ export function getUniforms({
   };
 }
 
-export const vertexShader = '';
+export const vs = '';
 
-export const fragmentShader = `\
+export const fs = `\
 // fog configuration
 uniform bool fog_uEnable;
 uniform vec3 fog_uColor;

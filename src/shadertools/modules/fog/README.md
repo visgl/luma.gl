@@ -1,4 +1,4 @@
-# Shader Module: Fog
+# Shader Module: fog
 
 Implements a linear fog effect. Essentually attenuates a color based on
 distance from viewer (fragment depth) and mixes in a fog color.
