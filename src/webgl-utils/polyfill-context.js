@@ -67,29 +67,6 @@ const WEBGL_CONTEXT_POLYFILLS = {
   [WEBGL_draw_buffers]: {
     meta: {
       suffix: 'WEBGL'
-      // constants: [
-      //   // The fragment shader is not written to any color buffer.
-      //   'NONE',
-      //   // Fragment shader is written to the back color buffer.
-      //   'BACK',
-      //   // Fragment shader is written to the nth color attachment of the framebuffer.
-      //   'COLOR_ATTACHMENT0',
-      //   'COLOR_ATTACHMENT1',
-      //   'COLOR_ATTACHMENT2',
-      //   'COLOR_ATTACHMENT3',
-      //   'COLOR_ATTACHMENT4',
-      //   'COLOR_ATTACHMENT5',
-      //   'COLOR_ATTACHMENT6',
-      //   'COLOR_ATTACHMENT7',
-      //   'COLOR_ATTACHMENT8',
-      //   'COLOR_ATTACHMENT9',
-      //   'COLOR_ATTACHMENT10',
-      //   'COLOR_ATTACHMENT11',
-      //   'COLOR_ATTACHMENT12',
-      //   'COLOR_ATTACHMENT13',
-      //   'COLOR_ATTACHMENT14',
-      //   'COLOR_ATTACHMENT15'
-      // ]
     },
     drawBuffers: () => { assert(false); }
   },
@@ -215,9 +192,9 @@ const WEBGL_CONTEXT_POLYFILLS = {
   }
 };
 
-function getExtensions(gl) {
+function initializeExtensions(gl) {
   gl.luma.extensions = {};
-  const EXTENSIONS = [EXT_texture_filter_anisotropic];
+  const EXTENSIONS = gl.getSupportedExtensions();
   for (const extension of EXTENSIONS) {
     gl.luma[extension] = gl.getExtension(extension);
   }
@@ -273,7 +250,7 @@ function installOverrides(gl, {target, target2}) {
 // Registers polyfill or mock functions for all known extensions
 export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
-  getExtensions(gl);
+  initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
     for (const extension in WEBGL_CONTEXT_POLYFILLS) {
       if (extension !== 'overrides') {
