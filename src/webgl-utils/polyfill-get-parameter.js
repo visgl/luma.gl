@@ -1,6 +1,5 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
-import GL from './gl-constants';
-import {isWebGL2} from './context';
+import GL from './constants';
 
 const OES_element_index = 'OES_element_index';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';
@@ -16,16 +15,18 @@ const GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FF;
 const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
 const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.
 
+const getWebGL2ValueOrZero = gl => !isWebGL2(gl) ? 0 : undefined;
+
+// if a function returns undefined in this table,
+// the original getParameter will be called, defeating the override
 const WEBGL_PARAMETERS = {
   // WebGL2 context parameters
   [GL_FRAGMENT_SHADER_DERIVATIVE_HINT]:
     gl => !isWebGL2(gl) ? GL_DONT_CARE : undefined,
 
-  [GL.RASTERIZER_DISCARD]:
-    gl => !isWebGL2(gl) ? 0 : undefined,
+  [GL.RASTERIZER_DISCARD]: getWebGL2ValueOrZero,
 
-  [GL.SAMPLES]:
-    gl => !isWebGL2(gl) ? 0 : undefined,
+  [GL.SAMPLES]: getWebGL2ValueOrZero,
 
   // WebGL2 extension context parameters
   [GL_GPU_DISJOINT_EXT]:
@@ -57,21 +58,27 @@ const WEBGL_PARAMETERS = {
     },
 
   // WebGL2 Limits
-  [GL.MAX_3D_TEXTURE_SIZE]: 0,
-  [GL.MAX_ARRAY_TEXTURE_LAYERS]: 0,
-  [GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL]: 0,
+  [GL.MAX_3D_TEXTURE_SIZE]: getWebGL2ValueOrZero,
+  [GL.MAX_ARRAY_TEXTURE_LAYERS]: getWebGL2ValueOrZero,
+  [GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL]: getWebGL2ValueOrZero,
   [GL.MAX_COLOR_ATTACHMENTS]:
     (gl, getParameter) => {
-      const ext = gl.getExtension(WEBGL_draw_buffers);
-      return ext ? getParameter(ext.MAX_COLOR_ATTACHMENTS_WEBGL) : 0;
+      if (!isWebGL2(gl)) {
+        const ext = gl.getExtension(WEBGL_draw_buffers);
+        return ext ? getParameter(ext.MAX_COLOR_ATTACHMENTS_WEBGL) : 0;
+      }
+      return undefined;
     },
-  [GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS]: 0,
-  [GL.MAX_COMBINED_UNIFORM_BLOCKS]: 0,
-  [GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS]: 0,
+  [GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_COMBINED_UNIFORM_BLOCKS]: getWebGL2ValueOrZero,
+  [GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
   [GL.MAX_DRAW_BUFFERS]:
     gl => {
-      const ext = gl.getExtension(WEBGL_draw_buffers);
-      return ext ? ext.MAX_DRAW_BUFFERS_WEBGL : 0;
+      if (!isWebGL2(gl)) {
+        const ext = gl.getExtension(WEBGL_draw_buffers);
+        return ext ? ext.MAX_DRAW_BUFFERS_WEBGL : 0;
+      }
+      return undefined;
     },
   [GL.MAX_ELEMENT_INDEX]:
     // Guess: per webglstats.com 99.6% of webgl2 supports 2147483647
@@ -82,25 +89,31 @@ const WEBGL_PARAMETERS = {
   [GL.MAX_ELEMENTS_VERTICES]:
     // Guess: "Reasonably safe" per webglstats.com - could be higher/lower (on some mobile devices)
     gl => 16777216,
-  [GL.MAX_FRAGMENT_INPUT_COMPONENTS]: 0,
-  [GL.MAX_FRAGMENT_UNIFORM_BLOCKS]: 0,
-  [GL.MAX_FRAGMENT_UNIFORM_COMPONENTS]: 0,
-  [GL.MAX_SAMPLES]: 0,
-  [GL.MAX_SERVER_WAIT_TIMEOUT]: 0,
-  [GL.MAX_TEXTURE_LOD_BIAS]: 0,
-  [GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS]: 0,
-  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS]: 0,
-  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS]: 0,
-  [GL.MAX_UNIFORM_BLOCK_SIZE]: 0,
-  [GL.MAX_UNIFORM_BUFFER_BINDINGS]: 0,
-  [GL.MAX_VARYING_COMPONENTS]: 0,
-  [GL.MAX_VERTEX_OUTPUT_COMPONENTS]: 0,
-  [GL.MAX_VERTEX_UNIFORM_BLOCKS]: 0,
-  [GL.MAX_VERTEX_UNIFORM_COMPONENTS]: 0,
-  [GL.MIN_PROGRAM_TEXEL_OFFSET]: 0,
-  [GL.MAX_PROGRAM_TEXEL_OFFSET]: 0,
-  [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: 0
+  [GL.MAX_FRAGMENT_INPUT_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_FRAGMENT_UNIFORM_BLOCKS]: getWebGL2ValueOrZero,
+  [GL.MAX_FRAGMENT_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_SAMPLES]: getWebGL2ValueOrZero,
+  [GL.MAX_SERVER_WAIT_TIMEOUT]: getWebGL2ValueOrZero,
+  [GL.MAX_TEXTURE_LOD_BIAS]: getWebGL2ValueOrZero,
+  [GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS]: getWebGL2ValueOrZero,
+  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_UNIFORM_BLOCK_SIZE]: getWebGL2ValueOrZero,
+  [GL.MAX_UNIFORM_BUFFER_BINDINGS]: getWebGL2ValueOrZero,
+  [GL.MAX_VARYING_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_VERTEX_OUTPUT_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MAX_VERTEX_UNIFORM_BLOCKS]: getWebGL2ValueOrZero,
+  [GL.MAX_VERTEX_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
+  [GL.MIN_PROGRAM_TEXEL_OFFSET]: getWebGL2ValueOrZero,
+  [GL.MAX_PROGRAM_TEXEL_OFFSET]: getWebGL2ValueOrZero,
+  [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: getWebGL2ValueOrZero
 };
+
+// Return true if WebGL2 context
+function isWebGL2(gl) {
+  const GL_TEXTURE_BINDING_3D = 0x806A;
+  return gl && gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D;
+}
 
 // A "replacement" gl.getParameter that accepts "enums" from extensions and WebGL2
 // and returns reasonably safe defaults
@@ -109,7 +122,7 @@ export function getParameterPolyfill(gl, originalGetParameter, pname) {
   // Return mock limits (usually 0) for WebGL2 constants to ensure these
   // can be queries without error
   const limit = WEBGL_PARAMETERS[pname];
-  const value = typeof limit === 'function' ? limit(gl, getParameterPolyfill, pname) : limit;
+  const value = typeof limit === 'function' ? limit(gl, originalGetParameter, pname) : limit;
   const result = value !== undefined ? value : originalGetParameter(pname);
   return result;
 }

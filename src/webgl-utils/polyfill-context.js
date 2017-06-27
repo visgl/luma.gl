@@ -9,6 +9,7 @@
 
 /* eslint-disable camelcase, brace-style */
 import assert from 'assert';
+import {getParameterPolyfill} from './polyfill-get-parameter';
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -174,37 +175,7 @@ const WEBGL_CONTEXT_POLYFILLS = {
       }
       return originalFunc(target, pname);
     },
-    getParameter(gl, originalFunc, pname) {
-      const GL_FRAGMENT_SHADER_DERIVATIVE_HINT = 0x8B8B;
-      const GL_DONT_CARE = 0x1100;
-      const GL_GPU_DISJOINT_EXT = 0x8FBB;
-      const GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FF;
-
-      const {extensions} = gl.luma;
-
-      function override() {
-        switch (pname) {
-        case GL_FRAGMENT_SHADER_DERIVATIVE_HINT:
-          return !isWebGL2(gl) ? GL_DONT_CARE : undefined;
-
-        case GL_GPU_DISJOINT_EXT:
-          const hasTimerQueries =
-            !extensions[EXT_disjoint_timer_query] && !extensions[EXT_disjoint_timer_query_webgl2];
-          return hasTimerQueries ? 0 : undefined;
-
-        case GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT:
-          const ext = gl.luma.extensions[EXT_texture_filter_anisotropic];
-          pname = ext && ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT;
-          return !pname ? 1.0 : undefined;
-
-        default:
-          return undefined;
-        }
-      }
-
-      const result = override(pname);
-      return result !== undefined ? result : originalFunc(pname);
-    },
+    getParameter: getParameterPolyfill,
     hint(gl, originalFunc, pname, value) {
       // TODO - handle GL.FRAGMENT_SHADER_DERIVATIVE_HINT:
       // switch (pname) {
