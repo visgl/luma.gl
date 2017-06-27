@@ -59,8 +59,8 @@ const animationLoop = new AnimationLoop({
     });
 
     const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
-    const triangle = new Model({geometry: triangleGeometry, program});
-    const square = new Model({geometry: squareGeometry, program});
+    const triangle = new Model(gl, {geometry: triangleGeometry, program});
+    const square = new Model(gl, {geometry: squareGeometry, program});
 
     return {triangle, square};
   },

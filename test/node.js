@@ -14,6 +14,6 @@ moduleAlias.addAlias('luma.gl', path.resolve('./src'));
 require('luma.gl/headless');
 
 // Run the tests
-// require('./index-webgl-independent-tests');
+require('./index-webgl-independent-tests');
 require('./index-webgl-dependent-tests');
 require('./debug/seer-integration');

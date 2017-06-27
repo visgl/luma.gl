@@ -151,8 +151,7 @@ export default class Framebuffer extends Resource {
 
   // Attach from a map of attachments
   attach(attachments, {
-    clearAttachments = false,
-    setFilteringParameters = true
+    clearAttachments = false
   } = {}) {
     const newAttachments = {};
 
@@ -185,15 +184,6 @@ export default class Framebuffer extends Resource {
         this._attachTexture({attachment, texture, layer, level});
       } else {
         this._attachTexture({attachment, texture: object, layer: 0, level: 0});
-      }
-
-      if (setFilteringParameters && object instanceof Texture2D) {
-        object.setParameters({
-          [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-          [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
-          [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
-        });
       }
 
       // Resize objects
@@ -444,9 +434,12 @@ export default class Framebuffer extends Resource {
         type: GL.UNSIGNED_BYTE,
         width,
         height,
-        // Only power of two sized textures can have mipmaps in WebGL1
+        // Note: Mipmapping can be disabled by texture resource when we resize the texture
+        // to a non-power-of-two dimenstion (NPOT texture) under WebGL1. To have consistant
+        // behavior we always disable mipmaps.
         mipmaps: false,
-        // Use poor filtering, and clamp
+        // Set MIN and MAG filtering parameters so mipmaps are not used in sampling.
+        // Set WRAP modes that support NPOT textures too.
         parameters: {
           [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
           [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,

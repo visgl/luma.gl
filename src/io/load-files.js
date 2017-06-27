@@ -103,7 +103,7 @@ export function parseModel(gl, opts = {}) {
     }
   }
 
-  return new Model(Object.assign(
+  return new Model(gl, Object.assign(
     {program, geometry: new Geometry({attributes})},
     modelOptions,
     opts

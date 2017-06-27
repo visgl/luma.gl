@@ -16,6 +16,16 @@ const framebuffer = new Framebuffer(gl, {
   depth: true
 });
 ```
+When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
+For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
+
+| Texture parameter       | Value |
+| ---                     | --- |
+| `GL.TEXTURE_MIN_FILTER` | `GL.LINEAR` |
+| `GL.TEXTURE_WRAP_S`     | `GL.CLAMP_TO_EDGE` |
+| `GL.TEXTURE_WRAP_T`     | `GL.CLAMP_TO_EDGE` |
+For depth, new `Renderbuffer` object is created with `GL.DEPTH_COMPONENT16` format.
+
 
 Attaching textures and renderbuffers
 ```js

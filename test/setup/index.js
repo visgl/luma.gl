@@ -14,7 +14,7 @@ export function createTestContext(opts = {}) {
 }
 
 export const fixture = {
-  gl: createTestContext(),
+  gl: createTestContext({webgl2: false, webgl1: true}),
   gl2: createTestContext({webgl2: true, webgl1: false})
 };
 

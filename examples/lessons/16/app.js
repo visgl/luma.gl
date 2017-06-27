@@ -230,7 +230,7 @@ const animationLoop = new AnimationLoop({
 
       // TODO: Square program/model for debugging only, remove once all rendering issues resolved
       const programSQ = new Program(gl, {vs: VERTEX_SHADER_SQ, fs: FRAGMENT_SHADER_SQ});
-      const tSquare = new Model({geometry: squareGeometry, program: programSQ});
+      const tSquare = new Model(gl, {geometry: squareGeometry, program: programSQ});
 
       return {moon, macbook, cube, laptopScreenModel, tCrate, tSquare};
     });
