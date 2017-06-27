@@ -42,6 +42,16 @@ export function isWebGL2(gl) {
   ));
 }
 
+export function isWebGLContext(gl) {
+  log.deprecated('isWebGLContext', 'isWebGL');
+  return isWebGL(gl);
+}
+
+export function isWebGL2Context(gl) {
+  log.deprecated('isWebGL2Context', 'isWebGL2');
+  return isWebGL2(gl);
+}
+
 export function assertWebGLContext(gl) {
   // Need to handle debug context
   assert(isWebGL(gl), ERR_CONTEXT);

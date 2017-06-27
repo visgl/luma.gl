@@ -10,8 +10,8 @@ import assert from 'assert';
 // Defines luma.gl "feature" names and semantics
 const WEBGL_FEATURES = {
   // API SUPPORT
-  VERTEX_ARRAY_OBJECTS: ['OES_vertex_array_object', true],
-  TIMER_QUERIES: ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
+  VERTEX_ARRAY_OBJECT: ['OES_vertex_array_object', true],
+  TIMER_QUERY: ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
   INSTANCED_RENDERING: ['ANGLE_instanced_arrays', true],
   MULTIPLE_RENDER_TARGETS: ['WEBGL_draw_buffers', true],
 
@@ -44,10 +44,11 @@ const WEBGL_FEATURES = {
 };
 
 // Create a key-mirrored FEATURES array
-export const FEATURES = {};
+const FEATURES = {};
 Object.keys(WEBGL_FEATURES).forEach(key => {
   FEATURES[key] = key;
 });
+export {FEATURES};
 
 function getFeature(gl, cap) {
   const feature = WEBGL_FEATURES[cap];

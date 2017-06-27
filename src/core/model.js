@@ -1,5 +1,5 @@
 // A scenegraph object node
-import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGLContext} from '../webgl';
+import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGL} from '../webgl';
 // import {withParameters} from '../webgl/context-state';
 import {getUniformsTable} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
@@ -22,7 +22,7 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 export default class Model extends Object3D {
   constructor(gl, opts = {}) {
     super(opts);
-    if (isWebGLContext(gl)) {
+    if (isWebGL(gl)) {
       // constructor signature 1: (gl, {...opts})
       this.gl = gl;
     } else {
@@ -30,7 +30,7 @@ export default class Model extends Object3D {
       opts = gl;
       this.gl = opts.gl;
     }
-    assert(isWebGLContext(this.gl), 'Not a WebGL context');
+    assert(isWebGL(this.gl), 'Not a WebGL context');
     this.init(opts);
   }
 

@@ -14,12 +14,12 @@ So, to simplify capability detection luma.gl provides:
 
 Feature detection
 ```js
-import {hasFeature, CAPS} from 'luma.gl';
+import {hasFeature, FEATURES} from 'luma.gl';
 // Checks if `Query` objects can do async queries of GPU timings
-if (hasFeature(CAPS.`CAPS.TIMER_QUERY`)) {
+if (hasFeature(gl, FEATURES.TIMER_QUERY)) {
    ...
 }
-if (hasFeature(`EXT_disjoint_timer_query`) || hasFeature(`EXT_disjoint_timer_query_webgl2`)) {
+if (hasFeature(gl, 'EXT_disjoint_timer_query') || hasFeature(gl, 'EXT_disjoint_timer_query_webgl2')) {
    ...
 }
 ```
@@ -91,7 +91,7 @@ The luma.gl capability interface provides a set of feature constants that are mo
 
 | Capability                      | WebGL2 | WebGL1 | Description |
 | ---                             | ---    | ---    | ---  |
-| `CAPS.VERTEX_ARRAY_OBJECTS`     | Yes    | *      | Checks if `VertexArrayObject`s are available. | `OES_vertex_array_object` |
+| `CAPS.VERTEX_ARRAY_OBJECT`     | Yes    | *      | Checks if `VertexArrayObject`s are available. | `OES_vertex_array_object` |
 | `CAPS.TIMER_QUERIES`            | *      | *      | Checks if `Query` objects can do async queries of GPU timings (`EXT_disjoint_timer_query`, `EXT_disjoint_timer_query_webgl2`) |
 | `CAPS.INSTANCED_RENDERING`      | Yes    | *      | Checks if instanced drawing and instance divisors are supported (`ANGLE_instanced_arrays`) |
 | `CAPS.MULTIPLE_RENDER_TARGETS`  | Yes    | *      | Check if fragment shaders can draw to multiple framebuffers (`WEBGL_draw_buffers`) |
@@ -171,4 +171,3 @@ The luma.gl capability interface provides a set of feature constants that are mo
     * What WebGL extensions are available (which, perhaps surprisingly, will be different on the same platform depending on whether you created a WebGL1 or WebGL2 context).
     * The limits on various resources imposed by the current platform.
 * Querying for all of these things, and adapting your code to use different APIs whether you are using running on WebGL1 with an extension or WebGL2 can be surprisingly complicated.
-
