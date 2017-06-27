@@ -60,7 +60,7 @@ void sincos_taylor_fp32(float a, out float sin_t, out float cos_t) {
   cos_t = sqrt(1.0 - sin_t * sin_t);
 }
 
-float tan_fp32(float a) {
+float tan_taylor_fp32(float a) {
     float sin_a;
     float cos_a;
 

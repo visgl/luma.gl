@@ -17,6 +17,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 export default `\
 uniform float ONE;
 
@@ -29,6 +30,7 @@ const vec2 PI_4_FP64 = vec2(0.7853981852531433, -2.1855695031547384e-8);
 const vec2 PI_16_FP64 = vec2(0.19634954631328583, -5.463923757886846e-9);
 const vec2 PI_16_2_FP64 = vec2(0.39269909262657166, -1.0927847515773692e-8);
 const vec2 PI_16_3_FP64 = vec2(0.5890486240386963, -1.4906100798128818e-9);
+const vec2 PI_180_FP64 = vec2(0.01745329238474369, 1.3519960498364902e-10);
 
 const vec2 SIN_TABLE_0_FP64 = vec2(0.19509032368659973, -1.6704714833615242e-9);
 const vec2 SIN_TABLE_1_FP64 = vec2(0.3826834261417389, 6.22335089017767e-9);
@@ -104,10 +106,23 @@ vec2 nint_fp64(vec2 a) {
 }
 
 #if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+
+/* The purpose of this workaround is to prevent compilers from
+optimizing away necessary arithmetic operations by swapping their sequences
+or transform the equation to some 'equivalent' from.
+
+The method is to multiply an artifical variable, ONE, which will be known to
+the compiler to be one only at the runtime. The whole expression is then represented
+as a polynomial with respective to ONE. In the coefficients of all terms, only one a
+and one b should appear
+
+err = (a + b) * ONE^6 - a * ONE^5 - (a + b) * ONE^4 + a * ONE^3 - b - (a + b) * ONE^2 + a * ONE
+*/
+
 vec2 twoSum(float a, float b) {
-  float s = (a + b) * ONE;
-  float v = (s - a);
-  float err = (a - (s - v) * ONE) * ONE + (b - v);
+  float s = (a + b);
+  float v = (s * ONE - a) * ONE;
+  float err = (a - (s - v) * ONE) * ONE * ONE * ONE + (b - v);
   return vec2(s, err);
 }
 #else
@@ -120,10 +135,11 @@ vec2 twoSum(float a, float b) {
 #endif
 
 #if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+/* Same thing as in twoSum() */
 vec2 twoSub(float a, float b) {
-  float s = (a - b) * ONE;
-  float v = (s - a);
-  float err = (a - (s - v) * ONE) * ONE - (b + v);
+  float s = (a - b);
+  float v = (s * ONE - a) * ONE;
+  float err = (a - (s - v) * ONE) * ONE * ONE * ONE - (b + v);
   return vec2(s, err);
 }
 #else
@@ -149,8 +165,8 @@ vec2 twoSqr(float a) {
   float prod = a * a;
   vec2 a_fp64 = split(a);
 
-  float err = ((a_fp64.x * a_fp64.x - prod) * ONE +
-    2.0 * a_fp64.x * a_fp64.y * ONE * ONE) + a_fp64.y * a_fp64.y * ONE * ONE * ONE;
+  float err = ((a_fp64.x * a_fp64.x - prod) * ONE + 2.0 * a_fp64.x *
+    a_fp64.y * ONE * ONE) + a_fp64.y * a_fp64.y * ONE * ONE * ONE;
   return vec2(prod, err);
 }
 #else
@@ -219,18 +235,25 @@ vec2 sqrt_fp64(vec2 a) {
   return sum_fp64(vec2(yn, 0.0), prod);
 }
 
+/* k_power controls how much range reduction we would like to have
+Range reduction uses the following method:
+assume a = k_power * r + m * log(2), k and m being integers.
+Set k_power = 4 (we can choose other k to trade accuracy with performance.
+we only need to calculate exp(r) and using exp(a) = 2^m * exp(r)^k_power;
+*/
+
 vec2 exp_fp64(vec2 a) {
-  const float k = 512.0;
+  // We need to make sure these two numbers match
+  // as bit-wise shift is not available in GLSL 1.0
+  const int k_power = 4;
+  const float k = 16.0;
+
   const float inv_k = 1.0 / k;
 
   if (a.x <= -88.0) return vec2(0.0, 0.0);
   if (a.x >= 88.0) return vec2(1.0 / 0.0, 1.0 / 0.0);
   if (a.x == 0.0 && a.y == 0.0) return vec2(1.0, 0.0);
   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
-
-  // Range reduction using assume a = kr + m * log(2), k and m being integers.
-  // Set k = 9 (we can choose other k to trade accuracy with performance.
-  // we only need to calculate exp(r) and using exp(a) = 2^m * exp(r)^k
 
   float m = floor(a.x / LOG2_FP64.x + 0.5);
   vec2 r = sub_fp64(a, mul_fp64(LOG2_FP64, vec2(m, 0.0))) * inv_k;
@@ -249,32 +272,24 @@ vec2 exp_fp64(vec2 a) {
   p = mul_fp64(p, r);
   t = mul_fp64(p, INVERSE_FACTORIAL_5_FP64);
 
-  s = sum_fp64(s, t);
-  p = mul_fp64(p, r);
-  t = mul_fp64(p, INVERSE_FACTORIAL_6_FP64);
+  // s = sum_fp64(s, t);
+  // p = mul_fp64(p, r);
+  // t = mul_fp64(p, INVERSE_FACTORIAL_6_FP64);
+
+  // s = sum_fp64(s, t);
+  // p = mul_fp64(p, r);
+  // t = mul_fp64(p, INVERSE_FACTORIAL_7_FP64);
 
   s = sum_fp64(s, t);
-  p = mul_fp64(p, r);
-  t = mul_fp64(p, INVERSE_FACTORIAL_7_FP64);
 
-  s = sum_fp64(s, t);
 
   // At this point, s = exp(r) - 1; but after following 4 recursions, we will get exp(r) ^ 512 - 1.
-
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-
-  // We can add more iterations here and increase k.
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
-  s = sum_fp64(s * 2.0, mul_fp64(s, s));
+  for (int i = 0; i < k_power; i++) {
+    s = sum_fp64(s * 2.0, mul_fp64(s, s));
+  }
 
 #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-  s = sum_fp64(s, vec2(1.0, 0.0) * ONE);
+  s = sum_fp64(s, vec2(ONE, 0.0));
 #else
   s = sum_fp64(s, vec2(1.0, 0.0));
 #endif
@@ -288,7 +303,14 @@ vec2 log_fp64(vec2 a)
   if (a.x == 1.0 && a.y == 0.0) return vec2(0.0, 0.0);
   if (a.x <= 0.0) return vec2(0.0 / 0.0, 0.0 / 0.0);
   vec2 x = vec2(log(a.x), 0.0);
-  x = sub_fp64(sum_fp64(x, mul_fp64(a, exp_fp64(-x))), vec2(1.0, 0.0));
+  vec2 s;
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
+  s = vec2(ONE, 0.0);
+#else
+  s = vec2(1.0, 0.0);
+#endif
+
+  x = sub_fp64(sum_fp64(x, mul_fp64(a, exp_fp64(-x))), s);
   return x;
 }
 
@@ -311,13 +333,16 @@ vec2 sin_taylor_fp64(vec2 a) {
   t = mul_fp64(r, INVERSE_FACTORIAL_5_FP64);
   s = sum_fp64(s, t);
 
-  r = mul_fp64(r, x);
-  t = mul_fp64(r, INVERSE_FACTORIAL_7_FP64);
-  s = sum_fp64(s, t);
+  /* keep the following commented code in case we need them
+  for extra accuracy from the Taylor expansion*/
 
-  r = mul_fp64(r, x);
-  t = mul_fp64(r, INVERSE_FACTORIAL_9_FP64);
-  s = sum_fp64(s, t);
+  // r = mul_fp64(r, x);
+  // t = mul_fp64(r, INVERSE_FACTORIAL_7_FP64);
+  // s = sum_fp64(s, t);
+
+  // r = mul_fp64(r, x);
+  // t = mul_fp64(r, INVERSE_FACTORIAL_9_FP64);
+  // s = sum_fp64(s, t);
 
   return s;
 }
@@ -341,13 +366,16 @@ vec2 cos_taylor_fp64(vec2 a) {
   t = mul_fp64(r, INVERSE_FACTORIAL_6_FP64);
   s = sum_fp64(s, t);
 
-  r = mul_fp64(r, x);
-  t = mul_fp64(r, INVERSE_FACTORIAL_8_FP64);
-  s = sum_fp64(s, t);
+  /* keep the following commented code in case we need them
+  for extra accuracy from the Taylor expansion*/
 
-  r = mul_fp64(r, x);
-  t = mul_fp64(r, INVERSE_FACTORIAL_10_FP64);
-  s = sum_fp64(s, t);
+  // r = mul_fp64(r, x);
+  // t = mul_fp64(r, INVERSE_FACTORIAL_8_FP64);
+  // s = sum_fp64(s, t);
+
+  // r = mul_fp64(r, x);
+  // t = mul_fp64(r, INVERSE_FACTORIAL_10_FP64);
+  // s = sum_fp64(s, t);
 
   return s;
 }
@@ -400,10 +428,6 @@ vec2 sin_fp64(vec2 a) {
 
     if (abs_k > 4) {
         return vec2(0.0 / 0.0, 0.0 / 0.0);
-    } else if (k == 3) {
-        t = sub_fp64(t, PI_16_3_FP64);
-    } else if (k == -3) {
-        t = sum_fp64(t, PI_16_3_FP64);
     } else {
         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
     }
@@ -443,6 +467,8 @@ vec2 sin_fp64(vec2 a) {
 
     vec2 sin_t, cos_t;
     sincos_taylor_fp64(t, sin_t, cos_t);
+
+
 
     vec2 result = vec2(0.0, 0.0);
     if (j == 0) {
@@ -512,10 +538,6 @@ vec2 cos_fp64(vec2 a) {
 
     if (abs_k > 4) {
         return vec2(0.0 / 0.0, 0.0 / 0.0);
-    } else if (k == 3) {
-        t = sub_fp64(t, PI_16_3_FP64);
-    } else if (k == -3) {
-        t = sum_fp64(t, PI_16_3_FP64);
     } else {
         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
     }
@@ -617,10 +639,6 @@ vec2 tan_fp64(vec2 a) {
     // so let's just store it
     if (abs_k > 4) {
         return vec2(0.0 / 0.0, 0.0 / 0.0);
-    } else if (k == 3) {
-        t = sub_fp64(t, PI_16_3_FP64);
-    } else if (k == -3) {
-        t = sum_fp64(t, PI_16_3_FP64);
     } else {
         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
     }
@@ -692,7 +710,12 @@ vec2 tan_fp64(vec2 a) {
 }
 
 vec2 radians_fp64(vec2 degree) {
-  return div_fp64(mul_fp64(degree, PI_FP64), vec2(180.0, 0.0));
+  return mul_fp64(degree, PI_180_FP64);
+}
+
+vec2 mix_fp64(vec2 a, vec2 b, float x) {
+  vec2 range = sub_fp64(b, a);
+  return sum_fp64(a, mul_fp64(range, vec2(x, 0.0)));
 }
 
 // Vector functions
@@ -705,6 +728,16 @@ void vec2_sum_fp64(vec2 a[2], vec2 b[2], out vec2 out_val[2]) {
 void vec2_sub_fp64(vec2 a[2], vec2 b[2], out vec2 out_val[2]) {
     out_val[0] = sub_fp64(a[0], b[0]);
     out_val[1] = sub_fp64(a[1], b[1]);
+}
+
+void vec2_mul_fp64(vec2 a[2], vec2 b[2], out vec2 out_val[2]) {
+    out_val[0] = mul_fp64(a[0], b[0]);
+    out_val[1] = mul_fp64(a[1], b[1]);
+}
+
+void vec2_div_fp64(vec2 a[2], vec2 b[2], out vec2 out_val[2]) {
+    out_val[0] = div_fp64(a[0], b[0]);
+    out_val[1] = div_fp64(a[1], b[1]);
 }
 
 void vec2_mix_fp64(vec2 x[2], vec2 y[2], float a, out vec2 out_val[2]) {
@@ -720,10 +753,28 @@ vec2 vec2_length_fp64(vec2 x[2]) {
   return sqrt_fp64(sum_fp64(mul_fp64(x[0], x[0]), mul_fp64(x[1], x[1])));
 }
 
+void vec2_normalize_fp64(vec2 x[2], out vec2 out_val[2]) {
+  vec2 length = vec2_length_fp64(x);
+  vec2 length_vec2[2];
+  length_vec2[0] = length;
+  length_vec2[1] = length;
+
+  vec2_div_fp64(x, length_vec2, out_val);
+}
+
 vec2 vec2_distance_fp64(vec2 x[2], vec2 y[2]) {
   vec2 diff[2];
   vec2_sub_fp64(x, y, diff);
   return vec2_length_fp64(diff);
+}
+
+vec2 vec2_dot_fp64(vec2 a[2], vec2 b[2]) {
+  vec2 v[2];
+
+  v[0] = mul_fp64(a[0], b[0]);
+  v[1] = mul_fp64(a[1], b[1]);
+
+  return sum_fp64(v[0], v[1]);
 }
 
 // vec3 functions

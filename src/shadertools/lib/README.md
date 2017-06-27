@@ -36,17 +36,67 @@ Also does some platform detection and injects `#define` statements enabling
 your shader to conditionally use code.
 
 
+## Usage
+
+To use the shader module system to inject modules into your shaders, just call `assembleShaders`:
+```js
+const {vs, fs, getUniforms, moduleMap} = assembleShaders(gl, {
+  fs: '...',
+  vs: '...',
+  modules: [...],
+  defines: {...}
+})
+
+Note that assembleShaders is integrated into the `Model` class"
+```js
+const model = new Model(gl, {
+  fs: '...',
+  vs,
+  modules: [],
+});
+```
+
+To create a new shader module, you need to create the following object
+```js
+const module = {
+  name: 'my-mnodule',
+  vs: ....
+  fs: null,
+  dependencies: []
+};
+```
+
+
 ## API
-
-
-### `registerShaderModules`
-
-Registers new shader modules, making them available to `assembleShaders`
 
 
 ### `assembleShaders`
 
-Takes the source code of a vertex shader and a fragment shader, and
+Takes the source code of a vertex shader and a fragment shader, and a list of modules, and generates combined source code for both shaders.
+
+* `vs` - vertex shader source
+* `fs` - fragment shader source code
+* `modules`=`[]` - list of shader modules (either objects defining the module, or names of previously registered modules)
+* `id` - `id` for the shader, will be used to inject shader names (using `#define SHADER_NAME`) if not already present in the source.
+* `defines`=`{}` (Object) - a map of key/value pairs representing custom `#define`s to be injected into the shader source
+
+Returns:
+* `vs` - the resolved vertex shader
+* `fs` - the resolved fragment shader
+* `getUniforms` - a combined `getUniforms` function covering all modules.
+* `moduleMap` - a map with all resolved modules, keyed by name
+
+Remarks:
+* Will inject platform prologue, with defines identifying GPU driver to enable bug workarounds
+* Will inject a GLSL feature detection prologue, simplifying writing code that works with GLSL extensions and across GLSL versions (WebGL1 and WebGL2)
+* Will follow module dependencies and inject dependency tree in correct order
+
+
+### `registerShaderModules`
+
+Can be used to "name" shader modules, making them available to `assembleShaders` using module names rather than the module definitions.
+
+Note: Can defeat three-shaking of unused shader modules (affects size of application JavaScript bundle).
 
 
 ### `getShaderUniforms`

@@ -26,23 +26,35 @@ export default class Model extends Object3D {
       // constructor signature 1: (gl, {...opts})
       this.gl = gl;
     } else {
+      // Warning that we are using v3 style construction
+      log.deprecated('Model({gl, ...opts})', 'Model(gl, {...opts}');
       // constructor signature 2: ({gl, ...opts})
-      opts = gl;
-      this.gl = opts.gl;
+      // Note: A Model subclass may still have supplied opts, just use those as overrides
+      opts = Object.assign(gl, opts);
+      // v3 compatibility: Auto extract gl from program if supplied
+      this.gl = opts.gl || (opts.program && opts.program.gl);
+      // Verify that we have a valid context
+      assert(isWebGL(this.gl), 'Not a WebGL context');
     }
-    assert(isWebGL(this.gl), 'Not a WebGL context');
     this.init(opts);
   }
 
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   init({
-    program,
     vs = null,
     fs = null,
+
+    // 1: Modular shaders
     modules = null,
+    defines = {},
+    moduleSettings = {},
+
+    // 2: Legacy shaders
     defaultUniforms,
-    shaderlibs = {},
+
+    // 3: Pre-created program
+    program,
 
     isInstanced = false, // Enables instanced rendering
     instanced, // deprecated
@@ -65,30 +77,25 @@ export default class Model extends Object3D {
     // Other opts
     timerQueryEnabled = false
   } = {}) {
-    const {gl} = this;
+    this._initializeProgram({
+      vs,
+      fs,
+      modules,
+      defines,
+      moduleSettings,
+      defaultUniforms,
+      program
+    });
 
-    if (!vs) {
-      vs = modules ? MODULAR_SHADERS.vs : MONOLITHIC_SHADERS.vs;
-    }
-    if (!fs) {
-      fs = modules ? MODULAR_SHADERS.fs : MONOLITHIC_SHADERS.fs;
-    }
+    this.uniforms = {};
 
-    // Assign default uniforms if any default shaders are being used
-    if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
-      defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
-    }
-
-    // Call assembleShaders if `modules` were supplied
-    let getUniforms;
-    if (modules && typeof vs === 'string' && typeof fs === 'string') {
-      ({vs, fs, getUniforms} = assembleShaders(gl, {vs, fs, modules}));
-    }
-    this.getModuleUniforms = getUniforms || (x => {});
-
-    // set a custom program per o3d
-    this.program = program || new Program(gl, {vs, fs});
-    assert(this.program instanceof Program, 'Model needs a program');
+    // Make sure we have some reasonable default uniforms in place
+    uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
+    this.setUniforms(uniforms);
+    // Get all default uniforms
+    this.setUniforms(this.getModuleUniforms());
+    // Get unforms for supplied settings
+    this.setUniforms(this.getModuleUniforms(moduleSettings));
 
     if (instanced) {
       /* global console */
@@ -110,10 +117,6 @@ export default class Model extends Object3D {
     this.attributes = {};
     this.setAttributes(attributes);
 
-    uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
-    this.uniforms = {};
-    this.setUniforms(uniforms);
-
     // geometry might have set drawMode and vertexCount
     if (drawMode !== undefined) {
       this.drawMode = getDrawMode(drawMode);
@@ -132,8 +135,7 @@ export default class Model extends Object3D {
     this.onAfterRender = onAfterRender;
 
     // assert(program || program instanceof Program);
-    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount),
-      ERR_MODEL_PARAMS);
+    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
 
     // TimerQuery - TODO replace with Query class
     this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
@@ -148,9 +150,47 @@ export default class Model extends Object3D {
     };
   }
   /* eslint-enable max-statements */
+
+  _initializeProgram({
+    vs,
+    fs,
+    modules,
+    defines,
+    moduleSettings,
+    defaultUniforms,
+    program
+  }) {
+    // Assign default shaders if none are provided
+    if (!vs) {
+      vs = modules ? MODULAR_SHADERS.vs : MONOLITHIC_SHADERS.vs;
+    }
+    if (!fs) {
+      fs = modules ? MODULAR_SHADERS.fs : MONOLITHIC_SHADERS.fs;
+    }
+
+    // Assign default uniforms (if any default shaders are being used)
+    if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
+      defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
+    }
+
+    // Call assembleShaders if `modules` argument was supplied
+    let getUniforms;
+    if (modules && typeof vs === 'string' && typeof fs === 'string') {
+      ({vs, fs, getUniforms} = assembleShaders(this.gl, {vs, fs, modules, defines}));
+    }
+    this.getModuleUniforms = getUniforms || (x => {});
+
+    this.program = program || new Program(this.gl, {vs, fs});
+    assert(this.program instanceof Program, 'Model needs a program');
+  }
   /* eslint-enable complexity */
 
   destroy() {
+    this.delete();
+  }
+
+  delete() {
+    this.program.delete();
     removeModel(this.id);
   }
 
@@ -231,6 +271,13 @@ export default class Model extends Object3D {
     Object.assign(this.uniforms, uniforms);
     this.setNeedsRedraw();
     return this;
+  }
+
+  // getModuleUniforms (already on object)
+
+  updateModuleSettings(opts) {
+    const uniforms = this.getModuleUniforms(opts);
+    return this.setUniforms(uniforms);
   }
 
   // TODO - uniform names are too strongly linked camera <=> default shaders

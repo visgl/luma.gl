@@ -1,20 +1,10 @@
-export default `\
-#define SHADER_NAME luma-modular-fragment
-
-#ifdef GL_ES
-precision highp float;
+export const MODULE_INJECTORS_VS = `\
+#ifdef MODULE_LOGDEPTH
+  logdepth_adjustPosition(gl_Position);
 #endif
+`;
 
-// varyings
-varying vec4 vColor;
-
-void main(){
-  gl_FragColor = vec4(1., 0., 1., 1.);
-
-#ifdef MODULE_DIFFUSE
-  gl_FragColor = diffuse_filterColor(gl_FragColor);
-#endif
-
+export const MODULE_INJECTORS_FS = `\
 #ifdef MODULE_MATERIAL
   gl_FragColor = material_filterColor(gl_FragColor);
 #endif
@@ -32,7 +22,7 @@ void main(){
 #endif
 
 #ifdef MODULE_LOGDEPTH
-  logdepth_setFragDepth(gl_Position);
+  logdepth_setFragDepth();
 #endif
-}
 `;
+
