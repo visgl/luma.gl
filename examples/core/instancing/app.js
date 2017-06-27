@@ -1,7 +1,13 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, Cube, Matrix4, radians, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
+  Cube, picking, dirlight} from 'luma.gl';
 
 const SIDE = 256;
+
+let pickPosition = [0, 0];
+function mousemove(e) {
+  pickPosition = [e.offsetX, e.offsetY];
+}
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
@@ -14,17 +20,18 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
+    gl.canvas.addEventListener('mousemove', mousemove);
+
     return {
       cube: makeInstancedCube(gl)
     };
   },
-  onFinalize({cube}) {
+  onFinalize({gl, cube}) {
+    gl.canvas.removeEventListener('mousemove', mousemove);
     cube.delete();
   },
-  onRender({gl, tick, aspect, cube}) {
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-    cube.render({
+  onRender({gl, tick, aspect, cube, framebuffer}) {
+    cube.setUniforms({
       uTime: tick * 0.1,
       // Basic projection matrix
       uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
@@ -40,6 +47,23 @@ const animationLoop = new AnimationLoop({
       // Rotate all the individual cubes
       uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
     });
+
+    const pickInfo = pickModels(gl, {models: [cube], position: pickPosition, framebuffer});
+    // console.log(pickInfo ? pickInfo.color : 'picked background');
+    cube.updateModuleSettings({
+      pickingSelectedColor: pickInfo && pickInfo.color
+    });
+
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    cube.render();
+  },
+  onMouseMove({gl, tick, cube, framebuffer}) {
+    // TODO - activate this path
+    const pickInfo = pickModels(gl, {models: [cube], position: pickPosition, framebuffer});
+    console.log(pickInfo ? pickInfo.color : 'picked background');
+    cube.setUniforms(picking.getUniforms({
+      pickingSelectedColor: pickInfo && pickInfo.color
+    }));
   }
 });
 
@@ -72,15 +96,20 @@ uniform mat4 uProjection;
 uniform float uTime;
 
 varying vec3 color;
-varying vec3 normal;
 
 void main(void) {
-  float d = length(instanceOffsets);
-  vec4 offset = vec4(instanceOffsets, sin((uTime + d) * 0.1) * 16.0, 0);
-  gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
+  vec3 pickingColor = vec3(0., instanceOffsets.x + ${SIDE / 2}., instanceOffsets.y + ${SIDE / 2}.);
+  vec3 normal = vec3(uModel * vec4(normals, 1.0));
 
-  normal = vec3(uModel * vec4(normals, 1.0));
+  // Set up data for modules
   color = instanceColors;
+  project_setNormal(normal);
+  picking_setPickingColor(pickingColor);
+
+  // Vertex position (z coordinate undulates with time), and model rotates around center
+  float delta = length(instanceOffsets);
+  vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
+  gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
 }
 `,
     fs: `\
@@ -89,19 +118,19 @@ precision highp float;
 #endif
 
 varying vec3 color;
-varying vec3 normal;
 
 void main(void) {
-  float d = abs(dot(normalize(normal), normalize(vec3(1,1,2))));
-  gl_FragColor = vec4(d * color, 1);
+  gl_FragColor = vec4(color, 1.);
+  gl_FragColor = dirlight_filterColor(gl_FragColor);
+  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 `
   };
 
-  return new Cube({
-    gl,
+  return new Cube(gl, {
     vs,
     fs,
+    modules: [picking, dirlight],
     isInstanced: 1,
     instanceCount: SIDE * SIDE,
     attributes: {

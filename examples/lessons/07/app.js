@@ -110,7 +110,7 @@ const animationLoop = new AnimationLoop({
       uMVMatrix,
       uPMatrix: Matrix4.perspective({aspect}),
       uAmbientColor: [0.2, 0.2, 0.2],
-      uLightingDirection: [0, 0, 1],
+      uLightingDirection: [0, 0, 3],
       uDirectionalColor: [0.8, 0.8, 0.8],
       uUseLighting: true
     });

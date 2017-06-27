@@ -1,8 +1,5 @@
 /* global document */
-import {
-  AnimationLoop, GL, TextureCube, Cube, Matrix4, radians,
-  resetParameters, setParameters
-} from 'luma.gl';
+import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians, setParameters} from 'luma.gl';
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
@@ -79,8 +76,6 @@ function getCube(gl) {
   return new Cube({
     gl,
     vs: `\
-#define SHADER_NAME cube_vertex
-
 attribute vec3 positions;
 
 uniform mat4 uModel;
@@ -115,8 +110,6 @@ function getPrism(gl) {
   return new Cube({
     gl,
     vs: `\
-#define SHADER_NAME prism_vertex
-
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -134,8 +127,6 @@ void main(void) {
 }
 `,
     fs: `\
-#define SHADER_NAME prism_fragment
-
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -150,7 +141,6 @@ varying vec3 vNormal;
 void main(void) {
   vec4 color = vec4(1, 0, 0, 1); // Prism color is red
 
-  // TODO - why is this needed?
   vec3 offsetPosition = vPosition - vec3(0, 0, 2.5);
 
   // The inner prism samples the texture cube in refract and reflect directions

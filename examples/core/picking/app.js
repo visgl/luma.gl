@@ -1,34 +1,34 @@
 import {
-  GL, AnimationLoop, Matrix4, Vector3, radians,
-  loadTextures, Buffer, Sphere, Framebuffer, pickModels
+  GL, AnimationLoop, setParameters, loadTextures, Buffer, Matrix4, radians,
+  Sphere, project, diffuse, picking, pickModels
 } from 'luma.gl';
 
-const pick = {x: 0, y: 0};
+const PLANETS = [
+  {name: 'Jupiter', textureUrl: 'jupiter.jpg'},
+  {name: 'Mars', textureUrl: 'mars.jpg'},
+  {name: 'Mercury', textureUrl: 'mercury.jpg'},
+  {name: 'Neptune', textureUrl: 'neptune.jpg'},
+  {name: 'Saturn', textureUrl: 'saturn.jpg'},
+  {name: 'Uranus', textureUrl: 'uranus.jpg'},
+  {name: 'Venus', textureUrl: 'venus.jpg'}
+];
 
-let scene;
-let framebuffer = null;
+let pickPosition = [0, 0];
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
+    addControls();
 
-    framebuffer = new Framebuffer(gl);
-
-    canvas.addEventListener('mousemove', function mousemove(e) {
-      pick.x = e.offsetX;
-      pick.y = e.offsetY;
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
     });
 
-    const PLANETS = [
-      {name: 'Jupiter', textureUrl: 'jupiter.jpg'},
-      {name: 'Mars', textureUrl: 'mars.jpg'},
-      {name: 'Mercury', textureUrl: 'mercury.jpg'},
-      {name: 'Neptune', textureUrl: 'neptune.jpg'},
-      {name: 'Saturn', textureUrl: 'saturn.jpg'},
-      {name: 'Uranus', textureUrl: 'uranus.jpg'},
-      {name: 'Venus', textureUrl: 'venus.jpg'}
-    ];
+    canvas.addEventListener('mousemove', function mousemove(e) {
+      pickPosition = [e.offsetX, e.offsetY];
+    });
 
     return loadTextures(gl, {
       urls: PLANETS.map(planet => planet.textureUrl),
@@ -50,11 +50,10 @@ const animationLoop = new AnimationLoop({
           colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
           pickingColors: new Buffer(gl, {size: 3, data: new Float32Array(10000)})
         },
-        uniforms: {
-          sampler1: textures[i],
-          hasTexture1: true,
-          hasTextureCube1: false,
-          colors: [1, 1, 1, 1]
+        modules: [project, diffuse, picking],
+        moduleSettings: {
+          diffuseTexture: textures[i],
+          pickingThreshold: 0
         }
       })
       .setPosition([
@@ -62,46 +61,59 @@ const animationLoop = new AnimationLoop({
         Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
         0
       ])
-      .updateMatrix()
     ))
     .then(planets => ({
       planets
     }));
   },
-  onRender: ({gl, aspect, planets}) => {
-    const uniforms = {
-      projectionMatrix: Matrix4.perspective({fov: radians(75), aspect}),
-      viewMatrix: Matrix4.lookAt({eye: [0, 0, 32]})
-    };
+  onRender: ({gl, aspect, planets, framebuffer}) => {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    const projectionMatrix = Matrix4.perspective({fov: radians(75), aspect});
+    const viewMatrix = Matrix4.lookAt({eye: [0, 0, 8]});
 
     for (const planet of planets) {
-      planet.rotation.y += 0.01;
+      planet.rotation[1] += 0.01;
       planet.updateMatrix();
+      planet.updateModuleSettings({
+        modelMatrix: planet.matrix,
+        viewMatrix,
+        projectionMatrix
+      });
+      planet.render();
     }
 
-    planets.forEach(planet => planet.render(
-      Object.assign({}, uniforms, {modelMatrix: planet.matrix})
-    ));
-
     // const pickedModel = pickModels(gl, {
-    //   group: scene,
-    //   uniforms,
-    //   x: pick.x,
-    //   y: pick.y,
+    //   models: planets,
+    //   position: pickPosition,
     //   framebuffer
     // });
 
     // const div = document.getElementById('planet-name');
-    // if (pickedModel) {
+    // if (pickedModel && div) {
     //   div.innerHTML = pickedModel.model.id;
-    //   div.style.top = `${pick.y}px`;
-    //   div.style.left = `${pick.x}px`;
+    //   div.style.top = `${pickPosition[0]}px`;
+    //   div.style.left = `${pickPosition[1]}px`;
     //   div.style.display = 'block';
-    // } else {
+    // } else if (div) {
     //   div.style.display = 'none';
     // }
   }
 });
+
+function addControls() {
+  /* global document */
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+      <p>
+      Basic color picking of multiple models
+      <p>
+      Uses the luma.gl <code>picking</code> shader module
+      <div id='planet-name'/>
+    `;
+  }
+}
 
 export default animationLoop;
 
