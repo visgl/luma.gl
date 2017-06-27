@@ -28,9 +28,6 @@ export default class AnimationLoop {
     width = null,
     height = null,
 
-    // options
-    framebuffer = true, // Maintain an offscreen framebuffer of same size as screen
-
     // view parameters - can be changed for each start call
     autoResizeViewport = true,
     autoResizeCanvas = true,
@@ -125,7 +122,7 @@ export default class AnimationLoop {
   // Resize canvas in "CSS coordinates" (may be different from device coords)
   // @param {Number} width, height - new width and height of canvas in CSS coordinates
   resizeCanvas(width, height) {
-    resizeCanvas({width, height});
+    this._resizeCanvas({width, height});
     return this;
   }
 
@@ -207,16 +204,14 @@ export default class AnimationLoop {
     this.gl = this.gl || opts.gl;
     if (!this.gl) {
       this.gl = this._onCreateContext(opts);
+      // Setup default framebuffer
       this.framebuffer = new Framebuffer(this.gl);
     }
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
     }
-    // unless reset is set to false, reset the WebGL context.
-    // if (opts.reset !== false) {
+    // Reset the WebGL context.
     resetParameters(this.gl);
-    // }
-    // Setup default framebuffers {
   }
 
   // Default viewport setup
