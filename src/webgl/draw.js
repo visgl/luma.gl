@@ -25,7 +25,7 @@ export function draw(gl, {
 
   // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
   if (isInstanced) {
-    const webgl2 = isWebGL2Context(gl);
+    const webgl2 = isWebGL2(gl);
     const extension = gl.getExtension('ANGLE_instanced_arrays');
     const context = webgl2 ? gl : extension;
     const suffix = webgl2 ? '' : 'ANGLE';

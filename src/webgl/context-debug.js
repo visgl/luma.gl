@@ -52,7 +52,7 @@ export function getDebugContext(gl) {
   }
 
   // If this already has a debug context, return it.
-  if (data.debugContex) {
+  if (data.debugContext) {
     return data.debugContext;
   }
 
@@ -78,7 +78,7 @@ function getFunctionString(functionName, functionArgs) {
 }
 
 function throwOnError(err, functionName, args) {
-  if (log.debug) {
+  if (!log.nothrow) {
     const errorMessage = WebGLDebug.glEnumToString(err);
     const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
     throw new Error(`${errorMessage} in gl.${functionName}(${functionArgs})`);

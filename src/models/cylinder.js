@@ -2,7 +2,7 @@ import {CylinderGeometry} from '../geometry';
 import Model from '../core/model';
 
 export default class Cylinder extends Model {
-  constructor(opts = {}) {
-    super(Object.assign({}, opts, {geometry: new CylinderGeometry(opts)}));
+  constructor(gl, opts = {}) {
+    super(gl, Object.assign({}, opts, {geometry: new CylinderGeometry(opts)}));
   }
 }

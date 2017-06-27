@@ -1,12 +1,6 @@
 import Object3D from './object-3d';
+import {Matrix4} from '../packages/math';
 import assert from 'assert';
-
-// TODO - FIX
-class Matrix4 {
-  mulMat4() {
-    return this;
-  }
-}
 
 export default class Group extends Object3D {
   constructor(opts = {}) {
@@ -44,18 +38,15 @@ export default class Group extends Object3D {
 
   // If visitor returns a truthy value, traversal will be aborted and that value
   // will be returned from `traverse`. Otherwise `traverse` will return null.
-  traverse(visitor, {viewMatrix = new Matrix4()} = {}) {
+  traverse(visitor, {modelMatrix = new Matrix4()} = {}) {
     for (const child of this.children) {
       const {matrix} = child;
-      const worldMatrix = viewMatrix.mulMat4(matrix);
+      modelMatrix = modelMatrix.multiplyRight(matrix);
       let result;
       if (child instanceof Group) {
-        result = child.traverse({matrix, worldMatrix, visitor});
+        result = child.traverse(visitor, {modelMatrix});
       } else {
-        if (child.program) {
-          child.program.use();
-          child.program.setUniforms({worldMatrix});
-        }
+        // child.setUniforms({modelMatrix});
         result = visitor(child, {});
       }
       // Abort if a result was returned
@@ -68,19 +59,16 @@ export default class Group extends Object3D {
 
   // If visitor returns a truthy value, traversal will be aborted and that value
   // will be returned from `traverseReverse`. Otherwise `traverseReverse` will return null.
-  traverseReverse(visitor, {viewMatrix = new Matrix4()} = {}) {
+  traverseReverse(visitor, {modelMatrix = new Matrix4()} = {}) {
     for (let i = this.children.length - 1; i >= 0; --i) {
       const child = this.children[i];
       const {matrix} = child;
-      const worldMatrix = viewMatrix.mulMat4(matrix);
+      modelMatrix = modelMatrix.multiplyRight(matrix);
       let result;
       if (child instanceof Group) {
-        result = child.traverse({matrix, worldMatrix, visitor});
+        result = child.traverseReverse(visitor, {modelMatrix});
       } else {
-        if (child.program) {
-          child.program.use();
-          child.program.setUniforms({worldMatrix});
-        }
+        // child.setUniforms({modelMatrix});
         result = visitor(child, {});
       }
       // Abort if a result was returned

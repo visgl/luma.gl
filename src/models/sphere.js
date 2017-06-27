@@ -3,8 +3,8 @@ import {SphereGeometry} from '../geometry';
 import {uid} from '../utils';
 
 export default class Sphere extends Model {
-  constructor(opts = {}) {
+  constructor(gl, opts = {}) {
     const {id = uid('sphere')} = opts;
-    super(Object.assign({}, opts, {id, geometry: new SphereGeometry(opts)}));
+    super(gl, Object.assign({}, opts, {id, geometry: new SphereGeometry(opts)}));
   }
 }

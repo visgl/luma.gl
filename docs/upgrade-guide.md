@@ -8,7 +8,7 @@ V4 is a major release and a number of previously deprecated features have been r
 
 ## Removed Features
 
-Some previously deprecated classes and functions have been removed in luma.gl v4
+Some previously deprecated classes and functions have been removed in luma.gl v4 and applications must be updated if they are still using these.
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
@@ -19,7 +19,8 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 
 ## Deprecated Features
 
-Some classes and functions have been deprecated in luma.gl v4. They will continue to function in V4, but will generate a warning in the console. These functions are expected to be removed in a future major version of luma.gl.
+Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but will generate a warning in the console. These functions are expected to be removed in a future major version of luma.gl.
+
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
@@ -27,9 +28,25 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 | `glContextWithState` | `withParameters` | New WebGL state management |
 
 
-## Details
+### Deprecations
 
-### math
+#### Model Class
+
+The `Model` constructor now expects a gl context as the first argument.
+```
+  // v3
+  Model({gl});
+  Model({gl, ...opts});
+  Model({program});
+  // v4
+  Model(gl)
+  Model(gl, {...opts});
+  Model(gl, {program});
+```
+the gl context is extracted from the supplied program, but since v4 emphasizes sharing shaders rather than programs (often indirectly via shader caching / shader assembly), it is less common that a gl context is available.
+
+
+#### Math Library
 
 The deprecated math library (`Vec3`, `Mat4`, `Quat`) has now been removed.
 
@@ -40,10 +57,11 @@ The new Math library is based on `gl-matrix` and uses Array subclassing so that 
 
 V3 was a fairly minor release, a number of deprecations were made.
 
-## Deprecations
+### Deprecations
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
 | `Vec3`               | `Vector3`        | New math library |
 | `Mat4`               | `Matrix4`        | New math library |
 | `Quat`               | `Quaternion`     | New math library |
+

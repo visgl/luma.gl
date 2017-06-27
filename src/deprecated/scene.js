@@ -109,7 +109,7 @@ export default class Scene extends Group {
     const {x, y, uniforms = {}} = opts;
     return pickModels(this.gl, Object.assign({
       group: this,
-      x, y,
+      position: [x, y],
       uniforms
     }, opts));
   }

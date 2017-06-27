@@ -1,14 +1,13 @@
 // WebGLRenderingContext related methods
-
-/* global document */
 import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
 import trackContextState from '../webgl-utils/track-context-state';
+import {createCanvas, getCanvas, createContext} from '../webgl-utils';
 
 import {makeDebugContext} from './context-debug';
 import {glGetDebugInfo} from './context-limits';
 import queryManager from './helpers/query-manager';
 
-import {log, isBrowser, isPageLoaded, pageLoadPromise} from '../utils';
+import {log, isBrowser} from '../utils';
 import luma from '../init';
 import assert from 'assert';
 
@@ -19,10 +18,6 @@ const GL_TEXTURE_BINDING_3D = 0x806A;
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
-
-const ERR_WEBGL_MISSING_BROWSER = `\
-WebGL API is missing. Check your if your browser supports WebGL or
-install a recent version of a major browser.`;
 
 const ERR_WEBGL_MISSING_NODE = `\
 WebGL API is missing. To run luma.gl under Node.js, please "npm install gl"
@@ -47,22 +42,14 @@ export function isWebGL2(gl) {
   ));
 }
 
-export function isWebGLContext(gl) {
-  return isWebGL(gl);
-}
-
-export function isWebGL2Context(gl) {
-  return isWebGL2(gl);
-}
-
 export function assertWebGLContext(gl) {
   // Need to handle debug context
-  assert(isWebGLContext(gl), ERR_CONTEXT);
+  assert(isWebGL(gl), ERR_CONTEXT);
 }
 
 export function assertWebGL2Context(gl) {
   // Need to handle debug context
-  assert(isWebGL2Context(gl), ERR_WEBGL2);
+  assert(isWebGL2(gl), ERR_WEBGL2);
 }
 
 const contextDefaults = {
@@ -72,151 +59,77 @@ const contextDefaults = {
   webgl1: true,  // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   throwOnFailure: true,
   manageState: true,
-
   // BROWSER CONTEXT PARAMETERS
   canvas: null, // A canvas element or a canvas string id
   debug: false, // Instrument context (at the expense of performance)
-
   // HEADLESS CONTEXT PARAMETERS
   width: 800, // width are height are only used by headless gl
   height: 600
-
   // WEBGL/HEADLESS CONTEXT PARAMETERS
   // Remaining options are passed through to context creator
 };
 
-// Change default context creation parameters. Main use case is regression test suite.
+/*
+ * Change default context creation parameters.
+ * Main use case is regression test suite.
+ */
 export function setContextDefaults(opts = {}) {
   Object.assign(contextDefaults, {width: 1, height: 1}, opts);
 }
 
-// Checks if WebGL is enabled and creates a context for using WebGL.
+/*
+ * Creates a context giving access to the WebGL API
+ */
 /* eslint-disable complexity, max-statements */
 export function createGLContext(opts = {}) {
-  // BROWSER CONTEXT PARAMATERS: canvas is only used when in browser
-  let {canvas} = opts;
-
   opts = Object.assign({}, contextDefaults, opts);
-  const {
-    width,
-    height,
-    throwOnError,
-    manageState,
-    debug
-  } = opts;
+  const {canvas, width, height, throwOnError, manageState, debug} = opts;
 
-  function error(message) {
-    // log(0, error);
+  // Error reporting function, enables exceptions to be disabled
+  function onError(message) {
     if (throwOnError) {
       throw new Error(message);
     }
+    // log.log(0, message);
     return null;
   }
 
   let gl;
-
-  if (!isBrowser) {
-    gl = _createHeadlessContext(width, height, opts, error);
-  } else {
-    // Make sure we have a canvas
+  if (isBrowser) {
+    // Make sure we have a real canvas ("canvas" can a string, a canvas or null)
+    let realCanvas;
     if (!canvas) {
-      canvas = _createCanvas({id: canvas, width, height});
+      realCanvas = createCanvas({id: 'lumagl-canvas', width, height, onError});
     } else if (typeof canvas === 'string') {
-      canvas = _getCanvasFromId(canvas);
+      realCanvas = getCanvas({id: canvas});
+    } else {
+      realCanvas = canvas;
     }
-    // Create a browser context in the canvas
-    gl = _createBrowserContext(canvas, opts);
-  }
-
-  if (gl) {
-    // Install context state tracking
-    if (manageState) {
-      trackContextState(gl, {
-        copyState: false,
-        log: (...args) => log.log(1, ...args)
-      });
-    }
-
-    // Add debug instrumentation to the context
-    // TODO - why only on browser
-    if (isBrowser && debug) {
-      gl = makeDebugContext(gl);
-      // Debug forces log level to at least 1
-      log.priority = Math.max(log.priority, 1);
-      // Log some debug info
-      logInfo(gl);
-    }
-  }
-
-  return gl;
-}
-
-// Create a canvas set to 100%
-function _createCanvas({width, height}) {
-  const canvas = document.createElement('canvas');
-  canvas.id = 'lumagl-canvas';
-  canvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
-  canvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
-  // adds the canvas to the body element
-  pageLoadPromise.then(document => {
-    const body = document.body;
-    body.insertBefore(canvas, body.firstChild);
-  });
-  return canvas;
-}
-
-function _getCanvasFromId(id) {
-  if (!isPageLoaded) {
-    throw new Error(`createGLContext called on canvas '${id}' before page was loaded`);
-  }
-  return document.getElementById(id);
-}
-
-function _createHeadlessContext(width, height, opts, error) {
-  const {webgl1, webgl2} = opts;
-
-  if (webgl2 && !webgl1) {
-    return error('headless-gl does not support WebGL2');
-  }
-
-  // Create headless gl context
-  if (!webGLTypesAvailable) {
-    return error(ERR_WEBGL_MISSING_NODE);
-  }
-  if (!luma.globals.headlessGL) {
-    return error(ERR_HEADLESSGL_NOT_AVAILABLE);
-  }
-  const gl = luma.globals.headlessGL(width, height, opts);
-  if (!gl) {
-    return error(ERR_HEADLESSGL_FAILED);
-  }
-  return gl;
-}
-
-function _createBrowserContext(canvas, opts, error) {
-  const {webgl1, webgl2} = opts;
-
-  // Create browser gl context
-  if (!webGLTypesAvailable) {
-    return error(ERR_WEBGL_MISSING_BROWSER);
-  }
-
-  canvas.addEventListener('webglcontextcreationerror', e => {
-    log.log(0, e.statusMessage || 'Unknown error');
-  }, false);
-
-  let gl = null;
-  // Prefer webgl2 over webgl1, prefer conformant over experimental
-  if (webgl2) {
-    gl = gl || canvas.getContext('webgl2', opts);
-    gl = gl || canvas.getContext('experimental-webgl2', opts);
-  }
-  if (webgl1) {
-    gl = gl || canvas.getContext('webgl', opts);
-    gl = gl || canvas.getContext('experimental-webgl', opts);
+    // Create a WebGL context in the canvas
+    gl = createContext({canvas: realCanvas, opts});
+  } else {
+    // Create a headless-gl context under Node.js
+    gl = _createHeadlessContext({width, height, opts, onError});
   }
   if (!gl) {
-    return error(`Failed to create ${webgl2 ? 'WebGL2' : 'WebGL'} context`);
+    return null;
+  }
+
+  // Install context state tracking
+  if (manageState) {
+    trackContextState(gl, {
+      copyState: false,
+      log: (...args) => log.log(1, ...args)
+    });
+  }
+
+  // Add debug instrumentation to the context
+  if (isBrowser && debug) {
+    gl = makeDebugContext(gl, {debug});
+    // Debug forces log level to at least 1
+    log.priority = Math.max(log.priority, 1);
+    // Log some debug info about the context
+    logInfo(gl);
   }
 
   return gl;
@@ -229,13 +142,28 @@ export function pollContext(gl) {
 }
 
 function logInfo(gl) {
-  const webGL = isWebGL2Context(gl) ? 'WebGL2' : 'WebGL1';
+  const webGL = isWebGL2(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
   log.log(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
-
-  // const extensions = gl.getSupportedExtensions();
-  // log.log(0, `Supported extensions: [${extensions.join(', ')}]`);
 }
 
+// Create headless gl context (for running under Node.js)
+function _createHeadlessContext({width, height, opts, onError}) {
+  const {webgl1, webgl2} = opts;
+  if (webgl2 && !webgl1) {
+    return onError('headless-gl does not support WebGL2');
+  }
+  if (!webGLTypesAvailable) {
+    return onError(ERR_WEBGL_MISSING_NODE);
+  }
+  if (!luma.globals.headlessGL) {
+    return onError(ERR_HEADLESSGL_NOT_AVAILABLE);
+  }
+  const gl = luma.globals.headlessGL(width, height, opts);
+  if (!gl) {
+    return onError(ERR_HEADLESSGL_FAILED);
+  }
+  return gl;
+}
