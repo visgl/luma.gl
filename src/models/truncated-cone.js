@@ -2,7 +2,7 @@ import {TruncatedConeGeometry} from '../geometry';
 import {Model} from '../core';
 
 export default class TruncatedCone extends Model {
-  constructor(opts = {}) {
-    super(Object.assign({}, opts, {geometry: new TruncatedConeGeometry(opts)}));
+  constructor(gl, opts = {}) {
+    super(gl, Object.assign({}, opts, {geometry: new TruncatedConeGeometry(opts)}));
   }
 }

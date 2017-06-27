@@ -1,19 +1,16 @@
 /* global window, setTimeout, clearTimeout */
-import {isBrowser, pageLoadPromise} from '../utils';
-import {createGLContext, isWebGLContext} from '../webgl';
-import {resetParameters} from 'luma.gl';
+import {isBrowser} from '../utils';
+import {getPageLoadPromise, resizeCanvas, resizeDrawingBuffer} from '../webgl-utils';
+import {createGLContext, isWebGL, resetParameters} from '../webgl';
+import {Framebuffer} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export function requestAnimationFrame(callback) {
-  return isBrowser ?
-    window.requestAnimationFrame(callback) :
-    setTimeout(callback, 1000 / 60);
+  return isBrowser ? window.requestAnimationFrame(callback) : setTimeout(callback, 1000 / 60);
 }
 
 export function cancelAnimationFrame(timerId) {
-  return isBrowser ?
-    window.cancelAnimationFrame(timerId) :
-    clearTimeout(timerId);
+  return isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
 }
 
 export default class AnimationLoop {
@@ -30,6 +27,8 @@ export default class AnimationLoop {
     glOptions = {},
     width = null,
     height = null,
+
+    // view parameters - can be changed for each start call
     autoResizeViewport = true,
     autoResizeCanvas = true,
     autoResizeDrawingBuffer = true,
@@ -39,7 +38,7 @@ export default class AnimationLoop {
     this.stop = this.stop.bind(this);
     this._renderFrame = this._renderFrame.bind(this);
 
-    this.update({
+    this.setViewParameters({
       autoResizeViewport,
       autoResizeCanvas,
       autoResizeDrawingBuffer,
@@ -62,7 +61,7 @@ export default class AnimationLoop {
   }
 
   // Update parameters (TODO - should these be specified in `start`?)
-  update({
+  setViewParameters({
     autoResizeDrawingBuffer = true,
     autoResizeCanvas = true,
     autoResizeViewport = true,
@@ -77,38 +76,29 @@ export default class AnimationLoop {
 
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
-  start(contextParams = {}) {
+  start(opts = {}) {
     // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
 
       // Wait for start promise before rendering frame
-      this._startPromise = pageLoadPromise
+      this._startPromise = getPageLoadPromise()
       .then(() => {
-        // Create the context
-        contextParams = Object.assign({}, contextParams, this.glOptions);
-        this.gl = this.gl || contextParams.gl || this._onCreateContext(contextParams);
-        if (!isWebGLContext(this.gl)) {
-          throw new Error('AnimationLoop.onCreateContext - illegal context returned');
-        }
+        // Create the WebGL context
+        this._createWebGLContext(opts);
 
-        this._initializeContext();
+        // Initialize the callback data
+        this._initializeCallbackData();
+        this._updateCallbackData();
 
-        // Unless reset is set to false, reset the context.
-        if ((contextParams.reset !== false)) {
-          resetParameters(this.gl);
-        }
+        // Default viewport setup, in case onInitialize wants to render
+        this._resizeCanvasDrawingBuffer();
+        this._resizeViewport();
 
-        // Default viewport setup
-        const {canvas} = this._context;
-        this._resizeCanvasDrawingBuffer(canvas);
-        if (this.autoResizeViewport) {
-          this.gl.viewport(0, 0, canvas.width, canvas.height);
-        }
         // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this._onInitialize(this._context);
+        return this._onInitialize(this._callbackData);
       })
       .then((appContext) => {
-        this._addAppDataToContext(appContext || {});
+        this._addCallbackData(appContext || {});
         if (appContext !== false && !this._animationFrameId) {
           this._animationFrameId = requestAnimationFrame(this._renderFrame);
         }
@@ -122,7 +112,7 @@ export default class AnimationLoop {
   stop() {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._animationFrameId) {
-      this._finalizeContext();
+      this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
     }
@@ -130,45 +120,23 @@ export default class AnimationLoop {
   }
 
   // Resize canvas in "CSS coordinates" (may be different from device coords)
-  // NOTE: No effect on headless contexts
   // @param {Number} width, height - new width and height of canvas in CSS coordinates
   resizeCanvas(width, height) {
-    this._resizeCanvas(width, height);
+    this._resizeCanvas({width, height});
     return this;
   }
 
   // PRIVATE METHODS
 
-  // Initialize the context object that will be passed to app callbacks
-  _initializeContext() {
-    if (!this._context) {
-      this._context = {
-        gl: this.gl,
-        canvas: this.gl.canvas,
-        stop: this.stop,
-        tick: 0,
-        tock: 0
-      };
-    }
-    this._updateContext();
-  }
-
-  // Update the context object that will be passed to app callbacks
-  _updateContext() {
-    // Context width and height represent drawing buffer width and height
-    const {canvas} = this._context;
-    this._context.width = canvas.width;
-    this._context.height = canvas.height;
-    this._context.aspect = canvas.width / canvas.height;
-  }
-
-  _finalizeContext() {
-  }
-
-  // Add application's data to the app context object
-  _addAppDataToContext(appContext) {
-    if (typeof appContext === 'object' && appContext !== null) {
-      this._context = Object.assign({}, this._context, appContext);
+  _setupFrame() {
+    if (this._onSetupFrame) {
+      // call callback
+      this._onSetupFrame(this._callbackData);
+      // end callback
+    } else {
+      this._resizeCanvasDrawingBuffer();
+      this._resizeViewport();
+      this._resizeFramebuffer();
     }
   }
 
@@ -178,115 +146,104 @@ export default class AnimationLoop {
    * callback
    */
   _renderFrame() {
-    const {canvas} = this._context;
+    this._setupFrame();
+    this._updateCallbackData();
 
-    if (this._onSetupFrame) {
-      this._onSetupFrame(this._context);
-    } else {
-      this._resizeCanvasDrawingBuffer(canvas);
-      // Default viewport setup
-      if (this.autoResizeViewport) {
-        this.gl.viewport(0, 0, canvas.width, canvas.height);
-      }
-    }
-
-    this._updateContext();
-    this._onRender(this._context);
+    // call callback
+    this._onRender(this._callbackData);
+    // end callback
 
     // Increment tick
-    this._context.tick++;
+    this._callbackData.tick++;
 
     // Request another render frame (now )
     this._animationFrameId = requestAnimationFrame(this._renderFrame);
+  }
+
+  // Initialize the  object that will be passed to app callbacks
+  _initializeCallbackData() {
+    if (!this._callbackData) {
+      this._callbackData = {
+        gl: this.gl,
+        canvas: this.gl.canvas,
+        framebuffer: this.framebuffer,
+        stop: this.stop,
+        // Initial values
+        tick: 0,
+        tock: 0
+      };
+    }
+  }
+
+  // Update the context object that will be passed to app callbacks
+  _updateCallbackData() {
+    // CallbackData width and height represent drawing buffer width and height
+    const {canvas} = this.gl;
+    this._callbackData.width = canvas.width;
+    this._callbackData.height = canvas.height;
+    this._callbackData.aspect = canvas.width / canvas.height;
+  }
+
+  _finalizeCallbackData() {
+    // call callback
+    this._onFinalize(this._callbackData);
+    // end callback
+  }
+
+  // Add application's data to the app context object
+  _addCallbackData(appContext) {
+    if (typeof appContext === 'object' && appContext !== null) {
+      this._callbackData = Object.assign({}, this._callbackData, appContext);
+    }
+  }
+
+  // Either uses supplied or existing context, or calls provided callback to create one
+  _createWebGLContext(opts) {
+    // Create the WebGL context if necessary
+    opts = Object.assign({}, opts, this.glOptions);
+    this.gl = this.gl || opts.gl;
+    if (!this.gl) {
+      this.gl = this._onCreateContext(opts);
+      // Setup default framebuffer
+      this.framebuffer = new Framebuffer(this.gl);
+    }
+    if (!isWebGL(this.gl)) {
+      throw new Error('AnimationLoop.onCreateContext - illegal context returned');
+    }
+    // Reset the WebGL context.
+    resetParameters(this.gl);
+  }
+
+  // Default viewport setup
+  _resizeViewport() {
+    if (this.autoResizeViewport) {
+      this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+    }
+  }
+
+  _resizeFramebuffer() {
+    this.framebuffer.resize({width: this.gl.canvas.width, height: this.gl.canvas.height});
   }
 
   // Resize canvas in "CSS coordinates" (may be different from device coords)
   // NOTE: No effect on headless contexts
   // @param {Number} width, height - new width and height of canvas in CSS coordinates
   _resizeCanvas(width, height) {
-    const {canvas} = this._context;
-    // if (canvas) {
-    //   // Lookup the size the browser is displaying the canvas.
-    //   var displayWidth = canvas.clientWidth;
-    //   var displayHeight = canvas.clientHeight;
-
-    //   // Check if the canvas is not the same size.
-    //   if (canvas.width  !== displayWidth || canvas.height !== displayHeight) {
-    //     // Make the canvas the same size
-    //     canvas.width  = displayWidth;
-    //     canvas.height = displayHeight;
-    //   }
-    // }
-    if (canvas) {
-      if (this.autoResizeDrawingBuffer) {
-        const cssToDevicePixels = this.useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
-
-        // Lookup the size the browser is displaying the canvas in CSS pixels
-        // and compute a size needed to make our drawingbuffer match it in
-        // device pixels.
-        const displayWidth = Math.floor(width * cssToDevicePixels);
-        const displayHeight = Math.floor(height * cssToDevicePixels);
-
-        // Check if the canvas is not the same size.
-        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-          // Make the canvas the same size
-          canvas.width = displayWidth;
-          canvas.height = displayHeight;
-        }
-      }
-
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    }
+    resizeCanvas({
+      canvas: this.gl.canvas,
+      width,
+      height,
+      useDevicePixelRatio: this.useDevicePixelRatio,
+      resizeDrawingBuffer: this.autoResizeDrawingBuffer
+    });
     return this;
   }
 
   // Resize the render buffer of the canvas to match canvas client size
-  // multiplying with dpr (Optionally can be turned off)
-  // http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+  // Optionally multiplying with devicePixel ratio
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
-      const {canvas} = this._context;
-      const cssToDevicePixels = this.useDevicePixelRatio ?
-        window.devicePixelRatio || 1 : 1;
-
-      // Lookup the size the browser is displaying the canvas in CSS pixels
-      // and compute a size needed to make our drawingbuffer match it in
-      // device pixels.
-      const oldWidth = window.innerWidth;
-      const oldHeight = window.innerHeight;
-      const displayWidth = Math.floor(oldWidth * cssToDevicePixels);
-      const displayHeight = Math.floor(oldHeight * cssToDevicePixels);
-
-      // Check if the canvas is not the same size.
-      if (oldWidth !== displayWidth || oldHeight !== displayHeight) {
-        // Make the canvas the same size
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-        canvas.style.width = oldWidth;
-        canvas.style.height = oldHeight;
-      }
+      resizeDrawingBuffer({gl: this.gl, useDevicePixelRatio: this.useDevicePixelRatio});
     }
-  }
-
-  /**
-   * Resize canvas drawing buffer
-   * NOTE: The drawing buffer will be scaled to the viewport
-   * for best visual results, usually set to either:
-   *  canvas CSS width x canvas CSS height
-   *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
-   * TODO - add separate call for headless contexts
-   * @param {Number} width - new width of canvas in CSS coordinates
-   * @param {Number} height - new height of canvas in CSS coordinates
-   * @return {Renderer} - returns self for chaining
-   */
-  _resizeDrawingBuffer(width, height) {
-    const {canvas} = this._context;
-    if (canvas) {
-      canvas.width = width;
-      canvas.height = height;
-      this.autoResizeDrawingBuffer = false;
-    }
-    return this;
   }
 }

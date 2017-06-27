@@ -26,13 +26,14 @@ export {
 } from './api/types';
 
 export {
-  isWebGLContext,
-  isWebGL2Context,
+  isWebGL,
+  isWebGL2,
   createGLContext
 } from './context';
 
 export {
-  withParameters
+  withParameters,
+  resetParameters
 } from './context-state';
 
 export {

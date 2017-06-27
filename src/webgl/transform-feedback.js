@@ -1,6 +1,6 @@
 import GL from './gl-constants';
 import Resource from './resource';
-import {isWebGL2Context, assertWebGL2Context} from './context';
+import {isWebGL2, assertWebGL2Context} from './context';
 import assert from 'assert';
 
 const GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E;
@@ -9,7 +9,7 @@ const GL_TRANSFORM_FEEDBACK = 0x8E22;
 export default class TranformFeedback extends Resource {
 
   static isSupported(gl) {
-    return isWebGL2Context(gl) || gl.getExtension('OES_vertex_array_object');
+    return isWebGL2(gl) || gl.getExtension('OES_vertex_array_object');
   }
 
   static isHandle(handle) {

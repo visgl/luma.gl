@@ -4,14 +4,18 @@
 require('./init');
 
 // WebGL
-export {default as GL, glGet, glKey} from './webgl/gl-constants';
 export {
+  default as GL,
+  glGet,
+  glKey} from './webgl/gl-constants';
+export {
+  trackContextCreation,
+  trackContextState} from './webgl-utils';
+export {
+  isWebGL,
   isWebGL2,
-  isWebGLContext,
-  isWebGL2Context,
   setContextDefaults,
   createGLContext,
-  getGLExtension,
   pollContext} from './webgl/context';
 export {
   resetParameters,
@@ -19,9 +23,7 @@ export {
   getParameters,
   setParameter,
   setParameters,
-  withState,
-  withParameters,
-  glContextWithState} from './webgl/context-state';
+  withParameters} from './webgl/context-state';
 export {
   getGLContextInfo,
   getContextLimits,
@@ -117,9 +119,11 @@ export {
 export {default as ShaderCache} from './shadertools/lib/shader-cache';
 export {assembleShaders} from './shadertools/lib/assemble-shaders';
 // shader modules
-export {default as lighting} from './shadertools/modules/lighting/lighting';
-export {default as picking} from './shadertools/modules/picking/picking';
-export {default as project} from './shadertools/modules/project/project';
+// export {default as project} from './shadertools/modules/project/project';
+// export {default as lighting} from './shadertools/modules/lighting/lighting';
+// export {default as dirlight} from './shadertools/modules/dirlight/dirlight';
+// export {default as picking} from './shadertools/modules/picking/picking';
+// export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
 
 // EXPERIMENTAL EXPORTS
 
@@ -141,6 +145,7 @@ export const experimental = {
 // Alias for FramebufferObject (deprecated in v3). Framebuffer API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';
 export {default as Scene} from './deprecated/scene';
+export {withState, glContextWithState} from './webgl/context-state';
 // DEPRECATED IN V3.0
 export {readPixels} from './webgl/functions';
 export {default as Shaders} from './deprecated/shaderlib';

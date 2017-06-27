@@ -442,3 +442,22 @@ export function addEvents(domElement, opt = {}) {
 
   return new EventsProxy(domElement, opt);
 }
+
+export function removeEvents(domElement, opt = {}) {
+  opt = Object.assign({}, DEFAULT_OPTS, opt);
+
+  const bind = opt.bind;
+  if (bind) {
+    for (const name in opt) {
+      if (name.match(/^on[a-zA-Z0-9]+$/)) {
+        ((fname, fn) => {
+          opt[fname] = function f() {
+            fn.apply(bind, Array.prototype.slice.call(arguments));
+          };
+        })(name, opt[name]);
+      }
+    }
+  }
+
+  return new EventsProxy(domElement, opt);
+}

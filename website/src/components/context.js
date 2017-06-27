@@ -10,7 +10,10 @@ class Context extends Component {
   componentDidMount() {
     const demo = Demos[this.props.demo];
     if (demo) {
-      demo.start({canvas: this.props.canvas || 'lumagl-canvas'});
+      demo.start({
+        canvas: this.props.canvas || 'lumagl-canvas'
+        // debug: true
+      });
     }
   }
 

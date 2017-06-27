@@ -1,6 +1,6 @@
 /* eslint-disable dot-notation*/
 import {glGet} from './api';
-import {assertWebGLContext, assertWebGL2Context, isWebGL2Context} from './context';
+import {assertWebGLContext, assertWebGL2Context, isWebGL2} from './context';
 import {log} from '../utils';
 import assert from 'assert';
 
@@ -73,7 +73,7 @@ export function getMaxAttributes(gl) {
 export function hasDivisor(gl) {
   assertWebGLContext(gl);
   return Boolean(
-    isWebGL2Context(gl) ||
+    isWebGL2(gl) ||
     gl.getExtension(gl, 'ANGLE_instanced_arrays')
   );
 }
@@ -222,7 +222,7 @@ export function disable(gl, location) {
  * @param {GLuint} divisor - instances that pass between updates of attribute
  */
 export function setDivisor(gl, location, divisor) {
-  if (isWebGL2Context(gl)) {
+  if (isWebGL2(gl)) {
     gl.vertexAttribDivisor(location, divisor);
     return;
   }
@@ -245,7 +245,7 @@ export function setDivisor(gl, location, divisor) {
  */
 export function getDivisor(gl, location) {
   assert(location > 0);
-  if (isWebGL2Context(gl)) {
+  if (isWebGL2(gl)) {
     const divisor = get(location, gl.VERTEX_ATTRIB_ARRAY_DIVISOR);
     return divisor;
   }
