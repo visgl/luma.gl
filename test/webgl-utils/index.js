@@ -5,3 +5,4 @@
 import './polyfill-context.spec';
 import './track-context-state.spec';
 import './set-parameters.spec';
+import './polyfill-get-parameter.spec';
