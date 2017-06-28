@@ -31,10 +31,10 @@ const WEBGL_PARAMETERS = {
   // WebGL2 extension context parameters
   [GL_GPU_DISJOINT_EXT]:
     (gl, getParameter) => {
-      const ext =
-        gl.getExtension(EXT_disjoint_timer_query) ||
-        gl.getExtension(EXT_disjoint_timer_query_webgl2);
-      return ext ? getParameter(ext.GPU_DISJOINT_EXT) : 0;
+      const ext = isWebGL2(gl) ?
+        gl.getExtension(EXT_disjoint_timer_query_webgl2) :
+        gl.getExtension(EXT_disjoint_timer_query);
+      return ext && ext.GPU_DISJOINT_EXT ? getParameter(ext.GPU_DISJOINT_EXT) : 0;
     },
 
   // Extension fixed values

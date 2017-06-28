@@ -50,26 +50,24 @@ Object.keys(WEBGL_FEATURES).forEach(key => {
 });
 export {FEATURES};
 
+// TODO - cache the value
 function getFeature(gl, cap) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
-  if (!feature.value) {
-    // Get extension name from table
-    const extensionName = isWebGL2(gl) ?
-      feature[1] || feature[0] :
-      feature[0];
+  // Get extension name from table
+  const extensionName = isWebGL2(gl) ?
+    feature[1] || feature[0] :
+    feature[0];
 
-    // Check if the value is dependent on checking an extension
-    const value = typeof extensionName === 'string' ?
-      Boolean(gl.getExtension(extensionName)) :
-      extensionName;
+  // Check if the value is dependent on checking an extension
+  const value = typeof extensionName === 'string' ?
+    Boolean(gl.getExtension(extensionName)) :
+    extensionName;
 
-    assert(value === false || value === true);
-    feature.value = value;
-  }
+  assert(value === false || value === true);
 
-  return feature.value;
+  return value;
 }
 
 // capability can be a WebGL extension name or a luma capability name

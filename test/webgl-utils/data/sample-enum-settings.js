@@ -125,8 +125,8 @@ export const ENUM_STYLE_SETTINGS_SET2 = {
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   [GL.VIEWPORT]: new Int32Array([0, 0, 200, 200]),
   // WEBGL1 PIXEL PACK/UNPACK MODES
-  [GL.PACK_ALIGNMENT]: 16,
-  [GL.UNPACK_ALIGNMENT]: 8,
+  [GL.PACK_ALIGNMENT]: 2,
+  [GL.UNPACK_ALIGNMENT]: 2,
   [GL.UNPACK_FLIP_Y_WEBGL]: false,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: false,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.BROWSER_DEFAULT_WEBGL

@@ -7,7 +7,7 @@ import {fixture} from '../setup';
 const WEBGL_FEATURES = {
   // API SUPPORT
   VERTEX_ARRAY_OBJECT: true,
-  INSTANCED_ARRAYS: true,
+  INSTANCED_RENDERING: true,
   MULTIPLE_RENDER_TARGETS: true,
 
   // FEATURES
