@@ -112,6 +112,13 @@ export const TEXTURE_FORMATS = {
   // [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true, gl1: ETC1}
 };
 
+const V3_TO_V4_OPTIONS_MAP = {
+  magFilter: [GL.TEXTURE_MAG_FILTER],
+  minFilter: [GL.TEXTURE_MIN_FILTER],
+  wrapS: [GL.TEXTURE_WRAP_S],
+  wrapT: [GL.TEXTURE_WRAP_T]
+};
+
 function isFormatSupported(gl, format) {
   assert(isWebGL(gl), ERR_WEBGL);
   const info = TEXTURE_FORMATS[format];
@@ -190,10 +197,21 @@ export default class Texture extends Resource {
       parameters = {},
       pixelStore = {},
       // Deprecated parameters
-      unpackFlipY = true
+      unpackFlipY = true,
+      generateMipmaps = true
     } = opts;
 
-    let {mipmaps = true} = opts;
+    let {mipmaps} = opts;
+    if (mipmaps === undefined) {
+      // Check if v3 style option is present
+      if (generateMipmaps === true || generateMipmaps === false) {
+        log.deprecated(generateMipmaps, mipmaps);
+        mipmaps = generateMipmaps;
+      } else {
+        // Default value is true
+        mipmaps = true;
+      }
+    }
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
@@ -607,6 +625,21 @@ export default class Texture extends Resource {
     // gl.texSubImage2D(target, level, x, y, format, type, GLintptr offset);
   }
   */
+
+  // OVERRIDES
+  setParameters(parameters) {
+
+    // // NOTE: Conver any v3 style option to v4
+    for (const pname in parameters) {
+      if (V3_TO_V4_OPTIONS_MAP[pname] !== undefined) {
+        log.deprecated(pname, glKey(V3_TO_V4_OPTIONS_MAP[pname]));
+        const value = parameters[pname];
+        delete parameters[pname];
+        parameters[V3_TO_V4_OPTIONS_MAP[pname]] = value;
+      }
+    }
+    return super.setParameters(parameters);
+  }
 
   // HELPER METHODS
 
