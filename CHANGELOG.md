@@ -1,5 +1,18 @@
 # Pre-releases
 
+## 4.0.0-alpha.14
+
+- v4 Capability Management API finalization
+- New Shader Module refactor
+- Query objects enabled + unit tests
+- NPOT workaround for texture-2d object
+INTERNAL
+- Add webgl-util readme
+- Canvas resize/context creation moved to webgl-utils
+- getParameter polyfill consolidated in webgl-utils
+- Move non-working examples to wip folder
+- Rename demo folder to website
+
 ## 4.0.0-alpha.13
 
 - Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
