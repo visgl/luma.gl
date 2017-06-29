@@ -64,12 +64,12 @@ test('webgl#caps#hasFeatures(WebGL1)', t => {
 });
 
 test('webgl#caps#hasFeatures(WebGL2)', t => {
-  const {gl} = fixture;
+  const {gl2} = fixture;
 
-  if (fixture.gl2) {
+  if (gl2) {
     for (const feature in WEBGL_FEATURES) {
       if (WEBGL_FEATURES[feature]) {
-        t.equals(hasFeature(gl, feature), true, `${feature} is always supported under WebGL2`);
+        t.equals(hasFeature(gl2, feature), true, `${feature} is always supported under WebGL2`);
       }
     }
   }

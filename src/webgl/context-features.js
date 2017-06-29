@@ -78,7 +78,7 @@ export function hasFeature(gl, feature) {
 export function hasFeatures(gl, features) {
   features = Array.isArray(features) ? features : [features];
   return features.every(feature => {
-    return getFeature(gl, feature) || gl.getExtension(feature);
+    return getFeature(gl, feature);
   });
 }
 

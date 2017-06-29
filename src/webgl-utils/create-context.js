@@ -37,8 +37,6 @@ export function trackContextCreation({
  */
 export function createContext({
   canvas,
-  webgl2 = true,
-  webgl1 = true,
   opts = {}, // WebGLRenderingContext options
   onError = message => null
 }) {
@@ -46,6 +44,7 @@ export function createContext({
     onError(`WebGL context: ${e.statusMessage || 'Unknown error'}`);
   }, false);
 
+  const {webgl1 = true, webgl2 = true} = opts;
   let gl = null;
   // Prefer webgl2 over webgl1, prefer conformant over experimental
   if (webgl2) {
