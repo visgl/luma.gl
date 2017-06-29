@@ -10,6 +10,7 @@ import {MONOLITHIC_SHADERS, MODULAR_SHADERS} from '../shadertools/shaders';
 import {assembleShaders} from '../shadertools';
 
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
+import Query from '../webgl/query';
 import assert from 'assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
@@ -137,9 +138,7 @@ export default class Model extends Object3D {
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
 
-    // TimerQuery - TODO replace with Query class
-    this.ext = this.program.gl.getExtension('EXT_disjoint_timer_query');
-    this.timerQueryEnabled = timerQueryEnabled && this.ext !== null;
+    this.timerQueryEnabled = timerQueryEnabled && Query.isSupported(this.gl, {timer: true});
     this.timeElapsedQuery = undefined;
     this.lastQueryReturned = true;
 
@@ -373,54 +372,41 @@ export default class Model extends Object3D {
     return this;
   }
 
-  // PROFILING - TODO - rebuild using Query class
   _timerQueryStart() {
-    if (this.timerQueryEnabled === true && this.lastQueryReturned === true && this.ext) {
-      this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
-      this.timeElapsedQuery = this.ext.createQueryEXT();
-      this.ext.beginQueryEXT(this.ext.TIME_ELAPSED_EXT, this.timeElapsedQuery);
+    if (this.timerQueryEnabled === true) {
+      if (!this.timeElapsedQuery) {
+        this.timeElapsedQuery = new Query(this.gl);
+      }
+      if (this.lastQueryReturned) {
+        this.lastQueryReturned = false;
+        this.timeElapsedQuery.beginTimeElapsedQuery();
+      }
     }
   }
 
   _timerQueryEnd() {
-    if (this.timerQueryEnabled === true && this.ext) {
-      if (this.lastQueryReturned === true) {
-        this.ext.endQueryEXT(this.ext.TIME_ELAPSED_EXT);
-        this.profileFrameCount++;
-        this.lastQueryReturned = false;
-      }
-      // ...at some point in the future, after returning control to the browser
-      // and being called again:
-      const disjoint = this.program.gl.getParameter(this.ext.GPU_DISJOINT_EXT);
-      if (disjoint) {
+    if (this.timerQueryEnabled === true) {
+      this.timeElapsedQuery.end();
+      // TODO: Skip results if 'gl.getParameter(this.ext.GPU_DISJOINT_EXT)' returns false
+      // should this be incorporated into Query object?
+      if (this.timeElapsedQuery.isResultAvailable()) {
         this.lastQueryReturned = true;
-        // Have to redo all of the measurements.
-      } else {
-        const available = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
-          this.ext.QUERY_RESULT_AVAILABLE_EXT);
+        const elapsedTime = this.timeElapsedQuery.getResult();
 
-        if (available) {
-          const timeElapsed = this.ext.getQueryObjectEXT(this.timeElapsedQuery,
-            this.ext.QUERY_RESULT_EXT) / 1e6;
-          this.lastQueryReturned = true;
+        // Update stats (e.g. for seer)
+        this.stats.lastFrameTime = elapsedTime;
+        this.stats.accumulatedFrameTime += elapsedTime;
+        this.stats.profileFrameCount++;
+        this.stats.averageFrameTime =
+          this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
 
-          // Do something useful with the time.  Note that care should be
-          // taken to use all significant bits of the result, not just the
-          // least significant 32 bits.
+        // Log stats
+        log.log(2, 'program.id: ', this.program.id);
+        log.log(2, `last frame time: ${this.stats.lastFrameTime}ms`);
+        log.log(2, `average frame time ${this.stats.averageFrameTime}ms`);
+        log.log(2, `accumulated frame time: ${this.stats.accumulatedFrameTime}ms`);
+        log.log(2, `profile frame count: ${this.stats.profileFrameCount}`);
 
-          // Update stats (e.g. for seer)
-          this.stats.lastFrameTime = timeElapsed;
-          this.stats.accumulatedTimeFrame += timeElapsed;
-          this.stats.averageFrameTime =
-            this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
-
-          // Log stats
-          log.log(2, 'program.id: ', this.program.id);
-          log.log(2, `last frame time: ${this.stats.lastFrameTime}ms`);
-          log.log(2, `average frame time ${this.stats.averageFrameTime}ms`);
-          log.log(2, `accumulated frame time: ${this.stats.accumulatedFrameTime}ms`);
-          log.log(2, `profile frame count: ${this.stats.profileFrameCount}`);
-        }
       }
     }
   }
