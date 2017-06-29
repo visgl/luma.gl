@@ -7,7 +7,7 @@ import trackContextState, {pushContextState, popContextState, deepEqual} // clon
 import {getParameter, setParameters, resetParameters, GL_PARAMETER_DEFAULTS, GL_PARAMETER_SETTERS}
   from '../../src/webgl-utils/set-parameters';
 
-import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './sample-enum-settings';
+import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
 
 // utils
 function stringifyTypedArray(v) {

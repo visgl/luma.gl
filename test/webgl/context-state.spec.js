@@ -5,7 +5,7 @@ import {getParameter, getParameters, setParameters, withParameters, resetParamet
 import {getKey} from '../../src/webgl-utils/constants-to-keys';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/set-parameters';
-import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/sample-enum-settings';
+import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './sample-function-settings';
 
 function stringifyTypedArray(v) {

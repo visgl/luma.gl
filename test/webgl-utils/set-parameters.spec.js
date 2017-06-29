@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {createTestContext} from '../setup';
 
-import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './sample-enum-settings';
+import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 import {GL_PARAMETER_DEFAULTS} from '../../src/webgl-utils/set-parameters';
 
 import GL from '../../src/webgl-utils/constants';
