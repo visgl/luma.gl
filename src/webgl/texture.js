@@ -112,13 +112,6 @@ export const TEXTURE_FORMATS = {
   // [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true, gl1: ETC1}
 };
 
-const V3_TO_V4_OPTIONS_MAP = {
-  magFilter: [GL.TEXTURE_MAG_FILTER],
-  minFilter: [GL.TEXTURE_MIN_FILTER],
-  wrapS: [GL.TEXTURE_WRAP_S],
-  wrapT: [GL.TEXTURE_WRAP_T]
-};
-
 function isFormatSupported(gl, format) {
   assert(isWebGL(gl), ERR_WEBGL);
   const info = TEXTURE_FORMATS[format];
@@ -198,19 +191,14 @@ export default class Texture extends Resource {
       pixelStore = {},
       // Deprecated parameters
       unpackFlipY = true,
-      generateMipmaps = true
+      generateMipmaps
     } = opts;
 
-    let {mipmaps} = opts;
-    if (mipmaps === undefined) {
-      // Check if v3 style option is present
-      if (generateMipmaps === true || generateMipmaps === false) {
-        log.deprecated(generateMipmaps, mipmaps);
-        mipmaps = generateMipmaps;
-      } else {
-        // Default value is true
-        mipmaps = true;
-      }
+    let {mipmaps = true} = opts;
+
+    if (generateMipmaps !== undefined) {
+      log.deprecated('generateMipmaps', 'mipmaps');
+      mipmaps = generateMipmaps;
     }
 
     // pixels variable is  for API compatibility purpose
@@ -258,8 +246,11 @@ export default class Texture extends Resource {
       this.generateMipmap();
     }
 
+    // Append any v3 style parameters
+    const updatedParameters = this._applyV3Options(parameters, opts);
+
     // Set texture sampler parameters
-    this.setParameters(parameters);
+    this.setParameters(updatedParameters);
 
     // TODO - Store data to enable auto recreate on context loss
     if (recreate) {
@@ -626,21 +617,6 @@ export default class Texture extends Resource {
   }
   */
 
-  // OVERRIDES
-  setParameters(parameters) {
-
-    // // NOTE: Conver any v3 style option to v4
-    for (const pname in parameters) {
-      if (V3_TO_V4_OPTIONS_MAP[pname] !== undefined) {
-        log.deprecated(pname, glKey(V3_TO_V4_OPTIONS_MAP[pname]));
-        const value = parameters[pname];
-        delete parameters[pname];
-        parameters[V3_TO_V4_OPTIONS_MAP[pname]] = value;
-      }
-    }
-    return super.setParameters(parameters);
-  }
-
   // HELPER METHODS
 
   _deduceParameters(opts) {
@@ -658,6 +634,30 @@ export default class Texture extends Resource {
     ({width, height} = this._deduceImageSize({data, width, height}));
 
     return {dataFormat, type, compressed, width, height, format, data};
+  }
+
+  // Convert and append any v3 style parameters
+  _applyV3Options(parameters, opts) {
+    const v4Parameters = Object.assign({}, parameters);
+
+    if ('magFilter' in opts) {
+      v4Parameters[GL.TEXTURE_MAG_FILTER] = opts.magFilter;
+      log.deprecated('magFilter', 'TEXTURE_MAG_FILTER');
+    }
+    if ('minFilter' in opts) {
+      v4Parameters[GL.TEXTURE_MIN_FILTER] = opts.minFilter;
+      log.deprecated('minFilter', 'TEXTURE_MIN_FILTER');
+    }
+    if ('wrapS' in opts) {
+      v4Parameters[GL.TEXTURE_WRAP_S] = opts.wrapS;
+      log.deprecated('wrapS', 'TEXTURE_WRAP_S');
+    }
+    if ('wrapT' in opts) {
+      v4Parameters[GL.TEXTURE_WRAP_T] = opts.wrapT;
+      log.deprecated('wrapT', 'TEXTURE_WRAP_T');
+    }
+
+    return v4Parameters;
   }
 
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */

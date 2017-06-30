@@ -357,20 +357,22 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
   t.end();
 });
 
-test('WebGL#Texture2D: V3 style setParameters', t => {
+test('WebGL#Texture2D: Constructor with V3 style options', t => {
   const {gl} = fixture;
 
-  // Create NPOT texture
-  const texture = new Texture2D(gl, {data: null, width: 256, height: 256});
-  t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
-
-  const v3Parameters = {
+  const texture = new Texture2D(gl, {
+    data: null,
+    width: 256,
+    height: 256,
     magFilter: GL.NEAREST,
     minFilter: GL.LINEAR_MIPMAP_NEAREST,
     wrapS: GL.MIRRORED_REPEAT,
-    wrapT: GL.CLAMP_TO_EDGE
-  };
-  texture.setParameters(v3Parameters);
+    wrapT: GL.CLAMP_TO_EDGE,
+    generateMipmaps: true,
+    // This should get overwriten by above v3 style setting.
+    parameters: {[GL.TEXTURE_MIN_FILTER]: GL.LINEAR}
+  });
+  t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
 
   // Above parameters should be changed to corresponding V4 parameters.
   const magFilter = texture.getParameter(GL.TEXTURE_MAG_FILTER);
