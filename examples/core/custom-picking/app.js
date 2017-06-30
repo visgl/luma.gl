@@ -4,11 +4,10 @@ import {
   Model, project, picking, pickModels} from 'luma.gl';
 import HeightmapGeometry from './heightmap-geometry';
 
-const pick = {x: 0, y: 0};
+let pickPosition = [0, 0];
 
 function mousemove(e) {
-  pick.x = e.offsetX;
-  pick.y = e.offsetY;
+  pickPosition = [e.offsetX, e.offsetY];
 }
 
 const animationLoop = new AnimationLoop({
@@ -31,13 +30,12 @@ const animationLoop = new AnimationLoop({
     return {heightmap};
   },
   onFinalize({gl}) {
-    gl.canvas.removeEventListener(mousemove);
+    gl.canvas.removeEventListener('mousemove', mousemove);
   },
-  onRender: ({gl, tick, aspect, heightmap}) => {
+  onRender: ({gl, tick, aspect, heightmap, framebuffer}) => {
     const projection = Matrix4.perspective({
       fov: radians(60), aspect, near: 0.1, far: 1000
     });
-
     const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
     const model = new Matrix4().clone(view).rotateY(tick * 0.01);
 
@@ -50,11 +48,15 @@ const animationLoop = new AnimationLoop({
 
     const pickInfo = pickModels(gl, {
       models: [heightmap],
-      x: pick.x,
-      y: pick.y
+      position: pickPosition,
+      framebuffer
     });
 
     updatePickInfo(gl, pickInfo);
+
+    heightmap.setModuleUniforms({
+      selectedPickingColor: pickInfo && pickInfo.color
+    });
 
     heightmap.render();
   }
@@ -65,10 +67,10 @@ function updatePickInfo(gl, pickInfo) {
     gl.canvas.appendChild(document.createElement('div'));
   div.id = 'pick-info';
 
-  if (pickInfo && div) {
+  if (pickInfo) {
     div.innerHTML = `altitude: ${pickInfo.color[0]}`;
-    div.style.top = `${pick.y}px`;
-    div.style.left = `${pick.x}px`;
+    div.style.top = `${pickPosition[0]}px`;
+    div.style.left = `${pickPosition[1]}px`;
     div.style.display = 'block';
   } else {
     div.style.display = 'none';
@@ -86,6 +88,7 @@ function addControls() {
       Uses the luma.gl <code>picking</code> shader module,
       adding detailed picking capabilities to a complex model with
       a few lines of code.
+      <div id='pick-info'/>
     `;
   }
 }

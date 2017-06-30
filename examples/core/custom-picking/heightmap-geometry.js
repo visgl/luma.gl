@@ -74,7 +74,7 @@ export default class HeightmapGeometry extends Geometry {
       positions: {size: 3, value: new Float32Array(positions)},
       normals: {size: 3, value: new Float32Array(normals)},
       colors: {size: 4, value: new Float32Array(colors)},
-      pickingColors: {size: 4, value: new Float32Array(colors)},
+      pickingColors: {size: 4, value: new Uint8Array(colors.map(c => c * 256))},
       // Dummy to silence shader attribute 0 warnings
       texCoords: {size: 2, value: new Float32Array(positions)}
     });
