@@ -15,12 +15,12 @@ new AnimationLoop({
   onCreateContext() {
     return createGLContext({canvas: 'canvas-0'}))
   },
-  onInit({gl}) {
+  onInitialize({gl}) {
     return {
       clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONTEXT_0_FRAGMENT_SHADER})
     };
   },
-  onFrame({tick, clipSpaceQuad}) {
+  onRenderFrame({tick, clipSpaceQuad}) {
     clipSpaceQuad.render({uTime: tick * 0.01});
   }
 });
@@ -48,10 +48,9 @@ new AnimationLoop()
 ```
 
 
-## Callbacks and the `context` Object
+## Callback Parameters
 
-The callbacks that the app supplies will be called with a context object.
-The context object will contain the following values:
+The callbacks that the app supplies to the `AnimationLoop` will be called with an object containing named parameters. The parametre object will contain the following values:
 
 * `gl` - This `AnimationLoop`'s `WebGLRenderingContext`.
 * `canvas` - The canvas associated with the rendering context.
@@ -69,48 +68,15 @@ The context object will contain the following values:
 ### constructor
 
 Parameters:
-* `gl` - Sets this `AnimationLoop`'s `WebGLRenderingContext`.
-
-
-### init(callback)
-
-* `callback` - function that takes a context object. It will be called
-  exactly once, after page load completes and a context has been created.
-
-The callback will be called with an initial context object, containing
-
-
-### setupFrame(callback)
-
-Supplying this callback overrides the default frame setup code, which
-resizes the canvas and the viewport after the window size.
-
-For applications that use a single full screen canvas, this function is
-usually not needed.
-
-
-### frame(callback)
-
-Calling `frame` will automatically start the animation. If this is not
-desired, follow immediately with a stop.
+* `onInitialize` (callback) - function that will be called exactly once after `start()` has been called, after page load completes and a context has been created. The callback will be called with an initial object containing a gl context object. Can return a promise (e.g. for texture or model loads)
+* `onSetupFrame` (callback) - Supplying this callback overrides the default frame setup code, which resizes the canvas and the viewport after the window size. For applications that use a single full screen canvas, this function is usually not needed.
+* `onRenderFrame` (callback) - Calling `frame` will automatically start the animation. If this is not desired, follow immediately with a `stop()`.
+* `onCreateContext` (callback) - function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.
 
 Remarks:
-
-
-### initContext
-
-Postpones context creation until the page (i.e. all HTML) has been loaded.
-At this time it is safe to specify canvas ids when calling `createGLContext`.
-
-* `callback` - function without parameters that returns a
-  `WebGLRenderingContext`. This callback will be called exactly once,
-  after page load completes.
-
-Remarks:
-* The supplied callback function must return a WebGLRenderingContext or
-  an error will be thrown.
-* This callback registration function should not be called if a
-  `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
+* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling `createGLContext`.
+* The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
+* This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
 
 
 ### start
@@ -123,11 +89,8 @@ Restarts the animation
 Stops the animation
 
 
-
-
 ## Remarks
 
-* If creating a context using a canvas element specified in HTML, it is often helpful to use the `initContext` method callback to create the context, since that method's callback is not called until the DOM has been fully loaded.
-* You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s. See the multicontext example for one way to do this.
+* You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 * Works both in browser and under Node.js.
 * All `AnimationLoop` methods can be chained.

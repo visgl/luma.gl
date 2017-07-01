@@ -1,4 +1,4 @@
-const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master'
+const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
 export const EXAMPLE_PAGES = [
   {
@@ -229,11 +229,11 @@ export const DOC_PAGES = [
       {
         name: 'Using with Node.js',
         content: 'get-started/using-with-node.md'
-      },
-      {
-        name: 'Using with other Frameworks',
-        content: 'get-started/using-with-other-frameworks.md'
       }
+      // {
+      //   name: 'Using with other Frameworks',
+      //   content: 'get-started/using-with-other-frameworks.md'
+      // }
     ]
   },
   {
@@ -244,25 +244,35 @@ export const DOC_PAGES = [
         content: 'user-guide/README.md'
       },
       {
-        name: 'Modules',
-        content: 'user-guide/modules.md'
-      },
-      {
         name: 'Debugging',
         content: 'user-guide/debugging.md'
-      },
-      {
-        name: 'WebGL2',
-        content: 'user-guide/webgl2.md'
-      },
-      {
-        name: 'GPGPU Programming',
-        content: 'user-guide/gpgpu.md'
       }
     ]
   },
+  // ,
+  // {
+  //   name: 'Advanced',
+  //   children: [
+  //     {
+  //       name: 'Roadmap',
+  //       content: 'user-guide/extensions.md'
+  //     },
+  //     {
+  //       name: 'Extensions',
+  //       content: 'user-guide/extensions.md'
+  //     },
+      // {
+      //   name: 'WebGL2',
+      //   content: 'user-guide/webgl2.md'
+      // },
+      // {
+      //   name: 'GPGPU Programming',
+      //   content: 'user-guide/gpgpu.md'
+      // }
+  //   ]
+  // }
   {
-    name: 'API Reference',
+    name: 'Core API Reference',
     children: [
       {
         name: 'Animation Loop',
@@ -283,34 +293,26 @@ export const DOC_PAGES = [
       {
         name: 'Geometry',
         content: 'api-reference/core/geometry.md'
-      },
-      {
-        name: 'Shader Cache',
-        content: 'api-reference/shadertools/shader-cache.md'
-      },
-      {
-        name: 'Events Package',
-        content: 'api-reference/events/event.md'
-      },
-      {
-        name: 'Picking',
-        content: 'api-reference/picking/picking.md'
       }
+      // {
+      //   name: 'Picking',
+      //   content: 'api-reference/picking/picking.md'
+      // }
     ]
   },
   {
-    name: 'WebGL Reference',
+    name: 'WebGL2 API Reference',
     children: [
       {
-        name: 'Context Management',
+        name: 'WebGL Context',
         content: 'api-reference/webgl/context.md'
       },
       {
-        name: 'Capability Management',
+        name: 'WebGL Capabilities',
         content: 'api-reference/webgl/context-limits.md'
       },
       {
-        name: 'State Management',
+        name: 'WebGL Parameters',
         content: 'api-reference/webgl/context-state.md'
       },
       {
@@ -330,7 +332,7 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/program.md'
       },
       {
-        name: 'Query (WebGL2)',
+        name: 'Query (WebGL2*)',
         content: 'api-reference/webgl/query.md'
       },
       {
@@ -374,27 +376,101 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/transform-feedback.md'
       },
       {
-        name: 'UniformBufferLayout',
+        name: 'UniformBufferLayout (WebGL2*)',
         content: 'api-reference/webgl/uniform-buffer-layout.md'
       },
       {
-        name: 'VertexArray (EXT)',
+        name: 'VertexArray (WebGL2*)',
         content: 'api-reference/webgl/vertex-array.md'
       }
     ]
-  }
-  // ,
+  },
   // {
-  //   name: 'Advanced',
+  //   name: 'Math API Reference',
   //   children: [
   //     {
-  //       name: 'Roadmap',
-  //       content: 'user-guide/extensions.md'
+  //       name: 'Overview',
+  //       content: 'api-reference/math/README.md'
   //     },
   //     {
-  //       name: 'Extensions',
-  //       content: 'user-guide/extensions.md'
+  //       name: 'Matrix4',
+  //       content: 'api-reference/math/matrix4.md'
   //     },
+  //     // {
+  //     //   name: 'Vector2',
+  //     //   content: 'api-reference/math/vector2.md'
+  //     // },
+  //     {
+  //       name: 'Vector3',
+  //       content: 'api-reference/math/vector3.md'
+  //     }
+  //     // {
+  //     //   name: 'Vector4',
+  //     //   content: 'api-reference/math/vector4.md'
+  //     // },
+  //     // {
+  //     //   name: 'Quaternion',
+  //     //   content: 'api-reference/math/quaternion.md'
+  //     // },
+  //     // {
+  //     //   name: 'Euler',
+  //     //   content: 'api-reference/math/euler.md'
+  //     // }
   //   ]
-  // }
+  // },
+  {
+    name: 'Shadertools API Reference',
+    children: [
+      {
+        name: 'Shader Modules',
+        content: 'api-reference/shadertools/README.md'
+      },
+      {
+        name: 'Shader Cache',
+        content: 'api-reference/shadertools/shader-cache.md'
+      },
+      {
+        name: 'picking (Shader Module)',
+        content: 'api-reference/shadertools/shadertools-picking.md'
+      }
+    ]
+  },
+  {
+    name: 'Geometry API Reference',
+    children: [
+      {
+        name: 'Cone',
+        content: 'api-reference/primitives/cone.md'
+      },
+      {
+        name: 'Cube',
+        content: 'api-reference/primitives/cube.md'
+      },
+      {
+        name: 'Cylinder',
+        content: 'api-reference/primitives/cylinder.md'
+      },
+      {
+        name: 'IcoSphere',
+        content: 'api-reference/primitives/ico-sphere.md'
+      },
+      {
+        name: 'Plane',
+        content: 'api-reference/primitives/plane.md'
+      },
+      {
+        name: 'Sphere',
+        content: 'api-reference/primitives/sphere.md'
+      }
+    ]
+  },
+  {
+    name: 'Addons API Reference',
+    children: [
+      {
+        name: 'Events Package',
+        content: 'api-reference/events/event.md'
+      }
+    ]
+  }
 ];
