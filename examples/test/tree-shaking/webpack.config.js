@@ -1,4 +1,4 @@
-// NOTE: To use this example standalone (e.g. outside of deck.gl repo)
+// NOTE: To use this example standalone (e.g. outside of this repo)
 // delete the local development overrides at the bottom of this file
 const {resolve} = require('path');
 const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer');
@@ -54,8 +54,8 @@ module.exports = {
 };
 
 // DELETE THIS LINE WHEN COPYING THIS EXAMPLE FOLDER OUTSIDE OF DECK.GL
-// It enables bundling against src in this repo rather than installed deck.gl module
+// It enables bundling against src in this repo rather than installed module
 module.exports = require('../../webpack.config.local')(module.exports, {
-  // Import the deck.gl library from the dist-es6 directory in this repo to test shaking
+  // Import the library from the dist-es6 directory in this repo to test shaking
   libAlias: resolve(__dirname, '../../../dist-es6')
 });
