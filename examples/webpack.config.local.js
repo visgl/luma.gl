@@ -29,7 +29,14 @@ const LOCAL_DEVELOPMENT_CONFIG = {
     }
   },
   module: {
-    rules: []
+    rules: [
+      {
+        // Unfortunately, webpack doesn't import library sourcemaps on its own...
+        test: /\.js$/,
+        use: ['source-map-loader'],
+        enforce: 'pre'
+      }
+    ]
   }
 };
 
@@ -52,6 +59,6 @@ module.exports = (baseConfig, opts = {}) => env => {
   if (env && env.local) {
     addLocalDevSettings(config, opts);
   }
-  // console.warn(JSON.stringify(config, null, 2));
+  console.warn(JSON.stringify(config, null, 2));
   return config;
 };

@@ -5,11 +5,11 @@
     "Rye Terrell <ryeterrell@ryeterrell.net"
   ],
   "scripts": {
-    "start": "webpack-dev-server --progress --hot --open",
-    "start-local": "webpack-dev-server --env.local --progress --hot --open"
+    "start": "webpack-dev-server --progress --hot --open -d",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "luma.gl": "3.0.0-beta.3"
+    "luma.gl": ">=4.0.0-alpha.13"
   },
   "devDependencies": {
     "webpack-dev-server": "^2.2.0",
