@@ -1,6 +1,8 @@
-import {AnimationLoop, IcoSphere, Model, clear} from 'luma.gl';
-import {GL, Program, Geometry, Framebuffer} from 'luma.gl';
-import {Matrix4, Vector3, radians} from 'luma.gl';
+import {
+  GL, AnimationLoop, setParameters, IcoSphere, Model, clear,
+  Framebuffer, Program, Geometry,
+  Matrix4, Vector3, radians
+} from 'luma.gl';
 
 const SCREEN_QUAD_VS = `\
 attribute vec2 aPosition;
@@ -94,36 +96,16 @@ const animationLoop = new AnimationLoop({
   onInitialize: ({gl, width, height}) => {
 
     addControls();
-    // setGLState(gl, {
-    //   clearColor: [0, 0, 0, 0],
-    //   clearDepth: 1,
-    //   depthTest: true,
-    //   depthFunc: GL.LEQUAL,
-    //   cullFace: GL.BACK,
-    //   unpackFlipYWebGL: true
-    // });
 
-    gl.clearColor(0, 0, 0, 0);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    gl.enable(GL.CULL_FACE);
-    gl.cullFace(GL.BACK);
-    // gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
-
-    /*
-    withParameters({
+    setParameters({
       clearColor: [0, 0, 0, 0],
       clearDepth: 1,
-      enableDepthTest: true,
+      depthTest: true,
       depthFunc: GL.EQUAL,
-      enableFaceCulling: true,
+      faceCulling: true,
       cullFace: GL.BACK,
-      pixelStore: {
-        [GL.UNPACK_FLIP_Y_WEBGL]: true
-      }
+      [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
-    */
 
     mainFramebuffer = new Framebuffer(gl, {width, height});
 
@@ -202,21 +184,6 @@ const animationLoop = new AnimationLoop({
     }
   },
   onRender: ({gl, tick, width, height, aspect}) => {
-    /*
-    withParameters({
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1,
-      // enableDepthTest: true,
-      depthFunc: GL.EQUAL,
-      // enableFaceCulling: true,
-      cullFace: GL.BACK,
-      pixelStore: {
-        [GL.UNPACK_FLIP_Y_WEBGL]: true
-      }
-    }, () => {
-    });
-    */
-
     mainFramebuffer.resize({width, height});
     pingpongFramebuffers[0].resize({width, height});
     pingpongFramebuffers[1].resize({width, height});
@@ -224,7 +191,7 @@ const animationLoop = new AnimationLoop({
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
     const view = new Matrix4().lookAt({eye: [0, 0, 4]});
 
-    mainFramebuffer.clear({color: [0, 0, 0, 0], depth: 1});
+    clear(gl, {framebuffer: mainFramebuffer, color: [0, 0, 0, 0], depth: 1});
 
     // RENDER ELECTRONS TO FRAMEBUFFER
     for (let i = 0; i < ELECTRON_COUNT; i++) {
@@ -253,6 +220,7 @@ const animationLoop = new AnimationLoop({
         .rotateXYZ([0, tick * 0.021, 0])
         .translate(nPos[i])
         .scale([0.25, 0.25, 0.25]);
+
       sphere.draw({
         framebuffer: mainFramebuffer,
         uniforms: {
@@ -264,7 +232,6 @@ const animationLoop = new AnimationLoop({
         }
       });
     }
-    mainFramebuffer.unbind();
 
     const ppi = tick % 2;
     const currentFramebuffer = pingpongFramebuffers[ppi];
@@ -272,7 +239,7 @@ const animationLoop = new AnimationLoop({
 
     // RENDER TO SCREEN
 
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    clear(gl, {color: true, depth: true});
     persistenceQuad.draw({
       framebuffer: currentFramebuffer,
       uniforms: {
@@ -282,21 +249,16 @@ const animationLoop = new AnimationLoop({
       }
     });
 
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    clear(gl, {color: true, depth: true});
     quad.render({
       uTexture: currentFramebuffer.texture,
       uRes: [width, height]
     });
-
-    // gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-    // quad.render({
-    //   uTexture: currentFramebuffer.texture,
-    //   uRes: [width, height]
-    // });
   }
 });
 
 function addControls() {
+  /* global document */
   const controlPanel = document.querySelector('.control-panel');
   if (controlPanel) {
     controlPanel.innerHTML = `
@@ -310,3 +272,9 @@ function addControls() {
 }
 
 export default animationLoop;
+
+/* expose on Window for standalone example */
+/* global window */
+if (typeof window !== 'undefined') {
+  window.animationLoop = animationLoop;
+}
