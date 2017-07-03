@@ -88,6 +88,7 @@ class Page extends Component {
   }
 
   @autobind _resizeContext() {
+    this.forceUpdate();
     this.props.updateViewport(this._getCanvasSize());
   }
 

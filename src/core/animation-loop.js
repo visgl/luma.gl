@@ -165,17 +165,15 @@ export default class AnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
-    if (!this._callbackData) {
-      this._callbackData = {
-        gl: this.gl,
-        canvas: this.gl.canvas,
-        framebuffer: this.framebuffer,
-        stop: this.stop,
-        // Initial values
-        tick: 0,
-        tock: 0
-      };
-    }
+    this._callbackData = {
+      gl: this.gl,
+      canvas: this.gl.canvas,
+      framebuffer: this.framebuffer,
+      stop: this.stop,
+      // Initial values
+      tick: 0,
+      tock: 0
+    };
   }
 
   // Update the context object that will be passed to app callbacks
