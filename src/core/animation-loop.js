@@ -1,7 +1,7 @@
 /* global window, setTimeout, clearTimeout */
 import {isBrowser} from '../utils';
-import {getPageLoadPromise, resizeCanvas, resizeDrawingBuffer} from '../webgl-utils';
-import {createGLContext, isWebGL, resetParameters} from '../webgl';
+import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
+import {createGLContext, deleteGLContext, isWebGL, resetParameters} from '../webgl';
 import {Framebuffer} from '../webgl';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
@@ -18,13 +18,16 @@ export default class AnimationLoop {
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor({
-    onCreateContext = opts => createGLContext(Object.assign({preserveDrawingBuffer: true}, opts)),
+    onCreateContext = opts => createGLContext(opts),
+    onDeleteContext = gl => deleteGLContext(gl),
     onInitialize = () => {},
     onRender = () => {},
     onFinalize = () => {},
 
     gl = null,
-    glOptions = {},
+    glOptions = {
+      preserveDrawingBuffer: true
+    },
     width = null,
     height = null,
 
@@ -126,13 +129,6 @@ export default class AnimationLoop {
     return this;
   }
 
-  // Resize canvas in "CSS coordinates" (may be different from device coords)
-  // @param {Number} width, height - new width and height of canvas in CSS coordinates
-  resizeCanvas(width, height) {
-    this._resizeCanvas({width, height});
-    return this;
-  }
-
   // PRIVATE METHODS
 
   _setupFrame() {
@@ -208,15 +204,17 @@ export default class AnimationLoop {
   _createWebGLContext(opts) {
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, this.glOptions);
-    this.gl = this.gl || opts.gl;
-    if (!this.gl) {
+    if (opts.gl) {
+      this.gl = opts.gl;
+    } else {
       this.gl = this._onCreateContext(opts);
-      // Setup default framebuffer
-      this.framebuffer = new Framebuffer(this.gl);
     }
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
     }
+
+    // Setup default framebuffer
+    this.framebuffer = new Framebuffer(this.gl);
     // Reset the WebGL context.
     resetParameters(this.gl);
   }
@@ -232,25 +230,11 @@ export default class AnimationLoop {
     this.framebuffer.resize({width: this.gl.canvas.width, height: this.gl.canvas.height});
   }
 
-  // Resize canvas in "CSS coordinates" (may be different from device coords)
-  // NOTE: No effect on headless contexts
-  // @param {Number} width, height - new width and height of canvas in CSS coordinates
-  _resizeCanvas(width, height) {
-    resizeCanvas({
-      canvas: this.gl.canvas,
-      width,
-      height,
-      useDevicePixelRatio: this.useDevicePixelRatio,
-      resizeDrawingBuffer: this.autoResizeDrawingBuffer
-    });
-    return this;
-  }
-
   // Resize the render buffer of the canvas to match canvas client size
   // Optionally multiplying with devicePixel ratio
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
-      resizeDrawingBuffer({gl: this.gl, useDevicePixelRatio: this.useDevicePixelRatio});
+      resizeDrawingBuffer(this.gl.canvas, {useDevicePixelRatio: this.useDevicePixelRatio});
     }
   }
 }

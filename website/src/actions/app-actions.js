@@ -24,14 +24,14 @@ export const loadContent = filename => {
   };
 };
 
-const loadDataStart = owner => ({type: 'LOAD_DATA_START', owner});
+// const loadDataStart = owner => ({type: 'LOAD_DATA_START', owner});
 
-const loadDataSuccess = (owner, data, meta) => ({
-  type: 'LOAD_DATA_SUCCESS',
-  payload: {owner, data, meta}
-});
+// const loadDataSuccess = (owner, data, meta) => ({
+//   type: 'LOAD_DATA_SUCCESS',
+//   payload: {owner, data, meta}
+// });
 
-export const updateContext = viewport => ({type: 'UPDATE_CONTEXT', viewport});
+export const updateViewport = viewport => ({type: 'UPDATE_VIEWPORT', viewport});
 export const updateMeta = meta => ({type: 'UPDATE_META', meta});
 export const updateParam = (name, value) => ({type: 'UPDATE_PARAM', payload: {name, value}});
 export const useParams = params => ({type: 'USE_PARAMS', params});

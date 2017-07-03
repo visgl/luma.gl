@@ -29,16 +29,18 @@ export function getPageLoadPromise() {
  * @param {Number} width - set to 100%
  * @param {Number} height - set to 100%
  */
-export function createCanvas({width, height, id = 'gl-canvas'}) {
+export function createCanvas({width = 800, height = 600, id = 'gl-canvas', insert = true}) {
   const canvas = document.createElement('canvas');
   canvas.id = id;
   canvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
   canvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
-  // adds the canvas to the body element once the page has loaded
-  getPageLoadPromise().then(document => {
-    const body = document.body;
-    body.insertBefore(canvas, body.firstChild);
-  });
+  // add the canvas to the body element once the page has loaded
+  if (insert) {
+    getPageLoadPromise().then(document => {
+      const body = document.body;
+      body.insertBefore(canvas, body.firstChild);
+    });
+  }
   return canvas;
 }
 
@@ -53,50 +55,85 @@ export function getCanvas({id}) {
   return document.getElementById(id);
 }
 
+// Gets current size of canvas in css (logical/window) coordinates
+export function getCSSSize(canvas) {
+  return {
+    width: canvas.clientWidth,
+    height: canvas.clientHeight
+  };
+}
+
+// Gets current size of canvas drawing buffer in actual pixels
+// This is needed for the gl.viewport call
+export function getDrawingBufferSize(canvas) {
+  return {
+    width: canvas.width,
+    height: canvas.height
+  };
+}
+
+// Calculate the drawing buffer size that would cover current canvas size and device pixel ratio
+// Intention is that every pixel in the drawing buffer will have a 1-to-1 mapping with
+// actual device pixels in the hardware framebuffer, allowing us to render at the full
+// resolution of the device.
+export function calculateDrawingBufferSize(canvas, {useDevicePixelRatio = true}) {
+  const cssToDevicePixels = useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
+
+  // Lookup the size the browser is displaying the canvas in CSS pixels
+  // and compute a size needed to make our drawingbuffer match it in
+  // device pixels.
+  const cssSize = getCSSSize(canvas);
+  return {
+    width: Math.floor(cssSize.width * cssToDevicePixels),
+    height: Math.floor(cssSize.height * cssToDevicePixels),
+    devicePixelRatio: cssToDevicePixels
+  };
+}
+
 /**
- * Resizes canvas in "CSS coordinates" (note these can be different from device coords,
- * depending on devicePixelRatio/retina screens) and is separate from its drawing buffer
- * size.
+ * Resizes canvas in "CSS coordinates" (note these can be very different from device coords,
+ * depending on devicePixelRatio/retina screens and size of drawing buffer)
+ * and can be changed separately from drawing buffer size.
+ * Therefore, normally `resizeDrawingBuffer` should be called after calling `resizeCanvas`.
+ *
  * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+ *
  * @param {Number} width, height - new width and height of canvas in CSS coordinates
  */
-export function resizeCanvas({
-  canvas,
+export function resizeCanvas(canvas, {
   width,
   height,
-  useDevicePixelRatio = true,
-  resizeDrawingBuffer = true
+  useDevicePixelRatio = true
 }) {
-  if (resizeDrawingBuffer) {
-    const cssToDevicePixels = useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
-
-    // Lookup the size the browser is displaying the canvas in CSS pixels
-    // and compute a size needed to make our drawingbuffer match it in
-    // device pixels.
-    const displayWidth = Math.floor(width * cssToDevicePixels);
-    const displayHeight = Math.floor(height * cssToDevicePixels);
-
-    // Check if the canvas is not the same size.
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-      // Make the canvas the same size
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
-    }
-  }
-
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
+}
 
-  // if (canvas) {
-  //   // Lookup the size the browser is displaying the canvas.
-  //   var displayWidth = canvas.clientWidth;
-  //   var displayHeight = canvas.clientHeight;
-
-  //   // Check if the canvas is not the same size.
-  //   if (canvas.width  !== displayWidth || canvas.height !== displayHeight) {
-  //     // Make the canvas the same size
-  //     canvas.width  = displayWidth;
-  //     canvas.height = displayHeight;
-  //   }
-  // }
+/**
+ * Resize the canvas' drawing buffer to match the canvas CSS size,
+ * and by default to also consider devicePixelRatio
+ * detects if anything has changed, can be called every frame
+ * for best visual results, usually set to either:
+ *  canvas CSS width x canvas CSS height
+ *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
+ *
+ * NOTE: Regardless of size, the drawing buffer will always be scaled to the viewport
+ * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+ *
+ * @param {Number} width - new width of canvas in CSS coordinates
+ * @param {Number} height - new height of canvas in CSS coordinates
+ */
+export function resizeDrawingBuffer(canvas, {useDevicePixelRatio = true}) {
+  // Resize the render buffer of the canvas to match canvas client size
+  // multiplying with dpr (Optionally can be turned off)
+  const newBufferSize = calculateDrawingBufferSize(canvas, {useDevicePixelRatio});
+  // Only update if the canvas size has not changed
+  if (newBufferSize.width !== canvas.width || newBufferSize.height !== canvas.height) {
+    // Make the canvas render buffer the same size as
+    canvas.width = newBufferSize.width;
+    canvas.height = newBufferSize.height;
+    // Always reset CSS size after setting drawing buffer size
+    // canvas.style.width = `${cssSize.width}px`;
+    // canvas.style.height = `${cssSize.height}px`;
+  }
 }

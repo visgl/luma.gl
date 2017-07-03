@@ -142,7 +142,13 @@ export function createGLContext(opts = {}) {
     logInfo(gl);
   }
 
+  // Add to seer integration
+
   return gl;
+}
+
+export function deleteGLContext(gl) {
+  // Remove from seer integration
 }
 
 // POLLING FOR PENDING QUERIES

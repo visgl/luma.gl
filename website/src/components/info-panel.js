@@ -44,6 +44,19 @@ class InfoPanel extends Component {
     const demo_ = Demos[demo];
     const metaLoaded = owner === demo ? meta : {};
 
+    /*
+    { demo_.onAddControls &&
+      demo_.onAddControls({metaLoaded, div: 'options-panel'}) }
+    {Object.keys(params).length > 0 && <hr />}
+
+    {Object.keys(params).map((name, i) => (
+      <GenericInput key={i}
+        name={name}
+        {...params[name]}
+        onChange={this.props.updateParam} />
+    ))}
+    */
+
     return (
       <div
         ref="optionsPanel"
@@ -54,21 +67,6 @@ class InfoPanel extends Component {
         <br/>
 
         <div className="control-panel" id="control-panel"/>
-
-        {
-        /*
-        { demo_.onAddControls &&
-          demo_.onAddControls({metaLoaded, div: 'options-panel'}) }
-        {Object.keys(params).length > 0 && <hr />}
-
-        {Object.keys(params).map((name, i) => (
-          <GenericInput key={i}
-            name={name}
-            {...params[name]}
-            onChange={this.props.updateParam} />
-        ))}
-        */
-        }
 
       </div>
     );

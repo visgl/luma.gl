@@ -1,17 +1,27 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux';
+import PropTypes from 'prop-types';
 
 import * as Demos from '../../contents/demos.js';
 
 import {updateMeta, useParams} from '../actions/app-actions';
 
-class Context extends Component {
+const propTypes = {
+  demo: PropTypes.string,
+  canvas: PropTypes.string
+};
+
+const defaultProps = {
+  canvas: 'demo-canvas'
+};
+
+class DemoRunner extends Component {
 
   componentDidMount() {
     const demo = Demos[this.props.demo];
     if (demo) {
       demo.start({
-        canvas: this.props.canvas || 'lumagl-canvas'
+        canvas: this.props.canvas
         // debug: true
       });
     }
@@ -31,7 +41,7 @@ class Context extends Component {
         while (node && node.firstChild) {
           node.removeChild(node.firstChild);
         }
-        demo.start({canvas: 'lumagl-canvas'});
+        demo.start({canvas: this.props.canvas});
       }
     }
   }
@@ -44,19 +54,24 @@ class Context extends Component {
   }
 
   render() {
+    const {width, height} = this.props;
     return (
-      <canvas id="lumagl-canvas" style={{width: '100%', height: '100%', padding: 0, border: 0}}/>
+      <canvas id={this.props.canvas} style={{width, height, padding: 0, border: 0}}/>
     );
   }
 
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
+  ...ownProps,
   viewport: state.viewport,
   ...state.vis
 });
 
+DemoRunner.propTypes = propTypes;
+DemoRunner.defaultProps = defaultProps;
+
 export default connect(
   mapStateToProps,
   {updateMeta, useParams}
-)(Context);
+)(DemoRunner);
