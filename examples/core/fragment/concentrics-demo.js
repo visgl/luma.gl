@@ -16,14 +16,27 @@ void main(void) {
 }
 `;
 
-luma.log.priority = 1;
-
 export default new AnimationLoop({
-  // onCreateContext: () => createGLContext({canvas: 'canvas-0'}),
-  onInitialize: ({gl}) => ({
-    clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})
-  }),
+  onInitialize: ({gl}) => {
+    addControls();
+    return {clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})};
+  },
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
     clipSpaceQuad.render({uTime: tick * 0.01});
   }
 });
+
+function addControls() {
+  /* global document */
+  const controlPanel = document.querySelector('.control-panel');
+  if (controlPanel) {
+    controlPanel.innerHTML = `
+      <p>
+      Fragment shader based rendering.
+      <p>
+      A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
+      using a single uniform <code>uTime</code>.
+    `;
+  }
+}
+

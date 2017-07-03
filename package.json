@@ -90,6 +90,7 @@
     "pre-commit": "^1.2.2",
     "raw-loader": "^0.5.1",
     "reify": "^0.4.4",
+    "source-map-loader": "^0.2.1",
     "source-map-support": "^0.4.2",
     "tap-browser-color": "^0.1.2",
     "tape": "^4.6.3",

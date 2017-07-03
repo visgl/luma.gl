@@ -15,6 +15,10 @@
       }
     </style>
 
-    <script type="text/javascript" src="bundle.js"></script>
+    <body>
+      <canvas id="lumagl-canvas"></canvas>
+      <script type="text/javascript" src="bundle.js"></script>
+      <script>window.animationLoop.start({canvas: 'lumagl-canvas'}); // eslint-disable-line</script>
+    </body>
   </head>
 </html>

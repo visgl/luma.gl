@@ -24,6 +24,12 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
+        name: 'Fragment',
+        content: {
+          demo: 'FragmentDemo'
+        }
+      },
+      {
         name: 'Instancing',
         content: {
           demo: 'InstancingDemo'
@@ -33,12 +39,6 @@ export const EXAMPLE_PAGES = [
         name: 'Mandelbrot',
         content: {
           demo: 'MandelbrotDemo'
-        }
-      },
-      {
-        name: 'Concentrics',
-        content: {
-          demo: 'MulticontextDemo'
         }
       },
       {
@@ -60,18 +60,18 @@ export const EXAMPLE_PAGES = [
       //     demo: 'ParticlesDemo'
       //   }
       // },
-      // {
-      //   name: 'Persistence',
-      //   content: {
-      //     demo: 'PersistenceDemo'
-      //   }
-      // },
-      // {
-      //   name: 'Shadowmap',
-      //   content: {
-      //     demo: 'ShadowmapDemo'
-      //   }
-      // },
+      {
+        name: 'Persistence',
+        content: {
+          demo: 'PersistenceDemo'
+        }
+      },
+      {
+        name: 'Shadowmap',
+        content: {
+          demo: 'ShadowmapDemo'
+        }
+      },
       {
         name: 'Tranform Feedback',
         content: {

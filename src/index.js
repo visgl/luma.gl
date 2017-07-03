@@ -44,7 +44,7 @@ export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 
 export {draw} from './webgl/draw';
-export {clear} from './webgl/clear';
+export {clear, clearBuffer} from './webgl/clear';
 
 // WebGL2 & Extensions
 export {default as FenceSync} from './webgl/fence-sync';

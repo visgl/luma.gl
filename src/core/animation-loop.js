@@ -77,12 +77,16 @@ export default class AnimationLoop {
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
   start(opts = {}) {
+    this._stopped = false;
     // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
-
       // Wait for start promise before rendering frame
       this._startPromise = getPageLoadPromise()
       .then(() => {
+        if (this._stopped) {
+          return null;
+        }
+
         // Create the WebGL context
         this._createWebGLContext(opts);
 
@@ -97,10 +101,12 @@ export default class AnimationLoop {
         // Note: onIntialize can return a promise (in case it needs to load resources)
         return this._onInitialize(this._callbackData);
       })
-      .then((appContext) => {
-        this._addCallbackData(appContext || {});
-        if (appContext !== false && !this._animationFrameId) {
-          this._animationFrameId = requestAnimationFrame(this._renderFrame);
+      .then(appContext => {
+        if (!this._stopped) {
+          this._addCallbackData(appContext || {});
+          if (appContext !== false && !this._animationFrameId) {
+            this._animationFrameId = requestAnimationFrame(this._renderFrame);
+          }
         }
       });
 
@@ -115,6 +121,7 @@ export default class AnimationLoop {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
+      this._stopped = true;
     }
     return this;
   }
