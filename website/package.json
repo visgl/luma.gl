@@ -7,10 +7,10 @@
   },
   "main": "index.js",
   "scripts": {
-    "start": "webpack-dev-server --config webpack/dev --progress --content-base ./src/static --port 3000 --open",
+    "start": "webpack-dev-server --env.local --progress --content-base ./src/static --open",
     "build-clean": "rm -rf ./dist && mkdir dist",
     "build-static": "cp -r ./src/static/* dist && npm run build-images && cd `git rev-parse --show-toplevel`",
-    "build-script": "webpack -p --config webpack/prod",
+    "build-script": "webpack -p --env.prod",
     "build": "npm run build-clean && npm run build-script",
     "lint": "eslint src --ignore-pattern workers"
   },
