@@ -1,5 +1,19 @@
 # Pre-releases
 
+## 4.0.0-beta.1
+- Canvas and Drawing Buffer API fixes
+- Reduce size of gl-matrix dependencies
+- Support v3 texture parameters
+- Shader Module System cleanup and use in some examples
+- Webpack configuration consolidation
+
+- WEBSITE: Links to other frameworks
+- WEBSITE: Shippable docs
+- WEBSITE: SIZE and MULTIPLE CANVAS fixes
+- WEBSITE: Restore Shadowmap and Particles Examples
+- WEBSITE: Shader Module System - use in some examples
+- WEBSITE: Webpack configuration consolidation
+
 ## 4.0.0-alpha.14
 
 - v4 Capability Management API finalization
