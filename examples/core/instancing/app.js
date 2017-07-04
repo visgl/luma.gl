@@ -34,9 +34,9 @@ const animationLoop = new AnimationLoop({
     cube.setUniforms({
       uTime: tick * 0.1,
       // Basic projection matrix
-      uProjection: Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
       // Move the eye around the plane
-      uView: Matrix4.lookAt({
+      uView: new Matrix4().lookAt({
         center: [0, 0, 0],
         eye: [
           Math.cos(tick * 0.005) * SIDE / 2,

@@ -1,6 +1,30 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
-import {quat} from 'gl-matrix';
+
+// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
+// import {quat} from 'gl-matrix';
+/* eslint-disable camelcase */
+import quat_fromMat3 from 'gl-quat/fromMat3';
+import quat_identity from 'gl-quat/identity';
+import quat_length from 'gl-quat/length';
+import quat_squaredLength from 'gl-quat/squaredLength';
+import quat_dot from 'gl-quat/dot';
+// import quat_getAxisAngle from 'gl-quat/getAxisAngle';
+import quat_rotationTo from 'gl-quat/rotationTo';
+import quat_add from 'gl-quat/add';
+import quat_calculateW from 'gl-quat/calculateW';
+import quat_conjugate from 'gl-quat/conjugate';
+import quat_invert from 'gl-quat/invert';
+import quat_lerp from 'gl-quat/lerp';
+import quat_multiply from 'gl-quat/multiply';
+import quat_normalize from 'gl-quat/normalize';
+import quat_rotateX from 'gl-quat/rotateX';
+import quat_rotateY from 'gl-quat/rotateY';
+import quat_rotateZ from 'gl-quat/rotateZ';
+import quat_scale from 'gl-quat/scale';
+import quat_set from 'gl-quat/set';
+import quat_setAxisAngle from 'gl-quat/setAxisAngle';
+import quat_slerp from 'gl-quat/slerp';
 
 export default class Quaternion extends MathArray {
   // Creates a new identity quat
@@ -17,7 +41,7 @@ export default class Quaternion extends MathArray {
   // NOTE: The resultant quaternion is not normalized, so you should
   // be sure to renormalize the quaternion yourself where necessary.
   fromMatrix3(m) {
-    quat.fromMat3(this, m);
+    quat_fromMat3(this, m);
     this.check();
     return this;
   }
@@ -29,19 +53,9 @@ export default class Quaternion extends MathArray {
 
   // Set a quat to the identity quaternion
   identity() {
-    quat.identity(this);
+    quat_identity(this);
     this.check();
     return this;
-  }
-
-  equals(quaternion) {
-    return quat.equals(this, quaternion);
-  }
-
-  // Returns whether or not the quaternions have exactly the same elements
-  // in the same position (when compared with ===)
-  exactEquals(quaternion) {
-    return quat.exactEquals(this, quaternion);
   }
 
   // Getters/setters
@@ -59,12 +73,12 @@ export default class Quaternion extends MathArray {
 
   // Calculates the length of a quat
   length() {
-    return quat.length(this);
+    return quat_length(this);
   }
 
   // Calculates the squared length of a quat
   squaredLength(a) {
-    return quat.squaredLength(this);
+    return quat_squaredLength(this);
   }
 
   // Calculates the dot product of two quat's
@@ -73,7 +87,7 @@ export default class Quaternion extends MathArray {
     if (b !== undefined) {
       throw new Error('Quaternion.dot only takes one argument');
     }
-    return quat.dot(this, a);
+    return quat_dot(this, a);
   }
 
   // Gets the rotation axis and angle for a given quaternion.
@@ -84,18 +98,18 @@ export default class Quaternion extends MathArray {
   // is the same as the quaternion formed by [0, 0, 1] and 270.
   // This method favors the latter.
   // @return {{[x,y,z], Number}}
-  getAxisAngle() {
-    const axis = [];
-    const angle = quat.getAxisAngle(axis, this);
-    return {axis, angle};
-  }
+  // getAxisAngle() {
+  //   const axis = [];
+  //   const angle = quat_getAxisAngle(axis, this);
+  //   return {axis, angle};
+  // }
 
   // MODIFIERS
 
   // Sets a quaternion to represent the shortest rotation from one vector
   // to another. Both vectors are assumed to be unit length.
   rotationTo(vectorA, vectorB) {
-    quat.rotationTo(this, vectorA, vectorB);
+    quat_rotationTo(this, vectorA, vectorB);
     this.check();
     return this;
   }
@@ -117,7 +131,7 @@ export default class Quaternion extends MathArray {
     if (b !== undefined) {
       throw new Error('Quaternion.add only takes one argument');
     }
-    quat.add(this, a);
+    quat_add(this, a);
     this.check();
     return this;
   }
@@ -125,29 +139,29 @@ export default class Quaternion extends MathArray {
   // Calculates the W component of a quat from the X, Y, and Z components.
   // Any existing W component will be ignored.
   calculateW() {
-    quat.calculateW(this, this);
+    quat_calculateW(this, this);
     this.check();
     return this;
   }
 
   // Calculates the conjugate of a quat If the quaternion is normalized,
-  // this function is faster than quat.inverse and produces the same result.
+  // this function is faster than quat_inverse and produces the same result.
   conjugate() {
-    quat.conjugate(this, this);
+    quat_conjugate(this, this);
     this.check();
     return this;
   }
 
   // Calculates the inverse of a quat
   invert() {
-    quat.invert(this, this);
+    quat_invert(this, this);
     this.check();
     return this;
   }
 
   // Performs a linear interpolation between two quat's
   lerp(a, b, t) {
-    quat.lerp(this, a, b, t);
+    quat_lerp(this, a, b, t);
     this.check();
     return this;
   }
@@ -157,63 +171,63 @@ export default class Quaternion extends MathArray {
     if (b !== undefined) {
       throw new Error('Quaternion.multiply only takes one argument');
     }
-    quat.multiply(this, this, b);
+    quat_multiply(this, this, b);
     this.check();
     return this;
   }
 
   // Normalize a quat
   normalize() {
-    quat.normalize(this, this);
+    quat_normalize(this, this);
     this.check();
     return this;
   }
 
   // Rotates a quaternion by the given angle about the X axis
   rotateX(rad) {
-    quat.rotateX(this, this, rad);
+    quat_rotateX(this, this, rad);
     this.check();
     return this;
   }
 
   // Rotates a quaternion by the given angle about the Y axis
   rotateY(rad) {
-    quat.rotateY(this, this, rad);
+    quat_rotateY(this, this, rad);
     this.check();
     return this;
   }
 
   // Rotates a quaternion by the given angle about the Z axis
   rotateZ(rad) {
-    quat.rotateZ(this, this, rad);
+    quat_rotateZ(this, this, rad);
     this.check();
     return this;
   }
 
   // Scales a quat by a scalar number
   scale(b) {
-    quat.scale(this, this, b);
+    quat_scale(this, this, b);
     this.check();
     return this;
   }
 
   // Set the components of a quat to the given values
   set(i, j, k, l) {
-    quat.set(this, i, j, k, l);
+    quat_set(this, i, j, k, l);
     this.check();
     return this;
   }
 
   // Sets a quat from the given angle and rotation axis, then returns it.
   setAxisAngle(axis, rad) {
-    quat.setAxisAngle(this, axis, rad);
+    quat_setAxisAngle(this, axis, rad);
     this.check();
     return this;
   }
 
   // Performs a spherical linear interpolation between two quat
   slerp(a, b, t) {
-    quat.slerp(this, a, b, t);
+    quat_slerp(this, a, b, t);
     this.check();
     return this;
   }

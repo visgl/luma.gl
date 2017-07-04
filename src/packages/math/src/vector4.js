@@ -1,6 +1,28 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
-import {vec4} from 'gl-matrix';
+
+// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
+// import {vec4} from 'gl-matrix';
+/* eslint-disable camelcase */
+import vec4_set from 'gl-vec4/set';
+import vec4_distance from 'gl-vec4/distance';
+import vec4_add from 'gl-vec4/add';
+import vec4_subtract from 'gl-vec4/subtract';
+import vec4_scale from 'gl-vec4/scale';
+import vec4_scaleAndAdd from 'gl-vec4/scaleAndAdd';
+import vec4_negate from 'gl-vec4/negate';
+import vec4_inverse from 'gl-vec4/inverse';
+import vec4_normalize from 'gl-vec4/normalize';
+import vec4_dot from 'gl-vec4/dot';
+// import vec4_cross from 'gl-vec4/cross';
+import vec4_lerp from 'gl-vec4/lerp';
+
+// import vec4_multiply from 'gl-vec4/multiply';
+// import vec4_divide from 'gl-vec4/divide';
+// import vec4_ceil from 'gl-vec4/ceil';
+// import vec4_floor from 'gl-vec4/floor';
+// import vec4_min from 'gl-vec4/min';
+// import vec4_max from 'gl-vec4/max';
 
 export default class Vector4 extends MathArray {
   // Creates a new, empty vec4
@@ -14,17 +36,9 @@ export default class Vector4 extends MathArray {
   }
 
   set(x, y, z, w) {
-    vec4.set(this, x, y, z, w);
+    vec4_set(this, x, y, z, w);
     this.check();
     return this;
-  }
-
-  equals(vector) {
-    return vec4.equals(this, vector);
-  }
-
-  exactEquals(vector) {
-    return vec4.exactEquals(this, vector);
   }
 
   // Getters/setters
@@ -41,20 +55,12 @@ export default class Vector4 extends MathArray {
   /* eslint-enable no-multi-spaces, brace-style, no-return-assign */
 
   distance(vector) {
-    return vec4.distance(vector);
-  }
-
-  dist(vector) {
-    return vec4.dist(vector);
-  }
-
-  angle(vector) {
-    return vec4.angle(vector);
+    return vec4_distance(vector);
   }
 
   add(...vectors) {
     for (const vector of vectors) {
-      vec4.add(this, vector);
+      vec4_add(this, vector);
     }
     this.check();
     return this;
@@ -62,15 +68,64 @@ export default class Vector4 extends MathArray {
 
   subtract(...vectors) {
     for (const vector of vectors) {
-      vec4.subtract(this, vector);
+      vec4_subtract(this, vector);
     }
     this.check();
     return this;
   }
 
+  scale(scale) {
+    vec4_scale(this, this, scale);
+    this.check();
+    return this;
+  }
+
+  scaleAndAdd(vector, scale) {
+    vec4_scaleAndAdd(this, this, vector, scale);
+    this.check();
+    return this;
+  }
+
+  negate() {
+    vec4_negate(this, this);
+    this.check();
+    return this;
+  }
+
+  inverse() {
+    vec4_inverse(this, this);
+    this.check();
+    return this;
+  }
+
+  normalize() {
+    vec4_normalize(this, this);
+    this.check();
+    return this;
+  }
+
+  dot(scale) {
+    vec4_dot(this, this, scale);
+    this.check();
+    return this;
+  }
+
+  // cross(scale) {
+  //   vec4_cross(this, this, scale);
+  //   this.check();
+  //   return this;
+  // }
+
+  lerp(scale) {
+    vec4_lerp(this, this, scale);
+    this.check();
+    return this;
+  }
+
+  /*
   multiply(...vectors) {
     for (const vector of vectors) {
-      vec4.multiply(this, vector);
+      vec4_multiply(this, vector);
     }
     this.check();
     return this;
@@ -78,117 +133,70 @@ export default class Vector4 extends MathArray {
 
   divide(...vectors) {
     for (const vector of vectors) {
-      vec4.divide(this, vector);
+      vec4_divide(this, vector);
     }
     this.check();
     return this;
   }
 
   ceil() {
-    vec4.ceil(this, this);
+    vec4_ceil(this, this);
     this.check();
     return this;
   }
 
   floor() {
-    vec4.floor(this, this);
+    vec4_floor(this, this);
     this.check();
     return this;
   }
 
   min() {
-    vec4.min(this, this);
+    vec4_min(this, this);
     this.check();
     return this;
   }
 
   max() {
-    vec4.max(this, this);
-    this.check();
-    return this;
-  }
-
-  scale(scale) {
-    vec4.scale(this, this, scale);
-    this.check();
-    return this;
-  }
-
-  scaleAndAdd(vector, scale) {
-    vec4.scaleAndAdd(this, this, vector, scale);
-    this.check();
-    return this;
-  }
-
-  negate() {
-    vec4.negate(this, this);
-    this.check();
-    return this;
-  }
-
-  inverse() {
-    vec4.inverse(this, this);
-    this.check();
-    return this;
-  }
-
-  normalize() {
-    vec4.normalize(this, this);
-    this.check();
-    return this;
-  }
-
-  dot(scale) {
-    vec4.dot(this, this, scale);
-    this.check();
-    return this;
-  }
-
-  cross(scale) {
-    vec4.cross(this, this, scale);
-    this.check();
-    return this;
-  }
-
-  lerp(scale) {
-    vec4.lerp(this, this, scale);
+    vec4_max(this, this);
     this.check();
     return this;
   }
 
   hermite(scale) {
-    vec4.hermite(this, this, scale);
+    vec4_hermite(this, this, scale);
     this.check();
     return this;
   }
 
   bezier(scale) {
-    vec4.bezier(this, this, scale);
+    vec4_bezier(this, this, scale);
     this.check();
     return this;
   }
 
   random(scale) {
-    vec4.random(this, this, scale);
+    vec4_random(this, this, scale);
     this.check();
     return this;
   }
 
   rotateX(origin, angle) {
-    vec4.rotateX(this, this, origin, angle);
+    vec4_rotateX(this, this, origin, angle);
     this.check();
     return this;
   }
 
   rotateY(origin, angle) {
-    vec4.rotateY(this, this, origin, angle);
+    vec4_rotateY(this, this, origin, angle);
     this.check();
     return this;
   }
 
   rotateZ(origin, angle) {
-    vec4.rotateZ(this, this, origin, angle);
+    vec4_rotateZ(this, this, origin, angle);
     this.check();
     return this;
   }
+  */
 }

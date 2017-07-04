@@ -61,8 +61,8 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     cube.render({
-      uPMatrix: Matrix4.perspective({aspect}),
-      uMVMatrix: Matrix4
+      uPMatrix: new Matrix4().perspective({aspect}),
+      uMVMatrix: new Matrix4()
         .lookAt({eye: [0, 0, 0]})
         .translate([0, 0, -5])
         .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])

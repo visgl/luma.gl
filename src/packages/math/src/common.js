@@ -1,7 +1,7 @@
 /* eslint-disable no-shadow */
-import {glMatrix} from 'gl-matrix';
-
 // TODO - remove
+const glMatrix = {};
+glMatrix.EPSILON = 1e-12;
 glMatrix.debug = true;
 glMatrix.printRowMajor = true;
 glMatrix.precision = 4;
