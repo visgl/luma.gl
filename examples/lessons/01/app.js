@@ -46,7 +46,7 @@ const animationLoop = new AnimationLoop({
     var squarePositions = new Buffer(gl, {size: 3, data: new Float32Array(SQUARE_VERTS)});
 
     const view = new Matrix4().translate([-1.5, 0, -7]);
-    const projection = Matrix4.perspective({aspect});
+    const projection = new Matrix4().perspective({aspect});
 
     program.use();
 

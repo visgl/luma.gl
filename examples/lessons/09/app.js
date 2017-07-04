@@ -50,13 +50,13 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     for (var i in stars) {
-      var uMVMatrix = Matrix4
+      var uMVMatrix = new Matrix4()
         .lookAt({eye: [0, cameraY, cameraZ]})
         .multiplyRight(stars[i].matrix);
 
       stars[i].render({
         uMVMatrix,
-        uPMatrix: Matrix4.perspective({aspect})
+        uPMatrix: new Matrix4().perspective({aspect})
       });
       stars[i].animate();
     }

@@ -1,6 +1,4 @@
-import {
-  GL, AnimationLoop, Model, Geometry, Program, Matrix4,
-  resetParameters, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Model, Geometry, Program, Matrix4, setParameters} from 'luma.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -51,8 +49,8 @@ const animationLoop = new AnimationLoop({
   onRender({gl, tick, aspect, pyramid, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    const projection = Matrix4.perspective({aspect});
-    const view = Matrix4.lookAt({eye: [0, 0, 0]});
+    const projection = new Matrix4().perspective({aspect});
+    const view = new Matrix4().lookAt({eye: [0, 0, 0]});
 
     pyramid.render({
       uPMatrix: projection,
@@ -62,8 +60,7 @@ const animationLoop = new AnimationLoop({
     const phi = tick * 0.01;
     cube.render({
       uPMatrix: projection,
-      uMVMatrix:
-        view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
+      uMVMatrix: view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
     });
   }
 });

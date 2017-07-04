@@ -405,11 +405,11 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
       .updateMatrix()
       .render({
         uMVMatrix: tSquare.matrix,
-        uPMatrix: Matrix4.perspective({aspect})
+        uPMatrix: new Matrix4().perspective({aspect})
       });
   } else {
 
-  let uMVMatrix = Matrix4
+  let uMVMatrix = new Matrix4()
     .lookAt({eye: [0, 0, 20]})
     .translate([2, 0, 0])
     .rotateY(moonAngle)
@@ -420,11 +420,11 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
   moon.draw({
     uniforms: {
       uMVMatrix,
-      uPMatrix: Matrix4.perspective({aspect: FB_WIDTH / FB_HEIGHT, near: 0.1, far: 500})
+      uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT, near: 0.1, far: 500})
     }
   });
 
-  uMVMatrix = Matrix4
+  uMVMatrix = new Matrix4()
     .lookAt({eye: [0, 0, 20]})
     .translate([1, 0, 0])
     .rotateY(cubeAngle)
@@ -434,7 +434,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
     cube.draw({
       uniforms: {
         uMVMatrix,
-        uPMatrix: Matrix4.perspective({aspect: FB_WIDTH / FB_HEIGHT})
+        uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT})
       }
     });
   }
@@ -450,7 +450,7 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-  const uMVMatrix = Matrix4
+  const uMVMatrix = new Matrix4()
     .lookAt({eye: [0, 0, 0]})
     .translate([0, -0.5, -3])
     .rotateY(laptopAngle)
@@ -458,13 +458,13 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
 
   macbook.render({
     uMVMatrix,
-    uPMatrix: Matrix4.perspective({aspect}),
+    uPMatrix: new Matrix4().perspective({aspect}),
     uUseTextures: false
   });
 
   laptopScreenModel.render({
       uMVMatrix,
-      uPMatrix: Matrix4.perspective({aspect}),
+      uPMatrix: new Matrix4().perspective({aspect}),
       uUseTextures: true,
       uSampler: rttFramebuffer.texture
   });

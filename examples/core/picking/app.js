@@ -69,8 +69,8 @@ const animationLoop = new AnimationLoop({
   onRender: ({gl, aspect, planets, framebuffer}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    const projectionMatrix = Matrix4.perspective({fov: radians(75), aspect});
-    const viewMatrix = Matrix4.lookAt({eye: [0, 0, 8]});
+    const projectionMatrix = new Matrix4().perspective({fov: radians(75), aspect});
+    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
     for (const planet of planets) {
       planet.rotation[1] += 0.01;
