@@ -42,7 +42,7 @@ INTERNAL
 
 ## 4.0.0-alpha.8
 
-- FIX: Remove duplicate export that fails deck.gl tests (#191)
+- FIX: Remove duplicate export that fails tests in other repos (#191)
 
 ## 4.0.0-alpha.7
 

@@ -1,4 +1,3 @@
-// TODO - this is the new picking for deck.gl
 /* global window */
 import {GL, withParameters, isWebGL} from '../webgl';
 import Group from './group';
