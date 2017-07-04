@@ -116,7 +116,7 @@ export default class IcoSphereGeometry extends Geometry {
         y1 - y2,
         z1 - z2
       ];
-      const normal = Vector3.cross(vec1, vec2).normalize();
+      const normal = new Vector3(vec1).cross(vec2).normalize();
       let newIndex;
 
       if ((u1 === 0 || u2 === 0 || u3 === 0) &&

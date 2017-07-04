@@ -21,8 +21,8 @@ const animationLoop = new AnimationLoop({
   onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    const view = Matrix4.lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
-    const projection = Matrix4.perspective({fov: radians(75), aspect});
+    const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
+    const projection = new Matrix4().perspective({fov: radians(75), aspect});
 
     // Red uniforms
     const reflectionElement = document.getElementById('reflection');

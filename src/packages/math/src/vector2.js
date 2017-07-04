@@ -1,6 +1,11 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
-import {vec2} from 'gl-matrix';
+
+// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
+// import {vec2} from 'gl-matrix';
+/* eslint-disable camelcase */
+import vec2_set from 'gl-vec2/set';
+import vec2_add from 'gl-vec2/add';
 
 export default class Vector2 extends MathArray {
   // Creates a new, empty vec2
@@ -14,17 +19,9 @@ export default class Vector2 extends MathArray {
   }
 
   set(x, y) {
-    vec2.set(this, x, y);
+    vec2_set(this, x, y);
     this.check();
     return this;
-  }
-
-  equals(vector) {
-    return vec2.equals(this, vector);
-  }
-
-  exactEquals(vector) {
-    return vec2.exactEquals(this, vector);
   }
 
   // Getters/setters
@@ -38,7 +35,7 @@ export default class Vector2 extends MathArray {
 
   add(...vectors) {
     for (const vector of vectors) {
-      vec2.add(this, vector);
+      vec2_add(this, vector);
     }
     return this;
   }

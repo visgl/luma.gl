@@ -1,4 +1,4 @@
-import {glMatrix} from 'gl-matrix';
+import {glMatrix} from '../common';
 
 export function checkArguments(...args) {
   for (let i = 0; i < args.length; ++i) {

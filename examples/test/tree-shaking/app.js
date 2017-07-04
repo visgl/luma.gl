@@ -1,12 +1,9 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationFrame, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
-
-class Test {
-}
+import {GL, AnimationLoop, createGLContext, Cube, Matrix4, radians} from 'luma.gl';
 
 const SIDE = 256;
 
-const animationFrame = new AnimationFrame()
+const animationFrame = new AnimationLoop()
 .context(() => createGLContext({canvas: 'render-canvas'}))
 .init(({gl}) => {
   gl.clearColor(1, 1, 1, 1);
@@ -22,7 +19,7 @@ const animationFrame = new AnimationFrame()
   cube.render({
     uTime: tick * 0.1,
     uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-    uView: Matrix4.lookAt({
+    uView: new Matrix4().lookAt({
       center: [0, 0, 0],
       eye: [
         Math.cos(tick * 0.005) * SIDE / 2,
@@ -30,8 +27,7 @@ const animationFrame = new AnimationFrame()
         (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
       ]
     }),
-    uProjection:
-      Matrix4.perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
+    uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
   });
 });
 

@@ -100,7 +100,7 @@ export {default as Vector3} from './packages/math/src/vector3';
 export {default as Vector4} from './packages/math/src/vector4';
 export {default as Matrix4} from './packages/math/src/matrix4';
 export {default as Quaternion} from './packages/math/src/quaternion';
-export {default as Euler} from './packages/math/src/euler';
+// export {default as Euler} from './packages/math/src/euler';
 
 // IO
 export {

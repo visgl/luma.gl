@@ -1,6 +1,25 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
-import {vec3} from 'gl-matrix';
+
+// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
+// import {vec3} from 'gl-matrix';
+/* eslint-disable camelcase */
+import vec3_set from 'gl-vec3/set';
+import vec3_length from 'gl-vec3/add';
+import vec3_distance from 'gl-vec3/add';
+import vec3_angle from 'gl-vec3/add';
+import vec3_add from 'gl-vec3/add';
+import vec3_subtract from 'gl-vec3/subtract';
+import vec3_multiply from 'gl-vec3/multiply';
+import vec3_divide from 'gl-vec3/divide';
+import vec3_scale from 'gl-vec3/scale';
+import vec3_scaleAndAdd from 'gl-vec3/scaleAndAdd';
+import vec3_negate from 'gl-vec3/negate';
+import vec3_inverse from 'gl-vec3/inverse';
+import vec3_normalize from 'gl-vec3/normalize';
+import vec3_dot from 'gl-vec3/dot';
+import vec3_cross from 'gl-vec3/cross';
+import vec3_lerp from 'gl-vec3/lerp';
 
 export default class Vector3 extends MathArray {
   // Creates a new vec3, either empty, or from an array or from values
@@ -13,25 +32,17 @@ export default class Vector3 extends MathArray {
     }
   }
 
-  static fromArray(array) {
-    if (array instanceof Vector3) {
-      return array;
-    }
-    return new Vector3(...array);
-  }
+  // fromArray(array) {
+  //   if (array instanceof Vector3) {
+  //     return array;
+  //   }
+  //   return new Vector3(...array);
+  // }
 
   set(x, y, z) {
-    vec3.set(this, x, y, z);
+    vec3_set(this, x, y, z);
     this.check();
     return this;
-  }
-
-  equals(vector) {
-    return vec3.equals(this, vector);
-  }
-
-  exactEquals(vector) {
-    return vec3.exactEquals(this, vector);
   }
 
   // Getters/setters
@@ -45,23 +56,23 @@ export default class Vector3 extends MathArray {
   set z(value) { return this[2] = checkNumber(value); }
   /* eslint-enable no-multi-spaces, brace-style, no-return-assign */
 
-  len() {
-    return vec3.len(this);
+  length() {
+    return vec3_length(this);
   }
 
   distance(vector) {
-    return vec3.distance(this. vector);
+    return vec3_distance(this. vector);
   }
 
   angle(vector) {
-    return vec3.angle(this, vector);
+    return vec3_angle(this, vector);
   }
 
   // MODIFIERS
 
   add(...vectors) {
     for (const vector of vectors) {
-      vec3.add(this, vector);
+      vec3_add(this, vector);
     }
     this.check();
     return this;
@@ -69,7 +80,7 @@ export default class Vector3 extends MathArray {
 
   subtract(...vectors) {
     for (const vector of vectors) {
-      vec3.subtract(this, vector);
+      vec3_subtract(this, vector);
     }
     this.check();
     return this;
@@ -77,7 +88,7 @@ export default class Vector3 extends MathArray {
 
   multiply(...vectors) {
     for (const vector of vectors) {
-      vec3.multiply(this, vector);
+      vec3_multiply(this, vector);
     }
     this.check();
     return this;
@@ -85,7 +96,7 @@ export default class Vector3 extends MathArray {
 
   divide(...vectors) {
     for (const vector of vectors) {
-      vec3.divide(this, vector);
+      vec3_divide(this, vector);
     }
     this.check();
     return this;
@@ -93,60 +104,52 @@ export default class Vector3 extends MathArray {
 
   scale(scale) {
     if (Number.isFinite(scale)) {
-      vec3.scale(this, this, scale);
+      vec3_scale(this, this, scale);
     } else {
-      vec3.dot(this, this, scale);
+      vec3_dot(this, this, scale);
     }
     this.check();
     return this;
   }
 
   scaleAndAdd(vector, scale) {
-    vec3.scaleAndAdd(this, this, vector, scale);
+    vec3_scaleAndAdd(this, this, vector, scale);
     this.check();
     return this;
   }
 
   negate() {
-    vec3.negate(this, this);
+    vec3_negate(this, this);
     this.check();
     return this;
   }
 
   inverse() {
-    vec3.inverse(this, this);
+    vec3_inverse(this, this);
     this.check();
     return this;
   }
 
-  // normalize() {
-  //   vec3.normalize(this, this);
-  //   this.check();
-  //   return this;
-  // }
+  normalize() {
+    vec3_normalize(this, this);
+    this.check();
+    return this;
+  }
 
   dot(vector) {
-    vec3.dot(this, this, vector);
+    vec3_dot(this, this, vector);
     this.check();
     return this;
-  }
-
-  static dot(a, b) {
-    return Vector3.fromArray(a).dot(b);
   }
 
   cross(vector) {
-    vec3.cross(this, this, vector);
+    vec3_cross(this, this, vector);
     this.check();
     return this;
   }
 
-  static cross(a, b) {
-    return Vector3.fromArray(a).cross(b);
-  }
-
   lerp(scale) {
-    vec3.lerp(this, this, scale);
+    vec3_lerp(this, this, scale);
     this.check();
     return this;
   }
@@ -156,66 +159,4 @@ export default class Vector3 extends MathArray {
     this.check();
     return this;
   }
-
-  /*
-  min() {
-    vec3.min(this, this);
-    this.check();
-    return this;
-  }
-
-  max() {
-    vec3.max(this, this);
-    this.check();
-    return this;
-  }
-
-  rotateX(origin, angle) {
-    vec3.rotateX(this, this, origin, angle);
-    this.check();
-    return this;
-  }
-
-  rotateY(origin, angle) {
-    vec3.rotateY(this, this, origin, angle);
-    this.check();
-    return this;
-  }
-
-  rotateZ(origin, angle) {
-    vec3.rotateZ(this, this, origin, angle);
-    this.check();
-    return this;
-  }
-
-  ceil() {
-    vec3.ceil(this, this);
-    this.check();
-    return this;
-  }
-
-  floor() {
-    vec3.floor(this, this);
-    this.check();
-    return this;
-  }
-
-  hermite(scale) {
-    vec3.hermite(this, this, scale);
-    this.check();
-    return this;
-  }
-
-  bezier(scale) {
-    vec3.bezier(this, this, scale);
-    this.check();
-    return this;
-  }
-
-  random(scale) {
-    vec3.random(this, this, scale);
-    this.check();
-    return this;
-  }
-  */
 }
