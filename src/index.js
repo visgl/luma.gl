@@ -16,6 +16,7 @@ export {
   isWebGL2,
   setContextDefaults,
   createGLContext,
+  deleteGLContext,
   pollContext} from './webgl/context';
 export {
   resetParameters,

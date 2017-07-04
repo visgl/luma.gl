@@ -73,7 +73,7 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
-        name: 'Tranform Feedback',
+        name: 'Transform Feedback',
         content: {
           demo: 'TransformFeedbackDemo'
         }

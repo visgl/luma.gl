@@ -1,7 +1,42 @@
 // Create a WebGL context
 import assert from 'assert';
+/* global HTMLCanvasElement, WebGLRenderingContext */
 
-/* global window, HTMLCanvasElement, WebGLRenderingContext */
+/**
+ * Create a WebGL context for a canvas
+ * Note calling this multiple time on the same canvas does return the same context
+ */
+export function createContext({
+  canvas,
+  opts = {}, // WebGLRenderingContext options
+  onError = message => null
+}) {
+  // See if we can extract any extra information about why context creation failed
+  function onContextCreationError(error) {
+    onError(`WebGL context: ${error.statusMessage || 'Unknown error'}`);
+  }
+  canvas.addEventListener('webglcontextcreationerror', onContextCreationError, false);
+
+  const {webgl1 = true, webgl2 = true} = opts;
+  let gl = null;
+  // Prefer webgl2 over webgl1, prefer conformant over experimental
+  if (webgl2) {
+    gl = gl || canvas.getContext('webgl2', opts);
+    gl = gl || canvas.getContext('experimental-webgl2', opts);
+  }
+  if (webgl1) {
+    gl = gl || canvas.getContext('webgl', opts);
+    gl = gl || canvas.getContext('experimental-webgl', opts);
+  }
+
+  canvas.removeEventListener(onContextCreationError, false);
+
+  if (!gl) {
+    return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
+  }
+
+  return gl;
+}
 
 /**
  * Installs a spy on Canvas.getContext
@@ -29,77 +64,4 @@ export function trackContextCreation({
       return context;
     };
   }
-}
-
-/**
- * Create a WebGL context for a canvas
- * Note calling this multiple time on the same canvas does return the same context
- */
-export function createContext({
-  canvas,
-  opts = {}, // WebGLRenderingContext options
-  onError = message => null
-}) {
-  canvas.addEventListener('webglcontextcreationerror', e => {
-    onError(`WebGL context: ${e.statusMessage || 'Unknown error'}`);
-  }, false);
-
-  const {webgl1 = true, webgl2 = true} = opts;
-  let gl = null;
-  // Prefer webgl2 over webgl1, prefer conformant over experimental
-  if (webgl2) {
-    gl = gl || canvas.getContext('webgl2', opts);
-    gl = gl || canvas.getContext('experimental-webgl2', opts);
-  }
-  if (webgl1) {
-    gl = gl || canvas.getContext('webgl', opts);
-    gl = gl || canvas.getContext('experimental-webgl', opts);
-  }
-  if (!gl) {
-    return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
-  }
-
-  return gl;
-}
-
-/**
- * Resize the canvas' drawing buffer
- * for best visual results, usually set to either:
- *  canvas CSS width x canvas CSS height
- *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
- * NOTE: Regardless of size, the drawing buffer will always be scaled to the viewport
- * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
- * @param {Number} width - new width of canvas in CSS coordinates
- * @param {Number} height - new height of canvas in CSS coordinates
- */
-export function resizeDrawingBuffer({gl, useDevicePixelRatio = true}) {
-  // Resize the render buffer of the canvas to match canvas client size
-  // multiplying with dpr (Optionally can be turned off)
-  const {canvas} = gl;
-  const cssToDevicePixels = useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
-
-  // Lookup the size the browser is displaying the canvas in CSS pixels
-  // and compute a size needed to make our drawingbuffer match it in
-  // device pixels.
-  const oldWidth = window.innerWidth;
-  const oldHeight = window.innerHeight;
-  const displayWidth = Math.floor(oldWidth * cssToDevicePixels);
-  const displayHeight = Math.floor(oldHeight * cssToDevicePixels);
-
-  // Check if the canvas size has not changed
-  if (oldWidth !== displayWidth || oldHeight !== displayHeight) {
-    // Make the canvas the same size
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
-    canvas.style.width = oldWidth;
-    canvas.style.height = oldHeight;
-  }
-}
-
-/**
- * Resizes a webgl context's viewport to cover the size of its canvas
- * @param {WebGLRenderingContext} gl - gl context
- */
-export function resizeViewport({gl}) {
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 }

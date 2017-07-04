@@ -28,7 +28,8 @@ export {
 export {
   isWebGL,
   isWebGL2,
-  createGLContext
+  createGLContext,
+  deleteGLContext
 } from './context';
 
 export {
@@ -55,7 +56,10 @@ export {
 } from './draw';
 
 export {
-  clear,
+  clear
+} from './clear';
+
+export {
   readPixels,
   readPixelsFromBuffer
 } from './functions';

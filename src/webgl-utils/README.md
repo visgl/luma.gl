@@ -5,6 +5,31 @@ This luma.gl sub-module contains a number of completely generic WebGL helper fun
 Since all luma.gl code is MIT licensed you are of course welcome to copy these into your projects should you find them helpful.
 
 
+## Canvas Management
+
+The canvas manages the default drawing buffer including the size of the default drawing buffer, so the canvas typically needs to be updated when the window resizes
+
+## getPageLoadPromise
+
+Returns a promise that resolves when the page's HTML has loaded (meaning that any canvas specified in the HTML can now be queried by id).
+
+### createCanvas
+
+Programatically creates a canvas element with a certain size and id, and inserts it into the documents body once the page is loaded (see `getPageLoadPromise`).
+
+### resizeDrawingBuffer
+
+Resizes the drawing buffer if the size of the canvas has changed. Intended to be called on every frame. By default, takes devicePixelRatio into account.
+
+### createContext
+
+Gives a controlled interface to create a WebGL1 or WebGL2 context from a canvas.
+
+### trackContextCreation
+
+If you need access to the WebGL context created by another application or framework, this spy allows you to intercept context creation requests.
+
+
 ## State Management
 
 ### trackContextState

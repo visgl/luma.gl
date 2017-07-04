@@ -2,13 +2,13 @@ export {
   getPageLoadPromise,
   createCanvas,
   getCanvas,
-  resizeCanvas
+  resizeCanvas,
+  resizeDrawingBuffer
 } from './create-canvas';
 
 export {
   trackContextCreation,
   createContext,
-  resizeDrawingBuffer,
   resizeViewport
 } from './create-context';
 

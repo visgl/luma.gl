@@ -3,12 +3,17 @@ import React, {Component, PropTypes} from 'react';
 import {connect} from 'react-redux';
 import autobind from 'autobind-decorator';
 
-import Context from './context';
+import DemoRunner from './demo-runner';
 import InfoPanel from './info-panel';
 import MarkdownPage from './markdown-page';
-import {loadContent, updateContext} from '../actions/app-actions';
+import {loadContent, updateViewport} from '../actions/app-actions';
 
 import {setPathPrefix} from 'luma.gl';
+
+// table-of-contents width (_gallery.scss)
+const TOC_MIN_WIDTH = 768;
+const TOC_WIDTH = 240;
+const HEADER_HEIGHT = 64;
 
 const contextTypes = {
   router: PropTypes.object
@@ -18,7 +23,7 @@ const propTypes = {
   route: PropTypes.any,
   location: PropTypes.any,
   loadContent: PropTypes.any,
-  updateContext: PropTypes.any,
+  updateViewport: PropTypes.any,
   contents: PropTypes.any
 };
 
@@ -73,13 +78,18 @@ class Page extends Component {
     return content;
   }
 
-  @autobind _resizeContext() {
+  _getCanvasSize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.props.updateContext({
-      width: w <= 768 ? w : w - 240,  // table-of-contents width (_gallery.scss)
-      height: h - 64
-    });
+    return {
+      width: w <= TOC_MIN_WIDTH ? w : w - TOC_WIDTH,
+      height: h - HEADER_HEIGHT
+    };
+  }
+
+  @autobind _resizeContext() {
+    this.forceUpdate();
+    this.props.updateViewport(this._getCanvasSize());
   }
 
   _setActiveTab(tabName) {
@@ -100,12 +110,11 @@ class Page extends Component {
   }
 
   _renderDemo(name, fullSize) {
+    const {width, height} = this._getCanvasSize();
     return (
       <div className={`demo ${fullSize ? '' : 'embedded'}`}>
-        <Context
-          demo={name} />
-        <InfoPanel
-          demo={name} />
+        <DemoRunner width={width} height={height} demo={name} />
+        <InfoPanel demo={name} />
       </div>
     );
   }
@@ -143,10 +152,6 @@ class Page extends Component {
     return (
       <ul className="tabs">
 
-        {/*activeTab === 'demo' && (
-          <li><span className="bg-black tip">Hold down shift key to rotate</span></li>
-        )*/}
-
         {Object.keys(tabs).map(tabName => (
           <li key={tabName} className={`${tabName === activeTab ? 'active' : ''}`}>
             <button onClick={this._setActiveTab.bind(this, tabName)}>
@@ -172,11 +177,13 @@ class Page extends Component {
 }
 
 Page.contextTypes = contextTypes;
+Page.propTypes = propTypes;
 
-function mapStateToProps(state) {
+function mapStateToProps(state, ownProps) {
   return {
+    ...ownProps,
     contents: state.contents
   };
 }
 
-export default connect(mapStateToProps, {loadContent, updateContext})(Page);
+export default connect(mapStateToProps, {loadContent, updateViewport})(Page);

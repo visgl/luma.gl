@@ -7,7 +7,7 @@ import {DEFAULT_VIEWPORT_STATE} from '../constants/defaults';
 
 export default handleActions({
 
-  UPDATE_CONTEXT: (state, action) => {
+  UPDATE_VIEWPORT: (state, action) => {
     const {viewport} = action;
     return {...state, ...viewport};
   }
