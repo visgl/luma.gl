@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "4.0.0-alpha.14",
+  "version": "4.0.0-beta.1",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -9,7 +9,9 @@
     "Rye Terrell <ryeterrell@ryeterrell.net",
     "Shan He <shan@uber.com>",
     "Mikola Lysenko <mikolalysenko@gmail.com",
-    "Wesam Manassra <manassra@uber.com>"
+    "Wesam Manassra <manassra@uber.com>",
+    "Shaojing Li <shaojing@uber.com>",
+    "Ravi Akenapalli <chandu@uber.com>"
   ],
   "repository": {
     "type": "git",

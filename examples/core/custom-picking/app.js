@@ -33,11 +33,11 @@ const animationLoop = new AnimationLoop({
     gl.canvas.removeEventListener('mousemove', mousemove);
   },
   onRender: ({gl, tick, aspect, heightmap, framebuffer}) => {
-    const projection = Matrix4.perspective({
+    const projection = new Matrix4().perspective({
       fov: radians(60), aspect, near: 0.1, far: 1000
     });
-    const view = Matrix4.lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
-    const model = new Matrix4().clone(view).rotateY(tick * 0.01);
+    const view = new Matrix4().lookAt({eye: [0, 1.5, 0.75], center: [0, 0.5, 0]});
+    const model = view.clone().rotateY(tick * 0.01);
 
     heightmap.setUniforms({
       projectionMatrix: projection,

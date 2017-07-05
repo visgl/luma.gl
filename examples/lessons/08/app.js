@@ -107,7 +107,7 @@ const animationLoop = new AnimationLoop({
       .setRotation([xRot, yRot, 0])
       .updateMatrix();
 
-    const uMVMatrix = Matrix4
+    const uMVMatrix = new Matrix4()
       .lookAt({eye: [0, 0, 0]})
       .translate([0, 0, cubePositionZ])
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
@@ -115,7 +115,7 @@ const animationLoop = new AnimationLoop({
 
     cube.render({
       uMVMatrix,
-      uPMatrix: Matrix4.perspective({aspect}),
+      uPMatrix: new Matrix4().perspective({aspect}),
       uAmbientColor: [0.2, 0.2, 0.2],
       uLightingDirection: [0, 0, 1],
       uDirectionalColor: [0.8, 0.8, 0.8],
