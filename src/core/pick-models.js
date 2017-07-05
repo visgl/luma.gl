@@ -51,8 +51,13 @@ export default function pickModels(gl, {
       model.setUniforms({picking_uActive: 0});
 
       // Sample Read color in the central pixel, to be mapped as a picking color
-      const color = new Uint8Array(4);
-      gl.readPixels(deviceX, deviceY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color);
+      const color = framebuffer.readPixels({
+        x: deviceX,
+        y: deviceY,
+        width: 1,
+        height: 1,
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE});
 
       const isPicked = color[0] !== 0 || color[1] !== 0 || color[2] !== 0 || color[3] !== 0;
 

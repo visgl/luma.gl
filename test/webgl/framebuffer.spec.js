@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D, clear} from 'luma.gl';
 
 import {fixture} from '../setup';
 
@@ -164,6 +164,54 @@ function testFramebufferResize(t, gl) {
 test('WebGL1#Framebuffer resize', t => {
   const {gl} = fixture;
   testFramebufferResize(t, gl);
+  t.end();
+});
+
+function testFramebufferReadPixels(t, gl) {
+  const frameBufferOptions = {
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
+      [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
+    }
+  };
+
+  const framebuffer = new Framebuffer(gl, frameBufferOptions);
+
+  framebuffer.resize({width: 1000, height: 1000});
+  framebuffer.checkStatus();
+
+  const clearColor = [1, 0.5, 0.25, 0.125];
+  const expectedColor = [255, 128, 64, 32];
+
+  clear(gl, {framebuffer, color: clearColor});
+
+  const color = framebuffer.readPixels({
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE});
+
+  t.equals(color[0], expectedColor[0], 'Readpixels returned expected value for Red channel');
+  t.equals(color[1], expectedColor[1], 'Readpixels returned expected value for Green channel');
+  t.equals(color[2], expectedColor[2], 'Readpixels returned expected value for Blue channel');
+  t.equals(color[3], expectedColor[3], 'Readpixels returned expected value for Alpha channel');
+}
+
+test('WebGL1#Framebuffer readPixels', t => {
+  const {gl} = fixture;
+  testFramebufferReadPixels(t, gl);
+  t.end();
+});
+
+test('WebGL2#Framebuffer readPixels', t => {
+  const {gl2} = fixture;
+  if (gl2) {
+    testFramebufferReadPixels(t, gl2);
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
   t.end();
 });
 

@@ -253,7 +253,7 @@ export default class Framebuffer extends Resource {
     if (!pixelArray) {
       // Allocate pixel array if not already available, using supplied type
       type = type || gl.UNSIGNED_BYTE;
-      const ArrayType = getTypedArrayFromGLType(type);
+      const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
       const components = glFormatToComponents(format);
       // TODO - check for composite type (components = 1).
       pixelArray = pixelArray || new ArrayType(width * height * components);
