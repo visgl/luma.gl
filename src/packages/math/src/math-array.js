@@ -1,4 +1,4 @@
-import {formatValue, equals, glMatrix} from './common';
+import {formatValue, equals, config} from './common';
 
 export default class MathArray extends Array {
 
@@ -85,7 +85,7 @@ export default class MathArray extends Array {
   }
 
   check(array = this) {
-    if (glMatrix.debug && !this.validate(array)) {
+    if (config.debug && !this.validate(array)) {
       throw new Error(`Invalid ${this.constructor.name}`);
     }
   }

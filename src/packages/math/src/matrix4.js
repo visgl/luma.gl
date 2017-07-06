@@ -1,12 +1,11 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
-import Vector2 from './vector2';
-import Vector3 from './vector3';
-import Vector4 from './vector4';
-import {checkVector2, checkVector3, checkVector4} from './utils/validators';
+import Vector2, {validateVector2} from './vector2';
+import Vector3, {validateVector3} from './vector3';
+import Vector4, {validateVector4} from './vector4';
+import assert from 'assert';
 
-// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
-// import {mat4, vec2, vec3, vec4} from 'gl-matrix';
+// gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import mat4_determinant from 'gl-mat4/determinant';
 import mat4_fromQuat from 'gl-mat4/fromQuat';
@@ -28,6 +27,18 @@ import vec3_transformMat4 from 'gl-vec3/transformMat4';
 import vec4_transformMat4 from 'gl-vec4/transformMat4';
 
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+export function validateMatrix4(m) {
+  return m.length === 16 &&
+    Number.isFinite(m[0]) && Number.isFinite(m[1]) &&
+    Number.isFinite(m[2]) && Number.isFinite(m[3]) &&
+    Number.isFinite(m[4]) && Number.isFinite(m[5]) &&
+    Number.isFinite(m[6]) && Number.isFinite(m[7]) &&
+    Number.isFinite(m[8]) && Number.isFinite(m[9]) &&
+    Number.isFinite(m[10]) && Number.isFinite(m[11]) &&
+    Number.isFinite(m[12]) && Number.isFinite(m[13]) &&
+    Number.isFinite(m[14]) && Number.isFinite(m[15]);
+}
 
 export default class Matrix4 extends MathArray {
   constructor(...args) {
@@ -95,7 +106,7 @@ export default class Matrix4 extends MathArray {
   /* eslint-enable max-params */
 
   // toString() {
-  //   if (glMatrix.printRowMajor) {
+  //   if (config.printRowMajor) {
   //     mat4_str(this);
   //   } else {
   //     mat4_str(this);
@@ -296,21 +307,21 @@ export default class Matrix4 extends MathArray {
   transformVector2(vector, out) {
     out = out || new Vector2();
     vec2_transformMat4(out, vector, this);
-    checkVector2(out);
+    assert(validateVector2(out));
     return out;
   }
 
   transformVector3(vector, out = new Vector3()) {
     out = out || new Vector3();
     vec3_transformMat4(out, vector, this);
-    checkVector3(out);
+    assert(validateVector3(out));
     return out;
   }
 
   transformVector4(vector, out = new Vector4()) {
     out = out || new Vector4();
     vec4_transformMat4(out, vector, this);
-    checkVector4(out);
+    assert(validateVector4(out));
     return out;
   }
 

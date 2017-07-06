@@ -1,8 +1,7 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
 
-// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
-// import {quat} from 'gl-matrix';
+// gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import quat_fromMat3 from 'gl-quat/fromMat3';
 import quat_identity from 'gl-quat/identity';
@@ -25,6 +24,12 @@ import quat_scale from 'gl-quat/scale';
 import quat_set from 'gl-quat/set';
 import quat_setAxisAngle from 'gl-quat/setAxisAngle';
 import quat_slerp from 'gl-quat/slerp';
+
+export function validateQuaternion(q) {
+  return q.length === 4 &&
+    Number.isFinite(q[0]) && Number.isFinite(q[1]) &&
+    Number.isFinite(q[2]) && Number.isFinite(q[3]);
+}
 
 export default class Quaternion extends MathArray {
   // Creates a new identity quat

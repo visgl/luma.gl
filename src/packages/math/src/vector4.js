@@ -1,8 +1,7 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
 
-// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
-// import {vec4} from 'gl-matrix';
+// gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import vec4_set from 'gl-vec4/set';
 import vec4_distance from 'gl-vec4/distance';
@@ -17,12 +16,11 @@ import vec4_dot from 'gl-vec4/dot';
 // import vec4_cross from 'gl-vec4/cross';
 import vec4_lerp from 'gl-vec4/lerp';
 
-// import vec4_multiply from 'gl-vec4/multiply';
-// import vec4_divide from 'gl-vec4/divide';
-// import vec4_ceil from 'gl-vec4/ceil';
-// import vec4_floor from 'gl-vec4/floor';
-// import vec4_min from 'gl-vec4/min';
-// import vec4_max from 'gl-vec4/max';
+export function validateVector4(v) {
+  return v.length === 4 &&
+    Number.isFinite(v[0]) && Number.isFinite(v[1]) &&
+    Number.isFinite(v[2]) && Number.isFinite(v[3]);
+}
 
 export default class Vector4 extends MathArray {
   // Creates a new, empty vec4

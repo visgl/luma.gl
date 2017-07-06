@@ -1,19 +1,19 @@
 /* eslint-disable no-shadow */
 // TODO - remove
-const glMatrix = {};
-glMatrix.EPSILON = 1e-12;
-glMatrix.debug = true;
-glMatrix.printRowMajor = true;
-glMatrix.precision = 4;
-export {glMatrix};
+const config = {};
+config.EPSILON = 1e-12;
+config.debug = true;
+config.printRowMajor = true;
+config.precision = 4;
+export {config};
 
 export function configure(options) {
   if ('epsilon' in options) {
-    glMatrix.EPSILON = options.epsilon;
+    config.EPSILON = options.epsilon;
   }
 
   if ('debug' in options) {
-    glMatrix.debug = options.debug;
+    config.debug = options.debug;
   }
 }
 
@@ -24,7 +24,7 @@ export function checkNumber(value) {
   return value;
 }
 
-export function formatValue(value, precision = glMatrix.precision || 4) {
+export function formatValue(value, precision = config.precision || 4) {
   return parseFloat(value.toPrecision(precision));
 }
 
@@ -96,12 +96,24 @@ export function atan(radians) {
   return map(radians, angle => Math.atan(angle));
 }
 
-// TODO - glsl equivalent
 export function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+  return map(value, value => Math.max(min, Math.min(max, value)));
 }
 
 export function equals(a, b) {
-  return Math.abs(a - b) <=
-    glMatrix.EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a === b) {
+      return true;
+    }
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; ++i) {
+      if (!equals(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return Math.abs(a - b) <= config.EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
 }
