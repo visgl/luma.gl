@@ -79,6 +79,14 @@ function makeInstancedCube(gl) {
   }
   offsets = new Float32Array(offsets);
 
+  const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
+  for (let i = 0; i < SIDE; i++) {
+    for (let j = 0; j < SIDE; j++) {
+      pickingColors[(i * SIDE + j) * 2 + 0] = i;
+      pickingColors[(i * SIDE + j) * 2 + 1] = j;
+    }
+  }
+
   const colors = new Float32Array(SIDE * SIDE * 3).map(
     () => Math.random() * 0.75 + 0.25
   );
@@ -89,6 +97,7 @@ attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 instanceOffsets;
 attribute vec3 instanceColors;
+attribute vec2 instancePickingColors;
 
 uniform mat4 uModel;
 uniform mat4 uView;
@@ -98,13 +107,12 @@ uniform float uTime;
 varying vec3 color;
 
 void main(void) {
-  vec3 pickingColor = vec3(0., instanceOffsets.x + ${SIDE / 2}., instanceOffsets.y + ${SIDE / 2}.);
   vec3 normal = vec3(uModel * vec4(normals, 1.0));
 
   // Set up data for modules
   color = instanceColors;
   project_setNormal(normal);
-  picking_setPickingColor(pickingColor);
+  picking_setPickingColor(vec3(0., instancePickingColors));
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -135,7 +143,8 @@ void main(void) {
     instanceCount: SIDE * SIDE,
     attributes: {
       instanceOffsets: {value: offsets, size: 2, instanced: 1},
-      instanceColors: {value: colors, size: 3, instanced: 1}
+      instanceColors: {value: colors, size: 3, instanced: 1},
+      instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
     }
   });
 }
