@@ -20,6 +20,7 @@ import mat4_multiply from 'gl-mat4/multiply';
 import mat4_rotateX from 'gl-mat4/rotateX';
 import mat4_rotateY from 'gl-mat4/rotateY';
 import mat4_rotateZ from 'gl-mat4/rotateZ';
+import mat4_rotate from 'gl-mat4/rotateZ';
 import mat4_scale from 'gl-mat4/scale';
 import mat4_translate from 'gl-mat4/translate';
 import vec2_transformMat4 from 'gl-vec2/transformMat4';
@@ -250,7 +251,6 @@ export default class Matrix4 extends MathArray {
   }
 
   // Rotates a matrix by the given angle around the X axis
-  // uses SIMD if available and enabled
   rotateX(radians) {
     mat4_rotateX(this, this, radians);
     this.check();
@@ -258,7 +258,6 @@ export default class Matrix4 extends MathArray {
   }
 
   // Rotates a matrix by the given angle around the Y axis.
-  // Uses SIMD if available and enabled
   rotateY(radians) {
     mat4_rotateY(this, this, radians);
     this.check();
@@ -266,19 +265,21 @@ export default class Matrix4 extends MathArray {
   }
 
   // Rotates a matrix by the given angle around the Z axis.
-  // Uses SIMD if available and enabled
   rotateZ(radians) {
     mat4_rotateZ(this, this, radians);
     this.check();
     return this;
   }
 
-  // TODO - may not be needed
-  /* eslint-disable max-statements */
   rotateXYZ([rx, ry, rz]) {
     return this.rotateX(rx).rotateY(ry).rotateZ(rz);
   }
-  /* eslint-enable max-statements */
+
+  rotateAxis(radians, axis) {
+    mat4_rotate(this, this, radians, axis);
+    this.check();
+    return this;
+  }
 
   scale(vec) {
     mat4_scale(this, this, vec);

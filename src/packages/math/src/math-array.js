@@ -53,7 +53,7 @@ export default class MathArray extends Array {
   }
 
   equals(array) {
-    if (this.length !== array.length) {
+    if (!array || this.length !== array.length) {
       return false;
     }
     for (let i = 0; i < this.ELEMENTS; ++i) {
@@ -65,7 +65,7 @@ export default class MathArray extends Array {
   }
 
   exactEquals(array) {
-    if (this.length !== array.length) {
+    if (!array || this.length !== array.length) {
       return false;
     }
     for (let i = 0; i < this.ELEMENTS; ++i) {
@@ -77,7 +77,7 @@ export default class MathArray extends Array {
   }
 
   validate(array = this) {
-    let valid = array.length === this.ELEMENTS;
+    let valid = array && array.length === this.ELEMENTS;
     for (let i = 0; i < this.ELEMENTS; ++i) {
       valid = valid && Number.isFinite(array[i]);
     }
