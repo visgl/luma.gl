@@ -74,9 +74,14 @@ const float COLOR_SCALE = 1. / 256.;
  * Returns highlight color if this item is selected
  * Note: Should be normally be called before other
  */
-vec4 picking_filterHighlight(vec4 color) {
+vec4 picking_filterHighlightColor(vec4 color) {
   bool selected = bool(picking_vRGBcolor_Aselected.a);
   return selected ? picking_uHighlightColor : color;
+}
+
+vec4 picking_filterPickingColor(vec4 color) {
+  vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
+  return picking_uActive ? vec4(pickingColor, 1.0) : color;
 }
 
 /*
@@ -84,17 +89,17 @@ vec4 picking_filterHighlight(vec4 color) {
  * Note: Should be called last, picking color must not be modified.
  */
 vec4 picking_filterColor(vec4 color) {
-  vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
-  return picking_uActive ?
-    vec4(pickingColor, 1.0) :
-    picking_filterHighlight(color);
+  color = picking_filterHighlightColor(color);
+  color = picking_filterPickingColor(color);
+  return color;
 }
 `;
 
+// TODO:  Make changes to doc with above new method and
+// function names. Update all examples where they are used.
 export default {
   name: 'picking',
   vs,
   fs,
   getUniforms
 };
-

@@ -16,20 +16,28 @@ main() {
 }
 ```
 
-In your fragment shader, you simply apply (call) the `picking_filterFinal` filter function at the very end of the shader.
+In your fragment shader, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader.
 ```
 main() {
   gl_FragColor = ...
-  gl_FragColor = picking_filterFinal(gl_FragColor);
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 ```
 
-If you would like to apply the highlight color to the currently selected element call `picking_filterHighlight`
+If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`
 ```
 main() {
   gl_FragColor = picking_filterHighlight(color);
 
-  gl_FragColor = picking_filterFinal(gl_FragColor);
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+}
+```
+
+If you need to apply highlight color you can also just call `picking_filterColor`.
+```
+main() {
+  gl_FragColor = ...
+  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 ```
 
@@ -37,7 +45,7 @@ main() {
 
 ### getUniforms
 
-`getUniforms` returns an object with key/value pairs representing the uniforms that the `picking` module shaders need. 
+`getUniforms` returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
 
 `getUniforms({enabled, })`
 

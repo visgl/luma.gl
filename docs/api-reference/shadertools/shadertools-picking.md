@@ -15,20 +15,25 @@ main() {
 }
 ```
 
-In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+In your fragment shader, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
 ```
 main() {
   gl_FragColor = ...
-  gl_FragColor = picking_filterColor(gl_FragColor);
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 ```
+If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`. You can also apply other filters on the non-picking color (vertex or highlight color) by placing those instruction between these two function calls.
 
-A limitation with the above approach is that the highlight color does not get processed by i.e. other color filters in your fragment shader. If you would like to get the non-picking color (vertex or highlight color) of the current fragment simply call `picking_filterHighlight`, This ensures the highlight color gets exposed to the same lighting or other color treatments in your shader as normal vertex colors.
+ ```
+main() {
+   gl_FragColor = picking_filterHighlightColor(color);
+    ... apply any filters on gl_FragColor ...
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+}
+
+If you are not applying any filters on non-picking color (vertex or highlight color), you can simply call 'picking_filterColor' which will handle both picking color and hight light color if enabled.
 ```
 main() {
-  gl_FragColor = picking_filterHighlight(color);
-  // Now the highlight color will also be filtered...
-  gl_FragColor = lighting_filterColor(gl_FragColor);
   ...
   gl_FragColor = picking_filterColor(gl_FragColor);
 }
@@ -59,20 +64,23 @@ Sets the color that will be returned by the fragment shader if color based picki
 
 ## Fragment Shader Functions
 
+### picking_filterPickingColor
+
+If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns its argument unmodified.
+
+`vec4 picking_filterPickingColor(vec4 color)`
+
+### picking_filterHighlightColor
+
+Returns picking highlight color if the pixel belongs to currently selected model, otherwise returns its argument unmodified.
+
+`vec4 picking_filterHighlightColor(vec4 color)`
+
 ### picking_filterColor
 
- If is picking enabled and active, returns the current vertex's picking color set by `picking_setPickingColor`. Otherwise returns its argument, unmodified.
+ If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns non-picking color, which is highlight color if the pixel belongs to currently selected model, unmodified argument if not.
 
 `vec4 picking_filterColor(vec4 color)`
-
-
-
-### picking_filterHighlight
-
-Returns the picking color set by `picking_setPickingColor`, if is picking enabled and active. Otherwise returns its argument, unmodified.
-
-`vec4 picking_filterHighlight(vec4 color)`
-
 
 ## Remarks
 
