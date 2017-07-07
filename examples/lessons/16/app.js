@@ -201,8 +201,7 @@ const animationLoop = new AnimationLoop({
         )
       });
 
-      const moon = new Sphere({
-        gl,
+      const moon = new Sphere(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         nlat: 30,

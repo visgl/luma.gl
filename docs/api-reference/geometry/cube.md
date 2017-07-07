@@ -52,7 +52,7 @@ The main constructor function for the Sphere class. Use this to create a new Sph
 
 ### Syntax:
 
-  var model = new Sphere(options);
+  var model = new Sphere(gl, options);
 
 ### Arguments:
 
@@ -69,7 +69,7 @@ The main constructor function for the Sphere class. Use this to create a new Sph
 Create a white Sphere of radius 2.
 
 {% highlight js %}
-var whiteSphere = new Sphere({
+var whiteSphere = new Sphere(gl, {
   radius: 2,
   colors: [1, 1, 1, 1]
 });
@@ -93,7 +93,7 @@ The main constructor function for the IcoSphere class. Use this to create a new 
 
 ### Syntax:
 
-  var model = new IcoSphere(options);
+  var model = new IcoSphere(gl, options);
 
 ### Arguments:
 
@@ -108,7 +108,7 @@ The main constructor function for the IcoSphere class. Use this to create a new 
 Create a white IcoSphere of radius 1.
 
 {% highlight js %}
-var whiteSphere = new IcoSphere({
+var whiteSphere = new IcoSphere(gl, {
   iterations: 1,
   colors: [1, 1, 1, 1]
 });

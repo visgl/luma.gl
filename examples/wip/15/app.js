@@ -38,7 +38,7 @@ const animationLoop = new AnimationLoop({
         }
       });
 
-      var earth = new Sphere({
+      var earth = new Sphere(gl, {
         nlat: 30,
         nlong: 30,
         radius: 2,

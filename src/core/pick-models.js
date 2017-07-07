@@ -59,7 +59,7 @@ export default function pickModels(gl, {
         format: gl.RGBA,
         type: gl.UNSIGNED_BYTE});
 
-      const isPicked = color[0] !== 0 || color[1] !== 0 || color[2] !== 0 || color[3] !== 0;
+      const isPicked = color[0] !== 0 || color[1] !== 0 || color[2] !== 0;
 
       // Add the information to the stack
       if (isPicked) {

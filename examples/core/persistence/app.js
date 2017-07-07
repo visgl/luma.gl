@@ -141,7 +141,7 @@ const animationLoop = new AnimationLoop({
       geometry: quadGeometry
     });
 
-    sphere = new IcoSphere({
+    sphere = new IcoSphere(gl, {
       id: 'electron',
       iterations: 4,
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
