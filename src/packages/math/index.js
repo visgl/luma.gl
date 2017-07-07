@@ -6,7 +6,7 @@ export {default as Quaternion} from './src/quaternion';
 // export {default as Euler} from './src/euler';
 
 export {
-  glMatrix,
+  config,
   checkNumber,
   configure,
   formatValue,
@@ -20,5 +20,6 @@ export {
   asin,
   acos,
   atan,
-  clamp
+  clamp,
+  equals
 } from './src/common';

@@ -1,8 +1,7 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
 
-// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
-// import {vec3} from 'gl-matrix';
+// gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import vec3_set from 'gl-vec3/set';
 import vec3_length from 'gl-vec3/add';
@@ -20,6 +19,11 @@ import vec3_normalize from 'gl-vec3/normalize';
 import vec3_dot from 'gl-vec3/dot';
 import vec3_cross from 'gl-vec3/cross';
 import vec3_lerp from 'gl-vec3/lerp';
+
+export function validateVector3(v) {
+  return v.length === 3 &&
+    Number.isFinite(v[0]) && Number.isFinite(v[1]) && Number.isFinite(v[2]);
+}
 
 export default class Vector3 extends MathArray {
   // Creates a new vec3, either empty, or from an array or from values

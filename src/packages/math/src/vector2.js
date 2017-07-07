@@ -1,11 +1,15 @@
 import MathArray from './math-array';
 import {checkNumber} from './common';
 
-// gl-matrix is a big library. Cherry-pick individual imports from stack.gl version
-// import {vec2} from 'gl-matrix';
+// gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import vec2_set from 'gl-vec2/set';
 import vec2_add from 'gl-vec2/add';
+
+export function validateVector2(v) {
+  return v.length === 2 &&
+    Number.isFinite(v[0]) && Number.isFinite(v[1]);
+}
 
 export default class Vector2 extends MathArray {
   // Creates a new, empty vec2
