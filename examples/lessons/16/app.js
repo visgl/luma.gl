@@ -333,7 +333,7 @@ function generateLaptopScreenModel(gl) {
     drawMode: GL.TRIANGLE_STRIP
   });
 
-  const model = new Model({
+  const model = new Model(gl, {
     gl,
     id: 'laptopscreen-model',
     geometry,

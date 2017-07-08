@@ -31,12 +31,6 @@ main() {
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 
-If you are not applying any filters on non-picking color (vertex or highlight color), you can simply call 'picking_filterColor' which will handle both picking color and hight light color if enabled.
-```
-main() {
-  ...
-  gl_FragColor = picking_filterColor(gl_FragColor);
-}
 ```
 
 ## JavaScript Functions
@@ -76,12 +70,6 @@ Returns picking highlight color if the pixel belongs to currently selected model
 
 `vec4 picking_filterHighlightColor(vec4 color)`
 
-### picking_filterColor
-
- If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns non-picking color, which is highlight color if the pixel belongs to currently selected model, unmodified argument if not.
-
-`vec4 picking_filterColor(vec4 color)`
-
 ## Remarks
 
-* It is strongly recommended that `picking_filterColor` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
+* It is strongly recommended that `picking_filterPickingColor` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.

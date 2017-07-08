@@ -28,7 +28,7 @@ export function postProcessImage({
 
   var textures = fromTexture ? [fromTexture] : [];
 
-  const plane = new Plane({
+  const plane = new Plane(gl, {
     program,
     type: 'x,y',
     xlen: length,
