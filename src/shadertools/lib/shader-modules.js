@@ -6,20 +6,12 @@ const shaderModules = {};
  * Registers an array of shader modules
  * @param {Object[]} shaderModuleList - Array of shader modules
  */
-export function registerShaderModules(shaderModuleList, {ignoreMultipleRegistrations = false}) {
+export function registerShaderModules(shaderModuleList, {
+  ignoreMultipleRegistrations = false
+} = {}) {
   for (const shaderModule of shaderModuleList) {
     registerShaderModule(shaderModule, {ignoreMultipleRegistrations});
   }
-}
-
-function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false}) {
-  assert(shaderModule.name, 'shader module has no name');
-  if (!ignoreMultipleRegistrations && shaderModules[shaderModule.name]) {
-    // TODO - instead verify that definition is not changing...
-    throw new Error(`shader module ${shaderModule.name} already registered`);
-  }
-  shaderModules[shaderModule.name] = shaderModule;
-  shaderModule.dependencies = shaderModule.dependencies || [];
 }
 
 // Looks up a moduleName among registered modules and returns definition.
@@ -40,6 +32,19 @@ export function getShaderModule(moduleOrName) {
     assert(false, `Unknown shader module ${moduleOrName}`);
   }
   return shaderModule;
+}
+
+// registers any supplied modules and returns a list of module names
+export function resolveModules(modules) {
+  const moduleNames = modules.map(module => {
+    if (typeof module !== 'string') {
+      registerShaderModules([module], {ignoreMultipleRegistrations: true});
+      return module.name;
+    }
+    return module;
+  });
+
+  return getShaderDependencies(moduleNames);
 }
 
 /**
@@ -64,6 +69,18 @@ export function getShaderDependencies(modules) {
 
   // Return a reverse sort so that dependencies come before the modules that use them
   return Object.keys(result).sort((a, b) => result[b] - result[a]);
+}
+
+// PRIVATE API
+
+function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false}) {
+  assert(shaderModule.name, 'shader module has no name');
+  if (!ignoreMultipleRegistrations && shaderModules[shaderModule.name]) {
+    // TODO - instead verify that definition is not changing...
+    throw new Error(`shader module ${shaderModule.name} already registered`);
+  }
+  shaderModules[shaderModule.name] = shaderModule;
+  shaderModule.dependencies = shaderModule.dependencies || [];
 }
 
 // Adds another level of dependencies to the result map
@@ -92,17 +109,4 @@ function getDependencyGraph({modules, level, result}) {
   }
 
   return result;
-}
-
-// registers any supplied modules and returns a list of module names
-export function resolveModules(modules) {
-  const moduleNames = modules.map(module => {
-    if (typeof module !== 'string') {
-      registerShaderModules([module], {ignoreMultipleRegistrations: true});
-      return module.name;
-    }
-    return module;
-  });
-
-  return getShaderDependencies(moduleNames);
 }

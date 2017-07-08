@@ -119,6 +119,7 @@ export {
 // shadertools
 export {default as ShaderCache} from './shadertools/lib/shader-cache';
 export {assembleShaders} from './shadertools/lib/assemble-shaders';
+export {registerShaderModules} from './shadertools/lib/shader-modules';
 // shader modules
 export {default as project} from './shadertools/modules/project/project';
 export {default as lighting} from './shadertools/modules/lighting/lighting';

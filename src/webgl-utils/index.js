@@ -15,7 +15,7 @@ export {
 export {default as polyfillContext} from './polyfill-context';
 export {default as trackContextState} from './track-context-state';
 
-export {default as formatGLSLCompilerError} from './format-glsl-error';
+export {default as formatGLSLCompilerError, parseGLSLCompilerError} from './format-glsl-error';
 export {default as getShaderName} from './get-shader-name';
 
 // TODO - avoid uncondsitionally importing GL as it adds a lot to bundle size?

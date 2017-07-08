@@ -1,19 +1,24 @@
-import GL, {formatGLSLCompilerError, getShaderName} from './api';
+import {parseGLSLCompilerError, getShaderName} from '../webgl-utils';
 import {assertWebGLContext} from './context';
 import Resource from './resource';
-import {uid} from '../utils';
+import {uid, log} from '../utils';
 import assert from 'assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
+
+const GL_FRAGMENT_SHADER = 0x8B30;
+const GL_VERTEX_SHADER = 0x8B31;
+const GL_COMPILE_STATUS = 0x8B81;
+const GL_SHADER_TYPE = 0x8B4F;
 
 // For now this is an internal class
 export class Shader extends Resource {
 
   static getTypeName(shaderType) {
     switch (shaderType) {
-    case GL.VERTEX_SHADER: return 'vertex-shader';
-    case GL.FRAGMENT_SHADER: return 'fragment-shader';
-    default: return 'unknown-shader';
+    case GL_VERTEX_SHADER: return 'vertex-shader';
+    case GL_FRAGMENT_SHADER: return 'fragment-shader';
+    default: assert(false); return 'unknown';
     }
   }
 
@@ -71,15 +76,17 @@ export class Shader extends Resource {
     this.gl.shaderSource(this.handle, this.source);
     this.gl.compileShader(this.handle);
 
-    // Avoid checking shader compilation errors on production
-    // if (this.gl.debug || log.priority > 0) {
-    // }
-    // Throw if compilation failed
-    const compileStatus = this.getParameter(GL.COMPILE_STATUS);
+    // TODO - For performance reasons, avoid checking shader compilation errors on production?
+    // TODO - Load log even when no error reported, to catch warnings?
+    // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
+    const compileStatus = this.getParameter(GL_COMPILE_STATUS);
     if (!compileStatus) {
       const infoLog = this.gl.getShaderInfoLog(this.handle);
-      const error = formatGLSLCompilerError(infoLog, this.source, this.shaderType);
-      throw new Error(error);
+      const {shaderName, errors, warnings} =
+        parseGLSLCompilerError(infoLog, this.source, this.shaderType);
+      log.error(0, `GLSL compilation errors in ${shaderName}\n${errors}`);
+      log.warn(0, `GLSL compilation warnings in ${shaderName}\n${warnings}`);
+      throw new Error(`GLSL compilation errors in ${shaderName}\n${errors}\n${warnings}`);
     }
   }
 
@@ -89,7 +96,7 @@ export class Shader extends Resource {
 
   _getOptsFromHandle() {
     return {
-      type: this.getParameter(GL.SHADER_TYPE),
+      type: this.getParameter(GL_SHADER_TYPE),
       source: this.getSource()
     };
   }
@@ -97,22 +104,22 @@ export class Shader extends Resource {
 
 export class VertexShader extends Shader {
   constructor(gl, source) {
-    super(gl, source, GL.VERTEX_SHADER);
+    super(gl, source, GL_VERTEX_SHADER);
   }
 
   // PRIVATE METHODS
   _createHandle() {
-    return this.gl.createShader(GL.VERTEX_SHADER);
+    return this.gl.createShader(GL_VERTEX_SHADER);
   }
 }
 
 export class FragmentShader extends Shader {
   constructor(gl, source) {
-    super(gl, source, GL.FRAGMENT_SHADER);
+    super(gl, source, GL_FRAGMENT_SHADER);
   }
 
   // PRIVATE METHODS
   _createHandle() {
-    return this.gl.createShader(GL.FRAGMENT_SHADER);
+    return this.gl.createShader(GL_FRAGMENT_SHADER);
   }
 }

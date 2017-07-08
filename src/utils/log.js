@@ -26,10 +26,13 @@ const log = {
     cache[arg] = true;
   },
   warn(priority, arg, ...args) {
-    if (!cache[arg]) {
+    if (priority <= log.priority && !cache[arg]) {
       console.warn(`luma.gl: ${arg}`, ...args);
     }
     cache[arg] = true;
+  },
+  error(priority, arg, ...args) {
+    console.error(`luma.gl: ${arg}`, ...args);
   },
   deprecated(oldUsage, newUsage) {
     log.warn(0, `luma.gl: \`${oldUsage}\` is deprecated and will be removed \

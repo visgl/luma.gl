@@ -58,8 +58,8 @@ export const VERSION_DEFINES = `\
 # define attribute in
 # define varying out
 #else
-# define in attribute
-# define out varying
+// # define in attribute
+// # define out varying
 #endif // __VERSION
 
 // FRAG_DEPTH => gl_FragDepth is available
@@ -106,7 +106,4 @@ export const VERSION_DEFINES = `\
 #if (__VERSION__ > 120)
 # define TEXTURE_LOD
 #endif
-
-// Some common constants
-#define EPSILON 1e-6
 `;

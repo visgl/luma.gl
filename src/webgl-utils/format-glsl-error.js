@@ -1,23 +1,15 @@
-import GL from './constants';
-
 // TODO - formatGLSLCompilerError should not depend on this
-import getShaderName from './get-shader-name';
+import getShaderName, {getShaderTypeName} from './get-shader-name';
 
 /**
- * Formats a GLSL shader compiler error and generates a string
- * showing the source code around the error.
- *
+ * Parse a GLSL compiler error log into a string showing the source code around each error.
  * Based on https://github.com/wwwtyro/gl-format-compiler-error (public domain)
- *
- * @param {String} errLog - error log from gl.getShaderInfoLog
- * @param {String} src - original shader source code
- * @param {Number} shaderType - shader type (GL constant)
- * @return {String} - Formatted strings has the error marked inline with src.
  */
 /* eslint-disable no-continue, max-statements */
-export default function formatGLSLCompilerError(errLog, src, shaderType) {
+export function parseGLSLCompilerError(errLog, src, shaderType) {
   const errorStrings = errLog.split(/\r?\n/);
   const errors = {};
+  const warnings = {};
 
   // Parse the error - note: browser and driver dependent
   for (let i = 0; i < errorStrings.length; i++) {
@@ -25,17 +17,40 @@ export default function formatGLSLCompilerError(errLog, src, shaderType) {
     if (errorString.length <= 1) {
       continue;
     }
-    const lineNo = parseInt(errorString.split(':')[2], 10);
-    if (isNaN(lineNo)) {
-      return `Could not parse GLSL compiler error: ${errLog}`;
+    const segments = errorString.split(':');
+    const type = segments[0];
+    const line = parseInt(segments[2], 10);
+    if (isNaN(line)) {
+      throw new Error(`Could not parse GLSL compiler error: ${errLog}`);
     }
-    errors[lineNo] = errorString;
+    if (type !== 'WARNING') {
+      errors[line] = errorString;
+    } else {
+      warnings[line] = errorString;
+    }
   }
 
   // Format the error inline with the code
-  let message = '';
-  const lines = addLineNumbers(src).split(/\r?\n/);
+  const lines = addLineNumbers(src);
+  const name = getShaderName(src) || 'unknown name';
+  const type = getShaderTypeName(shaderType);
 
+  return {
+    shaderName: `${type} shader ${name}\n`,
+    errors: formatErrors(errors, lines),
+    warnings: formatErrors(warnings, lines)
+  };
+}
+
+// Formats GLSL compiler error log into single string
+export default function formatGLSLCompilerError(errLog, src, shaderType) {
+  const {shaderName, errors, warnings} = parseGLSLCompilerError(errLog, src, shaderType);
+  return `GLSL compilation error in ${shaderName}\n${errors}\n${warnings}`;
+}
+
+// helper function, outputs annotated errors or warnings
+function formatErrors(errors, lines) {
+  let message = '';
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!errors[i + 3] && !errors[i + 2] && !errors[i + 1]) {
@@ -43,28 +58,25 @@ export default function formatGLSLCompilerError(errLog, src, shaderType) {
     }
     message += `${line}\n`;
     if (errors[i + 1]) {
-      let e = errors[i + 1];
-      e = e.substr(e.split(':', 3).join(':').length + 1).trim();
-      message += `^^^ ${e}\n\n`;
+      const error = errors[i + 1];
+      const segments = error.split(':', 3);
+      const type = segments[0];
+      const column = parseInt(segments[1], 10) || 0;
+      const err = error.substr(segments.join(':').length + 1).trim();
+      message += padLeft(`^^^ ${type}: ${err}\n\n`, column);
     }
   }
-
-  const name = getShaderName(src) || 'unknown name';
-  const type = getShaderTypeName(shaderType);
-  return `GLSL compilation error in ${type} shader ${name}\n${message}`;
+  return message;
 }
 
 /**
  * Prepends line numbers to each line of a string.
  * The line numbers will be left-padded with spaces to ensure an
  * aligned layout when rendered using monospace fonts.
- *
- * Adapted from https://github.com/Jam3/add-line-numbers, MIT license
- *
  * @param {String} string - multi-line string to add line numbers to
  * @param {Number} start=1 - number of spaces to add
  * @param {String} delim =': ' - injected between line number and original line
- * @return {String} string - The original string with line numbers added
+ * @return {String[]} strings - array of string, one per line, with line numbers added
  */
 function addLineNumbers(string, start = 1, delim = ': ') {
   const lines = string.split(/\r?\n/);
@@ -74,7 +86,7 @@ function addLineNumbers(string, start = 1, delim = ': ') {
     const digits = String(lineNumber).length;
     const prefix = padLeft(lineNumber, maxDigits - digits);
     return prefix + delim + line;
-  }).join('\n');
+  });
 }
 
 /**
@@ -89,12 +101,4 @@ function padLeft(string, digits) {
     result += ' ';
   }
   return `${result}${string}`;
-}
-
-function getShaderTypeName(type) {
-  switch (type) {
-  case GL.FRAGMENT_SHADER: return 'fragment';
-  case GL.VERTEX_SHADER: return 'vertex';
-  default: return 'unknown type';
-  }
 }
