@@ -1,5 +1,13 @@
 # Pre-releases
 
+## 4.0.0-beta.2
+- FIX: Shader error parsing, shadertools export fix
+- Changes to Picking module & fix Picking example  (#256)
+- math library fixes (#253)
+- Matrix docs (#254)
+- Fix picking color encoding. (#252)
+- Fix picking module & add FB unit tests. (#251)
+
 ## 4.0.0-beta.1
 - Canvas and Drawing Buffer API fixes
 - Reduce size of gl-matrix dependencies
@@ -7,12 +15,12 @@
 - Shader Module System cleanup and use in some examples
 - Webpack configuration consolidation
 
-- WEBSITE: Links to other frameworks
 - WEBSITE: Shippable docs
 - WEBSITE: SIZE and MULTIPLE CANVAS fixes
 - WEBSITE: Restore Shadowmap and Particles Examples
 - WEBSITE: Shader Module System - use in some examples
 - WEBSITE: Webpack configuration consolidation
+- WEBSITE: Framework links
 
 ## 4.0.0-alpha.14
 
