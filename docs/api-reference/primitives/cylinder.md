@@ -5,7 +5,7 @@ Creates a Cylinder model. Inherits methods from [Model](Model).
 Create a white Cylinder of radius 2 and height 3.
 
 ```js
-var whiteCylinder = new Cylinder({
+var whiteCylinder = new Cylinder(gl, {
   radius: 2,
   height: 3,
   colors: [1, 1, 1, 1]
@@ -16,7 +16,7 @@ var whiteCylinder = new Cylinder({
 
 The constructor for the Cylinder class. Use this to create a new Cylinder.
 
-`var model = new Cylinder(options);`
+`var model = new Cylinder(gl, options);`
 
 * nradial - (*number*, optional) The number of vertices for the disk. Default's 10.
 * nvertical - (*number*, optional) The number of vertices for the height. Default's 10.

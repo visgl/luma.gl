@@ -14,7 +14,7 @@ var whiteCone = new Cone({
 
 The constructor for the Cone class. Use this to create a new Cone.
 
-`var model = new Cone(options);`
+`var model = new Cone(gl, options);`
 
 * nradial - (*number*, optional) The number of vertices used to create the disk for a given height. Default's 10.
 * nvertical - (*number*, optional) The number of vertices for the height. Default's 10.

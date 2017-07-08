@@ -52,7 +52,7 @@ The main constructor function for the Sphere class. Use this to create a new Sph
 
 ### Syntax:
 
-  var model = new Sphere(options);
+  var model = new Sphere(gl, options);
 
 ### Arguments:
 
@@ -69,7 +69,7 @@ The main constructor function for the Sphere class. Use this to create a new Sph
 Create a white Sphere of radius 2.
 
 {% highlight js %}
-var whiteSphere = new Sphere({
+var whiteSphere = new Sphere(gl, {
   radius: 2,
   colors: [1, 1, 1, 1]
 });
@@ -93,7 +93,7 @@ The main constructor function for the IcoSphere class. Use this to create a new 
 
 ### Syntax:
 
-  var model = new IcoSphere(options);
+  var model = new IcoSphere(gl, options);
 
 ### Arguments:
 
@@ -108,7 +108,7 @@ The main constructor function for the IcoSphere class. Use this to create a new 
 Create a white IcoSphere of radius 1.
 
 {% highlight js %}
-var whiteSphere = new IcoSphere({
+var whiteSphere = new IcoSphere(gl, {
   iterations: 1,
   colors: [1, 1, 1, 1]
 });
@@ -132,7 +132,7 @@ The main constructor function for the Plane class. Use this to create a new Plan
 
 ### Syntax:
 
-  var model = new Plane(options);
+  var model = new Plane(gl, options);
 
 ### Arguments:
 
@@ -154,7 +154,7 @@ The main constructor function for the Plane class. Use this to create a new Plan
 Create a white XZ plane.
 
 {% highlight js %}
-var whitePlane = new Plane({
+var whitePlane = new Plane(gl, {
   type: 'x,z',
   xlen: 10,
   zlen: 20,
@@ -184,7 +184,7 @@ The main constructor function for the Cylinder class. Use this to create a new C
 
 ### Syntax:
 
-  var model = new Cylinder(options);
+  var model = new Cylinder(gl, options);
 
 ### Arguments:
 
@@ -204,7 +204,7 @@ The main constructor function for the Cylinder class. Use this to create a new C
 Create a white Cylinder of radius 2 and height 3.
 
 {% highlight js %}
-var whiteCylinder = new Cylinder({
+var whiteCylinder = new Cylinder(gl, {
   radius: 2,
   height: 3,
   colors: [1, 1, 1, 1]
@@ -229,7 +229,7 @@ The main constructor function for the Cone class. Use this to create a new Cone.
 
 ### Syntax:
 
-  var model = new Cone(options);
+  var model = new Cone(gl, options);
 
 ### Arguments:
 
@@ -247,7 +247,7 @@ The main constructor function for the Cone class. Use this to create a new Cone.
 Create a white Cone of base radius 2 and height 3.
 
 {% highlight js %}
-var whiteCone = new Cone({
+var whiteCone = new Cone(gl, {
   radius: 2,
   height: 3,
   cap: true,

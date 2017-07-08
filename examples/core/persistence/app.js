@@ -129,19 +129,19 @@ const animationLoop = new AnimationLoop({
       vertexCount: 6
     });
 
-    quad = new Model({
+    quad = new Model(gl, {
       id: 'quad',
       program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
       geometry: quadGeometry
     });
 
-    persistenceQuad = new Model({
+    persistenceQuad = new Model(gl, {
       id: 'persistence-quad',
       program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
       geometry: quadGeometry
     });
 
-    sphere = new IcoSphere({
+    sphere = new IcoSphere(gl, {
       id: 'electron',
       iterations: 4,
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})

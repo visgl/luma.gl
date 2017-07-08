@@ -201,8 +201,7 @@ const animationLoop = new AnimationLoop({
         )
       });
 
-      const moon = new Sphere({
-        gl,
+      const moon = new Sphere(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         nlat: 30,
@@ -334,7 +333,7 @@ function generateLaptopScreenModel(gl) {
     drawMode: GL.TRIANGLE_STRIP
   });
 
-  const model = new Model({
+  const model = new Model(gl, {
     gl,
     id: 'laptopscreen-model',
     geometry,

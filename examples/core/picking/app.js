@@ -17,6 +17,9 @@ let pickPosition = [0, 0];
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
+    // Use non zero pickingColor to identify if the model has been picked or not.
+    const pickingColorsData = new Float32Array(10000).fill(1.0);
+
     addControls();
 
     setParameters(gl, {
@@ -39,8 +42,7 @@ const animationLoop = new AnimationLoop({
       }
     })
     .then(textures => PLANETS.map(
-      (planet, i) => new Sphere({
-        gl,
+      (planet, i) => new Sphere(gl, {
         id: planet.name,
         nlat: 32,
         nlong: 32,
@@ -48,7 +50,7 @@ const animationLoop = new AnimationLoop({
         pickable: true,
         attributes: {
           colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
-          pickingColors: new Buffer(gl, {size: 3, data: new Float32Array(10000)})
+          pickingColors: new Buffer(gl, {size: 3, data: pickingColorsData})
         },
         modules: [project, diffuse, picking],
         moduleSettings: {
@@ -83,21 +85,22 @@ const animationLoop = new AnimationLoop({
       planet.render();
     }
 
-    // const pickedModel = pickModels(gl, {
-    //   models: planets,
-    //   position: pickPosition,
-    //   framebuffer
-    // });
+    const pickedModel = pickModels(gl, {
+      models: planets,
+      position: pickPosition,
+      framebuffer
+    });
 
-    // const div = document.getElementById('planet-name');
-    // if (pickedModel && div) {
-    //   div.innerHTML = pickedModel.model.id;
-    //   div.style.top = `${pickPosition[0]}px`;
-    //   div.style.left = `${pickPosition[1]}px`;
-    //   div.style.display = 'block';
-    // } else if (div) {
-    //   div.style.display = 'none';
-    // }
+    const div = document.getElementById('planet-name');
+    if (pickedModel && div) {
+      div.innerHTML = pickedModel.model.id;
+      div.style.top = `${pickPosition[0]}px`;
+      div.style.left = `${pickPosition[1]}px`;
+      div.style.display = 'block';
+      div.style.fontWeight = 'bold';
+    } else if (div) {
+      div.style.display = 'none';
+    }
   }
 });
 

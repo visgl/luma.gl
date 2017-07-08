@@ -8,7 +8,7 @@ const ICO_INDICES = [3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1];
 
 export default class IcoSphereGeometry extends Geometry {
   constructor(opts = {}) {
-    const {iterations = 0} = {};
+    const {iterations = 0} = opts;
 
     const PI = Math.PI;
     const PI2 = PI * 2;

@@ -18,11 +18,11 @@ export const MODULE_INJECTORS_FS = `\
 #endif
 
 #ifdef MODULE_PICKING
-  gl_FragColor = picking_filterColor(gl_FragColor);
+  gl_FragColor = picking_filterHighlightColor(gl_FragColor);
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
 #endif
 
 #ifdef MODULE_LOGDEPTH
   logdepth_setFragDepth();
 #endif
 `;
-

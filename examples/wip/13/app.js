@@ -68,7 +68,7 @@ window.webGLStart = function() {
     var tCrate = textures[1];
 
     // Create moon
-    var moon = new Sphere({
+    var moon = new Sphere(gl, {
       program: defaultProgram,
       nlat: 30,
       nlong: 30,

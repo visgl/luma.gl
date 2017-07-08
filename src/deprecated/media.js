@@ -39,7 +39,7 @@ export function postProcessImage({
   var x = opt.viewportX;
   var y = opt.viewportY;
 
-  const plane = new Plane({
+  const plane = new Plane(gl, {
     program,
     type: 'x,y',
     xlen: length,

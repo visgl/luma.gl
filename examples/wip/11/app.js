@@ -74,7 +74,7 @@ window.webGLStart = function() {
 
     var tMoon = textures[0];
 
-    moon = new Sphere({
+    moon = new Sphere(gl, {
       nlat: 30,
       nlong: 30,
       radius: 2,

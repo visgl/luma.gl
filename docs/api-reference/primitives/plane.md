@@ -4,7 +4,7 @@ Creates a plane. Inherits methods from [Model](Model).
 
 Create a white XZ plane.
 ```js
-var whitePlane = new Plane({
+var whitePlane = new Plane(gl, {
   type: 'x,z',
   xlen: 10,
   zlen: 20,
@@ -17,7 +17,7 @@ var whitePlane = new Plane({
 
 The constructor for the Plane class. Use this to create a new Plane.
 
-`var model = new Plane(options);`
+`var model = new Plane(gl, options);`
 
 * type - (*string*) Whether is a XY, YZ or XZ plane. Possible values are `x,y`, `x,z`, `y,z`.
 * xlen - (*number*) The length along the x-axis. Only used in `x,z` or `x,y` planes.

@@ -7,7 +7,7 @@ The Geometry class enables you to create a collection of vertex array attribute 
 
 Create a pyramid model (used in lesson 4 of learning WebGL examples).
 ```js
-var pyramid = new Model({
+var pyramid = new Model(gl, {
   vertices: [ 0,1,0, -1,-1,1, 1,-1, 1, ...],
   colors: [1,0,0,1, 0,1,0,1, 0,0,1,1, ...]
 });

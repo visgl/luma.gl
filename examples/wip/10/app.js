@@ -88,7 +88,7 @@ window.webGLStart = function() {
     var program = new Program(gl);
     program.use();
 
-    world = new Model({
+    world = new Model(gl, {
       program,
       geometry: new Geometry({
         positions: params.positions,

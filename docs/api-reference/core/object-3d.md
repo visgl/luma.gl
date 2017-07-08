@@ -24,7 +24,7 @@ This matrix gets updated each time the method `update` is called on a Model inst
 
 ### constructor
 
-	var model = new Model(options);
+	var model = new Model(gl, options);
 
 
 ### update

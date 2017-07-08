@@ -71,23 +71,19 @@ varying vec4 picking_vRGBcolor_Aselected;
 const float COLOR_SCALE = 1. / 256.;
 
 /*
- * Returns highlight color if this item is selected
- * Note: Should be normally be called before other
+ * Returns highlight color if this item is selected.
  */
-vec4 picking_filterHighlight(vec4 color) {
+vec4 picking_filterHighlightColor(vec4 color) {
   bool selected = bool(picking_vRGBcolor_Aselected.a);
   return selected ? picking_uHighlightColor : color;
 }
 
 /*
- * Returns picking color if picking enabled
- * Note: Should be called last, picking color must not be modified.
+ * Returns picking color if picking enabled else unmodified argument.
  */
-vec4 picking_filterColor(vec4 color) {
+vec4 picking_filterPickingColor(vec4 color) {
   vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
-  return picking_uActive ?
-    vec4(pickingColor, 1.0) :
-    picking_filterHighlight(color);
+  return picking_uActive ? vec4(pickingColor, 1.0) : color;
 }
 `;
 
@@ -97,4 +93,3 @@ export default {
   fs,
   getUniforms
 };
-
