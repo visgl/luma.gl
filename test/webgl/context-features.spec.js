@@ -1,4 +1,4 @@
-import {hasFeature, hasFeatures, getFeatures, FEATURES} from '../../src/webgl/context-features';
+import {hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
 
 import {fixture} from '../setup';
