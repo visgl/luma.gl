@@ -1,5 +1,5 @@
-import {glKey} from 'luma.gl';
-import {getContextInfo, TEST_EXPORTS} from '../../src/webgl/context-limits';
+import {glKey, getContextInfo} from 'luma.gl';
+import {TEST_EXPORTS} from '../../src/webgl/context-limits';
 import test from 'tape-catch';
 
 import {fixture} from '../setup';

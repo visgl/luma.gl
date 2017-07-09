@@ -26,11 +26,15 @@ export {
   setParameters,
   withParameters} from './webgl/context-state';
 export {
+  getContextInfo,
   getGLContextInfo,
   getContextLimits,
-  glGetDebugInfo,
-  FEATURE,
-  hasFeatures} from './webgl/context-limits';
+  glGetDebugInfo} from './webgl/context-limits';
+export {
+  FEATURES,
+  hasFeature,
+  hasFeatures,
+  getFeatures} from './webgl/context-features';
 export {
   makeDebugContext} from './webgl/context-debug';
 export {
