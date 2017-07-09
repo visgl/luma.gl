@@ -1,50 +1,11 @@
 # Shader Modules
 
-The luma.gl `shadertools` module enables packaging of GLSL code in reusable "modules", and allows shaders modules to specify dependencies on other shader modules, allowing gradual composition of more complex modules.
-
-
-## Concepts
-
-A shader module typically contains both vertex and fragment shader "chunks", typically containing:
-* a mix of uniform and varying declarations
-* one or more GLSL function definitions
-
-In addition the shader module defintion contains:
-* the module name (a String)
-* a list (possibly empty) of other shader modules that this module is dependent on
-* a `getUniforms` JavaScript function that maps JavaScript parameter keys to uniforms used by this module
-
-
-Note that modules can define uniforms and varyings
-
-* `name`
-* `vs`
-* `fs`
-* `getUniforms`
-
-Each shader module provides a method to get a map of uniforms for the shader. This function takes named arguments with defaults. It can thus be called with no arguments to generate a set of default uniform values.
-
-Most WebGL frameworks, including luma.gl, have functions that accept a JavaScript object with keys representing uniform names and values representing uniform values.
-
-
-## Platform Detection
-
-Also does some platform detection and injects `#define` statements enabling
-your shader to conditionally use code.
+By passing your shaders to the `assembleShaders` function, the `shadertools` module adds platform detection and portability your shaders. In addition it also enables you to "inject" shader code (GLSL code) that has been packaged into reusable, composable "modules". And naturally, `shadertools` also allows you to create your own reusable shader modules.
 
 
 ## Usage
 
-To use the shader module system to inject modules into your shaders, just call `assembleShaders`:
-```js
-const {vs, fs, getUniforms, moduleMap} = assembleShaders(gl, {
-  fs: '...',
-  vs: '...',
-  modules: [...],
-  defines: {...}
-})
-
-Note that assembleShaders is integrated into the `Model` class"
+Note that `assembleShaders` is integrated into the `Model` class. Your shaders will automatically be passed to `assembleShaders` if you supply `modules` parameter.
 ```js
 const model = new Model(gl, {
   fs: '...',
@@ -53,15 +14,69 @@ const model = new Model(gl, {
 });
 ```
 
+To use the shader module system directly to add/inject modules into your shaders, just call `assembleShaders`:
+```js
+const {vs, fs, getUniforms, moduleMap} = assembleShaders(gl, {
+  fs: '...',
+  vs: '...',
+  modules: [...],
+  defines: {...}
+})
+```
+
 To create a new shader module, you need to create the following object
 ```js
 const module = {
   name: 'my-mnodule',
   vs: ....
   fs: null,
-  dependencies: []
+  dependencies: [],
+  getUniforms
 };
 ```
+
+This object can be used as shader module directly, or you can register it so that it can be referred to by name.
+```js
+new Model(gl, {..., modules: [module]});
+registerShaderModules([module]);
+new Model(gl, {..., modules: ['my-module']});
+```
+
+
+## Concepts
+
+A shader module is either:
+* **Generic** - a set of generic GLSL functions that can be included either in a fragment shader or a vertex shader (or both). The `fp64` module is a good example of this type of module.
+* **Functional** - Contains specific vertex and/or fragment shader "chunks", often set up so that the vertex shader part sets up a `varying` used by the fragment shader part.
+
+To define a shader module, you must specify the following fields:
+* `name` (*String*) - the name of the shader module
+* `dependencies` (*Array*) - a list of other shader modules that this module is dependent on
+* `getUniforms` JavaScript function that maps JavaScript parameter keys to uniforms used by this module
+* `vs`
+* `fs`
+
+
+### GLSL Code
+
+The GLSL code for a shader module typically contains:
+* a mix of uniform and varying declarations
+* one or more GLSL function definitions
+
+
+### getUniforms
+
+Each shader module provides a method to get a map of uniforms for the shader. This function takes named arguments with defaults. It can thus be called with no arguments to generate a set of default uniform values.
+
+Most WebGL frameworks, including luma.gl, have functions that accept a JavaScript object with keys representing uniform names and values representing uniform values.
+
+Note that modules can define uniforms and varyings
+
+
+### Platform Detection
+
+Also does some platform detection and injects `#define` statements enabling
+your shader to conditionally use code.
 
 
 ## API
@@ -96,29 +111,11 @@ Can be used to "name" shader modules, making them available to `assembleShaders`
 Note: Can defeat three-shaking of unused shader modules (affects size of application JavaScript bundle).
 
 
-### `getShaderUniforms`
+### `getModuleUniforms`
 
-Takes a list of shader module names and an object with options, and
-creates a combined uniform object that contains all necessary uniforms
-
-
-### `getShaderDependencies`
-
-* moduleNames {String[]} - Array of module names
-returns {String[]} - Array of modules
-
-Takes a list of shader module names and returns a new list of
-shader module names that includes all dependencies, sorted so
-that modules that are dependencies of other modules come first.
-
-If the shader glsl code from the returned modules is concatenated
-in the reverse order, it is guaranteed that all functions be resolved and
-that all function and variable definitions come before use.
-
-Note: This function is called internally by `assembleShaders` so the
-application does not normally need to call it directly.
+Takes a list of shader module names and an object with options, and creates a combined uniform object that contains all necessary uniforms for all the modules injected into your shader
 
 
 ## Remarks
-* **No Vertex Attributes** - At the moment shader modules are not expected to use attributes. It is up to the root application shaders to define attributes and call GLSL functions from the imported shader modules with the appropriate attributes. This is just a convention, not a hard limitation.
 
+* **No Vertex Attributes** - At the moment shader modules are not expected to use attributes. It is up to the root application shaders to define attributes and call GLSL functions from the imported shader modules with the appropriate attributes. This is just a convention, not a hard limitation.
