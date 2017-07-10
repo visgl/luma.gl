@@ -4,16 +4,15 @@
 
 Release Date: Target early Q3 2017
 
-A major release that brings full WebGL2 support to luma.gl, as well as support for GL state management and a shader module system.
+A major release that brings full WebGL2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 
 
 ### Full WebGL2 Support
 
-luma.gl now exposes a complete WebGL2 API surface
+luma.gl now exposes the complete WebGL2 APIs
 * New classes expose all the new WebGL2 objects (`FenceSync`, `Query`, `Sampler`, `Texture2DArray`, `Texture3D`, and `TransformFeedback`), together with a new `UniformBufferLayout` helper class to make uniform buffers easy to use.
-* Every existing WebGL class has been updated and have received additional methods that expose new WebGL2 functionality whenever available.
-* Image-format related classes like `Texture`, `Renderbuffer` and `Framebuffer` have been updated to handle all the new WebGL2 image formats, including floating point textures, and multiple rendertargets.
-
+* Other existing WebGL classes with new functionalites under WebGL2 have been updated.
+* Add new WebGL2 texture formats and types support, including floating point textures, and multiple render targets.
 
 ### WebGL Capability Management
 
@@ -22,25 +21,27 @@ luma.gl provides a single unified WebGL2-style API across WebGL2, WebGL1 and Web
 
 ### WebGL State Management
 
-luma.gl enables apps to temporarily set WebGL parameters and modify the global WebGL context state without having to worry about side effects.
-* Lets apps temporarily change global context state without having to do expensive queries to remember what values to restore it to.
-* Tracks changes to the context happening outside of luma.gl to ensure that global state always remains synchronized.
-* Prevents unnecessary calls to set state to current value.
-* Addressed one of the weak spots of the WebGL API.
+In this version, a new WebGL state management is implemented to help address one of the weak spots of the state-machine based WebGL API
 
+* luma.gl can track certain WebGL context state changes so the app could easily set and unset WebGL states for certain operations.
 
-### shadertools - New GLSL Module System
+* luma.gl also has a host-side WebGL state mirroring system that record certain WebGL states so that expansive queries into the GPU or underlying OpenGL driver won't be necessary.
+
+### shadertools - A New Shader Module System
 
 * The new, optional, shadertools module with the `assembleShaders` function system allows shader code to be broken into composable pieces.
-* Includes a new `ShaderCache` class to ensure that identical shaders are only compiled once, which significantly accelerates startup in some use cases.
+
+* A new `ShaderCache` class is provided to ensure that identical shaders are only compiled once and no unnecessary examination and/or checks are done on already compiled WebGL shader and program objects, which significantly accelerates app start up under some occasions.
 
 
 ### Documentation Improvements
 
-Extensive improvement of documentation structure and contents, including a new website, linking to other frameworks in the same visualization suite such as deck.gl.
+Extensive improvement of documentation structure and contents, including a new website, linking to other frameworks in the same visualization suite, such as deck.gl and react-map-gl.
 
 
 ### Code Size Improvements
+
+Significant reduction in the size of distributed luma.gl library
 
 * Code Size - luma.gl is continuously being tuned for code size.
 * Deprecated Code Removed - Removal of deprecated features to help reduce library size.
