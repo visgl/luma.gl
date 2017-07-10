@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 4.0.0-beta.3
+- Export feature detection functions (#260)
+- Improve shadertools docs (#258)
+
 ## 4.0.0-beta.2
 - FIX: Shader error parsing, shadertools export fix
 - Changes to Picking module & fix Picking example  (#256)
