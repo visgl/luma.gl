@@ -1,14 +1,14 @@
 # Upgrade Guide
 
 
-## Upgrading from V3 to V4
+## Upgrading from v3 to v4
 
-V4 is a major release and a number of previously deprecated features have been removed in luma.gl V4. In addition a number of additional deprecations have been made.
+luma.gl v4 is a major release and a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time in this version.
 
 
 ## Removed Features
 
-Some previously deprecated classes and functions have been removed in luma.gl v4 and applications must be updated if they are still using these.
+Some previously deprecated classes and functions have been removed in luma.gl v4 and applications must be updated with the new classes and functions if they are still using these.
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
@@ -19,7 +19,7 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 
 ## Deprecated Features
 
-Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but will generate a warning in the console. These functions are expected to be removed in a future major version of luma.gl.
+Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but a warning in the console will be generated. These functions are expected to be removed in a future major versions of luma.gl.
 
 
 | Symbol               | Replacement      | Comment |
@@ -38,6 +38,7 @@ The `Model` constructor now expects a gl context as the first argument.
   Model({gl});
   Model({gl, ...opts});
   Model({program});
+
   // v4
   Model(gl)
   Model(gl, {...opts});
