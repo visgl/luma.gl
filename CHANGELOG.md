@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.0.0-beta.4
+- Parameters: draw(`settings`) renamed to `parameters`
+- Shader Modules: Move fp32 and fp64 from deck.gl
+- WEBSITE: Remove/Retitle examples
+
 ## 4.0.0-beta.3
 - Export feature detection functions (#260)
 - Improve shadertools docs (#258)

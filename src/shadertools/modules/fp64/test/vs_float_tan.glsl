@@ -18,29 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-export {fp64ify} from './utils';
+attribute vec3 positions;
 
-import fp64arithmeticShader from './fp64-arithmetic.glsl';
-import fp64functionShader from './fp64-functions.glsl';
+uniform vec2 a;
+varying vec4 vColor;
 
-const fp64shader = `${fp64arithmeticShader}\n${fp64functionShader}`;
-
-export default {
-  name: 'fp64',
-  vs: fp64shader,
-  fs: null
-};
-
-// Arithmetic only
-export const fp64arithmetic = {
-  name: 'fp64-arithmetic',
-  vs: `${fp64arithmeticShader}`,
-  fs: null
-};
-
-// Fragment shader fp64
-export const fp64fs = {
-  name: 'fp64-fs',
-  vs: null,
-  fs: fp64shader
-};
+void main(void) {
+  gl_Position = vec4(positions, 1.0);
+  vec2 result = tan_fp64(a);
+  vColor = vec4(result.x, result.y, 0.0, 0.0);
+}

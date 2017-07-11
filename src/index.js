@@ -123,8 +123,13 @@ export {
 // shadertools
 export {default as ShaderCache} from './shadertools/lib/shader-cache';
 export {assembleShaders} from './shadertools/lib/assemble-shaders';
-export {registerShaderModules} from './shadertools/lib/shader-modules';
+export {
+  registerShaderModules,
+  setDefaultShaderModules} from './shadertools/lib/shader-modules';
+
 // shader modules
+export {default as fp32} from './shadertools/modules/fp32/fp32';
+export {default as fp64} from './shadertools/modules/fp64/fp64';
 export {default as project} from './shadertools/modules/project/project';
 export {default as lighting} from './shadertools/modules/lighting/lighting';
 export {default as dirlight} from './shadertools/modules/dirlight/dirlight';
@@ -134,17 +139,10 @@ export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
 // EXPERIMENTAL EXPORTS
 
 import {
-  clearBuffer
-} from './webgl/clear';
-
-// Shader Tools - Some exports are still considered xperimental
-import {
-  registerShaderModules
-} from './shadertools';
+  clearBuffer} from './webgl/clear';
 
 export const experimental = {
-  clearBuffer,
-  registerShaderModules
+  clearBuffer
 };
 
 // DEPRECATED EXPORTS
@@ -155,4 +153,3 @@ export {withState, glContextWithState} from './webgl/context-state';
 // DEPRECATED IN V3.0
 export {readPixels} from './webgl/functions';
 export {default as Shaders} from './deprecated/shaderlib';
-export {default as Fx} from './deprecated/fx';
