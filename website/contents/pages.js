@@ -16,13 +16,13 @@ export const EXAMPLE_PAGES = [
           demo: 'CubemapDemo'
         }
       },
-      {
-        name: 'Custom Picking',
-        content: {
-          demo: 'CustomPickingDemo',
-          path: `${RAW_GITHUB}/examples/core/custom-picking/`
-        }
-      },
+      // {
+      //   name: 'Custom Picking',
+      //   content: {
+      //     demo: 'CustomPickingDemo',
+      //     path: `${RAW_GITHUB}/examples/core/custom-picking/`
+      //   }
+      // },
       {
         name: 'Fragment',
         content: {
@@ -60,12 +60,12 @@ export const EXAMPLE_PAGES = [
       //     demo: 'ParticlesDemo'
       //   }
       // },
-      {
-        name: 'Persistence',
-        content: {
-          demo: 'PersistenceDemo'
-        }
-      },
+      // {
+      //   name: 'Persistence',
+      //   content: {
+      //     demo: 'PersistenceDemo'
+      //   }
+      // },
       {
         name: 'Shadowmap',
         content: {
@@ -84,59 +84,59 @@ export const EXAMPLE_PAGES = [
     name: 'WebGL Lessons',
     children: [
       {
-        name: 'Lesson 01',
+        name: 'Lesson 01 - Drawing',
         content: {
           demo: 'Lesson01'
         }
       },
       {
-        name: 'Lesson 02',
+        name: 'Lesson 02 - Color',
         content: {
           demo: 'Lesson02'
         }
       },
       {
-        name: 'Lesson 03',
+        name: 'Lesson 03 - Movement',
         content: {
           demo: 'Lesson03'
         }
       },
       {
-        name: 'Lesson 04',
+        name: 'Lesson 04 - 3D Objects',
         content: {
           demo: 'Lesson04'
         }
       },
       {
-        name: 'Lesson 05',
+        name: 'Lesson 05 - Textures',
         content: {
           demo: 'Lesson05',
           path: `${RAW_GITHUB}/examples/lessons/05/`
         }
       },
       {
-        name: 'Lesson 06',
+        name: 'Lesson 06 - Texture Filters',
         content: {
           demo: 'Lesson06',
           path: `${RAW_GITHUB}/examples/lessons/06/`
         }
       },
       {
-        name: 'Lesson 07',
+        name: 'Lesson 07 - Lighting',
         content: {
           demo: 'Lesson07',
           path: `${RAW_GITHUB}/examples/lessons/07/`
         }
       },
       {
-        name: 'Lesson 08',
+        name: 'Lesson 08 - Transparency',
         content: {
           demo: 'Lesson08',
           path: `${RAW_GITHUB}/examples/lessons/08/`
         }
       },
       {
-        name: 'Lesson 09',
+        name: 'Lesson 09 - Moving Objects',
         content: {
           demo: 'Lesson09',
           path: `${RAW_GITHUB}/examples/lessons/09/`
@@ -179,7 +179,7 @@ export const EXAMPLE_PAGES = [
       //   }
       // },
       {
-        name: 'Lesson 16',
+        name: 'Lesson 10 - Render to Texture',
         content: {
           demo: 'Lesson16',
           path: `${RAW_GITHUB}/examples/lessons/16/`
