@@ -232,8 +232,8 @@ WebGL allows textures to be created from a number of different data sources.
 | Type                               | Description  |
 | ---------------------------------- | -----------  |
 | `null`                             | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
-| `typed array`                      | Bytes will be interpreted according to format/type parameters and pixel store settings. |
-| `Buffer` or `WebGLBuffer` (`WebGL2`) | Bytes will be interpreted according to format/type parameters and pixel store settings. |
+| `typed array`                      | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
+| `Buffer` or `WebGLBuffer` (`WebGL2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
 | `Image` (`HTMLImageElement`)       | image will be used to fill the texture. width and height will be deduced. |
 | `Video` (`HTMLVideoElement`)       | video will be played, continously updating the texture. width and height will be deduced. |
 | `Canvas` (`HTMLCanvasElement`)     | canvas will be used to fill the texture. width and height will be deduced. |
@@ -378,7 +378,7 @@ For more details, see tables in:
 | `GL.TEXTURE_WRAP_S`     | Must be `GL.CLAMP_TO_EDGE` |
 | `GL.TEXTURE_WRAP_T`     | Must be `GL.CLAMP_TO_EDGE` |
 
-* 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
+* 'Texture' class will perform above parameters when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
 
 
 ## Remarks
@@ -386,5 +386,5 @@ For more details, see tables in:
 * Textures can be supplied as uniforms to shaders that can sample them using texture coordinates and color pixels accordingly.
 * Parameters that affect texture sampling can be set on textures or sampler objects.
 * Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL2).
-* The WebGL Context has global "pixel store" settings that control how pixel data is laid out, including Y direction, color space etc.
-* Textures are read from supplied data and written to the specified format/type parameters and pixel store settings.
+* The WebGL Context has global "pixel store" parameters that control how pixel data is laid out, including Y direction, color space etc.
+* Textures are read from supplied data and written to the specified format/type parameters and pixel store parameters.

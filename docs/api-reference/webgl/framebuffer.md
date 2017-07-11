@@ -57,11 +57,11 @@ Specifying a framebuffer for rendering in each render calls
 const offScreenBuffer = new Framebuffer();
 program1.draw({
   framebuffer: offScreenBuffer,
-  settings: {}
+  parameters: {}
 });
 model.draw({
   framebuffer: null, // the default drawing buffer
-  settings: {}
+  parameters: {}
 });
 ```
 

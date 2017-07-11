@@ -92,7 +92,7 @@ new Texture2D(gl, {
 * `type`= (*enum*) - type of pixel data (`GL.UNSIGNED_BYTE`, `GL.FLOAT` etc). Default is autodeduced from `format`.
 * `dataFormat`= (*GLenum*) - internal format that WebGL should use. Default is autodeduced from `format`.
 * `parameters`=`{}` (*object*) - map of texture sampler parameters
-* `pixelStore`=`{}` (*object*) - map of pixel store settings (controls how `data` is interpreted)
+* `pixelStore`=`{}` (*object*) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
 
 Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](texture.md). Sampler parameters are specified in [Sampler](./sampler.md), and pixel store parameters are specified in [State Management](./context-state.md)
 

@@ -1,10 +1,10 @@
 # State Management
 
-luma.gl simplifies the usage of WebGL settings by providing a unified API for setting and getting values. Any GL parameter can be queried or set using `getParameters` and `setParameters` (no need to keep track of what underlying WebGL calls are required), and luma.gl also provide *setting names* that allow the normal WebGL setter functions (like `gl.blendEquation` or `gl.clearColor`) to be specified as keys in a `setParameters` call.
+luma.gl simplifies the usage of WebGL parameters by providing a unified API for setting and getting values. Any GL parameter can be queried or set using `getParameters` and `setParameters` (no need to keep track of what underlying WebGL calls are required), and luma.gl also provide *setting names* that allow the normal WebGL setter functions (like `gl.blendEquation` or `gl.clearColor`) to be specified as keys in a `setParameters` call.
 
 In addition, state queries are done towards cached values and are thus much faster than working directly with the WebGL API, where synchronous WebGL queries can be a performance bottleneck.
 
-Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, settings can e.g. be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
+Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, parameters can e.g. be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
 
 The following functions are provided:
 * `getParameter` - Returns the value(s) of a GL context parameter
@@ -50,7 +50,7 @@ Set parameters temporarily for a function call (automatically restoring them aft
 const returnValue = withParameters(gl, {
   depthTest: true
 }, () = {
-  // execute code with new settings temporarily applied
+  // execute code with new parameters temporarily applied
   program.draw(...);
   ...
   // parameters will be restored even the function throws an exception
@@ -489,7 +489,7 @@ Specifies how bitmaps are written to and read from memory
 ## Remarks
 
 WebGL State Management can be quite complicated.
-* A large part of the WebGL API is devoted to settings. When reading, querying individual values using GL constants is the norm, and when writing, special purpose functions are provided for most settings. luma.gl supports both forms for both reading and writing settings.
+* A large part of the WebGL API is devoted to parameters. When reading, querying individual values using GL constants is the norm, and when writing, special purpose functions are provided for most parameters. luma.gl supports both forms for both reading and writing parameters.
 * Reading values from WebGL can be very slow if it requires a GPU roundtrip. To get around this, luma.gl reads values once, caches them and tracks them as they are changed through luma functions. The cached values can get out of sync if the context is shared outside of luma.gl.
 * luma.gl's state management enables "conflict-free" programming, so that even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
 * Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.

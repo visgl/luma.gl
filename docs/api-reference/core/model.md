@@ -165,7 +165,7 @@ values not present in the argument map won't be overwritten.
 
 * `uniforms`
 * `attributes`
-* `settings`
+* `parameters`
 * `samplers`
 
 
@@ -181,13 +181,13 @@ during by Scene.render traversing the models in the scene.
 
 ### Model.onBeforeRender()
 
-Callback before `render`, can be used to adust settings that affect the draw call.
-It is recommended to use parameters on `render` instead.
+Callback before `render`, can be used to adust parameters that affect the draw call.
+Note: it is recommended to use `parameters` on `render` instead.
 
 ### Model.onAfterRender()
 
-Callback after `render`, can be used to adust settings that affect the draw call.
-It is recommended to use parameters on `render` instead.
+Callback after `render`, can be used to adust parameters that affect the draw call.
+Note: it is recommended to use `parameters` on `render` instead.
 
 
 ### Model.setProgramState

@@ -13,7 +13,8 @@ export default function pickModels(gl, {
   models,
   position,
   uniforms = {}, // eslint-disable-line
-  settings = {},
+  parameters = {},
+  settings,
   useDevicePixelRatio = true,
   framebuffer
 }) {
@@ -47,7 +48,7 @@ export default function pickModels(gl, {
       // Render picking colors
       /* eslint-disable camelcase */
       model.setUniforms({picking_uActive: 1});
-      model.draw({uniforms, settings, framebuffer});
+      model.draw({uniforms, parameters, settings, framebuffer});
       model.setUniforms({picking_uActive: 0});
 
       // Sample Read color in the central pixel, to be mapped as a picking color

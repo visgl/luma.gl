@@ -95,7 +95,7 @@ export default class Model extends Object3D {
     this.setUniforms(uniforms);
     // Get all default uniforms
     this.setUniforms(this.getModuleUniforms());
-    // Get unforms for supplied settings
+    // Get unforms for supplied parameters
     this.setUniforms(this.getModuleUniforms(moduleSettings));
 
     if (instanced) {
@@ -297,19 +297,24 @@ export default class Model extends Object3D {
     uniforms = {},
     attributes = {},
     samplers = {},
-    settings = {},
+    parameters = {},
+    settings,
     framebuffer = null
   } = {}) {
+    if (settings) {
+      log.deprecated('settings', 'parameters');
+      parameters = settings;
+    }
     const {program: {gl}} = this;
     if (framebuffer) {
-      settings = Object.assign(settings, {framebuffer});
+      parameters = Object.assign(parameters, {framebuffer});
     }
-    return withParameters(gl, settings,
+    return withParameters(gl, parameters,
       () => this.render(uniforms, attributes, samplers)
     );
   }
 
-  render(uniforms = {}, attributes = {}, settings = {}, samplers = {}) {
+  render(uniforms = {}, attributes = {}, parameters = {}, samplers = {}) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
