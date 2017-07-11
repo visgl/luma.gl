@@ -1,6 +1,7 @@
 import assert from 'assert';
 
 const shaderModules = {};
+let defaultShaderModules = [];
 
 /**
  * Registers an array of shader modules
@@ -12,6 +13,16 @@ export function registerShaderModules(shaderModuleList, {
   for (const shaderModule of shaderModuleList) {
     registerShaderModule(shaderModule, {ignoreMultipleRegistrations});
   }
+}
+
+/**
+ * Registers an array of default shader modules. These will be concatenated
+ * automatically at the end of any shader module list passed to
+ * `assembleShaders` (plus `resolveModules` and `getShaderDependencies`)
+ * @param {Object[]} modules - Array of shader modules
+ */
+export function setDefaultShaderModules(modules) {
+  defaultShaderModules = modules;
 }
 
 // Looks up a moduleName among registered modules and returns definition.
@@ -60,6 +71,8 @@ export function resolveModules(modules) {
  * @return {String[]} - Array of modules
  */
 export function getShaderDependencies(modules) {
+  modules = modules.concat(defaultShaderModules);
+
   const result = {};
   getDependencyGraph({
     modules,
