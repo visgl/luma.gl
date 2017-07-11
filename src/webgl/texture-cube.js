@@ -42,7 +42,7 @@ export default class TextureCube extends Texture {
     // Enforce cube
     assert(width === height);
 
-    // Temporarily apply any pixel store settings and build textures
+    // Temporarily apply any pixel store paramaters and build textures
     // withParameters(this.gl, opts, () => {
     //   for (const face of CUBE_MAP_FACES) {
     //     this.setImageData({

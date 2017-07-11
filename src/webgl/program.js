@@ -105,15 +105,21 @@ export default class Program extends Resource {
     transformFeedback = null,
     uniforms = {},
     samplers = {},
-    settings = {}
+    parameters = {},
+    settings
   }) {
+    if (settings) {
+      log.deprecated('settings', 'parameters');
+      parameters = settings;
+    }
+
     vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
     vertexArray.bind(() => {
 
       this.gl.useProgram(this.handle);
 
       if (transformFeedback) {
-        if (settings[GL.RASTERIZER_DISCARD]) {
+        if (parameters[GL.RASTERIZER_DISCARD]) {
           // bypass fragment shader
           this.gl.enable(GL.RASTERIZER_DISCARD);
         }
@@ -142,7 +148,7 @@ export default class Program extends Resource {
       if (transformFeedback) {
         transformFeedback.end();
 
-        if (settings[GL.RASTERIZER_DISCARD]) {
+        if (parameters[GL.RASTERIZER_DISCARD]) {
           // resume fragment shader
           this.gl.disable(GL.RASTERIZER_DISCARD);
         }

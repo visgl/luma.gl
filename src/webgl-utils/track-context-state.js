@@ -212,7 +212,7 @@ function installSetterSpy(gl, functionName, setter, updateCache) {
   // Wrap it with a spy so that we can update our state cache when it gets called
   gl[functionName] = function(...params) {
     // Update the value
-    // Call the setter with the state cache and the params so that it can store the settings
+    // Call the setter with the state cache and the params so that it can store the parameters
     const valueChanged = setter(updateCache, ...params);
 
     // Call the original WebGLRenderingContext func to make sure the context actually gets updated
@@ -276,7 +276,7 @@ class GLState {
         valueChanged = true;
 
         // First, save current value being shadowed
-        // If a state stack frame is active, save the current settings for pop
+        // If a state stack frame is active, save the current parameter values for pop
         // but first check that value hasn't already been shadowed and saved
         if (oldValues && !(key in oldValues)) {
           oldValues[key] = this.cache[key];

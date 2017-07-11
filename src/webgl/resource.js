@@ -189,7 +189,7 @@ export default class Resource {
   }
 
   /*
-   * Batch update resource settings
+   * Batch update resource parameters
    * Assumes the subclass supports a setParameter call
    */
   setParameters(parameters) {

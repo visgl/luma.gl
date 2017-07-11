@@ -66,7 +66,7 @@ When using transform feedback, you are often not interested in the output of the
 
 ```
 program.draw({
-  settings: {
+  parameters: {
     [GL.RASTERIZER_DISCARD]: true
   }
 });

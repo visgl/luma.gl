@@ -119,7 +119,7 @@ const animationLoop = new AnimationLoop({
       uniforms: {
         MVP: new Matrix4().identity()
       },
-      settings: {
+      parameters: {
         [gl.RASTERIZER_DISCARD]: true
       }
     });
