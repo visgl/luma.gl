@@ -29,7 +29,7 @@ export function createContext({
     gl = gl || canvas.getContext('experimental-webgl', opts);
   }
 
-  canvas.removeEventListener(onContextCreationError, false);
+  canvas.removeEventListener('webglcontextcreationerror', onContextCreationError, false);
 
   if (!gl) {
     return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
