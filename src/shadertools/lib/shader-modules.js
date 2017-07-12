@@ -84,20 +84,16 @@ export function getShaderDependencies(modules) {
   return Object.keys(result).sort((a, b) => result[b] - result[a]);
 }
 
-// PRIVATE API
-
-function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false}) {
-  assert(shaderModule.name, 'shader module has no name');
-  if (!ignoreMultipleRegistrations && shaderModules[shaderModule.name]) {
-    // TODO - instead verify that definition is not changing...
-    throw new Error(`shader module ${shaderModule.name} already registered`);
-  }
-  shaderModules[shaderModule.name] = shaderModule;
-  shaderModule.dependencies = shaderModule.dependencies || [];
-}
-
+/**
+ * Recursively checks module dpendencies to calculate dependency
+ * level of each module.
+ *
+ * @param {String[]} modules - Array of modules
+ * @param {Number} level - Current level
+ * @return {result} - Map of module name to its level
+ */
 // Adds another level of dependencies to the result map
-function getDependencyGraph({modules, level, result}) {
+export function getDependencyGraph({modules, level, result}) {
   if (level >= 5) {
     throw new Error('Possible loop in shader dependency graph');
   }
@@ -105,7 +101,9 @@ function getDependencyGraph({modules, level, result}) {
   // Update level on all current modules
   for (const moduleOrName of modules) {
     const shaderModule = getShaderModule(moduleOrName);
-    result[shaderModule.name] = level;
+    if (result[shaderModule.name] === undefined || result[shaderModule.name] < level) {
+      result[shaderModule.name] = level;
+    }
   }
 
   // Recurse
@@ -122,4 +120,16 @@ function getDependencyGraph({modules, level, result}) {
   }
 
   return result;
+}
+
+// PRIVATE API
+
+function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false}) {
+  assert(shaderModule.name, 'shader module has no name');
+  if (!ignoreMultipleRegistrations && shaderModules[shaderModule.name]) {
+    // TODO - instead verify that definition is not changing...
+    throw new Error(`shader module ${shaderModule.name} already registered`);
+  }
+  shaderModules[shaderModule.name] = shaderModule;
+  shaderModule.dependencies = shaderModule.dependencies || [];
 }
