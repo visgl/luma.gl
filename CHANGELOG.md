@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.0.0-beta.5
+- Fix Shader Module dependency ordering (#266)
+- API Audit - change 'settings' to 'parameters' (#264)
+- Remove duplicate docs for faature management (#265)
+
 ## 4.0.0-beta.4
 - Parameters: draw(`settings`) renamed to `parameters`
 - Shader Modules: Move fp32 and fp64 from deck.gl
