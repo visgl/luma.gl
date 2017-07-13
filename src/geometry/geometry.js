@@ -2,8 +2,6 @@ import {uid} from '../utils';
 import {log} from '../utils';
 import assert from 'assert';
 
-const ILLEGAL_ARG = 'Geometry: Illegal argument';
-
 // Rendering primitives - specify how to extract primitives from vertices.
 // NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants
 export const DRAW_MODE = {
@@ -35,8 +33,6 @@ export default class Geometry {
       vertexCount = undefined,
       attributes
     } = opts;
-
-    assert(drawMode, ILLEGAL_ARG);
 
     this.id = id || uid(this.constructor.name);
     this.drawMode = getDrawMode(drawMode);
