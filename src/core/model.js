@@ -161,10 +161,10 @@ export default class Model extends Object3D {
   }) {
     // Assign default shaders if none are provided
     if (!vs) {
-      vs = modules ? MODULAR_SHADERS.vs : MONOLITHIC_SHADERS.vs;
+      vs = MODULAR_SHADERS.vs;
     }
     if (!fs) {
-      fs = modules ? MODULAR_SHADERS.fs : MONOLITHIC_SHADERS.fs;
+      fs = MODULAR_SHADERS.fs;
     }
 
     // Assign default uniforms (if any default shaders are being used)
@@ -172,11 +172,10 @@ export default class Model extends Object3D {
       defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
     }
 
-    // Call assembleShaders if `modules` argument was supplied
-    let getUniforms;
-    if (modules && typeof vs === 'string' && typeof fs === 'string') {
-      ({vs, fs, getUniforms} = assembleShaders(this.gl, {vs, fs, modules, defines}));
-    }
+    const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
+    ({vs, fs} = assembleResult);
+    const {getUniforms} = assembleResult;
+
     this.getModuleUniforms = getUniforms || (x => {});
 
     this.program = program || new Program(this.gl, {vs, fs});
