@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.0.0-beta.6
+- Call assembleShaders always (#270)
+- Remove invalid assert on GL.POINTS (#268)
+- Fix the WebGL context creation issue on Safari (#267)
+
 ## 4.0.0-beta.5
 - Fix Shader Module dependency ordering (#266)
 - API Audit - change 'settings' to 'parameters' (#264)
