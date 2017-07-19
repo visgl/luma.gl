@@ -238,10 +238,8 @@ export default class Texture extends Resource {
       this._updateForNPOT(parameters);
     }
 
-    // Temporarily apply any pixel store settings and build textures
-    withParameters(this.gl, glSettings, () => {
-      this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps});
-    });
+    this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps, parameters: glSettings});
+
     if (mipmaps) {
       this.generateMipmap();
     }
@@ -285,11 +283,116 @@ export default class Texture extends Resource {
     return this;
   }
 
+  /*
+   * Allocates storage
+   * @param {*} pixels -
+   *  null - create empty texture of specified format
+   *  Typed array - init from image data in typed array
+   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+   *  HTMLVideoElement - Creates video texture. Auto width/height
+   *
+   * @param {GLint} width -
+   * @param {GLint} height -
+   * @param {GLint} mipMapLevel -
+   * @param {GLenum} format - format of image data.
+   * @param {GLenum} type
+   *  - format of array (autodetect from type) or
+   *  - (WEBGL2) format of buffer
+   * @param {Number} offset - (WEBGL2) offset from start of buffer
+   * @param {GLint} border - must be 0.
+   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+   */
+  /* eslint-disable max-len, max-statements, complexity */
+  setImageData({
+    target = this.target,
+    pixels = null,
+    data = null,
+    width,
+    height,
+    level = 0,
+    format = GL.RGBA,
+    type,
+    dataFormat,
+    offset = 0,
+    border = 0,
+    compressed = false,
+    parameters = {}
+  }) {
+    // pixels variable is  for API compatibility purpose
+    if (!data) {
+      data = pixels;
+    }
+
+    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
+      format, type, dataFormat, compressed, data, width, height}));
+
+    const {gl} = this;
+    gl.bindTexture(this.target, this.handle);
+
+    let dataType = null;
+    ({data, dataType} = this._getDataType({data, compressed}));
+
+    withParameters(this.gl, parameters, () => {
+      switch (dataType) {
+      case 'null':
+        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+        break;
+      case 'typed-array':
+        // Looks like this assert is not necessary, as offset is ignored under WebGL1
+        // assert((offset === 0 || isWebGL2(gl)), 'offset supported in WebGL2 only');
+        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data, offset);
+        break;
+      case 'buffer':
+        // WebGL2 enables creating textures directly from a WebGL buffer
+        assert(isWebGL2(gl), ERR_WEBGL2);
+        gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
+        gl.texImage2D(target, level, format, width, height, border, format, type, offset);
+        break;
+      case 'browser-object':
+        gl.texImage2D(target, level, format, format, type, data);
+        break;
+      case 'compressed':
+        gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
+        break;
+      default:
+        assert(false, 'Unknown image data type');
+      }
+    });
+
+  }
+  /* eslint-enable max-len, max-statements, complexity */
+
   /**
    * Redefines an area of an existing texture
    * Note: does not allocate storage
    */
-  subImage({
+  /*
+   * Redefines an area of an existing texture
+   * @param {*} pixels, data -
+   *  null - create empty texture of specified format
+   *  Typed array - init from image data in typed array
+   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+   *  HTMLVideoElement - Creates video texture. Auto width/height
+   *
+   * @param {GLint} x - xOffset from where texture to be updated
+   * @param {GLint} y - yOffset from where texture to be updated
+   * @param {GLint} width - width of the sub image to be updated
+   * @param {GLint} height - height of the sub image to be updated
+   * @param {GLint} level - mip level to be updated
+   * @param {GLenum} format - internal format of image data.
+   * @param {GLenum} type
+   *  - format of array (autodetect from type) or
+   *  - (WEBGL2) format of buffer or ArrayBufferView
+   * @param {GLenum} dataFormat - format of image data.
+   * @param {Number} offset - (WEBGL2) offset from start of buffer
+   * @param {GLint} border - must be 0.
+   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+   */
+  setSubImageData({
     target = this.target,
     pixels = null,
     data = null,
@@ -303,10 +406,16 @@ export default class Texture extends Resource {
     dataFormat,
     compressed = false,
     offset = 0,
-    border = 0
+    border = 0,
+    parameters = {}
   }) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format, type, dataFormat, compressed, data, width, height}));
+
+    // pixels variable is  for API compatibility purpose
+    if (!data) {
+      data = pixels;
+    }
 
     // Support ndarrays
     if (data && data.data) {
@@ -323,28 +432,30 @@ export default class Texture extends Resource {
 
     this.gl.bindTexture(this.target, this.handle);
 
-    // TODO - x,y parameters
-    if (compressed) {
-      this.gl.compressedTexSubImage2D(target,
-        level, x, y, width, height, format, data);
-    } else if (data === null) {
-      this.gl.texSubImage2D(target,
-        level, format, width, height, border, dataFormat, type, null);
-    } else if (ArrayBuffer.isView(data)) {
-      this.gl.texSubImage2D(target,
-        level, format, width, height, border, dataFormat, type, data);
-    } else if (data instanceof WebGLBuffer) {
-      // WebGL2 allows us to create texture directly from a WebGL buffer
-      assert(isWebGL2(this.gl), ERR_WEBGL2);
-      // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
-      this.gl.texSubImage2D(target,
-        level, format, width, height, border, format, type, offset);
-      this.gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
-    } else {
-      // Assume data is a browser supported object (ImageData, Canvas, ...)
-      this.gl.texSubImage2D(target, level, x, y, format, type, data);
-    }
+    withParameters(this.gl, parameters, () => {
+      // TODO - x,y parameters
+      if (compressed) {
+        this.gl.compressedTexSubImage2D(target,
+          level, x, y, width, height, format, data);
+      } else if (data === null) {
+        this.gl.texSubImage2D(target,
+          level, format, width, height, border, dataFormat, type, null);
+      } else if (ArrayBuffer.isView(data)) {
+        this.gl.texSubImage2D(target,
+          level, x, y, width, height, format, type, data, offset);
+      } else if (data instanceof WebGLBuffer) {
+        // WebGL2 allows us to create texture directly from a WebGL buffer
+        assert(isWebGL2(this.gl), ERR_WEBGL2);
+        // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
+        this.gl.texSubImage2D(target,
+          level, format, width, height, border, format, type, offset);
+        this.gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
+      } else {
+        // Assume data is a browser supported object (ImageData, Canvas, ...)
+        this.gl.texSubImage2D(target, level, x, y, format, type, data);
+      }
+    });
 
     this.gl.bindTexture(this.target, null);
   }
@@ -420,77 +531,6 @@ export default class Texture extends Resource {
   }
 
   // PRIVATE METHODS
-
-  /*
-   * Allocates storage
-   * @param {*} pixels -
-   *  null - create empty texture of specified format
-   *  Typed array - init from image data in typed array
-   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
-   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
-   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
-   *  HTMLVideoElement - Creates video texture. Auto width/height
-   *
-   * @param {GLint} width -
-   * @param {GLint} height -
-   * @param {GLint} mipMapLevel -
-   * @param {GLenum} format - format of image data.
-   * @param {GLenum} type
-   *  - format of array (autodetect from type) or
-   *  - (WEBGL2) format of buffer
-   * @param {Number} offset - (WEBGL2) offset from start of buffer
-   * @param {GLint} border - must be 0.
-   */
-  /* eslint-disable max-len, max-statements, complexity */
-  setImageData({
-    target = this.target,
-    pixels = null,
-    data = null,
-    width,
-    height,
-    level = 0,
-    format = GL.RGBA,
-    type,
-    dataFormat,
-    offset = 0,
-    border = 0,
-    compressed = false
-  }) {
-    // pixels variable is  for API compatibility purpose
-    if (!data) {
-      data = pixels;
-    }
-
-    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-      format, type, dataFormat, compressed, data, width, height}));
-
-    const {gl} = this;
-    gl.bindTexture(this.target, this.handle);
-
-    let dataType = null;
-    ({data, dataType} = this._getDataType({data, compressed}));
-    switch (dataType) {
-    case 'typed-array':
-    case 'null':
-      gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
-      break;
-    case 'buffer':
-      // WebGL2 enables creating textures directly from a WebGL buffer
-      assert(isWebGL2(gl), ERR_WEBGL2);
-      gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-      gl.texImage2D(target, level, format, width, height, border, format, type, offset);
-      break;
-    case 'browser-object':
-      gl.texImage2D(target, level, format, format, type, data);
-      break;
-    case 'compressed':
-      gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
-      break;
-    default:
-      assert(false, 'Unknown image data type');
-    }
-  }
-  /* eslint-enable max-len, max-statements, complexity */
 
   _getDataType({data, compressed = false}) {
     if (compressed) {
