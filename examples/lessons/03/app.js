@@ -64,7 +64,8 @@ const animationLoop = new AnimationLoop({
 
     return {triangle, square};
   },
-  onRender({gl, tick, aspect, triangle, square}) {
+  onRender(context) {
+    const {gl, tick, aspect, triangle, square} = context;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const projection = new Matrix4().perspective({aspect});

@@ -4,14 +4,14 @@ luma.gl simplifies the usage of WebGL parameters by providing a unified API for 
 
 In addition, state queries are done towards cached values and are thus much faster than working directly with the WebGL API, where synchronous WebGL queries can be a performance bottleneck.
 
-Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, parameters can e.g. be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
+Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, state settings can be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
 
 The following functions are provided:
 * `getParameter` - Returns the value(s) of a GL context parameter
 * `getParameters` - Returns the values of some or all GL context parameters
 * `setParameters` - Sets a the value(s) of the specified GL context parameters
 * `withParameters` - Runs a function with a set of parameters temporarily applied
-* `resetParameters` - Resets some or all GL context parameters to their default values
+* `resetParameters` - Resets all GL context parameters to their default values
 
 
 ## Usage
@@ -355,11 +355,12 @@ Specify multisample coverage parameters
 
 ### Scissor Test
 
-Setting scissor box value will enable scissor testing.
+Settings for scissor test and scissor box.
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
 | [scissor](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glScissor.xml) | `GL.SCISSOR_BOX`                   |
+| scissorTest | GL.SCISSOR_TEST |
 
 | Parameter                          | Type          | Default  | Description             |
 | ---------------------------------- | ------------- | -------- | ----------------------- |
@@ -378,8 +379,8 @@ Setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
 | [stencilMaskSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilMaskSeparate.xml) | [`GL.STENCIL_WRITEMASK`, `GL.STENCIL_BACK_WRITEMASK`] |
 | [stencilFunc](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilFunc.xml) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`] |
 | [stencilFuncSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilFuncSeparate.xml) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`, `GL.STENCIL_BACK_FUNC`, `GL.STENCIL_BACK_REF`, `GL.STENCIL_BACK_VALUE_MASK` ]
-| [stencilOp](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOp.xml) | |
-| [stencilOpSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOpSeparate.xml) | |
+| [stencilOp](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOp.xml) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`]|
+| [stencilOpSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOpSeparate.xml) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`, `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`]|
 
 | Parameter                         | Type      | Default      | Description             |
 | --------------------------------- | --------- | ------------ | ----------------------- |
