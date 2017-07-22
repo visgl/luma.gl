@@ -21,7 +21,8 @@ For color, new `Texture2D` object is created with no mipmaps and following filte
 
 | Texture parameter       | Value |
 | ---                     | --- |
-| `GL.TEXTURE_MIN_FILTER` | `GL.LINEAR` |
+| `GL.TEXTURE_MIN_FILTER` | `GL.NEAREST` |
+| `GL.TEXTURE_MAG_FILTER` | `GL.NEAREST` |
 | `GL.TEXTURE_WRAP_S`     | `GL.CLAMP_TO_EDGE` |
 | `GL.TEXTURE_WRAP_T`     | `GL.CLAMP_TO_EDGE` |
 For depth, new `Renderbuffer` object is created with `GL.DEPTH_COMPONENT16` format.
@@ -160,7 +161,6 @@ new Framebuffer(gl, {
 * `width=`1` - (*number*) The width of the framebuffer.
 * `height`=`1` - (*number*) The height of the framebuffer.
 * `attachments`={} - (*Object*, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
-* `texture` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
 * `color` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
 * `depth` - shortcut to the attachment in `GL.DEPTH_ATTACHMENT`
 * `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
@@ -404,5 +404,3 @@ The following values can be provided for each attachment point
 
 * In the raw WebGL API, creating a set of properly configured and matching textures and renderbuffers can require a lot of careful coding and boilerplate.
 * This is further complicated by many capabilities (such as support for multiple color buffers and various image formats) depending on WebGL extensions or WebGL versions.
-
-

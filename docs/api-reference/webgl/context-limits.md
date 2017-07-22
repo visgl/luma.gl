@@ -156,12 +156,12 @@ Parameters to `hasFeatures`:
 | `FEATURES.COLOR_ATTACHMENT_RGBA32F`   |         | *      | Floating point `Texture`s using the `GL.RGBA32F` format are renderable and readable [`EXT_color_buffer_float`]() [`WEBGL_color_buffer_float`]() |
 | `FEATURES.COLOR_ATTACHMENT_FLOAT`     | *       | **NO** | Floating point `Texture`s are renderable and readable, i.e. can be attached to `Framebuffer`s and written to from fragment shaders, and read from with `readPixels` etc. Note that the formats include `GL.RGBA32F`. [`EXT_color_buffer_float`]() |
 | `FEATURES.COLOR_ATTACHMENT_HALF_FLOAT`| *       | **NO** | Half float format `Texture`s are renderable and readable[`EXT_color_buffer_half_float`]() |
-`WEBGL_depth_texture`]() |
+| `WEBGL_depth_texture`]() |
 | `FEATURES.TEXTURE_DEPTH_BUFFERS`      | **YES** | *      | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations [| **GLSL | `TEXTURE_FILTER_LINEAR_FLOAT`      | **Yes** | * | Linear texture filtering for floating point textures [`OES_texture_float_linear`]() |
 | `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | **Yes** | * | Linear texture filtering for half float textures [`OES_texture_half_float_linear`]() |
 | `FEATURES.TEXTURE_FILTER_ANISOTROPIC` | *       | *      | Anisotropic texture filtering [`EXT_texture_filter_anisotropic`]() |
 | `FEATURES.SRGB`                       | **YES** | *      | sRGB encoded rendering is available [`EXT_sRGB`]() |
-extensions**          |         |        | |
+| extensions**          |         |        | |
 | `FEATURES.SHADER_TEXTURE_LOD`         | `ES300` | *      | Enables shader control of LOD [`EXT_shader_texture_lod`]() |
 | `FEATURES.FRAGMENT_SHADER_DRAW_BUFFERS` | `ES300` | *      | Fragment shader can draw to multiple render targets [`WEBGL_draw_buffers`]() |
 | `FEATURES.FRAGMENT_SHADER_DEPTH`      | `ES300` | *  | Fragment shader can control fragment depth value [`EXT_frag_depth`]() |

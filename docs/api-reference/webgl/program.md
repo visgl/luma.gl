@@ -195,7 +195,7 @@ returns (`WebGLActiveInfo`) - object with {`name`, `size`, `type`} fields.
 WebGL APIs [gl.getTransformFeedbackVarying]()
 
 
-### `use`
+### use
 
 Calls `gl.useProgram(this.program)`. To set the current program as active. After this call, `gl.draw*` calls will run the shaders in this program.
 
