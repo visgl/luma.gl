@@ -23,9 +23,9 @@ luma.gl provides a single unified WebGL2-style API across WebGL2, WebGL1 and Web
 
 In this version, a new WebGL state management is implemented to help address one of the weak spots of the state-machine based WebGL API
 
-* luma.gl can track certain WebGL context state changes so the app could easily set and unset WebGL states for certain operations.
+* luma.gl can track certain WebGL context state changes so the app could easily set and reset WebGL states for certain operations.
 
-* luma.gl also has a host-side WebGL state mirroring system that record certain WebGL states so that expansive queries into the GPU or underlying OpenGL driver won't be necessary.
+* luma.gl also has a host-side WebGL state caching system that records certain WebGL states so that expansive queries into the GPU or underlying OpenGL driver won't be necessary.
 
 ### shadertools - A New Shader Module System
 
@@ -36,7 +36,7 @@ In this version, a new WebGL state management is implemented to help address one
 
 ### Documentation Improvements
 
-Extensive improvement of documentation structure and contents, including a new website, linking to other frameworks in the same visualization suite, such as deck.gl and react-map-gl.
+Complete rewrite of luma.gl's documentation. New structure and contents for every classes provided, featured on a new website with links to other frameworks in Uber's visualization framework suite, such as deck.gl and react-map-gl.
 
 
 ### Code Size Improvements

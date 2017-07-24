@@ -3,7 +3,8 @@
 
 ## Upgrading from v3 to v4
 
-luma.gl v4 is a major release and a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time in this version.
+luma.gl v4 is a major release with API changes. Please read this documentation before upgrading your luma.gl's dependency from v3 to v4.
+In addition, a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time in this version.
 
 
 ## Removed Features
@@ -12,9 +13,9 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `Vec3`               | `Vector3`        | New math library |
-| `Mat4`               | `Matrix4`        | New math library |
-| `Quat`               | `Quaternion`     | New math library |
+| `Vec3`               | `Vector3`        | [New math library]() |
+| `Mat4`               | `Matrix4`        | [New math library]() |
+| `Quat`               | `Quaternion`     | [New math library]() |
 
 
 ## Deprecated Features
@@ -24,15 +25,16 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `withState`          | `withParameters` | New WebGL state management |
-| `glContextWithState` | `withParameters` | New WebGL state management |
+| `withState`          | `withParameters` | [New WebGL state management]() |
+| `glContextWithState` | `withParameters` | [New WebGL state management]() |
 
 
-### Deprecations
+## API Change
 
-#### Model Class
+### Model Class
 
 The `Model` constructor now expects a gl context as the first argument.
+
 ```
   // v3
   Model({gl});
@@ -44,14 +46,8 @@ The `Model` constructor now expects a gl context as the first argument.
   Model(gl, {...opts});
   Model(gl, {program});
 ```
-the gl context is extracted from the supplied program, but since v4 emphasizes sharing shaders rather than programs (often indirectly via shader caching / shader assembly), it is less common that a gl context is available.
 
-
-#### Math Library
-
-The deprecated math library (`Vec3`, `Mat4`, `Quat`) has now been removed.
-
-The new Math library is based on `gl-matrix` and uses Array subclassing so that objects are directly usable with luma.gl. Note that luma.gl now works directly with JavaScript arrays (a `Vector3` is just a 3 element array) and you can use any math library as long as you convert objects to arrays before passing data to luma.gl.
+the gl context used to be extracted from the supplied program or provided along side with other options, but in luma.gl v4, it is expected as a separate argument to the constructor. This change is because luma.gl v4 emphasizes sharing shaders rather than programs (often indirectly via shader caching / shader assembly), it is less common that a gl context is available.
 
 
 ## Upgrading from V2 to V3

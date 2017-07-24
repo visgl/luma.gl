@@ -1,54 +1,48 @@
 # User's Guide
 
-luma.gl is a relatively large framework, but it is divided into submodules, which hopefully makes it can be approachable in a piece-wise fashion.
+luma.gl constains a lot of classes and functions that might make new users wonder where to get started. The developers of luma.gl therefore separate classes and functions provided by luma.gl into groups, as shown in the following table and also in the folder structure of the source code
 
-| Module                         | Description |
-| ---                            | --- |
-| [core](api-reference/core)     | A set of "traditional" 3D library classes on a slightly higher abstraction level than the WebGL2 API, that can serve as the basic building blocks for most applications. Contains luma.gl's signature [`Model`](model) class. |
-| [webgl2](api-reference/webgl2) | The heart of luma.gl is the WebGL2 module, a set of classes covering all OpenGL objects exposed by the WebGL2 API. These classes organize the sprawling WebGL2 API and makes it easy to work with in JavaScript. |
-| [geometry]()                   | Provides a collection of geometric primitives, including `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry` |
-| [math](math.html)              | Small math library, `Vector3`, `Vector4`, `Matrix4`, `Quaternion` |
-| [io](io.html)                  | Node.js loader support. Also enables using streams in browser. |
-| [event](event.html)            | Browser Event handling |
+| Folder                           | Description |
+| ---                              | --- |
+| [src/webgl](api-reference/webgl) | A set of classes covering all WebGL objects. Currently luma.gl supports WebGL 2.0. These classes organize the sprawling WebGL API and makes it easy to work with in JavaScript. |
+| [src/core](api-reference/core)   | A set of classes very common across all 3D graphics applications. They are on a higher abstraction level than the WebGL2 API. luma.gl's signature [`Model`](model) class is in this folder. |
+| [src/geometry](api-reference/geometry-model)                 | This folder contains a collection of geometric primitives extending from the base `Geometry` class, including `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They can be used to create `Model` class with common geometries|
+| [src/models](api-reference/geometry-model)                   | Some predefined `Models` created from simple geometries from the `src/geometry` folder|
+| [src/io](api-reference/io)                | Node.js loader support. Also enables using streams in browser. |
+| [src/packges/math](api-reference/package-math)    | A small math library, containing `Vector3`, `Vector4`, `Matrix4`, `Quaternion` classes based on `gl-matrix` library|
+| [src/packges/events](api-reference/package-events)             | A very simple browser event handling class|
+| [src/shadertools](api-reference/shadertools)              | luma.gl's internal shader module system and shader assembler utility|
+| [src/webgl-utils](api-reference/webgl-utils) | Miscellanious internal utilies used by luma.gl |
 
+## WebGL Classes
 
-## Core Classes
-
-The [core module](api-reference/core), with the signature [`Model`](model) class, represent a set of fairly traditional 3D library classes on a slightly higher abstraction level than the WebGL2 API, that can serve as the basic building blocks for most applications.
-
-* [`Model`](api-reference/core/model) - A renderable object with attributes and uniforms. |
-* [`Geometry`](api-reference/core/geometry) - Holds attributes and drawType for a geometric primitive |
-* [`Group`](api-reference/core/group) - Supports recursive travesal and matrix transformation |
-* [`AnimationFrame`](api-reference/core/animation-frame) - render loop / app life cycle support |
-* [`Object3D`](api-reference/core/object3d) - Base class, golds position, rotation, scale (TBD) |
-
-Note the `Model` class is in many ways the quintessential luma.gl class. It ties together many concepts in luma.gl and is a good place to start reading if you are new to the framework.
-
-
-## WebGL2 Classes
-
-The heart of luma.gl is the [webgl2 module](api-reference/webgl2), a set of JavaScript class wrappers covering all WebGL2 API objects. These classes help organize the sprawling WebGL2 API and makes it much easier to program WebGL2 in JavaScript.
+The heart of luma.gl is the [webgl module](api-reference/webgl), a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, These classes help organize the sprawling WebGL2 API and makes it much easier to program WebGL2 in JavaScript.
 
 After creating a context, perhaps with luma.gl's [`createGLContext`](context.html) function, you have can start instantiating luma.gl's WebGL2 classes: `Buffer`, `FrameBuffer`, `RenderBuffer`, `Program`, `Shader`, `Texture2D`, `TextureCube`, `Texture2DArray`, `Texture3D`, `Query`, `Sampler`, `Sync`, `TransformFeedback`, `VertexArrayObject`, `VertexAttributes`, `VertexAttributes`.
 
+## Core Classes
 
-## Geometric Primitives
+The [core module](api-reference/core), with the signature [`Model`](model) class, represents a set of objects that is common in most 3D rendering libraries or engines. These objects are at higher abstraction levels than the actual WebGL objects and that can serve as the basic building blocks for most 3D applications.
 
-A geometry holds a set of attributes (native JavaScript arrays) (vertices, normals, texCoords, indices) and a drawType.
+* [`Model`](api-reference/core/model) - A renderable object with program, attributes, uniforms and other state required for rendering 3D objects on the screen
+* [`Geometry`](api-reference/core/geometry) - Holds attributes and drawType for a primitive geometric object
 
-Classes: `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`
+<!--* [`Object3D`](api-reference/core/object3d) - Base class, golds position, rotation, scale (TBD)
+* [`Group`](api-reference/core/group) - Supports recursive travesal and matrix transformation
+-->
+* [`AnimationLoop`](api-reference/core/animation-loop) - A simple animation loop that connects with browser's animation mechanism
 
-It should be fairly straightforward to use other primitives, e.g. from npm modules. As long as you have a number of attributes you can wrap them in a `Geometry` or set them directly on a `Model` or a `Program`.
+
+## Basic Geometries and Models
+
+A `Geomtry` object holds a set of attributes (native JavaScript arrays) (vertices, normals, texCoords, indices) and a `drawMode` prop to indicate how to interpret those vertices and normals as actual geometries.
+
+There are several basic geometry classes predefined in luma.gl: `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They are all subclasses of the `Geometry` class. 
+
+Corresponding to those geometry objects, luma.gl also provides commonly used `Model` classes that consist of basic geometries. These include `Cone`, `Cube`, `Cylinder`, `IcoSphere`, `Plane`, `Sphere`, `TruncatedCone` and `ClipSpaceQuad`.
 
 
+Users are encouraged to write their own geometries and models and luma.gl could include them in its future releases.
 
-## Companion Modules
-
-luma.gl offers a number of companion "modules":
-
-* **WebGL Classes** - Make working with WebGL a little easier.
-* **Math Library** - A math library with basic 2, 3 and 4 dimensional vectors and matrices. Allows you to manipulate arrays as if they were JavaScript objects.
-* **shadertools** - Registry of reusable shader packages, with platform patching support.
-* **Geometry Primitives** - Cubes, Spheres, Cones etc.
-* **IO** - Load images and data both in the Browser and under Node.js.
-* **Addons** - Browser Event handling
+## Utilities
+ 

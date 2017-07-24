@@ -1,14 +1,14 @@
 # Examples
 
-luma.gl contains a suite of stand-alone examples that can be used to test various features of the library
+luma.gl contains a suite of stand-alone examples that can be used to learn the various features of the framework. 
 
-## Viewing Examples
-
-Note that many of the examples can be viewed live on the luma.gl documentation website. But you can also build and run the examples yourself, see below.
+If you are just curious to see what can be achieved by luma.gl, you are welcome to check luma.gl's website at luma.gl. Examples are presented live there.
 
 ## Running Examples
 
-To run the examples, just go to their directories, install and start:
+If you'd like to poke around the example and see learn how to develop using luma.gl, you can build and run the examples yourself, following the instruction below:
+
+To run the examples, go to their directories, install and start:
 
     cd examples/core/instancing
     yarn # or npm install
@@ -22,9 +22,9 @@ You may need to delete the last line in the webpack config file. That line handl
 
 ## Development Mode
 
-Note that `npm start` will install an official version of luma.gl from npmjs.org and use that when bundling the code.
+Note that `npm start` will install a published version of luma.gl from npmjs.org and use that when bundling the code.
 
-To run the examples against the luma.gl source code in this repository (for testing changes in luma.gl itself), use the `npm start-local` command in the examples.
+To run the examples against the local luma.gl source code (usually for development of luma.gl itself), use the `npm start-local` command in the examples.
 
     cd examples/core/instancing
     yarn # or npm install
