@@ -81,15 +81,9 @@ const addDevConfig = config => {
 };
 
 const addProdConfig = config => {
-  // transpile mapbox-gl utils imported by react-map-gl@2
-  // these files are ES6 and break UglifyJS
-  config.module.rules.push({
-    loader: 'babel-loader'
-  });
-
   return Object.assign(config, {
     output: {
-      path: resolve(__dirname, '../dist'),
+      path: resolve(__dirname, './dist'),
       filename: 'bundle.js'
     }
   });
