@@ -9,9 +9,9 @@
   "scripts": {
     "start": "webpack-dev-server --env.local --progress --content-base ./src/static --open",
     "build-clean": "rm -rf ./dist && mkdir dist",
-    "build-static": "cp -r ./src/static/* dist && npm run build-images && cd `git rev-parse --show-toplevel`",
+    "build-static": "cp -r ./src/static/* dist",
     "build-script": "webpack -p --env.prod",
-    "build": "npm run build-clean && npm run build-script",
+    "build": "npm run build-clean && npm run build-static && npm run build-script",
     "lint": "eslint src --ignore-pattern workers"
   },
   "dependencies": {
