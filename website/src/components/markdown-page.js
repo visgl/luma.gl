@@ -1,5 +1,4 @@
-import React, {Component, PropTypes} from 'react';
-import pureRender from 'pure-render-decorator';
+import React, {PureComponent, PropTypes} from 'react';
 import marked from 'marked';
 
 /**
@@ -26,8 +25,7 @@ const urlRewrites = {
  */
 const imageRewrites = {};
 
-@pureRender
-export default class MarkdownPage extends Component {
+export default class MarkdownPage extends PureComponent {
 
   render() {
     const {content} = this.props;

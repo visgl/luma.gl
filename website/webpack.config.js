@@ -9,7 +9,9 @@ const libSources = join(rootDir, 'src');
 // https://github.com/babel/babel-loader/issues/149#issuecomment-191991686
 const BABEL_CONFIG = {
   presets: [
-    'es2015'
+    'es2015',
+    'react',
+    'stage-2'
   ].map(name => require.resolve(`babel-preset-${name}`)),
   plugins: [
     // '../babel-plugin-tree-shaking.js'
@@ -79,15 +81,9 @@ const addDevConfig = config => {
 };
 
 const addProdConfig = config => {
-  // transpile mapbox-gl utils imported by react-map-gl@2
-  // these files are ES6 and break UglifyJS
-  config.module.rules.push({
-    loader: 'babel-loader'
-  });
-
-  module.exports = Object.assign(config, {
+  return Object.assign(config, {
     output: {
-      path: resolve(__dirname, '../dist'),
+      path: resolve(__dirname, './dist'),
       filename: 'bundle.js'
     }
   });
