@@ -11,24 +11,22 @@ Most texture related functionality is implemented by and documented on the [Text
 
 Creating a `TextureCube`
 ```js
-const textureCube = new TextureCube(gl, {
+const textureCube = new TextureCube(gl, {width, height, dataFormat, pixels: {
   [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: imagePosX,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: imagePosY,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: imagePosZ,
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: imageNegX,
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: imageNegY,
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: imageNegZ
-});
+}});
 ```
 
-Replacing an entire face texture image
+Replacing one or more faces texture data
 ```js
-textureCube.setImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_X, data, x, y, mipmapLevel});
-```
-
-Replacing part of a face texture image
-```js
-textureCube.subImage({target: GL.TEXTURE_CUBE_MAP_POSITIVE_X, data, x, y, mipmapLevel});
+textureCube.setCubeMapImageData({width, height, dataFormat, pixels: {
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: imagePosX,
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: imageNegY
+}});
 ```
 
 Passing a `TextureCube` to a draw call...
@@ -39,8 +37,10 @@ Program.draw({
     textureDir: [1, 1, 1]
   }
 });
+```
 
 ...and accessing it in the shader
+
 ```
 // GLSL
 uniform samplerCube cubemap;
@@ -67,9 +67,8 @@ void main()
 
 ### TextureCube constructor
 
-```
+```js
 new Texture3D(gl, {
-  ...,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: imagePosX,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: imagePosY,
   [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: imagePosZ,
@@ -77,8 +76,8 @@ new Texture3D(gl, {
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: imageNegY,
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: imageNegZ,
   parameters
-})
-```;
+});
+```
 
 
 
@@ -94,5 +93,3 @@ new Texture3D(gl, {
 
 
 ## Remarks
-
-

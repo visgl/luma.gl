@@ -58,6 +58,7 @@ const vertexArray = new VertexArray(gl, {
   	0: new Buffer({data: new Float32Array([...])})
   }
 }
+```
 
 Setting a buffer name map
 ```js

@@ -203,6 +203,7 @@ export default class Texture extends Resource {
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
+      log.deprecated('data', 'pixels');
       data = pixels;
     }
 

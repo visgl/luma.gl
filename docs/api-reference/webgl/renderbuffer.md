@@ -15,7 +15,7 @@ const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4, width: 100, height:
 Reformatting/reinitializing a `Renderbuffer`
 ```js
 const renderbuffer = new Renderbuffer(gl, {format: GL.RGBA4, width: 100, height: 100});
-renderbuffer.storage({format: GL.RGBA4, width: 100, height: 100});
+renderbuffer.initialize({format: GL.RGB565, width: 50, height: 50});
 ```
 
 Resizing a `Renderbuffer`
@@ -125,10 +125,10 @@ This table lists the basic formats supported in WebGL1. For a full table of form
 | Sized Internal Format   | Format               | Type | Depth Bits | Stencil Bits |
 | ---                     | ---                  | ---  | ---        | --- |
 | `GL.DEPTH_COMPONENT16`  | `GL.DEPTH_COMPONENT` | `GL.UNSIGNED_SHORT`, `GL.UNSIGNED_INT` | 16 | 0 |
-| `GL.DEPTH_COMPONENT24`  | `GL.DEPTH_COMPONENT` | `GL.UNSIGNED_INT | 24 | 0 |
-| `GL.DEPTH_COMPONENT32F` | `GL.DEPTH_COMPONENT` | `GL.FLOAT | f32 | 0 |
-| `GL.DEPTH24_STENCIL8`   | `GL.DEPTH_STENCIL`   | `GL.UNSIGNED_INT_24_8 | 24 | 8 |
-| `GL.DEPTH32F_STENCIL8`  | `GL.DEPTH_STENCIL`   | `GL.FLOAT_32_UNSIGNED_INT_24_8_REV | f32 | 8 |
+| `GL.DEPTH_COMPONENT24`  | `GL.DEPTH_COMPONENT` | `GL.UNSIGNED_INT` | 24 | 0 |
+| `GL.DEPTH_COMPONENT32F` | `GL.DEPTH_COMPONENT` | `GL.FLOAT` | f32 | 0 |
+| `GL.DEPTH24_STENCIL8`   | `GL.DEPTH_STENCIL`   | `GL.UNSIGNED_INT_24_8` | 24 | 8 |
+| `GL.DEPTH32F_STENCIL8`  | `GL.DEPTH_STENCIL`   | `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` | f32 | 8 |
 
 
 When using the WEBGL_depth_texture extension:

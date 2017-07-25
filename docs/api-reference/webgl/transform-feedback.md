@@ -4,8 +4,6 @@
 
 The state managed by `TransformFeedback` objects includes the buffers the GPU will use to record the requested varyings.
 
-The `TransformFeedback` also stores current count of primitives recorded in the current feedback operation, if it is active. See [`Query`]() for more information.
-
 When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`) before it can be used. There a number of caveats to be aware of when manually managing `TransformFeedback` object activation, see the remarks. For this reason, luma.gl [`Program.draw`]() call takes an optional `TransformFeedback` object as a parameter and activates and deactivates it before and after the draw call.
 
 Finally, note that when using transform feedback it is frequently desirable to turn off rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
@@ -30,11 +28,6 @@ const program = new Program(gl, {
   fs,
   varyings: ['gl_Position'],
 });
-
-transformFeedback.bindBuffers(program.varyings, {
-  gl_Position: {buffer, offset},
-  normals: {buffer: buffer, offset}
-})
 ```
 
 ```js
@@ -118,8 +111,6 @@ Pauses transform feedback operations. When paused, transform feedback is still c
 
 The current program can be changed and so forth. Feedback operations can be paused indefinitely, and it is legal to read from buffers that are in a paused feedback operation (though you need to unbind the feedback object first).
 
-TODO `program.use` must be called first to restore the program that was active?
-
 Returns (`TransformFeedback`) - returns self to enable chaining
 
 WebGL APIs [gl.pauseTransformFeedback](), [gl.bindTransformFeedback]()
@@ -146,7 +137,7 @@ WebGL APIs [gl.endTransformFeedback](), [gl.bindTransformFeedback]()
 ## See also
 
 * `Program` constructor - `varyings` argument to specify which  
-* `Program.varyings` - contains a map of the indices of 
+* `Program.varyings` - contains a map of the indices of
 
 
 ## Parameters
@@ -171,9 +162,3 @@ None
 * About `TransformFeedback` activation caveats
     * When activated, `TransformFeedback` are coupled to the "current" `Program`
 * Note that a started and unpaused TransformFeedback prevents the app from changing or re-linking the current program. So for instance, `Program.use` (`gl.useProgram`) cannot be called.
-
-
-## API Audit Notes
-
-* Activation is tightly coupled to the current program. Since we try to encapsulate program.use, should we move these methods (begin/pause/resume/end) to the Program?
-

@@ -12,7 +12,7 @@ Most texture related functionality is implemented by and documented on the [Text
 Create a new texture array
 ```js
 if (Texture3D.isSupported()) {
-  textureArray = new Texture3D(gl, {...});
+  texture3D = new Texture3D(gl, {...});
 }
 ```
 

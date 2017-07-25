@@ -48,6 +48,8 @@ export default class TranformFeedback extends Resource {
     }
   }
 
+  // TODO: Activation is tightly coupled to the current program. Since we try to encapsulate
+  // program.use, should we move these methods (begin/pause/resume/end) to the Program?
   begin(primitiveMode) {
     this._bindBuffers();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
