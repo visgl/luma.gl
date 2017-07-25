@@ -18,7 +18,7 @@ const texture = new Texture2D(gl, {
   pixelStore: {
     [GL.UNPACK_FLIP_Y_WEBGL]: true,
   },
-  mipmaps: GL.NICEST
+  mipmaps: true
 });
 ```
 
@@ -47,12 +47,12 @@ const texture = new Texture2D(gl);
 
 Resize it (this clears the texture).
 ```js
-texture.update({width: 10, height: 10});
+texture.resize({width: 10, height: 10});
 ```
 
 Write a sub image into the texture
 ```js
-texture.subImage({data, x, y, mipmapLevel});
+texture.setSubImageData({pixels, x, y, width, height, level, type, dataFormat});
 ```
 
 Accessing elements
@@ -79,7 +79,8 @@ new Texture2D(gl, {
   format=,
   type=,
   dataFormat=,
-  parameters=, pixelStore=
+  parameters=,
+  pixelStore=
 })
 ```
 
@@ -87,14 +88,13 @@ new Texture2D(gl, {
 * `data`=null (*) - If not provided (null), a solid color texture will be allocated of the specified size.
 * `width`=`0` (*Number*) - The width of the texture.
 * `height`=`0` (*Number*) - The height of the texture.
-* `mipmaps`= - (*GLenum*) - How mipmaps should be created.
+* `mipmaps`= - (*Boolean*) - Generates mipmaps when true.
 * `format`=`GL.RGBA` (*GLenum* ) - internal format that WebGL should use.
 * `type`= (*enum*) - type of pixel data (`GL.UNSIGNED_BYTE`, `GL.FLOAT` etc). Default is autodeduced from `format`.
 * `dataFormat`= (*GLenum*) - internal format that WebGL should use. Default is autodeduced from `format`.
-* `parameters`=`{}` (*object*) - map of texture sampler parameters
+* `parameters`=`{}` (*object*) - map of texture sampler parameters.
 * `pixelStore`=`{}` (*object*) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
 
 Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](texture.md). Sampler parameters are specified in [Sampler](./sampler.md), and pixel store parameters are specified in [State Management](./context-state.md)
-
 
 ## Limits

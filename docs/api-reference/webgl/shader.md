@@ -6,8 +6,8 @@
 
 Create a pair of shaders
 ```js
-const fs = new VertexShader(gl, {});
-const fs = new FragmentShader(gl, {});
+const fs = new VertexShader(gl, source);
+const fs = new FragmentShader(gl, source);
 ```
 
 
@@ -20,6 +20,8 @@ const fs = new FragmentShader(gl, {});
 
 ### constructor
 
+* `gl` - gl context
+* `source` - string containing shader instructions.
 
 
 

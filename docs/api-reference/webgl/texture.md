@@ -19,25 +19,27 @@ Note that textures have a lot of optional capabilities made available by extensi
 
 Configuring a Texture
 ```js
-const sampler = new Texture2D(gl);
-sampler.setParameters({
+const texture = new Texture2D(gl);
+texture.setParameters({
   [GL.TEXTURE_WRAP_S]: GL.CLAMP
 });
 ```
 
 Using Textures
 ```js
-// Create two samplers to sample the same texture in different ways
 const texture = new Texture2D(gl, ...);
 
 // For ease of use, the `Model` class can bind textures for a draw call
 model.draw({
-  uniforms({texture1: texture, texture2: texture})
+  uniforms({uMVMatrix: matrix, texture1: texture, texture2: texture})
 });
 
 // Alternatively, bind the textures using the `Texture` API directly
 texture.bind(0);
 texture.bind(1);
+model.draw({
+  uniforms({uMVMatrix: matrix})
+});
 ```
 
 ## Members
@@ -101,7 +103,8 @@ Allocates storage
     dataFormat,
     offset = 0,
     border = 0,
-    compressed = false
+    compressed = false,
+    parameters= {}
   });
 ```
 
@@ -114,21 +117,23 @@ Allocates storage
  HTMLVideoElement - Creates video texture. Auto width/height
 * `width` (GLint) -
 * `height` (GLint) -
-* `mipMapLevel` (GLint) -
+* `level` (GLint) -
 * `format` (GLenum) - format of image data.
 * `type` (GLenum)
  - format of array (autodetect from type) or
  - (WEBGL2) format of buffer
 * `offset` (Number) - (WEBGL2) offset from start of buffer
 * `border` (GLint) - must be 0.
+* `compressed` (Boolean) -
+* `parameters` (Object) - GL parameters to be temporarily applied (most of the time, pixelStorage parameters) when updating the texture.
 
-### subImage
+### setSubImageData
 
 Redefines an area of an existing texture
 Note: does not allocate storage
 
 ```
-  Texture.subImage({
+  Texture.setSubImageData({
     target = this.target,
     pixels = null,
     data = null,
@@ -142,7 +147,8 @@ Note: does not allocate storage
     dataFormat,
     compressed = false,
     offset = 0,
-    border = 0
+    border = 0,
+    parameters = {}
   });
 ```
 
@@ -175,10 +181,12 @@ WebGL References [copyTexImage2D](), [gl.bindFramebuffer]()
 
 ### getActiveUnit
 
-[gl.getParameter]()
+Returns number of active textures.
 
 
 ### bind
+
+Binds itself to given textureUnit.
 
  * textureUnit
 
@@ -188,41 +196,6 @@ WebGL References [gl.activeTexture](), [gl.bindTexture]()
 ### unbind()
 
 WebGL References [gl.activeTexture](), [gl.bindTexture]()
-
-
-## Texture Parameters
-
-### Width, Height and Depth
-
-
-### Mipmaps
-
-
-`GL.DONT_CARE`
-
-### Sampler Parameters
-
-Texture parameters control how textures are sampled in the shaders.
-
-Also see [`Sampler`](sampler.md).
-
-
-### Unpack Parameters
-
-Specifies how bitmaps are read from memory
-
-
-
-### Pack Parameters
-
-Specifies how bitmaps are written to memory
-
-| Parameter                             | Type          | Default  | Description             |
-| ------------------------------------- | ------------- | -------- | ----------------------- |
-| `GL.PACK_ALIGNMENT`                   | GLint         |      `4` | Byte alignment of pixel row in memory (1,2,4,8 bytes) when storing |
-| `GL.PACK_ROW_LENGTH` **WebGL2**       | GLint         |      `0` | Number of pixels in a row |
-| `GL.PACK_SKIP_PIXELS` **WebGL2**      | GLint         |      `0` | Number of pixels skipped before the first pixel is written into memory |
-| `GL.PACK_SKIP_ROWS` **WebGL2**        | GLint         |      `0` | Number of rows of pixels skipped before first pixel is written to memory |
 
 
 ## Texture Image Data
@@ -378,7 +351,7 @@ For more details, see tables in:
 | `GL.TEXTURE_WRAP_S`     | Must be `GL.CLAMP_TO_EDGE` |
 | `GL.TEXTURE_WRAP_T`     | Must be `GL.CLAMP_TO_EDGE` |
 
-* 'Texture' class will perform above parameters when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
+* 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
 
 
 ## Remarks

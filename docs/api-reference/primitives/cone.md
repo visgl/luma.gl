@@ -4,7 +4,7 @@ Creates a Cone model. Inherits methods from [Model](Model).
 
 Create a white Cone of base radius 2 and height 3.
 ```js
-var whiteCone = new Cone({
+var whiteCone = new Cone(gl, {
   radius: 2,
   height: 3,
   cap: true,
