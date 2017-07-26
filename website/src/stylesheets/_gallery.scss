@@ -15,6 +15,7 @@
   height: 100%;
   background: #fff;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 2px 0 4px rgba(0,0,0,0.15);
   z-index: 1;
   transition: all 300ms;
@@ -89,20 +90,6 @@
     border-color: #000;
   }
 }
-.tab {
-  display: none;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-.tab.active {
-  display: block;
-  >div {
-    height: 100%;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
-  }
-}
 .markdown {
   padding: 40px 36px 96px;
 }
@@ -135,10 +122,18 @@
   hr {
     margin: 12px -24px;
   }
+  .source-link {
+    text-align: right;
+    margin-top: 8px;
+
+    a {
+      font-weight: bold;
+      color: $black-40;
+      font-size: 11px;
+    }
+  }
   .input {
     position: relative;
-    float: left;
-    margin: 4px;
     width: 100%;
 
     >* {
@@ -209,28 +204,11 @@ code {
   overflow: hidden;
   height: 100vh;
   transition: height 300ms;
-
-  &.embedded {
-    height: 80vh;
-
-    >div:first-child {
-      margin-top: 0;
-      transition: margin-top 300ms;
-    }
-  }
-  &.embedded:not(:hover) {
-    height: 30vh;
-    min-height: 200px;
-
-    >div:first-child {
-      margin-top: -20vh;
-    }
-    .options-panel {
-      .input, hr {
-        display: none;
-      }
-    }
-  }
+}
+.markdown {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 576px) {

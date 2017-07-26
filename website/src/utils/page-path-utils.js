@@ -3,7 +3,6 @@ function getDocUrl(filename) {
   if (filename.indexOf('markdown') !== -1) {
     url = filename;
   }
-  console.log(url);
   return url;
 }
 
@@ -15,10 +14,10 @@ export function generatePaths(tree, {docUrls = false} = {}) {
     generatePaths(tree.children, {docUrls});
   }
   if (tree.name) {
-    tree.path = tree.name.match(/(([A-Z]|^)[a-z]+|\d+)/g).join('-').toLowerCase();
+    tree.path = tree.name.match(/(3D|API|WebGL|([A-Z]|^)[a-z]+|\d+)/g).join('-').toLowerCase();
   }
   if (docUrls && typeof tree.content === 'string') {
-    tree.content = {path: getDocUrl(tree.content)};
+    tree.content = getDocUrl(tree.content);
   }
   return tree;
 }

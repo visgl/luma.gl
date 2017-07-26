@@ -61,7 +61,6 @@ const zoomCenterY = 0.78186693904085048;
 const animationLoop = new AnimationLoop({
   // onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
   onInitialize: ({gl}) => {
-    addControls();
     return {
       clipSpaceQuad: new ClipSpaceQuad({gl, fs: MANDELBROT_FRAGMENT_SHADER})
     };
@@ -107,18 +106,15 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls() {
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
   <code>Mandelbrot</code> set zoom implemented as a GLSL fragment shader.
   <p>
   Uses a luma.gl <code>ClipSpaceQuad</code> to set up a screen spaced model
   in which the <code>fragment shader</code> can render.
     `;
-  }
-}
+};
 
 export default animationLoop;
 

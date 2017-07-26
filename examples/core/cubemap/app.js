@@ -3,8 +3,6 @@ import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians, setParameters} f
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
-    addControls(canvas);
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -49,10 +47,8 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls() {
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
   A <code>cubemapped</code> prism within a larger cubemapped cube
   <p>
@@ -60,17 +56,20 @@ function addControls() {
   the GLSL <code>reflect</code> and <code>refract</code> builtin functions
   to calculate reflection and refraction directions from the prism normals
   </p>
-  reflection
-  <input class="valign" id="reflection"
-    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  <hr />
+  <div class="input">
+    <label >reflection</label>
+    <input class="valign" id="reflection"
+      type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  </div>
   <br>
-  refraction
-  <input class="valign" id="refraction"
-    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-  <br>
+  <div class="input">
+    <label >refraction</label>
+    <input class="valign" id="refraction"
+      type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  </div>
     `;
-  }
-}
+};
 
 function getCube(gl) {
   return new Cube({
