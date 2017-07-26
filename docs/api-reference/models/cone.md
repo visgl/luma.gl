@@ -1,8 +1,8 @@
 # Cone
 
-Creates a Cone model. Inherits methods from [Model](Model).
+Creates a cone model. Inherits methods from [Model](/docs/api-reference/core/model).
 
-### Usage
+## Usage
 
 Create a white Cone of base radius 2 and height 3.
 ```js
@@ -13,6 +13,7 @@ var whiteCone = new Cone(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+## Method
 
 ### constructor
 

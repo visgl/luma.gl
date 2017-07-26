@@ -1,8 +1,8 @@
 # IcoSphere
 
-Creates a Sphere model by subdividing an Icosahedron. Inherits methods from [Model](Model).
+Creates a sphere model by subdividing an Icosahedron. Inherits methods from [Model](/docs/api-reference/core/model).
 
-### Usage
+## Usage
 
 Create a white IcoSphere of radius 1.
 
@@ -12,6 +12,8 @@ var whiteSphere = new IcoSphere(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+
+## Method
 
 ### constructor
 

@@ -1,8 +1,8 @@
 # Plane
 
-Creates a plane. Inherits methods from [Model](Model).
+Creates a plane. Inherits methods from [Model](/docs/api-reference/core/model).
 
-### Usage
+## Usage
 
 Create a white XZ plane.
 ```js
@@ -16,6 +16,7 @@ var whitePlane = new Plane(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+## Method
 
 ### constructor
 

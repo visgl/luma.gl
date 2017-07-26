@@ -1,8 +1,8 @@
 # Cube
 
-Create a white cube.
+Create a white cube model. Inherits methods from [Model](/docs/api-reference/core/model)
 
-### Usage
+## Usage
 
 ```js
 var whiteCube = new Cube(gl, {
@@ -10,6 +10,7 @@ var whiteCube = new Cube(gl, {
     });
 ```
 
+## Method
 
 ### constructor
 

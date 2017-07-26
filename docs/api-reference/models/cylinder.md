@@ -1,9 +1,9 @@
 # Cylinder
 
-Creates a Cylinder model. Inherits methods from [Model](Model).
+Creates a cylinder model. Inherits methods from [Model](/docs/api-reference/core/model).
 
 
-### Usage
+## Usage
 
 Create a white Cylinder of radius 2 and height 3.
 
@@ -14,6 +14,8 @@ var whiteCylinder = new Cylinder(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+
+## Method
 
 ### constructor
 

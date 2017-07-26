@@ -1,5 +1,6 @@
 # Shader
 
+The `Shader` class are the base class for `VectexShader` class and `FragmentShader` class
 
 
 ## Usage
@@ -9,7 +10,6 @@ Create a pair of shaders
 const fs = new VertexShader(gl, source);
 const fs = new FragmentShader(gl, source);
 ```
-
 
 ## Members
 
@@ -27,5 +27,5 @@ const fs = new FragmentShader(gl, source);
 
 ## Remarks
 
-* Shader sources: A Program needs to be constructed with two strings containing source code for vertex and fragment shaders.
+* Shader sources: A `Program` needs to be constructed with two strings containing source code for vertex and fragment shaders.
 * Default Shaders: luma.gl comes with a set of default shaders that can be used for basic rendering and picking.

@@ -44,7 +44,7 @@ input arguments, both are implictly set to this), and exposes the remaining
 arguments in the same order as the gl-matrix api.
 
 Only in a few cases where `gl-matrix` methods take a long list arguments
-(e.g. `mat4.perspective`, `mat4.ortho` etc) or return multiple values
+(e.g. `Matrix4.perspective`, `Matrix4.ortho` etc) or return multiple values
 (e.g. `quat.getAxisRotation`) do methods provide a modified API
 that is more natural for modern ES6 applications to use, e.g. using named
 parameters, or collecting all results in one returned object.
@@ -99,9 +99,9 @@ will be suffixed with the number `2`.
 ### Notes:
 
 All classes extend from `Array` or some
-`DataView` class (i.e. some typed array). This means that `Vec3`, `Mat4`
-and `Quat`-like objects are plain arrays and not plain objects. Getters
-have been added for all properties in `Vec3`, `Mat4` and `Quat`
+`DataView` class (i.e. some typed array). This means that `Vector3`, `Matrix4`
+and `Quaternion`-like objects are plain arrays and not plain objects. Getters
+have been added for all properties in `Vector3`, `Matrix4` and `Quaternion`
 classes so you can still access them via `vec.x`, etc, but remember
 that the inner implementation is an array, so `vec3[0]` will also
 work.

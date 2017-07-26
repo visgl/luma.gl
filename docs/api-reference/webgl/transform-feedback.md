@@ -4,7 +4,7 @@
 
 The state managed by `TransformFeedback` objects includes the buffers the GPU will use to record the requested varyings.
 
-When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`) before it can be used. There a number of caveats to be aware of when manually managing `TransformFeedback` object activation, see the remarks. For this reason, luma.gl [`Program.draw`]() call takes an optional `TransformFeedback` object as a parameter and activates and deactivates it before and after the draw call.
+When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`) before it can be used. There a number of caveats to be aware of when manually managing `TransformFeedback` object activation, see the remarks. For this reason, luma.gl [`Program.draw`](/docs/api-reference/program) call takes an optional `TransformFeedback` object as a parameter and activates and deactivates it before and after the draw call.
 
 Finally, note that when using transform feedback it is frequently desirable to turn off rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
 
@@ -103,7 +103,7 @@ returns (`TransformFeedback`) - returns self to enable chaining
 | `GL.LINES`	 | `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP` |
 | `GL.TRIANGLES` | `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN` |
 
-WebGL APIs [gl.beginTransformFeedback](), [gl.bindTransformFeedback]()
+WebGL APIs [gl.beginTransformFeedback](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/beginTransformFeedback)
 
 ### pause()
 
@@ -113,7 +113,7 @@ The current program can be changed and so forth. Feedback operations can be paus
 
 Returns (`TransformFeedback`) - returns self to enable chaining
 
-WebGL APIs [gl.pauseTransformFeedback](), [gl.bindTransformFeedback]()
+WebGL APIs [gl.pauseTransformFeedback](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/pauseTransformFeedback)
 
 ### resume()
 
@@ -123,7 +123,7 @@ Bind the exact program that was used when TransformFeedback.begin was called.
 
 returns (`TransformFeedback`) - returns self to enable chaining
 
-WebGL APIs [gl.resumeTransformFeedback](), [gl.bindTransformFeedback]()
+WebGL APIs [gl.resumeTransformFeedback](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/resumeTransformFeedback)
 
 returns (`TransformFeedback`) - returns self to enable chaining
 
@@ -131,12 +131,12 @@ returns (`TransformFeedback`) - returns self to enable chaining
 
 returns (`TransformFeedback`) - returns self to enable chaining
 
-WebGL APIs [gl.endTransformFeedback](), [gl.bindTransformFeedback]()
+WebGL APIs [gl.endTransformFeedback](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/endTransformFeedback)
 
 
 ## See also
 
-* `Program` constructor - `varyings` argument to specify which  
+* `Program` constructor - `varyings` argument to specify which
 * `Program.varyings` - contains a map of the indices of
 
 

@@ -4,9 +4,9 @@ import {checkNumber} from './common';
 // gl-matrix is too big. Cherry-pick individual imports from stack.gl version
 /* eslint-disable camelcase */
 import vec3_set from 'gl-vec3/set';
-import vec3_length from 'gl-vec3/add';
-import vec3_distance from 'gl-vec3/add';
-import vec3_angle from 'gl-vec3/add';
+import vec3_length from 'gl-vec3/length';
+import vec3_distance from 'gl-vec3/distance';
+import vec3_angle from 'gl-vec3/angle';
 import vec3_add from 'gl-vec3/add';
 import vec3_subtract from 'gl-vec3/subtract';
 import vec3_multiply from 'gl-vec3/multiply';
@@ -65,7 +65,7 @@ export default class Vector3 extends MathArray {
   }
 
   distance(vector) {
-    return vec3_distance(this. vector);
+    return vec3_distance(this, vector);
   }
 
   angle(vector) {
@@ -141,9 +141,7 @@ export default class Vector3 extends MathArray {
   }
 
   dot(vector) {
-    vec3_dot(this, this, vector);
-    this.check();
-    return this;
+    return vec3_dot(this, vector);
   }
 
   cross(vector) {
@@ -152,8 +150,8 @@ export default class Vector3 extends MathArray {
     return this;
   }
 
-  lerp(scale) {
-    vec3_lerp(this, this, scale);
+  lerp(vector, coeff) {
+    vec3_lerp(this, this, vector, coeff);
     this.check();
     return this;
   }

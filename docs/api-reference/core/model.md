@@ -65,24 +65,23 @@ The constructor for the Model class. Use this to create a new Model.
 
 `const model = new Model(gl, options);`
 
-Parameters:
+#### Parameters
 
-* gl - WebGL context.
-* opts - contains following named properties.
-  * vs - (VertexShader|*string*) - A vertex shader object, or source as a string.
-  * fs - (FragmentShader|*string*) - A fragment shader object, ot source as a string.
-  * modules - shader modules to be applied.
-  * moduleSettings - any uniforms needed by shader modules.
-  * program - pre created program to use, when provided, vs, ps and modules are not used.
-  * isInstanced - default value is false.
-  * instanceCount - default value is 0.
-  * vertexCount - when not provided will be deduced from `geometry` object.
-  * uniforms - uniform values to be used for drawing.
-  * geometry - geometry object, from which attributes, vertex count and drawing mode are deduced.
-  * onBeforeRender - function to be called before every time this model is drawn.
-  * onAfterRender - function to be called after every time this model is drawn.
-
+* `gl` - WebGL context.
+* `opts` - contains following named properties.
+  * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
+  * `fs` - (FragmentShader|*string*) - A fragment shader object, ot source as a string.
+  * `modules` - shader modules to be applied.
+  * `moduleSettings` - any uniforms needed by shader modules.
+  * `program` - pre created program to use, when provided, vs, ps and modules are not used.
+  * `isInstanced` - default value is false.
+  * `instanceCount` - default value is 0.
+  * `vertexCount` - when not provided will be deduced from `geometry` object.
+  * `uniforms` - uniform values to be used for drawing.
+  * `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
+  * `onBeforeRender` - function to be called before every time this model is drawn.
+  * `onAfterRender` - function to be called after every time this model is drawn.
 
 ## Remarks
-  * All instance methods in `Model` are chainable
-    (unless they return a documented value).
+* All instance methods in `Model` are chainable
+  (unless they return a documented value).

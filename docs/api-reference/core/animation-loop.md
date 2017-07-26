@@ -1,6 +1,6 @@
 # AnimationLoop
 
-While this class is named to suggest that it is a wrapper for `requestAnimationFrame`, it provides a number of features related to initialization and animation of a WebGLRenderingContext.
+While this class is named to suggest that it is a wrapper for `requestAnimationFrame`, it provides a number of features related to initialization and animation of a `WebGLRenderingContext` or `WebGL2RenderingContext`.
 
 * Makes it easy to wait for the HTML page to load before creating resources.
 * Provides a number of commonly needed variables as part of the `context` object which is passed to `onRender` and `onFinalize` callbacks.
@@ -12,7 +12,7 @@ While this class is named to suggest that it is a wrapper for `requestAnimationF
 ## Usage
 
 Short example:
-```
+```js
 new AnimationLoop({
   onCreateContext() {
     return createGLContext({canvas: 'canvas-0'}))
@@ -31,7 +31,7 @@ new AnimationLoop({
 
 ## Callback Parameters
 
-The callbacks that the app supplies to the `AnimationLoop` will be called with an object containing named parameters. The parametre object will contain the following values:
+The callbacks that the app supplies to the `AnimationLoop` will be called with an object containing named parameters. The parameter object will contain the following values:
 
 * `gl` - This `AnimationLoop`'s `WebGLRenderingContext`.
 * `canvas` - The canvas associated with the rendering context.
@@ -54,12 +54,6 @@ Parameters:
 * `onRenderFrame` (callback) - Calling `frame` will automatically start the animation. If this is not desired, follow immediately with a `stop()`.
 * `onFinalize` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
 
-Remarks(`onCreateContext`):
-* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling `createGLContext`.
-* The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
-* This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
-
-
 ### start
 
 Restarts the animation
@@ -75,3 +69,7 @@ Stops the animation
 * You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 * Works both in browser and under Node.js.
 * All `AnimationLoop` methods can be chained.
+* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling `createGLContext`.
+* The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
+* This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
+

@@ -1,8 +1,8 @@
 # Sphere
 
-Creates a Sphere model. Inherits methods from [Model](Model).
+Creates a sphere model. Inherits methods from [Model](/docs/api-reference/core/model).
 
-### Usage
+## Usage
 
 Create a white Sphere of radius 2
 ```js
@@ -11,6 +11,8 @@ var whiteSphere = new Sphere(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+
+## Method
 
 ### constructor
 
