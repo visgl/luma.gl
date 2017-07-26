@@ -56,18 +56,6 @@ animationLoop.getInfo = () => {
   the GLSL <code>reflect</code> and <code>refract</code> builtin functions
   to calculate reflection and refraction directions from the prism normals
   </p>
-  <hr />
-  <div class="input">
-    <label >reflection</label>
-    <input class="valign" id="reflection"
-      type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-  </div>
-  <br>
-  <div class="input">
-    <label >refraction</label>
-    <input class="valign" id="refraction"
-      type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-  </div>
     `;
 };
 
