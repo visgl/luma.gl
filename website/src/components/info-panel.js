@@ -10,7 +10,7 @@ export default class InfoPanel extends PureComponent {
     const controls = DemoComponent.getInfo && DemoComponent.getInfo() || '';
 
     return (
-      <div className="options-panel top-right" >
+      <div className="options-panel top-right" tabIndex="0">
         <h3>{demo}</h3>
         <div className="control-panel" dangerouslySetInnerHTML={{__html: controls}} />
 
