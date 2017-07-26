@@ -282,14 +282,14 @@ export const DOC_PAGES = [
         name: 'Model',
         content: 'api-reference/core/model.md'
       },
-      {
-        name: 'Object3d',
-        content: 'api-reference/core/object-3d.md'
-      },
-      {
-        name: 'Group',
-        content: 'api-reference/core/group.md'
-      },
+      // {
+      //   name: 'Object3d',
+      //   content: 'api-reference/core/object-3d.md'
+      // },
+      // {
+      //   name: 'Group',
+      //   content: 'api-reference/core/group.md'
+      // },
       {
         name: 'Geometry',
         content: 'api-reference/core/geometry.md'
