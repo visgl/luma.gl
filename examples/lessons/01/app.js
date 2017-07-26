@@ -87,12 +87,6 @@ animationLoop.getInfo = () => {
     `;
 };
 
-animationLoop.getInfo = () => {
-  return `
-    <p></p>
-  `;
-};
-
 export default animationLoop;
 
 // expose on Window for standalone example
