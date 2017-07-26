@@ -1,6 +1,6 @@
 # Renderbuffer
 
-`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use `Texture`s instead. In addition, in WebGL2, `Renderbuffer` can do Multisampling (MSAA) just like standard framebuffer.
+`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/#/documentation/api-reference/texture) instead. In addition, in WebGL2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
 
 For additional information, see [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object)
 
@@ -68,7 +68,7 @@ Creates a new `Renderbuffer` and initalizes it by calling `initialize` with the 
 * `height`=`1` (GLint) - height of renderbuffer in pixels
 * `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
 
-WebGL References [gl.createRenderbuffer](), also see `initialize`.
+WebGL References [gl.createRenderbuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createRenderbuffer), also see `initialize`.
 
 ### initialize
 
@@ -86,7 +86,7 @@ Returns itself to enable chaining
 * `initialize` erases the current content of the `Renderbuffer`.
 
 
-WebGL References [gl.renderbufferStorage](), [gl.renderbufferStorageMultisample](), [gl.bindRenderbuffer]()
+WebGL References [gl.renderbufferStorage](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/renderbufferStorage), [gl.renderbufferStorageMultisample](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/renderbufferStorageMultisample) (WebGL2), [gl.bindRenderbuffer](WebGLRenderingContext.bindRenderbuffer())
 
 ### resize
 
@@ -116,7 +116,7 @@ The "internal" format of the `Renderbuffer`.
 | `GL.DEPTH_COMPONENT16` |  16 depth bits |
 | `GL.STENCIL_INDEX8`    |  8 stencil bits |
 
-This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/docs/webgl/texture.md).
+This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/#/documentation/api-reference/texture).
 
 | Sized Internal Format   | Format               | Type | Depth Bits | Stencil Bits |
 | ---                     | ---                  | ---  | ---        | --- |
@@ -185,6 +185,6 @@ When using a WebGL 2 context, the following values are available additionally:
 
 ## Remarks
 
-* The only way to work with a renderbuffer, besides creating it, is to attach it to a `Framebuffer`.
+* The only way to work with a renderbuffer, besides creating it, is to attach it to a [`Framebuffer`](/#/documentation/api-reference/framebuffer).
 * A `Renderbuffer` cannot be accessed by a shader in any way.
 * Multisampling is only available in WebGL2

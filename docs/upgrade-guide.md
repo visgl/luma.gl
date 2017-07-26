@@ -13,9 +13,9 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `Vec3`               | `Vector3`        | [New math library]() |
-| `Mat4`               | `Matrix4`        | [New math library]() |
-| `Quat`               | `Quaternion`     | [New math library]() |
+| `Vec3`               | `Vector3`        | [New math library](/#/documentation/api-reference/math) |
+| `Mat4`               | `Matrix4`        | [New math library](/#/documentation/api-reference/math) |
+| `Quat`               | `Quaternion`     | [New math library](/#/documentation/api-reference/math) |
 
 
 ## Deprecated Features
@@ -25,8 +25,8 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `withState`          | `withParameters` | [New WebGL state management]() |
-| `glContextWithState` | `withParameters` | [New WebGL state management]() |
+| `withState`          | `withParameters` | [New WebGL state management](/#/documentation/api-reference/with-parameters) |
+| `glContextWithState` | `withParameters` | [New WebGL state management](/#/documentation/api-reference/with-parameters) |
 
 
 ## API Change
@@ -58,7 +58,7 @@ V3 was a fairly minor release, a number of deprecations were made.
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `Vec3`               | `Vector3`        | New math library |
-| `Mat4`               | `Matrix4`        | New math library |
-| `Quat`               | `Quaternion`     | New math library |
+| `Vec3`               | `Vector3`        | [New math library](/#/documentation/api-reference/math) |
+| `Mat4`               | `Matrix4`        | [New math library](/#/documentation/api-reference/math) |
+| `Quat`               | `Quaternion`     | [New math library](/#/documentation/api-reference/math) |
 

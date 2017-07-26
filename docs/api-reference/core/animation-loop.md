@@ -1,6 +1,6 @@
 # AnimationLoop
 
-While this class is named to suggest that it is a wrapper for `requestAnimationFrame`, it provides a number of features related to initialization and animation of a `WebGLRenderingContext` or `WebGL2RenderingContext`.
+While this class is named to suggest that it is a wrapper for [`requestAnimationFrame`](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame), it provides a number of features related to initialization and animation of a `WebGLRenderingContext` or `WebGL2RenderingContext`.
 
 * Makes it easy to wait for the HTML page to load before creating resources.
 * Provides a number of commonly needed variables as part of the `context` object which is passed to `onRender` and `onFinalize` callbacks.
@@ -69,7 +69,7 @@ Stops the animation
 * You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 * Works both in browser and under Node.js.
 * All `AnimationLoop` methods can be chained.
-* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling `createGLContext`.
+* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/#/documentation/api-reference/context).
 * The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 * This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
 

@@ -5,7 +5,7 @@ luma.gl constains a lot of classes and functions that might make new users wonde
 | Folder                           | Description |
 | ---                              | --- |
 | src/webgl | A set of classes covering all **WebGL objects**. Currently luma.gl supports WebGL 2.0. These classes organize the sprawling WebGL API and makes it easy to work with in JavaScript. |
-| src/core | A set of common classes across all 3D graphics applications. They are on a higher abstraction level than the WebGL API. luma.gl's signature [`Model`](/docs/api-reference/core/model) class is in this folder. |
+| src/core | A set of common classes across all 3D graphics applications. They are on a higher abstraction level than the WebGL API. luma.gl's signature [`Model`](/#/documentation/api-reference/model) class is in this folder. |
 | src/geometry | This folder contains a collection of geometric primitives extending from the base `Geometry` class, including `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They can be used to create `Model` class with common geometries|
 | src/models | Some predefined `Models` created from simple geometries from the `src/geometry` folder|
 | src/io | Node.js and browser file loaders. Also enables using streams in browser. |
@@ -18,19 +18,18 @@ luma.gl constains a lot of classes and functions that might make new users wonde
 
 The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, These classes help organize the sprawling WebGL2 API and makes it much easier to program WebGL2 in JavaScript.
 
-After creating a context, perhaps with luma.gl's [`createGLContext`](context.html) function, you have can start instantiating luma.gl's WebGL2 classes: `Buffer`, `FrameBuffer`, `RenderBuffer`, `Program`, `Shader`, `Texture2D`, `TextureCube`, `Texture2DArray`, `Texture3D`, `Query`, `Sampler`, `Sync`, `TransformFeedback`, `VertexArrayObject`, `VertexAttributes`, `VertexAttributes`.
+After creating a context, perhaps with luma.gl's [`createGLContext`](/#/documentation/api-reference/context) function, you have can start instantiating luma.gl's WebGL2 classes: `Buffer`, `FrameBuffer`, `RenderBuffer`, `Program`, `Shader`, `Texture2D`, `TextureCube`, `Texture2DArray`, `Texture3D`, `Query`, `Sampler`, `Sync`, `TransformFeedback`, `VertexArrayObject`, `VertexAttributes`, `VertexAttributes`.
 
 ## Core Classes
 
-The `core` classes, with the signature [`Model`](/docs/api-reference/core/model) class, represents a set of objects that is common in most 3D rendering libraries or engines. These objects are at higher abstraction levels than the actual WebGL objects and that can serve as the basic building blocks for most 3D applications.
+The `core` classes, with the signature [`Model`](/#/documentation/api-reference/model) class, represents a set of objects that is common in most 3D rendering libraries or engines. These objects are at higher abstraction levels than the actual WebGL objects and that can serve as the basic building blocks for most 3D applications.
 
-* [`Model`](/docs/api-reference/core/model) - A renderable object with program, attributes, uniforms and other state required for rendering 3D objects on the screen
-* [`Geometry`](/docs/api-reference/core/geometry) - Holds attributes and drawType for a primitive geometric object
-
+* [`Model`](/#/documentation/api-reference/model) - A renderable object with program, attributes, uniforms and other state required for rendering 3D objects on the screen
+* [`Geometry`](/#/documentation/api-reference/geometry) - Holds attributes and drawType for a primitive geometric object
 <!--* [`Object3D`](api-reference/core/object3d) - Base class, golds position, rotation, scale (TBD)
 * [`Group`](api-reference/core/group) - Supports recursive travesal and matrix transformation
 -->
-* [`AnimationLoop`](/docs/api-reference/core/animation-loop) - A simple animation loop that connects with browser's animation mechanism
+* [`AnimationLoop`](/#/documentation/api-reference/animation-loop) - A simple animation loop that connects with browser's animation mechanism
 
 
 ## Basic Geometries and Models

@@ -1,6 +1,6 @@
 # Program
 
-A `Program` contains a matched pair of vertex and fragment shaders that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, setting and unsetting buffers (attributes), setting uniform values etc.
+A `Program` contains a matched pair of vertex and fragment [shaders](/#/documentation/api-reference/shader) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, setting and unsetting buffers (attributes), setting uniform values etc.
 
 | **Method**      | **Description** |
 | ---             | --- |
@@ -84,7 +84,7 @@ Syntax:
 | `GL.INTERLEAVED_ATTRIBS`            | Multiple varyings per buffer |
 
 
-WebGL References [WebGLProgram](), [gl.createProgram]()
+WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
 ### initialize
 
@@ -142,8 +142,9 @@ Runs the shaders in the program, on the attributes and uniforms.
 * If a `TransformFeedback` object is supplied, `transformFeedback.begin()` and `transformFeedback.end()` will be called before and after the draw call.
 * `Sampler`s will only be bound if there is a matching Texture with the same key in the supplied `uniforms` object.
 
+The following WebGL APIs are called in this function:
 
-WebGL APIs [gl.useProgram](), [gl.drawElements](), [gl.drawElementsRange](), [gl.drawArrays](), [gl.drawElementsInstanced](), [gl.drawArraysInstanced](), [gl.getExtension](), [ANGLE_instanced_arrays](), [gl.drawElementsInstancedANGLE](), [gl.drawArraysInstancedANGLE](),
+[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram), [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements), [gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2), [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays), [gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2), [gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2), [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](), [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE), [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE),
 
 
 ### setBuffers
@@ -181,7 +182,7 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 * `bufferMode` (`GLenum`) -
 returns (`TransformFeedback`) - returns self to enable chaining
 
-WebGL APIs [gl.transformFeedbackVaryings]()
+WebGL APIs [gl.transformFeedbackVaryings](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/transformFeedbackVaryings)
 
 ### getVarying(program, index)
 
@@ -189,7 +190,7 @@ WebGL APIs [gl.transformFeedbackVaryings]()
 * `index` (`GLuint`) - index
 returns (`WebGLActiveInfo`) - object with {`name`, `size`, `type`} fields.
 
-WebGL APIs [gl.getTransformFeedbackVarying]()
+WebGL APIs [gl.getTransformFeedbackVarying](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getTransformFeedbackVarying)
 
 
 ### use
@@ -198,7 +199,7 @@ Calls `gl.useProgram(this.program)`. To set the current program as active. After
 
 Like `bind` calls on many other luma.gl objects, this method does normally not have to be called by the application.
 
-[gl.useProgram]()
+[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
 
 
 ### getUniformCount

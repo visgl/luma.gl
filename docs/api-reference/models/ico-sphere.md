@@ -1,6 +1,6 @@
 # IcoSphere
 
-Creates a sphere model by subdividing an Icosahedron. Inherits methods from [Model](/docs/api-reference/core/model).
+Creates a sphere model by subdividing an Icosahedron. Inherits methods from [`Model`](/#/documentation/api-reference/model).
 
 ## Usage
 

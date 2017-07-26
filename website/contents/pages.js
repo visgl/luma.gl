@@ -426,16 +426,40 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/vertex-array.md'
       },
       {
-        name: 'WebGL Capabilities',
-        content: 'api-reference/webgl/context-limits.md'
+        name: 'createGLContext',
+        content: 'api-reference/webgl/context/context.md'
       },
       {
-        name: 'WebGL Context',
-        content: 'api-reference/webgl/context.md'
+        name: 'isWebGL2',
+        content: 'api-reference/webgl/context/is-webGL2.md'
       },
       {
-        name: 'WebGL Parameters',
-        content: 'api-reference/webgl/context-state.md'
+        name: 'hasFeature(s)',
+        content: 'api-reference/webgl/context-features/has-features.md'
+      },
+      {
+        name: 'getFeature',
+        content: 'api-reference/webgl/context-features/get-features.md'
+      },
+      {
+        name: 'getContextInfo',
+        content: 'api-reference/webgl/context-limits/get-context-info.md'
+      },
+      {
+        name: 'getContextLimits',
+        content: 'api-reference/webgl/context-limits/get-context-limits.md'
+      },
+      {
+        name: 'get|setParameter(s)',
+        content: 'api-reference/webgl/context-state/get-parameters.md'
+      },
+      {
+        name: 'resetParameters',
+        content: 'api-reference/webgl/context-state/reset-parameters.md'
+      },
+      {
+        name: 'withParameters',
+        content: 'api-reference/webgl/context-state/with-parameters.md'
       }
     ]
   }
