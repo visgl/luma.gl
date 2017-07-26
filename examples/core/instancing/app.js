@@ -11,10 +11,8 @@ function mousemove(e) {
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
-    addControls();
-
     setParameters(gl, {
-      clearColor: [1, 1, 1, 1],
+      clearColor: [0, 0, 0, 1],
       clearDepth: 1,
       depthTest: true,
       depthFunc: GL.LEQUAL
@@ -150,19 +148,15 @@ void main(void) {
   });
 }
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
-      <p>
-      Cube drawn with <b>instanced rendering</b>.
-      <p>
-      A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-      single GPU draw call using instanced vertex attributes.
-    `;
-  }
-}
+animationLoop.getInfo = () => {
+  return `
+    <p>
+    Cube drawn with <b>instanced rendering</b>.
+    <p>
+    A luma.gl <code>Cube</code>, rendering 65,536 instances in a
+    single GPU draw call using instanced vertex attributes.
+  `;
+};
 
 export default animationLoop;
 

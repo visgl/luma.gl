@@ -93,7 +93,6 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   // gl: createGLContext()})
   onInitialize: ({gl}) => {
-    addControls();
 
     setParameters(gl, {
       depthTest: true,
@@ -164,20 +163,15 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
-      <p>
-      Simple <b>shadow mapping</b>.
-      <p>
-      A luma.gl <code>Cube</code>, rendering into a shadowmap framebuffer
-      and then rendering onto the screen.
-    `;
-  }
-}
-
+animationLoop.getInfo = () => {
+  return `
+    <p>
+    Simple <b>shadow mapping</b>.
+    <p>
+    A luma.gl <code>Cube</code>, rendering into a shadowmap framebuffer
+    and then rendering onto the screen.
+  `;
+};
 
 export default animationLoop;
 

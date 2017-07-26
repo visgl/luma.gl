@@ -35,12 +35,6 @@ class DemoRunner extends Component {
       }
       demo = Demos[nextProps.demo];
       if (demo) {
-        /* global document */
-        const controlPanel = document.querySelector('.control-panel');
-        const node = controlPanel;
-        while (node && node.firstChild) {
-          node.removeChild(node.firstChild);
-        }
         demo.start({canvas: this.props.canvas});
       }
     }

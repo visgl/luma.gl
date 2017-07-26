@@ -16,9 +16,8 @@ void main(void) {
 }
 `;
 
-export default new AnimationLoop({
+const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    addControls();
     return {clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})};
   },
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
@@ -26,17 +25,14 @@ export default new AnimationLoop({
   }
 });
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
-      <p>
-      Fragment shader based rendering.
-      <p>
-      A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
-      using a single uniform <code>uTime</code>.
-    `;
-  }
-}
+animationLoop.getInfo = () => {
+  return `
+    <p>
+    Fragment shader based rendering.
+    <p>
+    A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
+    using a single uniform <code>uTime</code>.
+  `;
+};
 
+export default animationLoop;

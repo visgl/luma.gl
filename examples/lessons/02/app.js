@@ -30,7 +30,6 @@ void main(void) {
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl, aspect, canvas}) {
-    addControls();
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -86,11 +85,8 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls({controlPanel} = {}) {
-  /* global document */
-  controlPanel = controlPanel || document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=134" target="_blank">
       Adding Color
@@ -98,7 +94,6 @@ function addControls({controlPanel} = {}) {
   <p>
     The classic WebGL Lessons in luma.gl
     `;
-  }
-}
+};
 
 export default animationLoop;

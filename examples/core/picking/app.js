@@ -20,8 +20,6 @@ const animationLoop = new AnimationLoop({
     // Use non zero pickingColor to identify if the model has been picked or not.
     const pickingColorsData = new Float32Array(10000).fill(1.0);
 
-    addControls();
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -104,19 +102,15 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
-      <p>
-      Basic color picking of multiple models
-      <p>
-      Uses the luma.gl <code>picking</code> shader module
-      <div id='planet-name'/>
-    `;
-  }
-}
+animationLoop.getInfo = () => {
+  return `
+    <p>
+    Basic color picking of multiple models
+    <p>
+    Uses the luma.gl <code>picking</code> shader module
+    <div id='planet-name'/>
+  `;
+};
 
 export default animationLoop;
 

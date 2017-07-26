@@ -3,9 +3,9 @@
 @import 'mixins';
 @import 'icon';
 
-$primary: #00ADE6;
-$secondary: #05E3D5;
-$black: #041725;
+$primary: #7989B7;
+$secondary: #CCC7E4;
+$black: #2E3446;
 $black-20: #213746;
 $black-40: #5A666D;
 $white: #EDEDED;
@@ -88,7 +88,7 @@ header {
 
     a {
       line-height: 58px;
-      color: $white-40;
+      color: rgba($white, 0.6);
       text-transform: uppercase;
       margin-left: 40px;
       border-style: solid;
@@ -96,13 +96,17 @@ header {
       border-color: transparent;
     }
     a:hover {
-      border-color: $white-40;
+      border-color: rgba($white, 0.6);
     }
     a.active {
       color: $white;
       border-color: $primary;
       @include linearGradientH(border-image, $primary, $secondary);
       border-image-slice: 2;
+    }
+    .icon {
+      line-height: 0;
+      margin-left: 4px;
     }
   }
 }
@@ -228,11 +232,11 @@ hr.short {
   color: $white;
 }
 .thumb {
-  padding: 8px;
   cursor: pointer;
   position: relative;
-  width: 32%;
+  width: 24%;
   display: inline-block;
+  line-height: 0;
 
   img {
     transition: opacity 0.4s;
@@ -246,6 +250,7 @@ hr.short {
     text-align: center;
     pointer-events: none;
     box-sizing: border-box;
+    line-height: 1.5;
   }
   >div:before {
     content: attr(data-title);
@@ -292,12 +297,12 @@ hr.short {
 
 @media screen and (max-width: 1200px) {
   .thumb {
-    width: 49%;
+    width: 32%;
   }
 }
 @media screen and (max-width: 800px) {
   .thumb {
-    width: 100%;
+    width: 49%;
   }
 }
 @media screen and (max-width: 576px) {

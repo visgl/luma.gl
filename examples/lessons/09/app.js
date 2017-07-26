@@ -12,7 +12,6 @@ var tilt = 90;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-    addControls();
     addKeyboardHandler(canvas);
 
     setParameters(gl, {
@@ -63,11 +62,8 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls({controlPanel} = {}) {
-  /* global document */
-  controlPanel = controlPanel || document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=1008" target="_blank">
       Improving the code structure with lots of moving objects
@@ -75,8 +71,7 @@ function addControls({controlPanel} = {}) {
   <p>
     The classic WebGL Lessons in luma.gl
     `;
-  }
-}
+};
 
 function addKeyboardHandler(canvas) {
 

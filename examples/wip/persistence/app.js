@@ -95,8 +95,6 @@ const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'render-canvas'}))
   onInitialize: ({gl, width, height}) => {
 
-    addControls();
-
     setParameters({
       clearColor: [0, 0, 0, 0],
       clearDepth: 1,
@@ -257,19 +255,15 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
   Electron trails renderings persist across multiple frames.
   <p>
   Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered
   data between frames.
     `;
-  }
-}
+};
 
 export default animationLoop;
 

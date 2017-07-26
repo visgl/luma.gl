@@ -80,11 +80,8 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls({controlPanel} = {}) {
-  /* global document */
-  controlPanel = controlPanel || document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
 <div id="controls">
   <input type="checkbox" id="color-map" checked /> Show color map<br/>
   <input type="checkbox" id="specular-map" checked /> Show specular map<br/>
@@ -136,8 +133,7 @@ function addControls({controlPanel} = {}) {
     <a href="http://learningwebgl.com/blog/?p=1658">&lt;&lt; Back to Lesson 15</a><br />
 </div>
 `;
-  }
-}
+};
 
 function getSettings() {
   const $id = d => document.getElementById(d);

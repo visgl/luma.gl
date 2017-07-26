@@ -30,7 +30,6 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
   onInitialize({gl}) {
-    addControls();
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -184,11 +183,8 @@ function getCubeGeometry() {
   });
 }
 
-function addControls({controlPanel} = {}) {
-  /* global document */
-  controlPanel = controlPanel || document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=370" target="_blank">
       Some Real 3D Objects
@@ -196,5 +192,4 @@ function addControls({controlPanel} = {}) {
   <p>
     The classic WebGL Lessons in luma.gl
     `;
-  }
-}
+};

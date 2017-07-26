@@ -1,50 +1,54 @@
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/master';
 const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
 export const EXAMPLE_PAGES = [
   {
+    name: 'Overview',
+    content: 'markdown/examples.md'
+  },
+  {
     name: 'Core Examples',
     children: [
       {
-        name: 'Overview',
-        content: {
-          path: 'markdown/examples.md'
-        }
-      },
-      {
         name: 'Cubemap',
         content: {
-          demo: 'CubemapDemo'
+          demo: 'CubemapDemo',
+          code: `${GITHUB_TREE}/examples/core/cubemap`
         }
       },
       // {
       //   name: 'Custom Picking',
       //   content: {
       //     demo: 'CustomPickingDemo',
-      //     path: `${RAW_GITHUB}/examples/core/custom-picking/`
+      //     path: `${GITHUB_TREE}/examples/core/custom-picking/`
       //   }
       // },
       {
         name: 'Fragment',
         content: {
-          demo: 'FragmentDemo'
+          demo: 'FragmentDemo',
+          code: `${GITHUB_TREE}/examples/core/fragment`
         }
       },
       {
         name: 'Instancing',
         content: {
-          demo: 'InstancingDemo'
+          demo: 'InstancingDemo',
+          code: `${GITHUB_TREE}/examples/core/instancing`
         }
       },
       {
         name: 'Mandelbrot',
         content: {
-          demo: 'MandelbrotDemo'
+          demo: 'MandelbrotDemo',
+          code: `${GITHUB_TREE}/examples/core/mandelbrot`
         }
       },
       {
         name: 'Picking',
         content: {
           demo: 'PickingDemo',
+          code: `${GITHUB_TREE}/examples/core/picking`,
           path: `${RAW_GITHUB}/examples/core/picking/`
         }
       },
@@ -69,13 +73,15 @@ export const EXAMPLE_PAGES = [
       {
         name: 'Shadowmap',
         content: {
-          demo: 'ShadowmapDemo'
+          demo: 'ShadowmapDemo',
+          code: `${GITHUB_TREE}/examples/core/shadowmap`
         }
       },
       {
         name: 'Transform Feedback',
         content: {
-          demo: 'TransformFeedbackDemo'
+          demo: 'TransformFeedbackDemo',
+          code: `${GITHUB_TREE}/examples/core/transform-feedback`
         }
       }
     ]
@@ -86,31 +92,36 @@ export const EXAMPLE_PAGES = [
       {
         name: 'Lesson 01 - Drawing',
         content: {
-          demo: 'Lesson01'
+          demo: 'Lesson01',
+          code: `${GITHUB_TREE}/examples/lessons/01`
         }
       },
       {
         name: 'Lesson 02 - Color',
         content: {
-          demo: 'Lesson02'
+          demo: 'Lesson02',
+          code: `${GITHUB_TREE}/examples/lessons/02`
         }
       },
       {
         name: 'Lesson 03 - Movement',
         content: {
-          demo: 'Lesson03'
+          demo: 'Lesson03',
+          code: `${GITHUB_TREE}/examples/lessons/03`
         }
       },
       {
         name: 'Lesson 04 - 3D Objects',
         content: {
-          demo: 'Lesson04'
+          demo: 'Lesson04',
+          code: `${GITHUB_TREE}/examples/lessons/04`
         }
       },
       {
         name: 'Lesson 05 - Textures',
         content: {
           demo: 'Lesson05',
+          code: `${GITHUB_TREE}/examples/lessons/05`,
           path: `${RAW_GITHUB}/examples/lessons/05/`
         }
       },
@@ -118,6 +129,7 @@ export const EXAMPLE_PAGES = [
         name: 'Lesson 06 - Texture Filters',
         content: {
           demo: 'Lesson06',
+          code: `${GITHUB_TREE}/examples/lessons/06/`,
           path: `${RAW_GITHUB}/examples/lessons/06/`
         }
       },
@@ -125,6 +137,7 @@ export const EXAMPLE_PAGES = [
         name: 'Lesson 07 - Lighting',
         content: {
           demo: 'Lesson07',
+          code: `${GITHUB_TREE}/examples/lessons/07/`,
           path: `${RAW_GITHUB}/examples/lessons/07/`
         }
       },
@@ -132,6 +145,7 @@ export const EXAMPLE_PAGES = [
         name: 'Lesson 08 - Transparency',
         content: {
           demo: 'Lesson08',
+          code: `${GITHUB_TREE}/examples/lessons/08/`,
           path: `${RAW_GITHUB}/examples/lessons/08/`
         }
       },
@@ -139,6 +153,7 @@ export const EXAMPLE_PAGES = [
         name: 'Lesson 09 - Moving Objects',
         content: {
           demo: 'Lesson09',
+          code: `${GITHUB_TREE}/examples/lessons/09/`,
           path: `${RAW_GITHUB}/examples/lessons/09/`
         }
       },
@@ -179,9 +194,10 @@ export const EXAMPLE_PAGES = [
       //   }
       // },
       {
-        name: 'Lesson 10 - Render to Texture',
+        name: 'Lesson 16 - Render to Texture',
         content: {
           demo: 'Lesson16',
+          code: `${GITHUB_TREE}/examples/lessons/16/`,
           path: `${RAW_GITHUB}/examples/lessons/16/`
         }
       }
@@ -212,7 +228,7 @@ export const DOC_PAGES = [
     children: [
       {
         name: 'Overview',
-        content: 'get-started/README.md'
+        content: 'user-guide/README.md'
       },
       {
         name: 'Installation',
@@ -229,24 +245,15 @@ export const DOC_PAGES = [
       {
         name: 'Using with Node.js',
         content: 'get-started/using-with-node.md'
-      }
-      // {
-      //   name: 'Using with other Frameworks',
-      //   content: 'get-started/using-with-other-frameworks.md'
-      // }
-    ]
-  },
-  {
-    name: 'User\'s Guide',
-    children: [
-      {
-        name: 'Overview',
-        content: 'user-guide/README.md'
       },
       {
         name: 'Debugging',
         content: 'user-guide/debugging.md'
       }
+      // {
+      //   name: 'Using with other Frameworks',
+      //   content: 'get-started/using-with-other-frameworks.md'
+      // }
     ]
   },
   // ,
@@ -272,15 +279,15 @@ export const DOC_PAGES = [
   //   ]
   // }
   {
-    name: 'Core API Reference',
+    name: 'API Reference',
     children: [
       {
-        name: 'Animation Loop',
+        name: 'AnimationLoop',
         content: 'api-reference/core/animation-loop.md'
       },
       {
-        name: 'Model',
-        content: 'api-reference/core/model.md'
+        name: 'Buffer',
+        content: 'api-reference/webgl/buffer.md'
       },
       // {
       //   name: 'Object3d',
@@ -293,40 +300,75 @@ export const DOC_PAGES = [
       {
         name: 'Geometry',
         content: 'api-reference/core/geometry.md'
-      }
+      },
+      {
+        name: 'Group',
+        content: 'api-reference/core/group.md'
+      },
+      {
+        name: 'Math',
+        content: 'api-reference/math/README.md'
+      },
+      {
+        name: 'Math:Euler',
+        content: 'api-reference/math/euler.md'
+      },
+      {
+        name: 'Math:Matrix4',
+        content: 'api-reference/math/matrix4.md'
+      },
+      {
+        name: 'Math:Quaternion',
+        content: 'api-reference/math/quaternion.md'
+      },
+      {
+        name: 'Math:Vector2',
+        content: 'api-reference/math/vector2.md'
+      },
+      {
+        name: 'Math:Vector3',
+        content: 'api-reference/math/vector3.md'
+      },
+      {
+        name: 'Math:Vector4',
+        content: 'api-reference/math/vector4.md'
+      },
+      {
+        name: 'Model',
+        content: 'api-reference/core/model.md'
+      },
+      {
+        name: 'Model:Cone',
+        content: 'api-reference/primitives/cone.md'
+      },
+      {
+        name: 'Model:Cube',
+        content: 'api-reference/primitives/cube.md'
+      },
+      {
+        name: 'Model:Cylinder',
+        content: 'api-reference/primitives/cylinder.md'
+      },
+      {
+        name: 'Model:IcoSphere',
+        content: 'api-reference/primitives/ico-sphere.md'
+      },
+      {
+        name: 'Model:Plane',
+        content: 'api-reference/primitives/plane.md'
+      },
+      {
+        name: 'Model:Sphere',
+        content: 'api-reference/primitives/sphere.md'
+      },
+      {
+        name: 'Object3d',
+        content: 'api-reference/core/object-3d.md'
+      },
       // {
       //   name: 'Picking',
       //   content: 'api-reference/picking/picking.md'
-      // }
-    ]
-  },
-  {
-    name: 'WebGL2 API Reference',
-    children: [
-      {
-        name: 'WebGL Context',
-        content: 'api-reference/webgl/context.md'
-      },
-      {
-        name: 'WebGL Capabilities',
-        content: 'api-reference/webgl/context-limits.md'
-      },
-      {
-        name: 'WebGL Parameters',
-        content: 'api-reference/webgl/context-state.md'
-      },
-      {
-        name: 'Buffer',
-        content: 'api-reference/webgl/buffer.md'
-      },
-      // {
-      //   name: 'FenceSync (WebGL2)',
-      //   content: 'api-reference/webgl/fence-sync.md'
       // },
-      {
-        name: 'Framebuffer',
-        content: 'api-reference/webgl/framebuffer.md'
-      },
       {
         name: 'Program',
         content: 'api-reference/webgl/program.md'
@@ -350,6 +392,18 @@ export const DOC_PAGES = [
       {
         name: 'Shader',
         content: 'api-reference/webgl/shader.md'
+      },
+      {
+        name: 'ShaderCache',
+        content: 'api-reference/shadertools/shader-cache.md'
+      },
+      {
+        name: 'Shader Modules',
+        content: 'api-reference/shadertools/README.md'
+      },
+      {
+        name: 'Shader Module:picking',
+        content: 'api-reference/shadertools/shadertools-picking.md'
       },
       {
         name: 'Texture',
@@ -382,94 +436,18 @@ export const DOC_PAGES = [
       {
         name: 'VertexArray (WebGL2*)',
         content: 'api-reference/webgl/vertex-array.md'
-      }
-    ]
-  },
-  // {
-  //   name: 'Math API Reference',
-  //   children: [
-  //     {
-  //       name: 'Overview',
-  //       content: 'api-reference/math/README.md'
-  //     },
-  //     {
-  //       name: 'Matrix4',
-  //       content: 'api-reference/math/matrix4.md'
-  //     },
-  //     // {
-  //     //   name: 'Vector2',
-  //     //   content: 'api-reference/math/vector2.md'
-  //     // },
-  //     {
-  //       name: 'Vector3',
-  //       content: 'api-reference/math/vector3.md'
-  //     }
-  //     // {
-  //     //   name: 'Vector4',
-  //     //   content: 'api-reference/math/vector4.md'
-  //     // },
-  //     // {
-  //     //   name: 'Quaternion',
-  //     //   content: 'api-reference/math/quaternion.md'
-  //     // },
-  //     // {
-  //     //   name: 'Euler',
-  //     //   content: 'api-reference/math/euler.md'
-  //     // }
-  //   ]
-  // },
-  {
-    name: 'Shadertools API Reference',
-    children: [
-      {
-        name: 'Shader Modules',
-        content: 'api-reference/shadertools/README.md'
       },
       {
-        name: 'Shader Cache',
-        content: 'api-reference/shadertools/shader-cache.md'
+        name: 'WebGL Capabilities',
+        content: 'api-reference/webgl/context-limits.md'
       },
       {
-        name: 'picking (Shader Module)',
-        content: 'api-reference/shadertools/shadertools-picking.md'
-      }
-    ]
-  },
-  {
-    name: 'Geometry API Reference',
-    children: [
-      {
-        name: 'Cone',
-        content: 'api-reference/primitives/cone.md'
+        name: 'WebGL Context',
+        content: 'api-reference/webgl/context.md'
       },
       {
-        name: 'Cube',
-        content: 'api-reference/primitives/cube.md'
-      },
-      {
-        name: 'Cylinder',
-        content: 'api-reference/primitives/cylinder.md'
-      },
-      {
-        name: 'IcoSphere',
-        content: 'api-reference/primitives/ico-sphere.md'
-      },
-      {
-        name: 'Plane',
-        content: 'api-reference/primitives/plane.md'
-      },
-      {
-        name: 'Sphere',
-        content: 'api-reference/primitives/sphere.md'
-      }
-    ]
-  },
-  {
-    name: 'Addons API Reference',
-    children: [
-      {
-        name: 'Events Package',
-        content: 'api-reference/events/event.md'
+        name: 'WebGL Parameters',
+        content: 'api-reference/webgl/context-state.md'
       }
     ]
   }

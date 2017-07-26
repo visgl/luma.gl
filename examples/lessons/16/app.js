@@ -158,7 +158,6 @@ const laptopAngleDelta = -0.002; // * Math.PI / 180.0;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-    addControls();
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -245,11 +244,8 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-function addControls({controlPanel} = {}) {
-  /* global document */
-  controlPanel = controlPanel || document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
+animationLoop.getInfo = () => {
+  return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=1786" target="_blank">
       Rendering to textures
@@ -257,8 +253,7 @@ function addControls({controlPanel} = {}) {
   <p>
     The classic WebGL Lessons in luma.gl
     `;
-  }
-}
+};
 
 function getLaptopUniforms() {
   return {

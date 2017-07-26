@@ -13,7 +13,7 @@ export default class Header extends Component {
         <div className="site-link"><a href="#">{FRAMEWORK_NAME}</a></div>
         {
           links.map(name =>
-            <div className="site-link"><a href={FRAMEWORK_LINKS[name]}>{name}</a></div>
+            <div key={name} className="site-link"><a href={FRAMEWORK_LINKS[name]}>{name}</a></div>
           )
         }
       </div>
@@ -24,7 +24,7 @@ export default class Header extends Component {
     const {isMenuOpen, opacity, toggleMenu} = this.props;
 
     return (
-      <header className={ isMenuOpen ? 'open' : '' } style={{opacity: 1, backgroundColor: '#000'}}>
+      <header className={ isMenuOpen ? 'open' : '' } >
         <div className="bg" style={{opacity}} />
         <div className="container">
           <a className="logo" href="#">

@@ -12,7 +12,6 @@ function mousemove(e) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    addControls();
 
     setParameters(gl, {
       depthTest: true,
@@ -77,21 +76,17 @@ function updatePickInfo(gl, pickInfo) {
   }
 }
 
-function addControls() {
-  /* global document */
-  const controlPanel = document.querySelector('.control-panel');
-  if (controlPanel) {
-    controlPanel.innerHTML = `
-      <p>
-      Custom Picking on a grid
-      <p>
-      Uses the luma.gl <code>picking</code> shader module,
-      adding detailed picking capabilities to a complex model with
-      a few lines of code.
-      <div id='pick-info'/>
-    `;
-  }
-}
+animationLoop.getInfo = () => {
+  return `
+    <p>
+    Custom Picking on a grid
+    <p>
+    Uses the luma.gl <code>picking</code> shader module,
+    adding detailed picking capabilities to a complex model with
+    a few lines of code.
+    <div id='pick-info'/>
+  `;
+};
 
 export default animationLoop;
 

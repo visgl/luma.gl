@@ -5,17 +5,21 @@ import Stats from 'stats.js';
 
 import DemoRunner from './demo-runner';
 
-import {updateMap, setHeaderOpacity} from '../actions/app-actions';
+import {setHeaderOpacity} from '../actions/app-actions';
 
 class Home extends Component {
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      demoWidth: 0,
+      demoHeight: 0
+    };
   }
 
   componentDidMount() {
     window.onresize = this._resizeHandler.bind(this);
     window.onscroll = this._onScroll.bind(this);
+    this._resizeHandler();
     this._onScroll();
 
     this._stats = new Stats();
@@ -23,7 +27,6 @@ class Home extends Component {
     if (this.refs.fps) {
       this.refs.fps.appendChild(this._stats.dom);
     }
-
 
     const calcFPS = () => {
       this._stats.begin();
@@ -41,7 +44,10 @@ class Home extends Component {
   }
 
   _resizeHandler() {
-    this.forceUpdate();
+    const container = this.refs.banner;
+    const demoWidth = container.clientWidth;
+    const demoHeight = container.clientHeight;
+    this.setState({demoWidth, demoHeight});
   }
 
   _onScroll() {
@@ -51,25 +57,26 @@ class Home extends Component {
   }
 
   render() {
-    const {atTop} = this.state;
+    const {demoWidth, demoHeight} = this.state;
+
     return (
-      <div className={`home-wrapper ${atTop ? 'top' : ''}`}>
+      <div className="home-wrapper">
 
         <section ref="banner" id="banner">
           <div className="hero">
             <DemoRunner
               demo="InstancingDemo"
               canvas="front-canvas"
-              width={window.innerWidth}
-              height={540}
+              width={demoWidth}
+              height={demoHeight}
               isInteractive={false}/>
           </div>
-          <div className="container soft-left" style={{opacity: 0.8, backgroundColor: '#000000'}}>
-            <h1 style={{opacity: 1}}>luma.gl</h1>
-            <p style={{opacity: 1}}>
+          <div className="container soft-left">
+            <h1>luma.gl</h1>
+            <p>
               A WebGL2-Powered Framework for GPU-based Visualization and Computation
             </p>
-            <a style={{opacity: 1}} href="#/documentation/getting-started/overview" className="btn">
+            <a href="#/documentation/getting-started/overview" className="btn">
               Get started
             </a>
           </div>
@@ -77,14 +84,12 @@ class Home extends Component {
         </section>
 
         <section id="features">
-          <div style={{height: 20}}/>
-          <h2 className="container soft-left">
-            High-performance WebGL2 components for
-            GPU-powered data visualization and computation.
-          </h2>
           <div className="container soft-left texts">
             <div>
-
+              <h2>
+                High-performance WebGL2 components for
+                GPU-powered data visualization and computation.
+              </h2>
               <hr className="short" />
               <h3>
                 <img src="images/icon-high-precision.svg" />
@@ -133,7 +138,4 @@ class Home extends Component {
   }
 }
 
-export default connect(
-  state => ({}),
-  {updateMap, setHeaderOpacity}
-)(Home);
+export default connect(null, {setHeaderOpacity})(Home);
