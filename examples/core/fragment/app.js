@@ -8,6 +8,6 @@ export default concentricsAnimationLoop;
 if (typeof window !== 'undefined') {
   window.startApp = function startApp() {
     concentricsAnimationLoop.start();
-    randomNoiseAnimationLoop.start();
+    //randomNoiseAnimationLoop.start();
   };
 }
