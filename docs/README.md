@@ -5,10 +5,10 @@ luma.gl is a Javascript framework that provides developers easier and complete a
 
 ## Design Goals
 
-- **Full WebGL2 Access** - Unlike many other WebGL frameworks, luma.gl is designed expose the full WebGL2 APIs but makes it easier to use. luma.gl simply reorganizes WebGL2 objects and APIs so that it's more natural to users with experience in modern object-oriented programming languages.
+- **Full WebGL2 Access** - Unlike many other WebGL frameworks, luma.gl is designed expose the [full WebGL2 APIs](https://www.khronos.org/registry/webgl/specs/latest/2.0/) but makes it easier to use. luma.gl simply reorganizes WebGL2 objects and APIs so that it's more natural to users with experience in modern object-oriented programming languages.
 - **Device feature and capability management** - Easily check if certain features and capability extensions are available on a specific device / platform / API combination and expose those functionalities with consistent APIs
 - **Facilitate Shader Programming** - Extensive facilities for developing, modularizing, debugging and profiling GLSL shaders.
-- **Advanced GPU Programming** - targets use cases like *instance rendering* for extremely large data sets, GPU based computing using *transform feedback*, and other WebGL2 / GPGPU techniques.
+- **Advanced GPU Programming** - targets use cases like *instance rendering* for extremely large data sets, GPU based computing using *transform feedback*, and other WebGL2 / [GPGPU](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units) techniques.
 - **Performance First** - A strong focus on performance, which means providing access to APIs on lower abstraction levels.
 
 
