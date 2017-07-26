@@ -65,7 +65,7 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 
 ## Methods
 
-### Constructor
+### constructor
 
 The texture class cannot be constructed directly. It is a base class that provides common methods the the concrete texture classes.
 * [`Texture2D`](./texture-2d.md),

@@ -74,7 +74,7 @@ trackState(gl);
 ```
 
 
-## Functions
+## Methods
 
 ### getParameter
 

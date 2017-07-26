@@ -51,7 +51,7 @@ const gl = createGLContext({width: 100, height: 100});
 ```
 
 
-## Functions
+## Methods
 
 
 ### createGLContext

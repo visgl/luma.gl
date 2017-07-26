@@ -92,7 +92,7 @@ Note: buffer binding and unbinding is handled internal by luma.gl methods so the
 
 ## Methods
 
-### Constructor
+### constructor
 
 Creates a new Buffer, which will either be a an "element" buffer used for indices, or a generic buffer. To create an element buffer, simply specify `target: GL.ELEMENT_ARRAY_BUFFER`. If not, it will be a generic buffer that can be used in a variety of situations.
 

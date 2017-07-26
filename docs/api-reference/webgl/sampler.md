@@ -71,7 +71,7 @@ sampler2.bind(1);
 * `setParameters` see below.
 
 
-### Constructor
+### constructor
 
 `new Sampler(gl, {parameters: {...}})`
 

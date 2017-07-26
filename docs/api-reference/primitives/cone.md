@@ -2,6 +2,8 @@
 
 Creates a Cone model. Inherits methods from [Model](Model).
 
+### Usage
+
 Create a white Cone of base radius 2 and height 3.
 ```js
 var whiteCone = new Cone(gl, {
@@ -11,6 +13,8 @@ var whiteCone = new Cone(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+
+### constructor
 
 The constructor for the Cone class. Use this to create a new Cone.
 

@@ -11,7 +11,7 @@ Notes:
 * Using setDivisor to set up instanced attributes requires WebGL2 or a a WebGL1 extension.
 
 
-## Functions
+## Methods
 
 | Function | WebGL Counterpart | Description |
 | ---                         | --- | --- |

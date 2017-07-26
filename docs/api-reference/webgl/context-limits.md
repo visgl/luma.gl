@@ -47,9 +47,9 @@ const limit = GL.MAX_COLOR_ATTACHMENTS; // Always works
 
 Check a certain limit (whether through an extension under WebGL1 or through WebGL2)
 ```js
-import {getLimit, GL} from 'luma.gl';
-const limit = getLimit(gl, GL.MAX_COLOR_ATTACHMENTS); // In WebGL1, works and returns 0
-if (limit > 0) {
+import {getContextLimits, GL} from 'luma.gl';
+const limits = getContextLimits(gl);
+if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
    ...
 }
 ```
@@ -62,7 +62,7 @@ if (Query.isSupported(gl)) {
 }
 
 
-## Functions
+## Methods
 
 
 ### isWebGL2
@@ -168,15 +168,6 @@ Parameters to `hasFeatures`:
 | `FEATURES.FRAGMENT_SHADER_DERIVATIVES`| `ES300` | *      | Derivative functions are available in GLSL [`OES_standard_derivatives`]() |
 
 
-## Remarks
-
-* WebGL1 only supports one color buffer format (RBG32F is deprecated)
-* WebGL2 supports multiple color buffer formats
-* Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
-* The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
-* Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
-
-
 
 # WebGL Limits
 
@@ -233,34 +224,42 @@ In addition to capabilities, luma.gl can also query the context for all limits.
 
 
 ### getGLContextInfo(gl)
+Returns an object with following parameters as keys and corresponding value for each key.
 
-| 'GL.VENDOR' | |
-| 'GL.RENDERER' | |
-| 'GL.UNMASKED_VENDOR_WEBGL' | |
-| 'GL.UNMASKED_RENDERER_WEBGL' | |
-| 'GL.VERSION' | |
-| 'GL.SHADING_LANGUAGE_VERSION' | |
+| parameter |
+| --- |
+| 'GL.VENDOR' |
+| 'GL.RENDERER' |
+| 'GL.UNMASKED_VENDOR_WEBGL' |
+| 'GL.UNMASKED_RENDERER_WEBGL' |
+| 'GL.VERSION' |
+| 'GL.SHADING_LANGUAGE_VERSION' |
 
 
 ### getContextLimits(gl)
 
-Each limit is an object with multiple values
+Returns an object with limits, each limit is an object with multiple values
 - `value` - the value of the limit in the current context
 - `webgl1` - the minimum allowed value of the limit for WebGL1 contexts
 - `webgl2` - the minimum allowed value of the limit for WebGL2 contexts
 
-
-### getContextCaps(gl)
-
-
 ### getContextInfo(gl)
 
+Returns an object containing following details.
 * vendor: info[GL.UNMASKED_VENDOR_WEBGL] || info[GL.VENDOR],
 * renderer: info[GL.UNMASKED_RENDERER_WEBGL] || info[GL.RENDERER],
 * version: info[GL.VERSION],
 * shadingLanguageVersion: info[GL.SHADING_LANGUAGE_VERSION],
 * info,
-* caps: getContextCaps(gl),
 * limits,
 * webgl1MinLimits: gl.luma.webgl1MinLimits,
 * webgl2MinLimits: gl.luma.webgl2MinLimits
+
+
+## Remarks
+
+* WebGL1 only supports one color buffer format (RBG32F is deprecated)
+* WebGL2 supports multiple color buffer formats
+* Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
+* The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
+* Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.

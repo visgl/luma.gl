@@ -37,12 +37,9 @@ if (Texture2DArray.isSupported()) {
 Returns true if the context supports creation of `Texture2DArrays`.
 
 
-### Constructor
+### constructor
 
 `new Texture2DArray(gl, {parameters})`;
-
-
-### delete
 
 
 ## Limits

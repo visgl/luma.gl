@@ -37,7 +37,7 @@ if (Texture3D.isSupported()) {
 Returns true if the context supports creation of `Texture3Ds`.
 
 
-### Constructor
+### constructor
 
 `new Texture3D(gl, {parameters})`;
 
@@ -50,9 +50,6 @@ Returns true if the context supports creation of `Texture3Ds`.
 * `type` (*enum*, default is autodeduced from format) - type of pixel data (GL.UNSIGNED_BYTE, GL.FLOAT etc).
 * `dataFormat` (*enum*, default is autodeduced from `format`) - internal format that WebGL should use.
 * `parameters`=`{}` (object) - texture
-
-
-### delete
 
 
 ## Limits

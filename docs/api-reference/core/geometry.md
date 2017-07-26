@@ -24,7 +24,9 @@ var pyramidGeometry= new Geometry({
 
 The constructor for the Geometry class. Use this to create a new Geometry.
 
-`const model = new Geometry(options);`
+`const geometry = new Geometry(options);`
+
+Parameters:
 
 * id - (*string*, optional) An id for the model. If not provided, a random unique identifier will be created.
 * drawType - (*string*, optional) A string describing the drawType. Some options are `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`. Default's `TRIANGLES`.
