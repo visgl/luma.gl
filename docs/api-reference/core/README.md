@@ -15,7 +15,7 @@ The core module provides the following classes
 * [`Model`](api-reference/core/model) - A renderable object with attributes and uniforms.
 * [`Geometry`](api-reference/core/geometry) - Holds attributes and drawType for a geometric primitive
 
-## Functions
+## Methods
 
 ### encodePickingColor
 

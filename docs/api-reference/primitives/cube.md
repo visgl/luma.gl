@@ -1,11 +1,17 @@
 # Cube
 
-Create a white cube
+Create a white cube.
+
+### Usage
+
 ```js
 var whiteCube = new Cube(gl, {
       colors: [1, 1, 1, 1]
     });
 ```
+
+
+### constructor
 
 Creates a Cube model. Inherits methods from [Model](Model).
 

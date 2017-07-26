@@ -90,6 +90,3 @@ new Texture3D(gl, {
 ## Limits
 
 * `GL.MAX_CUBE_MAP_TEXTURE_SIZE`
-
-
-## Remarks

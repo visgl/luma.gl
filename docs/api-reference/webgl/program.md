@@ -56,7 +56,7 @@ Creating a program for transform feedback, specifying which varyings to use
 
 ## Methods
 
-### `constructor`
+### constructor
 
 Creates a new program using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
@@ -86,7 +86,7 @@ Syntax:
 
 WebGL References [WebGLProgram](), [gl.createProgram]()
 
-### `initialize`
+### initialize
 
 Relinks a program
 
@@ -96,14 +96,14 @@ Relinks a program
 * `bufferMode` WebGL2 (`GLenum`=`GL.SEPARATE_ATTRIBS`) - Optional, specifies how transform feedback should store the varyings.
 
 
-### `delete`
+### delete
 
 Deletes resources held by program. Note: Does not currently delete shaders (to enable shader caching).
 
 WebGL APIs [gl.createProgram]()
 
 
-### `draw`
+### draw
 
 The heart of the luma.gl API, the `Program.draw` the entry point for running shaders, rendering and calculating data using transform feedback techniques.
 
@@ -149,7 +149,7 @@ Runs the shaders in the program, on the attributes and uniforms.
 WebGL APIs [gl.useProgram](), [gl.drawElements](), [gl.drawElementsRange](), [gl.drawArrays](), [gl.drawElementsInstanced](), [gl.drawArraysInstanced](), [gl.getExtension](), [ANGLE_instanced_arrays](), [gl.drawElementsInstancedANGLE](), [gl.drawArraysInstancedANGLE](),
 
 
-### `setBuffers`
+### setBuffers
 
 Sets named uniforms from a map, ignoring names.
 
@@ -162,7 +162,7 @@ program.setBuffers(object);
 * options - (*object*) An object with options/data described below:
 
 
-### `setUniforms`
+### setUniforms
 
 Sets named uniforms from a map, ignoring names
 
@@ -204,15 +204,15 @@ Like `bind` calls on many other luma.gl objects, this method does normally not h
 [gl.useProgram]()
 
 
-### `getUniformCount`
+### getUniformCount
 
 Gets number of active uniforms
 
-### `getUniformInfo`
+### getUniformInfo
 
 Gets {name, type, size} for uniform at index
 
-### `getFragDataLocation` WebGL2
+### getFragDataLocation (WebGL2)
 
 
 ## Limits

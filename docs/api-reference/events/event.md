@@ -51,7 +51,7 @@ The first parameter of each event callback function is an event wrapper object t
 * **meta** (*boolean*) - Available onKeyDown only. Whether the meta key is pressed.
 
 
-## Functions
+## Methods
 
 ### addEvents
 

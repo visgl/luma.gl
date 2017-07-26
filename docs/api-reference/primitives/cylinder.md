@@ -2,6 +2,9 @@
 
 Creates a Cylinder model. Inherits methods from [Model](Model).
 
+
+### Usage
+
 Create a white Cylinder of radius 2 and height 3.
 
 ```js

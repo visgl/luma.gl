@@ -19,26 +19,23 @@ class.
 Create model object by passing shaders, uniforms, and render it by passing updated uniforms.
 ```js
 // construct the model.
-const cube =  new Cube({
-  gl,
+const model =  new Model(gl, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
+  geometry: geometryObject,
   uniforms: {uSampler: texture}
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
-cube.render({
+model.render({
   uPMatrix: currentProjectionMatrix,
   uMVMatrix: current ModelViewMatrix
 });
 
 ```
 
-## Remarks
-* All instance methods in `Model` are chainable
-  (unless they return a documented value).
-
 ## Methods
+
 
 | **Method** | **Description** |
 | --- | --- |
@@ -62,18 +59,30 @@ cube.render({
 | `setProgramState` | Sets uniforms, attributes, textures, uses program |
 | `unsetProgramState` | Unbinds attributes etc |
 
-### Model constructor
-1. **gl** WebGL context.
-2. **opts** contains following name properties.
-  * **vs** (VertexShader|*string*) - A vertex shader object, or source as a string.
-  * **fs** (FragmentShader|*string*) - A fragment shader object, ot source as a string.
-  * **modules** shader modules to be applied.
-  * **moduleSettings** any uniforms needed by shader modules.
-  * **program** pre created program to use, when provided, vs, ps and modules are not used.
-  * **isInstanced** default value is false.
-  * **instanceCount** default value is 0.
-  * **vertexCount** when not provided will be deduced from `geometry` object.
-  * **uniforms** uniform values to be used for drawing.
-  * **geometry** geometry object, from which attributes, vertex count and drawing mode are deduced.
-  * **onBeforeRender** function to be called before every time this model is drawn.
-  * **onAfterRender** function to be called after every time this model is drawn.
+### constructor
+
+The constructor for the Model class. Use this to create a new Model.
+
+`const model = new Model(gl, options);`
+
+Parameters:
+
+* gl - WebGL context.
+* opts - contains following named properties.
+  * vs - (VertexShader|*string*) - A vertex shader object, or source as a string.
+  * fs - (FragmentShader|*string*) - A fragment shader object, ot source as a string.
+  * modules - shader modules to be applied.
+  * moduleSettings - any uniforms needed by shader modules.
+  * program - pre created program to use, when provided, vs, ps and modules are not used.
+  * isInstanced - default value is false.
+  * instanceCount - default value is 0.
+  * vertexCount - when not provided will be deduced from `geometry` object.
+  * uniforms - uniform values to be used for drawing.
+  * geometry - geometry object, from which attributes, vertex count and drawing mode are deduced.
+  * onBeforeRender - function to be called before every time this model is drawn.
+  * onAfterRender - function to be called after every time this model is drawn.
+
+
+## Remarks
+  * All instance methods in `Model` are chainable
+    (unless they return a documented value).

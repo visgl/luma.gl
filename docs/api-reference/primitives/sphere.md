@@ -2,6 +2,8 @@
 
 Creates a Sphere model. Inherits methods from [Model](Model).
 
+### Usage
+
 Create a white Sphere of radius 2
 ```js
 var whiteSphere = new Sphere(gl, {
@@ -10,7 +12,7 @@ var whiteSphere = new Sphere(gl, {
 });
 ```
 
-### Sphere constructor
+### constructor
 
 The constructor for the Sphere class. Use this to create a new Sphere.
 

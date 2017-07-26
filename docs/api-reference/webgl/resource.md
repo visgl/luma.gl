@@ -26,7 +26,7 @@ resource.getParameters({keys: true}); // Returns object with keys and enum value
 
 ## Methods
 
-### Resource Constructor
+### constructor
 
 * `gl` - WebGL context, which is stored on the object.
 * `opts` - options
@@ -40,17 +40,17 @@ resource.getParameters({keys: true}); // Returns object with keys and enum value
   not be possible on imported handles. Also, imported handles can
   typically not be automatically reinitialized after context loss.
 
-### Resource.delete
+### delete
 
 * Deletes any WebGL resources associated with this resources (i.e the underlying WebGLResource handle).
 
-### Resource.getParameter(pname)
+### getParameter(pname)
 
 Gets a given parameter from the resource.
 
 * Note querying for parameters in WebGL is slow and should be avoided in loops and other performance critical situations.
 
-### Resource.getParameters(parameters)
+### getParameters(parameters)
 
 Gets list of parameters from the resource (or all parameters).
 
@@ -76,5 +76,3 @@ An empty object to which the application can add keys and values. Note that
 the resource object. itself is sealed to prevent additional key being added,
 and any keys and values added directly to the underlying WebGL object will
 be lost during WebGL context loss.
-
-

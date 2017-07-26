@@ -2,6 +2,8 @@
 
 Creates a plane. Inherits methods from [Model](Model).
 
+### Usage
+
 Create a white XZ plane.
 ```js
 var whitePlane = new Plane(gl, {
@@ -14,6 +16,8 @@ var whitePlane = new Plane(gl, {
   colors: [1, 1, 1, 1]
 });
 ```
+
+### constructor
 
 The constructor for the Plane class. Use this to create a new Plane.
 

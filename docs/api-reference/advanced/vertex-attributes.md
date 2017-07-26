@@ -55,7 +55,7 @@ Instancing requires a WebGL extension or WebGL2.
 * An attribute is referred to as **instanced** if its divisor value is non-zero.
 
 
-## Functions
+## Methods
 
 | **Function** | **WebGL Counterpart** | **Description** |
 | --- | --- | --- |
