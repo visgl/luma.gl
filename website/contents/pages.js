@@ -194,9 +194,9 @@ export const EXAMPLE_PAGES = [
       //   }
       // },
       {
-        name: 'Lesson 16 - Render to Texture',
+        name: 'Lesson 10 - Render to Texture',
         content: {
-          demo: 'Lesson16',
+          demo: 'Lesson10',
           code: `${GITHUB_TREE}/examples/lessons/16/`,
           path: `${RAW_GITHUB}/examples/lessons/16/`
         }
@@ -248,7 +248,7 @@ export const DOC_PAGES = [
       },
       {
         name: 'Debugging',
-        content: 'user-guide/debugging.md'
+        content: 'get-started/debugging.md'
       }
       // {
       //   name: 'Using with other Frameworks',
@@ -282,6 +282,10 @@ export const DOC_PAGES = [
     name: 'API Reference',
     children: [
       {
+        name: 'Introduction',
+        content: 'api-reference/README.md'
+      },
+      {
         name: 'AnimationLoop',
         content: 'api-reference/core/animation-loop.md'
       },
@@ -289,22 +293,14 @@ export const DOC_PAGES = [
         name: 'Buffer',
         content: 'api-reference/webgl/buffer.md'
       },
-      // {
-      //   name: 'Object3d',
-      //   content: 'api-reference/core/object-3d.md'
-      // },
-      // {
-      //   name: 'Group',
-      //   content: 'api-reference/core/group.md'
-      // },
       {
         name: 'Geometry',
         content: 'api-reference/core/geometry.md'
       },
-      {
-        name: 'Group',
-        content: 'api-reference/core/group.md'
-      },
+      // {
+      //   name: 'Group',
+      //   content: 'api-reference/core/group.md'
+      // },
       {
         name: 'Math',
         content: 'api-reference/math/README.md'
@@ -322,16 +318,8 @@ export const DOC_PAGES = [
         content: 'api-reference/math/quaternion.md'
       },
       {
-        name: 'Math:Vector2',
-        content: 'api-reference/math/vector2.md'
-      },
-      {
-        name: 'Math:Vector3',
-        content: 'api-reference/math/vector3.md'
-      },
-      {
-        name: 'Math:Vector4',
-        content: 'api-reference/math/vector4.md'
+        name: 'Math:Vector Classes',
+        content: 'api-reference/math/vector.md'
       },
       {
         name: 'Model',
@@ -339,32 +327,32 @@ export const DOC_PAGES = [
       },
       {
         name: 'Model:Cone',
-        content: 'api-reference/primitives/cone.md'
+        content: 'api-reference/models/cone.md'
       },
       {
         name: 'Model:Cube',
-        content: 'api-reference/primitives/cube.md'
+        content: 'api-reference/models/cube.md'
       },
       {
         name: 'Model:Cylinder',
-        content: 'api-reference/primitives/cylinder.md'
+        content: 'api-reference/models/cylinder.md'
       },
       {
         name: 'Model:IcoSphere',
-        content: 'api-reference/primitives/ico-sphere.md'
+        content: 'api-reference/models/ico-sphere.md'
       },
       {
         name: 'Model:Plane',
-        content: 'api-reference/primitives/plane.md'
+        content: 'api-reference/models/plane.md'
       },
       {
         name: 'Model:Sphere',
-        content: 'api-reference/primitives/sphere.md'
+        content: 'api-reference/models/sphere.md'
       },
-      {
-        name: 'Object3d',
-        content: 'api-reference/core/object-3d.md'
-      },
+      // {
+      //   name: 'Object3d',
+      //   content: 'api-reference/core/object-3d.md'
+      // },
       // {
       //   name: 'Picking',
       //   content: 'api-reference/picking/picking.md'
@@ -374,7 +362,7 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/program.md'
       },
       {
-        name: 'Query (WebGL2*)',
+        name: 'Query',
         content: 'api-reference/webgl/query.md'
       },
       {
@@ -386,7 +374,7 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/resource.md'
       },
       {
-        name: 'Sampler (WebGL2)',
+        name: 'Sampler',
         content: 'api-reference/webgl/sampler.md'
       },
       {
@@ -414,11 +402,11 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/texture-2d.md'
       },
       {
-        name: 'Texture2DArray (WebGL2)',
+        name: 'Texture2DArray',
         content: 'api-reference/webgl/texture-2d-array.md'
       },
       {
-        name: 'Texture3D (WebGL2)',
+        name: 'Texture3D',
         content: 'api-reference/webgl/texture-3d.md'
       },
       {
@@ -426,15 +414,15 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/texture-cube.md'
       },
       {
-        name: 'TransformFeedback (WebGL2)',
+        name: 'TransformFeedback',
         content: 'api-reference/webgl/transform-feedback.md'
       },
       {
-        name: 'UniformBufferLayout (WebGL2*)',
+        name: 'UniformBufferLayout',
         content: 'api-reference/webgl/uniform-buffer-layout.md'
       },
       {
-        name: 'VertexArray (WebGL2*)',
+        name: 'VertexArray',
         content: 'api-reference/webgl/vertex-array.md'
       },
       {

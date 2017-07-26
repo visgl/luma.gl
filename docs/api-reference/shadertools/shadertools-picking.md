@@ -1,8 +1,8 @@
 # picking (Shader Module)
 
-Provides support for color based picking. In particular, supports picking a specific instance in an instanced draw call.
+Provides support for color-coding-based picking. In particular, supports picking a specific instance in an instanced draw call.
 
-Color based picking lets the application draw a primitive with a fixed color, and by reading the color from a pixel in the resulting Framebuffer it can determine which primitive was drawn topmost at that point without asking the CPU to refer to geometry or raycasting etc.
+Color based picking lets the application draw a primitive with a color that can later be used to index this specific primitive.
 
 ## Usage
 

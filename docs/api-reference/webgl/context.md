@@ -70,7 +70,7 @@ const gl = createGLContext(options);
 | `webgl1`                | `true`  | `true` | If `true`, will attempt to create a WebGL1 context. The `webgl2` flag has higher priority. |
 | `throwOnError`          | `true`  | `true` | Normally `createGLContext` will throw an error on failure. If `false`, it will return `null` instead. |
 | `manageState`           | `true`  | `true` | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to. |
-| Browser-only            |         |        | |
+| *Browser-only*            |         |        | |
 | `debug`                 | `false` | N/A    | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. Note the enabling debug mode has a signficant performance impact. |
 | `canvas`                | `null`  | N/A    | A *string* containing the `id` of an existing HTML element or a *DOMElement* instance. If `null` or not provided, a new canvas will be created. |
 | `alpha`                 | `true`  | N/A      | Default render target has an alpha buffer. |

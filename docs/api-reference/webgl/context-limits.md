@@ -2,7 +2,7 @@
 
 Provides WebGL feature detection and queries for max values.
 
-WebGL capabilities can vary quite dramatically between browsers (from minimal WebGL1 (e.g. headless-gl) through WebGL1 with dozens of extensions through WebGL2, which also has a growing number of extensions). Unfortunately, the raw WebGL API does not exactly make it trivial to write code that dynamically uses available features.
+WebGL capabilities can vary quite dramatically between browsers (from minimal WebGL1 (e.g. headless-gl) to WebGL1 with dozens of extensions to full WebGL2, which also has a growing number of extensions). Unfortunately, the raw WebGL API sometimes expose the same functionalities through APIs that are slightly different and not exactly compatible.
 
 To simplify detecting and working with conditionally available capabilities (or "features") luma.gl provides:
 * A set of functions (e.g. `isWebGL2`, `getFeatures` and `hasFeatures`, described in this document) that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL2 or a WebGL1 extension).
@@ -63,7 +63,6 @@ if (Query.isSupported(gl)) {
 
 
 ## Methods
-
 
 ### isWebGL2
 

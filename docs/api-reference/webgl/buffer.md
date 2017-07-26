@@ -19,7 +19,7 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 
 ## Usage
 
-```
+```js
 import {Buffer} from 'luma.gl';
 ```
 
@@ -50,53 +50,51 @@ const buffer = new Buffer(gl).initialize({bytes: 200});
 ```
 
 Updating a buffer
-```
+```js
 const buffer = new Buffer(gl, {bytes: 200})
 buffer.subData({})
 ```
 
 Copying data between buffers (WebGL2)
-```
+```js
 const buffer = new Buffer(gl, {bytes: 200})
 buffer.subData({offset: 20, data: new Float32Array([1, 2, 3])});
 ```
 
 Getting data from a buffer (WebGL2)
-```
+```js
 const buffer = ...;
 const data = buffer.getSubData({offset: 20, size: 10});
 ```
 
 Binding and unbinding a buffer
-```
+```js
 const buffer = ...;
 buffer.bind({target: GL.ARRAY_BUFFER});
 ...
 buffer.unbind({target: GL.ARRAY_BUFFER});
 ```
 WebGL2 examples
-```
+```js
 buffer.bind({target: GL.PIXEL_PACK_BUFFER});
 buffer.bind({target: GL.PIXEL_UNPACK_BUFFER});
 buffer.bind({target: GL.TRANSFORM_FEEDBACK_BUFFER, index: 0});
 buffer.bind({target: GL.UNIFORM_BUFFER, index: 0, offset: ..., size: ...});
 buffer.unbind({target: GL.UNIFORM_BUFFER, index: 0});
 ```
-Note: buffer binding and unbinding is handled internal by luma.gl methods so the application will typically not need to bind buffers unless integrating with external libraries or raw webgl code).
-
+Note: buffer binding and unbinding is handled internal by luma.gl methods so the application  typically **DONOT** need to bind buffers unless integrating with external libraries or raw webgl code.
 
 ## Members
 
 * `handle` - holds the underlying `WebGLBuffer`
 
-
 ## Methods
 
 ### constructor
 
-Creates a new Buffer, which will either be a an "element" buffer used for indices, or a generic buffer. To create an element buffer, simply specify `target: GL.ELEMENT_ARRAY_BUFFER`. If not, it will be a generic buffer that can be used in a variety of situations.
+Creates a new `Buffer`, which will either be a an "element" buffer used for storing vertex indices, or a generic buffer. To create an element buffer, specify `target: GL.ELEMENT_ARRAY_BUFFER`. If target is not specified, it will be a generic buffer that can be used in a variety of situations.
 
-```
+```js
 const buffer = new Buffer(gl, {target, ...initOptions, ...layoutOptions});
 ```
 
@@ -116,7 +114,9 @@ Allocates and optionally initializes buffer memory/data store (releasing any pre
 
 Also extracts characteristics of stored data, hints for vertex attribute.
 
-`Buffer.initialize({data, bytes, usage=, dataType=, size=, ...layoutOptions})`
+```js
+Buffer.initialize({data, bytes, usage=, dataType=, size=, ...layoutOptions})
+```
 
 * `data` (ArrayBufferView) - contents
 * `bytes` (GLsizeiptr) - the size of the buffer object's data store.
@@ -126,7 +126,6 @@ Also extracts characteristics of stored data, hints for vertex attribute.
 * `...layoutOptions` -  parameters passed to `setLayout`
 
 Returns itself for chaining.
-
 
 ### setLayout
 
@@ -144,7 +143,6 @@ Allows you to optionally describe the layout of the data in the buffer. This doe
 
 Notes:
 * `offset` and `stride` are typically used to interleave data in buffers.
-
 
 ### subData
 
@@ -227,4 +225,5 @@ Returns a typed array containing the data from the buffer (if `dstData` was supp
 Note that in WebGL, there are two types of buffers:
 * "element" buffers. These can only store vertex attributes with indices (a.k.a "elements") and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
 * "generic" buffers. These can be used interchangeably to store different types of data, including (non-index) vertex attributes.
-For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [WebGL1](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) and [WebGL2](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences).
+
+For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [this page](https://www.khronos.org/registry/webgl/specs/1.0/#webgl_gl_differences) for WebGL1 and [this page](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) for WebGL2.

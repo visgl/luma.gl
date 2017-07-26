@@ -7,7 +7,7 @@ The Geometry class enables you to create a collection of vertex array attribute 
 
 Create a pyramid geometry (used in lesson 4 of learning WebGL examples).
 ```js
-var pyramidGeometry= new Geometry({
+const pyramidGeometry= new Geometry({
   attributes: {
     positions: new Float32Array([ ... ]),
     colors: {
@@ -22,22 +22,22 @@ var pyramidGeometry= new Geometry({
 
 ### constructor
 
-The constructor for the Geometry class. Use this to create a new Geometry.
+The constructor for the `Geometry` class. Use this to create a new `Geometry`.
 
-`const geometry = new Geometry(options);`
+```js
+const geometry = new Geometry(options);
+```
+#### Parameters
 
-Parameters:
+* `id` - (*string*, optional) An id for the model. If not provided, a random unique identifier will be created.
+* `drawType` - (*string*, optional) A string describing the drawType. Some options are `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`. Default's `TRIANGLES`.
+* `attributes` - (*object*, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model.
 
-* id - (*string*, optional) An id for the model. If not provided, a random unique identifier will be created.
-* drawType - (*string*, optional) A string describing the drawType. Some options are `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`. Default's `TRIANGLES`.
-* attributes - (*object*, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model.
+### Typical Attributes
 
-
-## Typical Attributes
-
-* vertices - (*array*, optional) An array of floats that describe the vertices of the model.
-* normals - (*array*, optional) An array of floats that describe the normals of the model.
-* texCoords - (*mixed*, optional) Can be an array of floats indicating the texture coordinates for the texture to be used or an object that has texture ids as keys and an array of floats as values.
-* colors - (*array*, optional) An array of colors in RGBA. If just one color is specified that color will be used for all faces.
-* indices - (*array*, optional) An array of numbers describing the vertex indices for each face.
-* pickingColors - (*array*, optional) A custom set of colors to render the object to texture when performing the color picking algorithm.
+* `vertices` - (*array*, optional) An array of floats that describe the vertices of the model.
+* `normals` - (*array*, optional) An array of floats that describe the normals of the model.
+* `texCoords` - (*mixed*, optional) Can be an array of floats indicating the texture coordinates for the texture to be used or an object that has texture ids as keys and an array of floats as values.
+* `colors` - (*array*, optional) An array of colors in RGBA. If just one color is specified that color will be used for all faces.
+* `indices` - (*array*, optional) An array of numbers describing the vertex indices for each face.
+* `pickingColors` - (*array*, optional) A custom set of colors to render the object to texture when performing the color picking algorithm.

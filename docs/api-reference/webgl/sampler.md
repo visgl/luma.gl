@@ -1,17 +1,17 @@
 # Sampler
 
-A Sampler Object is an OpenGL Object that stores the sampling parameters for a Texture access inside of a shader. While texture sampling parameters can be specified directly on textures, samplers allow them to be specified independently. Thus, by using samplers an application can render the same texture with different parameters without duplicating the texture or modifying the texture parameters.
+A [Sampler object](https://www.khronos.org/opengl/wiki/Sampler_Object) is an OpenGL Object that stores the sampling parameters for a texture access inside of a shader. While texture sampling parameters can be specified directly on textures, samplers allow them to be specified independently. Thus, by using samplers an application can render the same texture with different parameters without duplicating the texture or modifying the texture parameters.
 
-To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture. When using the higher level [`Model`]('./model.md') class, samplers can be specified using uniform names instead of texture indices.
+To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture. When using the higher level [`Model`](/docs/api-reference/core/model.md) class, samplers can be specified using uniform names instead of texture indices.
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).
 
 
 ## Usage
 
-Sampler inherits from [Resource](./resource) and supports the same use cases.
+Sampler inherits from [Resource](/docs/api-reference/webgl/model.md) and supports the same use cases.
 
-Create a new Sampler
+Create a new `Sampler`
 ```js
 import {Sampler} from 'luma.gl';
 const sampler = new Sampler(gl, {
@@ -21,7 +21,7 @@ const sampler = new Sampler(gl, {
 });
 ```
 
-Reconfiguring a Sampler
+Reconfiguring a `Sampler`
 ```js
 const sampler = new Sampler(gl);
 sampler.setParameters({
@@ -29,7 +29,7 @@ sampler.setParameters({
 });
 ```
 
-Using Samplers via `Model.draw`
+Using `Samplers` via `Model.draw`
 ```js
 // Create a texture
 const texture = new Texture2D(gl, ...);
@@ -73,7 +73,9 @@ sampler2.bind(1);
 
 ### constructor
 
-`new Sampler(gl, {parameters: {...}})`
+```js
+new Sampler(gl, {parameters: {...}})
+```
 
 * `gl` - gl context
 * `parameters` - an object where each key represents a sampler parameter and its value.
@@ -87,7 +89,6 @@ Frees the underlying WebGL resource
 
 WebGL APIs [gl.deleteSampler]()
 
-
 ### setParameters
 
 `Sampler.setParameters(parameters)`
@@ -95,8 +96,6 @@ WebGL APIs [gl.deleteSampler]()
 * `parameters` (Object) - keys are parameters, value are values to be assigned
 
 WebGL APIs [gl.getSamplerParameteri](), [gl.getSamplerParameterf]()
-
-
 
 ### bind
 

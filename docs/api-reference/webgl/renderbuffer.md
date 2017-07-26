@@ -1,6 +1,6 @@
 # Renderbuffer
 
-`Renderbuffer`s are WebGL Objects that contain images. They are optimized for use as render targets, while `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use `Texture`s instead. In addition, in WebGL2, `Renderbuffer`'s natively accommodate Multisampling (MSAA).
+`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use `Texture`s instead. In addition, in WebGL2, `Renderbuffer` can do Multisampling (MSAA) just like standard framebuffer.
 
 For additional information, see [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object)
 
@@ -55,7 +55,6 @@ Returns (Number[]) - An list of valid sample counts in descending order.
 
 If multisampling is not supported the returned value will be `[0]`, e.g. signed and unsigned integer internal formats in WebGL2. Note that this method always returns `[0]` in WebGL1.
 
-
 ### constructor
 
 Creates a new `Renderbuffer` and initalizes it by calling `initialize` with the provided parameters.
@@ -70,7 +69,6 @@ Creates a new `Renderbuffer` and initalizes it by calling `initialize` with the 
 * `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
 
 WebGL References [gl.createRenderbuffer](), also see `initialize`.
-
 
 ### initialize
 
@@ -90,7 +88,6 @@ Returns itself to enable chaining
 
 WebGL References [gl.renderbufferStorage](), [gl.renderbufferStorageMultisample](), [gl.bindRenderbuffer]()
 
-
 ### resize
 
 Reinitializes the `Renderbuffer`'s data store with the new `width` and `height` but unchanged `format` (and `samples`, if available).
@@ -106,7 +103,6 @@ Returns itself to enable chaining
 * If a resize happens, `resize` erases the current content of the `Renderbuffer`.
 
 WebGL References see `initialize`.
-
 
 ## Renderbuffer Formats
 
@@ -178,7 +174,6 @@ When using a WebGL 2 context, the following values are available additionally:
 | `GL.RENDERBUFFER_DEPTH_SIZE`       | GLint  | R | resolution (bits) of depth component |
 | `GL.RENDERBUFFER_STENCIL_SIZE`     | GLint  | R | resolution (bits) of stencil component |
 | `GL.RENDERBUFFER_SAMPLES` (WebGL2) | GLint  | R | |
-
 
 ## Limits
 

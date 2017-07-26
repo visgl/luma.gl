@@ -7,6 +7,8 @@ import vec4_set from 'gl-vec4/set';
 import vec4_distance from 'gl-vec4/distance';
 import vec4_add from 'gl-vec4/add';
 import vec4_subtract from 'gl-vec4/subtract';
+import vec4_multiply from 'gl-vec4/multiply';
+import vec4_divide from 'gl-vec4/divide';
 import vec4_scale from 'gl-vec4/scale';
 import vec4_scaleAndAdd from 'gl-vec4/scaleAndAdd';
 import vec4_negate from 'gl-vec4/negate';
@@ -72,6 +74,22 @@ export default class Vector4 extends MathArray {
     return this;
   }
 
+  multiply(...vectors) {
+    for (const vector of vectors) {
+      vec4_multiply(this, vector);
+    }
+    this.check();
+    return this;
+  }
+
+  divide(...vectors) {
+    for (const vector of vectors) {
+      vec4_divide(this, vector);
+    }
+    this.check();
+    return this;
+  }
+
   scale(scale) {
     vec4_scale(this, this, scale);
     this.check();
@@ -102,10 +120,8 @@ export default class Vector4 extends MathArray {
     return this;
   }
 
-  dot(scale) {
-    vec4_dot(this, this, scale);
-    this.check();
-    return this;
+  dot(vector) {
+    return vec4_dot(this, vector);
   }
 
   // cross(scale) {
@@ -114,8 +130,8 @@ export default class Vector4 extends MathArray {
   //   return this;
   // }
 
-  lerp(scale) {
-    vec4_lerp(this, this, scale);
+  lerp(vector, coeff) {
+    vec4_lerp(this, this, vector, coeff);
     this.check();
     return this;
   }

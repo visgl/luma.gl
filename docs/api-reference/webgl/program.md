@@ -100,9 +100,6 @@ Relinks a program
 
 Deletes resources held by program. Note: Does not currently delete shaders (to enable shader caching).
 
-WebGL APIs [gl.createProgram]()
-
-
 ### draw
 
 The heart of the luma.gl API, the `Program.draw` the entry point for running shaders, rendering and calculating data using transform feedback techniques.
@@ -215,7 +212,7 @@ Gets {name, type, size} for uniform at index
 ### getFragDataLocation (WebGL2)
 
 
-## Limits
+### Limits
 
 | Limit | Value | Description |
 | --- | --- | --- |
@@ -228,7 +225,7 @@ Gets {name, type, size} for uniform at index
 | `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2) | - | - |
 
 
-## Parameters
+### Parameters
 
 Use with `Program.getParameter(parameter)`
 

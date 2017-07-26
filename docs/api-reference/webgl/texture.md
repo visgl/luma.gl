@@ -3,10 +3,10 @@
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
-* [`Texture2D`](./texture-2d.md) - Contains a "normal" image texture
-* [`TextureCube`](./texture-cube.md) - Holds 6 textures representing sides of a cube.
-* [`Texture2DArray`](./texture-2d-array.md) (WebGL2) - Holds an array of textures
-* [`Texture3D`](./texture-3d.md) (WebGL2) - Holds a "stack" of textures which enables 3D interpolation.
+* [`Texture2D`](/docs/api-reference/webgl/texture-2d.md) - Contains a "normal" image texture
+* [`TextureCube`](/docs/api-reference/webgl//texture-cube.md) - Holds 6 textures representing sides of a cube.
+* [`Texture2DArray`](/docs/api-reference/webgl//texture-2d-array.md) (WebGL2) - Holds an array of textures
+* [`Texture3D`](/docs/api-reference/webgl//texture-3d.md) (WebGL2) - Holds a "stack" of textures which enables 3D interpolation.
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
