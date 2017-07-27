@@ -88,3 +88,6 @@ animationLoop.getInfo = () => {
 };
 
 export default animationLoop;
+
+// expose on Window for standalone example
+window.animationLoop = animationLoop; // eslint-disable-lie

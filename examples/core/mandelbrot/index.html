@@ -13,8 +13,8 @@
 
       canvas {
         width: 100%;
-        margin: 16px auto 16px auto;
-        border: 1px solid black;
+        height: 100%;
+        background-size: cover;
       }
 
       #container {
@@ -33,12 +33,6 @@
 
       #text-container {
         margin-top: 64px;
-       -webkit-column-count: 2;
-       -moz-column-count: 2;
-        column-count: 2;
-       -webkit-column-gap: 20px;
-       -moz-column-gap: 20px;
-        column-gap: 20px;
         text-align: justify;
         font-size: 16px;
         line-height: 18px;
@@ -62,11 +56,7 @@
       <div id='title'>Rendering Mandelbrot Sets with LumaGL</div>
       <div id='text-container'>
         <div id='zoom'></div>
-        <canvas id="canvas-1"></canvas>
-        <p>Zoom in on mandelbrot set</p>
-        <p>32 bits only goes to 50,000x</p>
         <canvas id="canvas-0"></canvas>
-        <p>64 bits goes much deeper</p>
       </div>
     </div>
     <script type="text/javascript" src="bundle.js"></script>

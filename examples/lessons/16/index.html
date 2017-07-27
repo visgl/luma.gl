@@ -1,35 +1,25 @@
 <html>
+  <head>
+    <title>Lesson 16</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
-<head>
-<title>Learning WebGL &mdash; lesson 16</title>
-<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <style>
+      body {
+        margin: 0px;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+      }
+    </style>
 
-<link rel="stylesheet"
-  href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-  integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-  crossorigin="anonymous">
-<link href="../lessons.css" type="text/css" rel="stylesheet" media="screen"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  </head>a
 
-<script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js" type="text/javascript" charset="utf-8"></script>
-
-<script type="text/javascript" src="../../../dist/lumagl.js"></script>
-
-<script type="text/javascript" src="../lessons.js"></script>
-<script type="text/javascript" src="index.js"></script>
-
-</head>
-
-
-<body onload="webGLStart();">
-  <canvas id="lesson16-canvas" style="border: none;" width="500" height="500"></canvas>
-<div id="controls">
-  Laptop model adapted from <a href="http://www.turbosquid.com/3d-models/apple-macbook-max-free/391534">this 3DS Max model by Xedium</a><br/>
-  Moon texture courtesy of <a href="http://maps.jpl.nasa.gov/">the Jet Propulsion Laboratory</a>.
-  <br/>
-  <br/>
-
-    <a href="http://learningwebgl.com/blog/?p=1786">&lt;&lt; Back to Lesson 16</a><br />
-</div>
-</body>
-
+  <body>
+    <canvas id="lumagl-canvas"></canvas>
+    <script type="text/javascript" src="bundle.js"></script>
+    <script>window.animationLoop.start({canvas: 'lumagl-canvas'}); // eslint-disable-line</script>
+  </body>
 </html>
