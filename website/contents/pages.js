@@ -228,7 +228,7 @@ export const DOC_PAGES = [
     children: [
       {
         name: 'Overview',
-        content: 'user-guide/README.md'
+        content: 'get-started/README.md'
       },
       {
         name: 'Installation',
@@ -438,7 +438,7 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/context-features/has-features.md'
       },
       {
-        name: 'getFeature',
+        name: 'getFeatures',
         content: 'api-reference/webgl/context-features/get-features.md'
       },
       {

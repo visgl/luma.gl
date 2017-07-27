@@ -18,7 +18,7 @@ luma.gl constains a lot of classes and functions that might make new users wonde
 
 The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, These classes help organize the sprawling WebGL2 API and makes it much easier to program WebGL2 in JavaScript.
 
-After creating a context, perhaps with luma.gl's [`createGLContext`](/#/documentation/api-reference/context) function, you have can start instantiating luma.gl's WebGL2 classes: `Buffer`, `FrameBuffer`, `RenderBuffer`, `Program`, `Shader`, `Texture2D`, `TextureCube`, `Texture2DArray`, `Texture3D`, `Query`, `Sampler`, `Sync`, `TransformFeedback`, `VertexArrayObject`, `VertexAttributes`, `VertexAttributes`.
+After creating a context, perhaps with luma.gl's [`createGLContext`](/#/documentation/api-reference/create-context) function, you have can start instantiating luma.gl's WebGL2 classes: `Buffer`, `FrameBuffer`, `RenderBuffer`, `Program`, `Shader`, `Texture2D`, `TextureCube`, `Texture2DArray`, `Texture3D`, `Query`, `Sampler`, `Sync`, `TransformFeedback`, `VertexArrayObject`, `VertexAttributes`, `VertexAttributes`.
 
 ## Core Classes
 
@@ -26,10 +26,12 @@ The `core` classes, with the signature [`Model`](/#/documentation/api-reference/
 
 * [`Model`](/#/documentation/api-reference/model) - A renderable object with program, attributes, uniforms and other state required for rendering 3D objects on the screen
 * [`Geometry`](/#/documentation/api-reference/geometry) - Holds attributes and drawType for a primitive geometric object
-<!--* [`Object3D`](api-reference/core/object3d) - Base class, golds position, rotation, scale (TBD)
+* [`AnimationLoop`](/#/documentation/api-reference/animation-loop) - A simple animation loop that connects with browser's animation mechanism
+
+<!---
+* [`Object3D`](api-reference/core/object3d) - Base class, golds position, rotation, scale (TBD)
 * [`Group`](api-reference/core/group) - Supports recursive travesal and matrix transformation
 -->
-* [`AnimationLoop`](/#/documentation/api-reference/animation-loop) - A simple animation loop that connects with browser's animation mechanism
 
 
 ## Basic Geometries and Models
@@ -42,6 +44,3 @@ Corresponding to those geometry objects, luma.gl also provides commonly used `Mo
 
 
 Users are encouraged to write their own geometries and models and luma.gl could include them in its future releases.
-
-## Utilities
-

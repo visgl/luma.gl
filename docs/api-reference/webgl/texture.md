@@ -76,7 +76,7 @@ The texture class cannot be constructed directly. It is a base class that provid
 The constructors for these classes should be used to create textures. They constructors all take common parameters, many of which are specified in this document.
 
 * Sampling parameters are described in [`Sampler`](/#/documentation/api-reference/sampler).
-* Pixel store parameters are described in [`State Management`](/#/documentation/api-reference/context-state).
+* Pixel store parameters are described in [`State Management`](/#/documentation/api-reference/get-parameter).
 
 
 ### generateMipmap

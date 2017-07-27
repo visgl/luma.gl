@@ -15,12 +15,12 @@ Notes:
 
 | Function | WebGL Counterpart | Description |
 | ---                         | --- | --- |
-| [`setBuffer`](#setBuffer)   | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
+| `setBuffer`   | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
 | `enable`                    | `enableVertexAttribArray` | attribute visible to shader |
 | `disable` | `disableVertexAttribArray` | not visible to shader |
 | `setDivisor` WebGL2/ext | `vertexAttribDivisor` | (un)marks as instanced |
 | `getMaxAttributes`  | `MAX_VERTEX_ATTRIBS` | Length of array (>=8) |
-| [`setGeneric`](#setGeneric) | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
+| `setGeneric` | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
 
 
 ## Usage
@@ -153,7 +153,7 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 Notes:
 * The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
 * **WebGL2** The application can disable integer to float conversion when running under WebGL2, by setting the `integer` flag to `true`.
-* `glVertexAttribIPointer` specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
+* [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
 [vertexAttrib{I}Pointer]()
 

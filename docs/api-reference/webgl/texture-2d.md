@@ -95,4 +95,4 @@ new Texture2D(gl, {
 * `parameters`=`{}` (*object*) - map of texture sampler parameters.
 * `pixelStore`=`{}` (*object*) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
 
-Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/#/documentation/api-reference/texture). Sampler parameters are specified in [Sampler](/#/documentation/api-reference/sampler), and pixel store parameters are specified in [State Management](/#/documentation/api-reference/context-state/get-parameters)
+Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/#/documentation/api-reference/texture). Sampler parameters are specified in [Sampler](/#/documentation/api-reference/sampler), and pixel store parameters are specified in [State Management](/#/documentation/api-reference/get-parameter)
