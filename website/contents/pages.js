@@ -194,9 +194,9 @@ export const EXAMPLE_PAGES = [
       //   }
       // },
       {
-        name: 'Lesson 10 - Render to Texture',
+        name: 'Lesson 16 - Render to Texture',
         content: {
-          demo: 'Lesson10',
+          demo: 'Lesson16',
           code: `${GITHUB_TREE}/examples/lessons/16/`,
           path: `${RAW_GITHUB}/examples/lessons/16/`
         }

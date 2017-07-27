@@ -466,3 +466,7 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
 }
 
 export default animationLoop;
+
+// expose on Window for standalone example
+window.animationLoop = animationLoop; // eslint-disable-lie
+

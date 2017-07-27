@@ -193,3 +193,7 @@ animationLoop.getInfo = () => {
     The classic WebGL Lessons in luma.gl
     `;
 };
+
+// expose on Window for standalone example
+window.animationLoop = animationLoop; // eslint-disable-lie
+

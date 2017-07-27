@@ -181,3 +181,6 @@ function addKeyboardHandler(canvas) {
     }
   });
 }
+
+// expose on Window for standalone example
+window.animationLoop = animationLoop; // eslint-disable-lie
