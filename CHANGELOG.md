@@ -1,141 +1,15 @@
 # Pre-releases
 
-## 4.0.0-beta.6
-- Call assembleShaders always (#270)
-- Remove invalid assert on GL.POINTS (#268)
-- Fix the WebGL context creation issue on Safari (#267)
-
-## 4.0.0-beta.5
-- Fix Shader Module dependency ordering (#266)
-- API Audit - change 'settings' to 'parameters' (#264)
-- Remove duplicate docs for faature management (#265)
-
-## 4.0.0-beta.4
-- Parameters: draw(`settings`) renamed to `parameters`
-- Shader Modules: Move fp32 and fp64 from deck.gl
-- WEBSITE: Remove/Retitle examples
-
-## 4.0.0-beta.3
-- Export feature detection functions (#260)
-- Improve shadertools docs (#258)
-
-## 4.0.0-beta.2
-- FIX: Shader error parsing, shadertools export fix
-- Changes to Picking module & fix Picking example  (#256)
-- math library fixes (#253)
-- Matrix docs (#254)
-- Fix picking color encoding. (#252)
-- Fix picking module & add FB unit tests. (#251)
-
-## 4.0.0-beta.1
-- Canvas and Drawing Buffer API fixes
-- Reduce size of gl-matrix dependencies
-- Support v3 texture parameters
-- Shader Module System cleanup and use in some examples
-- Webpack configuration consolidation
-
-- WEBSITE: Shippable docs
-- WEBSITE: SIZE and MULTIPLE CANVAS fixes
-- WEBSITE: Restore Shadowmap and Particles Examples
-- WEBSITE: Shader Module System - use in some examples
-- WEBSITE: Webpack configuration consolidation
-- WEBSITE: Framework links
-
-## 4.0.0-alpha.14
-
-- v4 Capability Management API finalization
-- New Shader Module refactor
-- Query objects enabled + unit tests
-- NPOT workaround for texture-2d object
-INTERNAL
-- Add webgl-util readme
-- Canvas resize/context creation moved to webgl-utils
-- getParameter polyfill consolidated in webgl-utils
-- Move non-working examples to wip folder
-- Rename demo folder to website
-
-## 4.0.0-alpha.13
-
-- Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
-- `shadertools` module no longer experimental
-- webgl2 uniform support
-
-## 4.0.0-alpha.12
-
-- FIX: Seer integration
-
-## 4.0.0-alpha.11
-
-- State and Parameter support
-- Many fixes to examples
-
-## 4.0.0-alpha.10
-
-- FIX: Framebuffer resize & add unit test (#200)
-- Add the pixel parameter back in texture class for compatibility with v3 (#198)
-- FIX: 'npm run build' for demos (#195)
-- FIX: Lesson 08 (#196)
-- FIX: Lesson 07 (#194)
-
-## 4.0.0-alpha.9
-
-- FIX: Some leftover export fix and storage mode fix (#192)
-
-## 4.0.0-alpha.8
-
-- FIX: Remove duplicate export that fails tests in other repos (#191)
-
-## 4.0.0-alpha.7
-
-- FIX: Fix the texture storage mode settings (#189)
-- FIX: examples/lessons (#188)
-- Transform feedback fixes (#187)
-- FIX: Example updates and fixes for textures (#186)
-- Size improvements to transpiled code (dist)
-- Tree-shaking improvements - carefully avoid dependencies that defeat tree shaking (#185)
-
-## 4.0.0-alpha.6
-- Fix framebuffer creation error AGAIN (#183)
-- NEW: `UniformBufferLayout` class
-
-## 4.0.0-alpha.4
-- Remove null params given to Float32Array constructor (#176)
-- Fix framebuffer creation error (#177)
-
-## 4.0.0-alpha.3
-- bump seer
-- remove duplicate info from readme
-
-## 4.0.0-alpha.2
-
-- Reorgnize files (#168)
-- Transform feedback improvement (#165)
-- WebGL2 updates (#160)
-- Buffer refactor (#156)
-- Fix examples (#161, #149, #172, #173)
-- Adding new docs for WebGL2 (#159)
-- Demo site creation (#158)
-- Docs cleanup and updates (#157, #169, #170)
-- seer integration
-- Add coverage support (#155)
-
-## 4.0.0-alpha.1
-
-- Refactor WebGL classes using new `Resource` base class
-- `Resource.getParameters` for ease of debugging
-- Fix FramebufferObject export
-- GL state and limit management (#146)
-- Fix shader file name (#151)
-- Refactor many classes in the webgl folder (#136, #154)
-- Check compilation and linking status only with debug WebGL context (#144)
-- Add benchmarking scaffolding and a benchmark test for Program constructor (#142)
-- Docs update (#137)
-
-
 # Official releases
 
+## v4.0
 
-## v3
+### 4.0.0
+
+This is a major release that brings WebGL2 support to luma.gl. For more info, please see
+[What's new](https://github.com/uber/luma.gl/blob/4.0-release/docs/whats-new.md)
+
+## v3.0
 
 Theme: Pure ES6 Codebase/Build tooling improvements
 
@@ -166,6 +40,8 @@ Breaking Changes:
 - BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
   and into `packages`. This allows luma.gl to drop a number of big dependencies.
   The node IO code may be published as a separate module later.
+
+## v2.0
 
 ### 2.10.4
 - FIX: Fix for glGetDebugInfo regression on Intel processors.
@@ -279,7 +155,142 @@ headless-gl.
 ### 1.0.1 - Initial release.
 
 
-# Prereleases
+# Previous Beta Releases
+
+## v4.0 Beta Releases
+
+### 4.0.0-beta.6
+- Call assembleShaders always (#270)
+- Remove invalid assert on GL.POINTS (#268)
+- Fix the WebGL context creation issue on Safari (#267)
+
+### 4.0.0-beta.5
+- Fix Shader Module dependency ordering (#266)
+- API Audit - change 'settings' to 'parameters' (#264)
+- Remove duplicate docs for faature management (#265)
+
+### 4.0.0-beta.4
+- Parameters: draw(`settings`) renamed to `parameters`
+- Shader Modules: Move fp32 and fp64 from deck.gl
+- WEBSITE: Remove/Retitle examples
+
+### 4.0.0-beta.3
+- Export feature detection functions (#260)
+- Improve shadertools docs (#258)
+
+### 4.0.0-beta.2
+- FIX: Shader error parsing, shadertools export fix
+- Changes to Picking module & fix Picking example  (#256)
+- math library fixes (#253)
+- Matrix docs (#254)
+- Fix picking color encoding. (#252)
+- Fix picking module & add FB unit tests. (#251)
+
+### 4.0.0-beta.1
+- Canvas and Drawing Buffer API fixes
+- Reduce size of gl-matrix dependencies
+- Support v3 texture parameters
+- Shader Module System cleanup and use in some examples
+- Webpack configuration consolidation
+
+- WEBSITE: Shippable docs
+- WEBSITE: SIZE and MULTIPLE CANVAS fixes
+- WEBSITE: Restore Shadowmap and Particles Examples
+- WEBSITE: Shader Module System - use in some examples
+- WEBSITE: Webpack configuration consolidation
+- WEBSITE: Framework links
+
+### 4.0.0-alpha.14
+
+- v4 Capability Management API finalization
+- New Shader Module refactor
+- Query objects enabled + unit tests
+- NPOT workaround for texture-2d object
+INTERNAL
+- Add webgl-util readme
+- Canvas resize/context creation moved to webgl-utils
+- getParameter polyfill consolidated in webgl-utils
+- Move non-working examples to wip folder
+- Rename demo folder to website
+
+### 4.0.0-alpha.13
+
+- Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
+- `shadertools` module no longer experimental
+- webgl2 uniform support
+
+### 4.0.0-alpha.12
+
+- FIX: Seer integration
+
+### 4.0.0-alpha.11
+
+- State and Parameter support
+- Many fixes to examples
+
+### 4.0.0-alpha.10
+
+- FIX: Framebuffer resize & add unit test (#200)
+- Add the pixel parameter back in texture class for compatibility with v3 (#198)
+- FIX: 'npm run build' for demos (#195)
+- FIX: Lesson 08 (#196)
+- FIX: Lesson 07 (#194)
+
+### 4.0.0-alpha.9
+
+- FIX: Some leftover export fix and storage mode fix (#192)
+
+### 4.0.0-alpha.8
+
+- FIX: Remove duplicate export that fails tests in other repos (#191)
+
+### 4.0.0-alpha.7
+
+- FIX: Fix the texture storage mode settings (#189)
+- FIX: examples/lessons (#188)
+- Transform feedback fixes (#187)
+- FIX: Example updates and fixes for textures (#186)
+- Size improvements to transpiled code (dist)
+- Tree-shaking improvements - carefully avoid dependencies that defeat tree shaking (#185)
+
+### 4.0.0-alpha.6
+- Fix framebuffer creation error AGAIN (#183)
+- NEW: `UniformBufferLayout` class
+
+### 4.0.0-alpha.4
+- Remove null params given to Float32Array constructor (#176)
+- Fix framebuffer creation error (#177)
+
+### 4.0.0-alpha.3
+- bump seer
+- remove duplicate info from readme
+
+### 4.0.0-alpha.2
+
+- Reorgnize files (#168)
+- Transform feedback improvement (#165)
+- WebGL2 updates (#160)
+- Buffer refactor (#156)
+- Fix examples (#161, #149, #172, #173)
+- Adding new docs for WebGL2 (#159)
+- Demo site creation (#158)
+- Docs cleanup and updates (#157, #169, #170)
+- seer integration
+- Add coverage support (#155)
+
+### 4.0.0-alpha.1
+
+- Refactor WebGL classes using new `Resource` base class
+- `Resource.getParameters` for ease of debugging
+- Fix FramebufferObject export
+- GL state and limit management (#146)
+- Fix shader file name (#151)
+- Refactor many classes in the webgl folder (#136, #154)
+- Check compilation and linking status only with debug WebGL context (#144)
+- Add benchmarking scaffolding and a benchmark test for Program constructor (#142)
+- Docs update (#137)
+
+## v3.0 Beta Releases
 
 Note: Unfortunately 3.0.0-beta6 was published without beta tag and takes
 precedence when using wildcard installs.
