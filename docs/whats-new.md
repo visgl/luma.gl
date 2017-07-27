@@ -2,7 +2,7 @@
 
 ## Version 4.0
 
-Release Date: Target early Q3 2017
+Release date: July 27th, 2017
 
 A major release that brings full WebGL2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 
