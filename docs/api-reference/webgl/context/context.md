@@ -1,9 +1,8 @@
-# WebGL Context
+# createGLContext
 
 Provides functions to create and initialize a WebGL context, and to check for presence of WebGL and extensions.
 
 * Provides the `createGLContext` method which can create WebGLContexts both in browsers and under Node.js.
-* Also provides `getGLExtension` that throws an `Error` if the requested extension cannot be returned.
 
 Note that the use of these functions is NOT required to use the remaining functions and classes in luma.gl.
 

@@ -1,6 +1,6 @@
 # Event
 
-Provides the [Events](event.html) object to bind events to the canvas to interact with 3D objects.
+Provides the [`Events`](/#/documentation/api-reference/event) object to bind events to the canvas to interact with 3D objects.
 
 ### Examples:
 
@@ -77,15 +77,15 @@ Creates a set of events for the given domElement that can be handled through a c
 * enableMouse - (*boolean*, optional) Whether to append listeners to mouse events. Default's `true`.
 * enableKeyboard - (*boolean*, optional) Whether to append listeners to keyboard events. Default's `true`.
 * bind - (*mixed*, optional) bind the *thisArg* in the callbacks to the specified object.
-* picking - (*boolean*, optional) Whether to use picking. If true, the second parameter for the callback functions will be an [O3D](o3d.html) target for the event (or a falsy value otherwise). Default's false.
+* picking - (*boolean*, optional) Whether to use picking. Default's false.
 
 ### Callbacks:
 
 You can also provide callback functions for the events you need to
 handle. The first parameter of the callback is the event object
-described [here](event.html#Event). If `picking` is set to `true` in the
+described [here](/#/documentation/api-reference/event). If `picking` is set to `true` in the
 options, then the second parameter of the callback may be an
-[O3D](o3d.html) that is the target of the mouse event. If no target
+`O3D` that is the target of the mouse event. If no target
 exists for the mouse event then a falsy value will be provided. The
 following callbacks are:
 

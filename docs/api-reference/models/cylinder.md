@@ -1,6 +1,6 @@
 # Cylinder
 
-Creates a cylinder model. Inherits methods from [Model](/docs/api-reference/core/model).
+Creates a cylinder model. Inherits methods from [`Model`](/#/documentation/api-reference/model).
 
 
 ## Usage
