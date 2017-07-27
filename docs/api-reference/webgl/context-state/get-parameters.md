@@ -1,18 +1,13 @@
-# State Management
+# getParameters, getParamter, setParameters, setParameter
 
 luma.gl simplifies the usage of WebGL parameters by providing a unified API for setting and getting values. Any GL parameter can be queried or set using `getParameters` and `setParameters` (no need to keep track of what underlying WebGL calls are required), and luma.gl also provide *setting names* that allow the normal WebGL setter functions (like `gl.blendEquation` or `gl.clearColor`) to be specified as keys in a `setParameters` call.
 
 In addition, state queries are done towards cached values and are thus much faster than working directly with the WebGL API, where synchronous WebGL queries can be a performance bottleneck.
 
-Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, state settings can be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
-
 The following functions are provided:
 * `getParameter` - Returns the value(s) of a GL context parameter
 * `getParameters` - Returns the values of some or all GL context parameters
 * `setParameters` - Sets a the value(s) of the specified GL context parameters
-* `withParameters` - Runs a function with a set of parameters temporarily applied
-* `resetParameters` - Resets all GL context parameters to their default values
-
 
 ## Usage
 
@@ -39,40 +34,6 @@ Get all gl parameter values (values will be an object map keyed with parameter n
 ```js
 const values = getParameters(gl);
 ```
-
-Reset all parameters to their default values
-```js
-resetParameters(gl);
-```
-
-Set parameters temporarily for a function call (automatically restoring them after the call)
-```js
-const returnValue = withParameters(gl, {
-  depthTest: true
-}, () = {
-  // execute code with new parameters temporarily applied
-  program.draw(...);
-  ...
-  // parameters will be restored even the function throws an exception
-  if (...) {
-    throw new Error('Exception after setting parameters');
-  }
-
-  // Return value of the function will be returned from `withParameters`
-  return true;
-});
-
-// previous parameters are restored here
-program.draw(...);
-```
-
-Set up state tracking for a context (only required for contexts created outside of luma.gl)
-```js
-import {trackState} from 'luma.gl';
-const gl = ...
-trackState(gl);
-```
-
 
 ## Methods
 
@@ -119,33 +80,6 @@ Note:
 * If both luma.gl setting names and GL parameter constants representing the same value are submitted the results are undefined.
 * value may be "normalized" (in case a short form is supported). In that case the normalized value is returned.
 
-
-### withParameters
-
-Executes a function after temporarily setting the parameters. Will restore the parameters to their previously value after the completion of the function, even if the function exits with an exception.
-
-```js
-withParameters(gl, {...params}, func)
-```
-* `gl` {WebGLRenderingContext} - context
-* `params` {Object} - any parameter names accepted by `setParameters`
-
-Returns: the value returned by `func`, if any.
-
-
-### resetParameters
-
-```js
-resetParameters(gl)
-```
-Resets all gl context parameters to default values.
-
-* `gl` {WebGLRenderingContext} - context
-Returns no value.
-
-Note that technically, resetting context parameters does not fully reset the context, as buffer binding, z buffer values etc are not reset.
-
-
 ## Parameters
 
 Describes luma.gl setting names and values
@@ -154,10 +88,10 @@ Describes luma.gl setting names and values
 
 | Function style        | Sets parameter(s)      |
 | --------------------- | ---------------------- |
-| [blendColor]()        | `GL.BLEND_COLOR`       |
-| [blendEquation]()     | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`] |
-| [blendFunc]()         | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`] |
-| [blendFuncSeparate]() | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
+| [blendColor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor)        | `GL.BLEND_COLOR`       |
+| [blendEquation](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation)     | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`] |
+| [blendFunc](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc)         | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`] |
+| [blendFuncSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquationSeparate) | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
 
 | Parameter                 | Type            | Default         | Description |
 | ------------------------- | --------------- | --------------- | -------- |
@@ -175,7 +109,7 @@ Describes luma.gl setting names and values
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [clearColor]() | GL.COLOR_CLEAR_VALUE |
+| [clearColor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearColor) | GL.COLOR_CLEAR_VALUE |
 
 | Parameter              | Type            | Default  | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -186,7 +120,7 @@ Describes luma.gl setting names and values
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [colorMask]() | GL.COLOR_WRITEMASK |
+| [colorMask](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/colorMask) | GL.COLOR_WRITEMASK |
 
 | Parameter              | Type            | Default  | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -197,10 +131,10 @@ Describes luma.gl setting names and values
 
 | Function style   | Sets parameters        |
 | ---------------- | ---------------------- |
-| [clearDepth]()     | `GL.DEPTH_CLEAR_VALUE` |
-| [depthFunc]()      | `GL.DEPTH_FUNC`        |
-| [depthRange]()     | `GL.DEPTH_RANGE`       |
-| [depthMask]()      | `GL.DEPTH_WRITEMASK`   |
+| [clearDepth](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth)     | `GL.DEPTH_CLEAR_VALUE` |
+| [depthFunc](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthFunc)      | `GL.DEPTH_FUNC`        |
+| [depthRange](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange)     | `GL.DEPTH_RANGE`       |
+| [depthMask](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthMask)      | `GL.DEPTH_WRITEMASK`   |
 
 | Parameter              | Type            | Default | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -242,8 +176,8 @@ Requires WebGL2 or `OES_standard_derivatives`.
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [cullFace]()  | `GL.CULL_FACE_MODE` |
-| [frontFace]() | `GL.FRONT_FACE` |
+| [cullFace](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace)  | `GL.CULL_FACE_MODE` |
+| [frontFace](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/frontFace) | `GL.FRONT_FACE` |
 
 | Parameter              | Type            | Default | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -290,7 +224,7 @@ Line widths are between 1 and GL.ALIASED_LINE_WIDTH_RANGE.
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [lineWidth](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glLineWidth.xml) | `GL.LINE_WIDTH` |
+| [lineWidth](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/lineWidth) | `GL.LINE_WIDTH` |
 
 | Parameter              | Type            | Default | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -317,7 +251,7 @@ and for rendering solids with highlighted edges.
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [polygonOffset](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glPolygonOffset.xml) | [GL.POLYGON_OFFSET_FACTOR, GL.POLYGON_OFFSET_UNITS] |
+| [polygonOffset](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset) | [GL.POLYGON_OFFSET_FACTOR, GL.POLYGON_OFFSET_UNITS] |
 
 | Parameter                  | Type          | Default  | Description             |
 | -------------------------- | ------------- | -------- | ----------------------- |
@@ -343,7 +277,7 @@ Specify multisample coverage parameters
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [sampleCoverage](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glSampleCoverage.xml) | [`GL.SAMPLE_COVERAGE_VALUE`, `GL.SAMPLE_COVERAGE_INVERT`] |
+| [sampleCoverage](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/sampleCoverage) | [`GL.SAMPLE_COVERAGE_VALUE`, `GL.SAMPLE_COVERAGE_INVERT`] |
 
 | Parameter                          | Type          | Default  | Description             |
 | ---------------------------------- | ------------- | -------- | ----------------------- |
@@ -359,7 +293,7 @@ Settings for scissor test and scissor box.
 
 | Function  | Sets parameters                    |
 | --------- | ---------------------------------- |
-| [scissor](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glScissor.xml) | `GL.SCISSOR_BOX`                   |
+| [scissor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/scissor) | `GL.SCISSOR_BOX`                   |
 | scissorTest | GL.SCISSOR_TEST |
 
 | Parameter                          | Type          | Default  | Description             |
@@ -374,13 +308,13 @@ Setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
 
 | Function | Parameters Set |
 | -------- | -------------- |
-| [clearStencil](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilMask.xml) | `GL.STENCIL_CLEAR_VALUE` |
-| [stencilMask](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilMask.xml) | [`GL.STENCIL_WRITEMASK`] |
-| [stencilMaskSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilMaskSeparate.xml) | [`GL.STENCIL_WRITEMASK`, `GL.STENCIL_BACK_WRITEMASK`] |
-| [stencilFunc](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilFunc.xml) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`] |
-| [stencilFuncSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilFuncSeparate.xml) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`, `GL.STENCIL_BACK_FUNC`, `GL.STENCIL_BACK_REF`, `GL.STENCIL_BACK_VALUE_MASK` ]
-| [stencilOp](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOp.xml) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`]|
-| [stencilOpSeparate](https://www.khronos.org/opengles/sdk/docs/man/xhtml/glStencilOpSeparate.xml) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`, `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`]|
+| [clearStencil](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil) | `GL.STENCIL_CLEAR_VALUE` |
+| [stencilMask](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask) | [`GL.STENCIL_WRITEMASK`] |
+| [stencilMaskSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMaskSeparate) | [`GL.STENCIL_WRITEMASK`, `GL.STENCIL_BACK_WRITEMASK`] |
+| [stencilFunc](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`] |
+| [stencilFuncSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFuncSeparate) | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`, `GL.STENCIL_BACK_FUNC`, `GL.STENCIL_BACK_REF`, `GL.STENCIL_BACK_VALUE_MASK` ]
+| [stencilOp](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`]|
+| [stencilOpSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate) | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`, `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`]|
 
 | Parameter                         | Type      | Default      | Description             |
 | --------------------------------- | --------- | ------------ | ----------------------- |
@@ -443,7 +377,7 @@ window/framebuffer coordinates. The maximum supported value, is defined by the
 
 | Function     | Parameters     |
 | ------------ | -------------- |
-| [viewport]() | `GL.VIEWPORT`  |
+| [viewport](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/viewport) | `GL.VIEWPORT`  |
 
 | Parameter                          | Type          | Default   | Description             |
 | ---------------------------------- | ------------- | --------- | ----------------------- |

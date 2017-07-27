@@ -4,7 +4,7 @@ WebGL provides an API to manipulate the global "vertex attributes array", which 
 
 This module offers set of functions for manipulating WebGL's global "vertex attributes array". Essentially, this module collects all WebGL `gl.vertexAttrib*` methods and `gl.VERTEX_ATTRIB_ARRAY_*` queries in a small JavaScript friendly package.
 
-**Note** It is usually not necessary to manipulate the vertex attributes array directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](model.html) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
+**Note** It is usually not necessary to manipulate the vertex attributes array directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/#/documentation/api-reference/model) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
 
 
 ### Overview of Vertex Attributes
@@ -26,7 +26,7 @@ Each vertex attribute has these properties:
 - An integer normalization policy (see below)
 - **WebGL2** An integer conversion policy (see below)
 
-Normally attributes are set to a [`WebGLBuffer`](buffer.html) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
+Normally attributes are set to a [`WebGLBuffer`](https://www.khronos.org/registry/webgl/specs/1.0/#5.4) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
 
 Attributes can also be set to what WebGL calls a "generic" value. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex (assuming a vertex shader expecting an attribute
 containing color information).
@@ -59,8 +59,8 @@ Instancing requires a WebGL extension or WebGL2.
 
 | **Function** | **WebGL Counterpart** | **Description** |
 | --- | --- | --- |
-| [`setBuffer`](#setBuffer) | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
-| [`setGeneric`](#setGeneric) | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
+| `setBuffer` | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](https://www.khronos.org/registry/webgl/specs/1.0/#5.4) |
+| `setGeneric` | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
 | `enable` | `enableVertexAttribArray` | attribute visible to shader |
 | `disable` | `disableVertexAttribArray` | not visible to shader |
 | `setDivisor` <sub>**WebGL2/ext**</sub> | `vertexAttribDivisor` | (un)marks as instanced |

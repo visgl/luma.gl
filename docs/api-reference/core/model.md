@@ -7,8 +7,8 @@ luma.gl: **shaders** (via a `Program` instance), **shader modules**, **vertex at
 For most applications, the `Model` class is probably the most central luma.gl
 class.
 
-- `Model` is a subclass of `Object3D`, meaning it can be positioned, rotated and scaled.
-- `Model` contains a [`Program`](program.html) (the shaders), a [`Geometry`](geometry.html) (containing the attributes for the primitive), [`Shader Modules`](#/documentation/shadertools-reference/shader-modules), any additional attributes for instanced rendering, and also stores textures and uniforms.
+- `Model` can be positioned, rotated and scaled.
+- `Model` contains a [`Program`](/#/documentation/api-reference/program) (the shaders), a [`Geometry`](/#/documentation/api-reference/geometry) (containing the attributes for the primitive), [`Shader Modules`](/#/documentation/api-reference/shader-modules), any additional attributes for instanced rendering, and also stores textures and uniforms.
 - Has simple boolean flags for selecting indexed and/or instanced rendering.
 - Offers a simple render method that binds all attributes, uniforms and textures, selects (uses) the program, and calls the right gl draw call for the model.
 - Setting buffers and more.

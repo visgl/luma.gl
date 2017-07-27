@@ -223,16 +223,16 @@ The following values can be provided for each attachment
 * `Texture` - attaches the `Texture`
 * [`Texture`, layer=0 (Number), mipmapLevel=0 (Number)] - attaches the specific layer from the `Texture` (WebGL2)
 
-WebGL calls [`gl.framebufferRenderbuffer`](), [`gl.bindFramebuffer`]()
-WebGL calls [`gl.framebufferTexture2D`](), [`gl.bindFramebuffer`]()
-WebGL calls [`gl.framebufferTextureLayer`](), [`gl.bindFramebuffer`]()
+This function makes calls to the following WebGL APIs:
+
+[`gl.framebufferRenderbuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferRenderbuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.framebufferTexture2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferTexture2D), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.framebufferTextureLayer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/framebufferTextureLayer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL2 only)
 
 
 ### checkStatus
 
 Check that the framebuffer contains a valid combination of attachments
 
-[`gl.framebufferCheckStatus`](), [`gl.bindFramebuffer`]()
+[`gl.checkFramebufferStatus`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/checkFramebufferStatus), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ### clear
@@ -247,20 +247,6 @@ Clears the contents (pixels) of the framebuffer attachments.
 * The scissor box bounds the cleared region.
 * The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect the operation of `clear`.
 * Alpha function, blend function, logical operation, stenciling, texture mapping, and depth-buffering are ignored by `clear`.
-
-
-### clearBuffer
-
-Clears a single draw buffer, specified using a draw buffer index matching the `drawBuffers` (Note: this is not the attachment point).
-
-`framebuffer.clearBuffer({buffer, drawBuffer, value})`
-
-* `buffer`=`GL.COLOR`
-* `drawBuffer`=`0`
-* `value`=`[0, 0, 0, 0]`
-
-* Note that `value` can be `Float32Array`, `Int32Array` and `Uint32Array` for more control when using signed and unsigned integer color formats.
-
 
 ### readPixels
 
@@ -277,7 +263,9 @@ App can provide pixelArray or have it auto allocated by this method
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
 * When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
-[gl.readPixels](), [`gl.bindFramebuffer`]()
+This function makes calls to the following WebGL APIs:
+
+[gl.readPixels](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ### blit (WebGL2)
@@ -301,7 +289,9 @@ Parameters
 
 * There are a number of restrictions when blitting between integer and floating point formats.
 
-[`gl.blitFramebuffer`](), [`gl.readBuffer`](), [`gl.writeBuffers`](), [`gl.bindFramebuffer`]()
+This function makes calls to the following WebGL APIs:
+
+[`gl.blitFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/blitFramebuffer), [`gl.readBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/readBuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ### invalidate (WebGL2)
@@ -311,7 +301,9 @@ Signals to the GL that it need not preserve the pixels of a specified region of 
 Parameters
 * attachments - list of attachments to invalidate
 
-[`gl.invalidateFramebuffer`](), [`gl.invalidateSubFramebuffer`](), [`gl.bindFramebuffer`]()
+This function makes calls to the following WebGL APIs:
+
+[`gl.invalidateFramebuffer`](WebGL2RenderingContext.invalidateFramebuffer()), [`gl.invalidateSubFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/invalidateSubFramebuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ### clearBuffers (WebGL2)
@@ -358,9 +350,9 @@ Parameters
 * Except for `GL_NONE`, a constants may not appear more than once.
 * The maximum number of draw buffers.
 
+This function makes calls to the following WebGL APIs:
 
-
-[`gl.drawBuffers`](), [`gl.bindFramebuffer`]()
+[`gl.drawBuffers`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawBuffers), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ## Limits

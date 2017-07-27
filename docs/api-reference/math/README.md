@@ -4,7 +4,7 @@ A JavaScript math library primarily intended to support WebGL applications.
 
 Note that luma.gl works directly with JavaScript arrays (a `Vector3` is just a 3 element array) and you can use any math library as long as you convert objects to arrays before passing data to luma.gl.
 
-The provided Math library is based on `gl-matrix` and uses Array subclassing so that objects are directly usable with luma.gl.
+The provided Math library is based on [`gl-matrix`](http://glmatrix.net/) and uses Array subclassing so that objects are directly usable with luma.gl.
 
 
 ## Features

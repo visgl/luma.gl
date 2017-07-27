@@ -2,7 +2,7 @@
 
 A `VertexArray` holds a WebGL `VertexArrayObject` which stores a set of `Buffer` bindings representing the input data to GLSL shaders (in much the same way that a `TransformFeedback` object stores a set of `Buffer` bindings for output data from shaders).
 
-Note that it is usually not necessary to manipulate `VertexArray`s directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](model.html) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
+Note that it is usually not necessary to manipulate `VertexArray`s directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/#/documentation/api-reference/model) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
 
@@ -15,12 +15,12 @@ Notes:
 
 | Function | WebGL Counterpart | Description |
 | ---                         | --- | --- |
-| [`setBuffer`](#setBuffer)   | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
+| `setBuffer`   | `vertexAttrib{I}Pointer` | Set to ['WebGLBuffer'](buffer.html) |
 | `enable`                    | `enableVertexAttribArray` | attribute visible to shader |
 | `disable` | `disableVertexAttribArray` | not visible to shader |
 | `setDivisor` WebGL2/ext | `vertexAttribDivisor` | (un)marks as instanced |
 | `getMaxAttributes`  | `MAX_VERTEX_ATTRIBS` | Length of array (>=8) |
-| [`setGeneric`](#setGeneric) | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
+| `setGeneric` | `vertexAttrib4[u]{f,i}v` | Set value to a constant |
 
 
 ## Usage
@@ -153,7 +153,7 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 Notes:
 * The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
 * **WebGL2** The application can disable integer to float conversion when running under WebGL2, by setting the `integer` flag to `true`.
-* `glVertexAttribIPointer` specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
+* [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
 [vertexAttrib{I}Pointer]()
 
@@ -195,7 +195,8 @@ Notes:
 
 * This method will look use WebGL2 or the `array_instanced_ANGLE` extension, if available. To avoid exceptions on unsupported platforms. the app can call `VertexAttributeObject.isSupported()` to determine whether instancing is supported before invoking `VertexArray.setDivisor`.
 
-[vertexAttribDivisor]()
+The following WebGL APIs are called in this method:
+[gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
 
 
 ### setGeneric
@@ -207,7 +208,8 @@ Sets a constant (i.e. generic) value for a vertex attribute. All Vertex Shader i
 * `gl` (`WebGLRenderingContext`) - gl context
 * `location` (*GLuint*) - index of the attribute
 
-[vertexAttrib4[u]{f,i}v]()
+The following WebGL APIs are called in this method:
+[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 
 ### setGenericValues
@@ -219,7 +221,8 @@ Specify values for generic vertex attributes. Generic vertex attributes are cons
 * `gl` (`WebGLRenderingContext`) - gl context
 * `location` (*GLuint*) - index of the attribute
 
-[vertexAttrib4[u]{f,i}v]()
+The following WebGL APIs are called in this method:
+[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 
 
@@ -265,7 +268,7 @@ Each vertex attribute has these properties:
 - An integer normalization policy (see below)
 - An integer conversion policy (see below) **WebGL2**
 
-Normally attributes are set to a [`WebGLBuffer`](buffer.html) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
+Normally attributes are set to a [`WebGLBuffer`](/#/documentation/api-reference/buffer) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
 
 Attributes can also be set to "generic" values. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex.
 
