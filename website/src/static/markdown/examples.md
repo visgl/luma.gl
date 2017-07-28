@@ -120,7 +120,7 @@
   </div>
   <div class="thumb">
     <div class="bg-black" data-name="Lesson 10" data-title="Render To Texture">
-      <a href="#/examples/webgl-lessons/lesson-16-render-to-texture">
+      <a href="#/examples/webgl-lessons/lesson-16-render-texture">
         <img src="images/lesson-16.png" />
       </a>
     </div>
