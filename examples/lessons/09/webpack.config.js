@@ -1,13 +1,12 @@
-// NOTE: To use this example standalone (e.g. outside of this repository)
-// delete the local development overrides at the bottom of this file
 const {resolve} = require('path');
 
-module.exports = {
+const CONFIG = {
   entry: {
     app: resolve('./app.js')
-  }
+  },
+
+  devtool: 'source-map'
 };
 
-// DELETE THIS LINE WHEN COPYING THIS EXAMPLE FOLDER OUTSIDE OF DECK.GL
-// It enables bundling against src in this repo rather than installed module
-module.exports = require('../../webpack.config.local')(module.exports);
+// This line enables bundling against src in this repo rather than installed module
+module.exports = env => env ? require('../webpack.config.local')(CONFIG)(env) : CONFIG;
