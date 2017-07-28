@@ -11,7 +11,7 @@ function getDevicePixelRatio() {
 
 export default function pickModels(gl, {
   models,
-  position,
+  position = null,
   uniforms = {}, // eslint-disable-line
   parameters = {},
   settings,
@@ -20,6 +20,10 @@ export default function pickModels(gl, {
 }) {
   assert(isWebGL(gl), ILLEGAL_ARG);
   assert(framebuffer, ILLEGAL_ARG);
+
+  if (position === null) {
+    return null;
+  }
 
   const [x, y] = position;
 

@@ -8,6 +8,9 @@ let pickPosition = [0, 0];
 function mousemove(e) {
   pickPosition = [e.offsetX, e.offsetY];
 }
+function mouseleave(e) {
+  pickPosition = null;
+}
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
@@ -19,6 +22,7 @@ const animationLoop = new AnimationLoop({
     });
 
     gl.canvas.addEventListener('mousemove', mousemove);
+    gl.canvas.addEventListener('mouseleave', mouseleave);
 
     return {
       cube: makeInstancedCube(gl)
@@ -47,21 +51,13 @@ const animationLoop = new AnimationLoop({
     });
 
     const pickInfo = pickModels(gl, {models: [cube], position: pickPosition, framebuffer});
-    // console.log(pickInfo ? pickInfo.color : 'picked background');
     cube.updateModuleSettings({
-      pickingSelectedColor: pickInfo && pickInfo.color
+      pickingSelectedColor: pickInfo && pickInfo.color,
+      pickingValid: pickInfo !== null
     });
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
     cube.render();
-  },
-  onMouseMove({gl, tick, cube, framebuffer}) {
-    // TODO - activate this path
-    const pickInfo = pickModels(gl, {models: [cube], position: pickPosition, framebuffer});
-    console.log(pickInfo ? pickInfo.color : 'picked background');
-    cube.setUniforms(picking.getUniforms({
-      pickingSelectedColor: pickInfo && pickInfo.color
-    }));
   }
 });
 
