@@ -31,6 +31,10 @@ const animationLoop = new AnimationLoop({
       pickPosition = [e.offsetX, e.offsetY];
     });
 
+    canvas.addEventListener('mouseleave', function mouseleave(e) {
+      pickPosition = null;
+    });
+
     return loadTextures(gl, {
       urls: PLANETS.map(planet => planet.textureUrl),
       mipmaps: true,
@@ -83,7 +87,7 @@ const animationLoop = new AnimationLoop({
       planet.render();
     }
 
-    const pickedModel = pickModels(gl, {
+    const pickedModel = pickPosition && pickModels(gl, {
       models: planets,
       position: pickPosition,
       framebuffer
