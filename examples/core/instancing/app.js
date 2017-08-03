@@ -50,7 +50,12 @@ const animationLoop = new AnimationLoop({
       uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
     });
 
-    const pickInfo = pickModels(gl, {models: [cube], position: pickPosition, framebuffer});
+    const pickInfo = pickPosition && pickModels(gl, {
+      models: [cube],
+      position: pickPosition,
+      framebuffer
+    });
+
     cube.updateModuleSettings({
       pickingSelectedColor: pickInfo && pickInfo.color,
       pickingValid: pickInfo !== null

@@ -87,7 +87,7 @@ const animationLoop = new AnimationLoop({
       planet.render();
     }
 
-    const pickedModel = pickModels(gl, {
+    const pickedModel = pickPosition && pickModels(gl, {
       models: planets,
       position: pickPosition,
       framebuffer
