@@ -20,6 +20,7 @@ export default function pickModels(gl, {
 }) {
   assert(isWebGL(gl), ILLEGAL_ARG);
   assert(framebuffer, ILLEGAL_ARG);
+  assert(position, ILLEGAL_ARG);
 
   const [x, y] = position;
 
