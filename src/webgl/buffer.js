@@ -100,7 +100,14 @@ export default class Buffer extends Resource {
 
     if (!data) {
       type = type || GL.FLOAT;
-      bytes = bytes || 0;
+
+      // Workaround needed for Safari (#291):
+      // gl.bufferData with size (second argument) equal to 0 crashes.
+      // hence create zero sized array.
+      if (!bytes || bytes === 0) {
+        bytes = 0;
+        data = new Float32Array(0);
+      }
     } else {
       type = type || getGLTypeFromTypedArray(data);
       bytes = data.byteLength;
