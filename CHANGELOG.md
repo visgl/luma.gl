@@ -4,6 +4,11 @@
 
 ## v4.0
 
+### 4.0.1
+- bufferData workaround to fix Safari crash. (#294)
+- Picking shader module: Handle invalid/null picking color (#288)
+- fix the link of lesson 16
+
 ### 4.0.0
 
 This is a major release that brings WebGL2 support to luma.gl. For more info, please see
