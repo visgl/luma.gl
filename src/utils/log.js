@@ -37,6 +37,20 @@ const log = {
   deprecated(oldUsage, newUsage) {
     log.warn(0, `luma.gl: \`${oldUsage}\` is deprecated and will be removed \
 in a later version. Use \`${newUsage}\` instead`);
+  },
+  group(priority, arg, {collapsed = false} = {}) {
+    if (priority <= log.priority) {
+      if (collapsed) {
+        console.groupCollapsed(`luma.gl: ${arg}`);
+      } else {
+        console.group(`luma.gl: ${arg}`);
+      }
+    }
+  },
+  groupEnd(priority, arg) {
+    if (priority <= log.priority) {
+      console.groupEnd(`luma.gl: ${arg}`);
+    }
   }
 };
 
@@ -54,12 +68,16 @@ function formatArrayValue(v, opts) {
 }
 
 export function formatValue(v, opts = {}) {
+  const EPSILON = 1e-16;
   const {isInteger = false} = opts;
   if (Array.isArray(v) || ArrayBuffer.isView(v)) {
     return formatArrayValue(v, opts);
   }
   if (!Number.isFinite(v)) {
     return String(v);
+  }
+  if (Math.abs(v) < EPSILON) {
+    return isInteger ? '0' : '0.';
   }
   if (isInteger) {
     return v.toFixed(0);

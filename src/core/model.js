@@ -321,11 +321,11 @@ export default class Model extends Object3D {
 
     this.setUniforms(resolvedUniforms);
 
-    log.log(2, `>>> RENDERING MODEL ${this.id}`, this);
+    log.group(2, `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
 
     this.setProgramState();
 
-    this._logAttributesAndUniforms(3, resolvedUniforms);
+    this._logAttributesAndUniforms(2, resolvedUniforms);
 
     this.onBeforeRender();
 
@@ -355,7 +355,7 @@ export default class Model extends Object3D {
 
     this.setNeedsRedraw(false);
 
-    log.log(2, `<<< RENDERING MODEL ${this.id} - complete`);
+    log.groupEnd(2, `>>> RENDERING MODEL ${this.id}`);
 
     return this;
   }
@@ -405,12 +405,12 @@ export default class Model extends Object3D {
           this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
 
         // Log stats
-        log.log(2, 'program.id: ', this.program.id);
-        log.log(2, `last frame time: ${this.stats.lastFrameTime}ms`);
-        log.log(2, `average frame time ${this.stats.averageFrameTime}ms`);
-        log.log(2, `accumulated frame time: ${this.stats.accumulatedFrameTime}ms`);
-        log.log(2, `profile frame count: ${this.stats.profileFrameCount}`);
-
+        log.log(2, `\
+GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
+avg ${this.stats.averageFrameTime}ms \
+acc: ${this.stats.accumulatedFrameTime}ms \
+count: ${this.stats.profileFrameCount}`
+        );
       }
     }
   }
@@ -447,14 +447,14 @@ export default class Model extends Object3D {
   _logAttributesAndUniforms(priority = 3, uniforms = {}) {
     if (log.priority >= priority) {
       const attributeTable = this._getAttributesTable({
-        header: `Attributes ${this.id}`,
+        header: `${this.id} attributes`,
         program: this.program,
         attributes: Object.assign({}, this.geometry.attributes, this.attributes)
       });
       log.table(priority, attributeTable);
 
       const {table, unusedTable, unusedCount} = getUniformsTable({
-        header: `Uniforms ${this.id}`,
+        header: `${this.id} uniforms`,
         program: this.program,
         uniforms: Object.assign({}, this.uniforms, uniforms)
       });
@@ -475,27 +475,27 @@ export default class Model extends Object3D {
   } = {}) {
     assert(program);
     const attributeLocations = program._attributeLocations;
-    const table = {[header]: {}};
+    const table = {}; // {[header]: {}};
 
     // Add used attributes
     for (const attributeName in attributeLocations) {
       const attribute = attributes[attributeName];
       const location = attributeLocations[attributeName];
-      table[attributeName] = this._getAttributeEntry(attribute, location);
+      table[attributeName] = this._getAttributeEntry(attribute, location, header);
     }
 
     // Add any unused attributes
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       if (!table[attributeName]) {
-        table[attributeName] = this._getAttributeEntry(attribute, null);
+        table[attributeName] = this._getAttributeEntry(attribute, null, header);
       }
     }
 
     return table;
   }
 
-  _getAttributeEntry(attribute, location) {
+  _getAttributeEntry(attribute, location, header) {
     const round = num => Math.round(num * 10) / 10;
 
     let type = 'NOT PROVIDED';
@@ -531,9 +531,9 @@ export default class Model extends Object3D {
     const isInteger = type.indexOf('nt') !== -1;
 
     return {
-      Location: `${location}${instanced ? ' [instanced]' : ''}`,
-      'Type Size x Verts = Bytes': `${type} ${size} x ${verts} = ${bytes}`,
-      Value: formatValue(value, {size, isInteger})
+      'Inst/Verts/Comps/Bytes/Type/Loc':
+        `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes} ${type}) loc=${location}`,
+      [header]: formatValue(value, {size, isInteger})
     };
   }
 
