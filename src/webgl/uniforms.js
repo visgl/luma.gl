@@ -204,6 +204,17 @@ function checkUniformValue(value) {
   return ok;
 }
 
+// Helper
+function addUniform(table, header, uniforms, uniformName) {
+  const value = uniforms[uniformName];
+  const isDefined = value !== undefined && value !== null;
+  table[uniformName] = {
+    // Add program's unprovided uniforms
+    Type: isDefined ? value : 'NOT PROVIDED',
+    [header]: isDefined ? formatValue(value) : 'N/A'
+  };
+}
+
 // Prepares a table suitable for console.table
 /* eslint-disable max-statements */
 export function getUniformsTable({
@@ -213,42 +224,38 @@ export function getUniformsTable({
 } = {}) {
   assert(program);
 
+  const SHADER_MODULE_UNIFORM_REGEXP = '.*_.*';
+
   const uniformLocations = program._uniformSetters;
-  const table = {[header]: {}};
+  const table = {}; // {[header]: {}};
 
-  // Add program's provided uniforms
-  for (const uniformName in uniformLocations) {
-    const uniform = uniforms[uniformName];
-    if (uniform !== undefined) {
-      table[uniformName] = {
-        Type: uniform,
-        Value: formatValue(uniform)
-      };
+  // Add program's provided uniforms (in alphabetical order)
+  const uniformNames = Object.keys(uniformLocations).sort();
+
+  // First add non-underscored uniforms (assumed not coming from shader modules)
+  for (const uniformName of uniformNames) {
+    if (!uniformName.match(SHADER_MODULE_UNIFORM_REGEXP)) {
+      addUniform(table, header, uniforms, uniformName);
     }
   }
 
-  // Add program's unprovided uniforms
-  for (const uniformName in uniformLocations) {
-    const uniform = uniforms[uniformName];
-    if (uniform === undefined) {
-      table[uniformName] = {
-        Type: 'NOT PROVIDED',
-        Value: 'N/A'
-      };
+  // add underscored uniforms (assumed from shader modules)
+  for (const uniformName of uniformNames) {
+    if (!table[uniformName]) {
+      addUniform(table, header, uniforms, uniformName);
     }
   }
 
+  // Create a table of unused uniforms
   const unusedTable = {};
   let unusedCount = 0;
-
-  // List any unused uniforms
   for (const uniformName in uniforms) {
     const uniform = uniforms[uniformName];
     if (!table[uniformName]) {
       unusedCount++;
       unusedTable[uniformName] = {
         Type: `NOT USED: ${uniform}`,
-        Value: formatValue(uniform)
+        [header]: formatValue(uniform)
       };
     }
   }

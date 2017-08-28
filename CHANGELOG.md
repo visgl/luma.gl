@@ -1,5 +1,17 @@
 # Pre-releases
 
+## 4.1.0-alpha.2
+ Debug improvements
+ - [x] wrap uniform/attribute tables in group (more compact log level 2)
+ - [x] remove rendering model end log (unnecessary line)
+ - [x] sort uniforms in table - first local uniforms, then module uniforms
+ - [x] title of model (layer) in table - more prominent, don't waste row
+ - [x] unify middle columns in attribute table (location and type/size/vert column)
+ - [x] reduce #lines of log from queryTimer (model.js) - enabled for all when seer is active
+
+## 4.1.0-alpha.1
+- Add SphericalCoordinates and export Euler (#295)
+
 ## 4.0.0-beta.6
 - Call assembleShaders always (#270)
 - Remove invalid assert on GL.POINTS (#268)
