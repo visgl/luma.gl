@@ -12,6 +12,10 @@
 ## 4.1.0-alpha.1
 - Add SphericalCoordinates and export Euler (#295)
 
+## 4.0.1
+
+- Wire up ShaderCache in Model class to avoid re-compilaiton of same shader (#301)
+
 ## 4.0.0-beta.6
 - Call assembleShaders always (#270)
 - Remove invalid assert on GL.POINTS (#268)
