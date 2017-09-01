@@ -1,3 +1,4 @@
+/* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
 import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGL} from '../webgl';
 // import {withParameters} from '../webgl/context-state';
@@ -55,7 +56,9 @@ export default class Model extends Object3D {
     defaultUniforms,
 
     // 3: Pre-created program
-    program,
+    program = null,
+
+    shaderCache = null,
 
     isInstanced = false, // Enables instanced rendering
     instanced, // deprecated
@@ -85,7 +88,8 @@ export default class Model extends Object3D {
       defines,
       moduleSettings,
       defaultUniforms,
-      program
+      program,
+      shaderCache
     });
 
     this.uniforms = {};
@@ -157,28 +161,44 @@ export default class Model extends Object3D {
     defines,
     moduleSettings,
     defaultUniforms,
-    program
+    program,
+    shaderCache
   }) {
-    // Assign default shaders if none are provided
-    if (!vs) {
-      vs = MODULAR_SHADERS.vs;
+
+    this.getModuleUniforms = x => {};
+
+    if (!program) {
+      // Assign default shaders if none are provided
+      if (!vs) {
+        vs = MODULAR_SHADERS.vs;
+      }
+      if (!fs) {
+        fs = MODULAR_SHADERS.fs;
+      }
+
+      // Assign default uniforms (if any default shaders are being used)
+      if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
+        log.warn(0, `luma.gl: default shaders are deprecated and will be removed \
+in a future version. Use shader modules instead.`);
+        defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
+      }
+
+      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
+      ({vs, fs} = assembleResult);
+
+      // Retrive compiled shaders from cache if exist, otherwise add to the cache.
+      if (shaderCache) {
+        vs = shaderCache.getVertexShader(this.gl, vs);
+        fs = shaderCache.getFragmentShader(this.gl, fs);
+      }
+
+      const {getUniforms} = assembleResult;
+      this.getModuleUniforms = getUniforms || (x => {});
+
+      program = new Program(this.gl, {vs, fs});
     }
-    if (!fs) {
-      fs = MODULAR_SHADERS.fs;
-    }
 
-    // Assign default uniforms (if any default shaders are being used)
-    if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
-      defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
-    }
-
-    const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
-    ({vs, fs} = assembleResult);
-    const {getUniforms} = assembleResult;
-
-    this.getModuleUniforms = getUniforms || (x => {});
-
-    this.program = program || new Program(this.gl, {vs, fs});
+    this.program = program;
     assert(this.program instanceof Program, 'Model needs a program');
   }
   /* eslint-enable complexity */

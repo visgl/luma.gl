@@ -1,6 +1,6 @@
 import {
   GL, AnimationLoop, setParameters, loadTextures, Buffer, Matrix4, radians,
-  Sphere, project, diffuse, picking, pickModels
+  Sphere, project, diffuse, picking, pickModels, ShaderCache
 } from 'luma.gl';
 
 const PLANETS = [
@@ -19,6 +19,8 @@ const animationLoop = new AnimationLoop({
   onInitialize: ({gl, canvas}) => {
     // Use non zero pickingColor to identify if the model has been picked or not.
     const pickingColorsData = new Float32Array(10000).fill(1.0);
+
+    const shaderCache = new ShaderCache({gl});
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -58,7 +60,8 @@ const animationLoop = new AnimationLoop({
         moduleSettings: {
           diffuseTexture: textures[i],
           pickingThreshold: 0
-        }
+        },
+        shaderCache
       })
       .setPosition([
         Math.cos(i / PLANETS.length * Math.PI * 2) * 3,

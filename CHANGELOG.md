@@ -2,6 +2,8 @@
 
 # Official releases
 
+- Wire up ShaderCache in Model class to avoid re-compilaiton of same shader (#301)
+
 ## v4.0
 
 ### 4.0.1
