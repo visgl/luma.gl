@@ -74,6 +74,7 @@ The constructor for the Model class. Use this to create a new Model.
   * `modules` - shader modules to be applied.
   * `moduleSettings` - any uniforms needed by shader modules.
   * `program` - pre created program to use, when provided, vs, ps and modules are not used.
+  * `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
   * `isInstanced` - default value is false.
   * `instanceCount` - default value is 0.
   * `vertexCount` - when not provided will be deduced from `geometry` object.
