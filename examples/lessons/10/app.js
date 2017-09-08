@@ -76,7 +76,7 @@ const animationLoop = new AnimationLoop({
 animationLoop.getInfo = () => {
   return `
   <p>
-    <a href="http://learningwebgl.com/blog/?p=1008" target="_blank">
+    <a href="http://learningwebgl.com/blog/?p=1067" target="_blank">
       Improving the code structure with lots of moving objects
     </a>
   <p>
