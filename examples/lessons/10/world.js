@@ -30,11 +30,11 @@ void main(void) {
 `;
 
 function loadWorldGeometry(data) {
-  var lines = data.split("\n");
-  var vertexPositions = [];
-  var vertexTextureCoords = [];
-  for (var i in lines) {
-	var vals = lines[i].replace(/^\s+/, "").split(/\s+/);
+  let lines = data.split("\n");
+  let vertexPositions = [];
+  let vertexTextureCoords = [];
+  for (let i in lines) {
+	let vals = lines[i].replace(/^\s+/, "").split(/\s+/);
     if (vals.length == 5 && vals[0] != "//") {
       // It is a line describing a vertex; get X, Y and Z first
       vertexPositions.push(parseFloat(vals[0]));
