@@ -66,30 +66,6 @@ export class World extends Model {
         uSampler: opts.texture
       },
     });
-
-    this.angle = 0;
-    this.dist = opts.startingDistance;
-    this.rotationSpeed = opts.rotationSpeed;
-    this.spin = 0;
-  }
-
-  animate(elapsedTime, twinkle) {
-    this.angle += this.rotationSpeed / 10;
-    this.dist -= 0.001;
-
-    if (this.dist < 0) {
-      this.dist += 5;
-      this.randomiseColors();
-    }
-
-    this.position.set(
-      Math.cos(this.angle) * this.dist,
-      Math.sin(this.angle) * this.dist,
-      0
-    );
-    this.setRotation([0, 0, this.spin]);
-    this.spin += 0.1;
-    this.updateMatrix();
   }
 }
 
