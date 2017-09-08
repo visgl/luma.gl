@@ -1,0 +1,96 @@
+import {Program, Geometry, Model} from 'luma.gl';
+
+const VERTEX_SHADER = `\
+attribute vec3 positions;
+attribute vec2 texCoords;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+
+varying vec2 vTextureCoord;
+
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vTextureCoord = texCoords;
+}
+`;
+
+const FRAGMENT_SHADER = `\
+#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec2 vTextureCoord;
+
+uniform sampler2D uSampler;
+
+void main(void) {
+  gl_FragColor = vec4(texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t)).rgb, 1.0);
+}
+`;
+
+function loadWorldGeometry(data) {
+  var lines = data.split("\n");
+  var vertexPositions = [];
+  var vertexTextureCoords = [];
+  for (var i in lines) {
+	var vals = lines[i].replace(/^\s+/, "").split(/\s+/);
+    if (vals.length == 5 && vals[0] != "//") {
+      // It is a line describing a vertex; get X, Y and Z first
+      vertexPositions.push(parseFloat(vals[0]));
+      vertexPositions.push(parseFloat(vals[1]));
+      vertexPositions.push(parseFloat(vals[2]));
+      // And then the texture coords
+      vertexTextureCoords.push(parseFloat(vals[3]));
+      vertexTextureCoords.push(parseFloat(vals[4]));
+     }
+  }
+  return new Geometry({
+    positions: new Float32Array(vertexPositions),
+    texCoords: new Float32Array(vertexTextureCoords)
+  });
+}
+    
+export class World extends Model {
+  constructor(opts = {}) {
+    const program = new Program(opts.gl, {
+      fs: FRAGMENT_SHADER,
+      vs: VERTEX_SHADER
+    });
+
+    super({
+      gl: opts.gl,
+      program,
+      geometry: opts.geometry,
+      uniforms: {
+        uSampler: opts.texture
+      },
+    });
+
+    this.angle = 0;
+    this.dist = opts.startingDistance;
+    this.rotationSpeed = opts.rotationSpeed;
+    this.spin = 0;
+  }
+
+  animate(elapsedTime, twinkle) {
+    this.angle += this.rotationSpeed / 10;
+    this.dist -= 0.001;
+
+    if (this.dist < 0) {
+      this.dist += 5;
+      this.randomiseColors();
+    }
+
+    this.position.set(
+      Math.cos(this.angle) * this.dist,
+      Math.sin(this.angle) * this.dist,
+      0
+    );
+    this.setRotation([0, 0, this.spin]);
+    this.spin += 0.1;
+    this.updateMatrix();
+  }
+}
+
+export {loadWorldGeometry};
