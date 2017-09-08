@@ -21,12 +21,19 @@ const cameraInfo = {
   yPos: 0.4,
   zPos: 0,
   speed: 0,
+  joggingAngle: 0, // Used to make us "jog" up and down as we move forward.
   direction: [0, 0, -1]
 };
 
+const timeLine = {
+  lastTime: 0
+};
+
+const currentlyPressedKeys = {};
+
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-    addKeyboardHandler(canvas);
+    addKeyboardHandler(canvas, currentlyPressedKeys);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -68,8 +75,8 @@ const animationLoop = new AnimationLoop({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
-    handleKeys();
-    animate();
+    handleKeys(cameraInfo, currentlyPressedKeys);
+    animate(cameraInfo, timeLine);
   }
 });
 
@@ -88,9 +95,7 @@ function degToRad(degree) {
   return degree / 180 * Math.PI;
 }
 
-let currentlyPressedKeys = {};
-
-function addKeyboardHandler(canvas) {
+function addKeyboardHandler(canvas, currentlyPressedKeys) {
   addEvents(canvas, {
     onKeyDown(e) {
       currentlyPressedKeys[e.code] = true;
@@ -101,7 +106,7 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-function handleKeys() {
+function handleKeys(cameraInfo, currentlyPressedKeys) {
   if (currentlyPressedKeys[33]) {
       // Page Up
     cameraInfo.pitchRate = 0.1;
@@ -131,24 +136,20 @@ function handleKeys() {
   }
 }
 
-let lastTime = 0;
-// Used to make us "jog" up and down as we move forward.
-let joggingAngle = 0;
-
-function animate() {
-    let timeNow = new Date().getTime();
-    if (lastTime != 0) {
-        let elapsed = timeNow - lastTime;
-        if (cameraInfo.speed != 0) {
-          cameraInfo.xPos -= Math.sin(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
-          cameraInfo.zPos -= Math.cos(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
-          cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - makes it feel more realistic :-)
-          cameraInfo.yPos = Math.sin(degToRad(joggingAngle)) / 20 + 0.4
-        }
-        cameraInfo.yaw += cameraInfo.yawRate * elapsed;
-        cameraInfo.pitch += cameraInfo.pitchRate * elapsed;
+function animate(cameraInfo, timeLine) {
+  let timeNow = new Date().getTime();
+  if (timeLine.lastTime != 0) {
+    let elapsed = timeNow - timeLine.lastTime;
+      if (cameraInfo.speed != 0) {
+        cameraInfo.xPos -= Math.sin(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+        cameraInfo.zPos -= Math.cos(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+        cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - makes it feel more realistic :-)
+        cameraInfo.yPos = Math.sin(degToRad(cameraInfo.joggingAngle)) / 20 + 0.4
+       }
+      cameraInfo.yaw += cameraInfo.yawRate * elapsed;
+      cameraInfo.pitch += cameraInfo.pitchRate * elapsed;
     }
-    lastTime = timeNow;
+    timeLine.lastTime = timeNow;
 }
 
 export default animationLoop;
