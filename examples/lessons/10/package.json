@@ -1,8 +1,8 @@
 {
-  "name": "luma.gl-examples-shadowmap",
-  "description": "An es6 shadowmap example for luma.gl.",
+  "name": "luma.gl-examples-lesson10",
+  "description": "An es6 example for luma.gl.",
   "contributors": [
-    "Rye Terrell <ryeterrell@ryeterrell.net"
+    "Jian Huang <jianh@uber.com>"
   ],
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
