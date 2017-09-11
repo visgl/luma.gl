@@ -69,7 +69,7 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     let uMVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]})
+      .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]});
 
     world.render({
       uMVMatrix,

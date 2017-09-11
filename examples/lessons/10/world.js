@@ -46,8 +46,10 @@ function loadWorldGeometry(data) {
      }
   }
   return new Geometry({
-    positions: new Float32Array(vertexPositions),
-    texCoords: new Float32Array(vertexTextureCoords)
+    attributes: {
+      positions: new Float32Array(vertexPositions),
+      texCoords: new Float32Array(vertexTextureCoords)
+    }
   });
 }
     
@@ -58,8 +60,7 @@ export class World extends Model {
       vs: VERTEX_SHADER
     });
 
-    super({
-      gl: opts.gl,
+    super(opts.gl, {
       program,
       geometry: opts.geometry,
       uniforms: {
