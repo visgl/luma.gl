@@ -2,8 +2,7 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global document */
 import {
-  GL, AnimationLoop, loadTextures, loadFile, addEvents, Vector3,
-  resetParameters, setParameters, Program, Sphere
+  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Program, Sphere
 } from 'luma.gl';
 
 import {
