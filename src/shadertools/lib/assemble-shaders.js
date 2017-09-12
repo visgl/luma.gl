@@ -116,7 +116,18 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
   }
 
   // Add the actual source of this shader
-  assembledSource += source;
+  if (source.indexOf('#version ') === 0) {
+    // Keep any version directive at the begining of the shader
+    // TODO : keep all pre-processor statements at the begining of the shader.
+    const lines = source.split('\n');
+    const assembledLines = [
+      lines[0],
+      assembledSource
+    ].concat(lines.slice(1));
+    assembledSource = assembledLines.join('\n');
+  } else {
+    assembledSource += source;
+  }
 
   // Finally, if requested, insert an automatic module injector chunk
   if (inject) {
