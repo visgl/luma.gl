@@ -1,8 +1,5 @@
-/* eslint-disable no-var, max-statements */
-/* eslint-disable array-bracket-spacing, no-multi-spaces */
-/* global document */
 import {
-  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Program, Sphere
+  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere
 } from 'luma.gl';
 
 import {
@@ -83,13 +80,9 @@ const animationLoop = new AnimationLoop({
       urls: ['moon.gif']
     })
     .then(textures => {
-      let program = new Program(gl, {
-        fs: FRAGMENT_SHADER,
-        vs: VERTEX_SHADER
-      });
-
       let moon = new Sphere(gl, {
-        program,
+        fs: FRAGMENT_SHADER,
+        vs: VERTEX_SHADER,
         uniforms: {
           uSampler: textures[0]
         },
@@ -157,7 +150,7 @@ animationLoop.getInfo = () => {
   return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=1253" target="_blank">
-      Improving the code structure with lots of moving objects
+    Spheres, rotation matrices, and mouse events
     </a>
   <p>
     The classic WebGL Lessons in luma.gl
@@ -203,4 +196,4 @@ function addMouseHandler(canvas, mouseMovement, moonRotation) {
 export default animationLoop;
 
 // expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+window.animationLoop = animationLoop;

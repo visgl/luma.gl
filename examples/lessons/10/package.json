@@ -1,6 +1,5 @@
 {
-  "name": "luma.gl-examples-lesson10",
-  "description": "An es6 example for luma.gl.",
+  "description": "The classic WebGL Lesson 10 ported to luma.gl.",
   "contributors": [
     "Jian Huang <jianh@uber.com>"
   ],
@@ -10,7 +9,7 @@
   },
   "dependencies": {
     "luma.gl": ">=4.0.0",
-    "math.gl": "1.0.0-alpha.7"
+    "math.gl": ">=1.0.0-alpha.7"
   },
   "devDependencies": {
     "webpack-dev-server": "^2.2.0",

@@ -1,6 +1,3 @@
-/* eslint-disable no-var, max-statements */
-/* eslint-disable array-bracket-spacing, no-multi-spaces */
-/* global document */
 import {
   GL, AnimationLoop, loadTextures, loadFile, addEvents,
   resetParameters, setParameters
@@ -84,7 +81,7 @@ animationLoop.getInfo = () => {
   return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=1067" target="_blank">
-      Improving the code structure with lots of moving objects
+    Loading a world, and the most basic kind of camera
     </a>
   <p>
     The classic WebGL Lessons in luma.gl
@@ -155,4 +152,4 @@ function animate(cameraInfo, timeLine) {
 export default animationLoop;
 
 // expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+window.animationLoop = animationLoop;
