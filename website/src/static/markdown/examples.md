@@ -118,6 +118,20 @@
       </a>
     </div>
   </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 10" data-title="3D World">
+      <a href="#/examples/webgl-lessons/lesson-10-3d-world">
+        <img src="images/lesson-10.png" />
+      </a>
+    </div>
+  </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 11" data-title="Sphere">
+      <a href="#/examples/webgl-lessons/lesson-11-sphere">
+        <img src="images/lesson-11.png" />
+      </a>
+    </div>
+  </div>
   <div class="thumb">
     <div class="bg-black" data-name="Lesson 10" data-title="Render To Texture">
       <a href="#/examples/webgl-lessons/lesson-16-render-texture">
