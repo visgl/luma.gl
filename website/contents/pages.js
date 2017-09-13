@@ -157,6 +157,22 @@ export const EXAMPLE_PAGES = [
           path: `${RAW_GITHUB}/examples/lessons/09/`
         }
       },
+      {
+        name: 'Lesson 10 - 3D World',
+        content: {
+          demo: 'Lesson10',
+          code: `${GITHUB_TREE}/examples/lessons/10/`,
+          path: `${RAW_GITHUB}/examples/lessons/10/`
+        }
+      },
+      {
+        name: 'Lesson 11 - Sphere',
+        content: {
+          demo: 'Lesson11',
+          code: `${GITHUB_TREE}/examples/lessons/11/`,
+          path: `${RAW_GITHUB}/examples/lessons/11/`
+        }
+      },
       // {
       //   name: 'Lesson 10',
       //   content: {
