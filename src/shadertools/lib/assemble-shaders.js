@@ -91,6 +91,16 @@ function assembleShader(gl, {
 }) {
   assert(typeof source === 'string', 'shader source must be a string');
 
+  const sourceLines = source.split('\n');
+  let versionLine = '';
+  let coreSource = source;
+  // Extract any version directive string from source.
+  // TODO : keep all pre-processor statements at the begining of the shader.
+  if (sourceLines[0].indexOf('#version ') === 0) {
+    versionLine = sourceLines[0];
+    coreSource = sourceLines.slice(1).join('\n');
+  }
+
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
   // Add precision declaration for fragment shaders
@@ -115,19 +125,8 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
     }
   }
 
-  // Add the actual source of this shader
-  if (source.indexOf('#version ') === 0) {
-    // Keep any version directive at the begining of the shader
-    // TODO : keep all pre-processor statements at the begining of the shader.
-    const lines = source.split('\n');
-    const assembledLines = [
-      lines[0],
-      assembledSource
-    ].concat(lines.slice(1));
-    assembledSource = assembledLines.join('\n');
-  } else {
-    assembledSource += source;
-  }
+  // Add the version directive and actual source of this shader
+  assembledSource = versionLine + assembledSource + coreSource;
 
   // Finally, if requested, insert an automatic module injector chunk
   if (inject) {
