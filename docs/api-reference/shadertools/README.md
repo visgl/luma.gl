@@ -102,6 +102,7 @@ Remarks:
 * Will inject platform prologue, with defines identifying GPU driver to enable bug workarounds
 * Will inject a GLSL feature detection prologue, simplifying writing code that works with GLSL extensions and across GLSL versions (WebGL1 and WebGL2)
 * Will follow module dependencies and inject dependency tree in correct order
+* Version directive (like `#version 300 es`) must be the very first line in `vs` and `fs` shader if it exists, `assembleShaders` will make sure it is still the very first line in resolved shader.
 
 
 ### `registerShaderModules`
