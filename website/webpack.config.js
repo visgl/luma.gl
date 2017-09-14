@@ -46,7 +46,8 @@ const COMMON_CONFIG = {
 
   resolve: {
     alias: {
-      'luma.gl': libSources
+      'luma.gl': libSources,
+      'math.gl': join(__dirname, 'node_modules/math.gl')
     }
   },
 

@@ -5,7 +5,7 @@ import {
 
 import {
   Matrix4
-} from 'math.gl'
+} from 'math.gl';
 
 import {loadWorldGeometry, World} from './world';
 

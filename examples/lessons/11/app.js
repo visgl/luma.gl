@@ -4,7 +4,7 @@ import {
 
 import {
   Matrix4
-} from 'math.gl'
+} from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
