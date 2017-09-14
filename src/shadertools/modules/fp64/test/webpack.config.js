@@ -25,7 +25,7 @@ module.exports = {
 
   resolve: {
     alias: {
-      'deck.gl': resolve('../../../src')
+      'luma.gl': resolve('../../../../../src')
     }
   },
 

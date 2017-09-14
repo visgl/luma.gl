@@ -49,7 +49,7 @@
     "test": "npm run lint && npm run build && npm run test-node",
     "test-cover": "NODE_ENV=test tape -r babel-register test/node.js && nyc report",
     "test-fast": "node test/node.js",
-    "test-fp64": "(cd src/shadertools/fp64/test && webpack-dev-server --progress --hot --open)",
+    "test-fp64": "(cd src/shadertools/modules/fp64/test && webpack-dev-server --progress --hot --open)",
     "test-node": "node test/node.js | faucet",
     "test-browser": "webpack-dev-server --env.test --progress --hot --open",
     "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",

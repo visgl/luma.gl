@@ -24,8 +24,7 @@
 import 'babel-polyfill';
 
 import {document, window} from 'global';
-import {Buffer, createGLContext, Program, setParameters} from 'luma.gl';
-import {assembleShaders} from 'deck.gl';
+import {Buffer, createGLContext, Program, setParameters, assembleShaders, registerShaderModules, fp64} from 'luma.gl';
 
 const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 
@@ -139,11 +138,11 @@ function initializeGL(canvas)
   });
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  var fp_texture_support = gl.getExtension('OES_texture_float');
-  if (!fp_texture_support)
-  {
-    console.error("no floating point texture support!");
-  }
+  // var fp_texture_support = gl.getExtension('OES_texture_float');
+  // if (!fp_texture_support)
+  // {
+  //   console.error("no floating point texture support!");
+  // }
   return gl;
 }
 
@@ -159,7 +158,7 @@ function initializeTexTarget(gl)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, framebuffer.width, framebuffer.height, 0, gl.RGBA, gl.FLOAT, null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, framebuffer.width, framebuffer.height, 0, gl.RGBA, gl.FLOAT, null);
 
   var renderbuffer = gl.createRenderbuffer();
   gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
@@ -251,9 +250,9 @@ function test_float_add(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_add.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
-      }));
+        modules: ['fp64']
+      }
+    ));
   program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
@@ -285,8 +284,7 @@ function test_float_sub(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
       vs: require('./vs_float_sub.glsl'),
       fs: require('./fs.glsl'),
-      fp64: true,
-      project64: true
+      modules: ['fp64']
     }));
 
   program.use();
@@ -319,11 +317,10 @@ function test_float_mul(gl, testName) {
   const float_ref_vec2 = fp64ify(float_ref);
 
   const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_mul.glsl'),
-        fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
-      }));
+    vs: require('./vs_float_mul.glsl'),
+    fs: require('./fs.glsl'),
+    modules: ['fp64']
+  }));
 
   program.use();
   program.setBuffers({
@@ -356,8 +353,7 @@ function test_float_div(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
     vs: require('./vs_float_div.glsl'),
     fs: require('./fs.glsl'),
-    fp64: true,
-    project64: true
+    modules: ['fp64']
   }));
 
   program.use();
@@ -389,8 +385,7 @@ function test_float_sqrt(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_sqrt.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -421,8 +416,7 @@ function test_float_exp(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_exp.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -453,8 +447,7 @@ function test_float_log(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_log.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -486,8 +479,7 @@ function test_float_sin(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_sin.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -518,8 +510,7 @@ function test_float_cos(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_cos.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -550,8 +541,7 @@ function test_float_tan(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_tan.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -582,8 +572,7 @@ function test_float_radians(gl, testName) {
   const program = new Program(gl, assembleShaders(gl, {
         vs: require('./vs_float_radians.glsl'),
         fs: require('./fs.glsl'),
-        fp64: true,
-        project64: true
+        modules: ['fp64']
       }));
 
   program.use();
@@ -612,6 +601,9 @@ window.onload = () => {
 
   var gl = initializeGL(canvas);
   initializeTexTarget(gl);
+
+
+  registerShaderModules([fp64]);
 
   var idx0;
   var test_no = 0;
