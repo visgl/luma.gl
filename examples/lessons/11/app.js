@@ -106,29 +106,30 @@ const animationLoop = new AnimationLoop({
     let uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    let lighting = document.getElementById("lighting").checked;
+    let element = null;
+    let lighting = (element = document.getElementById("lighting")) ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
       let ambientColor = new Vector3(
-        parseFloat(document.getElementById("ambientR").value),
-        parseFloat(document.getElementById("ambientG").value),
-        parseFloat(document.getElementById("ambientB").value)
+        parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
+        parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
+        parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
       );
 
       let lightingDirection = new Vector3(
-        parseFloat(document.getElementById("lightDirectionX").value),
-        parseFloat(document.getElementById("lightDirectionY").value),
-        parseFloat(document.getElementById("lightDirectionZ").value)
+        parseFloat((element = document.getElementById("lightDirectionX")) ? element.value : "-1"),
+        parseFloat((element = document.getElementById("lightDirectionY")) ? element.value : "-1"),
+        parseFloat((element = document.getElementById("lightDirectionZ")) ? element.value : "-1")
       );
       lightingDirection.normalize();
       lightingDirection.scale(-1);
 
       let directionalColor = new Vector3(
-        parseFloat(document.getElementById("directionalR").value),
-        parseFloat(document.getElementById("directionalG").value),
-        parseFloat(document.getElementById("directionalB").value)
+        parseFloat((element = document.getElementById("directionalR")) ? element.value : "0.8"),
+        parseFloat((element = document.getElementById("directionalG")) ? element.value : "0.8"),
+        parseFloat((element = document.getElementById("directionalB")) ? element.value : "0.8")
       );
 
       moon.setUniforms({
