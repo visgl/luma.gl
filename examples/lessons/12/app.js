@@ -2,7 +2,7 @@ import {
   GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere, Cube
 } from 'luma.gl';
 
-import { Matrix4 } from 'math.gl';
+import { Matrix4, radians } from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -56,7 +56,7 @@ void main(void) {
 `;
 
 const moonRotation = {
-  matrix: new Matrix4().rotateY(degToRad(180)).translate([5, 0, 0])
+  matrix: new Matrix4().rotateY(radians(180)).translate([5, 0, 0])
 };
 
 const cubeRotation = {
@@ -104,15 +104,11 @@ const animationLoop = new AnimationLoop({
   onRender: ({
     gl, tick, aspect, moon, cube
   }) => {
-    // Update Camera Position
+    // set camera position
     const eyePos = [0, 0, 20];
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    let uMoonMMatrix = new Matrix4()
-      .multiplyRight(moonRotation.matrix);
-    let uCubeMMatrix = new Matrix4()
-      .multiplyRight(cubeRotation.matrix);
     let uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
@@ -155,16 +151,17 @@ const animationLoop = new AnimationLoop({
     }
 
     moon.render({
-      uMMatrix: uMoonMMatrix,
+      uMMatrix: moonRotation.matrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
 
     cube.render({
-      uMMatrix: uCubeMMatrix,
+      uMMatrix: cubeRotation.matrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
+
     animate(timeline, moonRotation, cubeRotation);
   }
 });
@@ -180,10 +177,6 @@ animationLoop.getInfo = () => {
     `;
 };
 
-function degToRad(degree) {
-  return degree / 180 * Math.PI;
-}
-
 const timeline = {
   lastTime: 0
 };
@@ -193,7 +186,7 @@ function animate(timeline, moonRotation, cubeRotation) {
   if (timeline.lastTime != 0) {
     let elapsed = timeNow - timeline.lastTime;
     let newMatrix = new Matrix4()
-    .rotateY(degToRad(elapsed / 20));
+    .rotateY(radians(elapsed / 20));
     moonRotation.matrix.multiplyLeft(newMatrix);
     cubeRotation.matrix.multiplyLeft(newMatrix);
   }
