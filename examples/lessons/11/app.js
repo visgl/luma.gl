@@ -2,9 +2,7 @@ import {
   GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere
 } from 'luma.gl';
 
-import {
-  Matrix4
-} from 'math.gl'
+import { Matrix4 } from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;

@@ -3,9 +3,7 @@ import {
   resetParameters, setParameters
 } from 'luma.gl';
 
-import {
-  Matrix4
-} from 'math.gl'
+import { Matrix4 } from 'math.gl';
 
 import {loadWorldGeometry, World} from './world';
 
