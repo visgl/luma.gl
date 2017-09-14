@@ -1,3 +1,5 @@
+/* eslint max-depth: ["error", 4] */
+
 import test from 'tape-catch';
 
 import {GL} from 'luma.gl';
@@ -236,5 +238,59 @@ test('WebGLState#withParameters: recursive', t => {
   t.deepEqual(blendEquation, GL.FUNC_ADD,
     `got expected initial value ${stringifyTypedArray(blendEquation)}`);
 
+  t.end();
+});
+
+// EXT_blend_minmax
+test('WebGLState#BlendEquationMinMax', t => {
+  // TODO: For WebGL1 this test passing could be false positive.
+  // Verify if state set is scuccessful, we could be just returning the value from cache.
+
+  const {gl, gl2} = fixture;
+  const contexts = {
+    ['WebGL1 Context']: gl,
+    ['WebGL2 Context']: gl2
+  };
+  const parametersArray = [
+    {
+      [GL.BLEND_EQUATION_RGB]: GL.MAX,
+      [GL.BLEND_EQUATION_ALPHA]: GL.MIN
+    },
+    {
+      blendEquation: GL.MAX
+    }
+  ];
+  const expectedArray = [
+    {
+      [GL.BLEND_EQUATION_RGB]: GL.MAX,
+      [GL.BLEND_EQUATION_ALPHA]: GL.MIN
+    },
+    {
+      [GL.BLEND_EQUATION_RGB]: GL.MAX,
+      [GL.BLEND_EQUATION_ALPHA]: GL.MAX
+    }
+  ];
+
+  for (const contextName in contexts) {
+    const context = contexts[contextName];
+    if (context) {
+      resetParameters(context);
+
+      for (const index in parametersArray) {
+        const parameters = parametersArray[index];
+        const expected = expectedArray[index];
+
+        setParameters(context, parameters);
+
+        for (const state in expected) {
+          const value = getParameter(context, state);
+          t.equal(value, expected[state],
+            `${contextName} : expected value, ${getKey(GL, value)} received for ${getKey(GL, state)}`);
+        }
+      }
+    } else {
+      t.comment(`${contextName} not available, skipping tests`);
+    }
+  }
   t.end();
 });
