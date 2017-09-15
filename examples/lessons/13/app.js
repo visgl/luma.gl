@@ -180,12 +180,12 @@ const animationLoop = new AnimationLoop({
   onRender: ({
     gl, tick, aspect, moon, cube, vertexLightingProgram, fragmentLightingProgram
   }) => {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
     // set camera position
     const eyePos = new Matrix4()
     .rotateX(radians(-30))
     .transformVector3([0, 0, 5]);
-
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     let uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
