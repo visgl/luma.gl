@@ -47,7 +47,7 @@ export function loadImages(opts = {}) {
   let count = 0;
   return Promise.all(urls.map(
     url => {
-      const promise = loadImage(url);
+      const promise = loadImage(url, opts);
       promise.then(file => onProgress({
         progress: ++count / urls.length,
         count,
