@@ -3,7 +3,7 @@ import {
   resetParameters, setParameters
 } from 'luma.gl';
 
-import { Matrix4 } from 'math.gl';
+import { Matrix4, radians } from 'math.gl';
 
 import {loadWorldGeometry, World} from './world';
 
@@ -57,8 +57,8 @@ const animationLoop = new AnimationLoop({
     // Update Camera Position
     const eyePos = [cameraInfo.xPos, cameraInfo.yPos, cameraInfo.zPos];
     const centerPos = new Matrix4()
-      .rotateX(degToRad(cameraInfo.pitch))
-      .rotateY(degToRad(cameraInfo.yaw))
+      .rotateX(radians(cameraInfo.pitch))
+      .rotateY(radians(cameraInfo.yaw))
       .transformVector3(cameraInfo.direction)
       .add(eyePos);
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
@@ -85,10 +85,6 @@ animationLoop.getInfo = () => {
     The classic WebGL Lessons in luma.gl
     `;
 };
-
-function degToRad(degree) {
-  return degree / 180 * Math.PI;
-}
 
 function addKeyboardHandler(canvas, currentlyPressedKeys) {
   addEvents(canvas, {
@@ -136,10 +132,10 @@ function animate(cameraInfo, timeLine) {
   if (timeLine.lastTime != 0) {
     let elapsed = timeNow - timeLine.lastTime;
       if (cameraInfo.speed != 0) {
-        cameraInfo.xPos -= Math.sin(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
-        cameraInfo.zPos -= Math.cos(degToRad(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+        cameraInfo.xPos -= Math.sin(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+        cameraInfo.zPos -= Math.cos(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
         cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - makes it feel more realistic :-)
-        cameraInfo.yPos = Math.sin(degToRad(cameraInfo.joggingAngle)) / 20 + 0.4
+        cameraInfo.yPos = Math.sin(radians(cameraInfo.joggingAngle)) / 20 + 0.4
        }
       cameraInfo.yaw += cameraInfo.yawRate * elapsed;
       cameraInfo.pitch += cameraInfo.pitchRate * elapsed;

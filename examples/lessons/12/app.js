@@ -55,12 +55,10 @@ void main(void) {
 }
 `;
 
-const moonRotation = {
-  matrix: new Matrix4().rotateY(radians(180)).translate([5, 0, 0])
-};
-
-const cubeRotation = {
-  matrix: new Matrix4().translate([5, 0, 0])
+const appState = {
+  moonRotationMatrix: new Matrix4().rotateY(radians(180)).translate([5, 0, 0]),
+  cubeRotationMatrix: new Matrix4().translate([5, 0, 0]),
+  lastTime: 0
 };
 
 const animationLoop = new AnimationLoop({
@@ -151,18 +149,18 @@ const animationLoop = new AnimationLoop({
     }
 
     moon.render({
-      uMMatrix: moonRotation.matrix,
+      uMMatrix: appState.moonRotationMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
 
     cube.render({
-      uMMatrix: cubeRotation.matrix,
+      uMMatrix: appState.cubeRotationMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
 
-    animate(timeline, moonRotation, cubeRotation);
+    animate(appState);
   }
 });
 
@@ -177,20 +175,16 @@ animationLoop.getInfo = () => {
     `;
 };
 
-const timeline = {
-  lastTime: 0
-};
-
-function animate(timeline, moonRotation, cubeRotation) {
+function animate(appState) {
   var timeNow = new Date().getTime();
-  if (timeline.lastTime != 0) {
-    let elapsed = timeNow - timeline.lastTime;
+  if (appState.lastTime != 0) {
+    let elapsed = timeNow - appState.lastTime;
     let newMatrix = new Matrix4()
     .rotateY(radians(elapsed / 20));
-    moonRotation.matrix.multiplyLeft(newMatrix);
-    cubeRotation.matrix.multiplyLeft(newMatrix);
+    appState.moonRotationMatrix.multiplyLeft(newMatrix);
+    appState.cubeRotationMatrix.multiplyLeft(newMatrix);
   }
-  timeline.lastTime = timeNow;
+  appState.lastTime = timeNow;
 }
 
 export default animationLoop;
