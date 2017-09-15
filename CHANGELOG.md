@@ -4,6 +4,12 @@
 
 ## v4.0
 
+### 4.0.3 -  “September 1, 2017”
+- FIX: Allow cross-origin image loads using loadTextures(). (#308)
+- FIX: GLSL version 3.0 compilation (WebGL2 shaders). ( #306)
+- FIX: GLSL compiler error reporting.  (#308)
+- TEST: Add unit tests for MIN and MAX blend equation. ( #308)
+
 ### 4.0.2
 - Wire up ShaderCache in Model class to avoid re-compilaiton of same shader (#301)
 
