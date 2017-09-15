@@ -24,4 +24,6 @@ export {default as Lesson08} from '../../examples/lessons/08/app.js';
 export {default as Lesson09} from '../../examples/lessons/09/app.js';
 export {default as Lesson10} from '../../examples/lessons/10/app.js';
 export {default as Lesson11} from '../../examples/lessons/11/app.js';
+export {default as Lesson12} from '../../examples/lessons/12/app.js';
+export {default as Lesson13} from '../../examples/lessons/13/app.js';
 export {default as Lesson16} from '../../examples/lessons/16/app.js';

@@ -173,6 +173,22 @@ export const EXAMPLE_PAGES = [
           path: `${RAW_GITHUB}/examples/lessons/11/`
         }
       },
+      {
+        name: 'Lesson 12 - Point Lighting',
+        content: {
+          demo: 'Lesson12',
+          code: `${GITHUB_TREE}/examples/lessons/12/`,
+          path: `${RAW_GITHUB}/examples/lessons/12/`
+        }
+      },
+      {
+        name: 'Lesson 13 - Per-Fragment Lighting',
+        content: {
+          demo: 'Lesson13',
+          code: `${GITHUB_TREE}/examples/lessons/13/`,
+          path: `${RAW_GITHUB}/examples/lessons/13/`
+        }
+      },
       // {
       //   name: 'Lesson 10',
       //   content: {
