@@ -2,7 +2,7 @@ import {
   GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere
 } from 'luma.gl';
 
-import { Matrix4 } from 'math.gl';
+import { Matrix4, radians } from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -54,19 +54,16 @@ void main(void) {
 }
 `;
 
-const mouseMovement = {
+const appState = {
   mouseDown: false,
   lastMouseX: null,
-  lastMouseY: null
-};
-
-const moonRotation = {
-  matrix: new Matrix4()
+  lastMouseY: null,
+  moonRotationMatrix: new Matrix4()
 };
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-    addMouseHandler(canvas, mouseMovement, moonRotation);
+    addMouseHandler(canvas, appState);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -100,7 +97,7 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     let uMMatrix = new Matrix4()
-      .multiplyRight(moonRotation.matrix);
+      .multiplyRight(appState.moonRotationMatrix);
     let uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
@@ -156,38 +153,34 @@ animationLoop.getInfo = () => {
     `;
 };
 
-function degToRad(degree) {
-  return degree / 180 * Math.PI;
-}
-
-function addMouseHandler(canvas, mouseMovement, moonRotation) {
+function addMouseHandler(canvas, appState) {
   addEvents(canvas, {
     onDragStart(e) {
-      mouseMovement.mouseDown = true;
-      mouseMovement.lastMouseX = event.clientX;
-      mouseMovement.lastMouseY = event.clientY;
+      appState.mouseDown = true;
+      appState.lastMouseX = event.clientX;
+      appState.lastMouseY = event.clientY;
     },
     onDragMove(e) {
-      if (!mouseMovement.mouseDown) {
+      if (!appState.mouseDown) {
         return;
       }
       let newX = event.clientX;
       let newY = event.clientY;
 
-      let deltaX = newX - mouseMovement.lastMouseX
-      let deltaY = newY - mouseMovement.lastMouseY;
+      let deltaX = newX - appState.lastMouseX
+      let deltaY = newY - appState.lastMouseY;
 
       let newMatrix = new Matrix4()
-        .rotateX(degToRad(deltaY / 10))
-        .rotateY(degToRad(deltaX / 10));
+        .rotateX(radians(deltaY / 10))
+        .rotateY(radians(deltaX / 10));
 
-      moonRotation.matrix.multiplyLeft(newMatrix);
+      appState.moonRotationMatrix.multiplyLeft(newMatrix);
 
-      mouseMovement.lastMouseX = newX
-      mouseMovement.lastMouseY = newY;
+      appState.lastMouseX = newX;
+      appState.lastMouseY = newY;
     },
     onDragEnd(e) {
-      mouseMovement.mouseDown = false;
+      appState.mouseDown = false;
     }
   });
 }
