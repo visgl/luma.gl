@@ -13,8 +13,8 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 | `initialize` | Allocates and optionally initializes the buffer object's data store on GPU. |
 | `delete` | Destroys buffer |
 | `subData` | Updates a subset of a buffer object's data store. |
-| `copySubData` (WebGL2) | Copies part of the data of another buffer into this buffer |
-| `getSubData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. |
+| `copyData` (WebGL2) | Copies part of the data of another buffer into this buffer |
+| `getData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. When no destination ArrayBufferView is provided, it optimally allocates enough memory to copy all eligible data.|
 
 
 ## Usage
@@ -64,7 +64,7 @@ buffer.subData({offset: 20, data: new Float32Array([1, 2, 3])});
 Getting data from a buffer (WebGL2)
 ```js
 const buffer = ...;
-const data = buffer.getSubData({offset: 20, size: 10});
+const data = buffer.getData({srcByteOffset: 32, length: 5});
 ```
 
 Binding and unbinding a buffer
