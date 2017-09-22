@@ -13,8 +13,8 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 | `initialize` | Allocates and optionally initializes the buffer object's data store on GPU. |
 | `delete` | Destroys buffer |
 | `subData` | Updates a subset of a buffer object's data store. |
-| `copySubData` (WebGL2) | Copies part of the data of another buffer into this buffer |
-| `getSubData` (WebGL2) | Reads data from buffer (GPU) into an ArrayBuffer or SharedArrayBuffer. |
+| `copyData` (WebGL2) | Copies part of the data of another buffer into this buffer |
+| `getData` (WebGL2) | Reads data from buffer (GPU) into an `ArrayBufferView` or `SharedArrayBuffer`.|
 
 
 ## Usage
@@ -57,14 +57,38 @@ buffer.subData({})
 
 Copying data between buffers (WebGL2)
 ```js
-const buffer = new Buffer(gl, {bytes: 200})
-buffer.subData({offset: 20, data: new Float32Array([1, 2, 3])});
+const sourceBuffer = ...
+const destinationBuffer = ...
+
+// To copy 32 bytes from sourceBuffer to destinationBuffer
+destinationBuffer.copyData({sourceBuffer, size: 32});
+
+// To copy 32 bytes from sourceBuffer at 8 byte offset into
+// destinationBuffer at 16 byte offset.
+destinationBuffer.copyData({sourceBuffer,
+  readOffset: 8,
+  writeOffset: 16,
+  size: 32});
 ```
 
 Getting data from a buffer (WebGL2)
 ```js
 const buffer = ...;
-const data = buffer.getSubData({offset: 20, size: 10});
+
+// To get all the data from buffer
+const data = buffer.getData();
+
+// To get all the data from buffer starting from byteOffset 8
+// into existing ArrayBufferView.
+const existingArray = ...
+const data = buffer.getData({dstData: existingArray, srcByteOffset: 8});
+// Maximum possible elements will be copied based buffer and dstData size.
+
+// To get 5 elements from source buffer starting from byteOffset 8
+// into existing ArrayBufferView starting from 3rd element position.
+const existingArray = ...
+const data = buffer.getData({dstData: existingArray, srcByteOffset: 8, dstOffset: 3, length: 5});
+
 ```
 
 Binding and unbinding a buffer
@@ -180,14 +204,14 @@ Note:
 
 ### getData (WEBGL2)
 
-Reads data from buffer into an `ArrayBuffer` or `SharedArrayBuffer`.
+Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 
 `Buffer.getData({dstData, srcByteOffset, srcOffset, length})`
 
-* `dstData`=`null` (`ArrayBufferView` | `ArrayBuffer` | `SharedArrayBuffer` | `null`)  - memory to which to write the buffer data.
+* `dstData`=`null` (`ArrayBufferView` | `SharedArrayBuffer` | `null`)  - memory to which to write the buffer data. New ArrayBufferView allocated with correct type if not provided.
 * `srcByteOffset`=`0` (GLintptr) - byte offset from which to start reading from the buffer.
 * `srcOffset`=`0` (GLuint) - element index offset where to start reading the buffer.
-* `length`=`0` (GLuint)  Optional, defaulting to 0.
+* `length`=`0` (GLuint)  Optional, Element count to be copied, optimal value calculated when not provided.
 
 Returns a typed array containing the data from the buffer (if `dstData` was supplied it will be returned, otherwise this will be a freshly allocated array).
 
