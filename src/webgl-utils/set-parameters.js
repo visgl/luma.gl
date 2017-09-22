@@ -24,6 +24,8 @@ export const GL_PARAMETER_DEFAULTS = {
   [GL.DEPTH_RANGE]: new Float32Array([0, 1]), // TBD
   [GL.DEPTH_WRITEMASK]: true,
   [GL.DITHER]: true,
+  // FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
+  [GL.FRAMEBUFFER_BINDING]: null,
   [GL.FRONT_FACE]: GL.CCW,
   [GL.GENERATE_MIPMAP_HINT]: GL.DONT_CARE,
   [GL.LINE_WIDTH]: 1,
@@ -63,6 +65,7 @@ export const GL_PARAMETER_DEFAULTS = {
   // WEBGL2 / EXTENSIONS
   // gl1: 'OES_standard_derivatives'
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.DONT_CARE,
+  [GL.READ_FRAMEBUFFER_BINDING]: null,
   [GL.RASTERIZER_DISCARD]: false,
   [GL.PACK_ROW_LENGTH]: 0,
   [GL.PACK_SKIP_PIXELS]: 0,
@@ -102,6 +105,8 @@ export const GL_PARAMETER_SETTERS = {
   [GL.DEPTH_WRITEMASK]: (gl, value) => gl.depthMask(value),
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
+  // NOTE: FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
+  [GL.FRAMEBUFFER_BINDING]: (gl, value) => gl.bindFramebuffer(GL.FRAMEBUFFER, value),
   [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl, value) => gl.lineWidth(value),
@@ -143,6 +148,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.PACK_ROW_LENGTH]: pixelStorei,
   [GL.PACK_SKIP_PIXELS]: pixelStorei,
   [GL.PACK_SKIP_ROWS]: pixelStorei,
+  [GL.READ_FRAMEBUFFER_BINDING]: (gl, value) => gl.bindFramebuffer(GL.READ_FRAMEBUFFER, value),
   [GL.UNPACK_ROW_LENGTH]: pixelStorei,
   [GL.UNPACK_IMAGE_HEIGHT]: pixelStorei,
   [GL.UNPACK_SKIP_PIXELS]: pixelStorei,

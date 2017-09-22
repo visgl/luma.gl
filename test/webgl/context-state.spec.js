@@ -3,7 +3,7 @@
 import test from 'tape-catch';
 
 import {GL} from 'luma.gl';
-import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
+import {getParameter, getParameters, setParameters, withParameters, resetParameters, Framebuffer} from 'luma.gl';
 import {getKey} from '../../src/webgl-utils/constants-to-keys';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/set-parameters';
@@ -292,5 +292,96 @@ test('WebGLState#BlendEquationMinMax', t => {
       t.comment(`${contextName} not available, skipping tests`);
     }
   }
+  t.end();
+});
+
+test('WebGLState#bindFramebuffer (WebGL1)', t => {
+  const {gl} = fixture;
+  const framebuffer = new Framebuffer(gl);
+  let fbHandle;
+
+  resetParameters(gl);
+
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
+
+  setParameters(gl, {
+    bindFramebuffer: [gl.FRAMEBUFFER, framebuffer.handle]
+  });
+
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, framebuffer.handle, 'setParameters should set framebuffer binding');
+
+  t.end();
+});
+
+test('WebGLState#bindFramebuffer (WebGL2)', t => {
+  const {gl2} = fixture;
+  if (gl2) {
+    const framebuffer = new Framebuffer(gl2);
+    const framebufferTwo = new Framebuffer(gl2);
+    const framebufferThree = new Framebuffer(gl2);
+    let fbHandle;
+
+    resetParameters(gl2);
+
+    setParameters(gl2, {
+      bindFramebuffer: [gl2.FRAMEBUFFER, framebuffer.handle]
+    });
+
+    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
+    t.equal(fbHandle, framebuffer.handle, 'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING');
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebuffer.handle, 'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING');
+
+    setParameters(gl2, {
+      bindFramebuffer: [gl2.DRAW_FRAMEBUFFER, framebufferTwo.handle]
+    });
+    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebufferTwo.handle, 'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING');
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebuffer.handle, 'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING');
+
+    setParameters(gl2, {
+      bindFramebuffer: [gl2.READ_FRAMEBUFFER, framebufferThree.handle]
+    });
+    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebufferTwo.handle, 'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING');
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebufferThree.handle, 'READ_FRAMEBUFFER binding should set READ_FRAMEBUFFER_BINDING');
+
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
+  t.end();
+});
+
+test('WebGLState#withParameters framebuffer', t => {
+  const {gl} = fixture;
+  const framebufferOne = new Framebuffer(gl);
+  const framebufferTwo = new Framebuffer(gl);
+
+  resetParameters(gl);
+
+  let fbHandle;
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
+
+  withParameters(gl, {framebuffer: framebufferOne}, () => {
+    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    t.deepEqual(fbHandle, framebufferOne.handle, 'withParameters should bind framebuffer');
+
+    withParameters(gl, {framebuffer: framebufferTwo}, () => {
+      fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+      t.deepEqual(fbHandle, framebufferTwo.handle, 'Inner withParameters should bind framebuffer');
+    });
+
+    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    t.deepEqual(fbHandle, framebufferOne.handle, 'Inner withParameters should restore draw framebuffer binding');
+  });
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.deepEqual(fbHandle, null, 'withParameters should restore framebuffer bidning');
+
   t.end();
 });
