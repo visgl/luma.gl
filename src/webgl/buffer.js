@@ -185,33 +185,17 @@ export default class Buffer extends Resource {
     return this;
   }
 
-  //
-  /**
-   * WEBGL2 ONLY: Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
-   *
-   * @param {ArrayBufferView} dstData= -ArrayBufferView to copy elements into,
-   *    new ArrayBufferView allocated with correct type if not provided.
-   * @param {GLuint} length= -Element count to be copied, optimal value calculated
-   *    when not provided.
-   * @param {GLuint} srcByteOffset=0 Byte offset into buffer data from where data to be copied.
-   * @param {GLuint} dstOffset=0 Element offset into dstData to where data to be copied.
-   *
-   * @returns {ArrayBufferView} - Copies elements from this buffer and
-   *    returns supplied/allocated ArrayBufferView.
-   */
+  // WEBGL2 ONLY: Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
   getData({
-    dstData,
-    length,
+    dstData = null,
     srcByteOffset = 0,
-    dstOffset = 0
-  }) {
+    dstOffset = 0,
+    length = 0
+  } = {}) {
     assertWebGL2Context(this.gl);
 
-    // Use GL_COPY_READ_BUFFER to avoid disturbing other targets and locking type
     const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
-    const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
-    const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
-    const sourceAvailableElementCount = sourceElementCount - sourceElementOffset;
+    const sourceAvailableElementCount = this._getAvailableElementCount(srcByteOffset);
     let dstAvailableElementCount;
     let dstElementCount;
     const dstElementOffset = dstOffset;
@@ -233,6 +217,7 @@ export default class Buffer extends Resource {
     assert(length <= copyElementCount,
       'Invalid srcByteOffset, dstOffset and length combination');
     dstData = dstData || new ArrayType(dstElementCount);
+    // Use GL_COPY_READ_BUFFER to avoid disturbing other targets and locking type
     this.gl.bindBuffer(GL_COPY_READ_BUFFER, this.handle);
     this.gl.getBufferSubData(GL_COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
     this.gl.bindBuffer(GL_COPY_READ_BUFFER, null);
@@ -320,5 +305,12 @@ export default class Buffer extends Resource {
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);
     return value;
+  }
+
+  _getAvailableElementCount(srcByteOffset) {
+    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
+    const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
+    return sourceElementCount - sourceElementOffset;
   }
 }

@@ -98,6 +98,39 @@ test('WebGL#Buffer setData/subData', t => {
   t.end();
 });
 
+test('WebGL#Buffer copyData', t => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const sourceData = new Float32Array([1, 2, 3]);
+  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const destinationData = new Float32Array([4, 5, 6]);
+  const destinationBuffer = new Buffer(gl2, {data: destinationData});
+
+  let receivedData = destinationBuffer.getData();
+  let expectedData = new Float32Array([4, 5, 6]);
+  t.deepEqual(receivedData, expectedData, 'Buffer.getData: default parameters successful');
+
+  destinationBuffer.copyData({sourceBuffer, size: 2 * Float32Array.BYTES_PER_ELEMENT});
+  receivedData = destinationBuffer.getData();
+  expectedData = new Float32Array([1, 2, 6]);
+  t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size successful');
+
+  destinationBuffer.copyData({sourceBuffer,
+    readOffset: Float32Array.BYTES_PER_ELEMENT,
+    writeOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
+    size: Float32Array.BYTES_PER_ELEMENT});
+  receivedData = destinationBuffer.getData();
+  expectedData = new Float32Array([1, 2, 2]);
+  t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size and offsets successful');
+
+  t.end();
+});
+
 test('WebGL#Buffer getData', t => {
   const {gl2} = fixture;
   if (!gl2) {
@@ -109,7 +142,7 @@ test('WebGL#Buffer getData', t => {
   let data = new Float32Array([1, 2, 3]);
   let buffer = new Buffer(gl2, {data});
 
-  let receivedData = buffer.getData({});
+  let receivedData = buffer.getData();
   let expectedData = new Float32Array([1, 2, 3]);
   t.deepEqual(data, receivedData, 'Buffer.getData: default parameters successful');
 
@@ -140,7 +173,8 @@ test('WebGL#Buffer getData', t => {
   data = new Uint8Array([128, 255, 1]);
   buffer = new Buffer(gl2, {data});
 
-  receivedData = buffer.getData({});
+  receivedData = buffer.getData();
   t.deepEqual(data, data, 'Buffer.getData: Uint8Array + default parameters successful');
 
+  t.end();
 });
