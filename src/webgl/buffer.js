@@ -1,6 +1,6 @@
 import GL from './api';
 import {assertWebGL2Context} from './context';
-import {getGLTypeFromTypedArray} from '../utils/typed-array-utils';
+import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../utils/typed-array-utils';
 import Resource from './resource';
 import assert from 'assert';
 
@@ -185,17 +185,41 @@ export default class Buffer extends Resource {
     return this;
   }
 
-  // WEBGL2 ONLY: Reads data from buffer into an ArrayBuffer or SharedArrayBuffer.
+  // WEBGL2 ONLY: Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
   getData({
-    dstData,
+    dstData = null,
     srcByteOffset = 0,
     dstOffset = 0,
     length = 0
-  }) {
-    // TODO optimize dstData according to offset and length
-    dstData = dstData || new ArrayBuffer(this.bytes);
+  } = {}) {
+    assertWebGL2Context(this.gl);
+
+    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    const sourceAvailableElementCount = this._getAvailableElementCount(srcByteOffset);
+    let dstAvailableElementCount;
+    let dstElementCount;
+    const dstElementOffset = dstOffset;
+    if (dstData) {
+      dstElementCount = dstData.length;
+      dstAvailableElementCount = dstElementCount - dstElementOffset;
+    } else {
+      // Allocate ArrayBufferView with enough size to copy all eligible data.
+      dstAvailableElementCount = Math.min(
+        sourceAvailableElementCount,
+        length || sourceAvailableElementCount);
+      dstElementCount = dstElementOffset + dstAvailableElementCount;
+    }
+
+    const copyElementCount = Math.min(
+      sourceAvailableElementCount,
+      dstAvailableElementCount);
+    length = length || copyElementCount;
+    assert(length <= copyElementCount,
+      'Invalid srcByteOffset, dstOffset and length combination');
+    dstData = dstData || new ArrayType(dstElementCount);
+    // Use GL_COPY_READ_BUFFER to avoid disturbing other targets and locking type
     this.gl.bindBuffer(GL_COPY_READ_BUFFER, this.handle);
-    this.gl.getBufferSubData(this.target, srcByteOffset, dstData, dstOffset, length);
+    this.gl.getBufferSubData(GL_COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
     this.gl.bindBuffer(GL_COPY_READ_BUFFER, null);
     return dstData;
   }
@@ -281,5 +305,12 @@ export default class Buffer extends Resource {
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);
     return value;
+  }
+
+  _getAvailableElementCount(srcByteOffset) {
+    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
+    const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
+    return sourceElementCount - sourceElementOffset;
   }
 }
