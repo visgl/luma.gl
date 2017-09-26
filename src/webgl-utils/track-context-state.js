@@ -45,9 +45,10 @@ export const GL_STATE_SETTERS = {
 
   // SPECIFIC SETTERS
 
-  clearStencil: (setter, s) => setter({
-    [GL.STENCIL_CLEAR_VALUE]: s}
-  ),
+  bindFramebuffer: (setter, target, fb) => setter({
+    [target === GL.READ_FRAMEBUFFER ?
+      GL.READ_FRAMEBUFFER_BINDING : GL.DRAW_FRAMEBUFFER_BINDING]: fb
+  }),
 
   blendColor: (setter, r, g, b, a) => setter({
     [GL.BLEND_COLOR]: new Float32Array([r, g, b, a])}
@@ -83,6 +84,10 @@ export const GL_STATE_SETTERS = {
 
   clearDepth: (setter, depth) => setter({
     [GL.DEPTH_CLEAR_VALUE]: depth
+  }),
+
+  clearStencil: (setter, s) => setter({
+    [GL.STENCIL_CLEAR_VALUE]: s
   }),
 
   colorMask: (setter, r, g, b, a) => setter({

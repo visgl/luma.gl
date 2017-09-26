@@ -9,10 +9,12 @@ import {getKey} from '../../src/webgl-utils/constants-to-keys';
 
 import {setParameters, getParameter, getParameters, resetParameters}
   from '../../src/webgl-utils/set-parameters';
+import {Framebuffer} from 'luma.gl';
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createTestContext({debug: true, manageState: false})
+  gl: createTestContext({debug: true}),
+  gl2: createTestContext({debug: true, webgl2: true, webgl1: false})
 };
 
 function stringifyTypedArray(v) {
@@ -38,7 +40,6 @@ test('WebGL#set and get', t => {
   t.end();
 });
 
-/*
 test('WebGL#composite setter', t => {
   const {gl} = fixture;
   const compositeStateKeys = [
@@ -75,7 +76,6 @@ test('WebGL#composite setter', t => {
 
   t.end();
 });
-*/
 
 test('WebGLState#get all parameters', t => {
   const {gl} = fixture;
@@ -121,5 +121,58 @@ test('WebGL#reset', t => {
       `got expected value ${stringifyTypedArray(value)} after resetParameters for ${getKey(GL, key)}`);
   }
 
+  t.end();
+});
+
+test('WebGLState#setParameters framebuffer', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+
+  let fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  // t.equal(fbHandle, null, 'Initial frambuffer binding should be null');
+  const framebuffer = new Framebuffer(gl);
+
+  setParameters(gl, {
+    [GL.FRAMEBUFFER_BINDING]: framebuffer.handle
+  });
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, framebuffer.handle, 'setParameters should set framebuffer binding');
+
+  // verify setting null value
+  setParameters(gl, {
+    [GL.FRAMEBUFFER_BINDING]: null
+  });
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'setParameters should set framebuffer binding');
+
+  t.end();
+});
+
+test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
+  const {gl2} = fixture;
+  // const gl2 = createTestContext({webgl2: true, webgl1: false});
+  if (gl2) {
+    resetParameters(gl2);
+
+    let fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    // t.equal(fbHandle, null, 'Initial read-frambuffer binding should be null');
+    const framebuffer = new Framebuffer(gl2);
+
+    setParameters(gl2, {
+      [GL.READ_FRAMEBUFFER_BINDING]: framebuffer.handle
+    });
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, framebuffer.handle, 'setParameters should set read-framebuffer binding');
+
+    // verify setting null value
+    setParameters(gl2, {
+      [GL.READ_FRAMEBUFFER_BINDING]: null
+    });
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, null, 'setParameters should set read-framebuffer binding');
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
   t.end();
 });
