@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import 'luma.gl/headless';
-import {GL, Framebuffer, Renderbuffer, Texture2D, clear} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
 import {fixture} from '../setup';
 
@@ -183,7 +183,7 @@ function testFramebufferReadPixels(t, gl) {
   const clearColor = [1, 0.5, 0.25, 0.125];
   const expectedColor = [255, 128, 64, 32];
 
-  clear(gl, {framebuffer, color: clearColor});
+  framebuffer.clear({color: clearColor});
 
   const color = framebuffer.readPixels({
     x: 0,
@@ -290,3 +290,33 @@ test('WebGL2#Framebuffer texture attach and read', t => {
   t.end();
 });
 */
+
+test('WebGL2#Framebuffer blit', t => {
+  const {gl2} = fixture;
+  if (gl2) {
+
+    t.doesNotThrow(
+      () => {
+        const framebufferSrc = new Framebuffer(gl2);
+        const framebufferDst = new Framebuffer(gl2);
+        framebufferDst.blit({
+          srcFramebuffer: framebufferSrc,
+          srcX0: 0,
+          srcY0: 0,
+          srcX1: 1,
+          srcY1: 1,
+          dstX0: 0,
+          dstY0: 0,
+          dstX1: 1,
+          dstY1: 1,
+          color: true,
+          depth: true,
+          stencil: true});
+      },
+      'Framebuffer blit successful'
+    );
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
+  t.end();
+});
