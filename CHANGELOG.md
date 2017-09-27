@@ -1,15 +1,32 @@
 # Pre-releases
 
-## 4.1.0-alpha.2
- Debug improvements
- - [x] wrap uniform/attribute tables in group (more compact log level 2)
- - [x] remove rendering model end log (unnecessary line)
- - [x] sort uniforms in table - first local uniforms, then module uniforms
- - [x] title of model (layer) in table - more prominent, don't waste row
- - [x] unify middle columns in attribute table (location and type/size/vert column)
- - [x] reduce #lines of log from queryTimer (model.js) - enabled for all when seer is active
+## 4.1.0-alpha.3 - Sep 27
+ - Fix Framebuffer.clear (#321)
+ - Add context management support for framebuffer binding. (#319)
+ - Fix buffer.getData default parameters and target setting. (#317)
+ - Hook up website links for example "lesson 12" and "lesson 13" (#312)
+ - Add "lesson 13" example about fragment lighting and multiple programs (#311)
+ - Miscellaneous fixes: GLSL error reporting, BlendMinMax test, 'cross origin' image load
+ - Add "lesson 12" example about point lighting (#310)
+ - Add "math.gl" dependency for website (#309)
+ - fix fp64 test (#298)
+ - Lesson 11 example for creating textured and lighted sphere (#305)
+ - Keep version directive at the beginning of the shader during assembly. (#306)
+ - fix compiling warnings caused by deprecated APIs
+ - Make example work with Safari without using "var"
+ - Lesson 10 for loading a game world
+ - Wire up ShaderCache in Model class to avoid re-compilaiton of same shaders. (#301)
 
-## 4.1.0-alpha.1
+## 4.1.0-alpha.2 - Aug 28
+ Debug improvements
+ - wrap uniform/attribute tables in group (more compact log level 2)
+ - remove rendering model end log (unnecessary line)
+ - sort uniforms in table - first local uniforms, then module uniforms
+ - title of model (layer) in table - more prominent, don't waste row
+ - unify middle columns in attribute table (location and type/size/vert column)
+ - reduce #lines of log from queryTimer (model.js) - enabled for all when seer is active
+
+## 4.1.0-alpha.1 - Aug 10
 - Add SphericalCoordinates and export Euler (#295)
 
 ## 4.0.1
