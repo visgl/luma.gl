@@ -222,7 +222,7 @@ export default class Framebuffer extends Resource {
     this.gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
 
     if (color || depth || stencil) {
-      clear({color, depth, stencil});
+      clear(this.gl, {color, depth, stencil});
     }
 
     drawBuffers.forEach((value, drawBuffer) => {
