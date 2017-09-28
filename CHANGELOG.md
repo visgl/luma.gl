@@ -4,16 +4,23 @@
 
 ## v4.0
 
-### 4.0.3 -  “September 1, 2017”
+### 4.0.4 -  “September 28, 2017”
+- Add examples, lesson-10, 11, 12 and 13. (#303, #305, #307, #309, #310, #311, #312)
+- Fix fp64 shader module unit test (#298)
+- WebGL2 Buffer API fixes (#317)
+- Add context management support for Framebuffer bindings. (#319)
+- Fix Framebuffer.clear (#321)
+
+### 4.0.3 -  “September 15, 2017”
 - FIX: Allow cross-origin image loads using loadTextures(). (#308)
 - FIX: GLSL version 3.0 compilation (WebGL2 shaders). ( #306)
 - FIX: GLSL compiler error reporting.  (#308)
 - TEST: Add unit tests for MIN and MAX blend equation. ( #308)
 
-### 4.0.2
+### 4.0.2 - “September 1, 2017”
 - Wire up ShaderCache in Model class to avoid re-compilaiton of same shader (#301)
 
-### 4.0.1
+### 4.0.1 - "August 10, 2017"
 - bufferData workaround to fix Safari crash. (#294)
 - Picking shader module: Handle invalid/null picking color (#288)
 - fix the link of lesson 16
