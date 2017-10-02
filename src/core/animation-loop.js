@@ -31,6 +31,8 @@ export default class AnimationLoop {
     width = null,
     height = null,
 
+    createFramebuffer = false,
+
     // view parameters - can be changed for each start call
     autoResizeViewport = true,
     autoResizeCanvas = true,
@@ -50,6 +52,7 @@ export default class AnimationLoop {
 
     this._onCreateContext = onCreateContext;
     this.glOptions = glOptions;
+    this._createFramebuffer = createFramebuffer;
 
     this._onInitialize = onInitialize;
     this._onRender = onRender;
@@ -212,7 +215,9 @@ export default class AnimationLoop {
     }
 
     // Setup default framebuffer
-    this.framebuffer = new Framebuffer(this.gl);
+    if (this._createFramebuffer) {
+      this.framebuffer = new Framebuffer(this.gl);
+    }
     // Reset the WebGL context.
     resetParameters(this.gl);
   }
@@ -225,7 +230,9 @@ export default class AnimationLoop {
   }
 
   _resizeFramebuffer() {
-    this.framebuffer.resize({width: this.gl.canvas.width, height: this.gl.canvas.height});
+    if (this.framebuffer) {
+      this.framebuffer.resize({width: this.gl.canvas.width, height: this.gl.canvas.height});
+    }
   }
 
   // Resize the render buffer of the canvas to match canvas client size
