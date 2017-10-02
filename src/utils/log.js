@@ -1,8 +1,6 @@
 /* eslint-disable no-console */
 /* global console, window, Image */
 
-console.image = require('console-image');
-
 const cache = {};
 
 const log = {
