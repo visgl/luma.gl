@@ -2,6 +2,7 @@
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
 import GL from './constants';
+import assert from 'assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
@@ -83,8 +84,16 @@ const enable = (gl, value, key) => value ? gl.enable(key) : gl.disable(key);
 const hint = (gl, value, key) => gl.hint(key, value);
 const pixelStorei = (gl, value, key) => gl.pixelStorei(key, value);
 
-// NOTE: When value type is a string, it will be handled by 'GL_PARAMETER_COMPOSITE_SETTERS'
+const drawFramebuffer = (gl, value) => {
+  return gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, value);
+};
+const readFramebuffer = (gl, value) => {
+  return gl.bindFramebuffer(GL.READ_FRAMEBUFFER, value);
+};
 
+// Map from WebGL parameter names to corresponding WebGL setter functions
+// WegGL constants are read by parameter names, but set by function names
+// NOTE: When value type is a string, it will be handled by 'COMPOSITE_GL_PARAMETER_SETTERS'
 export const GL_PARAMETER_SETTERS = {
   [GL.BLEND]: enable,
   [GL.BLEND_COLOR]: (gl, value) => gl.blendColor(...value),
@@ -106,7 +115,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
   // NOTE: FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
-  [GL.FRAMEBUFFER_BINDING]: (gl, value) => gl.bindFramebuffer(GL.FRAMEBUFFER, value),
+  [GL.FRAMEBUFFER_BINDING]: drawFramebuffer,
   [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl, value) => gl.lineWidth(value),
@@ -148,7 +157,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.PACK_ROW_LENGTH]: pixelStorei,
   [GL.PACK_SKIP_PIXELS]: pixelStorei,
   [GL.PACK_SKIP_ROWS]: pixelStorei,
-  [GL.READ_FRAMEBUFFER_BINDING]: (gl, value) => gl.bindFramebuffer(GL.READ_FRAMEBUFFER, value),
+  [GL.READ_FRAMEBUFFER_BINDING]: readFramebuffer,
   [GL.UNPACK_ROW_LENGTH]: pixelStorei,
   [GL.UNPACK_IMAGE_HEIGHT]: pixelStorei,
   [GL.UNPACK_SKIP_PIXELS]: pixelStorei,
@@ -156,7 +165,8 @@ export const GL_PARAMETER_SETTERS = {
   [GL.UNPACK_SKIP_IMAGES]: pixelStorei
 };
 
-const GL_PARAMETER_COMPOSITE_SETTERS = {
+// COMPOSITE_WEBGL_PARAMETER_
+const COMPOSITE_GL_PARAMETER_SETTERS = {
   blendEquation: (gl, values) => gl.blendEquationSeparate(
     values[GL.BLEND_EQUATION_RGB],
     values[GL.BLEND_EQUATION_ALPHA]
@@ -217,7 +227,38 @@ export const GL_PARAMETER_GETTERS = {
   [GL.RASTERIZER_DISCARD]: isEnabled
 };
 
+// HELPER METHODS
+
+const deepArrayEqual = (x, y) => {
+  if (x === y) {
+    return true;
+  }
+  const isArrayX = Array.isArray(x) || ArrayBuffer.isView(x);
+  const isArrayY = Array.isArray(y) || ArrayBuffer.isView(y);
+  if (isArrayX && isArrayY && x.length === y.length) {
+    for (let i = 0; i < x.length; ++i) {
+      if (x[i] !== y[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
 // PUBLIC METHODS
+
+// Sets any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
+// Returns the previous value
+// Note: limited to parameter values
+export function setParameter(gl, key, value) {
+  const getter = GL_PARAMETER_GETTERS[key];
+  const prevValue = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
+  const setter = GL_PARAMETER_SETTERS[key];
+  assert(typeof setter === 'function');
+  setter(gl, value, Number(key));
+  return prevValue;
+}
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
@@ -255,7 +296,7 @@ export function setParameters(gl, values) {
 
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.
-      const compositeSetter = GL_PARAMETER_COMPOSITE_SETTERS[key];
+      const compositeSetter = COMPOSITE_GL_PARAMETER_SETTERS[key];
       // Note - if `trackContextState` has been called,
       // the setter will automatically update this.state.cache
       compositeSetter(gl, mergedValues);
@@ -300,6 +341,19 @@ export function getDefaultParameters(gl) {
   });
 }
 
+// Reset all parameters to a pure context state
 export function resetParameters(gl) {
   setParameters(gl, getDefaultParameters(gl));
+}
+
+// Get all parameters that have been modified from a pure context state
+export function getModifiedParameters(gl) {
+  const values = getParameters(GL_PARAMETER_DEFAULTS);
+  const modified = {};
+  for (const key in GL_PARAMETER_DEFAULTS) {
+    if (!deepArrayEqual(values[key], GL_PARAMETER_DEFAULTS[key])) {
+      modified[key] = values[key];
+    }
+  }
+  return modified;
 }

@@ -2,8 +2,15 @@
 import GL from '../webgl-utils/constants';
 import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
 import {log} from '../utils';
-import {isWebGL2} from './context';
-import assert from 'assert';
+
+import {
+  getParameter,
+  getParameters,
+  setParameter,
+  setParameters as glSetParameters,
+  resetParameters,
+  getModifiedParameters
+} from '../webgl-utils/set-parameters';
 
 // map of parameter setter function names, parameter constants, default values and types
 // - Uses gl function names, except when setter function exist that are named differently
@@ -12,23 +19,9 @@ import assert from 'assert';
 //   separate arguments. Thus, a `getParameter` call will always return all the separate values
 //   in an array, in a form that can be accepted by the setter.
 export const LUMA_SETTERS = {
-  bindFramebuffer: (gl, args) => {
-    assert(args.length === 2, 'bindFramebuffer needs two arguments, target and handle');
-    const [target, handle] = args;
-    if (target === GL.FRAMEBUFFER) {
-      if (isWebGL2(gl)) {
-        // NOTE: https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_framebuffer_blit.txt
-        // As per above spec, under WebGL2, FRAMEBUFFER binding updates both READ_FRAMEBUFFER and DRAW_FRAMEBUFFER
-        // This generates two bindFramebuffer calls so that our cache is correct
-        gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, handle);
-        gl.bindFramebuffer(GL.READ_FRAMEBUFFER, handle);
-      } else {
-        gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
-      }
-    } else {
-      // handle GL.DRAW_FRAMEBUFFER and GL.READ_FRAMEBUFFER
-      gl.bindFramebuffer(target, handle);
-    }
+  framebuffer: (gl, framebuffer) => {
+    const handle = framebuffer && framebuffer.handle ? framebuffer.handle : framebuffer;
+    return gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   },
   blend: (gl, value) => value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND),
   blendColor: (gl, value) => gl.blendColor(...value),
@@ -109,16 +102,21 @@ function isArray(array) {
 // GETTERS AND SETTERS
 
 // Get the parameter value(s) from the context
-export {getParameter} from '../webgl-utils/set-parameters';
+export {getParameter}; // from '../webgl-utils/set-parameters'
 
 // Get the parameters from the context
-export {getParameters} from '../webgl-utils/set-parameters';
+export {getParameters}; // from '../webgl-utils/set-parameters'
 
 // Resets gl state to default values.
-export {resetParameters} from '../webgl-utils/set-parameters';
+export {setParameter}; // from '../webgl-utils/set-parameters'
 
-// Get the parameter value(s) from the context
-import {setParameters as glSetParameters} from '../webgl-utils/set-parameters';
+// Resets gl state to default values.
+export {resetParameters}; // from '../webgl-utils/set-parameters'
+
+// Get a map of modified parameters
+export {getModifiedParameters};
+
+// Note: "setParameters" is given extra treatment below
 
 // Set the parameter value(s) by key to the context
 // Sets value with key to context.
@@ -141,40 +139,30 @@ export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
   const {frameBuffer, nocatch = true} = parameters;
-  let {framebuffer} = parameters;
   if (frameBuffer) {
     log.deprecated('withParameters({frameBuffer})', 'withParameters({framebuffer})');
-    framebuffer = frameBuffer;
-  }
-
-  // Define a helper function that will reset state after the function call
-  function resetStateAfterCall() {
-    popContextState(gl);
+    parameters.framebuffer = parameters.framebuffer || frameBuffer;
   }
 
   pushContextState(gl);
-
   setParameters(gl, parameters);
-
-  if (framebuffer) {
-    framebuffer.bind();
-  }
 
   // Setup is done, call the function
   let value;
 
   if (nocatch) {
-    // Avoid try catch to minimize debugging impact for safe execution paths
+    // Avoid try catch to minimize stack size impact for safe execution paths
     value = func(gl);
-    resetStateAfterCall();
+    popContextState(gl);
   } else {
     // Wrap in a try-catch to ensure that parameters are restored on exceptions
     try {
       value = func(gl);
     } finally {
-      resetStateAfterCall();
+      popContextState(gl);
     }
   }
+
   return value;
 }
 

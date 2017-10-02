@@ -20,6 +20,8 @@ const getWebGL2ValueOrZero = gl => !isWebGL2(gl) ? 0 : undefined;
 // if a function returns undefined in this table,
 // the original getParameter will be called, defeating the override
 const WEBGL_PARAMETERS = {
+  [GL.READ_BUFFER]: gl => !isWebGL2(gl) ? GL.COLOR_ATTACHMENT0 : undefined,
+
   // WebGL2 context parameters
   [GL_FRAGMENT_SHADER_DERIVATIVE_HINT]:
     gl => !isWebGL2(gl) ? GL_DONT_CARE : undefined,

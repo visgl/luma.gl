@@ -77,8 +77,6 @@ export default class Resource {
   /**
    * Query a Resource parameter
    *
-   * @todo - cache parameters to avoid issuing WebGL calls?
-   *
    * @param {GLenum} pname
    * @return {GLint|GLfloat|GLenum} param
    */

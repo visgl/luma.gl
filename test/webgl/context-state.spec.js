@@ -306,7 +306,7 @@ test('WebGLState#bindFramebuffer (WebGL1)', t => {
   t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
 
   setParameters(gl, {
-    bindFramebuffer: [gl.FRAMEBUFFER, framebuffer.handle]
+    framebuffer
   });
 
   fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
@@ -326,7 +326,7 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
     resetParameters(gl2);
 
     setParameters(gl2, {
-      bindFramebuffer: [gl2.FRAMEBUFFER, framebuffer.handle]
+      framebuffer: framebuffer.handle
     });
 
     fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
@@ -335,17 +335,13 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
     fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
     t.equal(fbHandle, framebuffer.handle, 'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING');
 
-    setParameters(gl2, {
-      bindFramebuffer: [gl2.DRAW_FRAMEBUFFER, framebufferTwo.handle]
-    });
+    gl2.bindFramebuffer(gl2.DRAW_FRAMEBUFFER, framebufferTwo.handle);
     fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
     t.equal(fbHandle, framebufferTwo.handle, 'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING');
     fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
     t.equal(fbHandle, framebuffer.handle, 'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING');
 
-    setParameters(gl2, {
-      bindFramebuffer: [gl2.READ_FRAMEBUFFER, framebufferThree.handle]
-    });
+    gl2.bindFramebuffer(gl2.READ_FRAMEBUFFER, framebufferThree.handle);
     fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
     t.equal(fbHandle, framebufferTwo.handle, 'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING');
     fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);

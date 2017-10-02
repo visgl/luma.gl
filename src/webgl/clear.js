@@ -22,10 +22,12 @@ export function clear(gl, {
   depth = null,
   stencil = null
 } = {}) {
-  const parameters = {
-    nocatch: false,
-    framebuffer
-  };
+  const parameters = {};
+
+  if (framebuffer) {
+    parameters.framebuffer = framebuffer;
+  }
+
   let clearFlags = 0;
 
   if (color) {

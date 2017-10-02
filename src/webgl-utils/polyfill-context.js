@@ -93,6 +93,14 @@ const WEBGL_CONTEXT_POLYFILLS = {
     queryCounter: null
   },
   OVERRIDES: {
+    // Ensure readBuffer is a no-op
+    readBuffer: (gl, originalFunc, attachment) => {
+      if (isWebGL2(gl)) {
+        originalFunc(attachment);
+      } else {
+        // assert(attachment !== GL_COLOR_ATTACHMENT0 && attachment !== GL_FRONT);
+      }
+    },
     // Override for getVertexAttrib that returns sane values for non-WebGL1 constants
     getVertexAttrib: (gl, originalFunc, location, pname) => {
       // const gl = this; // eslint-disable-line
