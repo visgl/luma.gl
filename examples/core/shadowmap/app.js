@@ -100,7 +100,7 @@ const animationLoop = new AnimationLoop({
     });
 
     return {
-      fbShadow: new Framebuffer(gl, {width: 1024, height: 1024}),
+      fbShadow: new Framebuffer(gl, {id: 'shadowmap', width: 1024, height: 1024}),
       cube: new Cube(gl, {vs: SCENE_VERTEX, fs: SCENE_FRAGMENT}),
       shadow: new Cube(gl, {vs: SHADOWMAP_VERTEX, fs: SHADOWMAP_FRAGMENT})
     };
@@ -149,7 +149,7 @@ const animationLoop = new AnimationLoop({
       uProjection: camProj,
       uShadowView: shadowView,
       uShadowProj: shadowProj,
-      uShadowMap: fbShadow.texture
+      uShadowMap: fbShadow
     });
 
     cube.render({

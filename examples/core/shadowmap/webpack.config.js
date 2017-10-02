@@ -2,7 +2,7 @@ const {resolve} = require('path');
 
 const CONFIG = {
   entry: {
-    app: resolve('./src/app.js')
+    app: resolve('./app.js')
   }
 };
 
