@@ -20,6 +20,8 @@ This will become a hard error in a future version of luma.gl.`;
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
+const LOG_DRAW_PRIORITY = 2;
+
 // Model abstract O3D Class
 export default class Model extends Object3D {
   constructor(gl, opts = {}) {
@@ -178,7 +180,7 @@ export default class Model extends Object3D {
 
       // Assign default uniforms (if any default shaders are being used)
       if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
-        log.warn(0, `luma.gl: default shaders are deprecated and will be removed \
+        log.warn(`luma.gl: default shaders are deprecated and will be removed \
 in a future version. Use shader modules instead.`);
         defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
       }
@@ -328,9 +330,15 @@ in a future version. Use shader modules instead.`);
     if (framebuffer) {
       parameters = Object.assign(parameters, {framebuffer});
     }
-    return withParameters(gl, parameters,
+    withParameters(gl, parameters,
       () => this.render(uniforms, attributes, samplers)
     );
+
+    if (framebuffer) {
+      framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
+    }
+
+    return this;
   }
 
   render(uniforms = {}, attributes = {}, parameters = {}, samplers = {}) {
@@ -341,7 +349,8 @@ in a future version. Use shader modules instead.`);
 
     this.setUniforms(resolvedUniforms);
 
-    log.group(2, `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
+    log.group(LOG_DRAW_PRIORITY,
+      `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
 
     this.setProgramState();
 
@@ -351,7 +360,7 @@ in a future version. Use shader modules instead.`);
 
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
-      log.warn(0, 'Found instanced attributes on non-instanced model');
+      log.warn('Found instanced attributes on non-instanced model');
     }
     const {isIndexed, indexType} = drawParams;
     const {isInstanced, instanceCount} = this;
@@ -375,7 +384,7 @@ in a future version. Use shader modules instead.`);
 
     this.setNeedsRedraw(false);
 
-    log.groupEnd(2, `>>> RENDERING MODEL ${this.id}`);
+    log.groupEnd(LOG_DRAW_PRIORITY, `>>> RENDERING MODEL ${this.id}`);
 
     return this;
   }
@@ -425,10 +434,10 @@ in a future version. Use shader modules instead.`);
           this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
 
         // Log stats
-        log.log(2, `\
+        log.log(LOG_DRAW_PRIORITY, `\
 GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
-avg ${this.stats.averageFrameTime}ms \
-acc: ${this.stats.accumulatedFrameTime}ms \
+average ${this.stats.averageFrameTime}ms \
+accumulated: ${this.stats.accumulatedFrameTime}ms \
 count: ${this.stats.profileFrameCount}`
         );
       }
@@ -464,7 +473,7 @@ count: ${this.stats.profileFrameCount}`
     return this;
   }
 
-  _logAttributesAndUniforms(priority = 3, uniforms = {}) {
+  _logAttributesAndUniforms(priority, uniforms = {}) {
     if (log.priority >= priority) {
       const attributeTable = this._getAttributesTable({
         header: `${this.id} attributes`,
@@ -481,6 +490,17 @@ count: ${this.stats.profileFrameCount}`
 
       log.table(priority, table);
       log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
+    } else {
+      // Always log missing uniforms
+      const {table, count} = getUniformsTable({
+        header: `${this.id} uniforms`,
+        program: this.program,
+        uniforms: Object.assign({}, this.uniforms, uniforms),
+        undefinedOnly: true
+      });
+      if (count > 0) {
+        log.table(0, table);
+      }
     }
 
     logModel(this, uniforms);

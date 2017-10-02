@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
-/* global console */
+/* global console, window, Image */
+
 const cache = {};
 
 const log = {
@@ -34,8 +35,30 @@ const log = {
   error(priority, arg, ...args) {
     console.error(`luma.gl: ${arg}`, ...args);
   },
+  image({priority, image, message = '', scale = 1}) {
+    if (priority > log.priority) {
+      return;
+    }
+    if (typeof window === 'undefined') { // Let's not try this under node
+      return;
+    }
+    if (typeof image === 'string') {
+      const img = new Image();
+      img.onload = logImage.bind(null, img, message, scale);
+      img.src = image;
+    }
+    const element = image.nodeName || '';
+    if (element.toLowerCase() === 'img') {
+      logImage(image, message, scale);
+    }
+    if (element.toLowerCase() === 'canvas') {
+      const img = new Image();
+      img.onload = logImage.bind(null, img, message, scale);
+      img.src = image.toDataURL();
+    }
+  },
   deprecated(oldUsage, newUsage) {
-    log.warn(0, `luma.gl: \`${oldUsage}\` is deprecated and will be removed \
+    log.warn(`luma.gl: \`${oldUsage}\` is deprecated and will be removed \
 in a later version. Use \`${newUsage}\` instead`);
   },
   group(priority, arg, {collapsed = false} = {}) {
@@ -53,6 +76,22 @@ in a later version. Use \`${newUsage}\` instead`);
     }
   }
 };
+
+// Inspired by https://github.com/hughsk/console-image (MIT license)
+function logImage(image, message, scale) {
+  const width = image.width * scale;
+  const height = image.height * scale;
+  const imageUrl = image.src.replace(/\(/g, '%28').replace(/\)/g, '%29');
+
+  console.log(`${message} %c+`, [
+    'font-size:1px;',
+    `padding:${Math.floor(height / 2)}px ${Math.floor(width / 2)}px;`,
+    `line-height:${height}px;`,
+    `background:url(${imageUrl});`,
+    `background-size:${width}px ${height}px;`,
+    'color:transparent;'
+  ].join(''));
+}
 
 function formatArrayValue(v, opts) {
   const {maxElts = 16, size = 1} = opts;

@@ -25,123 +25,134 @@ export const deepEqual = (x, y) => {
 };
 
 // interceptors for WEBGL FUNCTIONS that set WebGLRenderingContext state
+// These "setters" map functions to gl parameters
 
 export const GL_STATE_SETTERS = {
 
   // GENERIC SETTERS
 
-  enable: (setter, cap) => setter({
+  enable: (update, cap) => update({
     [cap]: true
   }),
-  disable: (setter, cap) => setter({
+  disable: (update, cap) => update({
     [cap]: false}
   ),
-  pixelStorei: (setter, pname, param) => setter({
+  pixelStorei: (update, pname, param) => update({
     [pname]: param
   }),
-  hint: (setter, pname, hint) => setter({
+  hint: (update, pname, hint) => update({
     [pname]: hint
   }),
 
   // SPECIFIC SETTERS
 
-  bindFramebuffer: (setter, target, fb) => setter({
-    [target === GL.READ_FRAMEBUFFER ?
-      GL.READ_FRAMEBUFFER_BINDING : GL.DRAW_FRAMEBUFFER_BINDING]: fb
-  }),
-
-  blendColor: (setter, r, g, b, a) => setter({
+  bindFramebuffer: (update, target, fb) => {
+    switch (target) {
+    case GL.FRAMEBUFFER:
+      return update({
+        [GL.DRAW_FRAMEBUFFER_BINDING]: fb,
+        [GL.READ_FRAMEBUFFER_BINDING]: fb
+      });
+    case GL.DRAW_FRAMEBUFFER:
+      return update({[GL.DRAW_FRAMEBUFFER_BINDING]: fb});
+    case GL.READ_FRAMEBUFFER:
+      return update({[GL.READ_FRAMEBUFFER_BINDING]: fb});
+    default:
+      return null;
+    }
+  },
+  blendColor: (update, r, g, b, a) => update({
     [GL.BLEND_COLOR]: new Float32Array([r, g, b, a])}
   ),
 
-  blendEquation: (setter, mode) => setter({
+  blendEquation: (update, mode) => update({
     [GL.BLEND_EQUATION_RGB]: mode,
     [GL.BLEND_EQUATION_ALPHA]: mode
   }),
 
-  blendEquationSeparate: (setter, modeRGB, modeAlpha) => setter({
+  blendEquationSeparate: (update, modeRGB, modeAlpha) => update({
     [GL.BLEND_EQUATION_RGB]: modeRGB,
     [GL.BLEND_EQUATION_ALPHA]: modeAlpha
   }),
 
-  blendFunc: (setter, src, dst) => setter({
+  blendFunc: (update, src, dst) => update({
     [GL.BLEND_SRC_RGB]: src,
     [GL.BLEND_DST_RGB]: dst,
     [GL.BLEND_SRC_ALPHA]: src,
     [GL.BLEND_DST_ALPHA]: dst
   }),
 
-  blendFuncSeparate: (setter, srcRGB, dstRGB, srcAlpha, dstAlpha) => setter({
+  blendFuncSeparate: (update, srcRGB, dstRGB, srcAlpha, dstAlpha) => update({
     [GL.BLEND_SRC_RGB]: srcRGB,
     [GL.BLEND_DST_RGB]: dstRGB,
     [GL.BLEND_SRC_ALPHA]: srcAlpha,
     [GL.BLEND_DST_ALPHA]: dstAlpha
   }),
 
-  clearColor: (setter, r, g, b, a) => setter({
+  clearColor: (update, r, g, b, a) => update({
     [GL.COLOR_CLEAR_VALUE]: new Float32Array([r, g, b, a])
   }),
 
-  clearDepth: (setter, depth) => setter({
+  clearDepth: (update, depth) => update({
     [GL.DEPTH_CLEAR_VALUE]: depth
   }),
 
-  clearStencil: (setter, s) => setter({
+  clearStencil: (update, s) => update({
     [GL.STENCIL_CLEAR_VALUE]: s
   }),
 
-  colorMask: (setter, r, g, b, a) => setter({
+  colorMask: (update, r, g, b, a) => update({
     [GL.COLOR_WRITEMASK]: [r, g, b, a]
   }),
 
-  cullFace: (setter, mode) => setter({
+  cullFace: (update, mode) => update({
     [GL.CULL_FACE_MODE]: mode
   }),
 
-  depthFunc: (setter, func) => setter({
+  depthFunc: (update, func) => update({
     [GL.DEPTH_FUNC]: func
   }),
 
-  depthRange: (setter, zNear, zFar) => setter({
+  depthRange: (update, zNear, zFar) => update({
     [GL.DEPTH_RANGE]: new Float32Array([zNear, zFar])
   }),
 
-  depthMask: (setter, mask) => setter({
+  depthMask: (update, mask) => update({
     [GL.DEPTH_WRITEMASK]: mask
   }),
 
-  frontFace: (setter, face) => setter({
+  frontFace: (update, face) => update({
     [GL.FRONT_FACE]: face
   }),
 
-  lineWidth: (setter, width) => setter({
+  lineWidth: (update, width) => update({
     [GL.LINE_WIDTH]: width
   }),
 
-  polygonOffset: (setter, factor, units) => setter({
+  polygonOffset: (update, factor, units) => update({
     [GL.POLYGON_OFFSET_FACTOR]: factor,
     [GL.POLYGON_OFFSET_UNITS]: units
   }),
 
-  sampleCoverage: (setter, value, invert) => setter({
+  sampleCoverage: (update, value, invert) => update({
     [GL.SAMPLE_COVERAGE_VALUE]: value,
     [GL.SAMPLE_COVERAGE_INVERT]: invert
   }),
 
-  scissor: (setter, x, y, width, height) => setter({
+  scissor: (update, x, y, width, height) => update({
     [GL.SCISSOR_BOX]: new Int32Array([x, y, width, height])
   }),
 
-  stencilMask: (setter, mask) => setter({
+  stencilMask: (update, mask) => update({
     [GL.STENCIL_WRITEMASK]: mask,
     [GL.STENCIL_BACK_WRITEMASK]: mask
   }),
 
-  stencilMaskSeparate: (setter, face, mask) => setter({
+  stencilMaskSeparate: (update, face, mask) => update({
     [face === GL.FRONT ? GL.STENCIL_WRITEMASK : GL.STENCIL_BACK_WRITEMASK]: mask
   }),
 
-  stencilFunc: (setter, func, ref, mask) => setter({
+  stencilFunc: (update, func, ref, mask) => update({
     [GL.STENCIL_FUNC]: func,
     [GL.STENCIL_REF]: ref,
     [GL.STENCIL_VALUE_MASK]: mask,
@@ -150,13 +161,13 @@ export const GL_STATE_SETTERS = {
     [GL.STENCIL_BACK_VALUE_MASK]: mask
   }),
 
-  stencilFuncSeparate: (setter, face, func, ref, mask) => setter({
+  stencilFuncSeparate: (update, face, func, ref, mask) => update({
     [face === GL.FRONT ? GL.STENCIL_FUNC : GL.STENCIL_BACK_FUNC]: func,
     [face === GL.FRONT ? GL.STENCIL_REF : GL.STENCIL_BACK_REF]: ref,
     [face === GL.FRONT ? GL.STENCIL_VALUE_MASK : GL.STENCIL_BACK_VALUE_MASK]: mask
   }),
 
-  stencilOp: (setter, fail, zfail, zpass) => setter({
+  stencilOp: (update, fail, zfail, zpass) => update({
     [GL.STENCIL_FAIL]: fail,
     [GL.STENCIL_PASS_DEPTH_FAIL]: zfail,
     [GL.STENCIL_PASS_DEPTH_PASS]: zpass,
@@ -165,13 +176,13 @@ export const GL_STATE_SETTERS = {
     [GL.STENCIL_BACK_PASS_DEPTH_PASS]: zpass
   }),
 
-  stencilOpSeparate: (setter, face, fail, zfail, zpass) => setter({
+  stencilOpSeparate: (update, face, fail, zfail, zpass) => update({
     [face === GL.FRONT ? GL.STENCIL_FAIL : GL.STENCIL_BACK_FAIL]: fail,
     [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_FAIL : GL.STENCIL_BACK_PASS_DEPTH_FAIL]: zfail,
     [face === GL.FRONT ? GL.STENCIL_PASS_DEPTH_PASS : GL.STENCIL_BACK_PASS_DEPTH_PASS]: zpass
   }),
 
-  viewport: (setter, x, y, width, height) => setter({
+  viewport: (update, x, y, width, height) => update({
     [GL.VIEWPORT]: new Int32Array([x, y, width, height])
   })
 };
@@ -210,7 +221,7 @@ function installGetterOverride(gl, functionName) {
 // Overrides a WebGLRenderingContext state "setter" function
 // to call a setter spy before the actual setter. Allows us to keep a cache
 // updated with a copy of the WebGL context state.
-function installSetterSpy(gl, functionName, setter, updateCache) {
+function installSetterSpy(gl, functionName, setter) {
   // Get the original function from the WebGLRenderingContext
   const originalSetterFunc = gl[functionName].bind(gl);
 
@@ -218,17 +229,20 @@ function installSetterSpy(gl, functionName, setter, updateCache) {
   gl[functionName] = function(...params) {
     // Update the value
     // Call the setter with the state cache and the params so that it can store the parameters
-    const valueChanged = setter(updateCache, ...params);
+    const {valueChanged, oldValue} = setter(gl.state._updateCache, ...params);
 
     // Call the original WebGLRenderingContext func to make sure the context actually gets updated
     if (valueChanged) {
       gl.state.log(`gl.${functionName}`, ...params); // eslint-disable-line
       originalSetterFunc(...params);
     }
+
     // Note: if the original function fails to set the value, our state cache will be bad
     // No solution for this at the moment, but assuming that this is unlikely to be a real problem
     // We could call the setter after the originalSetterFunc. Concern is that this would
     // cause different behavior in debug mode, where originalSetterFunc can throw exceptions
+
+    return oldValue;
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
@@ -271,6 +285,7 @@ class GLState {
   // values (Object) - the key values for this setter
   _updateCache(values) {
     let valueChanged = false;
+    let oldValue; // = undefined
 
     const oldValues = this.stateStack.length > 0 && this.stateStack[this.stateStack.length - 1];
 
@@ -279,6 +294,7 @@ class GLState {
       // Check that value hasn't already been shadowed
       if (!deepEqual(values[key], this.cache[key])) {
         valueChanged = true;
+        oldValue = this.cache[key];
 
         // First, save current value being shadowed
         // If a state stack frame is active, save the current parameter values for pop
@@ -292,7 +308,7 @@ class GLState {
       }
     }
 
-    return valueChanged;
+    return {valueChanged, oldValue};
   }
 }
 
@@ -317,7 +333,7 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
     // intercept all setter functions in the table
     for (const key in GL_STATE_SETTERS) {
       const setter = GL_STATE_SETTERS[key];
-      installSetterSpy(gl, key, setter, gl.state._updateCache);
+      installSetterSpy(gl, key, setter);
     }
 
     // intercept all getter functions in the table

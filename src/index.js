@@ -24,7 +24,8 @@ export {
   getParameters,
   setParameter,
   setParameters,
-  withParameters} from './webgl/context-state';
+  withParameters,
+  getModifiedParameters} from './webgl/context-state';
 export {
   getContextInfo,
   getGLContextInfo,

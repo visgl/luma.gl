@@ -1,3 +1,4 @@
+import Framebuffer from './framebuffer';
 import Texture from './texture';
 import {formatValue} from '../utils';
 import assert from 'assert';
@@ -178,41 +179,44 @@ export function checkUniformValues(uniforms, source) {
   return true;
 }
 
+// TODO use type information during validation
 function checkUniformValue(value) {
-  let ok = true;
-
-  // Test for texture (for sampler uniforms)
-  // WebGL2: if (value instanceof Texture || value instanceof Sampler) {
-  if (value instanceof Texture) {
-    ok = true;
   // Check that every element in array is a number, and at least 1 element
-  } else if (Array.isArray(value)) {
-    for (const element of value) {
-      if (!isFinite(element)) {
-        ok = false;
-      }
-    }
-    ok = ok && (value.length > 0);
+  if (Array.isArray(value)) {
+    return value.length > 0 && value.every(element => isFinite(element));
   // Typed arrays can only contain numbers, but check length
   } else if (ArrayBuffer.isView(value)) {
-    ok = value.length > 0;
+    // TODO - Can contain NaN
+    return value.length > 0;
   // Check that single value is a number
-  } else if (!isFinite(value)) {
-    ok = false;
+  } else if (isFinite(value)) {
+    return true;
+    // Test for texture (for sampler uniforms)
+    // WebGL2: if (value instanceof Texture || value instanceof Sampler) {
+  } else if (value instanceof Texture) {
+    return true;
+  } else if (value instanceof Framebuffer) {
+    return Boolean(value.texture);
   }
-
-  return ok;
+  return false;
 }
 
+function isUniformDefined(value) {
+  return value !== undefined && value !== null;
+}
 // Helper
-function addUniform(table, header, uniforms, uniformName) {
+function addUniformToTable({table, header, uniforms, uniformName, undefinedOnly}) {
   const value = uniforms[uniformName];
-  const isDefined = value !== undefined && value !== null;
-  table[uniformName] = {
-    // Add program's unprovided uniforms
-    Type: isDefined ? value : 'NOT PROVIDED',
-    [header]: isDefined ? formatValue(value) : 'N/A'
-  };
+  const isDefined = isUniformDefined(value);
+  if (!undefinedOnly || !isDefined) {
+    table[uniformName] = {
+      // Add program's unprovided uniforms
+      Type: isDefined ? value : 'NOT PROVIDED',
+      [header]: isDefined ? formatValue(value) : 'N/A'
+    };
+    return true;
+  }
+  return false;
 }
 
 // Prepares a table suitable for console.table
@@ -220,11 +224,13 @@ function addUniform(table, header, uniforms, uniformName) {
 export function getUniformsTable({
   header = 'Uniforms',
   program,
-  uniforms
+  uniforms,
+  undefinedOnly = false
 } = {}) {
   assert(program);
 
   const SHADER_MODULE_UNIFORM_REGEXP = '.*_.*';
+  const PROJECT_MODULE_UNIFORM_REGEXP = '.*Matrix'; // TODO - Use explicit list
 
   const uniformLocations = program._uniformSetters;
   const table = {}; // {[header]: {}};
@@ -232,33 +238,50 @@ export function getUniformsTable({
   // Add program's provided uniforms (in alphabetical order)
   const uniformNames = Object.keys(uniformLocations).sort();
 
+  let count = 0;
+
   // First add non-underscored uniforms (assumed not coming from shader modules)
   for (const uniformName of uniformNames) {
-    if (!uniformName.match(SHADER_MODULE_UNIFORM_REGEXP)) {
-      addUniform(table, header, uniforms, uniformName);
+    if (!uniformName.match(SHADER_MODULE_UNIFORM_REGEXP) &&
+      !uniformName.match(PROJECT_MODULE_UNIFORM_REGEXP)) {
+      if (addUniformToTable({table, header, uniforms, uniformName, undefinedOnly})) {
+        count++;
+      }
     }
   }
 
   // add underscored uniforms (assumed from shader modules)
   for (const uniformName of uniformNames) {
+    if (uniformName.match(PROJECT_MODULE_UNIFORM_REGEXP)) {
+      if (addUniformToTable({table, header, uniforms, uniformName, undefinedOnly})) {
+        count++;
+      }
+    }
+  }
+
+  for (const uniformName of uniformNames) {
     if (!table[uniformName]) {
-      addUniform(table, header, uniforms, uniformName);
+      if (addUniformToTable({table, header, uniforms, uniformName, undefinedOnly})) {
+        count++;
+      }
     }
   }
 
   // Create a table of unused uniforms
-  const unusedTable = {};
   let unusedCount = 0;
-  for (const uniformName in uniforms) {
-    const uniform = uniforms[uniformName];
-    if (!table[uniformName]) {
-      unusedCount++;
-      unusedTable[uniformName] = {
-        Type: `NOT USED: ${uniform}`,
-        [header]: formatValue(uniform)
-      };
+  const unusedTable = {};
+  if (!undefinedOnly) {
+    for (const uniformName in uniforms) {
+      const uniform = uniforms[uniformName];
+      if (!table[uniformName]) {
+        unusedCount++;
+        unusedTable[uniformName] = {
+          Type: `NOT USED: ${uniform}`,
+          [header]: formatValue(uniform)
+        };
+      }
     }
   }
 
-  return {table, unusedTable, unusedCount};
+  return {table, count, unusedTable, unusedCount};
 }

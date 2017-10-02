@@ -21,7 +21,7 @@ export default class TranformFeedback extends Resource {
    * @param {WebGL2RenderingContext} gl - context
    * @param {Object} opts - options
    */
-  constructor(gl, opts) {
+  constructor(gl, opts = {}) {
     assertWebGL2Context(gl);
     super(gl, opts);
     this.buffers = {};

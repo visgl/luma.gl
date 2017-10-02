@@ -4,6 +4,7 @@ import {assertWebGL2Context, isWebGL2} from './context';
 import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
+import Framebuffer from './framebuffer';
 import {getTransformFeedbackMode} from './transform-feedback';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
@@ -242,11 +243,14 @@ export default class Program extends Resource {
   /* eslint-disable max-depth */
   setUniforms(uniforms, samplers = {}) {
     for (const uniformName in uniforms) {
-      const uniform = uniforms[uniformName];
+      let uniform = uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
       const sampler = samplers[uniformName];
 
       if (uniformSetter) {
+        if (uniform instanceof Framebuffer) {
+          uniform = uniform.texture;
+        }
         if (uniform instanceof Texture) {
           if (uniformSetter.textureIndex === undefined) {
             uniformSetter.textureIndex = this._textureIndexCounter++;
@@ -385,7 +389,7 @@ export default class Program extends Resource {
         const location = this._attributeLocations[attributeName];
         // throw new Error(`Program ${this.id}: ` +
         //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(0, `Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
+        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
         this._warn[attributeName] = true;
       }
     }
@@ -405,7 +409,7 @@ export default class Program extends Resource {
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
         } else if (!this._warn[bufferName]) {
-          log.warn(2, `${this._print(bufferName)} not used`);
+          log.log(2, `${this._print(bufferName)} not used`);
           this._warn[bufferName] = true;
         }
       } else {

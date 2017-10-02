@@ -93,6 +93,19 @@ test('WebGL#Framebuffer construct/delete', t => {
   t.end();
 });
 
+test('Framebuffer#getDefaultFramebuffer', t => {
+  const {gl} = fixture;
+
+  const framebuffer = Framebuffer.getDefaultFramebuffer(gl);
+  t.ok(framebuffer instanceof Framebuffer,
+    'getDefaultFramebuffer successful');
+
+  framebuffer.resize({width: 1000, height: 1000});
+  framebuffer.checkStatus();
+
+  t.end();
+});
+
 function testFramebuffer(t, gl) {
   for (const tc of TEST_CASES) {
     let opts;
