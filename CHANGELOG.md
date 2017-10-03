@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.1.0-alpha.4 - Oct 2
+ - Framebuffer binding fixes (#323)
+ - Shadowmap example, Delete unused files (#325)
+ - Prevent animation  loop from creating unused framebuffer (#326)
+   
 ## 4.1.0-alpha.3 - Sep 27
  - Fix Framebuffer.clear (#321)
  - Add context management support for framebuffer binding. (#319)

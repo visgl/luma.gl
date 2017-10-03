@@ -157,9 +157,20 @@ export default class Framebuffer extends Resource {
   }
 
   // Attachment resize is expected to be a noop if size is same
-  resize({width, height}) {
+  resize({width, height} = {}) {
+    // for default framebuffer, just update the stored size
     if (this.handle === null) {
-      return this.updateSize();
+      assert(width === undefined && height === undefined);
+      this.width = this.gl.drawingBufferWidth;
+      this.height = this.gl.drawingBufferHeight;
+      return this;
+    }
+
+    if (width === undefined) {
+      width = this.gl.drawingBufferWidth;
+    }
+    if (height === undefined) {
+      height = this.gl.drawingBufferHeight;
     }
 
     if (width !== this.width && height !== this.height) {
@@ -170,16 +181,6 @@ export default class Framebuffer extends Resource {
     }
     this.width = width;
     this.height = height;
-    return this;
-  }
-
-  updateSize() {
-    // If default framebuffer
-    if (this.handle === null) {
-      // Default
-      this.width = this.gl.drawingBufferWidth;
-      this.height = this.gl.drawingBufferHeight;
-    }
     return this;
   }
 
@@ -558,7 +559,7 @@ export default class Framebuffer extends Resource {
     if (color) {
       defaultAttachments = defaultAttachments || {};
       defaultAttachments[GL_COLOR_ATTACHMENT0] = new Texture2D(this.gl, {
-        data: null, // reserves texture memory, but texels are undefined
+        pixels: null, // reserves texture memory, but texels are undefined
         format: GL.RGBA,
         type: GL.UNSIGNED_BYTE,
         width,
