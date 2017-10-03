@@ -100,8 +100,20 @@ test('Framebuffer#getDefaultFramebuffer', t => {
   t.ok(framebuffer instanceof Framebuffer,
     'getDefaultFramebuffer successful');
 
-  framebuffer.resize({width: 1000, height: 1000});
-  framebuffer.checkStatus();
+  t.throws(
+    () => framebuffer.resize({width: 1000, height: 1000}),
+    'defaultFramebuffer.resize({width, height}) throws'
+  );
+
+  t.doesNotThrow(
+    () => framebuffer.resize(),
+    'defaultFramebuffer.resize() successful'
+  );
+
+  t.doesNotThrow(
+    () => framebuffer.checkStatus(),
+    'defaultFramebuffer status ok'
+  );
 
   t.end();
 });

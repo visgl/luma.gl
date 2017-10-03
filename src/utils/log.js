@@ -26,13 +26,11 @@ const log = {
     }
     cache[arg] = true;
   },
-  warn(priority, arg, ...args) {
-    if (priority <= log.priority && !cache[arg]) {
-      console.warn(`luma.gl: ${arg}`, ...args);
-    }
+  warn(arg, ...args) {
+    console.warn(`luma.gl: ${arg}`, ...args);
     cache[arg] = true;
   },
-  error(priority, arg, ...args) {
+  error(arg, ...args) {
     console.error(`luma.gl: ${arg}`, ...args);
   },
   image({priority, image, message = '', scale = 1}) {

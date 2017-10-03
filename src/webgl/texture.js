@@ -201,9 +201,11 @@ export default class Texture extends Resource {
       mipmaps = generateMipmaps;
     }
 
-    // pixels variable is  for API compatibility purpose
+    // pixels variable is for API compatibility purpose
     if (!data) {
-      log.deprecated('data', 'pixels');
+      // TODO - This looks backwards? Commenting out for now until we decide
+      // which prop to use
+      // log.deprecated('data', 'pixels');
       data = pixels;
     }
 
