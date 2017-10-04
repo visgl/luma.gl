@@ -59,22 +59,14 @@ export function getVersionDefines(gl) {
 #if (__VERSION__ > 120)
 # define attribute in
 # define varying out
+# define FRAG_DEPTH
+# define DERIVATIVES
+# define DRAW_BUFFERS
+# define TEXTURE_LOD
 #else
 // # define in attribute
 // # define out varying
 #endif // __VERSION
-#if (__VERSION__ > 120)
-# define FRAG_DEPTH
-#endif
-#if (__VERSION__ > 120)
-# define DERIVATIVES
-#endif
-#if (__VERSION__ > 120)
-# define DRAW_BUFFERS
-#endif
-#if (__VERSION__ > 120)
-# define TEXTURE_LOD
-#endif
 `;
 
   if (hasFeature(gl, FEATURES.GLSL_FRAG_DEPTH)) {
