@@ -1,5 +1,5 @@
 import {resolveModules, getShaderModule} from './shader-modules';
-import {getPlatformShaderDefines, VERSION_DEFINES} from './platform-defines';
+import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
 import assert from 'assert';
 
@@ -107,7 +107,7 @@ function assembleShader(gl, {
   let assembledSource = `\
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
-${VERSION_DEFINES}
+${getVersionDefines(gl)}
 ${getApplicationDefines(defines)}
 ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
 `;
