@@ -1,4 +1,5 @@
 import {getContextInfo} from '../../webgl';
+import {hasFeature, FEATURES} from '../../webgl/context-features';
 
 export function checkRendererVendor(debugInfo, gpuVendor) {
   const {vendor, renderer} = debugInfo;
@@ -52,7 +53,8 @@ export function getPlatformShaderDefines(gl) {
   return platformDefines;
 }
 
-export const VERSION_DEFINES = `\
+export function getVersionDefines(gl) {
+  let versionDefines = `\
 // Defines for shader portability
 #if (__VERSION__ > 120)
 # define attribute in
@@ -61,35 +63,50 @@ export const VERSION_DEFINES = `\
 // # define in attribute
 // # define out varying
 #endif // __VERSION
+#if (__VERSION__ > 120)
+# define FRAG_DEPTH
+#endif
+#if (__VERSION__ > 120)
+# define DERIVATIVES
+#endif
+#if (__VERSION__ > 120)
+# define DRAW_BUFFERS
+#endif
+#if (__VERSION__ > 120)
+# define TEXTURE_LOD
+#endif
+`;
 
+  if (hasFeature(gl, FEATURES.GLSL_FRAG_DEPTH)) {
+    versionDefines += `\
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
 #extension GL_EXT_frag_depth : enable
 # define FRAG_DEPTH
 # define gl_FragDepth gl_FragDepthEXT
 #endif
-#if (__VERSION__ > 120)
-# define FRAG_DEPTH
-#endif
-
+`;
+  }
+  if (hasFeature(gl, FEATURES.GLSL_DERIVATIVES)) {
+    versionDefines += `\
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #ifdef GL_OES_standard_derivatives
 #extension GL_OES_standard_derivatives : enable
 # define DERIVATIVES
 #endif
-#if (__VERSION__ > 120)
-# define DERIVATIVES
-#endif
-
+`;
+  }
+  if (hasFeature(gl, FEATURES.GLSL_FRAG_DATA)) {
+    versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
 #extension GL_EXT_draw_buffers : require
 #define DRAW_BUFFERS
 #endif
-#if (__VERSION__ > 120)
-# define DRAW_BUFFERS
-#endif
-
+`;
+  }
+  if (hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)) {
+    versionDefines += `\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
 #extension GL_EXT_shader_texture_lod : enable
@@ -103,7 +120,7 @@ export const VERSION_DEFINES = `\
 #define texture2DProjGrad texture2DProjGradEXT
 #define textureCubeGrad textureCubeGradEXT
 #endif
-#if (__VERSION__ > 120)
-# define TEXTURE_LOD
-#endif
 `;
+  }
+  return versionDefines;
+}

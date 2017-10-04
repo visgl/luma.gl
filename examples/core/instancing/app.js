@@ -13,6 +13,7 @@ function mouseleave(e) {
 }
 
 const animationLoop = new AnimationLoop({
+  createFramebuffer: true,
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],

@@ -16,6 +16,7 @@ const PLANETS = [
 let pickPosition = [0, 0];
 
 const animationLoop = new AnimationLoop({
+  createFramebuffer: true,
   onInitialize: ({gl, canvas}) => {
     // Use non zero pickingColor to identify if the model has been picked or not.
     const pickingColorsData = new Float32Array(10000).fill(1.0);
