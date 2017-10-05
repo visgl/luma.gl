@@ -9,7 +9,7 @@ const GL_TRANSFORM_FEEDBACK = 0x8E22;
 export default class TranformFeedback extends Resource {
 
   static isSupported(gl) {
-    return isWebGL2(gl) || gl.getExtension('OES_vertex_array_object');
+    return isWebGL2(gl);
   }
 
   static isHandle(handle) {
