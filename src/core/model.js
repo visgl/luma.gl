@@ -499,7 +499,7 @@ count: ${this.stats.profileFrameCount}`
         undefinedOnly: true
       });
       if (count > 0) {
-        log.table(0, table);
+        log.table(priority, table);
       }
     }
 
