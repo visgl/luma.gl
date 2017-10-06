@@ -10,7 +10,7 @@ export {default as FragmentDemo} from '../../examples/core/fragment/app.js';
 // export {default as ParticlesDemo} from '../../examples/core/particles/app.js';
 // export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
 export {default as PickingDemo} from '../../examples/core/picking/app.js';
-export {default as ShadowmapDemo} from '../../examples/core/shadowmap/app.js';
+export {default as ShadowmapDemo} from '../../examples/core/shadowmap/src/app.js';
 export {default as TransformFeedbackDemo} from '../../examples/core/transform-feedback/app.js';
 
 export {default as Lesson01} from '../../examples/lessons/01/app.js';
