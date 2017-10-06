@@ -4,6 +4,10 @@
 
 ## v4.0
 
+### 4.0.5 - "October 6, 2017"
+- Fix `TransformFeedback.isSupported` bug (#333)
+- Conditionally add shader extensions defines (#330)
+
 ### 4.0.4 -  “September 28, 2017”
 - Add examples, lesson-10, 11, 12 and 13. (#303, #305, #307, #309, #310, #311, #312)
 - Fix fp64 shader module unit test (#298)
