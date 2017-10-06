@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.1.0-alpha.5 - Oct 3
+ - Fix example framebuffer usage and conditionally add shader extension (#330)
+ - Fix `TransformFeedback.isSupported` bug (#333)
+ - Fix priority of missing uniforms log (#334)
+
 ## 4.1.0-alpha.4 - Oct 2
  - Framebuffer binding fixes (#323)
  - Shadowmap example, Delete unused files (#325)
