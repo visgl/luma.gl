@@ -22,6 +22,10 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
 const LOG_DRAW_PRIORITY = 2;
 
+// These old picking uniforms should be avoided and we should use picking module
+// and set uniforms using Model class 'updateModuleSettings()'
+const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
+
 // Model abstract O3D Class
 export default class Model extends Object3D {
   constructor(gl, opts = {}) {
@@ -287,6 +291,7 @@ in a future version. Use shader modules instead.`);
 
   // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
+    this._checkForDeprecatedUniforms(uniforms);
     checkUniformValues(uniforms, this.id);
     Object.assign(this.uniforms, uniforms);
     this.setNeedsRedraw();
@@ -403,6 +408,17 @@ in a future version. Use shader modules instead.`);
     // is unbound
     this.program.unsetBuffers();
     return this;
+  }
+
+  // HELPER METHODS
+
+  _checkForDeprecatedUniforms(uniforms) {
+    // deprecated picking uniforms
+    DEPRECATED_PICKING_UNIFORMS.forEach((uniform) => {
+      if (uniform in uniforms) {
+        log.deprecated(uniform, 'use picking shader module and Model class updateModuleSettings()');
+      }
+    });
   }
 
   _timerQueryStart() {
