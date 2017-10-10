@@ -315,6 +315,7 @@ in a future version. Use shader modules instead.`);
   }
 
   draw({
+    moduleSettings = null,
     uniforms = {},
     attributes = {},
     samplers = {},
@@ -326,6 +327,11 @@ in a future version. Use shader modules instead.`);
       log.deprecated('settings', 'parameters');
       parameters = settings;
     }
+
+    if (moduleSettings) {
+      this.updateModuleSettings(moduleSettings);
+    }
+
     const {program: {gl}} = this;
     if (framebuffer) {
       parameters = Object.assign(parameters, {framebuffer});

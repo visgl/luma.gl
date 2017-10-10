@@ -1,5 +1,8 @@
 # Pre-releases
 
+[TBD]
+- Support `moduleSettings` in `Model.draw`
+
 ## 4.1.0-alpha.5 - Oct 3
  - Fix example framebuffer usage and conditionally add shader extension (#330)
  - Fix `TransformFeedback.isSupported` bug (#333)
