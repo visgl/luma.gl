@@ -532,10 +532,12 @@ export default class Framebuffer extends Resource {
   }
 
   log({priority = 0, message = ''} = {}) {
-    message = message || `Framebuffer ${this.id}`;
-    if (typeof window !== 'undefined') { // Let's not try this under node
-      log.image({priority, message, image: this.copyToDataUrl({maxHeight: 100})}, message);
+    if (priority > log.priority || typeof window === 'undefined') {
+      return this;
     }
+    message = message || `Framebuffer ${this.id}`;
+    const image = this.copyToDataUrl({maxHeight: 100});
+    log.image({priority, message, image}, message);
     return this;
   }
 
