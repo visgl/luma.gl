@@ -59,7 +59,7 @@ const animationLoop = new AnimationLoop({
 
     cube.updateModuleSettings({
       pickingSelectedColor: pickInfo && pickInfo.color,
-      pickingValid: pickInfo !== null
+      pickingSelectedColorValid: pickInfo !== null
     });
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
