@@ -3,6 +3,12 @@
 [TBD]
 - Support `moduleSettings` in `Model.draw`
 
+## 4.1.0-alpha.6 - Oct 11
+ - Add moduleSettings parameter to Model.draw (#337)
+ - Fix performance regression in picking flow (#339)
+ - Copy enhanced Picking module from deck.gl (#338)
+ - Fix browser test for TransformFeedback (#336)
+
 ## 4.1.0-alpha.5 - Oct 3
  - Fix example framebuffer usage and conditionally add shader extension (#330)
  - Fix `TransformFeedback.isSupported` bug (#333)
