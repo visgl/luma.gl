@@ -27,7 +27,9 @@ const log = {
     cache[arg] = true;
   },
   warn(arg, ...args) {
-    console.warn(`luma.gl: ${arg}`, ...args);
+    if (!cache[arg]) {
+      console.warn(`luma.gl: ${arg}`, ...args);
+    }
     cache[arg] = true;
   },
   error(arg, ...args) {
