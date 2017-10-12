@@ -23,14 +23,14 @@ const log = {
   once(priority, arg, ...args) {
     if (!cache[arg]) {
       log.log(priority, arg, ...args);
+      cache[arg] = true;
     }
-    cache[arg] = true;
   },
   warn(arg, ...args) {
     if (!cache[arg]) {
       console.warn(`luma.gl: ${arg}`, ...args);
+      cache[arg] = true;
     }
-    cache[arg] = true;
   },
   error(arg, ...args) {
     console.error(`luma.gl: ${arg}`, ...args);
