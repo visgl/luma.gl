@@ -1,7 +1,7 @@
 # Pre-releases
 
-[TBD]
-- Support `moduleSettings` in `Model.draw`
+## 4.1.0-alpha.7 - Oct 12
+- Fix duplicate console warnings (#341)
 
 ## 4.1.0-alpha.6 - Oct 11
  - Add moduleSettings parameter to Model.draw (#337)
