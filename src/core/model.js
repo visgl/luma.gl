@@ -291,7 +291,9 @@ in a future version. Use shader modules instead.`);
 
   // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
-    this._checkForDeprecatedUniforms(uniforms);
+    // TODO: we are still setting these uniforms in deck.gl so we don't break any external
+    // application using them, these will be removed in 5.0 release, enable warnings then.
+    // this._checkForDeprecatedUniforms(uniforms);
     checkUniformValues(uniforms, this.id);
     Object.assign(this.uniforms, uniforms);
     this.setNeedsRedraw();
