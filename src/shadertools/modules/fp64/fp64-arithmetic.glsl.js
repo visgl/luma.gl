@@ -39,7 +39,7 @@ vec2 split(float a) {
 }
 #endif
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 vec2 quickTwoSum(float a, float b) {
   float sum = (a + b) * ONE;
   float err = b - (sum - a) * ONE;
@@ -53,7 +53,7 @@ vec2 quickTwoSum(float a, float b) {
 }
 #endif
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 
 /* The purpose of this workaround is to prevent shader compilers from
 optimizing away necessary arithmetic operations by swapping their sequences
@@ -82,7 +82,7 @@ vec2 twoSum(float a, float b) {
 }
 #endif
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 /* Same thing as in twoSum() */
 vec2 twoSub(float a, float b) {
   float s = (a - b);
@@ -99,7 +99,7 @@ vec2 twoSub(float a, float b) {
 }
 #endif
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 vec2 twoSqr(float a) {
   float prod = a * a;
   vec2 a_fp64 = split(a);

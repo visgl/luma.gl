@@ -271,7 +271,7 @@ vec2 sin_fp64(vec2 a) {
     vec2 u = vec2(0.0, 0.0);
     vec2 v = vec2(0.0, 0.0);
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
     if (abs(float(abs_k) - 1.0) < 0.5) {
         u = COS_TABLE_0_FP64;
         v = SIN_TABLE_0_FP64;
@@ -381,7 +381,7 @@ vec2 cos_fp64(vec2 a) {
     vec2 u = vec2(0.0, 0.0);
     vec2 v = vec2(0.0, 0.0);
 
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
     if (abs(float(abs_k) - 1.0) < 0.5) {
         u = COS_TABLE_0_FP64;
         v = SIN_TABLE_0_FP64;
@@ -491,7 +491,7 @@ vec2 tan_fp64(vec2 a) {
         s = sin_t;
         c = cos_t;
     } else {
-#if defined(NVIDIA_EQUATION_WORKAROUND) || defined(INTEL_EQUATION_WORKAROUND)
+#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
         if (abs(float(abs_k) - 1.0) < 0.5) {
             u = COS_TABLE_0_FP64;
             v = SIN_TABLE_0_FP64;
