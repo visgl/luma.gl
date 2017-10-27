@@ -1,5 +1,5 @@
 const fp32shader = `\
-#ifdef INTEL_TAN_WORKAROUND
+#ifdef LUMA_FP32_TAN_PRECISION_WORKAROUND
 
 // All these functions are for substituting tan() function from Intel GPU only
 const float TWO_PI = 6.2831854820251465;
@@ -143,7 +143,7 @@ float tan_taylor_fp32(float a) {
 #endif
 
 float tan_fp32(float a) {
-#ifdef INTEL_TAN_WORKAROUND
+#ifdef LUMA_FP32_TAN_PRECISION_WORKAROUND
   return tan_taylor_fp32(a);
 #else
   return tan(a);

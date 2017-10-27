@@ -21,41 +21,10 @@
 export default `\
 uniform float ONE;
 
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-vec2 split(float a) {
-  const float SPLIT = 4097.0;
-  float t = a * SPLIT;
-  float a_hi = t * ONE - (t - a);
-  float a_lo = a * ONE - a_hi;
-  return vec2(a_hi, a_lo);
-}
-#else
-vec2 split(float a) {
-  const float SPLIT = 4097.0;
-  float t = a * SPLIT;
-  float a_hi = t - (t - a);
-  float a_lo = a - a_hi;
-  return vec2(a_hi, a_lo);
-}
-#endif
+/*
+About LUMA_FP64_CODE_ELIMINATION_WORKAROUND
 
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-vec2 quickTwoSum(float a, float b) {
-  float sum = (a + b) * ONE;
-  float err = b - (sum - a) * ONE;
-  return vec2(sum, err);
-}
-#else
-vec2 quickTwoSum(float a, float b) {
-  float sum = a + b;
-  float err = b - (sum - a);
-  return vec2(sum, err);
-}
-#endif
-
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-
-/* The purpose of this workaround is to prevent shader compilers from
+The purpose of this workaround is to prevent shader compilers from
 optimizing away necessary arithmetic operations by swapping their sequences
 or transform the equation to some 'equivalent' from.
 
@@ -67,56 +36,65 @@ and one b should appear
 err = (a + b) * ONE^6 - a * ONE^5 - (a + b) * ONE^4 + a * ONE^3 - b - (a + b) * ONE^2 + a * ONE
 */
 
+vec2 split(float a) {
+  const float SPLIT = 4097.0;
+  float t = a * SPLIT;
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
+  float a_hi = t * ONE - (t - a);
+  float a_lo = a * ONE - a_hi;
+#else
+  float a_hi = t - (t - a);
+  float a_lo = a - a_hi;
+#endif
+  return vec2(a_hi, a_lo);
+}
+
+vec2 quickTwoSum(float a, float b) {
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
+  float sum = (a + b) * ONE;
+  float err = b - (sum - a) * ONE;
+#else
+  float sum = a + b;
+  float err = b - (sum - a);
+#endif
+  return vec2(sum, err);
+}
+
 vec2 twoSum(float a, float b) {
   float s = (a + b);
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   float v = (s * ONE - a) * ONE;
   float err = (a - (s - v) * ONE) * ONE * ONE * ONE + (b - v);
-  return vec2(s, err);
-}
 #else
-vec2 twoSum(float a, float b) {
-  float s = a + b;
   float v = s - a;
   float err = (a - (s - v)) + (b - v);
+#endif
   return vec2(s, err);
 }
-#endif
 
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-/* Same thing as in twoSum() */
 vec2 twoSub(float a, float b) {
   float s = (a - b);
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   float v = (s * ONE - a) * ONE;
   float err = (a - (s - v) * ONE) * ONE * ONE * ONE - (b + v);
-  return vec2(s, err);
-}
 #else
-vec2 twoSub(float a, float b) {
-  float s = a - b;
   float v = s - a;
   float err = (a - (s - v)) - (b + v);
+#endif
   return vec2(s, err);
 }
-#endif
 
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 vec2 twoSqr(float a) {
   float prod = a * a;
   vec2 a_fp64 = split(a);
-
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   float err = ((a_fp64.x * a_fp64.x - prod) * ONE + 2.0 * a_fp64.x *
     a_fp64.y * ONE * ONE) + a_fp64.y * a_fp64.y * ONE * ONE * ONE;
-  return vec2(prod, err);
-}
 #else
-vec2 twoSqr(float a) {
-  float prod = a * a;
-  vec2 a_fp64 = split(a);
-
   float err = ((a_fp64.x * a_fp64.x - prod) + 2.0 * a_fp64.x * a_fp64.y) + a_fp64.y * a_fp64.y;
+#endif
   return vec2(prod, err);
 }
-#endif
 
 vec2 twoProd(float a, float b) {
   float prod = a * b;
@@ -172,7 +150,7 @@ vec2 sqrt_fp64(vec2 a) {
 
   float x = 1.0 / sqrt(a.x);
   float yn = a.x * x;
-#if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   vec2 yn_sqr = twoSqr(yn) * ONE;
 #else
   vec2 yn_sqr = twoSqr(yn);

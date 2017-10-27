@@ -1038,23 +1038,23 @@ GLSL compilation error in vertex shader scatterplot-layer-vertex-shader-64
 
  965:     radiusMinPixels, radiusMaxPixels
  966:   );
- 967:
+ 967: 
 ^^^ ERROR: 'project_scale' : no matching overloaded function found
 
  992:   vertex_pos_modelspace[3] = vec2(1.0, 0.0);
- 993:
+ 993: 
  994:   gl_Position = project_to_clipspace_fp64(vertex_pos_modelspace);
 ^^^ ERROR: 'project_scale' : no matching overloaded function found
 
 
- 262:
+ 262: 
  263:   float x = 1.0 / sqrt(a.x);
  264:   float yn = a.x * x;
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
  292:   if (a.x == 0.0 && a.y == 0.0) return vec2(1.0, 0.0);
  293:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
- 294:
+ 294: 
 ^^^ WARNING: '/' : Divide by zero during constant folding
 
  342:   vec2 x = vec2(log(a.x), 0.0);
@@ -1063,7 +1063,7 @@ GLSL compilation error in vertex shader scatterplot-layer-vertex-shader-64
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
  445:     }
- 446:
+ 446: 
  447:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
@@ -1073,7 +1073,7 @@ GLSL compilation error in vertex shader scatterplot-layer-vertex-shader-64
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
  555:     }
- 556:
+ 556: 
  557:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
@@ -1083,7 +1083,7 @@ GLSL compilation error in vertex shader scatterplot-layer-vertex-shader-64
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
  667:     }
- 668:
+ 668: 
  669:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
 ^^^ WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
