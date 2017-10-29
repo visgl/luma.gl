@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 4.1.0-alpha.8 - Oct 29
+- Fix the fp64 platform define (#344)
+- Disable picking uniform warnings for now. (#342)
+
 ## 4.1.0-alpha.7 - Oct 12
 - Fix duplicate console warnings (#341)
 
@@ -18,7 +22,7 @@
  - Framebuffer binding fixes (#323)
  - Shadowmap example, Delete unused files (#325)
  - Prevent animation  loop from creating unused framebuffer (#326)
-   
+
 ## 4.1.0-alpha.3 - Sep 27
  - Fix Framebuffer.clear (#321)
  - Add context management support for framebuffer binding. (#319)
