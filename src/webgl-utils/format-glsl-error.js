@@ -62,7 +62,7 @@ function formatErrors(errors, lines) {
       const segments = error.split(':', 3);
       const type = segments[0];
       const column = parseInt(segments[1], 10) || 0;
-      const err = error.substr(segments.join(':').length + 1).trim();
+      const err = error.substring(segments.join(':').length + 1).trim();
       message += padLeft(`^^^ ${type}: ${err}\n\n`, column);
     }
   }

@@ -30,23 +30,27 @@ export function getPlatformShaderDefines(gl) {
   if (checkRendererVendor(debugInfo, 'nvidia')) {
     platformDefines += `\
 #define NVIDIA_GPU
-#define NVIDIA_FP64_WORKAROUND 1
-#define NVIDIA_EQUATION_WORKAROUND 1
+// Nvidia optimizes away the calculation necessary for emulated fp64
+#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
   } else if (checkRendererVendor(debugInfo, 'intel')) {
     platformDefines += `\
 #define INTEL_GPU
-#define INTEL_FP64_WORKAROUND 1
-#define NVIDIA_EQUATION_WORKAROUND 1\n \
-#define INTEL_TAN_WORKAROUND 1
+// Intel optimizes away the calculation necessary for emulated fp64
+#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
+// Intel's built-in 'tan' function doesn't have acceptable precision
+#define LUMA_FP32_TAN_PRECISION_WORKAROUND 1
 `;
   } else if (checkRendererVendor(debugInfo, 'amd')) {
+    // AMD Does not eliminate fp64 code
     platformDefines += `\
 #define AMD_GPU
 `;
   } else {
     platformDefines += `\
 #define DEFAULT_GPU
+// Prevent driver from optimizing away the calculation necessary for emulated fp64
+#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
   }
 
