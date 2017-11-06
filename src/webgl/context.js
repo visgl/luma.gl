@@ -162,7 +162,7 @@ function logInfo(gl) {
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.once(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
+  log.once(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`);
 }
 
 // Create headless gl context (for running under Node.js)
