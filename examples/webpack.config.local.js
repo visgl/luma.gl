@@ -41,6 +41,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
 };
 
 function addLocalDevSettings(config, {libAlias}) {
+  config = Object.assign({}, LOCAL_DEVELOPMENT_CONFIG, config);
   config.resolve = config.resolve || {};
   config.resolve.alias = config.resolve.alias || {};
   Object.assign(config.resolve.alias, LOCAL_DEVELOPMENT_CONFIG.resolve.alias);
@@ -55,9 +56,8 @@ function addLocalDevSettings(config, {libAlias}) {
 }
 
 module.exports = (baseConfig, opts = {}) => env => {
-  const config = baseConfig;
   if (env && env.local) {
-    addLocalDevSettings(config, opts);
+    config = addLocalDevSettings(baseConfig, opts);
   }
   console.warn(JSON.stringify(config, null, 2));
   return config;

@@ -11,6 +11,9 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
   const errors = {};
   const warnings = {};
 
+  const name = getShaderName(src) || '(unnamed)';
+  const shaderName = `${getShaderTypeName(shaderType)} shader ${name}`;
+
   // Parse the error - note: browser and driver dependent
   for (let i = 0; i < errorStrings.length; i++) {
     const errorString = errorStrings[i];
@@ -21,7 +24,7 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
     const type = segments[0];
     const line = parseInt(segments[2], 10);
     if (isNaN(line)) {
-      throw new Error(`Could not parse GLSL compiler error: ${errLog}`);
+      throw new Error(`GLSL compilation error in ${shaderName}: ${errLog}`);
     }
     if (type !== 'WARNING') {
       errors[line] = errorString;
@@ -32,11 +35,9 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
 
   // Format the error inline with the code
   const lines = addLineNumbers(src);
-  const name = getShaderName(src) || 'unknown name';
-  const type = getShaderTypeName(shaderType);
 
   return {
-    shaderName: `${type} shader ${name}\n`,
+    shaderName,
     errors: formatErrors(errors, lines),
     warnings: formatErrors(warnings, lines)
   };
@@ -45,7 +46,7 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
 // Formats GLSL compiler error log into single string
 export default function formatGLSLCompilerError(errLog, src, shaderType) {
   const {shaderName, errors, warnings} = parseGLSLCompilerError(errLog, src, shaderType);
-  return `GLSL compilation error in ${shaderName}\n${errors}\n${warnings}`;
+  return `GLSL compilation error in ${shaderName}\n\n${errors}\n${warnings}`;
 }
 
 // helper function, outputs annotated errors or warnings
