@@ -33,11 +33,6 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
   if (ndx < 0) {
     const msg = `getError expected${(glErrors.length > 1) ? ' one of: ' : ': '}`;
     console.error('FAIL ' + msg);
-    // addSpan('<span><span class="fail" style="color:red">FAIL</span> ' + escapeHTML(msg) + '</span>');
-    // testFailed(`${msg}${expected}. Was ${glEnumToString(gl, err)} : ${opt_msg}`);
-  } else {
-    // var msg = 'getError was ' + ((glErrors.length > 1) ? 'one of: ' : 'expected value: ');
-    // testPassed(msg + expected + ' : ' + opt_msg);
   }
 }
 
@@ -49,12 +44,6 @@ export function initializeGL(canvas) {
     clearDepth: 1
   });
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  // var fp_texture_support = gl.getExtension('OES_texture_float');
-  // if (!fp_texture_support)
-  // {
-  //   console.error('no floating point texture support!');
-  // }
   return gl;
 }
 
