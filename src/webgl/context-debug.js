@@ -64,6 +64,7 @@ export function getDebugContext(gl) {
   // Store the debug context
   data.debugContext = debugContext;
   debugContext.debug = true;
+  debugContext.gl = gl;
 
   // Return it
   return debugContext;

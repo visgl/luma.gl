@@ -11,6 +11,8 @@ import {VertexShader, FragmentShader} from './shader';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
+const LOG_PROGRAM_PERF_PRIORITY = 3;
+
 // const GL_TRANSFORM_FEEDBACK_BUFFER_MODE = 0x8C7F;
 // const GL_TRANSFORM_FEEDBACK_VARYINGS = 0x8C83;
 // MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS : 0x8C80,
@@ -23,31 +25,14 @@ import assert from 'assert';
 // SEPARATE_ATTRIBS : 0x8C8D,
 
 export default class Program extends Resource {
-  /*
-   * @classdesc
-   * Handles creation of programs, mapping of attributes and uniforms
-   *
-   * @class
-   * @param {WebGLRenderingContext} gl - gl context
-   * @param {Object} opts - options
-   * @param {String} opts.vs - Vertex shader source
-   * @param {String} opts.fs - Fragment shader source
-   * @param {String} opts.id= - Id
-   */
+
   constructor(gl, opts = {}) {
     super(gl, opts);
     this.initialize(opts);
     this.vertexAttributes = VertexArray.getDefaultArray(gl);
     Object.seal(this);
 
-    // If program is not named, name it after shader names
-    if (!opts.id) {
-      let programName = this.vs.getName() || this.fs.getName();
-      programName = programName.replace(/shader/i, '');
-      programName = programName ? `${programName}-program` : 'program';
-      // TODO - this.id will already have been initialized
-      this.id = uid(programName);
-    }
+    this._setId(opts.id);
   }
 
   initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL.SEPARATE_ATTRIBS} = {}) {
@@ -69,18 +54,12 @@ export default class Program extends Resource {
 
     this._compileAndLink();
 
-    // determine attribute locations (i.e. indices)
-    this._attributeLocations = this._getAttributeLocations();
-    this._attributeCount = this.getAttributeCount();
-    this._warn = [];
-    this._filledLocations = {};
-
-    // prepare uniform setters
-    this._uniformSetters = this._getUniformSetters();
-    this._uniformCount = this.getUniformCount();
-    this._textureIndexCounter = 0;
-
     return this;
+  }
+
+  reset() {
+    this.unsetBuffers();
+    // TODO - reset uniforms and attributes to initial state
   }
 
   use() {
@@ -371,7 +350,9 @@ export default class Program extends Resource {
     const {gl} = this;
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
+    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`);
     gl.linkProgram(this.handle);
+    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`);
 
     // Avoid checking program linking error in production
     if (gl.debug || log.priority > 0) {
@@ -381,6 +362,17 @@ export default class Program extends Resource {
         throw new Error(`Error linking ${gl.getProgramInfoLog(this.handle)}`);
       }
     }
+
+    // determine attribute locations (i.e. indices)
+    this._attributeLocations = this._getAttributeLocations();
+    this._attributeCount = this.getAttributeCount();
+    this._warn = [];
+    this._filledLocations = {};
+
+    // prepare uniform setters
+    this._uniformSetters = this._getUniformSetters();
+    this._uniformCount = this.getUniformCount();
+    this._textureIndexCounter = 0;
   }
 
   _checkBuffers() {
@@ -473,6 +465,13 @@ export default class Program extends Resource {
     this.gl.deleteProgram(this.handle);
   }
 
+  _getName() {
+    let programName = this.vs.getName() || this.fs.getName();
+    programName = programName.replace(/shader/i, '');
+    programName = programName ? `${programName}-program` : 'program';
+    return programName;
+  }
+
   _getOptionsFromHandle(handle) {
     const shaderHandles = this.gl.getAttachedShaders(handle);
     const opts = {};
@@ -493,6 +492,15 @@ export default class Program extends Resource {
 
   _getParameter(pname) {
     return this.gl.getProgramParameter(this.handle, pname);
+  }
+
+  _setId(id) {
+    // If program is not named, name it after shader names
+    if (!id) {
+      const programName = this._getName();
+      // TODO - this.id will already have been initialized
+      this.id = uid(programName);
+    }
   }
 }
 

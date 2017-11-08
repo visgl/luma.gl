@@ -76,6 +76,26 @@ in a later version. Use \`${newUsage}\` instead`);
     if (priority <= log.priority) {
       console.groupEnd(`luma.gl: ${arg}`);
     }
+  },
+  time(priority, label) {
+    if (priority <= log.priority) {
+      // In case the platform doesn't have console.time
+      if (console.time) {
+        console.time(label);
+      } else {
+        console.info(label);
+      }
+    }
+  },
+  timeEnd(priority, label) {
+    if (priority <= log.priority) {
+      // In case the platform doesn't have console.timeEnd
+      if (console.timeEnd) {
+        console.timeEnd(label);
+      } else {
+        console.info(label);
+      }
+    }
   }
 };
 
