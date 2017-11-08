@@ -20,10 +20,8 @@
 
 // Actual tests for different arithmetic functions
 
-/* eslint-disable camelcase, prefer-template, max-len */
-/* global window, document, */
 import test from 'tape-catch';
-import {testcase} from './fp64-test-utils';
+import {testcase, gl} from './fp64-test-utils';
 
 test('fp64#sum_fp64', t => {
   testcase(gl, {glslFunc: 'sum_fp64', binary: true, op: (a, b) => a + b, t});
@@ -44,35 +42,3 @@ test('fp64#div_fp64', t => {
 test('fp64#sqrt_fp64', t => {
   testcase(gl, {glslFunc: 'sqrt_fp64', op: (a) => Math.sqrt(a), limit: 128, t});
 });
-
-/*
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_exp, title: 'Float exp test', t});
-}
-
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_log, title: 'Float log test', t});
-}
-
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_sin, title: 'Float sin test', t});
-}
-
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_cos, title: 'Float cos test', t});
-}
-
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_tan, title: 'Float tan test', t});
-}
-
-addSpan('------------------------', di);
-for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
-  testcase({gl, func: test_float_radians, title: 'Float radians test', t});
-}
-*/
