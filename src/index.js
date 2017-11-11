@@ -130,13 +130,13 @@ export {
   setDefaultShaderModules} from './shadertools/lib/shader-modules';
 
 // shader modules
-export {default as fp32} from './shadertools/modules/fp32/fp32';
-export {default as fp64} from './shadertools/modules/fp64/fp64';
-export {default as project} from './shadertools/modules/project/project';
-export {default as lighting} from './shadertools/modules/lighting/lighting';
-export {default as dirlight} from './shadertools/modules/dirlight/dirlight';
-export {default as picking} from './shadertools/modules/picking/picking';
-export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
+export {default as fp32} from './shaderlib/fp32/fp32';
+export {default as fp64} from './shaderlib/fp64/fp64';
+export {default as project} from './shaderlib/project/project';
+export {default as lighting} from './shaderlib/lighting/lighting';
+export {default as dirlight} from './shaderlib/dirlight/dirlight';
+export {default as picking} from './shaderlib/picking/picking';
+export {default as diffuse} from './shaderlib/diffuse/diffuse';
 
 // EXPERIMENTAL EXPORTS
 

@@ -2,6 +2,7 @@
 
 import './webgl-utils';
 import './shadertools';
+import './shaderlib';
 import './webgl';
 import './core';
 import './experimental';

@@ -1,4 +1,4 @@
-import {log} from '../../../utils';
+import {log} from '../../utils';
 
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 

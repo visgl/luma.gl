@@ -1,6 +1,6 @@
 import {resolveModules, getShaderModule} from './shader-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
-import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
+import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../shaderlib/module-injectors';
 import assert from 'assert';
 
 const VERTEX_SHADER = 'vs';
