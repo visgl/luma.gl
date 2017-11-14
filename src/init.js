@@ -1,29 +1,29 @@
 import {isBrowser} from './utils/is-browser';
 import {global} from './utils/globals';
 import log from './utils/log';
-// Version detection
-// TODO - this imports a rather large JSON file, we only need one field
-import {version} from '../package.json';
+// Version detection using babel plugin
+/* global __VERSION__ */
+const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
 
 const STARTUP_MESSAGE = `\
 Assign luma.log.priority in console to control logging: \
 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
 luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
-if (global.luma && global.luma.VERSION !== version) {
-  throw new Error(`luma.gl - multiple versions detected: ${global.luma.VERSION} vs ${version}`);
+if (global.luma && global.luma.VERSION !== VERSION) {
+  throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);
 }
 
 if (!global.luma) {
   /* global console */
   /* eslint-disable no-console */
   if (isBrowser) {
-    console.log(`luma.gl ${version} - ${STARTUP_MESSAGE}`);
+    console.log(`luma.gl ${VERSION} - ${STARTUP_MESSAGE}`);
   }
 
   global.luma = global.luma || {
-    VERSION: version,
-    version,
+    VERSION,
+    version: VERSION,
     log,
 
     // A global stats object that various components can add information to
