@@ -3,6 +3,14 @@
   	["es2015", {modules: false}]
   ],
   "plugins": [
+    "version-inline",
   	"./babel-plugin-tree-shaking.js"
-  ]
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        "istanbul"
+      ]
+    }
+  }
 }
