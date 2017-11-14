@@ -9,21 +9,24 @@ A cache of compiled shaders, keyed by shader source strings. Compilation of long
 
 Creates a new `ShaderCache` object.
 
+`new ShaderCache(gl)`
+
+Note that only objects from a single context can be cached, any attempts to use this cache with other gl contexts will result in exceptions.
+
 
 ### delete
 
 `ShaderCache.delete()`
 
 Hint to delete any unused cached shaders (currently a no-op).
-Returns itself to enable chaining.
 
 
 ### getVertexShader
 
+Returns a compiled `VertexShader` object corresponding to the supplied GLSL source code string, if possible from cache.
+
 `ShaderCache.getVertexShader(gl, source)`
 
-Returns a compiled `VertexShader` object corresponding to the supplied
-GLSL source code string, if possible from cache.
 
 * `gl` {WebGLRenderingContext} - gl context
 * `source` {String} - Source code for shader
@@ -32,8 +35,7 @@ returns {VertexShader} - a compiled vertex shader
 
 ### getFragmentShader
 
-Returns a compiled `FragmentShader` object corresponding to the supplied
-GLSL source code string, if possible from cache.
+Returns a compiled `FragmentShader` object corresponding to the supplied GLSL source code string, if possible from cache.
 
 `ShaderCache.getFragmentShader(gl, source)`
 

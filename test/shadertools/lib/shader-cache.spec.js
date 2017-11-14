@@ -1,11 +1,9 @@
 import 'luma.gl/headless';
-import {createGLContext, VertexShader, FragmentShader, Program, ShaderCache} from 'luma.gl';
+import {VertexShader, FragmentShader, Program, ShaderCache} from 'luma.gl';
 
 import test from 'tape-catch';
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../../setup';
 
 const VS1 = `
 attribute vec3 positions;
@@ -63,7 +61,8 @@ test('Experimental#ShaderCache import', t => {
 });
 
 test('Experimental#ShaderCache construct/delete', t => {
-  let shaderCache = new ShaderCache();
+  const {gl} = fixture;
+  let shaderCache = new ShaderCache({gl});
   t.ok(shaderCache instanceof ShaderCache, 'ShaderCache construction successful');
   shaderCache = shaderCache.delete();
   t.ok(shaderCache instanceof ShaderCache, 'ShaderCache delete successful');
@@ -73,7 +72,7 @@ test('Experimental#ShaderCache construct/delete', t => {
 test('Experimental#ShaderCache get cached vertex shaders', t => {
   const {gl} = fixture;
 
-  const shaderCache = new ShaderCache(gl);
+  const shaderCache = new ShaderCache({gl});
 
   const vs1 = shaderCache.getVertexShader(gl, VS1);
   const vs2 = shaderCache.getVertexShader(gl, VS2);
@@ -94,7 +93,7 @@ test('Experimental#ShaderCache get cached vertex shaders', t => {
 test('Experimental#ShaderCache get cached fragment shaders', t => {
   const {gl} = fixture;
 
-  const shaderCache = new ShaderCache(gl);
+  const shaderCache = new ShaderCache({gl});
 
   const fs1 = shaderCache.getFragmentShader(gl, FS1);
   const fs2 = shaderCache.getFragmentShader(gl, FS2);
@@ -115,7 +114,7 @@ test('Experimental#ShaderCache get cached fragment shaders', t => {
 test('Experimental#ShaderCache - construct Program from cached shaders', t => {
   const {gl} = fixture;
 
-  const shaderCache = new ShaderCache();
+  const shaderCache = new ShaderCache({gl});
   shaderCache.getVertexShader(gl, VS1);
   shaderCache.getFragmentShader(gl, FS1);
 
@@ -135,6 +134,110 @@ test('Experimental#ShaderCache - construct Program from cached shaders', t => {
   });
   t.ok(program2 instanceof Program,
     'Program constructed from cached shaders successful after delete of first program');
+
+  t.end();
+});
+
+test('Experimental#ShaderCache - check default Program caching', t => {
+  const {gl} = fixture;
+
+  // without _cachePrograms set to true, Program caching should be disabled.
+  const shaderCache = new ShaderCache({gl});
+
+  const program = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  const newProgram = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(newProgram instanceof Program, 'Program construction successful ');
+
+  t.notEqual(program, newProgram, 'Should receive new program');
+
+  t.end();
+});
+
+test('Experimental#ShaderCache - check Program caching with same id', t => {
+  const {gl} = fixture;
+
+  const shaderCache = new ShaderCache({gl, _cachePrograms: true});
+
+  const program = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  const cachedProgram = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(cachedProgram instanceof Program, 'Program construction successful ');
+
+  t.equal(program, cachedProgram, 'Should receive cached program');
+
+  t.end();
+});
+
+test('Experimental#ShaderCache - check Program caching with different id', t => {
+  const {gl} = fixture;
+
+  const shaderCache = new ShaderCache({gl, _cachePrograms: true});
+
+  const program = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  const newProgram = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-2'
+  });
+  t.ok(newProgram instanceof Program, 'Program construction successful ');
+
+  t.notEqual(program, newProgram, 'Should receive new Program instance');
+
+  t.end();
+});
+
+test('Experimental#ShaderCache - check Program caching with varyings', t => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const shaderCache = new ShaderCache({gl: gl2, _cachePrograms: true});
+
+  const program = shaderCache.getProgram(gl2, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1',
+    varyings: ['gl_Position']
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  const newProgram = shaderCache.getProgram(gl2, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1',
+    varyings: ['gl_Position']
+  });
+  t.ok(newProgram instanceof Program, 'Program construction successful ');
+
+  t.notEqual(program, newProgram, 'Should receive new Program instance');
 
   t.end();
 });

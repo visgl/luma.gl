@@ -192,16 +192,14 @@ in a future version. Use shader modules instead.`);
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
       ({vs, fs} = assembleResult);
 
-      // Retrive compiled shaders from cache if exist, otherwise add to the cache.
       if (shaderCache) {
-        vs = shaderCache.getVertexShader(this.gl, vs);
-        fs = shaderCache.getFragmentShader(this.gl, fs);
+        program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
+      } else {
+        program = new Program(this.gl, {vs, fs});
       }
 
       const {getUniforms} = assembleResult;
       this.getModuleUniforms = getUniforms || (x => {});
-
-      program = new Program(this.gl, {vs, fs});
     }
 
     this.program = program;
