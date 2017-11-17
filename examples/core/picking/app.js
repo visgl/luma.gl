@@ -74,7 +74,7 @@ const animationLoop = new AnimationLoop({
       planets
     }));
   },
-  onRender: ({gl, aspect, planets, framebuffer}) => {
+  onRender: ({gl, aspect, planets, framebuffer, useDevicePixels}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     const projectionMatrix = new Matrix4().perspective({fov: radians(75), aspect});
@@ -94,7 +94,8 @@ const animationLoop = new AnimationLoop({
     const pickedModel = pickPosition && pickModels(gl, {
       models: planets,
       position: pickPosition,
-      framebuffer
+      framebuffer,
+      useDevicePixels
     });
 
     const div = document.getElementById('planet-name');

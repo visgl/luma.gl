@@ -1,6 +1,7 @@
 // Resizing a webgl canvas
 
 /* global window, document */
+import {log} from '../utils';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -76,8 +77,15 @@ export function getDrawingBufferSize(canvas) {
 // Intention is that every pixel in the drawing buffer will have a 1-to-1 mapping with
 // actual device pixels in the hardware framebuffer, allowing us to render at the full
 // resolution of the device.
-export function calculateDrawingBufferSize(canvas, {useDevicePixelRatio = true}) {
-  const cssToDevicePixels = useDevicePixelRatio ? window.devicePixelRatio || 1 : 1;
+export function calculateDrawingBufferSize(canvas, {
+  useDevicePixelRatio = null, // deprecated
+  useDevicePixels = true
+}) {
+  if (useDevicePixelRatio !== null) {
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    useDevicePixels = useDevicePixelRatio;
+  }
+  const cssToDevicePixels = useDevicePixels ? window.devicePixelRatio || 1 : 1;
 
   // Lookup the size the browser is displaying the canvas in CSS pixels
   // and compute a size needed to make our drawingbuffer match it in
@@ -102,8 +110,7 @@ export function calculateDrawingBufferSize(canvas, {useDevicePixelRatio = true})
  */
 export function resizeCanvas(canvas, {
   width,
-  height,
-  useDevicePixelRatio = true
+  height
 }) {
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
@@ -123,10 +130,17 @@ export function resizeCanvas(canvas, {
  * @param {Number} width - new width of canvas in CSS coordinates
  * @param {Number} height - new height of canvas in CSS coordinates
  */
-export function resizeDrawingBuffer(canvas, {useDevicePixelRatio = true}) {
+export function resizeDrawingBuffer(canvas, {
+  useDevicePixelRatio = null, // deprecated
+  useDevicePixels = true
+}) {
   // Resize the render buffer of the canvas to match canvas client size
+  if (useDevicePixelRatio !== null) {
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    useDevicePixels = useDevicePixelRatio;
+  }
   // multiplying with dpr (Optionally can be turned off)
-  const newBufferSize = calculateDrawingBufferSize(canvas, {useDevicePixelRatio});
+  const newBufferSize = calculateDrawingBufferSize(canvas, {useDevicePixels});
   // Only update if the canvas size has not changed
   if (newBufferSize.width !== canvas.width || newBufferSize.height !== canvas.height) {
     // Make the canvas render buffer the same size as

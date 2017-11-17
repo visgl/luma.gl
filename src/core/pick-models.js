@@ -1,5 +1,6 @@
 /* global window */
 import {clear, isWebGL} from '../webgl';
+import {log} from '../utils';
 import Group from './group';
 import assert from 'assert';
 
@@ -15,12 +16,17 @@ export default function pickModels(gl, {
   uniforms = {}, // eslint-disable-line
   parameters = {},
   settings,
-  useDevicePixelRatio = true,
+  useDevicePixelRatio = null, // deprecated
+  useDevicePixels = true,
   framebuffer
 }) {
   assert(isWebGL(gl), ILLEGAL_ARG);
   assert(framebuffer, ILLEGAL_ARG);
   assert(position, ILLEGAL_ARG);
+  if (useDevicePixelRatio !== null) {
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    useDevicePixels = useDevicePixelRatio;
+  }
 
   const [x, y] = position;
 
@@ -29,7 +35,7 @@ export default function pickModels(gl, {
 
   // Compensate for devicePixelRatio
   // Note: this assumes the canvas framebuffer has been matched
-  const dpr = useDevicePixelRatio ? getDevicePixelRatio() : 1;
+  const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
   // Reverse the y coordinate
   const deviceX = x * dpr;
   const deviceY = gl.canvas.height - y * dpr;
