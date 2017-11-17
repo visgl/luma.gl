@@ -1,5 +1,7 @@
 import {log} from '../../../utils';
+import {equals} from 'math.gl';
 
+export const PICKING_NULL_COLOR = new Int8Array([-1, -1, -1, -1]);
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 const DEFAULT_MODULE_OPTIONS = {
@@ -13,21 +15,20 @@ const DEFAULT_MODULE_OPTIONS = {
 /* eslint-disable camelcase */
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};
-  if (opts.pickingSelectedColorValid !== undefined) {
-    uniforms.picking_uSelectedPickingColorValid = opts.pickingSelectedColorValid ? 1 : 0;
-  }
   if (opts.pickingValid !== undefined) {
     uniforms.picking_uSelectedPickingColorValid = opts.pickingValid ? 1 : 0;
-    log.deprecated('pickingValid', 'pickingSelectedColorValid');
+    log.deprecated('pickingValid', 'set picking color PICKING_NULL_COLOR');
   }
-  if (opts.pickingSelectedColor !== undefined) {
-    if (opts.pickingSelectedColor) {
+  if (opts.pickingSelectedColor) {
+    if (equals(Array.from(opts.pickingSelectedColor), Array.from(PICKING_NULL_COLOR))) {
+      uniforms.picking_uSelectedPickingColorValid = 0;
+    } else {
       const selectedColor = [
         opts.pickingSelectedColor[0],
         opts.pickingSelectedColor[1],
         opts.pickingSelectedColor[2]
       ];
-      // console.log('selected picking color', selectedColor);
+      uniforms.picking_uSelectedPickingColorValid = 1;
       uniforms.picking_uSelectedPickingColor = selectedColor;
     }
   }
