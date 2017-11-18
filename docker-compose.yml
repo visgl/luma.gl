@@ -1,0 +1,7 @@
+version: '2'
+services:
+  luma-gl:
+    build: .
+    volumes:
+      - .:/luma-gl
+      - /luma-gl/node_modules/

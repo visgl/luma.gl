@@ -21,6 +21,9 @@
 // Enables ES2015 import/export in Node.js
 require('reify');
 
+/* global global */
+global.__VERSION__ = require('../../package.json').version;
+
 // Registers an alias for this module
 const path = require('path');
 const moduleAlias = require('module-alias');

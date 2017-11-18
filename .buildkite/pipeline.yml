@@ -1,0 +1,26 @@
+steps:
+  - name: ":docker:"
+    plugins:
+      docker-compose#v1.5.2:
+        build: fusion-core
+        image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+
+  - wait
+
+  - name: ":eslint:"
+    command: "yarn lint"
+    plugins:
+      docker-compose#v1.5.2:
+        run: luma-gl
+
+  - name: ":hourglass:"
+    command: "sh /etc/init.d/xvfb && yarn test"
+    plugins:
+      docker-compose#v1.5.2:
+        run: luma-gl
+
+  - name: ":package:"
+    command: "yarn build"
+    plugins:
+      docker-compose#v1.5.2:
+        run: luma-gl
