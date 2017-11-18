@@ -2,7 +2,7 @@ steps:
   - name: ":docker:"
     plugins:
       docker-compose#v1.5.2:
-        build: fusion-core
+        build: luma-gl
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
 
   - wait
