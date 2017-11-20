@@ -58,7 +58,7 @@ const animationLoop = new AnimationLoop({
       framebuffer
     });
 
-    const pickingSelectedColor = pickInfo && pickInfo.color || PICKING_NULL_COLOR;
+    const pickingSelectedColor = (pickInfo && pickInfo.color) || PICKING_NULL_COLOR;
 
     cube.updateModuleSettings({
       pickingSelectedColor
