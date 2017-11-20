@@ -38,7 +38,7 @@ The callbacks that the app supplies to the `AnimationLoop` will be called with a
 * `width`: The canvas width, in device pixels.
 * `height`: The canvas height, in device pixels.
 * `aspect`: The canvas aspect ratio (width/height) to update projection matrices
-* `pixelRatio`: Pixel ratio of the canvas drawingBuffer.
+* `useDevicePixels`: A boolean value, indicates whether canvas is created to utilize full resolution of Retina/HD displays.
 * `time`: A monotonic value in milliseconds since `AnimationLoop` was created.
 * `tick`: A monotonic counter that updates for every frame rendered.
 * And objects that are returned by `onInitialize` method.

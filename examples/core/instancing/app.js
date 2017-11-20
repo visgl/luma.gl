@@ -1,6 +1,6 @@
 /* eslint-disable no-var, max-statements */
 import {GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
-  Cube, picking, dirlight} from 'luma.gl';
+  Cube, picking, dirlight, PICKING_NULL_COLOR} from 'luma.gl';
 
 const SIDE = 256;
 
@@ -33,7 +33,7 @@ const animationLoop = new AnimationLoop({
     gl.canvas.removeEventListener('mousemove', mousemove);
     cube.delete();
   },
-  onRender({gl, tick, aspect, cube, framebuffer}) {
+  onRender({gl, tick, aspect, cube, framebuffer, useDevicePixels}) {
     cube.setUniforms({
       uTime: tick * 0.1,
       // Basic projection matrix
@@ -54,12 +54,14 @@ const animationLoop = new AnimationLoop({
     const pickInfo = pickPosition && pickModels(gl, {
       models: [cube],
       position: pickPosition,
+      useDevicePixels,
       framebuffer
     });
 
+    const pickingSelectedColor = (pickInfo && pickInfo.color) || PICKING_NULL_COLOR;
+
     cube.updateModuleSettings({
-      pickingSelectedColor: pickInfo && pickInfo.color,
-      pickingSelectedColorValid: pickInfo !== null
+      pickingSelectedColor
     });
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
