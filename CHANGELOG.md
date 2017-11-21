@@ -1,5 +1,12 @@
 # Pre-releases
 
+## 4.1.0-alpha.9 - Nov 20
+- 4.1 API Audit (picking module, useDevicePixels) (#355)
+- ShaderCache: Add support for Program objets. (#352)
+- Add version during transpilation (#354)
+- Make fp64 tests work under `tape` (#351)
+- Remove context in logging. Fix formatting in shader errors (#348)
+
 ## 4.1.0-alpha.8 - Oct 29
 - Fix the fp64 platform define (#344)
 - Disable picking uniform warnings for now. (#342)
