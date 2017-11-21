@@ -173,8 +173,10 @@ export default class AnimationLoop {
     // Increment tick
     this._callbackData.tick++;
 
-    // Request another render frame (now )
-    this._animationFrameId = requestAnimationFrame(this._renderFrame);
+    if (!this._stopped) {
+      // Request another render frame (now )
+      this._animationFrameId = requestAnimationFrame(this._renderFrame);
+    }
   }
 
   // Initialize the  object that will be passed to app callbacks
