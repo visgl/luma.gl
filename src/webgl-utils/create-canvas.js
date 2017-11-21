@@ -3,9 +3,10 @@
 /* global window, document */
 import {log, isBrowser} from '../utils';
 
-let isPageLoaded = isBrowser && document.readyState === 'complete';
+const isPage = isBrowser && typeof document !== 'undefined';
+let isPageLoaded = isPage && document.readyState === 'complete';
 
-const pageLoadPromise = isBrowser ?
+const pageLoadPromise = isPage ?
   new Promise((resolve, reject) => {
     if (isPageLoaded) {
       resolve(document);
