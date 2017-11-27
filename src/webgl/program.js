@@ -363,16 +363,8 @@ export default class Program extends Resource {
       }
     }
 
-    // determine attribute locations (i.e. indices)
-    this._attributeLocations = this._getAttributeLocations();
-    this._attributeCount = this.getAttributeCount();
-    this._warn = [];
-    this._filledLocations = {};
-
-    // prepare uniform setters
-    this._uniformSetters = this._getUniformSetters();
-    this._uniformCount = this.getUniformCount();
-    this._textureIndexCounter = 0;
+    this._queryAttributeLocations();
+    this._queryUniformLocations();
   }
 
   _checkBuffers() {
@@ -426,33 +418,6 @@ export default class Program extends Resource {
     return true;
   }
 
-  // determine attribute locations (maps attribute name to index)
-  _getAttributeLocations() {
-    const attributeLocations = {};
-    const length = this.getAttributeCount();
-    for (let location = 0; location < length; location++) {
-      const name = this.getAttributeInfo(location).name;
-      attributeLocations[name] = this.getAttributeLocation(name);
-    }
-    return attributeLocations;
-  }
-
-  // create uniform setters
-  // Map of uniform names to setter functions
-  _getUniformSetters() {
-    const {gl} = this;
-    const uniformSetters = {};
-    const length = this.getUniformCount();
-    for (let i = 0; i < length; i++) {
-      const info = this.getUniformInfo(i);
-      const parsedName = parseUniformName(info.name);
-      const location = this.getUniformLocation(parsedName.name);
-      uniformSetters[parsedName.name] =
-        getUniformSetter(gl, location, info, parsedName.isArray);
-    }
-    return uniformSetters;
-  }
-
   _print(bufferName) {
     return `Program ${this.id}: Attribute ${bufferName}`;
   }
@@ -492,6 +457,33 @@ export default class Program extends Resource {
 
   _getParameter(pname) {
     return this.gl.getProgramParameter(this.handle, pname);
+  }
+
+  // query attribute locations and build name to location map.
+  _queryAttributeLocations() {
+    this._attributeLocations = {};
+    this._attributeCount = this.getAttributeCount();
+    for (let location = 0; location < this._attributeCount; location++) {
+      const name = this.getAttributeInfo(location).name;
+      this._attributeLocations[name] = this.getAttributeLocation(name);
+    }
+    this._warn = [];
+    this._filledLocations = {};
+  }
+
+  // query uniform locations and build name to setter map.
+  _queryUniformLocations() {
+    const {gl} = this;
+    this._uniformSetters = {};
+    this._uniformCount = this.getUniformCount();
+    for (let i = 0; i < this._uniformCount; i++) {
+      const info = this.getUniformInfo(i);
+      const parsedName = parseUniformName(info.name);
+      const location = this.getUniformLocation(parsedName.name);
+      this._uniformSetters[parsedName.name] =
+        getUniformSetter(gl, location, info, parsedName.isArray);
+    }
+    this._textureIndexCounter = 0;
   }
 
   _setId(id) {
