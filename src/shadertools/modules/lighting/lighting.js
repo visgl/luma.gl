@@ -1,4 +1,4 @@
-import {Vector3} from '../../../packages/math';
+import {Vector3} from 'math.gl';
 
 import commonShader from './lighting-common.glsl';
 import vertexShader1 from './lighting-vertex.glsl';

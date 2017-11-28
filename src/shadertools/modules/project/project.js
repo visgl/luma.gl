@@ -1,4 +1,4 @@
-import {Matrix4} from '../../../packages/math';
+import {Matrix4} from 'math.gl';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
