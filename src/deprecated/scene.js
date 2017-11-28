@@ -1,7 +1,7 @@
 // Scene Object management and rendering
 /* eslint-disable max-statements, no-try-catch */
 
-import {Vector3} from '../packages/math';
+import {Vector3} from 'math.gl';
 import {merge} from '../utils';
 import Group from '../core/group';
 import pickModels from '../core/pick-models';
