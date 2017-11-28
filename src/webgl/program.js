@@ -369,12 +369,12 @@ export default class Program extends Resource {
 
   _checkBuffers() {
     for (const attributeName in this._attributeLocations) {
-      if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
+      if (!this._filledLocations[attributeName] && !this._warnedLocations[attributeName]) {
         const location = this._attributeLocations[attributeName];
         // throw new Error(`Program ${this.id}: ` +
         //   `Attribute ${location}:${attributeName} not supplied`);
         log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
-        this._warn[attributeName] = true;
+        this._warnedLocations[attributeName] = true;
       }
     }
     return this;
@@ -392,9 +392,9 @@ export default class Program extends Resource {
           throw new Error(`${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
-        } else if (!this._warn[bufferName]) {
+        } else if (!this._warnedLocations[bufferName]) {
           log.log(2, `${this._print(bufferName)} not used`);
-          this._warn[bufferName] = true;
+          this._warnedLocations[bufferName] = true;
         }
       } else {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
@@ -467,7 +467,7 @@ export default class Program extends Resource {
       const name = this.getAttributeInfo(location).name;
       this._attributeLocations[name] = this.getAttributeLocation(name);
     }
-    this._warn = [];
+    this._warnedLocations = [];
     this._filledLocations = {};
   }
 
