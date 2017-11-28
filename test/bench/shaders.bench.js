@@ -18,15 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Enables ES2015 import/export in Node.js
-require('reify');
+import {createGLContext, Program, VertexShader, FragmentShader} from 'luma.gl';
+const gl = createGLContext();
 
-// Registers an alias for this module
-const path = require('path');
-const moduleAlias = require('module-alias');
-moduleAlias.addAlias('luma.gl', path.resolve('./src'));
+const VS = `
+attribute vec3 positions;
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+}
+`;
 
-// Import headless luma support
-require('luma.gl/headless');
+const FS = `
+void main(void) {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+`;
 
-require('./index');
+const vs = new VertexShader(gl, VS);
+const fs = new FragmentShader(gl, FS);
+
+export default function coreLayersBench(suite) {
+  return suite
+
+    .group('PROGRAM FROM SHADERS')
+    .add('Program from shader source', () => {
+      return new Program(gl, {vs: VS, fs: FS});
+    })
+    .add('Program from cached shaders', () => {
+      return new Program(gl, {vs, fs});
+    })
+    ;
+}

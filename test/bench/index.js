@@ -19,53 +19,14 @@
 // THE SOFTWARE.
 
 /* eslint-disable no-console, no-invalid-this */
-/* global console */
-import {Suite} from 'benchmark';
+import {Bench} from 'probe.gl';
 
-import {createGLContext, Program, VertexShader, FragmentShader} from 'luma.gl';
+import shadersBench from './shaders.bench';
 
-const suite = new Suite();
-
-const gl = createGLContext();
-
-const VS = `
-attribute vec3 positions;
-uniform mat4 uMVMatrix;
-uniform mat4 uPMatrix;
-void main(void) {
-  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
-}
-`;
-
-const FS = `
-void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
-
-const vs = new VertexShader(gl, VS);
-const fs = new FragmentShader(gl, FS);
+const suite = new Bench();
 
 // add tests
-suite
-.add('Program from shader source', () => {
-  return new Program(gl, {vs: VS, fs: FS});
-})
-.add('Program from cached shaders', () => {
-  return new Program(gl, {vs, fs});
-})
-// .add('encoding picking color', () => {
-//   testIdx++;
-//   testLayer.encodePickingColor(testIdx);
-// })
-// add listeners
-.on('start', (event) => {
-  console.log('Starting bench...');
-})
-.on('cycle', (event) => {
-  console.log(String(event.target));
-})
-.on('complete', function t() {
-  console.log(`Fastest is ${this.filter('fastest').map('name')}`);
-})
-.run({});
+shadersBench(suite);
+
+// Run the suite
+suite.run();

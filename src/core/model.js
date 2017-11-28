@@ -184,7 +184,7 @@ export default class Model extends Object3D {
 
       // Assign default uniforms (if any default shaders are being used)
       if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
-        log.warn(`luma.gl: default shaders are deprecated and will be removed \
+        log.warn(`default shaders are deprecated and will be removed \
 in a future version. Use shader modules instead.`);
         defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
       }
