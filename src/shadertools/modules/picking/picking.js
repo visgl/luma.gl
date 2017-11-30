@@ -1,7 +1,5 @@
 import {log} from '../../../utils';
-import {equals} from 'math.gl';
 
-export const PICKING_NULL_COLOR = new Int8Array([-1, -1, -1, -1]);
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 const DEFAULT_MODULE_OPTIONS = {
@@ -16,20 +14,20 @@ const DEFAULT_MODULE_OPTIONS = {
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};
   if (opts.pickingValid !== undefined) {
-    uniforms.picking_uSelectedPickingColorValid = opts.pickingValid ? 1 : 0;
-    log.deprecated('pickingValid', 'set picking color PICKING_NULL_COLOR');
+    uniforms.picking_uSelectedColorValid = opts.pickingValid ? 1 : 0;
+    log.deprecated('pickingValid', 'set pickingSelectedColor to null');
   }
-  if (opts.pickingSelectedColor) {
-    if (equals(Array.from(opts.pickingSelectedColor), Array.from(PICKING_NULL_COLOR))) {
-      uniforms.picking_uSelectedPickingColorValid = 0;
+  if (opts.pickingSelectedColor !== undefined) {
+    if (opts.pickingSelectedColor === null) {
+      uniforms.picking_uSelectedColorValid = 0;
     } else {
       const selectedColor = [
         opts.pickingSelectedColor[0],
         opts.pickingSelectedColor[1],
         opts.pickingSelectedColor[2]
       ];
-      uniforms.picking_uSelectedPickingColorValid = 1;
-      uniforms.picking_uSelectedPickingColor = selectedColor;
+      uniforms.picking_uSelectedColorValid = 1;
+      uniforms.picking_uSelectedColor = selectedColor;
     }
   }
   if (opts.pickingHighlightColor !== undefined) {
@@ -46,9 +44,9 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 }
 
 const vs = `\
-uniform vec3 picking_uSelectedPickingColor;
+uniform vec3 picking_uSelectedColor;
 uniform float picking_uThreshold;
-uniform bool picking_uSelectedPickingColorValid;
+uniform bool picking_uSelectedColorValid;
 
 varying vec4 picking_vRGBcolor_Aselected;
 
@@ -56,10 +54,10 @@ const float COLOR_SCALE = 1. / 255.;
 
 bool isVertexPicked(vec3 vertexColor) {
   return
-    picking_uSelectedPickingColorValid &&
-    abs(vertexColor.r - picking_uSelectedPickingColor.r) < picking_uThreshold &&
-    abs(vertexColor.g - picking_uSelectedPickingColor.g) < picking_uThreshold &&
-    abs(vertexColor.b - picking_uSelectedPickingColor.b) < picking_uThreshold;
+    picking_uSelectedColorValid &&
+    abs(vertexColor.r - picking_uSelectedColor.r) < picking_uThreshold &&
+    abs(vertexColor.g - picking_uSelectedColor.g) < picking_uThreshold &&
+    abs(vertexColor.b - picking_uSelectedColor.b) < picking_uThreshold;
 }
 
 void picking_setPickingColor(vec3 pickingColor) {
@@ -74,7 +72,7 @@ void picking_setPickingColor(vec3 pickingColor) {
 
 const fs = `\
 uniform bool picking_uActive; // true during rendering to offscreen picking buffer
-uniform vec3 picking_uSelectedPickingColor;
+uniform vec3 picking_uSelectedColor;
 uniform vec4 picking_uHighlightColor;
 
 varying vec4 picking_vRGBcolor_Aselected;

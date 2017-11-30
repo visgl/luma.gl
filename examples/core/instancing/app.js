@@ -1,6 +1,6 @@
 /* eslint-disable no-var, max-statements */
 import {GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
-  Cube, picking, dirlight, PICKING_NULL_COLOR} from 'luma.gl';
+  Cube, picking, dirlight} from 'luma.gl';
 
 const SIDE = 256;
 
@@ -58,7 +58,7 @@ const animationLoop = new AnimationLoop({
       framebuffer
     });
 
-    const pickingSelectedColor = (pickInfo && pickInfo.color) || PICKING_NULL_COLOR;
+    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
 
     cube.updateModuleSettings({
       pickingSelectedColor
