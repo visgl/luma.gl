@@ -1,7 +1,7 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 import {
   GL, AnimationLoop, Program, Model, Geometry, Matrix4,
-  resetParameters, setParameters
+  setParameters
 } from 'luma.gl';
 
 const FRAGMENT_SHADER = `\
@@ -32,18 +32,22 @@ void main(void) {
 `;
 
 const triangleGeometry = new Geometry({
-  positions: new Float32Array([0, 1, 0,  -1, -1, 0,  1, -1, 0]),
-  colors: {size: 4, value: new Float32Array([1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1])}
+  attributes: {
+    positions: {size: 3, value: new Float32Array([0, 1, 0,  -1, -1, 0,  1, -1, 0])},
+    colors: {size: 4, value: new Float32Array([1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1])}
+  }
 });
 
 const squareGeometry = new Geometry({
   drawMode: GL.TRIANGLE_STRIP,
-  positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
-  colors: {
-    size: 4,
-    value: new Float32Array([
-      0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1
-    ])
+  attributes: {
+    positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
+    colors: {
+      size: 4,
+      value: new Float32Array([
+        0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1
+      ])
+    }
   }
 });
 
@@ -106,4 +110,3 @@ export default animationLoop;
 
 // expose on Window for standalone example
 window.animationLoop = animationLoop; // eslint-disable-lie
-

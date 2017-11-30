@@ -2,7 +2,7 @@
 import {
   GL, AnimationLoop, Cube, Sphere, Matrix4, Texture2D,
   loadTextures, Model, loadFiles, parseModel,
-  Program, Renderbuffer, Framebuffer, Geometry, resetParameters, setParameters
+  Program, Renderbuffer, Framebuffer, Geometry, setParameters
 } from 'luma.gl';
 
 // TODO: Remaining issues
@@ -42,12 +42,14 @@ void main(void) {
 
 const squareGeometry = new Geometry({
   drawMode: GL.TRIANGLE_STRIP,
-  positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
-  colors: {
-    size: 4,
-    value: new Float32Array([
-      1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1,  1, 1, 0, 1
-    ])
+  attributes: {
+    positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
+    colors: {
+      size: 4,
+      value: new Float32Array([
+        1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1,  1, 1, 0, 1
+      ])
+    }
   }
 });
 
@@ -469,4 +471,3 @@ export default animationLoop;
 
 // expose on Window for standalone example
 window.animationLoop = animationLoop; // eslint-disable-lie
-
