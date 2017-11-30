@@ -101,8 +101,8 @@ const animationLoop = new AnimationLoop({
     const div = document.getElementById('planet-name');
     if (pickedModel && div) {
       div.innerHTML = pickedModel.model.id;
-      div.style.top = `${pickPosition[0]}px`;
-      div.style.left = `${pickPosition[1]}px`;
+      div.style.left = `${pickPosition[0]}px`;
+      div.style.top = `${pickPosition[1]}px`;
       div.style.display = 'block';
       div.style.fontWeight = 'bold';
     } else if (div) {
