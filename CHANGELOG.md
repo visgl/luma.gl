@@ -1,5 +1,14 @@
 # Pre-releases
 
+## 4.1.0-beta.1 - Nov 30
+- Add buildkite (#356)
+- Cleanup: remove un-used picking code (#366)
+- Picking: Remove PICKING_NULL_COLOR, use 'null' (#365)
+- Remove packages/math and add math.gl (#363)
+- Use probe.gl for bench (#362)
+- Program: Enhancements to attribute/uniform locations map setup. (#361)
+- Fix AnimationLoop stop method (#360)
+
 ## 4.1.0-alpha.9 - Nov 20
 - 4.1 API Audit (picking module, useDevicePixels) (#355)
 - ShaderCache: Add support for Program objets. (#352)
