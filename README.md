@@ -2,8 +2,8 @@
   <a href="https://npmjs.org/package/luma.gl">
     <img src="https://img.shields.io/npm/v/luma.gl.svg?style=flat-square" alt="version" />
   </a>
-  <a href="https://buildkite.com/uberopensource/luma-gl">
-    <img src="https://badge.buildkite.com/c97450ea874884cb697059daf4bae50a98f595718f7f270080.svg?style=flat-square" alt="build" />
+  <a href="https://travis-ci.org/uber/luma.gl">
+    <img src="https://img.shields.io/travis/uber/luma.gl/master.svg?style=flat-square" alt="build" />
   </a>
   <a href="https://npmjs.org/package/luma.gl">
     <img src="https://img.shields.io/npm/dm/luma.gl.svg?style=flat-square" alt="downloads" />
