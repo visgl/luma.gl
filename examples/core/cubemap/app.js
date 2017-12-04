@@ -60,8 +60,7 @@ animationLoop.getInfo = () => {
 };
 
 function getCube(gl) {
-  return new Cube({
-    gl,
+  return new Cube(gl, {
     vs: `\
 attribute vec3 positions;
 
@@ -94,8 +93,7 @@ void main(void) {
 }
 
 function getPrism(gl) {
-  return new Cube({
-    gl,
+  return new Cube(gl, {
     vs: `\
 attribute vec3 positions;
 attribute vec3 normals;

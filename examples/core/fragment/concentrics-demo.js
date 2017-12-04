@@ -18,7 +18,7 @@ void main(void) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    return {clipSpaceQuad: new ClipSpaceQuad({gl, fs: CONCENTRICS_FRAGMENT_SHADER})};
+    return {clipSpaceQuad: new ClipSpaceQuad(gl, {fs: CONCENTRICS_FRAGMENT_SHADER})};
   },
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
     clipSpaceQuad.render({uTime: tick * 0.01});

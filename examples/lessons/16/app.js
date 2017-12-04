@@ -215,8 +215,7 @@ const animationLoop = new AnimationLoop({
         )
       });
 
-      const cube = new Cube({
-        gl,
+      const cube = new Cube(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: Object.assign(

@@ -32,29 +32,30 @@ void main(void) {
 `;
 
 export class Star extends Model {
-  constructor(opts = {}) {
-    const program = new Program(opts.gl, {
+  constructor(gl, opts = {}) {
+    const program = new Program(gl, {
       fs: FRAGMENT_SHADER,
       vs: VERTEX_SHADER
     });
 
-    super({
-      gl: opts.gl,
+    super(gl, {
       program,
       geometry: new Geometry({
-        positions: new Float32Array([
-          -1.0, -1.0, 0.0,
-          1.0, -1.0, 0.0,
-          -1.0, 1.0, 0.0,
-          1.0, 1.0, 0.0
-        ]),
-        texCoords: new Float32Array([
-          0.0, 0.0,
-          1.0, 0.0,
-          0.0, 1.0,
-          1.0, 1.0
-        ]),
-        indices: new Uint16Array([0, 1, 3, 3, 2, 0])
+        attributes: {
+          positions: new Float32Array([
+            -1.0, -1.0, 0.0,
+            1.0, -1.0, 0.0,
+            -1.0, 1.0, 0.0,
+            1.0, 1.0, 0.0
+          ]),
+          texCoords: new Float32Array([
+            0.0, 0.0,
+            1.0, 0.0,
+            0.0, 1.0,
+            1.0, 1.0
+          ]),
+          indices: new Uint16Array([0, 1, 3, 3, 2, 0])
+        }
       }),
       uniforms: {
         uSampler: opts.texture

@@ -62,7 +62,7 @@ const animationLoop = new AnimationLoop({
   // onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
   onInitialize: ({gl}) => {
     return {
-      clipSpaceQuad: new ClipSpaceQuad({gl, fs: MANDELBROT_FRAGMENT_SHADER})
+      clipSpaceQuad: new ClipSpaceQuad(gl, {fs: MANDELBROT_FRAGMENT_SHADER})
     };
   },
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {

@@ -45,13 +45,15 @@ export default class Geometry {
     if (attributes) {
       this.setAttributes(attributes);
     } else {
-      log.deprecated('inline attributes', 'attributes parameter');
       // TODO this is deprecated
       delete opts.id;
       delete opts.drawMode;
       delete opts.vertexCount;
       delete opts.attributes;
-      this.setAttributes(opts);
+      if (Object.keys(opts).length > 0) {
+        log.deprecated('inline attributes', 'attributes parameter');
+        this.setAttributes(opts);
+      }
     }
   }
 

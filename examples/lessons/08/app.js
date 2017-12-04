@@ -85,8 +85,7 @@ const animationLoop = new AnimationLoop({
       }]
     })
     .then(textures => ({
-      cube: new Cube({
-        gl,
+      cube: new Cube(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: {uSampler: textures[0]}
