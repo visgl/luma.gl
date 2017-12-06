@@ -46,8 +46,7 @@ function makeInstancedCube(gl) {
     () => Math.random() * 0.75 + 0.25
   );
 
-  return new Cube({
-    gl,
+  return new Cube(gl, {
     isInstanced: 1,
     instanceCount: SIDE * SIDE,
     attributes: {

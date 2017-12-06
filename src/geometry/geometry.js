@@ -45,13 +45,17 @@ export default class Geometry {
     if (attributes) {
       this.setAttributes(attributes);
     } else {
-      log.deprecated('inline attributes', 'attributes parameter');
-      // TODO this is deprecated
-      delete opts.id;
-      delete opts.drawMode;
-      delete opts.vertexCount;
-      delete opts.attributes;
-      this.setAttributes(opts);
+      const inlineAttributes = {};
+      // extract inline attributes from opts.
+      for (const attributeName in opts) {
+        if (ArrayBuffer.isView(opts[attributeName])) {
+          inlineAttributes[attributeName] = {value: opts[attributeName]};
+        }
+      }
+      if (Object.keys(inlineAttributes).length > 0) {
+        log.deprecated('inline attributes', 'attributes parameter');
+        this.setAttributes(inlineAttributes);
+      }
     }
   }
 

@@ -57,7 +57,7 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    const cube = new Cube({gl, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
+    const cube = new Cube(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
     // load image
     return loadImage('crate.gif')

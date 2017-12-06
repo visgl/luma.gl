@@ -28,8 +28,7 @@ const animationLoop = new AnimationLoop({
       var stars = [];
       var numStars = 50;
       for (var i = 0; i < numStars; i++) {
-        stars.push(new Star({
-          gl,
+        stars.push(new Star(gl, {
           startingDistance: ((i / numStars) * 5.0),
           rotationSpeed: (i / numStars),
           texture: textures[0]
