@@ -193,18 +193,20 @@ test('WebGL#Uniforms Program uniform locations', t => {
   t.end();
 });
 
-const testSetUniform = gl => t => {
+const testSetUniform = (gl, t) => {
   const program = new Program(gl, {
     vs: VERTEX_SHADER,
     fs: WEBGL1_FRAGMENT_SHADER
   });
   program.use();
 
-  const uniforms = Object.assign({}, WEBGL1_GOOD_UNIFORMS);
+  let uniforms = Object.assign({}, WEBGL1_GOOD_UNIFORMS);
 
+  t.comment('Test setting typed arrays');
   program.setUniforms(uniforms);
-  t.pass('Program set uniforms successful');
+  t.pass('Set typed array uniforms successful');
 
+  uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];
     if (value.length) {
@@ -213,9 +215,11 @@ const testSetUniform = gl => t => {
     }
   }
 
+  t.comment('Test setting plain arrays');
   program.setUniforms(uniforms);
-  t.pass('Program set array uniforms successful');
+  t.pass('Set plain array uniforms successful');
 
+  uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];
     if (value.length) {
@@ -225,8 +229,9 @@ const testSetUniform = gl => t => {
     }
   }
 
+  t.comment('Test setting malformed typed arrays');
   program.setUniforms(uniforms);
-  t.pass('Program set malformed uniforms successful');
+  t.pass('Set malformed typed array uniforms successful');
 
   t.end();
 };
@@ -234,14 +239,14 @@ const testSetUniform = gl => t => {
 test('WebGL#Uniforms Program setUniforms', t => {
   const {gl} = fixture;
 
-  testSetUniform(gl)(t);
+  testSetUniform(gl, t);
 });
 
 test('WebGL2#Uniforms Program setUniforms', t => {
   const {gl2} = fixture;
 
   if (gl2) {
-    testSetUniform(gl2)(t);
+    testSetUniform(gl2, t);
   } else {
     t.end();
   }

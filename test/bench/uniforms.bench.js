@@ -41,8 +41,10 @@ program.use();
 
 const projectionMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const projectionMatrixTyped = new Float32Array(projectionMatrix);
+const projectionMatrixIntTyped = new Int32Array(projectionMatrix);
 const positions = [0, 0, 1];
 const positionsTyped = new Float32Array(positions);
+const positionsIntTyped = new Int32Array(positions);
 
 export default function uniformsBench(suite) {
   return suite
@@ -52,27 +54,21 @@ export default function uniformsBench(suite) {
     .add('Set vec3 uniform from Float32Array', () => {
       program.setUniforms({positions: positionsTyped});
     })
-    .add('Set vec3 uniform from cloned Float32Array', () => {
-      program.setUniforms({positions: new Float32Array(positionsTyped)});
-    })
-    .add('Set vec3 uniform from array', () => {
+    .add('Set vec3 uniform from plain array', () => {
       program.setUniforms({positions});
     })
-    .add('Set vec3 uniform from new Float32Array', () => {
-      program.setUniforms({positions: new Float32Array(positions)});
+    .add('Set vec3 uniform from Int32Array', () => {
+      program.setUniforms({positions: positionsIntTyped});
     })
 
     .add('Set mat4 uniform from Float32Array', () => {
       program.setUniforms({uPMatrix: projectionMatrixTyped});
     })
-    .add('Set mat4 uniform from cloned Float32Array', () => {
-      program.setUniforms({uPMatrix: new Float32Array(projectionMatrixTyped)});
-    })
-    .add('Set mat4 uniform from array', () => {
+    .add('Set mat4 uniform from plain array', () => {
       program.setUniforms({uPMatrix: projectionMatrix});
     })
-    .add('Set mat4 uniform from new Float32Array', () => {
-      program.setUniforms({uPMatrix: new Float32Array(projectionMatrix)});
+    .add('Set mat4 uniform from Int32Array', () => {
+      program.setUniforms({uPMatrix: projectionMatrixIntTyped});
     })
     ;
 }
