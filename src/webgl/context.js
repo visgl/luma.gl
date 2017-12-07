@@ -138,9 +138,9 @@ export function createGLContext(opts = {}) {
     gl = makeDebugContext(gl, {debug});
     // Debug forces log level to at least 1
     log.priority = Math.max(log.priority, 1);
-    // Log some debug info about the context
-    logInfo(gl);
   }
+  // Log some debug info once about the context
+  logInfo(gl);
 
   // Add to seer integration
 
@@ -162,7 +162,7 @@ function logInfo(gl) {
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor} ${info.renderer})` : '';
   const debug = gl.debug ? 'debug' : '';
-  log.log(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
+  log.once(0, `luma.gl: Created ${webGL} ${debug} context ${driver}`, gl);
 }
 
 // Create headless gl context (for running under Node.js)

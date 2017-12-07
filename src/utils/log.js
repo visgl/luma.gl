@@ -1,5 +1,8 @@
 /* eslint-disable no-console */
 /* global console */
+
+console.debug = console.debug || console.log;
+
 const cache = {};
 
 const log = {
