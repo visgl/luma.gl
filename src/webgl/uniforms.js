@@ -134,7 +134,7 @@ const UNIFORM_SETTERS = {
   /* eslint-enable max-len */
 };
 
-// Pre-located typed arrays for temporary conversion
+// Pre-allocated typed arrays for temporary conversion
 const FLOAT_ARRAY = [2, 3, 4, 6, 8, 9, 12, 16].reduce((arrays, length) => {
   arrays[length] = new Float32Array(length);
   return arrays;
@@ -150,6 +150,7 @@ const UINT_ARRAY = {
   4: new Uint32Array(4)
 };
 
+/* Functions to ensure the type of uniform values */
 function toFloatArray(value, length) {
   if (value instanceof Float32Array) {
     return value;
