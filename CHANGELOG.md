@@ -4,7 +4,11 @@
 
 ## v4.0
 
+### 4.0.6 - "December 6, 2017"
+- Add Intel Tan Shader WA for default GPU (#369)
+
 ### 4.0.5 - "October 6, 2017"
+- Fix Shadowmap demo
 - Fix `TransformFeedback.isSupported` bug (#333)
 - Conditionally add shader extensions defines (#330)
 
