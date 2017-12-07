@@ -92,7 +92,7 @@ const UNIFORM_SETTERS = {
 
   [GL_BOOL]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value)),
-  [GL_BOOL_VEC3]: (gl, location, value) => gl.uniform3fv(location, toIntArray(value)),
+  [GL_BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value)),
   [GL_BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value)),
 
   // uniformMatrix(false): don't transpose the matrix

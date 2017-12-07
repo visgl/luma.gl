@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 import {createGLContext, Program} from 'luma.gl';
-const gl = createGLContext({webgl2: true});
+const gl = createGLContext();
 
 const VS = `
 uniform vec3 positions;
