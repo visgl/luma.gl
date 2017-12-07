@@ -22,10 +22,12 @@
 import {Bench} from 'probe.gl';
 
 import shadersBench from './shaders.bench';
+import uniformsBench from './uniforms.bench';
 
 const suite = new Bench();
 
 // add tests
+uniformsBench(suite);
 shadersBench(suite);
 
 // Run the suite
