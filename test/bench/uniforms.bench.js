@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 import {createGLContext, Program} from 'luma.gl';
-const gl = createGLContext();
+const gl = createGLContext({webgl2: true});
 
 const VS = `
 uniform vec3 positions;
@@ -37,11 +37,12 @@ void main(void) {
 `;
 
 const program = new Program(gl, {vs: VS, fs: FS});
+program.use();
 
 const projectionMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-const projectionMatrixTyped = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+const projectionMatrixTyped = new Float32Array(projectionMatrix);
 const positions = [0, 0, 1];
-const positionsTyped = new Float32Array([0, 0, 1]);
+const positionsTyped = new Float32Array(positions);
 
 export default function uniformsBench(suite) {
   return suite
