@@ -22,7 +22,7 @@ import {createGLContext, Program} from 'luma.gl';
 const gl = createGLContext();
 
 const VS = `
-attribute vec3 positions;
+uniform vec3 positions;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 void main(void) {
@@ -37,13 +37,30 @@ void main(void) {
 `;
 
 const program = new Program(gl, {vs: VS, fs: FS});
+
 const projectionMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const projectionMatrixTyped = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+const positions = [0, 0, 1];
+const positionsTyped = new Float32Array([0, 0, 1]);
 
 export default function uniformsBench(suite) {
   return suite
 
     .group('SET UNIFORMS')
+
+    .add('Set vec3 uniform from Float32Array', () => {
+      program.setUniforms({positions: positionsTyped});
+    })
+    .add('Set vec3 uniform from cloned Float32Array', () => {
+      program.setUniforms({positions: new Float32Array(positionsTyped)});
+    })
+    .add('Set vec3 uniform from array', () => {
+      program.setUniforms({positions});
+    })
+    .add('Set vec3 uniform from new Float32Array', () => {
+      program.setUniforms({positions: new Float32Array(positions)});
+    })
+
     .add('Set mat4 uniform from Float32Array', () => {
       program.setUniforms({uPMatrix: projectionMatrixTyped});
     })
