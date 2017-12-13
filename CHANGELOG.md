@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 4.1.0-beta.2 - Dec 12
+- Enable Intel Tan shader WA for default GPU (#368)
+- Improve perf of uniform setters (#370)
+- Remove deprecated api usage (#367)
+
 ## 4.1.0-beta.1 - Nov 30
 - Add buildkite (#356)
 - Cleanup: remove un-used picking code (#366)
