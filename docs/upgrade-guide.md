@@ -2,7 +2,7 @@
 
 ## Upgrading from v4 to v5
 
-Please read this documentation before upgrading your luma.gl's dependency from v4 to v5. In v5 a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time.
+Please read this documentation before upgrading your luma.gl dependency from v4 to v5. In v5 a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time.
 
 Before upgrading to v5, it is highly recommended to run your application using latest v4 release, and check the console for any deprecated warnings, if there are any replace deprecated API with newer API as listed below.
 
@@ -21,9 +21,9 @@ Following style construction was deprecated in v4 and is now removed in v5.
 
 ```
   // NOT SUPPORTED
-  Model(gl)
-  Model(gl, {...opts});
-  Model(gl, {program});
+  Model({gl});
+  Model({gl, ...opts});
+  Model({program});
 ```
 
 ### useDevicePixelRatio
@@ -62,8 +62,9 @@ new Geometry({
 
 ### Removed Features
 
-Follwoing features were deprecated in v3 and v4 are now removed in v5.
+Following features were deprecated in v3 and v4 are now removed in v5.
 
+* Global symbols:
 
 | Removed symbol / Usage | Replacement    | Comment |
 | ---                  | ---              | --      |
@@ -71,15 +72,20 @@ Follwoing features were deprecated in v3 and v4 are now removed in v5.
 | `glContextWithState` | `withParameters` | State management |
 |`withParameters({frameBuffer})`| `withParameters({framebuffer})`| State management |
 | `MONOLITHIC_SHADERS` | `MODULAR_SHADERS` | default shaders |
-| `Camera`, `PerspectiveCamera`, `OrthoCamera` | |
-| `Scene` | `None` | |
 | `isWebGLContext` | `isWebGL` | WebGL context validation |
 | `isWebGL2Context` | `isWebGL2` | WebGL2 context validation |
-| `generateMipmaps` | `mipmaps` | `Texture` constructor argument |
-| `magFilter` | `parameters[GL.TEXTURE_MAG_FILTER]` | `Texture` constructor argument |
-| `minFilter` | `parameters[GL.TEXTURE_MIN_FILTER]` | `Texture` constructor argument |
-| `wrapS` | `parameters[GL.TEXTURE_WRAP_S]` | `Texture` constructor argument |
-| `wrapT` | `parameters[GL.TEXTURE_WRAP_T]` | `Texture` constructor argument |
+| `Camera`, `PerspectiveCamera`, `OrthoCamera` | `None` | |
+| `Scene` | `None` | |
+
+* Texture construction options:
+
+| Removed symbol / Usage | Replacement    |
+| ---                  | ---              |
+| `generateMipmaps` | `mipmaps` |
+| `magFilter` | `parameters[GL.TEXTURE_MAG_FILTER]` |
+| `minFilter` | `parameters[GL.TEXTURE_MIN_FILTER]` |
+| `wrapS` | `parameters[GL.TEXTURE_WRAP_S]` |
+| `wrapT` | `parameters[GL.TEXTURE_WRAP_T]` |
 
 
 ## Upgrading from v3 to v4
