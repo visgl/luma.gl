@@ -1,22 +1,15 @@
-import {log} from '../../../utils';
-
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 const DEFAULT_MODULE_OPTIONS = {
   pickingSelectedColor: null, //  Set to a picking color to visually highlight that item
   pickingHighlightColor: DEFAULT_HIGHLIGHT_COLOR, // Color of visual highlight of "selected" item
   pickingThreshold: 1.0,
-  pickingActive: false, // Set to true when rendering to off-screen "picking" buffer
-  pickingSelectedColorValid: false
+  pickingActive: false // Set to true when rendering to off-screen "picking" buffer
 };
 
 /* eslint-disable camelcase */
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};
-  if (opts.pickingValid !== undefined) {
-    uniforms.picking_uSelectedColorValid = opts.pickingValid ? 1 : 0;
-    log.deprecated('pickingValid', 'set pickingSelectedColor to null');
-  }
   if (opts.pickingSelectedColor !== undefined) {
     if (opts.pickingSelectedColor === null) {
       uniforms.picking_uSelectedColorValid = 0;

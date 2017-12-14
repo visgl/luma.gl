@@ -1,5 +1,22 @@
 # What's New
 
+## Version 5.0
+
+A smaller release with new `picking` shader module, several new examples and some under the hood changes to improve performance, bug fixes and code cleanup.
+
+### Picking shader module
+
+`picking` shader module is moved from deck.gl to luma.gl and is also enhanced to support object highlighting. For more details check `picking/README.md`. // TODO : add link.
+
+### Framebuffer binding
+
+In v4 we added WebGL state management which automatically tracks all WebGL state settings. In this release we extended this feature to support framebuffer bindings.
+
+### Model
+
+`Model.draw` now supports `moduleSettings` parameters to update shader module settings.
+
+
 ## Version 4.0
 
 Release date: July 27th, 2017

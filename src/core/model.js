@@ -7,7 +7,7 @@ import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../core/object-3d';
 import {log, formatValue} from '../utils';
-import {MONOLITHIC_SHADERS, MODULAR_SHADERS} from '../shadertools/shaders';
+import {MODULAR_SHADERS} from '../shadertools/shaders';
 import {assembleShaders} from '../shadertools';
 
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
@@ -30,20 +30,8 @@ const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 export default class Model extends Object3D {
   constructor(gl, opts = {}) {
     super(opts);
-    if (isWebGL(gl)) {
-      // constructor signature 1: (gl, {...opts})
-      this.gl = gl;
-    } else {
-      // Warning that we are using v3 style construction
-      log.deprecated('Model({gl, ...opts})', 'Model(gl, {...opts}');
-      // constructor signature 2: ({gl, ...opts})
-      // Note: A Model subclass may still have supplied opts, just use those as overrides
-      opts = Object.assign(gl, opts);
-      // v3 compatibility: Auto extract gl from program if supplied
-      this.gl = opts.gl || (opts.program && opts.program.gl);
-      // Verify that we have a valid context
-      assert(isWebGL(this.gl), 'Not a WebGL context');
-    }
+    assert(isWebGL(gl));
+    this.gl = gl;
     this.init(opts);
   }
 
@@ -182,13 +170,6 @@ export default class Model extends Object3D {
         fs = MODULAR_SHADERS.fs;
       }
 
-      // Assign default uniforms (if any default shaders are being used)
-      if (vs === MONOLITHIC_SHADERS.vs || fs === MONOLITHIC_SHADERS.fs) {
-        log.warn(`default shaders are deprecated and will be removed \
-in a future version. Use shader modules instead.`);
-        defaultUniforms = defaultUniforms || MONOLITHIC_SHADERS.defaultUniforms;
-      }
-
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
       ({vs, fs} = assembleResult);
 
@@ -290,7 +271,8 @@ in a future version. Use shader modules instead.`);
   // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
     // TODO: we are still setting these uniforms in deck.gl so we don't break any external
-    // application using them, these will be removed in 5.0 release, enable warnings then.
+    // application, these are marked deprecated in 5.0, remove them in deck.gl in 6.0.
+    // Disabling since it gets too noisy in console, these are documented as deprecated.
     // this._checkForDeprecatedUniforms(uniforms);
     checkUniformValues(uniforms, this.id);
     Object.assign(this.uniforms, uniforms);

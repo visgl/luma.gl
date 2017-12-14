@@ -68,7 +68,6 @@ model.draw({
 
 Binding a framebuffer for multiple render calls
 ```js
-import {withState} from 'luma.gl';
 const framebuffer1 = ...;
 const framebuffer2 = ...;
 withParameters(gl, {framebuffer: framebuffer1}, () => {
