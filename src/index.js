@@ -151,12 +151,7 @@ export { // Moved to math.gl
   SphericalCoordinates
 } from 'math.gl';
 
-// DEPRECATED IN V4.0
-export {default as Scene} from './deprecated/scene';
-export {withState, glContextWithState} from './webgl/context-state';
-
 // DEPRECATED IN V3.0
-export {default as Shaders} from './deprecated/shaderlib';
 export {readPixels} from './webgl/functions';
 // Alias FramebufferObject to Framebuffer - API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';

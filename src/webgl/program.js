@@ -85,14 +85,8 @@ export default class Program extends Resource {
     transformFeedback = null,
     uniforms = {},
     samplers = {},
-    parameters = {},
-    settings
+    parameters = {}
   }) {
-    if (settings) {
-      log.deprecated('settings', 'parameters');
-      parameters = settings;
-    }
-
     vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
     vertexArray.bind(() => {
 

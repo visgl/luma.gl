@@ -1,5 +1,4 @@
 import {uid} from '../utils';
-import {log} from '../utils';
 import assert from 'assert';
 
 // Rendering primitives - specify how to extract primitives from vertices.
@@ -44,18 +43,6 @@ export default class Geometry {
 
     if (attributes) {
       this.setAttributes(attributes);
-    } else {
-      const inlineAttributes = {};
-      // extract inline attributes from opts.
-      for (const attributeName in opts) {
-        if (ArrayBuffer.isView(opts[attributeName])) {
-          inlineAttributes[attributeName] = {value: opts[attributeName]};
-        }
-      }
-      if (Object.keys(inlineAttributes).length > 0) {
-        log.deprecated('inline attributes', 'attributes parameter');
-        this.setAttributes(inlineAttributes);
-      }
     }
   }
 

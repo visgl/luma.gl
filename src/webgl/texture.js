@@ -190,16 +190,10 @@ export default class Texture extends Resource {
       parameters = {},
       pixelStore = {},
       // Deprecated parameters
-      unpackFlipY = true,
-      generateMipmaps
+      unpackFlipY = true
     } = opts;
 
     let {mipmaps = true} = opts;
-
-    if (generateMipmaps !== undefined) {
-      log.deprecated('generateMipmaps', 'mipmaps');
-      mipmaps = generateMipmaps;
-    }
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -247,11 +241,8 @@ export default class Texture extends Resource {
       this.generateMipmap();
     }
 
-    // Append any v3 style parameters
-    const updatedParameters = this._applyV3Options(parameters, opts);
-
     // Set texture sampler parameters
-    this.setParameters(updatedParameters);
+    this.setParameters(parameters);
 
     // TODO - Store data to enable auto recreate on context loss
     if (recreate) {
@@ -677,30 +668,6 @@ export default class Texture extends Resource {
     ({width, height} = this._deduceImageSize({data, width, height}));
 
     return {dataFormat, type, compressed, width, height, format, data};
-  }
-
-  // Convert and append any v3 style parameters
-  _applyV3Options(parameters, opts) {
-    const v4Parameters = Object.assign({}, parameters);
-
-    if ('magFilter' in opts) {
-      v4Parameters[GL.TEXTURE_MAG_FILTER] = opts.magFilter;
-      log.deprecated('magFilter', 'TEXTURE_MAG_FILTER');
-    }
-    if ('minFilter' in opts) {
-      v4Parameters[GL.TEXTURE_MIN_FILTER] = opts.minFilter;
-      log.deprecated('minFilter', 'TEXTURE_MIN_FILTER');
-    }
-    if ('wrapS' in opts) {
-      v4Parameters[GL.TEXTURE_WRAP_S] = opts.wrapS;
-      log.deprecated('wrapS', 'TEXTURE_WRAP_S');
-    }
-    if ('wrapT' in opts) {
-      v4Parameters[GL.TEXTURE_WRAP_T] = opts.wrapT;
-      log.deprecated('wrapT', 'TEXTURE_WRAP_T');
-    }
-
-    return v4Parameters;
   }
 
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */

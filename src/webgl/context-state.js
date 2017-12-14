@@ -1,7 +1,7 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from '../webgl-utils/constants';
 import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
-import {log} from '../utils';
+import assert from 'assert';
 
 import {
   getParameter,
@@ -138,11 +138,9 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  const {frameBuffer, nocatch = true} = parameters;
-  if (frameBuffer) {
-    log.deprecated('withParameters({frameBuffer})', 'withParameters({framebuffer})');
-    parameters.framebuffer = parameters.framebuffer || frameBuffer;
-  }
+  const {nocatch = true} = parameters;
+  // frameBuffer not supported use framebuffer
+  assert(!parameters.frameBuffer);
 
   pushContextState(gl);
   setParameters(gl, parameters);
@@ -164,16 +162,4 @@ export function withParameters(gl, parameters, func) {
   }
 
   return value;
-}
-
-// DEPRECATED
-
-export function withState(...args) {
-  log.deprecated('withState', 'withParameters');
-  return withParameters(...args);
-}
-
-export function glContextWithState(...args) {
-  log.deprecated('glContextWithState', 'withParameters');
-  return withParameters(...args);
 }
