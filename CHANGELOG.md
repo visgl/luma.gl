@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.0.0-beta.1 - Dec 18
+- Remove deprecated API (#373)
+
 ## 4.1.0-beta.2 - Dec 12
 - Enable Intel Tan shader WA for default GPU (#368)
 - Improve perf of uniform setters (#370)
