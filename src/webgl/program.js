@@ -163,20 +163,17 @@ export default class Program extends Resource {
       const buffer = buffers[bufferName];
       // DISABLE MISSING ATTRIBUTE
       if (!buffer) {
-        // do not disable attribute at location 0
-        if (location > 0) {
-          this.vertexAttributes.disable(location);
-        }
+        this.vertexAttributes.disable(location);
       } else if (buffer instanceof Buffer) {
         const divisor = buffer.layout.instanced ? 1 : 0;
-        this.vertexAttributes.enable(location);
         this.vertexAttributes.setBuffer({location, buffer});
         this.vertexAttributes.setDivisor(location, divisor);
         drawParams.isInstanced = buffer.layout.instanced > 0;
+        this.vertexAttributes.enable(location);
         this._filledLocations[bufferName] = true;
       } else {
-        this.vertexAttributes.disable(location);
         this.vertexAttributes.setGeneric({location, array: buffer});
+        this.vertexAttributes.disable(location, true);
         this._filledLocations[bufferName] = true;
       }
     }

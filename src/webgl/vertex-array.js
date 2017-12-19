@@ -164,10 +164,15 @@ export default class VertexArray extends Resource {
   }
 
   // Disable an attribute
-  disable(location) {
-    this.bind(() => {
-      this.gl.disableVertexAttribArray(location);
-    });
+  // Perf penalty when disabling attribute 0:
+  // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
+  // this-has-significant-performance-penalt
+  disable(location, disableZero = false) {
+    if (location > 0 || disableZero) {
+      this.bind(() => {
+        this.gl.disableVertexAttribArray(location);
+      });
+    }
   }
 
   // Set the frequency divisor used for instanced rendering.
