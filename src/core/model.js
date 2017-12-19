@@ -105,6 +105,7 @@ export default class Model extends Object3D {
 
     // TODO - remove?
     this.buffers = {};
+    this.samplers = {};
     this.userData = {};
     this.drawParams = {};
     this.dynamic = false;
@@ -334,13 +335,15 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(uniforms = {}, attributes = {}, parameters = {}, samplers = {}) {
+  render(uniforms = {}, attributes = {}, samplers = {}) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
     getOverrides(this.id, resolvedUniforms);
 
     this.setUniforms(resolvedUniforms);
+    this.setAttributes(attributes);
+    Object.assign(this.samplers, samplers);
 
     log.group(LOG_DRAW_PRIORITY,
       `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
