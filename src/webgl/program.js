@@ -8,6 +8,7 @@ import Framebuffer from './framebuffer';
 import {getTransformFeedbackMode} from './transform-feedback';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
+import Buffer from './buffer';
 import {log, uid} from '../utils';
 import assert from 'assert';
 
@@ -163,12 +164,16 @@ export default class Program extends Resource {
       // DISABLE MISSING ATTRIBUTE
       if (!buffer) {
         this.vertexAttributes.disable(location);
-      } else {
+      } else if (buffer instanceof Buffer) {
         const divisor = buffer.layout.instanced ? 1 : 0;
-        this.vertexAttributes.enable(location);
         this.vertexAttributes.setBuffer({location, buffer});
         this.vertexAttributes.setDivisor(location, divisor);
         drawParams.isInstanced = buffer.layout.instanced > 0;
+        this.vertexAttributes.enable(location);
+        this._filledLocations[bufferName] = true;
+      } else {
+        this.vertexAttributes.setGeneric({location, array: buffer});
+        this.vertexAttributes.disable(location, true);
         this._filledLocations[bufferName] = true;
       }
     }

@@ -460,6 +460,8 @@ count: ${this.stats.profileFrameCount}`
 
       if (attribute instanceof Buffer) {
         this.buffers[attributeName] = attribute;
+      } else if (attribute.isGeneric) {
+        this.buffers[attributeName] = attribute.value;
       } else {
         // Autocreate a buffer
         this.buffers[attributeName] =

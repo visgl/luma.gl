@@ -164,9 +164,11 @@ export default class VertexArray extends Resource {
   }
 
   // Disable an attribute
-  disable(location) {
-    // Don't disable location 0
-    if (location > 0) {
+  // Perf penalty when disabling attribute 0:
+  // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
+  // this-has-significant-performance-penalt
+  disable(location, disableZero = false) {
+    if (location > 0 || disableZero) {
       this.bind(() => {
         this.gl.disableVertexAttribArray(location);
       });
@@ -214,38 +216,65 @@ export default class VertexArray extends Resource {
 
   // Specify values for generic vertex attributes
   setGeneric({location, array}) {
-    log.warn(0, 'VertexAttributes.setGeneric is not well tested');
-    // throw new Error('vertex attribute size must be between 1 and 4');
-
-    const {gl} = this;
-
     switch (array.constructor) {
     case Float32Array:
-      gl.vertexAttrib4fv(location, array);
+      this._setGenericFloatArray(location, array);
       break;
     case Int32Array:
-      assert(isWebGL2(gl));
-      gl.vertexAttribI4iv(location, array);
+      this._setGenericIntArray(location, array);
       break;
     case Uint32Array:
-      assert(isWebGL2(gl));
-      gl.vertexAttribI4uiv(location, array);
+      this._setGenericUintArray(location, array);
       break;
     default:
+      this.setGenericValues(location, ...array);
     }
+  }
 
-    return this;
+  _setGenericFloatArray(location, array) {
+    const {gl} = this;
+    switch (array.length) {
+    case 1: gl.vertexAttrib1fv(location, array); break;
+    case 2: gl.vertexAttrib2fv(location, array); break;
+    case 3: gl.vertexAttrib3fv(location, array); break;
+    case 4: gl.vertexAttrib4fv(location, array); break;
+    default: assert(false);
+    }
+  }
+
+  _setGenericIntArray(location, array) {
+    const {gl} = this;
+    assert(isWebGL2(gl));
+    switch (array.length) {
+    case 1: gl.vertexAttribI1iv(location, array); break;
+    case 2: gl.vertexAttribI2iv(location, array); break;
+    case 3: gl.vertexAttribI3iv(location, array); break;
+    case 4: gl.vertexAttribI4iv(location, array); break;
+    default: assert(false);
+    }
+  }
+
+  _setGenericUintArray(location, array) {
+    const {gl} = this;
+    assert(isWebGL2(gl));
+    switch (array.length) {
+    case 1: gl.vertexAttribI1uiv(location, array); break;
+    case 2: gl.vertexAttribI2uiv(location, array); break;
+    case 3: gl.vertexAttribI3uiv(location, array); break;
+    case 4: gl.vertexAttribI4uiv(location, array); break;
+    default: assert(false);
+    }
   }
 
   // Specify values for generic vertex attributes
   setGenericValues(location, v0, v1, v2, v3) {
-    log.warn(0, 'VertexAttributes.setGenericValues is not well tested');
+    const {gl} = this;
     switch (arguments.length - 1) {
-    case 1: this.gl.vertexAttrib1f(location, v0); break;
-    case 2: this.gl.vertexAttrib2f(location, v0, v1); break;
-    case 3: this.gl.vertexAttrib3f(location, v0, v1, v2); break;
-    case 4: this.gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
-    default: throw new Error('vertex attribute size must be between 1 and 4');
+    case 1: gl.vertexAttrib1f(location, v0); break;
+    case 2: gl.vertexAttrib2f(location, v0, v1); break;
+    case 3: gl.vertexAttrib3f(location, v0, v1, v2); break;
+    case 4: gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
+    default: assert(false);
     }
 
     // assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
