@@ -12,6 +12,7 @@ import {assembleShaders} from '../shadertools';
 
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import Query from '../webgl/query';
+import {equals} from 'math.gl';
 import assert from 'assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
@@ -258,9 +259,11 @@ export default class Model extends Object3D {
   }
 
   setAttributes(attributes = {}) {
-    Object.assign(this.attributes, attributes);
-    this._createBuffersFromAttributeDescriptors(attributes);
-    this.setNeedsRedraw();
+    if (Object.keys(attributes).length > 0) {
+      Object.assign(this.attributes, attributes);
+      this._createBuffersFromAttributeDescriptors(attributes);
+      this.setNeedsRedraw();
+    }
     return this;
   }
 
@@ -274,9 +277,15 @@ export default class Model extends Object3D {
     // application, these are marked deprecated in 5.0, remove them in deck.gl in 6.0.
     // Disabling since it gets too noisy in console, these are documented as deprecated.
     // this._checkForDeprecatedUniforms(uniforms);
-    checkUniformValues(uniforms, this.id);
-    Object.assign(this.uniforms, uniforms);
-    this.setNeedsRedraw();
+    const somethingChanged = Object.keys(uniforms).some(key => {
+      return !equals(uniforms[key], this.uniforms[key]);
+    });
+
+    if (somethingChanged) {
+      checkUniformValues(uniforms, this.id);
+      Object.assign(this.uniforms, uniforms);
+      this.setNeedsRedraw();
+    }
     return this;
   }
 
