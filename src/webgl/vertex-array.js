@@ -36,6 +36,7 @@ const PARAMETERS = [
   GL_VERTEX_ATTRIB_ARRAY_DIVISOR
 ];
 
+const ERR_GENERIC_ATTRBUTE_LENGTH = 'vertex attribute size must be between 1 and 4';
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArray extends Resource {
@@ -165,12 +166,9 @@ export default class VertexArray extends Resource {
 
   // Disable an attribute
   disable(location) {
-    // Don't disable location 0
-    if (location > 0) {
-      this.bind(() => {
-        this.gl.disableVertexAttribArray(location);
-      });
-    }
+    this.bind(() => {
+      this.gl.disableVertexAttribArray(location);
+    });
   }
 
   // Set the frequency divisor used for instanced rendering.
@@ -221,20 +219,48 @@ export default class VertexArray extends Resource {
 
     switch (array.constructor) {
     case Float32Array:
-      gl.vertexAttrib4fv(location, array);
+      this._setGenericFloatArray(location, array);
       break;
     case Int32Array:
       assert(isWebGL2(gl));
-      gl.vertexAttribI4iv(location, array);
+      this._setGenericIntArray(location, array);
       break;
     case Uint32Array:
       assert(isWebGL2(gl));
-      gl.vertexAttribI4uiv(location, array);
+      this._setGenericUintArray(location, array);
       break;
     default:
     }
+  }
 
-    return this;
+  _setGenericFloatArray(location, array) {
+    switch (array.length) {
+    case 1: this.gl.vertexAttrib1fv(location, array); break;
+    case 2: this.gl.vertexAttrib2fv(location, array); break;
+    case 3: this.gl.vertexAttrib3fv(location, array); break;
+    case 4: this.gl.vertexAttrib4fv(location, array); break;
+    default: throw new Error(ERR_GENERIC_ATTRBUTE_LENGTH);
+    }
+  }
+
+  _setGenericIntArray(location, array) {
+    switch (array.length) {
+    case 1: this.gl.vertexAttribI1iv(location, array); break;
+    case 2: this.gl.vertexAttribI2iv(location, array); break;
+    case 3: this.gl.vertexAttribI3iv(location, array); break;
+    case 4: this.gl.vertexAttribI4iv(location, array); break;
+    default: throw new Error(ERR_GENERIC_ATTRBUTE_LENGTH);
+    }
+  }
+
+  _setGenericUintArray(location, array) {
+    switch (array.length) {
+    case 1: this.gl.vertexAttribI1uiv(location, array); break;
+    case 2: this.gl.vertexAttribI2uiv(location, array); break;
+    case 3: this.gl.vertexAttribI3uiv(location, array); break;
+    case 4: this.gl.vertexAttribI4uiv(location, array); break;
+    default: throw new Error(ERR_GENERIC_ATTRBUTE_LENGTH);
+    }
   }
 
   // Specify values for generic vertex attributes
@@ -245,7 +271,7 @@ export default class VertexArray extends Resource {
     case 2: this.gl.vertexAttrib2f(location, v0, v1); break;
     case 3: this.gl.vertexAttrib3f(location, v0, v1, v2); break;
     case 4: this.gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
-    default: throw new Error('vertex attribute size must be between 1 and 4');
+    default: throw new Error(ERR_GENERIC_ATTRBUTE_LENGTH);
     }
 
     // assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
