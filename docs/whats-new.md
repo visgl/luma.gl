@@ -16,6 +16,7 @@ In v4 we added WebGL state management which automatically tracks all WebGL state
 
 `Model.draw` now supports `moduleSettings` parameters to update shader module settings.
 
+`Model.render` now supports `attributes` and `samplers` arguments to be used for drawing.
 
 ## Version 4.0
 
