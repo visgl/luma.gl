@@ -2,7 +2,7 @@
 // A scenegraph object node
 import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGL} from '../webgl';
 // import {withParameters} from '../webgl/context-state';
-import {getUniformsTable} from '../webgl/uniforms';
+import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../core/object-3d';
@@ -12,7 +12,6 @@ import {assembleShaders} from '../shadertools';
 
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import Query from '../webgl/query';
-import {equals} from 'math.gl';
 import assert from 'assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
@@ -259,7 +258,15 @@ export default class Model extends Object3D {
   }
 
   setAttributes(attributes = {}) {
-    if (Object.keys(attributes).length > 0) {
+    let isEmpty = true;
+    /* eslint-disable no-unused-vars */
+    for (const key in attributes) {
+      isEmpty = false;
+      break;
+    }
+    /* eslint-enable no-unused-vars */
+
+    if (!isEmpty) {
       Object.assign(this.attributes, attributes);
       this._createBuffersFromAttributeDescriptors(attributes);
       this.setNeedsRedraw();
@@ -277,9 +284,13 @@ export default class Model extends Object3D {
     // application, these are marked deprecated in 5.0, remove them in deck.gl in 6.0.
     // Disabling since it gets too noisy in console, these are documented as deprecated.
     // this._checkForDeprecatedUniforms(uniforms);
-    const somethingChanged = Object.keys(uniforms).some(key => {
-      return !equals(uniforms[key], this.uniforms[key]);
-    });
+    let somethingChanged = false;
+    for (const key in uniforms) {
+      if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
+        somethingChanged = true;
+        break;
+      }
+    }
 
     if (somethingChanged) {
       checkUniformValues(uniforms, this.id);
