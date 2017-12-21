@@ -124,6 +124,20 @@ export function getDependencyGraph({modules, level, result}) {
 
 // PRIVATE API
 
+function parseDeprecationDefinitions(deprecations = []) {
+  deprecations.forEach(def => {
+    switch (def.type) {
+    case 'function':
+      def.regex = new RegExp(`\\b${def.old}\\(`);
+      break;
+    default:
+      def.regex = new RegExp(`${def.type} ${def.old};`);
+    }
+  });
+
+  return deprecations;
+}
+
 function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false}) {
   assert(shaderModule.name, 'shader module has no name');
   if (!ignoreMultipleRegistrations && shaderModules[shaderModule.name]) {
@@ -132,4 +146,5 @@ function registerShaderModule(shaderModule, {ignoreMultipleRegistrations = false
   }
   shaderModules[shaderModule.name] = shaderModule;
   shaderModule.dependencies = shaderModule.dependencies || [];
+  shaderModule.deprecations = parseDeprecationDefinitions(shaderModule.deprecations);
 }
