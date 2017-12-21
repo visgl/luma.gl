@@ -65,7 +65,7 @@ in a later version. Use \`${newUsage}\` instead`);
   },
   removed(oldUsage, newUsage) {
     log.error(`\`${oldUsage}\` is no longer supported. Use \`${newUsage}\` instead,\
-   check our upgrade-guide.md for more details`);
+   check our Upgrade Guide for more details`);
   },
   group(priority, arg, {collapsed = false} = {}) {
     if (priority <= log.priority) {

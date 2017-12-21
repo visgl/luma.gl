@@ -55,12 +55,12 @@ function getApplicationDefines(defines = {}) {
 }
 
 // Warn about deprecated uniforms or functions
-function checkDeprection(moduleName, shaderSource) {
+function checkDeprecation(moduleName, shaderSource) {
   const shaderModule = getShaderModule(moduleName);
 
   shaderModule.deprecations.forEach(def => {
     if (def.regex.test(shaderSource)) {
-      if (def.supported) {
+      if (def.deprecated) {
         log.deprecated(def.old, def.new);
       } else {
         log.removed(def.old, def.new);
@@ -136,7 +136,7 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
       inject = true;
       break;
     default:
-      checkDeprection(moduleName, coreSource);
+      checkDeprecation(moduleName, coreSource);
       // Add the module source, and a #define that declares it presence
       assembledSource += getModuleSource(moduleName, type);
     }
