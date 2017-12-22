@@ -9,8 +9,7 @@ luma.gl constains a lot of classes and functions that might make new users wonde
 | src/geometry | This folder contains a collection of geometric primitives extending from the base `Geometry` class, including `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They can be used to create [`Models`](/#/documentation/api-reference/model) class with common geometries|
 | src/models | Some predefined subclasses of [`Models`](/#/documentation/api-reference/model) created from simple geometries from the `src/geometry` folder|
 | src/io | Node.js and browser file loaders. Also enables using streams in browser. |
-| src/packges/math | A small math library, currently containing [`Vector3`](/#/documentation/api-reference/vector), [`Vector4`](/#/documentation/api-reference/vector), [`Matrix4`](/#/documentation/api-reference/vector), [`Quaternion`](/#/documentation/api-reference/quaternion) classes based on the [`gl-matrix`](http://glmatrix.net/) library |
-| src/packges/events | A very simple browser event handling class used by luma.gl examples |
+| src/packages/events | A very simple browser event handling class used by luma.gl examples |
 | src/shadertools | luma.gl's internal shader module system and shader assembler utility |
 | src/webgl-utils | Miscellanious utilies |
 
