@@ -1,5 +1,12 @@
 # Pre-releases
 
+## 5.0.0 - Dec 21
+- Update links to point to 5.0-release branch
+- Do not mark `needsRedraw` unless something changed (#376)
+- Add deprecation check to shader modules (#377)
+- Fix `model.render` inconsistencies (#375)
+- Fix generic attribute support (#374)
+
 ## 5.0.0-beta.1 - Dec 18
 - Remove deprecated API (#373)
 
