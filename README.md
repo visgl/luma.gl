@@ -24,7 +24,7 @@ luma.gl's provides efficient and easy-to-use WebGL2-based building blocks enabli
 See
 [**Examples**](http://uber.github.io/luma.gl/) and
 [**Documentation**](http://uber.github.io/luma.gl/docs/).
-[**Change Log**](https://github.com/uber/luma.gl/blob/master/CHANGELOG.md).
+[**Change Log**](https://github.com/uber/luma.gl/blob/5.0-release/CHANGELOG.md).
 
 
 ## luma.gl Design Goals

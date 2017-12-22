@@ -1,4 +1,4 @@
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/master';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/5.0-release';
 const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
 export const EXAMPLE_PAGES = [
