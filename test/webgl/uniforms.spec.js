@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {Program, Texture2D} from 'luma.gl';
 import 'luma.gl/headless';
-import {checkUniformValues} from 'luma.gl/webgl/uniforms';
+import {checkUniformValues, areUniformsEqual} from 'luma.gl/webgl/uniforms';
 
 import {fixture} from '../setup';
 
@@ -251,4 +251,65 @@ test('WebGL2#Uniforms Program setUniforms', t => {
     t.end();
   }
 
+});
+
+test('WebGL#Uniforms areUniformsEqual', t => {
+  const {gl} = fixture;
+
+  const TEST_TEXTURE = new Texture2D(gl);
+
+  const TEST_CASES = [
+    {
+      title: 'Numeric values',
+      value1: 1,
+      value2: 1,
+      equals: true
+    }, {
+      title: 'Numeric values',
+      value1: 1,
+      value2: 2,
+      equals: false
+    }, {
+      title: 'Texture objects',
+      value1: TEST_TEXTURE,
+      value2: TEST_TEXTURE,
+      equals: true
+    }, {
+      title: 'Texture objects',
+      value1: TEST_TEXTURE,
+      value2: new Texture2D(gl),
+      equals: false
+    }, {
+      title: 'null',
+      value1: null,
+      value2: null,
+      equals: true
+    }, {
+      title: 'Array vs array',
+      value1: [0, 0, 0],
+      value2: [0, 0, 0],
+      equals: true
+    }, {
+      title: 'TypedArray vs array',
+      value1: new Float32Array(3),
+      value2: [0, 0, 0],
+      equals: true
+    }, {
+      title: 'Array different length',
+      value1: [0, 0, 0, 0],
+      value2: new Float32Array(3),
+      equals: false
+    }, {
+      title: 'Array vs null',
+      value1: new Float32Array(3),
+      value2: null,
+      equals: false
+    }
+  ];
+
+  TEST_CASES.forEach(testCase => {
+    t.is(areUniformsEqual(testCase.value1, testCase.value2), testCase.equals, testCase.title);
+  });
+
+  t.end();
 });
