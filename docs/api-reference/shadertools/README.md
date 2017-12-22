@@ -31,6 +31,7 @@ const module = {
   vs: ....
   fs: null,
   dependencies: [],
+  deprecations: [],
   getUniforms
 };
 ```
@@ -52,6 +53,11 @@ A shader module is either:
 To define a shader module, you must specify the following fields:
 * `name` (*String*) - the name of the shader module
 * `dependencies` (*Array*) - a list of other shader modules that this module is dependent on
+* `deprecations` (*Array*) - a list of deprecated APIs. If supplied, `assembleShaders` will scan the source for usage and issue a console warning. Each API is described in the following format:
+  - `type`: `uniform <type>` or `function`
+  - `old`: name of the deprecated uniform/function
+  - `new`: name of the new uniform/function
+  - `deprecated`: whether the old API is still supported
 * `getUniforms` JavaScript function that maps JavaScript parameter keys to uniforms used by this module
 * `vs`
 * `fs`

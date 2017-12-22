@@ -2,6 +2,7 @@ import {resolveModules, getShaderModule} from './shader-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
 import assert from 'assert';
+import {log} from '../../utils';
 
 const VERTEX_SHADER = 'vs';
 const FRAGMENT_SHADER = 'fs';
@@ -51,6 +52,21 @@ function getApplicationDefines(defines = {}) {
     sourceText += '\n';
   }
   return sourceText;
+}
+
+// Warn about deprecated uniforms or functions
+function checkDeprecation(moduleName, shaderSource) {
+  const shaderModule = getShaderModule(moduleName);
+
+  shaderModule.deprecations.forEach(def => {
+    if (def.regex.test(shaderSource)) {
+      if (def.deprecated) {
+        log.deprecated(def.old, def.new);
+      } else {
+        log.removed(def.old, def.new);
+      }
+    }
+  });
 }
 
 // Extracts the source code chunk for the specified shader type from the named shader module
@@ -120,6 +136,7 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
       inject = true;
       break;
     default:
+      checkDeprecation(moduleName, coreSource);
       // Add the module source, and a #define that declares it presence
       assembledSource += getModuleSource(moduleName, type);
     }
