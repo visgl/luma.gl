@@ -30,9 +30,9 @@
     </div>
   </div>
   <div class="thumb">
-    <div class="bg-black" data-title="Picking">
-      <a href="#/examples/core-examples/picking">
-        <img src="images/example-picking.jpg" />
+    <div class="bg-black" data-title="Persistence">
+      <a href="#/examples/core-examples/persistence">
+        <img src="images/example-persistence.jpg" />
       </a>
     </div>
   </div>
@@ -44,9 +44,51 @@
     </div>
   </div>
   <div class="thumb">
+    <div class="bg-black" data-title="Animation">
+      <a href="#/examples/core-examples/animation">
+        <img src="images/example-animation.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
     <div class="bg-black" data-title="Transform Feedback">
-      <a href="#/examples/core-examples/transform-feedback">
+      <a href="#/examples/core-examples/transform-feedback-webgl-2">
         <img src="images/example-transform-feedback.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Transform">
+      <a href="#/examples/core-examples/transform-webgl-2">
+        <img src="images/example-transform.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Depth of Field">
+      <a href="#/examples/core-examples/depth-field-webgl-2">
+        <img src="images/example-dof.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="GLTF">
+      <a href="#/examples/core-examples/gltf">
+        <img src="images/example-gltf.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Quasicrystals">
+      <a href="#/examples/core-examples/quasicrystals">
+        <img src="images/example-quasicrystals.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Texture3D">
+      <a href="#/examples/core-examples/texture-3d-webgl-2">
+        <img src="images/example-texture3d.png" />
       </a>
     </div>
   </div>
@@ -118,8 +160,50 @@
       </a>
     </div>
   </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 10" data-title="3D World">
+      <a href="#/examples/webgl-lessons/lesson-10-3d-world">
+        <img src="images/lesson-10.png" />
+      </a>
+    </div>
+  </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 11" data-title="Sphere">
+      <a href="#/examples/webgl-lessons/lesson-11-sphere">
+        <img src="images/lesson-11.png" />
+      </a>
+    </div>
+  </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 12" data-title="Point Lighting">
+      <a href="#/examples/webgl-lessons/lesson-12-point-lighting">
+        <img src="images/lesson-12.png" />
+      </a>
+    </div>
+  </div>
+    <div class="thumb">
+    <div class="bg-black" data-name="Lesson 13" data-title="Per-Fragment Lighting">
+      <a href="#/examples/webgl-lessons/lesson-13-per-fragment-lighting">
+        <img src="images/lesson-13.png" />
+      </a>
+    </div>
+  </div>
   <div class="thumb">
-    <div class="bg-black" data-name="Lesson 10" data-title="Render To Texture">
+    <div class="bg-black" data-name="Lesson 14" data-title="Specular Highlights">
+      <a href="#/examples/webgl-lessons/lesson-14-specular-highlights">
+        <img src="images/lesson-14.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-name="Lesson 15" data-title="Specular Maps">
+      <a href="#/examples/webgl-lessons/lesson-15-specular-maps">
+        <img src="images/lesson-15.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-name="Lesson 16" data-title="Render To Texture">
       <a href="#/examples/webgl-lessons/lesson-16-render-texture">
         <img src="images/lesson-16.png" />
       </a>
