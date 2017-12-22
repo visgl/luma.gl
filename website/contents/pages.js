@@ -326,6 +326,10 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/buffer.md'
       },
       {
+        name: 'Framebuffer',
+        content: 'api-reference/webgl/framebuffer.md'
+      },
+      {
         name: 'Geometry',
         content: 'api-reference/core/geometry.md'
       },
@@ -333,26 +337,6 @@ export const DOC_PAGES = [
       //   name: 'Group',
       //   content: 'api-reference/core/group.md'
       // },
-      {
-        name: 'Math',
-        content: 'api-reference/math/README.md'
-      },
-      {
-        name: 'Math:Euler',
-        content: 'api-reference/math/euler.md'
-      },
-      {
-        name: 'Math:Matrix4',
-        content: 'api-reference/math/matrix4.md'
-      },
-      {
-        name: 'Math:Quaternion',
-        content: 'api-reference/math/quaternion.md'
-      },
-      {
-        name: 'Math:Vector Classes',
-        content: 'api-reference/math/vector.md'
-      },
       {
         name: 'Model',
         content: 'api-reference/core/model.md'
