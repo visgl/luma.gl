@@ -329,7 +329,8 @@ export default class Model extends Object3D {
     samplers = {},
     parameters = {},
     settings,
-    framebuffer = null
+    framebuffer = null,
+    transformFeedback = null
   } = {}) {
     if (settings) {
       log.deprecated('settings', 'parameters');
@@ -345,7 +346,7 @@ export default class Model extends Object3D {
       parameters = Object.assign(parameters, {framebuffer});
     }
     withParameters(gl, parameters,
-      () => this.render(uniforms, attributes, samplers)
+      () => this.render(uniforms, attributes, samplers, transformFeedback)
     );
 
     if (framebuffer) {
@@ -355,7 +356,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(uniforms = {}, attributes = {}, samplers = {}) {
+  render(uniforms = {}, attributes = {}, samplers = {}, transformFeedback = null) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
@@ -386,6 +387,7 @@ export default class Model extends Object3D {
     this.program.draw({
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
+      transformFeedback,
       isIndexed,
       indexType,
       isInstanced,

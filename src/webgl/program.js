@@ -86,19 +86,19 @@ export default class Program extends Resource {
     transformFeedback = null,
     uniforms = {},
     samplers = {},
-    parameters = {}
+    parameters = null
   }) {
     vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
     vertexArray.bind(() => {
 
       this.gl.useProgram(this.handle);
 
-      if (transformFeedback) {
-        if (parameters[GL.RASTERIZER_DISCARD]) {
-          // bypass fragment shader
-          this.gl.enable(GL.RASTERIZER_DISCARD);
-        }
+      if (parameters) {
+        log.error('Program.draw({prameters}) not needed to disable RASTERIZATION, \
+          it is implict when transformFeedback parameter passed to input object');
+      }
 
+      if (transformFeedback) {
         const primitiveMode = getTransformFeedbackMode({drawMode});
         transformFeedback.begin(primitiveMode);
       }
@@ -122,11 +122,6 @@ export default class Program extends Resource {
 
       if (transformFeedback) {
         transformFeedback.end();
-
-        if (parameters[GL.RASTERIZER_DISCARD]) {
-          // resume fragment shader
-          this.gl.disable(GL.RASTERIZER_DISCARD);
-        }
       }
 
     });
