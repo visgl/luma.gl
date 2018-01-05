@@ -11,7 +11,7 @@ const pageLoadPromise = isBrowser ?
   new Promise((resolve, reject) => {
     if (isPageLoaded) {
       resolve(document);
-      return
+      return;
     }
     window.onload = () => {
       isPageLoaded = true;
