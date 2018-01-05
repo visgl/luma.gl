@@ -5,10 +5,13 @@ import {log} from '../utils';
 
 const isBrowser = typeof window !== 'undefined';
 
-let isPageLoaded = false;
+let isPageLoaded = isBrowser && document.readyState === 'complete';
 
 const pageLoadPromise = isBrowser ?
   new Promise((resolve, reject) => {
+    if (isPageLoaded) {
+      return resolve(document);
+    }
     window.onload = () => {
       isPageLoaded = true;
       resolve(document);
