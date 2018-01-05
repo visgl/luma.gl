@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 5.0.1 - Jan 5
+- Fix AnimationLoop bug - promise never resolves on page that is already loaded
+- Minimize console logs during startup (#380)
+
 ## 5.0.0 - Dec 21
 - Update links to point to 5.0-release branch
 - Do not mark `needsRedraw` unless something changed (#376)
