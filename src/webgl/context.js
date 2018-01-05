@@ -151,7 +151,7 @@ function logInfo(gl) {
   const webGL = isWebGL2(gl) ? 'WebGL2' : 'WebGL1';
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
-  const debug = gl.debug ? ' debug ' : '';
+  const debug = gl.debug ? ' debug' : '';
   log.once(0, `${webGL}${debug} context ${driver}`);
 }
 
