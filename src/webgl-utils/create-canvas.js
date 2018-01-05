@@ -10,7 +10,8 @@ let isPageLoaded = isBrowser && document.readyState === 'complete';
 const pageLoadPromise = isBrowser ?
   new Promise((resolve, reject) => {
     if (isPageLoaded) {
-      return resolve(document);
+      resolve(document);
+      return
     }
     window.onload = () => {
       isPageLoaded = true;
