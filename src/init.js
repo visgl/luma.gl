@@ -5,10 +5,10 @@ import log from './utils/log';
 /* global __VERSION__ */
 const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
 
-const STARTUP_MESSAGE = `\
-Assign luma.log.priority in console to control logging: \
-0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
-luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
+const STARTUP_MESSAGE = 'set luma.log.priority=1 (or higher) to trace rendering';
+// Assign luma.log.priority in console to control logging: \
+// 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
+// luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 if (global.luma && global.luma.VERSION !== VERSION) {
   throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);
