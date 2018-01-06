@@ -257,6 +257,10 @@ export const DOC_PAGES = [
         content: 'whats-new.md'
       },
       {
+        name: 'Roadmap',
+        content: 'roadmap.md'
+      },
+      {
         name: 'Upgrade Guide',
         content: 'upgrade-guide.md'
       }
