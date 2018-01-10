@@ -72,6 +72,9 @@ export default class Model extends Object3D {
     onBeforeRender = () => {},
     onAfterRender = () => {},
 
+    // TransformFeedback
+    varyings = null,
+
     // Other opts
     timerQueryEnabled = false
   } = {}) {
@@ -83,7 +86,8 @@ export default class Model extends Object3D {
       moduleSettings,
       defaultUniforms,
       program,
-      shaderCache
+      shaderCache,
+      varyings
     });
 
     this.uniforms = {};
@@ -157,7 +161,8 @@ export default class Model extends Object3D {
     moduleSettings,
     defaultUniforms,
     program,
-    shaderCache
+    shaderCache,
+    varyings
   }) {
 
     this.getModuleUniforms = x => {};
@@ -177,7 +182,7 @@ export default class Model extends Object3D {
       if (shaderCache) {
         program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
       } else {
-        program = new Program(this.gl, {vs, fs});
+        program = new Program(this.gl, {vs, fs, varyings});
       }
 
       const {getUniforms} = assembleResult;
