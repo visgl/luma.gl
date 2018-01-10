@@ -3,7 +3,9 @@ steps:
     plugins:
       docker-compose#v1.5.2:
         build: luma-gl
-        image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+        image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
+    agents:
+      queue: builders
 
   - wait
 
@@ -12,15 +14,21 @@ steps:
     plugins:
       docker-compose#v1.5.2:
         run: luma-gl
+    agents:
+      queue: workers
 
   - name: ":hourglass:"
     command: "sh /etc/init.d/xvfb && yarn test"
     plugins:
       docker-compose#v1.5.2:
         run: luma-gl
+    agents:
+      queue: workers
 
   - name: ":package:"
     command: "yarn build"
     plugins:
       docker-compose#v1.5.2:
         run: luma-gl
+    agents:
+      queue: workers
