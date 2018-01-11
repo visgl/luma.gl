@@ -50,8 +50,11 @@ export default class Program extends Resource {
     // Setup varyings if supplied
     if (varyings) {
       assertWebGL2Context(this.gl);
+      this.varyings = varyings;
       this.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
-      this.varyings = getVaryingMap(varyings, bufferMode);
+      this.varyingMap = getVaryingMap(varyings, bufferMode);
+    } else {
+      this.varyingMap = {};
     }
 
     this._compileAndLink();
@@ -508,17 +511,11 @@ export function getUniformDescriptors(gl, program) {
 export function getVaryingMap(varyings, bufferMode) {
   const varyingMap = {};
   let index = 0;
+  assert(bufferMode === GL.SEPARATE_ATTRIBS || bufferMode === GL.INTERLEAVED_ATTRIBS);
+  const indexIncrement = bufferMode === GL.SEPARATE_ATTRIBS ? 1 : 0;
   for (const varying of varyings) {
-    if (bufferMode === GL.SEPARATE_ATTRIBS) {
-      varyingMap[varyings] = {index};
-      index++;
-    } else if (varying === 'gl_NextBuffer') {
-      index++;
-    } else {
-      // Add a "safe" offset as fallback unless app specifies it
-      // Could query
-      varyingMap[varyings] = {index, offset: 16};
-    }
+    varyingMap[varying] = index;
+    index += indexIncrement;
   }
   return varyingMap;
 }

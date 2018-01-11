@@ -30,8 +30,8 @@ export default class TranformFeedback extends Resource {
     this.initialize(opts);
   }
 
-  initialize({buffers = {}}) {
-    this.bindBuffers(buffers, {clear: true});
+  initialize({buffers = {}, varyingMap = {}}) {
+    this.bindBuffers(buffers, {clear: true, varyingMap});
   }
 
   bindBuffers(buffers = {}, {clear = false, varyingMap = {}} = {}) {
@@ -39,10 +39,10 @@ export default class TranformFeedback extends Resource {
       this._unbindBuffers();
       this.buffers = {};
     }
-    let bufferIndex = 0;
     for (const bufferName in buffers) {
       const buffer = buffers[bufferName];
-      const index = bufferIndex++;
+      const index = Number.isFinite(Number(bufferName)) ?
+        Number(bufferName) : varyingMap[bufferName];
       assert(Number.isFinite(index));
       this.buffers[index] = buffer;
     }
@@ -81,6 +81,9 @@ export default class TranformFeedback extends Resource {
   }
 
   bindBuffer({index, buffer, offset = 0, size}) {
+    // Need to avoid chrome bug where buffer that is already bound to a different target
+    // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
+    buffer.unbind();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     if (size === undefined) {
       this.gl.bindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, index, buffer.handle);

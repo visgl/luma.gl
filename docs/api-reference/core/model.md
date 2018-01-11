@@ -71,7 +71,8 @@ The constructor for the Model class. Use this to create a new Model.
 * `opts` - contains following named properties.
   * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
   * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
-  * `varyings` - An array of vertex shader ouput variables, that needs to be recorded (used in Transformfeedback flow).
+  * `varyings` (WebGL2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
+  * `bufferMode` (WebGL2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
   * `modules` - shader modules to be applied.
   * `moduleSettings` - any uniforms needed by shader modules.
   * `program` - pre created program to use, when provided, vs, ps and modules are not used.
@@ -98,6 +99,7 @@ Render the model.
   * `parameters` - temporary gl settings to be applied to this draw call.
   * `framebuffer` - if provided, render to framebuffer
   * `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
+  * `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
 ### render
 
