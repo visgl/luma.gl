@@ -34,7 +34,7 @@ export default class TranformFeedback extends Resource {
     this.bindBuffers(buffers, {clear: true});
   }
 
-  bindBuffers(buffers = {}, {clear, varyingMap = {}}) {
+  bindBuffers(buffers = {}, {clear = false, varyingMap = {}} = {}) {
     if (clear) {
       this._unbindBuffers();
       this.buffers = {};
