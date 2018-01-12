@@ -66,8 +66,9 @@ withSettings({[GL.RASTERIZER_DISCARD]: true]}, () => {
 
 ### constructor
 
-* `gl` (`WebGL2RenderingContext`) gl - context
-* `opts` (`Object`=`{}`) - options
+* `gl` - (`WebGL2RenderingContext`) gl - context
+* `opts` - (`Object`={}) - options
+  * `buffers` - buffers that gets bound to `TRANSFORM_FEEDBACK_BUFFER` target for recording vertex shader outputs.
 
 WebGL APIs [`gl.createTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/createTransformFeedback)
 

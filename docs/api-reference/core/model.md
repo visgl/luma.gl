@@ -70,7 +70,8 @@ The constructor for the Model class. Use this to create a new Model.
 * `gl` - WebGL context.
 * `opts` - contains following named properties.
   * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
-  * `fs` - (FragmentShader|*string*) - A fragment shader object, ot source as a string.
+  * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
+  * `varyings` - An array of vertex shader ouput variables, that needs to be recorded (used in Transformfeedback flow).
   * `modules` - shader modules to be applied.
   * `moduleSettings` - any uniforms needed by shader modules.
   * `program` - pre created program to use, when provided, vs, ps and modules are not used.
@@ -96,6 +97,7 @@ Render the model.
   * `samplers` - texture mappings to be used for drawing.
   * `parameters` - temporary gl settings to be applied to this draw call.
   * `framebuffer` - if provided, render to framebuffer
+  * `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 
 ### render
 
@@ -103,9 +105,10 @@ Render the model.
 
 #### Parameters
 
-+ `uniforms` - uniform values to be used for drawing.
-+ `attributes` - attribute definitions to be used for drawing.
-+ `samplers` - texture mappings to be used for drawing.
+* `uniforms` - uniform values to be used for drawing.
+* `attributes` - attribute definitions to be used for drawing.
+* `samplers` - texture mappings to be used for drawing.
+* `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 
 
 ## Remarks
