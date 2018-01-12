@@ -1,6 +1,6 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
-import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGL} from '../webgl';
+import {GL, Buffer, Program, checkUniformValues, isWebGL} from '../webgl';
 // import {withParameters} from '../webgl/context-state';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
@@ -346,13 +346,11 @@ export default class Model extends Object3D {
       this.updateModuleSettings(moduleSettings);
     }
 
-    const {program: {gl}} = this;
     if (framebuffer) {
       parameters = Object.assign(parameters, {framebuffer});
     }
-    withParameters(gl, parameters,
-      () => this.render(uniforms, attributes, samplers, transformFeedback)
-    );
+
+    this.render(uniforms, attributes, samplers, transformFeedback, parameters);
 
     if (framebuffer) {
       framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
@@ -361,7 +359,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(uniforms = {}, attributes = {}, samplers = {}, transformFeedback = null) {
+  render(uniforms = {}, attributes = {}, samplers = {}, transformFeedback = null, parameters = {}) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
@@ -390,6 +388,7 @@ export default class Model extends Object3D {
     this._timerQueryStart();
 
     this.program.draw({
+      parameters,
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
       transformFeedback,

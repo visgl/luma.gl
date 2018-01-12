@@ -1,6 +1,7 @@
 /* eslint-disable no-inline-comments */
 import GL from './api';
 import {assertWebGL2Context, isWebGL2} from './context';
+import {withParameters} from './context-state';
 import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
@@ -86,17 +87,12 @@ export default class Program extends Resource {
     transformFeedback = null,
     uniforms = {},
     samplers = {},
-    parameters = null
+    parameters = {}
   }) {
     vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
     vertexArray.bind(() => {
 
       this.gl.useProgram(this.handle);
-
-      if (parameters) {
-        log.error('Program.draw({prameters}) not needed to disable RASTERIZATION, \
-          it is implict when transformFeedback parameter passed to input object');
-      }
 
       if (transformFeedback) {
         const primitiveMode = getTransformFeedbackMode({drawMode});
@@ -105,18 +101,22 @@ export default class Program extends Resource {
 
       this.setUniforms(uniforms, samplers);
 
-      // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-      if (isIndexed && isInstanced) {
-        this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-      } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-        this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
-      } else if (isIndexed) {
-        this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-      } else if (isInstanced) {
-        this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-      } else {
-        this.gl.drawArrays(drawMode, offset, vertexCount);
-      }
+      withParameters(this.gl, parameters,
+        () => {
+          // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+          if (isIndexed && isInstanced) {
+            this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+          } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+            this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
+          } else if (isIndexed) {
+            this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+          } else if (isInstanced) {
+            this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+          } else {
+            this.gl.drawArrays(drawMode, offset, vertexCount);
+          }
+        }
+      );
 
       // this.gl.useProgram(null);
 
