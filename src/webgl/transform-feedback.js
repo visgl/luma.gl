@@ -52,7 +52,6 @@ export default class TranformFeedback extends Resource {
   // program.use, should we move these methods (begin/pause/resume/end) to the Program?
   begin(primitiveMode) {
     this._bindBuffers();
-    this.gl.enable(GL.RASTERIZER_DISCARD);
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
@@ -63,13 +62,11 @@ export default class TranformFeedback extends Resource {
     this.gl.pauseTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
-    this.gl.disable(GL.RASTERIZER_DISCARD);
     return this;
   }
 
   resume() {
     this._bindBuffers();
-    this.gl.enable(GL.RASTERIZER_DISCARD);
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.resumeTransformFeedback();
     return this;
@@ -80,7 +77,6 @@ export default class TranformFeedback extends Resource {
     this.gl.endTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
-    this.gl.disable(GL.RASTERIZER_DISCARD);
     return this;
   }
 

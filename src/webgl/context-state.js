@@ -138,15 +138,16 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  let emptyParametes = true;
+  let emptyParameters = true;
   /* eslint-disable no-unused-vars  */
   for (const key in parameters) {
-    emptyParametes = false;
+    emptyParameters = false;
     break;
   }
   /* eslint-enable no-unused-vars  */
 
-  if (emptyParametes) {
+  if (emptyParameters) {
+    // Avoid setting state if no parameters provided. Just call and return
     return func(gl);
   }
 
