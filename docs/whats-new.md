@@ -1,5 +1,13 @@
 # What's New
 
+## TransformFeedback enhancements
+
+`Model` object constructor now accepts `varyings` (an array of vertex shader varyings) and `drawMode`, these will be used in creating `Program` object.
+
+`Model.draw()` now takes `TransformFeedback` object and transform feedback will begin and end during this draw.
+
+Program object now builds `varyingMap` on its creation depending on `varyings` array and `drawMode`. This map can be passed to `TransformFeedback.bindBuffers()` as varyingMap and buffers can be indexed by the varying name instead of index.
+
 ## Version 5.0
 
 A smaller release with new `picking` shader module, several new examples and some under the hood changes to improve performance, bug fixes and code cleanup.
