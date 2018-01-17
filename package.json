@@ -68,7 +68,7 @@
     "gl-vec4": "^1.0.1",
     "math.gl": "1.0.0-alpha.8",
     "seer": "^0.2.2",
-    "webgl-debug": "^1.0.2"
+    "webgl-debug": "^2.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.18",
