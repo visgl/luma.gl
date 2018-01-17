@@ -381,3 +381,39 @@ test('WebGLState#withParameters framebuffer', t => {
 
   t.end();
 });
+
+test('WebGLState#withParameters empty parameters object', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+
+  setParameters(gl, {
+    clearColor: [0, 0, 0, 0],
+    [GL.BLEND]: false
+  });
+
+  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  let blendState = getParameter(gl, GL.BLEND);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
+
+  withParameters(gl, {}, () => {
+    clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+    blendState = getParameter(gl, GL.BLEND);
+    t.deepEqual(clearColor, [0, 0, 0, 0],
+      `got expected value ${stringifyTypedArray(clearColor)}`);
+    t.deepEqual(blendState, false,
+      `got expected value ${stringifyTypedArray(blendState)}`);
+  });
+
+  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
+  blendState = getParameter(gl, GL.BLEND);
+  t.deepEqual(clearColor, [0, 0, 0, 0],
+    `got expected value ${stringifyTypedArray(clearColor)}`);
+  t.deepEqual(blendState, false,
+    `got expected value ${stringifyTypedArray(blendState)}`);
+
+  t.end();
+});

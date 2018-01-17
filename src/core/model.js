@@ -1,6 +1,6 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
-import {GL, Buffer, Program, withParameters, checkUniformValues, isWebGL} from '../webgl';
+import {GL, Buffer, Program, checkUniformValues, isWebGL} from '../webgl';
 // import {withParameters} from '../webgl/context-state';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
@@ -72,6 +72,9 @@ export default class Model extends Object3D {
     onBeforeRender = () => {},
     onAfterRender = () => {},
 
+    // TransformFeedback
+    varyings = null,
+
     // Other opts
     timerQueryEnabled = false
   } = {}) {
@@ -83,7 +86,8 @@ export default class Model extends Object3D {
       moduleSettings,
       defaultUniforms,
       program,
-      shaderCache
+      shaderCache,
+      varyings
     });
 
     this.uniforms = {};
@@ -157,7 +161,8 @@ export default class Model extends Object3D {
     moduleSettings,
     defaultUniforms,
     program,
-    shaderCache
+    shaderCache,
+    varyings
   }) {
 
     this.getModuleUniforms = x => {};
@@ -177,7 +182,7 @@ export default class Model extends Object3D {
       if (shaderCache) {
         program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
       } else {
-        program = new Program(this.gl, {vs, fs});
+        program = new Program(this.gl, {vs, fs, varyings});
       }
 
       const {getUniforms} = assembleResult;
@@ -329,7 +334,8 @@ export default class Model extends Object3D {
     samplers = {},
     parameters = {},
     settings,
-    framebuffer = null
+    framebuffer = null,
+    transformFeedback = null
   } = {}) {
     if (settings) {
       log.deprecated('settings', 'parameters');
@@ -340,13 +346,11 @@ export default class Model extends Object3D {
       this.updateModuleSettings(moduleSettings);
     }
 
-    const {program: {gl}} = this;
     if (framebuffer) {
       parameters = Object.assign(parameters, {framebuffer});
     }
-    withParameters(gl, parameters,
-      () => this.render(uniforms, attributes, samplers)
-    );
+
+    this.render(uniforms, attributes, samplers, transformFeedback, parameters);
 
     if (framebuffer) {
       framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
@@ -355,7 +359,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(uniforms = {}, attributes = {}, samplers = {}) {
+  render(uniforms = {}, attributes = {}, samplers = {}, transformFeedback = null, parameters = {}) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
@@ -384,8 +388,10 @@ export default class Model extends Object3D {
     this._timerQueryStart();
 
     this.program.draw({
+      parameters,
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
+      transformFeedback,
       isIndexed,
       indexType,
       isInstanced,

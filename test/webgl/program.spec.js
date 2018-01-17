@@ -63,3 +63,22 @@ test('WebGL#Program buffer update', t => {
 
   t.end();
 });
+
+test('WebGL#Program draw', t => {
+  const {gl} = fixture;
+
+  let program = new Program(gl, {fs, vs});
+
+  program = program.setBuffers({
+    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
+    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+  });
+
+  program.draw({vertexCount: 3});
+  t.ok(program instanceof Program, 'Program draw successful');
+
+  program.draw({vertexCount: 3, parameters: {blend: true}});
+  t.ok(program instanceof Program, 'Program draw with parameters is successful');
+
+  t.end();
+});

@@ -138,6 +138,19 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
+  let emptyParameters = true;
+  /* eslint-disable no-unused-vars  */
+  for (const key in parameters) {
+    emptyParameters = false;
+    break;
+  }
+  /* eslint-enable no-unused-vars  */
+
+  if (emptyParameters) {
+    // Avoid setting state if no parameters provided. Just call and return
+    return func(gl);
+  }
+
   const {nocatch = true} = parameters;
   // frameBuffer not supported use framebuffer
   assert(!parameters.frameBuffer);

@@ -118,6 +118,7 @@ The heart of the luma.gl API, the `Program.draw` the entry point for running sha
 
     transformFeedback = null,
     samplers = {},
+    parameters = {},
     start,
     end
   })
@@ -136,6 +137,7 @@ The heart of the luma.gl API, the `Program.draw` the entry point for running sha
 * `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
 * `uniforms`=`{}` - a map of uniforms that will be set before the draw call.
 * `samplers`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
+* `parameters` - temporary gl settings to be applied to this draw call.
 
 Runs the shaders in the program, on the attributes and uniforms.
 * Indexed rendering uses the element buffer (`GL.ELEMENT_ARRAY_BUFFER`), make sure your attributes or `VertexArray` contains one.

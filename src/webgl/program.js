@@ -1,6 +1,7 @@
 /* eslint-disable no-inline-comments */
 import GL from './api';
 import {assertWebGL2Context, isWebGL2} from './context';
+import {withParameters} from './context-state';
 import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
@@ -94,39 +95,33 @@ export default class Program extends Resource {
       this.gl.useProgram(this.handle);
 
       if (transformFeedback) {
-        if (parameters[GL.RASTERIZER_DISCARD]) {
-          // bypass fragment shader
-          this.gl.enable(GL.RASTERIZER_DISCARD);
-        }
-
         const primitiveMode = getTransformFeedbackMode({drawMode});
         transformFeedback.begin(primitiveMode);
       }
 
       this.setUniforms(uniforms, samplers);
 
-      // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-      if (isIndexed && isInstanced) {
-        this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-      } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-        this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
-      } else if (isIndexed) {
-        this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-      } else if (isInstanced) {
-        this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-      } else {
-        this.gl.drawArrays(drawMode, offset, vertexCount);
-      }
+      withParameters(this.gl, parameters,
+        () => {
+          // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+          if (isIndexed && isInstanced) {
+            this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+          } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+            this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
+          } else if (isIndexed) {
+            this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+          } else if (isInstanced) {
+            this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+          } else {
+            this.gl.drawArrays(drawMode, offset, vertexCount);
+          }
+        }
+      );
 
       // this.gl.useProgram(null);
 
       if (transformFeedback) {
         transformFeedback.end();
-
-        if (parameters[GL.RASTERIZER_DISCARD]) {
-          // resume fragment shader
-          this.gl.disable(GL.RASTERIZER_DISCARD);
-        }
       }
 
     });

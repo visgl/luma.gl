@@ -1,4 +1,4 @@
-import {TransformFeedback} from 'luma.gl';
+import {TransformFeedback, Buffer} from 'luma.gl';
 import 'luma.gl/headless';
 import test from 'tape-catch';
 
@@ -33,6 +33,34 @@ test('WebGL#TransformFeedback constructor/delete', t => {
 
   tf.delete();
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback repeated delete successful');
+
+  t.end();
+});
+
+test('WebGL#TransformFeedback bindBuffers', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const tf = new TransformFeedback(gl2);
+  const buffer1 = new Buffer(gl2);
+  const buffer2 = new Buffer(gl2);
+
+  tf.bindBuffers({
+    0: buffer1,
+    1: buffer2
+  });
+  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers successful');
+
+  tf.bindBuffers({
+    0: buffer1,
+    1: buffer2
+  }, {clear: true});
+  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
 
   t.end();
 });
