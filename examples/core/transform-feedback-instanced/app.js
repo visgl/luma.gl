@@ -7,7 +7,7 @@
 /* eslint-disable max-len */
 
 import {
-  AnimationLoop, Buffer, Program, TransformFeedback, VertexArray,
+  AnimationLoop, Buffer, TransformFeedback, VertexArray,
   setParameters, Model, Geometry
 } from 'luma.gl';
 
@@ -151,34 +151,28 @@ const animationLoop = new AnimationLoop({
 
     const modelRender = new Model(gl, {
       id: 'Model-Render',
-      program: new Program(gl, {
-        vs: VS_DRAW,
-        fs: FS_DRAW
-      }),
+      vs: VS_DRAW,
+      fs: FS_DRAW,
       geometry: new Geometry({
         id: 'Model-Render-Geometry',
         drawMode: gl.TRIANGLE_FAN,
         vertexCount: 3
       }),
       isInstanced: true,
-      instanceCount: NUM_INSTANCES,
-      isIndexed: false
+      instanceCount: NUM_INSTANCES
     });
 
     const modelTransform = new Model(gl, {
       id: 'Model-Transform',
-      program: new Program(gl, {
-        vs: VS_EMIT,
-        fs: FS_EMIT,
-        varyings: VARYINGS
-      }),
+      vs: VS_EMIT,
+      fs: FS_EMIT,
+      varyings: VARYINGS,
       geometry: new Geometry({
         id: 'Model-Transform-Geometry',
         drawMode: gl.POINTS,
         vertexCount: NUM_INSTANCES
       }),
-      isInstanced: false,
-      isIndexed: false
+      isInstanced: false
     });
 
     // -- Initialize data
@@ -216,84 +210,44 @@ const animationLoop = new AnimationLoop({
     const positionBuffer = new Buffer(gl, {
       data: trianglePositions,
       size: 2,
-      type: gl.FLOAT,
-      normalized: false,
-      stride: 0,
-      offset: 0,
-      instanced: 0,
-      usage: gl.STATIC_DRAW
+      type: gl.FLOAT
     });
 
     const colorBuffer = new Buffer(gl, {
       data: instanceColors,
       size: 3,
-      type: gl.FLOAT,
-      normalized: false,
-      stride: 0,
-      offset: 0,
-      instanced: 1,
-      usage: gl.STATIC_DRAW
+      type: gl.FLOAT
     });
 
     for (let va = 0; va < vertexArrays.length; ++va) {
       const offsetBuffer = new Buffer(gl, {
         data: instanceOffsets,
         size: 2,
-        type: gl.FLOAT,
-        normalized: false,
-        stride: 0,
-        offset: 0,
-        instanced: 1,
-        usage: gl.STREAM_COPY
+        type: gl.FLOAT
       });
 
       const rotationBuffer = new Buffer(gl, {
         data: instanceRotations,
         size: 1,
-        type: gl.FLOAT,
-        normalized: false,
-        stride: 0,
-        offset: 0,
-        instanced: 1,
-        usage: gl.STREAM_COPY
+        type: gl.FLOAT
       });
 
       vertexArrays[va] = new VertexArray(gl, {
         buffers: {
           [COLOR_LOCATION]: {
             buffer: colorBuffer,
-            size: 3,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 1
           },
           [OFFSET_LOCATION]: {
             buffer: offsetBuffer,
-            size: 2,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 1
           },
           [ROTATION_LOCATION]: {
             buffer: rotationBuffer,
-            size: 1,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 1
           },
           [POSITION_LOCATION]: {
             buffer: positionBuffer,
-            size: 2,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 0
           }
         }
@@ -303,20 +257,10 @@ const animationLoop = new AnimationLoop({
         buffers: {
           [OFFSET_LOCATION]: {
             buffer: offsetBuffer,
-            size: 2,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 0
           },
           [ROTATION_LOCATION]: {
             buffer: rotationBuffer,
-            size: 1,
-            type: gl.FLOAT,
-            normalized: false,
-            stride: 0,
-            offset: 0,
             instanced: 0
           }
         }
@@ -328,7 +272,7 @@ const animationLoop = new AnimationLoop({
           v_rotation: rotationBuffer,
           v_offset: offsetBuffer
         },
-        varyingMap: modelTransform.program.varyingMap
+        varyingMap: modelTransform.varyingMap
       });
       /* eslint-enable camelcase  */
     }
@@ -350,10 +294,8 @@ const animationLoop = new AnimationLoop({
 
   onRender({
     gl,
-    tick,
     width,
     height,
-    aspect,
     vertexArrays,
     transformVertexArrays,
     transformFeedbacks,

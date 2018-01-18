@@ -252,6 +252,10 @@ export default class Model extends Object3D {
     return this.program;
   }
 
+  get varyingMap() {
+    return this.program.varyingMap;
+  }
+
   // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
     this.geometry = geometry;
