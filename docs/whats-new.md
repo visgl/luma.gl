@@ -2,7 +2,7 @@
 
 ## TransformFeedback enhancements
 
-`Model` object constructor now accepts `varyings` (an array of vertex shader varyings) and `drawMode`, these will be used in creating `Program` object.
+TransformFeedback is now supported directly by the `Model` class, it is no longer necessary to work with the `Program` class.
 
 `Model.draw()` now takes `TransformFeedback` object and transform feedback will begin and end during this draw.
 
