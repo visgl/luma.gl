@@ -74,6 +74,7 @@ export default class Model extends Object3D {
 
     // TransformFeedback
     varyings = null,
+    bufferMode = GL.SEPARATE_ATTRIBS,
 
     // Other opts
     timerQueryEnabled = false
@@ -87,7 +88,8 @@ export default class Model extends Object3D {
       defaultUniforms,
       program,
       shaderCache,
-      varyings
+      varyings,
+      bufferMode
     });
 
     this.uniforms = {};
@@ -162,7 +164,8 @@ export default class Model extends Object3D {
     defaultUniforms,
     program,
     shaderCache,
-    varyings
+    varyings,
+    bufferMode
   }) {
 
     this.getModuleUniforms = x => {};
@@ -182,7 +185,7 @@ export default class Model extends Object3D {
       if (shaderCache) {
         program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
       } else {
-        program = new Program(this.gl, {vs, fs, varyings});
+        program = new Program(this.gl, {vs, fs, varyings, bufferMode});
       }
 
       const {getUniforms} = assembleResult;
@@ -247,6 +250,10 @@ export default class Model extends Object3D {
 
   getProgram() {
     return this.program;
+  }
+
+  get varyingMap() {
+    return this.program.varyingMap;
   }
 
   // TODO - just set attributes, don't hold on to geometry
@@ -335,6 +342,7 @@ export default class Model extends Object3D {
     parameters = {},
     settings,
     framebuffer = null,
+    vertexArray = null,
     transformFeedback = null
   } = {}) {
     if (settings) {
@@ -350,7 +358,7 @@ export default class Model extends Object3D {
       parameters = Object.assign(parameters, {framebuffer});
     }
 
-    this.render(uniforms, attributes, samplers, transformFeedback, parameters);
+    this.render(uniforms, attributes, samplers, transformFeedback, parameters, vertexArray);
 
     if (framebuffer) {
       framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
@@ -359,7 +367,15 @@ export default class Model extends Object3D {
     return this;
   }
 
-  render(uniforms = {}, attributes = {}, samplers = {}, transformFeedback = null, parameters = {}) {
+  /* eslint-disable max-params  */
+  render(
+    uniforms = {},
+    attributes = {},
+    samplers = {},
+    transformFeedback = null,
+    parameters = {},
+    vertexArray = null
+  ) {
     addModel(this);
 
     const resolvedUniforms = this.addViewUniforms(uniforms);
@@ -391,6 +407,7 @@ export default class Model extends Object3D {
       parameters,
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
+      vertexArray,
       transformFeedback,
       isIndexed,
       indexType,
@@ -410,6 +427,7 @@ export default class Model extends Object3D {
 
     return this;
   }
+  /* eslint-enable max-params  */
 
   setProgramState() {
     const {program} = this;

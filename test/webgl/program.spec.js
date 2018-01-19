@@ -8,8 +8,11 @@ const vs = `
 attribute vec3 positions;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
+varying vec3 vPosition;
+
 void main(void) {
   gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vPosition = positions;
 }
 `;
 
@@ -80,5 +83,24 @@ test('WebGL#Program draw', t => {
   program.draw({vertexCount: 3, parameters: {blend: true}});
   t.ok(program instanceof Program, 'Program draw with parameters is successful');
 
+  t.end();
+});
+
+test('WebGL#Program varyingMap', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  let program = new Program(gl2, {fs, vs, varyings: ['vPosition', 'gl_Position']});
+  t.deepEqual(program.varyingMap.vPosition, 0);
+  t.deepEqual(program.varyingMap.gl_Position, 1);
+
+  program = new Program(gl2, {fs, vs, varyings: ['vPosition', 'gl_Position'], bufferMode: GL.INTERLEAVED_ATTRIBS});
+  t.deepEqual(program.varyingMap.vPosition, 0);
+  t.deepEqual(program.varyingMap.gl_Position, 0);
   t.end();
 });
