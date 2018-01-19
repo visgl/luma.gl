@@ -38,6 +38,7 @@ export function getPlatformShaderDefines(gl) {
 #define INTEL_GPU
 // Intel optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
+#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 // Intel's built-in 'tan' function doesn't have acceptable precision
 #define LUMA_FP32_TAN_PRECISION_WORKAROUND 1
 `;
