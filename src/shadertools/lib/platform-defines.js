@@ -40,6 +40,8 @@ export function getPlatformShaderDefines(gl) {
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 // Intel's built-in 'tan' function doesn't have acceptable precision
 #define LUMA_FP32_TAN_PRECISION_WORKAROUND 1
+// Intel GPU doesn't have full 32 bits precision in same cases, causes overflow
+#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 `;
   } else if (checkRendererVendor(debugInfo, 'amd')) {
     // AMD Does not eliminate fp64 code
@@ -47,12 +49,17 @@ export function getPlatformShaderDefines(gl) {
 #define AMD_GPU
 `;
   } else {
+    // We don't know what GPU it is, could be that the GPU driver or
+    // browser is not implementing UNMASKED_RENDERER constant and not
+    // reporting a correct name
     platformDefines += `\
 #define DEFAULT_GPU
 // Prevent driver from optimizing away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 // Intel's built-in 'tan' function doesn't have acceptable precision
 #define LUMA_FP32_TAN_PRECISION_WORKAROUND 1
+// Intel GPU doesn't have full 32 bits precision in same cases, causes overflow
+#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 `;
   }
 

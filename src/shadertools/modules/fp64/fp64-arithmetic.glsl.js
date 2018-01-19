@@ -36,6 +36,7 @@ and one b should appear
 err = (a + b) * ONE^6 - a * ONE^5 - (a + b) * ONE^4 + a * ONE^3 - b - (a + b) * ONE^2 + a * ONE
 */
 
+// Divide float number to high and low floats to extend fraction bits
 vec2 split(float a) {
   const float SPLIT = 4097.0;
   float t = a * SPLIT;
@@ -49,6 +50,14 @@ vec2 split(float a) {
   return vec2(a_hi, a_lo);
 }
 
+// Divide float number again when high float uses too many fraction bits
+vec2 split2(vec2 a) {
+  vec2 b = split(a.x);
+  b.y += a.y;
+  return b;
+}
+
+// Special sum operation when a > b
 vec2 quickTwoSum(float a, float b) {
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   float sum = (a + b) * ONE;
@@ -60,6 +69,7 @@ vec2 quickTwoSum(float a, float b) {
   return vec2(sum, err);
 }
 
+// General sum operation
 vec2 twoSum(float a, float b) {
   float s = (a + b);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
@@ -131,14 +141,25 @@ vec2 mul_fp64(vec2 a, vec2 b) {
   vec2 prod = twoProd(a.x, b.x);
   // y component is for the error
   prod.y += a.x * b.y;
+#if defined(LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND)
+  prod = split2(prod);
+#endif
+  prod = quickTwoSum(prod.x, prod.y);
   prod.y += a.y * b.x;
+#if defined(LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND)
+  prod = split2(prod);
+#endif
   prod = quickTwoSum(prod.x, prod.y);
   return prod;
 }
 
 vec2 div_fp64(vec2 a, vec2 b) {
   float xn = 1.0 / b.x;
+#if defined(LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND)
+  vec2 yn = mul_fp64(a, vec2(xn, 0));
+#else
   vec2 yn = a * xn;
+#endif
   float diff = (sub_fp64(a, mul_fp64(b, yn))).x;
   vec2 prod = twoProd(xn, diff);
   return sum_fp64(yn, prod);
@@ -157,6 +178,10 @@ vec2 sqrt_fp64(vec2 a) {
 #endif
   float diff = sub_fp64(a, yn_sqr).x;
   vec2 prod = twoProd(x * 0.5, diff);
+#if defined(LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND)
+  return sum_fp64(split(yn), prod);
+#else
   return sum_fp64(vec2(yn, 0.0), prod);
+#endif
 }
 `;
