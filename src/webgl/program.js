@@ -10,7 +10,7 @@ import {getTransformFeedbackMode} from './transform-feedback';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import Buffer from './buffer';
-import {log, uid} from '../utils';
+import {log, uid, isObjectEmpty} from '../utils';
 import assert from 'assert';
 
 const LOG_PROGRAM_PERF_PRIORITY = 3;
@@ -59,6 +59,22 @@ export default class Program extends Resource {
 
     this._compileAndLink();
 
+    return this;
+  }
+
+  // Generates warning if a vertex shader attribute is not setup.
+  checkAttributeBindings({vertexArray}) {
+    const filledLocations = vertexArray ?
+      vertexArray.filledLocations : this.vertexAttributes.filledLocations;
+    for (const attributeName in this._attributeToLocationMap) {
+      const location = this._attributeToLocationMap[attributeName];
+      if (!filledLocations[location] && !this._warnedLocations[location]) {
+        // throw new Error(`Program ${this.id}: ` +
+        //   `Attribute ${location}:${attributeName} not supplied`);
+        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
+        this._warnedLocations[location] = true;
+      }
+    }
     return this;
   }
 
@@ -142,9 +158,9 @@ export default class Program extends Resource {
    * @returns {Program} Returns itself for chaining.
    */
   /* eslint-disable max-statements */
-  setBuffers(buffers, {clear = true, check = true, drawParams = {}} = {}) {
+  setBuffers(buffers, {clear = true, drawParams = {}} = {}) {
     if (clear) {
-      this._filledLocations = {};
+      this.vertexAttributes.clearBindings();
     }
 
     // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
@@ -152,6 +168,11 @@ export default class Program extends Resource {
     drawParams.isInstanced = false;
     drawParams.isIndexed = false;
     drawParams.indexType = null;
+
+    // Reutrn early if no buffers to be bound.
+    if (isObjectEmpty(buffers)) {
+      return this;
+    }
 
     const {locations, elements} = this._sortBuffersByLocation(buffers);
 
@@ -168,11 +189,9 @@ export default class Program extends Resource {
         this.vertexAttributes.setDivisor(location, divisor);
         drawParams.isInstanced = buffer.layout.instanced > 0;
         this.vertexAttributes.enable(location);
-        this._filledLocations[bufferName] = true;
       } else {
         this.vertexAttributes.setGeneric({location, array: buffer});
         this.vertexAttributes.disable(location, true);
-        this._filledLocations[bufferName] = true;
       }
     }
 
@@ -182,10 +201,6 @@ export default class Program extends Resource {
       buffer.bind();
       drawParams.isIndexed = true;
       drawParams.indexType = buffer.layout.type;
-    }
-
-    if (check) {
-      this._checkBuffers();
     }
 
     return this;
@@ -364,34 +379,21 @@ export default class Program extends Resource {
     this._queryUniformLocations();
   }
 
-  _checkBuffers() {
-    for (const attributeName in this._attributeLocations) {
-      if (!this._filledLocations[attributeName] && !this._warnedLocations[attributeName]) {
-        const location = this._attributeLocations[attributeName];
-        // throw new Error(`Program ${this.id}: ` +
-        //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
-        this._warnedLocations[attributeName] = true;
-      }
-    }
-    return this;
-  }
-
   _sortBuffersByLocation(buffers) {
     let elements = null;
     const locations = new Array(this._attributeCount);
 
     for (const bufferName in buffers) {
       const buffer = buffers[bufferName];
-      const location = this._attributeLocations[bufferName];
+      const location = this._attributeToLocationMap[bufferName];
       if (location === undefined) {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
           throw new Error(`${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
-        } else if (!this._warnedLocations[bufferName]) {
+        } else if (!this._warnedLocations[location]) {
           log.log(2, `${this._print(bufferName)} not used`);
-          this._warnedLocations[bufferName] = true;
+          this._warnedLocations[location] = true;
         }
       } else {
         if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
@@ -458,14 +460,13 @@ export default class Program extends Resource {
 
   // query attribute locations and build name to location map.
   _queryAttributeLocations() {
-    this._attributeLocations = {};
+    this._attributeToLocationMap = {};
     this._attributeCount = this.getAttributeCount();
     for (let location = 0; location < this._attributeCount; location++) {
       const name = this.getAttributeInfo(location).name;
-      this._attributeLocations[name] = this.getAttributeLocation(name);
+      this._attributeToLocationMap[name] = this.getAttributeLocation(name);
     }
-    this._warnedLocations = [];
-    this._filledLocations = {};
+    this._warnedLocations = {};
   }
 
   // query uniform locations and build name to setter map.

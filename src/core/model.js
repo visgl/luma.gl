@@ -391,7 +391,7 @@ export default class Model extends Object3D {
     log.group(LOG_DRAW_PRIORITY,
       `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
 
-    this.setProgramState();
+    this.setProgramState({vertexArray});
 
     this._logAttributesAndUniforms(2, resolvedUniforms);
 
@@ -432,11 +432,12 @@ export default class Model extends Object3D {
   }
   /* eslint-enable max-params  */
 
-  setProgramState() {
+  setProgramState({vertexArray = null} = {}) {
     const {program} = this;
     program.use();
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
+    program.checkAttributeBindings({vertexArray});
     program.setUniforms(this.uniforms, this.samplers);
     return this;
   }

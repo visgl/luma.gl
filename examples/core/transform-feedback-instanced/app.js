@@ -7,7 +7,7 @@
 
 import {
   AnimationLoop, Buffer, TransformFeedback, VertexArray,
-  setParameters, Model, Geometry
+  setParameters, Model
 } from 'luma.gl';
 
 const OFFSET_LOCATION = 0;

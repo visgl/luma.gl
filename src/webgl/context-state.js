@@ -2,6 +2,7 @@
 import GL from '../webgl-utils/constants';
 import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
 import assert from 'assert';
+import {isObjectEmpty} from '../utils';
 
 import {
   getParameter,
@@ -138,15 +139,7 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  let emptyParameters = true;
-  /* eslint-disable no-unused-vars  */
-  for (const key in parameters) {
-    emptyParameters = false;
-    break;
-  }
-  /* eslint-enable no-unused-vars  */
-
-  if (emptyParameters) {
+  if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(gl);
   }

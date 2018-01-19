@@ -83,6 +83,13 @@ export const EXAMPLE_PAGES = [
           demo: 'TransformFeedbackDemo',
           code: `${GITHUB_TREE}/examples/core/transform-feedback`
         }
+      },
+      {
+        name: 'Transform Feedback Instancing',
+        content: {
+          demo: 'TransformFeedbackInstancingDemo',
+          code: `${GITHUB_TREE}/examples/core/transform-feedback-instanced`
+        }
       }
     ]
   },
