@@ -36,6 +36,7 @@ and one b should appear
 err = (a + b) * ONE^6 - a * ONE^5 - (a + b) * ONE^4 + a * ONE^3 - b - (a + b) * ONE^2 + a * ONE
 */
 
+// Divide float number to high and low floats to extend fraction bits
 vec2 split(float a) {
   const float SPLIT = 4097.0;
   float t = a * SPLIT;
@@ -49,12 +50,14 @@ vec2 split(float a) {
   return vec2(a_hi, a_lo);
 }
 
+// Divide float number again when high float uses too many fraction bits
 vec2 split2(vec2 a) {
   vec2 b = split(a.x);
   b.y += a.y;
   return b;
 }
 
+// Special sum operation when a > b
 vec2 quickTwoSum(float a, float b) {
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
   float sum = (a + b) * ONE;
@@ -66,6 +69,7 @@ vec2 quickTwoSum(float a, float b) {
   return vec2(sum, err);
 }
 
+// General sum operation
 vec2 twoSum(float a, float b) {
   float s = (a + b);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
