@@ -258,6 +258,9 @@ export default class Model extends Object3D {
 
   // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
+    if (!geometry) {
+      return this;
+    }
     this.geometry = geometry;
     this.vertexCount = geometry.getVertexCount();
     this.drawMode = geometry.drawMode;

@@ -138,10 +138,8 @@ const animationLoop = new AnimationLoop({
       id: 'Model-Render',
       vs: DRAW_VS,
       fs: DRAW_FS,
-      geometry: new Geometry({
-        drawMode: gl.TRIANGLE_FAN,
-        vertexCount: 3
-      }),
+      drawMode: gl.TRIANGLE_FAN,
+      vertexCount: 3,
       isInstanced: true,
       instanceCount: NUM_INSTANCES
     });
@@ -151,10 +149,8 @@ const animationLoop = new AnimationLoop({
       vs: EMIT_VS,
       fs: EMIT_FS,
       varyings: EMIT_VARYINGS,
-      geometry: new Geometry({
-        drawMode: gl.POINTS,
-        vertexCount: NUM_INSTANCES
-      }),
+      drawMode: gl.POINTS,
+      vertexCount: NUM_INSTANCES,
       isInstanced: false
     });
 
