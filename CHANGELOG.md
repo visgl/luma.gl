@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.0.2 - Jan 22
+- Fix overflow of 64 bits shader on intel GPU (#388)
+
 ## 5.0.1 - Jan 5
 - Fix AnimationLoop bug - promise never resolves on page that is already loaded
 - Minimize console logs during startup (#380)
