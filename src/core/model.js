@@ -6,7 +6,7 @@ import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../core/object-3d';
-import {log, formatValue} from '../utils';
+import {log, formatValue, isObjectEmpty} from '../utils';
 import {MODULAR_SHADERS} from '../shadertools/shaders';
 import {assembleShaders} from '../shadertools';
 
@@ -118,7 +118,9 @@ export default class Model extends Object3D {
     this.needsRedraw = true;
 
     // Attributes and buffers
-    this.setGeometry(geometry);
+    if (geometry) {
+      this.setGeometry(geometry);
+    }
 
     this.attributes = {};
     this.setAttributes(attributes);
@@ -258,9 +260,6 @@ export default class Model extends Object3D {
 
   // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
-    if (!geometry) {
-      return this;
-    }
     this.geometry = geometry;
     this.vertexCount = geometry.getVertexCount();
     this.drawMode = geometry.drawMode;
@@ -274,19 +273,15 @@ export default class Model extends Object3D {
   }
 
   setAttributes(attributes = {}) {
-    let isEmpty = true;
-    /* eslint-disable no-unused-vars */
-    for (const key in attributes) {
-      isEmpty = false;
-      break;
+    // Reutrn early if no attributes to set.
+    if (isObjectEmpty(attributes)) {
+      return this;
     }
-    /* eslint-enable no-unused-vars */
 
-    if (!isEmpty) {
-      Object.assign(this.attributes, attributes);
-      this._createBuffersFromAttributeDescriptors(attributes);
-      this.setNeedsRedraw();
-    }
+    Object.assign(this.attributes, attributes);
+    this._createBuffersFromAttributeDescriptors(attributes);
+    this.setNeedsRedraw();
+
     return this;
   }
 

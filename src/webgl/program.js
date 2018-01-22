@@ -169,11 +169,6 @@ export default class Program extends Resource {
     drawParams.isIndexed = false;
     drawParams.indexType = null;
 
-    // Reutrn early if no buffers to be bound.
-    if (isObjectEmpty(buffers)) {
-      return this;
-    }
-
     const {locations, elements} = this._sortBuffersByLocation(buffers);
 
     // Process locations in order
@@ -381,8 +376,14 @@ export default class Program extends Resource {
 
   _sortBuffersByLocation(buffers) {
     let elements = null;
-    const locations = new Array(this._attributeCount);
+    let locations = [];
 
+    // Reutrn early if no buffers to be bound.
+    if (isObjectEmpty(buffers)) {
+      return {locations, elements};
+    }
+
+    locations = new Array(this._attributeCount);
     for (const bufferName in buffers) {
       const buffer = buffers[bufferName];
       const location = this._attributeToLocationMap[bufferName];
