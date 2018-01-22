@@ -88,3 +88,15 @@ export function isPowerOfTwo(n) {
   assert((typeof n === 'number'), 'Input must be a number');
   return n && ((n & (n - 1)) === 0);
 }
+
+// Returns true if given object is empty, false otherwise.
+export function isObjectEmpty(obj) {
+  let isEmpty = true;
+  /* eslint-disable no-unused-vars  */
+  for (const key in obj) {
+    isEmpty = false;
+    break;
+  }
+  /* eslint-enable no-unused-vars  */
+  return isEmpty;
+}

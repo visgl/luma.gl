@@ -71,6 +71,7 @@ export default class VertexArray extends Resource {
     this.drawParameters = {};
 
     this._bound = false;
+    this._filledLocations = {};
     Object.seal(this);
 
     this.initialize(opts);
@@ -84,6 +85,10 @@ export default class VertexArray extends Resource {
     this.setLocations(locations);
     this.setBuffers(buffers, {clear: true});
     this.setElements(elements);
+  }
+
+  get filledLocations() {
+    return this._filledLocations;
   }
 
   // Register an optional buffer name to location mapping
@@ -125,7 +130,10 @@ export default class VertexArray extends Resource {
     return {buffer, layout};
   }
 
-  setBuffers(buffers, {clear, check}) {
+  setBuffers(buffers, {clear = true} = {}) {
+    if (clear) {
+      this.clearBindings();
+    }
     const {locations, elements} = this._getLocations(buffers);
 
     this.ext.bindVertexArray(this.handle);
@@ -150,16 +158,23 @@ export default class VertexArray extends Resource {
     if (elements) {
       this.setElements(elements);
     }
-
-    if (check) {
-      this._checkBuffers();
-    }
   }
 
   // Enable an attribute
   enable(location) {
     this.bind(() => {
       this.gl.enableVertexAttribArray(location);
+    });
+  }
+
+  clearBindings({disableZero = false} = {}) {
+    this.bind(() => {
+      for (const location in this._filledLocations) {
+        if (this._filledLocations[location] && (location > 0 || disableZero)) {
+          this.gl.disableVertexAttribArray(location);
+        }
+      }
+      this._filledLocations = {};
     });
   }
 
@@ -196,6 +211,7 @@ export default class VertexArray extends Resource {
     layout = layout !== undefined ? layout : buffer.layout;
     assert(target, 'setBuffer needs target');
     assert(layout, 'setBuffer called on uninitialized buffer');
+    this._filledLocations[location] = true;
 
     this.bind(() => {
       // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
@@ -216,6 +232,7 @@ export default class VertexArray extends Resource {
 
   // Specify values for generic vertex attributes
   setGeneric({location, array}) {
+    this._filledLocations[location] = true;
     switch (array.constructor) {
     case Float32Array:
       this._setGenericFloatArray(location, array);
@@ -397,19 +414,6 @@ export default class VertexArray extends Resource {
     }
 
     return {locations, elements};
-  }
-
-  _checkBuffers() {
-    for (const attributeName in this._attributeLocations) {
-      if (!this._filledLocations[attributeName] && !this._warn[attributeName]) {
-        const location = this._attributeLocations[attributeName];
-        // throw new Error(`Program ${this.id}: ` +
-        //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(0, `Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
-        this._warn[attributeName] = true;
-      }
-    }
-    return this;
   }
 
   // RESOURCE IMPLEMENTATION

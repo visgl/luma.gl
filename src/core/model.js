@@ -6,7 +6,7 @@ import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 
 import Object3D from '../core/object-3d';
-import {log, formatValue} from '../utils';
+import {log, formatValue, isObjectEmpty} from '../utils';
 import {MODULAR_SHADERS} from '../shadertools/shaders';
 import {assembleShaders} from '../shadertools';
 
@@ -118,7 +118,9 @@ export default class Model extends Object3D {
     this.needsRedraw = true;
 
     // Attributes and buffers
-    this.setGeometry(geometry);
+    if (geometry) {
+      this.setGeometry(geometry);
+    }
 
     this.attributes = {};
     this.setAttributes(attributes);
@@ -271,19 +273,15 @@ export default class Model extends Object3D {
   }
 
   setAttributes(attributes = {}) {
-    let isEmpty = true;
-    /* eslint-disable no-unused-vars */
-    for (const key in attributes) {
-      isEmpty = false;
-      break;
+    // Reutrn early if no attributes to set.
+    if (isObjectEmpty(attributes)) {
+      return this;
     }
-    /* eslint-enable no-unused-vars */
 
-    if (!isEmpty) {
-      Object.assign(this.attributes, attributes);
-      this._createBuffersFromAttributeDescriptors(attributes);
-      this.setNeedsRedraw();
-    }
+    Object.assign(this.attributes, attributes);
+    this._createBuffersFromAttributeDescriptors(attributes);
+    this.setNeedsRedraw();
+
     return this;
   }
 
@@ -388,7 +386,7 @@ export default class Model extends Object3D {
     log.group(LOG_DRAW_PRIORITY,
       `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
 
-    this.setProgramState();
+    this.setProgramState({vertexArray});
 
     this._logAttributesAndUniforms(2, resolvedUniforms);
 
@@ -429,11 +427,12 @@ export default class Model extends Object3D {
   }
   /* eslint-enable max-params  */
 
-  setProgramState() {
+  setProgramState({vertexArray = null} = {}) {
     const {program} = this;
     program.use();
     this.drawParams = {};
     program.setBuffers(this.buffers, {drawParams: this.drawParams});
+    program.checkAttributeBindings({vertexArray});
     program.setUniforms(this.uniforms, this.samplers);
     return this;
   }
