@@ -1,5 +1,17 @@
 # Pre-releases
 
+## 5.1.0-beta.1 - Jan 25, 2018
+- Vertexarray enhancements (#391)
+- Fix overflow of 64 bits shader on intel GPU (#388)
+- TransformFeedback:  Add varyingMap support + new TF instancing example. (#385)
+- Bump webgl-debug module to 2.0.0 (#386)
+- Transform Feedback: Add Support to Model.draw and minor API changes. (#383)
+- Update buildkite agent queues (#384)
+- Initial luma.gl RFCs (#382)
+- Allow shaderModule.getUniforms access dependency uniforms (#379)
+- Fix AnimationLoop bug - promise never resolves on page that is already loaded
+- Minimize console logs during startup (#380)
+
 ## 5.0.0 - Dec 21
 - Update links to point to 5.0-release branch
 - Do not mark `needsRedraw` unless something changed (#376)
