@@ -20,7 +20,7 @@ export const addModel = model => {
  * Log a model uniforms and attributes.
  */
 export const logModel = (model, uniforms) => {
-  if (!window.__SEER_INITIALIZED__ || seer.throttle(`luma.gl:${model.id}`, 1E3)) {
+  if (!seer.isReady() || seer.throttle(`luma.gl:${model.id}`, 1E3)) {
     return;
   }
 
