@@ -1,6 +1,7 @@
-import seer from 'seer';
-
 import {window} from '../utils/globals';
+import isBrowser from '../utils/is-browser';
+
+const seer = isBrowser && require('seer');
 
 const models = {};
 
@@ -8,7 +9,7 @@ const models = {};
  * Add a model to our cache indexed by id
  */
 export const addModel = model => {
-  if (models[model.id]) {
+  if (!window.__SEER_INITIALIZED__ || models[model.id]) {
     return;
   }
   models[model.id] = model;
@@ -96,16 +97,18 @@ export const getOverrides = (id, uniforms) => {
 /**
  * Listen for luma.gl edit events
  */
-seer.listenFor('luma.gl', payload => {
-  const model = models[payload.itemKey];
-  if (!model || payload.type !== 'edit' || payload.valuePath[0] !== 'uniforms') {
-    return;
-  }
+if (seer) {
+  seer.listenFor('luma.gl', payload => {
+    const model = models[payload.itemKey];
+    if (!model || payload.type !== 'edit' || payload.valuePath[0] !== 'uniforms') {
+      return;
+    }
 
-  const valuePath = payload.valuePath.slice(1);
-  setOverride(payload.itemKey, valuePath, payload.value);
+    const valuePath = payload.valuePath.slice(1);
+    setOverride(payload.itemKey, valuePath, payload.value);
 
-  const uniforms = model.getUniforms();
-  recursiveSet(uniforms, valuePath, payload.value);
-  model.setUniforms(uniforms);
-});
+    const uniforms = model.getUniforms();
+    recursiveSet(uniforms, valuePath, payload.value);
+    model.setUniforms(uniforms);
+  });
+}
