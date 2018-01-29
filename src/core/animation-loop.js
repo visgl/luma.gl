@@ -13,6 +13,10 @@ export function cancelAnimationFrame(timerId) {
   return isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
 }
 
+const DEFAULT_GLOPIONS = {
+  preserveDrawingBuffer: true
+};
+
 export default class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -25,9 +29,7 @@ export default class AnimationLoop {
     onFinalize = () => {},
 
     gl = null,
-    glOptions = {
-      preserveDrawingBuffer: true
-    },
+    glOptions = {},
     width = null,
     height = null,
 
@@ -218,7 +220,7 @@ export default class AnimationLoop {
   // Either uses supplied or existing context, or calls provided callback to create one
   _createWebGLContext(opts) {
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, this.glOptions);
+    opts = Object.assign({}, opts, DEFAULT_GLOPIONS, this.glOptions);
     if (opts.gl) {
       this.gl = opts.gl;
     } else {
