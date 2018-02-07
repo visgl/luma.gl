@@ -16,14 +16,16 @@ class.
 
 ## Usage
 
-Create model object by passing shaders, uniforms, and render it by passing updated uniforms.
+### Provide attribute data using Geometry object
+Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
+
 ```js
 // construct the model.
 const model =  new Model(gl, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
+  uniforms: {uSampler: texture},
   geometry: geometryObject,
-  uniforms: {uSampler: texture}
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
@@ -31,7 +33,77 @@ model.render({
   uPMatrix: currentProjectionMatrix,
   uMVMatrix: current ModelViewMatrix
 });
+```
 
+### Provide attribute data using Buffer
+When using `Buffer` objects, data remains on GPU and same `Buffer` object can be shared between multiple models.
+
+```js
+// construct the model.
+const model =  new Model(gl, {
+  vs: VERTEX_SHADER,
+  fs: FRAGMENT_SHADER,
+  uniforms: {uSampler: texture},
+  attributes: {
+    attributeName1: bufferObject,
+    attributeName2: {data: dataArray, size: 3, type: GL.FLOAT} // new buffer object will be constructed
+  }
+  drawMode: gl.TRIANGLE_FAN,
+  vertexCount: 3,
+})
+
+// and on each frame update any uniforms (typically matrices) and call render.
+model.render({
+  uPMatrix: currentProjectionMatrix,
+  uMVMatrix: current ModelViewMatrix
+});
+```
+
+### Provide attribute data using VertexArray object
+`VertexArray` is a WebGL2 only feature. A `VertexArray` object can be build and passed to `Model.draw()` to provide attribute data. Attribute data can be changed by changing `VertexArray` object.
+
+```js
+// construct the model.
+const model =  new Model(gl, {
+  vs: VERTEX_SHADER,
+  fs: FRAGMENT_SHADER,
+  uniforms: {uSampler: texture},
+  drawMode: gl.TRIANGLE_FAN,
+  vertexCount: 3,
+})
+
+const ATTRIBUTE1_LOCAITON = 0;
+const ATTRIBUTE2_LOCATION = 1;
+const vertexArray1 = new VertexArray(gl, {
+  buffers: {
+    [ATTRIBUTE1_LOCAITON]: buffer1,
+    [ATTRIBUTE2_LOCATION]: buffer2
+  }
+});
+const vertexArray2 = new VertexArray(gl, {
+  buffers: {
+    [ATTRIBUTE1_LOCAITON]: buffer3,
+    [ATTRIBUTE2_LOCATION]: buffer4
+  }
+});
+
+//Render using attribute data from vertexArray1.
+model.draw({
+  uniforms: {
+    uPMatrix: currentProjectionMatrix,
+    uMVMatrix: current ModelViewMatrix
+  },
+  vertexArray: vertexArray1
+});
+
+// Switch attribute data to vertexArray2
+model.draw({
+  uniforms: {
+    uPMatrix: currentProjectionMatrix,
+    uMVMatrix: current ModelViewMatrix
+  },
+  vertexArray: vertexArray2
+});
 ```
 
 ## Methods

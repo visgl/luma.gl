@@ -13,22 +13,17 @@ For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Tran
 
 ## Usage
 
-Setting up a program for transform feedback.
+Setting up a model object for transform feedback.
 ```js
-const program = new Program(gl, {
-  vs,
-  fs,
-  varyings: ['gl_Position'],
-});
-
-Setting up a transform feedback object and binding buffers
-```js
-const program = new Program(gl, {
+const model = new Model(gl, {
   vs,
   fs,
   varyings: ['gl_Position', 'outputColor'],
+  ...
 });
 ```
+
+Setting up a transform feedback object and binding buffers
 
 ```js
 const transformFeedback = new TransformFeedback(gl)
@@ -38,7 +33,7 @@ const transformFeedback = new TransformFeedback(gl)
 
 When binding the buffers, index should be equal to the corresponding varying entry in `varyings` array passed to `Program` constructor.
 
-Buffers can also be bound using varying name and varyingMap that can be retrieved from `Program` object.
+Buffers can also be bound using varying name and varyingMap that can be retrieved from `Model` object.
 
 ```js
 const transformFeedback = new TransformFeedback(gl, {
@@ -46,14 +41,14 @@ const transformFeedback = new TransformFeedback(gl, {
     outputColor: bufferColor,
     gl_Position: bufferPosition
   },
-  varyingMap: program.varyingMap
+  varyingMap: model.varyingMap
 });
 ```
 
 
 Running program (drawing) with implicit activation of transform feedback (will call `begin` and `end` on supplied `transformFeedback`)
 ```js
-program.draw({
+model.draw({
   drawMode,
   vertexCount,
   ...,
@@ -63,16 +58,15 @@ program.draw({
 
 Running program (drawing) with explicit activation of transform feedback
 ```js
-program.use();
 transformFeedback.begin();
-program.draw({...});
+model.draw({...});
 transformFeedback.end();
 ```
 
 Turning off rasterization
 ```js
 const parameters = {[GL.RASTERIZER_DISCARD]: true}
-program.draw({..., transformFeedback, parameters});
+model.draw({..., transformFeedback, parameters});
 ```
 
 
