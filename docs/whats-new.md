@@ -2,11 +2,13 @@
 
 ## TransformFeedback enhancements
 
-TransformFeedback is now supported directly by the `Model` class, it is no longer necessary to work with the `Program` class.
+Performing Transform Feedback operations has gotten more simpler as it is now integrated with `Model` object.
 
 `Model.draw()` now takes `TransformFeedback` object and transform feedback will begin and end during this draw.
 
-Program object now builds `varyingMap` on its creation depending on `varyings` array and `drawMode`. This map can be passed to `TransformFeedback.bindBuffers()` as varyingMap and buffers can be indexed by the varying name instead of index.
+`TransformFeedback` buffers can now be bound using varying name instead of an index that matches with `varyings` array index.
+
+For more details check [`TransformFeedback`](/#/documentation/api-reference/transform-feedback) and [`Model`](/#/documentation/api-reference/model) documentation.
 
 ## Version 5.0
 

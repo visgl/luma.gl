@@ -58,7 +58,6 @@ Parameters:
 
 Restarts the animation
 
-
 ### stop
 
 Stops the animation

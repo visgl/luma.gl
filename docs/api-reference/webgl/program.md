@@ -95,7 +95,6 @@ Relinks a program
 * `varyings` WebGL2 (`String[]`) - a list of names of varyings.
 * `bufferMode` WebGL2 (`GLenum`=`GL.SEPARATE_ATTRIBS`) - Optional, specifies how transform feedback should store the varyings.
 
-
 ### delete
 
 Deletes resources held by program. Note: Does not currently delete shaders (to enable shader caching).
@@ -148,7 +147,6 @@ The following WebGL APIs are called in this function:
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram), [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements), [gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2), [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays), [gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2), [gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2), [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays), [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE), [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE),
 
-
 ### setBuffers
 
 Sets named uniforms from a map, ignoring names.
@@ -160,7 +158,6 @@ program.setBuffers(object);
 * object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
 * name - (*string*) The name (unique id) of the buffer. If no `attribute` value is set in `options` then the buffer name will be used as attribute name.
 * options - (*object*) An object with options/data described below:
-
 
 ### setUniforms
 
@@ -175,7 +172,6 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 * `object` (*object*) - An object with key value pairs matching a niform name and its value respectively.
 * `key` (*string*) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the Program than its shaders use, the extra uniforms will simply be ignored.
 * `value` (*mixed*) - The value to be set. Can be a float, an array of floats, a boolean, etc. When the shaders are run (through a draw call), The must match the declaration. There's no need to convert arrays into a typed array, that's done automatically.
-
 
 ### varyings
 
@@ -194,7 +190,6 @@ returns (`WebGLActiveInfo`) - object with {`name`, `size`, `type`} fields.
 
 WebGL APIs [gl.getTransformFeedbackVarying](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getTransformFeedbackVarying)
 
-
 ### use
 
 Calls `gl.useProgram(this.program)`. To set the current program as active. After this call, `gl.draw*` calls will run the shaders in this program.
@@ -202,7 +197,6 @@ Calls `gl.useProgram(this.program)`. To set the current program as active. After
 Like `bind` calls on many other luma.gl objects, this method does normally not have to be called by the application.
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
-
 
 ### getUniformCount
 
@@ -213,7 +207,6 @@ Gets number of active uniforms
 Gets {name, type, size} for uniform at index
 
 ### getFragDataLocation (WebGL2)
-
 
 ### Limits
 
@@ -226,7 +219,6 @@ Gets {name, type, size} for uniform at index
 | `GL.MAX_VERTEX_UNIFORM_VECTORS` | >= 128 (GLint) | |
 | `GL.MAX_FRAGMENT_UNIFORM_VECTORS` | >= 16 (GLint) | |
 | `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2) | - | - |
-
 
 ### Parameters
 
