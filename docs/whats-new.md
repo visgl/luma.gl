@@ -2,15 +2,15 @@
 
 ## Version 5.next
 
-## New class BufferMap
+## BufferMap class (New)
 
-`BufferMap` class provides easy interface to perform Transform Feedback operations.
+The new `BufferMap` class provides easy interface to perform Transform Feedback operations.
 
 ## Version 5.1
 
 ## TransformFeedback Enhancements
 
-Performing Transform Feedback operations has gotten easier since they are now integrated with `Model` object.
+Performing Transform Feedback operations has gotten easier, mainly in the following two ways:
 
 `TransformFeedback` instances can now be supplied directly to `Model.draw` and feedback will begin and end during that draw call. Thus it is no longer necessary to work directly with the `Program` class to use transform feedback.
 
