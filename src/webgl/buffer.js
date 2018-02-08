@@ -81,6 +81,9 @@ export default class Buffer extends Resource {
     return this;
   }
 
+  updateLayout(opts) {
+    Object.assign(this.layout, opts);
+  }
   // Creates and initializes the buffer object's data store.
   initialize({
     data,
