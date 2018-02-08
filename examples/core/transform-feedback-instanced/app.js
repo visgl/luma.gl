@@ -171,9 +171,14 @@ const animationLoop = new AnimationLoop({
 
       instanceRotations[i] = Math.random() * 2 * Math.PI;
 
-      instanceColors[i * 3] = Math.random();
-      instanceColors[i * 3 + 1] = Math.random();
-      instanceColors[i * 3 + 2] = Math.random();
+      const randValue = Math.random();
+      if (randValue > 0.5) {
+        instanceColors[i * 3 + 1] = 1.0;
+        instanceColors[i * 3 + 2] = 1.0;
+      } else {
+        instanceColors[i * 3] = 1.0;
+        instanceColors[i * 3 + 2] = 1.0;
+      }
     }
 
     // -- Init VertexArrays and TransformFeedback objects
