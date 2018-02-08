@@ -108,9 +108,11 @@ buffer.unbind({target: GL.UNIFORM_BUFFER, index: 0});
 ```
 Note: buffer binding and unbinding is handled internal by luma.gl methods so the application  typically **DONOT** need to bind buffers unless integrating with external libraries or raw webgl code.
 
+
 ## Members
 
 * `handle` - holds the underlying `WebGLBuffer`
+
 
 ## Methods
 
@@ -130,7 +132,6 @@ const buffer = new Buffer(gl, {target, ...initOptions, ...layoutOptions});
 Note:
 * In WebGL1, the default is `GL.ARRAY_BUFFER` which will work as a generic buffer.
 * In WebGL2, the default is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used (bound). From that point on, WebGL will consider it either as an element buffer or a generic buffer.
-
 
 ### initialize
 
@@ -181,7 +182,6 @@ Updates part or all of a buffer's allocated memory.
 
 Returns itself for chaining.
 
-
 ### copyData (WEBGL2)
 
 Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
@@ -200,7 +200,6 @@ Note:
 * `readOffset + sizereadOffset + size` must not exceeed the size of the source buffer object
 * `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
 * If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
-
 
 ### getData (WEBGL2)
 
@@ -231,7 +230,6 @@ Returns a typed array containing the data from the buffer (if `dstData` was supp
 | `GL.STATIC_COPY`  | Yes    | No     | Buffer will be used often and not change often. Contents are neither written or read by the user. |
 | `GL.DYNAMIC_COPY` | Yes    | No     | Buffer will be used often and change often. Contents are neither written or read by the user. |
 | `GL.STREAM_COPY`  | Yes    | No     | Buffer will be used often and not change often. Contents are neither written or read by the user. |
-
 
 ### Parameters
 

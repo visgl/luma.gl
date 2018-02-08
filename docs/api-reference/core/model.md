@@ -17,6 +17,7 @@ class.
 ## Usage
 
 ### Provide attribute data using Geometry object
+
 Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
 
 ```js
@@ -36,6 +37,7 @@ model.render({
 ```
 
 ### Provide attribute data using Buffer
+
 When using `Buffer` objects, data remains on GPU and same `Buffer` object can be shared between multiple models.
 
 ```js
@@ -46,7 +48,7 @@ const model =  new Model(gl, {
   uniforms: {uSampler: texture},
   attributes: {
     attributeName1: bufferObject,
-    attributeName2: {data: dataArray, size: 3, type: GL.FLOAT} // new buffer object will be constructed
+    attributeName2: {data: new Float32Array(...), size: 3, type: GL.FLOAT} // new buffer object will be constructed
   }
   drawMode: gl.TRIANGLE_FAN,
   vertexCount: 3,
@@ -60,7 +62,8 @@ model.render({
 ```
 
 ### Provide attribute data using VertexArray object
-`VertexArray` is a WebGL2 only feature. A `VertexArray` object can be build and passed to `Model.draw()` to provide attribute data. Attribute data can be changed by changing `VertexArray` object.
+
+A `VertexArray` object can be build and passed to `Model.draw()` to provide attribute data. Attribute data can be changed by changing `VertexArray` object.
 
 ```js
 // construct the model.
@@ -72,17 +75,17 @@ const model =  new Model(gl, {
   vertexCount: 3,
 })
 
-const ATTRIBUTE1_LOCAITON = 0;
+const ATTRIBUTE1_LOCATION = 0;
 const ATTRIBUTE2_LOCATION = 1;
 const vertexArray1 = new VertexArray(gl, {
   buffers: {
-    [ATTRIBUTE1_LOCAITON]: buffer1,
+    [ATTRIBUTE1_LOCATION]: buffer1,
     [ATTRIBUTE2_LOCATION]: buffer2
   }
 });
 const vertexArray2 = new VertexArray(gl, {
   buffers: {
-    [ATTRIBUTE1_LOCAITON]: buffer3,
+    [ATTRIBUTE1_LOCATION]: buffer3,
     [ATTRIBUTE2_LOCATION]: buffer4
   }
 });
@@ -107,7 +110,6 @@ model.draw({
 ```
 
 ## Methods
-
 
 | **Method** | **Description** |
 | --- | --- |

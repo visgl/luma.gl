@@ -8,7 +8,7 @@ Performing Transform Feedback operations has gotten more simpler as it is now in
 
 `TransformFeedback` buffers can now be bound using varying name instead of an index that matches with `varyings` array index.
 
-For more details check [`TransformFeedback`](/#/documentation/api-reference/transform-feedback) documentation.
+For more details check [`TransformFeedback`](/#/documentation/api-reference/transform-feedback) and [`Model`](/#/documentation/api-reference/model) documentation.
 
 ## Version 5.0
 

@@ -89,7 +89,6 @@ WebGL APIS [`gl.deleteTransformFeedback`](https://developer.mozilla.org/en-US/do
 
 WebGL APIs [`gl.bindBufferBase`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferBase), [`gl.bindBufferRange`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferRange)
 
-
 ### begin(primitiveMode)
 
 Activates transform feedback using the buffer bindings in this `TransformFeedback` object.
