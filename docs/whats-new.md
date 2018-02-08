@@ -1,18 +1,27 @@
 # What's New
 
-## TransformFeedback enhancements
+## Version 5.next
 
-Performing Transform Feedback operations has gotten more simpler as it is now integrated with `Model` object.
+## New class BufferMap
 
-`Model.draw()` now takes `TransformFeedback` object and transform feedback will begin and end during this draw.
+`BufferMap` class provides easy interface to perform Transform Feedback operations.
 
-`TransformFeedback` buffers can now be bound using varying name instead of an index that matches with `varyings` array index.
+## Version 5.1
+
+## TransformFeedback Enhancements
+
+Performing Transform Feedback operations has gotten easier since they are now integrated with `Model` object.
+
+`TransformFeedback` instances can now be supplied directly to `Model.draw` and feedback will begin and end during that draw call. Thus it is no longer necessary to work directly with the `Program` class to use transform feedback.
+
+`Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
 For more details check [`TransformFeedback`](/#/documentation/api-reference/transform-feedback) and [`Model`](/#/documentation/api-reference/model) documentation.
 
+
 ## Version 5.0
 
-A smaller release with new `picking` shader module, several new examples and some under the hood changes to improve performance, bug fixes and code cleanup.
+A smaller release with several new examples and some under the hood changes to improve performance, bug fixes and code cleanup.
 
 ### Picking shader module
 
