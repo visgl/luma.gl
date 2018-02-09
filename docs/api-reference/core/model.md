@@ -1,16 +1,14 @@
 # Model
 
-The `Model` class holds all the data necessary to draw an object in
-luma.gl: **shaders** (via a `Program` instance), **shader modules**, **vertex attributes**
-(a `Geometry` instance) and **uniforms**.
+For most luma.gl  applications, the `Model` class is probably the most important class. It holds all the data necessary to draw an object in luma.gl, e.g.:
+* **shaders** (via a [`Program`](/#/documentation/api-reference/program) instance)
+* **shader modules** [see `Shader Modules`](/#/documentation/api-reference/shader-modules)
+* **vertex attributes** (e.g. a [`Geometry`](/#/documentation/api-reference/geometry) instance, plus any additional attributes for instanced rendering)
+* **uniforms** these can also reference textures.
 
-For most applications, the `Model` class is probably the most central luma.gl
-class.
-
-- `Model` can be positioned, rotated and scaled.
-- `Model` contains a [`Program`](/#/documentation/api-reference/program) (the shaders), a [`Geometry`](/#/documentation/api-reference/geometry) (containing the attributes for the primitive), [`Shader Modules`](/#/documentation/api-reference/shader-modules), any additional attributes for instanced rendering, and also stores textures and uniforms.
-- Has simple boolean flags for selecting indexed and/or instanced rendering.
-- Offers a simple render method that binds all attributes, uniforms and textures, selects (uses) the program, and calls the right gl draw call for the model.
+It offers:
+- Simple boolean flags for selecting indexed and/or instanced rendering.
+- A "unified" render method that binds all attributes, uniforms and textures, selects (uses) the program, and calls the right gl draw call for the model.
 - Setting buffers and more.
 
 
@@ -111,80 +109,162 @@ model.draw({
 
 ## Methods
 
-| **Method** | **Description** |
-| --- | --- |
-| `constructor` | creates a Model|
-| `setInstanceCount` | How many instances |
-| `getInstanceCount` | Defaults to 0 |
-| `setVertexCount` | How many vertices, can be autocalculated from `Geometry` |
-| `getVertexCount` | Gets vertex count |
-| `isPickable` | True if picking is enabled |
-| `setPickable` | enable/disable picking|
-| `getProgram` | Get model's `Program` instance |
-| `getGeometry` | Get model's `Geometry` instance |
-| `getAttributes` | Get a map of named attributes |
-| `setAttributes` | Sets map of attributes (Arrays or buffers) |
-| `getUniforms` | Returns map of currently stored uniforms |
-| `setUniforms` | Stores named uniforms {key, value} |
-| `render` | Renders the model with provided uniforms, attributes and samplers |
-| `draw` | Applies gl settings temporarily and calls `render` |
-| `onBeforeRender` | Called before model renders |
-| `onAfterRender` | Called after model renders |
-| `setProgramState` | Sets uniforms, attributes, textures, uses program |
-| `unsetProgramState` | Unbinds attributes etc |
-
 ### constructor
 
 The constructor for the Model class. Use this to create a new Model.
 
-`const model = new Model(gl, options);`
-
-#### Parameters
+`new Model(gl, options);`
 
 * `gl` - WebGL context.
-* `opts` - contains following named properties.
-  * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
-  * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
-  * `varyings` (WebGL2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
-  * `bufferMode` (WebGL2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
-  * `modules` - shader modules to be applied.
-  * `moduleSettings` - any uniforms needed by shader modules.
-  * `program` - pre created program to use, when provided, vs, ps and modules are not used.
-  * `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
-  * `isInstanced` - default value is false.
-  * `instanceCount` - default value is 0.
-  * `vertexCount` - when not provided will be deduced from `geometry` object.
-  * `uniforms` - uniform values to be used for drawing.
-  * `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
-  * `onBeforeRender` - function to be called before every time this model is drawn.
-  * `onAfterRender` - function to be called after every time this model is drawn.
+* `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
+* `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
+* `varyings` (WebGL2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
+* `bufferMode` (WebGL2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
+* `modules` - shader modules to be applied.
+* `moduleSettings` - any uniforms needed by shader modules.
+* `program` - pre created program to use, when provided, vs, ps and modules are not used.
+* `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
+* `isInstanced` - default value is false.
+* `instanceCount` - default value is 0.
+* `vertexCount` - when not provided will be deduced from `geometry` object.
+* `uniforms` - uniform values to be used for drawing.
+* `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
+* `onBeforeRender` - function to be called before every time this model is drawn.
+* `onAfterRender` - function to be called after every time this model is drawn.
+
+### delete
+
+Free WebGL resources associated with this model
+
+
+### setNeedsRedraw
+
+Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
+
+
+### getNeedsRedraw
+
+* clearRedrawFlags - clear the redraw flag
+
+Gets the value of the redraw flag.
+
+
+### setDrawMode
+
+Sets the WebGL `drawMode`.
+
+`GL.POINTS` etc.
+
+
+### getDrawMode
+
+Gets the WebGL drawMode
+
+### setVertexCount
+
+Sets the number of vertices
+
+### getVertexCount
+
+Gets vertex count
+Note: might be autocalculated from `Geometry`
+
+
+### setInstanceCount
+
+How many instances will be rendered
+
+
+### getInstanceCount
+
+Defaults to 0
+
+
+### getProgram
+
+Get model's `Program` instance
+
+
+### varyingMap
+
+Returns the programs varyingMap
+
+
+### setGeometry
+
+Get model's `Geometry` instance
+
+
+### getAttributes
+
+Get a map of named attributes
+
+
+### setAttributes
+
+Sets map of attributes (Arrays or buffers)
+
+
+### getUniforms
+
+Returns map of currently stored uniforms
+
+
+### setUniforms
+
+Stores named uniforms {key, value}
+
+
+### updateModuleSettings
+
 
 ### draw
 
-Render the model.
+Renders the model with provided uniforms, attributes and samplers
 
-#### Parameters
+```js
+model.draw({
+  moduleSettings = null,
+  uniforms = {},
+  attributes = {},
+  samplers = {},
+  parameters = {},
+  settings,
+  framebuffer = null,
+  vertexArray = null,
+  transformFeedback = null
+});
+```
 
-* `opts` - contains following named properties.
-  * `moduleSettings` - any uniforms needed by shader modules.
-  * `uniforms` - uniform values to be used for drawing.
-  * `attributes` - attribute definitions to be used for drawing.
-  * `samplers` - texture mappings to be used for drawing.
-  * `parameters` - temporary gl settings to be applied to this draw call.
-  * `framebuffer` - if provided, render to framebuffer
-  * `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
-  * `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
+* `moduleSettings`=`null` (Object) - any uniforms needed by shader modules.
+* `uniforms`=`{}` (Object) - uniform values to be used for drawing.
+* `attributes`=`{}` (Object) - attribute definitions to be used for drawing.
+* `samplers`=`{}` (Object) - texture mappings to be used for drawing.
+* `parameters`=`{}` (Object) - temporary gl settings to be applied to this draw call.
+* `framebuffer`=`null` (`Framebuffer`) - if provided, renders into the supplied framebuffer, otherwise renders to the default framebuffer.
+* `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
+* `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
+
 
 ### render
 
-Render the model.
+Render the model. The main difference from `Model.draw` is historical, `render` does not use named parameters.
 
-#### Parameters
+```js
+model.render(
+  uniforms,
+  attributes,
+  samplers,
+  transformFeedback,
+  parameters,
+  vertexArray
+);
+```
 
-* `uniforms` - uniform values to be used for drawing.
-* `attributes` - attribute definitions to be used for drawing.
-* `samplers` - texture mappings to be used for drawing.
-* `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
+* `uniforms`=`{}` - uniform values to be used for drawing.
+* `attributes`=`{}` - attribute definitions to be used for drawing.
+* `samplers`=`{}` - texture mappings to be used for drawing.
+* `transformFeedback` - a `TranformFeedback` object, that gets activated for this rendering.
 
 
 ## Remarks
