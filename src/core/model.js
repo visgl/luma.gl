@@ -157,55 +157,13 @@ export default class Model extends Object3D {
   }
   /* eslint-enable max-statements */
 
-  _initializeProgram({
-    vs,
-    fs,
-    modules,
-    defines,
-    moduleSettings,
-    defaultUniforms,
-    program,
-    shaderCache,
-    varyings,
-    bufferMode
-  }) {
-
-    this.getModuleUniforms = x => {};
-
-    if (!program) {
-      // Assign default shaders if none are provided
-      if (!vs) {
-        vs = MODULAR_SHADERS.vs;
-      }
-      if (!fs) {
-        fs = MODULAR_SHADERS.fs;
-      }
-
-      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
-      ({vs, fs} = assembleResult);
-
-      if (shaderCache) {
-        program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
-      } else {
-        program = new Program(this.gl, {vs, fs, varyings, bufferMode});
-      }
-
-      const {getUniforms} = assembleResult;
-      this.getModuleUniforms = getUniforms || (x => {});
-    }
-
-    this.program = program;
-    assert(this.program instanceof Program, 'Model needs a program');
-  }
-  /* eslint-enable complexity */
-
-  destroy() {
-    this.delete();
-  }
-
   delete() {
     this.program.delete();
     removeModel(this.id);
+  }
+
+  destroy() {
+    this.delete();
   }
 
   setNeedsRedraw(redraw = true) {
@@ -316,20 +274,6 @@ export default class Model extends Object3D {
   updateModuleSettings(opts) {
     const uniforms = this.getModuleUniforms(opts);
     return this.setUniforms(uniforms);
-  }
-
-  // TODO - uniform names are too strongly linked camera <=> default shaders
-  // At least all special handling is collected here.
-  addViewUniforms(uniforms) {
-    // TODO - special treatment of these parameters should be removed
-    const {camera, viewMatrix, modelMatrix} = uniforms;
-    // Camera exposes uniforms that can be used directly in shaders
-    const cameraUniforms = camera ? camera.getUniforms() : {};
-
-    const viewUniforms = viewMatrix ?
-      this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
-
-    return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
   draw({
@@ -444,7 +388,65 @@ export default class Model extends Object3D {
     return this;
   }
 
-  // HELPER METHODS
+  // DEPRECATED METHODS
+
+  // TODO - uniform names are too strongly linked camera <=> default shaders
+  // At least all special handling is collected here.
+  addViewUniforms(uniforms) {
+    // TODO - special treatment of these parameters should be removed
+    const {camera, viewMatrix, modelMatrix} = uniforms;
+    // Camera exposes uniforms that can be used directly in shaders
+    const cameraUniforms = camera ? camera.getUniforms() : {};
+
+    const viewUniforms = viewMatrix ?
+      this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
+
+    return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
+  }
+
+  // PRIVATE METHODS
+
+  _initializeProgram({
+    vs,
+    fs,
+    modules,
+    defines,
+    moduleSettings,
+    defaultUniforms,
+    program,
+    shaderCache,
+    varyings,
+    bufferMode
+  }) {
+
+    this.getModuleUniforms = x => {};
+
+    if (!program) {
+      // Assign default shaders if none are provided
+      if (!vs) {
+        vs = MODULAR_SHADERS.vs;
+      }
+      if (!fs) {
+        fs = MODULAR_SHADERS.fs;
+      }
+
+      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines});
+      ({vs, fs} = assembleResult);
+
+      if (shaderCache) {
+        program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
+      } else {
+        program = new Program(this.gl, {vs, fs, varyings, bufferMode});
+      }
+
+      const {getUniforms} = assembleResult;
+      this.getModuleUniforms = getUniforms || (x => {});
+    }
+
+    this.program = program;
+    assert(this.program instanceof Program, 'Model needs a program');
+  }
+  /* eslint-enable complexity */
 
   _checkForDeprecatedUniforms(uniforms) {
     // deprecated picking uniforms
