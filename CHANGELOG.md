@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 5.1.0-beta.2 - Feb 09, 2018
+- Update docs for Model class
+- 5.1 Audit comments (#399)
+- Set preserveDrawingBuffer to true by default (#397)
+
 ## 5.1.0-beta.1 - Jan 25, 2018
 - Vertexarray enhancements (#391)
 - Fix overflow of 64 bits shader on intel GPU (#388)
