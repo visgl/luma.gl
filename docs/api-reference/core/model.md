@@ -222,7 +222,8 @@ Stores named uniforms {key, value}
 
 Renders the model with provided uniforms, attributes and samplers
 
-draw({
+```js
+model.draw({
   moduleSettings = null,
   uniforms = {},
   attributes = {},
@@ -232,7 +233,8 @@ draw({
   framebuffer = null,
   vertexArray = null,
   transformFeedback = null
-} = {}) {
+});
+```
 
 * `moduleSettings`=`null` (Object) - any uniforms needed by shader modules.
 * `uniforms`=`{}` (Object) - uniform values to be used for drawing.

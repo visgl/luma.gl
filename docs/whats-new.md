@@ -2,9 +2,9 @@
 
 ## Version 5.next
 
-## BufferMap class (New)
+## Transform class (New)
 
-The new `BufferMap` class provides easy interface to perform Transform Feedback operations.
+The new `Transform` class provides easy interface to perform Transform Feedback operations.
 
 ## Version 5.1
 
