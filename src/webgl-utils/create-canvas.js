@@ -60,14 +60,6 @@ export function getCanvas({id}) {
   return document.getElementById(id);
 }
 
-// Gets current size of canvas in css (logical/window) coordinates
-export function getCSSSize(canvas) {
-  return {
-    width: canvas.clientWidth,
-    height: canvas.clientHeight
-  };
-}
-
 // Gets current size of canvas drawing buffer in actual pixels
 // This is needed for the gl.viewport call
 export function getDrawingBufferSize(canvas) {
@@ -94,10 +86,9 @@ export function calculateDrawingBufferSize(canvas, {
   // Lookup the size the browser is displaying the canvas in CSS pixels
   // and compute a size needed to make our drawingbuffer match it in
   // device pixels.
-  const cssSize = getCSSSize(canvas);
   return {
-    width: Math.floor(cssSize.width * cssToDevicePixels),
-    height: Math.floor(cssSize.height * cssToDevicePixels),
+    width: Math.floor(canvas.clientWidth * cssToDevicePixels),
+    height: Math.floor(canvas.clientHeight * cssToDevicePixels),
     devicePixelRatio: cssToDevicePixels
   };
 }
