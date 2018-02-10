@@ -174,7 +174,7 @@ test('WebGL#Buffer getData', t => {
   buffer = new Buffer(gl2, {data});
 
   receivedData = buffer.getData();
-  t.deepEqual(data, data, 'Buffer.getData: Uint8Array + default parameters successful');
+  t.deepEqual(data, receivedData, 'Buffer.getData: Uint8Array + default parameters successful');
 
   t.end();
 });

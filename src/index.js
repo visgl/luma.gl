@@ -128,11 +128,12 @@ export {default as diffuse} from './shadertools/modules/diffuse/diffuse';
 
 // EXPERIMENTAL EXPORTS
 
-import {
-  clearBuffer} from './webgl/clear';
+import {clearBuffer} from './webgl/clear';
+import {default as Transform} from './core/experimental/transform';
 
 export const experimental = {
-  clearBuffer
+  clearBuffer,
+  Transform
 };
 
 // DEPRECATED EXPORTS
