@@ -275,7 +275,10 @@ export default class AnimationLoop {
 
   _resizeFramebuffer() {
     if (this.framebuffer) {
-      this.framebuffer.resize({width: this.gl.canvas.width, height: this.gl.canvas.height});
+      this.framebuffer.resize({
+        width: this.gl.drawingBufferWidth,
+        height: this.gl.drawingBufferHeight
+      });
     }
   }
 }

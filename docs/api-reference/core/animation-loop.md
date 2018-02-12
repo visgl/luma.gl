@@ -64,7 +64,7 @@ new AnimationLoop({
 ```
 
 * `onCreateContext`=`null` (callback) - function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.
-* `onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created. 
+* `onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
 * `onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
 * `onRenderFrame`=`null` (callback) - Calling `frame` will automatically start the animation. If this is not desired, follow immediately with a `stop()`.
 * `autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRenderFrame` is called. Set to false to control viewport size.
@@ -106,7 +106,7 @@ The callbacks that the app supplies to the `AnimationLoop`, will be called with 
 
 The callback will be called with an initial object containing a gl context object. Can return a promise (e.g. for texture or model loads)
 
-For the `onRenderFrame` callback, the parameter object will contain the following fields:
+For the `onInitialize` callback, the parameter object will contain the following fields:
 
 | Parameter | Type | Description |
 | ---       | ---  | --- |
