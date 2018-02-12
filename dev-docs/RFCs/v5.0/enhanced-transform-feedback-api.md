@@ -10,12 +10,10 @@ Notes:
 
 ## Overview
 
-
-One of the luma.gl goals is to provide easier interface on top complicated WebGL API. WebGL2 introduced a new feature "Transform Feedback" and luma.gl provides a wrapper around it. But in real world, using Transform Feedback still requires several state settings and object creations, which complicates using this new feature. This is an attempt to provide much easier API that takes minimum required data, deduces additional information when needed and provides methods that cover most use cases.
+One of the luma.gl goals is to provide easier interface on top of the complicated WebGL API. WebGL2 introduced a new feature "Transform Feedback" and luma.gl provides a wrapper around it. But in real world, using Transform Feedback still requires several state settings and object creations, which complicates using this new feature. This is an attempt to provide much easier API that takes minimum required data, deduces additional information when needed and provides methods that cover most use cases.
 
 
 ## Motivation
-
 
 Performing Transform feedback operations typically require following steps :
 
@@ -31,7 +29,6 @@ Performing Transform feedback operations typically require following steps :
 
 
 ## Proposed: Add new `Transform` class
-
 
 This new class can encapsulate all required objects, `Model`, `Program` and `TransformFeedback` and provide an easier interface.
 
@@ -53,7 +50,6 @@ Swap source destination buffers.
 
 
 ## Usage:
-
 
 Create `Transform` object with sourceBuffers, sourceDestinationMap and number of elements to process.
 
@@ -99,7 +95,6 @@ newData = bufferWithNewData.getData();
 
 ## Possible improvements:
 
-
 ### Input Functions:
 
 Current model proposes a vertex shader (String), instead we can define a set of methods (like, mul, add, etc) and set of data types they operate on (scalar, vector2, etc), and input can be any combination of these instructions, or a Javascript function.
@@ -112,6 +107,5 @@ When a list of Modules can be taken as input and assembled with vertex shader, b
 
 
 ## Conclusion:
-
 
 This new class provides much easier interface and encapsulates all required objects. It auto deduces information, creates buffers when needed and provides convenience methods to perform usual tasks.
