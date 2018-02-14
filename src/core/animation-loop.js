@@ -74,22 +74,27 @@ export default class AnimationLoop {
     return this;
   }
 
-  // Update parameters (TODO - should these be specified in `start`?)
-  setViewParameters({
-    autoResizeDrawingBuffer = true,
-    autoResizeCanvas = true,
-    autoResizeViewport = true,
-    useDevicePixels = true,
-    useDevicePixelRatio = null // deprecated
-  }) {
-    this.autoResizeViewport = autoResizeViewport;
-    this.autoResizeCanvas = autoResizeCanvas;
-    this.autoResizeDrawingBuffer = autoResizeDrawingBuffer;
-    this.useDevicePixels = useDevicePixels;
-    if (useDevicePixelRatio !== null) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
-      this.useDevicePixels = useDevicePixelRatio;
+  // Update parameters
+  setViewParameters(opts) {
+    if ('autoResizeViewport' in opts) {
+      this.autoResizeViewport = opts.autoResizeViewport;
     }
+    if ('autoResizeCanvas' in opts) {
+      this.autoResizeCanvas = opts.autoResizeCanvas;
+    }
+    if ('autoResizeDrawingBuffer' in opts) {
+      this.autoResizeDrawingBuffer = opts.autoResizeDrawingBuffer;
+    }
+    if ('useDevicePixels' in opts) {
+      this.useDevicePixels = opts.useDevicePixels;
+    }
+
+    // DEPRECATED
+    if ('useDevicePixelRatio' in opts) {
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+      this.useDevicePixels = opts.useDevicePixelRatio;
+    }
+
     return this;
   }
 
