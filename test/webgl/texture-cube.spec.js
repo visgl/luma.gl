@@ -1,5 +1,4 @@
 import test from 'tape-catch';
-import 'luma.gl/headless';
 import {createGLContext, TextureCube} from 'luma.gl';
 
 const fixture = {

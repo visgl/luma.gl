@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from './gl-constants';
-import {WebGLBuffer} from './api';
+import {WebGLBuffer} from '../webgl-utils';
 import {isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
 import {withParameters} from './context-state';
 import Resource from './resource';

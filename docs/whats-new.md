@@ -1,10 +1,14 @@
 # What's New
 
-## Version 5.next
+## Version 5.2
 
 ## Transform class (New)
 
 The new `Transform` class provides easy interface to perform Transform Feedback operations.
+
+## Node Support
+
+luma.gl will now automatically (dynamically) load `gl` (headless-gl) when installed on your system. It is no longer required to `import "luma.gl/headless"`.
 
 ## Version 5.1
 

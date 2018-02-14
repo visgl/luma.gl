@@ -1,5 +1,4 @@
 import {GL, Buffer, isWebGL} from 'luma.gl';
-import 'luma.gl/headless';
 import test from 'tape-catch';
 
 import {fixture} from '../setup';

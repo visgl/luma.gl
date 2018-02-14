@@ -1,7 +1,6 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-catch';
 import {Program, Texture2D} from 'luma.gl';
-import 'luma.gl/headless';
 import {checkUniformValues, areUniformsEqual} from 'luma.gl/webgl/uniforms';
 
 import {fixture} from '../setup';

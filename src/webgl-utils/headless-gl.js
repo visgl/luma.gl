@@ -1,7 +1,7 @@
 /* eslint-disable quotes, no-console */
 /* global console */
-import luma from './init';
-import isBrowser from './utils/is-browser';
+import luma from '../init';
+import isBrowser from '../utils/is-browser';
 import assert from 'assert';
 
 const ERR_NO_HEADLESS_GL = `\
@@ -20,9 +20,6 @@ if (!isBrowser) {
 }
 
 // Make sure luma.gl initializes with valid types
-require('./webgl/api/types');
+require('./types');
 
 export const isWebglAvailable = isBrowser || luma.globals.headlessGL;
-
-// Create context
-export default luma.globals.headlessGL;

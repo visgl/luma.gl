@@ -42,9 +42,8 @@ const gl = createGLContext({
 });
 ```
 
-Create a headless WebGL context (under Node.js).
+Create a headless WebGL context (under Node.js). `headless-gl` must be installed (`npm install gl`).
 ```js
-import 'luma.gl/headless';
 import {createGLContext} from 'luma.gl';
 const gl = createGLContext({width: 100, height: 100});
 ```

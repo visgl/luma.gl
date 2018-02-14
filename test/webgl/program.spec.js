@@ -1,6 +1,5 @@
 import test from 'tape-catch';
 import {GL, Program, Buffer} from 'luma.gl';
-import 'luma.gl/headless';
 
 import {fixture} from '../setup';
 

@@ -1,5 +1,4 @@
-import '../../../src/headless';
-import {loadImage} from '../../../src/io';
+import {loadImage} from 'luma.gl/io';
 import test from '../../setup';
 
 /* eslint-disable quotes */

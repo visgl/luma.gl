@@ -6,7 +6,10 @@
 //      library code.
 //    - Exports types from headless gl when running under Node.js
 
-import luma, {global} from '../../init';
+import luma, {global} from '../init';
+
+// Load headless gl dynamically, if available
+import './headless-gl';
 
 class DummyType {}
 

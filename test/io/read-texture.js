@@ -1,6 +1,5 @@
 import test from 'blue-tape';
 import {createGLContext, Program, Texture2D, Buffer} from 'luma.gl';
-import 'luma.gl/headless';
 import {loadImage} from 'luma.gl/io';
 
 const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA

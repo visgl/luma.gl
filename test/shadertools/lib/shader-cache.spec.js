@@ -1,4 +1,3 @@
-import 'luma.gl/headless';
 import {VertexShader, FragmentShader, Program, ShaderCache} from 'luma.gl';
 
 import test from 'tape-catch';

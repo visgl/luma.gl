@@ -1,5 +1,6 @@
+/* eslint-disable quotes */
 // WebGLRenderingContext related methods
-import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
+import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from '../webgl-utils';
 import trackContextState from '../webgl-utils/track-context-state';
 import {createCanvas, getCanvas, createContext} from '../webgl-utils';
 
@@ -20,8 +21,7 @@ export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
 const ERR_WEBGL_MISSING_NODE = `\
-WebGL API is missing. To run luma.gl under Node.js, please "npm install gl"
-and import 'luma.gl/headless' before importing 'luma.gl'.`;
+WebGL API is missing. To run luma.gl under Node.js, please install headless-gl ("npm install gl").`;
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =
 'Cannot create headless WebGL context, headlessGL not available';

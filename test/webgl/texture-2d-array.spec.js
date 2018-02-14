@@ -1,5 +1,4 @@
 import test from 'tape-catch';
-import 'luma.gl/headless';
 import {createGLContext} from '../../utils/test-tools';
 import {Texture2DArray} from 'luma.gl';
 
