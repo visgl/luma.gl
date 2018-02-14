@@ -109,3 +109,4 @@ When a list of Modules can be taken as input and assembled with vertex shader, b
 ## Conclusion:
 
 This new class provides much easier interface and encapsulates all required objects. It auto deduces information, creates buffers when needed and provides convenience methods to perform usual tasks.
+
