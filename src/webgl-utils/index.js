@@ -1,3 +1,5 @@
+export {createHeadlessContext} from './headless-gl';
+
 // Exports WebGL API constants and types, plus some basic type checks
 export {
   Image,
@@ -14,7 +16,7 @@ export {
   WebGL2RenderingContext,
 
   webGLTypesAvailable
-} from './types';
+} from './webgl-types';
 
 export {
   getPageLoadPromise,

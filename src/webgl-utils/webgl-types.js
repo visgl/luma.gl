@@ -6,10 +6,10 @@
 //      library code.
 //    - Exports types from headless gl when running under Node.js
 
-import luma, {global} from '../init';
+import {global} from '../utils/globals';
 
 // Load headless gl dynamically, if available
-import './headless-gl';
+import {headlessTypes} from './headless-gl';
 
 class DummyType {}
 
@@ -24,7 +24,7 @@ const {
   WebGLUniformLocation = DummyType,
   WebGLActiveInfo = DummyType,
   WebGLShaderPrecisionFormat = DummyType
-} = luma.globals.headlessTypes || global;
+} = headlessTypes || global;
 
 export const webGLTypesAvailable =
   WebGLRenderingContext !== DummyType &&
