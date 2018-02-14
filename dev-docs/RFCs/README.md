@@ -37,11 +37,10 @@ Current direction for luma.gl v6.0 is to focus on:
 * **improved WebGL2 support** - more examples
 * **code size**
 
-so we want to prioritize related RFCs.
 
 | RFC | Author | Status | Description |
 | --- | --- | --- | --- |
-| **Reviewed/Deferred** | | | |
+| [**Dist Size Reduction**](v6.0/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 | [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | |
 | [**Shader Module Injection**](v6.0/shader-module-injection-rfc.md) | @ibgreen | **Draft** | |
 
@@ -49,16 +48,22 @@ Possible other animation related RFCs:
 - integration with event handling (enter leave triggers for animations)
 
 
-## v5.0 RFCs
+## v5.2 RFCs
 
-These RFCs were implemented in v5.0.
+| RFC | Author | Status | Description |
+| --- | --- | --- | --- |
+| **General** | | | |
+| [**New Transform Class**](v5.2/enhanced-transform-feedback-api.md) | @1chandu | **Review / Prototyped** | Simpler API for TransformFeedback |
+
+
+## v5.0 RFCs
 
 Release Focus: Address any WebGL2 issues from 4.0.
 
 | RFC | Author | Status | Description |
 | --- | --- | --- | --- |
 | **General** | | | |
-| [**Break out Math Module**](v5.0/break-out-math-module-rfc.md) | @ibgreen | **Implemented** | **Hygiene** Break out luma.gl math module |
+| [**Break out Math Module**](v5.0/break-out-math-module-rfc.md) | @ibgreen | **Implemented** | Break out luma.gl math module |
 
 
 ## v4.0 RFCs
