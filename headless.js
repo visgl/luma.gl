@@ -1,1 +1,2 @@
-module.exports = require('./dist/headless');
+// Deprecated import file, just issues warning
+module.exports = require('./dist/deprecated/headless');

@@ -10,9 +10,6 @@ const path = require('path');
 const moduleAlias = require('module-alias');
 moduleAlias.addAlias('luma.gl', path.resolve('./src'));
 
-// Import headless luma support
-require('luma.gl/headless');
-
 // Run the tests
 require('./index-webgl-independent-tests');
 require('./index-webgl-dependent-tests');

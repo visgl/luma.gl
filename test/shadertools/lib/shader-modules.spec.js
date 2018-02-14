@@ -1,5 +1,3 @@
-
-import 'luma.gl/headless';
 import {resolveModules, getDependencyGraph} from '../../../src/shadertools/lib/shader-modules';
 import test from 'tape-catch';
 

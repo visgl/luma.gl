@@ -1,6 +1,5 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import 'luma.gl/headless';
 import {GL, Texture2D, glKey} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from '../../src/webgl/texture';

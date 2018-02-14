@@ -1,5 +1,4 @@
 /* eslint-disable camelcase */
-import 'luma.gl/headless';
 import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
 import sinon from 'sinon';
 import test from 'tape-catch';

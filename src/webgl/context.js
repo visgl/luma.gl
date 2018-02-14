@@ -1,5 +1,6 @@
+/* eslint-disable quotes */
 // WebGLRenderingContext related methods
-import {WebGLRenderingContext, WebGL2RenderingContext, webGLTypesAvailable} from './api';
+import {WebGLRenderingContext, WebGL2RenderingContext, createHeadlessContext} from '../webgl-utils';
 import trackContextState from '../webgl-utils/track-context-state';
 import {createCanvas, getCanvas, createContext} from '../webgl-utils';
 
@@ -8,7 +9,6 @@ import {glGetDebugInfo} from './context-limits';
 import queryManager from './helpers/query-manager';
 
 import {log, isBrowser} from '../utils';
-import luma from '../init';
 import assert from 'assert';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
@@ -18,15 +18,6 @@ const GL_TEXTURE_BINDING_3D = 0x806A;
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
-
-const ERR_WEBGL_MISSING_NODE = `\
-WebGL API is missing. To run luma.gl under Node.js, please "npm install gl"
-and import 'luma.gl/headless' before importing 'luma.gl'.`;
-
-const ERR_HEADLESSGL_NOT_AVAILABLE =
-'Cannot create headless WebGL context, headlessGL not available';
-
-const ERR_HEADLESSGL_FAILED = 'headlessGL failed to create headless WebGL context';
 
 export function isWebGL(gl) {
   return Boolean(gl && (
@@ -109,7 +100,7 @@ export function createGLContext(opts = {}) {
     gl = createContext({canvas: realCanvas, opts});
   } else {
     // Create a headless-gl context under Node.js
-    gl = _createHeadlessContext({width, height, opts, onError});
+    gl = createHeadlessContext({width, height, opts, onError});
   }
   if (!gl) {
     return null;
@@ -153,23 +144,4 @@ function logInfo(gl) {
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
   const debug = gl.debug ? ' debug' : '';
   log.once(0, `${webGL}${debug} context ${driver}`);
-}
-
-// Create headless gl context (for running under Node.js)
-function _createHeadlessContext({width, height, opts, onError}) {
-  const {webgl1, webgl2} = opts;
-  if (webgl2 && !webgl1) {
-    return onError('headless-gl does not support WebGL2');
-  }
-  if (!webGLTypesAvailable) {
-    return onError(ERR_WEBGL_MISSING_NODE);
-  }
-  if (!luma.globals.headlessGL) {
-    return onError(ERR_HEADLESSGL_NOT_AVAILABLE);
-  }
-  const gl = luma.globals.headlessGL(width, height, opts);
-  if (!gl) {
-    return onError(ERR_HEADLESSGL_FAILED);
-  }
-  return gl;
 }

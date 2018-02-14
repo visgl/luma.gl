@@ -1,6 +1,5 @@
 import test from 'tape-catch';
 import {GL, UniformBufferLayout} from 'luma.gl';
-import 'luma.gl/headless';
 
 /*
 const TEST_CASES = [

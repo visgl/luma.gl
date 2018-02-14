@@ -36,8 +36,6 @@ if (!global.luma) {
     // without unconditionally requiring and thus bundling big dependencies
     // into the app.
     globals: {
-      headlessGL: null,
-      headlessTypes: null,
       modules: {},
       nodeIO: {}
     }

@@ -1,6 +1,5 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import 'luma.gl/headless';
 import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
 import {fixture} from '../setup';

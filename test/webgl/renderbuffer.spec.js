@@ -1,5 +1,4 @@
 import test from 'tape-catch';
-import 'luma.gl/headless';
 import {GL, Renderbuffer, glKey} from 'luma.gl';
 
 import {RENDERBUFFER_FORMATS} from '../../src/webgl/renderbuffer';
