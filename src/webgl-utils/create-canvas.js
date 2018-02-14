@@ -1,9 +1,7 @@
 // Resizing a webgl canvas
 
 /* global window, document */
-import {log} from '../utils';
-
-const isBrowser = typeof window !== 'undefined';
+import {log, isBrowser} from '../utils';
 
 let isPageLoaded = isBrowser && document.readyState === 'complete';
 
