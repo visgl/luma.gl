@@ -75,7 +75,7 @@ void main(void) {
 
   v = texture2D(s2d, v2);
 
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  gl_FragColor = vec4(transform_v2, 1.0, 1.0) + vec4(transform_v3, 1.0) + transform_v4;
 }
 `;
 
