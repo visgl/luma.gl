@@ -55,8 +55,6 @@ Some additional examples have been ported to the luma.gl v4 API.
 
 * lesson 10-13
 
->>>>>>> wip
-
 ## Version 4.0
 
 Release date: July 27th, 2017

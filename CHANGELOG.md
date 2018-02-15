@@ -1,7 +1,9 @@
-# Pre-releases
 
-#5.1.0-beta.?
-- Fix AnimationLoop.setViewParameters
+## 5.1.0 - Feb 14, 2018
+- fix browser test (#413)
+- 5.1: Soft require headless-gl, remove unused utils (#408)
+- Fix animation loop parameter setting (#403)
+- Add initial roadmap doc
 
 ## 5.1.0-beta.2 - Feb 09, 2018
 - Update docs for Model class
