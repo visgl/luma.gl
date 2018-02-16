@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
