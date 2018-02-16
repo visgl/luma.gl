@@ -60,7 +60,7 @@ const log = {
     }
   },
   deprecated(oldUsage, newUsage) {
-    log.warn(`luma.gl: \`${oldUsage}\` is deprecated and will be removed \
+    log.warn(`\`${oldUsage}\` is deprecated and will be removed \
 in a later version. Use \`${newUsage}\` instead`);
   },
   removed(oldUsage, newUsage) {
