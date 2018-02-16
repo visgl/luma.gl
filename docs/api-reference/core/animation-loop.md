@@ -77,11 +77,13 @@ Restarts the animation
 
 `animationLoop.start()`
 
+
 ### stop
 
 Stops the animation
 
 `animationLoop.stop()`
+
 
 ### setNeedsRedraw
 
@@ -95,6 +97,15 @@ Notes:
 * `onRenderFrame` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
 * If called multiple times, the `reason` provided in the first call will be remembered.
 * `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
+
+
+### setProps
+
+`animationLoop.setProps({...props})`
+
+* `autoResizeViewport` - Call `gl.viewport` before each call to `onRenderFrame()`
+* `autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
+* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
 
 ## Callbacks
@@ -112,6 +123,7 @@ For the `onInitialize` callback, the parameter object will contain the following
 | ---       | ---  | --- |
 | `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. Note that if the context is associated with a canvas, it is accessible through `gl.canvas` |
 | `width`   | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
+
 | `height`  | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
 | `aspect`  | The canvas aspect ratio (width/height) to update projection matrices |
 | `useDevicePixels` | Boolean indicating if canvas is utilizes full resolution of Retina/
