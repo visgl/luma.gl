@@ -1,7 +1,7 @@
 /* global window, setTimeout, clearTimeout */
 import {isBrowser, log} from '../utils';
 import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
-import {createGLContext, deleteGLContext, isWebGL, resetParameters} from '../webgl';
+import {createGLContext, isWebGL, resetParameters} from '../webgl';
 import {Framebuffer} from '../webgl';
 import assert from 'assert';
 
@@ -14,7 +14,7 @@ export function cancelAnimationFrame(timerId) {
   return isBrowser ? window.cancelAnimationFrame(timerId) : clearTimeout(timerId);
 }
 
-const DEFAULT_GLOPIONS = {
+const DEFAULT_GL_OPTIONS = {
   preserveDrawingBuffer: true
 };
 
@@ -22,28 +22,34 @@ export default class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor({
-    onCreateContext = opts => createGLContext(opts),
-    onDeleteContext = gl => deleteGLContext(gl),
-    onInitialize = () => {},
-    onRender = () => {},
-    onFinalize = () => {},
+  constructor(props = {}) {
+    const {
+      onCreateContext = opts => createGLContext(opts),
+      onInitialize = () => {},
+      onRender = () => {},
+      onFinalize = () => {},
 
-    gl = null,
-    glOptions = {},
-    width = null,
-    height = null,
+      gl = null,
+      glOptions = {},
+      width = null,
+      height = null,
 
-    createFramebuffer = false,
+      createFramebuffer = false,
 
-    // view parameters
-    autoResizeViewport = true,
-    autoResizeDrawingBuffer = true,
-    useDevicePixels = true,
+      // view parameters
+      autoResizeViewport = true,
+      autoResizeDrawingBuffer = true
+    } = props;
 
-    // DEPRECATED
-    useDevicePixelRatio
-  } = {}) {
+    let {
+      useDevicePixels = true
+    } = props;
+
+    if ('useDevicePixelRatio' in props) {
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+      useDevicePixels = props.useDevicePixelRatio;
+    }
+
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
     this._renderFrame = this._renderFrame.bind(this);
@@ -62,12 +68,7 @@ export default class AnimationLoop {
 
     this.gl = gl;
 
-    if (useDevicePixelRatio !== null) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
-      useDevicePixels = useDevicePixelRatio;
-    }
-
-    this.setViewParameters({
+    this.setProps({
       autoResizeViewport,
       autoResizeDrawingBuffer,
       useDevicePixels
@@ -82,24 +83,16 @@ export default class AnimationLoop {
     return this;
   }
 
-  // Update parameters
-  setViewParameters(opts) {
-    if ('autoResizeViewport' in opts) {
-      this.autoResizeViewport = opts.autoResizeViewport;
+  setProps(props) {
+    if ('autoResizeViewport' in props) {
+      this.autoResizeViewport = props.autoResizeViewport;
     }
-    if ('autoResizeDrawingBuffer' in opts) {
-      this.autoResizeDrawingBuffer = opts.autoResizeDrawingBuffer;
+    if ('autoResizeDrawingBuffer' in props) {
+      this.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
     }
-    if ('useDevicePixels' in opts) {
-      this.useDevicePixels = opts.useDevicePixels;
+    if ('useDevicePixels' in props) {
+      this.useDevicePixels = props.useDevicePixels;
     }
-
-    // DEPRECATED
-    if ('useDevicePixelRatio' in opts) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
-      this.useDevicePixels = opts.useDevicePixelRatio;
-    }
-
     return this;
   }
 
@@ -151,6 +144,28 @@ export default class AnimationLoop {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
       this._stopped = true;
+    }
+    return this;
+  }
+
+  // DEPRECATED METHODS
+
+  // Update parameters
+  setViewParameters({
+    autoResizeDrawingBuffer = true,
+    autoResizeCanvas = true,
+    autoResizeViewport = true,
+    useDevicePixels = true,
+    useDevicePixelRatio = null // deprecated
+  }) {
+    log.deprecated('AnimationLoop.setViewParameters', 'AnimationLoop.setProps');
+    this.autoResizeViewport = autoResizeViewport;
+    this.autoResizeCanvas = autoResizeCanvas;
+    this.autoResizeDrawingBuffer = autoResizeDrawingBuffer;
+    this.useDevicePixels = useDevicePixels;
+    if (useDevicePixelRatio !== null) {
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+      this.useDevicePixels = useDevicePixelRatio;
     }
     return this;
   }
@@ -240,7 +255,7 @@ export default class AnimationLoop {
   // Either uses supplied or existing context, or calls provided callback to create one
   _createWebGLContext(opts) {
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, DEFAULT_GLOPIONS, this.glOptions);
+    opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.glOptions);
     if (opts.gl) {
       this.gl = opts.gl;
     } else {
