@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -61,12 +61,7 @@
     "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages"
   },
   "dependencies": {
-    "gl-mat4": "^1.1.4",
-    "gl-quat": "^1.0.0",
-    "gl-vec2": "^1.0.0",
-    "gl-vec3": "^1.0.3",
-    "gl-vec4": "^1.0.1",
-    "math.gl": "1.0.0-alpha.8",
+    "math.gl": "^1.0.0",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },
