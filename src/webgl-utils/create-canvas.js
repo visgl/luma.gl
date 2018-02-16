@@ -79,13 +79,11 @@ export function getDrawingBufferSize(canvas) {
 // Intention is that every pixel in the drawing buffer will have a 1-to-1 mapping with
 // actual device pixels in the hardware framebuffer, allowing us to render at the full
 // resolution of the device.
-export function calculateDrawingBufferSize(canvas, {
-  useDevicePixelRatio = null, // deprecated
-  useDevicePixels = true
-}) {
-  if (useDevicePixelRatio !== null) {
+export function calculateDrawingBufferSize(canvas, options) {
+  let {useDevicePixels = true} = options;
+  if ('useDevicePixelRatio' in options) {
     log.deprecated('useDevicePixelRatio', 'useDevicePixels');
-    useDevicePixels = useDevicePixelRatio;
+    useDevicePixels = options.useDevicePixels || options.useDevicePixelRatio;
   }
   const cssToDevicePixels = useDevicePixels ? window.devicePixelRatio || 1 : 1;
 

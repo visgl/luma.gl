@@ -54,13 +54,81 @@ Parameters:
 * `onRenderFrame` (callback) - Calling `frame` will automatically start the animation. If this is not desired, follow immediately with a `stop()`.
 * `onFinalize` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
 
+
 ### start
 
 Restarts the animation
 
+`animationLoop.start()`
+
+
 ### stop
 
 Stops the animation
+
+`animationLoop.stop()`
+
+
+### setNeedsRedraw
+
+`animationLoop.setNeedsRedraw(reason)`
+
+* `reason` (`String`) - A human readable string giving a hint as to why redraw was needed (e.g. "geometry changed").
+
+If set, the value will be provided as the `needsRedraw` field to the `onRenderFrame` callback.
+
+Notes:
+* `onRenderFrame` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
+* If called multiple times, the `reason` provided in the first call will be remembered.
+* `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
+
+
+### setProps
+
+`animationLoop.setProps({...props})`
+
+* `autoResizeViewport` - Call `gl.viewport` before each call to `onRenderFrame()`
+* `autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
+* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
+
+
+## Callbacks
+
+The callbacks that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters.
+
+
+### onInitialize
+
+The callback will be called with an initial object containing a gl context object. Can return a promise (e.g. for texture or model loads)
+
+For the `onInitialize` callback, the parameter object will contain the following fields:
+
+| Parameter | Type | Description |
+| ---       | ---  | --- |
+| `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. Note that if the context is associated with a canvas, it is accessible through `gl.canvas` |
+| `width`   | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
+
+| `height`  | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
+| `aspect`  | The canvas aspect ratio (width/height) to update projection matrices |
+| `useDevicePixels` | Boolean indicating if canvas is utilizes full resolution of Retina/
+
+
+### onRenderFrame
+
+For the `onRenderFrame` callback, the parameter object will contain the following fields:
+
+| Parameter | Type | Description |
+| ---       | ---  | --- |
+| `animationLoop` | `AnimationLoop` | The calling `AnimationLoop` |
+| `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. Note that if the context is associated with a canvas, it is accessible through `gl.canvas` |
+| `width`   | `Number` | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
+| `height`  | `Number` | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
+| `aspect`  | `Number` | The canvas aspect ratio (width/height) to update projection matrices |
+| `needsRedraw` | `String | null` | Redraw flag (will be automatically set if drawingBuffer resizes) |
+| `useDevicePixels` | `Boolean` | Does canvas utilize full resolution of Retina/HD displays. |
+| `time`    | `Number` | Milliseconds since `AnimationLoop` was created (monotonic). |
+| `tick`    | `Number` | Counter that updates for every frame rendered (monotonic). |
+| ...       | Any fields in the object that was returned by `onInitialize` method. |
 
 
 ## Remarks
