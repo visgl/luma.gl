@@ -7,7 +7,7 @@ The `Transform` class provides easy interface to perform Transform Feedback oper
 | **Method**      | **Description** |
 | ---             | --- |
 | `constructor`   | creates a `Transform` object |
-| `bindBuffers`   | Sets up source and destination buffers |
+| `updateBuffers` | Update some or all buffer bindings |
 | `run`           | Performs one iteration of TransformFeedback |
 | `swapBuffers`   | Swaps source and destination buffers |
 | `getBuffer`     | Returns current destination buffer of given varying |
@@ -37,7 +37,7 @@ const destinationBuffer = new Buffer(gl, {
   bytes: sourceData.length * 4
 });
 
-const bufferMap = new Transform(gl2, {
+const transform = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -50,7 +50,7 @@ const bufferMap = new Transform(gl2, {
 });
 
 // Perform one transform feedback iteration
-bufferMap.run();
+transform.run();
 ```
 
 ### Use case : Create destination buffers automatically.
@@ -58,7 +58,7 @@ bufferMap.run();
 `Transform` can internally create destinationBuffers, when `sourceDestinationMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `sourceDestinationMap`.
 
 ```js
-const bufferMap = new Transform(gl2, {
+const transform = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -79,27 +79,47 @@ When `sourceDestinationMap` is specified buffers can be swapped using a single c
 
 // Setup Transform with `souceDestinationMap` as above
 
-bufferMap.run();
+transform.run();
 
-let bufferWithNewValues = bufferMap.getBuffer('outValue');
+let bufferWithNewValues = transform.getBuffer('outValue');
 ...
 // Render using 'bufferWithNewValues'
 ...
 
 //swap buffers
-bufferMap.swapBuffers();
-bufferMap.run();
-bufferWithNewValues = bufferMap.getBuffer('outValue');
+transform.swapBuffers();
+transform.run();
+bufferWithNewValues = transform.getBuffer('outValue');
 ...
 // Render using 'bufferWithNewValues'
 ...
+```
+
+### Use case : Update one or more buffers using updateBuffers.
+
+Once `Transform` object is constructed and used, one or more source or destination buffers can be updated using `updateBuffers`.
+
+```js
+// transform is set up as above
+...
+
+// update buffer binding for 'inValue' attribute
+const newSourceBuffer = new Buffer(gl, {data: newSourceData});
+transform.updateBuffers({
+  sourceBuffers: {
+    inValue: newSourceBuffer
+  }
+});
+
+// now data is provided from newly bound buffer.
+transform.run();
 ```
 
 ## Methods
 
 ### constructor
 
-Constructs a `Transform` object, creates `Model` and `TransformFeedback` instances and calls `bindBuffers` to setup source and destination buffers.
+Constructs a `Transform` object, creates `Model` and `TransformFeedback` instances. It then creates destination buffers if needed and binds the buffers to `Model` and `TransformFeedback` objects.
 
 * `gl` (`WebGL2RenderingContext`) gl - context
 * `opts` (`Object`={}) - options
@@ -115,13 +135,12 @@ Constructs a `Transform` object, creates `Model` and `TransformFeedback` instanc
 
 Deletes all owned resources, `Model`, `TransformFeedback` and any `Buffer` objects that are crated internally.
 
-### bindBuffers
+### updateBuffers
 
-Sets up source and destination buffers. Creates destination buffers when not provided. Either `destinationBuffers` or `sourceDestinationTransform` must be provided.
+Updates buffer bindings with provided buffer objects for one or more source or destination buffers.
 
 * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
-* `destinationBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
-* `sourceDestinationMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
+* `destinationBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object.
 
 ### run
 
