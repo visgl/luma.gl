@@ -175,7 +175,9 @@ export default class Model extends Object3D {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
     this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    if (this.geometry) {
+      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    }
     return redraw;
   }
 
@@ -532,7 +534,11 @@ count: ${this.stats.profileFrameCount}`
       const attributeTable = this._getAttributesTable({
         header: `${this.id} attributes`,
         program: this.program,
-        attributes: Object.assign({}, this.geometry.attributes, this.attributes)
+        attributes: Object.assign(
+          {},
+          this.geometry && this.geometry.attributes,
+          this.attributes
+        )
       });
       log.table(priority, attributeTable);
 
