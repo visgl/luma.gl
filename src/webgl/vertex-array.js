@@ -4,6 +4,7 @@ import {isWebGL2} from './context';
 import Resource from './resource';
 import assert from 'assert';
 import {log} from '../utils';
+import Buffer from './buffer';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
@@ -71,6 +72,7 @@ export default class VertexArray extends Resource {
     this.drawParameters = {};
 
     this._bound = false;
+    // filled locations to buffer/array map
     this._filledLocations = {};
     Object.seal(this);
 
@@ -89,6 +91,28 @@ export default class VertexArray extends Resource {
 
   get filledLocations() {
     return this._filledLocations;
+  }
+
+  // Returns the minimum element count of all bound instance buffers.
+  getElementCount() {
+    let vertexCount = 0;
+    let instanceCount = 0;
+    for (const location in this._filledLocations) {
+      const bufferOrArray = this._filledLocations[location];
+      if (bufferOrArray instanceof Buffer) {
+        const elementCount = bufferOrArray.getElementCount();
+        if (elementCount.instanceCount) {
+          instanceCount = Math.min(elementCount.instanceCount, instanceCount);
+        }
+        if (elementCount.vertexCount) {
+          vertexCount = Math.min(elementCount.vertexCount, vertexCount);
+        }
+      } else {
+        // Generic attribute
+        vertexCount = Math.min(vertexCount, bufferOrArray.length);
+      }
+    }
+    return {vertexCount, instanceCount};
   }
 
   // Register an optional buffer name to location mapping
@@ -211,7 +235,7 @@ export default class VertexArray extends Resource {
     layout = layout !== undefined ? layout : buffer.layout;
     assert(target, 'setBuffer needs target');
     assert(layout, 'setBuffer called on uninitialized buffer');
-    this._filledLocations[location] = true;
+    this._filledLocations[location] = buffer;
 
     this.bind(() => {
       // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
@@ -232,7 +256,7 @@ export default class VertexArray extends Resource {
 
   // Specify values for generic vertex attributes
   setGeneric({location, array}) {
-    this._filledLocations[location] = true;
+    this._filledLocations[location] = array;
     switch (array.constructor) {
     case Float32Array:
       this._setGenericFloatArray(location, array);
@@ -348,7 +372,6 @@ export default class VertexArray extends Resource {
 
     return {isInstanced, isIndexed, indexType};
   }
-  //         this._filledLocations[bufferName] = true;
 
   _getLocations(buffers) {
     // Try to extract elements and locations

@@ -122,6 +122,8 @@ export default class Buffer extends Resource {
     this.data = data;
     this.type = type;
     this.usage = usage;
+    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    this.elementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
 
     // Call after type is set
     this.setDataLayout(Object.assign(opts));
@@ -293,6 +295,14 @@ export default class Buffer extends Resource {
     return this.gl.getIndexedParameter(binding, index);
   }
 
+  // returns number of elements in the buffer
+  getElementCount() {
+    if (this.instanced) {
+      return {instanceCount: this.elementCount};
+    }
+    return {vertexCount: this.elementCount};
+  }
+
   // RESOURCE METHODS
 
   _createHandle() {
@@ -312,8 +322,7 @@ export default class Buffer extends Resource {
 
   _getAvailableElementCount(srcByteOffset) {
     const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
-    const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
     const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
-    return sourceElementCount - sourceElementOffset;
+    return this.elementCount - sourceElementOffset;
   }
 }
