@@ -1,5 +1,12 @@
 # Pre-releases
 
+## 5.2.0-alpha.1 - Feb 26
+- Fix a crash when Model object created without geometry. (#419)
+- New method AnimationLoop.setProps to avoid breaking apps (#414)
+- update math version
+
+## 5.1.0 - Feb 14
+
 ## 5.0.0 - Dec 21
 - Update links to point to 5.0-release branch
 - Do not mark `needsRedraw` unless something changed (#376)
