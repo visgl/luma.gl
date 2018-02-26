@@ -94,25 +94,32 @@ export default class VertexArray extends Resource {
   }
 
   // Returns the minimum element count of all bound instance buffers.
-  getElementCount() {
-    let vertexCount = 0;
-    let instanceCount = 0;
+  getElementsCount() {
+    let vertexCount = null;
+    let instanceCount = null;
     for (const location in this._filledLocations) {
       const bufferOrArray = this._filledLocations[location];
       if (bufferOrArray instanceof Buffer) {
-        const elementCount = bufferOrArray.getElementCount();
+        const elementCount = bufferOrArray.getElementsCount();
         if (elementCount.instanceCount) {
-          instanceCount = Math.min(elementCount.instanceCount, instanceCount);
+          instanceCount = instanceCount && Math.min(elementCount.instanceCount, instanceCount) ||
+            elementCount.instanceCount;
         }
         if (elementCount.vertexCount) {
-          vertexCount = Math.min(elementCount.vertexCount, vertexCount);
+          vertexCount = vertexCount && Math.min(elementCount.vertexCount, vertexCount) ||
+            elementCount.vertexCount;
         }
       } else {
         // Generic attribute
-        vertexCount = Math.min(vertexCount, bufferOrArray.length);
+        // TODO: can this be an instanced?
+        vertexCount = vertexCount && Math.min(vertexCount, bufferOrArray.length) ||
+          bufferOrArray.length;
       }
     }
-    return {vertexCount, instanceCount};
+    return {
+      vertexCount: vertexCount || 0,
+      instanceCount: instanceCount || 0
+    };
   }
 
   // Register an optional buffer name to location mapping
@@ -166,6 +173,7 @@ export default class VertexArray extends Resource {
     for (const location in locations) {
       const bufferData = locations[location];
       if (bufferData) {
+        -TODO- here layout data can be in-addition to buffer.
         const {buffer, layout} = this._getBufferAndLayout(bufferData);
         this.setBuffer({location, buffer, layout});
         this.setDivisor(location, layout.instanced ? 1 : 0);

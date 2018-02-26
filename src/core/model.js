@@ -18,7 +18,7 @@ const MSG_INSTANCED_PARAM_DEPRECATED = `\
 Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
 This will become a hard error in a future version of luma.gl.`;
 
-const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
+const ERR_MODEL_PARAMS = 'Model needs drawMode';
 
 const LOG_DRAW_PRIORITY = 2;
 
@@ -57,7 +57,7 @@ export default class Model extends Object3D {
     isInstanced = false, // Enables instanced rendering
     instanced, // deprecated
     vertexCount = undefined,
-    instanceCount = 0,
+    instanceCount = undefined,
 
     // Extra uniforms and attributes (beyond geometry, material, camera)
     drawMode,
@@ -143,7 +143,7 @@ export default class Model extends Object3D {
     this.onAfterRender = onAfterRender;
 
     // assert(program || program instanceof Program);
-    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
+    assert(this.drawMode !== undefined, ERR_MODEL_PARAMS);
 
     this.timerQueryEnabled = timerQueryEnabled && Query.isSupported(this.gl, {timer: true});
     this.timeElapsedQuery = undefined;

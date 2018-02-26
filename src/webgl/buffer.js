@@ -96,8 +96,7 @@ export default class Buffer extends Resource {
     offset = 0,
     stride = 0,
     normalized = false,
-    integer = false,
-    instanced = 0
+    integer = false
   } = {}) {
     const opts = arguments[0];
 
@@ -296,8 +295,8 @@ export default class Buffer extends Resource {
   }
 
   // returns number of elements in the buffer
-  getElementCount() {
-    if (this.instanced) {
+  getElementsCount() {
+    if (this.layout.instanced) {
       return {instanceCount: this.elementCount};
     }
     return {vertexCount: this.elementCount};

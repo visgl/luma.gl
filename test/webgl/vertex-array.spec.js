@@ -1,10 +1,7 @@
 import test from 'tape-catch';
-import {GL, createGLContext} from 'luma.gl';
+import {GL, createGLContext, Buffer} from 'luma.gl';
 import {VertexArray} from 'luma.gl';
-
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from '../setup';
 
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
@@ -32,7 +29,7 @@ test('WebGL#VertexArray construct/delete', t => {
 });
 
 test('WebGL#VertexAttributes#enable', t => {
-  const gl = createGLContext();
+  const {gl} = fixture;
 
   const vertexAttributes = VertexArray.getDefaultArray(gl);
 
@@ -68,17 +65,17 @@ test('WebGL#VertexAttributes#enable', t => {
 });
 
 test('WebGL#vertexAttributes#WebGL2 support', t => {
-  const gl = createGLContext({webgl2: true});
+  const {gl2} = fixture;
 
-  if (!VertexArray.isSupported(gl, {instancedArrays: true})) {
+  if (!VertexArray.isSupported(gl2, {instancedArrays: true})) {
     t.comment('- instanced arrays not enabled: skipping tests');
     t.end();
     return;
   }
 
-  const vertexAttributes = VertexArray.getDefaultArray(gl);
+  const vertexAttributes = VertexArray.getDefaultArray(gl2);
 
-  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl);
+  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl2);
 
   for (let i = 0; i < MAX_ATTRIBUTES; i++) {
     t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_DIVISOR, {location: i}), 0,
@@ -86,4 +83,37 @@ test('WebGL#vertexAttributes#WebGL2 support', t => {
   }
 
   t.end();
+});
+
+test('WebGL#VertexArray#getElementsCount', t => {
+  const {gl} = fixture;
+
+  const buffer1 = new Buffer(gl, {data: new Float32Array([1, 2, 3, 4, 5])});
+  const buffer2 = new Buffer(gl, {data: new Float32Array([1, 2]), instanced: true});
+  const buffer3 = new Buffer(gl, {data: new Float32Array([1, 2, 3])});
+  const buffer4 = new Buffer(gl, {data: new Float32Array([1]), instanced: true});
+
+  const va = new VertexArray(gl, {
+    buffers: {
+      [0]: {buffer: buffer1},
+      [1]: {buffer: buffer2},
+      [2]: {buffer: buffer3},
+      [3]: {buffer: buffer4}
+    }
+  });
+
+  let elementsCount = va.getElementsCount();
+
+  t.equal(elementsCount.vertexCount, 3);
+  t.equal(elementsCount.instanceCount, 1);
+
+  // only bind non instanced buffers.
+  va.setBuffers({
+    [0]: {buffer: buffer1},
+    [1]: {buffer: buffer3}
+  }, {clear: true});
+  elementsCount = va.getElementsCount();
+
+  t.equal(elementsCount.vertexCount, 3);
+  t.equal(elementsCount.instanceCount, 0);
 });

@@ -177,3 +177,22 @@ test('WebGL#Buffer getData', t => {
 
   t.end();
 });
+
+test('WebGL#Buffer getElementsCount', t => {
+  const {gl} = fixture;
+
+  let buffer;
+  let elementsCounts;
+
+  buffer = new Buffer(gl, {data: new Float32Array([1, 2, 3])});
+  elementsCounts = buffer.getElementsCount();
+  t.equal(elementsCounts.vertexCount, 3, 'Vertex count should match');
+  t.ok(!elementsCounts.instance, 'buffer doesnt contain any instance data');
+
+  buffer = new Buffer(gl, {data: new Float32Array([1, 2, 3, 4]), instanced: true});
+  elementsCounts = buffer.getElementsCount();
+  t.equal(elementsCounts.instanceCount, 4, 'Instance cout should match');
+  t.ok(!elementsCounts.vertexCount, 'buffer contains instance data');
+
+  t.end();
+});

@@ -139,9 +139,9 @@ const animationLoop = new AnimationLoop({
       vs: DRAW_VS,
       fs: DRAW_FS,
       drawMode: gl.TRIANGLE_FAN,
-      vertexCount: 3,
-      isInstanced: true,
-      instanceCount: NUM_INSTANCES
+      // vertexCount: 3,
+      isInstanced: true
+      // instanceCount: NUM_INSTANCES
     });
 
     const modelTransform = new Model(gl, {
@@ -150,7 +150,7 @@ const animationLoop = new AnimationLoop({
       fs: EMIT_FS,
       varyings: EMIT_VARYINGS,
       drawMode: gl.POINTS,
-      vertexCount: NUM_INSTANCES,
+      // vertexCount: NUM_INSTANCES,
       isInstanced: false
     });
 

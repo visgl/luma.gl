@@ -94,14 +94,14 @@ export default class Program extends Resource {
   // that have sane defaults.
   draw({
     drawMode = GL.TRIANGLES,
-    vertexCount,
+    vertexCount = undefined,
     offset = 0,
     start,
     end,
     isIndexed = false,
     indexType = GL.UNSIGNED_SHORT,
     isInstanced = false,
-    instanceCount = 0,
+    instanceCount = undefined,
     vertexArray = null,
     transformFeedback = null,
     uniforms = {},
@@ -120,6 +120,11 @@ export default class Program extends Resource {
 
       this.setUniforms(uniforms, samplers);
 
+      if (!vertexCount || !instanceCount) {
+        const elementsCount = vertexArray.getElementsCount();
+        vertexCount = vertexCount || elementsCount.vertexCount;
+        instanceCount = instanceCount || elementsCount.instanceCount;
+      }
       withParameters(this.gl, parameters,
         () => {
           // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
@@ -179,6 +184,7 @@ export default class Program extends Resource {
       if (!buffer) {
         this.vertexAttributes.disable(location);
       } else if (buffer instanceof Buffer) {
+        -TODO- here layout data comes from buffer.
         const divisor = buffer.layout.instanced ? 1 : 0;
         this.vertexAttributes.setBuffer({location, buffer});
         this.vertexAttributes.setDivisor(location, divisor);
