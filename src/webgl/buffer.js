@@ -295,11 +295,8 @@ export default class Buffer extends Resource {
   }
 
   // returns number of elements in the buffer
-  getElementsCount() {
-    if (this.layout.instanced) {
-      return {instanceCount: this.elementCount};
-    }
-    return {vertexCount: this.elementCount};
+  get elementcount() {
+    return this.elementCount;
   }
 
   // RESOURCE METHODS

@@ -99,19 +99,17 @@ export default class VertexArray extends Resource {
     let instanceCount = null;
     for (const location in this._filledLocations) {
       const bufferOrArray = this._filledLocations[location];
-      if (bufferOrArray instanceof Buffer) {
-        const elementCount = bufferOrArray.getElementsCount();
-        if (elementCount.instanceCount) {
-          instanceCount = instanceCount && Math.min(elementCount.instanceCount, instanceCount) ||
-            elementCount.instanceCount;
-        }
-        if (elementCount.vertexCount) {
-          vertexCount = vertexCount && Math.min(elementCount.vertexCount, vertexCount) ||
-            elementCount.vertexCount;
+      if (bufferOrArray.buffer instanceof Buffer) {
+        const {buffer, layout} = bufferOrArray;
+        const elementCount = buffer.elementCount;
+        if (layout.instanced) {
+          instanceCount = instanceCount && Math.min(elementCount, instanceCount) || elementCount;
+        } else {
+          vertexCount = vertexCount && Math.min(elementCount, vertexCount) || elementCount;
         }
       } else {
         // Generic attribute
-        // TODO: can this be an instanced?
+        // TODO: can this be instanced?
         vertexCount = vertexCount && Math.min(vertexCount, bufferOrArray.length) ||
           bufferOrArray.length;
       }
@@ -173,7 +171,6 @@ export default class VertexArray extends Resource {
     for (const location in locations) {
       const bufferData = locations[location];
       if (bufferData) {
-        -TODO- here layout data can be in-addition to buffer.
         const {buffer, layout} = this._getBufferAndLayout(bufferData);
         this.setBuffer({location, buffer, layout});
         this.setDivisor(location, layout.instanced ? 1 : 0);
@@ -243,7 +240,7 @@ export default class VertexArray extends Resource {
     layout = layout !== undefined ? layout : buffer.layout;
     assert(target, 'setBuffer needs target');
     assert(layout, 'setBuffer called on uninitialized buffer');
-    this._filledLocations[location] = buffer;
+    this._filledLocations[location] = {buffer, layout};
 
     this.bind(() => {
       // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target

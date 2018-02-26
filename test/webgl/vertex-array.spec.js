@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {GL, createGLContext, Buffer} from 'luma.gl';
+import {GL, Buffer} from 'luma.gl';
 import {VertexArray} from 'luma.gl';
 import {fixture} from '../setup';
 
@@ -65,17 +65,22 @@ test('WebGL#VertexAttributes#enable', t => {
 });
 
 test('WebGL#vertexAttributes#WebGL2 support', t => {
-  const {gl2} = fixture;
+  const {gl} = fixture;
+  // if (!gl2) {
+  //   t.comment('WebGL2 not available, skipping tests');
+  //   t.end();
+  //   return;
+  // }
 
-  if (!VertexArray.isSupported(gl2, {instancedArrays: true})) {
+  if (!VertexArray.isSupported(gl, {instancedArrays: true})) {
     t.comment('- instanced arrays not enabled: skipping tests');
     t.end();
     return;
   }
 
-  const vertexAttributes = VertexArray.getDefaultArray(gl2);
+  const vertexAttributes = VertexArray.getDefaultArray(gl);
 
-  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl2);
+  const MAX_ATTRIBUTES = VertexArray.getMaxAttributes(gl);
 
   for (let i = 0; i < MAX_ATTRIBUTES; i++) {
     t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_DIVISOR, {location: i}), 0,
@@ -87,6 +92,11 @@ test('WebGL#vertexAttributes#WebGL2 support', t => {
 
 test('WebGL#VertexArray#getElementsCount', t => {
   const {gl} = fixture;
+  if (!VertexArray.isSupported(gl)) {
+    t.comment('- instanced arrays not enabled: skipping tests');
+    t.end();
+    return;
+  }
 
   const buffer1 = new Buffer(gl, {data: new Float32Array([1, 2, 3, 4, 5])});
   const buffer2 = new Buffer(gl, {data: new Float32Array([1, 2]), instanced: true});

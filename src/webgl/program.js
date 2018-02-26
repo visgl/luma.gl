@@ -184,7 +184,6 @@ export default class Program extends Resource {
       if (!buffer) {
         this.vertexAttributes.disable(location);
       } else if (buffer instanceof Buffer) {
-        -TODO- here layout data comes from buffer.
         const divisor = buffer.layout.instanced ? 1 : 0;
         this.vertexAttributes.setBuffer({location, buffer});
         this.vertexAttributes.setDivisor(location, divisor);
