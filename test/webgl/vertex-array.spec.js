@@ -66,14 +66,9 @@ test('WebGL#VertexAttributes#enable', t => {
 
 test('WebGL#vertexAttributes#WebGL2 support', t => {
   const {gl} = fixture;
-  // if (!gl2) {
-  //   t.comment('WebGL2 not available, skipping tests');
-  //   t.end();
-  //   return;
-  // }
 
-  if (!VertexArray.isSupported(gl, {instancedArrays: true})) {
-    t.comment('- instanced arrays not enabled: skipping tests');
+  if (!VertexArray.isSupported(gl)) {
+    t.comment('- VertexArray not supported: skipping tests');
     t.end();
     return;
   }
@@ -93,15 +88,18 @@ test('WebGL#vertexAttributes#WebGL2 support', t => {
 test('WebGL#VertexArray#getElementsCount', t => {
   const {gl} = fixture;
   if (!VertexArray.isSupported(gl)) {
-    t.comment('- instanced arrays not enabled: skipping tests');
+    t.comment('- VertexArray not supported: skipping tests');
     t.end();
     return;
   }
 
   const buffer1 = new Buffer(gl, {data: new Float32Array([1, 2, 3, 4, 5])});
-  const buffer2 = new Buffer(gl, {data: new Float32Array([1, 2]), instanced: true});
-  const buffer3 = new Buffer(gl, {data: new Float32Array([1, 2, 3])});
-  const buffer4 = new Buffer(gl, {data: new Float32Array([1]), instanced: true});
+  const buffer2 = new Buffer(gl, {data: new Float32Array([1, 2, 3]), instanced: true});
+  const buffer3 = new Buffer(gl, {data: new Float32Array([1, 2, 3, 4]), size: 2});
+  const buffer4 = new Buffer(gl, {data: new Float32Array([1, 2]), instanced: true, size: 2});
+
+  // buffer3 is the buffer with least number of vertices : 2
+  // buffer4 is the buffer with least number of instances : 1
 
   const va = new VertexArray(gl, {
     buffers: {
@@ -114,7 +112,7 @@ test('WebGL#VertexArray#getElementsCount', t => {
 
   let elementsCount = va.getElementsCount();
 
-  t.equal(elementsCount.vertexCount, 3);
+  t.equal(elementsCount.vertexCount, 2);
   t.equal(elementsCount.instanceCount, 1);
 
   // only bind non instanced buffers.
@@ -124,6 +122,6 @@ test('WebGL#VertexArray#getElementsCount', t => {
   }, {clear: true});
   elementsCount = va.getElementsCount();
 
-  t.equal(elementsCount.vertexCount, 3);
+  t.equal(elementsCount.vertexCount, 2);
   t.equal(elementsCount.instanceCount, 0);
 });

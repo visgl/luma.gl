@@ -93,7 +93,7 @@ export default class VertexArray extends Resource {
     return this._filledLocations;
   }
 
-  // Returns the minimum element count of all bound instance buffers.
+  // Returns the minimum element count of all bound buffers.
   getElementsCount() {
     let vertexCount = null;
     let instanceCount = null;
@@ -101,7 +101,8 @@ export default class VertexArray extends Resource {
       const bufferOrArray = this._filledLocations[location];
       if (bufferOrArray.buffer instanceof Buffer) {
         const {buffer, layout} = bufferOrArray;
-        const elementCount = buffer.elementCount;
+        assert(layout && layout.size);
+        const elementCount = buffer.elementCount / layout.size;
         if (layout.instanced) {
           instanceCount = instanceCount && Math.min(elementCount, instanceCount) || elementCount;
         } else {
