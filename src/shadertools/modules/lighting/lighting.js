@@ -89,3 +89,10 @@ function getPointUniforms(points) {
     pointSpecularColor: pointSpecularColors
   };
 }
+
+export default {
+  name,
+  vs: vertexShader,
+  fs: fragmentShader,
+  getUniforms
+};
