@@ -5,7 +5,7 @@ Interested in what is coming down the road? We are trying to make the luma.gl ro
 We share information about the direction of luma.gl in the following ways:
 * **Roadmap Document** - (this document) A high-level summary of our current direction for future releases.
 * **RFCs** - We are now publishing our RFCs for features in upcoming releases. RFCs are technical writeups that describe a proposed feature. RFCs are available [here](https://github.com/uber/luma.gl/tree/master/dev-docs/RFCs).
-* **Blog** - We will of course continue to use the [vis.gl](vis.gl) blog to share information about what we are doing.
+* **Blog** - We will of course continue to use the [vis.gl](https://medium.com/@vis.gl) blog to share information about what we are doing.
 
 In addition, github issues are a great way to join the discussions.
 
