@@ -1,6 +1,6 @@
 import Framebuffer from './framebuffer';
 import Texture from './texture';
-import {formatValue} from '../utils';
+import {formatValue, log} from '../utils';
 import assert from 'assert';
 
 // Local constants, will be "collapsed" during minification
@@ -57,23 +57,6 @@ const GL_UNSIGNED_INT_SAMPLER_2D = 0x8DD2;
 const GL_UNSIGNED_INT_SAMPLER_3D = 0x8DD3;
 const GL_UNSIGNED_INT_SAMPLER_CUBE = 0x8DD4;
 const GL_UNSIGNED_INT_SAMPLER_2D_ARRAY = 0x8DD7;
-
-/* TODO - create static Float32...Arrays and copy into those instead of minting new ones?
-const arrays = {};
-function getTypedArray(type, data) {
-  if (flatArrayLength > 1) {
-    setter = val => {
-      if (!(val instanceof TypedArray)) {
-        const typedArray = new TypedArray(flatArrayLength);
-        typedArray.set(val);
-        val = typedArray;
-      }
-      assert(val.length === flatArrayLength);
-    };
-  }
-}
-// TODO - handle array uniforms
-*/
 
 const UNIFORM_SETTERS = {
 
@@ -135,53 +118,41 @@ const UNIFORM_SETTERS = {
 };
 
 // Pre-allocated typed arrays for temporary conversion
-const FLOAT_ARRAY = [2, 3, 4, 6, 8, 9, 12, 16].reduce((arrays, length) => {
-  arrays[length] = new Float32Array(length);
-  return arrays;
-}, {});
-const INT_ARRAY = {
-  2: new Int32Array(2),
-  3: new Int32Array(3),
-  4: new Int32Array(4)
-};
-const UINT_ARRAY = {
-  2: new Uint32Array(2),
-  3: new Uint32Array(3),
-  4: new Uint32Array(4)
-};
+const FLOAT_ARRAY = {};
+const INT_ARRAY = {};
+const UINT_ARRAY = {};
 
 /* Functions to ensure the type of uniform values */
-function toFloatArray(value, length) {
-  if (value instanceof Float32Array) {
+function toTypedArray(value, uniformLength, Type, cache) {
+  const length = value.length;
+  if (length % uniformLength) {
+    log.warn(`Uniform size should be multiples of ${uniformLength}`, value);
+  }
+
+  if (value instanceof Type) {
     return value;
   }
-  const result = FLOAT_ARRAY[length];
+  let result = cache[length];
+  if (!result) {
+    result = new Type(length);
+    cache[length] = result;
+  }
   for (let i = 0; i < length; i++) {
     result[i] = value[i];
   }
   return result;
 }
 
-function toIntArray(value, length) {
-  if (value instanceof Int32Array) {
-    return value;
-  }
-  const result = INT_ARRAY[length];
-  for (let i = 0; i < length; i++) {
-    result[i] = value[i];
-  }
-  return result;
+function toFloatArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Float32Array, FLOAT_ARRAY);
 }
 
-function toUIntArray(value, length) {
-  if (value instanceof Uint32Array) {
-    return value;
-  }
-  const result = UINT_ARRAY[length];
-  for (let i = 0; i < length; i++) {
-    result[i] = value[i];
-  }
-  return result;
+function toIntArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Int32Array, INT_ARRAY);
+}
+
+function toUIntArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Uint32Array, UINT_ARRAY);
 }
 
 export function parseUniformName(name) {

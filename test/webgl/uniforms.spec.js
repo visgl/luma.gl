@@ -2,6 +2,8 @@
 import test from 'tape-catch';
 import {Program, Texture2D} from 'luma.gl';
 import 'luma.gl/headless';
+import {isBrowser} from 'luma.gl/utils';
+import {equals} from 'math.gl';
 import {checkUniformValues, areUniformsEqual} from 'luma.gl/webgl/uniforms';
 
 import {fixture} from '../setup';
@@ -42,6 +44,7 @@ uniform float f;
 uniform vec2 v2;
 uniform vec3 v3;
 uniform vec4 v4;
+uniform vec4 v4Array[4];
 
 uniform int i;
 uniform ivec2 iv2;
@@ -73,6 +76,10 @@ void main(void) {
   vec3 transform_v3 = m3 * v3;
   vec4 transform_v4 = m4 * v4;
 
+  for (int index = 0; index < 4; index++) {
+    transform_v4 += v4Array[index];
+  }
+
   v = texture2D(s2d, v2);
 
   gl_FragColor = vec4(transform_v2, 1.0, 1.0) + vec4(transform_v3, 1.0) + transform_v4;
@@ -84,6 +91,7 @@ const WEBGL1_GOOD_UNIFORMS = {
   v2: new Float32Array([1, 2]), // FLOAT_VEC2  0x8B50
   v3: new Float32Array([1, 2, 3]), // FLOAT_VEC3  0x8B51
   v4: new Float32Array([1, 2, 3, 4]), // FLOAT_VEC4  0x8B52
+  v4Array: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]), // FLOAT_VEC4  0x8B52
 
   i: -1,
   iv2: new Int32Array([1, 2]), // INT_VEC2  0x8B53
@@ -101,6 +109,10 @@ const WEBGL1_GOOD_UNIFORMS = {
 
   s2d: new Texture2D(fixture.gl)    // SAMPLER_2D  0x8B5E
   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
+};
+
+const ARRAY_UNIFORM_SIZE = {
+  v4Array: 4
 };
 
 // const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
@@ -193,6 +205,52 @@ test('WebGL#Uniforms Program uniform locations', t => {
   t.end();
 });
 
+const getExpectedUniformValues = () => {
+  const result = {};
+
+  for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
+    const value = WEBGL1_GOOD_UNIFORMS[uniformName];
+
+    if (ARRAY_UNIFORM_SIZE[uniformName]) {
+      if (!isBrowser) {
+        // headless gl does not handle uniform arrays
+        continue; // eslint-disable-line
+      }
+
+      // array uniform, need to check each item
+      const uniformSize = ARRAY_UNIFORM_SIZE[uniformName];
+      const arrayLen = value.length / uniformSize;
+
+      for (let i = 0; i < arrayLen; i++) {
+        result[`${uniformName}[${i}]`] = value.slice(uniformSize * i, uniformSize * (i + 1));
+      }
+    } else {
+      result[uniformName] = value;
+    }
+  }
+
+  return result;
+};
+
+const setUniformAndCheck = (program, input, expected, t) => {
+  program.setUniforms(input);
+  t.pass('Set uniforms successful');
+
+  for (const uniformName in expected) {
+    let expectedValue = expected[uniformName];
+    let value = program.getUniformValue(program.getUniformLocation(uniformName));
+
+    if (expectedValue instanceof Texture2D) {
+      expectedValue = expectedValue.textureUnit;
+    } else if (expectedValue.length) {
+      expectedValue = Array.from(expectedValue);
+      value = Array.from(value);
+    }
+
+    t.ok(equals(value, expectedValue), `${uniformName} set correctly`);
+  }
+};
+
 const testSetUniform = (gl, t) => {
   const program = new Program(gl, {
     vs: VERTEX_SHADER,
@@ -200,11 +258,12 @@ const testSetUniform = (gl, t) => {
   });
   program.use();
 
+  const expectedValues = getExpectedUniformValues();
+
   let uniforms = Object.assign({}, WEBGL1_GOOD_UNIFORMS);
 
   t.comment('Test setting typed arrays');
-  program.setUniforms(uniforms);
-  t.pass('Set typed array uniforms successful');
+  setUniformAndCheck(program, uniforms, expectedValues, t);
 
   uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
@@ -216,8 +275,7 @@ const testSetUniform = (gl, t) => {
   }
 
   t.comment('Test setting plain arrays');
-  program.setUniforms(uniforms);
-  t.pass('Set plain array uniforms successful');
+  setUniformAndCheck(program, uniforms, expectedValues, t);
 
   uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
@@ -230,8 +288,7 @@ const testSetUniform = (gl, t) => {
   }
 
   t.comment('Test setting malformed typed arrays');
-  program.setUniforms(uniforms);
-  t.pass('Set malformed typed array uniforms successful');
+  setUniformAndCheck(program, uniforms, expectedValues, t);
 
   t.end();
 };
