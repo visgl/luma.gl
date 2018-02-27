@@ -1,6 +1,6 @@
 import Framebuffer from './framebuffer';
 import Texture from './texture';
-import {formatValue} from '../utils';
+import {formatValue, log} from '../utils';
 import assert from 'assert';
 
 // Local constants, will be "collapsed" during minification
@@ -64,24 +64,24 @@ const UNIFORM_SETTERS = {
 
   /* eslint-disable max-len */
   [GL_FLOAT]: (gl, location, value) => gl.uniform1f(location, value),
-  [GL_FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, toFloatArray(value)),
-  [GL_FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, toFloatArray(value)),
-  [GL_FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, toFloatArray(value)),
+  [GL_FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, toFloatArray(value, 2)),
+  [GL_FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, toFloatArray(value, 3)),
+  [GL_FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, toFloatArray(value, 4)),
 
   [GL_INT]: (gl, location, value) => gl.uniform1i(location, value),
-  [GL_INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value)),
-  [GL_INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value)),
-  [GL_INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value)),
+  [GL_INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
+  [GL_INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
+  [GL_INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
   [GL_BOOL]: (gl, location, value) => gl.uniform1i(location, value),
-  [GL_BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value)),
-  [GL_BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value)),
-  [GL_BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value)),
+  [GL_BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
+  [GL_BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
+  [GL_BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL_FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, toFloatArray(value)),
+  [GL_FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, toFloatArray(value, 4)),
+  [GL_FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, toFloatArray(value, 9)),
+  [GL_FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, toFloatArray(value, 16)),
 
   [GL_SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
@@ -89,17 +89,17 @@ const UNIFORM_SETTERS = {
   // WEBGL2 - unsigned integers, irregular matrices, additional texture samplers
 
   [GL_UNSIGNED_INT]: (gl, location, value) => gl.uniform1ui(location, value),
-  [GL_UNSIGNED_INT_VEC2]: (gl, location, value) => gl.uniform2uiv(location, toUIntArray(value)),
-  [GL_UNSIGNED_INT_VEC3]: (gl, location, value) => gl.uniform3uiv(location, toUIntArray(value)),
-  [GL_UNSIGNED_INT_VEC4]: (gl, location, value) => gl.uniform4uiv(location, toUIntArray(value)),
+  [GL_UNSIGNED_INT_VEC2]: (gl, location, value) => gl.uniform2uiv(location, toUIntArray(value, 2)),
+  [GL_UNSIGNED_INT_VEC3]: (gl, location, value) => gl.uniform3uiv(location, toUIntArray(value, 3)),
+  [GL_UNSIGNED_INT_VEC4]: (gl, location, value) => gl.uniform4uiv(location, toUIntArray(value, 4)),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL_FLOAT_MAT2x3]: (gl, location, value) => gl.uniformMatrix2x3fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT2x4]: (gl, location, value) => gl.uniformMatrix2x4fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT3x2]: (gl, location, value) => gl.uniformMatrix3x2fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT3x4]: (gl, location, value) => gl.uniformMatrix3x4fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT4x2]: (gl, location, value) => gl.uniformMatrix4x2fv(location, false, toFloatArray(value)),
-  [GL_FLOAT_MAT4x3]: (gl, location, value) => gl.uniformMatrix4x3fv(location, false, toFloatArray(value)),
+  [GL_FLOAT_MAT2x3]: (gl, location, value) => gl.uniformMatrix2x3fv(location, false, toFloatArray(value, 6)),
+  [GL_FLOAT_MAT2x4]: (gl, location, value) => gl.uniformMatrix2x4fv(location, false, toFloatArray(value, 8)),
+  [GL_FLOAT_MAT3x2]: (gl, location, value) => gl.uniformMatrix3x2fv(location, false, toFloatArray(value, 6)),
+  [GL_FLOAT_MAT3x4]: (gl, location, value) => gl.uniformMatrix3x4fv(location, false, toFloatArray(value, 12)),
+  [GL_FLOAT_MAT4x2]: (gl, location, value) => gl.uniformMatrix4x2fv(location, false, toFloatArray(value, 8)),
+  [GL_FLOAT_MAT4x3]: (gl, location, value) => gl.uniformMatrix4x3fv(location, false, toFloatArray(value, 12)),
 
   [GL_SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL_SAMPLER_2D_SHADOW]: (gl, location, value) => gl.uniform1i(location, value),
@@ -123,11 +123,15 @@ const INT_ARRAY = {};
 const UINT_ARRAY = {};
 
 /* Functions to ensure the type of uniform values */
-function toTypedArray(value, Type, cache) {
+function toTypedArray(value, uniformLength, Type, cache) {
+  const length = value.length;
+  if (length % uniformLength) {
+    log.warn(`Uniform size should be multiples of ${uniformLength}`, value);
+  }
+
   if (value instanceof Type) {
     return value;
   }
-  const length = value.length;
   let result = cache[length];
   if (!result) {
     result = new Type(length);
@@ -139,16 +143,16 @@ function toTypedArray(value, Type, cache) {
   return result;
 }
 
-function toFloatArray(value) {
-  return toTypedArray(value, Float32Array, FLOAT_ARRAY);
+function toFloatArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Float32Array, FLOAT_ARRAY);
 }
 
-function toIntArray(value) {
-  return toTypedArray(value, Int32Array, INT_ARRAY);
+function toIntArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Int32Array, INT_ARRAY);
 }
 
-function toUIntArray(value) {
-  return toTypedArray(value, Uint32Array, UINT_ARRAY);
+function toUIntArray(value, uniformLength) {
+  return toTypedArray(value, uniformLength, Uint32Array, UINT_ARRAY);
 }
 
 export function parseUniformName(name) {
