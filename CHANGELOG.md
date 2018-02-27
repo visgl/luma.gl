@@ -1,4 +1,11 @@
 
+## 5.1.2 - Feb 26, 2018
+- Fix array uniform setting (#425)
+
+## 5.1.1 - Feb 15, 2018
+- Remove unreferenced math deps and docs in 5.1 release (#416)
+- Fix animation loop bug (#415)
+
 ## 5.1.0 - Feb 14, 2018
 - fix browser test (#413)
 - 5.1: Soft require headless-gl, remove unused utils (#408)
