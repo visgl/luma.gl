@@ -24,7 +24,11 @@ export const logModel = (model, uniforms) => {
     return;
   }
 
-  const attributesObject = Object.assign({}, model.geometry.attributes, model.attributes);
+  const attributesObject = Object.assign(
+    {},
+    model.geometry && model.geometry.attributes,
+    model.attributes
+  );
   const uniformsObject = Object.assign({}, model.uniforms, uniforms);
 
   seer.multiUpdate('luma.gl', model.id, [
