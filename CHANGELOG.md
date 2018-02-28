@@ -1,5 +1,14 @@
 # Pre-releases
 
+## 5.2.0-alpha.2 - Feb 27
+- Fix exports (#428)
+- Create pull_request_template.md
+- Update issue_template.md
+- Create issue_template.md
+- Add the right blog link in roadmap.md (#427)
+- Fix a crash: model.geometry is optional (#424)
+- Fix array uniform setting (#422)
+
 ## 5.2.0-alpha.1 - Feb 26
 - Fix a crash when Model object created without geometry. (#419)
 - New method AnimationLoop.setProps to avoid breaking apps (#414)
