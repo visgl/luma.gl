@@ -43,7 +43,7 @@ export {
 
 // WebGL1 objects
 export {default as Buffer} from './buffer';
-export {default as Shader, VertexShader, FragmentShader} from './shader';
+export {Shader, VertexShader, FragmentShader} from './shader';
 export {default as Program} from './program';
 export {default as Framebuffer} from './framebuffer';
 export {default as Renderbuffer} from './renderbuffer';
@@ -60,8 +60,7 @@ export {
 } from './clear';
 
 export {
-  readPixels,
-  readPixelsFromBuffer
+  readPixels
 } from './functions';
 
 export {

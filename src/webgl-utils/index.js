@@ -8,8 +8,7 @@ export {
 
 export {
   trackContextCreation,
-  createContext,
-  resizeViewport
+  createContext
 } from './create-context';
 
 export {default as polyfillContext} from './polyfill-context';

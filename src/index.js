@@ -42,7 +42,7 @@ export {
   installParameterDefinitions} from './webgl/api/debug-parameters';
 
 export {default as Buffer} from './webgl/buffer';
-export {default as Shader, VertexShader, FragmentShader} from './webgl/shader';
+export {Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
 export {default as Framebuffer} from './webgl/framebuffer';
 export {default as Renderbuffer} from './webgl/renderbuffer';
@@ -146,9 +146,7 @@ export { // Moved to math.gl
   Vector3,
   Vector4,
   Matrix4,
-  Quaternion,
-  Euler,
-  SphericalCoordinates
+  Quaternion
 } from 'math.gl';
 
 // DEPRECATED IN V3.0
