@@ -1,8 +1,8 @@
 <!-- Two templates to create new issue, choose the best fit -->
 <!-- If it is bug -->
 <!-- Anything doesn't work as expected is a bug, including code, doc and test -->
-<!-- For rendering issue in deck.gl example, please provide detailed log by typing 
-     "luma.log.priority=2" and "deck.log.priority=2" in browser console -->
+<!-- For rendering issue in luma.gl example, please provide detailed log by typing 
+     "luma.log.priority=2" in browser console -->
 <!-- For any issue in your example, please provide runnable code package and data -->
 #### Actual Result
 #### Expected Result
