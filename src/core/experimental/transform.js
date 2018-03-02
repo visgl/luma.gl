@@ -35,6 +35,14 @@ export default class Transform {
     Object.seal(this);
   }
 
+  // Delete owned resources.
+  delete() {
+    for (const buffer of this._buffersToDelete) {
+      buffer.delete();
+    }
+    this.model.delete();
+  }
+
   initialize({
     sourceBuffers = null,
     destinationBuffers = null,
@@ -69,23 +77,23 @@ export default class Transform {
   }
 
   // Update some or all buffer bindings.
-  updateBuffers({
+  update({
     sourceBuffers = null,
     destinationBuffers = null
   }) {
     if (!sourceBuffers && !destinationBuffers) {
-      log.warn('Transform : no buffers to updated');
+      log.warn('Transform : no buffers updated');
+      return this;
     }
     const {currentIndex, varyingMap, _buffersSwapable, transformFeedbacks} = this;
-
     for (const bufferName in sourceBuffers) {
       assert(sourceBuffers[bufferName] instanceof Buffer);
-      this.sourceBuffers[currentIndex][bufferName] = sourceBuffers[bufferName];
     }
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
-      this.destinationBuffers[currentIndex][bufferName] = destinationBuffers[bufferName];
     }
+    Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
+    Object.assign(this.destinationBuffers[currentIndex], destinationBuffers);
     transformFeedbacks[currentIndex].bindBuffers(
       this.destinationBuffers[currentIndex], {varyingMap}
     );
@@ -104,21 +112,15 @@ export default class Transform {
         this.destinationBuffers[nextIndex], {varyingMap}
       );
     }
-
-  }
-  // Delete owned resources.
-  delete() {
-    for (const buffer of this._buffersToDelete) {
-      buffer.delete();
-    }
-    this.model.delete();
+    return this;
   }
 
   // Run one transformfeedback loop.
   run({uniforms = {}} = {}) {
-    this.model.setAttributes(this.sourceBuffers[this.currentIndex]);
-    this.model.draw({
-      transformFeedback: this.transformFeedbacks[this.currentIndex],
+    const {model, transformFeedbacks, sourceBuffers, currentIndex} = this;
+    model.setAttributes(sourceBuffers[currentIndex]);
+    model.draw({
+      transformFeedback: transformFeedbacks[currentIndex],
       uniforms,
       parameters: {
         [GL.RASTERIZER_DISCARD]: true
@@ -134,28 +136,26 @@ export default class Transform {
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    assert(varyingName && this.destinationBuffers[this.currentIndex][varyingName]);
-    return this.destinationBuffers[this.currentIndex][varyingName];
+    const {destinationBuffers, currentIndex} = this;
+    assert(varyingName && destinationBuffers[currentIndex][varyingName]);
+    return destinationBuffers[currentIndex][varyingName];
   }
 
   // Private
   // build source and destination buffers
   _bindBuffers({
     sourceBuffers = null,
-    destinationBuffers = null,
-    clear = false
+    destinationBuffers = null
   }) {
     const {_buffersSwapable} = this;
-    this.sourceBuffers[0] = {};
     for (const bufferName in sourceBuffers) {
       assert(sourceBuffers[bufferName] instanceof Buffer);
-      this.sourceBuffers[0][bufferName] = sourceBuffers[bufferName];
     }
-    this.destinationBuffers[0] = {};
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
-      this.destinationBuffers[0][bufferName] = destinationBuffers[bufferName];
     }
+    this.sourceBuffers[0] = Object.assign({}, sourceBuffers);
+    this.destinationBuffers[0] = Object.assign({}, destinationBuffers);
 
     if (_buffersSwapable) {
       this.sourceBuffers[1] = {};
@@ -178,8 +178,6 @@ export default class Transform {
           this.sourceBuffers[0][sourceBufferName];
       }
     }
-
-    return this;
   }
 
   // build Model and TransformFeedback objects

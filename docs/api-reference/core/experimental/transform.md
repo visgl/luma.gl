@@ -7,7 +7,7 @@ The `Transform` class provides easy interface to perform Transform Feedback oper
 | **Method**      | **Description** |
 | ---             | --- |
 | `constructor`   | creates a `Transform` object |
-| `updateBuffers` | Update some or all buffer bindings |
+| `update` | Update some or all buffer bindings |
 | `run`           | Performs one iteration of TransformFeedback |
 | `swapBuffers`   | Swaps source and destination buffers |
 | `getBuffer`     | Returns current destination buffer of given varying |
@@ -95,9 +95,9 @@ bufferWithNewValues = transform.getBuffer('outValue');
 ...
 ```
 
-### Use case : Update one or more buffers using updateBuffers.
+### Use case : Update one or more buffers using update() method..
 
-Once `Transform` object is constructed and used, one or more source or destination buffers can be updated using `updateBuffers`.
+Once `Transform` object is constructed and used, one or more source or destination buffers can be updated using `update`.
 
 ```js
 // transform is set up as above
@@ -105,7 +105,7 @@ Once `Transform` object is constructed and used, one or more source or destinati
 
 // update buffer binding for 'inValue' attribute
 const newSourceBuffer = new Buffer(gl, {data: newSourceData});
-transform.updateBuffers({
+transform.update({
   sourceBuffers: {
     inValue: newSourceBuffer
   }
@@ -135,7 +135,7 @@ Constructs a `Transform` object, creates `Model` and `TransformFeedback` instanc
 
 Deletes all owned resources, `Model`, `TransformFeedback` and any `Buffer` objects that are crated internally.
 
-### updateBuffers
+### update
 
 Updates buffer bindings with provided buffer objects for one or more source or destination buffers.
 

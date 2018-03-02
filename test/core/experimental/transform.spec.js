@@ -130,7 +130,7 @@ test('WebGL#Transform swapBuffers', t => {
   t.end();
 });
 
-test('WebGL#Transform updateBuffers', t => {
+test('WebGL#Transform update', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -160,7 +160,7 @@ test('WebGL#Transform updateBuffers', t => {
   sourceBuffer.delete();
   sourceBuffer = new Buffer(gl2, {data: sourceData});
 
-  transform.updateBuffers({
+  transform.update({
     sourceBuffers: {
       inValue: sourceBuffer
     }
