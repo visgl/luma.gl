@@ -36,7 +36,7 @@ test('WebGL#Transform constructor/delete', t => {
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
   const sourceBuffer = new Buffer(gl2, {data: sourceData});
 
-  const bufferMap = new Transform(gl2, {
+  const transform = new Transform(gl2, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -48,13 +48,13 @@ test('WebGL#Transform constructor/delete', t => {
     elementCount: 5
   });
 
-  t.ok(bufferMap instanceof Transform, 'Transform construction successful');
+  t.ok(transform instanceof Transform, 'Transform construction successful');
 
-  bufferMap.delete();
-  t.ok(bufferMap instanceof Transform, 'Transform delete successful');
+  transform.delete();
+  t.ok(transform instanceof Transform, 'Transform delete successful');
 
-  bufferMap.delete();
-  t.ok(bufferMap instanceof Transform, 'Transform repeated delete successful');
+  transform.delete();
+  t.ok(transform instanceof Transform, 'Transform repeated delete successful');
 
   t.end();
 });
@@ -71,7 +71,7 @@ test('WebGL#Transform run', t => {
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
   const sourceBuffer = new Buffer(gl2, {data: sourceData});
 
-  const bufferMap = new Transform(gl2, {
+  const transform = new Transform(gl2, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -83,12 +83,12 @@ test('WebGL#Transform run', t => {
     elementCount: 5
   });
 
-  bufferMap.run();
+  transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
-  const outData = bufferMap.getBuffer('outValue').getData();
+  const outData = transform.getBuffer('outValue').getData();
 
-  t.deepEqual(expectedData, outData, 'Transform.getData: is successful');
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   t.end();
 });
@@ -105,7 +105,7 @@ test('WebGL#Transform swapBuffers', t => {
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
   const sourceBuffer = new Buffer(gl2, {data: sourceData});
 
-  const bufferMap = new Transform(gl2, {
+  const transform = new Transform(gl2, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -117,15 +117,60 @@ test('WebGL#Transform swapBuffers', t => {
     elementCount: 5
   });
 
-  bufferMap.run();
+  transform.run();
 
-  bufferMap.swapBuffers();
-  bufferMap.run();
+  transform.swapBuffers();
+  transform.run();
 
   const expectedData = sourceData.map(x => x * 4);
-  const outData = bufferMap.getBuffer('outValue').getData();
+  const outData = transform.getBuffer('outValue').getData();
 
-  t.deepEqual(expectedData, outData, 'Transform.getData: is successful');
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+test('WebGL#Transform update', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  let sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  let sourceBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    vs: VS,
+    sourceDestinationMap: {
+      inValue: 'outValue'
+    },
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  sourceData = new Float32Array([1, 2, 3, 0, -5]);
+  sourceBuffer.delete();
+  sourceBuffer = new Buffer(gl2, {data: sourceData});
+
+  transform.update({
+    sourceBuffers: {
+      inValue: sourceBuffer
+    }
+  });
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   t.end();
 });
