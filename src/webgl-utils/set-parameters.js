@@ -2,6 +2,7 @@
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
 import GL from './constants';
+import {isWebGL2} from '../webgl/context';
 import assert from 'assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
@@ -85,7 +86,8 @@ const hint = (gl, value, key) => gl.hint(key, value);
 const pixelStorei = (gl, value, key) => gl.pixelStorei(key, value);
 
 const drawFramebuffer = (gl, value) => {
-  return gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, value);
+  const target = isWebGL2(gl) ? GL.DRAW_FRAMEBUFFER : GL.FRAMEBUFFER;
+  return gl.bindFramebuffer(target, value);
 };
 const readFramebuffer = (gl, value) => {
   return gl.bindFramebuffer(GL.READ_FRAMEBUFFER, value);
