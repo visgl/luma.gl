@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 5.2.0-alpha.3 - Mar 3
+- Update TF demo to use new Transform class (#433)
+- Transform: Add updateBuffers method (#418)
+- Fixed crash caused by wrong utils folder path (#431)
+
 ## 5.2.0-alpha.2 - Feb 27
 - Fix exports (#428)
 - Create pull_request_template.md
