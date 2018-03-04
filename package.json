@@ -37,7 +37,8 @@
     "build-es6": "babel src --out-dir dist-es6 --source-maps && babel packages --out-dir dist-es6/packages --source-maps",
     "build-es6-packages": "",
     "build-es5": "babel src --out-dir dist --plugins=transform-es2015-modules-commonjs --source-maps && babel packages --out-dir dist/packages --plugins=transform-es2015-modules-commonjs --source-maps",
-    "build": "npm run build-clean && npm run build-es6 && npm run build-es5",
+    "build-size": "(echo \"source size\" ; find src/ -name '*.js' | xargs cat | wc -c) && (echo \"dist size\" ; find dist -name '*.js' | xargs cat | wc -c) && (echo \"dist-es6 size\" ; find dist-es6 -name '*.js' | xargs cat | wc -c)",
+    "build": "npm run build-clean && npm run build-es6 && npm run build-es5 && npm run build-size",
     "cover": "NODE_ENV=test nyc --reporter html --reporter cobertura --reporter=lcov npm run test-cover",
     "lint": "eslint src test && npm run lint-yarn",
     "lint-examples": "eslint examples",
@@ -62,6 +63,7 @@
   },
   "dependencies": {
     "math.gl": "^1.0.0",
+    "probe.gl": "^0.2.0",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },
@@ -91,7 +93,6 @@
     "module-alias": "^2.0.0",
     "nyc": "^10.2.0",
     "pre-commit": "^1.2.2",
-    "probe.gl": "0.0.2",
     "raw-loader": "^0.5.1",
     "reify": "^0.4.4",
     "sinon": "^4.1.3",
@@ -101,6 +102,7 @@
     "tape": "^4.6.3",
     "tape-catch": "^1.0.4",
     "tape-promise": "^1.1.0",
+    "webpack": "2.4",
     "webpack-dev-server": "^2.4.4"
   },
   "nyc": {

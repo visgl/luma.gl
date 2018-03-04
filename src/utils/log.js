@@ -1,6 +1,12 @@
-/* eslint-disable no-console */
-/* global console, window, Image */
+import {Log} from 'probe.gl';
+const log = new Log({id: 'luma'});
 
+export default log;
+
+// TODO - delete when confident that probe.gl logging implements all opts
+/* eslint-disable no-console */
+// global console, window, Image */
+/*
 console.debug = console.debug || console.log;
 
 const cache = {};
@@ -156,3 +162,4 @@ export function formatValue(v, opts = {}) {
 }
 
 export default log;
+*/
