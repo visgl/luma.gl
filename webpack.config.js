@@ -7,7 +7,14 @@ const COMMON_CONFIG = {
   },
 
   module: {
-    rules: []
+    rules: [
+      {
+        // Unfortunately, webpack doesn't import library sourcemaps on its own...
+        test: /\.js$/,
+        use: ['source-map-loader'],
+        enforce: 'pre'
+      }
+    ]
   },
 
   plugins: [],
