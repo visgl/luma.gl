@@ -1,6 +1,6 @@
 // TODO - delete when confident that probe.gl logging implements all opts
 /* eslint-disable no-console */
-// global console, window, Image */
+/* global console, window, Image */
 console.debug = console.debug || console.log;
 
 const cache = {};
