@@ -222,22 +222,26 @@ function checkUniformValue(value) {
   return false;
 }
 
-function isUniformDefined(value) {
-  return value !== undefined && value !== null;
-}
-// Helper
-function addUniformToTable({table, header, uniforms, uniformName, undefinedOnly}) {
-  const value = uniforms[uniformName];
-  const isDefined = isUniformDefined(value);
-  if (!undefinedOnly || !isDefined) {
-    table[uniformName] = {
-      // Add program's unprovided uniforms
-      Type: isDefined ? value : 'NOT PROVIDED',
-      [header]: isDefined ? formatValue(value) : 'N/A'
-    };
+/**
+ * Given two values of a uniform, returns `true` if they are equal
+ */
+export function areUniformsEqual(uniform1, uniform2) {
+  if (Array.isArray(uniform1) || ArrayBuffer.isView(uniform1)) {
+    if (!uniform2) {
+      return false;
+    }
+    const len = uniform1.length;
+    if (uniform2.length !== len) {
+      return false;
+    }
+    for (let i = 0; i < len; i++) {
+      if (uniform1[i] !== uniform2[i]) {
+        return false;
+      }
+    }
     return true;
   }
-  return false;
+  return uniform1 === uniform2;
 }
 
 // Prepares a table suitable for console.table
@@ -307,24 +311,21 @@ export function getUniformsTable({
   return {table, count, unusedTable, unusedCount};
 }
 
-/**
- * Given two values of a uniform, returns `true` if they are equal
- */
-export function areUniformsEqual(uniform1, uniform2) {
-  if (Array.isArray(uniform1) || ArrayBuffer.isView(uniform1)) {
-    if (!uniform2) {
-      return false;
-    }
-    const len = uniform1.length;
-    if (uniform2.length !== len) {
-      return false;
-    }
-    for (let i = 0; i < len; i++) {
-      if (uniform1[i] !== uniform2[i]) {
-        return false;
-      }
-    }
+// Helper
+function addUniformToTable({table, header, uniforms, uniformName, undefinedOnly}) {
+  const value = uniforms[uniformName];
+  const isDefined = isUniformDefined(value);
+  if (!undefinedOnly || !isDefined) {
+    table[uniformName] = {
+      // Add program's unprovided uniforms
+      [header]: isDefined ? formatValue(value) : 'N/A',
+      'Uniform Type': isDefined ? value : 'NOT PROVIDED'
+    };
     return true;
   }
-  return uniform1 === uniform2;
+  return false;
+}
+
+function isUniformDefined(value) {
+  return value !== undefined && value !== null;
 }

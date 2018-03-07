@@ -63,7 +63,7 @@
   },
   "dependencies": {
     "math.gl": "^1.0.0",
-    "probe.gl": "^0.2.0",
+    "probe.gl": "^1.0.0-alpha.1",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },

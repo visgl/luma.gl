@@ -631,9 +631,9 @@ count: ${this.stats.profileFrameCount}`
     const isInteger = type.indexOf('nt') !== -1;
 
     return {
-      'Inst/Verts/Comps/Bytes/Type/Loc':
-        `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes} ${type}) loc=${location}`,
-      [header]: formatValue(value, {size, isInteger})
+      [header]: formatValue(value, {size, isInteger}),
+      'Memory Size and Layout':
+        `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes}bytes ${type}) loc=${location}`
     };
   }
 
