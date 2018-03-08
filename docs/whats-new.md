@@ -1,20 +1,38 @@
 # What's New
 
+In addition to these notes, always check the [Upgrade Guide](/#/documentation/upgrade-guide) when considering adopting a new release.
+
+
 ## Version 5.2
+
+**IN DEVELOPMENT**
+
+Date: Target April, 2018
 
 ## Transform class (New)
 
-The new `Transform` class provides easy interface to perform Transform Feedback operations.
+The new [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
-## Node Support
 
-luma.gl will now automatically (dynamically) load `gl` (headless-gl) when installed on your system. It is no longer required to `import "luma.gl/headless"`.
+## Node.js Support Changes
+
+When running under Node.js, luma.gl will now automatically attempt to load `gl` (headless-gl) if installed on your system. It is no longer required to `import "luma.gl/headless"`. This should somewhat simplify running luma.gl code under Node.js. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+
+
+## Debug Mode Changes
+
+To minimize application bundle sizes, luma.gl installs, but no longer automatically imports the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools). To use debug contexts, applications need to explicitly import them using `import "luma.gl/debug"`. See the article on [Debugging](/#/documentation/get-started/debugging) and the Upgrade Guide.
+
 
 ## Version 5.1
 
-## TransformFeedback Enhancements
+A smaller release with improvements to `TransformFeedback` support.
 
-Performing Transform Feedback operations has gotten easier, mainly in the following two ways:
+Date: Feb 15, 2018
+
+## TransformFeedback Class
+
+Two improvements Performing Transform Feedback operations has gotten easier, mainly in the following two ways:
 
 `TransformFeedback` instances can now be supplied directly to `Model.draw` and feedback will begin and end during that draw call. Thus it is no longer necessary to work directly with the `Program` class to use transform feedback.
 
@@ -25,33 +43,30 @@ For more details check [`TransformFeedback`](/#/documentation/api-reference/tran
 
 ## Version 5.0
 
-A smaller release with several new examples and some under the hood changes to improve performance, bug fixes and code cleanup.
+Date: Dec 22, 2017
 
-### Picking shader module
-
-`picking` shader module is moved from deck.gl to luma.gl and is also enhanced to support object highlighting. For more details check `picking/README.md`. // TODO : add link.
-
-### Framebuffer binding
-
-In v4 we added WebGL state management which automatically tracks all WebGL state settings. In this release we extended this feature to support framebuffer bindings.
+A smaller release with several new examples and some under the hood changes to improve performance.
 
 
-### Model
+### Examples
 
-`Model.draw` now supports a `moduleSettings` parameters to update shader module settings.
+Additional examples have been ported to the luma.gl v5 API.
 
-`Model.render` now supports `attributes` and `samplers` arguments to be used for drawing.
-
-
-### Shader Modules
-
-* `fp64` - fp64 module works under more platforms/GPUs/drivers
-* `picking` - new module from deck.gl
+* [Lesson 10](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-10-3d-world)
+* [Lesson 11](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-11-sphere)
+* [Lesson 12](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-12-point-lighting)
+* [Lesson 13](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-13-per-fragment-lighting)
 
 
-### State Management
+### Model Class
 
-WebGL state management now also tracks framebuffer bindings in addition to other parameters.
+* `Model.draw` now supports a `moduleSettings` parameters to update shader module settings.
+* `Model.render` now supports `attributes` and `samplers` arguments to be used for drawing.
+
+
+### Framebuffer Binding Management
+
+In v4 we added WebGL state management which automatically tracks all WebGL state settings. In this release we extended this feature to support framebuffer bindings. When restoring context settings, the previous framebuffer binding will also be restored.
 
 
 ### WebGL2 Improvements
@@ -59,17 +74,27 @@ WebGL state management now also tracks framebuffer bindings in addition to other
 Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer` classes based on use in applications.
 
 
-### Examples
+### Shader Modules
 
-Some additional examples have been ported to the luma.gl v4 API.
+* `fp64` - fp64 module works under more platforms/GPUs/drivers
+* [`picking`](http://uber.github.io/luma.gl/#/documentation/api-reference/shader-module) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
 
-* lesson 10-13
 
->>>>>>> wip
 
 ## Version 4.0
 
 Release date: July 27th, 2017
+
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>WebGL 2</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 A major release that brings full WebGL2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 

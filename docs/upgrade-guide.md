@@ -1,5 +1,24 @@
 # Upgrade Guide
 
+
+## Upgrading from v5.1 to v5.2
+
+### Running under Node.js
+
+[Using with Node](/#/documentation/get-started/using-with-node): `"import luma.gl/headless"` is no longer required for luma.gl to load headless gl and the usage has been deprecated. You can now simply remove any such import statements from your code.
+
+
+### Using Debug Contexts
+
+[Debugging](/#/documentation/get-started/debugging): The Khronos group's `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
+
+To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
+```js
+import "luma.gl/debug";
+const gl = getDebugContext(gl);
+```
+
+
 ## Upgrading from v4 to v5
 
 Please read this documentation before upgrading your luma.gl dependency from v4 to v5. In v5 a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time.
