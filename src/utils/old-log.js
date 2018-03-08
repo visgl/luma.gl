@@ -1,4 +1,4 @@
-// TODO - delete when confident that probe.gl logging implements all opts
+// TODO / DEPRECATED - delete when confident that probe.gl logging implements all opts
 /* eslint-disable no-console */
 /* global console, window, Image */
 console.debug = console.debug || console.log;

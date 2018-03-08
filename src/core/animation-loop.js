@@ -46,7 +46,7 @@ export default class AnimationLoop {
     } = props;
 
     if ('useDevicePixelRatio' in props) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
       useDevicePixels = props.useDevicePixelRatio;
     }
 
@@ -158,13 +158,13 @@ export default class AnimationLoop {
     useDevicePixels = true,
     useDevicePixelRatio = null // deprecated
   }) {
-    log.deprecated('AnimationLoop.setViewParameters', 'AnimationLoop.setProps');
+    log.deprecated('AnimationLoop.setViewParameters', 'AnimationLoop.setProps')();
     this.autoResizeViewport = autoResizeViewport;
     this.autoResizeCanvas = autoResizeCanvas;
     this.autoResizeDrawingBuffer = autoResizeDrawingBuffer;
     this.useDevicePixels = useDevicePixels;
     if (useDevicePixelRatio !== null) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
       this.useDevicePixels = useDevicePixelRatio;
     }
     return this;

@@ -126,7 +126,7 @@ const UINT_ARRAY = {};
 function toTypedArray(value, uniformLength, Type, cache) {
   const length = value.length;
   if (length % uniformLength) {
-    log.warn(`Uniform size should be multiples of ${uniformLength}`, value);
+    log.warn(`Uniform size should be multiples of ${uniformLength}`, value)();
   }
 
   if (value instanceof Type) {

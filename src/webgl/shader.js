@@ -84,8 +84,8 @@ export class Shader extends Resource {
       const infoLog = this.gl.getShaderInfoLog(this.handle);
       const {shaderName, errors, warnings} =
         parseGLSLCompilerError(infoLog, this.source, this.shaderType);
-      log.error(`GLSL compilation errors in ${shaderName}\n${errors}`);
-      log.warn(`GLSL compilation warnings in ${shaderName}\n${warnings}`);
+      log.error(`GLSL compilation errors in ${shaderName}\n${errors}`)();
+      log.warn(`GLSL compilation warnings in ${shaderName}\n${warnings}`)();
       throw new Error(`GLSL compilation errors in ${shaderName}`);
     }
   }

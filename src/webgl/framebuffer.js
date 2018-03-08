@@ -537,7 +537,7 @@ export default class Framebuffer extends Resource {
     }
     message = message || `Framebuffer ${this.id}`;
     const image = this.copyToDataUrl({maxHeight: 100});
-    log.image({priority, message, image}, message);
+    log.image({priority, message, image}, message)();
     return this;
   }
 

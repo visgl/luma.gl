@@ -364,10 +364,6 @@ export default class VertexArray extends Resource {
         // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
         elements = buffer;
       }
-      // else if (!this._warn[bufferName]) {
-      //   log.warn(2, `${this._print(bufferName)} not used`);
-      //   this._warn[bufferName] = true;
-      // }
 
       let location = Number(bufferName);
       // if key is a number, interpret as the location
@@ -398,7 +394,7 @@ export default class VertexArray extends Resource {
         // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
         elements = buffer;
       } else if (!this._warn[bufferName]) {
-        log.warn(2, `${this._print(bufferName)} not used`);
+        log.warn(2, `${this._print(bufferName)} not used`)();
         this._warn[bufferName] = true;
       }
 

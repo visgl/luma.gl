@@ -15,10 +15,8 @@ if (global.luma && global.luma.VERSION !== VERSION) {
 }
 
 if (!global.luma) {
-  /* global console */
-  /* eslint-disable no-console */
   if (isBrowser) {
-    console.log(`luma.gl ${VERSION} - ${STARTUP_MESSAGE}`);
+    log.log(0, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }
 
   global.luma = global.luma || {

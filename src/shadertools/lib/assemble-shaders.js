@@ -61,9 +61,9 @@ function checkDeprecation(moduleName, shaderSource) {
   shaderModule.deprecations.forEach(def => {
     if (def.regex.test(shaderSource)) {
       if (def.deprecated) {
-        log.deprecated(def.old, def.new);
+        log.deprecated(def.old, def.new)();
       } else {
-        log.removed(def.old, def.new);
+        log.removed(def.old, def.new)();
       }
     }
   });

@@ -71,7 +71,7 @@ export default class Program extends Resource {
       if (!filledLocations[location] && !this._warnedLocations[location]) {
         // throw new Error(`Program ${this.id}: ` +
         //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`);
+        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`)();
         this._warnedLocations[location] = true;
       }
     }
@@ -357,9 +357,9 @@ export default class Program extends Resource {
     const {gl} = this;
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
-    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`);
+    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
     gl.linkProgram(this.handle);
-    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`);
+    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
 
     // Avoid checking program linking error in production
     if (gl.debug || log.priority > 0) {
@@ -393,7 +393,7 @@ export default class Program extends Resource {
         } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
           elements = bufferName;
         } else if (!this._warnedLocations[location]) {
-          log.log(2, `${this._print(bufferName)} not used`);
+          log.log(2, `${this._print(bufferName)} not used`)();
           this._warnedLocations[location] = true;
         }
       } else {

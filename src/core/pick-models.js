@@ -24,7 +24,7 @@ export default function pickModels(gl, {
   assert(framebuffer, ILLEGAL_ARG);
   assert(position, ILLEGAL_ARG);
   if (useDevicePixelRatio !== null) {
-    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
     useDevicePixels = useDevicePixelRatio;
   }
 
