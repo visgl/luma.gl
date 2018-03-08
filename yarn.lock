@@ -1603,10 +1603,6 @@ cyclist@~0.2.2:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-0.2.2.tgz#1b33792e11e914a2fd6d6ed6447464444e5fa640"
 
-d3-format@^1.2.0:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/d3-format/-/d3-format-1.2.2.tgz#1a39c479c8a57fe5051b2e67a3bee27061a74e7a"
-
 d3@^3.4.3:
   version "3.5.17"
   resolved "https://registry.yarnpkg.com/d3/-/d3-3.5.17.tgz#bc46748004378b21a360c9fc7cf5231790762fb8"
@@ -4511,12 +4507,11 @@ private@^0.1.6, private@^0.1.7:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
 
-probe.gl@^1.0.0-alpha.1:
-  version "1.0.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-1.0.0-alpha.1.tgz#af8b3da801c101e5c04bbbeea56a29ed8db057c1"
+probe.gl@>=1.0.0-alpha.2:
+  version "1.0.0-alpha.2"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-1.0.0-alpha.2.tgz#33a35fe4bfbb6cfb5325320e5ecb278b5664377a"
   dependencies:
     babel-runtime "^6.11.6"
-    d3-format "^1.2.0"
 
 process-nextick-args@~1.0.6:
   version "1.0.7"
