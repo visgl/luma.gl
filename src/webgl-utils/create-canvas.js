@@ -74,7 +74,7 @@ export function getDrawingBufferSize(canvas) {
 export function calculateDrawingBufferSize(canvas, options) {
   let {useDevicePixels = true} = options;
   if ('useDevicePixelRatio' in options) {
-    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
     useDevicePixels = options.useDevicePixels || options.useDevicePixelRatio;
   }
   const cssToDevicePixels = useDevicePixels ? window.devicePixelRatio || 1 : 1;
@@ -127,7 +127,7 @@ export function resizeDrawingBuffer(canvas, {
 }) {
   // Resize the render buffer of the canvas to match canvas client size
   if (useDevicePixelRatio !== null) {
-    log.deprecated('useDevicePixelRatio', 'useDevicePixels');
+    log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
     useDevicePixels = useDevicePixelRatio;
   }
   // multiplying with dpr (Optionally can be turned off)

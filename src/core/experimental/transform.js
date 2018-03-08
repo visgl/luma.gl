@@ -82,7 +82,7 @@ export default class Transform {
     destinationBuffers = null
   }) {
     if (!sourceBuffers && !destinationBuffers) {
-      log.warn('Transform : no buffers updated');
+      log.warn('Transform : no buffers updated')();
       return this;
     }
     const {currentIndex, varyingMap, _buffersSwapable, transformFeedbacks} = this;

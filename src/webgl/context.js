@@ -81,7 +81,7 @@ export function createGLContext(opts = {}) {
     if (throwOnError) {
       throw new Error(message);
     }
-    // log.log(0, message);
+    // log.log(0, message)();
     return null;
   }
 
@@ -110,7 +110,7 @@ export function createGLContext(opts = {}) {
   if (manageState) {
     trackContextState(gl, {
       copyState: false,
-      log: (...args) => log.log(1, ...args)
+      log: (...args) => log.log(1, ...args)()
     });
   }
 
@@ -118,7 +118,7 @@ export function createGLContext(opts = {}) {
   if (isBrowser && debug) {
     gl = makeDebugContext(gl, {debug});
     // Debug forces log level to at least 1
-    log.priority = Math.max(log.priority, 1);
+    log.priority = Math.max(log.priority, 1)();
     // Log some debug info about the context
   }
   logInfo(gl);
@@ -143,5 +143,5 @@ function logInfo(gl) {
   const info = glGetDebugInfo(gl);
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
   const debug = gl.debug ? ' debug' : '';
-  log.once(0, `${webGL}${debug} context ${driver}`);
+  log.once(0, `${webGL}${debug} context ${driver}`)();
 }

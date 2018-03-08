@@ -1,7 +1,6 @@
 /* eslint-disable dot-notation*/
 import {glGet} from './api';
 import {assertWebGLContext, assertWebGL2Context, isWebGL2} from './context';
-import {log} from '../utils';
 import assert from 'assert';
 
 /**
@@ -330,9 +329,6 @@ export function setBuffer({
  * @param {GLuint} divisor - instances that pass between updates of attribute
  */
 export function setGeneric({gl, location, array}) {
-  log.warn(0, 'VertexAttributes.setGeneric is not well tested');
-  // throw new Error('vertex attribute size must be between 1 and 4');
-
   if (array instanceof Float32Array) {
     gl.vertexAttrib4fv(location, array);
   } else if (array instanceof Int32Array) {
@@ -354,7 +350,6 @@ export function setGeneric({gl, location, array}) {
  */
 /* eslint-disable max-params */
 export function setGenericValues(gl, location, v0, v1, v2, v3) {
-  log.warn(0, 'VertexAttributes.setGenericValues is not well tested');
   switch (arguments.length - 1) {
   case 1: gl.vertexAttrib1f(location, v0); break;
   case 2: gl.vertexAttrib2f(location, v0, v1); break;

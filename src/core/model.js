@@ -290,7 +290,7 @@ export default class Model extends Object3D {
     transformFeedback = null
   } = {}) {
     if (settings) {
-      log.deprecated('settings', 'parameters');
+      log.deprecated('settings', 'parameters')();
       parameters = settings;
     }
 
@@ -330,7 +330,7 @@ export default class Model extends Object3D {
     Object.assign(this.samplers, samplers);
 
     log.group(LOG_DRAW_PRIORITY,
-      `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2});
+      `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2})();
 
     this.setProgramState({vertexArray});
 
@@ -340,7 +340,7 @@ export default class Model extends Object3D {
 
     const drawParams = this.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
-      log.warn('Found instanced attributes on non-instanced model');
+      log.warn('Found instanced attributes on non-instanced model')();
     }
     const {isIndexed, indexType} = drawParams;
     const {isInstanced, instanceCount} = this;
@@ -367,7 +367,7 @@ export default class Model extends Object3D {
 
     this.setNeedsRedraw(false);
 
-    log.groupEnd(LOG_DRAW_PRIORITY, `>>> RENDERING MODEL ${this.id}`);
+    log.groupEnd(LOG_DRAW_PRIORITY, `>>> RENDERING MODEL ${this.id}`)();
 
     return this;
   }
@@ -454,7 +454,8 @@ export default class Model extends Object3D {
     // deprecated picking uniforms
     DEPRECATED_PICKING_UNIFORMS.forEach((uniform) => {
       if (uniform in uniforms) {
-        log.deprecated(uniform, 'use picking shader module and Model class updateModuleSettings()');
+        log.deprecated(uniform,
+          'use picking shader module and Model class updateModuleSettings()')();
       }
     });
   }
@@ -493,7 +494,7 @@ GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
 average ${this.stats.averageFrameTime}ms \
 accumulated: ${this.stats.accumulatedFrameTime}ms \
 count: ${this.stats.profileFrameCount}`
-        );
+        )();
       }
     }
   }
@@ -540,7 +541,7 @@ count: ${this.stats.profileFrameCount}`
           this.attributes
         )
       });
-      log.table(priority, attributeTable);
+      log.table(priority, attributeTable)();
 
       const {table, unusedTable, unusedCount} = getUniformsTable({
         header: `${this.id} uniforms`,
@@ -548,8 +549,8 @@ count: ${this.stats.profileFrameCount}`
         uniforms: Object.assign({}, this.uniforms, uniforms)
       });
 
-      log.table(priority, table);
-      log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable);
+      log.table(priority, table)();
+      log.log(priority, `${unusedCount || 'No'} unused uniforms `, unusedTable)();
     } else {
       // Always log missing uniforms
       const {table, count} = getUniformsTable({
@@ -559,7 +560,7 @@ count: ${this.stats.profileFrameCount}`
         undefinedOnly: true
       });
       if (count > 0) {
-        log.table(priority, table);
+        log.table(priority, table)();
       }
     }
 
