@@ -38,22 +38,30 @@ luma.gl takes care to extract as much information as possible about shader compi
 
 luma.gl runs checks on attributes and buffers when they are being set, catching many trivial errors such as setting uniforms to `undefined` or wrong type (scalar vs array etc).
 
-Buffers will also have their first values checked to ensure that they are not NaN.
+Buffers will also have their first values checked to ensure that they are not NaN. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
 
 
 ## Debug Mode Contexts
 
-The application can create debug contexts from normal contexts.
+> Warning: Debug contexts impose a significant performance penalty (due to waiting for the GPU after each WebGL call to check error codes) and should not be used in production builds.
 
-When the `luma.log.debug` flag is set, debug contexts do the following:
+luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and can use these to "instrument" `WebGLRenderingContext`s.
 
-* Checks the WebGL error status after each WebGL call and throws an exception if an error was reported. Raw WebGL calls tend to either fail silently or log something cryptic in the console without making it clear what call generated the warning, so being able to break on exceptions where they happen in the luma code can be very helpful.
+The `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
 
-* *Parameter checking* - Parameter checks help catch a number of common WebGL coding mistakes, which is important since bad parameters in WebGL often lead to silent failure to render, or to inscrutable error messages in the console, both of which can be hard to debug. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
+To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
+```js
+import "luma.gl/debug";
+const gl = getDebugContext(gl);
+```
+If the debug tools haven't been imported, `getDebugContext` will print a warning and simply return the original context, so the debug code can be left in the applicatin even when debug support is not imported.
 
-## Error Handling
+When the `luma.log.debug` flag is set, a debug contexts does the following:
 
-* *Error handling* - Methods carefully check WebGL return values and throw exceptions when things go wrong, taking care to extract helpful information into the error message. As an example, a failed shader compilation will throw an Error with a message indicating the problem inline in the shader's GLSL source.
+* **Detects WebGL Errors** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, taking care to extract helpful information into the error message. Raw WebGL calls tend to either fail silently or log something cryptic in the console without making it clear what call generated the warning.
+
+* **Checks WebGL Parameters** - WebGL parameter checks help catch a number of common WebGL coding mistakes, which is important since bad parameters in WebGL often lead to hard to debug symptoms such as silent failures to render, or to inscrutable error messages in the console.
 
 
-* Note: Debug contexts impose a significant performance penalty (due to constantly waiting for the GPU to return error codes) and should not be used in production builds.
+
+

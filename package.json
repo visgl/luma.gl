@@ -29,6 +29,7 @@
     "src",
     "dist",
     "dist-es6",
+    "debug.js",
     "headless.js"
   ],
   "scripts": {

@@ -1,5 +1,6 @@
-// Khronos Debug support module
-import WebGLDebug from 'webgl-debug';
+// Depends on Khronos Debug support module being imported via "luma.gl/debug"
+
+import {global} from '../utils/globals';
 import {log} from '../utils';
 import {installParameterDefinitions} from './api/debug-parameters';
 
@@ -45,6 +46,11 @@ export function getDebugContext(gl) {
     return null;
   }
 
+  if (!global.WebGLDebug) {
+    log.warn('debug mode activation failed. import "luma.gl/debug" to enable.');
+    return gl;
+  }
+
   const data = getContextData(gl);
   // If this *is* a debug context, return itself
   if (data.realContext) {
@@ -58,7 +64,7 @@ export function getDebugContext(gl) {
 
   // Create a new debug context
   class WebGLDebugContext {}
-  const debugContext = WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
+  const debugContext = global.WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
   Object.assign(WebGLDebugContext.prototype, debugContext);
 
   // Store the debug context
@@ -73,15 +79,15 @@ export function getDebugContext(gl) {
 // DEBUG TRACING
 
 function getFunctionString(functionName, functionArgs) {
-  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
+  let args = global.WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
   args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
   return `gl.${functionName}(${args})`;
 }
 
 function throwOnError(err, functionName, args) {
   if (!log.nothrow) {
-    const errorMessage = WebGLDebug.glEnumToString(err);
-    const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+    const errorMessage = global.WebGLDebug.glEnumToString(err);
+    const functionArgs = global.WebGLDebug.glFunctionArgsToString(functionName, args);
     throw new Error(`${errorMessage} in gl.${functionName}(${functionArgs})`);
   }
 }
