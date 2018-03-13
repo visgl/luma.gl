@@ -1,3 +1,5 @@
+## 5.1.3 - March 13, 2018
+- Fix framebuffer target for WebGL1 context (#434)
 
 ## 5.1.2 - Feb 26, 2018
 - Fix array uniform setting (#425)
