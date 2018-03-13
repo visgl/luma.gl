@@ -7,6 +7,7 @@ import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import {log, flipRows, scalePixels} from '../utils';
+import {withParameters} from './context-state';
 import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
@@ -308,6 +309,36 @@ export default class Framebuffer extends Resource {
     this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
 
     return pixelArray;
+  }
+
+  // Reades data into provided buffer object asynchronusly
+  // This Function doesn't wait for copy to be complete, which happens on GPU.
+  readPixelsAsync({
+    x = 0,
+    y = 0,
+    width = this.width,
+    height = this.height,
+    format = GL.RGBA,
+    type, // Auto deduced from buffer if not provided
+    buffer = null,
+    byteOffset = 0 // byte offset in buffer object
+  }) {
+    const {gl} = this;
+
+    // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
+    assert(isWebGL2(gl));
+    assert(buffer);
+
+    // deduce type if not available.
+    type = type || buffer.type;
+
+    buffer.bind(GL.PIXEL_PACK_BUFFER);
+    withParameters(gl, {framebuffer: this}, () => {
+      gl.readPixels(x, y, width, height, format, type, byteOffset);
+    });
+    buffer.unbind();
+
+    return buffer;
   }
 
   // Reads pixels as a dataUrl

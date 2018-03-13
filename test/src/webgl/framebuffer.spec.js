@@ -1,9 +1,8 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
-
+import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
-
+const EPSILON = 0.0000001;
 const TEST_CASES = [
   {
     title: 'Default attachments',
@@ -342,5 +341,56 @@ test('WebGL2#Framebuffer blit', t => {
   } else {
     t.comment('WebGL2 not available, skipping tests');
   }
+  t.end();
+});
+
+test('WebGL#Framebuffer readPixelsAsync', t => {
+  const {gl2} = fixture;
+  const {abs} = Math;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+  const dataBytes = 6 * 4; // 4 floats
+
+  const colorTexture = new Texture2D(gl2, {
+    format: GL.RGBA32F,
+    type: GL.FLOAT,
+    dataFormat: GL.RGBA,
+    mipmap: false
+  });
+  const pbo = new Buffer(gl2, {
+    bytes: dataBytes,
+    type: GL.FLOAT,
+    target: GL.PIXEL_PACK_BUFFER
+  });
+  const framebuffer = new Framebuffer(gl2, {
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: colorTexture
+    }
+  });
+  const color = new Float32Array(6);
+  const clearColor = [0, -0.35, 12340.25, 0.005];
+
+  framebuffer.checkStatus();
+  framebuffer.clear({color: clearColor});
+
+  framebuffer.readPixelsAsync({
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+    format: GL.RGBA,
+    buffer: pbo,
+    byteOffset: 2 * 4 // start from 3rd element
+  });
+  pbo.getData({dstData: color});
+
+  t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
+  t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
+  t.ok(abs(clearColor[2] - color[4]) < EPSILON, 'Readpixels returned expected value for Blue channel');
+  t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
+
   t.end();
 });
