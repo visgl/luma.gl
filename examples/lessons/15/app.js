@@ -1,5 +1,5 @@
 import {
-  GL, AnimationLoop, Model, Geometry, loadTextures, loadFiles, Vector3, setParameters, Program
+  GL, AnimationLoop, Sphere,loadTextures, setParameters, Program
 } from 'luma.gl';
 
 import {Matrix4, radians} from 'math.gl';
@@ -37,7 +37,7 @@ varying vec4 vTransformedNormal;
 varying vec4 vPosition;
 
 uniform bool uUseColorMap;
-uniform bool uUserSpecularMap;
+uniform bool uUseSpecularMap;
 uniform bool uUseLighting;
 uniform vec3 uAmbientColor;
 uniform vec3 uPointLightingLocation;
@@ -45,7 +45,7 @@ uniform vec3 uPointLightingSpecularColor;
 uniform vec3 uPointLightingDiffuseColor;
 
 uniform sampler2D uSpecularMapSampler;
-uniform smapler2D uColorMapSampler;
+uniform sampler2D uColorMapSampler;
 
 void main(void) {
     vec3 lightWeighting;
@@ -60,9 +60,9 @@ void main(void) {
           shininess = texture2D(uSpecularMapSampler, vec2(vTextureCoord.s, vTextureCoord.t)).r * 255.0;
         }
         if (shininess < 255.0) {
-            vec3 eyeDirection = normalize(-vPosition.xyz);
-            vec3 reflectionDirection = reflect(-lightDirection, normal);
-            specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+           vec3 eyeDirection = normalize(-vPosition.xyz);
+           vec3 reflectionDirection = reflect(-lightDirection, normal);
+           specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), shininess);
         }
         float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
         lightWeighting = uAmbientColor
@@ -70,32 +70,33 @@ void main(void) {
             + uPointLightingDiffuseColor * diffuseLightWeighting;
     }
     vec4 fragmentColor;
-    if (uUseTextures) {
-        fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    if (uUseColorMap) {
+      fragmentColor = texture2D(uColorMapSampler, vec2(vTextureCoord.s, vTextureCoord.t));
     } else {
-        fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+      fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
     }
     gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
 `;
 
-function getTeapotUniforms() {
+function getSphereUniforms() {
   return {
-    uMaterialShininess: 20.0,
+    uUseColorMap: true,
+    uUseSpecularMap: false,
     uShowSpecularHighlights: true,
-    uUseLighting: true,
-    uUseTextures: true
+    uUseLighting: true
   };
 }
 
 function getLightUniforms() {
   return {
-    uAmbientColor: [0.2, 0.2, 0.2],
+    uAmbientColor: [0.4, 0.4, 0.4],
     uPointLightingLocation: [-10.0, 4.0, -20.0],
-    uPointLightingSpecularColor: [0.8, 0.8, 0.8],
+    uPointLightingSpecularColor: [5.0, 5.0, 5.0],
     uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
   };
 }
+
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
 
@@ -106,60 +107,45 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return loadFiles({
-      urls: ['Teapot.json']
-    }).then(files => {
-      return loadTextures(gl, {
-        urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
-        parameters: [{
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-          [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-          [gl.TEXTURE_WRAP_T]: gl.REPEAT,
-          mipmap: true
-        }, {
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-          [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-          [gl.TEXTURE_WRAP_T]: gl.REPEAT,
-          mipmap: true
-        }]
-      })
-      .then(textures => {
-        const galvanizedTexture = textures[0];
-        const earthTexture = textures[1];
-        const teapotJson = JSON.parse(files[0]);
+    return loadTextures(gl, {
+      urls: ['earth-specular.gif', 'earth.jpg'],
+      parameters: [{
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
+        mipmap: true
+      }, {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
+        mipmap: true
+      }]
+    })
+    .then(textures => {
+      const specualerTexture = textures[0];
+      const colorTexture = textures[1];
 
-        const fragmentLightingProgram = new Program(gl, {
-          fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-          vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
-        });
-
-        const teapot = new Model(gl, {
-          id: 'teapot-model',
-          program: fragmentLightingProgram,
-          geometry: new Geometry({
-            id: 'teapot-geometry',
-            attributes: {
-              positions: new Float32Array(teapotJson.positions),
-              normals: new Float32Array(teapotJson.normals),
-              texCoords: new Float32Array(teapotJson.texCoords),
-              indices: new Uint16Array(teapotJson.indices)
-            },
-            drawMode: GL.TRIANGLES
-          }),
-          uniforms: Object.assign(
-            {uSampler: galvanizedTexture},
-            getTeapotUniforms(),
-            getLightUniforms()
-          )
-        });
-        return {teapot, earthTexture, galvanizedTexture, fragmentLightingProgram}
+      const earth = new Sphere(gl, {
+        fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+        vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
+        uniforms: Object.assign({
+            uColorMapSampler: colorTexture,
+            uSpecularMapSampler: specualerTexture
+          },
+          getSphereUniforms(),
+          getLightUniforms()
+      ),
+        nlat: 30,
+        nlong: 30,
+        radius: 13,
       });
+      return {earth, specualerTexture, colorTexture}
     });
   },
   onRender: ({
-     gl, tick, aspect, teapot, earthTexture, galvanizedTexture
+    gl, tick, aspect, earth
   }) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -169,26 +155,23 @@ const animationLoop = new AnimationLoop({
       .transformVector3([0, 0, 5]);
 
     let uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
+      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     const {
-      specular,
+      colorMap,
+      specularMap,
       lighting,
-      texture,
-      shininess,
       point,
       ambient
     } = getControls();
     const useLighting = lighting.checked;
-    const useSpecular = specular.checked;
-    const useTextures = (texture.value !== 'none');
-    const materialShininess= shininess.value;
+    const useSpecularMap = specularMap.checked;
+    const useColorMap = colorMap.checked;
 
-    teapot.setUniforms({
-      uUseLighting: useLighting,
-      uUseTextures: useTextures,
-      uShowSpecularHighlights: useSpecular,
-      uMaterialShininess: materialShininess
+    earth.setUniforms({
+      uUseSpecularMap: useSpecularMap,
+      uUseColorMap: useColorMap,
+      uUseLighting: useLighting
     });
 
     if (useLighting) {
@@ -197,7 +180,7 @@ const animationLoop = new AnimationLoop({
       const pointLightSpecularColor = parseRGB(point.specular);
       const pointLightingDiffuseColor = parseRGB(point.diffuse);
 
-      teapot.setUniforms({
+      earth.setUniforms({
         uAmbientColor: ambientColor,
         uPointLightingLocation: pointLightingLocation,
         uPointLightingSpecularColor: pointLightSpecularColor,
@@ -205,16 +188,9 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    if (useTextures) {
-      const selectedTexture = texture.value;
-      teapot.setUniforms({
-        uSampler: selectedTexture === 'earth' ? earthTexture : galvanizedTexture
-      });
-    }
-
     const phi = tick * 0.01;
-    teapot.render({
-      uMMatrix: new Matrix4().translate([0, -35, -68]).rotateY(phi),
+    earth.render({
+      uMMatrix: new Matrix4().translate([0, -20, -40]).rotateAxis(radians(23.4), [1, 0, -1]).rotateY(phi),
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
@@ -252,10 +228,9 @@ function getControls() {
   };
 
   // Get lighting form elements
-  const specular = $id('specular');
+  const specularMap = $id('specular-map');
+  const colorMap = $id('color-map');
   const lighting = $id('lighting');
-  const texture = $id('texture');
-  const shininess =  $id('shininess');
 
   const point = {
     position: {
@@ -282,10 +257,9 @@ function getControls() {
   };
 
   return {
-    specular,
+    colorMap,
+    specularMap,
     lighting,
-    texture,
-    shininess,
     point,
     ambient
   }
