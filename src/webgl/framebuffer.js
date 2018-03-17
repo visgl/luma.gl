@@ -311,8 +311,8 @@ export default class Framebuffer extends Resource {
     return pixelArray;
   }
 
-  // Reades data into provided buffer object asynchronusly
-  // This Function doesn't wait for copy to be complete, which happens on GPU.
+  // Reads data into provided buffer object asynchronusly
+  // This function doesn't wait for copy to be complete, it program it to happen on GPU.
   readPixelsAsync({
     x = 0,
     y = 0,

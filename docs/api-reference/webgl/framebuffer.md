@@ -249,14 +249,16 @@ Clears the contents (pixels) of the framebuffer attachments.
 
 ### readPixels
 
-App can provide pixelArray or have it auto allocated by this method
-    x = 0,
-    y = 0,
-    width,
-    height,
-    format = GL.RGBA,
-    type,
-    pixelArray = null
+Reads data into an array object.
+
+Parameters
+* `x` - (*number*, default: 0) X offset of the area to be copied,
+* `y` - (*number*, default: 0) Y offset of the area to be copied,
+* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
+* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
+* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
+* `type` - (*GLenum*, default: type of buffer) The type of the data.
+* `pixelArray` - (*Array*, default: null) Array object, into which data to be copied.
 
 * Readpixels can be slow as it requires a roundtrip to the GPU
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
@@ -266,6 +268,23 @@ This function makes calls to the following WebGL APIs:
 
 [gl.readPixels](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
+### readPixelsAsync (WebGL2)
+
+Reads data into provided `Buffer` object. Function returns right away without waiting for actual copy to happen. Actual copy of data happens on GPU.
+
+Parameters
+* `x` - (*number*, default: 0) X offset of the area to be copied,
+* `y` - (*number*, default: 0) Y offset of the area to be copied,
+* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
+* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
+* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
+* `type` - (*GLenum*, default: type of buffer) The type of the data.
+* `buffer` - (*Buffer*) Buffer object, into which data to be copied.
+* `byteOffset` - (*number*, default: 0) Byte offset from which data should be copied into buffer.
+
+This function makes calls to the following WebGL APIs:
+
+[gl.readPixels](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 ### blit (WebGL2)
 

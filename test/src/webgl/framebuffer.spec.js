@@ -371,7 +371,7 @@ test('WebGL#Framebuffer readPixelsAsync', t => {
     }
   });
   const color = new Float32Array(6);
-  const clearColor = [0, -0.35, 12340.25, 0.005];
+  const clearColor = [0.25, -0.35, 12340.25, 0.005];
 
   framebuffer.checkStatus();
   framebuffer.clear({color: clearColor});
