@@ -270,11 +270,23 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
+  // Reads pixel data either into an Array object (synchronus) or
+  // into a Buffer object (asynchronus) depending on options and browser capability.
+  readPixels(opts) {
+    if (!isWebGL2(this.gl) || !opts.buffer) {
+      if (opts.buffer) {
+        log.warn('readPixels: No WebGL2 to support, falling back to synchronous version');
+      }
+      return this._readPixelsSync(opts);
+    }
+    return this._readPixelsAsync(opts);
+  }
+
   // NOTE: Slow requires roundtrip to GPU
   // App can provide pixelArray or have it auto allocated by this method
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
-  readPixels({
+  _readPixelsSync({
     x = 0,
     y = 0,
     width = this.width,
@@ -313,7 +325,7 @@ export default class Framebuffer extends Resource {
 
   // Reads data into provided buffer object asynchronusly
   // This function doesn't wait for copy to be complete, it program it to happen on GPU.
-  readPixelsAsync({
+  _readPixelsAsync({
     x = 0,
     y = 0,
     width = this.width,
@@ -332,11 +344,11 @@ export default class Framebuffer extends Resource {
     // deduce type if not available.
     type = type || buffer.type;
 
-    buffer.bind(GL.PIXEL_PACK_BUFFER);
+    buffer.bind({target: GL.PIXEL_PACK_BUFFER});
     withParameters(gl, {framebuffer: this}, () => {
       gl.readPixels(x, y, width, height, format, type, byteOffset);
     });
-    buffer.unbind();
+    buffer.unbind({target: GL.PIXEL_PACK_BUFFER});
 
     return buffer;
   }

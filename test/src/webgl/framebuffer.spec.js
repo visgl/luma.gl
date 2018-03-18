@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer, isWebGL2} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 const EPSILON = 0.0000001;
 const TEST_CASES = [
@@ -238,6 +238,90 @@ test('WebGL2#Framebuffer readPixels', t => {
   t.end();
 });
 
+function getReadPixelsParams(gl) {
+  const dataBytes = 6 * 4; // 4 floats
+  const colorTexture = new Texture2D(gl, {
+    format: isWebGL2(gl) ? GL.RGBA32F : GL.RGBA,
+    type: isWebGL2(gl) ? GL.FLOAT : GL.UNSIGNED_BYTE,
+    dataFormat: GL.RGBA,
+    mipmap: false
+  });
+  const pbo = new Buffer(gl, {
+    bytes: dataBytes,
+    type: GL.FLOAT
+  });
+  const framebuffer = new Framebuffer(gl, {
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: colorTexture
+    }
+  });
+
+  framebuffer.checkStatus();
+  return {pbo, framebuffer};
+}
+
+test('WebGL#Framebuffer readPixels Sync vs Async', t => {
+  const {gl, gl2} = fixture;
+
+  const glParams = getReadPixelsParams(gl);
+  let returnValue = glParams.framebuffer.readPixels({
+    width: 1,
+    height: 1,
+    buffer: glParams.pbo
+  });
+  t.ok((returnValue instanceof Uint8Array), 'WebGL1 should trigger synchronus read');
+
+  if (gl2) {
+    const gl2Params = getReadPixelsParams(gl2);
+    returnValue = gl2Params.framebuffer.readPixels({
+      width: 1,
+      height: 1,
+      type: GL.FLOAT
+    });
+    t.ok((returnValue instanceof Float32Array), 'No buffer should trigger synchronus read');
+
+    returnValue = gl2Params.framebuffer.readPixels({
+      width: 1,
+      height: 1,
+      buffer: gl2Params.pbo
+    });
+    t.ok((returnValue instanceof Buffer), 'WebGL2 and buffer should trigger asynchronus read');
+  }
+
+  t.end();
+});
+
+test('WebGL#Framebuffer readPixels Async', t => {
+  const {gl2} = fixture;
+  const {abs} = Math;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+  const {pbo, framebuffer} = getReadPixelsParams(gl2);
+
+  const color = new Float32Array(6);
+  const clearColor = [0.25, -0.35, 12340.25, 0.005];
+
+  framebuffer.clear({color: clearColor});
+
+  framebuffer.readPixels({
+    width: 1,
+    height: 1,
+    buffer: pbo,
+    byteOffset: 2 * 4 // start from 3rd element
+  });
+  pbo.getData({dstData: color});
+
+  t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
+  t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
+  t.ok(abs(clearColor[2] - color[4]) < EPSILON, 'Readpixels returned expected value for Blue channel');
+  t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
+
+  t.end();
+});
+
 /*
 
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
@@ -341,56 +425,5 @@ test('WebGL2#Framebuffer blit', t => {
   } else {
     t.comment('WebGL2 not available, skipping tests');
   }
-  t.end();
-});
-
-test('WebGL#Framebuffer readPixelsAsync', t => {
-  const {gl2} = fixture;
-  const {abs} = Math;
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-  const dataBytes = 6 * 4; // 4 floats
-
-  const colorTexture = new Texture2D(gl2, {
-    format: GL.RGBA32F,
-    type: GL.FLOAT,
-    dataFormat: GL.RGBA,
-    mipmap: false
-  });
-  const pbo = new Buffer(gl2, {
-    bytes: dataBytes,
-    type: GL.FLOAT,
-    target: GL.PIXEL_PACK_BUFFER
-  });
-  const framebuffer = new Framebuffer(gl2, {
-    attachments: {
-      [GL.COLOR_ATTACHMENT0]: colorTexture
-    }
-  });
-  const color = new Float32Array(6);
-  const clearColor = [0.25, -0.35, 12340.25, 0.005];
-
-  framebuffer.checkStatus();
-  framebuffer.clear({color: clearColor});
-
-  framebuffer.readPixelsAsync({
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    format: GL.RGBA,
-    buffer: pbo,
-    byteOffset: 2 * 4 // start from 3rd element
-  });
-  pbo.getData({dstData: color});
-
-  t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
-  t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
-  t.ok(abs(clearColor[2] - color[4]) < EPSILON, 'Readpixels returned expected value for Blue channel');
-  t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
-
   t.end();
 });
