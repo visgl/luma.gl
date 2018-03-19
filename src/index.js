@@ -35,7 +35,8 @@ export {
   FEATURES,
   hasFeature,
   hasFeatures,
-  getFeatures} from './webgl/context-features';
+  getFeatures,
+  canCompileGLGSExtension} from './webgl/context-features';
 export {
   makeDebugContext} from './webgl/context-debug';
 export {

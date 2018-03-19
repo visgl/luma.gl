@@ -50,6 +50,25 @@ Object.keys(WEBGL_FEATURES).forEach(key => {
 });
 export {FEATURES};
 
+// Enables feature detection in IE11 due to a bug where gl.getExtension may return true
+// but fail to compile when the extension is enabled in the shader. Specifically,
+// the OES_standard_derivatives extension fails to compile in IE11 even though its included
+// in the list of supported extensions.
+export function canCompileGLGSExtension(gl, cap) {
+  const feature = WEBGL_FEATURES[cap];
+  assert(feature, cap);
+
+  const extensionName = feature[0];
+  const source = `#extension ${extensionName} : enable\nvoid main(void) {}`;
+
+  const shader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  const canCompile = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+  gl.deleteShader(shader);
+  return canCompile;
+}
+
 // TODO - cache the value
 function getFeature(gl, cap) {
   const feature = WEBGL_FEATURES[cap];

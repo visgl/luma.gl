@@ -1,5 +1,6 @@
-import {hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
+import {canCompileGLGSExtension, hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
+import sinon from 'sinon';
 
 import {fixture} from 'luma.gl/test/setup';
 
@@ -74,5 +75,33 @@ test('webgl#caps#hasFeatures(WebGL2)', t => {
     }
   }
 
+  t.end();
+});
+
+test('webgl#caps#canCompileGLGSExtension', t => {
+  const {gl} = fixture;
+
+  t.ok(typeof canCompileGLGSExtension === 'function', 'canCompileGLGSExtension defined');
+  const getShaderParamerStub = sinon.stub(gl, 'getShaderParameter');
+  getShaderParamerStub.returns(true);
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    true,
+    'returns true when feature can be compiled'
+  );
+
+  getShaderParamerStub.returns(false);
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    false,
+    'returns false when feature can not be compiled'
+  );
+
+  t.throws(
+    () => canCompileGLGSExtension(gl, 'feature.dne'),
+    'should throw exception if feature does not exist'
+  );
+
+  getShaderParamerStub.restore();
   t.end();
 });
