@@ -1,5 +1,5 @@
 import {
-  GL, AnimationLoop, Model, Geometry, loadTextures, loadFiles, Vector3, setParameters, Program
+  GL, AnimationLoop, Model, Geometry, loadTextures, loadFiles, setParameters
 } from 'luma.gl';
 
 import {Matrix4, radians} from 'math.gl';
@@ -74,23 +74,20 @@ void main(void) {
 }
 `;
 
-function getTeapotUniforms() {
-  return {
-    uMaterialShininess: 20.0,
-    uShowSpecularHighlights: true,
-    uUseLighting: true,
-    uUseTextures: true
-  };
-}
+const TEAPOT_UNIFORMS = {
+  uMaterialShininess: 20.0,
+  uShowSpecularHighlights: true,
+  uUseLighting: true,
+  uUseTextures: true
+};
 
-function getLightUniforms() {
-  return {
-    uAmbientColor: [0.2, 0.2, 0.2],
-    uPointLightingLocation: [-10.0, 4.0, -20.0],
-    uPointLightingSpecularColor: [0.8, 0.8, 0.8],
-    uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
-  };
-}
+const LIGHT_UNIFORMS = {
+  uAmbientColor: [0.2, 0.2, 0.2],
+  uPointLightingLocation: [-10.0, 4.0, -20.0],
+  uPointLightingSpecularColor: [0.8, 0.8, 0.8],
+  uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
+};
+
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
 
@@ -101,10 +98,9 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return loadFiles({
-      urls: ['Teapot.json']
-    }).then(files => {
-      return loadTextures(gl, {
+    return Promise.all([
+      loadFiles({urls: ['Teapot.json']}),
+      loadTextures(gl, {
         urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
         parameters: [{
           [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
@@ -120,37 +116,32 @@ const animationLoop = new AnimationLoop({
           mipmap: true
         }]
       })
-      .then(textures => {
-        const galvanizedTexture = textures[0];
-        const earthTexture = textures[1];
-        const teapotJson = JSON.parse(files[0]);
+    ]).then(([files, textures]) => {
+      const galvanizedTexture = textures[0];
+      const earthTexture = textures[1];
+      const teapotJson = JSON.parse(files[0]);
 
-        const fragmentLightingProgram = new Program(gl, {
-          fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-          vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
-        });
-
-        const teapot = new Model(gl, {
-          id: 'teapot-model',
-          program: fragmentLightingProgram,
-          geometry: new Geometry({
-            id: 'teapot-geometry',
-            attributes: {
-              positions: new Float32Array(teapotJson.positions),
-              normals: new Float32Array(teapotJson.normals),
-              texCoords: new Float32Array(teapotJson.texCoords),
-              indices: new Uint16Array(teapotJson.indices)
-            },
-            drawMode: GL.TRIANGLES
-          }),
-          uniforms: Object.assign(
-            {uSampler: galvanizedTexture},
-            getTeapotUniforms(),
-            getLightUniforms()
-          )
-        });
-        return {teapot, earthTexture, galvanizedTexture, fragmentLightingProgram}
+      const teapot = new Model(gl, {
+        id: 'teapot-model',
+        fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+        vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
+        geometry: new Geometry({
+          id: 'teapot-geometry',
+          attributes: {
+            positions: new Float32Array(teapotJson.positions),
+            normals: new Float32Array(teapotJson.normals),
+            texCoords: new Float32Array(teapotJson.texCoords),
+            indices: new Uint16Array(teapotJson.indices)
+          },
+          drawMode: GL.TRIANGLES
+        }),
+        uniforms: Object.assign(
+          {uSampler: galvanizedTexture},
+          TEAPOT_UNIFORMS,
+          LIGHT_UNIFORMS
+        )
       });
+      return {teapot, earthTexture, galvanizedTexture}
     });
   },
   onRender: ({
@@ -164,7 +155,7 @@ const animationLoop = new AnimationLoop({
       .transformVector3([0, 0, 5]);
 
     let uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
+      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     const {
       specular,
@@ -177,7 +168,7 @@ const animationLoop = new AnimationLoop({
     const useLighting = lighting.checked;
     const useSpecular = specular.checked;
     const useTextures = (texture.value !== 'none');
-    const materialShininess= shininess.value;
+    const materialShininess = shininess.value;
 
     teapot.setUniforms({
       uUseLighting: useLighting,
@@ -250,7 +241,7 @@ function getControls() {
   const specular = $id('specular');
   const lighting = $id('lighting');
   const texture = $id('texture');
-  const shininess =  $id('shininess');
+  const shininess = $id('shininess');
 
   const point = {
     position: {
