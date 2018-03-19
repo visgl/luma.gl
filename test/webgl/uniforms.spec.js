@@ -64,7 +64,10 @@ uniform sampler2D s2d;
 
 void main(void) {
   vec4 v = vec4(f) + vec4(v2, 0., 0.) + vec4(v3, 0.) + v4;
-  ivec4 iv = ivec4(i) + ivec4(iv2, 0., 0.) + ivec4(iv3, 0.) + iv4;
+  ivec4 iv = ivec4(i, 0, 0, 0);
+  iv = iv + ivec4(iv2, 0, 0);
+  iv = iv + ivec4(iv3, 0);
+  iv = iv + iv4;
 
   bvec4 bv = bv4;
   bv = bvec4(bv3, 0.);
@@ -74,6 +77,7 @@ void main(void) {
   vec2 transform_v2 = m2 * v2;
   vec3 transform_v3 = m3 * v3;
   vec4 transform_v4 = m4 * v4;
+  transform_v4 = vec4(transform_v2, 0., 0.) + vec4(transform_v3, 0.);
 
   for (int index = 0; index < 4; index++) {
     transform_v4 += v4Array[index];
