@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {GL, Program, Buffer} from 'luma.gl';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 const vs = `
 attribute vec3 positions;

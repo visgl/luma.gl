@@ -1,4 +1,4 @@
-import formatGLSLError from '../../src/webgl-utils/format-glsl-error';
+import formatGLSLError from 'luma.gl/webgl-utils/format-glsl-error';
 import test from 'tape-catch';
 
 const SHADER_SOURCE = `

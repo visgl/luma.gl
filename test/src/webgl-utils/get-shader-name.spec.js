@@ -1,4 +1,4 @@
-import getShaderName from '../../src/webgl-utils/get-shader-name';
+import getShaderName from 'luma.gl/webgl-utils/get-shader-name';
 import test from 'tape-catch';
 
 const SHADER_1 = `\

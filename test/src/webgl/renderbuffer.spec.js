@@ -1,9 +1,9 @@
 import test from 'tape-catch';
 import {GL, Renderbuffer, glKey} from 'luma.gl';
 
-import {RENDERBUFFER_FORMATS} from '../../src/webgl/renderbuffer';
+import {RENDERBUFFER_FORMATS} from 'luma.gl/webgl/renderbuffer';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 // const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
 

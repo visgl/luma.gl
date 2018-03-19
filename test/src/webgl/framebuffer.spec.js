@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 const TEST_CASES = [
   {
@@ -241,7 +241,7 @@ test('WebGL2#Framebuffer readPixels', t => {
 
 /*
 
-import {TEXTURE_FORMATS} from '../../src/webgl/texture';
+import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 
 const RGB_TO = {
   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],

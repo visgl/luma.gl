@@ -1,7 +1,7 @@
 import {hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
 const WEBGL_FEATURES = {

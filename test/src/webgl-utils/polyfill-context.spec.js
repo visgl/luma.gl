@@ -1,8 +1,8 @@
-import polyfillContext from '../../src/webgl-utils/polyfill-context';
-// import {polyfillContext, TEST_EXPORTS} from '../../src/webgl///';
+import polyfillContext from 'luma.gl/webgl-utils/polyfill-context';
+// import {polyfillContext, TEST_EXPORTS} from 'luma.gl/webgl';
 import test from 'tape-catch';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#polyfillContext', t => {
   const {gl, gl2} = fixture;

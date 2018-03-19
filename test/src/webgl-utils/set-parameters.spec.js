@@ -1,14 +1,14 @@
 import test from 'tape-catch';
-import {createTestContext} from '../setup';
+import {createTestContext} from 'luma.gl/test/setup';
 
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
-import {GL_PARAMETER_DEFAULTS} from '../../src/webgl-utils/set-parameters';
+import {GL_PARAMETER_DEFAULTS} from 'luma.gl/webgl-utils/set-parameters';
 
-import GL from '../../src/webgl-utils/constants';
-import {getKey} from '../../src/webgl-utils/constants-to-keys';
+import GL from 'luma.gl/webgl-utils/constants';
+import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
 
 import {setParameters, getParameter, getParameters, resetParameters}
-  from '../../src/webgl-utils/set-parameters';
+  from 'luma.gl/webgl-utils/set-parameters';
 import {Framebuffer} from 'luma.gl';
 
 // Settings test, don't reuse a context

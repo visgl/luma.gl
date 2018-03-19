@@ -4,18 +4,18 @@ import test from 'tape-catch';
 
 import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters, Framebuffer} from 'luma.gl';
-import {getKey} from '../../src/webgl-utils/constants-to-keys';
+import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
 
-import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/set-parameters';
-import {ENUM_STYLE_SETTINGS_SET1} from './../webgl-utils/data/sample-enum-settings';
-import {FUNCTION_STYLE_SETTINGS_SET1} from './sample-function-settings';
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from 'luma.gl/webgl-utils/set-parameters';
+import {ENUM_STYLE_SETTINGS_SET1} from '../webgl-utils/data/sample-enum-settings';
+import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
   return JSON.stringify(v);
 }
 
-import {createTestContext} from '../setup';
+import {createTestContext} from 'luma.gl/test/setup';
 const fixture = {
   gl: createTestContext(),
   gl2: createTestContext({webgl2: true, webgl1: false})

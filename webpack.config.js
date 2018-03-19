@@ -71,6 +71,7 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
 
   resolve: {
     alias: {
+      'luma.gl/test': resolve('./test'),
       'luma.gl': resolve('./src')
     }
   }
