@@ -5,6 +5,7 @@
 
 /* eslint-disable no-inline-comments, max-len */
 import {isWebGL2} from './context';
+import {isOldIE} from '../utils';
 import assert from 'assert';
 
 // Defines luma.gl "feature" names and semantics
@@ -58,8 +59,12 @@ export function canCompileGLGSExtension(gl, cap) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
+  if (!isOldIE()) {
+    return true;
+  }
+
   const extensionName = feature[0];
-  const source = `#extension ${extensionName} : enable\nvoid main(void) {}`;
+  const source = `#extension GL_${extensionName} : enable\nvoid main(void) {}`;
 
   const shader = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(shader, source);
