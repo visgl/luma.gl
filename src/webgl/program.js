@@ -6,12 +6,12 @@ import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
-import {getTransformFeedbackMode} from './transform-feedback';
+import {getPrimitiveDrawMode} from './helpers/attribute-utils';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import Buffer from './buffer';
 import {log, uid, isObjectEmpty} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const LOG_PROGRAM_PERF_PRIORITY = 3;
 
@@ -23,8 +23,8 @@ const LOG_PROGRAM_PERF_PRIORITY = 3;
 // TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN: 0x8C88,
 // MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS: 0x8C8A,
 // MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS: 0x8C8B,
-// INTERLEAVED_ATTRIBS: 0x8C8C,
-// SEPARATE_ATTRIBS : 0x8C8D,
+const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
+const GL_SEPARATE_ATTRIBS = 0x8C8D;
 
 export default class Program extends Resource {
 
@@ -37,7 +37,7 @@ export default class Program extends Resource {
     this._setId(opts.id);
   }
 
-  initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL.SEPARATE_ATTRIBS} = {}) {
+  initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = {}) {
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
     this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
@@ -114,7 +114,7 @@ export default class Program extends Resource {
       this.gl.useProgram(this.handle);
 
       if (transformFeedback) {
-        const primitiveMode = getTransformFeedbackMode({drawMode});
+        const primitiveMode = getPrimitiveDrawMode({drawMode});
         transformFeedback.begin(primitiveMode);
       }
 
@@ -513,8 +513,8 @@ export function getUniformDescriptors(gl, program) {
 export function getVaryingMap(varyings, bufferMode) {
   const varyingMap = {};
   let index = 0;
-  assert(bufferMode === GL.SEPARATE_ATTRIBS || bufferMode === GL.INTERLEAVED_ATTRIBS);
-  const indexIncrement = bufferMode === GL.SEPARATE_ATTRIBS ? 1 : 0;
+  assert(bufferMode === GL_SEPARATE_ATTRIBS || bufferMode === GL_INTERLEAVED_ATTRIBS);
+  const indexIncrement = bufferMode === GL_SEPARATE_ATTRIBS ? 1 : 0;
   for (const varying of varyings) {
     varyingMap[varying] = index;
     index += indexIncrement;

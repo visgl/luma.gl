@@ -1,7 +1,6 @@
-import GL from './gl-constants';
 import Resource from './resource';
 import {isWebGL2, assertWebGL2Context} from './context';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E;
 const GL_TRANSFORM_FEEDBACK = 0x8E22;
@@ -134,51 +133,5 @@ export default class TranformFeedback extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTransformFeedback(this.handle);
-  }
-}
-
-// Counts the number of complete "primitives" given a number of vertices and a drawMode
-export function getPrimitiveCount({drawMode, vertexCount, countVertices}) {
-  switch (drawMode) {
-  case GL.POINTS: return vertexCount;
-  case GL.LINES: return vertexCount / 2;
-  case GL.LINE_STRIP: return vertexCount - 1;
-  case GL.LINE_LOOP: return vertexCount;
-  case GL.TRIANGLES: return vertexCount / 3;
-  case GL.TRIANGLE_STRIP: return vertexCount - 2;
-  case GL.TRIANGLE_FAN: return vertexCount - 2;
-  default: assert(false); return 0;
-  }
-}
-
-// Counts the number of vertices after splitting the vertex stream into separate "primitives"
-export function getVertexCount({drawMode, vertexCount}) {
-  const primitiveCount = getPrimitiveCount({drawMode, vertexCount});
-  switch (drawMode) {
-  case GL.POINTS:
-    return primitiveCount;
-  case GL.LINES:
-  case GL.LINE_STRIP:
-  case GL.LINE_LOOP:
-    return vertexCount * 2;
-  case GL.TRIANGLES:
-  case GL.TRIANGLE_STRIP:
-  case GL.TRIANGLE_FAN:
-    return vertexCount * 3;
-  default: assert(false); return 0;
-  }
-}
-
-// Counts the number of complete primitives given a number of vertices and a drawMode
-export function getTransformFeedbackMode({drawMode}) {
-  switch (drawMode) {
-  case GL.POINTS: return GL.POINTS;
-  case GL.LINES: return GL.LINES;
-  case GL.LINE_STRIP: return GL.LINES;
-  case GL.LINE_LOOP: return GL.LINES;
-  case GL.TRIANGLES: return GL.TRIANGLES;
-  case GL.TRIANGLE_STRIP: return GL.TRIANGLES;
-  case GL.TRIANGLE_FAN: return GL.TRIANGLES;
-  default: assert(false); return 0;
   }
 }

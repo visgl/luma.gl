@@ -82,7 +82,7 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
 const SIZE_CONFIG = Object.assign({}, TEST_CONFIG, {
   resolve: {
     alias: Object.assign({}, ALIASES, {
-      'luma.gl': resolve(__dirname, '../dist')
+      'luma.gl': resolve(__dirname, '../dist-es6')
     })
   }
 });

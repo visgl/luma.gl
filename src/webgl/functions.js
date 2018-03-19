@@ -4,7 +4,7 @@
 import GL, {glGet} from './api';
 import {assertWebGLContext, assertWebGL2Context} from './context';
 import {withParameters} from './context';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 /**
  * Read pixels from a target

@@ -4,7 +4,7 @@
 import GL from './constants';
 import {setParameters, getParameters, GL_PARAMETER_DEFAULTS} from './set-parameters';
 import polyfillContext from './polyfill-context';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 export const clone = x => {
   return Array.isArray(x) || ArrayBuffer.isView(x) ? x.slice() : x;

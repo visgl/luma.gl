@@ -8,7 +8,7 @@
 // easy to reuse or repurpose in other projects.
 
 /* eslint-disable camelcase, brace-style */
-import assert from 'assert';
+import assert from '../utils/assert';
 import {getParameterPolyfill} from './polyfill-get-parameter';
 
 const OES_vertex_array_object = 'OES_vertex_array_object';

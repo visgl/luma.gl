@@ -2,7 +2,7 @@
 import {glKey} from './gl-constants';
 import {isWebGL2} from './context';
 import Resource from './resource';
-import assert from 'assert';
+import assert from '../utils/assert';
 import {log} from '../utils';
 
 /* eslint-disable camelcase */

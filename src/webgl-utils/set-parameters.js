@@ -3,7 +3,7 @@
 // Provides base functionality for the state caching.
 import GL from './constants';
 import {isWebGL2} from '../webgl/context';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 

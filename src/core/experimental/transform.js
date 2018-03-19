@@ -3,7 +3,7 @@ import Buffer from '../../webgl/buffer';
 import TransformFeedback from '../../webgl/transform-feedback';
 import Model from '../model';
 import {isWebGL2, assertWebGL2Context} from '../../webgl/context';
-import assert from 'assert';
+import assert from '../../utils/assert';
 import {log} from '../../utils';
 
 const PASS_THROUGH_FS = `\

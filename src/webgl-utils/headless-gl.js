@@ -1,7 +1,7 @@
 /* eslint-disable quotes, no-console */
 /* global console */
 import isBrowser from '../utils/is-browser';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const ERR_HEADLESSGL_LOAD = `\
 WebGL API not available: Failed to dynamically load headless gl. \

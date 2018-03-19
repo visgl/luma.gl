@@ -1,7 +1,7 @@
 import Framebuffer from './framebuffer';
 import Texture from './texture';
 import {formatValue, log} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Local constants, will be "collapsed" during minification
 

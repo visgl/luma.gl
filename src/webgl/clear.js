@@ -1,6 +1,6 @@
 import {isWebGL2, ERR_WEBGL2} from './context';
 import {withParameters} from './context-state';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;

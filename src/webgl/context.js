@@ -9,7 +9,7 @@ import {glGetDebugInfo} from './context-limits';
 import queryManager from './helpers/query-manager';
 
 import {log, isBrowser} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
 const GL_ARRAY_BUFFER = 0x8892;

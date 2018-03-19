@@ -1,4 +1,4 @@
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function getKeyValue(gl, name) {

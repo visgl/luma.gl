@@ -3,7 +3,7 @@
 // One of the good things about GL is that there are so many ways to draw things
 import GL, {glGet} from './gl-constants';
 import {assertWebGLContext, assertWebGL2Context} from './context';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // A good thing about webGL is that there are so many ways to draw things,
 // e.g. depending on whether data is indexed and/or isInstanced.

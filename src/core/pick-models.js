@@ -2,7 +2,7 @@
 import {clear, isWebGL} from '../webgl';
 import {log} from '../utils';
 import Group from './group';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const ILLEGAL_ARG = 'Illegal argument to pick';
 

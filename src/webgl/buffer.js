@@ -1,14 +1,16 @@
-import GL from './api';
 import {assertWebGL2Context} from './context';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../utils/typed-array-utils';
 import Resource from './resource';
-import assert from 'assert';
-
-const ERR_BUFFER_PARAMS = 'Illegal or missing parameter to Buffer';
+import assert from '../utils/assert';
 
 const GL_COPY_READ_BUFFER = 0x8F36;
 const GL_COPY_WRITE_BUFFER = 0x8F37;
 const GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E;
+const GL_UNIFORM_BUFFER = 0x8A11;
+const GL_ARRAY_BUFFER = 0x8892;
+
+const GL_STATIC_DRAW = 0x88E4;
+const GL_FLOAT = 0x1406;
 
 export class BufferLayout {
   /**
@@ -52,7 +54,7 @@ export default class Buffer extends Resource {
     // initializing element buffers, otherwise the buffer type will be locked
     // to a generic (non-element) buffer.
     // In WebGL2, we can use GL_COPY_READ_BUFFER which avoids locking the type here
-    this.target = opts.target || (this.gl.webgl2 ? GL_COPY_READ_BUFFER : GL.ARRAY_BUFFER);
+    this.target = opts.target || (this.gl.webgl2 ? GL_COPY_READ_BUFFER : GL_ARRAY_BUFFER);
     this.index = null;
     this.setData(opts);
     Object.seal(this);
@@ -88,7 +90,7 @@ export default class Buffer extends Resource {
   initialize({
     data,
     bytes,
-    usage = GL.STATIC_DRAW,
+    usage = GL_STATIC_DRAW,
     // Layout of stored data
     layout,
     type,
@@ -102,7 +104,7 @@ export default class Buffer extends Resource {
     const opts = arguments[0];
 
     if (!data) {
-      type = type || GL.FLOAT;
+      type = type || GL_FLOAT;
 
       // Workaround needed for Safari (#291):
       // gl.bufferData with size (second argument) equal to 0 crashes.
@@ -114,7 +116,7 @@ export default class Buffer extends Resource {
     } else {
       type = type || getGLTypeFromTypedArray(data);
       bytes = data.byteLength;
-      assert(type, ERR_BUFFER_PARAMS);
+      assert(type);
     }
 
     this.bytes = bytes;
@@ -148,7 +150,7 @@ export default class Buffer extends Resource {
     srcOffset = 0, // WebGL2 only: Offset into srcData
     length         // WebGL2 only: Number of bytes to be copied
   } = {}) {
-    assert(data, ERR_BUFFER_PARAMS);
+    assert(data);
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL_COPY_WRITE_BUFFER to avoid locking the type
@@ -245,7 +247,7 @@ export default class Buffer extends Resource {
     // NOTE: While GL_TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
     // be used as direct binding points, they will not affect transform feedback or
     // uniform buffer state. Instead indexed bindings need to be made.
-    const type = (target === GL.UNIFORM_BUFFER || target === GL_TRANSFORM_FEEDBACK_BUFFER) ?
+    const type = (target === GL_UNIFORM_BUFFER || target === GL_TRANSFORM_FEEDBACK_BUFFER) ?
       (size !== undefined ? 'ranged' : ' indexed') : 'non-indexed';
 
     switch (type) {
@@ -254,7 +256,7 @@ export default class Buffer extends Resource {
       break;
     case 'indexed':
       assertWebGL2Context(this.gl);
-      assert(offset === 0, ERR_BUFFER_PARAMS); // Make sure offset wasn't supplied
+      assert(offset === 0); // Make sure offset wasn't supplied
       this.gl.bindBufferBase(target, index, this.handle);
       break;
     case 'ranged':
@@ -262,6 +264,7 @@ export default class Buffer extends Resource {
       this.gl.bindBufferRange(target, index, this.handle, offset, size);
       break;
     default:
+      assert(false);
       throw new Error(ERR_BUFFER_PARAMS);
     }
 
@@ -269,7 +272,7 @@ export default class Buffer extends Resource {
   }
 
   unbind({target = this.target, index = this.index} = {}) {
-    const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL_TRANSFORM_FEEDBACK_BUFFER;
+    const isIndexedBuffer = target === GL_UNIFORM_BUFFER || target === GL_TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {
       this.gl.bindBufferBase(target, index, null);
     } else {

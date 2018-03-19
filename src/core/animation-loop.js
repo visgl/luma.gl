@@ -3,7 +3,7 @@ import {isBrowser, log} from '../utils';
 import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
 import {createGLContext, isWebGL, resetParameters} from '../webgl';
 import {Framebuffer} from '../webgl';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export function requestAnimationFrame(callback) {

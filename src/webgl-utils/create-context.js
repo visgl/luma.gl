@@ -1,5 +1,5 @@
 // Create a WebGL context
-import assert from 'assert';
+import assert from '../utils/assert';
 /* global HTMLCanvasElement, WebGLRenderingContext */
 
 /**

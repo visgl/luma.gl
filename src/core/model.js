@@ -1,18 +1,15 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
 import {GL, Buffer, Program, checkUniformValues, isWebGL} from '../webgl';
-// import {withParameters} from '../webgl/context-state';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
+import Query from '../webgl/query';
 import {getDrawMode} from '../geometry/geometry';
-
 import Object3D from '../core/object-3d';
-import {log, formatValue, isObjectEmpty} from '../utils';
 import {MODULAR_SHADERS} from '../shadertools/shaders';
 import {assembleShaders} from '../shadertools';
-
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import Query from '../webgl/query';
-import assert from 'assert';
+import {log, formatValue, isObjectEmpty} from '../utils';
+import assert from '../utils/assert';
 
 const MSG_INSTANCED_PARAM_DEPRECATED = `\
 Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
