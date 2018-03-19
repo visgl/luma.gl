@@ -64,6 +64,9 @@ uniform sampler2D s2d;
 
 void main(void) {
   vec4 v = vec4(f) + vec4(v2, 0., 0.) + vec4(v3, 0.) + v4;
+
+  // Note: Insructions added in a way to create dependecy between i, and iv* variables,
+  // without this dependecy compiler can otimize the shader and remove these uniforms.
   ivec4 iv = ivec4(i, 0, 0, 0);
   iv = iv + ivec4(iv2, 0, 0);
   iv = iv + ivec4(iv3, 0);
@@ -74,6 +77,8 @@ void main(void) {
   bv = bvec4(bv2, 0., 0.);
   bv = bvec4(b);
 
+  // Note: Insructions added in a way to create dependecy between transform_v* variables,
+  // without this dependecy compiler can otimize the shader and remove these uniforms.
   vec2 transform_v2 = m2 * v2;
   vec3 transform_v3 = m3 * v3;
   vec4 transform_v4 = m4 * v4;
