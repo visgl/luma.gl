@@ -1,7 +1,7 @@
 import {TransformFeedback, Buffer} from 'luma.gl';
 import test from 'tape-catch';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#TransformFeedback isSupported', t => {
   const {gl, gl2} = fixture;

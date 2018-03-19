@@ -1,6 +1,6 @@
 import {experimental, Buffer} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from '../../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 const {Transform} = experimental;
 const VS = `\

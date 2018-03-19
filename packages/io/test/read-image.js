@@ -1,5 +1,5 @@
 import {loadImage} from 'luma.gl/io';
-import test from '../../setup';
+import test from 'luma.gl/test/setup';
 
 /* eslint-disable quotes */
 const PNG_BITS = `\

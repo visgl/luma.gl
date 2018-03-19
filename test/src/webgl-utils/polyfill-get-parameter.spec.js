@@ -1,8 +1,8 @@
-import {getParameterPolyfill} from '../../src/webgl-utils/polyfill-get-parameter';
-import GL from '../../src/webgl-utils/constants';
+import {getParameterPolyfill} from 'luma.gl/webgl-utils/polyfill-get-parameter';
+import GL from 'luma.gl/webgl-utils/constants';
 import test from 'tape-catch';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 const WEBGL_PARAMETER_KEYS = [
   // WebGL2 context parameters

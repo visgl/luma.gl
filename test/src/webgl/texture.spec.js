@@ -2,12 +2,12 @@
 import test from 'tape-catch';
 import {GL, Texture2D, glKey} from 'luma.gl';
 
-import {TEXTURE_FORMATS} from '../../src/webgl/texture';
+import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
   testSamplerParameters, SAMPLER_PARAMETERS, SAMPLER_PARAMETERS_WEBGL2
 } from './sampler.utils';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#Texture2D construct/delete', t => {
   const {gl} = fixture;

@@ -5,7 +5,7 @@ import {isBrowser} from 'luma.gl/utils';
 import {equals} from 'math.gl';
 import {checkUniformValues, areUniformsEqual} from 'luma.gl/webgl/uniforms';
 
-import {fixture} from '../setup';
+import {fixture} from 'luma.gl/test/setup';
 
 const MATRIX_2 = [
   1, 0,
