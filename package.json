@@ -56,7 +56,6 @@
     "test-node": "node test/node.js | faucet",
     "test-browser": "webpack-dev-server --env.test --progress --hot --open",
     "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",
-    "test-size-explicit": "npm run build && webpack --config test/webpack.config.js --env.import-vec4-mat4-explicit",
     "test-size": "npm run build && webpack --config test/webpack.config.js --env.import-nothing",
     "docs": "npm run docs-build && open ./_docs/docs/index.html",
     "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
