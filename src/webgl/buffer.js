@@ -265,7 +265,6 @@ export default class Buffer extends Resource {
       break;
     default:
       assert(false);
-      throw new Error(ERR_BUFFER_PARAMS);
     }
 
     return this;
