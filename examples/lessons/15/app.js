@@ -70,32 +70,25 @@ void main(void) {
             + uPointLightingDiffuseColor * diffuseLightWeighting;
     }
     vec4 fragmentColor;
-    if (uUseColorMap) {
-      fragmentColor = texture2D(uColorMapSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-    } else {
-      fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-    }
+    fragmentColor = uUseColorMap ? texture2D(uColorMapSampler, vec2(vTextureCoord.s, vTextureCoord.t)) : vec4(1.0, 1.0, 1.0, 1.0);
+      
     gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
 `;
 
-function getSphereUniforms() {
-  return {
-    uUseColorMap: true,
-    uUseSpecularMap: false,
-    uShowSpecularHighlights: true,
-    uUseLighting: true
-  };
-}
+const EARTH_UNIFORMS = {
+  uUseColorMap: true,
+  uUseSpecularMap: false,
+  uShowSpecularHighlights: true,
+  uUseLighting: true
+};
 
-function getLightUniforms() {
-  return {
-    uAmbientColor: [0.4, 0.4, 0.4],
-    uPointLightingLocation: [-10.0, 4.0, -20.0],
-    uPointLightingSpecularColor: [5.0, 5.0, 5.0],
-    uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
-  };
-}
+const LIGHT_UNIFORMS = {
+  uAmbientColor: [0.4, 0.4, 0.4],
+  uPointLightingLocation: [-10.0, 4.0, -20.0],
+  uPointLightingSpecularColor: [5.0, 5.0, 5.0],
+  uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
+};
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
@@ -124,7 +117,7 @@ const animationLoop = new AnimationLoop({
       }]
     })
     .then(textures => {
-      const specualerTexture = textures[0];
+      const specularTexture = textures[0];
       const colorTexture = textures[1];
 
       const earth = new Sphere(gl, {
@@ -132,16 +125,16 @@ const animationLoop = new AnimationLoop({
         vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
         uniforms: Object.assign({
             uColorMapSampler: colorTexture,
-            uSpecularMapSampler: specualerTexture
+            uSpecularMapSampler: specularTexture
           },
-          getSphereUniforms(),
-          getLightUniforms()
+          EARTH_UNIFORMS,
+          LIGHT_UNIFORMS
       ),
         nlat: 30,
         nlong: 30,
         radius: 13,
       });
-      return {earth, specualerTexture, colorTexture}
+      return {earth, specularTexture, colorTexture}
     });
   },
   onRender: ({
