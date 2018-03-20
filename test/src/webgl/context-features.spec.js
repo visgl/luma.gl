@@ -113,6 +113,12 @@ test('webgl#caps#canCompileGLGSExtension', t => {
   getShaderParameterStub.returns(false);
   t.equals(
     canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    true,
+    'memoizes previous call'
+  );
+
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_TEXTURE_LOD),
     false,
     'returns false when feature can not be compiled'
   );

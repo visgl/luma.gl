@@ -55,12 +55,17 @@ export {FEATURES};
 // but fail to compile when the extension is enabled in the shader. Specifically,
 // the OES_standard_derivatives extension fails to compile in IE11 even though its included
 // in the list of supported extensions.
+const compiledGlslExtensions = {};
 export function canCompileGLGSExtension(gl, cap) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
   if (!isOldIE()) {
     return true;
+  }
+
+  if (cap in compiledGlslExtensions) {
+    return compiledGlslExtensions[cap];
   }
 
   const extensionName = feature[0];
@@ -71,6 +76,7 @@ export function canCompileGLGSExtension(gl, cap) {
   gl.compileShader(shader);
   const canCompile = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
   gl.deleteShader(shader);
+  compiledGlslExtensions[cap] = canCompile;
   return canCompile;
 }
 
