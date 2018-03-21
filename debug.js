@@ -1,1 +1,1 @@
-module.exports = require('./dist/debug');
+module.exports = require('./dist/esm/debug');

@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 const {resolve} = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
@@ -76,13 +77,26 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
 
   resolve: {
     alias: Object.assign({}, ALIASES)
+  },
+
+  plugins: [
+    new HtmlWebpackPlugin({title: 'luma.gl tests'})
+  ]
+});
+
+const SIZE_ES6_CONFIG = Object.assign({}, TEST_CONFIG, {
+  resolve: {
+    mainFields: ['esnext', 'browser', 'module', 'main'],
+    alias: Object.assign({}, ALIASES, {
+      'luma.gl': resolve(__dirname, '../dist/es6')
+    })
   }
 });
 
-const SIZE_CONFIG = Object.assign({}, TEST_CONFIG, {
+const SIZE_ESM_CONFIG = Object.assign({}, TEST_CONFIG, {
   resolve: {
     alias: Object.assign({}, ALIASES, {
-      'luma.gl': resolve(__dirname, '../dist-es6')
+      'luma.gl': resolve(__dirname, '../dist/esm')
     })
   }
 });
@@ -93,6 +107,7 @@ const BENCH_CONFIG = Object.assign({}, TEST_CONFIG, {
   }
 });
 
+// Get first key in an object
 function getFirstKey(object) {
   for (const key in object) {
     return key;
@@ -100,18 +115,14 @@ function getFirstKey(object) {
   return null;
 }
 
-module.exports = env => {
-  env = env || {};
-  if (env.bench) {
-    return BENCH_CONFIG;
-  }
-  if (env.test) {
-    return TEST_CONFIG;
-  }
-  return Object.assign({}, SIZE_CONFIG, {
+// Generate a webpack config for a bundle size test app
+function getBundleSizeTestAppConfig(env) {
+  const app = getFirstKey(env);
+
+  return Object.assign({}, env.es6 ? SIZE_ES6_CONFIG : SIZE_ESM_CONFIG, {
     // Replace the entry point for webpack-dev-server
     entry: {
-      'test-browser': resolve(__dirname, './size', `${getFirstKey(env)}.js`)
+      'test-browser': resolve(__dirname, './size', `${app}.js`)
     },
     output: {
       path: resolve('./dist'),
@@ -119,4 +130,23 @@ module.exports = env => {
     },
     plugins: [new UglifyJsPlugin(), new BundleAnalyzerPlugin()]
   });
+}
+
+function getConfig(env) {
+  if (env.bench) {
+    return BENCH_CONFIG;
+  }
+  if (env.test) {
+    return TEST_CONFIG;
+  }
+
+  return getBundleSizeTestAppConfig(env);
+}
+
+module.exports = env => {
+  const config = getConfig(env || {});
+  // NOTE uncomment to display config
+  // console.log('webpack env', JSON.stringify(env));
+  // console.log('webpack config', JSON.stringify(config));
+  return config;
 };
