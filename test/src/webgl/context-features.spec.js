@@ -1,5 +1,7 @@
-import {hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
+import {window} from '../../../src/utils/globals';
+import {canCompileGLGSExtension, hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
+import sinon from 'sinon';
 
 import {fixture} from 'luma.gl/test/setup';
 
@@ -74,5 +76,60 @@ test('webgl#caps#hasFeatures(WebGL2)', t => {
     }
   }
 
+  t.end();
+});
+
+test('webgl#caps#canCompileGLGSExtension', t => {
+  const {gl} = fixture;
+  const oldNavigator = window.oldNavigator;
+
+  t.ok(typeof canCompileGLGSExtension === 'function', 'canCompileGLGSExtension defined');
+
+  // Non-IE version.
+  const getShaderParameterStub = sinon.stub(gl, 'getShaderParameter');
+  window.navigator = {
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36'
+  };
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    true,
+    'returns true when feature can be compiled'
+  );
+  t.notOk(getShaderParameterStub.called, 'should not call getShaderParameterStub');
+
+  // Old-IE version.
+  window.navigator = {
+    userAgent: 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'
+  };
+
+  getShaderParameterStub.returns(true);
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    true,
+    'returns true when feature can be compiled'
+  );
+  t.ok(getShaderParameterStub.called, 'should call getShaderParameterStub');
+
+  getShaderParameterStub.returns(false);
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES),
+    true,
+    'memoizes previous call'
+  );
+
+  t.equals(
+    canCompileGLGSExtension(gl, FEATURES.GLSL_TEXTURE_LOD),
+    false,
+    'returns false when feature can not be compiled'
+  );
+
+  t.throws(
+    () => canCompileGLGSExtension(gl, 'feature.dne'),
+    'should throw exception if feature does not exist'
+  );
+
+  // Restore the navigator to pre-test version.
+  window.navigator = oldNavigator;
+  getShaderParameterStub.restore();
   t.end();
 });

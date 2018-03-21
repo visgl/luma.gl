@@ -1,5 +1,5 @@
 import {getContextInfo} from '../../webgl';
-import {hasFeature, FEATURES} from '../../webgl/context-features';
+import {hasFeature, canCompileGLGSExtension, FEATURES} from '../../webgl/context-features';
 
 export function checkRendererVendor(debugInfo, gpuVendor) {
   const {vendor, renderer} = debugInfo;
@@ -92,7 +92,10 @@ export function getVersionDefines(gl) {
 #endif
 `;
   }
-  if (hasFeature(gl, FEATURES.GLSL_DERIVATIVES)) {
+  if (
+    hasFeature(gl, FEATURES.GLSL_DERIVATIVES) &&
+    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES)
+  ) {
     versionDefines += `\
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #ifdef GL_OES_standard_derivatives
