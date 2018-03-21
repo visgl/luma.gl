@@ -8,6 +8,7 @@ import Renderbuffer from './renderbuffer';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import {log, flipRows, scalePixels} from '../utils';
 import {withParameters} from './context-state';
+import Buffer from './buffer';
 import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
@@ -270,23 +271,11 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  // Reads pixel data either into an Array object (synchronus) or
-  // into a Buffer object (asynchronus) depending on options and browser capability.
-  readPixels(opts) {
-    if (!isWebGL2(this.gl) || !opts.buffer) {
-      if (opts.buffer) {
-        log.warn('readPixels: No WebGL2 to support, falling back to synchronous version');
-      }
-      return this._readPixelsSync(opts);
-    }
-    return this._readPixelsAsync(opts);
-  }
-
   // NOTE: Slow requires roundtrip to GPU
   // App can provide pixelArray or have it auto allocated by this method
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
-  _readPixelsSync({
+  readPixels({
     x = 0,
     y = 0,
     width = this.width,
@@ -308,7 +297,7 @@ export default class Framebuffer extends Resource {
       // Allocate pixel array if not already available, using supplied type
       type = type || gl.UNSIGNED_BYTE;
       const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
-      const components = glFormatToComponents(format);
+      const components = _glFormatToComponents(format);
       // TODO - check for composite type (components = 1).
       pixelArray = pixelArray || new ArrayType(width * height * components);
     }
@@ -325,13 +314,13 @@ export default class Framebuffer extends Resource {
 
   // Reads data into provided buffer object asynchronusly
   // This function doesn't wait for copy to be complete, it program it to happen on GPU.
-  _readPixelsAsync({
+  readPixelsToBuffer({
     x = 0,
     y = 0,
     width = this.width,
     height = this.height,
     format = GL.RGBA,
-    type, // Auto deduced from buffer if not provided
+    type, // When not provided, auto deduced from buffer or GL.UNSIGNED_BYTE
     buffer = null,
     byteOffset = 0 // byte offset in buffer object
   }) {
@@ -339,10 +328,21 @@ export default class Framebuffer extends Resource {
 
     // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
     assert(isWebGL2(gl));
-    assert(buffer);
 
     // deduce type if not available.
-    type = type || buffer.type;
+    type = type || (buffer ? buffer.type : GL.UNSIGNED_BYTE);
+
+    if (!buffer) {
+      // Create new buffer with enough size
+      const components = _glFormatToComponents(format);
+      const byteCount = _glTypeToBytes(type);
+      const bytes = byteOffset + (width * height * components * byteCount);
+      buffer = new Buffer(gl, {
+        bytes,
+        type,
+        size: components
+      });
+    }
 
     buffer.bind({target: GL.PIXEL_PACK_BUFFER});
     withParameters(gl, {framebuffer: this}, () => {
@@ -761,13 +761,31 @@ function mapIndexToCubeMapFace(layer) {
     layer;
 }
 
-// Returns number of components in a specific WebGL format
-function glFormatToComponents(format) {
+// Helper METHODS
+
+// Returns number of components in a specific readPixels WebGL format
+function _glFormatToComponents(format) {
   switch (format) {
   case GL.ALPHA: return 1;
   case GL.RGB: return 3;
   case GL.RGBA: return 4;
-  default: throw new Error('Unknown format');
+  default: throw new Error('readPixels: un-supported format');
+  }
+}
+
+// Return byte count for given readPixels WebGL type
+function _glTypeToBytes(type) {
+  switch (type) {
+  case GL.UNSIGNED_BYTE:
+    return 1;
+  case GL.UNSIGNED_SHORT_5_6_5:
+  case GL.UNSIGNED_SHORT_4_4_4_4:
+  case GL.UNSIGNED_SHORT_5_5_5_1:
+    return 2;
+  case GL.FLOAT:
+    return 4;
+  default:
+    throw new Error('readPixels: un-supported type');
   }
 }
 

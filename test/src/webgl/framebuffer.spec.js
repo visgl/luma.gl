@@ -238,8 +238,17 @@ test('WebGL2#Framebuffer readPixels', t => {
   t.end();
 });
 
-function getReadPixelsParams(gl) {
-  const dataBytes = 6 * 4; // 4 floats
+function testReadPixeslToBuffer(t, bufferCreation) {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const gl = gl2;
+  const {abs} = Math;
+  const dataBytes = 6 * 4; // 6 floats
   const colorTexture = new Texture2D(gl, {
     format: isWebGL2(gl) ? GL.RGBA32F : GL.RGBA,
     type: isWebGL2(gl) ? GL.FLOAT : GL.UNSIGNED_BYTE,
@@ -257,62 +266,20 @@ function getReadPixelsParams(gl) {
   });
 
   framebuffer.checkStatus();
-  return {pbo, framebuffer};
-}
-
-test('WebGL#Framebuffer readPixels Sync vs Async', t => {
-  const {gl, gl2} = fixture;
-
-  const glParams = getReadPixelsParams(gl);
-  let returnValue = glParams.framebuffer.readPixels({
-    width: 1,
-    height: 1,
-    buffer: glParams.pbo
-  });
-  t.ok((returnValue instanceof Uint8Array), 'WebGL1 should trigger synchronus read');
-
-  if (gl2) {
-    const gl2Params = getReadPixelsParams(gl2);
-    returnValue = gl2Params.framebuffer.readPixels({
-      width: 1,
-      height: 1,
-      type: GL.FLOAT
-    });
-    t.ok((returnValue instanceof Float32Array), 'No buffer should trigger synchronus read');
-
-    returnValue = gl2Params.framebuffer.readPixels({
-      width: 1,
-      height: 1,
-      buffer: gl2Params.pbo
-    });
-    t.ok((returnValue instanceof Buffer), 'WebGL2 and buffer should trigger asynchronus read');
-  }
-
-  t.end();
-});
-
-test('WebGL#Framebuffer readPixels Async', t => {
-  const {gl2} = fixture;
-  const {abs} = Math;
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-  const {pbo, framebuffer} = getReadPixelsParams(gl2);
 
   const color = new Float32Array(6);
   const clearColor = [0.25, -0.35, 12340.25, 0.005];
 
   framebuffer.clear({color: clearColor});
 
-  framebuffer.readPixels({
+  const buffer = framebuffer.readPixelsToBuffer({
     width: 1,
     height: 1,
-    buffer: pbo,
+    type: GL.FLOAT,
+    buffer: bufferCreation ? null : pbo,
     byteOffset: 2 * 4 // start from 3rd element
   });
-  pbo.getData({dstData: color});
+  buffer.getData({dstData: color});
 
   t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
   t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
@@ -320,6 +287,14 @@ test('WebGL#Framebuffer readPixels Async', t => {
   t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
 
   t.end();
+}
+
+test('WebGL#Framebuffer readPixelsToBuffer', t => {
+  testReadPixeslToBuffer(t, false);
+});
+
+test('WebGL#Framebuffer readPixelsToBuffer (buffer creation)', t => {
+  testReadPixeslToBuffer(t, true);
 });
 
 /*
