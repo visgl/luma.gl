@@ -2,14 +2,18 @@
 import AnimationLoop, {requestAnimationFrame, cancelAnimationFrame} from './animation-loop';
 import {getPageLoadPromise, createCanvas, getCanvas} from '../webgl-utils';
 
-export default class OffScreenAnimationLoop {
+export default class OffscreenAnimationLoop {
 
+  /*
+   * Create the script for the rendering worker.
+   * @param opts {object} - options to construct an AnimationLoop instance
+   */
   static createWorker(opts) {
     return self => {
 
       self.animationLoop = new AnimationLoop(Object.assign({}, opts, {
         offScreen: true,
-        // Prevent trying to access DOM properties
+        // Prevent the animation loop from trying to access DOM properties
         useDevicePixels: false,
         autoResizeDrawingBuffer: false
       }));
@@ -32,10 +36,6 @@ export default class OffScreenAnimationLoop {
         case 'resize':
           self.canvas.width = evt.data.width;
           self.canvas.height = evt.data.height;
-          break;
-
-        case 'setViewParameters':
-          animationLoop.setViewParameters(evt.data.params);
           break;
 
         default:
@@ -71,7 +71,9 @@ export default class OffScreenAnimationLoop {
     this._onFinalize = onFinalize;
   }
 
-  // Public methods
+  /* Public methods */
+
+  // Starts a render loop if not already running
   start(opts = {}) {
     this._stopped = false;
     // console.debug(`Starting ${this.constructor.name}`);
@@ -79,7 +81,7 @@ export default class OffScreenAnimationLoop {
       // Wait for start promise before rendering frame
       this._startPromise = getPageLoadPromise()
       .then(() => {
-        const {targetCanvas, offscreenCanvas} = this._createCanvas();
+        const {targetCanvas, offscreenCanvas} = this._createCanvas(opts);
 
         this.worker.postMessage({
           command: 'start',
@@ -99,11 +101,7 @@ export default class OffScreenAnimationLoop {
     return this;
   }
 
-  setViewParameters(params) {
-    this.worker.postMessage({command: 'setViewParameters', params});
-    return this;
-  }
-
+  // Stops a render loop if already running, finalizing
   stop() {
     if (this._animationFrameId) {
       cancelAnimationFrame(this._animationFrameId);
