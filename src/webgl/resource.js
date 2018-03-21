@@ -2,7 +2,7 @@ import luma from '../init';
 import {assertWebGLContext, isWebGL2} from './context';
 import {glGet, glKey} from './gl-constants';
 import {uid} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 import {polyfillContext} from '../webgl-utils';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';

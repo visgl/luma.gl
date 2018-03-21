@@ -3,3 +3,6 @@
 const WebGLDebug = require('webgl-debug');
 const global_ = typeof global !== 'undefined' ? global : window;
 global_.WebGLDebug = WebGLDebug;
+
+import {installParameterDefinitions} from './api/debug-parameters';
+installParameterDefinitions();

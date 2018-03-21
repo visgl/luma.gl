@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 

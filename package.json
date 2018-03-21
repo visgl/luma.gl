@@ -64,8 +64,8 @@
     "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages"
   },
   "dependencies": {
-    "math.gl": "^1.0.0",
-    "probe.gl": ">=1.0.0-alpha.2",
+    "math.gl": "^1.0.5",
+    "probe.gl": ">=1.0.0-alpha.10",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },

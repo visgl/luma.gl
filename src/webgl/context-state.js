@@ -1,9 +1,6 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from '../webgl-utils/constants';
 import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
-import assert from 'assert';
-import {isObjectEmpty} from '../utils';
-
 import {
   getParameter,
   getParameters,
@@ -12,6 +9,8 @@ import {
   resetParameters,
   getModifiedParameters
 } from '../webgl-utils/set-parameters';
+import {isObjectEmpty} from '../utils';
+import assert from '../utils/assert';
 
 // map of parameter setter function names, parameter constants, default values and types
 // - Uses gl function names, except when setter function exist that are named differently

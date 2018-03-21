@@ -2,7 +2,7 @@
 import GL from './gl-constants';
 import {isWebGL2} from './context';
 import Resource from './resource';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Define local GL constants to optimize minification
 const GL_RENDERBUFFER = 0x8D41;

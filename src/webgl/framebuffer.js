@@ -7,7 +7,7 @@ import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import {log, flipRows, scalePixels} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
 const GL_FRAMEBUFFER = 0x8D40;

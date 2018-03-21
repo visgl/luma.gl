@@ -6,9 +6,8 @@ import {withParameters} from './context-state';
 import Resource from './resource';
 import Buffer from './buffer';
 import {uid, isPowerOfTwo, log} from '../utils';
-import assert from 'assert';
 import {glKey} from './gl-constants';
-
+import assert from '../utils/assert';
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 

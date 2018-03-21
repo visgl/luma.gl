@@ -2,9 +2,6 @@
 
 import {global} from '../utils/globals';
 import {log} from '../utils';
-import {installParameterDefinitions} from './api/debug-parameters';
-
-installParameterDefinitions();
 
 // Helper to get shared context data
 function getContextData(gl) {

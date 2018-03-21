@@ -1,5 +1,5 @@
 /* eslint-disable guard-for-in, complexity, no-try-catch */
-import assert from 'assert';
+import assert from '../utils/assert';
 import {loadFile, loadImage} from './browser-load';
 import {Program, Texture2D} from '../webgl';
 import {Model} from '../core';

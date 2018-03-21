@@ -6,7 +6,7 @@
 /* eslint-disable no-inline-comments, max-len */
 import {isWebGL2} from './context';
 import {isOldIE} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 // Defines luma.gl "feature" names and semantics
 const WEBGL_FEATURES = {

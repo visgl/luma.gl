@@ -1,6 +1,6 @@
 import {uid} from '../utils';
 import {Vector3, Matrix4} from 'math.gl';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 export default class Object3D {
 

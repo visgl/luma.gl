@@ -1,6 +1,6 @@
 import Object3D from './object-3d';
 import {Matrix4} from 'math.gl';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 export default class Group extends Object3D {
   constructor(opts = {}) {

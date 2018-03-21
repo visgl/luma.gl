@@ -2,7 +2,7 @@ import {parseGLSLCompilerError, getShaderName} from '../webgl-utils';
 import {assertWebGLContext} from './context';
 import Resource from './resource';
 import {uid, log} from '../utils';
-import assert from 'assert';
+import assert from '../utils/assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
