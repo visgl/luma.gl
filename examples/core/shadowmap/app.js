@@ -97,7 +97,7 @@ void main(void) {
 //   })
 // };
 
-const animationLoop = new AnimationLoop({
+export const animationLoopOptions = {
   // gl: createGLContext()})
   onInitialize: ({gl}) => {
 
@@ -168,7 +168,9 @@ const animationLoop = new AnimationLoop({
       uShadow: 1.0
     });
   }
-});
+};
+
+const animationLoop = new AnimationLoop(animationLoopOptions);
 
 animationLoop.getInfo = () => INFO_HTML;
 

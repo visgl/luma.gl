@@ -1,0 +1,19 @@
+{
+  "name": "luma.gl-examples-shadowmap",
+  "description": "An es6 shadowmap example for luma.gl.",
+  "contributors": [
+    "Rye Terrell <ryeterrell@ryeterrell.net"
+  ],
+  "scripts": {
+    "start": "webpack-dev-server --progress --hot --open -d",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
+  },
+  "dependencies": {
+    "luma.gl": "^5.0.0",
+    "webworkify-webpack": "^2.1.0"
+  },
+  "devDependencies": {
+    "webpack-dev-server": "^2.2.0",
+    "webpack": "^2.2.0"
+  }
+}
