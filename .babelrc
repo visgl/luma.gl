@@ -1,6 +1,6 @@
 {
   "plugins": [
-    "version-inline",
+    "version-inline",///
     "./scripts/babel-plugin-tree-shaking",
 
   ],

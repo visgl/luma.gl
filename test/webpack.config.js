@@ -107,6 +107,7 @@ const BENCH_CONFIG = Object.assign({}, TEST_CONFIG, {
   }
 });
 
+// Get first key in an object
 function getFirstKey(object) {
   for (const key in object) {
     return key;
@@ -114,36 +115,38 @@ function getFirstKey(object) {
   return null;
 }
 
-module.exports = env => {
-  env = env || {};
+// Generate a webpack config for a bundle size test app
+function getBundleSizeTestAppConfig(env) {
+  const app = getFirstKey(env);
 
-  let config = COMMON_CONFIG;
-  const key = getFirstKey(env);
-  switch (key) {
-  case 'bench':
-    config = BENCH_CONFIG;
-    break;
+  return Object.assign({}, env.es6 ? SIZE_ES6_CONFIG : SIZE_ESM_CONFIG, {
+    // Replace the entry point for webpack-dev-server
+    entry: {
+      'test-browser': resolve(__dirname, './size', `${app}.js`)
+    },
+    output: {
+      path: resolve('./dist'),
+      filename: '[name]-bundle.js'
+    },
+    plugins: [new UglifyJsPlugin(), new BundleAnalyzerPlugin()]
+  });
+}
 
-  case 'test':
-    config = TEST_CONFIG;
-    break;
-
-  default:
-    config = Object.assign({}, env.es6 ? SIZE_ES6_CONFIG : SIZE_ESM_CONFIG, {
-      // Replace the entry point for webpack-dev-server
-      entry: {
-        'test-browser': resolve(__dirname, './size', `${key}.js`)
-      },
-      output: {
-        path: resolve('./dist'),
-        filename: '[name]-bundle.js'
-      },
-      plugins: [new UglifyJsPlugin(), new BundleAnalyzerPlugin()]
-    });
+function getConfig(env) {
+  if (env.bench) {
+    return BENCH_CONFIG;
+  }
+  if (env.test) {
+    return TEST_CONFIG;
   }
 
+  return getBundleSizeTestAppConfig(env);
+}
+
+module.exports = env => {
+  const config = getConfig(env || {});
+  // NOTE uncomment to display config
   // console.log('webpack env', JSON.stringify(env));
   // console.log('webpack config', JSON.stringify(config));
-
   return config;
 };
