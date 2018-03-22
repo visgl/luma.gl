@@ -39,7 +39,7 @@ case 'test-ci':
 case 'test-browser':
   new BrowserTestDriver().run({
     process: 'webpack-dev-server',
-    parameters: ['--env.test-browser'],
+    parameters: ['--config', 'test/webpack.config.js', '--env.test-browser'],
     exposeFunction: 'testDone'
   });
   break;
