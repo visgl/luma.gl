@@ -1,5 +1,11 @@
 # Pre-releases
 
+## 5.2.0-alpha.5 - Mar 22
+- Fix babel-minify breakage in uniform verification
+
+## 5.2.0-alpha.4 - Mar 21
+- Publish minified luma.gl
+
 ## 5.2.0-alpha.3 - Mar 21
 - esnext distribution
 - math.gl 1.1.0
