@@ -53,7 +53,7 @@
     "test-fast": "node test/node.js",
     "test-fp64": "(cd src/shadertools/test && webpack-dev-server --progress --hot --open)",
     "test-node": "node test/node.js | faucet",
-    "test-dist": "node test/start.js test-dist",
+    "test-dist": "npm run build-es6 && node test/start.js test-dist",
     "test-browser": "webpack-dev-server --config test/webpack.config.js --env.test-browser --progress --hot --open",
     "test-browser-puppet": "node test/start.js test-browser",
     "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",

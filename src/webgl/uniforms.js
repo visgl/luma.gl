@@ -203,26 +203,38 @@ export function checkUniformValues(uniforms, source) {
 
 // TODO use type information during validation
 function checkUniformValue(value) {
+  if (Array.isArray(value) || ArrayBuffer.isView(value)) {
+    return checkUniformArray(value);
+  }
+
   // Check if single value is a number
   if (Number.isFinite(value)) {
     return true;
   } else if (value === true || value === false) {
     return true;
-  } else if (Array.isArray(value)) {
-    // Check that every element in array is a number, and at least 1 element
-    return value.length > 0 && value.every(element => Number.isFinite(element));
-  // Typed arrays can only contain numbers, but check length
-  } else if (ArrayBuffer.isView(value)) {
-    // TODO - Can contain NaN
-    return value.length > 0;
-  // Test for texture (for sampler uniforms)
   } else if (value instanceof Texture || value instanceof Sampler) {
     return true;
   } else if (value instanceof Framebuffer) {
-    return Boolean(value.texture);
+    return !!value.texture;
+  }
+  return false;
+}
+
+function checkUniformArray(value) {
+  // Check that every element in array is a number, and at least 1 element
+  if (value.length === 0) {
+    return false;
   }
 
-  return false;
+  const checkLength = Math.min(value.length, 16);
+
+  for (let i = 0; i < checkLength; ++i) {
+    if (!Number.isFinite(value[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
