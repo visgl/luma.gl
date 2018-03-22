@@ -114,7 +114,7 @@ export default class Program extends Resource {
       this.gl.useProgram(this.handle);
 
       if (transformFeedback) {
-        const primitiveMode = getPrimitiveDrawMode({drawMode});
+        const primitiveMode = getPrimitiveDrawMode(drawMode);
         transformFeedback.begin(primitiveMode);
       }
 

@@ -41,7 +41,7 @@ export function getPrimitiveCount({drawMode, vertexCount}) {
 // Counts the number of vertices after splitting the vertex stream into separate "primitives"
 export function getVertexCount({drawMode, vertexCount}) {
   const primitiveCount = getPrimitiveCount({drawMode, vertexCount});
-  switch (getPrimitiveDrawMode({drawMode})) {
+  switch (getPrimitiveDrawMode(drawMode)) {
   case GL_POINTS: return primitiveCount;
   case GL_LINES: return primitiveCount * 2;
   case GL_TRIANGLES: return primitiveCount * 3;
