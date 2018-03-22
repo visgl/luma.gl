@@ -56,11 +56,12 @@ export {FEATURES};
 // the OES_standard_derivatives extension fails to compile in IE11 even though its included
 // in the list of supported extensions.
 const compiledGlslExtensions = {};
-export function canCompileGLGSExtension(gl, cap) {
+// opts allows user agent to be overridden for testing
+export function canCompileGLGSExtension(gl, cap, opts = {}) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
-  if (!isOldIE()) {
+  if (!isOldIE(opts)) {
     return true;
   }
 
