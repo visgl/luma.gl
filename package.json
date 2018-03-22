@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "5.2.0-alpha.3",
+  "version": "5.2.0-alpha.4",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -59,7 +59,7 @@
     "test-size-esm": "npm run build-esm && webpack --config test/webpack.config.js --env.import-nothing"
   },
   "dependencies": {
-    "math.gl": "^1.0.5",
+    "math.gl": ">=1.1.0-alpha.1",
     "probe.gl": ">=1.0.0-alpha.10",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"

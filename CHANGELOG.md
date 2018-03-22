@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 5.2.0-alpha.3 - Mar 21
+- esnext distribution
+- math.gl 1.1.0
+
 ## 5.2.0-alpha.3 - Mar 3
 - Update TF demo to use new Transform class (#433)
 - Transform: Add updateBuffers method (#418)
