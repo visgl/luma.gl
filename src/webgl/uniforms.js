@@ -215,7 +215,7 @@ function checkUniformValue(value) {
   } else if (value instanceof Texture || value instanceof Sampler) {
     return true;
   } else if (value instanceof Framebuffer) {
-    return !!value.texture;
+    return Boolean(value.texture);
   }
   return false;
 }
