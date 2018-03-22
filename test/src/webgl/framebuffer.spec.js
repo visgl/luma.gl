@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer, isWebGL2} from 'luma.gl';
+import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 const EPSILON = 0.0000001;
 const TEST_CASES = [
@@ -238,7 +238,7 @@ test('WebGL2#Framebuffer readPixels', t => {
   t.end();
 });
 
-function testReadPixeslToBuffer(t, bufferCreation) {
+function testReadPixelsToBuffer(t, bufferCreation) {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -250,8 +250,8 @@ function testReadPixeslToBuffer(t, bufferCreation) {
   const {abs} = Math;
   const dataBytes = 6 * 4; // 6 floats
   const colorTexture = new Texture2D(gl, {
-    format: isWebGL2(gl) ? GL.RGBA32F : GL.RGBA,
-    type: isWebGL2(gl) ? GL.FLOAT : GL.UNSIGNED_BYTE,
+    format: GL.RGBA32F,
+    type: GL.FLOAT,
     dataFormat: GL.RGBA,
     mipmap: false
   });
@@ -290,11 +290,11 @@ function testReadPixeslToBuffer(t, bufferCreation) {
 }
 
 test('WebGL#Framebuffer readPixelsToBuffer', t => {
-  testReadPixeslToBuffer(t, false);
+  testReadPixelsToBuffer(t, false);
 });
 
 test('WebGL#Framebuffer readPixelsToBuffer (buffer creation)', t => {
-  testReadPixeslToBuffer(t, true);
+  testReadPixelsToBuffer(t, true);
 });
 
 /*

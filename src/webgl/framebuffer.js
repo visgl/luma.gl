@@ -9,6 +9,7 @@ import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-a
 import {log, flipRows, scalePixels} from '../utils';
 import {withParameters} from './context-state';
 import Buffer from './buffer';
+import {glFormatToComponents, glTypeToBytes} from './helpers/format-utils';
 import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
@@ -297,7 +298,7 @@ export default class Framebuffer extends Resource {
       // Allocate pixel array if not already available, using supplied type
       type = type || gl.UNSIGNED_BYTE;
       const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
-      const components = _glFormatToComponents(format);
+      const components = glFormatToComponents(format);
       // TODO - check for composite type (components = 1).
       pixelArray = pixelArray || new ArrayType(width * height * components);
     }
@@ -312,8 +313,8 @@ export default class Framebuffer extends Resource {
     return pixelArray;
   }
 
-  // Reads data into provided buffer object asynchronusly
-  // This function doesn't wait for copy to be complete, it program it to happen on GPU.
+  // Reads data into provided buffer object asynchronously
+  // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
   readPixelsToBuffer({
     x = 0,
     y = 0,
@@ -321,7 +322,7 @@ export default class Framebuffer extends Resource {
     height = this.height,
     format = GL.RGBA,
     type, // When not provided, auto deduced from buffer or GL.UNSIGNED_BYTE
-    buffer = null,
+    buffer = null, // A new Buffer object is created when not provided.
     byteOffset = 0 // byte offset in buffer object
   }) {
     const {gl} = this;
@@ -334,8 +335,8 @@ export default class Framebuffer extends Resource {
 
     if (!buffer) {
       // Create new buffer with enough size
-      const components = _glFormatToComponents(format);
-      const byteCount = _glTypeToBytes(type);
+      const components = glFormatToComponents(format);
+      const byteCount = glTypeToBytes(type);
       const bytes = byteOffset + (width * height * components * byteCount);
       buffer = new Buffer(gl, {
         bytes,
@@ -762,33 +763,6 @@ function mapIndexToCubeMapFace(layer) {
 }
 
 // Helper METHODS
-
-// Returns number of components in a specific readPixels WebGL format
-function _glFormatToComponents(format) {
-  switch (format) {
-  case GL.ALPHA: return 1;
-  case GL.RGB: return 3;
-  case GL.RGBA: return 4;
-  default: throw new Error('readPixels: un-supported format');
-  }
-}
-
-// Return byte count for given readPixels WebGL type
-function _glTypeToBytes(type) {
-  switch (type) {
-  case GL.UNSIGNED_BYTE:
-    return 1;
-  case GL.UNSIGNED_SHORT_5_6_5:
-  case GL.UNSIGNED_SHORT_4_4_4_4:
-  case GL.UNSIGNED_SHORT_5_5_5_1:
-    return 2;
-  case GL.FLOAT:
-    return 4;
-  default:
-    throw new Error('readPixels: un-supported type');
-  }
-}
-
 // Get a string describing the framebuffer error if installed
 function _getFrameBufferStatus(status) {
   // Use error mapping if installed
