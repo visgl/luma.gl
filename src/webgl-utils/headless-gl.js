@@ -5,7 +5,8 @@ import assert from '../utils/assert';
 
 const ERR_HEADLESSGL_LOAD = `\
 WebGL API not available: Failed to dynamically load headless gl. \
-headless gl either not installed or not accessible from this directory. \
+headless gl either not installed, or not accessible from this directory, \
+or built for the wrong Node.js version. \
 Try rerunning after doing "npm install gl".`;
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =
@@ -22,8 +23,8 @@ if (!isBrowser) {
     headlessGL = module.require('gl');
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
-    console.error(ERR_HEADLESSGL_LOAD);
-    console.error(`Node error: ${error.message}`);
+    console.error();
+    console.error(`${ERR_HEADLESSGL_LOAD}\n${error.message}`);
   }
   assert(headlessTypes && headlessTypes.WebGLRenderingContext);
 }
