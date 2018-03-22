@@ -1,5 +1,6 @@
 import Framebuffer from './framebuffer';
 import Texture from './texture';
+import Sampler from './sampler';
 import {formatValue, log} from '../utils';
 import assert from '../utils/assert';
 
@@ -202,24 +203,38 @@ export function checkUniformValues(uniforms, source) {
 
 // TODO use type information during validation
 function checkUniformValue(value) {
-  // Check that every element in array is a number, and at least 1 element
-  if (Array.isArray(value)) {
-    return value.length > 0 && value.every(element => isFinite(element));
-  // Typed arrays can only contain numbers, but check length
-  } else if (ArrayBuffer.isView(value)) {
-    // TODO - Can contain NaN
-    return value.length > 0;
-  // Check that single value is a number
-  } else if (isFinite(value)) {
+  if (Array.isArray(value) || ArrayBuffer.isView(value)) {
+    return checkUniformArray(value);
+  }
+
+  // Check if single value is a number
+  if (Number.isFinite(value)) {
     return true;
-    // Test for texture (for sampler uniforms)
-    // WebGL2: if (value instanceof Texture || value instanceof Sampler) {
-  } else if (value instanceof Texture) {
+  } else if (value === true || value === false) {
+    return true;
+  } else if (value instanceof Texture || value instanceof Sampler) {
     return true;
   } else if (value instanceof Framebuffer) {
     return Boolean(value.texture);
   }
   return false;
+}
+
+function checkUniformArray(value) {
+  // Check that every element in array is a number, and at least 1 element
+  if (value.length === 0) {
+    return false;
+  }
+
+  const checkLength = Math.min(value.length, 16);
+
+  for (let i = 0; i < checkLength; ++i) {
+    if (!Number.isFinite(value[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
