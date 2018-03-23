@@ -1,3 +1,6 @@
+## 5.1.4 - March 23, 2018
+- Fix exports (#428)
+
 ## 5.1.3 - March 13, 2018
 - Fix framebuffer target for WebGL1 context (#434)
 
