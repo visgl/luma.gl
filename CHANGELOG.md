@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.2.0-alpha.7 - Mar 22
+- Don't throw on missing headless-gl.
+
 ## 5.2.0-alpha.6 - Mar 22
 - Temporarily disable babel minify until issues are resolved
 
