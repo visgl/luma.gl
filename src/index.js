@@ -146,9 +146,7 @@ export { // Moved to math.gl
   Vector3,
   Vector4,
   Matrix4,
-  Quaternion,
-  Euler,
-  SphericalCoordinates
+  Quaternion
 } from 'math.gl';
 
 // DEPRECATED IN V3.0
