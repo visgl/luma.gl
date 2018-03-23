@@ -9,10 +9,13 @@ In addition to these notes, always check the [Upgrade Guide](/#/documentation/up
 
 Date: Target April, 2018
 
-## Transform class (New)
+## Transform class (New, WebGL2)
 
 The new [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
+## Framebuffer Asynchronous Read (New, WebGL2)
+
+A new method [`readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This way applications have the freedom to reduce the CPU-GPU sync time or completely avoid it by using the `Buffer` object as data source for the GPU.
 
 ## Node.js Support Changes
 
