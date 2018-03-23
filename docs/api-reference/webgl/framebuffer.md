@@ -80,7 +80,30 @@ withParameters(gl, {framebuffer: framebuffer1}, () => {
 });
 // framebuffer1 is not longer bound
 ```
+Reading data from a framebuffer color attachment.
+```js
+// With CPU and GPU sync
+const data = framebuffer.readPixels({
+  x: 0,
+  y: 0,
+  width: 10,
+  height: 10});
 
+// Without CPU and GPU sync
+const buffer = framebuffer.readPixelsToBuffer({
+  x: 0,
+  y: 0,
+  width: 10,
+  height: 10});
+
+// Returned `Buffer` object can be used to read data into an Array object ...
+const data = buffer.getData();
+
+//or can be used as source for a vertex shader attribute using `Model` object.
+model.setAttributes({
+  attribute_name: buffer
+});
+```
 Blitting between framebuffers (WebGL2)
 ```js
 framebuffer.blit({
@@ -249,22 +272,50 @@ Clears the contents (pixels) of the framebuffer attachments.
 
 ### readPixels
 
-App can provide pixelArray or have it auto allocated by this method
-    x = 0,
-    y = 0,
-    width,
-    height,
-    format = GL.RGBA,
-    type,
-    pixelArray = null
+Reads data into an Array object and returns it. A new Array object is created when not provided. This method requires a sync between CPU and GPU as pixel values are copied from GPU texture memory to CPU Array object memory. This could introduce a delay as it waits for GPU to finish updating the texture. For asynchronous read, check `readPixelsToBuffer` method.
 
-* Readpixels can be slow as it requires a roundtrip to the GPU
+Parameters
+* `x` - (*number*, default: 0) X offset of the area to be copied,
+* `y` - (*number*, default: 0) Y offset of the area to be copied,
+* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
+* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
+* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
+* `type` - (*GLenum*, default: type of `pixelArray` or `UNSIGNED_BYTE`) The type of the data.
+* `pixelArray` - (*Array*, default: null) Array object, into which data to be copied.
+
+Notes:
+
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
 * When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
 This function makes calls to the following WebGL APIs:
 
-[gl.readPixels](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
+[`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
+
+### readPixelsToBuffer (WebGL2)
+
+Reads data into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
+
+A CPU and GPU sync will be triggered when the returned buffer data is read using `buffer.getData()`, but applications can delay this read, which can reduces the delay due to the sync, or the sync can be completely avoided by using the `Buffer` as the source of input to the GPU (either as `ARRAY_BUFFER` or `PIXEL_UNPACK_BUFFER`).
+
+Parameters
+* `x` - (*number*, default: 0) X offset of the area to be copied,
+* `y` - (*number*, default: 0) Y offset of the area to be copied,
+* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
+* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
+* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
+* `type` - (*GLenum*, default: type of `buffer` or `UNSIGNED_BYTE`) The type of the data.
+* `buffer` - (*Buffer*) Buffer object, into which data to be copied.
+* `byteOffset` - (*number*, default: 0) Byte offset from which data should be copied into buffer.
+
+Notes:
+
+* Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
+* When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
+
+This function makes calls to the following WebGL APIs:
+
+[`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.bindBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
 ### blit (WebGL2)

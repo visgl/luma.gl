@@ -1,9 +1,8 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {GL, Framebuffer, Renderbuffer, Texture2D} from 'luma.gl';
-
+import {GL, Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
-
+const EPSILON = 0.0000001;
 const TEST_CASES = [
   {
     title: 'Default attachments',
@@ -237,6 +236,65 @@ test('WebGL2#Framebuffer readPixels', t => {
     t.comment('WebGL2 not available, skipping tests');
   }
   t.end();
+});
+
+function testReadPixelsToBuffer(t, bufferCreation) {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const gl = gl2;
+  const {abs} = Math;
+  const dataBytes = 6 * 4; // 6 floats
+  const colorTexture = new Texture2D(gl, {
+    format: GL.RGBA32F,
+    type: GL.FLOAT,
+    dataFormat: GL.RGBA,
+    mipmap: false
+  });
+  const pbo = new Buffer(gl, {
+    bytes: dataBytes,
+    type: GL.FLOAT
+  });
+  const framebuffer = new Framebuffer(gl, {
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: colorTexture
+    }
+  });
+
+  framebuffer.checkStatus();
+
+  const color = new Float32Array(6);
+  const clearColor = [0.25, -0.35, 12340.25, 0.005];
+
+  framebuffer.clear({color: clearColor});
+
+  const buffer = framebuffer.readPixelsToBuffer({
+    width: 1,
+    height: 1,
+    type: GL.FLOAT,
+    buffer: bufferCreation ? null : pbo,
+    byteOffset: 2 * 4 // start from 3rd element
+  });
+  buffer.getData({dstData: color});
+
+  t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
+  t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
+  t.ok(abs(clearColor[2] - color[4]) < EPSILON, 'Readpixels returned expected value for Blue channel');
+  t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
+
+  t.end();
+}
+
+test('WebGL#Framebuffer readPixelsToBuffer', t => {
+  testReadPixelsToBuffer(t, false);
+});
+
+test('WebGL#Framebuffer readPixelsToBuffer (buffer creation)', t => {
+  testReadPixelsToBuffer(t, true);
 });
 
 /*

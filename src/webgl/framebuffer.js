@@ -7,6 +7,9 @@ import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import {log, flipRows, scalePixels} from '../utils';
+import {withParameters} from './context-state';
+import Buffer from './buffer';
+import {glFormatToComponents, glTypeToBytes} from './helpers/format-utils';
 import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
@@ -308,6 +311,47 @@ export default class Framebuffer extends Resource {
     this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
 
     return pixelArray;
+  }
+
+  // Reads data into provided buffer object asynchronously
+  // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+  readPixelsToBuffer({
+    x = 0,
+    y = 0,
+    width = this.width,
+    height = this.height,
+    format = GL.RGBA,
+    type, // When not provided, auto deduced from buffer or GL.UNSIGNED_BYTE
+    buffer = null, // A new Buffer object is created when not provided.
+    byteOffset = 0 // byte offset in buffer object
+  }) {
+    const {gl} = this;
+
+    // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
+    assert(isWebGL2(gl));
+
+    // deduce type if not available.
+    type = type || (buffer ? buffer.type : GL.UNSIGNED_BYTE);
+
+    if (!buffer) {
+      // Create new buffer with enough size
+      const components = glFormatToComponents(format);
+      const byteCount = glTypeToBytes(type);
+      const bytes = byteOffset + (width * height * components * byteCount);
+      buffer = new Buffer(gl, {
+        bytes,
+        type,
+        size: components
+      });
+    }
+
+    buffer.bind({target: GL.PIXEL_PACK_BUFFER});
+    withParameters(gl, {framebuffer: this}, () => {
+      gl.readPixels(x, y, width, height, format, type, byteOffset);
+    });
+    buffer.unbind({target: GL.PIXEL_PACK_BUFFER});
+
+    return buffer;
   }
 
   // Reads pixels as a dataUrl
@@ -718,16 +762,7 @@ function mapIndexToCubeMapFace(layer) {
     layer;
 }
 
-// Returns number of components in a specific WebGL format
-function glFormatToComponents(format) {
-  switch (format) {
-  case GL.ALPHA: return 1;
-  case GL.RGB: return 3;
-  case GL.RGBA: return 4;
-  default: throw new Error('Unknown format');
-  }
-}
-
+// Helper METHODS
 // Get a string describing the framebuffer error if installed
 function _getFrameBufferStatus(status) {
   // Use error mapping if installed
