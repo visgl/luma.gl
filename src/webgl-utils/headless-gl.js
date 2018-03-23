@@ -1,7 +1,6 @@
 /* eslint-disable quotes, no-console */
 /* global console */
 import isBrowser from '../utils/is-browser';
-import assert from '../utils/assert';
 
 const ERR_HEADLESSGL_LOAD = `\
 WebGL API not available: Failed to dynamically load headless gl. \
@@ -26,7 +25,7 @@ if (!isBrowser) {
     console.error();
     console.error(`${ERR_HEADLESSGL_LOAD}\n${error.message}`);
   }
-  assert(headlessTypes && headlessTypes.WebGLRenderingContext);
+  console.warn(headlessTypes && headlessTypes.WebGLRenderingContext);
 }
 
 export const isWebglAvailable = isBrowser || headlessGL;

@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.2.0-alpha.6 - Mar 22
+- Temporarily disable babel minify until issues are resolved
+
 ## 5.2.0-alpha.5 - Mar 22
 - Fix babel-minify breakage in uniform verification
 
