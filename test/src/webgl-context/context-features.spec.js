@@ -1,6 +1,6 @@
 import {canCompileGLGSExtension, hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
-import sinon from 'sinon';
+import {makeSpy} from 'probe.gl/test-utils';
 
 import {fixture} from 'luma.gl/test/setup';
 
@@ -87,7 +87,7 @@ test('webgl#caps#canCompileGLGSExtension', t => {
   t.ok(typeof canCompileGLGSExtension === 'function', 'canCompileGLGSExtension defined');
 
   // Non-IE version.
-  const getShaderParameterStub = sinon.stub(gl, 'getShaderParameter');
+  const getShaderParameterStub = makeSpy(gl, 'getShaderParameter');
   getShaderParameterStub.returns(true);
   t.equals(
     canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES, {
