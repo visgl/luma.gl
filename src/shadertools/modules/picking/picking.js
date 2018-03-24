@@ -87,6 +87,16 @@ vec4 picking_filterPickingColor(vec4 color) {
   vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
   return picking_uActive ? vec4(pickingColor, 1.0) : color;
 }
+
+/*
+ * Returns picking color if picking is enabled if not
+ * highlight color if this item is selected, otherwise unmodified argument.
+ */
+vec4 picking_filterColor(vec4 color) {
+  vec4 highightColor = picking_filterHighlightColor(color);
+  return picking_filterPickingColor(highightColor);
+}
+
 `;
 
 export default {
