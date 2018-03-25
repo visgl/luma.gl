@@ -22,8 +22,7 @@ const {resolve} = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-
-// const webpack = require('webpack');
+const webpack = require('webpack');
 
 const ALIASES = require(resolve(__dirname, '../aliases'));
 
@@ -84,29 +83,6 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
   ]
 });
 
-const SIZE_ES6_CONFIG = Object.assign({}, TEST_CONFIG, {
-  resolve: {
-    mainFields: ['esnext', 'browser', 'module', 'main'],
-    alias: Object.assign({}, ALIASES, {
-      'luma.gl': resolve(__dirname, '../dist/es6')
-    })
-  }
-});
-
-const SIZE_ESM_CONFIG = Object.assign({}, TEST_CONFIG, {
-  resolve: {
-    alias: Object.assign({}, ALIASES, {
-      'luma.gl': resolve(__dirname, '../dist/esm')
-    })
-  }
-});
-
-const BENCH_CONFIG = Object.assign({}, TEST_CONFIG, {
-  entry: {
-    'test-browser': resolve(__dirname, './bench/browser.js')
-  }
-});
-
 // Get first key in an object
 function getFirstKey(object) {
   for (const key in object) {
@@ -115,38 +91,93 @@ function getFirstKey(object) {
   return null;
 }
 
-// Generate a webpack config for a bundle size test app
-function getBundleSizeTestAppConfig(env) {
-  const app = getFirstKey(env);
-
-  return Object.assign({}, env.es6 ? SIZE_ES6_CONFIG : SIZE_ESM_CONFIG, {
-    // Replace the entry point for webpack-dev-server
-    entry: {
-      'test-browser': resolve(__dirname, './size', `${app}.js`)
-    },
-    output: {
-      path: resolve('./dist'),
-      filename: '[name]-bundle.js'
-    },
-    plugins: [new UglifyJsPlugin(), new BundleAnalyzerPlugin()]
-  });
+// Hack: first key is app
+function getApp(env) {
+  return getFirstKey(env);
 }
 
-function getConfig(env) {
-  if (env.bench) {
-    return BENCH_CONFIG;
+function getDist(env) {
+  return env.esm ? 'esm' : 'es6';
+}
+
+const CONFIGS = {
+  test: env => TEST_CONFIG,
+
+  bench: env => Object.assign({}, TEST_CONFIG, {
+    entry: {
+      'test-browser': resolve(__dirname, './bench/browser.js')
+    }
+  }),
+
+  size: env => {
+    const dist = getDist(env);
+
+    const config = Object.assign({}, TEST_CONFIG, {
+      resolve: {
+        alias: Object.assign({}, ALIASES, {
+          'luma.gl': resolve(__dirname, `../dist/${dist}`)
+        })
+      }
+    });
+    if (dist === 'es6') {
+      resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
+    }
+    return config;
+  },
+
+  // Bundles a test app for size analysis
+  bundle: env => {
+    const app = getApp(env);
+
+    const config = CONFIGS.size(env);
+
+    Object.assign(config, {
+      // Replace the entry point for webpack-dev-server
+      entry: {
+        'test-browser': resolve(__dirname, './size', `${app}.js`)
+      },
+      output: {
+        path: resolve('/tmp'),
+        filename: 'bundle.js'
+      },
+      plugins: [
+        // leave minification to app
+        // new webpack.optimize.UglifyJsPlugin({comments: false})
+        new webpack.DefinePlugin({NODE_ENV: JSON.stringify('production')}),
+        new UglifyJsPlugin()
+      ]
+    });
+
+    delete config.devtool;
+    return config;
+  },
+
+  // Bundles a test app for size analysis and starts the webpack bundle analyzer
+  analyze: env => {
+    const config = CONFIGS.bundle(env);
+    config.plugins.push(new BundleAnalyzerPlugin());
+    return config;
   }
+};
+
+function getConfig(env) {
   if (env.test || env['test-browser']) {
-    return TEST_CONFIG;
+    return CONFIGS.test(env);
+  }
+  if (env.bench) {
+    return CONFIGS.bench(env);
+  }
+  if (env.analyze) {
+    return CONFIGS.analyze(env);
   }
 
-  return getBundleSizeTestAppConfig(env);
+  return CONFIGS.bundle(env);
 }
 
 module.exports = env => {
   const config = getConfig(env || {});
   // NOTE uncomment to display config
-  // console.log('webpack env', JSON.stringify(env));
-  // console.log('webpack config', JSON.stringify(config));
+  console.log('webpack env', JSON.stringify(env));
+  console.log('webpack config', JSON.stringify(config));
   return config;
 };
