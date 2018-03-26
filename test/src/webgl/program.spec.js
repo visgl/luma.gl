@@ -103,3 +103,19 @@ test('WebGL#Program varyingMap', t => {
   t.deepEqual(program.varyingMap.gl_Position, 0);
   t.end();
 });
+
+test('WebGL#Program caching', t => {
+  const {gl} = fixture;
+
+  const program = new Program(gl, {fs, vs});
+
+  program.setCaching(true);
+  program.delete();
+  t.ok(program._handle, 'Program should not be deleted');
+
+  program.setCaching(false);
+  program.delete();
+  t.ok(!program._handle, 'Program should be deleted');
+
+  t.end();
+});

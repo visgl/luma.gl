@@ -155,8 +155,7 @@ export default class Model extends Object3D {
   /* eslint-enable max-statements */
 
   delete() {
-    // Program objects are cached
-    // this.program.delete();
+    this.program.delete();
     removeModel(this.id);
   }
 

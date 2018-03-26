@@ -147,6 +147,21 @@ The following WebGL APIs are called in this function:
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram), [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements), [gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2), [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays), [gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2), [gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2), [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays), [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE), [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE),
 
+### setCaching
+
+Program construction can take time as `gl.linkProgram` is an expensive operation. Applications can implement a custom Caching systems, cache and reuse the `Program` objects to save link time. When programs are cached, `setCaching(true)` should be called to avoid deleting WebGL handle of a cached program. When program objects are removed from cache, `setCaching(false)` can be called, so `delete()` will immediately delete associated WebGL handles.
+
+```js
+// build and add program to a custom cache
+program.setCaching(true);
+...
+program.delete() // doesn't delete the object
+...
+// remove program from custom cache
+program.setCaching(false);
+program.delete() // deletes the object
+```
+
 ### setBuffers
 
 Sets named uniforms from a map, ignoring names.

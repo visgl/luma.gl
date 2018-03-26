@@ -58,7 +58,7 @@ export default class Program extends Resource {
     }
 
     this._compileAndLink();
-
+    this._isCached = false;
     return this;
   }
 
@@ -76,6 +76,14 @@ export default class Program extends Resource {
       }
     }
     return this;
+  }
+
+  delete(opts = {}) {
+    if (this._isCached) {
+      // This object is cached, do not delete
+      return this;
+    }
+    return super.delete(opts);
   }
 
   reset() {
@@ -146,6 +154,12 @@ export default class Program extends Resource {
     });
 
     return this;
+  }
+
+  // When set to true, delete() doesn't delete the object(and associated WebGL handles).
+  // But when applications quit program objects will be garbage collected.
+  setCaching(flag) {
+    this._isCached = flag;
   }
 
   /**
