@@ -157,8 +157,8 @@ export default class Program extends Resource {
   }
 
   // When set to true, delete() doesn't delete the object(and associated WebGL handles).
-  // But when applications quit program objects will be garbage collected.
-  setCaching(flag) {
+  // But when applications quit, program objects will be garbage collected as any other objects.
+  setIsCached(flag) {
     this._isCached = flag;
   }
 

@@ -87,7 +87,7 @@ export default class ShaderCache {
     // Program caching is experimental and expects
     // each Model to have a unique-id (wich is used in key generation)
     if (this._cachePrograms && this._checkProgramProp(program)) {
-      program.setCaching(true);
+      program.setIsCached(true);
       this.programs[cacheKey] = program;
     }
 
