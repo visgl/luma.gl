@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 5.2.0-alpha.8 - Mar 26
+- Do not delete Program objects while being cached. (#467)
+- WebGL2 : Add asynchronous mode for readPixels using PBOs. (#450)
+
 ## 5.2.0-alpha.7 - Mar 22
 - Don't throw on missing headless-gl.
 
