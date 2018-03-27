@@ -208,7 +208,7 @@ function checkUniformValue(value) {
   }
 
   // Check if single value is a number
-  if (Number.isFinite(value)) {
+  if (isFinite(value)) {
     return true;
   } else if (value === true || value === false) {
     return true;
