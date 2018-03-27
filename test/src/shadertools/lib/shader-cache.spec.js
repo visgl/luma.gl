@@ -240,3 +240,39 @@ test('Experimental#ShaderCache - check Program caching with varyings', t => {
 
   t.end();
 });
+
+test('Experimental#ShaderCache - deleting non-cached program', t => {
+  const {gl} = fixture;
+  const shaderCache = new ShaderCache({gl, _cachePrograms: false});
+
+  const program = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  program.delete();
+
+  t.ok(!program._handle, 'Program should be deleted');
+
+  t.end();
+});
+
+test('Experimental#ShaderCache - deleting cached program', t => {
+  const {gl} = fixture;
+  const shaderCache = new ShaderCache({gl, _cachePrograms: true});
+
+  const program = shaderCache.getProgram(gl, {
+    vs: VS1,
+    fs: FS1,
+    id: 'id-1'
+  });
+  t.ok(program instanceof Program, 'Program construction successful ');
+
+  program.delete();
+
+  t.ok(program._handle, 'Program should not be deleted');
+
+  t.end();
+});
