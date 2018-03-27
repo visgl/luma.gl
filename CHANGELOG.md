@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 5.2.0-alpha.9 - Mar 27
+- Allow null uniforms (#472)
+- Add metrics collection (#466)
+
 ## 5.2.0-alpha.8 - Mar 26
 - Do not delete Program objects while being cached. (#467)
 - WebGL2 : Add asynchronous mode for readPixels using PBOs. (#450)
