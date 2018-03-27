@@ -97,7 +97,13 @@ function getApp(env) {
 }
 
 function getDist(env) {
-  return env.esm ? 'esm' : 'es6';
+  if (env.esm) {
+    return 'esm';
+  }
+  if (env.es5) {
+    return 'es5';
+  }
+  return 'es6';
 }
 
 const CONFIGS = {
