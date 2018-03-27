@@ -177,7 +177,7 @@ function getConfig(env) {
 module.exports = env => {
   const config = getConfig(env || {});
   // NOTE uncomment to display config
-  console.log('webpack env', JSON.stringify(env));
-  console.log('webpack config', JSON.stringify(config));
+  // console.log('webpack env', JSON.stringify(env));
+  // console.log('webpack config', JSON.stringify(config));
   return config;
 };
