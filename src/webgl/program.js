@@ -59,6 +59,9 @@ export default class Program extends Resource {
 
     this._compileAndLink();
 
+    // Experimental flag to avoid deleting Program object while it is cached
+    this._isCached = false;
+
     return this;
   }
 
@@ -76,6 +79,14 @@ export default class Program extends Resource {
       }
     }
     return this;
+  }
+
+  delete(opts = {}) {
+    if (this._isCached) {
+      // This object is cached, do not delete
+      return this;
+    }
+    return super.delete(opts);
   }
 
   reset() {
