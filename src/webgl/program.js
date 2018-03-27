@@ -58,7 +58,10 @@ export default class Program extends Resource {
     }
 
     this._compileAndLink();
+
+    // Experimental flag to avoid deleting Program object while it is cached
     this._isCached = false;
+
     return this;
   }
 
@@ -154,12 +157,6 @@ export default class Program extends Resource {
     });
 
     return this;
-  }
-
-  // When set to true, delete() doesn't delete the object(and associated WebGL handles).
-  // But when applications quit, program objects will be garbage collected as any other objects.
-  setIsCached(flag) {
-    this._isCached = flag;
   }
 
   /**

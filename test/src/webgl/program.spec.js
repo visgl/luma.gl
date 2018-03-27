@@ -109,11 +109,11 @@ test('WebGL#Program caching', t => {
 
   const program = new Program(gl, {fs, vs});
 
-  program.setIsCached(true);
+  program._isCached = true;
   program.delete();
   t.ok(program._handle, 'Program should not be deleted');
 
-  program.setIsCached(false);
+  program._isCached = false;
   program.delete();
   t.ok(!program._handle, 'Program should be deleted');
 
