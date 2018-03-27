@@ -3,28 +3,60 @@
 In addition to these notes, always check the [Upgrade Guide](/#/documentation/upgrade-guide) when considering adopting a new release.
 
 
+
 ## Version 5.2
 
 **IN DEVELOPMENT**
 
 Date: Target April, 2018
 
-## Transform class (New, WebGL2)
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>New Transform Class</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>Example 14</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>Example 15</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-The new [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
-## Framebuffer Asynchronous Read (New, WebGL2)
+## Transform class (New, WebGL2) (Experimental)
 
-A new method [`readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This way applications have the freedom to reduce the CPU-GPU sync time or completely avoid it by using the `Buffer` object as data source for the GPU.
-
-## Node.js Support Changes
-
-When running under Node.js, luma.gl will now automatically attempt to load `gl` (headless-gl) if installed on your system. It is no longer required to `import "luma.gl/headless"`. This should somewhat simplify running luma.gl code under Node.js. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+The new experimental [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
 
-## Debug Mode Changes
+## Framebuffer Class
 
-To minimize application bundle sizes, luma.gl installs, but no longer automatically imports the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools). To use debug contexts, applications need to explicitly import them using `import "luma.gl/debug"`. See the article on [Debugging](/#/documentation/get-started/debugging) and the Upgrade Guide.
+** "Asynchronous" Pixel Readback** (WebGL2) - A new method [`readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This way applications have the freedom to reduce the CPU-GPU sync time or completely avoid it by using the `Buffer` object as data source for the GPU.
+
+
+## Easier to Run luma.gl under Node.js
+
+When running under Node.js, luma.gl now automatically loads headless-gl (`gl`) if installed on the system. It is no longer required to `import "luma.gl/headless"`. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+
+
+## Dist Size Reduction
+
+Bundle sizes for a minimal luma.gl app with webpack 2.
+
+| Dist | 5.1.4 Bundle (Compressed) | 5.2.0 Bundle (Compressed) | Comments |
+| ---  | ---                       | ---                       | --- |
+| ES6  | N/A                       | 252 KB (72 KB)            | New dist in 5.2.0                |
+| ESM  | 320 KB (80 KB)            | 308 KB (76 KB)            | Transpiled, tree-shaking enabled |
+| ES5  | 388 KB (88 KB)            | 380 KB (88 KB)            | 100% Transipled to ES5           |
+
+
+* NOTE: To minimize application bundle sizes, luma.gl no longer imports the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools). To use debug contexts in v5.2, refer to the article on [Debugging](/#/documentation/get-started/debugging) and the Upgrade Guide.
 
 
 ## Version 5.1
