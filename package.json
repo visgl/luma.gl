@@ -46,7 +46,7 @@
     "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
     "bench": "node test/bench/node.js",
     "bench-browser": "webpack-dev-server --env.bench --progress --hot --open",
-    "test": "npm run lint && npm run build && npm run test-node",
+    "test": "npm run lint && npm run build && npm run test-node && npm run collect-metrics",
     "test-cover": "NODE_ENV=test tape -r babel-register test/node.js && nyc report",
     "test-fast": "node test/node.js",
     "test-fp64-old": "(cd src/shadertools/modules/fp64/test-deprecated && webpack-dev-server --progress --hot --open)",
@@ -54,11 +54,9 @@
     "test-node": "node test/node.js | faucet",
     "test-browser": "webpack-dev-server --env.test --progress --hot --open",
     "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",
-    "docs": "npm run docs-build && open ./_docs/docs/index.html",
-    "docs-build": "rm -fr _docs/* && jekyll build --config=docs/_config.yml --layouts docs/_layouts",
-    "docs-gh-pages": "git subtree push --prefix _docs origin gh-pages",
-    "docs-gh-pages-force": "git push origin `git subtree split --prefix _docs dev`:gh-pages --force",
-    "docs-publish": "npm run docs-build && git add _docs -f && git commit -m 'UPDATE DOCS' --no-verify && npm run docs-gh-pages"
+    "test-size-es6": "npm run build-es6 && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.es6",
+    "test-size-esm": "npm run build-esm && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.esm",
+    "collect-metrics": "./test/scripts/collect-metrics.sh"
   },
   "dependencies": {
     "math.gl": "^1.0.0",
@@ -101,6 +99,8 @@
     "tape": "^4.6.3",
     "tape-catch": "^1.0.4",
     "tape-promise": "^1.1.0",
+    "uglifyjs-webpack-plugin": "^1.2.4",
+    "webpack-bundle-analyzer": "^2.11.1",
     "webpack-dev-server": "^2.4.4"
   },
   "nyc": {
