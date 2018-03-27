@@ -1,5 +1,7 @@
 # Pre-releases
 
+## 5.2.0-alpha.8 - Mar 26
+
 ## 5.2.0-alpha.7 - Mar 22
 - Don't throw on missing headless-gl.
 
