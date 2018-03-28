@@ -1,3 +1,7 @@
+## 5.1.5 - March 28, 2018
+- Collect metrics (#465)
+- Do not delete cached Program objects (#467) (#469)
+
 ## 5.1.4 - March 23, 2018
 - Fix exports (#428)
 
