@@ -55,7 +55,6 @@ export default class Buffer extends Resource {
     // to a generic (non-element) buffer.
     // In WebGL2, we can use GL_COPY_READ_BUFFER which avoids locking the type here
     this.target = opts.target || (this.gl.webgl2 ? GL_COPY_READ_BUFFER : GL_ARRAY_BUFFER);
-    this.index = null;
     this.setData(opts);
     Object.seal(this);
   }
@@ -99,7 +98,8 @@ export default class Buffer extends Resource {
     stride = 0,
     normalized = false,
     integer = false,
-    instanced = 0
+    instanced = 0,
+    index = null
   } = {}) {
     const opts = arguments[0];
 
@@ -124,6 +124,7 @@ export default class Buffer extends Resource {
     this.data = data;
     this.type = type;
     this.usage = usage;
+    this.index = index;
 
     // Call after type is set
     this.setDataLayout(Object.assign(opts));
@@ -248,7 +249,7 @@ export default class Buffer extends Resource {
     // be used as direct binding points, they will not affect transform feedback or
     // uniform buffer state. Instead indexed bindings need to be made.
     const type = (target === GL_UNIFORM_BUFFER || target === GL_TRANSFORM_FEEDBACK_BUFFER) ?
-      (size !== undefined ? 'ranged' : ' indexed') : 'non-indexed';
+      (size !== undefined ? 'ranged' : 'indexed') : 'non-indexed';
 
     switch (type) {
     case 'non-indexed':
