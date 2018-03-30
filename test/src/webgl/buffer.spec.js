@@ -36,6 +36,23 @@ test('WebGL#Buffer bind/unbind', t => {
   t.end();
 });
 
+test('WebGL#Buffer bind/unbind with index', t => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const buffer = new Buffer(gl2, {target: GL.UNIFORM_BUFFER, index: 0})
+    .bind()
+    .unbind()
+    .delete();
+  t.ok(buffer instanceof Buffer, 'Buffer bind/unbind with index successful');
+
+  t.end();
+});
+
 test('WebGL#Buffer construction', t => {
   const {gl} = fixture;
 
