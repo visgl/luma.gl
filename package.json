@@ -48,7 +48,8 @@
     "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
     "bench": "node test/bench/node.js",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js  --env.bench --progress --hot --open",
-    "test": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics",
+    "test": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics && npm run test-browser-puppet",
+    "test-ci": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics",
     "test-cover": "NODE_ENV=test tape -r babel-register test/node.js && nyc report",
     "test-fast": "node test/node.js",
     "test-fp64": "(cd src/shadertools/test && webpack-dev-server --progress --hot --open)",
@@ -63,7 +64,7 @@
   },
   "dependencies": {
     "math.gl": ">=1.1.0-alpha.1",
-    "probe.gl": ">=1.0.0-alpha.10",
+    "probe.gl": ">=1.0.0-alpha.11",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },
