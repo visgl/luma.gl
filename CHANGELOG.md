@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 5.2.0-alpha.10 - Mar 29
+- Integrate test-browser with "git commit" (#468)
+- Fix Uniform Buffer binding (#473)
+
 ## 5.2.0-alpha.9 - Mar 27
 - Allow null uniforms (#472)
 - Add metrics collection (#466)
