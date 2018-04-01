@@ -14,9 +14,6 @@ const BABEL_CONFIG = {
     'stage-2'
   ].map(name => require.resolve(`babel-preset-${name}`)),
   plugins: [
-    // '../babel-plugin-tree-shaking.js'
-    // math library subclasses arrays
-    [require.resolve('babel-plugin-transform-builtin-extend'), {globals: ['Array']}],
     // website uses decorators
     require.resolve('babel-plugin-transform-decorators-legacy')
   ]

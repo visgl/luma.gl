@@ -37,7 +37,7 @@ The new experimental [`Transform`](/#/documentation/api-reference/transform) cla
 
 ## Framebuffer Class
 
-** "Asynchronous" Pixel Readback** (WebGL2) - A new method [`readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This way applications have the freedom to reduce the CPU-GPU sync time or completely avoid it by using the `Buffer` object as data source for the GPU.
+**Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 
 ## Easier to Run luma.gl under Node.js
@@ -47,16 +47,12 @@ When running under Node.js, luma.gl now automatically loads headless-gl (`gl`) i
 
 ## Dist Size Reduction
 
-Bundle sizes for a minimal luma.gl app with webpack 2.
-
-| Dist | 5.1.4 Bundle (Compressed) | 5.2.0 Bundle (Compressed) | Comments |
-| ---  | ---                       | ---                       | --- |
-| ES6  | N/A                       | 252 KB (72 KB)            | New dist in 5.2.0                |
-| ESM  | 320 KB (80 KB)            | 308 KB (76 KB)            | Transpiled, tree-shaking enabled |
-| ES5  | 388 KB (88 KB)            | 380 KB (88 KB)            | 100% Transipled to ES5           |
+The impact of luma.gl when bundled in production application has been reduced, in particular when using webpack 4 with appropriate configuration.
 
 
-* NOTE: To minimize application bundle sizes, luma.gl no longer imports the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools). To use debug contexts in v5.2, refer to the article on [Debugging](/#/documentation/get-started/debugging) and the Upgrade Guide.
+## Debug Mode Changes
+
+To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by defaults, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
 
 
 ## Version 5.1
