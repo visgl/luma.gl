@@ -40,14 +40,14 @@ The new experimental [`Transform`](/#/documentation/api-reference/transform) cla
 **Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 
-## Easier to Run luma.gl under Node.js
+## Bundle Size Reduction
 
-When running under Node.js, luma.gl now automatically loads headless-gl (`gl`) if installed on the system. It is no longer required to `import "luma.gl/headless"`. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/#/documentation/developer-guide/building-apps]) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
 
 
-## Dist Size Reduction
+## Running luma.gl in Node.js
 
-The impact of luma.gl when bundled in production application has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/#/documentation/developer-guide/building-apps]) has been added to the Developer Guide, providing in-depth information and guidance on numbers.
+Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
 
 
 ## Debug Mode Changes
