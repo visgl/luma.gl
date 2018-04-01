@@ -3,28 +3,56 @@
 In addition to these notes, always check the [Upgrade Guide](/#/documentation/upgrade-guide) when considering adopting a new release.
 
 
+
 ## Version 5.2
 
 **IN DEVELOPMENT**
 
 Date: Target April, 2018
 
-## Transform class (New, WebGL2)
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>New Transform Class</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>Example 14</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>Example 15</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-The new [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
-## Framebuffer Asynchronous Read (New, WebGL2)
+## Transform class (New, WebGL2) (Experimental)
 
-A new method [`readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This way applications have the freedom to reduce the CPU-GPU sync time or completely avoid it by using the `Buffer` object as data source for the GPU.
+The new experimental [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
-## Node.js Support Changes
 
-When running under Node.js, luma.gl will now automatically attempt to load `gl` (headless-gl) if installed on your system. It is no longer required to `import "luma.gl/headless"`. This should somewhat simplify running luma.gl code under Node.js. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+## Framebuffer Class
+
+**Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+
+
+## Bundle Size Reduction
+
+The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/#/documentation/developer-guide/building-apps]) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
+
+
+## Running luma.gl in Node.js
+
+Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
 
 
 ## Debug Mode Changes
 
-To minimize application bundle sizes, luma.gl installs, but no longer automatically imports the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools). To use debug contexts, applications need to explicitly import them using `import "luma.gl/debug"`. See the article on [Debugging](/#/documentation/get-started/debugging) and the Upgrade Guide.
+To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by defaults, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
 
 
 ## Version 5.1

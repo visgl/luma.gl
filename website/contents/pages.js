@@ -288,10 +288,6 @@ export const DOC_PAGES = [
       {
         name: 'Using with Node.js',
         content: 'get-started/using-with-node.md'
-      },
-      {
-        name: 'Debugging',
-        content: 'get-started/debugging.md'
       }
       // {
       //   name: 'Using with other Frameworks',
@@ -299,14 +295,17 @@ export const DOC_PAGES = [
       // }
     ]
   },
-  // ,
-  // {
-  //   name: 'Advanced',
-  //   children: [
-  //     {
-  //       name: 'Roadmap',
-  //       content: 'user-guide/extensions.md'
-  //     },
+  {
+    name: 'Developer Guide',
+    children: [
+      {
+        name: 'Building Apps',
+        content: 'developer-guide/building-apps.md'
+      },
+      {
+        name: 'Debugging',
+        content: 'developer-guide/debugging.md'
+      }
   //     {
   //       name: 'Extensions',
   //       content: 'user-guide/extensions.md'
@@ -319,8 +318,8 @@ export const DOC_PAGES = [
       //   name: 'GPGPU Programming',
       //   content: 'user-guide/gpgpu.md'
       // }
-  //   ]
-  // }
+    ]
+  },
   {
     name: 'API Reference',
     children: [
