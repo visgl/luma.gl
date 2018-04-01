@@ -340,6 +340,15 @@ export default class Program extends Resource {
     return this.gl.getUniform(this.handle, location);
   }
 
+  /* eslint-disable max-len */
+  // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
+  // For valid `pname` values check :
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
+  getActiveUniforms(uniformIndices, pname) {
+    return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
+  }
+  /* eslint-enable max-len */
+
   // WebGL2
   /**
    * @param {GLuint} index
@@ -361,6 +370,25 @@ export default class Program extends Resource {
   getAttachedShaders() {
     return this.gl.getAttachedShaders(this.handle);
   }
+
+  // Retrieves the index of a uniform block
+  getUniformBlockIndex(blockName) {
+    return this.gl.getUniformBlockIndex(this.handle, blockName);
+  }
+
+  // Binds a uniform block (`blockIndex`) to a speicif binding point (`blockBinding`)
+  uniformBlockBinding(blockIndex, blockBinding) {
+    this.gl.getUniformBlockIndex(this.handle, blockIndex, blockBinding);
+  }
+
+  /* eslint-disable max-len */
+  // Retrieves information about an active uniform block (`blockIndex`)
+  // For valid `pname` values check :
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
+  getActiveUniformBlockParameter(blockIndex, pname) {
+    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
+  }
+  /* eslint-enable max-len */
 
   // PRIVATE METHODS
 
