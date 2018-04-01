@@ -47,7 +47,7 @@ When running under Node.js, luma.gl now automatically loads headless-gl (`gl`) i
 
 ## Dist Size Reduction
 
-The impact of luma.gl when bundled in production application has been reduced, in particular when using webpack 4 with appropriate configuration.
+The impact of luma.gl when bundled in production application has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/#/documentation/developer-guide/building-apps]) has been added to the Developer Guide, providing in-depth information and guidance on numbers.
 
 
 ## Debug Mode Changes
