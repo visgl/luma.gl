@@ -9,7 +9,7 @@
 import {global} from '../utils/globals';
 
 // Load headless gl dynamically, if available
-import {headlessTypes} from './headless-gl';
+import {headlessTypes} from './create-headless-context';
 
 class DummyType {}
 

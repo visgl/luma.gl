@@ -3,17 +3,7 @@
 // with resource.getParameters(). This is mainly useful during debugging.
 // Note: Kept separate to avoid bundling in production applications
 
-import GL from '../../webgl-utils/constants';
-
-// TODO - separate install parameter definitions function from api metadata
-import Buffer from '../buffer';
-import FenceSync from '../fence-sync';
-import Framebuffer from '../framebuffer';
-import Program from '../program';
-import Renderbuffer from '../renderbuffer';
-import Sampler from '../sampler';
-// import Shader from './shader';
-import Texture from '../texture';
+import GL from './constants';
 
 // WebGL specification 'types'
 export const GLenum = 'GLenum';
@@ -413,19 +403,19 @@ export const DBG_PARAMETERS = {
 };
 */
 
-const BUFFER_PARAMETERS = {
+export const BUFFER_PARAMETERS = {
   [GL.BUFFER_SIZE]: {webgl1: 0}, // GLint indicating the size of the buffer in bytes.
   [GL.BUFFER_USAGE]: {webgl1: 0} // GLenum indicating the usage pattern of the buffer.
 };
 
-const FENCE_SYNC_PARAMETERS = [
+export const FENCE_SYNC_PARAMETERS = [
   GL.OBJECT_TYPE, // GLenum, type of sync object (always GL.SYNC_FENCE).
   GL.SYNC_STATUS, // GLenum, status of sync object (GL.SIGNALED/GL.UNSIGNALED)
   GL.SYNC_CONDITION, // GLenum. object condition (always GL.SYNC_GPU_COMMANDS_COMPLETE).
   GL.SYNC_FLAGS // GLenum, flags sync object was created with (always 0)
 ];
 
-const FRAMEBUFFER_ATTACHMENT_PARAMETERS = [
+export const FRAMEBUFFER_ATTACHMENT_PARAMETERS = [
   GL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, // WebGLRenderbuffer or WebGLTexture
   GL.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, // GL.RENDERBUFFER, GL.TEXTURE, GL.NONE
   GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE, // GL.TEXTURE_CUBE_MAP_POSITIVE_X, etc.
@@ -444,7 +434,7 @@ const FRAMEBUFFER_ATTACHMENT_PARAMETERS = [
   // GL.FLOAT, GL.INT, GL.UNSIGNED_INT, GL.SIGNED_NORMALIZED, OR GL.UNSIGNED_NORMALIZED.
 ];
 
-const FRAMEBUFFER_STATUS = {
+export const FRAMEBUFFER_STATUS = {
   [GL.FRAMEBUFFER_COMPLETE]:
     'Success. Framebuffer is correctly set up',
   [GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT]:
@@ -460,7 +450,7 @@ const FRAMEBUFFER_STATUS = {
     'Framebuffer attachement SAMPLES differs among renderbuffers, or are mixed with textures'
 };
 
-const PROGRAM_PARAMETERS = {
+export const PROGRAM_PARAMETERS = {
   [GL.DELETE_STATUS]: {webgl1: 0}, // GLboolean
   [GL.LINK_STATUS]: {webgl1: 0}, // GLboolean
   [GL.VALIDATE_STATUS]: {webgl1: 0}, // GLboolean
@@ -473,7 +463,7 @@ const PROGRAM_PARAMETERS = {
 };
 
 //  parameters
-const RENDERBUFFER_PARAMETERS = {
+export const RENDERBUFFER_PARAMETERS = {
   // WebGL1 parameters
   [GL.RENDERBUFFER_WIDTH]: {webgl1: 0}, // {GLint} - height of the image of renderbuffer.
   [GL.RENDERBUFFER_HEIGHT]: {webgl1: 0}, // {GLint} - height of the image of renderbuffer.
@@ -498,7 +488,7 @@ const RENDERBUFFER_PARAMETERS = {
   [GL.RENDERBUFFER_SAMPLES]: {webgl2: 1}
 };
 
-const SAMPLER_PARAMETERS = {
+export const SAMPLER_PARAMETERS = {
   [GL.TEXTURE_MAG_FILTER]: {webgl2: true}, // texture magnification filter
   [GL.TEXTURE_MIN_FILTER]: {webgl2: true}, // texture minification filter
   [GL.TEXTURE_WRAP_S]: {webgl2: true}, // texture wrapping function for texture coordinate s
@@ -520,7 +510,7 @@ const SAMPLER_PARAMETERS = {
 //   GL.SHADER_TYPE // GLenum - GL.VERTEX_SHADER or GL.FRAGMENT_SHADER.
 // ];
 
-const TEXTURE_PARAMETERS = {
+export const TEXTURE_PARAMETERS = {
   // WEBGL1
   [GL.TEXTURE_MAG_FILTER]: {type: 'GLenum', webgl1: GL.LINEAR}, // texture magnification filter
   [GL.TEXTURE_MIN_FILTER]: {type: 'GLenum', webgl1: GL.NEAREST_MIPMAP_LINEAR}, // minification filt.
@@ -544,14 +534,26 @@ const TEXTURE_PARAMETERS = {
   [GL.TEXTURE_HEIGHT]: {webgl1: 0}
 };
 
+// TODO - separate install parameter definitions function from api metadata
+/*
+import Buffer from '../buffer';
+import FenceSync from '../fence-sync';
+import Framebuffer from '../framebuffer';
+import Program from '../program';
+import Renderbuffer from '../renderbuffer';
+import Sampler from '../sampler';
+// import Shader from './shader';
+import Texture from '../texture';
+*/
+
 export function installParameterDefinitions() {
-  Buffer.PARAMETERS = BUFFER_PARAMETERS;
-  FenceSync.PARAMETERS = FENCE_SYNC_PARAMETERS;
-  Framebuffer.ATTACHMENT_PARAMETERS = FRAMEBUFFER_ATTACHMENT_PARAMETERS;
-  Framebuffer.STATUS = FRAMEBUFFER_STATUS;
-  Program.PARAMETERS = PROGRAM_PARAMETERS;
-  Renderbuffer.PARAMETERS = RENDERBUFFER_PARAMETERS;
-  Sampler.PARAMETERS = SAMPLER_PARAMETERS;
-  // Shader.PARAMETERS = SHADER_PARAMETERS;
-  Texture.PARAMETERS = TEXTURE_PARAMETERS;
+  // Buffer.PARAMETERS = BUFFER_PARAMETERS;
+  // FenceSync.PARAMETERS = FENCE_SYNC_PARAMETERS;
+  // Framebuffer.ATTACHMENT_PARAMETERS = FRAMEBUFFER_ATTACHMENT_PARAMETERS;
+  // Framebuffer.STATUS = FRAMEBUFFER_STATUS;
+  // Program.PARAMETERS = PROGRAM_PARAMETERS;
+  // Renderbuffer.PARAMETERS = RENDERBUFFER_PARAMETERS;
+  // Sampler.PARAMETERS = SAMPLER_PARAMETERS;
+  // // Shader.PARAMETERS = SHADER_PARAMETERS;
+  // Texture.PARAMETERS = TEXTURE_PARAMETERS;
 }
