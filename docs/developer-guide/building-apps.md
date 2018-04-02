@@ -46,8 +46,8 @@ So, what bundle size impact should you expect? When do you know if you have set 
 | Dist | 5.1.4 Bundle (Compressed) | 5.2.0 Bundle (Compressed) | Comments |
 | ---  | ---                       | ---                       | --- |
 | ES6  | N/A                       | 143 KB (39 KB)            | New ES6 dist in v5.2 (minimally transpiled) |
-| ESM  | 708 KB (169 KB)           | 212 KB (50 KB)           | Transpiled, tree-shaking enabled   |
-| ES5  | 754 KB (176 KB)           | 376 KB (85 KB)           | Transpiled to ES5, no tree-shaking |
+| ESM  | 320 KB (80 KB)           | 212 KB (50 KB)           | Transpiled, tree-shaking enabled   |
+| ES5  | 388 KB (88 KB)           | 376 KB (85 KB)           | Transpiled to ES5, no tree-shaking |
 
 Notes:
 * Numbers represent the minified bundle size of a minimal application, bundled with Webpack 4, which means that the results benefit from some tree shaking.
