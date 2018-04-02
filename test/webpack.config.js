@@ -27,6 +27,8 @@ const webpack = require('webpack');
 const ALIASES = require(resolve(__dirname, '../aliases'));
 
 const COMMON_CONFIG = {
+  mode: 'development',
+
   stats: {
     warnings: false
   },
@@ -107,12 +109,16 @@ function getDist(env) {
 }
 
 const CONFIGS = {
-  test: env => TEST_CONFIG,
+  test: env => Object.assign({}, TEST_CONFIG, {
+    plugins: [new HtmlWebpackPlugin()]
+  }),
 
   bench: env => Object.assign({}, TEST_CONFIG, {
     entry: {
       'test-browser': resolve(__dirname, './bench/browser.js')
-    }
+    },
+
+    plugins: [new HtmlWebpackPlugin()]
   }),
 
   size: env => {
@@ -138,6 +144,8 @@ const CONFIGS = {
     const config = CONFIGS.size(env);
 
     Object.assign(config, {
+      mode: 'production',
+
       // Replace the entry point for webpack-dev-server
       entry: {
         'test-browser': resolve(__dirname, './size', `${app}.js`)
@@ -167,7 +175,7 @@ const CONFIGS = {
 };
 
 function getConfig(env) {
-  if (env.test || env['test-browser']) {
+  if (env.test || env.testBrowser) {
     return CONFIGS.test(env);
   }
   if (env.bench) {
@@ -180,10 +188,14 @@ function getConfig(env) {
   return CONFIGS.bundle(env);
 }
 
-module.exports = env => {
-  const config = getConfig(env || {});
-  // NOTE uncomment to display config
+module.exports = (env = {}) => {
+  // env = getEnv(env);
+  // NOTE uncomment to display env
   // console.log('webpack env', JSON.stringify(env));
+
+  const config = getConfig(env);
+  // NOTE uncomment to display config
   // console.log('webpack config', JSON.stringify(config));
+
   return config;
 };

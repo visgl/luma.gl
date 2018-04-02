@@ -196,42 +196,22 @@ export const EXAMPLE_PAGES = [
           path: `${RAW_GITHUB}/examples/lessons/13/`
         }
       },
-      // {
-      //   name: 'Lesson 10',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 11',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 12',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 13',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 14',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
-      // {
-      //   name: 'Lesson 15',
-      //   content: {
-      //     demo: 'Lesson03'
-      //   }
-      // },
+      {
+        name: 'Lesson 14 - Specular Highlights',
+        content: {
+          demo: 'Lesson14',
+          code: `${GITHUB_TREE}/examples/lessons/14/`,
+          path: `${RAW_GITHUB}/examples/lessons/14/`
+        }
+      },
+      {
+        name: 'Lesson 15 - Specular Maps',
+        content: {
+          demo: 'Lesson15',
+          code: `${GITHUB_TREE}/examples/lessons/15/`,
+          path: `${RAW_GITHUB}/examples/lessons/15/`
+        }
+      },
       {
         name: 'Lesson 16 - Render to Texture',
         content: {
@@ -299,6 +279,10 @@ export const DOC_PAGES = [
     name: 'Developer Guide',
     children: [
       {
+        name: 'API Overview',
+        content: 'api-reference/README.md'
+      },
+      {
         name: 'Building Apps',
         content: 'developer-guide/building-apps.md'
       },
@@ -323,10 +307,6 @@ export const DOC_PAGES = [
   {
     name: 'API Reference',
     children: [
-      {
-        name: 'Introduction',
-        content: 'api-reference/README.md'
-      },
       {
         name: 'AnimationLoop',
         content: 'api-reference/core/animation-loop.md'

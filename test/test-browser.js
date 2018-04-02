@@ -19,13 +19,16 @@
 // THE SOFTWARE.
 
 require('tap-browser-color')();
-require('babel-polyfill');
+
+const test = require('tape');
 
 const {callExposedFunction} = require('probe.gl/test-utils');
 
-const test = require('tape');
 test.onFinish(() => callExposedFunction('testDone', {success: true}));
 test.onFailure(() => callExposedFunction('testDone', {success: false}));
 
-require('./index-webgl-independent-tests');
-require('./index-webgl-dependent-tests');
+test('Browser tests', t => {
+  require('./index-webgl-independent-tests');
+  require('./index-webgl-dependent-tests');
+  t.end();
+});

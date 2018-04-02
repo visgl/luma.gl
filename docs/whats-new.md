@@ -52,7 +52,7 @@ Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatic
 
 ## Debug Mode Changes
 
-To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by defaults, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
+To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
 
 
 ## Version 5.1
