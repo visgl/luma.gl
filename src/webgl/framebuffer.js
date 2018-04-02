@@ -154,7 +154,7 @@ export default class Framebuffer extends Resource {
     if (drawBuffers) {
       this._setDrawBuffers(drawBuffers);
     }
-    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
 
     return this;
   }
@@ -230,7 +230,7 @@ export default class Framebuffer extends Resource {
       }
     }
 
-    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
 
     // Assign to attachments and remove any nulls to get a clean attachment map
     Object.assign(this.attachments, attachments);
@@ -243,7 +243,7 @@ export default class Framebuffer extends Resource {
     const {gl} = this;
     const prevHandle = gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
     const status = gl.checkFramebufferStatus(GL_FRAMEBUFFER);
-    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error(_getFrameBufferStatus(status));
     }
@@ -267,7 +267,7 @@ export default class Framebuffer extends Resource {
       clearBuffer({drawBuffer, value});
     });
 
-    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
 
     return this;
   }
@@ -308,7 +308,7 @@ export default class Framebuffer extends Resource {
 
     const prevHandle = this.gl.bindFramebuffer(GL_FRAMEBUFFER, this.handle);
     this.gl.readPixels(x, y, width, height, format, type, pixelArray);
-    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    this.gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
 
     return pixelArray;
   }
@@ -464,7 +464,7 @@ export default class Framebuffer extends Resource {
     }
 
     gl.readBuffer(prevBuffer);
-    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle);
+    gl.bindFramebuffer(GL_FRAMEBUFFER, prevHandle || null);
     return texture;
   }
 

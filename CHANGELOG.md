@@ -1,5 +1,12 @@
 # Pre-releases
 
+
+## 5.2.0-alpha.12 - April 2
+- Fixes to electron support, debug mode and AnimationLoop (#483)
+- PickingModule: picking_filterColor method (#464)
+- Add AnimationLoopProxy class (#453)
+- Clean up debug mode (#481)
+
 ## 5.2.0-alpha.11 - April 1
 - babel 7
 
