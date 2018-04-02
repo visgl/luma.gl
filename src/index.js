@@ -38,7 +38,7 @@ export {
   getFeatures,
   canCompileGLGSExtension} from './webgl/context-features';
 export {
-  makeDebugContext} from './webgl/context-debug';
+  makeDebugContext} from './webgl-utils/debug-context';
 
 export {default as Buffer} from './webgl/buffer';
 export {Shader, VertexShader, FragmentShader} from './webgl/shader';

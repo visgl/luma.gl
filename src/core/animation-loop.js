@@ -3,6 +3,7 @@ import {window} from '../utils/globals';
 import {log} from '../utils';
 import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
 import {createGLContext, isWebGL, resetParameters} from '../webgl';
+import {makeDebugContext} from '../webgl-utils/debug-context';
 import {Framebuffer} from '../webgl';
 import assert from '../utils/assert';
 
@@ -37,8 +38,7 @@ export default class AnimationLoop {
       offScreen = false,
       gl = null,
       glOptions = {},
-      width = null,
-      height = null,
+      debug = false,
 
       createFramebuffer = false,
 
@@ -56,30 +56,33 @@ export default class AnimationLoop {
       useDevicePixels = props.useDevicePixelRatio;
     }
 
-    this.start = this.start.bind(this);
-    this.stop = this.stop.bind(this);
-    this._renderFrame = this._renderFrame.bind(this);
+    this.props = {
+      onCreateContext,
+      onInitialize,
+      onRender,
+      onFinalize,
 
-    this._onCreateContext = onCreateContext;
-    this.glOptions = glOptions;
-    this._createFramebuffer = createFramebuffer;
+      gl,
+      glOptions,
+      debug,
+      createFramebuffer
+    };
 
-    this._onInitialize = onInitialize;
-    this._onRender = onRender;
-    this._onFinalize = onFinalize;
-
-    this.width = width;
-    this.height = height;
-    this.needsRedraw = null;
-
+    // state
     this.gl = gl;
     this.offScreen = offScreen;
+    this.needsRedraw = null;
 
     this.setProps({
       autoResizeViewport,
       autoResizeDrawingBuffer,
       useDevicePixels
     });
+
+    // Bind methods
+    this.start = this.start.bind(this);
+    this.stop = this.stop.bind(this);
+    this._renderFrame = this._renderFrame.bind(this);
 
     return this;
   }
@@ -117,7 +120,8 @@ export default class AnimationLoop {
         }
 
         // Create the WebGL context
-        this._createWebGLContext(opts);
+        this._createWebGLContext();
+        this._createFramebuffer();
 
         // Initialize the callback data
         this._initializeCallbackData();
@@ -128,7 +132,7 @@ export default class AnimationLoop {
         this._resizeViewport();
 
         // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this._onInitialize(this._callbackData);
+        return this.props.onInitialize(this._callbackData);
       })
       .then(appContext => {
         if (!this._stopped) {
@@ -205,7 +209,7 @@ export default class AnimationLoop {
     this._updateCallbackData();
 
     // call callback
-    this._onRender(this._callbackData);
+    this.props.onRender(this._callbackData);
     // end callback
 
     if (this.offScreen) {
@@ -256,7 +260,7 @@ export default class AnimationLoop {
 
   _finalizeCallbackData() {
     // call callback
-    this._onFinalize(this._callbackData);
+    this.props.onFinalize(this._callbackData);
     // end callback
   }
 
@@ -270,20 +274,17 @@ export default class AnimationLoop {
   // Either uses supplied or existing context, or calls provided callback to create one
   _createWebGLContext(opts) {
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.glOptions);
-    if (opts.gl) {
-      this.gl = opts.gl;
-    } else {
-      this.gl = this._onCreateContext(opts);
-    }
+    opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);
+    this.gl = this.props.gl || this.props.onCreateContext(opts);
+
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
     }
 
-    // Setup default framebuffer
-    if (this._createFramebuffer) {
-      this.framebuffer = new Framebuffer(this.gl);
+    if (this.props.debug) {
+      this.gl = makeDebugContext(this.gl);
     }
+
     // Reset the WebGL context.
     resetParameters(this.gl);
   }
@@ -300,6 +301,14 @@ export default class AnimationLoop {
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
       resizeDrawingBuffer(this.gl.canvas, {useDevicePixels: this.useDevicePixels});
+    }
+  }
+
+  // TBD - deprecated?
+  _createFramebuffer() {
+    // Setup default framebuffer
+    if (this.props.createFramebuffer) {
+      this.framebuffer = new Framebuffer(this.gl);
     }
   }
 

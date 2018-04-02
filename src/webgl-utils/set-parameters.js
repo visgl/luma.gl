@@ -271,16 +271,17 @@ export function setParameters(gl, values) {
   // HANDLE PRIMITIVE SETTERS (and make note of any composite setters)
 
   for (const key in values) {
+    const glConstant = Number(key);
     const setter = GL_PARAMETER_SETTERS[key];
     if (setter) {
       // Composite setters should only be called once, so save them
       if (typeof setter === 'string') {
         compositeSetters[setter] = true;
-      // only call setter if value has changed
-      // TODO - deep equal on values?
-      } else {
-        // Note - the setter will automatically update this.state
-        setter(gl, values[key], Number(key));
+      } else { // if (gl[glConstant] !== undefined) {
+        // TODO - added above check since this is being called on WebGL2 values in WebGL1...
+        // TODO - deep equal on values? only call setter if value has changed?
+        // NOTE - the setter will automatically update this.state
+        setter(gl, values[key], glConstant);
       }
     }
   }

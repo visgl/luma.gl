@@ -18,7 +18,7 @@ export function enableDebug(debug) {
 
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
-export function makeDebugContext(gl, {debug} = {}) {
+export function makeDebugContext(gl, {debug = true} = {}) {
   if (gl === null) { // Return to ensure we don't create a context in this case.
     return null;
   }
@@ -44,7 +44,7 @@ export function getDebugContext(gl) {
   }
 
   if (!global.WebGLDebug) {
-    log.warn('debug mode activation failed. import "luma.gl/debug" to enable.');
+    log.error('WebGL debug mode activation failed. import "luma.gl/debug" to enable.')();
     return gl;
   }
 
@@ -61,13 +61,15 @@ export function getDebugContext(gl) {
 
   // Create a new debug context
   class WebGLDebugContext {}
-  const debugContext = global.WebGLDebug.makeDebugContext(gl, throwOnError, validateArgsAndLog);
+  const debugContext = global.WebGLDebug.makeDebugContext(gl, onGLError, onValidateGLFunc);
   Object.assign(WebGLDebugContext.prototype, debugContext);
 
   // Store the debug context
   data.debugContext = debugContext;
   debugContext.debug = true;
   debugContext.gl = gl;
+
+  log.info('debug context actived.');
 
   // Return it
   return debugContext;
@@ -81,24 +83,24 @@ function getFunctionString(functionName, functionArgs) {
   return `gl.${functionName}(${args})`;
 }
 
-function throwOnError(err, functionName, args) {
-  if (!log.nothrow) {
-    const errorMessage = global.WebGLDebug.glEnumToString(err);
-    const functionArgs = global.WebGLDebug.glFunctionArgsToString(functionName, args);
-    throw new Error(`${errorMessage} in gl.${functionName}(${functionArgs})`);
+function onGLError(err, functionName, args) {
+  const errorMessage = global.WebGLDebug.glEnumToString(err);
+  const functionArgs = global.WebGLDebug.glFunctionArgsToString(functionName, args);
+  const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
+  if (log.throw) {
+    throw new Error(message);
+  } else {
+    log.error(message)();
+    debugger; // eslint-disable-line
   }
 }
 
 // Don't generate function string until it is needed
-function validateArgsAndLog(functionName, functionArgs) {
-  if (!log.debug) {
-    return;
-  }
-
+function onValidateGLFunc(functionName, functionArgs) {
   let functionString;
   if (log.priority >= 4) {
     functionString = getFunctionString(functionName, functionArgs);
-    log.info(4, `${functionString}`)();
+    log.info(4, functionString)();
   }
 
   if (log.break) {
@@ -106,16 +108,19 @@ function validateArgsAndLog(functionName, functionArgs) {
     const isBreakpoint = log.break &&
       log.break.every(breakOn => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
-      /* eslint-disable no-debugger */
-      debugger;
-      /* eslint-enable no-debugger */
+      debugger; // eslint-disable-line
     }
   }
 
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-      throw new Error(`Undefined argument: ${functionString}`);
+      if (log.throw) {
+        throw new Error(`Undefined argument: ${functionString}`);
+      } else {
+        log.error(`Undefined argument: ${functionString}`);
+        debugger; // eslint-disable-line
+      }
     }
   }
 }
