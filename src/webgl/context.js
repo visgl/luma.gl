@@ -2,7 +2,7 @@
 // WebGLRenderingContext related methods
 import {WebGLRenderingContext, WebGL2RenderingContext, createHeadlessContext} from '../webgl-utils';
 import trackContextState from '../webgl-utils/track-context-state';
-import {createCanvas, getCanvas, createContext} from '../webgl-utils';
+import {getCanvas, createContext} from '../webgl-utils';
 
 import {makeDebugContext} from './context-debug';
 import {glGetDebugInfo} from './context-limits';
@@ -87,17 +87,10 @@ export function createGLContext(opts = {}) {
 
   let gl;
   if (isBrowser) {
-    // Make sure we have a real canvas ("canvas" can a string, a canvas or null)
-    let realCanvas;
-    if (!canvas) {
-      realCanvas = createCanvas({id: 'lumagl-canvas', width, height, onError});
-    } else if (typeof canvas === 'string') {
-      realCanvas = getCanvas({id: canvas});
-    } else {
-      realCanvas = canvas;
-    }
+    // Get or create a canvas
+    const targetCanvas = getCanvas({canvas, width, height, onError});
     // Create a WebGL context in the canvas
-    gl = createContext({canvas: realCanvas, opts});
+    gl = createContext({canvas: targetCanvas, opts});
   } else {
     // Create a headless-gl context under Node.js
     gl = createHeadlessContext({width, height, opts, onError});
