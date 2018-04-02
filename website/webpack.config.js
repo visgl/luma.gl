@@ -20,7 +20,13 @@ const BABEL_CONFIG = {
 };
 
 const COMMON_CONFIG = {
+  mode: 'development',
+
   entry: ['./src/main'],
+
+  output: {
+    filename: 'bundle.js'
+  },
 
   module: {
     rules: [
@@ -33,7 +39,7 @@ const COMMON_CONFIG = {
         exclude: [/node_modules/]
       }, {
         test: /\.scss$/,
-        loaders: ['style-loader', 'css-loader', 'sass-loader', 'autoprefixer-loader']
+        loaders: ['style-loader', 'css-loader', 'sass-loader']
       }, {
         test: /\.(eot|svg|ttf|woff|woff2|gif|jpe?g|png)$/,
         loader: 'url-loader'
@@ -81,6 +87,8 @@ const addDevConfig = config => {
 
 const addProdConfig = config => {
   return Object.assign(config, {
+    mode: 'production',
+
     output: {
       path: resolve(__dirname, './dist'),
       filename: 'bundle.js'
@@ -88,8 +96,23 @@ const addProdConfig = config => {
   });
 };
 
+// Different versions of webpack supply objects or arrays
+const getEnv = env => {
+  if (Array.isArray(env)) {
+    return env.reduce((key, obj) => {
+      obj[key] = true;
+    }, {});
+  }
+
+  if (typeof env === 'string') {
+    return {[env]: true};
+  }
+
+  return env || {};
+};
+
 module.exports = env => {
-  env = env || {};
+  env = getEnv(env);
 
   let config = COMMON_CONFIG;
 

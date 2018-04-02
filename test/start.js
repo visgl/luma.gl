@@ -24,6 +24,7 @@ case 'test-dist':
   // Load deck.gl itself from the dist folder
   const dist = arg === 'default' ? 'es6' : arg;
   moduleAlias.addAlias('luma.gl', path.resolve(`./dist/${dist}`));
+
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./src/debug/seer-integration');
@@ -39,7 +40,7 @@ case 'test-ci':
 case 'test-browser':
   new BrowserTestDriver().run({
     process: 'webpack-dev-server',
-    parameters: ['--config', 'test/webpack.config.js', '--env.test-browser'],
+    parameters: ['--config', 'test/webpack.config.js', '--env.testBrowser'],
     exposeFunction: 'testDone'
   });
   break;

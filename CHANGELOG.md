@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.2.0-alpha.11 - April 1
+- babel 7
+
 ## 5.2.0-alpha.10 - Mar 29
 - Integrate test-browser with "git commit" (#468)
 - Fix Uniform Buffer binding (#473)

@@ -32,7 +32,7 @@ if (module.require) {
   const moduleAlias = module.require('module-alias');
   moduleAlias.addAliases(ALIASES);
 
-  module.require('babel-polyfill');
+  module.require('@babel/polyfill');
 }
 
 module.exports = ALIASES;
