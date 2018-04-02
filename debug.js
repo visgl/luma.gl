@@ -1,1 +1,1 @@
-module.exports = require('./dist/esm/debug');
+module.exports = require('./dist/es5/debug');
