@@ -1,4 +1,4 @@
-import {isBrowser} from './utils/is-browser';
+import isBrowser from './utils/is-browser';
 import {global} from './utils/globals';
 import log from './utils/log';
 // Version detection using babel plugin

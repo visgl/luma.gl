@@ -347,7 +347,9 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
 }
 
 export function pushContextState(gl) {
-  assert(gl.state);
+  if (!gl.state) {
+    trackContextState(gl, {copyState: false});
+  }
   gl.state.push();
 }
 
