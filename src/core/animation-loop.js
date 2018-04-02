@@ -1,5 +1,6 @@
-/* global self, setTimeout, clearTimeout */
-import {isBrowser, log} from '../utils';
+/* global setTimeout, clearTimeout */
+import {window} from '../utils/globals';
+import {log} from '../utils';
 import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
 import {createGLContext, isWebGL, resetParameters} from '../webgl';
 import {Framebuffer} from '../webgl';
@@ -7,13 +8,15 @@ import assert from '../utils/assert';
 
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 export function requestAnimationFrame(callback) {
-  return isBrowser && self.requestAnimationFrame ?
-    self.requestAnimationFrame(callback) : setTimeout(callback, 1000 / 60);
+  return window.requestAnimationFrame ?
+    window.requestAnimationFrame(callback) :
+    setTimeout(callback, 1000 / 60);
 }
 
 export function cancelAnimationFrame(timerId) {
-  return isBrowser && self.requestAnimationFrame ?
-    self.cancelAnimationFrame(timerId) : clearTimeout(timerId);
+  return window.requestAnimationFrame ?
+    window.cancelAnimationFrame(timerId) :
+    clearTimeout(timerId);
 }
 
 const DEFAULT_GL_OPTIONS = {

@@ -48,15 +48,20 @@ export function createCanvas({width = 800, height = 600, id = 'gl-canvas', inser
   return canvas;
 }
 
-/**
- * Gets an already created canvas from the DOM
- * @param {Number} id - DOM element id
- */
-export function getCanvas({id}) {
-  if (!isPageLoaded) {
-    throw new Error(`createGLContext called on canvas '${id}' before page was loaded`);
+export function getCanvas({canvas, width, height, onError = () => {}}) {
+  let targetCanvas;
+  if (typeof canvas === 'string') {
+    if (!isPageLoaded) {
+      onError(`createGLContext called on canvas '${canvas}' before page was loaded`);
+    }
+    targetCanvas = document.getElementById(canvas);
+  } else if (canvas) {
+    targetCanvas = canvas;
+  } else {
+    targetCanvas = createCanvas({id: 'lumagl-canvas', width, height, onError});
   }
-  return document.getElementById(id);
+
+  return targetCanvas;
 }
 
 // Gets current size of canvas drawing buffer in actual pixels

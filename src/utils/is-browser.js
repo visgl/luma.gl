@@ -9,4 +9,7 @@ export const isNode =
 
 export const isBrowser = !isNode;
 
+// document does not exist on worker thread
+export const isBrowserMainThread = isBrowser && typeof document !== 'undefined';
+
 export default isBrowser;

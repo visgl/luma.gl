@@ -1,13 +1,11 @@
 /* global window */
 import AnimationLoop, {requestAnimationFrame, cancelAnimationFrame} from './animation-loop';
-import {getPageLoadPromise, createCanvas, getCanvas} from '../webgl-utils';
+import {getPageLoadPromise, createCanvas} from '../webgl-utils';
 
-export default class OffscreenAnimationLoop {
+export default class AnimationLoopProxy {
 
-  /*
-   * Create the script for the rendering worker.
-   * @param opts {object} - options to construct an AnimationLoop instance
-   */
+  // Create the script for the rendering worker.
+  // @param opts {object} - options to construct an AnimationLoop instance
   static createWorker(opts) {
     return self => {
 
@@ -53,22 +51,28 @@ export default class OffscreenAnimationLoop {
     worker,
     onInitialize = () => {},
     onFinalize = () => {},
-
     useDevicePixels = true,
     autoResizeDrawingBuffer = true
   }) {
-    this.worker = worker;
+    this.props = {
+      worker,
+      onInitialize,
+      onFinalize,
+      autoResizeDrawingBuffer,
+      useDevicePixels
+    };
 
+    // state
     this.canvas = null;
     this.width = null;
     this.height = null;
 
-    this.autoResizeDrawingBuffer = autoResizeDrawingBuffer;
-    this.useDevicePixels = useDevicePixels;
+    this._stopped = true;
+    this._animationFrameId = null;
+    this._startPromise = null;
 
+    // bind methods
     this._updateFrame = this._updateFrame.bind(this);
-    this._onInitialize = onInitialize;
-    this._onFinalize = onFinalize;
   }
 
   /* Public methods */
@@ -81,16 +85,8 @@ export default class OffscreenAnimationLoop {
       // Wait for start promise before rendering frame
       this._startPromise = getPageLoadPromise()
       .then(() => {
-        const {targetCanvas, offscreenCanvas} = this._createCanvas(opts);
-
-        this.worker.postMessage({
-          command: 'start',
-          opts: Object.assign({}, opts, {canvas: offscreenCanvas})
-        }, [offscreenCanvas]);
-
-        this.canvas = targetCanvas;
-
-        this._onInitialize(this);
+        this._createAndTransferCanvas(opts);
+        return this.props.onInitialize(this);
       })
       .then(() => {
         if (!this._stopped) {
@@ -107,49 +103,42 @@ export default class OffscreenAnimationLoop {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
       this._stopped = true;
-      this._onFinalize(this);
+      this.props.onFinalize(this);
     }
-    this.worker.postMessage({command: 'stop'});
+    this.props.worker.postMessage({command: 'stop'});
     return this;
   }
+
+  // PRIVATE METHODS
 
   _updateFrame() {
     this._resizeCanvasDrawingBuffer();
     this._animationFrameId = requestAnimationFrame(this._updateFrame);
   }
 
-  _createCanvas(opts) {
-    const {canvas, width, height, throwOnError} = opts;
+  _createAndTransferCanvas(opts) {
+    // Create a canvas on the main thread
+    const screenCanvas = createCanvas(opts);
 
-    // Error reporting function, enables exceptions to be disabled
-    function onError(message) {
-      if (throwOnError) {
-        throw new Error(message);
-      }
-      // log.log(0, message);
-      return null;
-    }
-
-    let targetCanvas;
-    if (!canvas) {
-      targetCanvas = createCanvas({id: 'lumagl-canvas', width, height, onError});
-    } else if (typeof canvas === 'string') {
-      targetCanvas = getCanvas({id: canvas});
-    } else {
-      targetCanvas = canvas;
-    }
-
-    if (!targetCanvas.transferControlToOffscreen) {
+    // Create an offscreen canvas controlling the main canvas
+    if (!screenCanvas.transferControlToOffscreen) {
       onError('OffscreenCanvas is not available. Enable Experimental canvas features in chrome://flags'); // eslint-disable-line
     }
-    const offscreenCanvas = targetCanvas.transferControlToOffscreen();
+    const offscreenCanvas = screenCanvas.transferControlToOffscreen();
 
-    return {targetCanvas, offscreenCanvas};
+    // Transfer the offscreen canvas to the worker
+    this.props.worker.postMessage({
+      command: 'start',
+      opts: Object.assign({}, opts, {canvas: offscreenCanvas})
+    }, [offscreenCanvas]);
+
+    // store the main canvas on the local thread
+    this.canvas = screenCanvas;
   }
 
   _resizeCanvasDrawingBuffer() {
-    if (this.autoResizeDrawingBuffer) {
-      const devicePixelRatio = this.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
+    if (this.props.autoResizeDrawingBuffer) {
+      const devicePixelRatio = this.props.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
       const width = this.canvas.clientWidth * devicePixelRatio;
       const height = this.canvas.clientHeight * devicePixelRatio;
 
