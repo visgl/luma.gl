@@ -9,7 +9,6 @@ const animationLoop = new AnimationLoop({
       depthTest: true,
       depthFunc: GL.LEQUAL
     });
-
     return {
       cube: getCube(gl),
       prism: getPrism(gl),
