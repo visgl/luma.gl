@@ -132,8 +132,7 @@ varying vec3 color;
 void main(void) {
   gl_FragColor = vec4(color, 1.);
   gl_FragColor = dirlight_filterColor(gl_FragColor);
-  gl_FragColor = picking_filterHighlightColor(gl_FragColor);
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 `
   };

@@ -17,22 +17,30 @@ main() {
 }
 ```
 
-In your fragment shader, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+```
+main() {
+  gl_FragColor = ...
+  gl_FragColor = picking_filterColor(color);
+}
+```
+
+If highlighting is not needed, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color or the picking color, as appropriate.
 ```
 main() {
   gl_FragColor = ...
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 ```
-If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`. You can also apply other filters on the non-picking color (vertex or highlight color) by placing those instruction between these two function calls.
 
+If additional filters need to be applied on the non-picking color (vertex or highlight color) you can use above functions in following order.
  ```
 main() {
-   gl_FragColor = picking_filterHighlightColor(color);
+   gl_FragColor = ...
+   gl_FragColor = picking_filterHighlightColor(gl_FragColor);
     ... apply any filters on gl_FragColor ...
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
-
 ```
 
 ## JavaScript Functions
