@@ -4,7 +4,7 @@ import {WebGLRenderingContext, WebGL2RenderingContext, createHeadlessContext} fr
 import trackContextState from '../webgl-utils/track-context-state';
 import {getCanvas, createContext} from '../webgl-utils';
 
-import {makeDebugContext} from './context-debug';
+import {makeDebugContext} from '../webgl-utils/debug-context';
 import {glGetDebugInfo} from './context-limits';
 import queryManager from './helpers/query-manager';
 
