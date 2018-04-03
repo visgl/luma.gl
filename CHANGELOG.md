@@ -1,4 +1,4 @@
-# 5.1.5 - April 3, 2018
+# 5.1.6 - April 3, 2018
 - Electron support fixes (#482)
 
 ## 5.1.5 - March 28, 2018
