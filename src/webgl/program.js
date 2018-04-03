@@ -277,6 +277,12 @@ export default class Program extends Resource {
   }
   /* eslint-enable max-depth */
 
+  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
+  uniformBlockBinding(blockIndex, blockBinding) {
+    assertWebGL2Context(this.gl);
+    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
+  }
+
   // setTransformFeedbackBuffers(buffers) {
   //   for (const buffer of buffers) {
   //     buffer.bindBase()
@@ -373,12 +379,8 @@ export default class Program extends Resource {
 
   // Retrieves the index of a uniform block
   getUniformBlockIndex(blockName) {
+    assertWebGL2Context(this.gl);
     return this.gl.getUniformBlockIndex(this.handle, blockName);
-  }
-
-  // Binds a uniform block (`blockIndex`) to a speicif binding point (`blockBinding`)
-  uniformBlockBinding(blockIndex, blockBinding) {
-    this.gl.getUniformBlockIndex(this.handle, blockIndex, blockBinding);
   }
 
   /* eslint-disable max-len */
@@ -386,6 +388,7 @@ export default class Program extends Resource {
   // For valid `pname` values check :
   // https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
   getActiveUniformBlockParameter(blockIndex, pname) {
+    assertWebGL2Context(this.gl);
     return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
   }
   /* eslint-enable max-len */
