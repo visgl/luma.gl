@@ -1,3 +1,6 @@
+# 5.1.5 - April 3, 2018
+- Electron support fixes (#482)
+
 ## 5.1.5 - March 28, 2018
 - Collect metrics (#465)
 - Do not delete cached Program objects (#467) (#469)
