@@ -173,6 +173,13 @@ For each `key, value` of the object passed in it executes `setUniform(key, value
 * `key` (*string*) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the Program than its shaders use, the extra uniforms will simply be ignored.
 * `value` (*mixed*) - The value to be set. Can be a float, an array of floats, a boolean, etc. When the shaders are run (through a draw call), The must match the declaration. There's no need to convert arrays into a typed array, that's done automatically.
 
+### uniformBlockBinding
+
+* `blockIndex` (`GLuint`) - uniform block index
+* `blockBinding` (`GLuint`) - binding point
+
+Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
+
 ### varyings
 
 * `program` (`WebGLProgram?`) - program
@@ -206,7 +213,33 @@ Gets number of active uniforms
 
 Gets {name, type, size} for uniform at index
 
+### getUniformLocation
+
+Gets uniform's location (`WebGLUniformLocation`)
+
+### getUniformValue
+
+Gets the value of a uniform variable at a given location
+
+### getActiveUniforms
+
+Gets the requested information (size, offset etc) of uniforms
+
+### getVarying (WebGL2)
+
+Gets the information {name, size, type} of a varying
+
+### getUniformBlockIndex (WebGL2)
+
+Gets the index of a uniform block
+
+### getActiveUniformBlockParameter (WebGL2)
+
+Gets the information about an active uniform block
+
 ### getFragDataLocation (WebGL2)
+
+Gets the binding of color numbers to user-defined varying out variables
 
 ### Limits
 

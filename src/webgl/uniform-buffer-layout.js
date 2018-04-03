@@ -144,10 +144,10 @@ export default class UniformBufferLayout {
     assert(definition, ERR_ARGUMENT);
     const [type, count] = definition;
 
-    // Get the current offset and calculate the next offset based on aligned size of this element
-    const offset = this.size;
     // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
     this.size = this._alignTo(this.size, count);
+    // Use the aligned size as the offset of the current uniform.
+    const offset = this.size;
     // Then, add our object's padded size ((1, 2, multiple of 4) to the current offset
     this.size += count;
 
