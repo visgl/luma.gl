@@ -2,11 +2,13 @@
 // make sure it can be imported in isolation
 /* global process */
 
-export const isNode =
+import isElectron from './is-electron';
+
+const isNode =
   typeof process === 'object' &&
   String(process) === '[object process]' &&
   !process.browser;
 
-export const isBrowser = !isNode;
+const isBrowser = !isNode || isElectron;
 
 export default isBrowser;
