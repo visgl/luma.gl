@@ -162,13 +162,51 @@ const animationLoop = new AnimationLoop({
 
 animationLoop.getInfo = () => {
   return `
+<div>
   <p>
-    <a href="http://learningwebgl.com/blog/?p=859" target="_blank">
+    <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
       The depth buffer, transparency and blending
     </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
+  </p>
+  The classic WebGL Lessons in luma.gl
+ 
+  <div id="control-elements">
+    <input type="checkbox" id="blending" checked/> Use blending<br/>
+    Alpha level <input type="text" id="alpha" value="0.5"/><br/>
+    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
+    (Use cursor keys to spin the box and <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
+   
+    <br/>
+    <div><b>Directional light:</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Direction:
+        <div>X: <input type="text" id="lightDirectionX" value="0"/></div>
+        <div>Y: <input type="text" id="lightDirectionY" value="0"/></div>
+        <div>Z: <input type="text" id="lightDirectionZ" value="1"/></div>
+      </div>
+      <div class="control-row">
+        Colour:
+        <div>R: <input type="text" id="directionalR" value="0.8"/></div>
+        <div>G: <input type="text" id="directionalG" value="0.8"/></div>
+        <div>B: <input type="text" id="directionalB" value="0.8"/></div>
+      </div>
+    </div>
+  </div> 
+
+  <div>
+    <div><b>Ambient light:</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Colour:
+        <div>R: <input type="text" id="ambientR" value="0.2"/></div>
+        <div>G: <input type="text" id="ambientG" value="0.2"/></div>
+        <div>B: <input type="text" id="ambientB" value="0.2"/></div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
 };
 
 function addKeyboardHandler(canvas) {

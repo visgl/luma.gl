@@ -198,6 +198,51 @@ animationLoop.getInfo = () => {
     </a>
   <p>
     The classic WebGL Lessons in luma.gl
+    
+  <div id="controls-elements">
+    <input type="checkbox" id="color-map" checked/> Use color map<br/>
+    <input type="checkbox" id="specular-map" checked/> Use specular map<br/>
+    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
+
+    <br/>
+    <h2>Point light:</h2>
+
+    <div class="control-block">
+      <div class="control-row">
+        <div><b>Location:</b></div>
+        <div>X: <input type="text" id="lightPositionX" value="-10.0"/></div>
+        <div>Y: <input type="text" id="lightPositionY" value="4.0"/></div>
+        <div>Z: <input type="text" id="lightPositionZ" value="-20.0"/></div>
+      </div>
+      <div class="control-row">
+        <div><b>Specular colour:</b></div>
+        <div>R: <input type="text" id="specularR" value="5.0"/></div>
+        <div>G: <input type="text" id="specularG" value="5.0"/></div>
+        <div>B: <input type="text" id="specularB" value="5.0"/></div>
+      </div>
+      <div class="control-row">
+        <div><b>Diffuse colour:</b></div>
+        <div>R: <input type="text" id="diffuseR" value="0.8"/></div>
+        <div>G: <input type="text" id="diffuseG" value="0.8"/></div>
+        <div>B: <input type="text" id="diffuseB" value="0.8"/></div>
+      </div>
+    </div>
+
+    <h2>Ambient light:</h2>
+    <div class="control-block">
+      <div class="control-row">
+        <div><b>Colour:</b></div>
+        <div>R: <input type="text" id="ambientR" value="0.4"/></div>
+        <div>G: <input type="text" id="ambientG" value="0.4"/></div>
+        <div>B: <input type="text" id="ambientB" value="0.4"/></div>
+      </div>
+    </div>
+
+    Earth texture courtesy of <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">the European Space
+    Agency/Envisat</a>.<br/>
+    <br/>
+
+  </div>
     `;
 };
 

@@ -211,11 +211,69 @@ animationLoop.getInfo = () => {
   return `
   <p>
     <a href="http://learningwebgl.com/blog/?p=1658" target="_blank">
-    specular highlights and loading a JSON model
+    specular maps
     </a>
   <p>
     The classic WebGL Lessons in luma.gl
-    `;
+    
+  <div id="control-elements">
+    <input type="checkbox" id="specular" checked/> Show specular highlight<br/>
+    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
+    Texture:
+    <select id="texture">
+      <option value="none">None</option>
+      <option selected value="galvanized">Galvanized</option>
+      <option value="earth">Earth</option>
+    </select>
+   
+    <br/>
+    <h2>Material:</h2>
+    <div class="control-block">
+      <div class="control-row">
+        <div><b>Shininess:</b></div>
+        <div><input type="text" id="shininess" value="32.0"/></div>
+      </div>
+    </div>
+
+    <h2>Point light:</h2>
+    <div class="control-block">
+      <div class="control-row">
+        <div><b>Location:</b></div>
+        <div>X: <input type="text" id="lightPositionX" value="-10.0"/></div>
+        <div>Y: <input type="text" id="lightPositionY" value="4.0"/></div>
+        <div>Z: <input type="text" id="lightPositionZ" value="-20.0"/></div>
+      </div>
+      <div class="control-row">
+        <div><b>Specular colour:</b></div>
+        <div>R: <input type="text" id="specularR" value="0.8"/></div>
+        <div>G: <input type="text" id="specularG" value="0.8"/></div>
+        <div>B: <input type="text" id="specularB" value="0.8"/></div>
+      </div>
+      <div class="control-row">
+        <div><b>Diffuse colour:</b></div>
+        <div>R: <input type="text" id="diffuseR" value="0.8"/></div>
+        <div>G: <input type="text" id="diffuseG" value="0.8"/></div>
+        <div>B: <input type="text" id="diffuseB" value="0.8"/></div>
+      </div>
+    </div>
+ 
+    <h2>Ambient light:</h2>
+    <div class="control-block">
+      <div class="control-row">
+        <div><b>Colour:</b></div>
+        <div>R: <input type="text" id="ambientR" value="0.2"/></div>
+        <div>G: <input type="text" id="ambientG" value="0.2"/></div>
+        <div>B: <input type="text" id="ambientB" value="0.2"/></div>
+      </div>
+    </div>
+ 
+     <br/>
+     Galvanized texture courtesy of <a href="http://www.arroway-textures.com/">Arroway Textures</a>.<br/>
+     Earth texture courtesy of <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">the European Space
+     Agency/Envisat</a>.<br/>
+     <br/>
+   </div>  
+  `;
 };
 
 function parseValue(value) {
