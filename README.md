@@ -37,7 +37,7 @@ High Level Design Goals
 Secondary Design Goals:
 - Focus on Shader Programming - Let's efficiently create, organize and debug shader code.
 - **Interoperability** - No "magic" global state that gets in the way of interoperability. All components work with a standard `WebGLRenderingContext` and can used together with components from other frameworks (e.g. stackgl).
-- **Debugging** Built in support for debugging and profiling WebGL and GLSL haders.
+- **Debugging** Built in support for debugging and profiling WebGL and GLSL shaders.
 
 
 ## Usage
