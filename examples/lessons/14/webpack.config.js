@@ -1,18 +1,5 @@
 const {resolve} = require('path');
 
-const {resolve} = require('path');
-
-const CONFIG = {
-  entry: {
-    app: resolve('./app.js')
-  },
-
-  output: {
-    filename: 'bundle.js'
-  }
-};
-
-// This line enables bundling against src in this repo rather than installed module
 const CONFIG = {
   mode: 'development',
 
@@ -20,7 +7,9 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  devtool: 'source-map'
+  output: {
+    filename: 'bundle.js'
+  }
 };
 
 // This line enables bundling against src in this repo rather than installed module
