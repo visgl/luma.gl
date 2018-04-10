@@ -147,6 +147,20 @@
     </div>
   </div>
   <div class="thumb">
+    <div class="bg-black" data-name="Lesson 14" data-title="Specular Highlights">
+      <a href="#/examples/webgl-lessons/lesson-14-specular-highlights">
+        <img src="images/lesson-14.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-name="Lesson 15" data-title="Specular Maps">
+      <a href="#/examples/webgl-lessons/lesson-15-specular-maps">
+        <img src="images/lesson-15.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
     <div class="bg-black" data-name="Lesson 16" data-title="Render To Texture">
       <a href="#/examples/webgl-lessons/lesson-16-render-texture">
         <img src="images/lesson-16.png" />
