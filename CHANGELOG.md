@@ -1,5 +1,9 @@
-# Pre-releases
-
+## 5.2.0-beta.1 - April 11
+- fix markdown file for webgl-lessons
+- fix examples and controls
+- fix webpack file for example 14 and 15
+- fix a typo in README (#489)
+- Delete duplicate file (#486)
 
 ## 5.2.0-alpha.12 - April 2
 - Fixes to electron support, debug mode and AnimationLoop (#483)
