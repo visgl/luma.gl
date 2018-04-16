@@ -63,8 +63,8 @@
     "collect-metrics": "./scripts/collect-metrics.sh"
   },
   "dependencies": {
-    "math.gl": ">=1.1.0-alpha.1",
-    "probe.gl": ">=1.0.0-alpha.11",
+    "math.gl": "^1.1.0",
+    "probe.gl": "^1.0.0",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },
