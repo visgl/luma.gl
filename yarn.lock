@@ -5163,11 +5163,10 @@ map-visit@^1.0.0:
   dependencies:
     object-visit "^1.0.0"
 
-math.gl@>=1.1.0-alpha.1:
-  version "1.1.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/math.gl/-/math.gl-1.1.0-alpha.1.tgz#efd6fdf2fca1fdd1cbad49b37760d48ffe143662"
+math.gl@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/math.gl/-/math.gl-1.1.0.tgz#2cd4758051441151eefa2c8664f16c189d9b6747"
   dependencies:
-    babel-plugin-version-inline "^1.0.0"
     gl-mat3 "^1.0.0"
     gl-mat4 "^1.1.4"
     gl-quat "^1.0.0"
@@ -6219,9 +6218,9 @@ private@^0.1.6, private@^0.1.7, private@~0.1.5:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
 
-probe.gl@>=1.0.0-alpha.11:
-  version "1.0.0-alpha.11"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-1.0.0-alpha.11.tgz#50e00a77fc770acb32430aca88a9d12ba113a5a7"
+probe.gl@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-1.0.0.tgz#b4dea632ffc8393d633e0980cb5026b5b7821400"
   dependencies:
     babel-runtime "^6.11.6"
 
