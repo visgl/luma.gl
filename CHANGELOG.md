@@ -1,5 +1,14 @@
 # Pre-releases
 
+## 5.2.0-beta.2 - April 16
+- Upgrade math.gl and probe.gl to official (non-alpha) versions
+- VertexArray: move private methods to end of class (#498)
+- Fix browser test of Framebuffer.blit (#497)
+- fix markdown file for webgl-lessons
+- fix examples and controls
+- fix webpack file for example 14 and 15
+- fix a typo in README (#489)
+- Delete duplicate file (#486)
 
 ## 5.2.0-alpha.12 - April 2
 - Fixes to electron support, debug mode and AnimationLoop (#483)
