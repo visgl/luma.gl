@@ -1,3 +1,7 @@
+## 5.2.0-beta.2 - April 16
+- Updates version of math.gl and probe.gl
+- Fix browser test of Framebuffer.blit (#497)
+
 ## 5.2.0-beta.1 - April 11
 - fix markdown file for webgl-lessons
 - fix examples and controls
