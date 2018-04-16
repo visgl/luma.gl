@@ -24,8 +24,7 @@
             "safari": "10.1",
             "node": "8"
           },
-          "modules": false,
-          "debug": true
+          "modules": false
         }]
       ]
     },
