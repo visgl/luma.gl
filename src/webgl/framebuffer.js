@@ -507,11 +507,11 @@ export default class Framebuffer extends Resource {
 
     const prevDrawHandle = gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, this.handle);
     const prevReadHandle = gl.bindFramebuffer(GL_READ_FRAMEBUFFER, srcFramebuffer.handle);
-    const prevReadBuffer = gl.readBuffer(attachment);
+    gl.readBuffer(attachment);
     gl.blitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
-    gl.readBuffer(prevReadBuffer);
-    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, prevReadHandle);
-    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawHandle);
+    gl.readBuffer(this.readBuffer);
+    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, prevReadHandle || null);
+    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawHandle || null);
 
     return this;
   }
