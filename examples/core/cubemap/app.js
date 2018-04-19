@@ -1,20 +1,37 @@
 /* global document */
 import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians, setParameters} from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+A <code>cubemapped</code> prism within a larger cubemapped cube
+<p>
+Uses a luma.gl <code>TextureCube</code> and
+the GLSL <code>reflect</code> and <code>refract</code> builtin functions
+to calculate reflection and refraction directions from the prism normals
+</p>
+`;
+
 const animationLoop = new AnimationLoop({
+
   onInitialize: ({gl, canvas}) => {
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.position = 'absolute';
+
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
       depthTest: true,
       depthFunc: GL.LEQUAL
     });
+
     return {
       cube: getCube(gl),
       prism: getPrism(gl),
       cubemap: new TextureCube(gl, {data: getFaceTextures({size: 512})})
     };
   },
+
   onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -46,17 +63,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-  A <code>cubemapped</code> prism within a larger cubemapped cube
-  <p>
-  Uses a luma.gl <code>TextureCube</code> and
-  the GLSL <code>reflect</code> and <code>refract</code> builtin functions
-  to calculate reflection and refraction directions from the prism normals
-  </p>
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function getCube(gl) {
   return new Cube(gl, {
@@ -186,8 +193,7 @@ function drawTexture({ctx, sign, axis, size}) {
 
 export default animationLoop;
 
-/* expose on Window for standalone example */
 /* global window */
-if (typeof window !== 'undefined') {
-  window.animationLoop = animationLoop;
+if (!window.website) {
+  animationLoop.start();
 }

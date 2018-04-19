@@ -1,11 +1,15 @@
-import {
-  GL, AnimationLoop, loadTextures, loadFile, addEvents,
-  resetParameters, setParameters
-} from 'luma.gl';
-
-import { Matrix4, radians } from 'math.gl';
-
+import {GL, AnimationLoop, loadTextures, loadFile, addEvents, setParameters} from 'luma.gl';
+import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1067" target="_blank">
+  Loading a world, and the most basic kind of camera
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
 
 const cameraInfo = {
   pitch: 0,
@@ -63,7 +67,7 @@ const animationLoop = new AnimationLoop({
       .add(eyePos);
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    let uMVMatrix = new Matrix4()
+    const uMVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]});
 
     world.render({
@@ -75,16 +79,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1067" target="_blank">
-    Loading a world, and the most basic kind of camera
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas, currentlyPressedKeys) {
   addEvents(canvas, {
@@ -128,22 +123,24 @@ function handleKeys(cameraInfo, currentlyPressedKeys) {
 }
 
 function animate(cameraInfo, timeLine) {
-  let timeNow = new Date().getTime();
-  if (timeLine.lastTime != 0) {
-    let elapsed = timeNow - timeLine.lastTime;
-      if (cameraInfo.speed != 0) {
-        cameraInfo.xPos -= Math.sin(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
-        cameraInfo.zPos -= Math.cos(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
-        cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - makes it feel more realistic :-)
-        cameraInfo.yPos = Math.sin(radians(cameraInfo.joggingAngle)) / 20 + 0.4
-       }
-      cameraInfo.yaw += cameraInfo.yawRate * elapsed;
-      cameraInfo.pitch += cameraInfo.pitchRate * elapsed;
+  const timeNow = new Date().getTime();
+  if (timeLine.lastTime !== 0) {
+    const elapsed = timeNow - timeLine.lastTime;
+    if (cameraInfo.speed !== 0) {
+      cameraInfo.xPos -= Math.sin(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+      cameraInfo.zPos -= Math.cos(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
+      cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - feel more realistic :-)
+      cameraInfo.yPos = Math.sin(radians(cameraInfo.joggingAngle)) / 20 + 0.4
     }
-    timeLine.lastTime = timeNow;
+    cameraInfo.yaw += cameraInfo.yawRate * elapsed;
+    cameraInfo.pitch += cameraInfo.pitchRate * elapsed;
+  }
+  timeLine.lastTime = timeNow;
 }
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop;
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

@@ -2,7 +2,16 @@ import {
   GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere
 } from 'luma.gl';
 
-import { Matrix4, radians } from 'math.gl';
+import {Matrix4, radians} from 'math.gl';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1253" target="_blank">
+  Spheres, rotation matrices, and mouse events
+  </a>
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -62,7 +71,7 @@ const appState = {
 };
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+  onInitialize({canvas, gl}) {
     addMouseHandler(canvas, appState);
 
     setParameters(gl, {
@@ -75,7 +84,7 @@ const animationLoop = new AnimationLoop({
       urls: ['moon.gif']
     })
     .then(textures => {
-      let moon = new Sphere(gl, {
+      const moon = new Sphere(gl, {
         fs: FRAGMENT_SHADER,
         vs: VERTEX_SHADER,
         uniforms: {
@@ -88,32 +97,30 @@ const animationLoop = new AnimationLoop({
       return {moon};
     });
   },
-  onRender: ({
-    gl, tick, aspect, moon
-  }) => {
+  onRender({gl, tick, aspect, moon}) {
     // Update Camera Position
     const eyePos = [0, 0, 6];
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    let uMMatrix = new Matrix4()
+    const uMMatrix = new Matrix4()
       .multiplyRight(appState.moonRotationMatrix);
-    let uVMatrix = new Matrix4()
+    const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    let element = null;
-    let lighting = (element = document.getElementById("lighting")) ? element.checked : true;
+    const element = null;
+    const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
-      let ambientColor = new Vector3(
+      const ambientColor = new Vector3(
         parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
       );
 
-      let lightingDirection = new Vector3(
+      const lightingDirection = new Vector3(
         parseFloat((element = document.getElementById("lightDirectionX")) ? element.value : "-1"),
         parseFloat((element = document.getElementById("lightDirectionY")) ? element.value : "-1"),
         parseFloat((element = document.getElementById("lightDirectionZ")) ? element.value : "-1")
@@ -121,7 +128,7 @@ const animationLoop = new AnimationLoop({
       lightingDirection.normalize();
       lightingDirection.scale(-1);
 
-      let directionalColor = new Vector3(
+      const directionalColor = new Vector3(
         parseFloat((element = document.getElementById("directionalR")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("directionalG")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("directionalB")) ? element.value : "0.8")
@@ -142,35 +149,26 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1253" target="_blank">
-    Spheres, rotation matrices, and mouse events
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addMouseHandler(canvas, appState) {
   addEvents(canvas, {
-    onDragStart(e) {
+    onDragStart(event) {
       appState.mouseDown = true;
       appState.lastMouseX = event.clientX;
       appState.lastMouseY = event.clientY;
     },
-    onDragMove(e) {
+    onDragMove(event) {
       if (!appState.mouseDown) {
         return;
       }
-      let newX = event.clientX;
-      let newY = event.clientY;
+      const newX = event.clientX;
+      const newY = event.clientY;
 
-      let deltaX = newX - appState.lastMouseX
-      let deltaY = newY - appState.lastMouseY;
+      const deltaX = newX - appState.lastMouseX
+      const deltaY = newY - appState.lastMouseY;
 
-      let newMatrix = new Matrix4()
+      const newMatrix = new Matrix4()
         .rotateX(radians(deltaY / 10))
         .rotateY(radians(deltaX / 10));
 
@@ -187,5 +185,7 @@ function addMouseHandler(canvas, appState) {
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop;
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

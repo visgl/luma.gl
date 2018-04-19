@@ -2,6 +2,14 @@ import {
   GL, AnimationLoop, Framebuffer, Cube, setParameters, clear, Matrix4, radians
 } from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+  Simple <b>shadow mapping</b>.
+<p>
+A luma.gl <code>Cube</code>, rendering into a shadowmap framebuffer
+and then rendering onto the screen.
+`;
+
 const SCENE_FRAGMENT = `\
 #ifdef GL_ES
 precision highp float;
@@ -163,21 +171,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-    <p>
-    Simple <b>shadow mapping</b>.
-    <p>
-    A luma.gl <code>Cube</code>, rendering into a shadowmap framebuffer
-    and then rendering onto the screen.
-  `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-/* expose on Window for standalone example */
 /* global window */
-if (typeof window !== 'undefined') {
-  window.animationLoop = animationLoop;
+if (!window.website) {
+  animationLoop.start();
 }
-

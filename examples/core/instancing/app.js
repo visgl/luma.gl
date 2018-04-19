@@ -1,6 +1,15 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
+import {
+  GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
   Cube, picking, dirlight} from 'luma.gl';
+
+const INFO_HTML = `
+<p>
+Cube drawn with <b>instanced rendering</b>.
+<p>
+A luma.gl <code>Cube</code>, rendering 65,536 instances in a
+single GPU draw call using instanced vertex attributes.
+`;
 
 const SIDE = 256;
 
@@ -151,20 +160,11 @@ void main(void) {
   });
 }
 
-animationLoop.getInfo = () => {
-  return `
-    <p>
-    Cube drawn with <b>instanced rendering</b>.
-    <p>
-    A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-    single GPU draw call using instanced vertex attributes.
-  `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-/* expose on Window for standalone example */
 /* global window */
-if (typeof window !== 'undefined') {
-  window.animationLoop = animationLoop;
+if (!window.website) {
+  animationLoop.start();
 }

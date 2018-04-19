@@ -4,6 +4,15 @@ import {
   setParameters
 } from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=239" target="_blank">
+    A Bit of Movement
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
+
 const FRAGMENT_SHADER = `\
 #ifdef GL_ES
 precision highp float;
@@ -95,18 +104,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=239" target="_blank">
-      A Bit of Movement
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

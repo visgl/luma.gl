@@ -44,7 +44,7 @@ export function getDebugContext(gl) {
   }
 
   if (!global.WebGLDebug) {
-    log.error('WebGL debug mode activation failed. import "luma.gl/debug" to enable.')();
+    log.warn('WebGL debug mode activation failed. import "luma.gl/debug" to enable.')();
     return gl;
   }
 
