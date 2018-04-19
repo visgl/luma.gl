@@ -55,8 +55,9 @@ vertexArrayObject.delete();
 Setting a set of attributes and an elements array
 ```js
 const vertexArray = new VertexArray(gl, {
-  elements: new Buffer({target: GL.ELEMENT_ARRAY_BUFFER, data: new Uint32Array([...])}),
-  attributes: {
+  elements:
+    new Buffer({target: GL.ELEMENT_ARRAY_BUFFER, data: new Uint32Array([...])}),
+  buffers: {
   	0: new Buffer({data: new Float32Array([...])})
   }
 }
@@ -66,7 +67,7 @@ Setting a buffer name map
 ```js
 const vertexArray = new VertexArray(gl);
 // Can only set buffers using location indices
-vertexArray.setAttributes({
+vertexArray.setBuffers({
   0: new Buffer({size: 3, data: new Float32Array([...]), ...})
 })
 
@@ -76,7 +77,7 @@ const locations = program.getLocations(); // Note: slow call, GPU driver roundtr
 vertexArray.initialize({locations});
 
 // Now possible to set buffers using attribute names
-vertexArray.setAttributes({
+vertexArray.setBuffers({
   aColor: new Buffer({size: 3, data: new Float32Array([...]), ...})
 });
 ```
