@@ -5,6 +5,15 @@ import {
   Program, Renderbuffer, Framebuffer, Geometry, setParameters
 } from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1786" target="_blank">
+    Rendering to textures
+  </a>
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
+
 // TODO: Remaining issues
 // 1. Specular highlights don not match with example:
 //    verify light position relative to moon/cube
@@ -69,16 +78,16 @@ varying vec4 vPosition;
 
 
 void main(void) {
-    // Perform lighting in world space
-    // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
-    // 'inverse' matrix operation not supported in GLSL 1.0, for now use
-    // upper-left 3X3 matrix of model view matrix, it works since we are not
-    // doing any non-uniform scaling transormations in this example.
-    mat3 normalMatrix = mat3(uMVMatrix);
-    vPosition = uMVMatrix * vec4(positions, 1.0);
-    gl_Position = uPMatrix * vPosition;
-    vTextureCoord = texCoords;
-    vTransformedNormal = normalMatrix * normals;
+  // Perform lighting in world space
+  // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
+  // 'inverse' matrix operation not supported in GLSL 1.0, for now use
+  // upper-left 3X3 matrix of model view matrix, it works since we are not
+  // doing any non-uniform scaling transormations in this example.
+  mat3 normalMatrix = mat3(uMVMatrix);
+  vPosition = uMVMatrix * vec4(positions, 1.0);
+  gl_Position = uPMatrix * vPosition;
+  vTextureCoord = texCoords;
+  vTransformedNormal = normalMatrix * normals;
 }
 `;
 
@@ -105,42 +114,43 @@ uniform vec3 uPointLightingSpecularColor;
 uniform sampler2D uSampler;
 
 void main(void) {
-    vec3 ambientLightWeighting = uAmbientLightingColor;
+  vec3 ambientLightWeighting = uAmbientLightingColor;
 
-    vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
-    vec3 normal = normalize(vTransformedNormal);
+  vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+  vec3 normal = normalize(vTransformedNormal);
 
-    vec3 specularLightWeighting = vec3(0.0, 0.0, 0.0);
-    if (uShowSpecularHighlights) {
-        vec3 eyeDirection = normalize(-vPosition.xyz);
-        vec3 reflectionDirection = reflect(-lightDirection, normal);
+  vec3 specularLightWeighting = vec3(0.0, 0.0, 0.0);
+  if (uShowSpecularHighlights) {
+    vec3 eyeDirection = normalize(-vPosition.xyz);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
 
-        float specularLightBrightness = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
-        specularLightWeighting = uPointLightingSpecularColor * specularLightBrightness;
-    }
+    float specularLightBrightness =
+      pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+    specularLightWeighting = uPointLightingSpecularColor * specularLightBrightness;
+  }
 
-    float diffuseLightBrightness = max(dot(normal, lightDirection), 0.0);
-    vec3 diffuseLightWeighting = uPointLightingDiffuseColor * diffuseLightBrightness;
+  float diffuseLightBrightness = max(dot(normal, lightDirection), 0.0);
+  vec3 diffuseLightWeighting = uPointLightingDiffuseColor * diffuseLightBrightness;
 
-    vec3 materialAmbientColor = uMaterialAmbientColor;
-    vec3 materialDiffuseColor = uMaterialDiffuseColor;
-    vec3 materialSpecularColor = uMaterialSpecularColor;
-    vec3 materialEmissiveColor = uMaterialEmissiveColor;
-    float alpha = 1.0;
-    if (uUseTextures) {
-        vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        materialAmbientColor = materialAmbientColor * textureColor.rgb;
-        materialDiffuseColor = materialDiffuseColor * textureColor.rgb;
-        materialEmissiveColor = materialEmissiveColor * textureColor.rgb;
-        alpha = textureColor.a;
-    }
-    gl_FragColor = vec4(
-        materialAmbientColor * ambientLightWeighting
-        + materialDiffuseColor * diffuseLightWeighting
-        + materialSpecularColor * specularLightWeighting
-        + materialEmissiveColor,
-        alpha
-    );
+  vec3 materialAmbientColor = uMaterialAmbientColor;
+  vec3 materialDiffuseColor = uMaterialDiffuseColor;
+  vec3 materialSpecularColor = uMaterialSpecularColor;
+  vec3 materialEmissiveColor = uMaterialEmissiveColor;
+  float alpha = 1.0;
+  if (uUseTextures) {
+    vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    materialAmbientColor = materialAmbientColor * textureColor.rgb;
+    materialDiffuseColor = materialDiffuseColor * textureColor.rgb;
+    materialEmissiveColor = materialEmissiveColor * textureColor.rgb;
+    alpha = textureColor.a;
+  }
+  gl_FragColor = vec4(
+    materialAmbientColor * ambientLightWeighting
+    + materialDiffuseColor * diffuseLightWeighting
+    + materialSpecularColor * specularLightWeighting
+    + materialEmissiveColor,
+    alpha
+  );
 }
 `;
 
@@ -245,16 +255,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1786" target="_blank">
-      Rendering to textures
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function getLaptopUniforms() {
   return {
@@ -346,39 +347,39 @@ function generateLaptopScreenModel(gl) {
 }
 
 function setupFramebuffer(gl) {
-    rttTexture = new Texture2D(gl, {
-      data: null,
-      format: GL.RGBA,
-      type: GL.UNSIGNED_BYTE,
-      border: 0,
-      mipmaps: true,
-      parameters: {
-        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST, // GL.LINEAR,
-        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST // GL.LINEAR_MIPMAP_NEAREST
-      },
-      width: FB_WIDTH,
-      height: FB_HEIGHT,
-      dataFormat: GL.RGBA
-    });
+  rttTexture = new Texture2D(gl, {
+    data: null,
+    format: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    border: 0,
+    mipmaps: true,
+    parameters: {
+      [GL.TEXTURE_MAG_FILTER]: GL.NEAREST, // GL.LINEAR,
+      [GL.TEXTURE_MIN_FILTER]: GL.NEAREST // GL.LINEAR_MIPMAP_NEAREST
+    },
+    width: FB_WIDTH,
+    height: FB_HEIGHT,
+    dataFormat: GL.RGBA
+  });
 
-    const renderbuffer = new Renderbuffer(gl, {
-      format: GL.DEPTH_COMPONENT16,
-      width: FB_WIDTH,
-      height: FB_HEIGHT
-    });
+  const renderbuffer = new Renderbuffer(gl, {
+    format: GL.DEPTH_COMPONENT16,
+    width: FB_WIDTH,
+    height: FB_HEIGHT
+  });
 
-    rttFramebuffer = new Framebuffer(gl, {
-      width: FB_WIDTH,
-      height: FB_HEIGHT,
-      attachments: {
-        [GL.COLOR_ATTACHMENT0]: rttTexture,
-        [GL.DEPTH_ATTACHMENT]: renderbuffer
-      }
-    });
-
-    if (DISABLE_FB === true) {
-      rttFramebuffer = null;
+  rttFramebuffer = new Framebuffer(gl, {
+    width: FB_WIDTH,
+    height: FB_HEIGHT,
+    attachments: {
+      [GL.COLOR_ATTACHMENT0]: rttTexture,
+      [GL.DEPTH_ATTACHMENT]: renderbuffer
     }
+  });
+
+  if (DISABLE_FB === true) {
+    rttFramebuffer = null;
+  }
 }
 
 function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
@@ -463,10 +464,11 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
       uUseTextures: true,
       uSampler: rttFramebuffer.texture
   });
-
 }
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

@@ -10,6 +10,10 @@ import {
   setParameters, Model, experimental
 } from 'luma.gl';
 
+const INFO_HTML = `
+  <p></p>
+`;
+
 const {Transform} = experimental;
 
 const EMIT_VS = `\
@@ -274,12 +278,12 @@ const animationLoop = new AnimationLoop({
 });
 
 animationLoop.getInfo = () => {
-  return `
-    <p></p>
-  `;
+  return INFO_HTML;
 };
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

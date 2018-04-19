@@ -1,4 +1,5 @@
 const {resolve} = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const CONFIG = {
   mode: 'development',
@@ -7,9 +8,9 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  output: {
-    filename: 'bundle.js'
-  }
+  plugins: [
+    new HtmlWebpackPlugin({title: 'Example 07'})
+  ]
 };
 
 // This line enables bundling against src in this repo rather than installed module

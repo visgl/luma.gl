@@ -1,7 +1,16 @@
+/* global document */
 import {
   GL, AnimationLoop, setParameters, loadTextures, Buffer, Matrix4, radians,
   Sphere, project, diffuse, picking, pickModels, ShaderCache
 } from 'luma.gl';
+
+const INFO_HTML = `
+<p>
+  Basic color picking of multiple models
+<p>
+Uses the luma.gl <code>picking</code> shader module
+<div id='planet-name'/>
+`;
 
 const PLANETS = [
   {name: 'Jupiter', textureUrl: 'jupiter.jpg'},
@@ -111,20 +120,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-    <p>
-    Basic color picking of multiple models
-    <p>
-    Uses the luma.gl <code>picking</code> shader module
-    <div id='planet-name'/>
-  `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-/* expose on Window for standalone example */
 /* global window */
-if (typeof window !== 'undefined') {
-  window.animationLoop = animationLoop;
+if (!window.website) {
+  animationLoop.start();
 }

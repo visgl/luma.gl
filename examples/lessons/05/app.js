@@ -1,8 +1,14 @@
 /* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {
-  GL, AnimationLoop, loadTextures, Cube, Matrix4,
-  resetParameters, setParameters
-} from 'luma.gl';
+import {GL, AnimationLoop, loadTextures, Cube, Matrix4, setParameters} from 'luma.gl';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=507" target="_blank">
+    Introducing Textures
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -68,19 +74,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=507" target="_blank">
-      Introducing Textures
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
-
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

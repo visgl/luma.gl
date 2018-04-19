@@ -6,6 +6,10 @@ import {
   setParameters
 } from 'luma.gl';
 
+const INFO_HTML = `
+  <p>Transform Feedback</p>
+`;
+
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
 const POSITION_LOCATION = 0;
@@ -161,14 +165,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-
-animationLoop.getInfo = () => {
-  return `
-    <p></p>
-  `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

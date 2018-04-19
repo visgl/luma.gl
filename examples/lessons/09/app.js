@@ -1,14 +1,17 @@
-/* eslint-disable no-var, max-statements */
-/* eslint-disable array-bracket-spacing, no-multi-spaces */
-/* global document */
-import {
-  GL, AnimationLoop, loadTextures, addEvents, Matrix4,
-  resetParameters, setParameters
-} from 'luma.gl';
+import {GL, AnimationLoop, loadTextures, addEvents, Matrix4, setParameters} from 'luma.gl';
 import {Star} from './star';
 
-var zoom = -15;
-var tilt = 90;
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1008" target="_blank">
+    Improving the code structure with lots of moving objects
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
+
+let zoom = -15;
+let tilt = 90;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
@@ -25,9 +28,9 @@ const animationLoop = new AnimationLoop({
       urls: ['star.gif']
     })
     .then(textures => {
-      var stars = [];
-      var numStars = 50;
-      for (var i = 0; i < numStars; i++) {
+      const stars = [];
+      const numStars = 50;
+      for (let i = 0; i < numStars; i++) {
         stars.push(new Star(gl, {
           startingDistance: ((i / numStars) * 5.0),
           rotationSpeed: (i / numStars),
@@ -47,8 +50,8 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    for (var i in stars) {
-      var uMVMatrix = new Matrix4()
+    for (const i in stars) {
+      const uMVMatrix = new Matrix4()
         .lookAt({eye: [0, cameraY, cameraZ]})
         .multiplyRight(stars[i].matrix);
 
@@ -61,16 +64,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1008" target="_blank">
-      Improving the code structure with lots of moving objects
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
 
@@ -97,6 +91,7 @@ function addKeyboardHandler(canvas) {
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
-
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

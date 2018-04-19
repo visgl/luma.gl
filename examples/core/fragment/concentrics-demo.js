@@ -1,5 +1,13 @@
 import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+  Fragment shader based rendering.
+<p>
+A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
+using a single uniform <code>uTime</code>.
+`;
+
 const CONCENTRICS_FRAGMENT_SHADER = `\
 #ifdef GL_ES
 precision highp float;
@@ -25,14 +33,6 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-    <p>
-    Fragment shader based rendering.
-    <p>
-    A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
-    using a single uniform <code>uTime</code>.
-  `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;

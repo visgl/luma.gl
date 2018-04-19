@@ -1,5 +1,14 @@
 import {GL, AnimationLoop, Model, Geometry, Program, Matrix4, setParameters} from 'luma.gl';
 
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=370" target="_blank">
+    Some Real 3D Objects
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
+
 const VERTEX_SHADER = `\
 attribute vec3 positions;
 attribute vec4 colors;
@@ -63,8 +72,6 @@ const animationLoop = new AnimationLoop({
     });
   }
 });
-
-export default animationLoop;
 
 /* eslint-disable indent, no-multi-spaces */
 // Makes a colored pyramid
@@ -183,17 +190,11 @@ function getCubeGeometry() {
   });
 }
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=370" target="_blank">
-      Some Real 3D Objects
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+export default animationLoop;
 
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}
