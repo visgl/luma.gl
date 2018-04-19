@@ -135,7 +135,7 @@ const animationLoop = new AnimationLoop({
       })
     }));
   },
-  onRender({gl, tick, aspect, cube}) => {
+  onRender({gl, tick, aspect, cube}) {
     xRot += xSpeed;
     yRot += ySpeed;
 
