@@ -7,7 +7,9 @@ import {
 } from 'luma.gl';
 
 const INFO_HTML = `
-  <p>Transform Feedback</p>
+<p>
+Gradient calculated on the GPU using <code>Transform Feedback</code>.
+</p>
 `;
 
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;

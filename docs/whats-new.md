@@ -10,25 +10,6 @@ In addition to these notes, always check the [Upgrade Guide](/#/documentation/up
 
 Date: Target April, 2018
 
-<table style="border: 0;" align="center">
-  <tbody>
-    <tr>
-      <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
-        <p><i>New Transform Class</i></p>
-      </td>
-      <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
-        <p><i>Example 14</i></p>
-      </td>
-      <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
-        <p><i>Example 15</i></p>
-      </td>
-    </tr>
-  </tbody>
-</table>
-
 
 ## Transform class (New, WebGL2) (Experimental)
 
@@ -53,6 +34,11 @@ Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatic
 ## Debug Mode Changes
 
 To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
+
+
+## Examples
+
+All examples have been updated to use webpack 4
 
 
 ## Version 5.1

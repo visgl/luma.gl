@@ -11,7 +11,7 @@ import {
 } from 'luma.gl';
 
 const INFO_HTML = `
-  <p></p>
+Instanced triangles animated on the GPU using a luma.gl <code>Transform</code> object.
 `;
 
 const {Transform} = experimental;
@@ -261,19 +261,11 @@ const animationLoop = new AnimationLoop({
   },
 
   onFinalize({
-    vertexArrays,
-    transformVertexArrays,
-    transformFeedbacks,
     modelRender,
-    modelTransform
+    transform
   }) {
-    for (let i = 0; i < 2; i++) {
-      vertexArrays[i].delete();
-      transformVertexArrays[i].delete();
-      transformFeedbacks[i].delete();
-    }
     modelRender.delete();
-    modelTransform.delete();
+    transform.delete();
   }
 });
 

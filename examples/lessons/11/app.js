@@ -108,7 +108,8 @@ const animationLoop = new AnimationLoop({
     const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    const element = null;
+    let element = null;
+    /* global document */
     const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});

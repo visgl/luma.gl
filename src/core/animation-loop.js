@@ -120,7 +120,7 @@ export default class AnimationLoop {
         }
 
         // Create the WebGL context
-        this._createWebGLContext();
+        this._createWebGLContext(opts);
         this._createFramebuffer();
 
         // Initialize the callback data
