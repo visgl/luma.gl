@@ -2,8 +2,98 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 /* global document */
 
-import {GL, AnimationLoop, Cube, Matrix4,
-  addEvents, loadTextures, resetParameters, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, addEvents, loadTextures, setParameters} from 'luma.gl';
+
+export const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=684" target="_blank">
+    Basic directional and ambient lighting
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
+
+// TODO: Use following HTML/getControls method and update lighting uniforms
+export const INFO_HTML2 = `
+  <div id="controls">
+    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
+    (Use cursor keys to spin the box and
+    <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
+
+    <br/>
+    <h2>Directional light:</h2>
+
+    <table style="border: 0; padding: 10px;">
+    <tr>
+    <td><b>Direction:</b>
+    <td>X: <input type="text" id="lightDirectionX" value="-0.25" />
+    <td>Y: <input type="text" id="lightDirectionY" value="-0.25" />
+    <td>Z: <input type="text" id="lightDirectionZ" value="-1.0" />
+    </tr>
+    <tr>
+    <td><b>Colour:</b>
+    <td>R: <input type="text" id="directionalR" value="0.8" />
+    <td>G: <input type="text" id="directionalG" value="0.8" />
+    <td>B: <input type="text" id="directionalB" value="0.8" />
+    </tr>
+    </table>
+
+    <h2>Ambient light:</h2>
+    <table style="border: 0; padding: 10px;">
+    <tr>
+    <td><b>Colour:</b>
+    <td>R: <input type="text" id="ambientR" value="0.2" />
+    <td>G: <input type="text" id="ambientG" value="0.2" />
+    <td>B: <input type="text" id="ambientB" value="0.2" />
+    </tr>
+    </table>
+
+    <a href="http://learningwebgl.com/blog/?p=684">&lt;&lt; Back to Lesson 7</a>
+  </div>
+`;
+
+export function getControls(scene) {
+  // Lighting form elements variables
+  var $id = function(d) {
+    return document.getElementById(d);
+  };
+
+  // Get lighting form elements
+  var lighting = $id('lighting');
+  var ambient = {
+    r: $id('ambientR'),
+    g: $id('ambientG'),
+    b: $id('ambientB')
+  };
+  var direction = {
+    x: $id('lightDirectionX'),
+    y: $id('lightDirectionY'),
+    z: $id('lightDirectionZ'),
+
+    r: $id('directionalR'),
+    g: $id('directionalG'),
+    b: $id('directionalB')
+  };
+
+  // Update scene config with light info
+  var lightConfig = scene.config.lights;
+  lightConfig.enable = lighting.checked;
+  lightConfig.ambient = {
+    r: Number(ambient.r.value),
+    g: Number(ambient.g.value),
+    b: Number(ambient.b.value)
+  };
+  lightConfig.directional.direction = {
+    x: Number(direction.x.value),
+    y: Number(direction.y.value),
+    z: Number(direction.z.value)
+  };
+  lightConfig.directional.color = {
+    r: Number(direction.r.value),
+    g: Number(direction.g.value),
+    b: Number(direction.b.value)
+  };
+}
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -25,17 +115,17 @@ void main(void) {
   vTextureCoord = texCoords;
 
   if (!uUseLighting) {
-      vLightWeighting = vec3(1.0, 1.0, 1.0);
+    vLightWeighting = vec3(1.0, 1.0, 1.0);
   } else {
-      // Perform lighting in world space
-      // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
-      // 'inverse' matrix operation not supported in GLSL 1.0, for now use
-      // upper-left 3X3 matrix of model view matrix, it works since we are not
-      // doing any non-uniform scaling transormations in this example.
-      mat3 normalMatrix = mat3(uMVMatrix);
-      vec3 transformedNormal = normalMatrix * normals;
-      float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
-      vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+    // Perform lighting in world space
+    // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
+    // 'inverse' matrix operation not supported in GLSL 1.0, for now use
+    // upper-left 3X3 matrix of model view matrix, it works since we are not
+    // doing any non-uniform scaling transormations in this example.
+    mat3 normalMatrix = mat3(uMVMatrix);
+    vec3 transformedNormal = normalMatrix * normals;
+    float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+    vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
   }
 }
 `;
@@ -115,21 +205,12 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=684" target="_blank">
-      Basic directional and ambient lighting
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
 
   addEvents(canvas, {
-    onKeyDown: function(e) {
+    onKeyDown(e) {
       switch (e.key) {
       case 'up':
         xSpeed -= 0.02;
@@ -155,92 +236,9 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-// TODO: Use following addControls/getControls method and update lighting uniforms
-// function addControls() {
-//   return `
-//     <div id="controls">
-//       <input type="checkbox" id="lighting" checked /> Use lighting<br/>
-//       (Use cursor keys to spin the box and
-//       <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
-//
-//       <br/>
-//       <h2>Directional light:</h2>
-//
-//       <table style="border: 0; padding: 10px;">
-//       <tr>
-//       <td><b>Direction:</b>
-//       <td>X: <input type="text" id="lightDirectionX" value="-0.25" />
-//       <td>Y: <input type="text" id="lightDirectionY" value="-0.25" />
-//       <td>Z: <input type="text" id="lightDirectionZ" value="-1.0" />
-//       </tr>
-//       <tr>
-//       <td><b>Colour:</b>
-//       <td>R: <input type="text" id="directionalR" value="0.8" />
-//       <td>G: <input type="text" id="directionalG" value="0.8" />
-//       <td>B: <input type="text" id="directionalB" value="0.8" />
-//       </tr>
-//       </table>
-//
-//       <h2>Ambient light:</h2>
-//       <table style="border: 0; padding: 10px;">
-//       <tr>
-//       <td><b>Colour:</b>
-//       <td>R: <input type="text" id="ambientR" value="0.2" />
-//       <td>G: <input type="text" id="ambientG" value="0.2" />
-//       <td>B: <input type="text" id="ambientB" value="0.2" />
-//       </tr>
-//       </table>
-//
-//       <a href="http://learningwebgl.com/blog/?p=684">&lt;&lt; Back to Lesson 7</a>
-//     </div>
-//   `;
-// }
-//
-// function getControls() {
-//   // Lighting form elements variables
-//   var $id = function(d) {
-//     return document.getElementById(d);
-//   };
-//
-//   // Get lighting form elements
-//   var lighting = $id('lighting');
-//   var ambient = {
-//     r: $id('ambientR'),
-//     g: $id('ambientG'),
-//     b: $id('ambientB')
-//   };
-//   var direction = {
-//     x: $id('lightDirectionX'),
-//     y: $id('lightDirectionY'),
-//     z: $id('lightDirectionZ'),
-//
-//     r: $id('directionalR'),
-//     g: $id('directionalG'),
-//     b: $id('directionalB')
-//   };
-//
-//   // Update scene config with light info
-//   var lightConfig = scene.config.lights;
-//   lightConfig.enable = lighting.checked;
-//   lightConfig.ambient = {
-//     r: Number(ambient.r.value),
-//     g: Number(ambient.g.value),
-//     b: Number(ambient.b.value)
-//   };
-//   lightConfig.directional.direction = {
-//     x: Number(direction.x.value),
-//     y: Number(direction.y.value),
-//     z: Number(direction.z.value)
-//   };
-//   lightConfig.directional.color = {
-//     r: Number(direction.r.value),
-//     g: Number(direction.g.value),
-//     b: Number(direction.b.value)
-//   };
-// }
-
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
-
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

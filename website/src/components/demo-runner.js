@@ -2,9 +2,11 @@ import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import PropTypes from 'prop-types';
 
-import * as Demos from '../../contents/demos.js';
-
 import {updateMeta, useParams} from '../actions/app-actions';
+
+/* global window */
+window.website = true;
+const Demos = require('../../contents/demos.js');
 
 const propTypes = {
   demo: PropTypes.string,

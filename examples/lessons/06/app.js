@@ -1,11 +1,17 @@
-/* eslint-disable no-var, max-statements, indent, no-multi-spaces */
+/* global window */
 import {
-  GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage,
-  resetParameters, setParameters
+  GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage, setParameters
 } from 'luma.gl';
 
-/* global window */
-/* eslint-disable max-statements, no-var, no-multi-spaces */
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=571" target="_blank">
+    Keyboard input and texture filters
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
+
 const VERTEX_SHADER = `\
 attribute vec3 positions;
 attribute vec2 texCoords;
@@ -36,13 +42,13 @@ void main(void) {
 }
 `;
 
-var xRot = 0;
-var xSpeed = 0.01;
-var yRot = 0;
-var ySpeed = 0.013;
-var z = -5.0;
-var filter = 0;
-var filters = ['nearest', 'linear', 'mipmap'];
+let xRot = 0;
+let xSpeed = 0.01;
+let yRot = 0;
+let ySpeed = 0.013;
+let z = -5.0;
+let filter = 0;
+const filters = ['nearest', 'linear', 'mipmap'];
 
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
@@ -132,23 +138,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=571" target="_blank">
-      Keyboard input and texture filters
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
-
-export default animationLoop;
-
-window.webGLStart = function() {
-  animationLoop.start();
-
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
 
@@ -182,5 +172,9 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
+export default animationLoop;
+
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

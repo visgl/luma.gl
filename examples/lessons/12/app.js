@@ -189,5 +189,7 @@ function animate(appState) {
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop;
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

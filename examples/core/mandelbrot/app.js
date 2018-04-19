@@ -1,5 +1,12 @@
-/* global document */
-import {AnimationLoop, ClipSpaceQuad, resetParameters} from 'luma.gl';
+import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
+
+const INFO_HTML = `
+<p>
+<code>Mandelbrot</code> set zoom implemented as a GLSL fragment shader.
+<p>
+Uses a luma.gl <code>ClipSpaceQuad</code> to set up a screen spaced model
+in which the <code>fragment shader</code> can render.
+`;
 
 // CONTEXT 1 - 32 bit mandelbrot
 
@@ -106,19 +113,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-  <code>Mandelbrot</code> set zoom implemented as a GLSL fragment shader.
-  <p>
-  Uses a luma.gl <code>ClipSpaceQuad</code> to set up a screen spaced model
-  in which the <code>fragment shader</code> can render.
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
 /* global window */
-if (typeof window !== 'undefined') {
-  window.animationLoop = animationLoop;
+if (!window.website) {
+  animationLoop.start();
 }

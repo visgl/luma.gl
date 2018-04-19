@@ -1,5 +1,14 @@
 /* eslint-disable no-var, max-statements */
-import {AnimationLoop, Program, Buffer, Matrix4, resetParameters, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, Matrix4, setParameters} from 'luma.gl';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=134" target="_blank">
+    Adding Color
+  </a>
+<p>
+The classic WebGL Lessons in luma.gl
+`;
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -85,19 +94,11 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=134" target="_blank">
-      Adding Color
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
-
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

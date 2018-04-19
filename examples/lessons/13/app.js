@@ -1,8 +1,17 @@
 import {
-  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere, Cube, Program
+  GL, AnimationLoop, loadTextures, Vector3, setParameters, Sphere, Cube, Program
 } from 'luma.gl';
 
-import { Matrix4, radians } from 'math.gl';
+import {Matrix4, radians} from 'math.gl';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1523" target="_blank">
+  Per-fragment lighting and multiple programs
+  </a>
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
 
 const VERTEX_LIGHTING_VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -259,22 +268,13 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1523" target="_blank">
-    Per-fragment lighting and multiple programs
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function animate(appState) {
-  var timeNow = new Date().getTime();
+  const timeNow = new Date().getTime();
   if (appState.lastTime != 0) {
-    let elapsed = timeNow - appState.lastTime;
-    let newMatrix = new Matrix4()
+    const elapsed = timeNow - appState.lastTime;
+    const newMatrix = new Matrix4()
     .rotateY(radians(elapsed / 20));
     appState.moonRotationMatrix.multiplyLeft(newMatrix);
     appState.cubeRotationMatrix.multiplyLeft(newMatrix);
@@ -284,5 +284,7 @@ function animate(appState) {
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop;
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}

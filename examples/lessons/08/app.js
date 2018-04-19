@@ -1,8 +1,52 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
-import {
-  GL, AnimationLoop, Cube, Matrix4,
-  addEvents, loadTextures, setParameters
-} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Matrix4, addEvents, loadTextures, setParameters} from 'luma.gl';
+
+const INFO_HTML = `
+<div>
+  <p>
+    <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
+      The depth buffer, transparency and blending
+    </a>
+  </p>
+  The classic WebGL Lessons in luma.gl
+
+  <div id="control-elements">
+    <input type="checkbox" id="blending" checked/> Use blending<br/>
+    Alpha level <input type="text" id="alpha" value="0.5"/><br/>
+    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
+    (Use cursor keys to spin the box and <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
+
+    <br/>
+    <div><b>Directional light:</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Direction:
+        <div>X: <input type="text" id="lightDirectionX" value="0"/></div>
+        <div>Y: <input type="text" id="lightDirectionY" value="0"/></div>
+        <div>Z: <input type="text" id="lightDirectionZ" value="1"/></div>
+      </div>
+      <div class="control-row">
+        Colour:
+        <div>R: <input type="text" id="directionalR" value="0.8"/></div>
+        <div>G: <input type="text" id="directionalG" value="0.8"/></div>
+        <div>B: <input type="text" id="directionalB" value="0.8"/></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div><b>Ambient light:</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Colour:
+        <div>R: <input type="text" id="ambientR" value="0.2"/></div>
+        <div>G: <input type="text" id="ambientG" value="0.2"/></div>
+        <div>B: <input type="text" id="ambientB" value="0.2"/></div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
 
 // Vertex shader with lighting
 const VERTEX_SHADER = `\
@@ -25,17 +69,17 @@ void main(void) {
   vTextureCoord = texCoords;
 
   if (!uUseLighting) {
-      vLightWeighting = vec3(1.0, 1.0, 1.0);
+    vLightWeighting = vec3(1.0, 1.0, 1.0);
   } else {
-      // Perform lighting in world space
-      // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
-      // 'inverse' matrix operation not supported in GLSL 1.0, for now use
-      // upper-left 3X3 matrix of model view matrix, it works since we are not
-      // doing any non-uniform scaling transormations in this example.
-      mat3 normalMatrix = mat3(uMVMatrix);
-      vec3 transformedNormal = normalMatrix * normals;
-      float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
-      vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+    // Perform lighting in world space
+    // we should use 'transpose(inverse(mat3(uMVMatrix)))', but
+    // 'inverse' matrix operation not supported in GLSL 1.0, for now use
+    // upper-left 3X3 matrix of model view matrix, it works since we are not
+    // doing any non-uniform scaling transormations in this example.
+    mat3 normalMatrix = mat3(uMVMatrix);
+    vec3 transformedNormal = normalMatrix * normals;
+    float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+    vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
   }
 }
 `;
@@ -65,7 +109,7 @@ let ySpeed = 0.0;
 let cubePositionZ = -5.0;
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+  onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas);
 
     setParameters(gl, {
@@ -83,17 +127,15 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR
       }]
     })
-      .then(textures => ({
-        cube: new Cube(gl, {
-          vs: VERTEX_SHADER,
-          fs: FRAGMENT_SHADER,
-          uniforms: {uSampler: textures[0]}
-        })
-      }));
+    .then(textures => ({
+      cube: new Cube(gl, {
+        vs: VERTEX_SHADER,
+        fs: FRAGMENT_SHADER,
+        uniforms: {uSampler: textures[0]}
+      })
+    }));
   },
-  onRender: ({
-               gl, tick, aspect, cube
-             }) => {
+  onRender({gl, tick, aspect, cube}) => {
     xRot += xSpeed;
     yRot += ySpeed;
 
@@ -110,7 +152,6 @@ const animationLoop = new AnimationLoop({
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
       .multiplyRight(cube.matrix);
 
-
     const {
       blending,
       lighting,
@@ -123,7 +164,7 @@ const animationLoop = new AnimationLoop({
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);
       cube.setUniforms({
-        'alpha': Number(0.5)
+        alpha: Number(0.5)
       });
     } else {
       gl.disable(gl.BLEND);
@@ -151,63 +192,16 @@ const animationLoop = new AnimationLoop({
     cube.render({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({aspect}),
-      uAmbientColor: ambientColor, //[0.2, 0.2, 0.2],
-      uLightingDirection: lightingDirection, //[0, 0, 1],
-      uDirectionalColor: directionalColor, //[0.8, 0.8, 0.8],
+      uAmbientColor: ambientColor, // [0.2, 0.2, 0.2],
+      uLightingDirection: lightingDirection, // [0, 0, 1],
+      uDirectionalColor: directionalColor, // [0.8, 0.8, 0.8],
       uUseLighting: useLight,
       uAlpha: Number(0.5)
     });
   }
 });
 
-animationLoop.getInfo = () => {
-  return `
-<div>
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
-      The depth buffer, transparency and blending
-    </a>
-  </p>
-  The classic WebGL Lessons in luma.gl
- 
-  <div id="control-elements">
-    <input type="checkbox" id="blending" checked/> Use blending<br/>
-    Alpha level <input type="text" id="alpha" value="0.5"/><br/>
-    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
-    (Use cursor keys to spin the box and <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
-   
-    <br/>
-    <div><b>Directional light:</b></div>
-    <div class="control-block">
-      <div class="control-row">
-        Direction:
-        <div>X: <input type="text" id="lightDirectionX" value="0"/></div>
-        <div>Y: <input type="text" id="lightDirectionY" value="0"/></div>
-        <div>Z: <input type="text" id="lightDirectionZ" value="1"/></div>
-      </div>
-      <div class="control-row">
-        Colour:
-        <div>R: <input type="text" id="directionalR" value="0.8"/></div>
-        <div>G: <input type="text" id="directionalG" value="0.8"/></div>
-        <div>B: <input type="text" id="directionalB" value="0.8"/></div>
-      </div>
-    </div>
-  </div> 
-
-  <div>
-    <div><b>Ambient light:</b></div>
-    <div class="control-block">
-      <div class="control-row">
-        Colour:
-        <div>R: <input type="text" id="ambientR" value="0.2"/></div>
-        <div>G: <input type="text" id="ambientG" value="0.2"/></div>
-        <div>B: <input type="text" id="ambientB" value="0.2"/></div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -273,11 +267,12 @@ function getControls() {
     direction,
     blending,
     alpha
-  }
+  };
 }
 
 export default animationLoop;
 
-// expose on Window for standalone example
-window.animationLoop = animationLoop; // eslint-disable-lie
-
+/* global window */
+if (!window.website) {
+  animationLoop.start();
+}
