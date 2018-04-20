@@ -13,6 +13,7 @@
 [Debugging](/#/documentation/get-started/debugging): The Khronos group's `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
 
 To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
+
 ```js
 import "luma.gl/debug";
 const gl = getDebugContext(gl);
@@ -29,7 +30,7 @@ Before upgrading to v5, it is highly recommended to run your application using l
 
 The `Model` constructor expects a gl context as the first argument.
 
-```
+```js
   // v5
   Model(gl)
   Model(gl, {...opts});
@@ -38,7 +39,7 @@ The `Model` constructor expects a gl context as the first argument.
 
 Following style construction was deprecated in v4 and is now removed in v5.
 
-```
+```js
   // NOT SUPPORTED
   Model({gl});
   Model({gl, ...opts});
@@ -53,7 +54,7 @@ Following style construction was deprecated in v4 and is now removed in v5.
 
 `Geometry` class construction with inline attributes was deprecated in v4 and now removed in v5.
 
-```
+```js
 // NOT SUPPORTED
 new Geometry({
   positions: new Float32Array([ ... ]),
@@ -66,7 +67,7 @@ new Geometry({
 
 All attributes should be grouped inside `attribute` object.
 
-```
+```js
 // SUPPORTED
 new Geometry({
  attributes: {
@@ -141,7 +142,7 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 
 The `Model` constructor now expects a gl context as the first argument.
 
-```
+```js
   // v3
   Model({gl});
   Model({gl, ...opts});
