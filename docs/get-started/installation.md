@@ -1,14 +1,21 @@
 # Installation
 
-Use npm or yarn to install luma.gl
-```sh
-npm install --save luma.gl
+Use npm or yarn to install luma.gl:
+
+using yarn:
+```
 yarn add luma.gl
 ```
 
-## Developing
+using npm:
+```
+npm install --save luma.gl
+```
 
-Use `npm start` to run the test server, it will open a web page from which you can access the examples and lessons, and automatically update when you save modified source files.
+
+## Testing using the Website
+
+Go to the website directory and run `yarn start` or `npm start` to run the test server, it will open a web page from which you can access live examples and lessons. It automatically updates when you save modified source files.
 
 
 ## Testing
