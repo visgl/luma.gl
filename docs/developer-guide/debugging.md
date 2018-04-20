@@ -6,10 +6,11 @@ luma.gl has a number of provisions for debugging designed to help you save time 
 ## Seer Integration
 
 luma.gl is integrated with the [`seer`](https://chrome.google.com/webstore/detail/seer/eogckabefmgphfgngjdmmlfbddmonfdh) Chrome extension, giving you a powerful tool for viewing and inspecting luma.gl state at runtime when developing in Chrome. Installing the extension gives you a new tab in the developer tools where you can:
+
 * See list of created `Models`
 * Inspect values of uniforms and vertex attributes
 * See GPU render timings for each model
-and much more.
+* and much more.
 
 
 ## id strings
@@ -50,10 +51,12 @@ luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGL
 The `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
 
 To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
+
 ```js
 import "luma.gl/debug";
 const gl = getDebugContext(gl);
 ```
+
 If the debug tools haven't been imported, `getDebugContext` will print a warning and simply return the original context, so the debug code can be left in the applicatin even when debug support is not imported.
 
 When the `luma.log.debug` flag is set, a debug contexts does the following:

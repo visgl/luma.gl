@@ -3,6 +3,7 @@
 luma.gl is integrated with [headless-gl](https://www.npmjs.com/package/gl) and dynamically attempts to load it when running under Node.js. If `gl` is installed and properly configured on your system (`gl` can often autodetect your configuration), you should be able to run luma.gl in Node.js from the console, even on machines that do not have GPUs.
 
 As of v5.2, no special imports are needed.
+
 ```js
 import 'luma.gl';
 import {createGLContext, Model, ...} from 'luma.gl';

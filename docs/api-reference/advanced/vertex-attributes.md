@@ -116,12 +116,12 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 2. **location** (*GLuint*) - index of the attribute
 3. **buffer** (*WebGLBuffer*|*Buffer*)
 4. **target** (*GLuint*, gl.ARRAY_BUFFER) - which target to bind to
-4. **size** (*GLuint*)  - number of values per element (1-4)
-4. **type** (*GLuint*)  - type of values (e.g. gl.FLOAT)
-4. **normalized** (*boolean*, false) - normalize integers to [-1,1] or [0,1]
-4. **integer** (*boolean*, false) - **WebGL2 only** disable int-to-float conversion
-4. **stride** (*GLuint*, 0) - supports strided arrays
-4. **offset** (*GLuint*, 0) - supports strided arrays
+5. **size** (*GLuint*)  - number of values per element (1-4)
+6. **type** (*GLuint*)  - type of values (e.g. gl.FLOAT)
+7. **normalized** (*boolean*, false) - normalize integers to [-1,1] or [0,1]
+8. **integer** (*boolean*, false) - **WebGL2 only** disable int-to-float conversion
+9. **stride** (*GLuint*, 0) - supports strided arrays
+10. **offset** (*GLuint*, 0) - supports strided arrays
 
 ### Remarks
 
@@ -133,7 +133,7 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 
 Sets a constant (i.e. generic) value for a vertex attribute. All Vertex Shader invocations will get the same value.
 
-### Syntax:
+### Syntax
 
 	VertexAttributes.setGeneric({gl, location, array});
 
@@ -154,7 +154,7 @@ Sets the instance divisor. 0 disables instancing, >=1 enables it.
 
 See description of instancing in the overview above.
 
-### Syntax:
+### Syntax
 
 	VertexAttributes.setGeneric({gl, location, array});
 

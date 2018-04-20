@@ -14,6 +14,7 @@ For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Tran
 ## Usage
 
 Setting up a model object for transform feedback.
+
 ```js
 const model = new Model(gl, {
   vs,
@@ -47,6 +48,7 @@ const transformFeedback = new TransformFeedback(gl, {
 
 
 Running program (drawing) with implicit activation of transform feedback (will call `begin` and `end` on supplied `transformFeedback`)
+
 ```js
 model.draw({
   drawMode,
@@ -57,6 +59,7 @@ model.draw({
 ```
 
 Running program (drawing) with explicit activation of transform feedback
+
 ```js
 transformFeedback.begin();
 model.draw({...});
@@ -64,6 +67,7 @@ transformFeedback.end();
 ```
 
 Turning off rasterization
+
 ```js
 const parameters = {[GL.RASTERIZER_DISCARD]: true}
 model.draw({..., transformFeedback, parameters});
@@ -75,9 +79,8 @@ model.draw({..., transformFeedback, parameters});
 ### constructor
 
 * `gl` - (`WebGL2RenderingContext`) gl - context
-* `opts` - (`Object`={}) - options
-  * `buffers` - buffers that gets bound to `TRANSFORM_FEEDBACK_BUFFER` target for recording vertex shader outputs.
-  * `varyingMap` - Object mapping varying name to buffer index it needs to be bound.
+* `buffers` - buffers that gets bound to `TRANSFORM_FEEDBACK_BUFFER` target for recording vertex shader outputs.
+* `varyingMap` - Object mapping varying name to buffer index it needs to be bound.
 
 WebGL APIs [`gl.createTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/createTransformFeedback)
 
@@ -103,10 +106,12 @@ Reallocating storage for any of these buffers. This includes invalidation.
 ```js
 begin(primitiveMode)
 ```
+
 * `primitiveMode` (`GLenum`) -
+
 returns (`TransformFeedback`) - returns self to enable chaining
 
-| `Transform Feedback primitiveMode | Compatible Draw Modes |
+| Transform Feedback primitiveMode | Compatible Draw Modes |
 | ---            | --- |
 | `GL.POINTS`	 | `GL.POINTS` |
 | `GL.LINES`	 | `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP` |
@@ -168,6 +173,8 @@ None
 
 * All of the indexed `GL.TRANSFORM_FEEDBACK_BUFFER` bindings. So all calls to `Buffer.bindBase` or `Buffer.bindRange` with `{target: GL.TRANSFORM_FEEDBACK_BUFFER, ...}` will attach the given region of the buffer to the currently bound feedback object.
 * Whether the transform feedback is active and/or paused.
-* About `TransformFeedback` activation caveats
-    * When activated, `TransformFeedback` are coupled to the "current" `Program`
+
+About `TransformFeedback` activation caveats
+
+* When activated, `TransformFeedback` are coupled to the "current" `Program`
 * Note that a started and unpaused TransformFeedback prevents the app from changing or re-linking the current program. So for instance, `Program.use` (`gl.useProgram`) cannot be called.

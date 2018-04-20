@@ -6,7 +6,8 @@ A helper class that lets the application describe the contents of a uniform bloc
 ## Usage
 
 Create a `UniformBufferLayout` that matches the uniform block declaration in your shader
-```
+
+```js
 #version 300 es
 layout (std140) uniform matrix {
     mat4 mvp;
@@ -20,6 +21,7 @@ const matrixBlockLayout = new UniformBufferLayout({
 ```
 
 Setting values on a `UniformBufferLayout`:
+
 ```js
 .setValues({
   mvp: [1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1]
@@ -27,12 +29,14 @@ Setting values on a `UniformBufferLayout`:
 ```
 
 Creating a uniform buffer to hold the data required by the layout
+
 ```js
 const layout = new UniformBufferLayout({...});
 const buffer = new Buffer(gl, {size: layout.getBytes()});
 ```
 
 Updating your actual uniform buffer
+
 ```js
 const layout = ...
 layout.setValues({...})
@@ -40,12 +44,14 @@ buffer.setData({data: layout.getData()})
 ```
 
 Updating a minimal part of the actual uniform buffer
+
 ```js
 const {data, offset} = layout.getSubData();
 buffer.setData({data, offset})
 ```
 
 Binding your uniform buffer
+
 ```js
 TBA
 ```
