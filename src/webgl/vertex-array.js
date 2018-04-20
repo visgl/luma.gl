@@ -91,22 +91,37 @@ export default class VertexArray extends Resource {
     return this._filledLocations;
   }
 
-  // Register an optional buffer name to location mapping
-  setLocations(locations) {
-    this.locations = locations;
-    this.names = {};
-  }
+  // Set a location in vertex attributes array to a buffer
+  setBuffer({
+    location,
+    buffer,
+    target,
+    layout
+  } = {}) {
+    const {gl} = this;
 
-  // Set (bind) an elements buffer, for indexed rendering. Must be GL.ELEMENT_ARRAY_BUFFER
-  setElements(elements) {
-    assert(!elements || elements.target === GL_ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
+    // Copy main data characteristics from buffer
+    target = target !== undefined ? target : buffer.target;
+    layout = layout !== undefined ? layout : buffer.layout;
+    assert(target, 'setBuffer needs target');
+    assert(layout, 'setBuffer called on uninitialized buffer');
+    this._filledLocations[location] = true;
 
-    this.ext.bindVertexArray(this.handle);
-    this.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements && elements.handle);
-    this.ext.bindVertexArray(null);
+    this.bind(() => {
+      // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
+      buffer.bind({target: gl.ARRAY_BUFFER});
 
-    this.elements = elements;
-    return this;
+      const {size, type, normalized, stride, offset} = layout;
+      // Attach _bound ARRAY_BUFFER with specified buffer format to location
+      if (!layout.integer) {
+        gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
+      } else {
+        // specifies *integer* data formats and locations of vertex attributes
+        assert(isWebGL2(gl));
+        gl.vertexAttribIPointer(location, size, type, stride, offset);
+      }
+    });
+
   }
 
   // Set (bind) an array or map of vertex array buffers, either in numbered or
@@ -160,11 +175,22 @@ export default class VertexArray extends Resource {
     }
   }
 
-  // Enable an attribute
-  enable(location) {
-    this.bind(() => {
-      this.gl.enableVertexAttribArray(location);
-    });
+  // Register an optional buffer name to location mapping
+  setLocations(locations) {
+    this.locations = locations;
+    this.names = {};
+  }
+
+  // Set (bind) an elements buffer, for indexed rendering. Must be GL.ELEMENT_ARRAY_BUFFER
+  setElements(elements) {
+    assert(!elements || elements.target === GL_ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
+
+    this.ext.bindVertexArray(this.handle);
+    this.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements && elements.handle);
+    this.ext.bindVertexArray(null);
+
+    this.elements = elements;
+    return this;
   }
 
   clearBindings({disableZero = false} = {}) {
@@ -175,6 +201,13 @@ export default class VertexArray extends Resource {
         }
       }
       this._filledLocations = {};
+    });
+  }
+
+  // Enable an attribute
+  enable(location) {
+    this.bind(() => {
+      this.gl.enableVertexAttribArray(location);
     });
   }
 
@@ -195,39 +228,6 @@ export default class VertexArray extends Resource {
     this.bind(() => {
       this.ext.vertexAttribDivisor(location, divisor);
     });
-  }
-
-  // Set a location in vertex attributes array to a buffer
-  setBuffer({
-    location,
-    buffer,
-    target,
-    layout
-  } = {}) {
-    const {gl} = this;
-
-    // Copy main data characteristics from buffer
-    target = target !== undefined ? target : buffer.target;
-    layout = layout !== undefined ? layout : buffer.layout;
-    assert(target, 'setBuffer needs target');
-    assert(layout, 'setBuffer called on uninitialized buffer');
-    this._filledLocations[location] = true;
-
-    this.bind(() => {
-      // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
-      buffer.bind({target: gl.ARRAY_BUFFER});
-
-      const {size, type, normalized, stride, offset} = layout;
-      // Attach _bound ARRAY_BUFFER with specified buffer format to location
-      if (!layout.integer) {
-        gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
-      } else {
-        // specifies *integer* data formats and locations of vertex attributes
-        assert(isWebGL2(gl));
-        gl.vertexAttribIPointer(location, size, type, stride, offset);
-      }
-    });
-
   }
 
   // Specify values for generic vertex attributes
