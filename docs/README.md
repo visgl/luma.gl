@@ -1,21 +1,21 @@
 # Overview
 
-luma.gl is a Javascript framework that provides developers easier and complete access to underlying WebGL2 APIs provided by modern browsers.
+luma.gl is a Javascript framework that provides developers complete access to the WebGL2 APIs provided by modern browsers.
 
 
 ## Design Goals
 
-- **Full WebGL2 Access** - Unlike many other WebGL frameworks, luma.gl is designed expose the [full WebGL2 APIs](https://www.khronos.org/registry/webgl/specs/latest/2.0/) but makes it easier to use. luma.gl simply reorganizes WebGL2 objects and APIs so that it's more natural to users with experience in modern object-oriented programming languages.
-- **Device feature and capability management** - Easily check if certain features and capability extensions are available on a specific device / platform / API combination and expose those functionalities with consistent APIs
+- **Complete WebGL2 API** - Unlike many other WebGL frameworks, luma.gl makes the [full WebGL2 APIs](https://www.khronos.org/registry/webgl/specs/latest/2.0/) available to apps. luma.gl provides WebGL2 classes that are stream-lined for us in modern object-oriented applications.
 - **Facilitate Shader Programming** - Extensive facilities for developing, modularizing, debugging and profiling GLSL shaders.
-- **Advanced GPU Programming** - targets use cases like *instance rendering* for extremely large data sets, GPU based computing using *transform feedback*, and other WebGL2 / [GPGPU](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units) techniques.
-- **Performance First** - A strong focus on performance, which means providing access to APIs on lower abstraction levels.
+- **Performance First** - A strong focus on performance, which includes a preference for providing APIs on lower abstraction levels than some other WebGL frameworks.
+- **Advanced GPU Programming** - targets use cases like GPU based computing using *transform feedback*, *instance rendering* for large data sets, and other WebGL2 and [GPGPU](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units) techniques.
+- **Device feature and capability management** - luma.gl checks if certain features/extensions are available on the current browser. and expose the available functionalities with a consistent API, making it easy to write apps that support the latest WebGL versions and WebGL extensions, but gracvefully fall back when they are not available.
 
 
 ## History
 
-The arrival of WebGL2 is changing the WebGL framework landscape. With the release of v4, luma.gl is now positioned as a foundation library for high-performance GPU programming in JavaScript.
-
 luma.gl was originally created in 2015 as a fork of [PhiloGL](https://github.com/philogb/philogl) to provide high performance WebGL rendering capability for [deck.gl](https://github.com/uber/deck.gl) - an advanced 3D geospatial visualization framework.
 
-Later, with the increase of adoption of its downstream deck.gl framework, the adoption of luma.gl also rise gradually. In addition, various contributors within and outside the company started to build up their own repository of custom deck.gl layers for their apps, which requires understanding of luma.gl's classes and APIs. This prompts us to completely rewrite the documentation and rebuild the website for luma.gl, along with the brand new v4 release with compelete WebGL2 support.
+The arrival of WebGL2 was a major milestone the WebGL framework landscape. With the release of luma.gl v4 in July 2017, luma.gl was positioned as a foundation library for high-performance GPU programming in JavaScript, and luma.gl v4.1, v5.0, v5.1 and v5.2 have continued to provide incremental improvements in the WebGL2 and GPGPU areas.
+
+Later, with the increased adoption of the deck.gl framework, the adoption of luma.gl also rise gradually. In addition, various contributors within and outside the company started to build up their own repository of custom deck.gl layers for their apps, which requires understanding of luma.gl's classes and APIs. This prompts us to completely rewrite the documentation and rebuild the website for luma.gl, along with the brand new v4 release with compelete WebGL2 support.
