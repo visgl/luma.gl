@@ -33,7 +33,7 @@
     "headless.js"
   ],
   "scripts": {
-    "start": "cat < docs/get-started/examples.md",
+    "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5/packages dist/esm/packages dist/es6/packages",
     "build-es6": "BABEL_ENV=es6 babel src --out-dir dist/es6 --source-maps && BABEL_ENV=es6 babel packages --out-dir dist/es6/packages --source-maps",
     "build-esm": "BABEL_ENV=esm babel src --out-dir dist/esm --source-maps && BABEL_ENV=esm babel packages --out-dir dist/esm/packages --source-maps",
@@ -85,6 +85,7 @@
     "eslint-plugin-babel": "^4.0.0",
     "gl": "^4.0.2",
     "html-webpack-plugin": "^3.0.7",
+    "markdownlint-cli": "^0.8.1",
     "mkdirp": "^0.5.1",
     "module-alias": "^2.0.0",
     "nyc": "^10.2.0",
