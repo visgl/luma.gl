@@ -85,6 +85,9 @@ vec4 picking_filterHighlightColor(vec4 color) {
  */
 vec4 picking_filterPickingColor(vec4 color) {
   vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
+  if (picking_uActive && length(pickingColor) < 0.001) {
+    discard;
+  }
   return picking_uActive ? vec4(pickingColor, 1.0) : color;
 }
 
