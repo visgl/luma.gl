@@ -1,10 +1,7 @@
-/* global window,*/
-/* eslint-disable no-console */
-
 import {
-  AnimationLoop, Buffer, Program, TransformFeedback, VertexArray, Matrix4,
-  setParameters
+  AnimationLoop, Buffer, Program, TransformFeedback, VertexArray, setParameters
 } from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>

@@ -1,19 +1,3 @@
-/* eslint-disable max-statements, indent, no-multi-spaces */
-import {
-  GL, AnimationLoop, Cube, Sphere, Matrix4, Texture2D,
-  loadTextures, Model, loadFiles, parseModel,
-  Program, Renderbuffer, Framebuffer, Geometry, setParameters
-} from 'luma.gl';
-
-const INFO_HTML = `
-<p>
-  <a href="http://learningwebgl.com/blog/?p=1786" target="_blank">
-    Rendering to textures
-  </a>
-<p>
-  The classic WebGL Lessons in luma.gl
-`;
-
 // TODO: Remaining issues
 // 1. Specular highlights don not match with example:
 //    verify light position relative to moon/cube
@@ -21,6 +5,35 @@ const INFO_HTML = `
 // 3. Match laptopScreen uniforms with the example.
 // 4. Match zNear/zFar values with example on all cases.
 // 5. Verify lookAt matrix used. (do we need it?)
+
+/* eslint-disable max-statements, indent, no-multi-spaces */
+import {
+  GL, AnimationLoop, Cube, Sphere, Texture2D,
+  loadTextures, Model, loadFiles, parseModel,
+  Program, Renderbuffer, Framebuffer, Geometry, setParameters
+} from 'luma.gl';
+import {Matrix4} from 'math.gl';
+
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1786" target="_blank">
+    Rendering to textures
+  </a>
+
+  <br/>
+  <br/>
+  Laptop model adapted from
+  <a href="http://www.turbosquid.com/3d-models/apple-macbook-max-free/391534">
+    this 3DS Max model by Xedium
+  </a><br/>
+  Moon texture courtesy of
+  <a href="http://maps.jpl.nasa.gov/">
+    the Jet Propulsion Laboratory
+  </a>.
+
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
 
 // TODO: For Debugging only, remove once rendering issues fixed.
 const FRAGMENT_SHADER_SQ = `\

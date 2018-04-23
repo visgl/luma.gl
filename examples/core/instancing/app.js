@@ -1,7 +1,5 @@
-/* eslint-disable no-var, max-statements */
-import {
-  GL, AnimationLoop, Matrix4, radians, setParameters, pickModels,
-  Cube, picking, dirlight} from 'luma.gl';
+import {GL, AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
+import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>

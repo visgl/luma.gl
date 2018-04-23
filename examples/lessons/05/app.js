@@ -1,5 +1,5 @@
-/* eslint-disable no-var, max-statements, indent, no-multi-spaces */
-import {GL, AnimationLoop, loadTextures, Cube, Matrix4, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, loadTextures, Cube, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>

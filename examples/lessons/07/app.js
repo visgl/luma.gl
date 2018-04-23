@@ -1,26 +1,21 @@
-/* eslint-disable max-statements, no-var */
-/* eslint-disable array-bracket-spacing, no-multi-spaces */
-/* global document */
-
-import {GL, AnimationLoop, Cube, Matrix4, addEvents, loadTextures, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Cube, addEvents, loadTextures, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 export const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=684" target="_blank">
     Basic directional and ambient lighting
   </a>
-<p>
-The classic WebGL Lessons in luma.gl
-`;
 
-// TODO: Use following HTML/getControls method and update lighting uniforms
-export const INFO_HTML2 = `
-  <div id="controls">
-    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
-    (Use cursor keys to spin the box and
-    <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
+  <br/>
 
-    <br/>
+  <br/>
+
+  Use arrow keys to spin the box and <code>+</code>/<code>-</code> to zoom in/out.
+
+  <br/>
+
+  <!--
     <h2>Directional light:</h2>
 
     <table style="border: 0; padding: 10px;">
@@ -47,51 +42,93 @@ export const INFO_HTML2 = `
     <td>B: <input type="text" id="ambientB" value="0.2" />
     </tr>
     </table>
+  -->
 
-    <a href="http://learningwebgl.com/blog/?p=684">&lt;&lt; Back to Lesson 7</a>
+  <div>
+    <input type="checkbox" id="lighting" checked/> <b>Directional Lighting</b>
+    <br/>
+    <div class="control-block">
+      <div class="control-row">
+        Direction:
+        <div>X:
+          <input id="lightDirectionX" type="range" value="-0.25" min="-5" max="5" step="0.1"/>
+        </div>
+        <div>Y:
+          <input id="lightDirectionY" type="range" value="-0.25" min="-5" max="5" step="0.1"/>
+        </div>
+        <div>Z:
+          <input id="lightDirectionZ" type="range" value="1.0" min="0" max="5" step="0.1"/>
+        </div>
+      </div>
+      <div class="control-row">
+        Colour:
+        <div>R:
+          <input id="directionalR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="directionalG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="directionalB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <br/>
+
+  <div>
+    <div><b>Ambient Lighting</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Colour:
+        <div>R:
+          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<p>
+The classic WebGL Lessons in luma.gl
 `;
 
-export function getControls(scene) {
-  // Lighting form elements variables
-  var $id = function(d) {
-    return document.getElementById(d);
-  };
+// Read Lighting form elements variables
+function getHTMLControls() {
+  /* global document */
+  const $id = id => document.getElementById(id);
+  const $value = (id, defaultValue = 1) => $id(id) ? Number($id(id).value) : defaultValue;
+  const $checked = id => $id(id) ? $id(id).checked : true;
 
   // Get lighting form elements
-  var lighting = $id('lighting');
-  var ambient = {
-    r: $id('ambientR'),
-    g: $id('ambientG'),
-    b: $id('ambientB')
-  };
-  var direction = {
-    x: $id('lightDirectionX'),
-    y: $id('lightDirectionY'),
-    z: $id('lightDirectionZ'),
+  const lightingEnabled = $checked('lighting');
+  const lightDirection = [
+    $value('lightDirectionX', 0),
+    $value('lightDirectionY', 0),
+    $value('lightDirectionZ', 1)
+  ];
+  const lightColor = [
+    $value('directionalR'),
+    $value('directionalG'),
+    $value('directionalB')
+  ];
+  const ambientColor = [
+    $value('ambientR'),
+    $value('ambientG'),
+    $value('ambientB')
+  ];
 
-    r: $id('directionalR'),
-    g: $id('directionalG'),
-    b: $id('directionalB')
-  };
-
-  // Update scene config with light info
-  var lightConfig = scene.config.lights;
-  lightConfig.enable = lighting.checked;
-  lightConfig.ambient = {
-    r: Number(ambient.r.value),
-    g: Number(ambient.g.value),
-    b: Number(ambient.b.value)
-  };
-  lightConfig.directional.direction = {
-    x: Number(direction.x.value),
-    y: Number(direction.y.value),
-    z: Number(direction.z.value)
-  };
-  lightConfig.directional.color = {
-    r: Number(direction.r.value),
-    g: Number(direction.g.value),
-    b: Number(direction.b.value)
+  return {
+    lightingEnabled,
+    lightDirection,
+    lightColor,
+    ambientColor
   };
 }
 
@@ -146,11 +183,11 @@ void main(void) {
 }
 `;
 
-var xRot = 0;
-var xSpeed = 0.01;
-var yRot = 0;
-var ySpeed = 0.0;
-var z = -5.0;
+let xRot = 0;
+let xSpeed = 0.01;
+let yRot = 0;
+let ySpeed = 0.0;
+let z = -5.0;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
@@ -194,11 +231,18 @@ const animationLoop = new AnimationLoop({
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
       .multiplyRight(cube.matrix);
 
+    const {
+      lightingEnabled,
+      lightDirection,
+      lightColor,
+      ambientColor
+    } = getHTMLControls();
+
     cube.render({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({aspect}),
-      uAmbientColor: [0.2, 0.2, 0.2],
-      uLightingDirection: [0, 0, 3],
+      uAmbientColor: ambientColor,
+      uLightingDirection: lightDirection,
       uDirectionalColor: [0.8, 0.8, 0.8],
       uUseLighting: true
     });
@@ -208,7 +252,6 @@ const animationLoop = new AnimationLoop({
 animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
-
   addEvents(canvas, {
     onKeyDown(e) {
       switch (e.key) {
@@ -225,12 +268,16 @@ function addKeyboardHandler(canvas) {
         ySpeed += 0.02;
         break;
       default:
-        // handle page up/down
-        if (e.code === 33) {
-          z -= 0.05;
-        } else if (e.code === 34) {
-          z += 0.05;
-        }
+      }
+
+      switch (e.code) {
+      case 187: // '+'
+        z += 0.05;
+        break;
+      case 189: // '-'
+        z -= 0.05;
+        break;
+      default:
       }
     }
   });

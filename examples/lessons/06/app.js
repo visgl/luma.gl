@@ -1,13 +1,21 @@
-/* global window */
-import {
-  GL, AnimationLoop, Cube, Matrix4, Texture2D, addEvents, loadImage, setParameters
-} from 'luma.gl';
+import {GL, AnimationLoop, Cube, Texture2D, addEvents, loadImage, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=571" target="_blank">
     Keyboard input and texture filters
   </a>
+
+  <br/>
+  <br/>
+
+  Use arrow keys to spin the box and <code>+</code>/<code>-</code> to zoom in/out.
+
+  <br/>
+  <br/>
+
+  Filter (<code>F</code>): <code><span id='filter'/></code>
 <p>
 The classic WebGL Lessons in luma.gl
 `;
@@ -50,6 +58,11 @@ let z = -5.0;
 let filter = 0;
 const filters = ['nearest', 'linear', 'mipmap'];
 
+function cycleFilter(newFilter) {
+  filter = newFilter !== undefined ? newFilter : (filter + 1) % 3;
+  document.getElementById('filter').textContent = `GL.${filters[filter].toUpperCase()}`;
+}
+
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize: ({canvas, gl}) => {
@@ -65,6 +78,8 @@ const animationLoop = new AnimationLoop({
 
     const cube = new Cube(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
 
+    cycleFilter(0);
+
     // load image
     return loadImage('crate.gif')
     .then(image => {
@@ -72,6 +87,10 @@ const animationLoop = new AnimationLoop({
       const textures = {
         nearest: new Texture2D(gl, {
           data: image,
+          parameters: {
+            [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+            [GL.TEXTURE_MAG_FILTER]: GL.NEAREST
+          },
           pixelStore: {
             [GL.UNPACK_FLIP_Y_WEBGL]: true
           }
@@ -146,27 +165,31 @@ function addKeyboardHandler(canvas) {
     onKeyDown(e) {
       switch (e.key) {
       case 'f':
-        filter = (filter + 1) % 3;
+        cycleFilter();
         break;
       case 'up':
-        xSpeed -= 0.02;
+        xSpeed -= 0.01;
         break;
       case 'down':
-        xSpeed += 0.02;
+        xSpeed += 0.01;
         break;
       case 'left':
-        ySpeed -= 0.02;
+        ySpeed -= 0.01;
         break;
       case 'right':
-        ySpeed += 0.02;
+        ySpeed += 0.01;
         break;
-      // andle page up/down
       default:
-        if (e.code === 33) {
-          z -= 0.05;
-        } else if (e.code === 34) {
-          z += 0.05;
-        }
+      }
+
+      switch (e.code) {
+      case 187: // '+'
+        z += 0.05;
+        break;
+      case 189: // '-'
+        z -= 0.05;
+        break;
+      default:
       }
     }
   });

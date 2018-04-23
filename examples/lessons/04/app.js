@@ -1,4 +1,5 @@
-import {GL, AnimationLoop, Model, Geometry, Program, Matrix4, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Model, Geometry, Program, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>

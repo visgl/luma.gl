@@ -1,52 +1,123 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
-import {GL, AnimationLoop, Cube, Matrix4, addEvents, loadTextures, setParameters} from 'luma.gl';
+import {GL, AnimationLoop, Cube, addEvents, loadTextures, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <div>
   <p>
-    <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
-      The depth buffer, transparency and blending
+    <a href="http://learningwebgl.com/blog/?p=859" target="_blank">
+      Depth buffer, transparency and blending
     </a>
   </p>
-  The classic WebGL Lessons in luma.gl
 
-  <div id="control-elements">
-    <input type="checkbox" id="blending" checked/> Use blending<br/>
-    Alpha level <input type="text" id="alpha" value="0.5"/><br/>
-    <input type="checkbox" id="lighting" checked/> Use lighting<br/>
-    (Use cursor keys to spin the box and <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
-
-    <br/>
-    <div><b>Directional light:</b></div>
-    <div class="control-block">
-      <div class="control-row">
-        Direction:
-        <div>X: <input type="text" id="lightDirectionX" value="0"/></div>
-        <div>Y: <input type="text" id="lightDirectionY" value="0"/></div>
-        <div>Z: <input type="text" id="lightDirectionZ" value="1"/></div>
-      </div>
-      <div class="control-row">
-        Colour:
-        <div>R: <input type="text" id="directionalR" value="0.8"/></div>
-        <div>G: <input type="text" id="directionalG" value="0.8"/></div>
-        <div>B: <input type="text" id="directionalB" value="0.8"/></div>
-      </div>
-    </div>
-  </div>
+  Use arrow keys to spin the box and <code>+</code>/<code>-</code> to zoom in/out.
+  <br/>
 
   <div>
-    <div><b>Ambient light:</b></div>
-    <div class="control-block">
-      <div class="control-row">
-        Colour:
-        <div>R: <input type="text" id="ambientR" value="0.2"/></div>
-        <div>G: <input type="text" id="ambientG" value="0.2"/></div>
-        <div>B: <input type="text" id="ambientB" value="0.2"/></div>
+    <div>
+      <input type="checkbox" id="blending" checked/> <b>Blending</b>
+      <br/>
+      Alpha level
+      <input id="directionalR" type="range" value="0.5" min="0.0" max="1.0" step="0.01"/>
+      <br/>
+    </div>
+
+    <br/>
+
+    <div>
+      <input type="checkbox" id="lighting" checked/> <b>Directional Lighting</b>
+      <br/>
+      <div class="control-block">
+        <div class="control-row">
+          Direction:
+          <div>X:
+            <input id="lightDirectionX" type="range" value="0" min="-5" max="5" step="0.1"/>
+          </div>
+          <div>Y:
+            <input id="lightDirectionY" type="range" value="0" min="-5" max="5" step="0.1"/>
+          </div>
+          <div>Z:
+            <input id="lightDirectionZ" type="range" value="2" min="0" max="5" step="0.1"/>
+          </div>
+        </div>
+        <div class="control-row">
+          Colour:
+          <div>R:
+            <input id="directionalR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+          </div>
+          <div>G:
+            <input id="directionalG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+          </div>
+          <div>B:
+            <input id="directionalB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <br/>
+
+  <div>
+    <div><b>Ambient Lighting</b></div>
+    <div class="control-block">
+      <div class="control-row">
+        Colour:
+        <div>R:
+          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <br/>
+  The classic WebGL Lessons in luma.gl
 </div>
 `;
+
+// Read Lighting form elements variables
+function getHTMLControls() {
+  /* global document */
+  const $id = id => document.getElementById(id);
+  const $value = (id, defaultValue = 1) => $id(id) ? Number($id(id).value) : defaultValue;
+  const $checked = id => $id(id) ? $id(id).checked : true;
+
+  const blendingEnabled = $checked('blending');
+  const alpha = $value('alpha', 0.5);
+
+  // Get lighting form elements
+  const lightingEnabled = $checked('lighting');
+  const lightDirection = [
+    $value('lightDirectionX', 0),
+    $value('lightDirectionY', 0),
+    $value('lightDirectionZ', 1)
+  ];
+  const lightColor = [
+    $value('directionalR'),
+    $value('directionalG'),
+    $value('directionalB')
+  ];
+  const ambientColor = [
+    $value('ambientR'),
+    $value('ambientG'),
+    $value('ambientB')
+  ];
+
+  return {
+    blendingEnabled,
+    alpha,
+    lightingEnabled,
+    lightDirection,
+    lightColor,
+    ambientColor
+  };
+}
 
 // Vertex shader with lighting
 const VERTEX_SHADER = `\
@@ -153,49 +224,34 @@ const animationLoop = new AnimationLoop({
       .multiplyRight(cube.matrix);
 
     const {
-      blending,
-      lighting,
-      ambient,
-      direction
-    } = getControls();
+      blendingEnabled,
+      alpha,
+      lightingEnabled,
+      lightDirection,
+      lightColor,
+      ambientColor
+    } = getHTMLControls();
 
-    if (blending.checked) {
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-      gl.enable(gl.BLEND);
+    if (blendingEnabled) {
       gl.disable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       cube.setUniforms({
-        alpha: Number(0.5)
+        alpha
       });
     } else {
-      gl.disable(gl.BLEND);
       gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.BLEND);
     }
 
     // Update scene config with light info
-    const useLight = lighting.checked;
-    const ambientColor = [
-      parseValue(ambient.r.value),
-      parseValue(ambient.g.value),
-      parseValue(ambient.b.value)
-    ];
-    const lightingDirection = [
-      parseValue(direction.x.value),
-      parseValue(direction.y.value),
-      parseValue(direction.z.value)
-    ];
-    const directionalColor = [
-      parseValue(direction.r.value),
-      parseValue(direction.g.value),
-      parseValue(direction.b.value)
-    ];
-
     cube.render({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({aspect}),
-      uAmbientColor: ambientColor, // [0.2, 0.2, 0.2],
-      uLightingDirection: lightingDirection, // [0, 0, 1],
-      uDirectionalColor: directionalColor, // [0.8, 0.8, 0.8],
-      uUseLighting: useLight,
+      uAmbientColor: ambientColor,
+      uUseLighting: lightingEnabled,
+      uLightingDirection: lightDirection,
+      uDirectionalColor: lightColor,
       uAlpha: Number(0.5)
     });
   }
@@ -207,67 +263,32 @@ function addKeyboardHandler(canvas) {
   addEvents(canvas, {
     onKeyDown(e) {
       switch (e.key) {
-        case 'up':
-          xSpeed -= 0.02;
-          break;
-        case 'down':
-          xSpeed += 0.02;
-          break;
-        case 'left':
-          ySpeed -= 0.02;
-          break;
-        case 'right':
-          ySpeed += 0.02;
-          break;
-        // handle page up/down
-        default:
-          if (e.code === 33) {
-            cubePositionZ -= 0.05;
-          } else if (e.code === 34) {
-            cubePositionZ += 0.05;
-          }
+      case 'up':
+        xSpeed -= 0.02;
+        break;
+      case 'down':
+        xSpeed += 0.02;
+        break;
+      case 'left':
+        ySpeed -= 0.02;
+        break;
+      case 'right':
+        ySpeed += 0.02;
+        break;
+      default:
+      }
+
+      switch (e.code) {
+      case 187: // '+'
+        cubePositionZ += 0.05;
+        break;
+      case 189: // '-'
+        cubePositionZ -= 0.05;
+        break;
+      default:
       }
     }
   });
-}
-
-function parseValue(value) {
-  let parsed = Number(value);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function getControls() {
-  // Lighting form elements variables
-  const $id = function (d) {
-    return document.getElementById(d);
-  };
-
-  // Get lighting form elements
-  const lighting = document.getElementById('lighting');
-  const ambient = {
-    r: $id('ambientR'),
-    g: $id('ambientG'),
-    b: $id('ambientB')
-  };
-  const direction = {
-    x: $id('lightDirectionX'),
-    y: $id('lightDirectionY'),
-    z: $id('lightDirectionZ'),
-
-    r: $id('directionalR'),
-    g: $id('directionalG'),
-    b: $id('directionalB')
-  };
-  const blending = $id('blending');
-  const alpha = $id('alpha');
-
-  return {
-    lighting,
-    ambient,
-    direction,
-    blending,
-    alpha
-  };
 }
 
 export default animationLoop;

@@ -1,13 +1,10 @@
-import {
-  GL, AnimationLoop, Model, Geometry, loadTextures, loadFiles, setParameters
-} from 'luma.gl';
-
+import {GL, AnimationLoop, Model, Geometry, loadTextures, loadFiles, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=1658" target="_blank">
-  specular maps
+    Specular highlights and loading a JSON model
   </a>
 <p>
   The classic WebGL Lessons in luma.gl
@@ -27,7 +24,7 @@ const INFO_HTML = `
   <div class="control-block">
     <div class="control-row">
       <div><b>Shininess:</b></div>
-      <div><input type="text" id="shininess" value="32.0"/></div>
+      <input id="shininess" type="range" value="32.0" min="0.0" max="100.0" step="1"/>
     </div>
   </div>
 
@@ -41,15 +38,27 @@ const INFO_HTML = `
     </div>
     <div class="control-row">
       <div><b>Specular colour:</b></div>
-      <div>R: <input type="text" id="specularR" value="0.8"/></div>
-      <div>G: <input type="text" id="specularG" value="0.8"/></div>
-      <div>B: <input type="text" id="specularB" value="0.8"/></div>
+      <div>R:
+        <input id="specularR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="specularG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="specularB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
     </div>
     <div class="control-row">
       <div><b>Diffuse colour:</b></div>
-      <div>R: <input type="text" id="diffuseR" value="0.8"/></div>
-      <div>G: <input type="text" id="diffuseG" value="0.8"/></div>
-      <div>B: <input type="text" id="diffuseB" value="0.8"/></div>
+      <div>R:
+        <input id="diffuseR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="diffuseG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="diffuseB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
     </div>
   </div>
 
@@ -57,22 +66,86 @@ const INFO_HTML = `
   <div class="control-block">
     <div class="control-row">
       <div><b>Colour:</b></div>
-      <div>R: <input type="text" id="ambientR" value="0.2"/></div>
-      <div>G: <input type="text" id="ambientG" value="0.2"/></div>
-      <div>B: <input type="text" id="ambientB" value="0.2"/></div>
-    </div>
+        <div>R:
+          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
   </div>
 
-   <br/>
-   Galvanized texture courtesy of
-   <a href="http://www.arroway-textures.com/">Arroway Textures</a>.<br/>
-   Earth texture courtesy of
-   <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">
+  <br/>
+  Galvanized texture courtesy of
+  <a href="http://www.arroway-textures.com/">Arroway Textures</a>.<br/>
+  Earth texture courtesy of
+  <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">
     the European Space Agency/Envisat
-   </a>.<br/>
-   <br/>
+  </a>.<br/>
+
+  <br/>
+  The classic WebGL Lessons in luma.gl
+
  </div>
 `;
+
+// Read Lighting form elements variables
+function getHTMLControls() {
+  /* global document */
+  const $id = id => document.getElementById(id);
+  const $value = (id, defaultValue = 1) => $id(id) ? Number($id(id).value) : defaultValue;
+  const $checked = id => $id(id) ? $id(id).checked : true;
+
+  // Get lighting form elements
+  // const useLighting = lighting.checked;
+  // const useSpecular = specular.checked;
+  // const materialShininess = shininess.value;
+
+  // Get lighting form elements
+  const useSpecular = $checked('specular');
+  const useLighting = $checked('lighting');
+  const useTextures = $id('texture').value !== 'none';
+
+  const shininess = $value('shininess');
+
+  const pointLightPosition = [
+    $value('lightPositionX', -10),
+    $value('lightPositionY', 4),
+    $value('lightPositionZ', -20)
+  ];
+  const pointLightSpecularColor = [
+    $value('specularR', 0.8),
+    $value('specularG', 0.8),
+    $value('specularB', 0.8)
+  ];
+  const pointLightDiffuseColor = [
+    $value('diffuseR', 0.8),
+    $value('diffuseG', 0.8),
+    $value('diffuseB', 0.8)
+  ];
+  const ambientColor = [
+    $value('ambientR', 0.2),
+    $value('ambientG', 0.2),
+    $value('ambientB', 0.2)
+  ];
+
+  return {
+    useLighting,
+    useSpecular,
+    useTextures,
+
+    shininess,
+    texture: $id('texture').value,
+
+    ambientColor,
+    pointLightPosition,
+    pointLightSpecularColor,
+    pointLightDiffuseColor
+  };
+}
 
 const FRAGMENT_LIGHTING_VERTEX_SHADER = `\
 precision highp float;
@@ -127,7 +200,8 @@ void main(void) {
         if (uShowSpecularHighlights) {
             vec3 eyeDirection = normalize(-vPosition.xyz);
             vec3 reflectionDirection = reflect(-lightDirection, normal);
-            specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+            specularLightWeighting =
+              pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
         }
         float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
         lightWeighting = uAmbientColor
@@ -159,7 +233,7 @@ const LIGHT_UNIFORMS = {
 };
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+  onInitialize({gl}) {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -186,7 +260,8 @@ const animationLoop = new AnimationLoop({
           mipmap: true
         }]
       })
-    ]).then(([files, textures]) => {
+    ])
+    .then(([files, textures]) => {
       const galvanizedTexture = textures[0];
       const earthTexture = textures[1];
       const teapotJson = JSON.parse(files[0]);
@@ -211,12 +286,11 @@ const animationLoop = new AnimationLoop({
           LIGHT_UNIFORMS
         )
       });
-      return {teapot, earthTexture, galvanizedTexture}
+      return {teapot, earthTexture, galvanizedTexture};
     });
   },
-  onRender: ({
-     gl, tick, aspect, teapot, earthTexture, galvanizedTexture
-  }) => {
+
+  onRender({gl, tick, aspect, teapot, earthTexture, galvanizedTexture}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
@@ -224,45 +298,40 @@ const animationLoop = new AnimationLoop({
       .rotateX(radians(-30))
       .transformVector3([0, 0, 5]);
 
-    let uVMatrix = new Matrix4()
+    const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     const {
-      specular,
-      lighting,
+      useLighting,
+      useSpecular,
+      useTextures,
       texture,
       shininess,
-      point,
-      ambient
-    } = getControls();
-    const useLighting = lighting.checked;
-    const useSpecular = specular.checked;
-    const useTextures = (texture.value !== 'none');
-    const materialShininess = shininess.value;
+      ambientColor,
+      pointLightPosition,
+      pointLightSpecularColor,
+      pointLightDiffuseColor
+
+    } = getHTMLControls();
 
     teapot.setUniforms({
       uUseLighting: useLighting,
       uUseTextures: useTextures,
       uShowSpecularHighlights: useSpecular,
-      uMaterialShininess: materialShininess
+      uMaterialShininess: shininess
     });
 
     if (useLighting) {
-      const ambientColor = parseRGB(ambient);
-      const pointLightingLocation = parseXYZ(point.position);
-      const pointLightSpecularColor = parseRGB(point.specular);
-      const pointLightingDiffuseColor = parseRGB(point.diffuse);
-
       teapot.setUniforms({
         uAmbientColor: ambientColor,
-        uPointLightingLocation: pointLightingLocation,
+        uPointLightingLocation: pointLightPosition,
         uPointLightingSpecularColor: pointLightSpecularColor,
-        uPointLightingDiffuseColor: pointLightingDiffuseColor
+        uPointLightingDiffuseColor: pointLightDiffuseColor
       });
     }
 
     if (useTextures) {
-      const selectedTexture = texture.value;
+      const selectedTexture = texture;
       teapot.setUniforms({
         uSampler: selectedTexture === 'earth' ? earthTexture : galvanizedTexture
       });
@@ -278,65 +347,6 @@ const animationLoop = new AnimationLoop({
 });
 
 animationLoop.getInfo = () => INFO_HTML;
-
-function parseValue(value) {
-  let parsed = Number(value);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function parseRGB({r, g, b}) {
-  return [parseValue(r.value), parseValue(g.value), parseValue(b.value)];
-}
-
-function parseXYZ({x, y, z}) {
-  return [parseValue(x.value), parseValue(y.value), parseValue(z.value)];
-}
-
-function getControls() {
-  // Lighting form elements variables
-  const $id = function (d) {
-    return document.getElementById(d);
-  };
-
-  // Get lighting form elements
-  const specular = $id('specular');
-  const lighting = $id('lighting');
-  const texture = $id('texture');
-  const shininess = $id('shininess');
-
-  const point = {
-    position: {
-      x: $id('lightPositionX'),
-      y: $id('lightPositionY'),
-      z: $id('lightPositionZ')
-    },
-    specular: {
-      r: $id('specularR'),
-      g: $id('specularG'),
-      b: $id('specularB')
-    },
-    diffuse: {
-      r: $id('diffuseR'),
-      g: $id('diffuseG'),
-      b: $id('diffuseB')
-    }
-  };
-
-  const ambient = {
-    r: $id('ambientR'),
-    g: $id('ambientG'),
-    b: $id('ambientB')
-  };
-
-  return {
-    specular,
-    lighting,
-    texture,
-    shininess,
-    point,
-    ambient
-  };
-}
 
 export default animationLoop;
 

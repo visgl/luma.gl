@@ -1,8 +1,6 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
-import {
-  GL, AnimationLoop, Program, Model, Geometry, Matrix4,
-  setParameters
-} from 'luma.gl';
+import {GL, AnimationLoop, Program, Model, Geometry, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>
