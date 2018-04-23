@@ -1,6 +1,5 @@
-/* eslint-disable no-var, max-statements */
-
-import {AnimationLoop, Program, Buffer, Matrix4, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>
@@ -42,7 +41,7 @@ const animationLoop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    var program = new Program(gl, {
+    const program = new Program(gl, {
       vs: VERTEX_SHADER,
       fs: FRAGMENT_SHADER
     });
@@ -50,8 +49,8 @@ const animationLoop = new AnimationLoop({
     const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
     const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
 
-    var trianglePositions = new Buffer(gl, {size: 3, data: new Float32Array(TRIANGLE_VERTS)});
-    var squarePositions = new Buffer(gl, {size: 3, data: new Float32Array(SQUARE_VERTS)});
+    const trianglePositions = new Buffer(gl, {size: 3, data: new Float32Array(TRIANGLE_VERTS)});
+    const squarePositions = new Buffer(gl, {size: 3, data: new Float32Array(SQUARE_VERTS)});
 
     const view = new Matrix4().translate([-1.5, 0, -7]);
     const projection = new Matrix4().perspective({aspect});

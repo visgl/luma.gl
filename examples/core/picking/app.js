@@ -1,8 +1,9 @@
 /* global document */
 import {
-  GL, AnimationLoop, setParameters, loadTextures, Buffer, Matrix4, radians,
+  GL, AnimationLoop, setParameters, loadTextures, Buffer,
   Sphere, project, diffuse, picking, pickModels, ShaderCache
 } from 'luma.gl';
+import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
