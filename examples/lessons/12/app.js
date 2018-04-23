@@ -1,8 +1,5 @@
-import {
-  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere, Cube
-} from 'luma.gl';
-
-import { Matrix4, radians } from 'math.gl';
+import {GL, AnimationLoop, loadTextures, setParameters, Sphere, Cube} from 'luma.gl';
+import {Vector3, Matrix4, radians} from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;

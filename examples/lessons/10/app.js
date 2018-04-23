@@ -5,8 +5,12 @@ import {loadWorldGeometry, World} from './world';
 const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=1067" target="_blank">
-  Loading a world, and the most basic kind of camera
+    Loading a world, and the most basic kind of camera
   </a>
+
+  </br>
+  </br>
+  Use the cursor keys or WASD to run around, and <code>+</code>/<code>-</code> to look up and down.
 <p>
 The classic WebGL Lessons in luma.gl
 `;
@@ -46,18 +50,18 @@ const animationLoop = new AnimationLoop({
     .then(textures => {
       return loadFile({url: 'world.txt'})
       .then(file => {
-        let geometry = loadWorldGeometry(file);
-        let world = new World({
+        const geometry = loadWorldGeometry(file);
+        const world = new World({
           gl,
           texture: textures[0],
-          geometry});
+          geometry
+        });
         return {world};
       });
     });
   },
-  onRender: ({
-    gl, tick, aspect, world
-  }) => {
+
+  onRender: ({gl, tick, aspect, world}) => {
     // Update Camera Position
     const eyePos = [cameraInfo.xPos, cameraInfo.yPos, cameraInfo.zPos];
     const centerPos = new Matrix4()
@@ -65,10 +69,11 @@ const animationLoop = new AnimationLoop({
       .rotateY(radians(cameraInfo.yaw))
       .transformVector3(cameraInfo.direction)
       .add(eyePos);
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     const uMVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]});
+
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     world.render({
       uMVMatrix,
@@ -93,29 +98,23 @@ function addKeyboardHandler(canvas, currentlyPressedKeys) {
 }
 
 function handleKeys(cameraInfo, currentlyPressedKeys) {
-  if (currentlyPressedKeys[33]) {
-      // Page Up
+  if (currentlyPressedKeys[33] || currentlyPressedKeys[187]) { // Page Up
     cameraInfo.pitchRate = 0.1;
-  } else if (currentlyPressedKeys[34]) {
-      // Page Down
+  } else if (currentlyPressedKeys[34] || currentlyPressedKeys[189]) { // Page Down
     cameraInfo.pitchRate = -0.1;
   } else {
     cameraInfo.pitchRate = 0;
   }
-  if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) {
-      // Left cursor key or A
+  if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) { // Left cursor key or A
     cameraInfo.yawRate = 0.1;
-  } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) {
-      // Right cursor key or D
+  } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) { // Right cursor key or D
     cameraInfo.yawRate = -0.1;
   } else {
     cameraInfo.yawRate = 0;
   }
-  if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) {
-      // Up cursor key or W
+  if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) { // Up cursor key or W
     cameraInfo.speed = 0.003;
-  } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) {
-      // Down cursor key
+  } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) { // Down cursor key
     cameraInfo.speed = -0.003;
   } else {
     cameraInfo.speed = 0;

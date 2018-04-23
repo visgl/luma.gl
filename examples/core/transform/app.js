@@ -1,20 +1,18 @@
-/* global window,*/
+/* global window */
+import {AnimationLoop, Buffer, setParameters, Model, experimental} from 'luma.gl';
+const {Transform} = experimental;
 
 /* eslint-disable max-len */
-// NOTE: This is a port of standard WebGL2 Example : https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html
-// This example demonstrates how to use luma.gl TransformFeedback API.
-/* eslint-enable max-len */
-
-import {
-  AnimationLoop, Buffer,
-  setParameters, Model, experimental
-} from 'luma.gl';
-
 const INFO_HTML = `
-Instanced triangles animated on the GPU using a luma.gl <code>Transform</code> object.
-`;
+<p>
+  Instanced triangles animated on the GPU using a luma.gl <code>Transform</code> object.
 
-const {Transform} = experimental;
+  This is a port of an example from
+  <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
+    WebGL2Samples
+  </a>
+`;
+/* eslint-enable max-len */
 
 const EMIT_VS = `\
 #version 300 es
@@ -269,9 +267,7 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => {
-  return INFO_HTML;
-};
+animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 

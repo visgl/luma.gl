@@ -1,16 +1,11 @@
-import {
-  GL, AnimationLoop, Sphere, loadTextures, setParameters
-} from 'luma.gl';
-
+import {GL, AnimationLoop, Sphere, loadTextures, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
-  <a href="http://learningwebgl.com/blog/?p=1658" target="_blank">
-  specular highlights and loading a JSON model
+  <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
+    Specular maps
   </a>
-<p>
-  The classic WebGL Lessons in luma.gl
 
 <div id="controls-elements">
   <input type="checkbox" id="color-map" checked/> Use color map<br/>
@@ -29,15 +24,27 @@ const INFO_HTML = `
     </div>
     <div class="control-row">
       <div><b>Specular colour:</b></div>
-      <div>R: <input type="text" id="specularR" value="5.0"/></div>
-      <div>G: <input type="text" id="specularG" value="5.0"/></div>
-      <div>B: <input type="text" id="specularB" value="5.0"/></div>
+      <div>R:
+        <input id="specularR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="specularG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="specularB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
     </div>
     <div class="control-row">
       <div><b>Diffuse colour:</b></div>
-      <div>R: <input type="text" id="diffuseR" value="0.8"/></div>
-      <div>G: <input type="text" id="diffuseG" value="0.8"/></div>
-      <div>B: <input type="text" id="diffuseB" value="0.8"/></div>
+      <div>R:
+        <input id="diffuseR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="diffuseG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="diffuseB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
     </div>
   </div>
 
@@ -45,18 +52,27 @@ const INFO_HTML = `
   <div class="control-block">
     <div class="control-row">
       <div><b>Colour:</b></div>
-      <div>R: <input type="text" id="ambientR" value="0.4"/></div>
-      <div>G: <input type="text" id="ambientG" value="0.4"/></div>
-      <div>B: <input type="text" id="ambientB" value="0.4"/></div>
-    </div>
+        <div>R:
+          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
   </div>
 
+  <br/>
   Earth texture courtesy of
   <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">
     the European Space Agency/Envisat
   </a>.<br/>
   <br/>
 </div>
+<p>
+  The classic WebGL Lessons in luma.gl
 `;
 
 function getControls() {
@@ -243,11 +259,11 @@ const animationLoop = new AnimationLoop({
 
     // set camera position
     const eyePos = new Matrix4()
-      .rotateX(radians(-30))
+      .rotateX(radians(-27))
       .transformVector3([0, 0, 5]);
 
     const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
+      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, -1, 0]});
 
     const {
       colorMap,

@@ -1,14 +1,14 @@
-import {
-  GL, AnimationLoop, loadTextures, addEvents, Vector3, setParameters, Sphere
-} from 'luma.gl';
-
-import {Matrix4, radians} from 'math.gl';
+import {GL, AnimationLoop, loadTextures, addEvents, setParameters, Sphere} from 'luma.gl';
+import {Vector3, Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=1253" target="_blank">
   Spheres, rotation matrices, and mouse events
   </a>
+<br/>
+<br/>
+  (Rotate the moon with the mouse)
 <p>
   The classic WebGL Lessons in luma.gl
 `;
@@ -163,21 +163,22 @@ function addMouseHandler(canvas, appState) {
       if (!appState.mouseDown) {
         return;
       }
-      const newX = event.clientX;
-      const newY = event.clientY;
 
-      const deltaX = newX - appState.lastMouseX
-      const deltaY = newY - appState.lastMouseY;
+      if (appState.lastMouseX !== undefined) {
+        const radiansX = (event.x - appState.lastMouseX) / 300;
+        const radiansY = -(event.y - appState.lastMouseY) / 300;
 
-      const newMatrix = new Matrix4()
-        .rotateX(radians(deltaY / 10))
-        .rotateY(radians(deltaX / 10));
+        const newMatrix = new Matrix4()
+          .rotateX(radiansY)
+          .rotateY(radiansX);
 
-      appState.moonRotationMatrix.multiplyLeft(newMatrix);
+        appState.moonRotationMatrix.multiplyLeft(newMatrix);
+      }
 
-      appState.lastMouseX = newX;
-      appState.lastMouseY = newY;
+      appState.lastMouseX = event.x;
+      appState.lastMouseY = event.y;
     },
+
     onDragEnd(e) {
       appState.mouseDown = false;
     }

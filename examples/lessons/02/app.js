@@ -1,5 +1,5 @@
-/* eslint-disable no-var, max-statements */
-import {AnimationLoop, Program, Buffer, Matrix4, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, Buffer, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
 <p>

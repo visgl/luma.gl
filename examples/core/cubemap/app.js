@@ -1,5 +1,5 @@
-/* global document */
-import {AnimationLoop, GL, TextureCube, Cube, Matrix4, radians, setParameters} from 'luma.gl';
+import {AnimationLoop, GL, TextureCube, Cube, setParameters} from 'luma.gl';
+import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
@@ -9,7 +9,28 @@ Uses a luma.gl <code>TextureCube</code> and
 the GLSL <code>reflect</code> and <code>refract</code> builtin functions
 to calculate reflection and refraction directions from the prism normals
 </p>
+<div>
+  Reflection
+  <input id="reflection"
+    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  <br>
+  Refraction
+  <input id="refraction"
+    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
+  <br>
+</div>
 `;
+
+function readHTMLControls() {
+  /* global document */
+  const reflectionElement = document.getElementById('reflection');
+  const refractionElement = document.getElementById('refraction');
+
+  const uReflect = reflectionElement ? parseFloat(reflectionElement.value) : 1;
+  const uRefract = refractionElement ? parseFloat(refractionElement.value) : 1;
+
+  return {uReflect, uRefract};
+}
 
 const animationLoop = new AnimationLoop({
 
@@ -38,12 +59,7 @@ const animationLoop = new AnimationLoop({
     const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
 
-    // Red uniforms
-    const reflectionElement = document.getElementById('reflection');
-    const refractionElement = document.getElementById('refraction');
-
-    const uReflect = reflectionElement ? parseFloat(reflectionElement.value) : 1;
-    const uRefract = refractionElement ? parseFloat(refractionElement.value) : 1;
+    const {uReflect, uRefract} = readHTMLControls();
 
     cube.render({
       uTextureCube: cubemap,
