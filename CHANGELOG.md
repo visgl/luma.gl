@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.3.0-alpha.1 - April 23
+- Add discard too picking.js fragment shader (#509)
+
 ## 5.2.0-beta.2 - April 16
 - Upgrade math.gl and probe.gl to official (non-alpha) versions
 - VertexArray: move private methods to end of class (#498)
