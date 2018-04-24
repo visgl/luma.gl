@@ -1,3 +1,12 @@
+## 5.2.0 - April 24
+- Update what's new release date
+- Example polish (#508)
+- Add markdown lint. Start adressing warnings (#507)
+- VertexArray docs, initial cleanup round (#506)
+- Update docs for running examples (#505)
+- Fix website examples (#502)
+- Update examples to webpack 4 (#501
+
 ## 5.2.0-beta.2 - April 16
 - Updates version of math.gl and probe.gl
 - Fix browser test of Framebuffer.blit (#497)
