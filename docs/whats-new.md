@@ -5,8 +5,7 @@ In addition to these notes, always check the [Upgrade Guide](/#/documentation/up
 
 ## Version 5.2
 
-Date: Target April, 2018  **IN DEVELOPMENT**
-
+Date: May 24, 2018
 
 ## Transform class (New, WebGL2) (Experimental)
 
