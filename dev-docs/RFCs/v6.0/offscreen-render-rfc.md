@@ -84,6 +84,15 @@ animationLoop.start({canvas: 'lumagl-canvas'});
 ```
 
 
+## Proposal: Interactivity
+
+`AnimationLoop` does not directly handle user input (mousemove, click, etc.). This is usually not an issue as the user can update their own application state from event callbacks and then access that state from within `onRender`. In the offscreen rendering case, this is no longer possible as `onRender` is on a different thread from where the event callbacks are executed.
+
+The proposed solution is to expose a new API on both `AnimationLoop` and `OffscreenAnimationLoop` for applications to send custom data to the renderer:
+
+- Add `setUserData` method to `AnimationLoop`. It adds a field `userData` to `animationLoop._callbackData` which can be accessed in the `onRender` callback.
+- Add `setUserData` method to `OffscreenAnimationLoop`. It posts the user data to the worker which then calls `animationLoop.setUserData`.
+
 
 ## Challenges
 
