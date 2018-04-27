@@ -145,7 +145,7 @@ export default class AnimationLoopProxy {
       if (this.width !== width || this.height !== height) {
         this.width = width;
         this.height = height;
-        this.worker.postMessage({
+        this.props.worker.postMessage({
           command: 'resize',
           width,
           height

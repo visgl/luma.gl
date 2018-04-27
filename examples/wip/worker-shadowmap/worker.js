@@ -1,4 +1,4 @@
 import {animationLoopOptions} from '../../core/shadowmap/app';
-import {OffScreenAnimationLoop} from 'luma.gl';
+import {AnimationLoopProxy} from 'luma.gl';
 
-export default OffScreenAnimationLoop.createWorker(animationLoopOptions);
+export default AnimationLoopProxy.createWorker(animationLoopOptions);
