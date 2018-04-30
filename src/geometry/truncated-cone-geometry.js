@@ -1,5 +1,11 @@
 import Geometry from './geometry';
 
+const INDEX_OFFSETS = {
+  x: [2, 0, 1],
+  y: [0, 1, 2],
+  z: [1, 2, 0]
+};
+
 export default class TruncatedConeGeometry extends Geometry {
 
   // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
@@ -13,6 +19,7 @@ export default class TruncatedConeGeometry extends Geometry {
       height = 1,
       nradial = 10,
       nvertical = 10,
+      verticalAxis = 'y',
       topCap = false,
       bottomCap = false
     } = opts;
@@ -34,6 +41,7 @@ export default class TruncatedConeGeometry extends Geometry {
     const normals = new Float32Array(numVertices * 3);
     const texCoords = new Float32Array(numVertices * 2);
     const indices = new Uint16Array(nradial * (nvertical + extra) * 6);
+    const indexOffset = INDEX_OFFSETS[verticalAxis];
 
     let i3 = 0;
     let i2 = 0;
@@ -63,13 +71,13 @@ export default class TruncatedConeGeometry extends Geometry {
         const sin = msin(j * mpi * 2 / nradial);
         const cos = mcos(j * mpi * 2 / nradial);
 
-        positions[i3 + 0] = sin * ringRadius;
-        positions[i3 + 1] = y;
-        positions[i3 + 2] = cos * ringRadius;
+        positions[i3 + indexOffset[0]] = sin * ringRadius;
+        positions[i3 + indexOffset[1]] = y;
+        positions[i3 + indexOffset[2]] = cos * ringRadius;
 
-        normals[i3 + 0] = (i < 0 || i > nvertical) ? 0 : (sin * cosSlant);
-        normals[i3 + 1] = (i < 0) ? -1 : (i > nvertical ? 1 : sinSlant);
-        normals[i3 + 2] = (i < 0 || i > nvertical) ? 0 : (cos * cosSlant);
+        normals[i3 + indexOffset[0]] = (i < 0 || i > nvertical) ? 0 : (sin * cosSlant);
+        normals[i3 + indexOffset[1]] = (i < 0) ? -1 : (i > nvertical ? 1 : sinSlant);
+        normals[i3 + indexOffset[2]] = (i < 0 || i > nvertical) ? 0 : (cos * cosSlant);
 
         texCoords[i2 + 0] = j / nradial;
         texCoords[i2 + 1] = v;

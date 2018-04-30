@@ -25,6 +25,7 @@ The constructor for the Cylinder class. Use this to create a new Cylinder.
 
 * nradial - (*number*, optional) The number of vertices for the disk. Default's 10.
 * nvertical - (*number*, optional) The number of vertices for the height. Default's 10.
+* verticalAxis - (*string*) The axis along which the height is measured. One of `x`, `y`, `z`. Default `y`.
 * radius - (*number*) The radius of the cylinder.
 * topCap - (*boolean*, optional) Whether to put the cap on the top of the cylinder. Default's false.
 * bottomCap - (*boolean*, optional) Whether to put the cap on the bottom
