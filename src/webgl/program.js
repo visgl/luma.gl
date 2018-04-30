@@ -1,15 +1,15 @@
 /* eslint-disable no-inline-comments */
-import GL from './api';
-import {assertWebGL2Context, isWebGL2} from './context';
-import {withParameters} from './context-state';
+import GL from '../constants';
 import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
-import {getPrimitiveDrawMode} from './helpers/attribute-utils';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import Buffer from './buffer';
+import {withParameters} from '../webgl-context/context-state';
+import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
+import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {log, uid, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments */
-import GL from './api';
-import {isWebGL2, assertWebGL2Context} from './context';
+import GL from '../constants';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import Resource from './resource';
 
 export default class Sampler extends Resource {

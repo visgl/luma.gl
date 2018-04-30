@@ -1,6 +1,7 @@
 /* global window */
-import AnimationLoop, {requestAnimationFrame, cancelAnimationFrame} from './animation-loop';
-import {getPageLoadPromise, createCanvas} from '../webgl-utils';
+import AnimationLoop from './animation-loop';
+import {getPageLoadPromise, createCanvas} from '../webgl-context';
+import {requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 
 export default class AnimationLoopProxy {
 

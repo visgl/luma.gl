@@ -2,6 +2,11 @@
 import 'babel-polyfill';
 import 'babel-register';
 
+// Enable debugging
+// import 'luma.gl/debug';
+// import {setContextDefaults} from 'luma.gl';
+// setContextDefaults({debug: true});
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {Provider} from 'react-redux';

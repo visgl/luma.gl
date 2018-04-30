@@ -1,13 +1,17 @@
 /* eslint-disable no-inline-comments, max-len */
-import GL from './gl-constants';
-import {WebGLBuffer} from '../webgl-utils';
-import {isWebGL, ERR_WEBGL, isWebGL2, ERR_WEBGL2} from './context';
-import {withParameters} from './context-state';
+import GL from '../constants';
+
 import Resource from './resource';
 import Buffer from './buffer';
-import {uid, isPowerOfTwo, log} from '../utils';
-import {glKey} from './gl-constants';
+
+import {withParameters} from '../webgl-context/context-state';
+
+import {WebGLBuffer} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context, getKey} from '../webgl-utils';
+
+import {log, uid, isPowerOfTwo} from '../utils';
 import assert from '../utils/assert';
+
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
@@ -112,7 +116,6 @@ export const TEXTURE_FORMATS = {
 };
 
 function isFormatSupported(gl, format) {
-  assert(isWebGL(gl), ERR_WEBGL);
   const info = TEXTURE_FORMATS[format];
   if (!info) {
     return false;
@@ -138,7 +141,6 @@ function isLinearFilteringSupported(gl, format) {
 export default class Texture extends Resource {
 
   static isSupported(gl, {format, linearFiltering} = {}) {
-    assert(isWebGL(gl), ERR_WEBGL);
     let supported = true;
     if (format) {
       supported = supported && isFormatSupported(gl, format);
@@ -339,7 +341,7 @@ export default class Texture extends Resource {
         break;
       case 'buffer':
         // WebGL2 enables creating textures directly from a WebGL buffer
-        assert(isWebGL2(gl), ERR_WEBGL2);
+        assertWebGL2Context(gl);
         gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
         gl.texImage2D(target, level, format, width, height, border, format, type, offset);
         break;
@@ -438,7 +440,7 @@ export default class Texture extends Resource {
           level, x, y, width, height, format, type, data, offset);
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
-        assert(isWebGL2(this.gl), ERR_WEBGL2);
+        assertWebGL2Context(this.gl);
         // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
         this.gl.texSubImage2D(target,
@@ -778,7 +780,7 @@ export default class Texture extends Resource {
       case GL.TEXTURE_WRAP_S:
       case GL.TEXTURE_WRAP_T:
         if (param !== GL.CLAMP_TO_EDGE) {
-          log.warn(`texture: ${this} is Non-Power-Of-Two, ${glKey(pname)} to CLAMP_TO_EDGE`)();
+          log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)();
           param = GL.CLAMP_TO_EDGE;
         }
         break;

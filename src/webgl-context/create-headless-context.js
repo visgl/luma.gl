@@ -12,17 +12,14 @@ const ERR_HEADLESSGL_FAILED =
 'Failed to create WebGL context in Node.js, headless gl returned null';
 
 export let headlessGL = null;
-export let headlessTypes = null;
 
 if (!isBrowser) {
   try {
     headlessGL = module.require('gl');
-    headlessTypes = module.require('gl/wrap');
   } catch (error) {
     console.error();
     console.error(`${ERR_HEADLESSGL_LOAD}\n${error.message}`);
   }
-  console.warn(headlessTypes && headlessTypes.WebGLRenderingContext);
 }
 
 export const isWebglAvailable = isBrowser || headlessGL;

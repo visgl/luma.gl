@@ -6,7 +6,7 @@ import assert from '../utils/assert';
  * Create a WebGL context for a canvas
  * Note calling this multiple time on the same canvas does return the same context
  */
-export function createContext({
+export function createBrowserContext({
   canvas,
   opts = {}, // WebGLRenderingContext options
   onError = message => null

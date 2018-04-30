@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments */
-import GL from './gl-constants';
-import {isWebGL2} from './context';
+import GL from '../constants';
+import {isWebGL2} from '../webgl-utils';
 import Resource from './resource';
 import assert from '../utils/assert';
 
@@ -74,7 +74,6 @@ export const RENDERBUFFER_FORMATS = {
 };
 
 function isFormatSupported(gl, format, formats) {
-  // assert(isWebGL(gl), ERR_WEBGL);
   const info = formats[format];
   if (!info) {
     return false;

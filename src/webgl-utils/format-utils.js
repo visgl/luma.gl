@@ -1,4 +1,4 @@
-import assert from '../../utils/assert';
+import assert from '../utils/assert';
 
 const GL_ALPHA = 0x1906;
 const GL_RGB = 0x1907;

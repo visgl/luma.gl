@@ -1,6 +1,9 @@
 /* eslint-disable no-inline-comments, max-len */
-import GL from '../webgl-utils/constants';
-import {pushContextState, popContextState} from '../webgl-utils/track-context-state';
+import GL from '../constants';
+import {
+  pushContextState,
+  popContextState
+} from '../webgl-context/track-context-state';
 import {
   getParameter,
   getParameters,
@@ -8,7 +11,7 @@ import {
   setParameters as glSetParameters,
   resetParameters,
   getModifiedParameters
-} from '../webgl-utils/set-parameters';
+} from '../webgl-context/set-parameters';
 import {isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 

@@ -17,10 +17,6 @@ Returns a promise that resolves when the page's HTML has loaded (meaning that an
 
 Programatically creates a canvas element with a certain size and id, and inserts it into the documents body once the page is loaded (see `getPageLoadPromise`).
 
-### resizeDrawingBuffer
-
-Resizes the drawing buffer if the size of the canvas has changed. Intended to be called on every frame. By default, takes devicePixelRatio into account.
-
 ### createContext
 
 Gives a controlled interface to create a WebGL1 or WebGL2 context from a canvas.

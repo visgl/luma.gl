@@ -1,5 +1,3 @@
-export {createHeadlessContext} from './create-headless-context';
-
 // Exports WebGL API constants and types, plus some basic type checks
 export {
   Image,
@@ -19,23 +17,25 @@ export {
 } from './webgl-types';
 
 export {
-  getPageLoadPromise,
-  createCanvas,
-  getCanvas,
-  resizeCanvas,
-  resizeDrawingBuffer
-} from './create-canvas';
+  isWebGL,
+  isWebGL2,
+  assertWebGLContext,
+  assertWebGL2Context
+} from './webgl-checks';
 
 export {
-  trackContextCreation,
-  createContext
-} from './create-context';
-
-export {default as polyfillContext} from './polyfill-context';
-export {default as trackContextState} from './track-context-state';
+  requestAnimationFrame,
+  cancelAnimationFrame
+} from './request-animation-frame';
 
 export {default as formatGLSLCompilerError, parseGLSLCompilerError} from './format-glsl-error';
 export {default as getShaderName} from './get-shader-name';
 
+export {
+  getGLTypeFromTypedArray, getTypedArrayFromGLType, flipRows, scalePixels
+} from './typed-array-utils';
+
+export {getKeyValue, getKey, getKeyType} from '../webgl-utils/constants-to-keys';
+
 // TODO - avoid uncondsitionally importing GL as it adds a lot to bundle size?
-export {default as GL} from './constants';
+export {default as GL} from '../constants';

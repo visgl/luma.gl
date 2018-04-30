@@ -152,7 +152,7 @@ export default class Geometry {
       break;
     case 'indices':
       attribute.size = attribute.size || 1;
-      attribute.isIndexed = attribute.isIndexed || true;
+      attribute.isIndexed = attribute.isIndexed === undefined ? true : attribute.isIndexed;
       assert(
         attribute.value instanceof Uint16Array ||
         attribute.value instanceof Uint32Array,

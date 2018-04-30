@@ -1,6 +1,6 @@
-import {assertWebGL2Context} from './context';
-import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../utils/typed-array-utils';
 import Resource from './resource';
+import {assertWebGL2Context} from '../webgl-utils';
+import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 import assert from '../utils/assert';
 
 const GL_COPY_READ_BUFFER = 0x8F36;

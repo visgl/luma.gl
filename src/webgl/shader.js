@@ -1,6 +1,6 @@
-import {parseGLSLCompilerError, getShaderName} from '../webgl-utils';
-import {assertWebGLContext} from './context';
 import Resource from './resource';
+import {parseGLSLCompilerError, getShaderName} from '../webgl-utils';
+import {assertWebGLContext} from '../webgl-utils';
 import {uid, log} from '../utils';
 import assert from '../utils/assert';
 

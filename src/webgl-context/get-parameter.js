@@ -1,7 +1,7 @@
 // A major polyfill of "gl.getParameter"
 // Attempts to return sane values for all known WebGL2 and extension constants
 /* eslint-disable camelcase */
-import GL from './constants';
+import GL from '../constants';
 
 // Return true if WebGL2 context
 function isWebGL2(gl) {

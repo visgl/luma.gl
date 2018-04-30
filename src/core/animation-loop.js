@@ -1,24 +1,12 @@
-/* global setTimeout, clearTimeout */
-import {window} from '../utils/globals';
+import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
+import {pageLoadPromise} from '../webgl-context';
+import {makeDebugContext} from '../webgl-context/debug-context';
+import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 import {log} from '../utils';
-import {getPageLoadPromise, resizeDrawingBuffer} from '../webgl-utils';
-import {createGLContext, isWebGL, resetParameters} from '../webgl';
-import {makeDebugContext} from '../webgl-utils/debug-context';
-import {Framebuffer} from '../webgl';
 import assert from '../utils/assert';
 
-// Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
-export function requestAnimationFrame(callback) {
-  return window.requestAnimationFrame ?
-    window.requestAnimationFrame(callback) :
-    setTimeout(callback, 1000 / 60);
-}
-
-export function cancelAnimationFrame(timerId) {
-  return window.requestAnimationFrame ?
-    window.cancelAnimationFrame(timerId) :
-    clearTimeout(timerId);
-}
+// TODO - remove dependency on webgl classes
+import {Framebuffer} from '../webgl';
 
 const DEFAULT_GL_OPTIONS = {
   preserveDrawingBuffer: true
@@ -113,7 +101,7 @@ export default class AnimationLoop {
     // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
       // Wait for start promise before rendering frame
-      this._startPromise = getPageLoadPromise()
+      this._startPromise = pageLoadPromise
       .then(() => {
         if (this._stopped) {
           return null;
@@ -300,7 +288,7 @@ export default class AnimationLoop {
   // Optionally multiplying with devicePixel ratio
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
-      resizeDrawingBuffer(this.gl.canvas, {useDevicePixels: this.useDevicePixels});
+      resizeGLContext(this.gl, {useDevicePixels: this.useDevicePixels});
     }
   }
 

@@ -1,3 +1,15 @@
+//
+// Internal class that helps "asynchronous WebGL query objects" manage
+// pending requests (e.g. for EXT_disjoint_timer_query and WebGL2 queries)
+//
+// Creates and manages promises for the queries.
+// Tracks pending queries enabling polling.
+// Tracks pending queries enabling invalidation.
+// Provides some standard error messages.
+//
+// Remarks:
+// - Maintains a minimal list of pending queries only to minimize GC impact
+// - Exported as a singleton class instance.
 
 const ERR_DELETED = 'Query was deleted before result was available';
 const ERR_CANCEL = 'Query was canceled before result was available';
@@ -5,20 +17,6 @@ const ERR_CANCEL = 'Query was canceled before result was available';
 const noop = x => x;
 
 class QueryManager {
-
-  /**
-   * Internal class that helps "asynchronous WebGL query objects" manage
-   * pending requests (e.g. for EXT_disjoint_timer_query and WebGL2 queries)
-   *
-   * Creates and manages promises for the queries.
-   * Tracks pending queries enabling polling.
-   * Tracks pending queries enabling invalidation.
-   * Encapsulates some standard error messages.
-   *
-   * Remarks:
-   * - Maintains a minimal list of pending queries only to minimize GC impact
-   * - Exported as a singleton class instance.
-   */
   constructor() {
     this.pendingQueries = new Set();
     this.invalidQueryType = null;

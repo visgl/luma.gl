@@ -1,5 +1,5 @@
 // WEBGL BUILT-IN CONSTANTS
-import GL from '../webgl-utils/constants';
+import GL from '../constants';
 import {getKeyValue, getKey, getKeyType} from '../webgl-utils/constants-to-keys';
 
 export {GL};
