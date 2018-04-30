@@ -15,7 +15,7 @@ References:
 
 ## Usage
 
-Autocreates a canvs/context
+Autocreates a canvas/context
 ```js
 import {AnimationLoop} from 'luma.gl';
 
