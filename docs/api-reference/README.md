@@ -1,6 +1,6 @@
 # API Reference
 
-luma.gl constains a lot of classes and functions that might make new users wonder where to get started. The authors of luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
+luma.gl contains a lot of classes and functions that might make new users wonder where to get started. The authors of luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
 
 | Folder                           | Description |
 | ---                              | --- |
@@ -11,7 +11,7 @@ luma.gl constains a lot of classes and functions that might make new users wonde
 | src/io | Node.js and browser file loaders. Also enables using streams in browser. |
 | src/packages/events | A very simple browser event handling class used by luma.gl examples |
 | src/shadertools | luma.gl's internal shader module system and shader assembler utility |
-| src/webgl-utils | Miscellanious utilies |
+| src/webgl-utils | Miscellaneous utilies |
 
 ## WebGL Classes
 
@@ -34,7 +34,7 @@ The `core` classes, with the signature [`Model`](/#/documentation/api-reference/
 
 ## Basic Geometries and Models
 
-A `Geomtry` object holds a set of attributes (native JavaScript arrays) (vertices, normals, texCoords, indices) and a `drawMode` prop to indicate how to interpret those vertices and normals as actual geometries.
+A `Geometry` object holds a set of attributes (native JavaScript arrays) (vertices, normals, texCoords, indices) and a `drawMode` prop to indicate how to interpret those vertices and normals as actual geometries.
 
 There are several basic geometry classes predefined in luma.gl: `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They are all subclasses of the `Geometry` class.
 

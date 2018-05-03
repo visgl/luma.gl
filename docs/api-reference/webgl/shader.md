@@ -1,6 +1,6 @@
 # Shader
 
-The `Shader` class are the base class for `VectexShader` class and `FragmentShader` class
+The `Shader` class are the base class for `VertexShader` class and `FragmentShader` class
 
 
 ## Usage
