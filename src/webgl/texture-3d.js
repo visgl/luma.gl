@@ -1,6 +1,6 @@
-import GL from './api';
-import {isWebGL2, assertWebGL2Context} from './context';
-import {withParameters} from './context-state';
+import GL from '../constants';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
+import {withParameters} from '../webgl-context/context-state';
 import Texture from '../webgl/texture';
 import Buffer from './buffer';
 

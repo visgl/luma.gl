@@ -5,19 +5,21 @@ require('./init');
 
 // WebGL
 export {
-  default as GL,
-  glGet,
-  glKey} from './webgl/gl-constants';
+  isWebGL,
+  isWebGL2} from './webgl-utils/webgl-checks';
+export {
+  getKeyValue,
+  getKey} from './webgl-utils/constants-to-keys';
+export {
+  createGLContext,
+  destroyGLContext,
+  resizeGLContext,
+  pollGLContext,
+  setContextDefaults
+} from './webgl-context/context';
 export {
   trackContextCreation,
-  trackContextState} from './webgl-utils';
-export {
-  isWebGL,
-  isWebGL2,
-  setContextDefaults,
-  createGLContext,
-  deleteGLContext,
-  pollContext} from './webgl/context';
+  trackContextState} from './webgl-context';
 export {
   resetParameters,
   getParameter,
@@ -25,21 +27,22 @@ export {
   setParameter,
   setParameters,
   withParameters,
-  getModifiedParameters} from './webgl/context-state';
+  getModifiedParameters} from './webgl-context/context-state';
 export {
   getContextInfo,
   getGLContextInfo,
   getContextLimits,
-  glGetDebugInfo} from './webgl/context-limits';
+  glGetDebugInfo} from './webgl-context/context-limits';
 export {
   FEATURES,
   hasFeature,
   hasFeatures,
   getFeatures,
-  canCompileGLGSExtension} from './webgl/context-features';
+  canCompileGLGSExtension} from './webgl-context/context-features';
 export {
-  makeDebugContext} from './webgl-utils/debug-context';
+  makeDebugContext} from './webgl-context/debug-context';
 
+// WebGL1 classes
 export {default as Buffer} from './webgl/buffer';
 export {Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
@@ -51,7 +54,7 @@ export {default as TextureCube} from './webgl/texture-cube';
 export {draw} from './webgl/draw';
 export {clear, clearBuffer} from './webgl/clear';
 
-// WebGL2 & Extensions
+// WebGL2 classes & Extensions
 export {default as FenceSync} from './webgl/fence-sync';
 export {default as Query} from './webgl/query';
 export {default as Sampler} from './webgl/sampler';
@@ -136,11 +139,23 @@ export const experimental = {
   Transform
 };
 
-// DEPRECATED EXPORTS
+// DEPRECATED EXPORTS IN v5.3
 
-// DEPRECATED IN V4.1
+export { // Should be optional import for application
+  default as GL} from './constants';
 
-export { // Moved to math.gl
+export { // Should be optional import for application
+  glGet,
+  glKey} from './deprecated/gl-constants';
+
+export {
+  destroyGLContext as deleteGLContext,
+  pollGLContext as pollContext
+} from './webgl-context/context';
+
+// DEPRECATED EXPORTS IN V4.1
+
+export {
   radians,
   degrees,
   Vector2,
@@ -150,7 +165,7 @@ export { // Moved to math.gl
   Quaternion
 } from 'math.gl';
 
-// DEPRECATED IN V3.0
+// DEPRECATED IN EXPORTS V3.0
+
 export {readPixels} from './webgl/functions';
-// Alias FramebufferObject to Framebuffer - API is fairly similar
 export {default as FramebufferObject} from './webgl/framebuffer';

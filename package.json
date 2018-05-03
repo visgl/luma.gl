@@ -11,7 +11,9 @@
     "Mikola Lysenko <mikolalysenko@gmail.com",
     "Wesam Manassra <manassra@uber.com>",
     "Shaojing Li <shaojing@uber.com>",
-    "Ravi Akenapalli <chandu@uber.com>"
+    "Ravi Akenapalli <chandu@uber.com>",
+    "Xiaoji Chen <xiaoji@uber.com>",
+    "Jian Huang <jianh@uber.com>"
   ],
   "repository": {
     "type": "git",
@@ -29,6 +31,7 @@
   "files": [
     "src",
     "dist",
+    "constants.js",
     "debug.js",
     "headless.js"
   ],

@@ -1,5 +1,5 @@
-import {isWebGL2, ERR_WEBGL2} from './context';
-import {withParameters} from './context-state';
+import {withParameters} from '../webgl-context/context-state';
+import {assertWebGL2Context} from '../webgl-utils';
 import assert from '../utils/assert';
 
 // Should collapse during minification
@@ -66,7 +66,7 @@ export function clearBuffer(gl, {
   drawBuffer = 0,
   value = [0, 0, 0, 0]
 } = {}) {
-  assert(isWebGL2(gl), ERR_WEBGL2);
+  assertWebGL2Context(gl);
 
   withParameters(gl, {framebuffer}, () => {
 

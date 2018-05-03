@@ -4,9 +4,6 @@
 // but make it easier to use.
 // Higher level abstractions can be built on these classes
 
-export {GL} from './gl-constants';
-export {GL as default} from './gl-constants';
-
 // Exports WebGL API constants and types, plus some basic type checks
 export {
   Image,
@@ -29,17 +26,17 @@ export {
   isWebGL,
   isWebGL2,
   createGLContext,
-  deleteGLContext
-} from './context';
+  destroyGLContext
+} from '../webgl-context/context';
 
 export {
   withParameters,
   resetParameters
-} from './context-state';
+} from '../webgl-context/context-state';
 
 export {
   getContextInfo
-} from './context-limits';
+} from '../webgl-context/context-limits';
 
 // WebGL1 objects
 export {default as Buffer} from './buffer';

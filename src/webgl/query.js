@@ -1,10 +1,10 @@
 // WebGL2 Query (also handles disjoint timer extensions)
 
 import Resource from './resource';
-import queryManager from './helpers/query-manager';
-import {FEATURES, hasFeatures} from './context-features';
-import {isWebGL2} from './context';
-import {polyfillContext} from '../webgl-utils';
+import {FEATURES, hasFeatures} from '../webgl-context/context-features';
+import {polyfillContext} from '../webgl-context';
+import {isWebGL2} from '../webgl-utils';
+import queryManager from '../webgl-utils/query-manager';
 
 const noop = x => x;
 

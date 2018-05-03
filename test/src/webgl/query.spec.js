@@ -4,7 +4,7 @@ import test from 'tape-catch';
 import {pollContext, Query} from 'luma.gl';
 import util from 'util';
 import {fixture} from 'luma.gl/test/setup';
-import GL from 'luma.gl/webgl-utils/constants';
+import GL from 'luma.gl/constants';
 
 function testQueryConstructDelete(gl, t) {
   const ext = gl.getExtension('EXT_disjoint_timer_query');

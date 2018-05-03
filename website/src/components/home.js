@@ -71,12 +71,13 @@ class Home extends Component {
               height={demoHeight}
               isInteractive={false}/>
           </div>
-          <div className="container soft-left">
+          <div className="container soft-left" style={{pointerEvents: 'none'}}>
             <h1>luma.gl</h1>
             <p>
               A WebGL2-Powered Framework for GPU-based Visualization and Computation
             </p>
-            <a href="#/documentation/getting-started/overview" className="btn">
+            <a href="#/documentation/getting-started/overview" className="btn"
+              style={{pointerEvents: 'auto'}}>
               Get started
             </a>
           </div>

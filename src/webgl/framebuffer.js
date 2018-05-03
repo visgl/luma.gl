@@ -1,15 +1,20 @@
-import GL from './api';
-import {isWebGL2, ERR_WEBGL2} from './context';
-import {getFeatures} from './context-features';
-import {clear, clearBuffer} from './clear';
+import GL from '../constants';
+
 import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
-import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
-import {log, flipRows, scalePixels} from '../utils';
-import {withParameters} from './context-state';
 import Buffer from './buffer';
-import {glFormatToComponents, glTypeToBytes} from './helpers/format-utils';
+import {clear, clearBuffer} from './clear';
+
+import {withParameters} from '../webgl-context';
+import {getFeatures} from '../webgl-context/context-features';
+
+import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
+import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
+import {flipRows, scalePixels} from '../webgl-utils';
+
+import {log} from '../utils';
 import assert from '../utils/assert';
 
 // Local constants - will collapse during minification
@@ -328,7 +333,7 @@ export default class Framebuffer extends Resource {
     const {gl} = this;
 
     // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-    assert(isWebGL2(gl));
+    assertWebGL2Context(gl);
 
     // deduce type if not available.
     type = type || (buffer ? buffer.type : GL.UNSIGNED_BYTE);
@@ -483,7 +488,7 @@ export default class Framebuffer extends Resource {
     filter = GL.NEAREST
   }) {
     const {gl} = this;
-    assert(isWebGL2(gl), ERR_WEBGL2);
+    assertWebGL2Context(gl);
 
     if (!srcFramebuffer.handle && attachment === GL_COLOR_ATTACHMENT0) {
       attachment = GL.FRONT;
@@ -526,7 +531,7 @@ export default class Framebuffer extends Resource {
     height
   }) {
     const {gl} = this;
-    assert(isWebGL2(gl, ERR_WEBGL2));
+    assertWebGL2Context(gl);
     const prevHandle = gl.bindFramebuffer(GL_READ_FRAMEBUFFER, this.handle);
     const invalidateAll = x === 0 && y === 0 && width === undefined && height === undefined;
     if (invalidateAll) {

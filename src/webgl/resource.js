@@ -1,9 +1,8 @@
 import luma from '../init';
-import {assertWebGLContext, isWebGL2} from './context';
-import {glGet, glKey} from './gl-constants';
+import {polyfillContext} from '../webgl-context';
+import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../webgl-utils';
 import {uid} from '../utils';
 import assert from '../utils/assert';
-import {polyfillContext} from '../webgl-utils';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -81,7 +80,7 @@ export default class Resource {
    * @return {GLint|GLfloat|GLenum} param
    */
   getParameter(pname, opts = {}) {
-    pname = glGet(pname);
+    pname = getKeyValue(this.gl, pname);
     assert(pname);
 
     const parameters = this.constructor.PARAMETERS || {};
@@ -135,10 +134,10 @@ export default class Resource {
         (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
 
       if (parameterAvailable) {
-        const key = keys ? glKey(pname) : pname;
+        const key = keys ? getKey(this.gl, pname) : pname;
         values[key] = this.getParameter(pname, opts);
         if (keys && parameter.type === 'GLenum') {
-          values[key] = glKey(values[key]);
+          values[key] = getKey(this.gl, values[key]);
         }
       }
     }
@@ -156,7 +155,7 @@ export default class Resource {
    * @return {Resource} returns self to enable chaining
    */
   setParameter(pname, value) {
-    pname = glGet(pname);
+    pname = getKeyValue(this.gl, pname);
     assert(pname);
 
     const parameters = this.constructor.PARAMETERS || {};
@@ -176,7 +175,7 @@ export default class Resource {
 
       // Handle string keys
       if (parameter.type === 'GLenum') {
-        value = glGet(value);
+        value = getKeyValue(value);
       }
     }
 

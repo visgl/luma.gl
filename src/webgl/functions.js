@@ -1,9 +1,9 @@
 /* eslint-disable */
 // TODO - generic draw call
 // One of the good things about GL is that there are so many ways to draw things
-import GL, {glGet} from './api';
-import {assertWebGLContext, assertWebGL2Context} from './context';
-import {withParameters} from './context';
+import GL from '../constants';
+import {withParameters} from '../webgl-context';
+import {assertWebGLContext, assertWebGL2Context, getKey} from '../webgl-utils';
 import assert from '../utils/assert';
 
 /**

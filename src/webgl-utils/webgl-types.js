@@ -6,10 +6,22 @@
 //      library code.
 //    - Exports types from headless gl when running under Node.js
 
+/* eslint-disable quotes, no-console */
+/* global console */
 import {global} from '../utils/globals';
+import isBrowser from '../utils/is-browser';
 
 // Load headless gl dynamically, if available
-import {headlessTypes} from './create-headless-context';
+export let headlessTypes = null;
+
+if (!isBrowser) {
+  try {
+    headlessTypes = module.require('gl/wrap');
+  } catch (error) {
+    console.error(`${error.message}`);
+  }
+  console.warn(headlessTypes && headlessTypes.WebGLRenderingContext);
+}
 
 class DummyType {}
 

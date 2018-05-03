@@ -1,9 +1,7 @@
 // WebGL2 VertexArray Objects Helper
-import {glKey} from './gl-constants';
-import {isWebGL2} from './context';
 import Resource from './resource';
-import assert from '../utils/assert';
-import {log} from '../utils';
+import {isWebGL2, getKey} from '../webgl-utils';
+import {log, assert} from '../utils';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
@@ -451,7 +449,7 @@ export default class VertexArray extends Resource {
     return new Array(this.MAX_ATTRIBUTES).fill(0).map((_, location) => {
       const result = {};
       PARAMETERS.forEach(parameter => {
-        result[glKey(parameter)] = this.getParameter(parameter, {location});
+        result[getKey(this.gl, parameter)] = this.getParameter(parameter, {location});
       });
       return result;
     });

@@ -1,7 +1,7 @@
-import GL from './api';
-import {assertWebGL2Context} from './context';
+import GL from '../constants';
 import Resource from './resource';
-import queryManager from './helpers/query-manager';
+import {assertWebGL2Context} from '../webgl-utils';
+import queryManager from '../webgl-utils/query-manager';
 
 export default class FenceSync extends Resource {
   /*

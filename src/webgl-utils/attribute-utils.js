@@ -1,4 +1,4 @@
-import assert from '../../utils/assert';
+import assert from '../utils/assert';
 
 const GL_POINTS = 0x0;
 const GL_LINES = 0x1;

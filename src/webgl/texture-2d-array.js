@@ -1,8 +1,5 @@
-// import GL from './api';
-import {isWebGL2} from './context';
-// import {isWebGl2Context, assertWebGL2Context, withParameters} from './context';
 import Texture from '../webgl/texture';
-// import Buffer from './buffer';
+import {isWebGL2} from '../webgl-utils';
 
 export default class Texture2DArray extends Texture {
   static isSupported(gl) {

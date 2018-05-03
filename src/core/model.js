@@ -1,8 +1,10 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
-import {GL, Buffer, Program, checkUniformValues, isWebGL} from '../webgl';
-import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
+import GL from '../constants';
+import {Buffer, Program, checkUniformValues} from '../webgl';
 import Query from '../webgl/query';
+import {isWebGL} from '../webgl-utils';
+import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 import Object3D from '../core/object-3d';
 import {MODULAR_SHADERS} from '../shadertools/shaders';
@@ -572,28 +574,36 @@ count: ${this.stats.profileFrameCount}`
     program
   } = {}) {
     assert(program);
-    const attributeLocations = program._attributeLocations;
+    const attributeLocations = program._attributeToLocationMap;
     const table = {}; // {[header]: {}};
+
+    // Add index if available
+    for (const attributeName in attributes) {
+      const attribute = attributes[attributeName];
+      if (attribute.isIndexed) {
+        this._createAttributeEntry(attribute, 'ELEMENT_ARRAY_BUFFER', header);
+      }
+    }
 
     // Add used attributes
     for (const attributeName in attributeLocations) {
       const attribute = attributes[attributeName];
       const location = attributeLocations[attributeName];
-      table[attributeName] = this._getAttributeEntry(attribute, location, header);
+      table[attributeName] = this._createAttributeEntry(attribute, location, header);
     }
 
     // Add any unused attributes
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
       if (!table[attributeName]) {
-        table[attributeName] = this._getAttributeEntry(attribute, null, header);
+        table[attributeName] = this._createAttributeEntry(attribute, null, header);
       }
     }
 
     return table;
   }
 
-  _getAttributeEntry(attribute, location, header) {
+  _createAttributeEntry(attribute, location, header) {
     const round = num => Math.round(num * 10) / 10;
 
     let type = 'NOT PROVIDED';

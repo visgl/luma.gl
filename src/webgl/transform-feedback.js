@@ -1,5 +1,5 @@
 import Resource from './resource';
-import {isWebGL2, assertWebGL2Context} from './context';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import assert from '../utils/assert';
 
 const GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E;

@@ -1,6 +1,6 @@
-import {GL} from './api';
-import {assertWebGLContext} from './context';
+import GL from '../constants';
 import Texture from './texture';
+import {assertWebGLContext} from '../webgl-utils';
 
 export default class Texture2D extends Texture {
 

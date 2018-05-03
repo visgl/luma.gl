@@ -4,7 +4,7 @@ import tapePromise from 'tape-promise';
 export default tapePromise(test_);
 
 // Avoid generating a lot of big context divs
-import {setContextDefaults} from 'luma.gl/webgl/context';
+import {setContextDefaults} from 'luma.gl';
 setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
 
 import {createGLContext, makeDebugContext} from 'luma.gl';

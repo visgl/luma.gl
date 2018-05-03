@@ -1,5 +1,5 @@
 import {getContextInfo} from '../../webgl';
-import {hasFeature, canCompileGLGSExtension, FEATURES} from '../../webgl/context-features';
+import {hasFeature, canCompileGLGSExtension, FEATURES} from '../../webgl-context/context-features';
 
 export function checkRendererVendor(debugInfo, gpuVendor) {
   const {vendor, renderer} = debugInfo;

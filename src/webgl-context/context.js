@@ -1,12 +1,13 @@
 /* eslint-disable quotes */
 // WebGLRenderingContext related methods
-import {WebGLRenderingContext, WebGL2RenderingContext, createHeadlessContext} from '../webgl-utils';
-import trackContextState from '../webgl-utils/track-context-state';
-import {getCanvas, createContext} from '../webgl-utils';
-
-import {makeDebugContext} from '../webgl-utils/debug-context';
+import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl-utils';
+import {createHeadlessContext} from './create-headless-context';
+import {getCanvas} from './create-canvas';
+import {createBrowserContext} from './create-browser-context';
+import trackContextState from './track-context-state';
+import {makeDebugContext} from './debug-context';
 import {glGetDebugInfo} from './context-limits';
-import queryManager from './helpers/query-manager';
+import queryManager from '../webgl-utils/query-manager';
 
 import {log, isBrowser} from '../utils';
 import assert from '../utils/assert';
@@ -90,7 +91,7 @@ export function createGLContext(opts = {}) {
     // Get or create a canvas
     const targetCanvas = getCanvas({canvas, width, height, onError});
     // Create a WebGL context in the canvas
-    gl = createContext({canvas: targetCanvas, opts});
+    gl = createBrowserContext({canvas: targetCanvas, opts});
   } else {
     // Create a headless-gl context under Node.js
     gl = createHeadlessContext({width, height, opts, onError});
@@ -114,22 +115,71 @@ export function createGLContext(opts = {}) {
     log.priority = Math.max(log.priority, 1);
     // Log some debug info about the context
   }
+
+  // Log context information
   logInfo(gl);
 
   // Add to seer integration
-
   return gl;
 }
 
-export function deleteGLContext(gl) {
-  // Remove from seer integration
+export function destroyGLContext(gl) {
+  // TODO - Remove from seer integration
+
+  // TODO - Unregister any tracking/polyfills
+
+  // There is no way to delete browser based context
+
+  // Destroy headless gl context
+  const ext = gl.getExtension('STACKGL_destroy_context');
+  if (ext) {
+    ext.destroy();
+  }
+}
+
+/**
+ * Resize the canvas' drawing buffer.
+ *
+ * Can match the canvas CSS size, and optionally also consider devicePixelRatio
+ * Can be called every frame
+ *
+ * Regardless of size, the drawing buffer will always be scaled to the viewport, but
+ * for best visual results, usually set to either:
+ *  canvas CSS width x canvas CSS height
+ *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
+ * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+ *
+ * resizeGLContext(gl, {width, height, useDevicePixels})
+ */
+export function resizeGLContext(gl, opts = {}) {
+  // Resize browser context
+  if (gl.canvas) {
+    /* global window */
+    const devicePixelRatio = opts.useDevicePixels ? window.devicePixelRatio || 1 : 1;
+
+    const width = `width` in opts ? opts.width : gl.canvas.clientWidth;
+    const height = `height` in opts ? opts.height : gl.canvas.clientHeight;
+
+    gl.canvas.width = width * devicePixelRatio;
+    gl.canvas.height = height * devicePixelRatio;
+
+    return;
+  }
+
+  // Resize headless gl context
+  const ext = gl.getExtension('STACKGL_resize_drawingbuffer');
+  if (ext && `width` in opts && `height` in opts) {
+    ext.resize(opts.width, opts.height);
+  }
 }
 
 // POLLING FOR PENDING QUERIES
 // Calling this function checks all pending queries for completion
-export function pollContext(gl) {
+export function pollGLContext(gl) {
   queryManager.poll(gl);
 }
+
+// HELPER METHODS
 
 function logInfo(gl) {
   const webGL = isWebGL2(gl) ? 'WebGL2' : 'WebGL1';

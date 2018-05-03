@@ -6,8 +6,8 @@ import {GL} from 'luma.gl';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters, Framebuffer} from 'luma.gl';
 import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
 
-import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from 'luma.gl/webgl-utils/set-parameters';
-import {ENUM_STYLE_SETTINGS_SET1} from '../webgl-utils/data/sample-enum-settings';
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from 'luma.gl/webgl-context/set-parameters';
+import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
 function stringifyTypedArray(v) {
