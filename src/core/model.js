@@ -524,7 +524,7 @@ count: ${this.stats.profileFrameCount}`
         attribute = attribute || new Attribute(gl, Object.assign({}, config.layout, {
           id: attributeName
         }));
-        attribute.update({value: config});
+        attribute.update({externalBuffer: config});
       } else if (attribute) {
         attribute.update(config);
       } else {

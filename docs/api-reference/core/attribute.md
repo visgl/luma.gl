@@ -39,7 +39,8 @@ The constructor for the Attribute class. Use this to create a new Attribute.
 * `integer` (*boolean*, optional) - Default `false`
 * `offset` (*number*, optional) - where the data starts in the buffer. Default `0`.
 * `stride` (*number*, optional) - an additional offset between each element in the buffer. Default `0`.
-* `value` (*Buffer*|*TypedArray*|*Array*) - value of the attribute.
+* `value` (*TypedArray*) - value of the attribute.
+* `externalBuffer` (*Buffer*) - use am external buffer for the attribute.
 
 
 ### delete

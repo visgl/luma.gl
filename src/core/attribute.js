@@ -22,6 +22,7 @@ export default class Attribute {
 
     // Initialize the attribute descriptor, with WebGL and metadata fields
     this.value = null;
+    this.externalBuffer = null;
     this.buffer = null;
     this.userData = {}; // Reserved for application
     this.update(opts);
@@ -42,12 +43,13 @@ export default class Attribute {
 
   clone(opts) {
     return new this.constructor(this.gl, Object.assign({}, this, {
-      value: this.getBuffer() || this.value
+      externalBuffer: this.getBuffer()
     }, opts));
   }
 
   update({
     value,
+    externalBuffer,
 
     // buffer options
     offset = this.offset || 0,
@@ -72,17 +74,21 @@ export default class Attribute {
       this.instanced = instanced;
     }
 
-    if (value) {
+    if (externalBuffer) {
+      this.externalBuffer = externalBuffer;
+      this.type = externalBuffer.type;
+    } else if (value) {
+      this.externalBuffer = null;
       this.value = value;
 
-      if (!(value instanceof Buffer) && !isGeneric) {
+      if (!isGeneric) {
         // Create buffer if needed
         this.buffer = this.buffer || new Buffer(this.gl, {
           target: this.target,
           type: this.type
         });
         this.buffer.setData({data: value});
-        this.type = this.type || this.buffer.type;
+        this.type = this.buffer.type;
       }
     }
   }
@@ -91,10 +97,7 @@ export default class Attribute {
     if (this.isGeneric) {
       return null;
     }
-    if (this.value instanceof Buffer) {
-      return this.value;
-    }
-    return this.buffer;
+    return this.externalBuffer || this.buffer;
   }
 
   _validateAttributeDefinition() {

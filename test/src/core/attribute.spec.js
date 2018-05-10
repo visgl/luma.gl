@@ -24,10 +24,10 @@ test('WebGL#Attribute constructor/update/delete', t => {
 
   /* Indexed attribute */
   buffer = new Buffer(gl, {data: value2});
-  attribute = new Attribute(gl, {isIndexed: true, value: buffer});
+  attribute = new Attribute(gl, {isIndexed: true, externalBuffer: buffer});
 
   t.ok(attribute instanceof Attribute, 'Indexed attribute construction successful');
-  t.notOk(attribute.buffer, 'Attribute does not create buffer when value is Buffer');
+  t.notOk(attribute.buffer, 'Attribute does not create buffer when external buffer is supplied');
   t.is(attribute.target, GL.ELEMENT_ARRAY_BUFFER, 'Attribute target is inferred');
 
   attribute.delete();
@@ -64,7 +64,7 @@ test('WebGL#Attribute getBuffer', t => {
   t.is(attribute.getBuffer(), attribute.buffer, 'getBuffer returns own buffer');
 
   const buffer = new Buffer(gl, {data: value1});
-  attribute.update({value: buffer});
+  attribute.update({externalBuffer: buffer});
   t.is(attribute.getBuffer(), buffer, 'getBuffer returns user supplied buffer');
 
   attribute.update({value: value2});
