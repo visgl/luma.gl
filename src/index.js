@@ -65,9 +65,12 @@ export {default as VertexArray} from './webgl/vertex-array';
 export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 
 // Core Classes
-export {default as Model} from './core/model';
-export {default as AnimationLoop} from './core/animation-loop';
-export {default as AnimationLoopProxy} from './core/animation-loop-proxy';
+export {
+  Model,
+  AnimationLoop,
+  AnimationLoopProxy,
+  Attribute
+} from './core';
 // export {default as Object3D} from './core/object-3d';
 // export {default as Group} from './core/group';
 export {default as pickModels} from './core/pick-models';

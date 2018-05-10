@@ -164,12 +164,62 @@ export default class Program extends Resource {
    * Only attributes with names actually present in the linked program
    * will be updated. Other supplied buffers will be ignored.
    *
+   * @param {Object} attributes - An object map with attribute names being keys
+   *  and values are expected to be instances of Attribute.
+   * @returns {Program} Returns itself for chaining.
+   */
+  setAttributes(attributes, {clear = true, drawParams = {}} = {}) {
+    if (clear) {
+      this.vertexAttributes.clearBindings();
+    }
+
+    // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
+    // index type is saved for drawElement calls
+    drawParams.isInstanced = false;
+    drawParams.isIndexed = false;
+    drawParams.indexType = null;
+
+    const {locations, elements} = this._sortBuffersByLocation(attributes);
+
+    // Process locations in order
+    for (let location = 0; location < locations.length; ++location) {
+      const attributeName = locations[location];
+      const attribute = attributes[attributeName];
+      // DISABLE MISSING ATTRIBUTE
+      if (!attribute) {
+        this.vertexAttributes.disable(location);
+      } else if (attribute.isGeneric) {
+        this._setGenericArray({location, array: attribute.value});
+      } else {
+        Object.assign(drawParams,
+          this._setBuffer({location, buffer: attribute.getBuffer(), layout: attribute}));
+      }
+    }
+
+    // SET ELEMENTS ARRAY BUFFER
+    if (elements) {
+      const attribute = attributes[elements];
+      attribute.getBuffer().bind();
+      drawParams.isIndexed = true;
+      drawParams.indexType = attribute.type;
+    }
+
+    return this;
+  }
+
+  /**
+   * Attach a map of Buffers values to a program
+   * Only attributes with names actually present in the linked program
+   * will be updated. Other supplied buffers will be ignored.
+   *
    * @param {Object} buffers - An object map with attribute names being keys
    *  and values are expected to be instances of Buffer.
    * @returns {Program} Returns itself for chaining.
    */
   /* eslint-disable max-statements */
   setBuffers(buffers, {clear = true, drawParams = {}} = {}) {
+    log.deprecated('program.setBuffers', 'program.setAttributes');
+
     if (clear) {
       this.vertexAttributes.clearBindings();
     }
@@ -190,14 +240,10 @@ export default class Program extends Resource {
       if (!buffer) {
         this.vertexAttributes.disable(location);
       } else if (buffer instanceof Buffer) {
-        const divisor = buffer.layout.instanced ? 1 : 0;
-        this.vertexAttributes.setBuffer({location, buffer});
-        this.vertexAttributes.setDivisor(location, divisor);
-        drawParams.isInstanced = buffer.layout.instanced > 0;
-        this.vertexAttributes.enable(location);
+        Object.assign(drawParams,
+          this._setBuffer({location, buffer, layout: buffer.layout}));
       } else {
-        this.vertexAttributes.setGeneric({location, array: buffer});
-        this.vertexAttributes.disable(location, true);
+        this._setGenericArray({location, array: buffer});
       }
     }
 
@@ -394,6 +440,22 @@ export default class Program extends Resource {
   /* eslint-enable max-len */
 
   // PRIVATE METHODS
+
+  _setGenericArray({location, array}) {
+    this.vertexAttributes.setGeneric({location, array});
+    this.vertexAttributes.disable(location, true);
+  }
+
+  _setBuffer({location, buffer, layout}) {
+    const divisor = layout.instanced ? 1 : 0;
+    this.vertexAttributes.setBuffer({location, buffer, layout});
+    this.vertexAttributes.setDivisor(location, divisor);
+    this.vertexAttributes.enable(location);
+
+    return {
+      isInstanced: layout.instanced > 0
+    };
+  }
 
   _compileAndLink() {
     const {gl} = this;
