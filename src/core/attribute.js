@@ -8,7 +8,7 @@ export default class Attribute {
     const {
       id = 'unnamed-attribute',
       type,
-      size = 1,
+      size,
       isIndexed = false
     } = opts;
 

@@ -29,7 +29,7 @@ The constructor for the Attribute class. Use this to create a new Attribute.
 `new Attribute(gl, options);`
 
 * `gl` - WebGL context.
-* `size` (*number*, optional) - The number of components in each element the buffer (1-4). Default `1`. Cannot be updated.
+* `size` (*number*) - The number of components in each element the buffer (1-4). Cannot be updated.
 * `id` (*string*, optional) - Identifier of the attribute. Cannot be updated.
 * `type` (*GLenum*, optional) - Identifier of the attribute. If not supplied will be inferred from `value`. Cannot be updated.
 * `isIndexed` (*bool*, optional) - If the attribute is element index. Default `false`. Cannot be updated.
