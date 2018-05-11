@@ -24,7 +24,7 @@ test('WebGL#Attribute constructor/update/delete', t => {
 
   /* Indexed attribute */
   buffer = new Buffer(gl, {data: value2});
-  attribute = new Attribute(gl, {isIndexed: true, externalBuffer: buffer});
+  attribute = new Attribute(gl, {size: 4, isIndexed: true, externalBuffer: buffer});
 
   t.ok(attribute instanceof Attribute, 'Indexed attribute construction successful');
   t.notOk(attribute.buffer, 'Attribute does not create buffer when external buffer is supplied');
@@ -33,7 +33,7 @@ test('WebGL#Attribute constructor/update/delete', t => {
   attribute.delete();
   t.ok(buffer._handle, 'External buffer is not deleted');
 
-  t.throws(() => new Attribute(gl, {size: 6}), /invalid size/,
+  t.throws(() => new Attribute(gl), /invalid size/,
     'Attribute constructor throws error if attribute definition is invalid');
 
   t.end();
@@ -83,8 +83,6 @@ test('WebGL#Attribute clone', t => {
 
   const attribute1 = new Attribute(gl, {size: 4, value: value1});
   const {buffer} = attribute1;
-
-  buffer.setData = () => t.fail('clone should not call buffer.setData');
 
   const attribute2 = attribute1.clone({isInstanced: true});
   t.is(attribute1.size, attribute2.size, 'sizes are the same');
