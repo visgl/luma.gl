@@ -1,4 +1,11 @@
 # Pre-releases
+## 5.3.0-alpha.2 - May 14
+- Fix some docs typos (#512)
+- Collect WebGL context code into one directory (#511)
+- add verticalAxis opt to TruncatedConGeometry (#491)
+- Initial draft of offscreen rendering RFC (#510)
+- Add off screen rendering example (PR 2/2) (#454)
+- update what's new release date
 
 ## 5.3.0-alpha.1 - April 23
 - Add discard too picking.js fragment shader (#509)
