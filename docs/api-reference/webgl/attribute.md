@@ -29,9 +29,9 @@ The constructor for the Attribute class. Use this to create a new Attribute.
 `new Attribute(gl, options);`
 
 * `gl` - WebGL context.
-* `size` (*number*) - The number of components in each element the buffer (1-4). Cannot be updated.
+* `size` (*number*) - The number of components in each element the buffer (1-4).
 * `id` (*string*, optional) - Identifier of the attribute. Cannot be updated.
-* `type` (*GLenum*, optional) - Identifier of the attribute. If not supplied will be inferred from `value`. Cannot be updated.
+* `type` (*GLenum*, optional) - Type of the attribute. If not supplied will be inferred from `value`. Cannot be updated.
 * `isIndexed` (*bool*, optional) - If the attribute is element index. Default `false`. Cannot be updated.
 * `isGeneric` (*bool*, optional) - If the attribute is generic. Default `false`.
 * `isInstanced` (*bool*, optional) - Whether buffer contains instance data. Default `false`.
@@ -40,23 +40,12 @@ The constructor for the Attribute class. Use this to create a new Attribute.
 * `offset` (*number*, optional) - where the data starts in the buffer. Default `0`.
 * `stride` (*number*, optional) - an additional offset between each element in the buffer. Default `0`.
 * `value` (*TypedArray*) - value of the attribute.
-* `externalBuffer` (*Buffer*) - use am external buffer for the attribute.
+* `buffer` (*Buffer*) - an external buffer for the attribute.
 
 
 ### delete
 
 Free WebGL resources associated with this attribute.
-
-
-### clone
-
-```js
-attribute.clone({isInstanced: false});
-```
-
-Create another attribute that shares the same buffer. Parameters:
-
-* `options` (*object*) - options for the new attribute. This will override the options on the current object.
 
 
 ### update

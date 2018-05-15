@@ -262,7 +262,7 @@ model.render(
 ```
 
 * `uniforms`=`{}` - uniform values to be used for drawing.
-* `attributes`=`{}` - attribute definitions to be used for drawing. Each value should be an `Attribute` object.
+* `attributes`=`{}` - attribute definitions to be used for drawing. Each value can be a plain object, an `Attribute` instance or a `Buffer` instance.
 * `samplers`=`{}` - texture mappings to be used for drawing.
 * `transformFeedback` - a `TranformFeedback` object, that gets activated for this rendering.
 

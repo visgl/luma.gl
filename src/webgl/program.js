@@ -189,10 +189,12 @@ export default class Program extends Resource {
       if (!attribute) {
         this.vertexAttributes.disable(location);
       } else if (attribute.isGeneric) {
-        this._setGenericArray({location, array: attribute.value});
+        this._setAttributeToGeneric({location, array: attribute.value});
       } else {
-        Object.assign(drawParams,
-          this._setBuffer({location, buffer: attribute.getBuffer(), layout: attribute}));
+        this._setAttributeToBuffer({location, buffer: attribute.getBuffer(), layout: attribute});
+        Object.assign(drawParams, {
+          isInstanced: attribute.instanced > 0
+        });
       }
     }
 
@@ -218,7 +220,7 @@ export default class Program extends Resource {
    */
   /* eslint-disable max-statements */
   setBuffers(buffers, {clear = true, drawParams = {}} = {}) {
-    log.deprecated('program.setBuffers', 'program.setAttributes');
+    log.deprecated('Program: `setBuffers`', '`setAttributes`');
 
     if (clear) {
       this.vertexAttributes.clearBindings();
@@ -240,10 +242,12 @@ export default class Program extends Resource {
       if (!buffer) {
         this.vertexAttributes.disable(location);
       } else if (buffer instanceof Buffer) {
-        Object.assign(drawParams,
-          this._setBuffer({location, buffer, layout: buffer.layout}));
+        this._setAttributeToBuffer({location, buffer, layout: buffer.layout});
+        Object.assign(drawParams, {
+          isInstanced: buffer.layout.instanced > 0
+        });
       } else {
-        this._setGenericArray({location, array: buffer});
+        this._setAttributeToGeneric({location, array: buffer});
       }
     }
 
@@ -441,20 +445,16 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
-  _setGenericArray({location, array}) {
+  _setAttributeToGeneric({location, array}) {
     this.vertexAttributes.setGeneric({location, array});
     this.vertexAttributes.disable(location, true);
   }
 
-  _setBuffer({location, buffer, layout}) {
+  _setAttributeToBuffer({location, buffer, layout}) {
     const divisor = layout.instanced ? 1 : 0;
     this.vertexAttributes.setBuffer({location, buffer, layout});
     this.vertexAttributes.setDivisor(location, divisor);
     this.vertexAttributes.enable(location);
-
-    return {
-      isInstanced: layout.instanced > 0
-    };
   }
 
   _compileAndLink() {

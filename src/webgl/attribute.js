@@ -8,14 +8,12 @@ export default class Attribute {
     const {
       id = 'unnamed-attribute',
       type,
-      size,
       isIndexed = false
     } = opts;
 
     // Options that cannot be changed later
     this.gl = gl;
     this.id = id;
-    this.size = size;
     this.isIndexed = isIndexed;
     this.target = isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
     this.type = type;
@@ -41,17 +39,12 @@ export default class Attribute {
     }
   }
 
-  clone(opts) {
-    return new this.constructor(this.gl, Object.assign({}, this, {
-      externalBuffer: this.getBuffer()
-    }, opts));
-  }
-
   update({
     value,
-    externalBuffer,
+    buffer,
 
     // buffer options
+    size = this.size,
     offset = this.offset || 0,
     stride = this.stride || 0,
     normalized = this.normalized || false,
@@ -62,6 +55,7 @@ export default class Attribute {
     isInstanced
   }) {
 
+    this.size = size;
     this.offset = offset;
     this.stride = stride;
     this.normalized = normalized;
@@ -74,9 +68,9 @@ export default class Attribute {
       this.instanced = instanced;
     }
 
-    if (externalBuffer) {
-      this.externalBuffer = externalBuffer;
-      this.type = externalBuffer.type;
+    if (buffer) {
+      this.externalBuffer = buffer;
+      this.type = buffer.type;
     } else if (value) {
       this.externalBuffer = null;
       this.value = value;

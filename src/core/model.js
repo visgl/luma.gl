@@ -1,8 +1,7 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
 import GL from '../constants';
-import {Buffer, Program, checkUniformValues} from '../webgl';
-import Attribute from './attribute';
+import {Attribute, Buffer, Program, checkUniformValues} from '../webgl';
 import Query from '../webgl/query';
 import {isWebGL} from '../webgl-utils';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
@@ -515,20 +514,20 @@ count: ${this.stats.profileFrameCount}`
     const {program: {gl}} = this;
 
     for (const attributeName in attributes) {
-      const config = attributes[attributeName];
+      const descriptor = attributes[attributeName];
       let attribute = this._attributes[attributeName];
 
-      if (config instanceof Attribute) {
-        attribute = config;
-      } else if (config instanceof Buffer) {
-        attribute = attribute || new Attribute(gl, Object.assign({}, config.layout, {
+      if (descriptor instanceof Attribute) {
+        attribute = descriptor;
+      } else if (descriptor instanceof Buffer) {
+        attribute = attribute || new Attribute(gl, Object.assign({}, descriptor.layout, {
           id: attributeName
         }));
-        attribute.update({externalBuffer: config});
+        attribute.update({buffer: descriptor});
       } else if (attribute) {
-        attribute.update(config);
+        attribute.update(descriptor);
       } else {
-        attribute = new Attribute(gl, config);
+        attribute = new Attribute(gl, descriptor);
       }
       this._attributes[attributeName] = attribute;
     }

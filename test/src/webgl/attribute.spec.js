@@ -24,7 +24,7 @@ test('WebGL#Attribute constructor/update/delete', t => {
 
   /* Indexed attribute */
   buffer = new Buffer(gl, {data: value2});
-  attribute = new Attribute(gl, {size: 4, isIndexed: true, externalBuffer: buffer});
+  attribute = new Attribute(gl, {size: 4, isIndexed: true, buffer});
 
   t.ok(attribute instanceof Attribute, 'Indexed attribute construction successful');
   t.notOk(attribute.buffer, 'Attribute does not create buffer when external buffer is supplied');
@@ -64,7 +64,7 @@ test('WebGL#Attribute getBuffer', t => {
   t.is(attribute.getBuffer(), attribute.buffer, 'getBuffer returns own buffer');
 
   const buffer = new Buffer(gl, {data: value1});
-  attribute.update({externalBuffer: buffer});
+  attribute.update({buffer});
   t.is(attribute.getBuffer(), buffer, 'getBuffer returns user supplied buffer');
 
   attribute.update({value: value2});
@@ -74,28 +74,6 @@ test('WebGL#Attribute getBuffer', t => {
   t.is(attribute.getBuffer(), null, 'getBuffer returns null for generic attributes');
 
   attribute.delete();
-
-  t.end();
-});
-
-test('WebGL#Attribute clone', t => {
-  const {gl} = fixture;
-
-  const attribute1 = new Attribute(gl, {size: 4, value: value1});
-  const {buffer} = attribute1;
-
-  const attribute2 = attribute1.clone({isInstanced: true});
-  t.is(attribute1.size, attribute2.size, 'sizes are the same');
-  t.is(attribute1.target, attribute2.target, 'targets are the same');
-  t.is(attribute1.type, attribute2.type, 'types are the same');
-  t.is(attribute1.getBuffer(), attribute2.getBuffer(), 'buffers are the same');
-  t.not(attribute1.instanced, attribute2.instanced, 'instanced is overridden');
-
-  attribute2.delete();
-  t.ok(buffer._handle, 'buffer is not deleted by the clone');
-
-  attribute1.delete();
-  t.notOk(buffer._handle, 'buffer is deleted by the original');
 
   t.end();
 });

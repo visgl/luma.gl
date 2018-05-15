@@ -312,6 +312,10 @@ export const DOC_PAGES = [
         content: 'api-reference/core/animation-loop.md'
       },
       {
+        name: 'Attribute',
+        content: 'api-reference/webgl/attribute.md'
+      },
+      {
         name: 'Buffer',
         content: 'api-reference/webgl/buffer.md'
       },

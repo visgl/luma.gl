@@ -43,6 +43,7 @@ export {
   makeDebugContext} from './webgl-context/debug-context';
 
 // WebGL1 classes
+export {default as Attribute} from './webgl/attribute';
 export {default as Buffer} from './webgl/buffer';
 export {Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
@@ -65,12 +66,10 @@ export {default as VertexArray} from './webgl/vertex-array';
 export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 
 // Core Classes
-export {
-  Model,
-  AnimationLoop,
-  AnimationLoopProxy,
-  Attribute
-} from './core';
+export {default as Model} from './core/model';
+export {default as AnimationLoop} from './core/animation-loop';
+export {default as AnimationLoopProxy} from './core/animation-loop-proxy';
+
 // export {default as Object3D} from './core/object-3d';
 // export {default as Group} from './core/group';
 export {default as pickModels} from './core/pick-models';
