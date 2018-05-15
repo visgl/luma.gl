@@ -624,9 +624,15 @@ count: ${this.stats.profileFrameCount}`
       type = attribute.type;
       instanced = attribute.instanced;
       size = attribute.size;
-      verts = round(attribute.value.length / attribute.size);
-      bytes = attribute.value.length * attribute.value.BYTES_PER_ELEMENT;
-      value = attribute.value;
+      if (attribute.externalBuffer) {
+        value = attribute.externalBuffer.data;
+        bytes = attribute.externalBuffer.bytes;
+        verts = bytes / value.BYTES_PER_ELEMENT;
+      } else if (attribute.value) {
+        value = attribute.value;
+        verts = round(value.length / size);
+        bytes = value.length * value.BYTES_PER_ELEMENT;
+      }
     }
 
     // Generate a type name by dropping Array from Float32Array etc.
