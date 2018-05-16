@@ -10,7 +10,7 @@ In your vertex shader, your inform the picking module what object we are current
 ```
 attribute vec3 aPickingColor;
 main() {
-  picking_setColor(aPickingColor);
+  picking_setPickingColor(aPickingColor);
   ...
 }
 ```
