@@ -43,7 +43,7 @@ export {
   makeDebugContext} from './webgl-context/debug-context';
 
 // WebGL1 classes
-export {default as Attribute} from './webgl/attribute';
+import Attribute from './webgl/attribute';
 export {default as Buffer} from './webgl/buffer';
 export {Shader, VertexShader, FragmentShader} from './webgl/shader';
 export {default as Program} from './webgl/program';
@@ -138,7 +138,8 @@ import {default as Transform} from './core/experimental/transform';
 
 export const experimental = {
   clearBuffer,
-  Transform
+  Transform,
+  Attribute
 };
 
 // DEPRECATED EXPORTS IN v5.3

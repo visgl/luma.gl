@@ -1,4 +1,5 @@
-import {Attribute, Buffer, GL} from 'luma.gl';
+import {experimental, Buffer, GL} from 'luma.gl';
+const {Attribute} = experimental;
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 

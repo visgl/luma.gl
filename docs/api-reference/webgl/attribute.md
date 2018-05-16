@@ -1,4 +1,4 @@
-# Attribute
+# Attribute (experimental)
 
 Wrapper class to be used with the `Model` class' `render` and `setAttributes` methods.
 
