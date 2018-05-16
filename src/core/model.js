@@ -1,7 +1,7 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
 import GL from '../constants';
-import {Buffer, Program, checkUniformValues} from '../webgl';
+import {Attribute, Buffer, Program, checkUniformValues} from '../webgl';
 import Query from '../webgl/query';
 import {isWebGL} from '../webgl-utils';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
@@ -108,8 +108,10 @@ export default class Model extends Object3D {
       isInstanced = isInstanced || instanced;
     }
 
-    // TODO - remove?
-    this.buffers = {};
+    // All attributes
+    this._attributes = {};
+    // User defined attributes
+    this.attributes = {};
     this.samplers = {};
     this.userData = {};
     this.drawParams = {};
@@ -121,7 +123,6 @@ export default class Model extends Object3D {
       this.setGeometry(geometry);
     }
 
-    this.attributes = {};
     this.setAttributes(attributes);
 
     // geometry might have set drawMode and vertexCount
@@ -157,6 +158,13 @@ export default class Model extends Object3D {
   /* eslint-enable max-statements */
 
   delete() {
+    // delete all attributes created by this model
+    for (const key in this._attributes) {
+      if (this._attributes[key] !== this.attributes[key]) {
+        this._attributes[key].delete();
+      }
+    }
+
     this.program.delete();
     removeModel(this.id);
   }
@@ -376,7 +384,7 @@ export default class Model extends Object3D {
     const {program} = this;
     program.use();
     this.drawParams = {};
-    program.setBuffers(this.buffers, {drawParams: this.drawParams});
+    program.setAttributes(this._attributes, {drawParams: this.drawParams});
     program.checkAttributeBindings({vertexArray});
     program.setUniforms(this.uniforms, this.samplers);
     return this;
@@ -506,24 +514,22 @@ count: ${this.stats.profileFrameCount}`
     const {program: {gl}} = this;
 
     for (const attributeName in attributes) {
-      const attribute = attributes[attributeName];
+      const descriptor = attributes[attributeName];
+      let attribute = this._attributes[attributeName];
 
-      if (attribute instanceof Buffer) {
-        this.buffers[attributeName] = attribute;
-      } else if (attribute.isGeneric) {
-        this.buffers[attributeName] = attribute.value;
+      if (descriptor instanceof Attribute) {
+        attribute = descriptor;
+      } else if (descriptor instanceof Buffer) {
+        attribute = attribute || new Attribute(gl, Object.assign({}, descriptor.layout, {
+          id: attributeName
+        }));
+        attribute.update({buffer: descriptor});
+      } else if (attribute) {
+        attribute.update(descriptor);
       } else {
-        // Autocreate a buffer
-        this.buffers[attributeName] =
-          this.buffers[attributeName] || new Buffer(gl, {
-            target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
-          });
-
-        const buffer = this.buffers[attributeName];
-        buffer
-          .setData({data: attribute.value})
-          .setDataLayout(attribute);
+        attribute = new Attribute(gl, descriptor);
       }
+      this._attributes[attributeName] = attribute;
     }
 
     return this;
@@ -534,11 +540,7 @@ count: ${this.stats.profileFrameCount}`
       const attributeTable = this._getAttributesTable({
         header: `${this.id} attributes`,
         program: this.program,
-        attributes: Object.assign(
-          {},
-          this.geometry && this.geometry.attributes,
-          this.attributes
-        )
+        attributes: this._attributes
       });
       log.table(priority, attributeTable)();
 
@@ -617,20 +619,19 @@ count: ${this.stats.profileFrameCount}`
       location = attribute.isIndexed ? 'ELEMENT_ARRAY_BUFFER' : 'NOT USED';
     }
 
-    if (attribute instanceof Buffer) {
-      const buffer = attribute;
-      type = buffer.layout.type;
-      instanced = buffer.layout.instanced;
-      size = buffer.layout.size;
-      verts = round(buffer.data.length / buffer.layout.size);
-      bytes = buffer.data.length * buffer.data.BYTES_PER_ELEMENT;
-    } else if (attribute) {
-      type = attribute.value.constructor.name;
+    if (attribute) {
+      type = attribute.type;
       instanced = attribute.instanced;
       size = attribute.size;
-      verts = round(attribute.value.length / attribute.size);
-      bytes = attribute.value.length * attribute.value.BYTES_PER_ELEMENT;
-      value = attribute.value;
+      if (attribute.externalBuffer) {
+        value = attribute.externalBuffer.data;
+        bytes = attribute.externalBuffer.bytes;
+        verts = bytes / value.BYTES_PER_ELEMENT;
+      } else if (attribute.value) {
+        value = attribute.value;
+        verts = round(value.length / size);
+        bytes = value.length * value.BYTES_PER_ELEMENT;
+      }
     }
 
     // Generate a type name by dropping Array from Float32Array etc.

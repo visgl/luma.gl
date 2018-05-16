@@ -14,6 +14,7 @@ npm-debug.log
 examples/winds/data/*.html
 test/data/test.png
 
+package-lock.json
 */**/yarn.lock
 yarn-error.log
 

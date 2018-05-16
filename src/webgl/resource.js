@@ -58,6 +58,7 @@ export default class Resource {
     // Delete this object, and get refs to any children
     const children = this._handle && this._deleteHandle(this._handle);
     this._handle = null;
+    this._removeStats();
 
     // Optionally, recursively delete the children
     if (children && deleteChildren) {
@@ -242,7 +243,15 @@ export default class Resource {
 
     // Resource creation stats
     stats.resourceCount++;
-    stats.resourceMap[name] = stats.resourceMap[name] || {count: 0};
-    stats.resourceMap[name].count++;
+    stats.resourceMap[name] = stats.resourceMap[name] || {created: 0, active: 0};
+    stats.resourceMap[name].created++;
+    stats.resourceMap[name].active++;
+  }
+
+  _removeStats() {
+    const name = this.constructor.name;
+    const {stats} = luma;
+
+    stats.resourceMap[name].active--;
   }
 }
