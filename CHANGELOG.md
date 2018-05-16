@@ -1,4 +1,7 @@
 # Pre-releases
+## 5.3.0-alpha.3 - May 16
+- Add Attribute class (#514)
+
 ## 5.3.0-alpha.2 - May 14
 - Fix some docs typos (#512)
 - Collect WebGL context code into one directory (#511)
