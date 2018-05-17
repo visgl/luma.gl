@@ -1,9 +1,9 @@
 # Model
 
 For most luma.gl  applications, the `Model` class is probably the most important class. It holds all the data necessary to draw an object in luma.gl, e.g.:
-* **shaders** (via a [`Program`](/#/documentation/api-reference/program) instance)
-* **shader modules** [see `Shader Modules`](/#/documentation/api-reference/shader-modules)
-* **vertex attributes** (e.g. a [`Geometry`](/#/documentation/api-reference/geometry) instance, plus any additional attributes for instanced rendering)
+* **shaders** (via a [`Program`](#/documentation/api-reference/program) instance)
+* **shader modules** [see `Shader Modules`](#/documentation/api-reference/shader-modules)
+* **vertex attributes** (e.g. a [`Geometry`](#/documentation/api-reference/geometry) instance, plus any additional attributes for instanced rendering)
 * **uniforms** these can also reference textures.
 
 It offers:
