@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-export {fp64ify} from './fp64-utils';
+export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 
 import fp64arithmeticShader from './fp64-arithmetic.glsl';
 import fp64functionShader from './fp64-functions.glsl';
