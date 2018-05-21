@@ -18,17 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
+import {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 
 import fp64arithmeticShader from './fp64-arithmetic.glsl';
 import fp64functionShader from './fp64-functions.glsl';
 
 const fp64shader = `${fp64arithmeticShader}\n${fp64functionShader}`;
 
+export {fp64ify, fp64LowPart, fp64ifyMatrix4};
+
 export default {
   name: 'fp64',
   vs: fp64shader,
-  fs: null
+  fs: null,
+  fp64ify,
+  fp64LowPart,
+  fp64ifyMatrix4
 };
 
 // Arithmetic only
