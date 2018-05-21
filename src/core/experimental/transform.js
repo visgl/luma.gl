@@ -87,9 +87,6 @@ export default class Transform {
       return this;
     }
     const {currentIndex, varyingMap, _buffersSwapable, transformFeedbacks} = this;
-    for (const bufferName in sourceBuffers) {
-      assert(sourceBuffers[bufferName] instanceof Buffer);
-    }
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
     }
@@ -108,6 +105,8 @@ export default class Transform {
           this.destinationBuffers[currentIndex][destinationBufferName];
         this.destinationBuffers[nextIndex][destinationBufferName] =
           this.sourceBuffers[currentIndex][sourceBufferName];
+        // make sure the new destination buffer is a Buffer object
+        assert(this.destinationBuffers[nextIndex][destinationBufferName] instanceof Buffer);
       }
       transformFeedbacks[nextIndex].bindBuffers(
         this.destinationBuffers[nextIndex], {varyingMap}
@@ -149,9 +148,6 @@ export default class Transform {
     destinationBuffers = null
   }) {
     const {_buffersSwapable} = this;
-    for (const bufferName in sourceBuffers) {
-      assert(sourceBuffers[bufferName] instanceof Buffer);
-    }
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
     }
@@ -177,6 +173,8 @@ export default class Transform {
           this.destinationBuffers[0][destinationBufferName];
         this.destinationBuffers[1][destinationBufferName] =
           this.sourceBuffers[0][sourceBufferName];
+        // make sure the new destination buffer is a Buffer object
+        assert(this.destinationBuffers[1][destinationBufferName] instanceof Buffer);
       }
     }
   }

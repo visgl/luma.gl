@@ -123,7 +123,7 @@ Constructs a `Transform` object, creates `Model` and `TransformFeedback` instanc
 
 * `gl` (`WebGL2RenderingContext`) gl - context
 * `opts` (`Object`={}) - options
-  * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
+  * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
   * `destinationBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
   * `vs` (`String`) - vertex shader string.
   * `varyings` (`Array`) - Array of vertex shader varyings names.
@@ -139,7 +139,7 @@ Deletes all owned resources, `Model`, `TransformFeedback` and any `Buffer` objec
 
 Updates buffer bindings with provided buffer objects for one or more source or destination buffers.
 
-* `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
+* `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
 * `destinationBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object.
 
 ### run
@@ -150,7 +150,7 @@ Performs one transform feedback iteration.
 
 ### swapBuffers
 
-Swaps source and destination buffers.
+Swaps source and destination buffers. If buffer swapping is used, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
 
 ### getBuffer
 
