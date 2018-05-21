@@ -1,4 +1,9 @@
 # Pre-releases
+
+## 5.3.0-alpha.4 - May 21
+- Port fp64 utils from deck.gl (#518)
+- Allow non-buffer supplied to Transform's sourceBuffers (#519)
+
 ## 5.3.0-alpha.3 - May 16
 - Add Attribute class (#514)
 
