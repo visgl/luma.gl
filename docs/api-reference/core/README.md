@@ -1,6 +1,6 @@
 # Core API Reference
 
-The `core module`, with the signature [`Model`](/#/documentation/api-reference/model) class, represent a set of fairly traditional 3D library classes on a slightly higher abstraction level than the WebGL2 API, that can serve as the basic building blocks for most applications.
+The `core module`, with the signature [`Model`](/docs/api-reference/core/model.md) class, represent a set of fairly traditional 3D library classes on a slightly higher abstraction level than the WebGL2 API, that can serve as the basic building blocks for most applications.
 
 Also contains a limited scene graph system that provides primitive hierarchy of 3D objects with positioning, grouping, traversal and scene support.
 
@@ -11,9 +11,9 @@ Note that the `Model` class is in many ways the quintessential luma.gl class. It
 
 The core module provides the following classes
 
-* [`AnimationFrame`](/#/documentation/api-reference/animation-frame) - render loop / app life cycle support
-* [`Model`](/#/documentation/api-reference/model) - A renderable object with attributes and uniforms.
-* [`Geometry`](/#/documentation/api-reference/geometry) - Holds attributes and drawType for a geometric primitive
+* [`AnimationLoop`](/docs/api-reference/core/animation-loop.md) - render loop / app life cycle support
+* [`Model`](/docs/api-reference/core/model.md) - A renderable object with attributes and uniforms.
+* [`Geometry`](/docs/api-reference/core/geometry.md) - Holds attributes and drawType for a geometric primitive
 
 ## Methods
 

@@ -1,6 +1,6 @@
 # Sphere
 
-Creates a sphere model. Inherits methods from [`Model`](/#/documentation/api-reference/model).
+Creates a sphere model. Inherits methods from [`Model`](/docs/api-reference/core/model.md).
 
 ## Usage
 

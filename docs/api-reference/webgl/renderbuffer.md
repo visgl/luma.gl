@@ -1,6 +1,6 @@
 # Renderbuffer
 
-`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/#/documentation/api-reference/texture) instead. In addition, in WebGL2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
+`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/docs/api-reference/webgl/texture.md) instead. In addition, in WebGL2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
 
 For additional information, see [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object)
 
@@ -116,7 +116,7 @@ The "internal" format of the `Renderbuffer`.
 | `GL.DEPTH_COMPONENT16` |  16 depth bits |
 | `GL.STENCIL_INDEX8`    |  8 stencil bits |
 
-This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/#/documentation/api-reference/texture).
+This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/docs/api-reference/webgl/texture.md).
 
 | Sized Internal Format   | Format               | Type | Depth Bits | Stencil Bits |
 | ---                     | ---                  | ---  | ---        | --- |
@@ -185,6 +185,6 @@ When using a WebGL 2 context, the following values are available additionally:
 
 ## Remarks
 
-* The only way to work with a renderbuffer, besides creating it, is to attach it to a [`Framebuffer`](/#/documentation/api-reference/framebuffer).
+* The only way to work with a renderbuffer, besides creating it, is to attach it to a [`Framebuffer`](/docs/api-reference/webgl/framebuffer.md).
 * A `Renderbuffer` cannot be accessed by a shader in any way.
 * Multisampling is only available in WebGL2

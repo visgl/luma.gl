@@ -2,14 +2,14 @@
 
 A [Sampler object](https://www.khronos.org/opengl/wiki/Sampler_Object) is an OpenGL Object that stores the sampling parameters for a texture access inside of a shader. While texture sampling parameters can be specified directly on textures, samplers allow them to be specified independently. Thus, by using samplers an application can render the same texture with different parameters without duplicating the texture or modifying the texture parameters.
 
-To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture. When using the higher level [`Model`](/#/documentation/api-reference/model) class, samplers can be specified using uniform names instead of texture indices.
+To use a sampler, bind it to the same texture unit as a texture to control sampling for that texture. When using the higher level [`Model`](/docs/api-reference/core/model.md) class, samplers can be specified using uniform names instead of texture indices.
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).
 
 
 ## Usage
 
-Sampler inherits from [Resource](/#/documentation/api-reference/resource) and supports the same use cases.
+Sampler inherits from [Resource](/docs/api-reference/webgl/resource.md) and supports the same use cases.
 
 Create a new `Sampler`
 ```js
@@ -64,7 +64,7 @@ sampler2.bind(1);
 
 ### Base Class
 
-`Sampler` inherits methods and members from [Resource](/#/documentation/api-reference/resource), with the following remarks:
+`Sampler` inherits methods and members from [Resource](/docs/api-reference/webgl/resource.md), with the following remarks:
 
 * `handle` - Handle to the underlying `WebGLSampler` object
 * `getParameters` uses WebGL APIs [WebGLRenderingContext.getSamplerParameter](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getSamplerParameter)

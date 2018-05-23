@@ -1,6 +1,6 @@
 # Cone
 
-Creates a cone model. Inherits methods from [`Model`](/#/documentation/api-reference/model).
+Creates a cone model. Inherits methods from [`Model`](/docs/api-reference/core/model.md).
 
 ## Usage
 

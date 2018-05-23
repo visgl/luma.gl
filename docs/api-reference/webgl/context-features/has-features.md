@@ -6,7 +6,7 @@ WebGL capabilities can vary quite dramatically between browsers (from minimal We
 
 To simplify detecting and working with conditionally available capabilities (or "features") luma.gl provides:
 
-* A set of functions (e.g. [`isWebGL2`](/#/documentation/api-reference/is-webgl-2), [`getFeatures`](/#/documentation/api-reference/get-features) and `hasFeatures`, described in this document) that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL2 or a WebGL1 extension).
+* A set of functions (e.g. [`isWebGL2`](/docs/api-reference/webgl/context/is-webGL2.md), [`getFeatures`](/docs/api-reference/webgl/context-features/get-features.md) and [`hasFeatures`](/docs/api-reference/webgl/context-features/has-features.md), described in this document) that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL2 or a WebGL1 extension).
 
 In addition, luma.gl's WebGL classes transparently use WebGL extensions or WebGL2 APIs as appropriate, meaning that the amount of conditional logic in application code can be kept to a minimum. Once you have established that a capability exists, luma.gl offers you one unified way to use it.
 
@@ -113,7 +113,7 @@ Parameters to `hasFeatures`:
 | `FEATURES.VERTEX_ARRAY_OBJECT`        | **YES** | *      | `VertexArrayObjects` can be created [`OES_vertex_array_object`](https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object) |
 | `FEATURES.ELEMENT_INDEX_UINT32`       | **YES** | *      | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s [`OES_element_index_uint`](https://developer.mozilla.org/en-US/docs/Web/API/OES_element_index_uint) |
 | `FEATURES.BLEND_MINMAX`               | **YES** | *      | `GL.MIN`, `GL.MAX` blending modes are available: [`EXT_blend_minmax`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_blend_minmax) |
-| `FEATURES.TIMER_QUERY`                | *       | *      | [`Query`](/#/documentation/api-reference/query) objects support asynchronous GPU timings [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/), [`EXT_disjoint_timer_query`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query) |
+| `FEATURES.TIMER_QUERY`                | *       | *      | [`Query`](/docs/api-reference/webgl/query.md) objects support asynchronous GPU timings [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/), [`EXT_disjoint_timer_query`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query) |
 | **`Texture`s and `Framebuffer`s** |    |        | |
 | `FEATURES.TEXTURE_FLOAT`              | **YES** | *      | Floating point (`Float32Array`) textures can be created and set as samplers (Note that filtering and rendering need to be queried separately, even in WebGL2)  [`OES_texture_float`](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float) |
 | `FEATURES.TEXTURE_HALF_FLOAT`         | **YES** |        | Half float (`Uint16Array`) textures can be created and set as samplers [`OES_texture_half_float`](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float) [`WEBGL_color_buffer_float`](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float) |

@@ -9,7 +9,7 @@ This is a scratch pad with various notes made during research of the luma.gl API
 * No ownership of WebGL context. Use your luma.gl context with other WebGL code, or use luma.gl with WebGL contexts created by other frameworks.
 
 API Design
-Note: luma.gl is not a "classic WebGL framework", in the sense that it intentionally doesn't try to hide WebGL from the developer under higher levels of abstraction (while a couple of higher level classes, like [`Model`](/#/documentation/api-reference/model), are offered, they do not ).
+Note: luma.gl is not a "classic WebGL framework", in the sense that it intentionally doesn't try to hide WebGL from the developer under higher levels of abstraction (while a couple of higher level classes, like [`Model`](/docs/api-reference/core/model.md), are offered, they do not ).
 
 
 ## WebGL Extensions
