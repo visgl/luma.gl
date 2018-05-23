@@ -1,6 +1,6 @@
 # What's New
 
-In addition to these notes, always check the [Upgrade Guide](/#/documentation/overview/upgrade-guide) when considering adopting a new release.
+In addition to these notes, always check the [Upgrade Guide](/docs/upgrade-guide.md) when considering adopting a new release.
 
 
 ## Version 5.2
