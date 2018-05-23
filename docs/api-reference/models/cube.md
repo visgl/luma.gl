@@ -1,6 +1,6 @@
 # Cube
 
-Create a white cube model. Inherits methods from [`Model`](/#/documentation/api-reference/model)
+Create a white cube model. Inherits methods from [`Model`](#/documentation/api-reference/model)
 
 ## Usage
 
@@ -14,7 +14,7 @@ var whiteCube = new Cube(gl, {
 
 ### constructor
 
-Creates a Cube model. Inherits methods from [`Model`](/#/documentation/api-reference/model).
+Creates a Cube model. Inherits methods from [`Model`](#/documentation/api-reference/model).
 
 
 Use this to create a new Cube. Accepts the same properties and options as Model constructor but has preset for `vertices`, `normals` and `indices`.

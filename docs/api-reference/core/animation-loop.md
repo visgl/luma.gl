@@ -152,6 +152,6 @@ For the `onRenderFrame` callback, the parameter object will contain the followin
 * You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 * Works both in browser and under Node.js.
 * All `AnimationLoop` methods can be chained.
-* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/#/documentation/api-reference/create-context).
+* Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](#/documentation/api-reference/create-context).
 * The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 * This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
