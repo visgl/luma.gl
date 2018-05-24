@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 5.3.0-alpha.6 - May 24
+- Fix Transform class update element count (#522)
+
 ## 5.3.0-alpha.4 - May 21
 - Port fp64 utils from deck.gl (#518)
 - Allow non-buffer supplied to Transform's sourceBuffers (#519)
