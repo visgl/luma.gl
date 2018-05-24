@@ -130,6 +130,7 @@ test('WebGL#Transform swapBuffers', t => {
   t.end();
 });
 
+/* eslint-disable max-statements */
 test('WebGL#Transform update', t => {
   const {gl2} = fixture;
 
@@ -141,6 +142,8 @@ test('WebGL#Transform update', t => {
 
   let sourceData = new Float32Array([10, 20, 31, 0, -57]);
   let sourceBuffer = new Buffer(gl2, {data: sourceData});
+  let expectedData;
+  let outData;
 
   const transform = new Transform(gl2, {
     sourceBuffers: {
@@ -165,10 +168,31 @@ test('WebGL#Transform update', t => {
       inValue: sourceBuffer
     }
   });
+  t.is(transform.elementCount, 5, 'Transform has correct element count');
   transform.run();
 
-  const expectedData = sourceData.map(x => x * 2);
-  const outData = transform.getBuffer('outValue').getData();
+  expectedData = sourceData.map(x => x * 2);
+  outData = transform.getBuffer('outValue').getData();
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  sourceData = new Float32Array([3, 4, 5, 2, -3, 0]);
+  sourceBuffer.delete();
+  sourceBuffer = new Buffer(gl2, {data: sourceData});
+
+  transform.update({
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    destinationBuffers: {
+      outValue: new Buffer(gl2, {data: new Float32Array(6)})
+    },
+    elementCount: 6
+  });
+  t.is(transform.elementCount, 6, 'Element count is updated');
+  transform.run();
+
+  expectedData = sourceData.map(x => x * 2);
+  outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
