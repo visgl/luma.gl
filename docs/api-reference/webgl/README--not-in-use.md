@@ -25,13 +25,13 @@ These objects all inherit from the [`Resource`](resource.html) class.
 | [`Shader`](/docs/api-reference/webgl/shader.md)             | [`WebGLShader`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram) | Holds a compiled GLSL shader program. |
 | [`Texture2D`](/docs/api-reference/webgl/texture-2d.md)         | [`WebGLTexture(GL.TEXTURE_2D)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a loaded texture in a format that supports sampling |
 | [`TextureCube`](/docs/api-reference/webgl/texture-cube.md)       | [`WebGLTexture(GL.TEXTURE_CUBE)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds 6 textures |
-| [`Texture2DArray`](/docs/api-reference/webgl/texture-2d.md-array) **WebGL2** | [`WebGLTexture(GL.TEXTURE_2D_ARRAY)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds an array of textures |
+| [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md) **WebGL2** | [`WebGLTexture(GL.TEXTURE_2D_ARRAY)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds an array of textures |
 | [`Texture3D`](/docs/api-reference/webgl/texture-3d.md) **WebGL2** | [`WebGLTexture(GL.TEXTURE_3D)`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture) | Holds a stack of textures |
 | [`Query`](/docs/api-reference/webgl/query.md) **WebGL2/ext*** | [`WebGLQuery`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLQuery) | Occlusion, Tranform Feedback and Performance Queries |
 | [`Sampler`](/docs/api-reference/webgl/sampler.md) **WebGL2** | [`WebGLSampler`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSampler) | Stores texture sampling params  |
 | [`Sync`](/#/documentation/api-reference/sync) **WebGL2**      | [`WebGLSync`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLSync) | Synchronize GPU and app. |
-| [`TransformFeedback`](/docs/api-reference/core/experimental/transform.md-feedback) **WebGL2** | [`WebGLTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) | Capture Vertex Shader output |
-| [`VertexArrayObject`](/docs/api-reference/webgl/vertex-array.md-object) **WebGL2/ext** | [`WebGLVertexArrayObject`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject) | Save global vertex attribute array. |
+| [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md) **WebGL2** | [`WebGLTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) | Capture Vertex Shader output |
+| [`VertexArrayObject`](/docs/api-reference/webgl/vertex-array.md) **WebGL2/ext** | [`WebGLVertexArrayObject`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLVertexArrayObject) | Save global vertex attribute array. |
 
 | ----------------------------------- | ============== | =============== |
 | **Class/Module**                    | **WebGL Type** | **Description** |

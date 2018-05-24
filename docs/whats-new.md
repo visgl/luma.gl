@@ -51,7 +51,7 @@ Two improvements Performing Transform Feedback operations has gotten easier, mai
 
 `Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
-For more details check [`TransformFeedback`](/docs/api-reference/core/experimental/transform.md-feedback) and [`Model`](/docs/api-reference/core/model.md) documentation.
+For more details check [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md) and [`Model`](/docs/api-reference/core/model.md) documentation.
 
 
 ## Version 5.0
@@ -90,7 +90,7 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 ### Shader Modules
 
 * `fp64` - fp64 module works under more platforms/GPUs/drivers
-* [`picking`](http://uber.github.io/luma.gl/docs/api-reference/webgl/shader.md-module) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
+* [`picking`](/docs/api-reference/shadertools/shadertools-picking.md) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
 
 
 
@@ -116,7 +116,7 @@ A major release that brings full WebGL2 support to luma.gl, as well as adding su
 
 luma.gl now exposes the complete WebGL2 APIs:
 
-* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/core/experimental/transform.md-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
+* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
 * Other existing WebGL classes with new functionalites under WebGL2 have been updated.
 * Add new WebGL2 texture formats and types support, including floating point textures, and multiple render targets.
 
