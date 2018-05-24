@@ -140,7 +140,7 @@ For the `onRenderFrame` callback, the parameter object will contain the followin
 | `width`   | `Number` | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
 | `height`  | `Number` | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
 | `aspect`  | `Number` | The canvas aspect ratio (width/height) to update projection matrices |
-| `needsRedraw` | `String | null` | Redraw flag (will be automatically set if drawingBuffer resizes) |
+| `needsRedraw` | `String` | Redraw flag (will be automatically set if drawingBuffer resizes) |
 | `useDevicePixels` | `Boolean` | Does canvas utilize full resolution of Retina/HD displays. |
 | `time`    | `Number` | Milliseconds since `AnimationLoop` was created (monotonic). |
 | `tick`    | `Number` | Counter that updates for every frame rendered (monotonic). |
