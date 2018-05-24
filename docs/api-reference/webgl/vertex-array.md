@@ -2,7 +2,7 @@
 
 A `VertexArray` holds a WebGL `VertexArrayObject` which stores a set of `Buffer` bindings representing the input data to GLSL shaders (in much the same way that a `TransformFeedback` object stores a set of `Buffer` bindings for output data from shaders).
 
-Note that it is usually not necessary to manipulate `VertexArray`s directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/#/documentation/api-reference/model) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
+Note that it is usually not necessary to manipulate `VertexArray`s directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/docs/api-reference/core/model.md) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object) as well as the remarks at the end.
 
@@ -282,7 +282,7 @@ Each vertex attribute has these properties:
 - An integer normalization policy (see below).
 - An integer conversion policy (see below) **WebGL2**.
 
-Normally attributes are set to a [`WebGLBuffer`](/#/documentation/api-reference/buffer) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
+Normally attributes are set to a [`WebGLBuffer`](/docs/api-reference/webgl/buffer.md) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
 
 Attributes can also be set to a single vertex value (or "generic" value) instead of a full array. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex.
 

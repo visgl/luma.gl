@@ -4,7 +4,7 @@ A texture cube holds six textures that represent faces of the cube. A main featu
 
 `TextureCube`s are typically used to store environment maps. As an example, by rendering an environment into a texture cube, reflections in objects can then be rendered efficiently.
 
-Most texture related functionality is implemented by and documented on the [Texture](/#/documentation/api-reference/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 # Usage

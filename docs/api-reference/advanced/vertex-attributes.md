@@ -4,7 +4,7 @@ WebGL provides an API to manipulate the global "vertex attributes array", which 
 
 This module offers set of functions for manipulating WebGL's global "vertex attributes array". Essentially, this module collects all WebGL `gl.vertexAttrib*` methods and `gl.VERTEX_ATTRIB_ARRAY_*` queries in a small JavaScript friendly package.
 
-**Note** It is usually not necessary to manipulate the vertex attributes array directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/#/documentation/api-reference/model) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
+**Note** It is usually not necessary to manipulate the vertex attributes array directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/docs/api-reference/core/model.md) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
 
 
 ### Overview of Vertex Attributes
