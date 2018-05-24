@@ -4,7 +4,7 @@ A `Texture3D` holds a number of textures of the same size and format. The entire
 
 3D textures are typically used to store volumetric data or for 3D lookup tables in shaders.
 
-Most texture related functionality is implemented by and documented on the [Texture](/#/documentation/api-reference/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 ## Usage

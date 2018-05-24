@@ -4,7 +4,7 @@ A `Texture2DArray` holds a array of textures of the same size and format. The en
 
 Texture arrays can be used as texture atlases if all textures are of the same size and format.
 
-Most texture related functionality is implemented by and documented on the [Texture](/#/documentation/api-reference/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 ## Usage
@@ -29,7 +29,7 @@ if (Texture2DArray.isSupported()) {
 
 ## Methods
 
-`Texture2DArray` is a subclass of the [Texture](/#/documentation/api-reference/texture) and [Resource](/#/documentation/api-reference/resource) classes and inherit all methods and members of those classes.
+`Texture2DArray` is a subclass of the [Texture](/docs/api-reference/webgl/texture.md) and [Resource](/docs/api-reference/webgl/resource.md) classes and inherit all methods and members of those classes.
 
 
 ### Texture2DArray.isSupported(gl)

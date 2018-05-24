@@ -122,5 +122,5 @@ Use the following WebGL types to declare uniforms corresponding to your GLSL dat
 ## Remarks
 
 * WebGL requires the data representing the uniforms in to be laid out in memory according to specific rules (essentially some padding needs to be injected between successive values to facilitate memory access by the GPU).
-* Note that WebGL2 uniform buffers are just [Buffer](/#/documentation/api-reference/buffer) objects and can be manipulated directly. The `UniformBufferLayout` class is not a WebGL2 object, it is just an optional helper class that makes it easy to create and update a block of memory with the required layout.
+* Note that WebGL2 uniform buffers are just [Buffer](/docs/api-reference/webgl/buffer.md) objects and can be manipulated directly. The `UniformBufferLayout` class is not a WebGL2 object, it is just an optional helper class that makes it easy to create and update a block of memory with the required layout.
 * More information on the `std140` layout specification: [OpenGL spec](https://khronos.org/registry/OpenGL/specs/gl/glspec45.core.pdf#page=137)

@@ -1,6 +1,6 @@
 # What's New
 
-In addition to these notes, always check the [Upgrade Guide](/#/documentation/upgrade-guide) when considering adopting a new release.
+In addition to these notes, always check the [Upgrade Guide](/docs/upgrade-guide.md) when considering adopting a new release.
 
 
 ## Version 5.2
@@ -9,27 +9,27 @@ Date: May 24, 2018
 
 ## Transform class (New, WebGL2) (Experimental)
 
-The new experimental [`Transform`](/#/documentation/api-reference/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
+The new experimental [`Transform`](/docs/api-reference/core/experimental/transform.md) class provides an easy-to-use interface to perform Transform Feedback operations.
 
 
 ## Framebuffer Class
 
-**Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/#/documentation/api-reference/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+**Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/webgl/framebuffer.md) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 
 ## Bundle Size Reduction
 
-The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/#/documentation/developer-guide/building-apps]) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
+The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/docs/developer-guide/building-apps.md) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
 
 
 ## Running luma.gl in Node.js
 
-Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/#/documentation/get-started/using-with-node) and the Upgrade Guide.
+Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/docs/get-started/using-with-node.md) and the Upgrade Guide.
 
 
 ## Debug Mode Changes
 
-To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/#/documentation/developer-guide/debugging) and the Upgrade Guide.
+To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/docs/developer-guide/debugging.md) and the Upgrade Guide.
 
 
 ## Examples
@@ -51,7 +51,7 @@ Two improvements Performing Transform Feedback operations has gotten easier, mai
 
 `Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
-For more details check [`TransformFeedback`](/#/documentation/api-reference/transform-feedback) and [`Model`](/#/documentation/api-reference/model) documentation.
+For more details check [`TransformFeedback`](/docs/api-reference/core/experimental/transform.md-feedback) and [`Model`](/docs/api-reference/core/model.md) documentation.
 
 
 ## Version 5.0
@@ -90,7 +90,7 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 ### Shader Modules
 
 * `fp64` - fp64 module works under more platforms/GPUs/drivers
-* [`picking`](http://uber.github.io/luma.gl/#/documentation/api-reference/shader-module) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
+* [`picking`](http://uber.github.io/luma.gl/docs/api-reference/webgl/shader.md-module) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
 
 
 
@@ -116,7 +116,7 @@ A major release that brings full WebGL2 support to luma.gl, as well as adding su
 
 luma.gl now exposes the complete WebGL2 APIs:
 
-* New classes expose all the new WebGL2 objects ([`Query`](/#/documentation/api-reference/query), [`Sampler`](/#/documentation/api-reference/sampler), [`Texture2DArray`](/#/documentation/api-reference/texture-2-array), [`Texture3D`](/#/documentation/api-reference/texture-3d), and [`TransformFeedback`](/#/documentation/api-reference/transform-feedback)), together with a new [`UniformBufferLayout`](/#/documentation/api-reference/uniform-buffer-layout) helper class to make uniform buffers easy to use.
+* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/core/experimental/transform.md-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
 * Other existing WebGL classes with new functionalites under WebGL2 have been updated.
 * Add new WebGL2 texture formats and types support, including floating point textures, and multiple render targets.
 

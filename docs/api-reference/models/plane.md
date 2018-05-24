@@ -1,6 +1,6 @@
 # Plane
 
-Creates a plane. Inherits methods from [`Model`](/#/documentation/api-reference/model).
+Creates a plane. Inherits methods from [`Model`](/docs/api-reference/core/model.md).
 
 ## Usage
 

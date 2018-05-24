@@ -2,7 +2,7 @@
 
 2D textures hold basic "single image" textures (although technically they can contain multiple mimap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
 
-Most texture related functionality is implemented by and documented on the [Texture](/#/documentation/api-reference/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 ## Usage
@@ -95,4 +95,4 @@ new Texture2D(gl, {
 * `parameters`=`{}` (*object*) - map of texture sampler parameters.
 * `pixelStore`=`{}` (*object*) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
 
-Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/#/documentation/api-reference/texture). Sampler parameters are specified in [Sampler](/#/documentation/api-reference/sampler), and pixel store parameters are specified in [State Management](/#/documentation/api-reference/get-parameter)
+Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture.md). Sampler parameters are specified in [Sampler](/docs/api-reference/webgl/sampler.md), and pixel store parameters are specified in [State Management](/docs/api-reference/webgl/context-state/get-parameters.md)

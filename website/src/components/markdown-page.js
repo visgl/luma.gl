@@ -1,5 +1,6 @@
 import React, {PureComponent, PropTypes} from 'react';
 import marked from 'marked';
+import {markdownFiles} from '../utils/page-path-utils';
 
 /**
  * This map allows you to rewrite urls present in the markdown files
@@ -10,15 +11,27 @@ import marked from 'marked';
  * If you specify a value of false, it will transform the link to a simple
  * text, in case you don't want this link to point to anything.
  */
-const urlRewrites = {
-  // '/docs/layers/base-layer.md': '#/layers/catalog/layer-base-class',
-  // '/docs/custom-layers.md#layerencodepickingcolorindex--number': false,
-  // '/docs/layers/arc-layer.md': '#/layers/core-layers/arc-layer',
-  // '/docs/layers/line-layer.md': '#/layers/core-layers/line-layer',
-  // '/docs/layers/choropleth-layer.md': '#/layers/core-layers/choropleth-layer',
-  // '/docs/layers/scatterplot-layer.md': '#/layers/core-layers/scatterplot-layer',
-  // '/docs/64-bits.md': '#/documentation/advanced-topics/64-layers'
-};
+
+const urlRewrites = [
+  {
+    /*
+     * Look for urls in the form of
+     * `/docs/path/to/file.md#header`
+     * and convert to
+     * `#/documentation/path/to/page?section=header`
+     */
+    test: /^\/(docs\/.+?\.md)(#.*)?$/,
+    rewrite: match => {
+      const filepath = match[1];
+      const hash = match[2] ? match[2].slice(1) : '';
+      const route = markdownFiles[filepath];
+      if (!route) {
+        console.warn('Cannot find linked doc: ', filepath);
+      }
+      return `#/documentation${route}${hash ? '?section=' : ''}${hash}`;
+    }
+  }
+];
 
 /**
  * Same as above, but for image src's
@@ -43,11 +56,16 @@ export default class MarkdownPage extends PureComponent {
     const renderer = new marked.Renderer();
 
     renderer.link = (href, title, text) => {
-      const to = urlRewrites[href] === undefined ? href : urlRewrites[href];
-      if (to === false) {
-        return `<span>${text}</span>`;
-      }
-      return `<a href=${to} title=${title}>${text}</a>`;
+      let to = href;
+
+      urlRewrites.forEach(rule => {
+        if (to && rule.test.test(to)) {
+          to = rule.rewrite(to.match(rule.test));
+        }
+      });
+
+      return to ? `<a href=${to}>${text}</a>` :
+        `<span>${text}</span>`;
     };
 
     renderer.image = (href, title, text) => {
