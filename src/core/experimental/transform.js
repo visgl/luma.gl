@@ -30,7 +30,6 @@ export default class Transform {
     this.destinationBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
     this._buffersToDelete = [];
-    this.elementCount = 0;
 
     this.initialize(opts);
     Object.seal(this);
@@ -42,6 +41,10 @@ export default class Transform {
       buffer.delete();
     }
     this.model.delete();
+  }
+
+  get elementCount() {
+    return this.model.getVertexCount();
   }
 
   initialize({
@@ -80,12 +83,16 @@ export default class Transform {
   // Update some or all buffer bindings.
   update({
     sourceBuffers = null,
-    destinationBuffers = null
+    destinationBuffers = null,
+    elementCount = this.elementCount
   }) {
     if (!sourceBuffers && !destinationBuffers) {
       log.warn('Transform : no buffers updated')();
       return this;
     }
+
+    this.model.setVertexCount(elementCount);
+
     const {currentIndex, varyingMap, _buffersSwapable, transformFeedbacks} = this;
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
