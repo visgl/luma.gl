@@ -1,7 +1,15 @@
 # Pre-releases
 
+## 5.3.0-rc.1 - May 24
+- Website: URL fixes (#524)
+
 ## 5.3.0-alpha.6 - May 24
 - Fix Transform class update element count (#522)
+- Minor doc fix for the new picking shader module (#515)
+- Fix failing canCompileGLGSExtension browser test (#458)
+
+## 5.3.0-alpha.5 - May 21
+- Export fp64 util functions (#520)
 
 ## 5.3.0-alpha.4 - May 21
 - Port fp64 utils from deck.gl (#518)
