@@ -38,41 +38,51 @@ If your shader needs GLSL 3.00 specific features, you should of course use GLSL 
 
 ### Automatic GLSL Syntax Conversion
 
-When using the shader module system, the shader assembler (by default) injects a prologue that sets up macros to replace keywords that increase compatibility between GLSL 1.00 and GLSL 3.00 code.
+The goal is to let applications use GLSL 3.00 es syntax, with some care so that shaders can be automatically converted back to GLSL 1.00 es under WebGL1.
+
+The shader assembler (by default) injects a prologue that sets up macros to replace keywords that increase compatibility between GLSL 1.00 es and GLSL 3.00 es code.
 
 TBA - should the tables be moved to the shader module reference docs?
 
 #### From GLSL 1.00 to GLSL 3.00
 
-| 1.00 GLSL token | 3.00 Vertex Replacement | 3.00 Fragment Replacement | Comment |
-| ---             | ---                     | ---                       | --- |
-| `attribute`     | `out`                   | `in`                      |  |
-| `varying`       | `out`                   | `in`                      |  |
-| `texture2D`     |                         | `texture`                 | 3.00 deduces from sampler type |
-| `textureCube`   |                         | `texture`                 | 3.00 deduces from sampler type |
-| `gl_FragColor`  | N/A                     | `fragColor`               | Will inject an `out vec4 fragColor` if `gl_FragColor` is detected in the source |
+| 3.00 Vertex | 3.00 Fragment | 1.00 GLSL token | Comment | --- |
+| ---         | ---           | ---             | ---     | --- |
+| `out` *     | `in` *        | `attribute`     |  |
+| `out` *     | `in` *        | `varying`       |  |
+|             | `texture` *   | `texture2D`     | 3.00 deduces from sampler type |
+|             | `texture`     | `textureCube` * | 3.00 deduces from sampler type |
+| N/A         | `fragColor`   | `gl_FragColor`  | Will inject an `out vec4 fragColor` if `gl_FragColor` is detected in the source |
 
 
 All GLSL 1.00 extensions are available by default in WebGL2 / GLSL 3.00.
 
-| GLSL 1.00 Extension    | 1.00 Vertex Replacement | 1.00 Fragment Replacement | Comment |
-| ---                    | ---                     | ---                       | --- |
-| **EXT_frag_depth**     |                         |                           ||
-| `gl_FragDepth`         | N/A                     | `gl_FragDepthEXT`         | Recommendation: always use `gl_FragDepth` |
-| **EXT_shader_texture_lod** |                     |                           ||
-| `texture2DLod`         | `texture2DLodEXT`       | `texture2DLodEXT`         | Recommendation: always use `texture2DLod` |
-| `texture2DProjLod`     | `texture2DProjLodEXT`   | `texture2DProjLodEXT`     | Recommendation: always use `texture2DProjLod` |
-| `texture2DProjLod`     | `texture2DProjLodEXT`   | `texture2DProjLodEXT`     | Recommendation: always use `texture2DProjLod` |
-| `textureCubeLod`       | `textureCubeLodEXT`     | `textureCubeLodEXT`       | Recommendation: always use `textureCubeLod` |
-| `texture2DGrad`        | `texture2DGradEXT`      | `texture2DGradEXT`        | Recommendation: always use `texture2DGrad` |
-| `texture2DProjGrad`    | `texture2DProjGradEXT`  | `texture2DProjGradEXT`    | Recommendation: always use `texture2DProjGrad` |
-| `texture2DProjGrad`    | `texture2DProjGradEXT`  | `texture2DProjGradEXT`    | Recommendation: always use `texture2DProjGrad` |
-| `textureCubeGrad`      | `textureCubeGradEXT`    | `textureCubeGradEXT`      | Recommendation: always use `textureCubeGrad` |
+| GLSL 3.00 token       | 1.00 Vertex | 1.00 Fragment             | Comment |
+| ---                   | ---         | ---                       | --- |
+| **EXT_frag_depth**    |             |                           | |
+| `gl_FragDepth` *      | N/A         | `gl_FragDepthEXT`         | Recommendation: always use `gl_FragDepth` |
+| **EXT_shader_texture_lod** |        |                           | |
+| `texture2DLod` *      |             | `texture2DLodEXT`         | Recommendation: always use `texture2DLod` |
+| `texture2DProjLod` *  |             | `texture2DProjLodEXT`     | Recommendation: always use `texture2DProjLod` |
+| `texture2DProjLod` *  |             | `texture2DProjLodEXT`     | Recommendation: always use `texture2DProjLod` |
+| `textureCubeLod` *    |             | `textureCubeLodEXT`       | Recommendation: always use `textureCubeLod` |
+| `texture2DGrad` *     |             | `texture2DGradEXT`        | Recommendation: always use `texture2DGrad` |
+| `texture2DProjGrad` * |             | `texture2DProjGradEXT`    | Recommendation: always use `texture2DProjGrad` |
+| `texture2DProjGrad` * |             | `texture2DProjGradEXT`    | Recommendation: always use `texture2DProjGrad` |
+| `textureCubeGrad` *   |             | `textureCubeGradEXT`      | Recommendation: always use `textureCubeGrad` |
 
 
 Not currently handled
 | **EXT_draw_buffers** |
 | `glFragData[]` |
+
+
+### Shader Modules Recommendations
+
+Many syntactic changes between GLSL 1.00es and 3.00es relate to shader input/outputs. The recommendation is that shader modules leave these choices up to the calling `main` shader. The main exception is "varyings" which are typically defined by shader modules that provide both a vertex and fragment shader component.
+
+* Definition of attributes should be done in.
+* Assignment to `gl_FragColor`, `gl_FragDepth` and `gl_FragData` should be done in the top level shader's `main` function. That is, shader modules can calculate the required values but typically do not actually assign to the shader output variables. This makes shader module code independent of the naming of the output variables.
 
 
 #### From GLSL 3.00 to GLSL 1.00
@@ -86,6 +96,52 @@ luma.gl can also attempt to do a simple conversion code from GLSL 3.00 to GLSL 1
 | `out`           | `varying`               | `gl_FragColor`*           | |
 | `texture`       |                         | `texture2D`               | 3.00 deduces from sampler type, could be `textureCube`... |
 
+
+## Conditional Code
+
+### New Features in GLSL 3.00
+
+The following features are only available in GLSL 3.00 and cannot be directly emulated in 1.00.
+
+
+#### Texture sizes and Pixel Fetch
+
+Shaders have access to texture sizes and can query by pixel coordinates instead of uv coordinates.
+
+```glsl
+vec2 size = textureSize(sampler, lod)
+vec4 values = texelFetch(sampler, ivec2Position, lod);
+```
+
+#### Texture Arrays and 3D textures
+
+```glsl
+vec4 color = texture(sampler2DArray, vec3(u, v, index));
+vec4 color = texture(sampler3D, vec3(u, v, depth));
+```
+
+#### Non-constant loops
+
+
+
+#### Matrix functions
+
+```glsl
+mat4 m = inverse(matrix);
+mat4 t = transpose(matrix);
+```
+
+#### Integer textures, attributes and math
+
+In WebGL2 you can have integer attributes and integer textures.
+
+GLSL 300 es allows you to do integer math in the shaders, including bit manipulations of integers.
+
+
+#### Uniform Buffer Objects
+
+
+#### Transform Feedback
 
 
 ## Testing GLSL Code
