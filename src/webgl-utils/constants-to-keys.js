@@ -1,4 +1,5 @@
 import assert from '../utils/assert';
+import log from '../utils/log';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function getKeyValue(gl, name) {
@@ -39,4 +40,29 @@ export function getKeyType(gl, value) {
     }
   }
   return String(value);
+}
+
+// Public methods
+
+// Resolve a WebGL enumeration name (returns itself if already a number)
+// TODO - unify with methods above
+export function glGet(gl, name) {
+  if (!name) {
+    log.removed('glGet(name)', 'glGet(gl, name)', '6.0');
+  }
+  return getKeyValue(gl, name);
+}
+
+export function glKey(gl, value) {
+  if (!value) {
+    log.removed('glKey(value)', 'glKey(gl, value)', '6.0');
+  }
+  return getKey(gl, value);
+}
+
+export function glKeyType(gl, value) {
+  if (!value) {
+    log.removed('glKeyType(value)', 'glKeyType(gl, value)', '6.0');
+  }
+  return getKeyType(gl, value);
 }

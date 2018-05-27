@@ -147,25 +147,11 @@ export default class AnimationLoop {
     return this;
   }
 
-  // DEPRECATED METHODS
+  // DEPRECATED/REMOVED METHODS
 
   // Update parameters
-  setViewParameters({
-    autoResizeDrawingBuffer = true,
-    autoResizeCanvas = true,
-    autoResizeViewport = true,
-    useDevicePixels = true,
-    useDevicePixelRatio = null // deprecated
-  }) {
-    log.deprecated('AnimationLoop.setViewParameters', 'AnimationLoop.setProps')();
-    this.autoResizeViewport = autoResizeViewport;
-    this.autoResizeCanvas = autoResizeCanvas;
-    this.autoResizeDrawingBuffer = autoResizeDrawingBuffer;
-    this.useDevicePixels = useDevicePixels;
-    if (useDevicePixelRatio !== null) {
-      log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
-      this.useDevicePixels = useDevicePixelRatio;
-    }
+  setViewParameters() {
+    log.removed('AnimationLoop.setViewParameters', 'AnimationLoop.setProps')();
     return this;
   }
 

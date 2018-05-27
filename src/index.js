@@ -144,31 +144,7 @@ export const experimental = {
 
 // DEPRECATED EXPORTS IN v5.3
 
-export { // Should be optional import for application
-  default as GL} from './constants';
+// Due to bundle size impact, should be optional import for application
+export {default as GL} from './constants';
 
-export { // Should be optional import for application
-  glGet,
-  glKey} from './deprecated/gl-constants';
-
-export {
-  destroyGLContext as deleteGLContext,
-  pollGLContext as pollContext
-} from './webgl-context/context';
-
-// DEPRECATED EXPORTS IN V4.1
-
-export {
-  radians,
-  degrees,
-  Vector2,
-  Vector3,
-  Vector4,
-  Matrix4,
-  Quaternion
-} from 'math.gl';
-
-// DEPRECATED IN EXPORTS V3.0
-
-export {readPixels} from './webgl/functions';
-export {default as FramebufferObject} from './webgl/framebuffer';
+import {glGet, glKey, glKeyType} from '../webgl-utils/constants-to-keys';
