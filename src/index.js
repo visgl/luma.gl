@@ -116,11 +116,12 @@ export {
 } from './io';
 
 // shadertools
-export {default as ShaderCache} from './shadertools/src/lib/shader-cache';
-export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
 export {
-  registerShaderModules,
-  setDefaultShaderModules} from './shadertools/src/lib/shader-modules';
+  setDefaultShaderModules,
+  registerShaderModules
+} from './shadertools/src/lib/resolve-modules';
+export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
+export {default as ShaderCache} from './shadertools/src/shader-cache';
 
 // shader modules
 export {default as fp32} from './shadertools/src/modules/fp32/fp32';

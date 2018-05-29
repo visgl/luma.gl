@@ -19,7 +19,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 }
 
 const vs = `\
-varying vec2 diffuse_vTexCoord;
+out vec2 diffuse_vTexCoord;
 
 /* Set the UV coordinate from attributes */
 void diffuse_setTextureCoordinate(vec2 uv) {
@@ -32,7 +32,7 @@ uniform vec4 diffuse_uColor;
 uniform bool diffuse_uHasTexture;
 uniform sampler2D diffuse_uTexture;
 
-varying vec2 diffuse_vTexCoord;
+in vec2 diffuse_vTexCoord;
 
 // Gets diffuse color of material from uniform
 // If we have a standard (diffuse) texture, set color to texture
