@@ -18,9 +18,7 @@ void main(void) {
 const FS_GLSL_300 = `\
 #version 300 es
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 out vec4 fragmentColor;
 

@@ -9,9 +9,7 @@ using a single uniform <code>uTime</code>.
 `;
 
 const CONCENTRICS_FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform float uTime;
 

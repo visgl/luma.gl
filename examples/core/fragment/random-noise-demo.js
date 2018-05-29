@@ -3,9 +3,7 @@
 import {AnimationLoop, createGLContext, ClipSpaceQuad} from 'luma.gl';
 
 const RANDOM_NOISE_FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 highp float random(vec2 co) {
     highp float a = 12.9898;

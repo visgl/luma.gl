@@ -13,9 +13,7 @@ in which the <code>fragment shader</code> can render.
 const MANDELBROT_FRAGMENT_SHADER = `\
 #define SHADER_NAME mandelbrot32
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 // Based on a renderman shader by Michael Rivero
 const int maxIterations = 1;

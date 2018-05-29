@@ -12,9 +12,7 @@ The classic WebGL Lessons in luma.gl
 `;
 
 const FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec4 vColor;
 

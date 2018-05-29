@@ -37,9 +37,7 @@ outValue = m * inValue;
 
 const FS = `\
 #version 300 es
-#ifdef GL_ES
 precision highp float;
-#endif
 out vec4 oColor;
 void main(void) {
   oColor = vec4(1.0, 1.0, 1.0, 1.0);

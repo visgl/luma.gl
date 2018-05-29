@@ -1,9 +1,7 @@
 export default `\
 #define SHADER_NAME spec-map-fs
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 #define LIGHT_MAX 4
 

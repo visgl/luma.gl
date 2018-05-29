@@ -1,9 +1,7 @@
 export default `\
 #define SHADER_NAME luma-modular-fragment
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 // varyings
 varying vec4 vColor;

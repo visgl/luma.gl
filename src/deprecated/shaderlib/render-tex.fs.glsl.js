@@ -1,9 +1,7 @@
 export default `\
 #define SHADER_NAME luma-render-tex-fs
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 #define LIGHT_MAX 4
 
