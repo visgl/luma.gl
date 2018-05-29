@@ -1,7 +1,5 @@
 export default `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 #define SHADER_NAME luma-default-fs
 

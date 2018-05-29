@@ -37,9 +37,7 @@ void main(void) {
 `;
 
 const FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec2 vTextureCoord;
 

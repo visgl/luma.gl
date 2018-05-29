@@ -13,9 +13,7 @@ void main(void) {
 `;
 
 const SCREEN_QUAD_FS = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform sampler2D uTexture;
 uniform vec2 uRes;
@@ -27,9 +25,7 @@ void main(void) {
 `;
 
 const PERSISTENCE_FS = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform sampler2D uScene;
 uniform sampler2D uPersistence;
@@ -60,9 +56,7 @@ void main(void) {
 `;
 
 const SPHERE_FS = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform vec3 uColor;
 uniform bool uLighting;

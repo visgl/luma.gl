@@ -25,9 +25,7 @@ const MATRIX_4 = [
 ];
 
 const VERTEX_SHADER = `
-#ifdef GL_ES
 precision highp float;
-#endif
 
 void main(void) {
   gl_Position = vec4(0., 0., 0., 0.);
@@ -35,9 +33,7 @@ void main(void) {
 `;
 
 const WEBGL1_FRAGMENT_SHADER = `
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform float f;
 uniform vec2 v2;

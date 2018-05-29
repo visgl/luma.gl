@@ -20,9 +20,7 @@ const MODULE_INJECTORS = {
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
 const FRAGMENT_SHADER_PROLOGUE = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 `;
 

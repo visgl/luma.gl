@@ -130,9 +130,7 @@ void main(void) {
 }
 `,
     fs: `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec3 color;
 

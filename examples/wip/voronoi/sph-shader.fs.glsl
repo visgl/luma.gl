@@ -1,6 +1,5 @@
-#ifdef GL_ES
 precision highp float;
-#endif
+
 #define SITE_MAX 50
 varying vec2 vTexCoord1;
 uniform int numberSites;

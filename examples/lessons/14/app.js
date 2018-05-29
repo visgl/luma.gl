@@ -171,9 +171,7 @@ void main(void) {
 `;
 
 const FRAGMENT_LIGHTING_FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec2 vTextureCoord;
 varying vec4 vTransformedNormal;

@@ -10,9 +10,7 @@ and then rendering onto the screen.
 `;
 
 const SCENE_FRAGMENT = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform sampler2D uShadowMap;
 uniform float uShadow;
@@ -74,9 +72,7 @@ void main(void) {
 `;
 
 const SHADOWMAP_FRAGMENT = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 void main(void) {
   gl_FragColor = vec4(0,0,gl_FragCoord.z,1);

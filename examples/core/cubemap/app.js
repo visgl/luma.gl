@@ -99,9 +99,8 @@ void main(void) {
 `,
     fs: `\
 #define SHADER_NAME cube_fragment
-#ifdef GL_ES
+
 precision highp float;
-#endif
 
 uniform samplerCube uTextureCube;
 varying vec3 vPosition;
@@ -134,9 +133,7 @@ void main(void) {
 }
 `,
     fs: `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform samplerCube uTextureCube;
 uniform float uReflect;

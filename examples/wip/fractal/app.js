@@ -92,9 +92,7 @@ void main(void) {
 `;
 
 const FRAGMENT_SHADER_ADVANCE = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 uniform sampler2D sampler1;//sampler_prev;
 
@@ -125,9 +123,7 @@ void main(void) {
 `;
 
 const FRAGMENT_SHADER_COMPOSITE = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
   uniform sampler2D sampler1;//sampler_prev;
 

@@ -37,9 +37,7 @@ const INFO_HTML = `
 
 // TODO: For Debugging only, remove once rendering issues fixed.
 const FRAGMENT_SHADER_SQ = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec4 vColor;
 
@@ -105,9 +103,7 @@ void main(void) {
 `;
 
 const FRAGMENT_SHADER = `\
-#ifdef GL_ES
 precision highp float;
-#endif
 
 varying vec2 vTextureCoord;
 varying vec3 vTransformedNormal;
