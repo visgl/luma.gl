@@ -49,11 +49,13 @@ function assembleShader(gl, {
   assert(typeof source === 'string', 'shader source must be a string');
 
   const sourceLines = source.split('\n');
+  let glslVersion = 100;
   let versionLine = '';
   let coreSource = source;
   // Extract any version directive string from source.
   // TODO : keep all pre-processor statements at the begining of the shader.
   if (sourceLines[0].indexOf('#version ') === 0) {
+    glslVersion = 300; // TODO - regexp that matches atual version number
     versionLine = sourceLines[0];
     coreSource = sourceLines.slice(1).join('\n');
   }
@@ -65,7 +67,7 @@ function assembleShader(gl, {
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
-${getVersionDefines(gl, type === FRAGMENT_SHADER)}
+${getVersionDefines(gl, type === FRAGMENT_SHADER, glslVersion)}
 ${getApplicationDefines(defines)}
 ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
 `;
@@ -80,9 +82,9 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
 
     default:
       module.checkDeprecations(coreSource, log);
-
+      const moduleSource = module.getModuleSource(type, glslVersion);
       // Add the module source, and a #define that declares it presence
-      assembledSource += module.getModuleSource(type);
+      assembledSource += moduleSource;
     }
   }
 

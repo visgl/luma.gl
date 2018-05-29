@@ -1,3 +1,4 @@
+import transpileShader from './transpile-shader';
 import assert from '../utils/assert';
 
 const VERTEX_SHADER = 'vs';
@@ -25,14 +26,14 @@ export default class ShaderModule {
   }
 
   // Extracts the source code chunk for the specified shader type from the named shader module
-  getModuleSource(type) {
+  getModuleSource(type, targetGLSLVersion) {
     let moduleSource;
     switch (type) {
     case VERTEX_SHADER:
-      moduleSource = this.vs;
+      moduleSource = transpileShader(this.vs || '', true, targetGLSLVersion);
       break;
     case FRAGMENT_SHADER:
-      moduleSource = this.fs;
+      moduleSource = transpileShader(this.fs || '', true, targetGLSLVersion);
       break;
     default:
       assert(false);
