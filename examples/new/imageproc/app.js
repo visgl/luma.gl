@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpace} from 'luma.gl';
+import {AnimationLoop, ClipSpace, loadTextures, resizeGLContext} from 'luma.gl';
 
 const INFO_HTML = `
 <p>
@@ -21,44 +21,42 @@ precision highp float;
 
 uniform float uTime;
 uniform float uRatio;
+uniform sampler2D uSampler;
 
 varying vec2 position;
+varying vec2 uv;
 
 void main(void) {
-  vec2 defpixel = (position - vec2( 0.5 ) ) * 170.;
-
-  float step = PI / uRatio;
-
-  // Sum up total of all waves
-  float total;
-  for (float i = 0.; i < 100.; i++) {
-    if ( i < uRatio ) {
-      float value = i * step;
-      float s = sin( value );
-      float c = cos( value );
-      total += ( cos( c * defpixel.x + s * defpixel.y + uTime ) + 1. ) / 2.;
-    }
-  }
-
-  float v = mod(total, 1.);
-  float k = total - v;
-  total = ( mod( abs( k ), 2. ) ) <= 0.0001 ? v : 1. - v;
-
-  gl_FragColor =
-    vec4( total * (1. - (uRatio / 20.)), total * (uRatio / 10.), total * (uRatio / 5.), 1. );
+  gl_FragColor = texture2D(uSampler, uv);
 }
 `;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    return {clipSpace: new ClipSpace(gl, {fs: FRAGMENT_SHADER})};
+
+    return loadTextures(gl, {
+      urls: ['earth.jpg'],
+      parameters: [{
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
+        mipmap: true
+      }]
+    })
+    .then(textures => ({
+      texture: textures[0],
+      clipSpace: new ClipSpace(gl, {fs: FRAGMENT_SHADER})
+    }));
   },
 
-  onRender: ({gl, canvas, time, clipSpace}) => {
+  onRender: ({gl, canvas, time, clipSpace, texture}) => {
+    resizeGLContext(gl, texture);
     clipSpace.draw({
       uniforms: {
         uTime: (time / 600) % (Math.PI * 2),
-        uRatio: animationLoop.getHTMLControlValue('wavefronts', 7)
+        uRatio: animationLoop.getHTMLControlValue('wavefronts', 7),
+        uSampler: texture
       }
     });
   },
