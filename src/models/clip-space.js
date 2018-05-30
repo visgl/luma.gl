@@ -1,9 +1,9 @@
-// ClipSpaceQuad
+// ClipSpace
 import GL from '../constants';
 import {Model} from '../core';
 import {Geometry} from '../geometry';
 
-const CLIPSPACE_QUAD_VERTEX_SHADER = `\
+const CLIPSPACE_VERTEX_SHADER = `\
 attribute vec2 aClipSpacePosition;
 attribute vec2 aTexCoord;
 attribute vec2 aCoordinate;
@@ -28,12 +28,12 @@ const POSITIONS = [
    1,  1
 ];
 
-export default class ClipSpaceQuad extends Model {
+export default class ClipSpace extends Model {
   constructor(gl, opts) {
     const TEX_COORDS = POSITIONS.map(coord => coord === -1 ? 0 : coord);
 
     super(gl, Object.assign({}, opts, {
-      vs: CLIPSPACE_QUAD_VERTEX_SHADER,
+      vs: CLIPSPACE_VERTEX_SHADER,
       geometry: new Geometry({
         drawMode: GL.TRIANGLE_STRIP,
         vertexCount: 4,
