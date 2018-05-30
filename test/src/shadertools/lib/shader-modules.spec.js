@@ -1,4 +1,4 @@
-import {resolveModules, getDependencyGraph} from 'luma.gl/shadertools/lib/shader-modules';
+import {resolveModules, getDependencyGraph} from 'luma.gl/shadertools/src/lib/shader-modules';
 import test from 'tape-catch';
 
 // Dummy shader modules with dependencies
