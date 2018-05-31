@@ -34,8 +34,8 @@ export {FEATURES};
 
 function isWebGL2(gl) {
   return Boolean(gl && (
-    gl instanceof WebGL2RenderingContext ||
-    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D
+    (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext ||
+    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
   ));
 }
 

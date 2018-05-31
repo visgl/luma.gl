@@ -1,6 +1,6 @@
 // This is a Webpack 2 configuration file
 const {resolve} = require('path');
-// const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   devServer: {
@@ -12,7 +12,7 @@ module.exports = {
 
   // Bundle the tests for running in the browser
   entry: {
-    'test-fp64': resolve('./index.js')
+    'test-fp64': resolve('./index-fp64.js')
   },
 
   // Generate a bundle in dist folder
@@ -42,5 +42,7 @@ module.exports = {
     fs: 'empty'
   },
 
-  plugins: []
+  plugins: [
+    new HtmlWebpackPlugin({title: 'Shader Module Tests'})
+  ]
 };
