@@ -2,6 +2,11 @@
 
 In addition to these notes, always check the [Upgrade Guide](/docs/upgrade-guide.md) when considering adopting a new release.
 
+## Version 5.3
+
+Date: June 01, 2018
+
+5.3 release contains documentation improvements and some minor changes to experimental [`Transform`](/docs/api-reference/core/experimental/transform.md) class.
 
 ## Version 5.2
 
