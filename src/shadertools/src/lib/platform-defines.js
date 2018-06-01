@@ -1,42 +1,19 @@
-import {getContextInfo} from '../../../webgl';
-import {
-  hasFeature, canCompileGLGSExtension, FEATURES
-} from '../../../webgl-context/context-features';
-
-export function checkRendererVendor(debugInfo, gpuVendor) {
-  const {vendor, renderer} = debugInfo;
-  let result;
-  switch (gpuVendor) {
-  case 'nvidia':
-    result = vendor.match(/NVIDIA/i) || renderer.match(/NVIDIA/i);
-    break;
-  case 'intel':
-    result = vendor.match(/INTEL/i) || renderer.match(/INTEL/i);
-    break;
-  case 'amd':
-    result =
-      vendor.match(/AMD/i) || renderer.match(/AMD/i) ||
-      vendor.match(/ATI/i) || renderer.match(/ATI/i);
-    break;
-  default:
-    result = false;
-  }
-  return result;
-}
+import {getContextInfo, hasFeatures, canCompileGLGSExtension, FEATURES} from '../utils/webgl-info';
 
 export function getPlatformShaderDefines(gl) {
-  /* eslint-disable */
-  let platformDefines = '';
+
   const debugInfo = getContextInfo(gl);
 
-  if (checkRendererVendor(debugInfo, 'nvidia')) {
-    platformDefines += `\
+  switch (debugInfo.gpuVendor.toLowerCase()) {
+  case 'nvidia':
+    return `\
 #define NVIDIA_GPU
 // Nvidia optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
-  } else if (checkRendererVendor(debugInfo, 'intel')) {
-    platformDefines += `\
+
+  case 'intel':
+    return `\
 #define INTEL_GPU
 // Intel optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -45,16 +22,18 @@ export function getPlatformShaderDefines(gl) {
 // Intel GPU doesn't have full 32 bits precision in same cases, causes overflow
 #define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 `;
-  } else if (checkRendererVendor(debugInfo, 'amd')) {
+
+  case 'amd':
     // AMD Does not eliminate fp64 code
-    platformDefines += `\
+    return `\
 #define AMD_GPU
 `;
-  } else {
+
+  default:
     // We don't know what GPU it is, could be that the GPU driver or
     // browser is not implementing UNMASKED_RENDERER constant and not
     // reporting a correct name
-    platformDefines += `\
+    return `\
 #define DEFAULT_GPU
 // Prevent driver from optimizing away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -64,27 +43,31 @@ export function getPlatformShaderDefines(gl) {
 #define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 `;
   }
-
-  return platformDefines;
 }
 
-export function getVersionDefines(gl) {
+export function getVersionDefines(gl, isFragment) {
   let versionDefines = `\
-// Defines for shader portability
+// Defines for shader version portability
 #if (__VERSION__ > 120)
+
 # define attribute in
-# define varying out
+# define varying ${isFragment ? 'in' : 'out'}
+
 # define FRAG_DEPTH
 # define DERIVATIVES
 # define DRAW_BUFFERS
 # define TEXTURE_LOD
+
 #else
-// # define in attribute
-// # define out varying
+// TODO - can only be replaced at beginning of line
+// # define in ${isFragment ? 'varying' : 'attribute'}
+// # define out ${isFragment ? 'out' : 'varying'}
+# define texture texture2D
+
 #endif // __VERSION
 `;
 
-  if (hasFeature(gl, FEATURES.GLSL_FRAG_DEPTH)) {
+  if (hasFeatures(gl, FEATURES.GLSL_FRAG_DEPTH)) {
     versionDefines += `\
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
@@ -95,7 +78,7 @@ export function getVersionDefines(gl) {
 `;
   }
   if (
-    hasFeature(gl, FEATURES.GLSL_DERIVATIVES) &&
+    hasFeatures(gl, FEATURES.GLSL_DERIVATIVES) &&
     canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES)
   ) {
     versionDefines += `\
@@ -106,7 +89,7 @@ export function getVersionDefines(gl) {
 #endif
 `;
   }
-  if (hasFeature(gl, FEATURES.GLSL_FRAG_DATA)) {
+  if (hasFeatures(gl, FEATURES.GLSL_FRAG_DATA)) {
     versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
@@ -115,7 +98,7 @@ export function getVersionDefines(gl) {
 #endif
 `;
   }
-  if (hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)) {
+  if (hasFeatures(gl, FEATURES.GLSL_TEXTURE_LOD)) {
     versionDefines += `\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
