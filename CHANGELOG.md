@@ -1,5 +1,6 @@
 # Pre-releases
 
+## 5.3.0 - June 1
 ## 5.3.0-rc.1 - May 24
 - Website: URL fixes (#524)
 
