@@ -1,4 +1,4 @@
-# RFC: Offscreen Rendering
+# RFC: Off-Thread (aka Offscreen) Rendering
 
 * **Authors**: Xiaoji
 * **Date**: March 2018
