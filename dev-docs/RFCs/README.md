@@ -26,10 +26,13 @@ These are early ideas not yet associated with any release
 | --- | --- | --- | --- |
 | **WIP/Draft** | | | |
 
+Possible other animation related RFCs:
+- integration with event handling (enter leave triggers for animations)
 
-## v6.0 RFCs
 
-Current direction for luma.gl v6.0 is to focus on:
+## v6.x RFCs
+
+Current direction for luma.gl v6.x is to focus on:
 
 * **GPGPU compute** - rich library for building and testing, WebGL1 fallbacks for transform feedback/floating point
 * **shader modules** - shader module system improvements for GPGPU
@@ -38,21 +41,22 @@ Current direction for luma.gl v6.0 is to focus on:
 * **code size**
 
 
+## v6.0 RFCs
+
 | RFC | Author | Status | Description |
-| --- | --- | --- | --- |
-| [**Dist Size Reduction**](v6.0/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
+| --- | ---    | ---    | ---         |
+| [**Off-Thread (aka Off-Screen) Rendering**](v6.0/offscreen-render-rfc.md) | @pessimistress | **Review** | Use the new Off-Screen API to enable WebGL to run in a separate thread. |
+| [**Portable GLSL 3.00 Shader Modules**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Draft** | |
+| [**Centralize Attribute Management in VertexArray**](v6.0/portable-glsl-300-rfc.md) | @ibgreen | **Draft** | |
 | [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | |
 | [**Shader Module Injection**](v6.0/shader-module-injection-rfc.md) | @ibgreen | **Draft** | |
-
-Possible other animation related RFCs:
-- integration with event handling (enter leave triggers for animations)
+| [**Dist Size Reduction**](v6.0/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
 
 ## v5.2 RFCs
 
 | RFC | Author | Status | Description |
-| --- | --- | --- | --- |
-| **General** | | | |
+| --- | ---    | ---    | ---         |
 | [**New Transform Class**](v5.2/enhanced-transform-feedback-api.md) | @1chandu | **Review / Prototyped** | Simpler API for TransformFeedback |
 
 
@@ -61,8 +65,7 @@ Possible other animation related RFCs:
 Release Focus: Address any WebGL2 issues from 4.0.
 
 | RFC | Author | Status | Description |
-| --- | --- | --- | --- |
-| **General** | | | |
+| --- | ---    | ---    | ---         |
 | [**Break out Math Module**](v5.0/break-out-math-module-rfc.md) | @ibgreen | **Implemented** | Break out luma.gl math module |
 
 
