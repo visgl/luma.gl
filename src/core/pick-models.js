@@ -25,7 +25,7 @@ export default function pickModels(gl, {
   assert(framebuffer, ILLEGAL_ARG);
   assert(position, ILLEGAL_ARG);
   if (useDevicePixelRatio !== null) {
-    log.removed('useDevicePixelRatio', 'useDevicePixels')();
+    log.removed('useDevicePixelRatio', 'useDevicePixels', '6.0')();
   }
 
   const [x, y] = position;

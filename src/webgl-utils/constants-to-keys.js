@@ -48,21 +48,21 @@ export function getKeyType(gl, value) {
 // TODO - unify with methods above
 export function glGet(gl, name) {
   if (!name) {
-    log.removed('glGet(name)', 'glGet(gl, name)', '6.0');
+    log.removed('glGet(name)', 'glGet(gl, name)', '6.0')();
   }
   return getKeyValue(gl, name);
 }
 
 export function glKey(gl, value) {
   if (!value) {
-    log.removed('glKey(value)', 'glKey(gl, value)', '6.0');
+    log.removed('glKey(value)', 'glKey(gl, value)', '6.0')();
   }
   return getKey(gl, value);
 }
 
 export function glKeyType(gl, value) {
   if (!value) {
-    log.removed('glKeyType(value)', 'glKeyType(gl, value)', '6.0');
+    log.removed('glKeyType(value)', 'glKeyType(gl, value)', '6.0')();
   }
   return getKeyType(gl, value);
 }
