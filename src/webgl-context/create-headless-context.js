@@ -3,7 +3,7 @@
 import isBrowser from '../utils/is-browser';
 
 const ERR_HEADLESSGL_LOAD = `\
-WebGL not available in Node.js, install using "npm install --dev gl" or "yarn add --dev gl."`;
+WebGL not available in Node.js, install using "npm install gl --save-dev" or "yarn add gl --dev".`;
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =
 'Failed to create WebGL context in Node.js, headless gl not available';
