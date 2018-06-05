@@ -11,6 +11,9 @@
 import {global} from '../utils/globals';
 import isBrowser from '../utils/is-browser';
 
+const ERR_HEADLESSGL_LOAD = `\
+WebGL not available in Node.js, install using "npm install --dev gl/wrap" or "yarn add --dev gl/wrap"`;
+
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
 
@@ -19,8 +22,8 @@ if (!isBrowser) {
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
     console.error(`${error.message}`);
+    console.error(`${ERR_HEADLESSGL_LOAD}\n${error.message}`);
   }
-  console.warn(headlessTypes && headlessTypes.WebGLRenderingContext);
 }
 
 class DummyType {}
