@@ -11,6 +11,10 @@
 import {global} from '../utils/globals';
 import isBrowser from '../utils/is-browser';
 
+export const ERR_HEADLESSGL_LOAD = `\
+luma.gl: WebGL contexts can not be created in Node.js since headless gl is not installed. \
+If this is desired, install headless gl using "npm install gl --save-dev" or "yarn add -D gl"`;
+
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
 
@@ -18,9 +22,8 @@ if (!isBrowser) {
   try {
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
-    console.error(`${error.message}`);
+    console.info(ERR_HEADLESSGL_LOAD);
   }
-  console.warn(headlessTypes && headlessTypes.WebGLRenderingContext);
 }
 
 class DummyType {}
