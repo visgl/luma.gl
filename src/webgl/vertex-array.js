@@ -39,6 +39,8 @@ const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 export default class VertexArray extends Resource {
 
   static isSupported(gl) {
+    // Now always supported via client side polyfill
+    log.deprecated('VertexArray.isSupported()', 'always true', '6.0');
     return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
   }
 

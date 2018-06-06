@@ -2,6 +2,8 @@
 export {
   Image,
   WebGLRenderingContext,
+  WebGL2RenderingContext,
+
   WebGLProgram,
   WebGLShader,
   WebGLBuffer,
@@ -11,7 +13,6 @@ export {
   WebGLUniformLocation,
   WebGLActiveInfo,
   WebGLShaderPrecisionFormat,
-  WebGL2RenderingContext,
 
   webGLTypesAvailable
 } from './webgl-types';
