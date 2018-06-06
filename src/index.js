@@ -121,7 +121,7 @@ export {
   registerShaderModules
 } from './shadertools/src/lib/resolve-modules';
 export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
-export {default as ShaderCache} from './shadertools/src/shader-cache';
+export {default as ShaderCache} from './shadertools/src/lib/shader-cache';
 
 // shader modules
 export {default as fp32} from './shadertools/src/modules/fp32/fp32';
