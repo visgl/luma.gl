@@ -67,7 +67,7 @@ function assembleShader(gl, {
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
-${getVersionDefines(gl, type === FRAGMENT_SHADER, glslVersion)}
+${getVersionDefines(gl, glslVersion, type === FRAGMENT_SHADER)}
 ${getApplicationDefines(defines)}
 ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
 `;

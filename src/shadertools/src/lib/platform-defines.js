@@ -45,24 +45,15 @@ export function getPlatformShaderDefines(gl) {
   }
 }
 
-export function getVersionDefines(gl, isFragment) {
+export function getVersionDefines(gl, glslVersion, isFragment) {
+// Add shadertools defines to let shaders portably v1/v3 check for features
   let versionDefines = `\
-// Defines for shader version portability
 #if (__VERSION__ > 120)
-
-# define attribute in
-# define varying ${isFragment ? 'in' : 'out'}
 
 # define FRAG_DEPTH
 # define DERIVATIVES
 # define DRAW_BUFFERS
 # define TEXTURE_LOD
-
-#else
-// TODO - can only be replaced at beginning of line
-// # define in ${isFragment ? 'varying' : 'attribute'}
-// # define out ${isFragment ? 'out' : 'varying'}
-# define texture texture2D
 
 #endif // __VERSION
 `;
