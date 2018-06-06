@@ -3,9 +3,26 @@
 In addition to these notes, always check the [Upgrade Guide](/docs/upgrade-guide.md) when considering adopting a new release.
 
 
+# Version 6.0
+
+Date: In development, target late June 2018
+
+## Shadertools
+
+* Shader assembler now transforms shader module code to the version specified by the top-level shader. GLSL 3.00 ES shader code is transformed into WebGL 1.00 ES compatible code and vice versa. T
+
+* **Portable GLSL 3.00 ES shader modules** - Accordingly, all shader modules now automatically work in both GLSL 3.00 ES and GLSL 1.00 ES (assuming they don't use GLSL 3.00 specific features).
+
+
+
+## Version 5.3
+
+Date: June 1, 2018
+
+
 ## Version 5.2
 
-Date: May 24, 2018
+Date: Apr 24, 2018
 
 ## Transform class (New, WebGL2) (Experimental)
 
