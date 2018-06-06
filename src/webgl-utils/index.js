@@ -35,7 +35,4 @@ export {
   getGLTypeFromTypedArray, getTypedArrayFromGLType, flipRows, scalePixels
 } from './typed-array-utils';
 
-export {getKeyValue, getKey, getKeyType} from '../webgl-utils/constants-to-keys';
-
-// TODO - avoid uncondsitionally importing GL as it adds a lot to bundle size?
-export {default as GL} from '../constants';
+export {getKeyValue, getKey, getKeyType} from './constants-to-keys';

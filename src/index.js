@@ -147,4 +147,4 @@ export const experimental = {
 // Due to bundle size impact, should be optional import for application
 export {default as GL} from './constants';
 
-import {glGet, glKey, glKeyType} from '../webgl-utils/constants-to-keys';
+export {glGet, glKey, glKeyType} from './webgl-utils/constants-to-keys';
