@@ -19,11 +19,8 @@ precision highp float;
 
 #define PI 3.1415926535
 
-uniform float uTime;
-uniform float uRatio;
 uniform sampler2D uSampler;
 
-varying vec2 position;
 varying vec2 uv;
 
 void main(void) {
