@@ -30,6 +30,10 @@ Several of the syntactic changes between GLSL 1.00 ES and 3.00 ES relate to shad
 
 #### From GLSL 1.00 to 3.00
 
+References
+
+* [Shaderific's Guide on how to update shaders to GLSL 3.00]http://www.shaderific.com/blog/2014/3/13/tutorial-how-to-update-a-shader-for-opengl-es-30
+
 luma.gl can also attempt to do a simple conversion code from GLSL 1.00 to GLSL 3.00. It is essentially the reverse of the mapping described in the matrix above.
 
 
