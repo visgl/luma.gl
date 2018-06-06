@@ -40,17 +40,20 @@ Current direction for luma.gl v6.x is to focus on:
 * **improved WebGL2 support** - more examples
 * **code size**
 
+| RFC | Author | Status | Description |
+| --- | ---    | ---    | ---         |
+| [**Dist Size Reduction**](v6.1/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
+
 
 ## v6.0 RFCs
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
 | [**Off-Thread (aka Off-Screen) Rendering**](v6.0/offscreen-render-rfc.md) | @pessimistress | **Review** | Use the new Off-Screen API to enable WebGL to run in a separate thread. |
-| [**Portable GLSL 3.00 Shader Modules**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Draft** | |
 | [**Centralize Attribute Management in VertexArray**](v6.0/portable-glsl-300-rfc.md) | @ibgreen | **Draft** | |
+| [**Portable GLSL 3.00 Shader Modules**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Implemented** | |
 | [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | |
 | [**Shader Module Injection**](v6.0/shader-module-injection-rfc.md) | @ibgreen | **Draft** | |
-| [**Dist Size Reduction**](v6.0/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
 
 ## v5.2 RFCs
