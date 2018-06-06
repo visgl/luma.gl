@@ -1,6 +1,26 @@
 # What's New
 
-In addition to these notes, always check the [Upgrade Guide](/docs/upgrade-guide.md) when considering adopting a new release.
+## Version 6.0
+
+### Developer's Guide
+
+luma.gl now has a more extensive Developer's Guide to make it easier to get started.
+
+### API Reference
+
+A new GLSL language reference describing both GLSL 3.00 ES and GLSL 1.00 ES as well as what has changed between the two versions.
+
+### GLSL 3.00 es support improvements
+
+- GLSL language reference page with clear information on what has changed between GLSL 3.00 ES and GLSL 1.00 ES.
+- Shader compiler automatically adapts GLSL 3.00 es to GLSL 1.00 es (and vice versa)
+- Developer Guide for Shadertools
+- All shader modules now written in GLSL 3.00 syntax
+- Guidelines for writing shaders that work in both environments
+
+### Unconditional support for Vertex Array Objects
+
+`VertexArrayObjects` are now emulated under WebGL1, meaning that they can always be used.
 
 
 # Version 6.0

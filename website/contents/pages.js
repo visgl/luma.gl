@@ -279,8 +279,28 @@ export const DOC_PAGES = [
     name: 'Developer Guide',
     children: [
       {
+        name: 'Welcome',
+        content: 'developer-guide/README.md'
+      },
+      {
         name: 'API Overview',
         content: 'api-reference/README.md'
+      },
+      {
+        name: 'Drawing',
+        content: 'developer-guide/drawing.md'
+      },
+      {
+        name: 'Geometry',
+        content: 'developer-guide/geometry.md'
+      },
+      {
+        name: 'Attributes',
+        content: 'developer-guide/attributes.md'
+      },
+      {
+        name: 'Portability',
+        content: 'developer-guide/portability.md'
       },
       {
         name: 'Building Apps',
@@ -289,11 +309,27 @@ export const DOC_PAGES = [
       {
         name: 'Debugging',
         content: 'developer-guide/debugging.md'
-      }
-  //     {
-  //       name: 'Extensions',
-  //       content: 'user-guide/extensions.md'
-  //     },
+      },
+      {
+        name: 'Shadertools',
+        content: 'developer-guide/shadertools/README.md'
+      },
+      {
+        name: 'Using Shadertools Modules',
+        content: 'developer-guide/shadertools/using-shader-modules.md'
+      },
+      {
+        name: 'Creating Shadertools Modules',
+        content: 'developer-guide/shadertools/writing-shader-modules.md'
+      },
+      {
+        name: 'Writing GLSL Code',
+        content: 'developer-guide/shadertools/writing-glsl-shaders.md'
+      },
+      // {
+      //   name: 'Extensions',
+      //   content: 'user-guide/extensions.md'
+      // },
       // {
       //   name: 'WebGL2',
       //   content: 'user-guide/webgl2.md'
@@ -424,8 +460,8 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/texture-cube.md'
       },
       {
-        name: 'Transform',
-        content: 'api-reference/core/experimental/transform.md'
+        name: 'Transform (Experimental)',
+        content: 'api-reference/core/transform.md'
       },
       {
         name: 'TransformFeedback',
@@ -449,31 +485,31 @@ export const DOC_PAGES = [
       },
       {
         name: 'hasFeature(s)',
-        content: 'api-reference/webgl/context-features/has-features.md'
+        content: 'api-reference/webgl/context/has-features.md'
       },
       {
         name: 'getFeatures',
-        content: 'api-reference/webgl/context-features/get-features.md'
+        content: 'api-reference/webgl/context/get-features.md'
       },
       {
         name: 'getContextInfo',
-        content: 'api-reference/webgl/context-limits/get-context-info.md'
+        content: 'api-reference/webgl/context/get-context-info.md'
       },
       {
         name: 'getContextLimits',
-        content: 'api-reference/webgl/context-limits/get-context-limits.md'
+        content: 'api-reference/webgl/context/get-context-limits.md'
       },
       {
         name: 'get|setParameter(s)',
-        content: 'api-reference/webgl/context-state/get-parameters.md'
+        content: 'api-reference/webgl/context/get-parameters.md'
       },
       {
         name: 'resetParameters',
-        content: 'api-reference/webgl/context-state/reset-parameters.md'
+        content: 'api-reference/webgl/context/reset-parameters.md'
       },
       {
         name: 'withParameters',
-        content: 'api-reference/webgl/context-state/with-parameters.md'
+        content: 'api-reference/webgl/context/with-parameters.md'
       }
     ]
   }
