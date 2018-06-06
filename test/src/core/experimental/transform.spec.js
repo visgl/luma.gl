@@ -5,8 +5,8 @@ import {fixture} from 'luma.gl/test/setup';
 const {Transform} = experimental;
 const VS = `\
 #version 300 es
-attribute float inValue;
-varying float outValue;
+in float inValue;
+out float outValue;
 
 void main()
 {
