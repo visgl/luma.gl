@@ -1,6 +1,6 @@
-# API Reference
+# API Structure
 
-luma.gl contains a lot of classes and functions that might make new users wonder where to get started. The authors of luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
+luma.gl contains a lot of classes and functions that might make new users wonder where to get started. luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
 
 | Folder                           | Description |
 | ---                              | --- |

@@ -19,7 +19,7 @@ The core module provides the following classes
 
 ### encodePickingColor
 
-Encodes an index as a Uint8Array([r, g, b]) format picking color`
+Encodes an index as a `Uint8Array([r, g, b])` format picking color
 
 `encodePickingColor(index)`
 
@@ -29,7 +29,7 @@ returns the decoded color
 
 ### decodePickingColor
 
-Decodes a picking color in [r, g, b] format to an index`
+Decodes a picking color in `[r, g, b]` format to an index
 
  * @param {Uint8Array} color - color array to be decoded
  * @return {Array} - the decoded picking color

@@ -1,6 +1,6 @@
 # GLSL Reference
 
-This page is an attempt to provide a reference for both GLSL 3.00 ES and GLSL 1.00 ES on a single page, with clear information on what has changed between the two language versions (the differences are often not emphasized in other sources).
+This page is a brief reference for both the GLSL 3.00 ES and GLSL 1.00 ES syntax, with notes about what has changed between the two versions (GLSL documentation tends to describe one version and the differences are often not emphasized).
 
 Main sources of information for this page comes the Khronos WebGL reference cards and GLSL language specs:
 * [WebGL2/GLSL 3.00 ES](https://www.khronos.org/files/webgl20-reference-guide.pdf)
@@ -33,8 +33,8 @@ Main sources of information for this page comes the Khronos WebGL reference card
 | Type                     | GLSL 1.00 | Description |
 | ---                      | ---       | ---         |
 | `sampler2D`              |           | access a 2D (or 3D) texture |
-| `sampler3D`              | N/A       | access a 2D or 3D texture |
 | `samplerCube`            |           | access cube mapped texture |
+| `sampler3D`              | N/A       | access a 2D or 3D texture |
 | `samplerCubeShadow`      | N/A       | access cube map depth texture with comparison |
 | `sampler2DShadow`        | N/A       | access 2D depth texture with comparison |
 | `sampler2DArray`         | N/A       | access 2D array texture |

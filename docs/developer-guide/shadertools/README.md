@@ -40,12 +40,6 @@ This object can be used as shader module directly:
 assembleShaders(gl, {..., modules: [MY_SHADER_MODULE]});
 ```
 
-Alternatively, you can register it so that it can be referred to by name.
-
-```js
-registerShaderModules([module]);
-assembleShaders(gl, {..., modules: ['my-module']});
-```
 
 ## Comparison with other WebGL shader module systems
 

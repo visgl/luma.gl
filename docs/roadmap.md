@@ -18,3 +18,17 @@ These are some of the main priorities for our next release:
 * **Transitions and Animations**.
 * **Visual Effects** - Shadows, blur, postprocessing etc. This continues to be strong goal that we intend to make progress on.
 * **Code Size** - luma.gl has gone through rapid development and we are overhauling the code and build processes to reduce the size.
+
+
+
+# Roadmap for Shadertools
+
+### Shader Module system improvements
+
+- App can add its uniforms to the shader module system.
+- Shader module system can now accept function valued uniforms, allowing animation of uniforms.
+- "Compute" shaders
+- Support for Uniform Buffers
+- Unit tests for shader modules under both GLSL 1.00 and GLSL 3.00
+
+
