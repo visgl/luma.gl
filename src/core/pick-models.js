@@ -16,16 +16,16 @@ export default function pickModels(gl, {
   uniforms = {}, // eslint-disable-line
   parameters = {},
   settings,
-  useDevicePixelRatio = null, // deprecated
   useDevicePixels = true,
-  framebuffer
+  framebuffer,
+  // deprecated/removed
+  useDevicePixelRatio = null
 }) {
   assert(isWebGL(gl), ILLEGAL_ARG);
   assert(framebuffer, ILLEGAL_ARG);
   assert(position, ILLEGAL_ARG);
   if (useDevicePixelRatio !== null) {
-    log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
-    useDevicePixels = useDevicePixelRatio;
+    log.removed('useDevicePixelRatio', 'useDevicePixels', '6.0')();
   }
 
   const [x, y] = position;

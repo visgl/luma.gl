@@ -1,5 +1,45 @@
 # Upgrade Guide
 
+## Upgrading from v5.3 to v6.0
+
+### Removed symbols
+
+luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
+
+| Removed symbol       | Replacement                            | Comment     |
+| ---                  | ---                                    | --          |
+| `readPixels`         | `Framebuffer.readPixels`               | Naming audit, deprecated in v3.0 |
+| `FrameBufferObject`  | `FrameBuffer`                          | Naming audit, deprecated in v3.0 |
+| Context              | | |
+| `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
+| `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
+| Constants            | | |
+| `GL`                 | `import {GL} from 'luma.gl/constants'` | Bundle size reduction, deprecated in v5.3 |
+| `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
+| `glKey(value)`       | `glKey(gl, value)`                     | Bundle size reduction, deprecated in v5.3 |
+| `glKeyType(value)`   | `glKeyType(gl, value)`                 | Bundle size reduction, deprecated in v5.3 |
+| AnimationLoop        | | |
+| `AnimationLoop.setViewParams()` | `AnimationLoop.setProps()`  | Naming audit, deprecated in 5.x |
+
+Math functions were moved from luma.gl to math.gl in v4.1. As of v6.0, they are no longer forwarded by luma.gl and now need to be imported directly from math.gl:
+
+```js
+import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from 'math.gl';
+```
+
+
+
+
+## Upgrading from v5.2 to v5.3
+
+v5.3 deprecates a number of symbols. It is recommended that you replace their usage in your source code.
+
+| Deprecated symbol    | Replacement                            | Reason     |
+| ---                  | ---                                    | --          |
+| `GL`                 | `import {GL} from 'luma.gl/constants'` | Bundle size concerns |
+| `deleteGLContest`    | `destroyGLContext`                     | Naming alignment |
+| `pollContext`        | `pollGLContext`                        | Naming alignment |
+
 
 ## Upgrading from v5.1 to v5.2
 

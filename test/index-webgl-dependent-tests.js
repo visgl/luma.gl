@@ -7,4 +7,3 @@ import './src/webgl-context';
 import './src/webgl';
 import './src/core';
 import './src/experimental';
-import './src/deprecated';
