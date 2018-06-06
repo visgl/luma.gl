@@ -358,7 +358,7 @@ export default function polyfillVertexArrayObject(WebGLRenderingContext, gl) {
       }
 
       if (!this.__OESVertexArrayObject) {
-        console.debug('Setup OES_vertex_array_object polyfill');
+        // console.debug('Setup OES_vertex_array_object polyfill');
         this.__OESVertexArrayObject = new OESVertexArrayObject(this);
       }
       return this.__OESVertexArrayObject;
