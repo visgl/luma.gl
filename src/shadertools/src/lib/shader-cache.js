@@ -1,6 +1,8 @@
+import assert from '../utils/assert';
+
+// TODO - luma dependencies, refactor to make shadertools independent
 import {VertexShader, FragmentShader} from '../../../webgl/shader';
 import Program from '../../../webgl/program';
-import assert from '../utils/assert';
 
 export default class ShaderCache {
 

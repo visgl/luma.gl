@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
+import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
 import sinon from 'sinon';
 import test from 'tape-catch';
 
@@ -39,8 +40,10 @@ test('assembleShaders#version_directive', t => {
     modules: [picking]
   });
   // Verify version directive remains as first line.
-  t.equal(assembleResult.vs.indexOf('#version 300 es'), 0, 'version directive should be first statement');
-  t.equal(assembleResult.fs.indexOf('#version 300 es'), 0, 'version directive should be first statement');
+  t.equal(assembleResult.vs.indexOf('#version 300 es'), 0,
+    'version directive should be first statement');
+  t.equal(assembleResult.fs.indexOf('#version 300 es'), 0,
+    'version directive should be first statement');
   t.end();
 });
 
@@ -49,8 +52,8 @@ test('assembleShaders#getUniforms', t => {
   const testModuleSettings = {pickingActive: true};
 
   // inject spy into the picking module's getUniforms
-  const picking2 = Object.assign({}, picking, {
-    getUniforms: sinon.spy(picking.getUniforms)
+  const picking2 = Object.assign(getShaderModule(picking), {
+    getUniforms: sinon.spy(getShaderModule(picking).getUniforms)
   });
 
   const testModule = {

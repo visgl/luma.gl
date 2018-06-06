@@ -24,7 +24,7 @@
 /* global window, document, */
 
 import {Buffer, Program, assembleShaders, registerShaderModules, fp64} from 'luma.gl';
-import {initializeGL, initializeTexTarget, render, getGPUOutput} from '../../test/gpu-test-utils';
+import {initializeGL, initializeTexTarget, render, getGPUOutput} from '../../../test/gpu-test-utils';
 
 const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 
