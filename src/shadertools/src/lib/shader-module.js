@@ -30,10 +30,10 @@ export default class ShaderModule {
     let moduleSource;
     switch (type) {
     case VERTEX_SHADER:
-      moduleSource = transpileShader(this.vs || '', true, targetGLSLVersion);
+      moduleSource = transpileShader(this.vs || '', targetGLSLVersion, true);
       break;
     case FRAGMENT_SHADER:
-      moduleSource = transpileShader(this.fs || '', true, targetGLSLVersion);
+      moduleSource = transpileShader(this.fs || '', targetGLSLVersion, false);
       break;
     default:
       assert(false);
