@@ -100,7 +100,7 @@ export {default as Plane} from './models/plane';
 export {default as Sphere} from './models/sphere';
 export {default as TruncatedCone} from './models/truncated-cone';
 
-export {default as ClipSpaceQuad} from './models/clip-space-quad';
+export {default as ClipSpace} from './models/clip-space';
 
 // IO
 export {
@@ -142,6 +142,10 @@ export const experimental = {
   Transform,
   Attribute
 };
+
+// DEPRECATED EXPORTS IN v6.0
+
+export {default as ClipSpaceQuad} from './models/clip-space';
 
 // DEPRECATED EXPORTS IN v5.3
 

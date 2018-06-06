@@ -19,6 +19,7 @@ export default class AnimationLoop {
   constructor(props = {}) {
     const {
       onCreateContext = opts => createGLContext(opts),
+      onAddHTML = null,
       onInitialize = () => {},
       onRender = () => {},
       onFinalize = () => {},
@@ -46,6 +47,7 @@ export default class AnimationLoop {
 
     this.props = {
       onCreateContext,
+      onAddHTML,
       onInitialize,
       onRender,
       onFinalize,
@@ -149,6 +151,11 @@ export default class AnimationLoop {
 
   // DEPRECATED/REMOVED METHODS
 
+  getHTMLControlValue(id, defaultValue = 1) {
+    const element = document.getElementById(id);
+    return element ? Number(element.value) : defaultValue;
+  }
+
   // Update parameters
   setViewParameters() {
     log.removed('AnimationLoop.setViewParameters', 'AnimationLoop.setProps')();
@@ -205,6 +212,8 @@ export default class AnimationLoop {
       // Initial values
       useDevicePixels: this.useDevicePixels,
       needsRedraw: null,
+      startTime: Date.now(),
+      time: 0,
       tick: 0,
       tock: 0
     };
@@ -229,7 +238,9 @@ export default class AnimationLoop {
     this.needsRedraw = null;
 
     // Increment tick
+    this._callbackData.time = Date.now() - this._callbackData.startTime;
     this._callbackData.tick++;
+    this._callbackData.tock = Math.floor(this._callbackData.time / 1000 * 60);
   }
 
   _finalizeCallbackData() {
@@ -261,6 +272,29 @@ export default class AnimationLoop {
 
     // Reset the WebGL context.
     resetParameters(this.gl);
+
+    this._createInfoDiv();
+  }
+
+  _createInfoDiv() {
+    if (this.gl.canvas && this.props.onAddHTML) {
+      /* global document */
+      const wrapperDiv = document.createElement('div');
+      document.body.appendChild(wrapperDiv);
+      wrapperDiv.style.position = 'relative';
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.left = '10px';
+      div.style.bottom = '10px';
+      div.style.width = '300px';
+      div.style.background = 'white';
+      wrapperDiv.appendChild(this.gl.canvas);
+      wrapperDiv.appendChild(div);
+      const html = this.props.onAddHTML(div);
+      if (html) {
+        div.innerHTML = html;
+      }
+    }
   }
 
   // Default viewport setup

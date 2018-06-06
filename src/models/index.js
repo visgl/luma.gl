@@ -8,4 +8,4 @@ export {default as Sphere} from './sphere';
 export {default as TruncatedCone} from './truncated-cone';
 
 // GPGPU models
-export {default as ClipSpaceQuad} from './clip-space-quad';
+export {default as ClipSpace} from './clip-space';
