@@ -1,7 +1,7 @@
 /* global window */
-import {AnimationLoop, Buffer, setParameters, Model, experimental} from 'luma.gl';
+import {AnimationLoop, Buffer, setParameters, Model, experimental, pickModels, picking} from 'luma.gl';
 const {Transform} = experimental;
-
+const RED = new Uint8Array([255, 0, 0, 255]);
 /* eslint-disable max-len */
 const INFO_HTML = `
 <p>
@@ -87,6 +87,7 @@ layout(location = POSITION_LOCATION) in vec2 a_position;
 layout(location = ROTATION_LOCATION) in float a_rotation;
 layout(location = OFFSET_LOCATION) in vec2 a_offset;
 layout(location = COLOR_LOCATION) in vec3 a_color;
+in vec2 instancePickingColors;
 out vec3 v_color;
 void main()
 {
@@ -99,6 +100,7 @@ void main()
         -sin_r, cos_r
     );
     gl_Position = vec4(rot * a_position + a_offset, 0.0, 1.0);
+    picking_setPickingColor(vec3(0., instancePickingColors));
 }
 `;
 
@@ -112,16 +114,28 @@ out vec4 color;
 void main()
 {
     color = vec4(v_color * ALPHA, ALPHA);
+    color = picking_filterColor(color);
 }
 `;
 
 const NUM_INSTANCES = 1000;
 let currentSourceIdx = 0;
 
+let pickPosition = [0, 0];
+function mousemove(e) {
+  pickPosition = [e.offsetX, e.offsetY];
+}
+function mouseleave(e) {
+  pickPosition = null;
+}
+
 const animationLoop = new AnimationLoop({
   glOptions: {webgl2: true},
+  createFramebuffer: true,
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
+    gl.canvas.addEventListener('mousemove', mousemove);
+    gl.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const trianglePositions = new Float32Array([
@@ -133,6 +147,7 @@ const animationLoop = new AnimationLoop({
     const instanceOffsets = new Float32Array(NUM_INSTANCES * 2);
     const instanceRotations = new Float32Array(NUM_INSTANCES);
     const instanceColors = new Float32Array(NUM_INSTANCES * 3);
+    const pickingColors = new Uint8ClampedArray(NUM_INSTANCES * 2);
 
     for (let i = 0; i < NUM_INSTANCES; ++i) {
       instanceOffsets[i * 2] = Math.random() * 2.0 - 1.0;
@@ -148,6 +163,10 @@ const animationLoop = new AnimationLoop({
         instanceColors[i * 3] = 1.0;
         instanceColors[i * 3 + 2] = 1.0;
       }
+
+      pickingColors[i * 2] = Math.floor(i / 255);
+      pickingColors[i * 2 + 1] = i - 255 * pickingColors[i * 2];
+
     }
 
     const positionBuffer = new Buffer(gl, {
@@ -186,8 +205,10 @@ const animationLoop = new AnimationLoop({
       instanceCount: NUM_INSTANCES,
       attributes: {
         a_position: positionBuffer,
-        a_color: colorBuffer
-      }
+        a_color: colorBuffer,
+        instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
+      },
+      modules: [picking]
     });
 
     const transform = new Transform(gl, {
@@ -229,7 +250,9 @@ const animationLoop = new AnimationLoop({
     modelRender,
     positionBuffer,
     colorBuffer,
-    transform
+    transform,
+    framebuffer,
+    useDevicePixels
   }) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -256,6 +279,21 @@ const animationLoop = new AnimationLoop({
     rotationBuffer.updateLayout({instanced: 0});
 
     currentSourceIdx = destinationIdx;
+
+    const pickInfo = pickPosition && pickModels(gl, {
+      models: [modelRender],
+      position: pickPosition,
+      useDevicePixels,
+      framebuffer
+    });
+
+    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
+
+    modelRender.updateModuleSettings({
+      pickingSelectedColor,
+      pickingHighlightColor: RED
+    });
+
   },
 
   onFinalize({

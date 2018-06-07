@@ -41,7 +41,7 @@ uniform vec3 picking_uSelectedColor;
 uniform float picking_uThreshold;
 uniform bool picking_uSelectedColorValid;
 
-varying vec4 picking_vRGBcolor_Aselected;
+out vec4 picking_vRGBcolor_Aselected;
 
 const float COLOR_SCALE = 1. / 255.;
 
@@ -68,7 +68,7 @@ uniform bool picking_uActive; // true during rendering to offscreen picking buff
 uniform vec3 picking_uSelectedColor;
 uniform vec4 picking_uHighlightColor;
 
-varying vec4 picking_vRGBcolor_Aselected;
+in vec4 picking_vRGBcolor_Aselected;
 
 const float COLOR_SCALE = 1. / 255.;
 
