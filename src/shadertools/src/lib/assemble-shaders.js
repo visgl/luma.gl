@@ -1,19 +1,12 @@
+import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
-import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
+import injectShader from './inject-shader';
 import assert from '../utils/assert';
-
-const VERTEX_SHADER = 'vs';
-const FRAGMENT_SHADER = 'fs';
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
   [FRAGMENT_SHADER]: 'fragment'
-};
-
-const MODULE_INJECTORS = {
-  [VERTEX_SHADER]: MODULE_INJECTORS_VS,
-  [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
 };
 
 // Precision prologue to inject before functions are injected in shader
@@ -44,9 +37,12 @@ function assembleShader(gl, {
   type,
   modules = [],
   defines = {},
+  inject = {},
   log
 }) {
   assert(typeof source === 'string', 'shader source must be a string');
+
+  const isVertex = type === VERTEX_SHADER;
 
   const sourceLines = source.split('\n');
   let glslVersion = 100;
@@ -67,17 +63,17 @@ function assembleShader(gl, {
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
-${getVersionDefines(gl, glslVersion, type === FRAGMENT_SHADER)}
+${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(defines)}
-${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
+${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 `;
 
   // Add source of dependent modules in resolved order
-  let inject = false;
+  let injectStandardStubs = false;
   for (const module of modules) {
     switch (module.name) {
     case 'inject':
-      inject = true;
+      injectStandardStubs = true;
       break;
 
     default:
@@ -91,10 +87,8 @@ ${type === FRAGMENT_SHADER ? FRAGMENT_SHADER_PROLOGUE : ''}
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
 
-  // Finally, if requested, insert an automatic module injector chunk
-  if (inject) {
-    assembledSource.replace('}\s*$', MODULE_INJECTORS);
-  }
+  // Apply any requested shader injections
+  assembledSource = injectShader(assembledSource, type, inject, injectStandardStubs);
 
   return assembledSource;
 }

@@ -40,15 +40,15 @@ export default class Model extends Object3D {
     // 1: Modular shaders
     modules = null,
     defines = {},
+    inject = {},
     moduleSettings = {},
+    shaderCache = null,
 
     // 2: Legacy shaders
     defaultUniforms,
 
     // 3: Pre-created program
     program = null,
-
-    shaderCache = null,
 
     isInstanced = false, // Enables instanced rendering
     instanced, // deprecated
@@ -80,6 +80,7 @@ export default class Model extends Object3D {
       fs,
       modules,
       defines,
+      inject,
       moduleSettings,
       defaultUniforms,
       program,
