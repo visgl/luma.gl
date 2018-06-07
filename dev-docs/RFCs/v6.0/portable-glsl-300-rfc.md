@@ -1,4 +1,4 @@
-# RFC: Portable GLSL 3.00 ES shader modules
+# RFC: GLSL 3.00 ES Shader Transpilation
 
 * **Authors**: Ib Green
 * **Date**: Jun 2018

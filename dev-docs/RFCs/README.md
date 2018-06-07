@@ -42,6 +42,8 @@ Current direction for luma.gl v6.x is to focus on:
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
+| [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | A number of mainly conceptual improvements of the shader module system. |
+| [**Shader Module Injection**](v6.1/shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
 | [**Dist Size Reduction**](v6.1/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
 
@@ -50,10 +52,9 @@ Current direction for luma.gl v6.x is to focus on:
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
 | [**Off-Thread (aka Off-Screen) Rendering**](v6.0/offscreen-render-rfc.md) | @pessimistress | **Review** | Use the new Off-Screen API to enable WebGL to run in a separate thread. |
-| [**Centralize Attribute Management in VertexArray**](v6.0/portable-glsl-300-rfc.md) | @ibgreen | **Draft** | |
+| [**Centralize Attribute Management in VertexArray**](v6.0/portable-glsl-300-rfc.md) | @ibgreen | **Draft** | Move attribute management to `VertexArray` |
 | [**Portable GLSL 3.00 Shader Modules**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Implemented** | |
-| [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | |
-| [**Shader Module Injection**](v6.0/shader-module-injection-rfc.md) | @ibgreen | **Draft** | |
+| [**Shader Fragment Injection**](v6.0/shader-fragment-injection-rfc.md) | @ibgreen | **Draft** | Enable short fragments of code to be injected into existing shaders |
 
 
 ## v5.2 RFCs

@@ -5,22 +5,23 @@
 * **Status**: Early Draft
 
 
+References
+
+* A related system is described here [Shader Fragment Injection](https://github.com/uber/luma.gl/blob/master/dev-docs/RFCs/v6.0/shader-injection-rfc.md)
+
+
 ## Overview
 
-This RFC explores dynamic injection of shader modules into existing code.
+This RFC explores dynamic injection of shader modules into existing code. whether it is possible to have the necessary additions to the main shader happen automatically as a result of just adding a shader module to the module list.
 
 
 ## Motivation
 
-Being able to automatically (dynamically) inject modules into shaders would provide a lot of flexibility and simplicity to luma.gl and deck.gl applications.
+Being able to automatically / dynamically inject shader modules into existing shaders (i.e. without having to copy or modify the existing shaders) would provide a tremendous amount of flexibility and simplicity to luma.gl and deck.gl applications.
 
-An application can currently specify a list of modules to be injected into its shaders, however it still needs to manually modify its shaders to call those modules.
+An application can currently specify a list of modules to be injected into its shaders, however it still needs to manually modify its shaders to call those modules, or use shader fragment injection.
 
-
-## Overview
-
-* Application Customization, extending an existing shader by injecting a few lines when subclassing modules or layers
-* Automatic Shader Module Injection
+Now that we have developed a number of shader modules, we are starting to see that the API provided by these modules is quite "formulaic". Especially the fragment shaders tend to use `<module_name>_filterColor` convention.
 
 
 ## Proposal
@@ -35,9 +36,6 @@ new Model(gl, {
 });
 ```
 
-### Vertex shader
-
-
 ### Fragment shader
 
 A common pattern is for shader modules to offer a fragment shader that exposes a single primary `<module>_filterColor()` method. This needs to be added to the fragment shader. Normally the only thing that matters is the order of the filterColor calls from different modules.
@@ -45,7 +43,11 @@ A common pattern is for shader modules to offer a fragment shader that exposes a
 By adding a priority value (integer) to each shader module definition, the assembleShaders system could automatically inject these `_filterColor()` calls in the right order simply by walking the list of requested modules.
 
 
-### Identifying where to inject
+### Vertex shader
+
+
+
+## Identifying where to inject
 
 A simple convention can be that the main function must come last in the app shader, and we can just find the last brace in the file and start injecting before that.
 
@@ -74,3 +76,8 @@ main() {
 The shader modules are expected to define relative priorities of their `<module>_filterColor` calls, so that assembleShaders can automatically order the selected injections.
 
 Perhaps priorities could be given explicitly by the app when listing shader modules?
+
+
+## Open Issues
+
+* JavaScript side, additional uniforms and attributes needed.
