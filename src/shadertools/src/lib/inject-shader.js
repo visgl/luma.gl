@@ -6,7 +6,8 @@ const MODULE_INJECTORS = {
   [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
 };
 
-// A basic shader injection system.
+// A minimal shader injection/templating system.
+// RFC: https://github.com/uber/luma.gl/blob/master/dev-docs/RFCs/v6.0/shader-injection-rfc.md
 export default function injectShader(source, type, inject, injectStandardStubs) {
   const INJECT_DECLARATIONS = /^/;
   const INJECT_CODE = /}[^{}]*$/;
