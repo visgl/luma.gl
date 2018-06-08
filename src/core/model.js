@@ -624,7 +624,7 @@ count: ${this.stats.profileFrameCount}`
       instanced = attribute.instanced;
       size = attribute.size;
       if (attribute.externalBuffer) {
-        value = attribute.externalBuffer.data;
+        value = attribute.externalBuffer.data || attribute.externalBuffer.getData();
         bytes = attribute.externalBuffer.bytes;
         verts = bytes / value.BYTES_PER_ELEMENT;
       } else if (attribute.value) {
