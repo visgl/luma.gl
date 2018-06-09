@@ -8,11 +8,16 @@
 // easy to reuse or repurpose in other projects.
 
 /* eslint-disable camelcase, brace-style */
+import GL from '../constants';
 import {getParameterPolyfill} from './polyfill-get-parameter';
 import polyfillVertexArrayObject from './polyfill-vertex-array-object';
-import {WebGLRenderingContext} from '../webgl-utils';
-import assert from '../utils/assert';
-import GL from '../constants';
+import {WebGLRenderingContext} from './webgl-rendering-context';
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message || 'luma.gl: assertion failed.');
+  }
+}
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -176,6 +181,8 @@ function polyfillExtension(gl, {extension, target, target2}) {
   const defaults = WEBGL_CONTEXT_POLYFILLS[extension];
   assert(defaults);
 
+  console.error('Polyfilling' + extension);
+
   const {meta = {}} = defaults;
   const {suffix = ''} = meta;
 
@@ -234,3 +241,7 @@ export default function polyfillContext(gl) {
   }
   return gl;
 }
+
+/* global window, global */
+const global_ = typeof global !== 'undefined' ? global : window;
+global_.polyfillContext = polyfillContext;

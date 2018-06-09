@@ -32,6 +32,7 @@
     "src",
     "dist",
     "constants.js",
+    "webgl1.js",
     "debug.js",
     "headless.js"
   ],
@@ -54,7 +55,7 @@
     "test": "npm run lint && npm run test-node && npm run build && npm run test-dist &&  npm run collect-metrics && npm run test-browser-puppet",
     "test-ci": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics",
     "test-cover": "NODE_ENV=test tape -r babel-register test/node.js && nyc report",
-    "test-fast": "node test/node.js",
+    "test-fast": "node test/start.js test",
     "test-fp64": "(cd src/shadertools/test && webpack-dev-server --progress --hot --open)",
     "test-node": "node test/node.js",
     "test-dist": "npm run build-es6 && node test/start.js test-dist",

@@ -46,7 +46,7 @@ export default class Query extends Resource {
     }
 
     if (timestamps) {
-      polyfillContext(gl);
+      // polyfillContext(gl);
       const queryCounterBits = gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
       supported = supported && (queryCounterBits > 0);
     }

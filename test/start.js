@@ -17,6 +17,7 @@ console.log(`Running test suite in "${mode}" mode...`); // eslint-disable-line
 
 switch (mode) {
 case 'test':
+  require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./src/debug/seer-integration');
@@ -27,6 +28,7 @@ case 'test-dist':
   const dist = arg === 'default' ? 'es6' : arg;
   moduleAlias.addAlias('luma.gl', path.resolve(`./dist/${dist}`));
 
+  require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./src/debug/seer-integration');
@@ -34,6 +36,7 @@ case 'test-dist':
 
 case 'test-ci':
   // Run a smaller selection of the tests (avoid overwhelming Travis CI)
+  require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./src/debug/seer-integration');

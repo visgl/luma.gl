@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
+
 import GL from 'luma.gl/constants';
 import {Texture2D, getKey} from 'luma.gl';
 
@@ -64,7 +65,11 @@ test('WebGL#Texture2D format creation', t => {
       // const opts = Object.assign({format}, textureFormat);
       // const texture = new Texture2D(gl, opts);
       // t.equals(texture.format, format,
+<<<<<<< HEAD
       //   `Texture2D(${getKey(GL, format)}) created with correct format`);
+=======
+      //   `Texture2D(${glKey(gl, format)}) created with correct format`);
+>>>>>>> Make polyfills for webgl1 optional.
 
       // texture.delete();
     }
@@ -116,7 +121,8 @@ test('WebGL2#Texture2D format creation', t => {
       for (const type of types) {
         // texture = new Texture2D(gl2, Object.assign({format, dataFormat, type}));
         // t.equals(texture.format, format,
-        //   `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) created`);
+        //   `Texture2D({format: ${glKey(gl, format)}, type: ${glKey(gl, type)},
+        //    dataFormat: ${glKey(gl, dataFormat)}) created`);
         // texture.delete()
         const data = TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA;
         if (data) { // eslint-disable-line

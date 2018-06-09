@@ -39,7 +39,7 @@ test('WebGL#Renderbuffer format creation', t => {
     if (Renderbuffer.isSupported(gl, {format})) {
       const renderbuffer = new Renderbuffer(gl, {format});
       t.equals(renderbuffer.format, format,
-        `Renderbuffer(${glKey(format)}) created with correct format`);
+        `Renderbuffer(${glKey(gl, format)}) created with correct format`);
       renderbuffer.delete();
     }
   }
@@ -61,7 +61,7 @@ test('WebGL2#Renderbuffer format creation', t => {
     if (Renderbuffer.isSupported(gl2, {format})) {
       const renderbuffer = new Renderbuffer(gl2, {format});
       t.equals(renderbuffer.format, format,
-        `Renderbuffer(${glKey(format)}) created with correct format`);
+        `Renderbuffer(${glKey(gl, format)}) created with correct format`);
       renderbuffer.delete();
     }
   }

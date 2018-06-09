@@ -1,4 +1,4 @@
-import polyfillContext from 'luma.gl/webgl-context/polyfill-context';
+import polyfillContext from 'luma.gl/webgl1/polyfill-context';
 import test from 'tape-catch';
 
 import {fixture} from 'luma.gl/test/setup';
