@@ -429,7 +429,7 @@ export const DOC_PAGES = [
       },
       {
         name: 'ShaderCache',
-        content: 'api-reference/shadertools/shader-cache.md'
+        content: 'api-reference/core/shader-cache.md'
       },
       {
         name: 'Shader Modules',
