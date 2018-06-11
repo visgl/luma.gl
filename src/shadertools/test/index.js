@@ -3,7 +3,6 @@ import './utils/is-old-ie.spec';
 import './lib/transpile-shader.spec.js';
 import './lib/assemble-shaders.spec.js';
 import './lib/resolve-modules.spec';
-import './lib/shader-cache.spec';
 
 import './modules';
 

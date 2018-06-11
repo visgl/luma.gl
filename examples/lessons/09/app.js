@@ -1,4 +1,6 @@
-import {GL, AnimationLoop, loadTextures, addEvents, Matrix4, setParameters} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {AnimationLoop, loadTextures, addEvents, setParameters} from 'luma.gl';
+import {Matrix4} from 'math.gl';
 import {Star} from './star';
 
 const INFO_HTML = `

@@ -1,5 +1,4 @@
 import luma from '../init';
-import {polyfillContext} from '../webgl-context';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../webgl-utils';
 import {uid} from '../utils';
 import assert from '../utils/assert';
@@ -17,7 +16,7 @@ export default class Resource {
 
     const {id, userData = {}} = opts;
     this.gl = gl;
-    this.ext = polyfillContext(gl);
+    // this.ext = polyfillContext(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this.opts = opts;

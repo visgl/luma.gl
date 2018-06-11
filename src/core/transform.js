@@ -1,10 +1,10 @@
-import GL from '../../constants';
-import Buffer from '../../webgl/buffer';
-import TransformFeedback from '../../webgl/transform-feedback';
-import Model from '../model';
-import {isWebGL2, assertWebGL2Context} from '../../webgl-utils';
-import assert from '../../utils/assert';
-import {log} from '../../utils';
+import GL from '../constants';
+import Model from './model';
+import Buffer from '../webgl/buffer';
+import TransformFeedback from '../webgl/transform-feedback';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
+import assert from '../utils/assert';
+import {log} from '../utils';
 
 const PASS_THROUGH_FS = `\
 void main()

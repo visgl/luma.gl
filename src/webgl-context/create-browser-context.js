@@ -1,7 +1,3 @@
-// Create a WebGL context
-import assert from '../utils/assert';
-/* global HTMLCanvasElement, WebGLRenderingContext */
-
 /**
  * Create a WebGL context for a canvas
  * Note calling this multiple time on the same canvas does return the same context
@@ -11,7 +7,7 @@ export function createBrowserContext({
   opts = {}, // WebGLRenderingContext options
   onError = message => null
 }) {
-  // See if we can extract any extra information about why context creation failed
+  // Try to extract any extra information about why context creation failed
   function onContextCreationError(error) {
     onError(`WebGL context: ${error.statusMessage || 'Unknown error'}`);
   }
@@ -36,32 +32,4 @@ export function createBrowserContext({
   }
 
   return gl;
-}
-
-/**
- * Installs a spy on Canvas.getContext
- * calls the provided callback with the {context}
- */
-export function trackContextCreation({
-  onContextCreate = () => null,
-  onContextCreated = () => {}
-}) {
-  assert(onContextCreate || onContextCreated);
-  if (typeof HTMLCanvasElement !== 'undefined') {
-    const getContext = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function getContextSpy(type, opts) {
-      // Let intercepter create context
-      let context;
-      if (type === 'webgl') {
-        context = onContextCreate({canvas: this, type, opts, getContext: getContext.bind(this)});
-      }
-      // If not, create context
-      context = context || getContext.call(this, type, opts);
-      // Report it created
-      if (context instanceof WebGLRenderingContext) {
-        onContextCreated({canvas: this, context, type, opts});
-      }
-      return context;
-    };
-  }
 }

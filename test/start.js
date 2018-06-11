@@ -13,11 +13,13 @@ const {BrowserTestDriver} = require('probe.gl/test-utils');
 
 const mode = process.argv.length >= 3 ? process.argv[2] : 'default';
 const arg = process.argv.length >= 4 ? process.argv[3] : 'default';
-console.log(`Running ${mode} {arg} tests...`); // eslint-disable-line
+console.log(`Running test suite in "${mode}" mode...`); // eslint-disable-line
 
 switch (mode) {
 case 'test':
-  require('./src/index'); // Run the tests
+  require('./index-webgl-independent-tests');
+  require('./index-webgl-dependent-tests');
+  require('./src/debug/seer-integration');
   break;
 
 case 'test-dist':

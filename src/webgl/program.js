@@ -135,13 +135,13 @@ export default class Program extends Resource {
         () => {
           // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
           if (isIndexed && isInstanced) {
-            this.ext.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+            this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
           } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
             this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
           } else if (isIndexed) {
             this.gl.drawElements(drawMode, vertexCount, indexType, offset);
           } else if (isInstanced) {
-            this.ext.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+            this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
           } else {
             this.gl.drawArrays(drawMode, offset, vertexCount);
           }

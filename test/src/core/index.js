@@ -1,2 +1,3 @@
+import './shader-cache.spec';
 // Experimental
-import './experimental/transform.spec';
+import './transform.spec';

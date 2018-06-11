@@ -39,9 +39,7 @@ const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 export default class VertexArray extends Resource {
 
   static isSupported(gl) {
-    // Now always supported via client side polyfill
-    log.deprecated('VertexArray.isSupported()', 'always true', '6.0');
-    return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
+    return Boolean(isWebGL2(gl) || gl.getExtension(OES_vertex_array_object));
   }
 
   static getDefaultArray(gl) {
@@ -136,7 +134,7 @@ export default class VertexArray extends Resource {
     }
     const {locations, elements} = this._getLocations(buffers);
 
-    this.ext.bindVertexArray(this.handle);
+    this.gl.bindVertexArray(this.handle);
 
     // Process locations in order
     for (const location in locations) {
@@ -153,7 +151,7 @@ export default class VertexArray extends Resource {
     }
     this.buffers = buffers;
 
-    this.ext.bindVertexArray(null);
+    this.gl.bindVertexArray(null);
 
     if (elements) {
       this.setElements(elements);
@@ -170,9 +168,9 @@ export default class VertexArray extends Resource {
   setElements(elements) {
     assert(!elements || elements.target === GL_ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
-    this.ext.bindVertexArray(this.handle);
+    this.gl.bindVertexArray(this.handle);
     this.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements && elements.handle);
-    this.ext.bindVertexArray(null);
+    this.gl.bindVertexArray(null);
 
     this.elements = elements;
     return this;
@@ -211,7 +209,7 @@ export default class VertexArray extends Resource {
   // Set the frequency divisor used for instanced rendering.
   setDivisor(location, divisor) {
     this.bind(() => {
-      this.ext.vertexAttribDivisor(location, divisor);
+      this.gl.vertexAttribDivisor(location, divisor);
     });
   }
 
@@ -259,12 +257,12 @@ export default class VertexArray extends Resource {
     let value;
 
     if (!this._bound) {
-      this.ext.bindVertexArray(this.handle);
+      this.gl.bindVertexArray(this.handle);
       this._bound = true;
 
       value = funcOrHandle();
 
-      this.ext.bindVertexArray(null);
+      this.gl.bindVertexArray(null);
       this._bound = false;
     } else {
       value = funcOrHandle();
@@ -415,11 +413,11 @@ export default class VertexArray extends Resource {
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
-    return this.ext.createVertexArray();
+    return this.gl.createVertexArray();
   }
 
   _deleteHandle(handle) {
-    this.ext.deleteVertexArray(handle);
+    this.gl.deleteVertexArray(handle);
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }
@@ -431,7 +429,7 @@ export default class VertexArray extends Resource {
   _getParameter(pname, {location}) {
     assert(Number.isFinite(location));
 
-    this.ext.bindVertexArray(this.handle);
+    this.gl.bindVertexArray(this.handle);
 
     // Let the polyfill intercept the query
     let result;
@@ -440,10 +438,10 @@ export default class VertexArray extends Resource {
       result = this.gl.getVertexAttribOffset(location, pname);
       break;
     default:
-      result = this.ext.getVertexAttrib(location, pname);
+      result = this.gl.getVertexAttrib(location, pname);
     }
 
-    this.ext.bindVertexArray(null);
+    this.gl.bindVertexArray(null);
     return result;
   }
 
@@ -458,6 +456,6 @@ export default class VertexArray extends Resource {
   }
 
   _bind(handle) {
-    this.ext.bindVertexArray(handle);
+    this.gl.bindVertexArray(handle);
   }
 }
