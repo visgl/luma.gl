@@ -54,14 +54,14 @@ export function glGet(gl, name) {
 }
 
 export function glKey(gl, value) {
-  if (!value) {
+  if (value === undefined) {
     log.removed('glKey(value)', 'glKey(gl, value)', '6.0')();
   }
   return getKey(gl, value);
 }
 
 export function glKeyType(gl, value) {
-  if (!value) {
+  if (value === undefined) {
     log.removed('glKeyType(value)', 'glKeyType(gl, value)', '6.0')();
   }
   return getKeyType(gl, value);

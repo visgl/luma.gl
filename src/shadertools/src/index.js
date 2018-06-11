@@ -4,8 +4,6 @@ export {
   registerShaderModules,
   setDefaultShaderModules} from './lib/resolve-modules';
 
-export {default as ShaderCache} from './lib/shader-cache';
-
 // shader modules
 export {default as fp32} from './modules/fp32/fp32';
 export {default as fp64} from './modules/fp64/fp64';

@@ -18,7 +18,6 @@ export {
   setContextDefaults
 } from './webgl-context/context';
 export {
-  trackContextCreation,
   trackContextState} from './webgl-context';
 export {
   resetParameters,
@@ -121,7 +120,6 @@ export {
   registerShaderModules
 } from './shadertools/src/lib/resolve-modules';
 export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
-export {default as ShaderCache} from './shadertools/src/lib/shader-cache';
 
 // shader modules
 export {default as fp32} from './shadertools/src/modules/fp32/fp32';
@@ -135,7 +133,8 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 // EXPERIMENTAL EXPORTS
 
 import {clearBuffer} from './webgl/clear';
-import {default as Transform} from './core/experimental/transform';
+import {default as Transform} from './core/transform';
+export {default as ShaderCache} from './core/shader-cache';
 
 export const experimental = {
   clearBuffer,

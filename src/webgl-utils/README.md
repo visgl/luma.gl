@@ -21,11 +21,6 @@ Programatically creates a canvas element with a certain size and id, and inserts
 
 Gives a controlled interface to create a WebGL1 or WebGL2 context from a canvas.
 
-### trackContextCreation
-
-If you need access to the WebGL context created by another application or framework, this spy allows you to intercept context creation requests.
-
-
 ## State Management
 
 ### trackContextState
