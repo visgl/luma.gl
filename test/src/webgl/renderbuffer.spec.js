@@ -61,7 +61,7 @@ test('WebGL2#Renderbuffer format creation', t => {
     if (Renderbuffer.isSupported(gl2, {format})) {
       const renderbuffer = new Renderbuffer(gl2, {format});
       t.equals(renderbuffer.format, format,
-        `Renderbuffer(${glKey(gl, format)}) created with correct format`);
+        `Renderbuffer(${glKey(gl2, format)}) created with correct format`);
       renderbuffer.delete();
     }
   }

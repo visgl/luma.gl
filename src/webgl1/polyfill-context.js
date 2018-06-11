@@ -181,8 +181,6 @@ function polyfillExtension(gl, {extension, target, target2}) {
   const defaults = WEBGL_CONTEXT_POLYFILLS[extension];
   assert(defaults);
 
-  console.error('Polyfilling' + extension);
-
   const {meta = {}} = defaults;
   const {suffix = ''} = meta;
 
