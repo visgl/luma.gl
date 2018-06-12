@@ -5,18 +5,6 @@ A `Buffer` is a WebGL object that stores an chunk of memory allocated by the GPU
 For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Buffer_Object).
 
 
-## Buffer Methods
-
-| **Method** | **Description** |
-| --- | --- |
-| `constructor` | Creates a Buffer|
-| `initialize` | Allocates and optionally initializes the buffer object's data store on GPU. |
-| `delete` | Destroys buffer |
-| `subData` | Updates a subset of a buffer object's data store. |
-| `copyData` (WebGL2) | Copies part of the data of another buffer into this buffer |
-| `getData` (WebGL2) | Reads data from buffer (GPU) into an `ArrayBufferView` or `SharedArrayBuffer`.|
-
-
 ## Usage
 
 ```js

@@ -1,4 +1,4 @@
-# TransformFeedback
+# TransformFeedback (WebGL2)
 
 `TransformFeedback` objects holds state needed to perform transform feedback operations. They store the buffer bindings that are being recorded to. This makes it easy to switch between different sets of feedback buffer bindings (somewhat similar to how `VertexArrayObjects` hold input vertex buffers.
 

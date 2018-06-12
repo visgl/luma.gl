@@ -8,6 +8,7 @@ For additional information, see OpenGL Wiki [Framebuffer](https://www.khronos.or
 ## Usage
 
 Creating a framebuffer with default color and depth attachments
+
 ```js
 const framebuffer = new Framebuffer(gl, {
   width: window.innerWidth,
@@ -16,6 +17,7 @@ const framebuffer = new Framebuffer(gl, {
   depth: true
 });
 ```
+
 When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
 For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
 
@@ -29,6 +31,7 @@ For depth, new `Renderbuffer` object is created with `GL.DEPTH_COMPONENT16` form
 
 
 Attaching textures and renderbuffers
+
 ```js
 framebuffer.attach({
   [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {...}),
@@ -42,18 +45,21 @@ framebuffer.checkStatus(); // optional
 ```
 
 Resizing a framebuffer to the size of a window
+
 ```js
 // Note: this resizes (and possibly clears) all attachments
 framebuffer.resize({width: window.innerWidth, height: window.innerHeight});
 ```
 
 Clearing a framebuffer
+
 ```js
 framebuffer.clear();
 framebuffer.clear({color: [0, 0, 0, 0], depth: 1, stencil: 0});
 ```
 
 Specifying a framebuffer for rendering in each render calls
+
 ```js
 const offScreenBuffer = new Framebuffer();
 program1.draw({
@@ -67,6 +73,7 @@ model.draw({
 ```
 
 Binding a framebuffer for multiple render calls
+
 ```js
 const framebuffer1 = ...;
 const framebuffer2 = ...;
@@ -80,7 +87,9 @@ withParameters(gl, {framebuffer: framebuffer1}, () => {
 });
 // framebuffer1 is not longer bound
 ```
+
 Reading data from a framebuffer color attachment.
+
 ```js
 // With CPU and GPU sync
 const data = framebuffer.readPixels({
@@ -104,7 +113,9 @@ model.setAttributes({
   attribute_name: buffer
 });
 ```
+
 Blitting between framebuffers (WebGL2)
+
 ```js
 framebuffer.blit({
   srcFramebuffer: ..., srcX: 0, srcy:0, srcWidth, srcHeight,
@@ -113,6 +124,7 @@ framebuffer.blit({
 ```
 
 Invalidating framebuffers (WebGL2)
+
 ```js
 framebuffer.invalidate(); // GPU can release the data for all attachments
 framebuffer.invalidate({attachments: [...]}); // GPU can release the data for specified attachments
@@ -122,6 +134,7 @@ framebuffer.invalidate({attachments: [...]}); // GPU can release the data for sp
 ### Using Multiple Render Targets
 
 Specify which framebuffer attachments the fragment shader will be writing to when assigning to `gl_FragData[]`
+
 ```js
 framebuffer.configure({
   drawBuffers: [
@@ -134,7 +147,8 @@ framebuffer.configure({
 ```
 
 Writing to multiple framebuffer attachments in GLSL fragment shader
-```
+
+```glsl
 #extension GL_EXT_draw_buffers : require
 precision highp float;
 void main(void) {
@@ -180,7 +194,7 @@ new Framebuffer(gl, {
 
 * `gl` - (*WebGLContext*) - context
 * `id`= - (*String*) - An optional name (id) of the buffer.
-* `width=`1` - (*number*) The width of the framebuffer.
+* `width`=`1` - (*number*) The width of the framebuffer.
 * `height`=`1` - (*number*) The height of the framebuffer.
 * `attachments`={} - (*Object*, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
 * `color` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
@@ -201,7 +215,7 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 
 `Framebuffer.initialize({width, height})`
 
-* `width=`1` - (*number*) The width of the framebuffer.
+* `width`=`1` - (*number*) The width of the framebuffer.
 * `height`=`1` - (*number*) The height of the framebuffer.
 * `attachments`={} - (*Object*, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
 * `texture` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
@@ -247,7 +261,12 @@ The following values can be provided for each attachment
 
 This function makes calls to the following WebGL APIs:
 
-[`gl.framebufferRenderbuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferRenderbuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.framebufferTexture2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferTexture2D), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.framebufferTextureLayer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/framebufferTextureLayer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL2 only)
+[`gl.framebufferRenderbuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferRenderbuffer),
+[`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer),
+[`gl.framebufferTexture2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferTexture2D),
+[`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer),
+[`gl.framebufferTextureLayer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/framebufferTextureLayer),
+[`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL2 only)
 
 
 ### checkStatus
@@ -286,7 +305,7 @@ Parameters
 Notes:
 
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
-* When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
+* When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
 This function makes calls to the following WebGL APIs:
 
@@ -311,7 +330,7 @@ Parameters
 Notes:
 
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
-* When supported, the `{format: GL.RGBA`, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
+* When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
 This function makes calls to the following WebGL APIs:
 
