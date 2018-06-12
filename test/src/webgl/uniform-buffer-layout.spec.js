@@ -61,7 +61,7 @@ const TEST_CASES = [
 ];
 */
 
-test('WebGL#UniformLayout', t => {
+test('WebGL#UniformBufferLayout', t => {
 
   const std140 = new UniformBufferLayout({
     uEnabled: GL.BOOL,
@@ -78,7 +78,7 @@ test('WebGL#UniformLayout', t => {
   t.end();
 });
 
-test('WebGL#UniformLayout getData', t => {
+test('WebGL#UniformBufferLayout getData', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -124,7 +124,7 @@ test('WebGL#UniformLayout getData', t => {
   t.end();
 });
 
-test('WebGL#UniformLayout setData', t => {
+test('WebGL#UniformBufferLayout setData', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

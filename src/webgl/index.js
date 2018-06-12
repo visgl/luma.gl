@@ -39,7 +39,6 @@ export {
 } from '../webgl-context/context-limits';
 
 // WebGL1 objects
-export {default as Attribute} from './attribute';
 export {default as Buffer} from './buffer';
 export {Shader, VertexShader, FragmentShader} from './shader';
 export {default as Program} from './program';
@@ -69,3 +68,5 @@ export {
 
 // WebGL2
 export {default as VertexArray} from './vertex-array';
+export {default as Query} from './query';
+

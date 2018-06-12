@@ -349,7 +349,7 @@ export const DOC_PAGES = [
       },
       {
         name: 'Attribute',
-        content: 'api-reference/webgl/attribute.md'
+        content: 'api-reference/core/attribute.md'
       },
       {
         name: 'Buffer',

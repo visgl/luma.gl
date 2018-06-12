@@ -2,7 +2,6 @@
 // This file imports tests that should run *with* headless-gl included
 
 // webgl
-import './attribute.spec';
 import './buffer.spec';
 import './vertex-array.spec';
 import './uniforms.spec';
