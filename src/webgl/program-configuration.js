@@ -2,7 +2,6 @@
 // Much of this is automatically extracted from shaders after program linking
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 import Accessor from './accessor';
-import assert from '../utils/assert';
 
 export default class ProgramConfiguration {
 

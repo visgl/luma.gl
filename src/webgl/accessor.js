@@ -43,6 +43,7 @@ export default class Accessor {
     return this;
   }
 
+  /* eslint-disable complexity */
   _update(opts = {}, target = this) {
     if (opts.type !== undefined) {
       target.type = opts.type;
@@ -75,4 +76,5 @@ export default class Accessor {
     }
     return target;
   }
+  /* eslint-enable complexity */
 }
