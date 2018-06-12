@@ -22,6 +22,20 @@ void main(void) {
 }
 `;
 
+const VS_GLSL_RESOLVED = `\
+#version 300 es
+
+attribute vec4 positions;
+varying vec4 vColor;
+
+void f(out float a, in float b) {}
+
+void main(void) {
+  gl_Position = positions;
+  vColor = vec4(1., 0., 0., 1.);
+}
+`;
+
 const FS_GLSL_TEMPLATE = `\
 #version 300 es
 
@@ -34,26 +48,6 @@ void f(out float a, in float b) {}
 
 void main(void) {
   fragmentColor = vColor;
-}
-`;
-
-const INJECT = {
-  'main-fs': 'hello',
-  'decl-fs': 'cruft',
-  'VS-MAIN': 'shoot'
-};
-
-const VS_GLSL_RESOLVED = `\
-#version 300 es
-
-attribute vec4 positions;
-varying vec4 vColor;
-
-void f(out float a, in float b) {}
-
-void main(void) {
-  gl_Position = positions;
-  vColor = vec4(1., 0., 0., 1.);
 }
 `;
 
@@ -71,6 +65,13 @@ void main(void) {
   fragmentColor = vColor;
 }
 `;
+
+const INJECT = {
+  'vs-decl': 'uniform float uNewUniform',
+  'fs-decl': 'uniform bool uDiscard;'
+  'fs-main-start': 'if (uDiscard} { discard } else {',
+  'fs-main-end': '}'
+};
 
 test('injectShader#import', t => {
   t.ok(injectShader !== undefined, 'injectShader import successful');
