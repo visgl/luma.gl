@@ -3,7 +3,7 @@
 import GL from '../constants';
 import {Attribute, Buffer, Program, checkUniformValues} from '../webgl';
 import Query from '../webgl/query';
-import {isWebGL} from '../webgl-utils';
+import {isWebGL, isWebGL2} from '../webgl-utils';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
 import Object3D from '../core/object-3d';
@@ -624,9 +624,11 @@ count: ${this.stats.profileFrameCount}`
       instanced = attribute.instanced;
       size = attribute.size;
       if (attribute.externalBuffer) {
-        value = attribute.externalBuffer.data || attribute.externalBuffer.getData();
-        bytes = attribute.externalBuffer.bytes;
-        verts = bytes / value.BYTES_PER_ELEMENT;
+        if (attribute.externalBuffer.data || isWebGL2(this.gl)) {
+          value = attribute.externalBuffer.data || attribute.externalBuffer.getData({length: 10});
+          bytes = attribute.externalBuffer.bytes;
+          verts = bytes / value.BYTES_PER_ELEMENT;
+        }
       } else if (attribute.value) {
         value = attribute.value;
         verts = round(value.length / size);
