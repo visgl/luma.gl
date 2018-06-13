@@ -1,5 +1,26 @@
 # Pre-releases
 
+## 6.0.0-alpha.1 - June 13
+- Fix log when using External buffer (#551)
+- Code reorganization (#552)
+- Update Picking Module to use GLSL 300 syntax (#549)
+- Shader injection RFC cleanup (#547)
+- Fix unit tests (#545)
+- Update RFC catalog (#544)
+- Developer Guide Improvements (#543)
+- GLSL transpilation (GLSL 3.00 <-> GLSL 1.00) (#542)
+- Shadertools doc refresh (#528)
+- Clarify error message (#541)
+- AnimationLoop improvements, QuasiCrystals example (#530)
+- Remove old deprecated functionality for v6.0 - First pass (#539)
+- Add Khronos VertexArrayObject polyfill (#536)
+- Refactor Shadertools to enable new features to be added (#533)
+- New RFCs for v6.0 (#534)
+- Preparations to make shadertools independently publishable (#532)
+- Add GLSL 3.00 vs 1.00 reference (#527)
+- Move shadertools files into submodule structure (#529)
+- Remove GL_ES define (#526)
+
 ## 5.3.0-alpha.4 - May 21
 - Port fp64 utils from deck.gl (#518)
 - Allow non-buffer supplied to Transform's sourceBuffers (#519)
