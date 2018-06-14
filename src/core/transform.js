@@ -100,8 +100,7 @@ export default class Transform {
     Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
     Object.assign(this.destinationBuffers[currentIndex], destinationBuffers);
     transformFeedbacks[currentIndex].bindBuffers(
-      this.destinationBuffers[currentIndex], {varyingMap}
-    );
+      this.destinationBuffers[currentIndex], {varyingMap});
 
     if (_buffersSwapable) {
       const nextIndex = (currentIndex + 1) % 2;
@@ -115,9 +114,7 @@ export default class Transform {
         // make sure the new destination buffer is a Buffer object
         assert(this.destinationBuffers[nextIndex][destinationBufferName] instanceof Buffer);
       }
-      transformFeedbacks[nextIndex].bindBuffers(
-        this.destinationBuffers[nextIndex], {varyingMap}
-      );
+      transformFeedbacks[nextIndex].bindBuffers(this.destinationBuffers[nextIndex], {varyingMap});
     }
     return this;
   }
@@ -128,10 +125,8 @@ export default class Transform {
     model.setAttributes(sourceBuffers[currentIndex]);
     model.draw({
       transformFeedback: transformFeedbacks[currentIndex],
-      uniforms,
-      parameters: {
-        [GL.RASTERIZER_DISCARD]: true
-      }
+      parameters: {[GL.RASTERIZER_DISCARD]: true},
+      uniforms
     });
   }
 
@@ -150,10 +145,7 @@ export default class Transform {
 
   // Private
   // build source and destination buffers
-  _bindBuffers({
-    sourceBuffers = null,
-    destinationBuffers = null
-  }) {
+  _bindBuffers({sourceBuffers = null, destinationBuffers = null}) {
     const {_buffersSwapable} = this;
     for (const bufferName in destinationBuffers) {
       assert(destinationBuffers[bufferName] instanceof Buffer);
@@ -187,33 +179,29 @@ export default class Transform {
   }
 
   // build Model and TransformFeedback objects
-  _buildModel({
-    vs, drawMode, elementCount
-  }) {
-    const {varyings, varyingMap, _buffersSwapable} = this;
-
-    // Append matching version string to FS.
+  _buildModel({vs, drawMode, elementCount}) {
+    // Append matching version string to the fragment shader to ensure compilation succeeds
+    // TODO - is this still needed now that we have shader transpilatio?
     let fs = PASS_THROUGH_FS;
-    const vsLines = vs.split('\n');
-    if (vsLines[0].indexOf('#version ') === 0) {
-      fs = `\
-${vsLines[0]}
-${PASS_THROUGH_FS}
-`;
+    if (vs.indexOf('#version ') === 0) {
+      const vsLines = vs.split('\n');
+      fs = `${vsLines[0]}\n${PASS_THROUGH_FS}`;
     }
 
     this.model = new Model(this.gl, {
       vs,
       fs,
-      varyings,
+      varyings: this.varyings,
       drawMode,
       vertexCount: elementCount
     });
+
     this.transformFeedbacks[0] = new TransformFeedback(this.gl, {
       buffers: this.destinationBuffers[0],
-      varyingMap
+      varyingMap: this.varyingMap
     });
-    if (_buffersSwapable) {
+
+    if (this._buffersSwapable) {
       this.transformFeedbacks[1] = new TransformFeedback(this.gl, {
         buffers: this.destinationBuffers[1],
         varyingMap: this.varyingMap

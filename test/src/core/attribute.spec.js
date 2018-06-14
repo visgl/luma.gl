@@ -34,9 +34,6 @@ test('WebGL#Attribute constructor/update/delete', t => {
   attribute.delete();
   t.ok(buffer._handle, 'External buffer is not deleted');
 
-  t.throws(() => new Attribute(gl), /invalid size/,
-    'Attribute constructor throws error if attribute definition is invalid');
-
   t.end();
 });
 

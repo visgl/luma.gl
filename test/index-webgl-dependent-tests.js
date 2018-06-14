@@ -6,4 +6,3 @@ import './src/webgl-utils';
 import './src/webgl-context';
 import './src/webgl';
 import './src/core';
-import './src/experimental';

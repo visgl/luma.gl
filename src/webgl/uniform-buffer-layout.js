@@ -1,76 +1,13 @@
 /* eslint-disable camelcase */
+import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 import assert from '../utils/assert';
 
 const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 
 // Local constants - these will "collapse" during minification
-const GL_INT = 0x1404;
-const GL_INT_VEC2 = 0x8B53;
-const GL_INT_VEC3 = 0x8B54;
-const GL_INT_VEC4 = 0x8B55;
-
 const GL_FLOAT = 0x1406;
-const GL_FLOAT_VEC2 = 0x8B50;
-const GL_FLOAT_VEC3 = 0x8B51;
-const GL_FLOAT_VEC4 = 0x8B52;
-
-const GL_BOOL = 0x8B56;
-const GL_BOOL_VEC2 = 0x8B57;
-const GL_BOOL_VEC3 = 0x8B58;
-const GL_BOOL_VEC4 = 0x8B59;
-
+const GL_INT = 0x1404;
 const GL_UNSIGNED_INT = 0x1405;
-const GL_UNSIGNED_INT_VEC2 = 0x8DC6;
-const GL_UNSIGNED_INT_VEC3 = 0x8DC7;
-const GL_UNSIGNED_INT_VEC4 = 0x8DC8;
-
-const GL_FLOAT_MAT2 = 0x8B5A;
-const GL_FLOAT_MAT3 = 0x8B5B;
-const GL_FLOAT_MAT4 = 0x8B5C;
-
-const GL_FLOAT_MAT2x3 = 0x8B65;
-const GL_FLOAT_MAT2x4 = 0x8B66;
-const GL_FLOAT_MAT3x2 = 0x8B67;
-const GL_FLOAT_MAT3x4 = 0x8B68;
-const GL_FLOAT_MAT4x2 = 0x8B69;
-const GL_FLOAT_MAT4x3 = 0x8B6A;
-
-// Uniform table for std140
-const UNIFORM_TYPES = {
-  // No samplers in uniform blocks
-
-  [GL_FLOAT]: [GL_FLOAT, 1],
-  [GL_FLOAT_VEC2]: [GL_FLOAT, 2],
-  [GL_FLOAT_VEC3]: [GL_FLOAT, 3],
-  [GL_FLOAT_VEC4]: [GL_FLOAT, 4],
-
-  [GL_INT]: [GL_INT, 1],
-  [GL_INT_VEC2]: [GL_INT, 2],
-  [GL_INT_VEC3]: [GL_INT, 3],
-  [GL_INT_VEC4]: [GL_INT, 4],
-
-  [GL_UNSIGNED_INT]: [GL_UNSIGNED_INT, 1],
-  [GL_UNSIGNED_INT_VEC2]: [GL_UNSIGNED_INT, 2],
-  [GL_UNSIGNED_INT_VEC3]: [GL_UNSIGNED_INT, 3],
-  [GL_UNSIGNED_INT_VEC4]: [GL_UNSIGNED_INT, 4],
-
-  [GL_BOOL]: [GL_FLOAT, 1],
-  [GL_BOOL_VEC2]: [GL_FLOAT, 2],
-  [GL_BOOL_VEC3]: [GL_FLOAT, 3],
-  [GL_BOOL_VEC4]: [GL_FLOAT, 4],
-
-  [GL_FLOAT_MAT2]: [GL_FLOAT, 8], // 4
-  [GL_FLOAT_MAT2x3]: [GL_FLOAT, 8], // 6
-  [GL_FLOAT_MAT2x4]: [GL_FLOAT, 8], // 8
-
-  [GL_FLOAT_MAT3]: [GL_FLOAT, 12], // 9
-  [GL_FLOAT_MAT3x2]: [GL_FLOAT, 12], // 6
-  [GL_FLOAT_MAT3x4]: [GL_FLOAT, 12], // 12
-
-  [GL_FLOAT_MAT4]: [GL_FLOAT, 16], // 16
-  [GL_FLOAT_MAT4x2]: [GL_FLOAT, 16], // 8
-  [GL_FLOAT_MAT4x3]: [GL_FLOAT, 16] // 12
-};
 
 // Std140 layout for uniforms
 export default class UniformBufferLayout {
@@ -140,9 +77,9 @@ export default class UniformBufferLayout {
   }
 
   _addUniform(key, uniformType) {
-    const definition = UNIFORM_TYPES[uniformType];
-    assert(definition, ERR_ARGUMENT);
-    const [type, count] = definition;
+    const typeAndComponents = decomposeCompositeGLType(uniformType);
+    assert(typeAndComponents, ERR_ARGUMENT);
+    const {type, components: count} = typeAndComponents;
 
     // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
     this.size = this._alignTo(this.size, count);

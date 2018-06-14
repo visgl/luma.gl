@@ -1,7 +1,8 @@
 /* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
 // A scenegraph object node
 import GL from '../constants';
-import {Attribute, Buffer, Program, checkUniformValues} from '../webgl';
+import Attribute from './attribute';
+import {Buffer, Program, checkUniformValues} from '../webgl';
 import Query from '../webgl/query';
 import {isWebGL, isWebGL2} from '../webgl-utils';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
