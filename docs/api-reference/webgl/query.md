@@ -1,6 +1,11 @@
 # Query
 
-A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries ( extesion from WebGL1: [`EXT_disjoint_timer_query`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query/), WebGL2: [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/)). Exposes a `promise` member that tracks the state of the query and `poll` is used to update queries.
+A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries. `Query` objects expose a `promise` member that tracks the state of the query and `poll` is used to update queries.
+
+See also:
+
+* WebGL1 timer extension: [`EXT_disjoint_timer_query`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query/)
+* WebGL2 timer extension: [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/)
 
 
 ## Usage

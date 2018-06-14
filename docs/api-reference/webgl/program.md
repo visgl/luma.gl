@@ -2,16 +2,6 @@
 
 A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader.md) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, setting and unsetting buffers (attributes), setting uniform values etc.
 
-| **Method**      | **Description** |
-| ---             | --- |
-| `constructor`   | creates a Program |
-| `initialze`     | reinitializes (relinks) a Program |
-| `delete`        | deletes resources held by program |
-| `draw`          | Runs the shaders to render or compute |
-| `setAttributes` | Sets named uniforms from a map, ignoring names |
-| `setUniforms`   | Sets named uniforms from a map, ignoring names |
-
-
 ## Usage
 
 Creating a program
@@ -101,10 +91,16 @@ Deletes resources held by program. Note: Does not currently delete shaders (to e
 
 ### draw
 
-The heart of the luma.gl API, the `Program.draw` the entry point for running shaders, rendering and calculating data using transform feedback techniques.
+`Program.draw` is the entry point for running shaders, rendering and optionally calculating data using transform feedback techniques.
 
 ```js
   Program.draw({
+    uniforms = {},
+    samplers = {},
+    parameters = {},
+    vertexArray = null,
+    transformFeedback = null,
+
     drawMode = GL.TRIANGLES,
     vertexCount,
     offset = 0,
@@ -112,40 +108,52 @@ The heart of the luma.gl API, the `Program.draw` the entry point for running sha
     indexType = GL.UNSIGNED_SHORT,
     isInstanced = false,
     instanceCount = 0,
-    vertexArray = null,
-    uniforms = {},
 
-    transformFeedback = null,
-    samplers = {},
-    parameters = {},
-    start,
-    end
+    start = 0,
+    end=
   })
 ```
+
+Main parameters
+
+* `uniforms`=`{}` - a map of uniforms that will be set before the draw call.
+* `samplers`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
+* `parameters` - temporary gl settings to be applied to this draw call.
+* `vertexArray`=`null` - an optional `VertexArray` object that will be bound and unbound before and after the draw call.
+* `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
+
+Potentially autodeduced parameters
 
 * `drawMode`=`GL.TRIANGLES` - geometry primitive format of vertex data
 * `vertexCount` - number of vertices to draw
 * `offset`=`0` - first vertex to draw
-* `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
-* `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
 * `isIndexed`=`false` - use indices in the "elements" buffer
 * `indexType`=`GL.UNSIGNED_SHORT` - must match the type of the "elements" buffer
 * `isInstanced`=`false` - Set to enable instanced rendering.
 * `instanceCount`=`0` - Number of instances
-* `vertexArray`=`null` - an optional `VertexArray` object that will be bound and unbound before and after the draw call.
-* `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
-* `uniforms`=`{}` - a map of uniforms that will be set before the draw call.
-* `samplers`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
-* `parameters` - temporary gl settings to be applied to this draw call.
 
-Runs the shaders in the program, on the attributes and uniforms.
+Parameters for drawing a limited range (WebGL2 only)
+
+* `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
+* `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
+
+Notes:
+* Runs the shaders in the program, on the attributes and uniforms.
 * Indexed rendering uses the element buffer (`GL.ELEMENT_ARRAY_BUFFER`), make sure your attributes or `VertexArray` contains one.
 * If a `TransformFeedback` object is supplied, `transformFeedback.begin()` and `transformFeedback.end()` will be called before and after the draw call.
-* `Sampler`s will only be bound if there is a matching Texture with the same key in the supplied `uniforms` object.
+* A `Sampler` will only be bound if there is a matching Texture with the same key in the supplied `uniforms` object.
 
 The following WebGL APIs are called in this function:
 
-[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram), [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements), [gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2), [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays), [gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2), [gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2), [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays), [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE), [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE),
+[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram),
+[gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements),
+[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2),
+[gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays),
+[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2),
+[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2),
+[gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
+[gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
+[gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
 
 ### setBuffers
 
@@ -241,17 +249,21 @@ Gets the information about an active uniform block
 
 Gets the binding of color numbers to user-defined varying out variables
 
+
+## Constants
+
 ### Limits
 
-| Limit | Value | Description |
-| --- | --- | --- |
-| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS` | >= 0 (GLint) | |
-| `GL.MAX_RENDERBUFFER_SIZE` | >= 1 (GLint) | |
-| `GL.MAX_VARYING_VECTORS` | >= 8 (GLint) | |
-| `GL.MAX_VERTEX_ATTRIBS` | >= 8 (GLint) | |
-| `GL.MAX_VERTEX_UNIFORM_VECTORS` | >= 128 (GLint) | |
-| `GL.MAX_FRAGMENT_UNIFORM_VECTORS` | >= 16 (GLint) | |
-| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2) | - | - |
+| Limit                               | Value          | Description |
+| ---                                 | ---            | --- |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS` | >= 0 (GLint)   | |
+| `GL.MAX_RENDERBUFFER_SIZE`          | >= 1 (GLint)   | |
+| `GL.MAX_VARYING_VECTORS`            | >= 8 (GLint)   | |
+| `GL.MAX_VERTEX_ATTRIBS`             | >= 8 (GLint)   | |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`     | >= 128 (GLint) | |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`   | >= 16 (GLint)  | |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2)  | - | - |
+
 
 ### Parameters
 

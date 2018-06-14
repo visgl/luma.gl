@@ -1,17 +1,19 @@
 # VertexArray
 
-A `VertexArray` holds a WebGL `VertexArrayObject` which stores a set of `Buffer` bindings representing the input data to GLSL shaders (in much the same way that a `TransformFeedback` object stores a set of `Buffer` bindings for output data from shaders).
+A `VertexArray` (WebGL `VertexArrayObject`) stores a set of `Buffer` bindings representing the input data to GLSL shaders together with additional information about how that data should be accessed (in much the same way that a `TransformFeedback` object stores a set of `Buffer` bindings for output data from shaders).
 
 Note that it is usually not necessary to manipulate `VertexArray`s directly in luma.gl applications. It is often simpler to just supply named attribute buffers to the [`Model`](/docs/api-reference/core/model.md) class, and rely on that class to automatically manage the vertex attributes array before running a program (e.g. when rendering, picking etc).
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object) as well as the remarks at the end.
 
 Notes:
+
 * A default `VertexArray` is always available, even in basic WebGL1 environments.
 * Creating additional non-default `VertexArray`s requires either WebGL2 or the presence of a (relatively widely supported) WebGL1 extension. The `VertexArray.isSupported()` method is provided to check.
 * Using `VertexArray.setDivisor` to set up instanced attributes requires WebGL2 or a (widely supported) WebGL1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available.
 
 Note that while `VertexArray`s and instance divisors are technically not available in basic WebGL1 environments, they available by default in WebGL2 and via commonly supported extensions under WebGL1.
+
 * [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays)
 * [vertex_array_objects](https://webglstats.com/webgl/extension/OES_vertex_array_object)
 
@@ -19,40 +21,40 @@ Note that while `VertexArray`s and instance divisors are technically not availab
 ## Usage
 
 Import the `VertexArray` class so that your app can use it:
+
 ```js
 import {VertexArray} from 'luma.gl';
 ```
 
 Getting the global `VertexArray` for a WebGL context
+
 ```js
 const vertexArray = VertexArray.global(gl);
 ```
 
-Check if additional `VertexArray` objects can be created
-```js
-const canCreateVertexArrays = VertexArray.isSupported(gl);
-```
-
 Create a new VertexArray
+
 ```js
-if (VertexArray.isSupported(gl)) {
-  return new VertexArray(gl)
+const vao = new VertexArray(gl)
 }
 ```
 
 Adding attributes to a VertexArray
+
 ```js
-const vertexArrayObject = new VertexArray(gl);
-vertexArrayObject.bind();
-vertexArrayObject.unbind();
+const vertexArray = new VertexArray(gl);
+vertexArray.setBuffer(location, buffer);
+vertexArray.setBuffer(name, buffer);
 ```
 
 Deleting a VertexArray
+
 ```js
 vertexArrayObject.delete();
 ```
 
 Setting a set of attributes and an elements array
+
 ```js
 const vertexArray = new VertexArray(gl, {
   elements:
@@ -61,32 +63,36 @@ const vertexArray = new VertexArray(gl, {
   	0: new Buffer({data: new Float32Array([...])})
   }
 }
-```
 
-Setting a buffer name map
-```js
 const vertexArray = new VertexArray(gl);
 // Can only set buffers using location indices
 vertexArray.setBuffers({
-  0: new Buffer({size: 3, data: new Float32Array([...]), ...})
-})
+  0: new Buffer({data: new Float32Array([...]), ...})
+});
 
-// Register a location map
-const program = new Program();
-const locations = program.getLocations(); // Note: slow call, GPU driver roundtrip
-vertexArray.initialize({locations});
+```
 
-// Now possible to set buffers using attribute names
+Setting attribute metadata
+
+```js
+// Register attribute info
+const program = new Program(gl, ...);
+vertexArray.initialize({attributeInfo: program.getAttributeInfo()});
+
+// Now it is possible to set buffers using attribute names
 vertexArray.setBuffers({
   aColor: new Buffer({size: 3, data: new Float32Array([...]), ...})
 });
+
+vertexArray.initialize({program: });
 ```
 
+Setting a constant vertex attribute
 
-Setting a generic vertex attribute
 ```js
 import {VertexArray} from 'luma.gl';
-VertexArray.setGeneric(gl, 0, ...);
+const vao = new VertexArray(gl);
+vao.setConstant(0, [0, 0, 0]);
 ```
 
 ## Methods
@@ -94,24 +100,11 @@ VertexArray.setGeneric(gl, 0, ...);
 `VertexArray` inherits from `Resource`.
 
 
-### isSupported (static method)
-
-Check if additional `VertexArray`s (beyond the global `VertexArray` object) can be created in the current environment.
-
-`VertexArray.isSupported();`
-
-Parameters:
-* gl (WebGLRenderingContext) - gl context
-
-Returns:
-* Boolean - true if `VertexArray`s are supported in the current environment.
-
-
 ### getDefaultArray (static method)
 
 Returns the "global" `VertexArray`.
 
-Note: The global `VertexArray` object is always available, even in environments where `VertexArray.isSupported()` returns false.
+Note: The global `VertexArray` object is always available. Binds the `null` VertexArrayObject.
 
 
 ### constructor
@@ -119,6 +112,7 @@ Note: The global `VertexArray` object is always available, even in environments 
 Creates a new VertexArray
 
 Parameters:
+
 * `gl` (WebGLRenderingContext) - gl context
 * `opts` (Object) - passed through to `Resource` constructor and to `initialize`
 
@@ -126,9 +120,14 @@ Parameters:
 ### initialize
 
 Parameters:
+
+* `attributes`=`{}` (`Object`) - map of attributes, can be keyed by index or names, can be constants (small arrays), `Buffer`, arrays or typed arrays of numbers, or attribute descriptors.
 * `elements`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
+* `program` - Transfers information on vertex attribute locations and types to this vertex array.
+
+Deprecated Parameters:
+
 * `buffers`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
-* `location`={} (Object) - optional map of (attribute) names to location indices.
 
 
 ### setBuffer
@@ -138,10 +137,10 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 * Set a location in vertex attributes array to a buffer, specifying
 * its data layout and integer to float conversion and normalization flags
 
-`setBuffer({location, buffer, ...});`
+`setBuffer(location, buffer);`
+`setBuffer(location, buffer, {offset = 0, stride = 0, normalized = false, integer = false});`
 
-* `gl` (*WebGLRenderingContext) - gl context
-* `location` (*GLuint*) - index/ordinal number of the attribute
+* `location` (*GLuint* | *String*) - index/ordinal number of the attribute
 * `buffer` (*WebGLBuffer*|*Buffer*) - WebGL buffer to set as value
 * `target`=`buffer.target` (*GLuint*, ) - which target to bind to
 * `size` (*GLuint*)  - number of values (components) per element (1-4)
@@ -155,11 +154,25 @@ Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not con
 
 
 Notes:
+
 * The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
 * **WebGL2** The application can disable integer to float conversion when running under WebGL2, by setting the `integer` flag to `true`.
 * [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
-[vertexAttrib{I}Pointer]()
+[gl.vertexAttrib{I}Pointer]()
+
+
+### setConstant
+
+Sets a constant value for a vertex attribute. All Vertex Shader invocations will get the same value.
+
+`VertexArray.setConstant(location, array);`
+
+* `gl` (`WebGLRenderingContext`) - gl context
+* `location` (*GLuint*) - index of the attribute
+
+WebGL APIs:
+[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 
 ### enable
@@ -193,41 +206,14 @@ Sets the Set the frequency divisor used for instanced rendering. Usually simply 
 
 Notes:
 * An attribute is referred to as **instanced** if its divisor value is non-zero.
-* The divisor modifies the rate at which generic vertex attributes advance when rendering multiple instances of primitives in a single draw call.
+* The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
 * If divisor is zero, the attribute at slot index advances once per vertex.
 * If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
 
 * This method will look use WebGL2 or the `array_instanced_ANGLE` extension, if available. To avoid exceptions on unsupported platforms. the app can call `VertexAttributeObject.isSupported()` to determine whether instancing is supported before invoking `VertexArray.setDivisor`.
 
-The following WebGL APIs are called in this method:
+WebGL APIs:
 [gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
-
-
-### setGeneric
-
-Sets a constant (i.e. generic) value for a vertex attribute. All Vertex Shader invocations will get the same value.
-
-`VertexArray.setGeneric({gl, location, array});`
-
-* `gl` (`WebGLRenderingContext`) - gl context
-* `location` (*GLuint*) - index of the attribute
-
-The following WebGL APIs are called in this method:
-[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
-
-
-### setGenericValues
-
-Specify values for generic vertex attributes. Generic vertex attributes are constant for all vertices. Up to 4 values depending on attribute size
-
-`VertexArray.setGenericValues({gl, location, array});`
-
-* `gl` (`WebGLRenderingContext`) - gl context
-* `location` (*GLuint*) - index of the attribute
-
-The following WebGL APIs are called in this method:
-[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
-
 
 
 ### getParameter
@@ -284,7 +270,7 @@ Each vertex attribute has these properties:
 
 Normally attributes are set to a [`WebGLBuffer`](/docs/api-reference/webgl/buffer.md) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
 
-Attributes can also be set to a single vertex value (or "generic" value) instead of a full array. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex.
+Attributes can also be set to a single "constant" vertex value instead of a full buffer/array. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex.
 
 
 ### Integer to Float Conversion and Normalization
@@ -310,5 +296,5 @@ The raw WebGL APIs for `WebGLVertexArray`s are exposed differently in the WebGL1
 
 * Setting instance divisors no longer requires a WebGL extension.
 * `VertexArrays` no longer require using a WebGL extension.
-* Adds support for exposing integer attribute values directly to shaders (without those values first being auto-converted to floats) The improvements cover both generic and buffered attributes.
+* Adds support for exposing integer attribute values directly to shaders (without those values first being auto-converted to floats) The improvements cover both constant and buffer-valued attributes.
 
