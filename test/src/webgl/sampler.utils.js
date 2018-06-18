@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
-import {GL, glKey} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {getKey} from 'luma.gl';
 
 // Sampler Parameters
 
@@ -11,7 +12,7 @@ import {GL, glKey} from 'luma.gl';
   [GL.TEXTURE_WRAP_S]                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `s` |
   [GL.TEXTURE_WRAP_T]                  | `GL.REPEAT`    | texture wrapping function for texture coordinate `t` |
   [GL.TEXTURE_WRAP_R] **WebGL2**       | `GL.REPEAT`    | texture wrapping function for texture coordinate `r` |
-| `GL_TEXTURE_MAX_ANISOTROPY           | fLargest
+| GL.TEXTURE_MAX_ANISOTROPY           | fLargest
   [GL.TEXTURE_BASE_LEVEL] **WebGL2**   | `0`            | Texture mipmap level |
   [GL.TEXTURE_MAX_LEVEL] **WebGL2**    | `1000`         | Maximum texture mipmap array level |
   [GL.TEXTURE_COMPARE_FUNC] **WebGL2** | `GL.LEQUAL`    | texture comparison function |
@@ -92,7 +93,7 @@ export function testSamplerParameters({t, texture, parameters}) {
       const name = texture.constructor.name;
       const newValue = texture.getParameter(parameter);
       t.equals(newValue, value,
-        `${name}.setParameters({[${glKey(parameter)}]: ${glKey(value)}}) read back OK`);
+        `${name}.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}}) read back OK`);
     }
   }
 }

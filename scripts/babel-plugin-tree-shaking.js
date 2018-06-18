@@ -1,3 +1,4 @@
+// This plugin is not needed for babel 7
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 

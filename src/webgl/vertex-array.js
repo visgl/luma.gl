@@ -2,36 +2,22 @@
 import Resource from './resource';
 import {isWebGL2, getKey} from '../webgl-utils';
 import {log, assert} from '../utils';
+import GL from '../constants';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
 
-const GL_ELEMENT_ARRAY_BUFFER = 0x8893;
-
-// const GL_CURRENT_VERTEX_ATTRIB = 0x8626;
-
-const GL_VERTEX_ATTRIB_ARRAY_ENABLED = 0x8622;
-const GL_VERTEX_ATTRIB_ARRAY_SIZE = 0x8623;
-const GL_VERTEX_ATTRIB_ARRAY_STRIDE = 0x8624;
-const GL_VERTEX_ATTRIB_ARRAY_TYPE = 0x8625;
-const GL_VERTEX_ATTRIB_ARRAY_NORMALIZED = 0x886A;
-const GL_VERTEX_ATTRIB_ARRAY_POINTER = 0x8645;
-const GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING = 0x889F;
-
-const GL_VERTEX_ATTRIB_ARRAY_INTEGER = 0x88FD;
-const GL_VERTEX_ATTRIB_ARRAY_DIVISOR = 0x88FE;
-
 const PARAMETERS = [
-  GL_VERTEX_ATTRIB_ARRAY_ENABLED,
-  GL_VERTEX_ATTRIB_ARRAY_SIZE,
-  GL_VERTEX_ATTRIB_ARRAY_STRIDE,
-  GL_VERTEX_ATTRIB_ARRAY_TYPE,
-  GL_VERTEX_ATTRIB_ARRAY_NORMALIZED,
-  GL_VERTEX_ATTRIB_ARRAY_POINTER,
-  GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+  GL.VERTEX_ATTRIB_ARRAY_ENABLED,
+  GL.VERTEX_ATTRIB_ARRAY_SIZE,
+  GL.VERTEX_ATTRIB_ARRAY_STRIDE,
+  GL.VERTEX_ATTRIB_ARRAY_TYPE,
+  GL.VERTEX_ATTRIB_ARRAY_NORMALIZED,
+  GL.VERTEX_ATTRIB_ARRAY_POINTER,
+  GL.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
 
-  GL_VERTEX_ATTRIB_ARRAY_INTEGER,
-  GL_VERTEX_ATTRIB_ARRAY_DIVISOR
+  GL.VERTEX_ATTRIB_ARRAY_INTEGER,
+  GL.VERTEX_ATTRIB_ARRAY_DIVISOR
 ];
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
@@ -106,7 +92,7 @@ export default class VertexArray extends Resource {
     this._filledLocations[location] = true;
 
     this.bind(() => {
-      // a non-zero named buffer object must be bound to the GL_ARRAY_BUFFER target
+      // a non-zero named buffer object must be bound to the GL.ARRAY_BUFFER target
       buffer.bind({target: gl.ARRAY_BUFFER});
 
       const {size, type, normalized, stride, offset} = layout;
@@ -166,10 +152,10 @@ export default class VertexArray extends Resource {
 
   // Set (bind) an elements buffer, for indexed rendering. Must be GL.ELEMENT_ARRAY_BUFFER
   setElements(elements) {
-    assert(!elements || elements.target === GL_ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
+    assert(!elements || elements.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
     this.gl.bindVertexArray(this.handle);
-    this.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements && elements.handle);
+    this.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, elements && elements.handle);
     this.gl.bindVertexArray(null);
 
     this.elements = elements;
@@ -307,7 +293,7 @@ export default class VertexArray extends Resource {
       const buffer = buffers[bufferName];
 
       // Check if this is an elements array
-      if (buffer && buffer.target === GL_ELEMENT_ARRAY_BUFFER) {
+      if (buffer && buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
         assert(!elements, 'Duplicate GL.ELEMENT_ARRAY_BUFFER');
         // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
         elements = buffer;
@@ -337,7 +323,7 @@ export default class VertexArray extends Resource {
       const buffer = buffers[bufferName];
 
       // Check if this is an elements arrau
-      if (buffer.target === GL_ELEMENT_ARRAY_BUFFER) {
+      if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
         assert(!elements, 'Duplicate GL.ELEMENT_ARRAY_BUFFER');
         // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
         elements = buffer;
@@ -434,7 +420,7 @@ export default class VertexArray extends Resource {
     // Let the polyfill intercept the query
     let result;
     switch (pname) {
-    case GL_VERTEX_ATTRIB_ARRAY_POINTER:
+    case GL.VERTEX_ATTRIB_ARRAY_POINTER:
       result = this.gl.getVertexAttribOffset(location, pname);
       break;
     default:

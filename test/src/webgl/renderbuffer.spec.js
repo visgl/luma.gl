@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {GL, Renderbuffer, glKey} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {Renderbuffer, glKey} from 'luma.gl';
 
 import {RENDERBUFFER_FORMATS} from 'luma.gl/webgl/renderbuffer';
 

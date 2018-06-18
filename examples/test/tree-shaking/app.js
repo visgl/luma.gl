@@ -1,5 +1,6 @@
 /* eslint-disable no-var, max-statements */
-import {GL, AnimationLoop, createGLContext, Cube} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {AnimationLoop, createGLContext, Cube} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 const SIDE = 256;

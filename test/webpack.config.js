@@ -131,8 +131,16 @@ const CONFIGS = {
         })
       }
     });
-    if (dist === 'es6') {
-      resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
+
+    switch (dist) {
+    case 'es6':
+      config.resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
+      break;
+    case 'es5':
+      config.resolve.mainFields = ['main'];
+      break;
+    case 'esm':
+    default:
     }
     return config;
   },

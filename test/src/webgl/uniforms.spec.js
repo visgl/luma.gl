@@ -120,9 +120,7 @@ const ARRAY_UNIFORM_SIZE = {
 };
 
 // const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
-// #ifdef GL_ES
 // precision highp float;
-// #endif
 
 // uniform float f[3];
 // uniform int i[3];
@@ -167,9 +165,7 @@ const ARRAY_UNIFORM_SIZE = {
 // };
 
 // const WEBGL2_FRAGMENT_SHADER = `
-// #ifdef GL_ES
 // precision highp float;
-// #endif
 // uniform sampler1D;
 // uniform sampler3D;
 

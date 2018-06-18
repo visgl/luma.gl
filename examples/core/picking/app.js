@@ -1,6 +1,7 @@
 /* global document */
+import GL from 'luma.gl/constants';
 import {
-  GL, AnimationLoop, setParameters, loadTextures, Buffer,
+  AnimationLoop, setParameters, loadTextures, Buffer,
   Sphere, project, diffuse, picking, pickModels, ShaderCache
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
