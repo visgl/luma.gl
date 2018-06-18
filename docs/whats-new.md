@@ -10,9 +10,6 @@ Date: In development, target late June 2018
 luma.gl now has a more extensive Developer's Guide covering more areas of the API.
 
 
-### 
-
-
 ### WebGL Improvements
 
 * **Unconditional support for Vertex Array Objects** - `VertexArrays` are now always used to manage attributes. The `Program` and `Model` classes have been updated to always use `VertexArray` resulting in a simpler and more consistent API and improved performance. If luma.gl's WebGL1 polyfills are installed, the `VertexArrayObject` extension is now emulated when the underlying WebGL1 platform does not provide the `OES_vertex_array_object` extension.

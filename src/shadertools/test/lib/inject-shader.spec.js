@@ -16,7 +16,6 @@ out vec4 vColor;
 void f(out float a, in float b) {}
 
 void main(void) {
-  // VS_MAIN
   gl_Position = positions;
   vColor = vec4(1., 0., 0., 1.);
 }
@@ -24,9 +23,10 @@ void main(void) {
 
 const VS_GLSL_RESOLVED = `\
 #version 300 es
+uniform float uNewUniform;
 
-attribute vec4 positions;
-varying vec4 vColor;
+in vec4 positions;
+out vec4 vColor;
 
 void f(out float a, in float b) {}
 
@@ -53,24 +53,27 @@ void main(void) {
 
 const FS_GLSL_RESOLVED = `\
 #version 300 es
+uniform bool uDiscard;
 
 precision highp float;
 
 out vec4 fragmentColor;
-varying vec4 vColor;
+in vec4 vColor;
 
 void f(out float a, in float b) {}
 
 void main(void) {
+  if (uDiscard} { discard } else {
   fragmentColor = vColor;
+  }
 }
 `;
 
 const INJECT = {
-  'vs-decl': 'uniform float uNewUniform',
-  'fs-decl': 'uniform bool uDiscard;'
-  'fs-main-start': 'if (uDiscard} { discard } else {',
-  'fs-main-end': '}'
+  'vs-decl': 'uniform float uNewUniform;\n',
+  'fs-decl': 'uniform bool uDiscard;\n',
+  'fs-main-start': '  if (uDiscard} { discard } else {\n',
+  'fs-main-end': '  }\n'
 };
 
 test('injectShader#import', t => {
@@ -81,10 +84,10 @@ test('injectShader#import', t => {
 test('injectShader#injectShader', t => {
   let injectResult;
 
-  injectResult = injectShader(VS_GLSL_TEMPLATE, 'VERTEX_SHADER', INJECT);
+  injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', INJECT);
   t.equal(injectResult, VS_GLSL_RESOLVED, 'correctly injected');
 
-  injectResult = injectShader(FS_GLSL_TEMPLATE, 'FRAGMENT_SHADER', INJECT);
+  injectResult = injectShader(FS_GLSL_TEMPLATE, 'fs', INJECT);
   t.equal(injectResult, FS_GLSL_RESOLVED, 'correctly injected');
 
   t.end();
@@ -94,7 +97,8 @@ test('injectShader#assembleShaders', t => {
   const assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
-    inject: INJECT
+    inject: INJECT,
+    prologue: false
   });
   t.equal(assembleResult.vs, VS_GLSL_RESOLVED, 'correctly injected');
   t.equal(assembleResult.fs, FS_GLSL_RESOLVED, 'correctly injected');

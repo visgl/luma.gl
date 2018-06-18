@@ -38,6 +38,7 @@ function assembleShader(gl, {
   modules = [],
   defines = {},
   inject = {},
+  prologue = true,
   log
 }) {
   assert(typeof source === 'string', 'shader source must be a string');
@@ -59,13 +60,14 @@ function assembleShader(gl, {
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
   // Add precision declaration for fragment shaders
-  let assembledSource = `\
+  let assembledSource = prologue ? `\
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(defines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
+` : `${versionLine}
 `;
 
   // Add source of dependent modules in resolved order
