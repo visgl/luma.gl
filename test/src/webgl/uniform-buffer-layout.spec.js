@@ -1,7 +1,6 @@
 import test from 'tape-catch';
 import GL from 'luma.gl/constants';
-import {UniformBufferLayout, experimental, Buffer, Program} from 'luma.gl';
-const {Transform} = experimental;
+import {UniformBufferLayout, Buffer, Program, _Transform as Transform} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 
 const UBO_INDEX = 0;

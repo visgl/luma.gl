@@ -1,8 +1,7 @@
-import {experimental, Buffer} from 'luma.gl';
+import {Buffer, _Transform as Transform} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 
-const {Transform} = experimental;
 const VS = `\
 #version 300 es
 in float inValue;

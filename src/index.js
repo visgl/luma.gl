@@ -63,8 +63,7 @@ export {default as TransformFeedback} from './webgl/transform-feedback';
 export {default as VertexArray} from './webgl/vertex-array';
 export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 
-// Core Classes
-import Attribute from './core/attribute';
+// Core
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as AnimationLoopProxy} from './core/animation-loop-proxy';
@@ -76,6 +75,9 @@ export {
   encodePickingColor,
   decodePickingColor,
   getNullPickingColor} from './core/picking-colors';
+
+// Experimental core exports
+export {default as _Attribute} from './core/attribute';
 
 // Addons
 export {addEvents} from './packages/events';
@@ -132,15 +134,9 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 
 // EXPERIMENTAL EXPORTS
 
-import {clearBuffer} from './webgl/clear';
-import {default as Transform} from './core/transform';
-export {default as ShaderCache} from './core/shader-cache';
-
-export const experimental = {
-  clearBuffer,
-  Transform,
-  Attribute
-};
+export {clearBuffer as _clearBuffer} from './webgl/clear';
+export {default as _Transform} from './core/transform';
+export {default as _ShaderCache} from './core/shader-cache';
 
 // DEPRECATED EXPORTS IN v6.0
 
