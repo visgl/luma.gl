@@ -1,8 +1,6 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-
 import Resource from './resource';
 import {FEATURES, hasFeatures} from '../webgl-context/context-features';
-import {polyfillContext} from '../webgl-context';
 import {isWebGL2} from '../webgl-utils';
 import queryManager from '../webgl-utils/query-manager';
 
@@ -46,7 +44,7 @@ export default class Query extends Resource {
     }
 
     if (timestamps) {
-      polyfillContext(gl);
+      // polyfillContext(gl);
       const queryCounterBits = gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
       supported = supported && (queryCounterBits > 0);
     }

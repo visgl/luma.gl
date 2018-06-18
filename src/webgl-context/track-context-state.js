@@ -3,7 +3,6 @@
 // NOTE: this system does not handle buffer bindings
 import GL from '../constants';
 import {setParameters, getParameters, GL_PARAMETER_DEFAULTS} from './set-parameters';
-import polyfillContext from './polyfill-context';
 import assert from '../utils/assert';
 
 export const clone = x => {
@@ -325,7 +324,11 @@ class GLState {
 export default function trackContextState(gl, {enable = true, copyState} = {}) {
   assert(copyState !== undefined);
   if (!gl.state) {
-    polyfillContext(gl);
+    /* global window, global */
+    const global_ = typeof global !== 'undefined' ? global : window;
+    if (global_.polyfillContext) {
+      global_.polyfillContext(gl);
+    }
 
     // Create a state cache
     gl.state = new GLState(gl, {copyState, enable});

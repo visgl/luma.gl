@@ -29,11 +29,11 @@ test('WebGL1#getContextInfo#limits', t => {
 
     if (Number.isFinite(actual)) {
       t.ok(Math.abs(actual) >= Math.abs(webgl1),
-        `${glKey(limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
+        `${glKey(gl, limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
       t.ok(Math.abs(webgl2) >= Math.abs(webgl1),
-        `${glKey(limit)}: webgl2 limit ${webgl2} >= webgl1 limit ${webgl1}`);
+        `${glKey(gl, limit)}: webgl2 limit ${webgl2} >= webgl1 limit ${webgl1}`);
     } else {
-      t.pass(`${glKey(limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
+      t.pass(`${glKey(gl, limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
     }
   }
 
@@ -53,11 +53,11 @@ test('WebGL2#getContextInfo#limits', t => {
 
       if (Number.isFinite(actual)) {
         t.ok(Math.abs(actual) >= Math.abs(webgl1),
-          `${glKey(limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
+          `${glKey(gl2, limit)}: actual limit ${actual} >= webgl1 limit ${webgl1}`);
         t.ok(Math.abs(actual) >= Math.abs(webgl2),
-          `${glKey(limit)}: actual limit ${actual} >= webgl2 limit ${webgl2}`);
+          `${glKey(gl2, limit)}: actual limit ${actual} >= webgl2 limit ${webgl2}`);
       } else {
-        t.pass(`${glKey(limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
+        t.pass(`${glKey(gl2, limit)}: actual limit ${actual} webgl2 limit ${webgl2}`);
       }
     }
   }

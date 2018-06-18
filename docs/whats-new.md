@@ -6,7 +6,7 @@
 
 luma.gl now has a more extensive Developer's Guide to make it easier to get started.
 
-### API Reference
+### GLSL API Reference
 
 A new GLSL language reference describing both GLSL 3.00 ES and GLSL 1.00 ES as well as what has changed between the two versions.
 
@@ -18,10 +18,15 @@ A new GLSL language reference describing both GLSL 3.00 ES and GLSL 1.00 ES as w
 - All shader modules now written in GLSL 3.00 syntax
 - Guidelines for writing shaders that work in both environments
 
-### Unconditional support for Vertex Array Objects
+### WebGL1 Support Improvements
 
-`VertexArrayObjects` are now emulated under WebGL1, meaning that they can always be used.
+* **WebGL1 Support now optional** - luma.gl no longer installs WebGL1 support by default. If your application is unconditionally using WebGL2 only features (like transform feedback) there is no value in including extra code with polyfills in your app. luma.gl now leaves the choice to you. If you want WebGL1 support, just add the following import to your application before importing luma.gl:
 
+```js
+import 'luma.gl/webgl1';
+```
+
+* **Unconditional support for Vertex Array Objects in WebGL1** - If luma.gl's WebGL1 polyfills are installed, the `VertexArrayObject` extension is now emulated by luma.gl when not provided by WebGL, meaning that `VertexArray`s can always be used.
 
 # Version 6.0
 

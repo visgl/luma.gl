@@ -27,9 +27,7 @@ export {
 } from './create-headless-context';
 
 export {
-  trackContextCreation,
   createBrowserContext
 } from './create-browser-context';
 
-export {default as polyfillContext} from './polyfill-context';
 export {default as trackContextState} from './track-context-state';

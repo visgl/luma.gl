@@ -2,6 +2,7 @@
 
 import '../src/shadertools/test';
 import './src/shadertools';
+import './src/webgl1';
 import './src/webgl-utils';
 import './src/webgl-context';
 import './src/webgl';

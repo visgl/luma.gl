@@ -6,13 +6,14 @@
 
 luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
 
-| Removed symbol       | Replacement                            | Comment     |
+| Removed symbol       | Replacement                            | Comment/Reason     |
 | ---                  | ---                                    | --          |
 | `readPixels`         | `Framebuffer.readPixels`               | Naming audit, deprecated in v3.0 |
 | `FrameBufferObject`  | `FrameBuffer`                          | Naming audit, deprecated in v3.0 |
 | Context              | | |
 | `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
 | `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
+| `trackContextCreation` | N/A                                  | Overly specialized |
 | Constants            | | |
 | `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction, deprecated in v5.3 |
 | `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
@@ -26,6 +27,10 @@ Math functions were moved from luma.gl to math.gl in v4.1. As of v6.0, they are 
 ```js
 import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from 'math.gl';
 ```
+
+
+
+If you need access to the WebGL context created by another application or framework, this spy allows you to intercept context creation requests.
 
 
 
