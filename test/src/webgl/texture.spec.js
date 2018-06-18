@@ -65,11 +65,7 @@ test('WebGL#Texture2D format creation', t => {
       // const opts = Object.assign({format}, textureFormat);
       // const texture = new Texture2D(gl, opts);
       // t.equals(texture.format, format,
-<<<<<<< HEAD
       //   `Texture2D(${getKey(GL, format)}) created with correct format`);
-=======
-      //   `Texture2D(${glKey(gl, format)}) created with correct format`);
->>>>>>> Make polyfills for webgl1 optional.
 
       // texture.delete();
     }
