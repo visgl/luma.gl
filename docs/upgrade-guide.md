@@ -14,7 +14,7 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 | `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
 | `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
 | Constants            | | |
-| `GL`                 | `import {GL} from 'luma.gl/constants'` | Bundle size reduction, deprecated in v5.3 |
+| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction, deprecated in v5.3 |
 | `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
 | `glKey(value)`       | `glKey(gl, value)`                     | Bundle size reduction, deprecated in v5.3 |
 | `glKeyType(value)`   | `glKeyType(gl, value)`                 | Bundle size reduction, deprecated in v5.3 |
@@ -36,7 +36,7 @@ v5.3 deprecates a number of symbols. It is recommended that you replace their us
 
 | Deprecated symbol    | Replacement                            | Reason     |
 | ---                  | ---                                    | --          |
-| `GL`                 | `import {GL} from 'luma.gl/constants'` | Bundle size concerns |
+| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size concerns |
 | `deleteGLContest`    | `destroyGLContext`                     | Naming alignment |
 | `pollContext`        | `pollGLContext`                        | Naming alignment |
 

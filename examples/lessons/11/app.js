@@ -1,4 +1,5 @@
-import {GL, AnimationLoop, loadTextures, addEvents, setParameters, Sphere} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {AnimationLoop, loadTextures, addEvents, setParameters, Sphere} from 'luma.gl';
 import {Vector3, Matrix4} from 'math.gl';
 
 const INFO_HTML = `

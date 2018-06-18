@@ -12,6 +12,7 @@ import {getParameterPolyfill} from './polyfill-get-parameter';
 import polyfillVertexArrayObject from './polyfill-vertex-array-object';
 import {WebGLRenderingContext} from '../webgl-utils';
 import assert from '../utils/assert';
+import GL from '../constants';
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -25,8 +26,7 @@ const ERR_VAO_NOT_SUPPORTED =
 
 // Return true if WebGL2 context
 function isWebGL2(gl) {
-  const GL_TEXTURE_BINDING_3D = 0x806A;
-  return gl && gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D;
+  return gl && gl.TEXTURE_BINDING_3D === GL.TEXTURE_BINDING_3D;
 }
 
 // Return object with webgl2 flag and an extension
@@ -108,15 +108,12 @@ const WEBGL_CONTEXT_POLYFILLS = {
       // const gl = this; // eslint-disable-line
       const {webgl2, ext} = getExtensionData(gl, ANGLE_instanced_arrays);
 
-      const GL_VERTEX_ATTRIB_ARRAY_INTEGER = 0x88FD;
-      const GL_VERTEX_ATTRIB_ARRAY_DIVISOR = 0x88FE;
-
       let result;
       switch (pname) {
       // WebGL1 attributes will never be integer
-      case GL_VERTEX_ATTRIB_ARRAY_INTEGER: result = !webgl2 ? false : undefined; break;
+      case GL.VERTEX_ATTRIB_ARRAY_INTEGER: result = !webgl2 ? false : undefined; break;
         // if instancing is not available, return 0 meaning divisor has not been set
-      case GL_VERTEX_ATTRIB_ARRAY_DIVISOR: result = !webgl2 && !ext ? 0 : undefined; break;
+      case GL.VERTEX_ATTRIB_ARRAY_DIVISOR: result = !webgl2 && !ext ? 0 : undefined; break;
       default:
       }
 
@@ -124,26 +121,20 @@ const WEBGL_CONTEXT_POLYFILLS = {
     },
     // Handle transform feedback and uniform block queries in WebGL1
     getProgramParameter: (gl, originalFunc, program, pname) => {
-      const GL_TRANSFORM_FEEDBACK_BUFFER_MODE = 0x8C7F;
-      const GL_TRANSFORM_FEEDBACK_VARYINGS = 0x8C83;
-      const GL_ACTIVE_UNIFORM_BLOCKS = 0x8A36;
-      const GL_SEPARATE_ATTRIBS = 0x8C8D;
-
       if (!isWebGL2(gl)) {
         switch (pname) {
-        case GL_TRANSFORM_FEEDBACK_BUFFER_MODE: return GL_SEPARATE_ATTRIBS;
-        case GL_TRANSFORM_FEEDBACK_VARYINGS: return 0;
-        case GL_ACTIVE_UNIFORM_BLOCKS: return 0;
+        case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
+        case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
+        case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
         default:
         }
       }
       return originalFunc(program, pname);
     },
     getInternalformatParameter: (gl, originalFunc, target, format, pname) => {
-      const GL_SAMPLES = 0x80A9;
       if (!isWebGL2(gl)) {
         switch (pname) {
-        case GL_SAMPLES:
+        case GL.SAMPLES:
           return new Int32Array([0]);
         default:
         }
@@ -151,12 +142,11 @@ const WEBGL_CONTEXT_POLYFILLS = {
       return gl.getInternalformatParameter(target, format, pname);
     },
     getTexParameter(gl, originalFunc, target, pname) {
-      const GL_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FE;
       switch (pname) {
-      case GL_TEXTURE_MAX_ANISOTROPY_EXT:
+      case GL.TEXTURE_MAX_ANISOTROPY_EXT:
         const {extensions} = gl.luma;
         const ext = extensions[EXT_texture_filter_anisotropic];
-        pname = (ext && ext.TEXTURE_MAX_ANISOTROPY_EXT) || GL_TEXTURE_MAX_ANISOTROPY_EXT;
+        pname = (ext && ext.TEXTURE_MAX_ANISOTROPY_EXT) || GL.TEXTURE_MAX_ANISOTROPY_EXT;
         break;
       default:
       }

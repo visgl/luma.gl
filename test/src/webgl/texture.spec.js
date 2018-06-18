@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import {GL, Texture2D, glKey} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {Texture2D, getKey} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
@@ -63,7 +64,7 @@ test('WebGL#Texture2D format creation', t => {
       // const opts = Object.assign({format}, textureFormat);
       // const texture = new Texture2D(gl, opts);
       // t.equals(texture.format, format,
-      //   `Texture2D(${glKey(format)}) created with correct format`);
+      //   `Texture2D(${getKey(GL, format)}) created with correct format`);
 
       // texture.delete();
     }
@@ -115,17 +116,17 @@ test('WebGL2#Texture2D format creation', t => {
       for (const type of types) {
         // texture = new Texture2D(gl2, Object.assign({format, dataFormat, type}));
         // t.equals(texture.format, format,
-        //   `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) created`);
+        //   `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) created`);
         // texture.delete()
         const data = TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA;
         if (data) { // eslint-disable-line
           texture = new Texture2D(gl2, {format, dataFormat, type, data, width: 1, height: 1});
           t.equals(texture.format, format,
-            `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) created`);
+            `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) created`);
           texture.delete();
         } else {
           t.equals(texture.format, format,
-            `Texture2D({format: ${glKey(format)}, type: ${glKey(type)}, dataFormat: ${glKey(dataFormat)}) skipped`);
+            `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) skipped`);
         }
       }
     }
@@ -184,7 +185,7 @@ test('WebGL#Texture2D setParameters', t => {
   });
   const newValue = texture.getParameter(GL.TEXTURE_MAG_FILTER);
   t.equals(newValue, value,
-    `Texture2D.setParameters({[${glKey(parameter)}]: ${glKey(value)}})`);
+    `Texture2D.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}})`);
   */
 
   texture = texture.delete();

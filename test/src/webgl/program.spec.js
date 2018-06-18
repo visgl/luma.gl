@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {GL, Program, Buffer} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {Program, Buffer} from 'luma.gl';
 
 import {fixture} from 'luma.gl/test/setup';
 

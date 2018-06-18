@@ -148,7 +148,4 @@ export {default as ClipSpaceQuad} from './models/clip-space';
 
 // DEPRECATED EXPORTS IN v5.3
 
-// Due to bundle size impact, should be optional import for application
-export {default as GL} from './constants';
-
 export {glGet, glKey, glKeyType} from './webgl-utils/constants-to-keys';

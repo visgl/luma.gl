@@ -1,4 +1,5 @@
-import {GL, Buffer, isWebGL} from 'luma.gl';
+import GL from 'luma.gl/constants';
+import {Buffer, isWebGL} from 'luma.gl';
 import test from 'tape-catch';
 
 import {fixture} from 'luma.gl/test/setup';
