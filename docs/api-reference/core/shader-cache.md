@@ -1,6 +1,13 @@
-# ShaderCache
+# ShaderCache (Experimental)
 
 A cache of compiled shaders, keyed by shader source strings. Compilation of long shaders can be time consuming. By using a `ShaderCache`, the application can ensure that each shader is only compiled once.
+
+
+## Usage
+
+```js
+import {_ShaderCache as ShaderCache} from 'luma.gl';
+```
 
 
 ## Methods

@@ -2,11 +2,27 @@
 
 ## Upgrading from v5.3 to v6.0
 
+### Experimental Exports: New Naming Convention
+
+Experimental exports are now prefixed with underscore (\_), and are no longer members of the `experimental` "name space":
+
+```js
+// luma.gl v6
+import {_Transform as Transform} from 'luma.gl';
+
+// luma.gl v5.x
+import {experimental} from 'luma.gl';
+const {Transform} = experimental;
+```
+
+Reason for Change: The export pattern was changed to make sure tree-shaking can removed unused experimental exports.
+
+
 ### Removed symbols
 
 luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
 
-| Removed symbol       | Replacement                            | Comment/Reason     |
+| Removed symbol       | Replacement                            | Reason for change     |
 | ---                  | ---                                    | --          |
 | `readPixels`         | `Framebuffer.readPixels`               | Naming audit, deprecated in v3.0 |
 | `FrameBufferObject`  | `FrameBuffer`                          | Naming audit, deprecated in v3.0 |

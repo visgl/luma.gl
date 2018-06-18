@@ -14,6 +14,10 @@ The `Transform` class provides easy interface to perform Transform Feedback oper
 
 ## Usage
 
+```js
+import {_Transform as Transform} from 'luma.gl';
+```
+
 ### Use case : Specify source and destination buffers.
 
 Create a `Transform` object by passing, vs (vertex shader), source buffer(s), varyings (output variable names in vertex shader) and destination buffers. Then call `run` to perform one transform feedback iteration.

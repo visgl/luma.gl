@@ -49,7 +49,7 @@ Date: June 1, 2018
 
 Date: Apr 24, 2018
 
-## Transform class (New, WebGL2) (Experimental)
+## Transform class (WebGL2) (Experimental)
 
 The new experimental [`Transform`](/docs/api-reference/core/transform.md) class provides an easy-to-use interface to perform Transform Feedback operations.
 

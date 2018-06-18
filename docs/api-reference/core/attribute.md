@@ -1,4 +1,4 @@
-# Attribute (experimental)
+# Attribute (Experimental)
 
 Wrapper class to be used with the `Model` class' `render` and `setAttributes` methods.
 
@@ -6,6 +6,10 @@ Wrapper class to be used with the `Model` class' `render` and `setAttributes` me
 ## Usage
 
 Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
+
+```js
+import {_Attribute as Attribute} from 'luma.gl';
+```
 
 ```js
 // construct the model.

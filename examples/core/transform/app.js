@@ -1,7 +1,9 @@
 /* global window */
-import {AnimationLoop, Buffer, setParameters, Model, experimental, pickModels, picking} from 'luma.gl';
-const {Transform} = experimental;
+import {AnimationLoop, Buffer, setParameters, Model, pickModels, picking} from 'luma.gl';
+import {_Transform as Transform} from 'luma.gl';
+
 const RED = new Uint8Array([255, 0, 0, 255]);
+
 /* eslint-disable max-len */
 const INFO_HTML = `
 <p>
