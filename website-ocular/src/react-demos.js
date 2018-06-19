@@ -7,7 +7,7 @@ import {default as Fragment} from '../../examples/core/fragment/app.js';
 // import {default as Particles} from '../../examples/core/particles/app.js';
 // import {default as Persistence} from '../../examples/core/persistence/app.js';
 import {default as Picking} from '../../examples/core/picking/app.js';
-import {default as Shadowmap} from '../../examples/core/shadowmap/src/app.js';
+import {default as Shadowmap} from '../../examples/core/shadowmap/app.js';
 import {default as TransformFeedback} from '../../examples/core/transform-feedback/app.js';
 
 import {default as Lesson01} from '../../examples/lessons/01/app.js';

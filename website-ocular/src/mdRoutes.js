@@ -1,54 +1,6 @@
 /* eslint-disable max-len */
 import {setPathPrefix} from 'luma.gl';
 
-import overview from './overview.md';
-import apiReference from '../../docs/api-reference/README.md';
-import animationLoop from '../../docs/api-reference/core/animation-loop.md';
-import buffer from '../../docs/api-reference/webgl/buffer.md';
-import geometry from '../../docs/api-reference/core/geometry.md';
-import model from '../../docs/api-reference/core/model.md';
-import cone from '../../docs/api-reference/models/cone.md';
-import cube from '../../docs/api-reference/models/cube.md';
-import cylinder from '../../docs/api-reference/models/cylinder.md';
-import icoSphere from '../../docs/api-reference/models/ico-sphere.md';
-import plane from '../../docs/api-reference/models/plane.md';
-import sphere from '../../docs/api-reference/models/sphere.md';
-import program from '../../docs/api-reference/webgl/program.md';
-import query from '../../docs/api-reference/webgl/query.md';
-import renderbuffer from '../../docs/api-reference/webgl/renderbuffer.md';
-import resource from '../../docs/api-reference/webgl/resource.md';
-import sampler from '../../docs/api-reference/webgl/sampler.md';
-import shader from '../../docs/api-reference/webgl/shader.md';
-import shaderCache from '../../docs/api-reference/shadertools/shader-cache.md';
-import shadertools from '../../docs/api-reference/shadertools/README.md';
-import shadertoolsPicking from '../../docs/api-reference/shadertools/shadertools-picking.md';
-import texture from '../../docs/api-reference/webgl/texture.md';
-import texture2d from '../../docs/api-reference/webgl/texture-2d.md';
-import texture2dArray from '../../docs/api-reference/webgl/texture-2d-array.md';
-import texture3d from '../../docs/api-reference/webgl/texture-3d.md';
-import textureCube from '../../docs/api-reference/webgl/texture-cube.md';
-import transformFeedback from '../../docs/api-reference/webgl/transform-feedback.md';
-import uniformBufferLayout from '../../docs/api-reference/webgl/uniform-buffer-layout.md';
-import vertexArray from '../../docs/api-reference/webgl/vertex-array.md';
-import context from '../../docs/api-reference/webgl/context/context.md';
-import contextIsWebGL2 from '../../docs/api-reference/webgl/context/is-webGL2.md';
-import contextHasFeatures from '../../docs/api-reference/webgl/context-features/has-features.md';
-import contextGetFeatures from '../../docs/api-reference/webgl/context-features/get-features.md';
-import contextGetContextInfo from '../../docs/api-reference/webgl/context-limits/get-context-info.md';
-import contextGetContextLimits from '../../docs/api-reference/webgl/context-limits/get-context-limits.md';
-import contextGetParameters from '../../docs/api-reference/webgl/context-state/get-parameters.md';
-import contextResetParameters from '../../docs/api-reference/webgl/context-state/reset-parameters.md';
-import contextWithParameters from '../../docs/api-reference/webgl/context-state/with-parameters.md';
-
-import README from '../../docs/README.md';
-import whatsNew from '../../docs/whats-new.md';
-import upgradeGuide from '../../docs/upgrade-guide.md';
-import getStarted from '../../docs/get-started/README.md';
-import installation from '../../docs/get-started/installation.md';
-import examples from '../../docs/get-started/examples.md';
-import usingWithDeckgl from '../../docs/get-started/using-with-deckgl.md';
-import usingWithNode from '../../docs/get-started/using-with-node.md';
-import debugging from '../../docs/get-started/debugging.md';
 /* eslint-enable max-len */
 
 import {
@@ -88,7 +40,8 @@ export default [
     data: [
       {
         name: 'Overview',
-        markdown: overview
+        markdown: require('./overview.md')
+
       },
       {
         name: 'Showcases',
@@ -225,15 +178,15 @@ export default [
         children: [
           {
             name: 'Introduction',
-            markdown: README
+            markdown: require('../../docs/README.md')
           },
           {
             name: 'What\'s New',
-            markdown: whatsNew
+            markdown: require('../../docs/whats-new.md')
           },
           {
             name: 'Upgrade Guide',
-            markdown: upgradeGuide
+            markdown: require('../../docs/upgrade-guide.md')
           }
         ]
       },
@@ -242,27 +195,40 @@ export default [
         children: [
           {
             name: 'Overview',
-            markdown: getStarted
+            markdown: require('../../docs/get-started/README.md')
           },
           {
             name: 'Installation',
-            markdown: installation
+            markdown: require('../../docs/get-started/installation.md')
           },
           {
             name: 'Examples',
-            markdown: examples
+            markdown: require('../../docs/get-started/examples.md')
           },
           {
             name: 'Using with deck.gl',
-            markdown: usingWithDeckgl
+            markdown: require('../../docs/get-started/using-with-deckgl.md')
           },
           {
             name: 'Using with Node.js',
-            markdown: usingWithNode
+            markdown: require('../../docs/get-started/using-with-node.md')
+          }
+          // {
+          //   name: 'Using with other Frameworks',
+          //   content: 'get-started/using-with-other-frameworks.md'
+          // }
+        ]
+      },
+      {
+        name: 'Developer Guide',
+        children: [
+          {
+            name: 'Overview',
+            markdown: require('../../docs/developer-guide/README.md')
           },
           {
             name: 'Debugging',
-            markdown: debugging
+            markdown: require('../../docs/developer-guide/debugging.md')
           }
           // {
           //   name: 'Using with other Frameworks',
@@ -297,19 +263,19 @@ export default [
         children: [
           {
             name: 'Introduction',
-            markdown: apiReference
+            markdown: require('../../docs/api-reference/README.md')
           },
           {
             name: 'AnimationLoop',
-            markdown: animationLoop
+            markdown: require('../../docs/api-reference/core/animation-loop.md')
           },
           {
-            name: 'Buffer',
-            markdown: buffer
+            name: 'ShaderCache',
+            markdown: require('../../docs/api-reference/core/shader-cache.md')
           },
           {
             name: 'Geometry',
-            markdown: geometry
+            markdown: require('../../docs/api-reference/core/geometry.md')
           },
           // {
           //   name: 'Group',
@@ -317,31 +283,31 @@ export default [
           // },
           {
             name: 'Model',
-            markdown: model
+            markdown: require('../../docs/api-reference/core/model.md')
           },
           {
             name: 'Model:Cone',
-            markdown: cone
+            markdown: require('../../docs/api-reference/models/cone.md')
           },
           {
             name: 'Model:Cube',
-            markdown: cube
+            markdown: require('../../docs/api-reference/models/cube.md')
           },
           {
             name: 'Model:Cylinder',
-            markdown: cylinder
+            markdown: require('../../docs/api-reference/models/cylinder.md')
           },
           {
             name: 'Model:IcoSphere',
-            markdown: icoSphere
+            markdown: require('../../docs/api-reference/models/ico-sphere.md')
           },
           {
             name: 'Model:Plane',
-            markdown: plane
+            markdown: require('../../docs/api-reference/models/plane.md')
           },
           {
             name: 'Model:Sphere',
-            markdown: sphere
+            markdown: require('../../docs/api-reference/models/sphere.md')
           },
           // {
           //   name: 'Object3d',
@@ -352,108 +318,108 @@ export default [
           //  picking/picking,
           // },
           {
+            name: 'Buffer',
+            markdown: require('../../docs/api-reference/webgl/buffer.md')
+          },
+          {
             name: 'Program',
-            markdown: program
+            markdown: require('../../docs/api-reference/webgl/program.md')
           },
           {
             name: 'Query',
-            markdown: query
+            markdown: require('../../docs/api-reference/webgl/query.md')
           },
           {
             name: 'Renderbuffer',
-            markdown: renderbuffer
+            markdown: require('../../docs/api-reference/webgl/renderbuffer.md')
           },
           {
             name: 'Resource',
-            markdown: resource
+            markdown: require('../../docs/api-reference/webgl/resource.md')
           },
           {
             name: 'Sampler',
-            markdown: sampler
+            markdown: require('../../docs/api-reference/webgl/sampler.md')
           },
           {
             name: 'Shader',
-            markdown: shader
-          },
-          {
-            name: 'ShaderCache',
-            markdown: shaderCache
+            markdown: require('../../docs/api-reference/webgl/shader.md')
           },
           {
             name: 'Shader Modules',
-            markdown: shadertools
+            markdown: require('../../docs/api-reference/shadertools/README.md')
           },
           {
             name: 'Shader Module:picking',
-            markdown: shadertoolsPicking
+            markdown: require('../../docs/api-reference/shadertools/shadertools-picking.md')
           },
           {
             name: 'Texture',
-            markdown: texture
+            markdown: require('../../docs/api-reference/webgl/texture.md')
           },
           {
             name: 'Texture2D',
-            markdown: texture2d
+            markdown: require('../../docs/api-reference/webgl/texture-2d.md')
           },
           {
             name: 'Texture2DArray',
-            markdown: texture2dArray
+            markdown: require('../../docs/api-reference/webgl/texture-2d-array.md')
           },
           {
             name: 'Texture3D',
-            markdown: texture3d
+            markdown: require('../../docs/api-reference/webgl/texture-3d.md')
           },
           {
             name: 'TextureCube',
-            markdown: textureCube
+            markdown: require('../../docs/api-reference/webgl/texture-cube.md')
           },
           {
             name: 'TransformFeedback',
-            markdown: transformFeedback
+            markdown: require('../../docs/api-reference/webgl/transform-feedback.md')
           },
           {
             name: 'UniformBufferLayout',
-            markdown: uniformBufferLayout
+            markdown: require('../../docs/api-reference/webgl/uniform-buffer-layout.md')
           },
           {
             name: 'VertexArray',
-            markdown: vertexArray
+            markdown: require('../../docs/api-reference/webgl/vertex-array.md')
           },
           {
             name: 'createGLContext',
-            markdown: context
+            markdown: require('../../docs/api-reference/webgl/context/context.md')
           },
           {
             name: 'isWebGL2',
-            markdown: contextIsWebGL2
+            markdown: require('../../docs/api-reference/webgl/context/is-webGL2.md')
           },
           {
             name: 'hasFeature(s)',
-            markdown: contextHasFeatures
+            markdown: require('../../docs/api-reference/webgl/context/has-features.md')
           },
           {
             name: 'getFeatures',
-            markdown: contextGetFeatures
+            markdown: require('../../docs/api-reference/webgl/context/get-features.md')
           },
           {
             name: 'getContextInfo',
-            markdown: contextGetContextInfo
+            markdown: require('../../docs/api-reference/webgl/context/get-context-info.md')
           },
           {
             name: 'getContextLimits',
-            markdown: contextGetContextLimits
+            markdown: require('../../docs/api-reference/webgl/context/get-context-limits.md')
           },
           {
             name: 'get|setParameter(s)',
-            markdown: contextGetParameters
+            markdown: require('../../docs/api-reference/webgl/context/get-parameters.md')
           },
           {
             name: 'resetParameters',
-            markdown: contextResetParameters
+            markdown: require('../../docs/api-reference/webgl/context/reset-parameters.md')
           },
           {
             name: 'withParameters',
-            markdown: contextWithParameters
+            markdown: require('../../docs/api-reference/webgl/context/with-parameters.md')
           }
         ]
       }

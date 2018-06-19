@@ -2,7 +2,8 @@
 import GL from 'luma.gl/constants';
 import {
   AnimationLoop, setParameters, loadTextures, Buffer,
-  Sphere, project, diffuse, picking, pickModels, ShaderCache
+  Sphere, project, diffuse, picking, pickModels,
+  _ShaderCache as ShaderCache
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
