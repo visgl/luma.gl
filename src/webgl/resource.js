@@ -1,6 +1,7 @@
 import luma from '../init';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../webgl-utils';
 import {uid} from '../utils';
+import {log} from '../utils';
 import assert from '../utils/assert';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
@@ -194,6 +195,18 @@ export default class Resource {
       this.setParameter(pname, parameters[pname]);
     }
     return this;
+  }
+
+  // Intall stubs for removed methods
+  stubRemovedMethods(version, methodNames) {
+    const upgradeMessage = `See luma.gl ${version} Upgrade Guide at \
+http://uber.github.io/luma.gl/#/documentation/overview/upgrade-guide`;
+    methodNames.forEach(methodName => {
+      this[methodName] = () => {
+        log.removed(methodName, upgradeMessage);
+        throw new Error(methodName);
+      };
+    });
   }
 
   // PUBLIC VIRTUAL METHODS

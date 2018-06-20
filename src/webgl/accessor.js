@@ -74,6 +74,10 @@ export default class Accessor {
     if (opts.isInstanced !== undefined) {
       target.divisor = opts.isInstanced ? 1 : 0;
     }
+    // TODO - should this be supported?
+    if (opts.index !== undefined) {
+      target.index = opts.index ? 1 : 0;
+    }
     return target;
   }
   /* eslint-enable complexity */
