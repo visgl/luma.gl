@@ -9,5 +9,8 @@
     "func-names": 0,
     "no-inline-comments": 0,
     "no-multi-str": 0
-  }
+  },
+  "globals": {
+    "window": false,
+  },
 }
