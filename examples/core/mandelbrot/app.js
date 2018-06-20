@@ -1,10 +1,10 @@
-import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, ClipSpace} from 'luma.gl';
 
 const INFO_HTML = `
 <p>
 <code>Mandelbrot</code> set zoom implemented as a GLSL fragment shader.
 <p>
-Uses a luma.gl <code>ClipSpaceQuad</code> to set up a screen spaced model
+Uses a luma.gl <code>ClipSpace</code> Model to set up a screen spaced model
 in which the <code>fragment shader</code> can render.
 `;
 
@@ -18,6 +18,7 @@ precision highp float;
 // Based on a renderman shader by Michael Rivero
 const int maxIterations = 1;
 varying vec2 coordinate;
+
 void main (void)
 {
   vec2 pos = coordinate;
@@ -43,10 +44,10 @@ void main (void)
   }
   // Base the color on the number of iterations
   vec4 color;
-  // if (divergeIteration < 9) {
-  //   color = vec4 (0., 0., 0., 1.0); // black
-  // }
-  // else
+  if (divergeIteration < 9) {
+    color = vec4 (0., 0., 0., 1.0); // black
+  }
+  else
   {
     float tmpval = fract((float(divergeIteration) / 100.));
     color = vec4 (tmpval, 0, tmpval, 1.0);
@@ -56,58 +57,58 @@ void main (void)
 }
 `;
 
+const ZOOM_THRESHOLD = 1e5;
+const ZOOM_CENTER_X = -0.0150086889504513;
+const ZOOM_CENTER_Y = 0.78186693904085048;
+
+const BASE_CORNERS = [
+  [-2.2, -1.2],
+  [0.7, -1.2],
+  [-2.2, 1.2],
+  [0.7, 1.2]
+];
+
 let centerOffsetX = 0;
 let centerOffsetY = 0;
 let zoom = 1;
-const zoomThreshold = 1e5;
-const zoomCenterX = -0.0150086889504513;
-const zoomCenterY = 0.78186693904085048;
+
+// Calculate new zoomed extents
+function getZoomedCorners(zoomFactor = 1.01) {
+  zoom *= zoomFactor;
+  if (zoom > ZOOM_THRESHOLD) {
+    zoom = 1;
+  }
+
+  const corners = [];
+  for (const baseCorner of BASE_CORNERS) {
+    corners.push(baseCorner[0] / zoom + centerOffsetX, baseCorner[1] / zoom + centerOffsetY);
+  }
+
+  if (centerOffsetX !== ZOOM_CENTER_X) {
+    centerOffsetX += (ZOOM_CENTER_X - centerOffsetX) / 20;
+  }
+  if (centerOffsetY !== ZOOM_CENTER_Y) {
+    centerOffsetY += (ZOOM_CENTER_Y - centerOffsetY) / 20;
+  }
+
+  return corners;
+}
 
 const animationLoop = new AnimationLoop({
-  // onCreateContext: () => createGLContext({canvas: 'canvas-1'}),
-  onInitialize: ({gl}) => {
-    return {
-      clipSpaceQuad: new ClipSpaceQuad(gl, {fs: MANDELBROT_FRAGMENT_SHADER})
-    };
-  },
-  onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
+  onInitialize: ({gl}) => ({
+    clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER})
+  }),
+
+  onRender: ({gl, canvas, tick, clipSpace}) => {
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
-    const baseCorners = [
-      [-2.2, -1.2],
-      [0.7, -1.2],
-      [-2.2, 1.2],
-      [0.7, 1.2]
-    ];
-
-    zoom *= 1.01;
-    if (zoom > zoomThreshold) {
-      zoom = 1;
-    }
-
-    // const div = document.getElementById('zoom');
-    // div.innerHTML = `Zoom ${zoom.toPrecision(2)}`;
-
-    const corners = [];
-    for (const corner of baseCorners) {
-      corners.push(
-        corner[0] / zoom + centerOffsetX,
-        corner[1] / zoom + centerOffsetY
-      );
-    }
-
-    if (centerOffsetX !== zoomCenterX) {
-      centerOffsetX += (zoomCenterX - centerOffsetX) / 20;
-    }
-    if (centerOffsetY !== zoomCenterY) {
-      centerOffsetY += (zoomCenterY - centerOffsetY) / 20;
-    }
-
-    clipSpaceQuad
-      .setAttributes({
+    // Feed in new extents every draw
+    const corners = getZoomedCorners();
+    clipSpace.draw({
+      attributes: {
         aCoordinate: {value: new Float32Array(corners), size: 2}
-      })
-      .render();
+      }
+    });
   }
 });
 

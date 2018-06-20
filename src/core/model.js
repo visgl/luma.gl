@@ -305,7 +305,6 @@ export default class Model extends Object3D {
   draw(opts = {}) {
     const {
       moduleSettings = null,
-      framebuffer = null,
       uniforms = {},
       attributes = {},
       samplers = {},
@@ -419,102 +418,6 @@ export default class Model extends Object3D {
     return this.draw({uniforms, attributes, samplers, transformFeedback, parameters, vertexArray});
   }
   /* eslint-enable max-params  */
-
-  /*
-  draw({
-    moduleSettings = null,
-    uniforms = {},
-    attributes = {},
-    samplers = {},
-    parameters = {},
-    settings,
-    framebuffer = null,
-    vertexArray = null,
-    transformFeedback = null
-  } = {}) {
-    if (settings) {
-      log.deprecated('settings', 'parameters')();
-      parameters = settings;
-    }
-
-    if (moduleSettings) {
-      this.updateModuleSettings(moduleSettings);
-    }
-
-    if (framebuffer) {
-      parameters = Object.assign(parameters, {framebuffer});
-    }
-
-    this.render(uniforms, attributes, samplers, transformFeedback, parameters, vertexArray);
-
-    if (framebuffer) {
-      framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
-    }
-
-    return this;
-  }
-
-  /* eslint-disable max-params  
-  render(
-    uniforms = {},
-    attributes = {},
-    samplers = {},
-    transformFeedback = null,
-    parameters = {},
-    vertexArray = null
-  ) {
-    addModel(this);
-
-    const resolvedUniforms = this.addViewUniforms(uniforms);
-    getOverrides(this.id, resolvedUniforms);
-
-    this.setUniforms(resolvedUniforms);
-    this.setAttributes(attributes);
-    Object.assign(this.samplers, samplers);
-
-    log.group(LOG_DRAW_PRIORITY,
-      `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2})();
-
-    this.setProgramState({vertexArray});
-
-    this._logAttributesAndUniforms(2, resolvedUniforms);
-
-    this.onBeforeRender();
-
-    const drawParams = this.drawParams;
-    if (drawParams.isInstanced && !this.isInstanced) {
-      log.warn('Found instanced attributes on non-instanced model')();
-    }
-    const {isIndexed, indexType} = drawParams;
-    const {isInstanced, instanceCount} = this;
-
-    this._timerQueryStart();
-
-    this.program.draw({
-      parameters,
-      drawMode: this.getDrawMode(),
-      vertexCount: this.getVertexCount(),
-      vertexArray,
-      transformFeedback,
-      isIndexed,
-      indexType,
-      isInstanced,
-      instanceCount
-    });
-
-    this._timerQueryEnd();
-
-    this.onAfterRender();
-
-    this.unsetProgramState();
-
-    this.setNeedsRedraw(false);
-
-    log.groupEnd(LOG_DRAW_PRIORITY, `>>> RENDERING MODEL ${this.id}`)();
-
-    return this;
-  }
-  */
 
   setProgramState({vertexArray = null} = {}) {
     const {program} = this;

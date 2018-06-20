@@ -34,6 +34,10 @@ export default class Program extends Resource {
     this._setId(opts.id);
   }
 
+  getConfiguration() {
+    return this.configuration;
+  }
+
   initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = {}) {
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;

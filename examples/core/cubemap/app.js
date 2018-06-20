@@ -36,10 +36,6 @@ function readHTMLControls() {
 const animationLoop = new AnimationLoop({
 
   onInitialize: ({gl, canvas}) => {
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.position = 'absolute';
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,

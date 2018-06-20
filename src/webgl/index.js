@@ -38,20 +38,7 @@ export {
   getContextInfo
 } from '../webgl-context/context-limits';
 
-// WebGL1 objects
-export {default as Buffer} from './buffer';
-export {Shader, VertexShader, FragmentShader} from './shader';
-export {default as Program} from './program';
-export {default as Framebuffer} from './framebuffer';
-export {default as Renderbuffer} from './renderbuffer';
-export {default as Texture2D} from './texture-2d';
-export {default as TextureCube} from './texture-cube';
-
 // Functions
-export {
-  draw
-} from './draw';
-
 export {
   clear
 } from './clear';
@@ -66,7 +53,17 @@ export {
   checkUniformValues
 } from './uniforms';
 
-// WebGL2
+// WebGL1 objects
+export {default as Buffer} from './buffer';
+export {Shader, VertexShader, FragmentShader} from './shader';
+export {default as Program} from './program';
+export {default as Framebuffer} from './framebuffer';
+export {default as Renderbuffer} from './renderbuffer';
+export {default as Texture2D} from './texture-2d';
+export {default as TextureCube} from './texture-cube';
+
+// WebGL2 objects
 export {default as VertexArray} from './vertex-array';
 export {default as Query} from './query';
+export {default as TransformFeedback} from './transform-feedback';
 

@@ -40,10 +40,9 @@ export function createCanvas({width = 800, height = 600, id = 'gl-canvas', inser
   canvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
   // add the canvas to the body element once the page has loaded
   if (insert) {
-    getPageLoadPromise().then(document => {
-      const body = document.body;
-      body.insertBefore(canvas, body.firstChild);
-    });
+    const body = document.body;
+    body.insertBefore(canvas, body.firstChild);
+    // getPageLoadPromise().then(document => {});
   }
   return canvas;
 }
