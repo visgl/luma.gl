@@ -61,7 +61,6 @@ export default class TransformFeedback extends Resource {
   }
 
   pause() {
-    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.pauseTransformFeedback();
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
@@ -76,7 +75,6 @@ export default class TransformFeedback extends Resource {
   }
 
   end() {
-    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this.gl.endTransformFeedback();
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
@@ -144,21 +142,18 @@ export default class TransformFeedback extends Resource {
   // You'd always use the default because you'd always have to bind and
   // unbind all the buffers.
   _bindBuffers() {
-    this.bind(() => {
-      for (const bufferIndex in this.buffers) {
-        console.warn('binding buffer');
-        this.bindBuffer(Number(bufferIndex), this.buffers[bufferIndex]);
-      }
-    });
+    // Can't bind here, supposed to be called on active feedback
+    for (const bufferIndex in this.buffers) {
+      this.bindBuffer(Number(bufferIndex), this.buffers[bufferIndex]);
+    }
   }
 
   _unbindBuffers() {
-    this.bind(() => {
-      for (const bufferIndex in this.buffers) {
-        // this.bindBuffer(Number(bufferIndex), null);
-        this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
-      }
-    });
+    // Can't bind here, supposed to be called on active feedback
+    for (const bufferIndex in this.buffers) {
+      // this.bindBuffer(Number(bufferIndex), null);
+      this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
+    }
   }
 
   // Resolve a varying name or number to a location index

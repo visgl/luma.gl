@@ -1,4 +1,5 @@
 /* global window */
+import 'luma.gl/debug';
 import {AnimationLoop, Buffer, setParameters, Model, pickModels, picking} from 'luma.gl';
 import {_Transform as Transform} from 'luma.gl';
 
@@ -132,7 +133,7 @@ function mouseleave(e) {
 }
 
 const animationLoop = new AnimationLoop({
-  glOptions: {webgl2: true},
+  glOptions: {webgl2: true, debug: true},
   createFramebuffer: true,
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
