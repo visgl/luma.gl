@@ -7,6 +7,7 @@ import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import Buffer from './buffer';
+import ProgramConfiguration from './program-configuration';
 import {withParameters} from '../webgl-context/context-state';
 import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
@@ -15,14 +16,6 @@ import assert from '../utils/assert';
 
 const LOG_PROGRAM_PERF_PRIORITY = 3;
 
-// const GL_TRANSFORM_FEEDBACK_BUFFER_MODE = 0x8C7F;
-// const GL_TRANSFORM_FEEDBACK_VARYINGS = 0x8C83;
-// MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS : 0x8C80,
-// TRANSFORM_FEEDBACK_BUFFER_START: 0x8C84,
-// TRANSFORM_FEEDBACK_BUFFER_SIZE : 0x8C85,
-// TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN: 0x8C88,
-// MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS: 0x8C8A,
-// MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS: 0x8C8B,
 const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
 const GL_SEPARATE_ATTRIBS = 0x8C8D;
 
@@ -30,11 +23,19 @@ export default class Program extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
+    this.vertexArray = VertexArray.getDefaultArray(gl);
+
+    // Experimental flag to avoid deleting Program object while it is cached
+    this._isCached = false;
+
     this.initialize(opts);
-    this.vertexAttributes = VertexArray.getDefaultArray(gl);
     Object.seal(this);
 
     this._setId(opts.id);
+  }
+
+  getConfiguration() {
+    return this.configuration;
   }
 
   initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = {}) {
@@ -59,8 +60,7 @@ export default class Program extends Resource {
 
     this._compileAndLink();
 
-    // Experimental flag to avoid deleting Program object while it is cached
-    this._isCached = false;
+    this.configuration = new ProgramConfiguration(this);
 
     return this;
   }
@@ -68,7 +68,7 @@ export default class Program extends Resource {
   // Generates warning if a vertex shader attribute is not setup.
   checkAttributeBindings({vertexArray}) {
     const filledLocations = vertexArray ?
-      vertexArray.filledLocations : this.vertexAttributes.filledLocations;
+      vertexArray.filledLocations : this.vertexArray.filledLocations;
     for (const attributeName in this._attributeToLocationMap) {
       const location = this._attributeToLocationMap[attributeName];
       if (!filledLocations[location] && !this._warnedLocations[location]) {
@@ -170,7 +170,7 @@ export default class Program extends Resource {
    */
   setAttributes(attributes, {clear = true, drawParams = {}} = {}) {
     if (clear) {
-      this.vertexAttributes.clearBindings();
+      this.vertexArray.clearBindings();
     }
 
     // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
@@ -187,7 +187,7 @@ export default class Program extends Resource {
       const attribute = attributes[attributeName];
       // DISABLE MISSING ATTRIBUTE
       if (!attribute) {
-        this.vertexAttributes.disable(location);
+        this.vertexArray.disable(location);
       } else if (attribute.isGeneric) {
         this._setAttributeToGeneric({location, array: attribute.value});
       } else {
@@ -223,7 +223,7 @@ export default class Program extends Resource {
     log.deprecated('Program: `setBuffers`', '`setAttributes`');
 
     if (clear) {
-      this.vertexAttributes.clearBindings();
+      this.vertexArray.clearBindings();
     }
 
     // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
@@ -240,7 +240,7 @@ export default class Program extends Resource {
       const buffer = buffers[bufferName];
       // DISABLE MISSING ATTRIBUTE
       if (!buffer) {
-        this.vertexAttributes.disable(location);
+        this.vertexArray.disable(location);
       } else if (buffer instanceof Buffer) {
         this._setAttributeToBuffer({location, buffer, layout: buffer.layout});
         Object.assign(drawParams, {
@@ -269,8 +269,8 @@ export default class Program extends Resource {
   unsetBuffers() {
     const length = this._attributeCount;
     for (let i = 1; i < length; ++i) {
-      // this.vertexAttributes.setDivisor(i, 0);
-      this.vertexAttributes.disable(i);
+      // this.vertexArray.setDivisor(i, 0);
+      this.vertexArray.disable(i);
     }
 
     // Clear elements buffer
@@ -446,15 +446,15 @@ export default class Program extends Resource {
   // PRIVATE METHODS
 
   _setAttributeToGeneric({location, array}) {
-    this.vertexAttributes.setGeneric({location, array});
-    this.vertexAttributes.disable(location, true);
+    this.vertexArray.setGeneric({location, array});
+    this.vertexArray.disable(location, true);
   }
 
   _setAttributeToBuffer({location, buffer, layout}) {
     const divisor = layout.instanced ? 1 : 0;
-    this.vertexAttributes.setBuffer({location, buffer, layout});
-    this.vertexAttributes.setDivisor(location, divisor);
-    this.vertexAttributes.enable(location);
+    this.vertexArray.setBuffer({location, buffer, layout});
+    this.vertexArray.setDivisor(location, divisor);
+    this.vertexArray.enable(location);
   }
 
   _compileAndLink() {
@@ -515,7 +515,7 @@ export default class Program extends Resource {
   _areAllAttributesEnabled() {
     const length = this._attributeCount;
     for (let i = 0; i < length; ++i) {
-      if (!this.vertexAttributes.isEnabled(i)) {
+      if (!this.vertexArray.isEnabled(i)) {
         return false;
       }
     }

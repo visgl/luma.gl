@@ -1,6 +1,11 @@
 /* eslint-disable camelcase */
 import assert from '../utils/assert';
 
+const GL_BYTE = 0x1400;
+const GL_UNSIGNED_BYTE = 0x1401;
+const GL_SHORT = 0x1402;
+const GL_UNSIGNED_SHORT = 0x1403;
+
 const GL_POINTS = 0x0;
 const GL_LINES = 0x1;
 const GL_LINE_LOOP = 0x2;
@@ -43,37 +48,37 @@ const GL_FLOAT_MAT4x3 = 0x8B6A;
 
 // Composite types table
 const COMPOSITE_GL_TYPES = {
-  [GL_FLOAT]: [GL_FLOAT, 1],
-  [GL_FLOAT_VEC2]: [GL_FLOAT, 2],
-  [GL_FLOAT_VEC3]: [GL_FLOAT, 3],
-  [GL_FLOAT_VEC4]: [GL_FLOAT, 4],
+  [GL_FLOAT]: [GL_FLOAT, 1, 'float'],
+  [GL_FLOAT_VEC2]: [GL_FLOAT, 2, 'vec2'],
+  [GL_FLOAT_VEC3]: [GL_FLOAT, 3, 'vec3'],
+  [GL_FLOAT_VEC4]: [GL_FLOAT, 4, 'vec4'],
 
-  [GL_INT]: [GL_INT, 1],
-  [GL_INT_VEC2]: [GL_INT, 2],
-  [GL_INT_VEC3]: [GL_INT, 3],
-  [GL_INT_VEC4]: [GL_INT, 4],
+  [GL_INT]: [GL_INT, 1, 'int'],
+  [GL_INT_VEC2]: [GL_INT, 2, 'ivec2'],
+  [GL_INT_VEC3]: [GL_INT, 3, 'ivec3'],
+  [GL_INT_VEC4]: [GL_INT, 4, 'ivec4'],
 
-  [GL_UNSIGNED_INT]: [GL_UNSIGNED_INT, 1],
-  [GL_UNSIGNED_INT_VEC2]: [GL_UNSIGNED_INT, 2],
-  [GL_UNSIGNED_INT_VEC3]: [GL_UNSIGNED_INT, 3],
-  [GL_UNSIGNED_INT_VEC4]: [GL_UNSIGNED_INT, 4],
+  [GL_UNSIGNED_INT]: [GL_UNSIGNED_INT, 1, 'uint'],
+  [GL_UNSIGNED_INT_VEC2]: [GL_UNSIGNED_INT, 2, 'uvec2'],
+  [GL_UNSIGNED_INT_VEC3]: [GL_UNSIGNED_INT, 3, 'uvec3'],
+  [GL_UNSIGNED_INT_VEC4]: [GL_UNSIGNED_INT, 4, 'uvec4'],
 
-  [GL_BOOL]: [GL_FLOAT, 1],
-  [GL_BOOL_VEC2]: [GL_FLOAT, 2],
-  [GL_BOOL_VEC3]: [GL_FLOAT, 3],
-  [GL_BOOL_VEC4]: [GL_FLOAT, 4],
+  [GL_BOOL]: [GL_FLOAT, 1, 'bool'],
+  [GL_BOOL_VEC2]: [GL_FLOAT, 2, 'bvec2'],
+  [GL_BOOL_VEC3]: [GL_FLOAT, 3, 'bvec3'],
+  [GL_BOOL_VEC4]: [GL_FLOAT, 4, 'bvec4'],
 
-  [GL_FLOAT_MAT2]: [GL_FLOAT, 8], // 4
-  [GL_FLOAT_MAT2x3]: [GL_FLOAT, 8], // 6
-  [GL_FLOAT_MAT2x4]: [GL_FLOAT, 8], // 8
+  [GL_FLOAT_MAT2]: [GL_FLOAT, 8, 'mat2'], // 4
+  [GL_FLOAT_MAT2x3]: [GL_FLOAT, 8, 'mat2x3'], // 6
+  [GL_FLOAT_MAT2x4]: [GL_FLOAT, 8, 'mat2x4'], // 8
 
-  [GL_FLOAT_MAT3]: [GL_FLOAT, 12], // 9
-  [GL_FLOAT_MAT3x2]: [GL_FLOAT, 12], // 6
-  [GL_FLOAT_MAT3x4]: [GL_FLOAT, 12], // 12
+  [GL_FLOAT_MAT3]: [GL_FLOAT, 12, 'mat3'], // 9
+  [GL_FLOAT_MAT3x2]: [GL_FLOAT, 12, 'mat3x2'], // 6
+  [GL_FLOAT_MAT3x4]: [GL_FLOAT, 12, 'mat3x4'], // 12
 
-  [GL_FLOAT_MAT4]: [GL_FLOAT, 16], // 16
-  [GL_FLOAT_MAT4x2]: [GL_FLOAT, 16], // 8
-  [GL_FLOAT_MAT4x3]: [GL_FLOAT, 16] // 12
+  [GL_FLOAT_MAT4]: [GL_FLOAT, 16, 'mat4'], // 16
+  [GL_FLOAT_MAT4x2]: [GL_FLOAT, 16, 'mat4x2'], // 8
+  [GL_FLOAT_MAT4x3]: [GL_FLOAT, 16, 'mat4x3'] // 12
 };
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
@@ -125,4 +130,25 @@ export function decomposeCompositeGLType(compositeGLType) {
   }
   const [type, components] = typeAndSize;
   return {type, components};
+}
+
+export function getCompositeGLType(type, components) {
+
+  switch (type) {
+  case GL_BYTE:
+  case GL_UNSIGNED_BYTE:
+  case GL_SHORT:
+  case GL_UNSIGNED_SHORT:
+    type = GL_FLOAT;
+    break;
+  default:
+  }
+
+  for (const glType in COMPOSITE_GL_TYPES) {
+    const [compType, compComponents, name] = COMPOSITE_GL_TYPES[glType];
+    if (compType === type && compComponents === components) {
+      return {glType, name};
+    }
+  }
+  return null;
 }

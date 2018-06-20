@@ -2,8 +2,8 @@
 // A scenegraph object node
 import GL from '../constants';
 import Attribute from './attribute';
-import {Buffer, Program, checkUniformValues} from '../webgl';
-import Query from '../webgl/query';
+import {Buffer, Program, Query, clear} from '../webgl';
+import {checkUniformValues} from '../webgl';
 import {isWebGL, isWebGL2} from '../webgl-utils';
 import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
 import {getDrawMode} from '../geometry/geometry';
@@ -13,10 +13,6 @@ import {assembleShaders} from '../shadertools/src';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {log, formatValue, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
-
-const MSG_INSTANCED_PARAM_DEPRECATED = `\
-Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
-This will become a hard error in a future version of luma.gl.`;
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
@@ -103,9 +99,7 @@ export default class Model extends Object3D {
     this.setUniforms(this.getModuleUniforms(moduleSettings));
 
     if (instanced) {
-      /* global console */
-      /* eslint-disable no-console */
-      console.warn(MSG_INSTANCED_PARAM_DEPRECATED);
+      log.replaced('instanced', 'isInstanced')();
       isInstanced = isInstanced || instanced;
     }
 
@@ -174,6 +168,15 @@ export default class Model extends Object3D {
     this.delete();
   }
 
+  setProps(props) {
+    if ('attributes' in props) {
+      this.setAttributes(props.attributes);
+    }
+    if ('uniforms' in props) {
+      this.setUniforms(props.uniforms);
+    }
+  }
+
   setNeedsRedraw(redraw = true) {
     this.needsRedraw = redraw;
     return this;
@@ -189,29 +192,12 @@ export default class Model extends Object3D {
     return redraw;
   }
 
-  setDrawMode(drawMode) {
-    this.drawMode = getDrawMode(drawMode);
-    return this;
-  }
-
   getDrawMode() {
     return this.drawMode;
   }
 
-  setVertexCount(vertexCount) {
-    assert(Number.isFinite(vertexCount));
-    this.vertexCount = vertexCount;
-    return this;
-  }
-
   getVertexCount() {
     return this.vertexCount;
-  }
-
-  setInstanceCount(instanceCount) {
-    assert(Number.isFinite(instanceCount));
-    this.instanceCount = instanceCount;
-    return this;
   }
 
   getInstanceCount() {
@@ -223,7 +209,35 @@ export default class Model extends Object3D {
   }
 
   get varyingMap() {
+    assert(false);
     return this.program.varyingMap;
+  }
+
+  getAttributes() {
+    return this.attributes;
+  }
+
+  getUniforms() {
+    return this.uniforms;
+  }
+
+  // TODO - replace with setProps?
+
+  setDrawMode(drawMode) {
+    this.drawMode = getDrawMode(drawMode);
+    return this;
+  }
+
+  setInstanceCount(instanceCount) {
+    assert(Number.isFinite(instanceCount));
+    this.instanceCount = instanceCount;
+    return this;
+  }
+
+  setVertexCount(vertexCount) {
+    assert(Number.isFinite(vertexCount));
+    this.vertexCount = vertexCount;
+    return this;
   }
 
   // TODO - just set attributes, don't hold on to geometry
@@ -234,10 +248,6 @@ export default class Model extends Object3D {
     this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.setNeedsRedraw();
     return this;
-  }
-
-  getAttributes() {
-    return this.attributes;
   }
 
   setAttributes(attributes = {}) {
@@ -251,10 +261,6 @@ export default class Model extends Object3D {
     this.setNeedsRedraw();
 
     return this;
-  }
-
-  getUniforms() {
-    return this.uniforms;
   }
 
   // TODO - should actually set the uniforms
@@ -286,63 +292,57 @@ export default class Model extends Object3D {
     return this.setUniforms(uniforms);
   }
 
-  draw({
-    moduleSettings = null,
-    uniforms = {},
-    attributes = {},
-    samplers = {},
-    parameters = {},
-    settings,
-    framebuffer = null,
-    vertexArray = null,
-    transformFeedback = null
-  } = {}) {
-    if (settings) {
-      log.deprecated('settings', 'parameters')();
-      parameters = settings;
-    }
+  setSamplers(samplers) {
+    Object.assign(this.samplers, samplers);
+  }
 
+  clear(opts) {
+    clear(this.program.gl, opts);
+    return this;
+  }
+
+  /* eslint-disable max-statements  */
+  draw(opts = {}) {
+    const {
+      moduleSettings = null,
+      uniforms = {},
+      attributes = {},
+      samplers = {},
+      transformFeedback = this.transformFeedback,
+      parameters = {},
+      vertexArray = this.vertexArray
+    } = opts;
+
+    // Update module settings
     if (moduleSettings) {
       this.updateModuleSettings(moduleSettings);
     }
 
-    if (framebuffer) {
-      parameters = Object.assign(parameters, {framebuffer});
-    }
-
-    this.render(uniforms, attributes, samplers, transformFeedback, parameters, vertexArray);
-
-    if (framebuffer) {
-      framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
-    }
-
-    return this;
-  }
-
-  /* eslint-disable max-params  */
-  render(
-    uniforms = {},
-    attributes = {},
-    samplers = {},
-    transformFeedback = null,
-    parameters = {},
-    vertexArray = null
-  ) {
     addModel(this);
 
-    const resolvedUniforms = this.addViewUniforms(uniforms);
-    getOverrides(this.id, resolvedUniforms);
-
-    this.setUniforms(resolvedUniforms);
     this.setAttributes(attributes);
-    Object.assign(this.samplers, samplers);
+
+    this.setSamplers(samplers);
+    // Let Seer override edited uniforms
+    getOverrides(this.id, uniforms);
+    this.setUniforms(uniforms);
+    // this.setUniforms(opts);
+
+    // Set program state
+    const {program} = this;
+    program.use();
+    program.setUniforms(this.uniforms, this.samplers);
+    // this.vertexArray.setAttributes(this._attributes);
+    // this.vertexArray.checkAttributeBindings();
+
+    this.setProgramState({vertexArray});
 
     log.group(LOG_DRAW_PRIORITY,
       `>>> RENDERING MODEL ${this.id}`, {collapsed: log.priority <= 2})();
 
     this.setProgramState({vertexArray});
 
-    this._logAttributesAndUniforms(2, resolvedUniforms);
+    this._logAttributesAndUniforms(2, this.uniforms);
 
     this.onBeforeRender();
 
@@ -350,12 +350,12 @@ export default class Model extends Object3D {
     if (drawParams.isInstanced && !this.isInstanced) {
       log.warn('Found instanced attributes on non-instanced model')();
     }
+
     const {isIndexed, indexType} = drawParams;
     const {isInstanced, instanceCount} = this;
-
     this._timerQueryStart();
 
-    this.program.draw({
+    this.program.draw(Object.assign(opts, {
       parameters,
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
@@ -365,7 +365,7 @@ export default class Model extends Object3D {
       indexType,
       isInstanced,
       instanceCount
-    });
+    }));
 
     this._timerQueryEnd();
 
@@ -378,6 +378,44 @@ export default class Model extends Object3D {
     log.groupEnd(LOG_DRAW_PRIORITY, `>>> RENDERING MODEL ${this.id}`)();
 
     return this;
+  }
+  /* eslint-enable max-statements  */
+
+  // Draw call for transform feedback
+  transform(opts = {}) {
+    const {
+      discard = true,
+      feedbackBuffers
+    } = opts;
+
+    let {
+      parameters
+    } = opts;
+
+    if (feedbackBuffers) {
+      this.setFeedbackBuffers(feedbackBuffers);
+    }
+
+    if (discard) {
+      parameters = Object.assign({}, parameters, {[GL.RASTERIZER_DISCARD]: discard});
+    }
+
+    return this.draw(Object.assign({}, opts, {parameters}));
+  }
+
+  // DEPRECATED METHODS
+
+  /* eslint-disable max-params  */
+  render(
+    uniforms = {},
+    attributes = {},
+    samplers = {},
+    transformFeedback = null,
+    parameters = {},
+    vertexArray = this.vertexArray
+  ) {
+    // log.deprecated('Model.render()', 'Model.draw()')();
+    return this.draw({uniforms, attributes, samplers, transformFeedback, parameters, vertexArray});
   }
   /* eslint-enable max-params  */
 
@@ -396,22 +434,6 @@ export default class Model extends Object3D {
     // is unbound
     this.program.unsetBuffers();
     return this;
-  }
-
-  // DEPRECATED METHODS
-
-  // TODO - uniform names are too strongly linked camera <=> default shaders
-  // At least all special handling is collected here.
-  addViewUniforms(uniforms) {
-    // TODO - special treatment of these parameters should be removed
-    const {camera, viewMatrix, modelMatrix} = uniforms;
-    // Camera exposes uniforms that can be used directly in shaders
-    const cameraUniforms = camera ? camera.getUniforms() : {};
-
-    const viewUniforms = viewMatrix ?
-      this.getCoordinateUniforms(viewMatrix, modelMatrix) : {};
-
-    return Object.assign({}, uniforms, cameraUniforms, viewUniforms);
   }
 
   // PRIVATE METHODS

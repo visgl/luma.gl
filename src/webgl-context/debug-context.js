@@ -100,7 +100,7 @@ function onValidateGLFunc(functionName, functionArgs) {
   let functionString;
   if (log.priority >= 4) {
     functionString = getFunctionString(functionName, functionArgs);
-    log.info(4, functionString)();
+    log.log(4, functionString)();
   }
 
   if (log.break) {

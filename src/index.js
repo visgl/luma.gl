@@ -50,7 +50,6 @@ export {default as Renderbuffer} from './webgl/renderbuffer';
 export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 
-export {draw} from './webgl/draw';
 export {clear, clearBuffer} from './webgl/clear';
 
 // WebGL2 classes & Extensions
