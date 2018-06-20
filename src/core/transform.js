@@ -6,10 +6,9 @@ import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log} from '../utils';
 
-const PASS_THROUGH_FS = `\
-void main()
-{
-}
+// Need a minimal fragment shader to make program compile when only vertex shader specified
+const EMPTY_FS = `\
+void main() {}
 `;
 
 export default class Transform {
@@ -24,10 +23,10 @@ export default class Transform {
 
     this.gl = gl;
     this.model = null;
-    this._buffersSwapable = false;
+    this._swapBuffers = false;
     this.currentIndex = 0;
     this.sourceBuffers = new Array(2);
-    this.destinationBuffers = new Array(2);
+    this.feedbackBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
     this._buffersToDelete = [];
 
@@ -48,83 +47,79 @@ export default class Transform {
   }
 
   initialize({
-    sourceBuffers = null,
-    destinationBuffers = null,
+    id,
     vs = null,
-    sourceDestinationMap = null,
     varyings = null,
     drawMode = GL.POINTS,
-    elementCount = null
+    elementCount = null,
+
+    sourceBuffers = null,
+    feedbackBuffers = null,
+    feedbackMap = null,
+
+    // deprecated
+    destinationBuffers = null,
+    sourceDestinationMap = null
   }) {
+    // deprecated support
+    feedbackBuffers = feedbackBuffers || destinationBuffers;
+    feedbackMap = feedbackMap || sourceDestinationMap;
+
     assert(sourceBuffers && vs && varyings && elementCount);
 
-    // If destinationBuffers are not provided, sourceDestinationMap must be provided
+    // If feedbackBuffers are not provided, feedbackMap must be provided
     // to create destinaitonBuffers with layout of corresponding source buffer.
-    assert(destinationBuffers || sourceDestinationMap);
-
-    if (sourceDestinationMap) {
-      this.sourceDestinationMap = sourceDestinationMap;
-      this._buffersSwapable = true;
+    assert(feedbackBuffers || feedbackMap);
+    for (const bufferName in feedbackBuffers || {}) {
+      assert(feedbackBuffers[bufferName] instanceof Buffer);
     }
 
-    let index = 0;
-    this.varyings = [];
-    this.varyingMap = {};
-    for (const varying of varyings) {
-      this.varyings[index] = varying;
-      this.varyingMap[varying] = index;
-      index++;
+    if (feedbackMap) {
+      this.feedbackMap = feedbackMap;
+      this._swapBuffers = true;
     }
 
-    this._bindBuffers({sourceBuffers, destinationBuffers});
-    this._buildModel({vs, drawMode, elementCount});
+    this._bindBuffers({sourceBuffers, feedbackBuffers});
+    this._buildModel({id, vs, varyings, drawMode, elementCount});
   }
 
   // Update some or all buffer bindings.
-  update({
-    sourceBuffers = null,
-    destinationBuffers = null,
-    elementCount = this.elementCount
-  }) {
-    if (!sourceBuffers && !destinationBuffers) {
+  update({sourceBuffers = null, feedbackBuffers = null, elementCount = this.elementCount}) {
+    if (!sourceBuffers && !feedbackBuffers) {
       log.warn('Transform : no buffers updated')();
       return this;
     }
 
     this.model.setVertexCount(elementCount);
 
-    const {currentIndex, varyingMap, _buffersSwapable, transformFeedbacks} = this;
-    for (const bufferName in destinationBuffers) {
-      assert(destinationBuffers[bufferName] instanceof Buffer);
-    }
+    const {currentIndex} = this;
     Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
-    Object.assign(this.destinationBuffers[currentIndex], destinationBuffers);
-    transformFeedbacks[currentIndex].bindBuffers(
-      this.destinationBuffers[currentIndex], {varyingMap});
+    Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
 
-    if (_buffersSwapable) {
+    this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+
+    if (this._swapBuffers) {
       const nextIndex = (currentIndex + 1) % 2;
 
-      for (const sourceBufferName in this.sourceDestinationMap) {
-        const destinationBufferName = this.sourceDestinationMap[sourceBufferName];
+      for (const sourceBufferName in this.feedbackMap) {
+        const feedbackBufferName = this.feedbackMap[sourceBufferName];
         this.sourceBuffers[nextIndex][sourceBufferName] =
-          this.destinationBuffers[currentIndex][destinationBufferName];
-        this.destinationBuffers[nextIndex][destinationBufferName] =
+          this.feedbackBuffers[currentIndex][feedbackBufferName];
+        this.feedbackBuffers[nextIndex][feedbackBufferName] =
           this.sourceBuffers[currentIndex][sourceBufferName];
         // make sure the new destination buffer is a Buffer object
-        assert(this.destinationBuffers[nextIndex][destinationBufferName] instanceof Buffer);
+        assert(this.feedbackBuffers[nextIndex][feedbackBufferName] instanceof Buffer);
       }
-      transformFeedbacks[nextIndex].bindBuffers(this.destinationBuffers[nextIndex], {varyingMap});
+      this.transformFeedbacks[nextIndex].setBuffers(this.feedbackBuffers[nextIndex]);
     }
     return this;
   }
 
-  // Run one transformfeedback loop.
+  // Run one transform feedback loop.
   run({uniforms = {}} = {}) {
-    const {model, transformFeedbacks, sourceBuffers, currentIndex} = this;
-    model.setAttributes(sourceBuffers[currentIndex]);
-    model.draw({
-      transformFeedback: transformFeedbacks[currentIndex],
+    this.model.setAttributes(this.sourceBuffers[this.currentIndex]);
+    this.model.draw({
+      transformFeedback: this.transformFeedbacks[this.currentIndex],
       parameters: {[GL.RASTERIZER_DISCARD]: true},
       uniforms
     });
@@ -132,79 +127,75 @@ export default class Transform {
 
   // Swap source and destination buffers.
   swapBuffers() {
-    assert(this._buffersSwapable);
+    assert(this._swapBuffers);
     this.currentIndex = (this.currentIndex + 1) % 2;
   }
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    const {destinationBuffers, currentIndex} = this;
-    assert(varyingName && destinationBuffers[currentIndex][varyingName]);
-    return destinationBuffers[currentIndex][varyingName];
+    assert(varyingName && this.feedbackBuffers[this.currentIndex][varyingName]);
+    return this.feedbackBuffers[this.currentIndex][varyingName];
   }
 
   // Private
   // build source and destination buffers
-  _bindBuffers({sourceBuffers = null, destinationBuffers = null}) {
-    const {_buffersSwapable} = this;
-    for (const bufferName in destinationBuffers) {
-      assert(destinationBuffers[bufferName] instanceof Buffer);
-    }
+  _bindBuffers({sourceBuffers = null, feedbackBuffers = null}) {
     this.sourceBuffers[0] = Object.assign({}, sourceBuffers);
-    this.destinationBuffers[0] = Object.assign({}, destinationBuffers);
+    this.feedbackBuffers[0] = Object.assign({}, feedbackBuffers);
 
-    if (_buffersSwapable) {
+    if (this._swapBuffers) {
       this.sourceBuffers[1] = {};
-      this.destinationBuffers[1] = {};
+      this.feedbackBuffers[1] = {};
 
-      for (const sourceBufferName in this.sourceDestinationMap) {
-        const destinationBufferName = this.sourceDestinationMap[sourceBufferName];
-        if (!this.destinationBuffers[0][destinationBufferName]) {
+      for (const sourceBufferName in this.feedbackMap) {
+        const feedbackBufferName = this.feedbackMap[sourceBufferName];
+        if (!this.feedbackBuffers[0][feedbackBufferName]) {
           // Create new buffer with same layout and settings as source buffer
           const sourceBuffer = this.sourceBuffers[0][sourceBufferName];
           const {bytes, type, usage, layout} = sourceBuffer;
-          this.destinationBuffers[0][destinationBufferName] =
+          this.feedbackBuffers[0][feedbackBufferName] =
             new Buffer(this.gl, {bytes, type, usage, layout});
-          this._buffersToDelete.push(this.destinationBuffers[0][destinationBufferName]);
+          this._buffersToDelete.push(this.feedbackBuffers[0][feedbackBufferName]);
         }
 
         this.sourceBuffers[1][sourceBufferName] =
-          this.destinationBuffers[0][destinationBufferName];
-        this.destinationBuffers[1][destinationBufferName] =
+          this.feedbackBuffers[0][feedbackBufferName];
+        this.feedbackBuffers[1][feedbackBufferName] =
           this.sourceBuffers[0][sourceBufferName];
         // make sure the new destination buffer is a Buffer object
-        assert(this.destinationBuffers[1][destinationBufferName] instanceof Buffer);
+        assert(this.feedbackBuffers[1][feedbackBufferName] instanceof Buffer);
       }
     }
   }
 
   // build Model and TransformFeedback objects
-  _buildModel({vs, drawMode, elementCount}) {
+  _buildModel({id, vs, varyings, drawMode, elementCount}) {
     // Append matching version string to the fragment shader to ensure compilation succeeds
     // TODO - is this still needed now that we have shader transpilatio?
-    let fs = PASS_THROUGH_FS;
+    let fs = EMPTY_FS;
     if (vs.indexOf('#version ') === 0) {
       const vsLines = vs.split('\n');
-      fs = `${vsLines[0]}\n${PASS_THROUGH_FS}`;
+      fs = `${vsLines[0]}\n${EMPTY_FS}`;
     }
 
     this.model = new Model(this.gl, {
+      id: id || 'transform',
       vs,
       fs,
-      varyings: this.varyings,
+      varyings,
       drawMode,
       vertexCount: elementCount
     });
 
     this.transformFeedbacks[0] = new TransformFeedback(this.gl, {
-      buffers: this.destinationBuffers[0],
-      varyingMap: this.varyingMap
+      program: this.model.program,
+      buffers: this.feedbackBuffers[0]
     });
 
-    if (this._buffersSwapable) {
+    if (this._swapBuffers) {
       this.transformFeedbacks[1] = new TransformFeedback(this.gl, {
-        buffers: this.destinationBuffers[1],
-        varyingMap: this.varyingMap
+        program: this.model.program,
+        buffers: this.feedbackBuffers[1]
       });
     }
   }

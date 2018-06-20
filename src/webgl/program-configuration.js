@@ -39,7 +39,7 @@ export default class ProgramConfiguration {
   }
 
   getVaryingIndex(locationOrName) {
-    const varying = this.getVaryingInfo();
+    const varying = this.getVaryingInfo(locationOrName);
     return varying ? varying.location : -1;
   }
 
