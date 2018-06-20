@@ -96,6 +96,8 @@ export default class ProgramConfiguration {
       const {name, type, size} = gl.getTransformFeedbackVarying(program.handle, location);
       this._addVarying(location, name, type, size);
     }
+
+    this.varyings.sort((a, b) => a.location - b.location);
   }
 
   /*
