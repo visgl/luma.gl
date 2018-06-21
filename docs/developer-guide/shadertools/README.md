@@ -1,6 +1,8 @@
 # ShaderTools
 
-shadertools is a GLSL shader module system built around a GLSL "assembler". that allows you to inject chunks of reusable shader code from modules into your shader source code.
+## Overview
+
+shadertools is a GLSL shader module system built around a GLSL "assembler" that allows you build modular shaders. It addressed the lack of a module/import system in the GLSL language and allows you to import chunks of reusable shader code from modules into your shader source code, and organize your shader code in reusable modules.
 
 * Enables you to import and "inject" prepackaged modules of shader code into your shaders.
 * Allows you to package up reusable GLSL code as shader modules.

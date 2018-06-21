@@ -1,4 +1,4 @@
-# Using Shadertools Shader Modules
+# Using Shader Modules
 
 ## Usage
 
@@ -26,3 +26,13 @@ const uniforms = getUniforms(props);
 // set returned uniforms on the program using your preferred WebGL library
 
 ```
+
+
+## GLSL Versions and Shader Module Transpilation
+
+Shader Modules are automatically converted ("transpiled") to the version of the shader you are importing them into.
+
+
+
+## Shader Code Injection
+

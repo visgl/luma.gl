@@ -70,10 +70,10 @@ void main(void) {
 `;
 
 const INJECT = {
-  'vs-decl': 'uniform float uNewUniform;\n',
-  'fs-decl': 'uniform bool uDiscard;\n',
-  'fs-main-start': '  if (uDiscard} { discard } else {\n',
-  'fs-main-end': '  }\n'
+  'vs:#decl': 'uniform float uNewUniform;\n',
+  'fs:#decl': 'uniform bool uDiscard;\n',
+  'fs:#main-start': '  if (uDiscard} { discard } else {\n',
+  'fs:#main-end': '  }\n'
 };
 
 test('injectShader#import', t => {
