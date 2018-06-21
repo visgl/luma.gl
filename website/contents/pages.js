@@ -315,17 +315,25 @@ export const DOC_PAGES = [
         content: 'developer-guide/shadertools/README.md'
       },
       {
-        name: 'Using Shadertools Modules',
+        name: 'Shader Assembly',
+        content: 'developer-guide/shadertools/shader-assembly.md'
+      },
+      {
+        name: 'Using Shader Modules',
         content: 'developer-guide/shadertools/using-shader-modules.md'
       },
       {
-        name: 'Creating Shadertools Modules',
+        name: 'Model Integration',
+        content: 'developer-guide/shadertools/model-integration.md'
+      },
+      {
+        name: 'Creating Shader Modules',
         content: 'developer-guide/shadertools/writing-shader-modules.md'
       },
       {
         name: 'Writing GLSL Code',
         content: 'developer-guide/shadertools/writing-glsl-shaders.md'
-      },
+      }
       // {
       //   name: 'Extensions',
       //   content: 'user-guide/extensions.md'
@@ -432,14 +440,6 @@ export const DOC_PAGES = [
         content: 'api-reference/core/shader-cache.md'
       },
       {
-        name: 'Shader Modules',
-        content: 'api-reference/shadertools/README.md'
-      },
-      {
-        name: 'Shader Module:picking',
-        content: 'api-reference/shadertools/shadertools-picking.md'
-      },
-      {
         name: 'Texture',
         content: 'api-reference/webgl/texture.md'
       },
@@ -510,6 +510,18 @@ export const DOC_PAGES = [
       {
         name: 'withParameters',
         content: 'api-reference/webgl/context/with-parameters.md'
+      },
+      {
+        name: 'Shadertools:assembleShaders',
+        content: 'api-reference/shadertools/assemble-shaders.md'
+      },
+      {
+        name: 'Shader Module:picking',
+        content: 'api-reference/shadertools/shader-module-picking.md'
+      },
+      {
+        name: 'GLSL Reference',
+        content: 'api-reference/shadertools/glsl-reference.md'
       }
     ]
   }

@@ -7,6 +7,7 @@ import test from 'tape-catch';
 const fixture = {
   gl: createGLContext()
 };
+
 const VS_GLSL_300 = `\
 #version 300 es
 

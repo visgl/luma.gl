@@ -1,6 +1,8 @@
 # ShaderTools
 
-shadertools is a GLSL shader module system built around a GLSL "assembler". that allows you to inject chunks of reusable shader code from modules into your shader source code.
+## Overview
+
+shadertools is a GLSL shader module system built around a GLSL "assembler" that allows you build modular shaders. It addresses the lack of a module/import system in the GLSL language and allows you to import chunks of reusable shader code from modules into your shader source code, and organize your shader code in reusable modules.
 
 * Enables you to import and "inject" prepackaged modules of shader code into your shaders.
 * Allows you to package up reusable GLSL code as shader modules.
@@ -43,13 +45,14 @@ assembleShaders(gl, {..., modules: [MY_SHADER_MODULE]});
 
 ## Comparison with other WebGL shader module systems
 
-Note that the shadertools shader assembler is mainly a GLSL source preprocessor. It helps you prepare a
+The shadertools shader assembler is a GLSL source preprocessor. There are other systems available which can potentially be used in place of, or in combination with shadertools.
+
 
 ### [glslify](https://github.com/glslify/glslify)
 
 * Lets shader modules be published (and consumed as) npm modules.
-* Does full GLSL shader parsing and renaming.
-* On the downside, glslify setups typically involve build tool plugins, which can be a complication.
+* Does full GLSL shader parsing and renames symbols to avoid conflicts.
+* Note that glslify setups typically involve build tool plugins, which can be a complication.
 
 Note: shadertools doesn't touch the preprocessor definitions used by glslify, so running glslify either before or after shadertools should work fine.
 
@@ -59,4 +62,4 @@ Note: shadertools doesn't touch the preprocessor definitions used by glslify, so
 * Detailed matching of varyings between vertex and fragment shaders
 * Nice graph visualizer
 * Written in coffee-script which is a consideration if considering to fork or extend.
-* No longer actively maintained.
+*

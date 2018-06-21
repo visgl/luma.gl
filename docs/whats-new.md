@@ -2,42 +2,54 @@
 
 ## Version 6.0
 
+Date: In development, target late June 2018
+
+
 ### Developer's Guide
 
-luma.gl now has a more extensive Developer's Guide to make it easier to get started.
+luma.gl now has a more extensive Developer's Guide covering more areas of the API.
 
-### GLSL API Reference
 
-A new GLSL language reference describing both GLSL 3.00 ES and GLSL 1.00 ES as well as what has changed between the two versions.
+### WebGL Improvements
 
-### GLSL 3.00 es support improvements
+* **Unconditional support for Vertex Array Objects** - `VertexArrays` are now always used to manage attributes. The `Program` and `Model` classes have been updated to always use `VertexArray` resulting in a simpler and more consistent API and improved performance. If luma.gl's WebGL1 polyfills are installed, the `VertexArrayObject` extension is now emulated when the underlying WebGL1 platform does not provide the `OES_vertex_array_object` extension.
 
-- GLSL language reference page with clear information on what has changed between GLSL 3.00 ES and GLSL 1.00 ES.
-- Shader compiler automatically adapts GLSL 3.00 es to GLSL 1.00 es (and vice versa)
-- Developer Guide for Shadertools
-- All shader modules now written in GLSL 3.00 syntax
-- Guidelines for writing shaders that work in both environments
-
-### WebGL1 Support Improvements
-
-* **WebGL1 Support now optional** - luma.gl no longer installs WebGL1 support by default. If your application is unconditionally using WebGL2 only features (like transform feedback) there is no value in including extra code with polyfills in your app. luma.gl now leaves the choice to you. If you want WebGL1 support, just add the following import to your application before importing luma.gl:
+* **WebGL1 Support is now optional** - To optimize the application's bundle size, luma.gl no longer installs WebGL1 support by default. If your application is using WebGL2 only features (like transform feedback) unconditionally, there is no value in including extra code to support WebGL1 in your app. luma.gl now leaves the choice to you: if you want WebGL1 support, just add the following import to your application before importing luma.gl:
 
 ```js
 import 'luma.gl/webgl1';
+import {...} from 'luma.gl';
 ```
 
-* **Unconditional support for Vertex Array Objects in WebGL1** - If luma.gl's WebGL1 polyfills are installed, the `VertexArrayObject` extension is now emulated by luma.gl when not provided by WebGL, meaning that `VertexArray`s can always be used.
 
-# Version 6.0
+### Shader Programming Improvements
 
-Date: In development, target late June 2018
+The shader module system has received a number of upgrades:
 
-## Shadertools
+### Unconditional support for GLSL 3.00 ES
 
-* Shader assembler now transforms shader module code to the version specified by the top-level shader. GLSL 3.00 ES shader code is transformed into WebGL 1.00 ES compatible code and vice versa. T
+- **Use GLSL 3.00 shaders in WebGL1 (Shader "transpilation")** - Shader assembler now transforms shader code to the version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa.
+- **Use GLSL 3.00 modules in your WebGL1 shader** - Again shader transpilation will automatically convert shader module source codce to the target version.
 
-* **Portable GLSL 3.00 ES shader modules** - Accordingly, all shader modules now automatically work in both GLSL 3.00 ES and GLSL 1.00 ES (assuming they don't use GLSL 3.00 specific features).
 
+### Shader Injection System
+
+A basic shader injection system allows applications to inject additional code into existing shaders. This avoids copying large and complicated existing shaders just to modify a few lines of code.
+
+Shader injection is particularly powerful when used with shader modules. Adding a shader module to the modules list usually requires adding one line of code each to the main functions in the vertex and fragment shaders. Shader injection allows this be done without copying the original shaders.
+
+
+### Shader Module Improvements
+
+* **Portable GLSL 3.00 ES shader modules** - All shader modules now written in GLSL 3.00 syntax. Thanks to the new shader transpilation feature all modules still work in both GLSL 3.00 ES and GLSL 1.00 ES (assuming they don't use GLSL 3.00 specific features).
+
+
+### Developer Guide for Shader Programming
+
+The shader module system now has its own section in the Developer Guide making it more accessible to users, including:
+
+- Guidelines for writing shaders that work in both GLSL 3.00 ES and GLSL 1.00 ES
+- A new GLSL language reference page describing both GLSL 3.00 ES and GLSL 1.00 ES (as well as what has changed between them) in a single place.
 
 
 ## Version 5.3
