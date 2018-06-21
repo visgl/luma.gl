@@ -182,7 +182,7 @@ test('WebGL#Transform update', t => {
     sourceBuffers: {
       inValue: sourceBuffer
     },
-    destinationBuffers: {
+    feedbackBuffers: {
       outValue: new Buffer(gl2, {data: new Float32Array(6)})
     },
     elementCount: 6
