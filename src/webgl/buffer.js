@@ -1,45 +1,12 @@
+import GL from '../constants';
 import Resource from './resource';
 import {assertWebGL2Context} from '../webgl-utils';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import Accessor from './accessor';
 import assert from '../utils/assert';
-import GL from '../constants';
-
-export class BufferLayout {
-  /**
-   * @classdesc
-   * Store characteristics of a data layout
-   * This data can be used when updating vertex attributes with
-   * the associated buffer, freeing the application from keeping
-   * track of this metadata.
-   *
-   * @class
-   * @param {GLuint} size - number of values per element (1-4)
-   * @param {GLuint} type - type of values (e.g. gl.FLOAT)
-   * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
-   * @param {GLuint} integer=false - WebGL2 only, int-to-float conversion
-   * @param {GLuint} stride=0 - supports strided arrays
-   * @param {GLuint} offset=0 - supports strided arrays
-   */
-  constructor({
-    type,
-    size = 1,
-    offset = 0,
-    stride = 0,
-    normalized = false,
-    integer = false,
-    instanced = 0
-  } = {}) {
-    this.type = type;
-    this.size = size;
-    this.offset = offset;
-    this.stride = stride;
-    this.normalized = normalized;
-    this.integer = integer;
-    this.instanced = instanced;
-  }
-}
 
 export default class Buffer extends Resource {
+
   constructor(gl, opts = {}) {
     super(gl, opts);
     // In WebGL1, we need to make sure we use GL.ELEMENT_ARRAY_BUFFER when
@@ -51,75 +18,50 @@ export default class Buffer extends Resource {
     Object.seal(this);
   }
 
-  // Stores the layout of data with the buffer, makes it easy to e.g. set it as an attribute later
-  setDataLayout({
-    layout,
-    type,
-    size = 1,
-    offset = 0,
-    stride = 0,
-    normalized = false,
-    integer = false,
-    instanced = 0
-  }) {
-    this.layout = layout || new BufferLayout({
-      type: type || this.type, // Use autodeduced type if available
-      size,
-      offset,
-      stride,
-      normalized,
-      integer,
-      instanced
-    });
+  // Stores the accessor of data with the buffer, makes it easy to e.g. set it as an attribute later
+  // {accessor,type,size = 1,offset = 0,stride = 0,normalized = false,integer = false,instanced = 0}
+  setAccessor(opts) {
+    this.accessor = opts;
     return this;
   }
 
-  updateLayout(opts) {
-    Object.assign(this.layout, opts);
+  updateAccessor(opts) {
+    this.accessor.update(opts);
+    return this;
   }
+
   // Creates and initializes the buffer object's data store.
-  initialize({
-    data,
-    bytes,
-    usage = GL.STATIC_DRAW,
-    // Layout of stored data
-    layout,
-    type,
-    size = 1,
-    offset = 0,
-    stride = 0,
-    normalized = false,
-    integer = false,
-    instanced = 0,
-    index = null
-  } = {}) {
-    const opts = arguments[0];
+  initialize(opts = {}) {
+    let {
+      data,
+      bytes
+    } = opts;
 
-    if (!data) {
-      type = type || GL.FLOAT;
+    const {
+      usage = GL.STATIC_DRAW
+    } = opts;
 
+    let type;
+    if (data) {
+      // infer type from typed array
+      type = getGLTypeFromTypedArray(data);
+      bytes = data.byteLength;
+      assert(type);
+    } else if (!bytes || bytes === 0) {
       // Workaround needed for Safari (#291):
       // gl.bufferData with size (second argument) equal to 0 crashes.
       // hence create zero sized array.
-      if (!bytes || bytes === 0) {
-        bytes = 0;
-        data = new Float32Array(0);
-      }
-    } else {
-      type = type || getGLTypeFromTypedArray(data);
-      bytes = data.byteLength;
-      assert(type);
+      bytes = 0;
+      data = new Float32Array(0);
     }
 
+    this.usage = usage;
     this.bytes = bytes;
     this.bytesUsed = bytes;
     this.data = data;
-    this.type = type;
-    this.usage = usage;
-    this.index = index;
 
-    // Call after type is set
-    this.setDataLayout(Object.assign(opts));
+    // Call after type is determined
+    this.setAccessor(new Accessor(type ? {type} : {}, opts));
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
@@ -137,12 +79,11 @@ export default class Buffer extends Resource {
   }
 
   // Updates a subset of a buffer object's data store.
-  subData({
-    data,          // Data (Typed Array or ArrayBuffer), length is inferred unless provided
-    offset = 0,    // Offset into buffer
-    srcOffset = 0, // WebGL2 only: Offset into srcData
-    length         // WebGL2 only: Number of bytes to be copied
-  } = {}) {
+  // Data (Typed Array or ArrayBuffer), length is inferred unless provided
+  // Offset into buffer
+  // WebGL2 only: Offset into srcData
+  // WebGL2 only: Number of bytes to be copied
+  subData({data, offset = 0, srcOffset = 0, length} = {}) {
     assert(data);
 
     // Create the buffer - binding it here for the first time locks the type
@@ -161,12 +102,7 @@ export default class Buffer extends Resource {
   }
 
   // WEBGL2 ONLY: Copies part of the data of another buffer into this buffer
-  copyData({
-    sourceBuffer,
-    readOffset = 0,
-    writeOffset = 0,
-    size
-  }) {
+  copyData({sourceBuffer, readOffset = 0, writeOffset = 0, size}) {
     assertWebGL2Context(this.gl);
 
     // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
@@ -184,15 +120,10 @@ export default class Buffer extends Resource {
   }
 
   // WEBGL2 ONLY: Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
-  getData({
-    dstData = null,
-    srcByteOffset = 0,
-    dstOffset = 0,
-    length = 0
-  } = {}) {
+  getData({dstData = null, srcByteOffset = 0, dstOffset = 0, length = 0} = {}) {
     assertWebGL2Context(this.gl);
 
-    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    const ArrayType = getTypedArrayFromGLType(this.accessor.type || GL.FLOAT, {clamped: false});
     const sourceAvailableElementCount = this._getAvailableElementCount(srcByteOffset);
     let dstAvailableElementCount;
     let dstElementCount;
@@ -236,7 +167,9 @@ export default class Buffer extends Resource {
    *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
    * @returns {Buffer} - Returns itself for chaining.
    */
-  bind({target = this.target, index = this.index, offset = 0, size} = {}) {
+  bind({
+    target = this.target, index = this.accessor && this.accessor.index, offset = 0, size
+  } = {}) {
     // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
     // be used as direct binding points, they will not affect transform feedback or
     // uniform buffer state. Instead indexed bindings need to be made.
@@ -263,7 +196,7 @@ export default class Buffer extends Resource {
     return this;
   }
 
-  unbind({target = this.target, index = this.index} = {}) {
+  unbind({target = this.target, index = this.accessor && this.accessor.index} = {}) {
     const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {
       this.gl.bindBufferBase(target, index, null);
@@ -306,9 +239,15 @@ export default class Buffer extends Resource {
   }
 
   _getAvailableElementCount(srcByteOffset) {
-    const ArrayType = getTypedArrayFromGLType(this.type, {clamped: false});
+    const ArrayType = getTypedArrayFromGLType(this.accessor.type || GL.FLOAT, {clamped: false});
     const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
     const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
     return sourceElementCount - sourceElementOffset;
+  }
+
+  // DEPRECATED
+
+  get layout() {
+    return this.accessor;
   }
 }

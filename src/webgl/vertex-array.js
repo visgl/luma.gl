@@ -1,33 +1,29 @@
-// WebGL2 VertexArray Objects Helper
-import Resource from './resource';
-import {isWebGL2, getKey} from '../webgl-utils';
-import {log, assert} from '../utils';
+// WebGL2 VertexArrayObject class (polyfilled/extended in WebGL1)
 import GL from '../constants';
+import Resource from './resource';
+import Accessor from './accessor';
+import Buffer from './buffer';
+import {isWebGL2} from '../webgl-utils';
+import {getCompositeGLType} from '../webgl-utils/attribute-utils';
+import {log, formatValue, assert} from '../utils';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
 
-const PARAMETERS = [
-  GL.VERTEX_ATTRIB_ARRAY_ENABLED,
-  GL.VERTEX_ATTRIB_ARRAY_SIZE,
-  GL.VERTEX_ATTRIB_ARRAY_STRIDE,
-  GL.VERTEX_ATTRIB_ARRAY_TYPE,
-  GL.VERTEX_ATTRIB_ARRAY_NORMALIZED,
-  GL.VERTEX_ATTRIB_ARRAY_POINTER,
-  GL.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+const GL_ELEMENT_ARRAY_BUFFER = 0x8893;
 
-  GL.VERTEX_ATTRIB_ARRAY_INTEGER,
-  GL.VERTEX_ATTRIB_ARRAY_DIVISOR
-];
-
+const ERR_WEBGL1 = 'import "luma.gl/webgl1" to make luma.gl run in minimal WebGL1 environments';
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
+const ERR_ATTRIBUTE_TYPE = 'VertexArray: attributes must be Buffer or typed array constant';
 
 export default class VertexArray extends Resource {
 
+  // Now always supported via client side polyfill
   static isSupported(gl) {
-    return Boolean(isWebGL2(gl) || gl.getExtension(OES_vertex_array_object));
+    return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
   }
 
+  // Returns the global (null) vertex array object. Exists even when no extension available
   static getDefaultArray(gl) {
     gl.luma = gl.luma || {};
     if (!gl.luma.defaultVertexArray) {
@@ -37,201 +33,254 @@ export default class VertexArray extends Resource {
   }
 
   static getMaxAttributes(gl) {
-    return gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-  }
-
-  get MAX_ATTRIBUTES() {
-    return this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
+    VertexArray.MAX_VERTEX_ATTRIBS = VertexArray.MAX_VERTEX_ATTRIBS ||
+      gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+    return VertexArray.MAX_VERTEX_ATTRIBS;
   }
 
   // Create a VertexArray
   constructor(gl, opts = {}) {
-    super(gl, opts);
+    if (opts.handle && !VertexArray.isSupported(gl)) {
+      throw new Error(ERR_WEBGL1);
+    }
 
+    // Use program's id if program but no id is supplied
+    const id = opts.id || opts.program && opts.program.id;
+    super(gl, Object.assign({}, opts, {id}));
+
+    this.configuration = null;
+
+    // Extracted information
     this.elements = null;
-    this.buffers = {}; // new Array(this.MAX_VERTEX_ATTRIBS).fill(null);
-    this.locations = {};
-    this.names = {};
-    this.drawParameters = {};
+    this.values = null;
+    this.infos = null;
+    this.accessors = null;
+    this.unused = null;
+    this.drawParams = null;
 
+    // State
     this._bound = false;
-    this._filledLocations = {};
+
+    this.stubRemovedMethods('v6.0', [
+      'setBuffers',
+      'setGeneric',
+      'clearBindings',
+      'setLocations',
+      'setGenericValues',
+      'setDivisor',
+      'enable',
+      'disable'
+    ]);
+
     Object.seal(this);
 
-    this.initialize(opts);
+    this._initialize(opts);
   }
 
-  initialize({
-    buffers = {},
-    elements = null,
-    locations = {}
-  } = {}) {
-    this.setLocations(locations);
-    this.setBuffers(buffers, {clear: true});
-    this.setElements(elements);
+  get MAX_ATTRIBUTES() {
+    return VertexArray.getMaxAttributes(this.gl);
   }
 
-  get filledLocations() {
-    return this._filledLocations;
+  getLocation(location) {
+    return this.configuration ? this.configuration.getLocation(location) : location;
+  }
+
+  _initialize(props = {}) {
+    this.reset(false);
+
+    const config = props.configuration || (props.program && props.program.getConfiguration());
+    if (config) {
+      this.configuration = config;
+    }
+
+    return this.setProps(props);
+  }
+
+  // Resets all attributes (to default valued constants)
+  reset(clear = true, disableZero = false) {
+    this.elements = null;
+    this.values = new Array(this.MAX_VERTEX_ATTRIBS).fill(null);
+    this.infos = new Array(this.MAX_VERTEX_ATTRIBS).fill({});
+    this.accessors = new Array(this.MAX_VERTEX_ATTRIBS).fill(null);
+    this.unused = [];
+
+    // Auto detects draw params
+    this.drawParams = {
+      isInstanced: false,
+      // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
+      // index type is saved for drawElement calls
+      isIndexed: false,
+      indexType: null
+    };
+
+    if (clear) {
+      this.bind(() => {
+        // Clear elements buffer
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
+        // Clear attributes
+        for (let i = 0; i < this.MAX_ATTRIBUTES; i++) {
+          if (i > 0 || disableZero) {
+            this.setConstant(i, [0, 0, 0, 1]); // match assumed WebGL defaults
+          }
+        }
+      });
+    }
+
+    return this;
+  }
+
+  setProps(props) {
+    if ('attributes' in props) {
+      this.setAttributes(props.attributes);
+    }
+    if ('buffers' in props) {
+      this.setAttributes(props.buffers);
+    }
+    if ('elements' in props) {
+      this.setElements(props.elements);
+    }
+    return this;
+  }
+
+  // Set (bind) an array or map of vertex array buffers, either in numbered or named locations.
+  // For names that are not present in `location`, the supplied buffers will be ignored.
+  // if a single buffer of type GL.ELEMENT_ARRAY_BUFFER is present, it will be set as elements
+  setAttributes(attributes) {
+    this.bind(() => {
+      for (const locationOrName in attributes) {
+        const value = attributes[locationOrName];
+        if (value instanceof Buffer) {
+          this.setBuffer(locationOrName, value);
+        } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+          this.setConstant(locationOrName, value);
+        } else {
+          throw new Error(ERR_ATTRIBUTE_TYPE);
+        }
+      }
+    });
+
+    return this;
+  }
+
+  // Set (bind) an elements buffer, for indexed rendering.
+  // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
+  setElements(elementBuffer = null, opts = {}) {
+    assert(!elementBuffer || elementBuffer.target === GL_ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
+
+    this.bind(() => {
+      this.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer ? elementBuffer.handle : null);
+    });
+    this.elements = elementBuffer;
+
+    // Auto-deduce isIndexed draw param
+    this.drawParams.isIndexed = Boolean(elementBuffer);
+    if (elementBuffer) {
+      this.drawParams.indexType = elementBuffer.accessor.getOptions(opts).type;
+    } else {
+      delete this.drawParams.indexType;
+    }
+
+    return this;
   }
 
   // Set a location in vertex attributes array to a buffer
-  setBuffer({
-    location,
-    buffer,
-    target,
-    layout
-  } = {}) {
+  setBuffer(locationOrName, buffer, opts = {}) {
     const {gl} = this;
 
-    // Copy main data characteristics from buffer
-    target = target !== undefined ? target : buffer.target;
-    layout = layout !== undefined ? layout : buffer.layout;
-    assert(target, 'setBuffer needs target');
-    assert(layout, 'setBuffer called on uninitialized buffer');
-    this._filledLocations[location] = true;
+    // Check target
+    if (buffer.target === gl.ELEMENT_ARRAY_BUFFER) {
+      return this.setElements(buffer);
+    }
+
+    const location = this.getAttributeIndex(locationOrName);
+    if (location < 0) {
+      this.unused[locationOrName] = buffer;
+      log.warn(() => `${this.id} unused buffer attribute ${locationOrName}`)();
+      return this;
+    }
 
     this.bind(() => {
-      // a non-zero named buffer object must be bound to the GL.ARRAY_BUFFER target
+      const accessInfo = this.getAttributeInfo(locationOrName, buffer, opts);
+      const name = accessInfo ? accessInfo.name : String(location);
+
+      // Override with any additional attribute configuration params
+      let accessor = accessInfo ? accessInfo.accessor : new Accessor();
+      accessor = accessor.getOptions(buffer, buffer.accessor, opts);
+
+      this.values[location] = buffer;
+      this.accessors[location] = accessor;
+      this.infos[location] = {location, name, accessor};
+
+      const {size, type, stride, offset, normalized, divisor} = accessor;
+      assert(Number.isFinite(size) && Number.isFinite(type));
+
+      // A non-zero buffer object must be bound to the GL_ARRAY_BUFFER target
       buffer.bind({target: gl.ARRAY_BUFFER});
 
-      const {size, type, normalized, stride, offset} = layout;
-      // Attach _bound ARRAY_BUFFER with specified buffer format to location
-      if (!layout.integer) {
+      // Attach ARRAY_BUFFER with specified buffer format to location
+      if (!opts.integer) {
         gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
       } else {
         // specifies *integer* data formats and locations of vertex attributes
         assert(isWebGL2(gl));
         gl.vertexAttribIPointer(location, size, type, stride, offset);
       }
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribDivisor(location, divisor || 0);
+
+      // NOTE We don't unbind buffer here
+
+      // Auto deduce isInstanced drawParam
+      const isInstanced = divisor > 0;
+      this.drawParams.isInstanced = this.drawParams.isInstanced || isInstanced;
     });
 
-  }
-
-  // Set (bind) an array or map of vertex array buffers, either in numbered or
-  // named locations. (named locations requires `locations` to have been provided).
-  // For names that are not present in `location`, the supplied buffers will be ignored.
-  // if a single buffer of type GL.ELEMENT_ARRAY_BUFFER is present, it will be set as elements
-  // @param {Object} buffers - An object map with attribute names being keys
-  //   and values are expected to be instances of Buffer.
-  setBuffers(buffers, {clear = true} = {}) {
-    if (clear) {
-      this.clearBindings();
-    }
-    const {locations, elements} = this._getLocations(buffers);
-
-    this.gl.bindVertexArray(this.handle);
-
-    // Process locations in order
-    for (const location in locations) {
-      const bufferData = locations[location];
-      if (bufferData) {
-        const {buffer, layout} = this._getBufferAndLayout(bufferData);
-        this.setBuffer({location, buffer, layout});
-        this.setDivisor(location, layout.instanced ? 1 : 0);
-        this.enable(location);
-      } else {
-        // DISABLE MISSING ATTRIBUTE
-        this.disable(location);
-      }
-    }
-    this.buffers = buffers;
-
-    this.gl.bindVertexArray(null);
-
-    if (elements) {
-      this.setElements(elements);
-    }
-  }
-
-  // Register an optional buffer name to location mapping
-  setLocations(locations) {
-    this.locations = locations;
-    this.names = {};
-  }
-
-  // Set (bind) an elements buffer, for indexed rendering. Must be GL.ELEMENT_ARRAY_BUFFER
-  setElements(elements) {
-    assert(!elements || elements.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
-
-    this.gl.bindVertexArray(this.handle);
-    this.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, elements && elements.handle);
-    this.gl.bindVertexArray(null);
-
-    this.elements = elements;
     return this;
   }
 
-  clearBindings({disableZero = false} = {}) {
+  // Set attribute to constant value (small typed array corresponding to one vertex' worth of data)
+  // TODO - handle single values for size 1 attributes?
+  // TODO - convert classic arrays based on known type?
+  setConstant(locationOrName, arrayValue, opts) {
+    const accessInfo = this.getAttributeInfo(locationOrName, arrayValue, opts);
+    if (!accessInfo) {
+      this.unused[locationOrName] = arrayValue;
+      log.warn(() => `${this.id} unused constant attribute ${locationOrName}`)();
+      return this;
+    }
+
     this.bind(() => {
-      for (const location in this._filledLocations) {
-        if (this._filledLocations[location] && (location > 0 || disableZero)) {
-          this.gl.disableVertexAttribArray(location);
-        }
+      const {location} = accessInfo;
+
+      // TODO - use known type in configuration to allow non-typed arrays?
+      switch (arrayValue.constructor) {
+      case Float32Array:
+        this._setConstantFloatArray(location, arrayValue);
+        break;
+      case Int32Array:
+        this._setConstantIntArray(location, arrayValue);
+        break;
+      case Uint32Array:
+        this._setConstantUintArray(location, arrayValue);
+        break;
+      default:
+        assert(false);
       }
-      this._filledLocations = {};
+
+      // To use the constant value, disable reading from arrays
+
+      // NOTE: Possible perf penalty when disabling attribute 0:
+      // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
+      // this-has-significant-performance-penalt
+      this.gl.disableVertexAttribArray(location);
+
+      // Reset instanced divisor
+      this.gl.vertexAttribDivisor(location, 0);
+
+      // Save the value for debugging
+      this.values[location] = arrayValue;
     });
-  }
-
-  // Enable an attribute
-  enable(location) {
-    this.bind(() => {
-      this.gl.enableVertexAttribArray(location);
-    });
-  }
-
-  // Disable an attribute
-  // Perf penalty when disabling attribute 0:
-  // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
-  // this-has-significant-performance-penalt
-  disable(location, disableZero = false) {
-    if (location > 0 || disableZero) {
-      this.bind(() => {
-        this.gl.disableVertexAttribArray(location);
-      });
-    }
-  }
-
-  // Set the frequency divisor used for instanced rendering.
-  setDivisor(location, divisor) {
-    this.bind(() => {
-      this.gl.vertexAttribDivisor(location, divisor);
-    });
-  }
-
-  // Specify values for generic vertex attributes
-  setGeneric({location, array}) {
-    this._filledLocations[location] = true;
-    switch (array.constructor) {
-    case Float32Array:
-      this._setGenericFloatArray(location, array);
-      break;
-    case Int32Array:
-      this._setGenericIntArray(location, array);
-      break;
-    case Uint32Array:
-      this._setGenericUintArray(location, array);
-      break;
-    default:
-      this.setGenericValues(location, ...array);
-    }
-  }
-
-  // Specify values for generic vertex attributes
-  setGenericValues(location, v0, v1, v2, v3) {
-    const {gl} = this;
-    switch (arguments.length - 1) {
-    case 1: gl.vertexAttrib1f(location, v0); break;
-    case 2: gl.vertexAttrib2f(location, v0, v1); break;
-    case 3: gl.vertexAttrib3f(location, v0, v1, v2); break;
-    case 4: gl.vertexAttrib4f(location, v0, v1, v2, v3); break;
-    default: assert(false);
-    }
-
-    // assert(gl instanceof WebGL2RenderingContext, 'WebGL2 required');
-    // Looks like these will check how many arguments were supplied?
-    // gl.vertexAttribI4i(location, v0, v1, v2, v3);
-    // gl.vertexAttribI4ui(location, v0, v1, v2, v3);
+    return this;
   }
 
   bind(funcOrHandle = this.handle) {
@@ -248,8 +297,8 @@ export default class VertexArray extends Resource {
 
       value = funcOrHandle();
 
-      this.gl.bindVertexArray(null);
       this._bound = false;
+      this.gl.bindVertexArray(null);
     } else {
       value = funcOrHandle();
     }
@@ -259,109 +308,45 @@ export default class VertexArray extends Resource {
 
   // PRIVATE
 
-  // Auto detect draw parameters from the complement of buffers provided
-  _deduceDrawParameters() {
-    // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
-    // index type is saved for drawElement calls
-    let isInstanced = false;
-    let isIndexed = false;
-    let indexType = null;
-
-    // Check if we have an elements array buffer
-    if (this.elements) {
-      isIndexed = true;
-      indexType = this.elements.layout.type;
-    }
-
-    // Check if any instanced buffers
-    this.buffers.forEach(buffer => {
-      if (buffer.layout.instanced > 0) {
-        isInstanced = true;
-      }
-    });
-
-    return {isInstanced, isIndexed, indexType};
+  getAttributeInfo(attributeName) {
+    return this.configuration && this.configuration.getAttributeInfo(attributeName);
   }
-  //         this._filledLocations[bufferName] = true;
 
-  _getLocations(buffers) {
-    // Try to extract elements and locations
+  getAttributeIndex(locationOrName) {
+    if (this.configuration) {
+      return this.configuration.getLocation(locationOrName);
+    }
+    const location = Number(locationOrName);
+    if (Number.isFinite(location)) {
+      return location;
+    }
+    return -1;
+  }
+
+  // Currently just checks that elements is not duplicated
+  _checkAttributes(attributes) {
     let elements = null;
-    const locations = {};
 
-    for (const bufferName in buffers) {
-      const buffer = buffers[bufferName];
-
+    for (const bufferName in attributes) {
+      const buffer = attributes[bufferName];
       // Check if this is an elements array
-      if (buffer && buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+      if (buffer && buffer.target === GL_ELEMENT_ARRAY_BUFFER) {
         assert(!elements, 'Duplicate GL.ELEMENT_ARRAY_BUFFER');
         // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
         elements = buffer;
       }
 
-      let location = Number(bufferName);
-      // if key is a number, interpret as the location
-      // if key is not a location number, assume it is a named buffer, look it up in supplied map
-      if (!Number.isFinite(location)) {
-        location = this.locations[bufferName];
+      const accessInfo = this.getAttributeInfo(bufferName, buffer);
+      if (accessInfo.location === undefined) {
+        // Check if this is an elements array
+        log.warn(`${bufferName} not used`)();
       }
-      assert(Number.isFinite(location));
-
-      assert(!locations[location], `Duplicate attribute for binding point ${location}`);
-      locations[location] = buffer;
     }
 
-    return {locations, elements};
+    return elements;
   }
 
-  _sortBuffersByLocation(buffers) {
-    // Try to extract elements and locations
-    let elements = null;
-    const locations = new Array(this._attributeCount).fill(null);
-
-    for (const bufferName in buffers) {
-      const buffer = buffers[bufferName];
-
-      // Check if this is an elements arrau
-      if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-        assert(!elements, 'Duplicate GL.ELEMENT_ARRAY_BUFFER');
-        // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
-        elements = buffer;
-      } else if (!this._warn[bufferName]) {
-        log.warn(2, `${this._print(bufferName)} not used`)();
-        this._warn[bufferName] = true;
-      }
-
-      let location = Number(bufferName);
-      // if key is a number, interpret as the location
-      // if key is not a location number, assume it is a named buffer, look it up in supplied map
-      if (!Number.isFinite(location)) {
-        location = this.locations[bufferName];
-      }
-      locations[location] = bufferName;
-      assert(locations[location] === null, `Duplicate attribute for binding point ${location}`);
-      locations[location] = location;
-    }
-
-    return {locations, elements};
-  }
-
-  _getBufferAndLayout(bufferData) {
-    // Check if buffer was supplied
-    let buffer;
-    let layout;
-    if (bufferData.handle) {
-      buffer = bufferData;
-      layout = bufferData.layout;
-    } else {
-      buffer = bufferData.buffer;
-      layout = Object.assign({}, buffer.layout, bufferData.layout || {}, bufferData);
-    }
-    return {buffer, layout};
-  }
-
-  // TODO - this doesn't minimize well, choose one of the two API styles?
-  _setGenericFloatArray(location, array) {
+  _setConstantFloatArray(location, array) {
     const {gl} = this;
     switch (array.length) {
     case 1: gl.vertexAttrib1fv(location, array); break;
@@ -372,7 +357,7 @@ export default class VertexArray extends Resource {
     }
   }
 
-  _setGenericIntArray(location, array) {
+  _setConstantIntArray(location, array) {
     const {gl} = this;
     assert(isWebGL2(gl));
     switch (array.length) {
@@ -384,7 +369,7 @@ export default class VertexArray extends Resource {
     }
   }
 
-  _setGenericUintArray(location, array) {
+  _setConstantUintArray(location, array) {
     const {gl} = this;
     assert(isWebGL2(gl));
     switch (array.length) {
@@ -409,39 +394,108 @@ export default class VertexArray extends Resource {
   }
 
   // Generic getter for information about a vertex attribute at a given position
-  // @param {GLuint} location - index of the vertex attribute.
-  // @param {GLenum} pname - specifies the information to query.
-  // @returns {*} - requested vertex attribute information (specified by pname)
   _getParameter(pname, {location}) {
     assert(Number.isFinite(location));
-
-    this.gl.bindVertexArray(this.handle);
-
-    // Let the polyfill intercept the query
-    let result;
-    switch (pname) {
-    case GL.VERTEX_ATTRIB_ARRAY_POINTER:
-      result = this.gl.getVertexAttribOffset(location, pname);
-      break;
-    default:
-      result = this.gl.getVertexAttrib(location, pname);
-    }
-
-    this.gl.bindVertexArray(null);
-    return result;
-  }
-
-  _getData() {
-    return new Array(this.MAX_ATTRIBUTES).fill(0).map((_, location) => {
-      const result = {};
-      PARAMETERS.forEach(parameter => {
-        result[getKey(this.gl, parameter)] = this.getParameter(parameter, {location});
-      });
-      return result;
+    return this.bind(() => {
+      switch (pname) {
+      case GL.VERTEX_ATTRIB_ARRAY_POINTER: return this.gl.getVertexAttribOffset(location, pname);
+      default: return this.gl.getVertexAttrib(location, pname);
+      }
     });
   }
 
   _bind(handle) {
     this.gl.bindVertexArray(handle);
   }
+
+  _getDebugTable({header = 'Attributes'} = {}) {
+    if (!this.configuration) {
+      return {};
+    }
+
+    const table = {}; // {[header]: {}};
+
+    // Add index (elements) if available
+    if (this.elements) {
+      // const elements = Object.assign({size: 1}, this.elements);
+      table.ELEMENT_ARRAY_BUFFER =
+        this._getDebugTableRow(this.elements, null, header);
+    }
+
+    // Add used attributes
+    const attributes = this.values;
+
+    for (const attributeName in attributes) {
+      const info = this.getAttributeInfo(attributeName);
+      if (info) {
+        let rowHeader = `${attributeName}: ${info.name}`;
+        const accessor = this.accessors[info.location];
+        if (accessor) {
+          const typeAndName = getCompositeGLType(accessor.type, accessor.size);
+          if (typeAndName) { // eslint-disable-line
+            rowHeader = `${attributeName}: ${info.name} (${typeAndName.name})`;
+          }
+        }
+        table[rowHeader] =
+          this._getDebugTableRow(attributes[attributeName], accessor, header);
+      }
+    }
+
+    // Add any unused attributes
+    // for (const attributeName in attributes) {
+    //   if (!table[attributeName]) {
+    //     table[attributeName] = this._getDebugTableRow(attributes[attributeName], null, header);
+    //   }
+    // }
+
+    return table;
+  }
+
+  /* eslint-disable max-statements */
+  _getDebugTableRow(attribute, accessor, header) {
+    // const round = xnum => Math.round(num * 10) / 10;
+
+    let type = 'NOT PROVIDED';
+    let instanced = 0;
+    let size = 'N/A';
+    let verts = 'N/A';
+    let bytes = 'N/A';
+    let value = 'N/A';
+
+    let isInteger;
+    let modified = '';
+
+    if (attribute instanceof Buffer) {
+      const buffer = attribute;
+
+      if (accessor) {
+        type = accessor.type;
+        instanced = accessor.divisor > 0;
+        size = accessor.size;
+
+        // Generate a type name by dropping Array from Float32Array etc.
+        type = String(type).replace('Array', '');
+        // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
+        isInteger = type.indexOf('nt') !== -1;
+      } else {
+        // element buffer
+        isInteger = true;
+      }
+
+      if (buffer.data) {
+        value = buffer.data;
+      } else if (isWebGL2(this.gl)) {
+        value = buffer.getData({length: 24});
+        modified = '*';
+      }
+      bytes = buffer.bytes;
+      verts = bytes / value.BYTES_PER_ELEMENT / size;
+    }
+
+    return {
+      [header]: `${modified}${formatValue(value, {size, isInteger})}`,
+      'Format ': `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes}bytes ${type})`
+    };
+  }
+  /* eslint-ensable max-statements */
 }

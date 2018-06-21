@@ -1,17 +1,15 @@
 /* eslint-disable no-inline-comments */
 import GL from '../constants';
-import VertexArray from './vertex-array';
 import Resource from './resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
-import Buffer from './buffer';
 import ProgramConfiguration from './program-configuration';
 import {withParameters} from '../webgl-context/context-state';
 import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {log, uid, isObjectEmpty} from '../utils';
+import {log, uid} from '../utils';
 import assert from '../utils/assert';
 
 const LOG_PROGRAM_PERF_PRIORITY = 3;
@@ -23,19 +21,19 @@ export default class Program extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
-    this.vertexArray = VertexArray.getDefaultArray(gl);
+
+    // For backwards compatibility, each program creates a vertex array.
+    // It can (should) be overridden in draw.
+    // this.vertexArray = null;
 
     // Experimental flag to avoid deleting Program object while it is cached
     this._isCached = false;
 
     this.initialize(opts);
+
     Object.seal(this);
 
     this._setId(opts.id);
-  }
-
-  getConfiguration() {
-    return this.configuration;
   }
 
   initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = {}) {
@@ -60,24 +58,13 @@ export default class Program extends Resource {
 
     this._compileAndLink();
 
+    this._readUniformLocationsFromLinkedProgram();
+
     this.configuration = new ProgramConfiguration(this);
 
-    return this;
-  }
+    // TODO - backwards compatibility should be removed
+    // this.vertexArray = new VertexArray(this.gl, {program: this});
 
-  // Generates warning if a vertex shader attribute is not setup.
-  checkAttributeBindings({vertexArray}) {
-    const filledLocations = vertexArray ?
-      vertexArray.filledLocations : this.vertexArray.filledLocations;
-    for (const attributeName in this._attributeToLocationMap) {
-      const location = this._attributeToLocationMap[attributeName];
-      if (!filledLocations[location] && !this._warnedLocations[location]) {
-        // throw new Error(`Program ${this.id}: ` +
-        //   `Attribute ${location}:${attributeName} not supplied`);
-        log.warn(`Program ${this.id}: Attribute ${location}:${attributeName} not supplied`)();
-        this._warnedLocations[location] = true;
-      }
-    }
     return this;
   }
 
@@ -89,9 +76,8 @@ export default class Program extends Resource {
     return super.delete(opts);
   }
 
-  reset() {
-    this.unsetBuffers();
-    // TODO - reset uniforms and attributes to initial state
+  getConfiguration() {
+    return this.configuration;
   }
 
   use() {
@@ -104,6 +90,7 @@ export default class Program extends Resource {
   // This function unifies those into a single call with simple parameters
   // that have sane defaults.
   draw({
+    logPriority,
     drawMode = GL.TRIANGLES,
     vertexCount,
     offset = 0,
@@ -115,21 +102,51 @@ export default class Program extends Resource {
     instanceCount = 0,
     vertexArray = null,
     transformFeedback = null,
+    framebuffer = null,
     uniforms = {},
     samplers = {},
     parameters = {}
   }) {
-    vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
+    assert(vertexArray);
+    // vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
+
+    if (logPriority !== undefined) {
+      log.log(logPriority, `Draw: \
+mode=${drawMode} \
+verts=${vertexCount} \
+instances=${instanceCount}`)();
+    }
+
+    // drawMode = GL.TRIANGLES,
+    // vertexCount,
+    // offset = 0,
+    // start,
+    // end,
+    // isIndexed = false,
+    // indexType = GL.UNSIGNED_SHORT,
+    // isInstanced = false,
+    // instanceCount = 0,
+    // vertexArray = null,
+    // transformFeedback = null,
+    // framebuffer = null,
+    // uniforms = {},
+    // samplers = {},
+    // parameters = {}
+
     vertexArray.bind(() => {
 
       this.gl.useProgram(this.handle);
+
+      this.setUniforms(uniforms, samplers);
+
+      if (framebuffer !== undefined) {
+        parameters = Object.assign({}, parameters, {framebuffer});
+      }
 
       if (transformFeedback) {
         const primitiveMode = getPrimitiveDrawMode(drawMode);
         transformFeedback.begin(primitiveMode);
       }
-
-      this.setUniforms(uniforms, samplers);
 
       withParameters(this.gl, parameters,
         () => {
@@ -156,125 +173,6 @@ export default class Program extends Resource {
 
     });
 
-    return this;
-  }
-
-  /**
-   * Attach a map of Buffers values to a program
-   * Only attributes with names actually present in the linked program
-   * will be updated. Other supplied buffers will be ignored.
-   *
-   * @param {Object} attributes - An object map with attribute names being keys
-   *  and values are expected to be instances of Attribute.
-   * @returns {Program} Returns itself for chaining.
-   */
-  setAttributes(attributes, {clear = true, drawParams = {}} = {}) {
-    if (clear) {
-      this.vertexArray.clearBindings();
-    }
-
-    // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
-    // index type is saved for drawElement calls
-    drawParams.isInstanced = false;
-    drawParams.isIndexed = false;
-    drawParams.indexType = null;
-
-    const {locations, elements} = this._sortBuffersByLocation(attributes);
-
-    // Process locations in order
-    for (let location = 0; location < locations.length; ++location) {
-      const attributeName = locations[location];
-      const attribute = attributes[attributeName];
-      // DISABLE MISSING ATTRIBUTE
-      if (!attribute) {
-        this.vertexArray.disable(location);
-      } else if (attribute.isGeneric) {
-        this._setAttributeToGeneric({location, array: attribute.value});
-      } else {
-        this._setAttributeToBuffer({location, buffer: attribute.getBuffer(), layout: attribute});
-        Object.assign(drawParams, {
-          isInstanced: attribute.instanced > 0
-        });
-      }
-    }
-
-    // SET ELEMENTS ARRAY BUFFER
-    if (elements) {
-      const attribute = attributes[elements];
-      attribute.getBuffer().bind();
-      drawParams.isIndexed = true;
-      drawParams.indexType = attribute.type;
-    }
-
-    return this;
-  }
-
-  /**
-   * Attach a map of Buffers values to a program
-   * Only attributes with names actually present in the linked program
-   * will be updated. Other supplied buffers will be ignored.
-   *
-   * @param {Object} buffers - An object map with attribute names being keys
-   *  and values are expected to be instances of Buffer.
-   * @returns {Program} Returns itself for chaining.
-   */
-  /* eslint-disable max-statements */
-  setBuffers(buffers, {clear = true, drawParams = {}} = {}) {
-    log.deprecated('Program: `setBuffers`', '`setAttributes`');
-
-    if (clear) {
-      this.vertexArray.clearBindings();
-    }
-
-    // indexing is autodetected - buffer with target gl.ELEMENT_ARRAY_BUFFER
-    // index type is saved for drawElement calls
-    drawParams.isInstanced = false;
-    drawParams.isIndexed = false;
-    drawParams.indexType = null;
-
-    const {locations, elements} = this._sortBuffersByLocation(buffers);
-
-    // Process locations in order
-    for (let location = 0; location < locations.length; ++location) {
-      const bufferName = locations[location];
-      const buffer = buffers[bufferName];
-      // DISABLE MISSING ATTRIBUTE
-      if (!buffer) {
-        this.vertexArray.disable(location);
-      } else if (buffer instanceof Buffer) {
-        this._setAttributeToBuffer({location, buffer, layout: buffer.layout});
-        Object.assign(drawParams, {
-          isInstanced: buffer.layout.instanced > 0
-        });
-      } else {
-        this._setAttributeToGeneric({location, array: buffer});
-      }
-    }
-
-    // SET ELEMENTS ARRAY BUFFER
-    if (elements) {
-      const buffer = buffers[elements];
-      buffer.bind();
-      drawParams.isIndexed = true;
-      drawParams.indexType = buffer.layout.type;
-    }
-
-    return this;
-  }
-  /* eslint-enable max-statements */
-
-  /*
-   * @returns {Program} Returns itself for chaining.
-   */
-  unsetBuffers() {
-    const length = this._attributeCount;
-    for (let i = 1; i < length; ++i) {
-      // this.vertexArray.setDivisor(i, 0);
-      this.vertexArray.disable(i);
-    }
-
-    // Clear elements buffer
-    this.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
     return this;
   }
 
@@ -333,46 +231,9 @@ export default class Program extends Resource {
     this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
   }
 
-  // setTransformFeedbackBuffers(buffers) {
-  //   for (const buffer of buffers) {
-  //     buffer.bindBase()
-  //   }
-  // }
+  //  UNIFORMS API
 
-  /**
-   * ATTRIBUTES API
-   * (Locations are numeric indices)
-   * @return {Number} count
-   */
-  getAttributeCount() {
-    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
-  }
-
-  /**
-   * Returns location (index) of a name
-   * @param {String} attributeName - name of an attribute
-   *   (matches name in a linked shader)
-   * @returns {Number} - // array of actual attribute names from shader linking
-   */
-  getAttributeLocation(attributeName) {
-    return this.gl.getAttribLocation(this.handle, attributeName);
-  }
-
-  /**
-   * Returns an object with info about attribute at index "location"/
-   * @param {int} location - index of an attribute
-   * @returns {WebGLActiveInfo} - info about an active attribute
-   *   fields: {name, size, type}
-   */
-  getAttributeInfo(location) {
-    return this.gl.getActiveAttrib(this.handle, location);
-  }
-
-  /**
-   * UNIFORMS API
-   * (Locations are numeric indices)
-   * @return {Number} count
-   */
+  // @return {Number} count (Locations are numeric indices)
   getUniformCount() {
     return this._getParameter(GL.ACTIVE_UNIFORMS);
   }
@@ -443,88 +304,27 @@ export default class Program extends Resource {
   }
   /* eslint-enable max-len */
 
+  // ATTRIBUTES API
+
+  // Query number of attributes in current program's vertex shader
+  //  (Locations are numeric indices)
+  getAttributeCount() {
+    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
+  }
+
+  // Query location (index) assigned by shader linker to a named attribute (name per GLSL shader)
+  getAttributeLocation(attributeName) {
+    return this.gl.getAttribLocation(this.handle, attributeName);
+  }
+
+  // Queries an object with info about attribute at index "location"
+  // @param {int} location - index of an attribute
+  // returns {WebGLActiveInfo} - info about an active attribute, fields: {name, size, type}
+  getAttributeInfo(location) {
+    return this.gl.getActiveAttrib(this.handle, location);
+  }
+
   // PRIVATE METHODS
-
-  _setAttributeToGeneric({location, array}) {
-    this.vertexArray.setGeneric({location, array});
-    this.vertexArray.disable(location, true);
-  }
-
-  _setAttributeToBuffer({location, buffer, layout}) {
-    const divisor = layout.instanced ? 1 : 0;
-    this.vertexArray.setBuffer({location, buffer, layout});
-    this.vertexArray.setDivisor(location, divisor);
-    this.vertexArray.enable(location);
-  }
-
-  _compileAndLink() {
-    const {gl} = this;
-    gl.attachShader(this.handle, this.vs.handle);
-    gl.attachShader(this.handle, this.fs.handle);
-    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
-    gl.linkProgram(this.handle);
-    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
-
-    // Avoid checking program linking error in production
-    if (gl.debug || log.priority > 0) {
-      gl.validateProgram(this.handle);
-      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
-      if (!linked) {
-        throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
-      }
-    }
-
-    this._queryAttributeLocations();
-    this._queryUniformLocations();
-  }
-
-  _sortBuffersByLocation(buffers) {
-    let elements = null;
-    let locations = [];
-
-    // Reutrn early if no buffers to be bound.
-    if (isObjectEmpty(buffers)) {
-      return {locations, elements};
-    }
-
-    locations = new Array(this._attributeCount);
-    for (const bufferName in buffers) {
-      const buffer = buffers[bufferName];
-      const location = this._attributeToLocationMap[bufferName];
-      if (location === undefined) {
-        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER && elements) {
-          throw new Error(`${this._print(bufferName)} duplicate GL.ELEMENT_ARRAY_BUFFER`);
-        } else if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-          elements = bufferName;
-        } else if (!this._warnedLocations[location]) {
-          log.log(2, `${this._print(bufferName)} not used`)();
-          this._warnedLocations[location] = true;
-        }
-      } else {
-        if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-          throw new Error(`${this._print(bufferName)}:${location} ` +
-            'has both location and type gl.ELEMENT_ARRAY_BUFFER');
-        }
-        locations[location] = bufferName;
-      }
-    }
-    return {locations, elements};
-  }
-
-  // Check that all active attributes are enabled
-  _areAllAttributesEnabled() {
-    const length = this._attributeCount;
-    for (let i = 0; i < length; ++i) {
-      if (!this.vertexArray.isEnabled(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  _print(bufferName) {
-    return `Program ${this.id}: Attribute ${bufferName}`;
-  }
 
   _createHandle() {
     return this.gl.createProgram();
@@ -534,13 +334,7 @@ export default class Program extends Resource {
     this.gl.deleteProgram(this.handle);
   }
 
-  _getName() {
-    let programName = this.vs.getName() || this.fs.getName();
-    programName = programName.replace(/shader/i, '');
-    programName = programName ? `${programName}-program` : 'program';
-    return programName;
-  }
-
+  // Extract opts needed to initialize a `Program` from an independently created WebGLProgram handle
   _getOptionsFromHandle(handle) {
     const shaderHandles = this.gl.getAttachedShaders(handle);
     const opts = {};
@@ -563,19 +357,43 @@ export default class Program extends Resource {
     return this.gl.getProgramParameter(this.handle, pname);
   }
 
-  // query attribute locations and build name to location map.
-  _queryAttributeLocations() {
-    this._attributeToLocationMap = {};
-    this._attributeCount = this.getAttributeCount();
-    for (let location = 0; location < this._attributeCount; location++) {
-      const name = this.getAttributeInfo(location).name;
-      this._attributeToLocationMap[name] = this.getAttributeLocation(name);
+  // If program is not named, name it after shader names
+  // TODO - this.id will already have been initialized
+  _setId(id) {
+    if (!id) {
+      const programName = this._getName();
+      this.id = uid(programName);
     }
-    this._warnedLocations = {};
+  }
+
+  // Generate a default name for the program based on names of the shaders
+  _getName() {
+    let programName = this.vs.getName() || this.fs.getName();
+    programName = programName.replace(/shader/i, '');
+    programName = programName ? `${programName}-program` : 'program';
+    return programName;
+  }
+
+  _compileAndLink() {
+    const {gl} = this;
+    gl.attachShader(this.handle, this.vs.handle);
+    gl.attachShader(this.handle, this.fs.handle);
+    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
+    gl.linkProgram(this.handle);
+    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
+
+    // Avoid checking program linking error in production
+    if (gl.debug || log.priority > 0) {
+      gl.validateProgram(this.handle);
+      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+      if (!linked) {
+        throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
+      }
+    }
   }
 
   // query uniform locations and build name to setter map.
-  _queryUniformLocations() {
+  _readUniformLocationsFromLinkedProgram() {
     const {gl} = this;
     this._uniformSetters = {};
     this._uniformCount = this.getUniformCount();
@@ -589,13 +407,26 @@ export default class Program extends Resource {
     this._textureIndexCounter = 0;
   }
 
-  _setId(id) {
-    // If program is not named, name it after shader names
-    if (!id) {
-      const programName = this._getName();
-      // TODO - this.id will already have been initialized
-      this.id = uid(programName);
-    }
+  // REMOVED/DEPRECATED METHODS in v6.0
+
+  reset() {
+    log.removed('Program.reset()', 'VertexArray.reset()', '6.0');
+  }
+
+  setVertexArray(vertexArray) {
+    log.removed('Program.setVertexArray()', 'Program.draw({vertexArray})', '6.0');
+  }
+
+  setAttributes(...args) {
+    log.removed('Program.setAttributes()', 'VertexArray.setAttributes()', '6.0');
+  }
+
+  setBuffers(...args) {
+    log.removed('Program.setBuffers()', 'VertexArray.setAttributes()', '6.0');
+  }
+
+  unsetBuffers() {
+    log.removed('Program.unsetBuffers()', 'No longer needed', '6.0');
   }
 }
 

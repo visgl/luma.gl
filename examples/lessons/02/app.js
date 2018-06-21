@@ -1,4 +1,4 @@
-import {AnimationLoop, Program, Buffer, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -38,6 +38,36 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   onInitialize({gl, aspect, canvas}) {
 
+    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0];
+    const TRIANGLE_COLORS = [1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1];
+
+    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0];
+    const SQUARE_COLORS = [0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1];
+
+    const program = new Program(gl, {
+      vs: VERTEX_SHADER,
+      fs: FRAGMENT_SHADER
+    });
+
+    const triangleVertexArray = new VertexArray(gl, {
+      program,
+      attributes: {
+        positions: new Buffer(gl, {data: new Float32Array(TRIANGLE_VERTS)}),
+        colors: new Buffer(gl, {data: new Float32Array(TRIANGLE_COLORS)}),
+      }
+    });
+
+    const squareVertexArray = new VertexArray(gl, {
+      program,
+      attributes: {
+        positions: new Buffer(gl, {data: new Float32Array(SQUARE_VERTS)}),
+        colors: new Buffer(gl, {data: new Float32Array(SQUARE_COLORS)})
+      }
+    });
+
+    const view = new Matrix4().translate([-1.5, 0, -7]);
+    const projection = new Matrix4().perspective({aspect});
+
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: [1],
@@ -45,50 +75,30 @@ const animationLoop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
-    program.use();
-
-    const projection = new Matrix4().perspective({aspect});
-    const view = new Matrix4().translate([-1.5, 0, -7]);
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Draw Triangle
-    program
-      .setBuffers({
-        positions: new Buffer(gl, {
-          size: 3,
-          data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])
-        }),
-        colors: new Buffer(gl, {
-          size: 4,
-          data: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
-        })
-      })
-      .setUniforms({
+    program.draw({
+      vertexArray: triangleVertexArray,
+      uniforms: {
         uMVMatrix: view,
         uPMatrix: projection
-      });
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+      },
+      drawMode: gl.TRIANGLES,
+      vertexCount: 3
+    })
 
     // Draw Square
     view.translate([3, 0, 0]);
-    program
-      .setBuffers({
-        positions: new Buffer(gl, {
-          size: 3,
-          data: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0])
-        }),
-        colors: new Buffer(gl).setData({
-          size: 4,
-          data: new Float32Array([0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1])
-        })
-      })
-      .setUniforms({
+
+    program.draw({
+      vertexArray: squareVertexArray,
+      uniforms: {
         uMVMatrix: view,
         uPMatrix: projection
-      });
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+      drawMode: gl.TRIANGLE_STRIP,
+      vertexCount: 4
+    });
   }
 });
 

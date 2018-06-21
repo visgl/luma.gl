@@ -1,4 +1,4 @@
-import {AnimationLoop, Program, Buffer, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -32,6 +32,31 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   onInitialize({gl, canvas, aspect}) {
 
+    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
+    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
+
+    const program = new Program(gl, {
+      vs: VERTEX_SHADER,
+      fs: FRAGMENT_SHADER
+    });
+
+    const triangleVertexArray = new VertexArray(gl, {
+      program,
+      attributes: {
+        positions: new Buffer(gl, {data: new Float32Array(TRIANGLE_VERTS)})
+      }
+    });
+
+    const squareVertexArray = new VertexArray(gl, {
+      program,
+      attributes: {
+        positions: new Buffer(gl, {data: new Float32Array(SQUARE_VERTS)})
+      }
+    });
+
+    const view = new Matrix4().translate([-1.5, 0, -7]);
+    const projection = new Matrix4().perspective({aspect});
+
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: [1],
@@ -39,46 +64,30 @@ const animationLoop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    const program = new Program(gl, {
-      vs: VERTEX_SHADER,
-      fs: FRAGMENT_SHADER
-    });
-
-    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
-    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
-
-    const trianglePositions = new Buffer(gl, {size: 3, data: new Float32Array(TRIANGLE_VERTS)});
-    const squarePositions = new Buffer(gl, {size: 3, data: new Float32Array(SQUARE_VERTS)});
-
-    const view = new Matrix4().translate([-1.5, 0, -7]);
-    const projection = new Matrix4().perspective({aspect});
-
-    program.use();
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Draw Triangle
-    program
-      .setBuffers({
-        positions: trianglePositions
-      })
-      .setUniforms({
+    program.draw({
+      vertexArray: triangleVertexArray,
+      uniforms: {
         uMVMatrix: view,
         uPMatrix: projection
-      });
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+      },
+      drawMode: gl.TRIANGLES,
+      vertexCount: 3
+    })
 
     // Draw Square
     view.translate([3, 0, 0]);
-    program
-      .setBuffers({
-        positions: squarePositions
-      })
-      .setUniforms({
+
+    program.draw({
+      vertexArray: squareVertexArray,
+      uniforms: {
         uMVMatrix: view,
         uPMatrix: projection
-      });
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+      drawMode: gl.TRIANGLE_STRIP,
+      vertexCount: 4
+    });
   }
 });
 

@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 import GL from 'luma.gl/constants';
-import {Program, Buffer} from 'luma.gl';
+import {Program, Buffer, VertexArray} from 'luma.gl';
 
 import {fixture} from 'luma.gl/test/setup';
 
@@ -55,12 +55,14 @@ test('WebGL#Program buffer update', t => {
   let program = new Program(gl, {fs, vs});
   t.ok(program instanceof Program, 'Program construction successful');
 
-  program = program.setBuffers({
-    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
-    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
-  });
-  t.ok(program instanceof Program, 'Program set buffers successful');
+  const vertexArray = new VertexArray(gl, {program})
+    .setAttributes({
+      positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
+      unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+    });
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
 
+  program.setVertexArray(vertexArray);
   program = program.delete();
   t.ok(program instanceof Program, 'Program delete successful');
 
@@ -70,17 +72,19 @@ test('WebGL#Program buffer update', t => {
 test('WebGL#Program draw', t => {
   const {gl} = fixture;
 
-  let program = new Program(gl, {fs, vs});
+  const program = new Program(gl, {fs, vs});
 
-  program = program.setBuffers({
-    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
-    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
-  });
+  const vertexArray = new VertexArray(gl, {program})
+    .setAttributes({
+      positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
+      unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+    });
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
 
-  program.draw({vertexCount: 3});
+  program.draw({vertexArray, vertexCount: 3});
   t.ok(program instanceof Program, 'Program draw successful');
 
-  program.draw({vertexCount: 3, parameters: {blend: true}});
+  program.draw({vertexArray, vertexCount: 3, parameters: {blend: true}});
   t.ok(program instanceof Program, 'Program draw with parameters is successful');
 
   t.end();
