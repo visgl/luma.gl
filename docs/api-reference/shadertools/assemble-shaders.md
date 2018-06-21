@@ -1,6 +1,6 @@
-# Shadertools API
+# Shadertools API Reference
 
-# Functions
+## Functions
 
 ### `registerShaderModules`
 
