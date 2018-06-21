@@ -1,5 +1,5 @@
 import test from 'blue-tape';
-import {createGLContext, Program, Texture2D, Buffer} from 'luma.gl';
+import {Program, Texture2D, Buffer} from 'luma.gl';
 import {loadImage} from 'luma.gl/io';
 import {fixture} from 'luma.gl/test/setup';
 

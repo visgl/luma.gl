@@ -2,9 +2,8 @@ import GL from '../constants';
 import Resource from './resource';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {log} from '../utils';
-import assert from '../utils/assert';
 
-export default class TranformFeedback extends Resource {
+export default class TransformFeedback extends Resource {
 
   static isSupported(gl) {
     return isWebGL2(gl);

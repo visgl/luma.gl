@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {createGLContext, Program} from 'luma.gl';
+import {Program} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 
 const vs = `
