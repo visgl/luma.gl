@@ -220,7 +220,7 @@ const animationLoop = new AnimationLoop({
       },
       vs: EMIT_VS,
       varyings: ['v_offset', 'v_rotation'],
-      sourceDestinationMap: {
+      feedbackMap: {
         a_offset: 'v_offset',
         a_rotation: 'v_rotation'
       },

@@ -1,6 +1,7 @@
 import test from 'blue-tape';
-import {createGLContext, Program, Texture2D, Buffer} from 'luma.gl';
+import {Program, Texture2D, Buffer} from 'luma.gl';
 import {loadImage} from 'luma.gl/io';
+import {fixture} from 'luma.gl/test/setup';
 
 const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA
 Bytg0kAAAAFElEQVQIW2P8z/D/PwMDAwMjjAEAQOwF/W1Dp54AAAAASUVORK5CYII=`;
@@ -10,7 +11,7 @@ test('WebGL#load-file', t => {
 });
 
 test('WebGL#read-texture', t => {
-  const gl = createGLContext({width: 2, height: 2, debug: true});
+  const {gl} = fixture;
 
   const program = new Program(gl, {
     vs: `

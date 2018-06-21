@@ -1,10 +1,7 @@
 import test from 'tape-catch';
-import {createGLContext} from '../../utils/test-tools';
-import {Texture2DArray} from 'luma.gl';
+import {Texture2DArray} from 'luma.gl2';
 
-const fixture = {
-  gl: createGLContext()
-};
+import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#Texture2DArray', tt => {
 
@@ -15,14 +12,14 @@ test('WebGL#Texture2DArray', tt => {
   }
 
   test('WebGL#Texture2DArray construct/delete', t => {
-    const {gl} = fixture;
+    const {gl2} = fixture;
 
     t.throws(
       () => new Texture2DArray(),
       /.*WebGLRenderingContext.*/,
       'Texture2DArray throws on missing gl context');
 
-    const texture = new Texture2DArray(gl);
+    const texture = new Texture2DArray(gl2);
     t.ok(texture instanceof Texture2DArray, 'Texture2DArray construction successful');
 
     texture.delete();
@@ -35,9 +32,9 @@ test('WebGL#Texture2DArray', tt => {
   });
 
   test('WebGL#Texture2DArray parameters', t => {
-    const {gl} = fixture;
+    const {gl2} = fixture;
 
-    const texture = new Texture2DArray(gl);
+    const texture = new Texture2DArray(gl2);
     t.ok(texture instanceof Texture2DArray, 'Texture2DArray construction successful');
 
     const params = texture.getParameters({keys: true});

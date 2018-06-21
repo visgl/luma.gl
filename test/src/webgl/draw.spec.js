@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {createGLContext, Program} from 'luma.gl';
+import {Program} from 'luma.gl';
+import {fixture} from 'luma.gl/test/setup';
 
 const vs = `
 attribute vec3 positions;
@@ -17,7 +18,7 @@ void main(void) {
 `;
 
 test('WebGL#draw', t => {
-  const gl = createGLContext();
+  const {gl} = fixture;
   t.ok(gl, 'Created gl context');
 
   const program = new Program(gl, {vs, fs});

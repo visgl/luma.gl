@@ -49,28 +49,24 @@ test('WebGL#TransformFeedback bindBuffers', t => {
   const buffer1 = new Buffer(gl2);
   const buffer2 = new Buffer(gl2);
 
-  tf.bindBuffers({
+  tf.setBuffers({
     0: buffer1,
     1: buffer2
   });
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers successful');
 
-  tf.bindBuffers({
+  tf.setBuffers({
     0: buffer1,
     1: buffer2
-  }, {clear: true});
+  });
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
 
-  const varyingMap = {
-    varying1: 0,
-    varying2: 1
-  };
-  tf.bindBuffers({
-    varying2: buffer2,
-    varying1: buffer1
-  }, {clear: true, varyingMap});
+  // tf.setBuffers({
+  //   varying2: buffer2,
+  //   varying1: buffer1
+  // }, {clear: true, varyingMap});
 
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
+  // t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
 
   t.end();
 });

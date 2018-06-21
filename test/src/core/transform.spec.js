@@ -40,7 +40,7 @@ test('WebGL#Transform constructor/delete', t => {
       inValue: sourceBuffer
     },
     vs: VS,
-    sourceDestinationMap: {
+    feedbackMap: {
       inValue: 'outValue'
     },
     varyings: ['outValue'],
@@ -75,7 +75,7 @@ test('WebGL#Transform run', t => {
       inValue: sourceBuffer
     },
     vs: VS,
-    sourceDestinationMap: {
+    feedbackMap: {
       inValue: 'outValue'
     },
     varyings: ['outValue'],
@@ -109,7 +109,7 @@ test('WebGL#Transform swapBuffers', t => {
       inValue: sourceBuffer
     },
     vs: VS,
-    sourceDestinationMap: {
+    feedbackMap: {
       inValue: 'outValue'
     },
     varyings: ['outValue'],
@@ -149,7 +149,7 @@ test('WebGL#Transform update', t => {
       inValue: sourceBuffer
     },
     vs: VS,
-    sourceDestinationMap: {
+    feedbackMap: {
       inValue: 'outValue'
     },
     varyings: ['outValue'],

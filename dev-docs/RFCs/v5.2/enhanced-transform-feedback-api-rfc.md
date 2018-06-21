@@ -51,14 +51,14 @@ Swap source destination buffers.
 
 ## Usage:
 
-Create `Transform` object with sourceBuffers, sourceDestinationMap and number of elements to process.
+Create `Transform` object with sourceBuffers, feedbackMap and number of elements to process.
 
 ```js
 const bufferMap = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
-  sourceDestinationMap: {
+  feedbackMap: {
     inValue: 'outValue'
   },
   vs: VS,
