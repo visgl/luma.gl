@@ -58,14 +58,14 @@ transform.run();
 
 ### Use case : Create destination buffers automatically.
 
-`Transform` can internally create destination buffers (i.e. feedback buffers), when `sourceDestinationMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `sourceDestinationMap`.
+`Transform` can internally create destination buffers (i.e. feedback buffers), when `feedbackMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `feedbackMap`.
 
 ```js
 const transform = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
-  sourceDestinationMap: {
+  feedbackMap: {
     inValue: 'outValue'
   },
   vs: VS,
@@ -76,7 +76,7 @@ const transform = new Transform(gl2, {
 ```
 ### Use case : Multiple iterations using swapBuffers().
 
-When `sourceDestinationMap` is specified buffers can be swapped using a single call to `swapBuffers()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
+When `feedbackMap` is specified buffers can be swapped using a single call to `swapBuffers()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
 ```js
 
@@ -130,7 +130,7 @@ Constructs a `Transform` object, creates `Model` and `TransformFeedback` instanc
   * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
   * `vs` (`String`) - vertex shader string.
   * `varyings` (`Array`) - Array of vertex shader varyings names.
-  * `sourceDestinationMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
+  * `feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
   * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
   * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
 

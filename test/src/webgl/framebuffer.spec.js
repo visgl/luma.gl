@@ -3,7 +3,9 @@ import test from 'tape-catch';
 import GL from 'luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
+
 const EPSILON = 0.0000001;
+
 const TEST_CASES = [
   {
     title: 'Default attachments',
