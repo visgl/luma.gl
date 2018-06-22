@@ -43,16 +43,18 @@ Note that tree-shaking still has limitations:
 
 So, what bundle size impact should you expect? When do you know if you have set up your bundler optimally. To help answer these questions, we provide some numbers you can compare against. luma.gl has scripts that measure the size of a minified bundle after each build, which allows us to provide comparison numbers between releases.
 
-| Dist | 5.1.4 Bundle (Compressed) | 5.2.0 Bundle (Compressed) | Comments |
-| ---  | ---                       | ---                       | --- |
-| ES6  | N/A                       | 160 KB (42 KB)            | New ES6 dist in v5.2 (minimally transpiled) |
-| ESM  | 320 KB (80 KB)            | 230 KB (53 KB)            | Transpiled, tree-shaking enabled   |
-| ES5  | 388 KB (88 KB)            | 392 KB (88 KB)            | Transpiled to ES5, no tree-shaking |
+| Dist | 6.0 Bundle (Compressed) | 5.2 Bundle (Compressed) | 5.1 Bundle (Compressed) | Comments |
+| ---  | ---                     | ---                     | ---                     | --- |
+| ES6  | 125 KB (36 KB)          | 160 KB (42 KB)          | N/A                     | ES6 dist, minimally transpiled) |
+| ESM  | 217 KB (51 KB)          | 230 KB (53 KB)          | 320 KB (80 KB)          | Transpiled, tree-shaking enabled   |
+| ES5  | 414 KB (92 KB)          | 392 KB (88 KB)          | 388 KB (88 KB)          | Transpiled to ES5, no tree-shaking |
 
 Notes:
+
 * Numbers represent the minified bundle size of a minimal application, bundled with Webpack 4, which means that the `ES6` and ESM numbers benefit from tree shaking.
 * The number in parenthesis are the compressed bundle sizes. This is an indication of the how much extra size will be added to your compressed app bundle if you import luma.gl.
 * For the ES6 and ESM dists, apps that use more luma.gl classes and features will see an increase in bundle size.
+
 
 ### Future Work
 

@@ -107,15 +107,12 @@ model.draw({
 });
 ```
 
-## Methods
+## Constructor
 
-### constructor
+### Model(gl: WebGLRenderingContext, props: Object)
 
 The constructor for the Model class. Use this to create a new Model.
 
-`new Model(gl, options);`
-
-* `gl` - WebGL context.
 * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
 * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
 * `varyings` (WebGL2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
@@ -132,93 +129,93 @@ The constructor for the Model class. Use this to create a new Model.
 * `onBeforeRender` - function to be called before every time this model is drawn.
 * `onAfterRender` - function to be called after every time this model is drawn.
 
-### delete
+### delete() : Model
 
 Free WebGL resources associated with this model
 
 
-### setNeedsRedraw
+## Methods
+
+### setNeedsRedraw() : Model
 
 Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
 
 
-### getNeedsRedraw
+### getNeedsRedraw() : Boolean
 
 * clearRedrawFlags - clear the redraw flag
 
 Gets the value of the redraw flag.
 
 
-### setDrawMode
+### setDrawMode() : Model
 
 Sets the WebGL `drawMode`.
 
 `GL.POINTS` etc.
 
 
-### getDrawMode
+### getDrawMode() : Enum
 
 Gets the WebGL drawMode
 
-### setVertexCount
+
+### setVertexCount() : Model
 
 Sets the number of vertices
 
-### getVertexCount
+
+### getVertexCount() : GLInt
 
 Gets vertex count
+
 Note: might be autocalculated from `Geometry`
 
 
-### setInstanceCount
+### setInstanceCount() : Model
 
 How many instances will be rendered
 
 
-### getInstanceCount
+### getInstanceCount() : GLInt
 
 Defaults to 0
 
 
-### getProgram
+### getProgram() : Program
 
 Get model's `Program` instance
 
 
-### varyingMap
-
-Returns the programs varyingMap
-
-
-### setGeometry
+### setGeometry() : Model
 
 Get model's `Geometry` instance
 
 
-### getAttributes
+### getAttributes() : Object
 
 Get a map of named attributes
 
 
-### setAttributes
+### setAttributes(attributes : Object) : Model
 
 Sets map of attributes (Attribute instances)
 
 
-### getUniforms
+### getUniforms() : Object
 
 Returns map of currently stored uniforms
 
 
-### setUniforms
+### setUniforms(uniforms : Object) : Model
 
 Stores named uniforms {key, value}
 
 
-### updateModuleSettings
+### updateModuleSettings(moduleSettings : Object) : Model
 
 
-### draw
+### draw(options) : Model
 
 Renders the model with provided uniforms, attributes and samplers
 
@@ -246,27 +243,20 @@ model.draw({
 * `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
 
-### render
+### transform(options) : Model
 
-Render the model. The main difference from `Model.draw` is historical, `render` does not use named parameters.
+Renders the model with provided uniforms, attributes and samplers, with rasterization turned off.
 
 ```js
-model.render(
-  uniforms,
-  attributes,
-  samplers,
-  transformFeedback,
-  parameters,
-  vertexArray
-);
+model.transform({
+  moduleSettings = null,
+  uniforms = {},
+  attributes = {},
+  samplers = {},
+  parameters = {},
+  settings,
+  framebuffer = null,
+  vertexArray = null,
+  transformFeedback = null
+});
 ```
-
-* `uniforms`=`{}` - uniform values to be used for drawing.
-* `attributes`=`{}` - attribute definitions to be used for drawing. Each value can be a plain object, an `Attribute` instance or a `Buffer` instance.
-* `samplers`=`{}` - texture mappings to be used for drawing.
-* `transformFeedback` - a `TranformFeedback` object, that gets activated for this rendering.
-
-
-## Remarks
-* All instance methods in `Model` are chainable
-  (unless they return a documented value).

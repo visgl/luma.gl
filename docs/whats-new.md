@@ -7,46 +7,44 @@ Date: In development, target late June 2018
 
 ### Developer's Guide
 
-luma.gl now has a more extensive Developer's Guide covering more areas of the API.
+luma.gl now has a more extensive Developer's Guide covering more areas of the API, including new sections about writing shaders and the shader module system.
 
 
 ### WebGL Improvements
 
-* **Unconditional support for Vertex Array Objects** - `VertexArrays` are now always used to manage attributes. The `Program` and `Model` classes have been updated to always use `VertexArray` resulting in a simpler and more consistent API and improved performance. If luma.gl's WebGL1 polyfills are installed, the `VertexArrayObject` extension is now emulated when the underlying WebGL1 platform does not provide the `OES_vertex_array_object` extension.
+* **VertexArray Attribute Management** - `VertexArray` objects are now used for all attribute management in luma.gl, resulting in improved performance and a simpler, more consistent API. The `Program` and `Model` class APIs have been updated to use `VertexArray`.
 
-* **WebGL1 Support is now optional** - To optimize the application's bundle size, luma.gl no longer installs WebGL1 support by default. If your application is using WebGL2 only features (like transform feedback) unconditionally, there is no value in including extra code to support WebGL1 in your app. luma.gl now leaves the choice to you: if you want WebGL1 support, just add the following import to your application before importing luma.gl:
+* **WebGL1 Browser Support** - luma.gl is a "WebGL2-first" API, meaing that it exposes a WebGL2 style API to applications, and internally "translates" WebGL2 calls to WebGL1 calls when WebGL2 is not available. To optimize the bundle size of WebGL2-only applications, WebGL1 polyfills for various WebGL2 methods are no longer included by default. The reasoning is that if an application is dependendent on WebGL2 features (like transform feedback), there is no value in including extra code to support WebGL1 in that app, since it won't run on WebGL1 browsers anyway. That said, WebGL1 browser support is still one of the major features of luma.gl, and if you still want your app to support WebGL1 browsers, just import 'luma.gl/webgl1' before creating any luma.gl contexts.
 
-```js
-import 'luma.gl/webgl1';
-import {...} from 'luma.gl';
-```
+
+### API Cleanup
+
+To keep reducing application bundle size, both previously deprecated methods as well as a selection of rarely used methods have been removed (functionality is still accessible using raw WebGL calls). In a few cases applications have been renamed due to API Audit usually to improve API consistency. The details are listed in the Upgrade Guide. In most cases, running your pre-v6 application on v6 should generate messages in the console when old method calls are encountened, and you should be able to address one-by-one.
 
 
 ### Shader Programming Improvements
 
 The shader module system has received a number of upgrades:
 
-### Unconditional support for GLSL 3.00 ES
 
-- **Use GLSL 3.00 shaders in WebGL1 (Shader "transpilation")** - Shader assembler now transforms shader code to the version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa.
-- **Use GLSL 3.00 modules in your WebGL1 shader** - Again shader transpilation will automatically convert shader module source codce to the target version.
+### GLSL Transpilation
+
+The shader assembler now transforms shader code to the GLSL version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa. This allows application to write shader code in the modern GLSL version available (3.00 ES) and still run it under WebGL1 - Shader "transpilation" will automatically convert shader module source code syntax to the target version (assuming that no WebGL2 only features were used).
 
 
 ### Shader Injection System
 
-A basic shader injection system allows applications to inject additional code into existing shaders. This avoids copying large and complicated existing shaders just to modify a few lines of code.
+A new shader injection system allows applications to inject additional code into existing shaders. In many cases, this can avoid the need to copy large and complicated existing shaders just to add a few lines of code.
 
-Shader injection is particularly powerful when used with shader modules. Adding a shader module to the modules list usually requires adding one line of code each to the main functions in the vertex and fragment shaders. Shader injection allows this be done without copying the original shaders.
+Shader injection can be used to add new shader modules to an existing shader. Adding a shader module to the modules list automatically injects the shader module functions into your main shaders, but still typically requires adding one line of code each to the main functions in the vertex and fragment shaders. Shader injection often allows this be done without copying the original shaders.
 
 
 ### Shader Module Improvements
 
-* **Portable GLSL 3.00 ES shader modules** - All shader modules now written in GLSL 3.00 syntax. Thanks to the new shader transpilation feature all modules still work in both GLSL 3.00 ES and GLSL 1.00 ES (assuming they don't use GLSL 3.00 specific features).
+* **Shader modules now support both GLSL 3.00 ES and 1.00 ES** - All shader modules are now written in GLSL 3.00 syntax, and through the new shader transpilation feature all modules now work in both GLSL 3.00 ES and GLSL 1.00 ES (care is taken to avoid using GLSL 3.00 specific features, and exceptions will be documented).
 
 
 ### Developer Guide for Shader Programming
-
-The shader module system now has its own section in the Developer Guide making it more accessible to users, including:
 
 - Guidelines for writing shaders that work in both GLSL 3.00 ES and GLSL 1.00 ES
 - A new GLSL language reference page describing both GLSL 3.00 ES and GLSL 1.00 ES (as well as what has changed between them) in a single place.

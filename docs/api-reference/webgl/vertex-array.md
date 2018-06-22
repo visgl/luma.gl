@@ -9,8 +9,8 @@ For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vert
 Notes:
 
 * A default `VertexArray` is always available, even in basic WebGL1 environments.
-* Creating additional non-default `VertexArray`s requires either WebGL2 or the presence of a (relatively widely supported) WebGL1 extension. The `VertexArray.isSupported()` method is provided to check.
-* Using `VertexArray.setDivisor` to set up instanced attributes requires WebGL2 or a (widely supported) WebGL1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available.
+* Creating additional non-default `VertexArray`s requires either WebGL2 or luma.gl's webgl1 support.
+* Instanced attributes requires WebGL2 or a (widely supported) WebGL1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though many apps just make the assumption.
 
 Note that while `VertexArray`s and instance divisors are technically not available in basic WebGL1 environments, they available by default in WebGL2 and via commonly supported extensions under WebGL1.
 
@@ -35,7 +35,7 @@ const vertexArray = VertexArray.global(gl);
 Create a new VertexArray
 
 ```js
-const vao = new VertexArray(gl)
+const vao = new VertexArray(gl);
 }
 ```
 
@@ -117,7 +117,7 @@ Parameters:
 * `opts` (Object) - passed through to `Resource` constructor and to `initialize`
 
 
-### initialize
+### initialize(props) : VertexArray
 
 Parameters:
 
@@ -130,7 +130,20 @@ Deprecated Parameters:
 * `buffers`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
 
 
-### setBuffer
+### setBuffers
+
+Sets named uniforms from a map, ignoring names.
+
+```js
+program.setBuffers(object);
+```
+
+* object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+* name - (*string*) The name (unique id) of the buffer. If no `attribute` value is set in `options` then the buffer name will be used as attribute name.
+* options - (*object*) An object with options/data described below:
+
+
+### setBuffer(buffer : Buffer) : VertexArray
 
 Assigns a buffer a vertex attribute. Vertex Shader will be invoked once (not considering indexing and instancing) with each value in the buffer's array.
 
@@ -162,7 +175,7 @@ Notes:
 [gl.vertexAttrib{I}Pointer]()
 
 
-### setConstant
+### setConstant(values : Array) : VertexArray
 
 Sets a constant value for a vertex attribute. All Vertex Shader invocations will get the same value.
 
@@ -175,50 +188,9 @@ WebGL APIs:
 [vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 
-### enable
 
-Enable the attribute
+### getParameter(location) : *
 
-Note: By default all attributes are disabled. Only attributes used by a program's shaders should be enabled.
-
-
-### disable
-
-Disable the attribute
-
-* @param {GLuint} location - ordinal number of the attribute
-
-Note:
-* Only attributes used by a program's shaders should be enabled.
-* Attribute 0 can sometimes be treated specially by the driver, so to be safe this method avoids disabling it.
-
-
-### setDivisor
-
-Sets the Set the frequency divisor used for instanced rendering. Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
-
-`VertexArray.setDivisor({gl, location, array});`
-
-1. **gl** (*WebGLRenderingContext) - gl context
-2. **location** (*GLuint*) - index of the attribute
-* @param {GLuint} divisor - instances that pass between updates of attribute
-
-
-Notes:
-* An attribute is referred to as **instanced** if its divisor value is non-zero.
-* The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
-* If divisor is zero, the attribute at slot index advances once per vertex.
-* If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
-
-* This method will look use WebGL2 or the `array_instanced_ANGLE` extension, if available. To avoid exceptions on unsupported platforms. the app can call `VertexAttributeObject.isSupported()` to determine whether instancing is supported before invoking `VertexArray.setDivisor`.
-
-WebGL APIs:
-[gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
-
-
-### getParameter
-
-* **gl** (*WebGLRenderingContext*) - WebGL context
 * **location** (*Number*) - index of attributes
 
 | Parameter                           | Type         | Value |
@@ -236,65 +208,30 @@ When using a WebGL 2 context, the following values are available additionally:
 | `GL.VERTEX_ATTRIB_ARRAY_DIVISOR`    | `GLint`      | The frequency divisor used for instanced rendering. |
 
 
+
+## About Attribute Access
+
+* Only attributes used by a program's shaders should be enabled.
+* Attribute 0 can sometimes be treated specially by the driver, so to be safe this method avoids disabling it.
+
+### Instanced
+
+Sets the Set the frequency divisor used for instanced rendering. Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
+
+* @param {GLuint} divisor - instances that pass between updates of attribute
+
+
+Notes:
+* An attribute is referred to as **instanced** if its divisor value is non-zero.
+* The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
+* If divisor is zero, the attribute at slot index advances once per vertex.
+* If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
+
+* This method will look use WebGL2 or the `array_instanced_ANGLE` extension, if available. To avoid exceptions on unsupported platforms. the app can call `VertexAttributeObject.isSupported()` to determine whether instancing is supported before invoking `VertexArray.setDivisor`.
+
+WebGL APIs:
+[gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
+
+
 ## Remarks
-
-### About Vertex Attributes
-
-In WebGL, **vertex attributes** (often just called **attributes**) are input data to the Vertex Shader, the first shader stage in the GPU rendering pipeline.
-
-These vertex attributes are stored in a "conceptual" array with indices from 0 and up, where each  This array is referred to as a `VertexArrayObject`, or `VertexArray` for short).
-
-At the start of shader execution, these indices (or 'locations') are matched with small integer indices assigned to shader attributes during shader compilation and program linking. This makes the data the application has set up in the vertex attributes available during shader execution. Vertex attributes thus represent one of the primary mechanisms for communication between JavaScript code and GPU code (GLSL shaders).
-
-
-### Create Additional Vertex Arrays
-
-Note that while you can create your own `VertexArrays` there is a global "vertex attributes array" that is always available (even in core WebGL1) which is where vertex data is staged for vertex shader execution.
-
-
-### Vertex Attribute API
-
-* Methods in this class take a `location` index to specify which vertex attribute in the array they are operating on. This location needs to be matched with the location (i.e. index) selected by the compiler when compiling a Shader. Therefore it is usually better to work with symbolic names for vertex attributes, which is supported by other luma.gl classes.
-* It is strongly recommended to only enable attributes that are actually used by a program. Other attributes can be left unchanged but disabled.
-
-
-### Vertex Attribute Values and Properties
-
-Each vertex attribute has these properties:
-- A value (constant or a buffered array with one set of values per vertex) that is accessible in shaders.
-- Enabled status: Can be enabled or disabled.
-- Data layout information: `size` (1-4 values per vertex), `type`, `offset`, `stride`.
-- An instance `divisor` (which enables/disables instancing) **WebGL2/Extension**.
-- An integer normalization policy (see below).
-- An integer conversion policy (see below) **WebGL2**.
-
-Normally attributes are set to a [`WebGLBuffer`](/docs/api-reference/webgl/buffer.md) that stores unique values for each vertex/instance, combined with information about the layout of data in the memory managed by the buffer.
-
-Attributes can also be set to a single "constant" vertex value instead of a full buffer/array. This single value will then be passed to every invocation of the vertex shader effectively representing a constant attribute value. A typical example could be to specify a single color for all vertices, instead of providing a buffer with unique colors per vertex.
-
-
-### Integer to Float Conversion and Normalization
-
-Integer values in attributes (e.g in an `Int32Array`) are converted to floats before being passed to the shader.
-
-In addition, normalization, maps values stored in an integer format to a normalized floating point range before they are passed to the shader:
-* `[-1,1]` (SNORM, for signed integers)
-* `[0,1]` (UNORM, for unsigned integers)
-
-In WebGL2, it is possible to disable automatic conversion of integers to integers, enabling shaders to work directly with integer values. This works with all the integer types: `gl.BYTE`, `gl.UNSIGNED_BYTE`,
-`gl.SHORT`, `gl.UNSIGNED_SHORT`, `gl.INT` and `gl.UNSIGNED_INT`.
-
-
-### WebGL2 Changes
-
-> The differences described here are hidden by the luma.gl `VertexArray` API.
-
-The raw WebGL APIs for `WebGLVertexArray`s are exposed differently in the WebGL1 extension and WebGL2. As always, the luma.gl `VertexArray` class transparently handles the necessary API detection and selection.
-
-**`ANGLE_instanced_arrays` Extension** Allows instance divisors to be set, enabling instanced rendering.
-* **`OES_VertexArray` Extension** Enables the application to create and "VertexArray"s to save and restore the entire global vertex attribute array with a single operation. luma.gl provides a class wrapper for `VertexArrays`.
-
-* Setting instance divisors no longer requires a WebGL extension.
-* `VertexArrays` no longer require using a WebGL extension.
-* Adds support for exposing integer attribute values directly to shaders (without those values first being auto-converted to floats) The improvements cover both constant and buffer-valued attributes.
 
