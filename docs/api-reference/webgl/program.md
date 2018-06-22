@@ -1,52 +1,59 @@
 # Program
 
-A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader.md) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, setting and unsetting buffers (attributes), setting uniform values etc.
+A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader.md) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
 ## Usage
 
 Creating a program
+
 ```js
   const program = new Program(gl, {
-    vs: vertexShaderSource,
-    fs: fragmentShaderSource,
-    id: 'my-identifier',
+    id: 'my-program',
+    vs: vertexShaderSourceString,
+    fs: fragmentShaderSourceString
   });
 ```
 
-Set matrix information for the projection matrix and element matrix of the camera and world
+Set or update uniforms, in this case world and projection matrices
+
 ```js
 program.setUniforms({
   uMVMatrix: view,
-  uPMatrix: camera.projection
+  uPMatrix: projection
 });
 ```
 
-Set buffer values for the vertices of a triangle
+Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
+
 ```js
-program.setBuffers({
-  aVertexPosition: {
-    value: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]),
-    size: 3
-  },
+const program = new Program(gl, {vs, fs});
+
+const vertexArray = new VertexArray(gl, {program});
+
+vertexArray.setAttributes({
+  aVertexPosition: new Buffer(gl, {data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])})
 });
+
+program.draw({vertexArray, ...});
 ```
 
 Creating a program for transform feedback, specifying which varyings to use
+
 ```js
-  const program = new Program(gl, {vs, fs, varyings: ['gl_Position']});
+const program = new Program(gl, {vs, fs, varyings: ['gl_Position']});
 ```
 
 
 ## Members
 
-* `handle` (`WebGLProgram`) - The native `WebGLProgram` instance.
-* `id` (`String`) - `id` string for debugging.
-* `gl` (`WebGLRenderingContext`)
+* `gl` : `WebGLRenderingContext`
+* `handle` : `WebGLProgram` - The WebGL `WebGLProgram` instance.
+* `id` : `String` - `id` string for debugging.
 
 
-## Methods
+## Constructor
 
-### constructor
+### Program(gl : WebGLRenderingContext, props : Object)
 
 Creates a new program using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
@@ -54,18 +61,17 @@ Syntax:
 
 ```js
 	const program = new Program(gl, {
+    id: 'my-identifier',
     vs: vertexShaderSource,
     fs: fragmentShaderSource,
-    id: 'my-identifier',
     varyings: ['gl_Position', 'vColor']
   });
 ```
 
-* `gl` (*WebGLRenderingContext*)
 * `id` (`string`, optional) - string id (to help indentify the program during debugging).
 * `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 * `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-* `varyings` WebGL2 (`String`) - a list of names of varyings.
+* `varyings` WebGL2 (`String[]`) - a list of names of varyings.
 * `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL2 (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
 
 | `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | Description |
@@ -73,33 +79,48 @@ Syntax:
 | `GL.SEPARATE_ATTRIBS`               | One varying per buffer |
 | `GL.INTERLEAVED_ATTRIBS`            | Multiple varyings per buffer |
 
-
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
-### initialize
 
-Relinks a program
+## Methods
 
-* `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
-* `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-* `varyings` WebGL2 (`String[]`) - a list of names of varyings.
-* `bufferMode` WebGL2 (`GLenum`=`GL.SEPARATE_ATTRIBS`) - Optional, specifies how transform feedback should store the varyings.
+### initialize(opts : Object) : Program
 
-### delete
+Relinks a program. Takes the same options as the constructor
+
+
+### delete() : Program
 
 Deletes resources held by program. Note: Does not currently delete shaders (to enable shader caching).
 
-### draw
 
-`Program.draw` is the entry point for running shaders, rendering and optionally calculating data using transform feedback techniques.
+### use() : Program
+
+Calls `gl.useProgram(this.program)`. To set the current program as active. After this call, `draw*` calls will run the shaders in this program.
+
+[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
+
+
+### setUniforms(uniforms : Object) : Program
+
+Sets named uniforms from a map, ignoring names
+
+* `key` (*String*) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the Program than its shaders use, the extra uniforms will simply be ignored.
+* `value` (*mixed*) - The value to be set. Can be a float, an array of floats, a typed array, a boolean, `Texture` etc. The values must match the declarations in the shader.
+
+
+### draw(opts) : Program
+
+`Program.draw` is the entry point for running shaders, rendering and (optionally calculating data using transform feedback techniques).
 
 ```js
   Program.draw({
+    vertexArray,
+
     uniforms = {},
+    transformFeedback = null,
     samplers = {},
     parameters = {},
-    vertexArray = null,
-    transformFeedback = null,
 
     drawMode = GL.TRIANGLES,
     vertexCount,
@@ -116,10 +137,10 @@ Deletes resources held by program. Note: Does not currently delete shaders (to e
 
 Main parameters
 
-* `uniforms`=`{}` - a map of uniforms that will be set before the draw call.
+* `vertexArray` - a `VertexArray` object that will be bound and unbound before and after the draw call.
+* `uniforms`=`{}` - a map of uniforms that will be set just before the draw call (and remain set after the call).
 * `samplers`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
 * `parameters` - temporary gl settings to be applied to this draw call.
-* `vertexArray`=`null` - an optional `VertexArray` object that will be bound and unbound before and after the draw call.
 * `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
 
 Potentially autodeduced parameters
@@ -138,6 +159,7 @@ Parameters for drawing a limited range (WebGL2 only)
 * `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
 
 Notes:
+
 * Runs the shaders in the program, on the attributes and uniforms.
 * Indexed rendering uses the element buffer (`GL.ELEMENT_ARRAY_BUFFER`), make sure your attributes or `VertexArray` contains one.
 * If a `TransformFeedback` object is supplied, `transformFeedback.begin()` and `transformFeedback.end()` will be called before and after the draw call.
@@ -154,100 +176,6 @@ The following WebGL APIs are called in this function:
 [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
 [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
 [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
-
-### setBuffers
-
-Sets named uniforms from a map, ignoring names.
-
-```js
-program.setBuffers(object);
-```
-
-* object - (*object*) An object with key value pairs matching a buffer name and its value respectively.
-* name - (*string*) The name (unique id) of the buffer. If no `attribute` value is set in `options` then the buffer name will be used as attribute name.
-* options - (*object*) An object with options/data described below:
-
-### setUniforms
-
-Sets named uniforms from a map, ignoring names
-
-For each `key, value` of the object passed in it executes `setUniform(key, value)`.
-
-```js
-  program.setUniforms(object);
-```
-
-* `object` (*object*) - An object with key value pairs matching a niform name and its value respectively.
-* `key` (*string*) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the Program than its shaders use, the extra uniforms will simply be ignored.
-* `value` (*mixed*) - The value to be set. Can be a float, an array of floats, a boolean, etc. When the shaders are run (through a draw call), The must match the declaration. There's no need to convert arrays into a typed array, that's done automatically.
-
-### uniformBlockBinding
-
-* `blockIndex` (`GLuint`) - uniform block index
-* `blockBinding` (`GLuint`) - binding point
-
-Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
-
-### varyings
-
-* `program` (`WebGLProgram?`) - program
-* `varyings` (`sequence<DOMString>`) -
-* `bufferMode` (`GLenum`) -
-returns (`TransformFeedback`) - returns self to enable chaining
-
-WebGL APIs [gl.transformFeedbackVaryings](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/transformFeedbackVaryings)
-
-### getVarying(program, index)
-
-* `program` (`WebGLProgram?`) - program
-* `index` (`GLuint`) - index
-returns (`WebGLActiveInfo`) - object with {`name`, `size`, `type`} fields.
-
-WebGL APIs [gl.getTransformFeedbackVarying](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getTransformFeedbackVarying)
-
-### use
-
-Calls `gl.useProgram(this.program)`. To set the current program as active. After this call, `gl.draw*` calls will run the shaders in this program.
-
-Like `bind` calls on many other luma.gl objects, this method does normally not have to be called by the application.
-
-[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
-
-### getUniformCount
-
-Gets number of active uniforms
-
-### getUniformInfo
-
-Gets {name, type, size} for uniform at index
-
-### getUniformLocation
-
-Gets uniform's location (`WebGLUniformLocation`)
-
-### getUniformValue
-
-Gets the value of a uniform variable at a given location
-
-### getActiveUniforms
-
-Gets the requested information (size, offset etc) of uniforms
-
-### getVarying (WebGL2)
-
-Gets the information {name, size, type} of a varying
-
-### getUniformBlockIndex (WebGL2)
-
-Gets the index of a uniform block
-
-### getActiveUniformBlockParameter (WebGL2)
-
-Gets the information about an active uniform block
-
-### getFragDataLocation (WebGL2)
-
-Gets the binding of color numbers to user-defined varying out variables
 
 
 ## Constants

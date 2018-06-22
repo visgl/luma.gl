@@ -367,3 +367,85 @@ Available only in fragment shaders.
 | `vec4 texture2DProj(sampler2D sampler, vec4 coord, float bias)` |
 | `vec4 textureCube(samplerCube sampler, vec3 coord, float bias)` |
 
+
+### Texture Lookup Functions [8.8]
+
+The function textureSize returns the dimensions of level lod for the texture bound to sampler, as described in [2.11.9] of the OpenGL ES 3.0 specification, under “Texture Size Query”. The initial “g” in a type name is a placeholder for nothing, “i”, or “u”.
+
+| `highp ivec{2,3} textureSize(gsampler{2,3}D sampler, int lod);` |
+| `highp ivec2 textureSize(gsamplerCube sampler, int lod);` |
+| `highp ivec2 textureSize(sampler2DShadow sampler, int lod);` |
+| `highp ivec2 textureSize(samplerCubeShadow sampler, int lod);` |
+| `highp ivec3 textureSize(gsampler2DArray sampler, int lod);` |
+| `highp ivec3 textureSize(sampler2DArrayShadow sampler, int lod);` |
+
+Texture lookup functions using samplers are available to vertex and fragment shaders. The initial “g” in a type name is a placeholder for nothing, “i”, or “u”.
+
+| `gvec4 texture(gsampler{2,3}D sampler, vec{2,3} P [, float bias]);` |
+| `gvec4 texture(gsamplerCube sampler, vec3 P [, float bias]);` |
+| `float texture(sampler2DShadow sampler, vec3 P [, float bias]);` |
+| `float texture(samplerCubeShadow sampler, vec4 P [, float bias]);` |
+| `gvec4 texture(gsampler2DArray sampler, vec3 P [, float bias]);` |
+| `float texture(sampler2DArrayShadow sampler, vec4 P);` |
+| `gvec4 textureProj(gsampler2D sampler, vec{3,4} P [, float bias]);` |
+| `gvec4 textureProj(gsampler3D sampler, vec4 P [, float bias]);` |
+| `float textureProj(sampler2DShadow sampler, vec4 P [, float bias]);` |
+| `gvec4 textureLod(gsampler{2,3}D sampler, vec{2,3} P, float lod);` |
+| `gvec4 textureLod(gsamplerCube sampler, vec3 P, float lod);` |
+| `float textureLod(sampler2DShadow sampler, vec3 P, float lod);` |
+| `gvec4 textureLod(gsampler2DArray sampler, vec3 P, float lod);` |
+| `gvec4 textureOffset(gsampler2D sampler, vec2 P, ivec2 offset [, float bias]);` |
+| `gvec4 textureOffset(gsampler3D sampler, vec3 P, ivec3 offset [, float bias]);` |
+| `float textureOffset(sampler2DShadow sampler, vec3 P, ivec2 offset [, float bias]);` |
+| `gvec4 textureOffset(gsampler2DArray sampler, vec3 P, ivec2 offset [, float bias]);` |
+| `gvec4 texelFetch(gsampler2D sampler, ivec2 P, int lod);` |
+| `gvec4 texelFetch(gsampler3D sampler, ivec3 P, int lod);` |
+| `gvec4 texelFetch(gsampler2DArray sampler, ivec3 P, int lod);` |
+| `gvec4 texelFetchOffset(gsampler2D sampler, ivec2 P, int lod, ivec2 offset);` |
+| `gvec4 texelFetchOffset(gsampler3D sampler, ivec3 P, int lod, ivec3 offset);` |
+| `gvec4 texelFetchOffset(gsampler2DArray sampler, ivec3 P, int lod, ivec2 offset);` |
+| `gvec4 textureProjOffset(gsampler2D sampler, vec3 P, ivec2 offset [, float bias]);` |
+| `gvec4 textureProjOffset(gsampler2D sampler, vec4 P, ivec2 offset [, float bias]);` |
+| `gvec4 textureProjOffset(gsampler3D sampler, vec4 P, ivec3 offset [, float bias]);` |
+| `float textureProjOffset(sampler2DShadow sampler, vec4 P, ivec2 offset [,float bias]);` |
+| `gvec4 textureLodOffset(gsampler2D sampler, vec2 P, float lod, ivec2 offset);` |
+| `gvec4 textureLodOffset(gsampler3D sampler, vec3 P, float lod, ivec3 offset);` |
+| `float textureLodOffset(sampler2DShadow sampler, vec3 P, float lod, ivec2 offset);` |
+| `gvec4 textureLodOffset(gsampler2DArray sampler, vec3 P, float lod, ivec2 offset);` |
+| `gvec4 textureProjLod(gsampler2D sampler, vec3 P, float lod);` |
+| `gvec4 textureProjLod(gsampler2D sampler, vec4 P, float lod);` |
+| `gvec4 textureProjLod(gsampler3D sampler, vec4 P, float lod);` |
+| `float textureProjLod(sampler2DShadow sampler, vec4 P, float lod);` |
+| `gvec4 textureProjLodOffset(gsampler2D sampler, vec3 P, float lod, ivec2 offset);` |
+| `gvec4 textureProjLodOffset(gsampler2D sampler, vec4 P, float lod, ivec2 offset);` |
+| `gvec4 textureProjLodOffset(gsampler3D sampler, vec4 P, float lod, ivec3 offset);` |
+| `float textureProjLodOffset(sampler2DShadow sampler, vec4 P, float lod, ivec2 offset);` |
+| `gvec4 textureGrad(gsampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy);` |
+| `gvec4 textureGrad(gsampler3D sampler, vec3 P, vec3 dPdx, vec3 dPdy);` |
+| `gvec4 textureGrad(gsamplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy);` |
+| `float textureGrad(sampler2DShadow sampler, vec3 P, vec2 dPdx, vec2 dPdy);` |
+| `float textureGrad(samplerCubeShadow sampler, vec4 P, vec3 dPdx, vec3 dPdy);` |
+| `gvec4 textureGrad(gsampler2DArray sampler, vec3 P, vec2 dPdx, vec2 dPdy);` |
+| `float textureGrad(sampler2DArrayShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy);` |
+| `gvec4 textureGradOffset(gsampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `gvec4 textureGradOffset(gsampler3D sampler, vec3 P, vec3 dPdx, vec3 dPdy, ivec3 offset);` |
+| `float textureGradOffset(sampler2DShadow sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `gvec4 textureGradOffset(gsampler2DArray sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `float textureGradOffset(sampler2DArrayShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `gvec4 textureProjGrad(gsampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy);` |
+| `gvec4 textureProjGrad(gsampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy);` |
+| `gvec4 textureProjGrad(gsampler3D sampler, vec4 P, vec3 dPdx, vec3 dPdy);` |
+| `float textureProjGrad(sampler2DShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy);` |
+| `gvec4 textureProjGradOffset(gsampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `gvec4 textureProjGradOffset(gsampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+| `gvec4 textureProjGradOffset(gsampler3D sampler, vec4 P, vec3 dPdx, vec3 dPdy, ivec3 offset);` |
+| `float textureProjGradOffset(sampler2DShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset);` |
+
+
+### Fragment Processing Functions [8.9]
+
+Approximated using local differencing.
+
+| `T dFdx(T p); Derivative in x` |
+| `T dFdy(T p); Derivative in y` |
+| `T fwidth(T p); abs (dFdx (p)) + abs (dFdy (p));` |

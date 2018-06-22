@@ -28,24 +28,23 @@ Setting up a transform feedback object and binding buffers
 
 ```js
 const transformFeedback = new TransformFeedback(gl)
-  .bindBuffer({index: 0, bufferPosition, })
-  .bindBuffer({index: 1, bufferColor, });
+  .setBuffer(0, bufferPosition)
+  .setBuffer(1, bufferColor);
 ```
 
 When binding the buffers, index should be equal to the corresponding varying entry in `varyings` array passed to `Program` constructor.
 
-Buffers can also be bound using varying name and varyingMap that can be retrieved from `Model` object.
+Buffers can also be bound using varying name if information about varyings are retrieved from `Program` object.
 
 ```js
 const transformFeedback = new TransformFeedback(gl, {
+  program: ..., // linked program, configuration will be read from it
   buffers: {
     outputColor: bufferColor,
     gl_Position: bufferPosition
-  },
-  varyingMap: model.varyingMap
+  }
 });
 ```
-
 
 Running program (drawing) with implicit activation of transform feedback (will call `begin` and `end` on supplied `transformFeedback`)
 
@@ -58,15 +57,17 @@ model.draw({
 });
 ```
 
-Running program (drawing) with explicit activation of transform feedback
+Running a transform feedback operation while turning off rasterization (drawing):
 
 ```js
-transformFeedback.begin();
-model.draw({...});
-transformFeedback.end();
+model.transform({
+  drawMode,
+  ...,
+  transformFeedback
+});
 ```
 
-Turning off rasterization
+or equivalently, just call draw with an additional parameter:
 
 ```js
 const parameters = {[GL.RASTERIZER_DISCARD]: true}
@@ -76,72 +77,60 @@ model.draw({..., transformFeedback, parameters});
 
 ## Methods
 
-### constructor
+### constructor(gl : WebGL2RenderingContext, props: Object)
 
-* `gl` - (`WebGL2RenderingContext`) gl - context
-* `buffers` - buffers that gets bound to `TRANSFORM_FEEDBACK_BUFFER` target for recording vertex shader outputs.
-* `varyingMap` - Object mapping varying name to buffer index it needs to be bound.
+See `TransformFeedback.setProps` for parameters.
 
 WebGL APIs [`gl.createTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/createTransformFeedback)
 
-### delete
+
+### initialize(props : Object) : TransformFeedback
+
+Reinitializes an existing `TransformFeedback` object with new props.
+
+
+### setProps(props : Object) : TransformFeedback
+
+* `props.program`= (Object) - Gets a mapping of varying name to buffer indices from a linked program if supplied.
+* `props.buffers`=(Object) - Map of buffers to use for recording vertex shader outputs.
+* `props.bindOnUse`=`true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a strange [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+
+Notes:
+
+* `buffers` - will get bound to indices in the `GL.TRANSFORM_FEEDBACK_BUFFER` target.
+
+
+### delete() : TransformFeedback
+
+Destroys a `TransformFeedback` object.
 
 WebGL APIS [`gl.deleteTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/deleteTransformFeedback)
 
-### bindBuffer
+
+### setBuffers(buffers: Object) : TransformFeedback
+
 
 WebGL APIs [`gl.bindBufferBase`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferBase), [`gl.bindBufferRange`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferRange)
 
-### begin(primitiveMode)
+
+### begin(primitiveMode : GLEnum) : TransformFeedback
 
 Activates transform feedback using the buffer bindings in this `TransformFeedback` object.
-Buffers can not be accessed until `TransformFeedback.end` or `TransformFeedback.pause` have been called.
-
-Buffers can not be changed until `TransformFeedback.end` or has been called.
-
-Doing anything which reads from or writes to any part of these buffers (outside of feedback writes, of course).
-
-Reallocating storage for any of these buffers. This includes invalidation.
-
-```js
-begin(primitiveMode)
-```
 
 * `primitiveMode` (`GLenum`) -
 
 returns (`TransformFeedback`) - returns self to enable chaining
 
-| Transform Feedback primitiveMode | Compatible Draw Modes |
-| ---            | --- |
-| `GL.POINTS`	 | `GL.POINTS` |
-| `GL.LINES`	 | `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP` |
-| `GL.TRIANGLES` | `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN` |
+Notes:
+
+* Buffers can not be accessed until `TransformFeedback.end` or `TransformFeedback.pause` have been called.
+* Buffers can not be changed until `TransformFeedback.end` or has been called, which includes doing anything which reads from or writes to any part of these buffers (outside of feedback writes, of course, or reallocating storage for any of these buffers).
+
 
 WebGL APIs [`gl.beginTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/beginTransformFeedback)
 
-### pause()
 
-Pauses transform feedback operations. When paused, transform feedback is still considered active and changing most transform feedback state related to the object results in an error. However, a new transform feedback object may be bound while transform feedback is paused.
-
-The current program can be changed and so forth. Feedback operations can be paused indefinitely, and it is legal to read from buffers that are in a paused feedback operation (though you need to unbind the feedback object first).
-
-Returns (`TransformFeedback`) - returns self to enable chaining
-
-WebGL APIs [`gl.pauseTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/pauseTransformFeedback)
-
-### resume()
-
-Resumes TranformFeedback
-
-Bind the exact program that was used when TransformFeedback.begin was called.
-
-returns (`TransformFeedback`) - returns self to enable chaining
-
-WebGL APIs [`gl.resumeTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/resumeTransformFeedback)
-
-returns (`TransformFeedback`) - returns self to enable chaining
-
-### end()
+### end() : TransformFeedback
 
 returns (`TransformFeedback`) - returns self to enable chaining
 
@@ -150,29 +139,29 @@ WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/
 
 ## See also
 
-* `Program` constructor - `varyings` argument to specify which
-* `Program.varyings` - contains a map of the indices of
+* `Program` constructor - `varyings` argument to specify which vertex shader outputs to expose to transform feedback operations.
 
 
-## Parameters
+## Enumerations
 
-None
+| Primitive Mode | Compatible Draw Modes |
+| ---            | --- |
+| `GL.POINTS`    | `GL.POINTS` |
+| `GL.LINES`     | `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP` |
+| `GL.TRIANGLES` | `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN` |
 
 
 ## Limits
 
-| Limit | Value | Description |
-| --- | --- | --- |
-| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS` | >=4 | total number of variables that can be captured }
-| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS` | >=4 | number of components that any particular variable can contain |
+| Limit                                              | Value | Description |
+| ---                                                | ---   | --- |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS`       | >=4   | total number of variables that can be captured }
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS`    | >=4   | number of components that any particular variable can contain |
 | `GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS` | >= 64 |  total number of components in interleaved capture |
-| `GL.MAX_TRANSFORM_FEEDBACK_BUFFERS` | TBD | Advanced interleaving total number of buffers |
+| `GL.MAX_TRANSFORM_FEEDBACK_BUFFERS`                | TBD   | Advanced interleaving total number of buffers |
 
 
 ## Remarks
-
-* All of the indexed `GL.TRANSFORM_FEEDBACK_BUFFER` bindings. So all calls to `Buffer.bindBase` or `Buffer.bindRange` with `{target: GL.TRANSFORM_FEEDBACK_BUFFER, ...}` will attach the given region of the buffer to the currently bound feedback object.
-* Whether the transform feedback is active and/or paused.
 
 About `TransformFeedback` activation caveats
 

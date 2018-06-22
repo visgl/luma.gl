@@ -1,22 +1,11 @@
-# Transform (Experimental)
+# Transform (Experimental, WebGL2)
 
 The `Transform` class provides easy interface to perform Transform Feedback operations on given data. Applications can use this class to move data processing from CPU to GPU, where multiple parallel execution units will be used for processing. Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory. Output of this class can directly set as attributes on `Model` or `VertexArray` for regular rendering operations, CPU access is not required hence avoids expensive CPU and GPU sync.
 
- `Transform` class creates and holds `Model` and `TransformFeedback` instances. This class is only supported when using `WebGL2RenderingContext`.
+`Transform` class creates and holds `Model` and `TransformFeedback` instances.
 
-| **Method**      | **Description** |
-| ---             | --- |
-| `constructor`   | creates a `Transform` object |
-| `update`        | Update some or all buffer bindings |
-| `run`           | Performs one iteration of TransformFeedback |
-| `swapBuffers`   | Swaps source and destination buffers |
-| `getBuffer`     | Returns current destination buffer of given varying |
+This class is only supported when using `WebGL2RenderingContext`.
 
-## Usage
-
-```js
-import {_Transform as Transform} from 'luma.gl';
-```
 
 ### Use case : Specify source and destination buffers.
 
@@ -80,7 +69,7 @@ When `feedbackMap` is specified buffers can be swapped using a single call to `s
 
 ```js
 
-// Setup Transform with `souceDestinationMap` as above
+// Setup Transform with `feedbackMap` as above
 
 transform.run();
 
@@ -118,11 +107,11 @@ transform.update({
 transform.run();
 ```
 
-## Methods
+## Constructor
 
-### constructor
+### Transform(gl : WebGL2RenderingContext, props: Object)
 
-Constructs a `Transform` object, creates `Model` and `TransformFeedback` instances. It then creates destination buffers if needed and binds the buffers to `Model` and `TransformFeedback` objects.
+Constructs a `Transform` object. It then creates destination buffers if needed and binds the buffers to `Model` and `TransformFeedback` objects.
 
 * `gl` (`WebGL2RenderingContext`) gl - context
 * `opts` (`Object`={}) - options
@@ -134,30 +123,41 @@ Constructs a `Transform` object, creates `Model` and `TransformFeedback` instanc
   * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
   * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
 
-### delete
+Notes:
+
+* Internally, creates `Model` and `TransformFeedback` instances
+
+
+### delete() : Transform
 
 Deletes all owned resources, `Model`, `TransformFeedback` and any `Buffer` objects that are crated internally.
 
-### update
+
+## Methods
+
+### getBuffer(varyingName : String) : Buffer
+
+Returns current destination buffer corresponding to given varying name.
+
+* `varyingName` (`String`) - varying name.
+
+
+### update(props) : Transform
 
 Updates buffer bindings with provided buffer objects for one or more source or destination buffers.
 
-* `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-* `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object.
-* `elementCount` (`Integer`, Optional) - Number set to vertex count when rendering the model. If not supplied, the previously set element count is used.
+* `props.sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
+* `props.feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object.
+* `props.elementCount` (`Integer`, Optional) - Number set to vertex count when rendering the model. If not supplied, the previously set element count is used.
 
-### run
+
+### run(uniforms : Object) : Transform
 
 Performs one transform feedback iteration.
 
 * `uniforms` (`Object` = {}, Optional) - Sets uniforms before rendering.
 
-### swapBuffers
+
+### swapBuffers() : Transform
 
 Swaps source and destination buffers. If buffer swapping is used, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
-
-### getBuffer
-
-Returns current destination buffer corresponding to given varying name.
-
-* `varyingName` (`String`) - varying name.

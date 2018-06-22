@@ -2,6 +2,13 @@
 
 ## Upgrading from v5.3 to v6.0
 
+luma.gl v6.0 underwent a big API cleanup. A lot of rarely used methods have been removed, and some key methods have been renamed.x
+
+### WebGL1 Support
+
+Support for WebGL1 browser is now optional.
+
+
 ### Experimental Exports: New Naming Convention
 
 Experimental exports are now prefixed with underscore (\_), and are no longer members of the `experimental` "name space":
@@ -15,28 +22,10 @@ import {experimental} from 'luma.gl';
 const {Transform} = experimental;
 ```
 
-Reason for Change: The export pattern was changed to make sure tree-shaking can removed unused experimental exports.
+This change will enable tree-shaking bundlers to remove unused experimental exports.
 
 
 ### Removed symbols
-
-luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
-
-| Removed symbol       | Replacement                            | Reason for change     |
-| ---                  | ---                                    | --          |
-| `readPixels`         | `Framebuffer.readPixels`               | Naming audit, deprecated in v3.0 |
-| `FrameBufferObject`  | `FrameBuffer`                          | Naming audit, deprecated in v3.0 |
-| Context              | | |
-| `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
-| `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
-| `trackContextCreation` | N/A                                  | Overly specialized |
-| Constants            | | |
-| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction, deprecated in v5.3 |
-| `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
-| `glKey(value)`       | `glKey(gl, value)`                     | Bundle size reduction, deprecated in v5.3 |
-| `glKeyType(value)`   | `glKeyType(gl, value)`                 | Bundle size reduction, deprecated in v5.3 |
-| AnimationLoop        | | |
-| `AnimationLoop.setViewParams()` | `AnimationLoop.setProps()`  | Naming audit, deprecated in 5.x |
 
 Math functions were moved from luma.gl to math.gl in v4.1. As of v6.0, they are no longer forwarded by luma.gl and now need to be imported directly from math.gl:
 
@@ -44,10 +33,75 @@ Math functions were moved from luma.gl to math.gl in v4.1. As of v6.0, they are 
 import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from 'math.gl';
 ```
 
+luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
 
 
-If you need access to the WebGL context created by another application or framework, this spy allows you to intercept context creation requests.
+### Constants
 
+| Removed symbol       | Replacement                            | Reason for change     |
+| ---                  | ---                                    | --          |
+| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction, deprecated in v5.3 |
+| `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
+| `glKey(value)`       | `glKey(gl, value)`                     | Bundle size reduction, deprecated in v5.3 |
+| `glKeyType(value)`   | `glKeyType(gl, value)`                 | Bundle size reduction, deprecated in v5.3 |
+
+
+### Context
+
+| Removed symbol       | Replacement                            | Reason for change     |
+| ---                  | ---                                    | --          |
+| `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
+| `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
+| `trackContextCreation` | N/A                                  | Overly specialized |
+
+
+### Global Functions
+
+| Removed symbol       | Replacement                            | Reason for change     |
+| ---                  | ---                                    | --          |
+| `readPixels`         | `Framebuffer.readPixels`               | Naming audit, deprecated in v3.0 |
+| `FrameBufferObject`  | `FrameBuffer`                          | Naming audit, deprecated in v3.0 |
+
+
+### AnimationLoop
+
+| Removed symbol               | Replacement                    | Reason for change     |
+| ---                          | ---                            | --          |
+| `AnimationLoop.setViewParams()` | `AnimationLoop.setProps()`  | Naming audit, deprecated in 5.x |
+
+
+### Program
+
+| Removed symbol             | Replacement                    | Reason for change     |
+| ---                        | ---                            | --          |
+| `Program.reset()`          | `VertexArray.reset()`          | Attribute management moved to `VertexArray` |
+| `Program.setAttributes()`  | `VertexArray.setAttributes()`  | Attribute management moved to `VertexArray` |
+| `Program.setBuffers()`     | `VertexArray.setAttributes()`  | Attribute management moved to `VertexArray` |
+| `Program.setVertexArray()` | `Program.draw({vertexArray})`  | No longer needed, just supply a `VertexArray` to `Program.draw()` |
+| `Program.unsetBuffers()`   | N/A                            | No longer needed, just supply a `VertexArray` to `Program.draw()` |
+
+
+### TransformFeedback
+
+| Removed symbol                   | Replacement                  | Reason for change     |
+| ---                              | ---                          | --          |
+| `TransformFeedback.pause()`      | `gl.pauseTransformFeedback`  | Rarely needed, use raw WebGL API |
+| `TransformFeedback.resume()`     | `gl.resumeTransformFeedback` | Rarely needed, use raw WebGL API |
+
+
+### VertexArray
+
+| Removed symbol                   | Replacement                     | Reason for change     |
+| ---                              | ---                             | --          |
+| `VertexArray.setBuffers()`       | `VertexArray.setAttributes()`   | API Audit |
+| `VertexArray.setGeneric()`       | `VertexArray.setConstant()`     | API Audit |
+| `VertexArray.filledLocations()`  | N/A                             | |
+| `VertexArray.clearBindings()`    | `VertexArray.reset()`           | API Audit |
+| `VertexArray.setLocations()`     | `VertexArray.constructor({program})` | v6.0')();
+| `VertexArray.setGenericValues()` | `VertexArray.setConstant()`     | v6.0')();
+| `VertexArray.setDivisor()`       | `gl.vertexAttribDivisor()`      | Rarely needed, use raw WebGL API |
+| `VertexArray.enable()`           | `gl.enableVertexAttribArray()`  | Rarely needed, use raw WebGL API |
+| `VertexArray.disable()`          | `gl.disableVertexAttribArray()` | Rarely needed, use raw WebGL API |
 
 
 
