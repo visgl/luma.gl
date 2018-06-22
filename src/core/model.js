@@ -191,7 +191,7 @@ export default class Model extends Object3D {
 
     // Experimental props
     if ('timerQueryEnabled' in props) {
-      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, {timer: true});
+      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
       if (props.timerQueryEnabled && !this.timerQueryEnabled) {
         log.warn('GPU timer not supported')();
       }
