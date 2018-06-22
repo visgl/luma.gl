@@ -249,6 +249,11 @@ export default class VertexArray extends Resource {
       return this;
     }
 
+    // TODO - read type if provided
+    if (Array.isArray(arrayValue)) {
+      arrayValue = new Float32Array(arrayValue);
+    }
+
     this.bind(() => {
       const {location} = accessInfo;
 

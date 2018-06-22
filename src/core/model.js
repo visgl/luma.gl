@@ -150,7 +150,7 @@ export default class Model extends Object3D {
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
 
-    this.timerQueryEnabled = timerQueryEnabled && Query.isSupported(this.gl, {timer: true});
+    this.timerQueryEnabled = false;
     this.timeElapsedQuery = undefined;
     this.lastQueryReturned = true;
 
@@ -187,6 +187,14 @@ export default class Model extends Object3D {
     }
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms);
+    }
+
+    // Experimental props
+    if ('timerQueryEnabled' in props) {
+      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, {timer: true});
+      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
+        log.warn('GPU timer not supported')();
+      }
     }
     if ('feedbackBuffers' in props) {
       this.setFeedbackBuffers(props.feedbackBuffers);
