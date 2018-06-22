@@ -9,31 +9,19 @@ export default class Sampler extends Resource {
     return isWebGL2(gl);
   }
 
-  static isHandle(handle) {
-    return this.gl.isSampler(this.handle);
-  }
-
   constructor(gl, opts) {
     assertWebGL2Context(gl);
     super(gl, opts);
     Object.seal(this);
   }
 
-  /**
-   * Bind to the same texture unit as a texture to control sampling for that texture
-   * @param {GLuint} unit - texture unit index
-   * @return {Sampler} - returns self to enable chaining
-   */
+  // Bind to the same texture unit as a texture to control sampling for that texture
+  // @param {GLuint} unit - texture unit index
   bind(unit) {
     this.gl.bindSampler(unit, this.handle);
     return this;
   }
 
-  /**
-   * Bind to the same texture unit as a texture to control sampling for that texture
-   * @param {GLuint} unit - texture unit index
-   * @return {Sampler} - returns self to enable chaining
-   */
   unbind(unit) {
     this.gl.bindSampler(unit, null);
     return this;
@@ -50,8 +38,7 @@ export default class Sampler extends Resource {
   }
 
   _getParameter(pname) {
-    const value = this.gl.getSamplerParameter(this.handle, pname);
-    return value;
+    return this.gl.getSamplerParameter(this.handle, pname);
   }
 
   _setParameter(pname, param) {
@@ -69,5 +56,4 @@ export default class Sampler extends Resource {
     }
     return this;
   }
-
 }

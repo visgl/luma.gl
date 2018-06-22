@@ -1,23 +1,36 @@
 # RFC: Reducing Distribution Size
 
 * **Authors**: Ib Green, ...
-* **Date**: Feb 2018
-* **Status**: Early draft, not ready for formal review.
+* **Date**: Feb 2018-
+* **Status**: Continuous Draft.
 
-Notes:
+References:
 
-## Motivation
+* See luma.gl issue [#234](https://github.com/uber/luma.gl/issues/234)
+* Most ideas in [deck.gl size reduction RFC](https://github.com/uber/deck.gl/blob/master/dev-docs/RFCs/v6.0/reduce-distribution-size-rfc.md) apply here.
 
-* deck.gl + luma.gl keeps growing > 1MB
-* react-map-gl pulls in mapbox which is already big
-* Users are starting to show concern
 
-Most ideas in [deck.gl size reduction RFC](https://github.com/uber/deck.gl/blob/master/dev-docs/RFCs/v6.0/reduce-distribution-size-rfc.md) apply here.
+## Summary
 
 This RFC focuses on additional luma.gl specific size reduction opportunities
 
 
-## Size Reduction Ops
+## Motivations
+
+* New features are constanly added
+* deck.gl + luma.gl keeps growing > 1MB
+* react-map-gl pulls in mapbox which is already big
+* Users are starting to show concern
+
+
+
+## Size Reduction Opportunities, Open
+
+## duplicated methods
+
+
+
+## Size Reduction Opportunities, Implemented
 
 ### webgl-debug
 
@@ -35,4 +48,3 @@ This library is always bundled, even when not used.
 * luma.gl proper does not need to import math.gl. Maybe it can include an internal minimal matrix multiplication method class.
 
 
-## duplicated methods

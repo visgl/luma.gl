@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, ClipSpace} from 'luma.gl';
 
 const INFO_HTML = `
 <p>
@@ -24,10 +24,10 @@ void main(void) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl}) => {
-    return {clipSpaceQuad: new ClipSpaceQuad(gl, {fs: CONCENTRICS_FRAGMENT_SHADER})};
+    return {clipSpace: new ClipSpace(gl, {fs: CONCENTRICS_FRAGMENT_SHADER})};
   },
-  onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
-    clipSpaceQuad.render({uTime: tick * 0.01});
+  onRender: ({gl, canvas, tick, clipSpace}) => {
+    clipSpace.render({uTime: tick * 0.01});
   }
 });
 

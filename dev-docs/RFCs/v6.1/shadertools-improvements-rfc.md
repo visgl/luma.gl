@@ -16,6 +16,15 @@ Simplifying shader programming.
 * Make it possible to specify dependencies separately for each type of shader
 
 
+## Shader Module system improvements
+
+- App should be able to add its uniforms to the shader module system.
+- Shader module system can to accept function valued uniforms, allowing animation of uniforms.
+- Support for "Compute" shaders (i.e. shaders that can be used in either )
+- Support for Uniform Buffers
+- Unit tests for shader modules under both GLSL 1.00 and GLSL 3.00
+
+
 ## Updates to the module system
 
 
