@@ -40,7 +40,7 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 
 | Removed symbol       | Replacement                            | Reason for change     |
 | ---                  | ---                                    | --          |
-| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction, deprecated in v5.3 |
+| `GL`                 | `import GL from 'luma.gl/constants'`   | Bundle size reduction by making it optional |
 | `glGet(name)`        | `glGet(gl, name)`                      | Bundle size reduction, deprecated in v5.3 |
 | `glKey(value)`       | `glKey(gl, value)`                     | Bundle size reduction, deprecated in v5.3 |
 | `glKeyType(value)`   | `glKeyType(gl, value)`                 | Bundle size reduction, deprecated in v5.3 |
@@ -52,7 +52,7 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 | ---                  | ---                                    | --          |
 | `deleteGLContest`    | `destroyGLContext`                     | Naming audit, deprecated in v5.3 |
 | `pollContext`        | `pollGLContext`                        | Naming audit, deprecated in v5.3 |
-| `trackContextCreation` | N/A                                  | Overly specialized |
+| `trackContextCreation` | N/A                                  | Rarely used, overly specialized |
 
 
 ### Global Functions

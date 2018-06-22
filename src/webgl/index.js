@@ -64,6 +64,5 @@ export {default as TextureCube} from './texture-cube';
 
 // WebGL2 objects
 export {default as VertexArray} from './vertex-array';
-export {default as Query} from './query';
 export {default as TransformFeedback} from './transform-feedback';
-
+export {default as Query} from './query';

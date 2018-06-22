@@ -498,15 +498,8 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  // signals to the GL that it need not preserve all pixels of a specified region
-  // of the framebuffer
-  invalidate({
-    attachments = [],
-    x = 0,
-    y = 0,
-    width,
-    height
-  }) {
+  // signals to the GL that it need not preserve all pixels of a specified region of the framebuffer
+  invalidate({attachments = [], x = 0, y = 0, width, height}) {
     const {gl} = this;
     assertWebGL2Context(gl);
     const prevHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, this.handle);
@@ -522,10 +515,7 @@ export default class Framebuffer extends Resource {
 
   // Return the value for `pname` of the specified attachment.
   // The type returned is the type of the requested pname
-  getAttachmentParameter({
-    attachment = GL.COLOR_ATTACHMENT0,
-    pname
-  } = {}) {
+  getAttachmentParameter({attachment = GL.COLOR_ATTACHMENT0, pname} = {}) {
     let value = this._getAttachmentParameterFallback(pname);
     if (value === null) {
       this.gl.bindTexture(GL.FRAMEBUFFER, this.handle);
