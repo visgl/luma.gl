@@ -221,7 +221,6 @@ window.onload = function() {
     fbPosition.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     pPosition
-      .use()
       .setUniforms({
         uView: view,
         uProjection: projection
@@ -232,7 +231,6 @@ window.onload = function() {
     fbNormal.bind();
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     pNormal
-      .use()
       .setUniforms({
         uView: view,
         uProjection: projection
@@ -269,7 +267,6 @@ window.onload = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     pLights
-      .use()
       .setBuffers(quadBuffers)
       .setUniforms({
         uView: view,

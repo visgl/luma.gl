@@ -253,7 +253,6 @@ function test_float_add(gl, testName) {
         modules: ['fp64']
       }
     ));
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -287,7 +286,6 @@ function test_float_sub(gl, testName) {
       modules: ['fp64']
     }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -322,7 +320,6 @@ function test_float_mul(gl, testName) {
     modules: ['fp64']
   }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -356,7 +353,6 @@ function test_float_div(gl, testName) {
     modules: ['fp64']
   }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -388,7 +384,6 @@ function test_float_sqrt(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -419,7 +414,6 @@ function test_float_exp(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -450,7 +444,6 @@ function test_float_log(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -482,7 +475,6 @@ function test_float_sin(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -513,7 +505,6 @@ function test_float_cos(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -544,7 +535,6 @@ function test_float_tan(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({
@@ -575,7 +565,6 @@ function test_float_radians(gl, testName) {
         modules: ['fp64']
       }));
 
-  program.use();
   program.setBuffers({
     positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
   }).setUniforms({

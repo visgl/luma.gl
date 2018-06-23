@@ -390,7 +390,6 @@ function begin() {
   });
 
   function copy(src, {width = 1, height = 1, dest = null}) {
-    pCopy.use();
     if (dest) {
       dest.bind();
     } else {
@@ -490,7 +489,6 @@ function begin() {
     fbVelocityDst.bind();
     gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
     pAccelerate
-      .use()
       .setBuffers(quad)
       .setUniforms({
         uSpeed: Math.sin(tick * 0.005) * 8 + 8,
@@ -503,7 +501,6 @@ function begin() {
     fbPositionDst.bind();
     gl.clear(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT);
     pIntegrate
-      .use()
       .setBuffers(quad)
       .setUniforms({
         uPosition: fbPositionSrc.texture,
@@ -521,7 +518,6 @@ function begin() {
     model.$scale(1000, 1000, 1);
 
     pPlane
-      .use()
       .setBuffers(plane)
       .setUniforms({
         uTexture: tMarble,
@@ -532,7 +528,6 @@ function begin() {
     gl.drawArrays(GL.TRIANGLES, 0, 6);
 
     pScene
-      .use()
       .setBuffers(sprite)
       .setUniforms({
         uReflect: true,
@@ -546,7 +541,6 @@ function begin() {
     ext.drawArraysInstancedANGLE(GL.TRIANGLES, 0, 6, dataSize * dataSize);
 
     pScene
-      .use()
       .setBuffers(sprite)
       .setUniforms({
         uReflect: false,

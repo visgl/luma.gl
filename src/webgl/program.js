@@ -32,21 +32,23 @@ export default class Program extends Resource {
     this.initialize(opts);
 
     this.stubRemovedMethods('Program', 'v6.0', [
-      'reset()',
-      'setVertexArray()',
-      'setAttributes()',
-      'setBuffers()',
-      'unsetBuffers()',
+      'setVertexArray',
+      'setAttributes',
+      'setBuffers',
+      'unsetBuffers',
 
-      'uniformBlockBinding()',
-      'getVarying()',
-      'getFragDataLocation()',
-      'getAttachedShaders()',
-      'getUniformBlockIndex()',
-      'getActiveUniformBlockParameter()',
-      'getAttributeCount()',
-      'getAttributeLocation()',
-      'getAttributeInfo()'
+      'use',
+      'getUniformCount',
+      'getUniformInfo',
+      'getUniformLocation',
+      'getUniformValue',
+
+      'getVarying',
+      'getFragDataLocation',
+      'getAttachedShaders',
+      'getAttributeCount',
+      'getAttributeLocation',
+      'getAttributeInfo'
     ]);
 
     Object.seal(this);
@@ -281,62 +283,43 @@ export default class Program extends Resource {
   _readUniformLocationsFromLinkedProgram() {
     const {gl} = this;
     this._uniformSetters = {};
-    this._uniformCount = this.getUniformCount();
+    this._uniformCount = this._getParameter(GL.ACTIVE_UNIFORMS);
     for (let i = 0; i < this._uniformCount; i++) {
-      const info = this.getUniformInfo(i);
-      const parsedName = parseUniformName(info.name);
-      const location = this.getUniformLocation(parsedName.name);
-      this._uniformSetters[parsedName.name] =
-        getUniformSetter(gl, location, info, parsedName.isArray);
+      const info = this.gl.getActiveUniform(this.handle, i);
+      const {name, isArray} = parseUniformName(info.name);
+      const location = gl.getUniformLocation(this.handle, name);
+      this._uniformSetters[name] = getUniformSetter(gl, location, info, isArray);
     }
     this._textureIndexCounter = 0;
   }
 
-  // TO BE REMOVED
-
-  reset() {}
-
-  use() {
-    this.gl.useProgram(this.handle);
-    return this;
+  // stub for shader chache, should reset uniforms to default valiues
+  reset() {
   }
 
-  // @return {Number} count (Locations are numeric indices)
-  getUniformCount() {
-    return this._getParameter(GL.ACTIVE_UNIFORMS);
-  }
-
-  getUniformInfo(index) {
-    return this.gl.getActiveUniform(this.handle, index);
-  }
-
-  getUniformLocation(name) {
-    return this.gl.getUniformLocation(this.handle, name);
-  }
-
-  getUniformValue(location) {
-    return this.gl.getUniform(this.handle, location);
-  }
+  // TO BE REMOVED in v7?
 
   // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
-  // For valid `pname` values check :
   // https://
   // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
   getActiveUniforms(uniformIndices, pname) {
     return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
   }
-}
 
-// create uniform setters
-// Map of uniform names to setter functions
-export function getUniformDescriptors(gl, program) {
-  const uniformDescriptors = {};
-  const length = program.getUniformCount();
-  for (let i = 0; i < length; i++) {
-    const info = program.getUniformInfo(i);
-    const location = program.getUniformLocation(info.name);
-    const descriptor = getUniformSetter(gl, location, info);
-    uniformDescriptors[descriptor.name] = descriptor;
+  // Retrieves the index of a uniform block
+  getUniformBlockIndex(blockName) {
+    return this.gl.getUniformBlockIndex(this.handle, blockName);
   }
-  return uniformDescriptors;
+
+  // Retrieves information about an active uniform block (`blockIndex`)
+  // https://
+  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
+  getActiveUniformBlockParameter(blockIndex, pname) {
+    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
+  }
+
+  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
+  uniformBlockBinding(blockIndex, blockBinding) {
+    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
+  }
 }

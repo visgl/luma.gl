@@ -232,13 +232,18 @@ const getExpectedUniformValues = () => {
   return result;
 };
 
+const getUniformValue = (program, locationName) => {
+  const location = program.gl.getUniformLocation(program.handle, locationName);
+  return program.gl.getUniform(program.handle, location);
+};
+
 const setUniformAndCheck = (program, input, expected, t) => {
   program.setUniforms(input);
   t.pass('Set uniforms successful');
 
   for (const uniformName in expected) {
     let expectedValue = expected[uniformName];
-    let value = program.getUniformValue(program.getUniformLocation(uniformName));
+    let value = getUniformValue(program, uniformName);
 
     if (expectedValue instanceof Texture2D) {
       expectedValue = expectedValue.textureUnit;
@@ -256,7 +261,6 @@ const testSetUniform = (gl, t) => {
     vs: VERTEX_SHADER,
     fs: WEBGL1_FRAGMENT_SHADER
   });
-  program.use();
 
   const expectedValues = getExpectedUniformValues();
 

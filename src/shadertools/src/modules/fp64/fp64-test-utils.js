@@ -101,7 +101,6 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op}) {
   }));
 
   program
-    .use()
     .setBuffers({
       positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
     })
