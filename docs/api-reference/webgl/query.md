@@ -34,6 +34,7 @@ requestAnimationFrame(() => pollContext(gl))
 
 
 ## Query Types
+
 A query can be started by passing following query type to to `begin()` or by using corresponding begin* method.
 
 | Query Type | begin method | Description |

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Resource` class is the base class of all WebGL resources (e.g. `Buffer`, `Texture`, etc.)
+The `Resource` class is the base class of all WebGL resource classes (e.g. `Buffer`, `Texture`, etc.)
 
 ## Usage
 

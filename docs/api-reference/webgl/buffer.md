@@ -102,9 +102,9 @@ Note: buffer binding and unbinding is handled internal by luma.gl methods so the
 * `handle` - holds the underlying `WebGLBuffer`
 
 
-## Methods
+## Constructor
 
-### constructor
+### Buffer(gl : WebGLRenderingContext, props : Object)
 
 Creates a new `Buffer`, which will either be a an "element" buffer used for storing vertex indices, or a generic buffer. To create an element buffer, specify `target: GL.ELEMENT_ARRAY_BUFFER`. If target is not specified, it will be a generic buffer that can be used in a variety of situations.
 
@@ -121,7 +121,9 @@ Note:
 * In WebGL1, the default is `GL.ARRAY_BUFFER` which will work as a generic buffer.
 * In WebGL2, the default is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used (bound). From that point on, WebGL will consider it either as an element buffer or a generic buffer.
 
-### initialize
+## Methods
+
+### initialize(props : Object) : Buffer
 
 Allocates and optionally initializes buffer memory/data store (releasing any previously allocated memory).
 
@@ -140,6 +142,7 @@ Buffer.initialize({data, bytes, usage=, dataType=, size=, ...layoutOptions})
 
 Returns itself for chaining.
 
+
 ### setLayout
 
 Allows you to optionally describe the layout of the data in the buffer. This does not affect the buffer itself, but enables you can to avoid having to supply this data again (You might use it as an attribute later, see `VertexArray`).
@@ -157,7 +160,8 @@ Allows you to optionally describe the layout of the data in the buffer. This doe
 Notes:
 * `offset` and `stride` are typically used to interleave data in buffers.
 
-### subData
+
+### subData({data , offset=, srcOffset=, length=}) : Buffer
 
 Updates part or all of a buffer's allocated memory.
 
@@ -168,9 +172,8 @@ Updates part or all of a buffer's allocated memory.
 * `srcOffset`=`0` -  WebGL2: Offset into srcData
 * `length` - WebGL2: Number of bytes to be copied
 
-Returns itself for chaining.
 
-### copyData (WEBGL2)
+### copyData(opts : Object) : Buffer (WEBGL2)
 
 Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
 
@@ -189,7 +192,7 @@ Note:
 * `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
 * If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
 
-### getData (WEBGL2)
+### getData() : TypedArray (WEBGL2)
 
 Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 

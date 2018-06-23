@@ -57,8 +57,6 @@ const program = new Program(gl, {vs, fs, varyings: ['gl_Position']});
 
 Creates a new program using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
-Syntax:
-
 ```js
 	const program = new Program(gl, {
     id: 'my-identifier',
@@ -82,23 +80,16 @@ Syntax:
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
 
-## Methods
-
-### initialize(opts : Object) : Program
-
-Relinks a program. Takes the same options as the constructor
-
-
 ### delete() : Program
 
 Deletes resources held by program. Note: Does not currently delete shaders (to enable shader caching).
 
 
-### use() : Program
+## Methods
 
-Calls `gl.useProgram(this.program)`. To set the current program as active. After this call, `draw*` calls will run the shaders in this program.
+### initialize(opts : Object) : Program
 
-[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
+Relinks a program. Takes the same options as the constructor
 
 
 ### setUniforms(uniforms : Object) : Program
@@ -107,6 +98,8 @@ Sets named uniforms from a map, ignoring names
 
 * `key` (*String*) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the Program than its shaders use, the extra uniforms will simply be ignored.
 * `value` (*mixed*) - The value to be set. Can be a float, an array of floats, a typed array, a boolean, `Texture` etc. The values must match the declarations in the shader.
+
+[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
 
 
 ### draw(opts) : Program

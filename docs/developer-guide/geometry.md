@@ -1,5 +1,4 @@
-# Geometry
-
+# Geometry (TBA)
 
 ## Components
 
@@ -9,11 +8,6 @@
 
 ### Texture Coordinates (UVs)
 
-
-
 ## Primitives
 
-
 ## Meshes
-
-

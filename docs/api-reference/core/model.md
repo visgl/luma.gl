@@ -1,15 +1,10 @@
 # Model
 
-For most luma.gl  applications, the `Model` class is probably the most important class. It holds all the data necessary to draw an object in luma.gl, e.g.:
+The `Model` class is probably the most useful class for typical applications. It holds all the data necessary to draw an object, e.g.:
 * **shaders** (via a [`Program`](/docs/api-reference/webgl/program.md) instance)
-* **shader modules** [see `Shader Modules`](/docs/api-reference/shadertools/README.md)
 * **vertex attributes** (e.g. a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
 * **uniforms** these can also reference textures.
-
-It offers:
-- Simple boolean flags for selecting indexed and/or instanced rendering.
-- A "unified" render method that binds all attributes, uniforms and textures, selects (uses) the program, and calls the right gl draw call for the model.
-- Setting buffers and more.
+* **shader modules** [see `Shader Modules`](/docs/api-reference/shadertools/README.md)
 
 
 ## Usage
@@ -136,11 +131,6 @@ Free WebGL resources associated with this model
 
 ## Methods
 
-### setNeedsRedraw() : Model
-
-Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
-
-
 ### getNeedsRedraw() : Boolean
 
 * clearRedrawFlags - clear the redraw flag
@@ -148,21 +138,9 @@ Set the redraw flag for the model. It is recommended that the redraw flag is a s
 Gets the value of the redraw flag.
 
 
-### setDrawMode() : Model
-
-Sets the WebGL `drawMode`.
-
-`GL.POINTS` etc.
-
-
 ### getDrawMode() : Enum
 
 Gets the WebGL drawMode
-
-
-### setVertexCount() : Model
-
-Sets the number of vertices
 
 
 ### getVertexCount() : GLInt
@@ -170,11 +148,6 @@ Sets the number of vertices
 Gets vertex count
 
 Note: might be autocalculated from `Geometry`
-
-
-### setInstanceCount() : Model
-
-How many instances will be rendered
 
 
 ### getInstanceCount() : GLInt
@@ -187,24 +160,46 @@ Defaults to 0
 Get model's `Program` instance
 
 
-### setGeometry() : Model
-
-Get model's `Geometry` instance
-
-
 ### getAttributes() : Object
 
 Get a map of named attributes
 
 
-### setAttributes(attributes : Object) : Model
-
-Sets map of attributes (Attribute instances)
-
-
 ### getUniforms() : Object
 
 Returns map of currently stored uniforms
+
+
+### setNeedsRedraw() : Model
+
+Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
+
+
+### setDrawMode() : Model
+
+Sets the WebGL `drawMode`.
+
+`GL.POINTS` etc.
+
+
+### setVertexCount() : Model
+
+Sets the number of vertices
+
+
+### setInstanceCount() : Model
+
+How many instances will be rendered
+
+
+### setGeometry() : Model
+
+Get model's `Geometry` instance
+
+
+### setAttributes(attributes : Object) : Model
+
+Sets map of attributes (Attribute instances)
 
 
 ### setUniforms(uniforms : Object) : Model
@@ -215,7 +210,7 @@ Stores named uniforms {key, value}
 ### updateModuleSettings(moduleSettings : Object) : Model
 
 
-### draw(options) : Model
+### draw(options : Object) : Model
 
 Renders the model with provided uniforms, attributes and samplers
 
@@ -243,7 +238,7 @@ model.draw({
 * `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
 
-### transform(options) : Model
+### transform(options : Object) : Model
 
 Renders the model with provided uniforms, attributes and samplers, with rasterization turned off.
 

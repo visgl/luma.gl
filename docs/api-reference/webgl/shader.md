@@ -16,11 +16,10 @@ const fs = new FragmentShader(gl, source);
 * `handle` - holds the underlying `WebGLShader` object
 
 
-## Methods
+## Constructor
 
-### constructor
+### Shader(gl : WebGLRenderingContext, source : String)
 
-* `gl` - gl context
 * `source` - string containing shader instructions.
 
 

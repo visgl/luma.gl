@@ -117,7 +117,7 @@ Parameters:
 * `opts` (Object) - passed through to `Resource` constructor and to `initialize`
 
 
-### initialize(props) : VertexArray
+### initialize(props : Object) : VertexArray
 
 Parameters:
 
@@ -130,9 +130,9 @@ Deprecated Parameters:
 * `buffers`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
 
 
-### setBuffers
+### setAttributes(attributes : Object) : VertexArray
 
-Sets named uniforms from a map, ignoring names.
+Sets named uniforms from a map.
 
 ```js
 program.setBuffers(object);
