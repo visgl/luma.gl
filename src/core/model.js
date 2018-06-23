@@ -313,7 +313,6 @@ export default class Model extends Object3D {
     // this.setUniforms(opts);
 
     // Simple change detection
-    // TODO - move to Program?
     let somethingChanged = false;
     for (const key in uniforms) {
       if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
@@ -322,8 +321,6 @@ export default class Model extends Object3D {
       }
     }
 
-    this.program.setUniforms(this.uniforms, this.samplers);
-
     if (somethingChanged) {
       this._checkForDeprecatedUniforms(uniforms);
       checkUniformValues(uniforms, this.id);
@@ -331,9 +328,11 @@ export default class Model extends Object3D {
       Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
 
-      // TODO - should only set updated uniforms
       this.setNeedsRedraw();
     }
+
+    // TODO - should only set updated uniforms
+    this.program.setUniforms(this.uniforms, this.samplers);
 
     return this;
   }

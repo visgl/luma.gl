@@ -284,6 +284,8 @@ export default class Program extends Resource {
 
   // TO BE REMOVED
 
+  reset() {}
+
   use() {
     this.gl.useProgram(this.handle);
     return this;
