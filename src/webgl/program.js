@@ -12,9 +12,9 @@ import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {log, uid} from '../utils';
 import assert from '../utils/assert';
 
-const LOG_PROGRAM_PERF_PRIORITY = 3;
+const LOG_PROGRAM_PERF_PRIORITY = 4;
 
-const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
+// const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
 const GL_SEPARATE_ATTRIBS = 0x8C8D;
 
 export default class Program extends Resource {
@@ -31,6 +31,14 @@ export default class Program extends Resource {
 
     this.initialize(opts);
 
+    this.stubRemovedMethods('v6.0', [
+      'Program.reset()',
+      'Program.setVertexArray()',
+      'Program.setAttributes()',
+      'Program.setBuffers()',
+      'Program.unsetBuffers()'
+    ]);
+
     Object.seal(this);
 
     this._setId(opts.id);
@@ -40,30 +48,21 @@ export default class Program extends Resource {
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
     this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
-
     assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
     assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
 
-    this.defaultUniforms = defaultUniforms;
+    this.defaultUniforms = defaultUniforms; // TODO - remove defaultUniforms
 
     // Setup varyings if supplied
     if (varyings) {
       assertWebGL2Context(this.gl);
       this.varyings = varyings;
       this.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
-      this.varyingMap = getVaryingMap(varyings, bufferMode);
-    } else {
-      this.varyingMap = {};
     }
 
     this._compileAndLink();
-
     this._readUniformLocationsFromLinkedProgram();
-
     this.configuration = new ProgramConfiguration(this);
-
-    // TODO - backwards compatibility should be removed
-    // this.vertexArray = new VertexArray(this.gl, {program: this});
 
     return this;
   }
@@ -74,15 +73,6 @@ export default class Program extends Resource {
       return this;
     }
     return super.delete(opts);
-  }
-
-  getConfiguration() {
-    return this.configuration;
-  }
-
-  use() {
-    this.gl.useProgram(this.handle);
-    return this;
   }
 
   // A good thing about webGL is that there are so many ways to draw things,
@@ -100,42 +90,28 @@ export default class Program extends Resource {
     indexType = GL.UNSIGNED_SHORT,
     isInstanced = false,
     instanceCount = 0,
-    vertexArray = null,
-    transformFeedback = null,
-    framebuffer = null,
+
+    vertexArray = null, // VertexArray.getDefaultArray(this.gl),
+    transformFeedback,
+    framebuffer,
     uniforms = {},
     samplers = {},
     parameters = {}
   }) {
-    assert(vertexArray);
-    // vertexArray = vertexArray || VertexArray.getDefaultArray(this.gl);
-
     if (logPriority !== undefined) {
-      log.log(logPriority, `Draw: \
-mode=${drawMode} \
-verts=${vertexCount} \
-instances=${instanceCount}`)();
+      const fb = framebuffer ? framebuffer.id : 'default';
+      const message =
+        `Framebuffer=${fb}: mode=${drawMode} verts=${vertexCount} instances=${instanceCount}` +
+        ` isIndexed=${isIndexed} isInstanced=${isInstanced}`;
+      log.log(logPriority, message)();
     }
 
-    // drawMode = GL.TRIANGLES,
-    // vertexCount,
-    // offset = 0,
-    // start,
-    // end,
-    // isIndexed = false,
-    // indexType = GL.UNSIGNED_SHORT,
-    // isInstanced = false,
-    // instanceCount = 0,
-    // vertexArray = null,
-    // transformFeedback = null,
-    // framebuffer = null,
-    // uniforms = {},
-    // samplers = {},
-    // parameters = {}
+    this.gl.useProgram(this.handle);
+
+    // TODO - move vertex array binding and transform feedback binding to withParameters?
+    assert(vertexArray);
 
     vertexArray.bind(() => {
-
-      this.gl.useProgram(this.handle);
 
       this.setUniforms(uniforms, samplers);
 
@@ -165,8 +141,6 @@ instances=${instanceCount}`)();
         }
       );
 
-      // this.gl.useProgram(null);
-
       if (transformFeedback) {
         transformFeedback.end();
       }
@@ -176,17 +150,12 @@ instances=${instanceCount}`)();
     return this;
   }
 
-  /**
-   * Apply a set of uniform values to a program
-   * Only uniforms with names actually present in the linked program
-   * will be updated.
-   * other uniforms will be ignored
-   *
-   * @param {Object} uniformMap - An object with names being keys
-   * @returns {Program} - returns itself for chaining.
-   */
+  // Apply a set of uniform values to a program
+  // Only uniforms actually present in the linked program will be updated.
   /* eslint-disable max-depth */
   setUniforms(uniforms, samplers = {}) {
+    this.gl.useProgram(this.handle);
+
     for (const uniformName in uniforms) {
       let uniform = uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
@@ -223,108 +192,14 @@ instances=${instanceCount}`)();
 
     return this;
   }
-  /* eslint-enable max-depth */
-
-  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
-  uniformBlockBinding(blockIndex, blockBinding) {
-    assertWebGL2Context(this.gl);
-    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
-  }
-
-  //  UNIFORMS API
-
-  // @return {Number} count (Locations are numeric indices)
-  getUniformCount() {
-    return this._getParameter(GL.ACTIVE_UNIFORMS);
-  }
-
-  /*
-   * @returns {WebGLActiveInfo} - object with {name, size, type}
-   */
-  getUniformInfo(index) {
-    return this.gl.getActiveUniform(this.handle, index);
-  }
-
-  /*
-   * @returns {WebGLUniformLocation} - opaque object representing location
-   * of uniform, used by setter methods
-   */
-  getUniformLocation(name) {
-    return this.gl.getUniformLocation(this.handle, name);
-  }
-
-  getUniformValue(location) {
-    return this.gl.getUniform(this.handle, location);
-  }
-
-  /* eslint-disable max-len */
-  // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
-  // For valid `pname` values check :
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
-  getActiveUniforms(uniformIndices, pname) {
-    return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
-  }
-  /* eslint-enable max-len */
-
-  // WebGL2
-  /**
-   * @param {GLuint} index
-   * @return {WebGLActiveInfo} - object with {name, size, type}
-   */
-  getVarying(program, index) {
-    const result = this.gl.getTransformFeedbackVarying(program, index);
-    return result;
-  }
-
-  // Retrieves the assigned color number binding for the user-defined varying
-  // out variable name for program. program must have previously been linked.
-  getFragDataLocation(varyingName) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getFragDataLocation(this.handle, varyingName);
-  }
-
-  // @returns {WebGLShader[]} - array of attached WebGLShader objects
-  getAttachedShaders() {
-    return this.gl.getAttachedShaders(this.handle);
-  }
-
-  // Retrieves the index of a uniform block
-  getUniformBlockIndex(blockName) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getUniformBlockIndex(this.handle, blockName);
-  }
-
-  /* eslint-disable max-len */
-  // Retrieves information about an active uniform block (`blockIndex`)
-  // For valid `pname` values check :
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
-  getActiveUniformBlockParameter(blockIndex, pname) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
-  }
-  /* eslint-enable max-len */
-
-  // ATTRIBUTES API
-
-  // Query number of attributes in current program's vertex shader
-  //  (Locations are numeric indices)
-  getAttributeCount() {
-    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
-  }
-
-  // Query location (index) assigned by shader linker to a named attribute (name per GLSL shader)
-  getAttributeLocation(attributeName) {
-    return this.gl.getAttribLocation(this.handle, attributeName);
-  }
-
-  // Queries an object with info about attribute at index "location"
-  // @param {int} location - index of an attribute
-  // returns {WebGLActiveInfo} - info about an active attribute, fields: {name, size, type}
-  getAttributeInfo(location) {
-    return this.gl.getActiveAttrib(this.handle, location);
-  }
 
   // PRIVATE METHODS
+
+  getConfiguration() {
+    return this.configuration;
+  }
+
+  // RESOURCE METHODS
 
   _createHandle() {
     return this.gl.createProgram();
@@ -407,27 +282,104 @@ instances=${instanceCount}`)();
     this._textureIndexCounter = 0;
   }
 
-  // REMOVED/DEPRECATED METHODS in v6.0
+  // TO BE REMOVED
 
-  reset() {
-    log.removed('Program.reset()', 'VertexArray.reset()', '6.0');
+  use() {
+    this.gl.useProgram(this.handle);
+    return this;
   }
 
-  setVertexArray(vertexArray) {
-    log.removed('Program.setVertexArray()', 'Program.draw({vertexArray})', '6.0');
+  // @return {Number} count (Locations are numeric indices)
+  getUniformCount() {
+    return this._getParameter(GL.ACTIVE_UNIFORMS);
   }
 
-  setAttributes(...args) {
-    log.removed('Program.setAttributes()', 'VertexArray.setAttributes()', '6.0');
+  getUniformInfo(index) {
+    return this.gl.getActiveUniform(this.handle, index);
   }
 
-  setBuffers(...args) {
-    log.removed('Program.setBuffers()', 'VertexArray.setAttributes()', '6.0');
+  getUniformLocation(name) {
+    return this.gl.getUniformLocation(this.handle, name);
   }
 
-  unsetBuffers() {
-    log.removed('Program.unsetBuffers()', 'No longer needed', '6.0');
+  getUniformValue(location) {
+    return this.gl.getUniform(this.handle, location);
   }
+
+  // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
+  // For valid `pname` values check :
+  // https://
+  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
+  getActiveUniforms(uniformIndices, pname) {
+    return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
+  }
+
+  /* eslint-enable max-depth */
+
+  /* TODO - Add stubs
+  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
+  uniformBlockBinding(blockIndex, blockBinding) {
+    assertWebGL2Context(this.gl);
+    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
+  }
+
+  //  UNIFORMS API
+
+  // WebGL2
+  // @param {GLuint} index
+  // @return {WebGLActiveInfo} - object with {name, size, type}
+  getVarying(program, index) {
+    const result = this.gl.getTransformFeedbackVarying(program, index);
+    return result;
+  }
+
+  // Retrieves the assigned color number binding for the user-defined varying
+  // out variable name for program. program must have previously been linked.
+  getFragDataLocation(varyingName) {
+    assertWebGL2Context(this.gl);
+    return this.gl.getFragDataLocation(this.handle, varyingName);
+  }
+
+  // @returns {WebGLShader[]} - array of attached WebGLShader objects
+  getAttachedShaders() {
+    return this.gl.getAttachedShaders(this.handle);
+  }
+
+  // Retrieves the index of a uniform block
+  getUniformBlockIndex(blockName) {
+    assertWebGL2Context(this.gl);
+    return this.gl.getUniformBlockIndex(this.handle, blockName);
+  }
+
+  // Retrieves information about an active uniform block (`blockIndex`)
+  // For valid `pname` values check :
+  // https://
+  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
+  getActiveUniformBlockParameter(blockIndex, pname) {
+    assertWebGL2Context(this.gl);
+    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
+  }
+
+  // ATTRIBUTES API
+
+  // Query number of attributes in current program's vertex shader
+  //  (Locations are numeric indices)
+  getAttributeCount() {
+    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
+  }
+
+  // Query location (index) assigned by shader linker to a named attribute (name per GLSL shader)
+  getAttributeLocation(attributeName) {
+    return this.gl.getAttribLocation(this.handle, attributeName);
+  }
+
+  // Queries an object with info about attribute at index "location"
+  // @param {int} location - index of an attribute
+  // returns {WebGLActiveInfo} - info about an active attribute, fields: {name, size, type}
+  getAttributeInfo(location) {
+    return this.gl.getActiveAttrib(this.handle, location);
+  }
+  */
 }
 
 // create uniform setters
@@ -444,6 +396,7 @@ export function getUniformDescriptors(gl, program) {
   return uniformDescriptors;
 }
 
+/*
 // Get a map of buffer indices
 export function getVaryingMap(varyings, bufferMode) {
   const varyingMap = {};
@@ -456,3 +409,4 @@ export function getVaryingMap(varyings, bufferMode) {
   }
   return varyingMap;
 }
+*/

@@ -21,7 +21,7 @@ This will become a hard error in a future version of luma.gl.`;
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
 const LOG_DRAW_PRIORITY = 2;
-const LOG_DRAW_TIMEOUT = 0;
+const LOG_DRAW_TIMEOUT = 10000;
 
 // These old picking uniforms should be avoided and we should use picking module
 // and set uniforms using Model class 'updateModuleSettings()'
@@ -97,6 +97,7 @@ export default class Model extends Object3D {
     });
 
     this.uniforms = {};
+    this.samplers = {};
 
     // Make sure we have some reasonable default uniforms in place
     uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
@@ -186,7 +187,7 @@ export default class Model extends Object3D {
       this.setAttributes(props.attributes);
     }
     if ('uniforms' in props) {
-      this.setUniforms(props.uniforms);
+      this.setUniforms(props.uniforms, props.samplers);
     }
 
     // Experimental props
@@ -304,10 +305,12 @@ export default class Model extends Object3D {
   }
 
   // TODO - should actually set the uniforms
-  setUniforms(uniforms = {}) {
-    // TODO: we are still setting these uniforms in deck.gl so we don't break any external
-    // application, these are marked deprecated in 5.0, remove them in deck.gl in 6.0.
-    this._checkForDeprecatedUniforms(uniforms);
+  setUniforms(uniforms = {}, samplers = {}) {
+    uniforms = Object.assign({}, uniforms);
+
+    // Let Seer override edited uniforms
+    getOverrides(this.id, uniforms);
+    // this.setUniforms(opts);
 
     // Simple change detection
     // TODO - move to Program?
@@ -319,18 +322,26 @@ export default class Model extends Object3D {
       }
     }
 
+    this.program.setUniforms(this.uniforms, this.samplers);
+
     if (somethingChanged) {
+      this._checkForDeprecatedUniforms(uniforms);
       checkUniformValues(uniforms, this.id);
+
       Object.assign(this.uniforms, uniforms);
+      Object.assign(this.samplers, samplers);
+
+      // TODO - should only set updated uniforms
       this.setNeedsRedraw();
     }
+
     return this;
   }
 
   // getModuleUniforms (already on object)
 
   updateModuleSettings(opts) {
-    const uniforms = this.getModuleUniforms(opts);
+    const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
   }
 
@@ -347,7 +358,7 @@ export default class Model extends Object3D {
   draw(opts = {}) {
     const {
       moduleSettings = null,
-      framebuffer = null,
+      framebuffer,
       uniforms = {},
       attributes = {},
       samplers = {},
@@ -357,30 +368,14 @@ export default class Model extends Object3D {
     } = opts;
 
     // Update module settings
-    if (moduleSettings) {
-      this.updateModuleSettings(moduleSettings);
-    }
 
     addModel(this);
 
     this.setAttributes(attributes);
-
-    this.setSamplers(samplers);
-    // Let Seer override edited uniforms
-    getOverrides(this.id, uniforms);
-    this.setUniforms(uniforms);
-    // this.setUniforms(opts);
-
-    // Set program state
-    const {program} = this;
-    program.use();
-    program.setUniforms(this.uniforms, this.samplers);
-    // this.vertexArray.setAttributes(this._attributes);
-    // this.vertexArray.checkAttributeBindings();
+    this.updateModuleSettings(moduleSettings);
+    this.setUniforms(uniforms, samplers);
 
     const logPriority = this._logDrawCallStart(2);
-
-    this.onBeforeRender();
 
     const drawParams = this.vertexArray.drawParams;
     if (drawParams.isInstanced && !this.isInstanced) {
@@ -390,10 +385,12 @@ export default class Model extends Object3D {
     const {isIndexed, indexType} = drawParams;
     const {isInstanced, instanceCount} = this;
 
+    this.onBeforeRender();
     this._timerQueryStart();
 
     this.program.draw(Object.assign(opts, {
       logPriority,
+      framebuffer,
       parameters,
       drawMode: this.getDrawMode(),
       vertexCount: this.getVertexCount(),
@@ -406,7 +403,6 @@ export default class Model extends Object3D {
     }));
 
     this._timerQueryEnd();
-
     this.onAfterRender();
 
     this.setNeedsRedraw(false);
@@ -441,19 +437,11 @@ export default class Model extends Object3D {
 
   // DEPRECATED METHODS
 
-  /* eslint-disable max-params  */
-  render(
-    uniforms = {},
-    attributes = {},
-    samplers = {},
-    transformFeedback = null,
-    parameters = {},
-    vertexArray = this.vertexArray
-  ) {
+  render(uniforms = {}) {
+    assert(arguments.length <= 1);
     // log.deprecated('Model.render()', 'Model.draw()')();
-    return this.draw({uniforms, attributes, samplers, transformFeedback, parameters, vertexArray});
+    return this.draw({uniforms});
   }
-  /* eslint-enable max-params  */
 
   // PRIVATE METHODS
 
@@ -588,7 +576,8 @@ count: ${this.stats.profileFrameCount}`
   }
 
   _logDrawCallStart(priority) {
-    if (log.priority < priority || (Date.now() - this.lastLogTime < LOG_DRAW_TIMEOUT)) {
+    const logDrawTimeout = priority > 3 ? 0 : LOG_DRAW_TIMEOUT;
+    if (log.priority < priority || (Date.now() - this.lastLogTime < logDrawTimeout)) {
       return undefined;
     }
 
