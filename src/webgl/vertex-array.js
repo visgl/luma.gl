@@ -61,7 +61,7 @@ export default class VertexArray extends Resource {
     // State
     this._bound = false;
 
-    this.stubRemovedMethods('v6.0', [
+    this.stubRemovedMethods('VertexArray', 'v6.0', [
       'setBuffers',
       'setGeneric',
       'clearBindings',

@@ -198,12 +198,12 @@ export default class Resource {
   }
 
   // Intall stubs for removed methods
-  stubRemovedMethods(version, methodNames) {
+  stubRemovedMethods(className, version, methodNames) {
     const upgradeMessage = `See luma.gl ${version} Upgrade Guide at \
 http://uber.github.io/luma.gl/#/documentation/overview/upgrade-guide`;
     methodNames.forEach(methodName => {
       this[methodName] = () => {
-        log.removed(methodName, upgradeMessage);
+        log.removed(`Calling removed method ${className}.${methodName}: `, upgradeMessage);
         throw new Error(methodName);
       };
     });

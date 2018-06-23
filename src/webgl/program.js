@@ -31,12 +31,22 @@ export default class Program extends Resource {
 
     this.initialize(opts);
 
-    this.stubRemovedMethods('v6.0', [
-      'Program.reset()',
-      'Program.setVertexArray()',
-      'Program.setAttributes()',
-      'Program.setBuffers()',
-      'Program.unsetBuffers()'
+    this.stubRemovedMethods('Program', 'v6.0', [
+      'reset()',
+      'setVertexArray()',
+      'setAttributes()',
+      'setBuffers()',
+      'unsetBuffers()',
+
+      'uniformBlockBinding()',
+      'getVarying()',
+      'getFragDataLocation()',
+      'getAttachedShaders()',
+      'getUniformBlockIndex()',
+      'getActiveUniformBlockParameter()',
+      'getAttributeCount()',
+      'getAttributeLocation()',
+      'getAttributeInfo()'
     ]);
 
     Object.seal(this);
@@ -315,73 +325,6 @@ export default class Program extends Resource {
   getActiveUniforms(uniformIndices, pname) {
     return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
   }
-
-  /* eslint-enable max-depth */
-
-  /* TODO - Add stubs
-  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
-  uniformBlockBinding(blockIndex, blockBinding) {
-    assertWebGL2Context(this.gl);
-    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
-  }
-
-  //  UNIFORMS API
-
-  // WebGL2
-  // @param {GLuint} index
-  // @return {WebGLActiveInfo} - object with {name, size, type}
-  getVarying(program, index) {
-    const result = this.gl.getTransformFeedbackVarying(program, index);
-    return result;
-  }
-
-  // Retrieves the assigned color number binding for the user-defined varying
-  // out variable name for program. program must have previously been linked.
-  getFragDataLocation(varyingName) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getFragDataLocation(this.handle, varyingName);
-  }
-
-  // @returns {WebGLShader[]} - array of attached WebGLShader objects
-  getAttachedShaders() {
-    return this.gl.getAttachedShaders(this.handle);
-  }
-
-  // Retrieves the index of a uniform block
-  getUniformBlockIndex(blockName) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getUniformBlockIndex(this.handle, blockName);
-  }
-
-  // Retrieves information about an active uniform block (`blockIndex`)
-  // For valid `pname` values check :
-  // https://
-  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
-  getActiveUniformBlockParameter(blockIndex, pname) {
-    assertWebGL2Context(this.gl);
-    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
-  }
-
-  // ATTRIBUTES API
-
-  // Query number of attributes in current program's vertex shader
-  //  (Locations are numeric indices)
-  getAttributeCount() {
-    return this._getParameter(GL.ACTIVE_ATTRIBUTES);
-  }
-
-  // Query location (index) assigned by shader linker to a named attribute (name per GLSL shader)
-  getAttributeLocation(attributeName) {
-    return this.gl.getAttribLocation(this.handle, attributeName);
-  }
-
-  // Queries an object with info about attribute at index "location"
-  // @param {int} location - index of an attribute
-  // returns {WebGLActiveInfo} - info about an active attribute, fields: {name, size, type}
-  getAttributeInfo(location) {
-    return this.gl.getActiveAttrib(this.handle, location);
-  }
-  */
 }
 
 // create uniform setters
@@ -397,18 +340,3 @@ export function getUniformDescriptors(gl, program) {
   }
   return uniformDescriptors;
 }
-
-/*
-// Get a map of buffer indices
-export function getVaryingMap(varyings, bufferMode) {
-  const varyingMap = {};
-  let index = 0;
-  assert(bufferMode === GL_SEPARATE_ATTRIBS || bufferMode === GL_INTERLEAVED_ATTRIBS);
-  const indexIncrement = bufferMode === GL_SEPARATE_ATTRIBS ? 1 : 0;
-  for (const varying of varyings) {
-    varyingMap[varying] = index;
-    index += indexIncrement;
-  }
-  return varyingMap;
-}
-*/

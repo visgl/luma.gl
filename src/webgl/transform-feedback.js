@@ -19,7 +19,7 @@ export default class TransformFeedback extends Resource {
     this._bound = false;
 
     this.initialize(props);
-    this.stubRemovedMethods('v6.0', ['pause', 'resume']);
+    this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);
     Object.seal(this);
   }
 
