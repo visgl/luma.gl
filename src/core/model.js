@@ -1,13 +1,10 @@
-/* eslint quotes: ["error", "single", { "allowTemplateLiterals": true }]*/
-// A scenegraph object node
 import GL from '../constants';
 import Attribute from './attribute';
 import Object3D from './object-3d';
 import {getDrawMode} from '../geometry/geometry';
-import {Buffer, Program, VertexArray, TransformFeedback, Query, clear} from '../webgl';
-import {checkUniformValues} from '../webgl';
+import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
-import {getUniformsTable, areUniformsEqual} from '../webgl/uniforms';
+import {getUniformsTable} from '../webgl/uniforms';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
@@ -25,6 +22,7 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 // These old picking uniforms should be avoided and we should use picking module
 // and set uniforms using Model class 'updateModuleSettings()'
+// TODO - move to shader modules
 const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
@@ -34,8 +32,8 @@ export default class Model extends Object3D {
     assert(isWebGL(gl));
     this.gl = gl;
     this.lastLogTime = 0; // TODO - move to probe.gl
-
     this.init(opts);
+    // intended to be subclassed, do not seal
   }
 
   /* eslint-disable max-statements  */
@@ -96,16 +94,16 @@ export default class Model extends Object3D {
       bufferMode
     });
 
-    this.uniforms = {};
-    this.samplers = {};
-
     // Make sure we have some reasonable default uniforms in place
-    uniforms = Object.assign({}, this.program.defaultUniforms, uniforms);
-    this.setUniforms(uniforms);
-    // Get all default uniforms
-    this.setUniforms(this.getModuleUniforms());
-    // Get unforms for supplied parameters
-    this.setUniforms(this.getModuleUniforms(moduleSettings));
+    this.setUniforms(Object.assign(
+      {},
+      this.program.defaultUniforms,
+      uniforms,
+      // Get all default uniforms
+      this.getModuleUniforms(),
+      // Get unforms for supplied parameters
+      this.getModuleUniforms(moduleSettings)
+    ));
 
     if (instanced) {
       /* global console */
@@ -165,7 +163,7 @@ export default class Model extends Object3D {
 
   delete() {
     // delete all attributes created by this model
-    // TODO - should be handled by vertex array
+    // TODO - should buffer deletes be handled by vertex array?
     for (const key in this._attributes) {
       if (this._attributes[key] !== this.attributes[key]) {
         this._attributes[key].delete();
@@ -181,6 +179,44 @@ export default class Model extends Object3D {
   destroy() {
     this.delete();
   }
+
+  // GETTERS
+
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    if (this.geometry) {
+      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    }
+    return redraw;
+  }
+
+  getDrawMode() {
+    return this.drawMode;
+  }
+
+  getVertexCount() {
+    return this.vertexCount;
+  }
+
+  getInstanceCount() {
+    return this.instanceCount;
+  }
+
+  getProgram() {
+    return this.program;
+  }
+
+  getAttributes() {
+    return this.attributes;
+  }
+
+  getUniforms() {
+    return this.program.getUniforms;
+  }
+
+  // SETTERS
 
   setProps(props) {
     if ('attributes' in props) {
@@ -198,7 +234,7 @@ export default class Model extends Object3D {
       }
     }
     if ('feedbackBuffers' in props) {
-      this.setFeedbackBuffers(props.feedbackBuffers);
+      this._setFeedbackBuffers(props.feedbackBuffers);
     }
   }
 
@@ -207,23 +243,9 @@ export default class Model extends Object3D {
     return this;
   }
 
-  getNeedsRedraw({clearRedrawFlags = false} = {}) {
-    let redraw = false;
-    redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    if (this.geometry) {
-      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
-    }
-    return redraw;
-  }
-
   setDrawMode(drawMode) {
     this.drawMode = getDrawMode(drawMode);
     return this;
-  }
-
-  getDrawMode() {
-    return this.drawMode;
   }
 
   setVertexCount(vertexCount) {
@@ -232,30 +254,10 @@ export default class Model extends Object3D {
     return this;
   }
 
-  getVertexCount() {
-    return this.vertexCount;
-  }
-
   setInstanceCount(instanceCount) {
     assert(Number.isFinite(instanceCount));
     this.instanceCount = instanceCount;
     return this;
-  }
-
-  getInstanceCount() {
-    return this.instanceCount;
-  }
-
-  getProgram() {
-    return this.program;
-  }
-
-  getAttributes() {
-    return this.attributes;
-  }
-
-  getUniforms() {
-    return this.uniforms;
   }
 
   // TODO - just set attributes, don't hold on to geometry
@@ -286,7 +288,24 @@ export default class Model extends Object3D {
     return this;
   }
 
-  setFeedbackBuffers(feedbackBuffers = {}) {
+  // TODO - should actually set the uniforms
+  setUniforms(uniforms = {}, samplers = {}) {
+    // Let Seer override edited uniforms
+    uniforms = Object.assign({}, uniforms);
+    getOverrides(this.id, uniforms);
+    this.program.setUniforms(uniforms, samplers, () => {
+      // if something changed
+      this._checkForDeprecatedUniforms(uniforms);
+      this.setNeedsRedraw();
+    });
+  }
+
+  updateModuleSettings(opts) {
+    const uniforms = this.getModuleUniforms(opts || {});
+    return this.setUniforms(uniforms);
+  }
+
+  _setFeedbackBuffers(feedbackBuffers = {}) {
     // Avoid setting needsRedraw if no feedbackBuffers
     if (isObjectEmpty(feedbackBuffers)) {
       return this;
@@ -304,49 +323,7 @@ export default class Model extends Object3D {
     return this;
   }
 
-  // TODO - should actually set the uniforms
-  setUniforms(uniforms = {}, samplers = {}) {
-    uniforms = Object.assign({}, uniforms);
-
-    // Let Seer override edited uniforms
-    getOverrides(this.id, uniforms);
-    // this.setUniforms(opts);
-
-    // Simple change detection
-    let somethingChanged = false;
-    for (const key in uniforms) {
-      if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
-        somethingChanged = true;
-        break;
-      }
-    }
-
-    if (somethingChanged) {
-      this._checkForDeprecatedUniforms(uniforms);
-      checkUniformValues(uniforms, this.id);
-
-      Object.assign(this.uniforms, uniforms);
-      Object.assign(this.samplers, samplers);
-
-      this.setNeedsRedraw();
-    }
-
-    // TODO - should only set updated uniforms
-    this.program.setUniforms(this.uniforms, this.samplers);
-
-    return this;
-  }
-
-  // getModuleUniforms (already on object)
-
-  updateModuleSettings(opts) {
-    const uniforms = this.getModuleUniforms(opts || {});
-    return this.setUniforms(uniforms);
-  }
-
-  setSamplers(samplers) {
-    Object.assign(this.samplers, samplers);
-  }
+  // DRAW CALLS
 
   clear(opts) {
     clear(this.program.gl, opts);
@@ -424,7 +401,7 @@ export default class Model extends Object3D {
     } = opts;
 
     if (feedbackBuffers) {
-      this.setFeedbackBuffers(feedbackBuffers);
+      this._setFeedbackBuffers(feedbackBuffers);
     }
 
     if (discard) {
@@ -631,19 +608,5 @@ count: ${this.stats.profileFrameCount}`
     }
 
     log.groupEnd(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`)();
-  }
-
-  // DEPRECATED / REMOVED
-  isPickable() {
-    return this.pickable;
-  }
-
-  setPickable(pickable = true) {
-    this.pickable = Boolean(pickable);
-    return this;
-  }
-
-  getGeometry() {
-    return this.geometry;
   }
 }

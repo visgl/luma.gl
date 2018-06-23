@@ -1,3 +1,4 @@
+import 'luma.gl/debug';
 import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
@@ -30,6 +31,7 @@ void main(void) {
 `;
 
 const animationLoop = new AnimationLoop({
+  debug: true,
   onInitialize({gl, canvas, aspect}) {
 
     const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
@@ -43,14 +45,14 @@ const animationLoop = new AnimationLoop({
     const triangleVertexArray = new VertexArray(gl, {
       program,
       attributes: {
-        positions: new Buffer(gl, {data: new Float32Array(TRIANGLE_VERTS)})
+        positions: new Buffer(gl, new Float32Array(TRIANGLE_VERTS))
       }
     });
 
     const squareVertexArray = new VertexArray(gl, {
       program,
       attributes: {
-        positions: new Buffer(gl, {data: new Float32Array(SQUARE_VERTS)})
+        positions: new Buffer(gl, new Float32Array(SQUARE_VERTS))
       }
     });
 
@@ -74,7 +76,7 @@ const animationLoop = new AnimationLoop({
       },
       drawMode: gl.TRIANGLES,
       vertexCount: 3
-    })
+    });
 
     // Draw Square
     view.translate([3, 0, 0]);

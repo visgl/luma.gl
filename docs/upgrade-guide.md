@@ -82,6 +82,7 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 
 | Removed symbol                   | Replacement                     | Reason for change     |
 | ---                              | ---                             | --          |
+| `varyingMap`                     | N/A (`configuration`)           | Program now auto discovers varyings.        |
 | `Program.setAttributes()`        | `VertexArray.setAttributes()`   | Attribute management moved to `VertexArray` |
 | `Program.setBuffers()`           | `VertexArray.setAttributes()`   | Attribute management moved to `VertexArray` |
 | `Program.setVertexArray()`       | `Program.draw({vertexArray})`   | No longer needed, just supply a `VertexArray` to `Program.draw()` |

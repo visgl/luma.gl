@@ -7,14 +7,20 @@ import assert from '../utils/assert';
 
 export default class Buffer extends Resource {
 
-  constructor(gl, opts = {}) {
-    super(gl, opts);
+  constructor(gl, props = {}) {
+    super(gl, props);
+
+    // Support signature `new Buffer(gl, new Float32Array(...)`
+    if (ArrayBuffer.isView(props)) {
+      props = {data: props};
+    }
+
     // In WebGL1, we need to make sure we use GL.ELEMENT_ARRAY_BUFFER when
     // initializing element buffers, otherwise the buffer type will be locked
     // to a generic (non-element) buffer.
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
-    this.target = opts.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
-    this.setData(opts);
+    this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
+    this.setData(props);
     Object.seal(this);
   }
 
@@ -31,15 +37,15 @@ export default class Buffer extends Resource {
   }
 
   // Creates and initializes the buffer object's data store.
-  initialize(opts = {}) {
+  initialize(props = {}) {
     let {
       data,
       bytes
-    } = opts;
+    } = props;
 
     const {
       usage = GL.STATIC_DRAW
-    } = opts;
+    } = props;
 
     let type;
     if (data) {
@@ -61,7 +67,7 @@ export default class Buffer extends Resource {
     this.data = data;
 
     // Call after type is determined
-    this.setAccessor(new Accessor(type ? {type} : {}, opts));
+    this.setAccessor(new Accessor(type ? {type} : {}, props));
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type

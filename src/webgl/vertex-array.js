@@ -72,9 +72,8 @@ export default class VertexArray extends Resource {
       'disable'
     ]);
 
-    Object.seal(this);
-
     this._initialize(opts);
+    Object.seal(this);
   }
 
   get MAX_ATTRIBUTES() {
@@ -88,12 +87,34 @@ export default class VertexArray extends Resource {
   _initialize(props = {}) {
     this.reset(false);
 
-    const config = props.configuration || (props.program && props.program.getConfiguration());
-    if (config) {
-      this.configuration = config;
-    }
+    this.configuration = null;
+    this.bindOnUse = false;
+
+    // Unbind any currently bound buffers
+    // if (!isObjectEmpty(this.buffers)) {
+    //   this.bind(() => this._unbindBuffers());
+    // }
 
     return this.setProps(props);
+  }
+
+  setProps(props) {
+    if ('program' in props) {
+      this.configuration = props.program && props.program.configuration;
+    }
+    if ('configuration' in props) {
+      this.configuration = props.configuration;
+    }
+    if ('bindOnUse' in props) {
+      props = props.bindOnUse;
+    }
+    if ('attributes' in props) {
+      this.setAttributes(props.attributes);
+    }
+    if ('elements' in props) {
+      this.setElements(props.elements);
+    }
+    return this;
   }
 
   // Resets all attributes (to default valued constants)
@@ -126,19 +147,6 @@ export default class VertexArray extends Resource {
       });
     }
 
-    return this;
-  }
-
-  setProps(props) {
-    if ('attributes' in props) {
-      this.setAttributes(props.attributes);
-    }
-    if ('buffers' in props) {
-      this.setAttributes(props.buffers);
-    }
-    if ('elements' in props) {
-      this.setElements(props.elements);
-    }
     return this;
   }
 

@@ -39,14 +39,15 @@ export default class TransformFeedback extends Resource {
   }
 
   setProps(props) {
-    if ('program' in props || 'configuration' in props) {
-      this.configuration =
-        props.configuration || (props.program && props.program.getConfiguration());
+    if ('program' in props) {
+      this.configuration = props.program && props.program.configuration;
+    }
+    if ('configuration' in props) {
+      this.configuration = props.configuration;
     }
     if ('bindOnUse' in props) {
       props = props.bindOnUse;
     }
-    this.configuration = props.configuration || (props.program && props.program.getConfiguration());
     if ('buffers' in props) {
       this.setBuffers(props.buffers);
     }

@@ -28,7 +28,7 @@ test('WebGL2#ProgramConfiguration', t => {
   t.ok(ProgramConfiguration, 'ProgramConfiguration import successful');
 
   const program = new Program(gl, {vs, fs});
-  const configuration = program.getConfiguration();
+  const configuration = program.configuration;
 
   t.ok(configuration, 'ProgramConfiguration construction successful');
 

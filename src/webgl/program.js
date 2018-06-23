@@ -7,6 +7,7 @@ import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {withParameters} from '../webgl-context/context-state';
+import {checkUniformValues, areUniformsEqual} from '../webgl/uniforms';
 import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {log, uid} from '../utils';
@@ -56,14 +57,17 @@ export default class Program extends Resource {
     this._setId(opts.id);
   }
 
-  initialize({vs, fs, defaultUniforms, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = {}) {
+  initialize(props = {}) {
+    const {vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
     // Create shaders if needed
     this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
     this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
     assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
     assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
 
-    this.defaultUniforms = defaultUniforms; // TODO - remove defaultUniforms
+    // uniforms
+    this.uniforms = {};
+    this.samplers = {};
 
     // Setup varyings if supplied
     if (varyings) {
@@ -76,7 +80,7 @@ export default class Program extends Resource {
     this._readUniformLocationsFromLinkedProgram();
     this.configuration = new ProgramConfiguration(this);
 
-    return this;
+    return this.setProps(props);
   }
 
   delete(opts = {}) {
@@ -87,10 +91,15 @@ export default class Program extends Resource {
     return super.delete(opts);
   }
 
-  // A good thing about webGL is that there are so many ways to draw things,
-  // e.g. depending on whether data is indexed and/or isInstanced.
-  // This function unifies those into a single call with simple parameters
-  // that have sane defaults.
+  setProps(props) {
+    if ('uniforms' in props) {
+      this.setUniforms(props.uniforms, props.samplers);
+    }
+    return this;
+  }
+
+  // Another thing about the WebGL API is that there are so many ways to draw things.
+  // This function unifies those ways into a single call using common parameters with sane defaults
   draw({
     logPriority,
     drawMode = GL.TRIANGLES,
@@ -162,10 +171,42 @@ export default class Program extends Resource {
     return this;
   }
 
+  setSamplers(samplers) {
+    Object.assign(this.samplers, samplers);
+  }
+
+  setUniforms(uniforms = {}, samplers = {}, _onChangeCallback = () => {}) {
+    // Simple change detection - if all uniforms are unchanged, do nothing
+    // TODO - Disabled since it interferes with textures
+    // we must still rebind texture units to current program's textures before drawing
+    // If modifying, test with `picking` example on website
+    let somethingChanged = false;
+    for (const key in uniforms) {
+      if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
+        somethingChanged = true;
+        break;
+      }
+    }
+
+    if (somethingChanged) {
+      _onChangeCallback();
+      checkUniformValues(uniforms, this.id);
+      Object.assign(this.uniforms, uniforms);
+      Object.assign(this.samplers, samplers);
+    }
+
+    // TODO - should only set updated uniforms
+    this._setUniforms(this.uniforms, this.samplers);
+
+    return this;
+  }
+
+  // PRIVATE METHODS
+
   // Apply a set of uniform values to a program
   // Only uniforms actually present in the linked program will be updated.
   /* eslint-disable max-depth */
-  setUniforms(uniforms, samplers = {}) {
+  _setUniforms(uniforms, samplers = {}) {
     this.gl.useProgram(this.handle);
 
     for (const uniformName in uniforms) {
@@ -186,6 +227,8 @@ export default class Program extends Resource {
           const texture = uniform;
           const {textureIndex} = uniformSetter;
 
+          // TODO - this should be separated out from uniform setting, since it needs to be done
+          // before every draw even if uniforms have not changed
           texture.bind(textureIndex);
 
           // Bind a sampler (if supplied) to index
@@ -203,12 +246,6 @@ export default class Program extends Resource {
     }
 
     return this;
-  }
-
-  // PRIVATE METHODS
-
-  getConfiguration() {
-    return this.configuration;
   }
 
   // RESOURCE METHODS

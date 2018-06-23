@@ -49,8 +49,7 @@ export {
 
 export {
   parseUniformName,
-  getUniformSetter,
-  checkUniformValues
+  getUniformSetter
 } from './uniforms';
 
 // WebGL1 objects

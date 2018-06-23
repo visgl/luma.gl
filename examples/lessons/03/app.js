@@ -58,8 +58,8 @@ const squareGeometry = new Geometry({
 });
 
 const animationLoop = new AnimationLoop({
-  onInitialize({gl}) {
 
+  onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: [1],
@@ -67,12 +67,12 @@ const animationLoop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
-    const triangle = new Model(gl, {geometry: triangleGeometry, program});
-    const square = new Model(gl, {geometry: squareGeometry, program});
-
-    return {triangle, square};
+    return {
+      triangle: new Model(gl, {geometry: triangleGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER}),
+      square: new Model(gl, {geometry: squareGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER})
+    };
   },
+
   onRender(context) {
     const {gl, tick, aspect, triangle, square} = context;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
