@@ -44,10 +44,6 @@ export {
 } from './clear';
 
 export {
-  readPixels
-} from './functions';
-
-export {
   parseUniformName,
   getUniformSetter
 } from './uniforms';
