@@ -40,14 +40,14 @@ Updating your actual uniform buffer
 ```js
 const layout = ...
 layout.setValues({...})
-buffer.setData({data: layout.getData()})
+buffer.subData({data: layout.getData()})
 ```
 
 Updating a minimal part of the actual uniform buffer
 
 ```js
 const {data, offset} = layout.getSubData();
-buffer.setData({data, offset})
+buffer.subData({data, offset})
 ```
 
 Binding your uniform buffer

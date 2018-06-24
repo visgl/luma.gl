@@ -4,27 +4,28 @@
 
 Date: In development, target late June 2018
 
-
-### Developer's Guide
-
-luma.gl now has a more extensive Developer's Guide covering more areas of the API, including new sections about writing shaders and the shader module system.
+A major release that focuses on WebGL performance and code size optimizations, API cleanup, better support for shader/GLSL programming and improved documentation.
 
 
-### WebGL Improvements
+### WebGL Optimizations
 
-* **VertexArray Attribute Management** - `VertexArray` objects are now used for all attribute management in luma.gl, resulting in improved performance and a simpler, more consistent API. The `Program` and `Model` class APIs have been updated to use `VertexArray`.
+* **WebGL1 Browser Support Optimizations** - luma.gl focuses on providing a WebGL2 based API, and internally "translates" WebGL2-style API calls to WebGL1 calls when WebGL2 is not available. While this WebGL1 backwards compatibility is convenient, it is not completely free. Therefore, to optimize the bundle size of WebGL2-only applications, WebGL1 "polyfills" are no longer included by default. If you still want your app to support WebGL1 browsers, just import 'luma.gl/webgl1' before creating any luma.gl contexts. Also note that WebGL portability, including WebGL1 browser support, is still a core feature of luma.gl, and the WebGL1 polyfills will continue to be used and supported.
 
-* **WebGL1 Browser Support** - luma.gl is a "WebGL2-first" API, meaing that it exposes a WebGL2 style API to applications, and internally "translates" WebGL2 calls to WebGL1 calls when WebGL2 is not available. To optimize the bundle size of WebGL2-only applications, WebGL1 polyfills for various WebGL2 methods are no longer included by default. The reasoning is that if an application is dependendent on WebGL2 features (like transform feedback), there is no value in including extra code to support WebGL1 in that app, since it won't run on WebGL1 browsers anyway. That said, WebGL1 browser support is still one of the major features of luma.gl, and if you still want your app to support WebGL1 browsers, just import 'luma.gl/webgl1' before creating any luma.gl contexts.
+* **Attribute Management Optimizations** - `VertexArray` objects are now used for all attribute management in luma.gl, resulting in improved performance and a simpler, more consistent API. The `Program` and `Model` class APIs have been updated to use `VertexArray`.
+
+* **Buffer Memory Optimizations** - The `Buffer` class no longer holds on to the complete JavaScript typed arrays used during initialization. This can lead to significant memory savings in apps that use multiple large GPU buffers initialized from typed arrays.
 
 
 ### API Cleanup
 
-To keep reducing application bundle size, both previously deprecated methods as well as a selection of rarely used methods have been removed (functionality is still accessible using raw WebGL calls). In a few cases applications have been renamed due to API Audit usually to improve API consistency. The details are listed in the Upgrade Guide. In most cases, running your pre-v6 application on v6 should generate messages in the console when old method calls are encountened, and you should be able to address one-by-one.
+* **Removal of Deprecated/Unused Methods** - To keep reducing application bundle size, a number of methods have been removed from the luma.gl API. Methods that were deprecated in previous releases have now been removed, and in additional a number of rarely used methods have also been dropped (in most cases, the dropped functionality is still accessible using raw WebGL calls).
+
+* **Renamed Methods** - In a few cases, methods have been renamed after API Audits, usually to improve API consistency. The details are listed in the Upgrade Guide. In most cases, running your pre-v6 application on v6 should generate messages in the console when old method calls are encountened, and you should be able to quickly address any changes one-by-one by referring to the Upgrade Guide.
 
 
-### Shader Programming Improvements
+## Shader Module System Improvements
 
-The shader module system has received a number of upgrades:
+The shader module system has received several significant upgrades:
 
 
 ### GLSL Transpilation
@@ -32,19 +33,28 @@ The shader module system has received a number of upgrades:
 The shader assembler now transforms shader code to the GLSL version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa. This allows application to write shader code in the modern GLSL version available (3.00 ES) and still run it under WebGL1 - Shader "transpilation" will automatically convert shader module source code syntax to the target version (assuming that no WebGL2 only features were used).
 
 
-### Shader Injection System
+### Shader Code Injection
 
-A new shader injection system allows applications to inject additional code into existing shaders. In many cases, this can avoid the need to copy large and complicated existing shaders just to add a few lines of code.
+A new shader injection system allows applications to inject additional code into existing shaders. In many cases, this can avoid the need to copy (or "fork") large and complicated existing shaders just to add a few lines of code.
 
-Shader injection can be used to add new shader modules to an existing shader. Adding a shader module to the modules list automatically injects the shader module functions into your main shaders, but still typically requires adding one line of code each to the main functions in the vertex and fragment shaders. Shader injection often allows this be done without copying the original shaders.
+Shader injection can be used to "inject" new shader modules into an existing shader. Adding a shader module to the modules list automatically "prepends" the shader module functions to the beginning of your main shader code, but using a shader module still typically requires adding one or two lines of code each to the main functions in the vertex and fragment shaders. In many cases, the new shader injection feature allows this be done without copying the original shaders.
 
 
-### Shader Module Improvements
+### Shader Modules
 
-* **Shader modules now support both GLSL 3.00 ES and 1.00 ES** - All shader modules are now written in GLSL 3.00 syntax, and through the new shader transpilation feature all modules now work in both GLSL 3.00 ES and GLSL 1.00 ES (care is taken to avoid using GLSL 3.00 specific features, and exceptions will be documented).
+* **Shader modules now support both GLSL 3.00 ES and 1.00 ES** - All shader modules are now written in GLSL 3.00 syntax, and leverage the new GLSL transpilation feature to be compatible with both GLSL 3.00 ES and GLSL 1.00 ES main shaders. Care is taken to avoid using GLSL 3.00 specific features whenever possible, and exceptions will be clearly documented.
+
+
+## Documentation
+
+### Developer's Guide
+
+luma.gl now has a more extensive Developer's Guide covering more areas of the API.
 
 
 ### Developer Guide for Shader Programming
+
+To make it easier to get started writing shaders for luma.gl a new shader programming section is being added to the developer guide, , including new sections about writing shaders and the shader module system.
 
 - Guidelines for writing shaders that work in both GLSL 3.00 ES and GLSL 1.00 ES
 - A new GLSL language reference page describing both GLSL 3.00 ES and GLSL 1.00 ES (as well as what has changed between them) in a single place.
@@ -54,12 +64,14 @@ Shader injection can be used to add new shader modules to an existing shader. Ad
 
 Date: June 1, 2018
 
+A minor release with bug fixes and internal improvements.
+
 
 ## Version 5.2
 
 Date: Apr 24, 2018
 
-## Transform class (WebGL2) (Experimental)
+## Transform class (WebGL2, Experimental)
 
 The new experimental [`Transform`](/docs/api-reference/core/transform.md) class provides an easy-to-use interface to perform Transform Feedback operations.
 

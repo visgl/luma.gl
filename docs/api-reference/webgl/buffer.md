@@ -140,14 +140,10 @@ Buffer.initialize({data, bytes, usage=, dataType=, size=, ...layoutOptions})
 * `size`=`1` (GLuint) - number of components per vertex, e.g. a `vec2` has 2 components.
 * `...layoutOptions` -  parameters passed to `setLayout`
 
-Returns itself for chaining.
 
+### updateAccessor(accessor : Object) : Buffer
 
-### setLayout
-
-Allows you to optionally describe the layout of the data in the buffer. This does not affect the buffer itself, but enables you can to avoid having to supply this data again (You might use it as an attribute later, see `VertexArray`).
-
-`Buffer.setLayout({bytes, usage=, dataType=, size=, type=})`
+Allows you to optionally describe the layout of the data in the buffer. This does not affect the buffer itself, but if supplied can avoid having to supply this data again (for instance if you use this buffer as an attribute later, see `VertexArray`).
 
 * `type`= type of the data being stored in the buffer. Usually not needed, when inferred by the typed array supplied as `data`.
 * `size`=`1` (*number*, optional) - The number of components in each element the buffer (typically 1-4).
@@ -158,6 +154,7 @@ Allows you to optionally describe the layout of the data in the buffer. This doe
 * `stride`=`0` (*number*, optional) - the `stride` represents an additional offset between each element in the buffer.
 
 Notes:
+* `type` and `size` values for attributes are read from the shaders when a program is created and linked, and normally do not need to be supplied. Also any attribute with `instance` in its name will automatically be given an instance divisor of `1`.
 * `offset` and `stride` are typically used to interleave data in buffers.
 
 
@@ -183,8 +180,6 @@ Copies part of the data of another buffer into this buffer. The copy happens on 
 * `readOffset`=`0` (GLint) - byte offset from which to start reading from the buffer.
 * `writeOffset`=`0` (GLint) - byte offset from which to start writing to the buffer.
 * `size` (GLsizei) - byte count, specifying the size of the data to be copied.
-
-Returns itself for chaining.
 
 Note:
 * `readOffset`, `writeOffset` and `size` must all be greater than or equal to zero.

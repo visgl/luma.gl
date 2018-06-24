@@ -473,10 +473,10 @@ export default class VertexArray extends Resource {
     let size = 'N/A';
     let verts = 'N/A';
     let bytes = 'N/A';
-    let value = 'N/A';
 
     let isInteger;
-    let modified = '';
+    let marker;
+    let value;
 
     if (attribute instanceof Buffer) {
       const buffer = attribute;
@@ -495,18 +495,16 @@ export default class VertexArray extends Resource {
         isInteger = true;
       }
 
-      if (buffer.data) {
-        value = buffer.data;
-      } else if (isWebGL2(this.gl)) {
-        value = buffer.getData({length: 24});
-        modified = '*';
-      }
+      const {data, modified} = buffer.getDebugData();
+      marker = modified ? '*' : '';
+
+      value = data;
       bytes = buffer.bytes;
-      verts = bytes / value.BYTES_PER_ELEMENT / size;
+      verts = bytes / data.BYTES_PER_ELEMENT / size;
     }
 
     return {
-      [header]: `${modified}${formatValue(value, {size, isInteger})}`,
+      [header]: `${marker}${formatValue(value, {size, isInteger})}`,
       'Format ': `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes}bytes ${type})`
     };
   }

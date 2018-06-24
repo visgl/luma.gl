@@ -78,34 +78,34 @@ test('WebGL#Buffer construction', t => {
   t.end();
 });
 
-test('WebGL#Buffer setData/subData', t => {
+test('WebGL#Buffer initialize/subData', t => {
   const {gl} = fixture;
 
   let buffer;
 
   buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER})
-    .setData({data: new Float32Array([1, 2, 3])})
+    .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
     .unbind()
     .delete();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_BUFFER) successful');
 
   buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER, data: new Float32Array([1, 2, 3])})
-    .setData({data: new Float32Array([1, 2, 3])})
+    .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
     .unbind()
     .delete();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_BUFFER) successful');
 
   buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
-    .setData({data: new Float32Array([1, 2, 3])})
+    .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
     .unbind()
     .delete();
-  t.ok(buffer instanceof Buffer, 'Buffer.setData(ELEMENT_ARRAY_BUFFER) successful');
+  t.ok(buffer instanceof Buffer, 'buffer.initialize(ELEMENT_ARRAY_BUFFER) successful');
 
   buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
-    .setData({data: new Float32Array([1, 2, 3])})
+    .initialize({data: new Float32Array([1, 2, 3])})
     .subData({data: new Float32Array([1, 1, 1])})
     .bind()
     .unbind()

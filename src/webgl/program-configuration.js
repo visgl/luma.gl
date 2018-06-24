@@ -56,7 +56,7 @@ export default class ProgramConfiguration {
   _inferProperties(location, name, accessor) {
     if ((/instance/i).test(name)) {
       // Any attribute containing the word "instance" will be assumed to be instanced
-      accessor.update({instanced: true});
+      accessor.merge({instanced: true});
     }
   }
 
