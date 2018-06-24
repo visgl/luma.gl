@@ -54,7 +54,9 @@ luma.gl now has a more extensive Developer's Guide covering more areas of the AP
 
 ### Developer Guide for Shader Programming
 
-To make it easier to get started writing shaders for luma.gl a new shader programming section is being added to the developer guide, , including new sections about writing shaders and the shader module system.
+To make it easier to get started writing shaders for luma.gl a new shader programming section is being added to the developer guide, with new sections about writing shaders and the shader module system.
+
+Content includes:
 
 - Guidelines for writing shaders that work in both GLSL 3.00 ES and GLSL 1.00 ES
 - A new GLSL language reference page describing both GLSL 3.00 ES and GLSL 1.00 ES (as well as what has changed between them) in a single place.
