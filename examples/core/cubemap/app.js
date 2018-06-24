@@ -33,9 +33,9 @@ function readHTMLControls() {
   return {uReflect, uRefract};
 }
 
-function getCube(gl) {
-  return new Cube(gl, {
-    vs: `\
+class RoomCube extends Cube {
+  constructor(gl, props) {
+    const vs = `\
 attribute vec3 positions;
 
 uniform mat4 uModel;
@@ -48,8 +48,8 @@ void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
   vPosition = positions;
 }
-`,
-    fs: `\
+`;
+    const fs = `\
 #define SHADER_NAME cube_fragment
 
 precision highp float;
@@ -61,13 +61,15 @@ void main(void) {
   // The outer cube just samples the texture cube directly
   gl_FragColor = textureCube(uTextureCube, normalize(vPosition));
 }
-`
-  });
+`;
+
+    super(gl, Object.assign({}, props, {fs, vs}));
+  }
 }
 
-function getPrism(gl) {
-  return new Cube(gl, {
-    vs: `\
+class Prism extends Cube {
+  constructor(gl, props) {
+    const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -83,8 +85,8 @@ void main(void) {
   vPosition = vec3(uModel * vec4(positions,1));
   vNormal = vec3(uModel * vec4(normals, 1));
 }
-`,
-    fs: `\
+`;
+    const fs = `\
 precision highp float;
 
 uniform samplerCube uTextureCube;
@@ -108,13 +110,14 @@ void main(void) {
   // Mix and multiply to keep it red
   gl_FragColor = color * mix(reflectedColor, refractedColor, 0.5);
 }
-`
-  });
+`;
+    super(gl, Object.assign({}, props, {vs, fs}));
+  }
 }
 
-const animationLoop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
 
-  onInitialize: ({gl, canvas}) => {
+  onInitialize({gl, canvas}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -122,14 +125,28 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
-    return {
-      cube: getCube(gl),
-      prism: getPrism(gl),
-      cubemap: new TextureCube(gl, {data: getFaceTextures({size: 512})})
-    };
-  },
+    const cubemap = new TextureCube(gl, {data: getFaceTextures({size: 512})});
 
-  onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
+    return {
+      cube: new RoomCube(gl, {
+        uniforms: {
+          uTextureCube: cubemap,
+          uModel: new Matrix4().scale([5, 5, 5])
+        }
+      }),
+      prism: new Prism(gl, {
+        _animationLoop: this,
+        uniforms: {
+          uTextureCube: cubemap,
+          uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+        }
+      })
+    };
+  }
+
+  onRender(animationProps) {
+    const {gl, aspect, cube, prism} = animationProps;
+
     const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
 
@@ -137,23 +154,25 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    cube.render({
-      uTextureCube: cubemap,
-      uModel: new Matrix4().scale([5, 5, 5]),
-      uView: view,
-      uProjection: projection
+    cube.draw({
+      uniforms: {
+        uView: view,
+        uProjection: projection
+      }
     });
 
-    prism.render({
-      uTextureCube: cubemap,
-      uReflect,
-      uRefract,
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-      uView: view,
-      uProjection: projection
+    prism.draw({
+      uniforms: {
+        uView: view,
+        uProjection: projection,
+        uReflect,
+        uRefract
+      }
     });
   }
-});
+}
+
+const animationLoop = new AppAnimationLoop();
 
 animationLoop.getInfo = () => INFO_HTML;
 

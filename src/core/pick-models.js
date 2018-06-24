@@ -1,32 +1,25 @@
 /* global window */
 import {clear, isWebGL} from '../webgl';
-import {log} from '../utils';
 import Group from './group';
 import assert from '../utils/assert';
-
-const ILLEGAL_ARG = 'Illegal argument to pick';
 
 function getDevicePixelRatio() {
   return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 }
 
-export default function pickModels(gl, {
-  models,
-  position,
-  uniforms = {}, // eslint-disable-line
-  parameters = {},
-  settings,
-  useDevicePixels = true,
-  framebuffer,
-  // deprecated/removed
-  useDevicePixelRatio = null
-}) {
-  assert(isWebGL(gl), ILLEGAL_ARG);
-  assert(framebuffer, ILLEGAL_ARG);
-  assert(position, ILLEGAL_ARG);
-  if (useDevicePixelRatio !== null) {
-    log.removed('useDevicePixelRatio', 'useDevicePixels', '6.0')();
-  }
+export default function pickModels(gl, props) {
+  const {
+    models,
+    position,
+    uniforms = {}, // eslint-disable-line
+    parameters = {},
+    settings,
+    useDevicePixels = true,
+    framebuffer,
+    context
+  } = props;
+
+  assert(isWebGL(gl) && framebuffer && position);
 
   const [x, y] = position;
 
@@ -48,14 +41,14 @@ export default function pickModels(gl, {
   const group = new Group({children: models});
   return group.traverseReverse(model => {
 
-    if (model.pickable !== false) {
+    if (model.pickable) {
       // Clear the frame buffer
       clear(gl, {framebuffer, color: true, depth: true});
 
       // Render picking colors
       /* eslint-disable camelcase */
       model.setUniforms({picking_uActive: 1});
-      model.draw({uniforms, parameters, settings, framebuffer});
+      model.draw(Object.assign({}, props, {uniforms, parameters, settings, framebuffer, context}));
       model.setUniforms({picking_uActive: 0});
 
       // Sample Read color in the central pixel, to be mapped as a picking color

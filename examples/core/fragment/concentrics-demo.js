@@ -23,12 +23,22 @@ void main(void) {
 `;
 
 const animationLoop = new AnimationLoop({
+
   onInitialize: ({gl}) => {
-    return {clipSpace: new ClipSpace(gl, {fs: CONCENTRICS_FRAGMENT_SHADER})};
+    return {
+      clipSpace: new ClipSpace(gl, {
+        fs: CONCENTRICS_FRAGMENT_SHADER,
+        uniforms: {
+          uTime: ({tick}) => tick * 0.01
+        }
+      })
+    };
   },
-  onRender: ({gl, canvas, tick, clipSpace}) => {
-    clipSpace.render({uTime: tick * 0.01});
+
+  onRender: animationProps => {
+    animationProps.clipSpace.draw({animationProps});
   }
+
 });
 
 animationLoop.getInfo = () => INFO_HTML;

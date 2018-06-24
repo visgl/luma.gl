@@ -47,6 +47,11 @@ export default class Model extends Object3D {
     this._attributes = {}; // All attributes
     this.attributes = {}; // User defined attributes
 
+    // Model manages uniform animation
+    this.animatedUniforms = {};
+    this.animated = false;
+    this.animationLoop = null; // if set, used as source for animationProps
+
     this.timerQueryEnabled = false;
     this.timeElapsedQuery = undefined;
     this.lastQueryReturned = true;
@@ -116,6 +121,12 @@ export default class Model extends Object3D {
     }
     if ('_feedbackBuffers' in props) {
       this._setFeedbackBuffers(props.feedbackBuffers);
+    }
+    if ('_animationProps' in props) {
+      this._setAnimationProps(props._animationProps);
+    }
+    if ('_animationLoop' in props) {
+      this.animationLoop = props._animationLoop;
     }
   }
 
@@ -232,6 +243,9 @@ export default class Model extends Object3D {
     uniforms = Object.assign({}, uniforms);
     getOverrides(this.id, uniforms);
 
+    // Resolve any animated uniforms so that we have an initial value
+    uniforms = this._extractAnimatedUniforms(uniforms);
+
     this.program.setUniforms(uniforms, samplers, () => {
       // if something changed
       this._checkForDeprecatedUniforms(uniforms);
@@ -261,7 +275,8 @@ export default class Model extends Object3D {
       samplers = {},
       transformFeedback = this.transformFeedback,
       parameters = {},
-      vertexArray = this.vertexArray
+      vertexArray = this.vertexArray,
+      animationProps
     } = opts;
 
     // Update module settings
@@ -272,6 +287,9 @@ export default class Model extends Object3D {
     this.setAttributes(attributes);
     this.updateModuleSettings(moduleSettings);
     this.setUniforms(uniforms, samplers);
+
+    // Animate any function valued uniforms
+    this._refreshAnimationProps(animationProps);
 
     const logPriority = this._logDrawCallStart(2);
 
@@ -390,6 +408,73 @@ export default class Model extends Object3D {
           'use picking shader module and Model class updateModuleSettings()')();
       }
     });
+  }
+
+  // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered
+  _refreshAnimationProps(animationProps) {
+    // Try to read animationProps
+    animationProps = animationProps || (this.animationLoop && this.animationLoop.animationProps);
+    this._setAnimationProps(animationProps);
+  }
+
+  // Generates and sets uniform values based on new animationProps
+  _setAnimationProps(animationProps) {
+    if (this.animated) {
+      assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
+      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
+      this.program.setUniforms(animatedUniforms, {}, () => {
+        // if something changed
+        this._checkForDeprecatedUniforms(animatedUniforms);
+        this.setNeedsRedraw();
+      });
+    }
+  }
+
+  // Calculate new values for any function uniforms based on supplied animationProps
+  _evaluateAnimateUniforms(animationProps) {
+    if (!this.animated) {
+      return;
+    }
+    const animatedUniforms = {};
+    for (const uniformName in this.animatedUniforms) {
+      const valueFunction = this.animatedUniforms[uniformName];
+      animatedUniforms[uniformName] = valueFunction(animationProps);
+    }
+    return animatedUniforms;
+  }
+
+  // Extracts a list of function valued uniforms, so we can update them before each draw call
+  // Also removes such uniforms from the returned list
+  _extractAnimatedUniforms(uniforms) {
+    let foundAnimated = false;
+
+    // Keep our animatedUniforms map up-to-date
+    for (const uniformName in uniforms) {
+      const newValue = uniforms[uniformName];
+      if (typeof newValue === 'function') {
+        this.animatedUniforms[uniformName] = newValue;
+        foundAnimated = true;
+      } else {
+        delete this.animatedUniforms[uniformName];
+      }
+    }
+
+    // Update animated flag: `Model` is animated if any uniforms are animated (i.e. functions)
+    this.animated = !isObjectEmpty(this.animatedUniforms);
+
+    if (!foundAnimated) {
+      return uniforms;
+    }
+
+    // If animated uniforms were found, remove them from ordinary uniform list
+    // `Program` class can't (and shouldn't) handle function valued uniforms
+    const staticUniforms = {};
+    for (const uniformName in uniforms) {
+      if (!this.animatedUniforms[uniformName]) {
+        staticUniforms[uniformName] = uniforms[uniformName];
+      }
+    }
+    return staticUniforms;
   }
 
   // Transform Feedback
