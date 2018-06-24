@@ -78,9 +78,6 @@ export {
 // Experimental core exports
 export {default as _Attribute} from './core/attribute';
 
-// Addons
-export {addEvents} from './packages/events';
-
 // Geometry
 export {default as Geometry} from './geometry/geometry';
 export {default as ConeGeometry} from './geometry/cone-geometry';

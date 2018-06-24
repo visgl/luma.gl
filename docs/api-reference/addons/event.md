@@ -1,4 +1,4 @@
-# Event
+# addEvents
 
 Provides the [`Events`](/#/documentation/api-reference/event) object to bind events to the canvas to interact with 3D objects.
 

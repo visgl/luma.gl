@@ -31,10 +31,11 @@
   "files": [
     "src",
     "dist",
+    "addons.js",
     "constants.js",
-    "webgl1.js",
     "debug.js",
-    "headless.js"
+    "headless.js",
+    "webgl1.js"
   ],
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
