@@ -1,29 +1,6 @@
-# Writing Modern WebGL
+# Using GLSL 3.00 ES
 
-A major design goal of luma.gl is to make it easy to write portable applications that work with the latest WebGL APIs (WebGL2 components and methods in JavaScript and GLSL 3.00 ES in shaders), by providing a modern JavaScript components and transparently handling differences between WebGL and GLSL versions.
-
-
-## WebGL Version Incompatibilities
-
-While WebGL2 claims to be almost 100% backwards compatible with WebGL1, this is really only true for the core JavaScript side of the API. There are two reasons for this:
-
-* WebGL Extensions - To use WebGL1 extensions to match functionality provided by default in WebGL2, one is forced to work with two different APIs, since WebGL2 explicitly forbids implementation of extensions covered by the WebGL2 API.
-
-* GLSL versions - And if an application wants to or needs to a specific GLSL version (whether GLSL 1.00 to remain WebGL1 compatible, or GLSL 3.00 to use some new feature or just write in a modern style), all shader code (including imported shader modules) must be updated since basic parts of the syntax have changed.
-
-If an application only needs to support WebGL2 browsers (and does not need to run under e.g. headless gl etc), or is satisfied with the WebGL1 subset of the API (and GLSL 1.00 shader syntax), then no support is needed. But if not, luma.gl provides solutions in the form of capability detection, API polyfills and automatic GLSL code transpilation.
-
-
-## Capability Detection and API Polyfills
-
-TBA
-
-
-Partial table of WebGL2 Features that can be used in WebGL1 using the common WebGL2 API.
-
-| VertexArrays        | Always available |
-| Instanced Rendering |                  |
-| ...                 |                  |
+luma.gl makes it easy to write portable applications that work with the latest WebGL APIs (WebGL2 components and methods in JavaScript and GLSL 3.00 ES in shaders), by providing a modern JavaScript components and transparently handling differences between WebGL and GLSL versions.
 
 
 ## Automatic GLSL Code Transpilation

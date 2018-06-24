@@ -1,4 +1,6 @@
+/* eslint-disable camelcase */
 /* global window */
+import 'luma.gl/debug';
 import {AnimationLoop, Buffer, setParameters, Model, pickModels, picking} from 'luma.gl';
 import {_Transform as Transform} from 'luma.gl';
 
@@ -121,7 +123,6 @@ void main()
 `;
 
 const NUM_INSTANCES = 1000;
-let currentSourceIdx = 0;
 
 let pickPosition = [0, 0];
 function mousemove(e) {
@@ -132,8 +133,14 @@ function mouseleave(e) {
 }
 
 const animationLoop = new AnimationLoop({
-  glOptions: {webgl2: true},
+  glOptions: {
+    webgl2: true,
+    webgl1: false,
+    debug: true
+  },
+
   createFramebuffer: true,
+
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
     gl.canvas.addEventListener('mousemove', mousemove);
@@ -171,34 +178,13 @@ const animationLoop = new AnimationLoop({
 
     }
 
-    const positionBuffer = new Buffer(gl, {
-      data: trianglePositions,
-      size: 2,
-      type: gl.FLOAT,
-      instanced: 0
-    });
-    const colorBuffer = new Buffer(gl, {
-      data: instanceColors,
-      size: 3,
-      type: gl.FLOAT,
-      instanced: 1
-    });
+    const positionBuffer = new Buffer(gl, {data: trianglePositions});
+    const colorBuffer = new Buffer(gl, {data: instanceColors, instanced: 1});
+    const offsetBuffer = new Buffer(gl, {data: instanceOffsets});
+    const rotationBuffer = new Buffer(gl, {data: instanceRotations});
 
-    const offsetBuffer = new Buffer(gl, {
-      data: instanceOffsets,
-      size: 2,
-      type: gl.FLOAT
-    });
-
-    const rotationBuffer = new Buffer(gl, {
-      data: instanceRotations,
-      size: 1,
-      type: gl.FLOAT
-    });
-
-    /* eslint-disable camelcase  */
-    const modelRender = new Model(gl, {
-      id: 'Model-Render',
+    const renderModel = new Model(gl, {
+      id: 'RenderModel',
       vs: DRAW_VS,
       fs: DRAW_FS,
       drawMode: gl.TRIANGLE_FAN,
@@ -208,30 +194,25 @@ const animationLoop = new AnimationLoop({
       attributes: {
         a_position: positionBuffer,
         a_color: colorBuffer,
+        a_offset: offsetBuffer,
+        a_rotation: rotationBuffer,
         instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
       },
       modules: [picking]
     });
 
     const transform = new Transform(gl, {
+      vs: EMIT_VS,
+      varyings: ['v_offset', 'v_rotation'],
+      elementCount: NUM_INSTANCES,
       sourceBuffers: {
         a_offset: offsetBuffer,
         a_rotation: rotationBuffer
       },
-      vs: EMIT_VS,
-      varyings: ['v_offset', 'v_rotation'],
       feedbackMap: {
         a_offset: 'v_offset',
         a_rotation: 'v_rotation'
-      },
-      elementCount: NUM_INSTANCES
-    });
-    /* eslint-enable camelcase  */
-
-    setParameters(gl, {
-      clearColor: [0.0, 0.0, 0.0, 1.0],
-      blend: true,
-      blendFunc: [gl.SRC_ALPHA, gl.ONE]
+      }
     });
 
     return {
@@ -239,7 +220,7 @@ const animationLoop = new AnimationLoop({
       rotationBuffer,
       colorBuffer,
       offsetBuffer,
-      modelRender,
+      renderModel,
       transform
     };
   },
@@ -249,41 +230,46 @@ const animationLoop = new AnimationLoop({
     gl,
     width,
     height,
-    modelRender,
+    renderModel,
     positionBuffer,
     colorBuffer,
     transform,
     framebuffer,
-    useDevicePixels
+    useDevicePixels,
+    time
   }) {
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    const destinationIdx = (currentSourceIdx + 1) % 2;
+    transform.run({
+      uniforms: {
+        u_time: time
+      }
+    });
 
-    transform.run();
+    transform.swapBuffers();
 
     const offsetBuffer = transform.getBuffer('v_offset');
     const rotationBuffer = transform.getBuffer('v_rotation');
 
-    transform.swapBuffers();
+    offsetBuffer.updateAccessor({instanced: 1});
+    rotationBuffer.updateAccessor({instanced: 1});
 
-    offsetBuffer.updateLayout({instanced: 1});
-    rotationBuffer.updateLayout({instanced: 1});
-    /* eslint-disable camelcase */
-    modelRender.draw({
+    renderModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
+    renderModel.draw({
       attributes: {
         a_offset: offsetBuffer,
         a_rotation: rotationBuffer
+      },
+      parameters: {
+        blend: true,
+        blendFunc: [gl.SRC_ALPHA, gl.ONE]
       }
     });
-    /* eslint-enable camelcase */
-    offsetBuffer.updateLayout({instanced: 0});
-    rotationBuffer.updateLayout({instanced: 0});
 
-    currentSourceIdx = destinationIdx;
+    offsetBuffer.updateAccessor({instanced: 0});
+    rotationBuffer.updateAccessor({instanced: 0});
 
     const pickInfo = pickPosition && pickModels(gl, {
-      models: [modelRender],
+      models: [renderModel],
       position: pickPosition,
       useDevicePixels,
       framebuffer
@@ -291,18 +277,15 @@ const animationLoop = new AnimationLoop({
 
     const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
 
-    modelRender.updateModuleSettings({
+    renderModel.updateModuleSettings({
       pickingSelectedColor,
       pickingHighlightColor: RED
     });
 
   },
 
-  onFinalize({
-    modelRender,
-    transform
-  }) {
-    modelRender.delete();
+  onFinalize({renderModel, transform}) {
+    renderModel.delete();
     transform.delete();
   }
 });

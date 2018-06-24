@@ -95,12 +95,13 @@ const animationLoop = new AnimationLoop({
     for (const planet of planets) {
       planet.rotation[1] += 0.01;
       planet.updateMatrix();
-      planet.updateModuleSettings({
-        modelMatrix: planet.matrix,
-        viewMatrix,
-        projectionMatrix
+      planet.draw({
+        moduleSettings: {
+          modelMatrix: planet.matrix,
+          viewMatrix,
+          projectionMatrix
+        }
       });
-      planet.render();
     }
 
     const pickedModel = pickPosition && pickModels(gl, {

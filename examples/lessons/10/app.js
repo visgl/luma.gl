@@ -1,5 +1,6 @@
 import GL from 'luma.gl/constants';
-import {AnimationLoop, loadTextures, loadFile, addEvents, setParameters} from 'luma.gl';
+import {addEvents} from 'luma.gl/addons';
+import {AnimationLoop, loadTextures, loadFile, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
 

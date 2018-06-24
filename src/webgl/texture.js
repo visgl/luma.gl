@@ -7,7 +7,7 @@ import Buffer from './buffer';
 import {withParameters} from '../webgl-context/context-state';
 
 import {WebGLBuffer} from '../webgl-utils';
-import {isWebGL2, assertWebGL2Context, getKey} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 
 import {log, uid, isPowerOfTwo} from '../utils';
 import assert from '../utils/assert';
@@ -737,7 +737,8 @@ export default class Texture extends Resource {
 
     case GL.TEXTURE_WIDTH:
     case GL.TEXTURE_HEIGHT:
-      throw new Error('Cannot set emulated parameter');
+      assert(false);
+      break;
 
     default:
       this.gl.texParameteri(this.target, pname, param);
@@ -755,15 +756,15 @@ export default class Texture extends Resource {
   // Update default settings which are not supported by NPOT textures.
   _updateForNPOT(parameters) {
     if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
+      // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
       parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
     }
     if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`)();
+      // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`)();
       parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
     }
     if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE`)();
+      // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE`)();
       parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
     }
   }
@@ -773,14 +774,14 @@ export default class Texture extends Resource {
       switch (pname) {
       case GL.TEXTURE_MIN_FILTER:
         if (NPOT_MIN_FILTERS.indexOf(param) === -1) {
-          log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
+          // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
           param = GL.LINEAR;
         }
         break;
       case GL.TEXTURE_WRAP_S:
       case GL.TEXTURE_WRAP_T:
         if (param !== GL.CLAMP_TO_EDGE) {
-          log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)();
+          // log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)();
           param = GL.CLAMP_TO_EDGE;
         }
         break;

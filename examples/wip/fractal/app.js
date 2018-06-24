@@ -67,7 +67,6 @@ export function postProcessImage({
   app.setFrameBuffer(framebuffer, false);
 
   if (screen) {
-    program.use();
     gl.viewport(x, y, width, height);
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
     program.setUniforms(uniforms);

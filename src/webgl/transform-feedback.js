@@ -1,7 +1,10 @@
 import GL from '../constants';
 import Resource from './resource';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
-import {log} from '../utils';
+import {log, isObjectEmpty} from '../utils';
+
+// NOTE: The `bindOnUse` flag is a major workaround:
+// See https://github.com/KhronosGroup/WebGL/issues/2346
 
 export default class TransformFeedback extends Resource {
 
@@ -9,48 +12,45 @@ export default class TransformFeedback extends Resource {
     return isWebGL2(gl);
   }
 
-  /**
-   * @class
-   * @param {WebGL2RenderingContext} gl - context
-   * @param {Object} opts - options
-   */
-  constructor(gl, opts = {}) {
+  constructor(gl, props = {}) {
     assertWebGL2Context(gl);
-    super(gl, opts);
+    super(gl, props);
 
-    this.configuration = null;
-    this.buffers = {};
-    this.unused = {};
     this._bound = false;
 
+    this.initialize(props);
+    this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);
     Object.seal(this);
-
-    this.initialize(opts);
   }
 
-  initialize(props) {
-    this.configuration = props.configuration || (props.program && props.program.getConfiguration());
-    this.reset();
+  initialize(props = {}) {
+    this.buffers = {};
+    this.unused = {};
+    this.configuration = null;
+    this.bindOnUse = true;
+
+    // Unbind any currently bound buffers
+    if (!isObjectEmpty(this.buffers)) {
+      this.bind(() => this._unbindBuffers());
+    }
+
     this.setProps(props);
+    return this;
   }
 
   setProps(props) {
+    if ('program' in props) {
+      this.configuration = props.program && props.program.configuration;
+    }
+    if ('configuration' in props) {
+      this.configuration = props.configuration;
+    }
+    if ('bindOnUse' in props) {
+      props = props.bindOnUse;
+    }
     if ('buffers' in props) {
       this.setBuffers(props.buffers);
     }
-  }
-
-  reset() {
-    this.buffers = {};
-    this.unused = [];
-
-    // Unbind any currently bound buffers
-    this.bind(() => {
-      for (const bufferIndex in this.buffers) {
-        this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
-      }
-    });
-    return this;
   }
 
   setBuffers(buffers = {}) {
@@ -62,20 +62,6 @@ export default class TransformFeedback extends Resource {
     return this;
   }
 
-  // See https://github.com/KhronosGroup/WebGL/issues/2346
-  // If it was true that having a buffer on an unused TF was a problem
-  // it would make the entire concept of transform feedback objects pointless.
-  // The whole point of them is like VertexArrayObjects.
-  // You set them up with all in outputs at init time and
-  // then in one call you can setup all the outputs just before drawing.
-  // Since the point of transform feedback is to generate data that will
-  // then be used as inputs to attributes it makes zero sense you'd
-  // have to unbind them from every unused transform feedback object
-  // before you could use them in an attribute. If that was the case
-  // there would be no reason to setup transform feedback objects ever.
-  // You'd always use the default because you'd always have to bind and
-  // unbind all the buffers.
-
   setBuffer(locationOrName, buffer, size, offset = 0) {
     const location = this._getVaryingIndex(locationOrName);
     if (location < 0) {
@@ -86,48 +72,24 @@ export default class TransformFeedback extends Resource {
 
     this.buffers[location] = buffer;
 
-    // Can't bind the buffer now
-    // const handle = buffer && buffer.handle;
-    // this.bind(() => {
-    //   if (!handle || size === undefined) {
-    //     this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, location, handle);
-    //   } else {
-    //     this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, location, handle, offset, size);
-    //   }
-    // });
+    // Need to avoid chrome bug where buffer that is already bound to a different target
+    // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
+    if (!this.bindOnUse) {
+      this._bindBuffer(location, buffer, size, offset);
+    }
 
     return this;
   }
 
-  // TODO: Activation is tightly coupled to the current program. Since we try to encapsulate
-  // program.use, should we move these methods (begin/pause/resume/end) to the Program?
-  begin(primitiveMode) {
+  begin(primitiveMode = GL.POINTS) {
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
-    // Need to avoid chrome bug where buffer that is already bound to a different target
-    // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
     this._bindBuffers();
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
   }
 
-  pause() {
-    this.gl.pauseTransformFeedback();
-    this._unbindBuffers();
-    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
-    return this;
-  }
-
-  resume() {
-    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
-    this._bindBuffers();
-    this.gl.resumeTransformFeedback();
-    return this;
-  }
-
   end() {
     this.gl.endTransformFeedback();
-    // Need to avoid chrome bug where buffer that is already bound to a different target
-    // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
     this._unbindBuffers();
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     return this;
@@ -147,8 +109,8 @@ export default class TransformFeedback extends Resource {
 
       value = funcOrHandle();
 
-      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
       this._bound = false;
+      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     } else {
       value = funcOrHandle();
     }
@@ -167,21 +129,24 @@ export default class TransformFeedback extends Resource {
       return this.configuration.getVaryingInfo(locationOrName).location;
     }
     const location = Number(locationOrName);
-    if (Number.isFinite(location)) {
-      return location;
-    }
-    return -1;
+    return Number.isFinite(location) ? location : -1;
   }
 
+  // Need to avoid chrome bug where buffer that is already bound to a different target
+  // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
   _bindBuffers() {
-    for (const bufferIndex in this.buffers) {
-      this._bindBuffer(bufferIndex, this.buffers[bufferIndex]);
+    if (this.bindOnUse) {
+      for (const bufferIndex in this.buffers) {
+        this._bindBuffer(bufferIndex, this.buffers[bufferIndex]);
+      }
     }
   }
 
   _unbindBuffers() {
-    for (const bufferIndex in this.buffers) {
-      this._bindBuffer(bufferIndex, null);
+    if (this.bindOnUse) {
+      for (const bufferIndex in this.buffers) {
+        this._bindBuffer(bufferIndex, null);
+      }
     }
   }
 

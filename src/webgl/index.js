@@ -44,13 +44,8 @@ export {
 } from './clear';
 
 export {
-  readPixels
-} from './functions';
-
-export {
   parseUniformName,
-  getUniformSetter,
-  checkUniformValues
+  getUniformSetter
 } from './uniforms';
 
 // WebGL1 objects

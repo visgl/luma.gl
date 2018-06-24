@@ -11,7 +11,6 @@ export default class ProgramConfiguration {
     this.attributeInfosByName = {};
     this.varyings = [];
     this.varyingsByName = {};
-    this.varyingMap = program.varyingMap;
     Object.seal(this);
     this._readAttributesFromProgram(program);
     this._readVaryingsFromProgram(program);
@@ -57,7 +56,7 @@ export default class ProgramConfiguration {
   _inferProperties(location, name, accessor) {
     if ((/instance/i).test(name)) {
       // Any attribute containing the word "instance" will be assumed to be instanced
-      accessor.update({instanced: true});
+      accessor.merge({instanced: true});
     }
   }
 
@@ -99,52 +98,4 @@ export default class ProgramConfiguration {
 
     this.varyings.sort((a, b) => a.location - b.location);
   }
-
-  /*
-  // Get a map of buffer indices
-  getVaryingMap(program, varyings, bufferMode) {
-    const {gl} = program;
-    // assert(bufferMode === gl.SEPARATE_ATTRIBS || bufferMode === gl.INTERLEAVED_ATTRIBS);
-
-    const varyingMap = {};
-    let index = 0;
-    const indexIncrement = bufferMode === gl.SEPARATE_ATTRIBS ? 1 : 0;
-    for (const varying of varyings) {
-      varyingMap[varying] = index;
-      index += indexIncrement;
-    }
-    return varyingMap;
-  }
-
-  /*
-  // query uniform locations and build name to setter map.
-  _readUniformLocationsFromLinkedProgram() {
-    const {gl} = this;
-    this._uniformSetters = {};
-    this._uniformCount = this.getUniformCount();
-    for (let i = 0; i < this._uniformCount; i++) {
-      const info = this.getUniformInfo(i);
-      const parsedName = parseUniformName(info.name);
-      const location = this.getUniformLocation(parsedName.name);
-      this._uniformSetters[parsedName.name] =
-        getUniformSetter(gl, location, info, parsedName.isArray);
-    }
-    this._textureIndexCounter = 0;
-  }
-
-  // create uniform setters
-  // Map of uniform names to setter functions
-  // linkProgram needs to have been called, although linking does not need to have been successful
-  _readUniformDescriptorsFromProgram2(program) {
-    const uniformDescriptors = {};
-    const length = program._getParameter(GL.ACTIVE_UNIFORMS);
-    for (let i = 0; i < length; i++) {
-      const info = program.getUniformInfo(i);
-      const location = this.gl.getActiveUniform(this.handle, this.handle, info.name);
-      const descriptor = getUniformSetter(gl, location, info);
-      uniformDescriptors[descriptor.name] = descriptor;
-    }
-    return uniformDescriptors;
-  }
-  */
 }

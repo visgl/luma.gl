@@ -1,3 +1,4 @@
+import 'luma.gl/debug';
 import GL from 'luma.gl/constants';
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
@@ -73,7 +74,7 @@ const animationLoop = new AnimationLoop({
     });
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-    cube.render();
+    cube.draw();
   }
 });
 

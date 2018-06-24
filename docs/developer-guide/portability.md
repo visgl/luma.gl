@@ -1,14 +1,16 @@
 # Portability
 
-There are multiple aspects to portability. Portability across WebGL versions, and portability across browsers, operating systems and GPUs. This article focused on writing code that works on multiple versions of WebGL, taking advantage of WebGL2 and extensions when available.
-
+luma.gl enables developers to write WebGL2-style applications that still work on older WebGL versions, and are portable across browsers and node, as well as across operating systems and GPUs.
 
 ## WebGL Versions
 
+### Unified API
 
-### Unified API and Polyfills
+luma.gl offers a single, WebGL2-based API for accessing WebGL functionality. This same API works regardless of whether a function is provided by WebGL2 or a WebGL1 extension.
 
-luma.gl offers a single API for accessing WebGL functionality, regardless of whether a function is provided by WebGL2 or a WebGL1 extension.
+Taking advantage of WebGL1 extensions when available.
+
+### Polyfills
 
 When possible, "polyfills" are done on the `WebGLRenderingContext` level, meaning that many missing WebGL2 functions are injected into WebGL1 contexts, with implementations that transparently use WebGL1 extensions while providing the WebGL2 API.
 

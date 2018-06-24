@@ -130,14 +130,14 @@ export const animationLoopOptions = {
     const shadowProj =
       new Matrix4().ortho({left: -4, right: 4, bottom: -4, top: 4, near: 0, far: 64});
 
-    shadow.setUniforms({
-      uModel: model,
-      uView: shadowView,
-      uProjection: shadowProj,
-      uLightPosition: lightPos
-    })
-    .draw({
-      framebuffer: fbShadow
+    shadow.draw({
+      framebuffer: fbShadow,
+      uniforms: {
+        uModel: model,
+        uView: shadowView,
+        uProjection: shadowProj,
+        uLightPosition: lightPos
+      }
     });
 
     // Render the screen
@@ -148,7 +148,6 @@ export const animationLoopOptions = {
     const camProj = new Matrix4().perspective({fov: radians(75), aspect, near: 0.1, far: 100});
 
     cube.setUniforms({
-      uModel: model,
       uView: camView,
       uProjection: camProj,
       uShadowView: shadowView,
@@ -156,13 +155,20 @@ export const animationLoopOptions = {
       uShadowMap: fbShadow
     });
 
-    cube.render({
-      uShadow: 0.0
+    cube.draw({
+      framebuffer: null,
+      uniforms: {
+        uModel: model,
+        uShadow: 0.0
+      }
     });
 
-    cube.render({
-      uModel: model2,
-      uShadow: 1.0
+    cube.draw({
+      framebuffer: null,
+      uniforms: {
+        uModel: model2,
+        uShadow: 1.0
+      }
     });
   }
 };

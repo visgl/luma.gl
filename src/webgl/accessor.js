@@ -2,7 +2,7 @@ const GL_FLOAT = 0x1406;
 
 export default class Accessor {
 
-  static get defaultOptions() {
+  static get DEFAULTS() {
     return {
       type: GL_FLOAT,
       size: 1,
@@ -33,7 +33,7 @@ export default class Accessor {
 
   // Combine with other accessors
   getOptions(...optsList) {
-    const combinedOpts = Object.assign({}, Accessor.defaultOptions, this);
+    const combinedOpts = Object.assign({}, Accessor.DEFAULTS, this);
     optsList.forEach(opts => this._update(opts, combinedOpts));
     return combinedOpts;
   }

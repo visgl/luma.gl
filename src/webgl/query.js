@@ -3,6 +3,7 @@ import Resource from './resource';
 import {FEATURES, hasFeatures} from '../webgl-context/context-features';
 import {isWebGL2} from '../webgl-utils';
 import queryManager from '../webgl-utils/query-manager';
+import assert from '../utils/assert';
 
 const noop = x => x;
 
@@ -26,27 +27,29 @@ export default class Query extends Resource {
 
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
-  static isSupported(gl, {
-    queries = false,
-    timers = false,
-    timestamps = false
-  } = {}) {
+  static isSupported(gl, opts = []) {
     const webgl2 = isWebGL2(gl);
-    const hasTimerQueries = hasFeatures(gl, FEATURES.TIMER_QUERY);
 
-    let supported = webgl2 || hasTimerQueries;
-    if (queries) {
-      supported = supported && webgl2;
-    }
+    // Initial value
+    const hasTimerQuery = hasFeatures(gl, FEATURES.TIMER_QUERY);
+    let supported = webgl2 || hasTimerQuery;
 
-    if (timers) {
-      supported = supported && hasTimerQueries;
-    }
-
-    if (timestamps) {
-      // polyfillContext(gl);
-      const queryCounterBits = gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT);
-      supported = supported && (queryCounterBits > 0);
+    for (const key of opts) {
+      switch (key) {
+      case 'queries':
+        supported = supported && webgl2;
+        break;
+      case 'timers':
+        supported = supported && hasTimerQuery;
+        break;
+      case 'timestamps':
+        const queryCounterBits =
+          hasTimerQuery ? gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT) : 0;
+        supported = supported && (queryCounterBits > 0);
+        break;
+      default:
+        assert(false);
+      }
     }
 
     return supported;

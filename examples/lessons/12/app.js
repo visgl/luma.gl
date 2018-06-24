@@ -57,8 +57,20 @@ const appState = {
   lastTime: 0
 };
 
+function animateAppState() {
+  const timeNow = Date.now();
+  if (appState.lastTime !== 0) {
+    const elapsed = timeNow - appState.lastTime;
+    const newMatrix = new Matrix4().rotateY(radians(elapsed / 20));
+    appState.moonRotationMatrix.multiplyLeft(newMatrix);
+    appState.cubeRotationMatrix.multiplyLeft(newMatrix);
+  }
+  appState.lastTime = timeNow;
+}
+
 const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+
+  onInitialize({canvas, gl}) {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -67,65 +79,61 @@ const animationLoop = new AnimationLoop({
     });
 
     return loadTextures(gl, {
-      urls: ['moon.gif']
+      urls: ['moon.gif', 'crate.gif']
     })
-    .then(textures => {
-      let moon = new Sphere(gl, {
-        fs: FRAGMENT_SHADER,
-        vs: VERTEX_SHADER,
-        uniforms: {
-          uSampler: textures[0]
-        },
-        nlat: 30,
-        nlong: 30,
-        radius: 2,
-      });
-      return loadTextures(gl, {
-        urls: ['crate.gif']
-      })
-      .then(textures => {
-        let cube = new Cube(gl, {
+    .then(([moonTexture, crateTexture]) => {
+      return {
+        moon: new Sphere(gl, {
+          fs: FRAGMENT_SHADER,
+          vs: VERTEX_SHADER,
+          uniforms: {
+            uSampler: moonTexture
+          },
+          nlat: 30,
+          nlong: 30,
+          radius: 2
+        }),
+        cube: new Cube(gl, {
           vs: VERTEX_SHADER,
           fs: FRAGMENT_SHADER,
           uniforms: {
-            uSampler: textures[0]
+            uSampler: crateTexture
           }
-        });
-        return {moon, cube};
-      });
+        })
+      };
     });
   },
-  onRender: ({
-    gl, tick, aspect, moon, cube
-  }) => {
+
+  onRender({gl, tick, aspect, moon, cube}) { // eslint-disable-line complexity
     // set camera position
     const eyePos = [0, 0, 20];
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    let uVMatrix = new Matrix4()
+    const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
     let element = null;
-    let lighting = (element = document.getElementById("lighting")) ? element.checked : true;
+    /* global document */
+    const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});
     cube.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
-      let ambientColor = new Vector3(
+      const ambientColor = new Vector3(
         parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
       );
 
-      let pointLightingLocation = new Vector3(
+      const pointLightingLocation = new Vector3(
         parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
         parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
         parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
       );
 
-      let pointLightColor = new Vector3(
+      const pointLightColor = new Vector3(
         parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
@@ -156,7 +164,7 @@ const animationLoop = new AnimationLoop({
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
 
-    animate(appState);
+    animateAppState();
   }
 });
 
@@ -170,18 +178,6 @@ animationLoop.getInfo = () => {
     The classic WebGL Lessons in luma.gl
     `;
 };
-
-function animate(appState) {
-  var timeNow = new Date().getTime();
-  if (appState.lastTime != 0) {
-    let elapsed = timeNow - appState.lastTime;
-    let newMatrix = new Matrix4()
-    .rotateY(radians(elapsed / 20));
-    appState.moonRotationMatrix.multiplyLeft(newMatrix);
-    appState.cubeRotationMatrix.multiplyLeft(newMatrix);
-  }
-  appState.lastTime = timeNow;
-}
 
 export default animationLoop;
 

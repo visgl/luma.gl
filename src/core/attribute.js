@@ -1,7 +1,6 @@
 /* eslint-disable complexity */
-import assert from '../utils/assert';
-import {Buffer} from '../webgl';
 import GL from '../constants';
+import {Buffer} from '../webgl';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
@@ -39,21 +38,22 @@ export default class Attribute {
     }
   }
 
-  update({
-    value,
-    buffer,
+  update(opts) {
+    const {
+      value,
+      buffer,
 
-    // buffer options
-    size = this.size,
-    offset = this.offset || 0,
-    stride = this.stride || 0,
-    normalized = this.normalized || false,
-    integer = this.integer || false,
-    instanced = this.instanced || 0,
+      // buffer options
+      size = this.size,
+      offset = this.offset || 0,
+      stride = this.stride || 0,
+      normalized = this.normalized || false,
+      integer = this.integer || false,
+      instanced = this.instanced || 0,
 
-    isGeneric = this.isGeneric || false,
-    isInstanced
-  }) {
+      isGeneric = this.isGeneric || false,
+      isInstanced
+    } = opts;
 
     this.size = size;
     this.offset = offset;
@@ -70,19 +70,20 @@ export default class Attribute {
 
     if (buffer) {
       this.externalBuffer = buffer;
-      this.type = buffer.type;
+      this.type = buffer.accessor.type;
+      if (buffer.accessor.divisor !== undefined) {
+        this.instanced = buffer.accessor.divisor > 0;
+      }
     } else if (value) {
       this.externalBuffer = null;
       this.value = value;
 
       if (!isGeneric) {
         // Create buffer if needed
-        this.buffer = this.buffer || new Buffer(this.gl, {
-          target: this.target,
-          type: this.type
-        });
+        this.buffer = this.buffer ||
+          new Buffer(this.gl, Object.assign({}, opts, {target: this.target, type: this.type}));
         this.buffer.setData({data: value});
-        this.type = this.buffer.type;
+        this.type = this.buffer.accessor.type;
       }
     }
   }
@@ -94,10 +95,24 @@ export default class Attribute {
     return this.externalBuffer || this.buffer;
   }
 
+  getValue() {
+    const buffer = this.externalBuffer || this.buffer;
+    if (buffer) {
+      buffer.accessor.update(this);
+      return buffer;
+    }
+    if (this.isGeneric) {
+      return this.value;
+    }
+    return null;
+  }
+
   _validateAttributeDefinition() {
-    assert(
-      this.size >= 1 && this.size <= 4,
-      `Attribute definition for ${this.id} invalid size`
-    );
+    // Can be undefined for buffers (auto deduced from shaders)
+    // or larger than 4 for uniform arrays
+    // assert(
+    //   this.size >= 1 && this.size <= 4,
+    //   `Attribute definition for ${this.id} invalid size`
+    // );
   }
 }
