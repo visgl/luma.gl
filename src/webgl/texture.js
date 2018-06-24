@@ -7,7 +7,7 @@ import Buffer from './buffer';
 import {withParameters} from '../webgl-context/context-state';
 
 import {WebGLBuffer} from '../webgl-utils';
-import {isWebGL2, assertWebGL2Context, getKey} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 
 import {log, uid, isPowerOfTwo} from '../utils';
 import assert from '../utils/assert';
@@ -738,6 +738,7 @@ export default class Texture extends Resource {
     case GL.TEXTURE_WIDTH:
     case GL.TEXTURE_HEIGHT:
       assert(false);
+      break;
 
     default:
       this.gl.texParameteri(this.target, pname, param);
