@@ -3,6 +3,7 @@ import Resource from './resource';
 import {assertWebGL2Context} from '../webgl-utils';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 import Accessor from './accessor';
+import {log} from '../utils';
 import assert from '../utils/assert';
 
 const DEBUG_DATA_LENGTH = 10;
@@ -25,6 +26,11 @@ export default class Buffer extends Resource {
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
     this.initialize(props);
     Object.seal(this);
+  }
+
+  get data() {
+    log.deprecated('Buffer.data', 'N/A', 'v6.0');
+    return this._data;
   }
 
   // Stores the accessor of data with the buffer, makes it easy to e.g. set it as an attribute later
@@ -68,6 +74,7 @@ export default class Buffer extends Resource {
     this.bytes = bytes;
     this.bytesUsed = bytes;
 
+    this._data = data; // TODO - remove
     this.debugData = data ? data.slice(0, DEBUG_DATA_LENGTH) : null;
 
     // Call after type is determined
