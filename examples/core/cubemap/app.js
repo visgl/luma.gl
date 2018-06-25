@@ -33,51 +33,6 @@ function readHTMLControls() {
   return {uReflect, uRefract};
 }
 
-const animationLoop = new AnimationLoop({
-
-  onInitialize: ({gl, canvas}) => {
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: GL.LEQUAL
-    });
-
-    return {
-      cube: getCube(gl),
-      prism: getPrism(gl),
-      cubemap: new TextureCube(gl, {data: getFaceTextures({size: 512})})
-    };
-  },
-
-  onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
-    const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
-    const projection = new Matrix4().perspective({fov: radians(75), aspect});
-
-    const {uReflect, uRefract} = readHTMLControls();
-
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-    cube.render({
-      uTextureCube: cubemap,
-      uModel: new Matrix4().scale([5, 5, 5]),
-      uView: view,
-      uProjection: projection
-    });
-
-    prism.render({
-      uTextureCube: cubemap,
-      uReflect,
-      uRefract,
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-      uView: view,
-      uProjection: projection
-    });
-  }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
-
 function getCube(gl) {
   return new Cube(gl, {
     vs: `\
@@ -156,6 +111,51 @@ void main(void) {
 `
   });
 }
+
+const animationLoop = new AnimationLoop({
+
+  onInitialize: ({gl, canvas}) => {
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
+
+    return {
+      cube: getCube(gl),
+      prism: getPrism(gl),
+      cubemap: new TextureCube(gl, {data: getFaceTextures({size: 512})})
+    };
+  },
+
+  onRender: ({gl, tick, aspect, cube, prism, cubemap}) => {
+    const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
+    const projection = new Matrix4().perspective({fov: radians(75), aspect});
+
+    const {uReflect, uRefract} = readHTMLControls();
+
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    cube.render({
+      uTextureCube: cubemap,
+      uModel: new Matrix4().scale([5, 5, 5]),
+      uView: view,
+      uProjection: projection
+    });
+
+    prism.render({
+      uTextureCube: cubemap,
+      uReflect,
+      uRefract,
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
+      uView: view,
+      uProjection: projection
+    });
+  }
+});
+
+animationLoop.getInfo = () => INFO_HTML;
 
 // Create six textures for the cube map sides
 function getFaceTextures({size}) {

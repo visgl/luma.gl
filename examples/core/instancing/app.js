@@ -13,71 +13,6 @@ single GPU draw call using instanced vertex attributes.
 
 const SIDE = 256;
 
-let pickPosition = [0, 0];
-function mousemove(e) {
-  pickPosition = [e.offsetX, e.offsetY];
-}
-function mouseleave(e) {
-  pickPosition = null;
-}
-
-const animationLoop = new AnimationLoop({
-  createFramebuffer: true,
-  onInitialize({gl}) {
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: GL.LEQUAL
-    });
-
-    gl.canvas.addEventListener('mousemove', mousemove);
-    gl.canvas.addEventListener('mouseleave', mouseleave);
-
-    return {
-      cube: makeInstancedCube(gl)
-    };
-  },
-  onFinalize({gl, cube}) {
-    gl.canvas.removeEventListener('mousemove', mousemove);
-    cube.delete();
-  },
-  onRender({gl, tick, aspect, cube, framebuffer, useDevicePixels}) {
-    cube.setUniforms({
-      uTime: tick * 0.1,
-      // Basic projection matrix
-      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-      // Move the eye around the plane
-      uView: new Matrix4().lookAt({
-        center: [0, 0, 0],
-        eye: [
-          Math.cos(tick * 0.005) * SIDE / 2,
-          Math.sin(tick * 0.006) * SIDE / 2,
-          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-        ]
-      }),
-      // Rotate all the individual cubes
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-    });
-
-    const pickInfo = pickPosition && pickModels(gl, {
-      models: [cube],
-      position: pickPosition,
-      useDevicePixels,
-      framebuffer
-    });
-
-    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
-
-    cube.updateModuleSettings({
-      pickingSelectedColor
-    });
-
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-    cube.draw();
-  }
-});
-
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 function makeInstancedCube(gl) {
   let offsets = [];
@@ -157,6 +92,71 @@ void main(void) {
     }
   });
 }
+
+let pickPosition = [0, 0];
+function mousemove(e) {
+  pickPosition = [e.offsetX, e.offsetY];
+}
+function mouseleave(e) {
+  pickPosition = null;
+}
+
+const animationLoop = new AnimationLoop({
+  createFramebuffer: true,
+  onInitialize({gl}) {
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true,
+      depthFunc: GL.LEQUAL
+    });
+
+    gl.canvas.addEventListener('mousemove', mousemove);
+    gl.canvas.addEventListener('mouseleave', mouseleave);
+
+    return {
+      cube: makeInstancedCube(gl)
+    };
+  },
+  onFinalize({gl, cube}) {
+    gl.canvas.removeEventListener('mousemove', mousemove);
+    cube.delete();
+  },
+  onRender({gl, tick, aspect, cube, framebuffer, useDevicePixels}) {
+    cube.setUniforms({
+      uTime: tick * 0.1,
+      // Basic projection matrix
+      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      // Move the eye around the plane
+      uView: new Matrix4().lookAt({
+        center: [0, 0, 0],
+        eye: [
+          Math.cos(tick * 0.005) * SIDE / 2,
+          Math.sin(tick * 0.006) * SIDE / 2,
+          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+        ]
+      }),
+      // Rotate all the individual cubes
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    });
+
+    const pickInfo = pickPosition && pickModels(gl, {
+      models: [cube],
+      position: pickPosition,
+      useDevicePixels,
+      framebuffer
+    });
+
+    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
+
+    cube.updateModuleSettings({
+      pickingSelectedColor
+    });
+
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    cube.draw();
+  }
+});
 
 animationLoop.getInfo = () => INFO_HTML;
 

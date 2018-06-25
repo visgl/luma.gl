@@ -48,7 +48,7 @@ export default function pickModels(gl, {
   const group = new Group({children: models});
   return group.traverseReverse(model => {
 
-    if (model.isPickable !== false) {
+    if (model.pickable !== false) {
       // Clear the frame buffer
       clear(gl, {framebuffer, color: true, depth: true});
 
