@@ -433,7 +433,7 @@ export default class Model extends Object3D {
   // Calculate new values for any function uniforms based on supplied animationProps
   _evaluateAnimateUniforms(animationProps) {
     if (!this.animated) {
-      return;
+      return {};
     }
     const animatedUniforms = {};
     for (const uniformName in this.animatedUniforms) {
