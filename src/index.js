@@ -62,13 +62,14 @@ export {default as TransformFeedback} from './webgl/transform-feedback';
 export {default as VertexArray} from './webgl/vertex-array';
 export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 
-// Core
-export {default as Model} from './core/model';
-export {default as AnimationLoop} from './core/animation-loop';
-export {default as AnimationLoopProxy} from './core/animation-loop-proxy';
+// experimental WebGL exports
+export {clearBuffer as _clearBuffer} from './webgl/clear';
 
+// CORE
 // export {default as Object3D} from './core/object-3d';
 // export {default as Group} from './core/group';
+export {default as Model} from './core/model';
+export {default as AnimationLoop} from './core/animation-loop';
 export {default as pickModels} from './core/pick-models';
 export {
   encodePickingColor,
@@ -76,7 +77,10 @@ export {
   getNullPickingColor} from './core/picking-colors';
 
 // Experimental core exports
+export {default as _Transform} from './core/transform';
 export {default as _Attribute} from './core/attribute';
+export {default as _ShaderCache} from './core/shader-cache';
+export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
 
 // Geometry
 export {default as Geometry} from './geometry/geometry';
@@ -127,12 +131,6 @@ export {default as lighting} from './shadertools/src/modules/lighting/lighting';
 export {default as dirlight} from './shadertools/src/modules/dirlight/dirlight';
 export {default as picking} from './shadertools/src/modules/picking/picking';
 export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
-
-// EXPERIMENTAL EXPORTS
-
-export {clearBuffer as _clearBuffer} from './webgl/clear';
-export {default as _Transform} from './core/transform';
-export {default as _ShaderCache} from './core/shader-cache';
 
 // DEPRECATED EXPORTS IN v6.0
 

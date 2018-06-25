@@ -122,7 +122,7 @@ export default class AnimationLoop {
         this._resizeViewport();
 
         // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this.props.onInitialize(this._callbackData);
+        return this.onInitialize(this.animationProps);
       })
       .then(appContext => {
         if (!this._stopped) {
@@ -149,6 +149,22 @@ export default class AnimationLoop {
     return this;
   }
 
+  onCreateContext(...args) {
+    return this.props.onCreateContext(...args);
+  }
+
+  onInitialize(...args) {
+    return this.props.onInitialize(...args);
+  }
+
+  onRender(...args) {
+    return this.props.onRender(...args);
+  }
+
+  onFinalize(...args) {
+    return this.props.onFinalize(...args);
+  }
+
   // DEPRECATED/REMOVED METHODS
 
   getHTMLControlValue(id, defaultValue = 1) {
@@ -167,7 +183,7 @@ export default class AnimationLoop {
   _setupFrame() {
     if (this._onSetupFrame) {
       // call callback
-      this._onSetupFrame(this._callbackData);
+      this._onSetupFrame(this.animationProps);
       // end callback
     } else {
       this._resizeCanvasDrawingBuffer();
@@ -190,7 +206,7 @@ export default class AnimationLoop {
     this._updateCallbackData();
 
     // call callback
-    this.props.onRender(this._callbackData);
+    this.onRender(this.animationProps);
     // end callback
 
     if (this.offScreen) {
@@ -204,55 +220,67 @@ export default class AnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
-    this._callbackData = {
+    this.animationProps = {
       gl: this.gl,
+
+      stop: this.stop,
       canvas: this.gl.canvas,
       framebuffer: this.framebuffer,
-      stop: this.stop,
+
       // Initial values
       useDevicePixels: this.useDevicePixels,
       needsRedraw: null,
+
+      // Animation props
       startTime: Date.now(),
       time: 0,
       tick: 0,
-      tock: 0
+      tock: 0,
+      // canvas
+
+      // Experimental
+      _loop: this,
+      _animationLoop: this
     };
   }
 
   // Update the context object that will be passed to app callbacks
   _updateCallbackData() {
+    // Update redraw reason
+    this.animationProps.needsRedraw = this.needsRedraw;
+    this.needsRedraw = null;
+
     // CallbackData width and height represent drawing buffer width and height
     const width = this.gl.drawingBufferWidth;
     const height = this.gl.drawingBufferHeight;
-    if (width !== this._callbackData.width || height !== this._callbackData.height) {
+    if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
     }
-    this._callbackData.width = width;
-    this._callbackData.height = height;
-    this._callbackData.aspect = width / height;
-    this._callbackData.needsRedraw = this.needsRedraw;
-    this._callbackData.offScreen = this.offScreen;
 
-    // Update redraw reason
-    this._callbackData.needsRedraw = this.needsRedraw;
-    this.needsRedraw = null;
+    this.animationProps.width = width;
+    this.animationProps.height = height;
+    this.animationProps.aspect = width / height;
+    this.animationProps.needsRedraw = this.needsRedraw;
 
     // Increment tick
-    this._callbackData.time = Date.now() - this._callbackData.startTime;
-    this._callbackData.tick++;
-    this._callbackData.tock = Math.floor(this._callbackData.time / 1000 * 60);
+    this.animationProps.time = Date.now() - this.animationProps.startTime;
+    this.animationProps.tick++;
+    this.animationProps.tock = Math.floor(this.animationProps.time / 1000 * 60);
+
+    // experimental
+    this.animationProps._offScreen = this.offScreen;
   }
 
   _finalizeCallbackData() {
     // call callback
-    this.props.onFinalize(this._callbackData);
+    this.onFinalize(this.animationProps);
     // end callback
   }
 
   // Add application's data to the app context object
   _addCallbackData(appContext) {
     if (typeof appContext === 'object' && appContext !== null) {
-      this._callbackData = Object.assign({}, this._callbackData, appContext);
+      this.animationProps = Object.assign({}, this.animationProps, appContext);
     }
   }
 
@@ -260,7 +288,7 @@ export default class AnimationLoop {
   _createWebGLContext(opts) {
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);
-    this.gl = this.props.gl || this.props.onCreateContext(opts);
+    this.gl = this.props.gl || this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');

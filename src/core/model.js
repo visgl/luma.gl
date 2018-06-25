@@ -11,10 +11,6 @@ import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integ
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 
-const MSG_INSTANCED_PARAM_DEPRECATED = `\
-Warning: Model constructor: parameter "instanced" renamed to "isInstanced".
-This will become a hard error in a future version of luma.gl.`;
-
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
 const LOG_DRAW_PRIORITY = 2;
@@ -27,127 +23,29 @@ const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
 export default class Model extends Object3D {
-  constructor(gl, opts = {}) {
-    super(opts);
+  constructor(gl, props = {}) {
+    super(props);
     assert(isWebGL(gl));
     this.gl = gl;
     this.lastLogTime = 0; // TODO - move to probe.gl
-    this.init(opts);
+    this.initialize(props);
     // intended to be subclassed, do not seal
   }
 
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
-  init({
-    vs = null,
-    fs = null,
+  initialize(props = {}) {
+    this.program = this._createProgram(props);
 
-    // 1: Modular shaders
-    modules = null,
-    defines = {},
-    inject = {},
-    moduleSettings = {},
-    shaderCache = null,
+    // Create a vertex array configured after this program
+    this.vertexArray = new VertexArray(this.gl, {program: this.program});
 
-    // 2: Legacy shaders
-    defaultUniforms,
-
-    // 3: Pre-created program
-    program = null,
-
-    isInstanced = false, // Enables instanced rendering
-    instanced, // deprecated
-    vertexCount = undefined,
-    instanceCount = 0,
-
-    // Extra uniforms and attributes (beyond geometry, material, camera)
-    drawMode,
-    uniforms = {},
-    attributes = {},
-    geometry = null,
-
-    // Picking
-    pickable = true,
-    pick = null,
-    render = null,
-    onBeforeRender = () => {},
-    onAfterRender = () => {},
-
-    // TransformFeedback
-    varyings = null,
-    bufferMode = GL.SEPARATE_ATTRIBS,
-
-    // Other opts
-    timerQueryEnabled = false
-  } = {}) {
-    this._initializeProgram({
-      vs,
-      fs,
-      modules,
-      defines,
-      inject,
-      moduleSettings,
-      defaultUniforms,
-      program,
-      shaderCache,
-      varyings,
-      bufferMode
-    });
-
-    // Make sure we have some reasonable default uniforms in place
-    this.setUniforms(Object.assign(
-      {},
-      this.program.defaultUniforms,
-      uniforms,
-      // Get all default uniforms
-      this.getModuleUniforms(),
-      // Get unforms for supplied parameters
-      this.getModuleUniforms(moduleSettings)
-    ));
-
-    if (instanced) {
-      /* global console */
-      /* eslint-disable no-console */
-      console.warn(MSG_INSTANCED_PARAM_DEPRECATED);
-      isInstanced = isInstanced || instanced;
-    }
-
-    // All attributes
-    this._attributes = {};
-    // User defined attributes
-    this.attributes = {};
-    this.samplers = {};
+    // Initialize state
     this.userData = {};
-    this.drawParams = {};
-    this.dynamic = false;
     this.needsRedraw = true;
-
-    // Attributes and buffers
-    if (geometry) {
-      this.setGeometry(geometry);
-    }
-
-    this.setAttributes(attributes);
-
-    // geometry might have set drawMode and vertexCount
-    if (drawMode !== undefined) {
-      this.drawMode = getDrawMode(drawMode);
-    }
-    if (vertexCount !== undefined) {
-      this.vertexCount = vertexCount;
-    }
-    this.isInstanced = isInstanced;
-    this.instanceCount = instanceCount;
-
-    // picking options
-    this.pickable = Boolean(pickable);
-    this.pick = pick || (() => false);
-
-    this.onBeforeRender = onBeforeRender;
-    this.onAfterRender = onAfterRender;
-
-    // assert(program || program instanceof Program);
-    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
+    // Model manages auto Buffer creation from typed arrays
+    this._attributes = {}; // All attributes
+    this.attributes = {}; // User defined attributes
 
     this.timerQueryEnabled = false;
     this.timeElapsedQuery = undefined;
@@ -158,8 +56,68 @@ export default class Model extends Object3D {
       averageFrameTime: 0,
       profileFrameCount: 0
     };
+
+    this.setProps(props);
+
+    // Make sure we have some reasonable default uniforms in place
+    this.setUniforms(Object.assign(
+      {},
+      this.getModuleUniforms(), // Get all default uniforms
+      this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
+    ));
+
+    // Attributes and buffers
+
+    // geometry might have set drawMode and vertexCount
+    this.isInstanced = props.isInstanced || props.instanced;
+
+    // picking options
+    this.pickable = Boolean(props.pickable);
+    // this.pick = pick || (() => false);
+
+    this.onBeforeRender = props.onBeforeRender || (() => {});
+    this.onAfterRender = props.onAfterRender || (() => {});
+
+    // assert(program || program instanceof Program);
+    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
+
   }
   /* eslint-enable max-statements */
+
+  setProps(props) {
+    // params
+    if ('drawMode' in props) {
+      this.drawMode = getDrawMode(props.drawMode);
+    }
+    if ('vertexCount' in props) {
+      this.vertexCount = props.vertexCount;
+    }
+    if ('instanceCount' in props) {
+      this.instanceCount = props.instanceCount;
+    }
+
+    // webgl settings
+    if ('attributes' in props) {
+      this.setAttributes(props.attributes);
+    }
+    if ('uniforms' in props) {
+      this.setUniforms(props.uniforms, props.samplers);
+    }
+    if ('geometry' in props) {
+      this.setGeometry(props.geometry);
+    }
+
+    // Experimental props
+    if ('timerQueryEnabled' in props) {
+      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
+      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
+        log.warn('GPU timer not supported')();
+      }
+    }
+    if ('_feedbackBuffers' in props) {
+      this._setFeedbackBuffers(props.feedbackBuffers);
+    }
+  }
 
   delete() {
     // delete all attributes created by this model
@@ -218,26 +176,6 @@ export default class Model extends Object3D {
 
   // SETTERS
 
-  setProps(props) {
-    if ('attributes' in props) {
-      this.setAttributes(props.attributes);
-    }
-    if ('uniforms' in props) {
-      this.setUniforms(props.uniforms, props.samplers);
-    }
-
-    // Experimental props
-    if ('timerQueryEnabled' in props) {
-      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
-      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
-        log.warn('GPU timer not supported')();
-      }
-    }
-    if ('feedbackBuffers' in props) {
-      this._setFeedbackBuffers(props.feedbackBuffers);
-    }
-  }
-
   setNeedsRedraw(redraw = true) {
     this.needsRedraw = redraw;
     return this;
@@ -293,6 +231,7 @@ export default class Model extends Object3D {
     // Let Seer override edited uniforms
     uniforms = Object.assign({}, uniforms);
     getOverrides(this.id, uniforms);
+
     this.program.setUniforms(uniforms, samplers, () => {
       // if something changed
       this._checkForDeprecatedUniforms(uniforms);
@@ -303,24 +242,6 @@ export default class Model extends Object3D {
   updateModuleSettings(opts) {
     const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
-  }
-
-  _setFeedbackBuffers(feedbackBuffers = {}) {
-    // Avoid setting needsRedraw if no feedbackBuffers
-    if (isObjectEmpty(feedbackBuffers)) {
-      return this;
-    }
-
-    const {gl} = this.program;
-    this.transformFeedback = this.transformFeedback || new TransformFeedback(gl, {
-      program: this.program
-    });
-
-    this.transformFeedback.setBuffers(feedbackBuffers);
-
-    this.setNeedsRedraw();
-
-    return this;
   }
 
   // DRAW CALLS
@@ -347,6 +268,7 @@ export default class Model extends Object3D {
 
     addModel(this);
 
+    // Update model with any just provided attributes, settings or uniforms
     this.setAttributes(attributes);
     this.updateModuleSettings(moduleSettings);
     this.setUniforms(uniforms, samplers);
@@ -421,29 +343,25 @@ export default class Model extends Object3D {
 
   // PRIVATE METHODS
 
-  _initializeProgram({
-    vs,
-    fs,
-    modules,
-    defines,
-    moduleSettings,
-    defaultUniforms,
-    program,
-    shaderCache,
-    varyings,
-    bufferMode
+  _createProgram({
+    vs = null,
+    fs = null,
+    // 1: Modular shaders
+    modules = null,
+    defines = {},
+    inject = {},
+    shaderCache = null,
+    // TransformFeedback
+    varyings = null,
+    bufferMode = GL.SEPARATE_ATTRIBS,
+    program = null
   }) {
-
     this.getModuleUniforms = x => {};
 
     if (!program) {
       // Assign default shaders if none are provided
-      if (!vs) {
-        vs = MODULAR_SHADERS.vs;
-      }
-      if (!fs) {
-        fs = MODULAR_SHADERS.fs;
-      }
+      vs = vs || MODULAR_SHADERS.vs;
+      fs = fs || MODULAR_SHADERS.fs;
 
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines, log});
       ({vs, fs} = assembleResult);
@@ -454,17 +372,15 @@ export default class Model extends Object3D {
         program = new Program(this.gl, {vs, fs, varyings, bufferMode});
       }
 
-      const {getUniforms} = assembleResult;
-      this.getModuleUniforms = getUniforms || (x => {});
+      this.getModuleUniforms = assembleResult.getUniforms || (x => {});
     }
 
-    this.program = program;
-    assert(this.program instanceof Program, 'Model needs a program');
-
-    // Create a vertex array configured after this program
-    this.vertexArray = new VertexArray(this.gl, {program});
+    assert(program instanceof Program, 'Model needs a program');
+    return program;
   }
   /* eslint-enable complexity */
+
+  // Uniforms
 
   _checkForDeprecatedUniforms(uniforms) {
     // deprecated picking uniforms
@@ -475,6 +391,28 @@ export default class Model extends Object3D {
       }
     });
   }
+
+  // Transform Feedback
+
+  _setFeedbackBuffers(feedbackBuffers = {}) {
+    // Avoid setting needsRedraw if no feedbackBuffers
+    if (isObjectEmpty(feedbackBuffers)) {
+      return this;
+    }
+
+    const {gl} = this.program;
+    this.transformFeedback = this.transformFeedback || new TransformFeedback(gl, {
+      program: this.program
+    });
+
+    this.transformFeedback.setBuffers(feedbackBuffers);
+
+    this.setNeedsRedraw();
+
+    return this;
+  }
+
+  // Timer Queries
 
   _timerQueryStart() {
     if (this.timerQueryEnabled === true) {
