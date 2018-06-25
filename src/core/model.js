@@ -32,9 +32,24 @@ export default class Model extends Object3D {
     // intended to be subclassed, do not seal
   }
 
+  get vertexCount() {
+    if (Number.isFinite(this.props.vertexCount)) {
+      return this.props.vertexCount;
+    }
+    return this.geometry && this.geometry.getVertexCount();
+  }
+
+  get drawMode() {
+    if (Number.isFinite(this.props.drawMode)) {
+      return this.props.drawMode;
+    }
+    return this.geometry && this.geometry.drawMode;
+  }
+
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   initialize(props = {}) {
+    this.props = {};
     this.program = this._createProgram(props);
 
     // Create a vertex array configured after this program
@@ -85,15 +100,20 @@ export default class Model extends Object3D {
   /* eslint-enable max-statements */
 
   setProps(props) {
+    Object.assign(this.props, props);
+
     // params
-    if ('drawMode' in props) {
-      this.drawMode = getDrawMode(props.drawMode);
-    }
-    if ('vertexCount' in props) {
-      this.vertexCount = props.vertexCount;
-    }
+    // if ('drawMode' in props) {
+    //   this.drawMode = getDrawMode(props.drawMode);
+    // }
+    // if ('vertexCount' in props) {
+    //   this.vertexCount = props.vertexCount;
+    // }
     if ('instanceCount' in props) {
       this.instanceCount = props.instanceCount;
+    }
+    if ('geometry' in props) {
+      this.setGeometry(props.geometry);
     }
 
     // webgl settings
@@ -102,9 +122,6 @@ export default class Model extends Object3D {
     }
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms, props.samplers);
-    }
-    if ('geometry' in props) {
-      this.setGeometry(props.geometry);
     }
 
     // Experimental props
@@ -182,13 +199,13 @@ export default class Model extends Object3D {
   }
 
   setDrawMode(drawMode) {
-    this.drawMode = getDrawMode(drawMode);
+    this.props.drawMode = getDrawMode(drawMode);
     return this;
   }
 
   setVertexCount(vertexCount) {
     assert(Number.isFinite(vertexCount));
-    this.vertexCount = vertexCount;
+    this.props.vertexCount = vertexCount;
     return this;
   }
 
@@ -201,10 +218,7 @@ export default class Model extends Object3D {
   // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
     this.geometry = geometry;
-    this.vertexCount = geometry.getVertexCount();
-    this.drawMode = geometry.drawMode;
     const buffers = this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
-    // Object.assign(this.attributes, buffers);
     this.vertexArray.setAttributes(buffers);
     this.setNeedsRedraw();
     return this;
