@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 6.0.0-alpha.3 - June 25
+- Fixes for deck.gl (#577)
+
 ## 6.0.0-alpha.2 - June 25
 - Upgrade to math.gl@2.0.0
 - Model, AnimationLoop - Code reorganization (#574)
