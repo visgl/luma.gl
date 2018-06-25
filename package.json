@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "6.0.0-alpha.1",
+  "version": "6.0.0-alpha.2",
   "description": "A WebGL JavaScript visualization library.",
   "license": "MIT",
   "contributors": [
@@ -68,7 +68,7 @@
     "collect-metrics": "./scripts/collect-metrics.sh"
   },
   "dependencies": {
-    "math.gl": "^2.0.0-alpha.1",
+    "math.gl": "^2.0.0",
     "probe.gl": "^1.0.0",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"

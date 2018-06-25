@@ -1,5 +1,22 @@
 # Pre-releases
 
+## 6.0.0-alpha.2 - June 25
+- Upgrade to math.gl@2.0.0
+- Model, AnimationLoop - Code reorganization (#574)
+- VertexArray #3: Move attribute handling to VertexArray (#557)
+- Minor code/example cleanup for 6.0 (#571)
+- Doc refresh for 6.0 (partial) (#570)
+- Additional Transform and TransformFeedback cleanup (#569)
+- Shader injection system (per RFC) (#546)
+- Transform class - light refresh (#567)
+- VertexArray #2:  Add Accessor and ProgramConfiguration helper classes (#560)
+- Ocular based website: initial directory (#564)
+- Adopt new underscore convention for experimental exports (#563)
+- Make polyfills for webgl1 optional (Dist Size Reduction) (#554)
+- Update code to import GL from luma.gl/constants (#556)
+- Code cleanup  (#559)
+- Doc Improvements (#558)
+
 ## 6.0.0-alpha.1 - June 13
 - Fix log when using External buffer (#551)
 - Code reorganization (#552)
