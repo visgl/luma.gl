@@ -1,10 +1,22 @@
 # Model
 
-The `Model` class is probably the most useful class for typical applications. It holds all the data necessary to draw an object, e.g.:
+The `Model` class is arguably the most useful class for typical applications. It manages the WebGL resources needed to perform draw calls and provide additional functionality as described below.
+
+A `Model` holds all the data necessary to draw an object, e.g.:
+
 * **shaders** (via a [`Program`](/docs/api-reference/webgl/program.md) instance)
-* **vertex attributes** (e.g. a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
 * **uniforms** these can also reference textures.
-* **shader modules** [see `Shader Modules`](/docs/api-reference/shadertools/README.md)
+* **vertex attributes** (e.g. a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
+
+In addition to exposing the functionality provided by the managed WebGL resources, `Model` also provides the following features:
+
+* Shader Module integration: [see `Shader Modules`](/docs/api-reference/shadertools/README.md)
+* Automatic creation of GPU `Buffer`s from typed array attributes
+* Detailed debug logging of draw calls
+
+Experimental Features:
+* Animation of uniforms
+* Detailed stats including timing of draw calls
 
 
 ## Usage
@@ -108,14 +120,19 @@ model.draw({
 
 The constructor for the Model class. Use this to create a new Model.
 
+The following props can only be specified on construction:
+
 * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
 * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
 * `varyings` (WebGL2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
 * `bufferMode` (WebGL2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
 * `modules` - shader modules to be applied.
-* `moduleSettings` - any uniforms needed by shader modules.
 * `program` - pre created program to use, when provided, vs, ps and modules are not used.
 * `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
+
+The following props can be updated after construction
+
+* `moduleSettings` - any uniforms needed by shader modules.
 * `isInstanced` - default value is false.
 * `instanceCount` - default value is 0.
 * `vertexCount` - when not provided will be deduced from `geometry` object.
@@ -130,6 +147,18 @@ Free WebGL resources associated with this model
 
 
 ## Methods
+
+### setProps(props : Object) : Model
+
+* `moduleSettings` - any uniforms needed by shader modules.
+* `isInstanced` - default value is false.
+* `instanceCount` - default value is 0.
+* `vertexCount` - when not provided will be deduced from `geometry` object.
+* `uniforms` - uniform values to be used for drawing.
+* `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
+* `onBeforeRender` - function to be called before every time this model is drawn.
+* `onAfterRender` - function to be called after every time this model is drawn.
+
 
 ### getNeedsRedraw() : Boolean
 
@@ -228,9 +257,16 @@ model.draw({
 });
 ```
 
+`Model.draw()` calls `Program.draw()` but adds and extends the available parameters as follows:
+
 * `moduleSettings`=`null` (Object) - any uniforms needed by shader modules.
+* `attributes`=`{}` (Object) - attribute definitions to be used for drawing. In additions to `Buffer` and constant values, `Model`s can also accept typed arrays and attribute descriptor objects which it converts to buffers.
+* `uniforms`=`{}` (Object) - uniform values to be used for drawing. In addition to normal uniform values, `Model` can also accept function valued uniforms which will be evaluated before every draw call.
+* `animationProps` (Object) - if any function valued uniforms are set on the `Model`, `animationProps` must be provided to the draw call. The `animationProps` are passed as parameter to the uniform functions.
+
+The remaining draw options are passed directly to `Program.draw()`:
+
 * `uniforms`=`{}` (Object) - uniform values to be used for drawing.
-* `attributes`=`{}` (Object) - attribute definitions to be used for drawing.
 * `samplers`=`{}` (Object) - texture mappings to be used for drawing.
 * `parameters`=`{}` (Object) - temporary gl settings to be applied to this draw call.
 * `framebuffer`=`null` (`Framebuffer`) - if provided, renders into the supplied framebuffer, otherwise renders to the default framebuffer.
@@ -240,7 +276,7 @@ model.draw({
 
 ### transform(options : Object) : Model
 
-Renders the model with provided uniforms, attributes and samplers, with rasterization turned off.
+Renders the model with provided uniforms, attributes and samplers. Basically calls `Program.draw()` with rasterization turned off.
 
 ```js
 model.transform({

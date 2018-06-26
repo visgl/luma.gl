@@ -14,31 +14,32 @@ single GPU draw call using instanced vertex attributes.
 const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-function makeInstancedCube(gl) {
-  let offsets = [];
-  for (let i = 0; i < SIDE; i++) {
-    const x = (-SIDE + 1) * 3 / 2 + i * 3;
-    for (let j = 0; j < SIDE; j++) {
-      const y = (-SIDE + 1) * 3 / 2 + j * 3;
-      offsets.push(x, y);
+class InstancedCube extends Cube {
+
+  constructor(gl, props) {
+    let offsets = [];
+    for (let i = 0; i < SIDE; i++) {
+      const x = (-SIDE + 1) * 3 / 2 + i * 3;
+      for (let j = 0; j < SIDE; j++) {
+        const y = (-SIDE + 1) * 3 / 2 + j * 3;
+        offsets.push(x, y);
+      }
     }
-  }
-  offsets = new Float32Array(offsets);
+    offsets = new Float32Array(offsets);
 
-  const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
-  for (let i = 0; i < SIDE; i++) {
-    for (let j = 0; j < SIDE; j++) {
-      pickingColors[(i * SIDE + j) * 2 + 0] = i;
-      pickingColors[(i * SIDE + j) * 2 + 1] = j;
+    const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
+    for (let i = 0; i < SIDE; i++) {
+      for (let j = 0; j < SIDE; j++) {
+        pickingColors[(i * SIDE + j) * 2 + 0] = i;
+        pickingColors[(i * SIDE + j) * 2 + 1] = j;
+      }
     }
-  }
 
-  const colors = new Float32Array(SIDE * SIDE * 3).map(
-    () => Math.random() * 0.75 + 0.25
-  );
+    const colors = new Float32Array(SIDE * SIDE * 3).map(
+      () => Math.random() * 0.75 + 0.25
+    );
 
-  const {vs, fs} = {
-    vs: `\
+    const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 instanceOffsets;
@@ -65,8 +66,8 @@ void main(void) {
   vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
   gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
 }
-`,
-    fs: `\
+`;
+    const fs = `\
 precision highp float;
 
 varying vec3 color;
@@ -76,21 +77,21 @@ void main(void) {
   gl_FragColor = dirlight_filterColor(gl_FragColor);
   gl_FragColor = picking_filterColor(gl_FragColor);
 }
-`
-  };
+`;
 
-  return new Cube(gl, {
-    vs,
-    fs,
-    modules: [picking, dirlight],
-    isInstanced: 1,
-    instanceCount: SIDE * SIDE,
-    attributes: {
-      instanceOffsets: {value: offsets, size: 2, instanced: 1},
-      instanceColors: {value: colors, size: 3, instanced: 1},
-      instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
-    }
-  });
+    super(gl, Object.assign({}, props, {
+      vs,
+      fs,
+      modules: [picking, dirlight],
+      isInstanced: 1,
+      instanceCount: SIDE * SIDE,
+      attributes: {
+        instanceOffsets: {value: offsets, size: 2, instanced: 1},
+        instanceColors: {value: colors, size: 3, instanced: 1},
+        instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
+      }
+    }));
+  }
 }
 
 let pickPosition = [0, 0];
@@ -101,9 +102,17 @@ function mouseleave(e) {
   pickPosition = null;
 }
 
-const animationLoop = new AnimationLoop({
-  createFramebuffer: true,
+class AppAnimationLoop extends AnimationLoop {
+  constructor() {
+    super({createFramebuffer: true});
+  }
+
+  getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({gl}) {
+
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -114,51 +123,57 @@ const animationLoop = new AnimationLoop({
     gl.canvas.addEventListener('mousemove', mousemove);
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
-    return {
-      cube: makeInstancedCube(gl)
-    };
-  },
-  onFinalize({gl, cube}) {
-    gl.canvas.removeEventListener('mousemove', mousemove);
-    cube.delete();
-  },
-  onRender({gl, tick, aspect, cube, framebuffer, useDevicePixels}) {
-    cube.setUniforms({
-      uTime: tick * 0.1,
-      // Basic projection matrix
-      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-      // Move the eye around the plane
-      uView: new Matrix4().lookAt({
-        center: [0, 0, 0],
-        eye: [
-          Math.cos(tick * 0.005) * SIDE / 2,
-          Math.sin(tick * 0.006) * SIDE / 2,
-          (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-        ]
-      }),
-      // Rotate all the individual cubes
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    this.cube =  new InstancedCube(gl, {
+      _animationLoop: this,
+      uniforms: {
+        uTime: ({tick}) => tick * 0.1,
+        // Basic projection matrix
+        uProjection: ({aspect}) =>
+          new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+        // Move the eye around the plane
+        uView: ({tick}) => new Matrix4().lookAt({
+          center: [0, 0, 0],
+          eye: [
+            Math.cos(tick * 0.005) * SIDE / 2,
+            Math.sin(tick * 0.006) * SIDE / 2,
+            (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
+          ]
+        }),
+        // Rotate all the individual cubes
+        uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+      }
     });
+  }
 
+  onRender(animationProps) {
+    const {gl, framebuffer, useDevicePixels} = animationProps;
+
+    // "Pick" the cube under the mouse
     const pickInfo = pickPosition && pickModels(gl, {
-      models: [cube],
+      models: [this.cube],
       position: pickPosition,
       useDevicePixels,
       framebuffer
     });
 
+    // Highlight it
     const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
-
-    cube.updateModuleSettings({
+    this.cube.updateModuleSettings({
       pickingSelectedColor
     });
 
+    // Draw the cubes
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-    cube.draw();
+    this.cube.draw();
   }
-});
 
-animationLoop.getInfo = () => INFO_HTML;
+  onFinalize({gl}) {
+    gl.canvas.removeEventListener('mousemove', mousemove);
+    this.cube.delete();
+  }
+}
+
+const animationLoop = new AppAnimationLoop();
 
 export default animationLoop;
 
