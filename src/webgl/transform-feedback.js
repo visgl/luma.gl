@@ -16,8 +16,6 @@ export default class TransformFeedback extends Resource {
     assertWebGL2Context(gl);
     super(gl, props);
 
-    this._bound = false;
-
     this.initialize(props);
     this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);
     Object.seal(this);
@@ -95,29 +93,6 @@ export default class TransformFeedback extends Resource {
     return this;
   }
 
-  bind(funcOrHandle = this.handle) {
-    if (typeof funcOrHandle !== 'function') {
-      this.bindTransformFeedback(funcOrHandle);
-      return this;
-    }
-
-    let value;
-
-    if (!this._bound) {
-      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
-      this._bound = true;
-
-      value = funcOrHandle();
-
-      this._bound = false;
-      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
-    } else {
-      value = funcOrHandle();
-    }
-
-    return value;
-  }
-
   // PRIVATE METHODS
 
   _getVaryingInfo(locationOrName) {
@@ -168,5 +143,9 @@ export default class TransformFeedback extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTransformFeedback(this.handle);
+  }
+
+  _bindHandle(handle) {
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
   }
 }
