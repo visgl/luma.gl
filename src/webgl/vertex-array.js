@@ -4,6 +4,7 @@ import Resource from './resource';
 import Accessor from './accessor';
 import Buffer from './buffer';
 import {isWebGL2} from '../webgl-utils';
+import {glKey} from '../webgl-utils/constants-to-keys';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';
 import {log, formatValue, assert} from '../utils';
 
@@ -58,8 +59,7 @@ export default class VertexArray extends Resource {
     this.unused = null;
     this.drawParams = null;
 
-    // State
-    this._bound = false;
+    this.dummyBuffer = new Buffer(gl, new Float32Array([0, 0, 0, 0]));
 
     this.stubRemovedMethods('VertexArray', 'v6.0', [
       'setBuffers',
@@ -119,6 +119,20 @@ export default class VertexArray extends Resource {
 
   // Resets all attributes (to default valued constants)
   reset(clear = true, disableZero = false) {
+    if (clear) {
+      this._unbindBuffers(disableZero);
+      this.bind(() => {
+        // Clear elements buffer
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
+      });
+
+      for (let i = 0; i < this.MAX_ATTRIBUTES; i++) {
+        if (i > 0 || disableZero) {
+          this.setConstant(i, [0, 0, 0, 1]); // match assumed WebGL defaults
+        }
+      }
+    }
+
     this.elements = null;
     this.values = new Array(this.MAX_VERTEX_ATTRIBS).fill(null);
     this.infos = new Array(this.MAX_VERTEX_ATTRIBS).fill({});
@@ -133,19 +147,6 @@ export default class VertexArray extends Resource {
       isIndexed: false,
       indexType: null
     };
-
-    if (clear) {
-      this.bind(() => {
-        // Clear elements buffer
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
-        // Clear attributes
-        for (let i = 0; i < this.MAX_ATTRIBUTES; i++) {
-          if (i > 0 || disableZero) {
-            this.setConstant(i, [0, 0, 0, 1]); // match assumed WebGL defaults
-          }
-        }
-      });
-    }
 
     return this;
   }
@@ -296,29 +297,6 @@ export default class VertexArray extends Resource {
     return this;
   }
 
-  bind(funcOrHandle = this.handle) {
-    if (typeof funcOrHandle !== 'function') {
-      this.gl.bindVertexArray(funcOrHandle);
-      return this;
-    }
-
-    let value;
-
-    if (!this._bound) {
-      this.gl.bindVertexArray(this.handle);
-      this._bound = true;
-
-      value = funcOrHandle();
-
-      this._bound = false;
-      this.gl.bindVertexArray(null);
-    } else {
-      value = funcOrHandle();
-    }
-
-    return value;
-  }
-
   // PRIVATE
 
   getAttributeInfo(attributeName) {
@@ -394,6 +372,39 @@ export default class VertexArray extends Resource {
     }
   }
 
+  // Workaround for Chrome issue, unbind temporarily to avoid conflicting with TransformFeednack
+  unbindBuffers(func) {
+    this._unbindBuffers();
+    try {
+      func();
+    } finally {
+      this._bindBuffers();
+    }
+  }
+
+  _unbindBuffers(disableZero = true) {
+    this.bind(() => {
+      for (const location in this.values) {
+        if (this.values[location] instanceof Buffer) {
+          this.gl.disableVertexAttribArray(location);
+          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.dummyBuffer.handle);
+          this.gl.vertexAttribPointer(location, 1, this.gl.FLOAT, false, 0, 0);
+        }
+      }
+    });
+  }
+
+  _bindBuffers(disableZero = true) {
+    this.bind(() => {
+      for (const location in this.values) {
+        const buffer = this.values[location];
+        if (buffer instanceof Buffer) {
+          this.setBuffer(location, buffer);
+        }
+      }
+    });
+  }
+
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
@@ -406,6 +417,14 @@ export default class VertexArray extends Resource {
     // return [this.elements, ...this.buffers];
   }
 
+  _bindHandle(handle) {
+    this.gl.bindVertexArray(handle);
+  }
+
+  _bind(handle) {
+    this.gl.bindVertexArray(handle);
+  }
+
   // Generic getter for information about a vertex attribute at a given position
   _getParameter(pname, {location}) {
     assert(Number.isFinite(location));
@@ -415,10 +434,6 @@ export default class VertexArray extends Resource {
       default: return this.gl.getVertexAttrib(location, pname);
       }
     });
-  }
-
-  _bind(handle) {
-    this.gl.bindVertexArray(handle);
   }
 
   _getDebugTable({header = 'Attributes'} = {}) {
@@ -466,10 +481,10 @@ export default class VertexArray extends Resource {
 
   /* eslint-disable max-statements */
   _getDebugTableRow(attribute, accessor, header) {
+    const {gl} = this;
     // const round = xnum => Math.round(num * 10) / 10;
 
     let type = 'NOT PROVIDED';
-    let instanced = 0;
     let size = 'N/A';
     let verts = 'N/A';
     let bytes = 'N/A';
@@ -478,22 +493,19 @@ export default class VertexArray extends Resource {
     let marker;
     let value;
 
+    if (accessor) {
+      type = accessor.type;
+      size = accessor.size;
+
+      // Generate a type name by dropping Array from Float32Array etc.
+      type = String(type).replace('Array', '');
+
+      // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
+      isInteger = type.indexOf('nt') !== -1;
+    }
+
     if (attribute instanceof Buffer) {
       const buffer = attribute;
-
-      if (accessor) {
-        type = accessor.type;
-        instanced = accessor.divisor > 0;
-        size = accessor.size;
-
-        // Generate a type name by dropping Array from Float32Array etc.
-        type = String(type).replace('Array', '');
-        // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
-        isInteger = type.indexOf('nt') !== -1;
-      } else {
-        // element buffer
-        isInteger = true;
-      }
 
       const {data, modified} = buffer.getDebugData();
       marker = modified ? '*' : '';
@@ -501,12 +513,37 @@ export default class VertexArray extends Resource {
       value = data;
       bytes = buffer.bytes;
       verts = bytes / data.BYTES_PER_ELEMENT / size;
+
+      let format;
+
+      if (accessor) {
+        const instanced = accessor.divisor > 0;
+        format = `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes} bytes ${glKey(gl, type)})`;
+      } else {
+        // element buffer
+        isInteger = true;
+        format = `${bytes} bytes`;
+      }
+
+      return {
+        [header]: `${marker}${formatValue(value, {size, isInteger})}`,
+        'Format ': format
+      };
     }
 
+    // CONSTANT VALUE
+    value = attribute;
+    size = attribute.length;
+    // Generate a type name by dropping Array from Float32Array etc.
+    type = String(attribute.constructor.name).replace('Array', '');
+    // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
+    isInteger = type.indexOf('nt') !== -1;
+
     return {
-      [header]: `${marker}${formatValue(value, {size, isInteger})}`,
-      'Format ': `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes}bytes ${type})`
+      [header]: `${formatValue(value, {size, isInteger})} (constant)`,
+      'Format ': `${size}x${type} (constant)`
     };
+
   }
   /* eslint-ensable max-statements */
 }

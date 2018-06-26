@@ -77,6 +77,10 @@ export default class Model extends Object3D {
       profileFrameCount: 0
     };
 
+    // picking options
+    this.pickable = true;
+    // this.pick = pick || (() => false);
+
     this.setProps(props);
 
     // Make sure we have some reasonable default uniforms in place
@@ -91,9 +95,6 @@ export default class Model extends Object3D {
     // geometry might have set drawMode and vertexCount
     this.isInstanced = props.isInstanced || props.instanced;
 
-    // picking options
-    this.pickable = Boolean(props.pickable);
-    // this.pick = pick || (() => false);
 
     this.onBeforeRender = props.onBeforeRender || (() => {});
     this.onAfterRender = props.onAfterRender || (() => {});
@@ -127,6 +128,10 @@ export default class Model extends Object3D {
     }
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms, props.samplers);
+    }
+
+    if ('pickable' in props) {
+      this.pickable = props.pickable;
     }
 
     // Experimental props
@@ -337,7 +342,7 @@ export default class Model extends Object3D {
 
     this.setNeedsRedraw(false);
 
-    this._logDrawCallEnd(logPriority, this.vertexArray, this.uniforms, framebuffer);
+    this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
 
     return this;
   }
@@ -614,14 +619,14 @@ count: ${this.stats.profileFrameCount}`
     const {table: uniformTable, unusedTable, unusedCount} = getUniformsTable({
       header: `${this.id} uniforms`,
       program: this.program,
-      uniforms: Object.assign({}, this.uniforms, uniforms)
+      uniforms: Object.assign({}, this.program.uniforms, uniforms)
     });
 
     // log missing uniforms
     const {table: missingTable, count: missingCount} = getUniformsTable({
       header: `${this.id} uniforms`,
       program: this.program,
-      uniforms: Object.assign({}, this.uniforms, uniforms),
+      uniforms: Object.assign({}, this.program.uniforms, uniforms),
       undefinedOnly: true
     });
 

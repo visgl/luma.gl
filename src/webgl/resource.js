@@ -21,6 +21,7 @@ export default class Resource {
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this.opts = opts;
+    this._bound = false;
 
     // Set the handle
     // If handle was provided, use it, otherwise create a new handle
@@ -68,6 +69,29 @@ export default class Resource {
     }
 
     return this;
+  }
+
+  bind(funcOrHandle = this.handle) {
+    if (typeof funcOrHandle !== 'function') {
+      this._bindHandle(funcOrHandle);
+      return this;
+    }
+
+    let value;
+
+    if (!this._bound) {
+      this._bindHandle(this.handle);
+      this._bound = true;
+
+      value = funcOrHandle();
+
+      this._bound = false;
+      this._bindHandle(null);
+    } else {
+      value = funcOrHandle();
+    }
+
+    return value;
   }
 
   unbind() {
@@ -219,6 +243,10 @@ http://uber.github.io/luma.gl/#/documentation/overview/upgrade-guide`;
   }
 
   _deleteHandle() {
+    throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
+  }
+
+  _bindHandle() {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 

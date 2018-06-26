@@ -9,7 +9,7 @@ const CONFIG = {
   },
 
   plugins: [
-    new HtmlWebpackPlugin({title: 'Cubemap'})
+    new HtmlWebpackPlugin({title: 'Instancing'})
   ]
 };
 
