@@ -298,7 +298,7 @@ export default class VertexArray extends Resource {
 
   bind(funcOrHandle = this.handle) {
     if (typeof funcOrHandle !== 'function') {
-      this.bindVertexArray(funcOrHandle);
+      this.gl.bindVertexArray(funcOrHandle);
       return this;
     }
 

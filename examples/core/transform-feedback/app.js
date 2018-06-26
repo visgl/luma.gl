@@ -93,17 +93,12 @@ const animationLoop = new AnimationLoop({
       vertexCount: VERTEX_COUNT,
       attributes: {
         [POSITION_LOCATION]: buffers.vertex
-      }
-    });
-
-    transformModel.transform({
-      feedbackBuffers: {
+      },
+      _feedbackBuffers: {
         gl_Position: buffers.position,
         v_color: buffers.color
       }
     });
-
-    transformModel.delete();
 
     const renderModel = new Model(gl, {
       vs: VS_RENDER,
@@ -116,13 +111,19 @@ const animationLoop = new AnimationLoop({
       }
     });
 
+    return {
+      transformModel,
+      renderModel
+    };
+  },
+
+  onRender({gl, time, renderModel, transformModel}) {
+
+    transformModel.transform();
+
     // second pass, render to screen
     renderModel.clear({color: [0.0, 0.0, 0.0, 1.0]});
     renderModel.draw();
-
-    renderModel.delete();
-
-    return false; // Don't start animation loop
   }
 });
 
