@@ -137,7 +137,7 @@ export default class Model extends Object3D {
       }
     }
     if ('_feedbackBuffers' in props) {
-      this._setFeedbackBuffers(props.feedbackBuffers);
+      this._setFeedbackBuffers(props._feedbackBuffers);
     }
     if ('_animationProps' in props) {
       this._setAnimationProps(props._animationProps);
@@ -581,7 +581,7 @@ count: ${this.stats.profileFrameCount}`
         attribute = new Attribute(gl, descriptor);
       }
 
-      // attributes[attributeName] = attribute;
+      this._attributes[attributeName] = attribute;
       buffers[attributeName] = attribute.getValue();
     }
 

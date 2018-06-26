@@ -42,6 +42,7 @@ class InstancedCube extends Cube {
     const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;
+attribute float instanceSizes;
 attribute vec2 instanceOffsets;
 attribute vec3 instanceColors;
 attribute vec2 instancePickingColors;
@@ -64,7 +65,7 @@ void main(void) {
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
   vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
-  gl_Position = uProjection * uView * (uModel * vec4(positions, 1.0) + offset);
+  gl_Position = uProjection * uView * (uModel * vec4(positions * instanceSizes, 1.0) + offset);
 }
 `;
     const fs = `\
@@ -86,6 +87,7 @@ void main(void) {
       isInstanced: 1,
       instanceCount: SIDE * SIDE,
       attributes: {
+        instanceSizes: {value: new Float32Array([1]), size: 1, instanced: 1, isGeneric: true},
         instanceOffsets: {value: offsets, size: 2, instanced: 1},
         instanceColors: {value: colors, size: 3, instanced: 1},
         instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
