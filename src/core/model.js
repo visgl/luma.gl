@@ -95,7 +95,6 @@ export default class Model extends Object3D {
     // geometry might have set drawMode and vertexCount
     this.isInstanced = props.isInstanced || props.instanced;
 
-
     this.onBeforeRender = props.onBeforeRender || (() => {});
     this.onAfterRender = props.onAfterRender || (() => {});
 

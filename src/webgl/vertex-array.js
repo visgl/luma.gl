@@ -120,17 +120,16 @@ export default class VertexArray extends Resource {
   // Resets all attributes (to default valued constants)
   reset(clear = true, disableZero = false) {
     if (clear) {
-      this._unbindBuffers(disableZero);
+      this._unbindBuffers();
       this.bind(() => {
         // Clear elements buffer
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
-      });
-
-      for (let i = 0; i < this.MAX_ATTRIBUTES; i++) {
-        if (i > 0 || disableZero) {
-          this.setConstant(i, [0, 0, 0, 1]); // match assumed WebGL defaults
+        for (let i = 0; i < this.MAX_ATTRIBUTES; i++) {
+          if (i > 0 || disableZero) {
+            this.setConstant(i, [0, 0, 0, 1]); // match assumed WebGL defaults
+          }
         }
-      }
+      });
     }
 
     this.elements = null;
