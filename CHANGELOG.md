@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 6.0.0-alpha.5 - June 27
+- Fix buffer reuse (#582)
+
 ## 6.0.0-alpha.4 - June 27
 - `unbindModels` param in `Model.transform` and `Transform.run` (#581)
 - VertexArray.unbindBuffers(). Constant attribute logging, (#579)
