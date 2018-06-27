@@ -123,12 +123,21 @@ Reinitializes a `VertexArray`.
 Sets named uniforms from a map.
 
 ```js
-program.setAttributes({nameOrLocation: value, ....});
+program.setAttributes(attributes : Object);
 ```
 
 * `attributes` - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+
+Attributes is an object with key-value pairs: `{nameOrLocation: value, ....}`.
+
 * `nameOrLocation` - (*string|number*) The name of the attribute as declared in the shader, or the location specified by a layout qualifier in the shader.
-* `value` - (*Buffer|typed array*) An attribute value must be a `Buffer` or a typed array.
+* `value` - (*Buffer|Array|typed array*) An attribute value must be a `Buffer` or a typed array.
+
+Each value can be an a `Buffer`, an `Array` starting with a `Buffer` or a typed array.
+
+* Typed Array - Sets a constant value as if `.setConstant(value)`  was called.
+* `Buffer` - Binds the atttribute to a buffer, using buffer's accessor data as if `.setBuffer(value)` was called.
+* `Array` - Binds the atttribute to a buffer, with extra accessor data overrides. Expects a two element array with `[buffer : Buffer, accessor : Object]`. Binds the attribute to the buffer as if ` .setBuffer(buffer, accessor)` was called.
 
 
 ### setConstant(values : Array) : VertexArray

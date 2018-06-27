@@ -7,13 +7,15 @@ Date: In development, target late June 2018
 A major release that focuses on WebGL performance and code size optimizations, API cleanup, better support for shader/GLSL programming and improved documentation.
 
 
-### WebGL Optimizations
+### WebGL Improvements
 
 * **WebGL1 Browser Support Optimizations** - luma.gl focuses on providing a WebGL2 based API, and internally "translates" WebGL2-style API calls to WebGL1 calls when WebGL2 is not available. While this WebGL1 backwards compatibility is convenient, it is not completely free. Therefore, to optimize the bundle size of WebGL2-only applications, WebGL1 "polyfills" are no longer included by default. If you still want your app to support WebGL1 browsers, just import 'luma.gl/webgl1' before creating any luma.gl contexts. Also note that WebGL portability, including WebGL1 browser support, is still a core feature of luma.gl, and the WebGL1 polyfills will continue to be used and supported.
 
 * **Attribute Management Optimizations** - `VertexArray` objects are now used for all attribute management in luma.gl, resulting in improved performance and a simpler, more consistent API. The `Program` and `Model` class APIs have been updated to use `VertexArray`.
 
 * **Buffer Memory Optimizations** - The `Buffer` class no longer holds on to the complete JavaScript typed arrays used during initialization. This can lead to significant memory savings in apps that use multiple large GPU buffers initialized from typed arrays.
+
+* **Transform Feedback Improvements** - A new method `Model.transform` makes it easier to run basic transform feedback operations.
 
 
 ### API Cleanup
