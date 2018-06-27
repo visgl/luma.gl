@@ -259,7 +259,7 @@ export default class AnimationLoop {
 
     this.animationProps.width = width;
     this.animationProps.height = height;
-    this.animationProps.aspect = width / height;
+    this.animationProps.aspect = height > 0 ? width / height : 1;
     this.animationProps.needsRedraw = this.needsRedraw;
 
     // Increment tick
