@@ -721,6 +721,10 @@ export default class Framebuffer extends Resource {
   _deleteHandle() {
     this.gl.deleteFramebuffer(this.handle);
   }
+
+  _bindHandle(handle) {
+    return this.gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
+  }
 }
 
 // PUBLIC METHODS

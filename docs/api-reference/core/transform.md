@@ -142,6 +142,14 @@ Returns current destination buffer corresponding to given varying name.
 * `varyingName` (`String`) - varying name.
 
 
+### run({uniforms : Object, unbindModels : Object}) : Transform
+
+Performs one transform feedback iteration.
+
+* `uniforms`=`null` (`Object` = {}, Optional) - Sets uniforms before rendering.
+* `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feeback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+
+
 ### update(props) : Transform
 
 Updates buffer bindings with provided buffer objects for one or more source or destination buffers.
@@ -149,13 +157,6 @@ Updates buffer bindings with provided buffer objects for one or more source or d
 * `props.sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
 * `props.feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object.
 * `props.elementCount` (`Integer`, Optional) - Number set to vertex count when rendering the model. If not supplied, the previously set element count is used.
-
-
-### run(uniforms : Object) : Transform
-
-Performs one transform feedback iteration.
-
-* `uniforms` (`Object` = {}, Optional) - Sets uniforms before rendering.
 
 
 ### swapBuffers() : Transform

@@ -140,6 +140,10 @@ export default class Renderbuffer extends Resource {
     this.gl.deleteRenderbuffer(this.handle);
   }
 
+  _bindHandle(handle) {
+    this.gl.bindRenderbuffer(GL_RENDERBUFFER, handle);
+  }
+
   _syncHandle(handle) {
     this.format = this.getParameter(GL_RENDERBUFFER_INTERNAL_FORMAT);
     this.width = this.getParameter(GL_RENDERBUFFER_WIDTH);

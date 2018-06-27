@@ -93,7 +93,7 @@ Reinitializes an existing `TransformFeedback` object with new props.
 
 * `props.program`= (Object) - Gets a mapping of varying name to buffer indices from a linked program if supplied.
 * `props.buffers`=(Object) - Map of buffers to use for recording vertex shader outputs.
-* `props.bindOnUse`=`true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a strange [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+* `props.bindOnUse`=`true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
 
 Notes:
 

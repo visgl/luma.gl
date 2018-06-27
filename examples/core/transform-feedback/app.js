@@ -118,10 +118,7 @@ const animationLoop = new AnimationLoop({
   },
 
   onRender({gl, time, renderModel, transformModel}) {
-
-    renderModel.vertexArray.unbindBuffers(() => {
-      transformModel.transform();
-    });
+    transformModel.transform({unbindModels: [renderModel]});
 
     // second pass, render to screen
     renderModel.clear({color: [0.0, 0.0, 0.0, 1.0]});

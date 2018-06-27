@@ -276,18 +276,15 @@ The remaining draw options are passed directly to `Program.draw()`:
 
 ### transform(options : Object) : Model
 
-Renders the model with provided uniforms, attributes and samplers. Basically calls `Program.draw()` with rasterization turned off.
+Renders the model with provided uniforms, attributes and samplers. Calls `Program.draw()` with rasterization turned off.
+
+* `discard`=`true` (Boolean) - Turns off rasterization
+* `feedbackBuffers`=`null` (Object) - Optional map of feedback buffers. A `TransformFeedback` object will be created, initialized with these buffers, and passed to `Model.draw`.
+* `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feeback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+.
 
 ```js
 model.transform({
-  moduleSettings = null,
-  uniforms = {},
-  attributes = {},
-  samplers = {},
-  parameters = {},
-  settings,
-  framebuffer = null,
-  vertexArray = null,
-  transformFeedback = null
+  discard:
 });
 ```
