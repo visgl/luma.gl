@@ -3,7 +3,9 @@ import {setPathPrefix} from 'luma.gl';
 
 /* eslint-enable max-len */
 
-import {
+window.website = true;
+
+const {
   InstancingDemo,
   CubemapDemo,
   //  CustomPickingDemo,
@@ -29,7 +31,7 @@ import {
   Lesson12Demo,
   Lesson13Demo,
   Lesson16Demo
-} from './react-demos';
+} = require('./react-demos');
 
 const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
@@ -346,12 +348,8 @@ export default [
             markdown: require('../../docs/api-reference/webgl/shader.md')
           },
           {
-            name: 'Shader Modules',
-            markdown: require('../../docs/api-reference/shadertools/README.md')
-          },
-          {
             name: 'Shader Module:picking',
-            markdown: require('../../docs/api-reference/shadertools/shadertools-picking.md')
+            markdown: require('../../docs/api-reference/shadertools/shader-module-picking.md')
           },
           {
             name: 'Texture',

@@ -1,4 +1,3 @@
-import 'luma.gl/debug';
 import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
