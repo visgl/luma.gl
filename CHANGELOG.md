@@ -1,5 +1,12 @@
 # Pre-releases
 
+## 6.0.0-alpha.4 - June 27
+- `unbindModels` param in `Model.transform` and `Transform.run` (#581)
+- VertexArray.unbindBuffers(). Constant attribute logging, (#579)
+- Fix ocular website (#580)
+- various bug minor fixes (#578)
+- Uniform animation (experimental) (#575
+
 ## 6.0.0-alpha.3 - June 25
 - Fixes for deck.gl (#577)
 
