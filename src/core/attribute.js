@@ -98,8 +98,7 @@ export default class Attribute {
   getValue() {
     const buffer = this.externalBuffer || this.buffer;
     if (buffer) {
-      buffer.accessor.update(this);
-      return buffer;
+      return [buffer, this];
     }
     if (this.isGeneric) {
       return this.value;

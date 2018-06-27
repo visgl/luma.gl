@@ -145,7 +145,11 @@ export default class VertexArray extends Resource {
     this.bind(() => {
       for (const locationOrName in attributes) {
         const value = attributes[locationOrName];
-        if (value instanceof Buffer) {
+        if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
+          const buffer = value[0];
+          const accessor = value[1];
+          this.setBuffer(locationOrName, buffer, accessor);
+        } else if (value instanceof Buffer) {
           this.setBuffer(locationOrName, value);
         } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
           this.setConstant(locationOrName, value);
