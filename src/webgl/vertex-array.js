@@ -59,8 +59,6 @@ export default class VertexArray extends Resource {
     this.unused = null;
     this.drawParams = null;
 
-    this.dummyBuffer = new Buffer(gl, new Float32Array([0, 0, 0, 0]));
-
     this.stubRemovedMethods('VertexArray', 'v6.0', [
       'setBuffers',
       'setGeneric',
@@ -383,13 +381,18 @@ export default class VertexArray extends Resource {
 
   _unbindBuffers(disableZero = true) {
     this.bind(() => {
+      // No clear way to set a buffer to null, so create a minimal "dummy buffer"
+      const dummyBuffer = new Buffer(this.gl, {size: 4});
+
       for (const location in this.values) {
         if (this.values[location] instanceof Buffer) {
           this.gl.disableVertexAttribArray(location);
-          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.dummyBuffer.handle);
+          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, dummyBuffer.handle);
           this.gl.vertexAttribPointer(location, 1, this.gl.FLOAT, false, 0, 0);
         }
       }
+
+      dummyBuffer.delete();
     });
   }
 
