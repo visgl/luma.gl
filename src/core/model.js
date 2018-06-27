@@ -351,7 +351,8 @@ export default class Model extends Object3D {
   transform(opts = {}) {
     const {
       discard = true,
-      feedbackBuffers
+      feedbackBuffers,
+      unbindModels = []
     } = opts;
 
     let {
@@ -366,7 +367,14 @@ export default class Model extends Object3D {
       parameters = Object.assign({}, parameters, {[GL.RASTERIZER_DISCARD]: discard});
     }
 
-    return this.draw(Object.assign({}, opts, {parameters}));
+    unbindModels.forEach(model => model.vertexArray.unbindBuffers());
+    try {
+      this.draw(Object.assign({}, opts, {parameters}));
+    } finally {
+      unbindModels.forEach(model => model.vertexArray.bindBuffers());
+    }
+
+    return this;
   }
 
   // DEPRECATED METHODS

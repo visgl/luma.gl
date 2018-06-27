@@ -1,3 +1,5 @@
+> These docs are work in progress
+
 # Vertex Attributes
 
 WebGL provides an API to manipulate the global "vertex attributes array", which is where vertex data is staged for vertex shader execution. This API is somewhat hard to learn for OpenGL newcomers so luma.gl provides this thin wrapper module to simplify its use.

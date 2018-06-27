@@ -1,4 +1,4 @@
-# Buffers
+# About WebGL Binding Points
 
 This section can be skipped as the luma.gl API will handle binding (and unbinding) of buffers to the appropriate "targets". Still it can be good to have some understanding of buffer binding points as these feature prominently in the WebGL API.
 

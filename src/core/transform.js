@@ -48,12 +48,13 @@ export default class Transform {
   }
 
   // Run one transform feedback loop.
-  run({uniforms = {}} = {}) {
+  run({uniforms = {}, unbindModels = []} = {}) {
     this.model.setAttributes(this.sourceBuffers[this.currentIndex]);
-    this.model.draw({
+    this.model.transform({
       transformFeedback: this.transformFeedbacks[this.currentIndex],
       parameters: {[GL.RASTERIZER_DISCARD]: true},
-      uniforms
+      uniforms,
+      unbindModels
     });
   }
 

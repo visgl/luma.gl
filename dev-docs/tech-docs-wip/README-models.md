@@ -1,3 +1,5 @@
+> These docs are work in progress
+
 # Geometry Module
 
 A geometry holds a set of attributes (native JavaScript arrays)

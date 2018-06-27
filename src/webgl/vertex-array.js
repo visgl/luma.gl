@@ -58,6 +58,7 @@ export default class VertexArray extends Resource {
     this.accessors = null;
     this.unused = null;
     this.drawParams = null;
+    this.unbindBuffer = null; // Created when unbinding buffers
 
     this.stubRemovedMethods('VertexArray', 'v6.0', [
       'setBuffers',
@@ -74,26 +75,15 @@ export default class VertexArray extends Resource {
     Object.seal(this);
   }
 
+  delete() {
+    super.delete();
+    if (this.unbindBuffer) {
+      this.unbindBuffer.delete();
+    }
+  }
+
   get MAX_ATTRIBUTES() {
     return VertexArray.getMaxAttributes(this.gl);
-  }
-
-  getLocation(location) {
-    return this.configuration ? this.configuration.getLocation(location) : location;
-  }
-
-  _initialize(props = {}) {
-    this.reset(false);
-
-    this.configuration = null;
-    this.bindOnUse = false;
-
-    // Unbind any currently bound buffers
-    // if (!isObjectEmpty(this.buffers)) {
-    //   this.bind(() => this._unbindBuffers());
-    // }
-
-    return this.setProps(props);
   }
 
   setProps(props) {
@@ -198,7 +188,7 @@ export default class VertexArray extends Resource {
       return this.setElements(buffer);
     }
 
-    const location = this.getAttributeIndex(locationOrName);
+    const location = this._getAttributeIndex(locationOrName);
     if (location < 0) {
       this.unused[locationOrName] = buffer;
       log.warn(() => `${this.id} unused buffer attribute ${locationOrName}`)();
@@ -206,7 +196,7 @@ export default class VertexArray extends Resource {
     }
 
     this.bind(() => {
-      const accessInfo = this.getAttributeInfo(locationOrName, buffer, opts);
+      const accessInfo = this._getAttributeInfo(locationOrName, buffer, opts);
       const name = accessInfo ? accessInfo.name : String(location);
 
       // Override with any additional attribute configuration params
@@ -248,7 +238,7 @@ export default class VertexArray extends Resource {
   // TODO - handle single values for size 1 attributes?
   // TODO - convert classic arrays based on known type?
   setConstant(locationOrName, arrayValue, opts) {
-    const accessInfo = this.getAttributeInfo(locationOrName, arrayValue, opts);
+    const accessInfo = this._getAttributeInfo(locationOrName, arrayValue, opts);
     if (!accessInfo) {
       this.unused[locationOrName] = arrayValue;
       log.warn(() => `${this.id} unused constant attribute ${locationOrName}`)();
@@ -296,11 +286,11 @@ export default class VertexArray extends Resource {
 
   // PRIVATE
 
-  getAttributeInfo(attributeName) {
+  _getAttributeInfo(attributeName) {
     return this.configuration && this.configuration.getAttributeInfo(attributeName);
   }
 
-  getAttributeIndex(locationOrName) {
+  _getAttributeIndex(locationOrName) {
     if (this.configuration) {
       return this.configuration.getLocation(locationOrName);
     }
@@ -311,27 +301,11 @@ export default class VertexArray extends Resource {
     return -1;
   }
 
-  // Currently just checks that elements is not duplicated
-  _checkAttributes(attributes) {
-    let elements = null;
-
-    for (const bufferName in attributes) {
-      const buffer = attributes[bufferName];
-      // Check if this is an elements array
-      if (buffer && buffer.target === GL_ELEMENT_ARRAY_BUFFER) {
-        assert(!elements, 'Duplicate GL.ELEMENT_ARRAY_BUFFER');
-        // assert(location === undefined, 'GL.ELEMENT_ARRAY_BUFFER assigned to location');
-        elements = buffer;
-      }
-
-      const accessInfo = this.getAttributeInfo(bufferName, buffer);
-      if (accessInfo.location === undefined) {
-        // Check if this is an elements array
-        log.warn(`${bufferName} not used`)();
-      }
-    }
-
-    return elements;
+  _initialize(props = {}) {
+    this.reset(false);
+    this.configuration = null;
+    this.bindOnUse = false;
+    return this.setProps(props);
   }
 
   _setConstantFloatArray(location, array) {
@@ -370,33 +344,24 @@ export default class VertexArray extends Resource {
   }
 
   // Workaround for Chrome issue, unbind temporarily to avoid conflicting with TransformFeednack
-  unbindBuffers(func) {
-    this._unbindBuffers();
-    try {
-      func();
-    } finally {
-      this._bindBuffers();
-    }
-  }
-
-  _unbindBuffers(disableZero = true) {
+  unbindBuffers(disableZero = true) {
     this.bind(() => {
       // No clear way to set a buffer to null, so create a minimal "dummy buffer"
-      const dummyBuffer = new Buffer(this.gl, {size: 4});
+      // Save it to avoid inflating buffer creation statistics
+      this.unbindBuffer = this.unbindBuffer || new Buffer(this.gl, {size: 4});
 
       for (const location in this.values) {
         if (this.values[location] instanceof Buffer) {
           this.gl.disableVertexAttribArray(location);
-          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, dummyBuffer.handle);
+          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.unbindBuffer.handle);
           this.gl.vertexAttribPointer(location, 1, this.gl.FLOAT, false, 0, 0);
         }
       }
-
-      dummyBuffer.delete();
     });
   }
 
-  _bindBuffers(disableZero = true) {
+  // Workaround for Chrome issue, rebind after temporary unbind
+  bindBuffers() {
     this.bind(() => {
       for (const location in this.values) {
         const buffer = this.values[location];
@@ -456,7 +421,7 @@ export default class VertexArray extends Resource {
     const attributes = this.values;
 
     for (const attributeName in attributes) {
-      const info = this.getAttributeInfo(attributeName);
+      const info = this._getAttributeInfo(attributeName);
       if (info) {
         let rowHeader = `${attributeName}: ${info.name}`;
         const accessor = this.accessors[info.location];
@@ -470,13 +435,6 @@ export default class VertexArray extends Resource {
           this._getDebugTableRow(attributes[attributeName], accessor, header);
       }
     }
-
-    // Add any unused attributes
-    // for (const attributeName in attributes) {
-    //   if (!table[attributeName]) {
-    //     table[attributeName] = this._getDebugTableRow(attributes[attributeName], null, header);
-    //   }
-    // }
 
     return table;
   }
