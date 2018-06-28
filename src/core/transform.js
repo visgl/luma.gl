@@ -129,12 +129,19 @@ export default class Transform {
       feedbackMap = feedbackMap || sourceDestinationMap;
     }
 
-    assert(sourceBuffers && vs && Array.isArray(varyings) && elementCount >= 0);
+    assert(sourceBuffers && vs && elementCount >= 0);
     // If feedbackBuffers are not provided, sourceDestinationMap must be provided
     // to create destinaitonBuffers with layout of corresponding source buffer.
     assert(feedbackBuffers || feedbackMap, ' Transform needs feedbackBuffers or feedbackMap');
     for (const bufferName in feedbackBuffers || {}) {
       assert(feedbackBuffers[bufferName] instanceof Buffer);
+    }
+
+    // If varyings are not provided feedbackMap must be provided to build varyings
+    assert(Array.isArray(varyings) || feedbackMap);
+    let varyingsArray = varyings;
+    if (!Array.isArray(varyings)) {
+      varyingsArray = Object.values(feedbackMap);
     }
 
     if (feedbackMap) {
@@ -143,7 +150,7 @@ export default class Transform {
     }
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
-    this._buildModel({id, vs, varyings, drawMode, elementCount});
+    this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
   }
 
   // setup source and destination buffers

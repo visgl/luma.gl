@@ -202,7 +202,6 @@ const animationLoop = new AnimationLoop({
 
     const transform = new Transform(gl, {
       vs: EMIT_VS,
-      varyings: ['v_offset', 'v_rotation'],
       elementCount: NUM_INSTANCES,
       sourceBuffers: {
         a_offset: offsetBuffer,
