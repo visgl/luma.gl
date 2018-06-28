@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 6.0.0-alpha.6 - June 27
+- Fix constant attribute bug (#584)
+
 ## 6.0.0-alpha.5 - June 27
 - Fix buffer reuse (#582)
 
