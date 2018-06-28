@@ -51,7 +51,7 @@ export default class Attribute {
       integer = this.integer || false,
       instanced = this.instanced || 0,
 
-      isGeneric = this.isGeneric || false,
+      constant = this.constant || false,
       isInstanced
     } = opts;
 
@@ -60,7 +60,7 @@ export default class Attribute {
     this.stride = stride;
     this.normalized = normalized;
     this.integer = integer;
-    this.isGeneric = isGeneric;
+    this.constant = constant;
 
     if (isInstanced !== undefined) {
       this.instanced = isInstanced ? 1 : 0;
@@ -70,6 +70,8 @@ export default class Attribute {
 
     if (buffer) {
       this.externalBuffer = buffer;
+      this.constant = false;
+
       this.type = buffer.accessor.type;
       if (buffer.accessor.divisor !== undefined) {
         this.instanced = buffer.accessor.divisor > 0;
@@ -78,7 +80,7 @@ export default class Attribute {
       this.externalBuffer = null;
       this.value = value;
 
-      if (!isGeneric) {
+      if (!constant) {
         // Create buffer if needed
         this.buffer = this.buffer ||
           new Buffer(this.gl, Object.assign({}, opts, {target: this.target, type: this.type}));
@@ -89,19 +91,19 @@ export default class Attribute {
   }
 
   getBuffer() {
-    if (this.isGeneric) {
+    if (this.constant) {
       return null;
     }
     return this.externalBuffer || this.buffer;
   }
 
   getValue() {
+    if (this.constant) {
+      return this.value;
+    }
     const buffer = this.externalBuffer || this.buffer;
     if (buffer) {
       return [buffer, this];
-    }
-    if (this.isGeneric) {
-      return this.value;
     }
     return null;
   }

@@ -37,13 +37,15 @@ The constructor for the Attribute class. Use this to create a new Attribute.
 * `id` (*string*, optional) - Identifier of the attribute. Cannot be updated.
 * `type` (*GLenum*, optional) - Type of the attribute. If not supplied will be inferred from `value`. Cannot be updated.
 * `isIndexed` (*bool*, optional) - If the attribute is element index. Default `false`. Cannot be updated.
-* `isGeneric` (*bool*, optional) - If the attribute is generic. Default `false`.
+* `constant` (*bool*, optional) - If the attribute is a constant. Default `false`.
 * `isInstanced` (*bool*, optional) - Whether buffer contains instance data. Default `false`.
 * `normalized` (*boolean*, optional) - Default `false`
 * `integer` (*boolean*, optional) - Default `false`
 * `offset` (*number*, optional) - where the data starts in the buffer. Default `0`.
 * `stride` (*number*, optional) - an additional offset between each element in the buffer. Default `0`.
 * `value` (*TypedArray*) - value of the attribute.
+    - If `constant` is `true`, the length of `value` should match `size`
+    - If `constant` is `false`, the length of `value` should be `size` multiplies the number of vertices.
 * `buffer` (*Buffer*) - an external buffer for the attribute.
 
 

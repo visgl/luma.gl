@@ -586,7 +586,7 @@ count: ${this.stats.profileFrameCount}`
         attribute = attribute || new Attribute(gl, Object.assign({}, descriptor.layout, {
           id: attributeName
         }));
-        attribute.update({isGeneric: false, buffer: descriptor});
+        attribute.update({buffer: descriptor});
       } else if (attribute) {
         attribute.update(descriptor);
       } else {
