@@ -38,4 +38,4 @@ export {
 
 export {getKeyValue, getKey, getKeyType} from './constants-to-keys';
 
-export {getVersion} from './shader-utils';
+export {getShaderVersion} from './shader-utils';

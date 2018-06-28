@@ -2,7 +2,7 @@ import GL from '../constants';
 import Model from './model';
 import Buffer from '../webgl/buffer';
 import TransformFeedback from '../webgl/transform-feedback';
-import {isWebGL2, assertWebGL2Context, getVersion} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context, getShaderVersion} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log} from '../utils';
 
@@ -140,7 +140,7 @@ export default class Transform {
       assert(feedbackBuffers[bufferName] instanceof Buffer);
     }
 
-    // If varyings are not provided feedbackMap must be provided to build varyings
+    // If varyings are not provided feedbackMap must be provided to deduce varyings
     assert(Array.isArray(varyings) || feedbackMap);
     let varyingsArray = varyings;
     if (!Array.isArray(varyings)) {
@@ -191,7 +191,8 @@ export default class Transform {
 
   // build Model and TransformFeedback objects
   _buildModel({id, vs, varyings, drawMode, elementCount}) {
-    const fs = getEmptyFragmentShader(vs);
+    // use a minimal fragment shader with matching version of vertex shader.
+    const fs = getShaderVersion(vs) === 300 ? FS300 : FS100;
 
     this.model = new Model(this.gl, {
       id,
@@ -214,18 +215,4 @@ export default class Transform {
       });
     }
   }
-}
-
-// Helper METHODS
-
-// Return a minimal fragment shader to make program compile when only vertex shader specified
-function getEmptyFragmentShader(vs) {
-  let fs = FS100;
-
-  // Check vertex shader version and return matching fragment shader to ensure linking succeeds
-  if (getVersion(vs) === 300) {
-    fs = FS300;
-  }
-
-  return fs;
 }

@@ -1,6 +1,6 @@
 
 // returns GLSL shader version of given shader string
-export function getVersion(source) {
+export function getShaderVersion(source) {
   let version = 100;
   const words = source.match(/[^\s]+/g);
   if (words.length >= 2 && words[0] === '#version') {

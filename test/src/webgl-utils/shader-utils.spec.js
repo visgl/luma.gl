@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {getVersion} from 'luma.gl/webgl-utils/shader-utils';
+import {getShaderVersion} from 'luma.gl/webgl-utils/shader-utils';
 
 const SHADER1 = 'void main() {}';
 const SHADER2 = '#version 100 void main() {}';
@@ -32,9 +32,9 @@ const versionTests = {
   [SHADER7]: 300
 };
 
-test('Shader-utils#getVersion', t => {
+test('Shader-utils#getShaderVersion', t => {
   for (const string in versionTests) {
-    t.equal(getVersion(string), versionTests[string], 'Version should match');
+    t.equal(getShaderVersion(string), versionTests[string], 'Version should match');
   }
   t.end();
 });
