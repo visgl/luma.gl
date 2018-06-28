@@ -96,12 +96,12 @@ export default class Attribute {
   }
 
   getValue() {
+    if (this.isGeneric) {
+      return this.value;
+    }
     const buffer = this.externalBuffer || this.buffer;
     if (buffer) {
       return [buffer, this];
-    }
-    if (this.isGeneric) {
-      return this.value;
     }
     return null;
   }

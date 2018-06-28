@@ -79,3 +79,24 @@ test('WebGL#Attribute getBuffer', t => {
 
   t.end();
 });
+
+test('WebGL#Attribute getValue', t => {
+  const {gl} = fixture;
+
+  const attribute = new Attribute(gl, {size: 4, value: value1});
+  t.is(attribute.getValue()[0], attribute.buffer, 'getValue returns own buffer');
+
+  const buffer = new Buffer(gl, {data: value1});
+  attribute.update({buffer});
+  t.is(attribute.getValue()[0], buffer, 'getValue returns user supplied buffer');
+
+  attribute.update({value: value2});
+  t.is(attribute.getValue()[0], attribute.buffer, 'getValue returns own buffer');
+
+  attribute.update({isGeneric: true, value: value1});
+  t.is(attribute.getValue(), value1, 'getValue returns generic value');
+
+  attribute.delete();
+
+  t.end();
+});
