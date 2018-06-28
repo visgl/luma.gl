@@ -72,8 +72,11 @@ test('WebGL#Attribute getBuffer', t => {
   attribute.update({value: value2});
   t.is(attribute.getBuffer(), attribute.buffer, 'getBuffer returns own buffer');
 
-  attribute.update({isGeneric: true, value: [0, 0, 0, 0]});
+  attribute.update({constant: true, value: [0, 0, 0, 0]});
   t.is(attribute.getBuffer(), null, 'getBuffer returns null for generic attributes');
+
+  attribute.update({buffer});
+  t.is(attribute.getBuffer(), buffer, 'getBuffer returns user supplied buffer');
 
   attribute.delete();
 
@@ -93,8 +96,11 @@ test('WebGL#Attribute getValue', t => {
   attribute.update({value: value2});
   t.is(attribute.getValue()[0], attribute.buffer, 'getValue returns own buffer');
 
-  attribute.update({isGeneric: true, value: value1});
+  attribute.update({constant: true, value: value1});
   t.is(attribute.getValue(), value1, 'getValue returns generic value');
+
+  attribute.update({buffer});
+  t.is(attribute.getValue()[0], buffer, 'getValue returns user supplied buffer');
 
   attribute.delete();
 

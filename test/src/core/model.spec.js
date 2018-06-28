@@ -42,7 +42,7 @@ test('Model#setAttribute', t => {
   model.setAttributes({
     instanceSizes: new Attribute(gl, {size: 1, buffer: buffer1}),
     instancePositions: buffer2,
-    instanceWeight: {size: 1, isGeneric: true, value: new Float32Array([10])}
+    instanceWeight: {size: 1, constant: true, value: new Float32Array([10])}
   });
 
   t.is(stats.resourceMap.Buffer.active - initialActiveBuffers, 4, 'Did not create new buffers');
