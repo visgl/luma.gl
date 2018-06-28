@@ -2,9 +2,12 @@ import GL from '../constants';
 import Model from './model';
 import Buffer from '../webgl/buffer';
 import TransformFeedback from '../webgl/transform-feedback';
-import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context, getVersion} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log} from '../utils';
+
+const FS100 = 'void main() {}';
+const FS300 = `#version 300 es\n${FS100}`;
 
 export default class Transform {
 
@@ -188,7 +191,7 @@ export default class Transform {
 
   // build Model and TransformFeedback objects
   _buildModel({id, vs, varyings, drawMode, elementCount}) {
-    const fs = this._getEmptyFragmentShader(vs);
+    const fs = getEmptyFragmentShader(vs);
 
     this.model = new Model(this.gl, {
       id,
@@ -211,17 +214,18 @@ export default class Transform {
       });
     }
   }
+}
 
-  // Return a minimal fragment shader to make program compile when only vertex shader specified
-  _getEmptyFragmentShader(vs) {
-    let fs = 'void main() {}';
+// Helper METHODS
 
-    // Append matching version string to the fragment shader to ensure linking succeeds
-    if (vs.indexOf('#version ') === 0) {
-      const vsLines = vs.split('\n');
-      fs = `${vsLines[0]}\n${fs}`;
-    }
+// Return a minimal fragment shader to make program compile when only vertex shader specified
+function getEmptyFragmentShader(vs) {
+  let fs = FS100;
 
-    return fs;
+  // Check vertex shader version and return matching fragment shader to ensure linking succeeds
+  if (getVersion(vs) === 300) {
+    fs = FS300;
   }
+
+  return fs;
 }
