@@ -37,3 +37,5 @@ export {
 } from './typed-array-utils';
 
 export {getKeyValue, getKey, getKeyType} from './constants-to-keys';
+
+export {getShaderVersion} from './shader-utils';
