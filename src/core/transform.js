@@ -74,6 +74,7 @@ export default class Transform {
       return this;
     }
 
+
     this.model.setVertexCount(elementCount);
 
     for (const bufferName in feedbackBuffers) {
@@ -147,10 +148,8 @@ export default class Transform {
       varyingsArray = Object.values(feedbackMap);
     }
 
-    if (feedbackMap) {
-      this.feedbackMap = feedbackMap;
-      this._swapBuffers = true;
-    }
+    this.feedbackMap = feedbackMap;
+    this._swapBuffers = this._canSwapBuffers({feedbackMap, sourceBuffers});
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
@@ -215,4 +214,14 @@ export default class Transform {
       });
     }
   }
+
+  _canSwapBuffers({feedbackMap, sourceBuffers}) {
+    const buffers = Object.values(sourceBuffers);
+    if (buffers.some(buffer => !(buffer instanceof Buffer))) {
+      return false;
+    }
+    if (!feedbackMap) {
+      return false;
+    }
+    return true;
 }
