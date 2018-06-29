@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 6.0.0-alpha.7 - June 27
+- Fix shader injection (#587)
+- Transform updates (#585)
+
 ## 6.0.0-alpha.6 - June 27
 - Fix constant attribute bug (#584)
 
