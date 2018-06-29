@@ -1,4 +1,4 @@
-import {Buffer, _Transform as Transform} from 'luma.gl';
+import {Buffer, _Transform as Transform, _Attribute as Attribute} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 
@@ -10,6 +10,18 @@ out float outValue;
 void main()
 {
   outValue = 2.0 * inValue;
+}
+`;
+
+const VS_CONSTANT_ATTRIBUTE = `\
+#version 300 es
+in float inValue;
+in float multiplier;
+out float outValue;
+
+void main()
+{
+  outValue = multiplier * inValue;
 }
 `;
 
@@ -99,6 +111,79 @@ test('WebGL#Transform run', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+test('WebGL#Transform run (Attribute)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Attribute(gl2, {value: sourceData});
+  const feedbackBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    feedbackBuffers: {
+      outValue: feedbackBuffer
+    },
+    vs: VS,
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+test('WebGL#Transform run (constant Attribute)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const MULTIPLIER = 5;
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Attribute(gl2, {value: sourceData});
+  const multiplier = new Attribute(gl2, {value: [MULTIPLIER], constant: true});
+  const feedbackBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer,
+      multiplier
+    },
+    feedbackBuffers: {
+      outValue: feedbackBuffer
+    },
+    vs: VS_CONSTANT_ATTRIBUTE,
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * MULTIPLIER);
   const outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');

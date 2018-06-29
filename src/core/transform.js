@@ -215,6 +215,7 @@ export default class Transform {
     }
   }
 
+  // Returns true if buffers can be swappable, false otherwise.
   _canSwapBuffers({feedbackMap, sourceBuffers}) {
     const buffers = Object.values(sourceBuffers);
     if (buffers.some(buffer => !(buffer instanceof Buffer))) {
@@ -224,4 +225,5 @@ export default class Transform {
       return false;
     }
     return true;
+  }
 }
