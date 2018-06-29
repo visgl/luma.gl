@@ -228,6 +228,61 @@ test('WebGL#Transform swapBuffers', t => {
   t.end();
 });
 
+test('WebGL#Transform swapBuffers + update', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  let sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  let sourceBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    vs: VS,
+    feedbackMap: {
+      inValue: 'outValue'
+    },
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  transform.swapBuffers();
+  transform.run();
+
+  let expectedData = sourceData.map(x => x * 4);
+  let outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  // Increase the buffer size
+  sourceData = new Float32Array([1, 2, 3, 4, 5, 6, 7]);
+  sourceBuffer = new Buffer(gl2, {data: sourceData});
+
+  transform.update({
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    elementCount: 7
+  });
+
+  transform.run();
+
+  expectedData = sourceData.map(x => x * 2);
+  outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
 test('WebGL#Transform swapBuffers without varyings', t => {
   const {gl2} = fixture;
 

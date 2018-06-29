@@ -26,7 +26,7 @@ export default class Transform {
     this.sourceBuffers = new Array(2);
     this.feedbackBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
-    this._buffersToDelete = [];
+    this._buffersCreated = {};
 
     this._initialize(opts);
     Object.seal(this);
@@ -34,9 +34,7 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    for (const buffer of this._buffersToDelete) {
-      buffer.delete();
-    }
+    Object.values(this._buffersCreated).map(buffer => buffer.delete());
     this.model.delete();
   }
 
@@ -74,7 +72,6 @@ export default class Transform {
       return this;
     }
 
-
     this.model.setVertexCount(elementCount);
 
     for (const bufferName in feedbackBuffers) {
@@ -84,24 +81,10 @@ export default class Transform {
     const {currentIndex} = this;
     Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
     Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
+    this._createFeedbackBuffers({feedbackBuffers});
     this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
 
-    if (this._swapBuffers) {
-      const nextIndex = (currentIndex + 1) % 2;
-
-      for (const sourceBufferName in this.feedbackMap) {
-        const feedbackBufferName = this.feedbackMap[sourceBufferName];
-
-        this.sourceBuffers[nextIndex][sourceBufferName] =
-          this.feedbackBuffers[currentIndex][feedbackBufferName];
-        this.feedbackBuffers[nextIndex][feedbackBufferName] =
-          this.sourceBuffers[currentIndex][sourceBufferName];
-        // make sure the new destination buffer is a Buffer object
-        assert(this.feedbackBuffers[nextIndex][feedbackBufferName] instanceof Buffer);
-      }
-
-      this.transformFeedbacks[nextIndex].setBuffers(this.feedbackBuffers[nextIndex]);
-    }
+    this._setupSwapBuffers({feedbackBuffers});
     return this;
   }
 
@@ -150,6 +133,7 @@ export default class Transform {
 
     this.feedbackMap = feedbackMap;
     this._swapBuffers = this._canSwapBuffers({feedbackMap, sourceBuffers});
+    this._autoCreatedBuffers = {};
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
@@ -160,31 +144,62 @@ export default class Transform {
 
     this.sourceBuffers[0] = Object.assign({}, sourceBuffers);
     this.feedbackBuffers[0] = Object.assign({}, feedbackBuffers);
+    this._createFeedbackBuffers({feedbackBuffers});
+    this.sourceBuffers[1] = {};
+    this.feedbackBuffers[1] = {};
 
-    if (this._swapBuffers) {
-      this.sourceBuffers[1] = {};
-      this.feedbackBuffers[1] = {};
+    this._setupSwapBuffers({feedbackBuffers});
+  }
 
-      for (const sourceBufferName in this.feedbackMap) {
-        const feedbackBufferName = this.feedbackMap[sourceBufferName];
+  // auto create any feedback buffers
+  _createFeedbackBuffers({feedbackBuffers}) {
+    if (!this.feedbackMap) {
+      // feedbackMap required to auto create buffers.
+      return;
+    }
+    const current = this.currentIndex;
+    for (const sourceBufferName in this.feedbackMap) {
+      const feedbackBufferName = this.feedbackMap[sourceBufferName];
+      if (!feedbackBuffers || !feedbackBuffers[feedbackBufferName]) {
+        // Create new buffer with same layout and settings as source buffer
+        const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
+        const {bytes, type, usage, layout} = sourceBuffer;
+        const buffer = new Buffer(this.gl, {bytes, type, usage, layout});
 
-        if (!this.feedbackBuffers[0][feedbackBufferName]) {
-
-          // Create new buffer with same layout and settings as source buffer
-          const sourceBuffer = this.sourceBuffers[0][sourceBufferName];
-          const {bytes, type, usage, layout} = sourceBuffer;
-          const buffer = new Buffer(this.gl, {bytes, type, usage, layout});
-
-          this.feedbackBuffers[0][feedbackBufferName] = buffer;
-          this._buffersToDelete.push(this.feedbackBuffers[0][feedbackBufferName]);
+        if (this._buffersCreated[feedbackBufferName]) {
+          this._buffersCreated[feedbackBufferName].delete();
+          this._buffersCreated[feedbackBufferName] = buffer;
         }
-
-        this.sourceBuffers[1][sourceBufferName] = this.feedbackBuffers[0][feedbackBufferName];
-        this.feedbackBuffers[1][feedbackBufferName] = this.sourceBuffers[0][sourceBufferName];
-
-        // make sure the new destination buffer is a Buffer object
-        assert(this.feedbackBuffers[1][feedbackBufferName] instanceof Buffer);
+        this.feedbackBuffers[current][feedbackBufferName] = buffer;
       }
+    }
+  }
+
+  // setup buffers for swapping.
+  _setupSwapBuffers({feedbackBuffers}) {
+    if (!this.feedbackMap) {
+      // feedbackMap required set up swap buffers.
+      return;
+    }
+    const current = this.currentIndex;
+    const next = (current + 1) % 2;
+
+    for (const sourceBufferName in this.feedbackMap) {
+      const feedbackBufferName = this.feedbackMap[sourceBufferName];
+
+      this.sourceBuffers[next][sourceBufferName] =
+        this.feedbackBuffers[current][feedbackBufferName];
+      this.feedbackBuffers[next][feedbackBufferName] =
+        this.sourceBuffers[current][sourceBufferName];
+
+      // make sure the new destination buffer is a Buffer object
+      assert(this.feedbackBuffers[next][feedbackBufferName] instanceof Buffer);
+    }
+
+    // When triggered by `update()` TranformFeedback objects are already set up,
+    // if so update buffers
+    if (this.transformFeedbacks[next]) {
+      this.transformFeedbacks[next].setBuffers(this.feedbackBuffers[next]);
     }
   }
 
@@ -217,11 +232,11 @@ export default class Transform {
 
   // Returns true if buffers can be swappable, false otherwise.
   _canSwapBuffers({feedbackMap, sourceBuffers}) {
-    const buffers = Object.values(sourceBuffers);
-    if (buffers.some(buffer => !(buffer instanceof Buffer))) {
+    if (!feedbackMap) {
       return false;
     }
-    if (!feedbackMap) {
+    const sourceBufferNames = Object.keys(feedbackMap);
+    if (sourceBufferNames.some(name => !(sourceBuffers[name] instanceof Buffer))) {
       return false;
     }
     return true;
