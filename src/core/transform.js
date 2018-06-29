@@ -138,7 +138,6 @@ export default class Transform {
 
     this.feedbackMap = feedbackMap;
     this._swapBuffers = this._canSwapBuffers({feedbackMap, sourceBuffers});
-    this._autoCreatedBuffers = {};
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
