@@ -253,14 +253,7 @@ test('WebGL#Transform swapBuffers + update', t => {
   });
 
   transform.run();
-
   transform.swapBuffers();
-  transform.run();
-
-  let expectedData = sourceData.map(x => x * 4);
-  let outData = transform.getBuffer('outValue').getData();
-
-  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   // Increase the buffer size
   sourceData = new Float32Array([1, 2, 3, 4, 5, 6, 7]);
@@ -275,7 +268,13 @@ test('WebGL#Transform swapBuffers + update', t => {
 
   transform.run();
 
-  expectedData = sourceData.map(x => x * 2);
+  let expectedData = sourceData.map(x => x * 2);
+  let outData = transform.getBuffer('outValue').getData();
+
+  transform.swapBuffers();
+  transform.run();
+
+  expectedData = sourceData.map(x => x * 4);
   outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');

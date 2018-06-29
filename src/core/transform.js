@@ -4,7 +4,7 @@ import Buffer from '../webgl/buffer';
 import TransformFeedback from '../webgl/transform-feedback';
 import {isWebGL2, assertWebGL2Context, getShaderVersion} from '../webgl-utils';
 import assert from '../utils/assert';
-import {log, isObjectEmpty} from '../utils';
+import {log} from '../utils';
 
 const FS100 = 'void main() {}';
 const FS300 = `#version 300 es\n${FS100}`;
@@ -27,6 +27,7 @@ export default class Transform {
     this.feedbackBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
     this._buffersCreated = {};
+    this._swapBuffersDirty = true;
 
     this._initialize(opts);
     Object.seal(this);
@@ -64,7 +65,7 @@ export default class Transform {
     assert(this._swapBuffers);
     const nextIndex = (this.currentIndex + 1) % 2;
     // Setup swapbuffers first time swapBuffers are called.
-    if (isObjectEmpty(this.sourceBuffers[nextIndex])) {
+    if (this._swapBuffersDirty) {
       this._setupSwapBuffers();
     }
     this.currentIndex = nextIndex;
@@ -89,7 +90,8 @@ export default class Transform {
     this._createFeedbackBuffers({feedbackBuffers});
     this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
 
-    // this._setupSwapBuffers();
+    // Buffer have changed, need to re-setup swap buffers.
+    this._swapBuffersDirty = true;
     return this;
   }
 
@@ -145,14 +147,11 @@ export default class Transform {
 
   // setup source and destination buffers
   _setupBuffers({sourceBuffers = null, feedbackBuffers = null}) {
-
     this.sourceBuffers[0] = Object.assign({}, sourceBuffers);
     this.feedbackBuffers[0] = Object.assign({}, feedbackBuffers);
     this._createFeedbackBuffers({feedbackBuffers});
     this.sourceBuffers[1] = {};
     this.feedbackBuffers[1] = {};
-
-    // this._setupSwapBuffers();
   }
 
   // auto create any feedback buffers
@@ -205,6 +204,7 @@ export default class Transform {
     if (this.transformFeedbacks[next]) {
       this.transformFeedbacks[next].setBuffers(this.feedbackBuffers[next]);
     }
+    this._swapBuffersDirty = false;
   }
 
   // build Model and TransformFeedback objects
