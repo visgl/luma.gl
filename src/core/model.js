@@ -407,7 +407,7 @@ export default class Model extends Object3D {
       vs = vs || MODULAR_SHADERS.vs;
       fs = fs || MODULAR_SHADERS.fs;
 
-      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, defines, log});
+      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
       ({vs, fs} = assembleResult);
 
       if (shaderCache) {
