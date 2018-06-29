@@ -4,7 +4,7 @@ import Buffer from '../webgl/buffer';
 import TransformFeedback from '../webgl/transform-feedback';
 import {isWebGL2, assertWebGL2Context, getShaderVersion} from '../webgl-utils';
 import assert from '../utils/assert';
-import {log} from '../utils';
+import {log, isObjectEmpty} from '../utils';
 
 const FS100 = 'void main() {}';
 const FS300 = `#version 300 es\n${FS100}`;
@@ -62,7 +62,12 @@ export default class Transform {
   // Swap source and destination buffers.
   swapBuffers() {
     assert(this._swapBuffers);
-    this.currentIndex = (this.currentIndex + 1) % 2;
+    const nextIndex = (this.currentIndex + 1) % 2;
+    // Setup swapbuffers first time swapBuffers are called.
+    if (isObjectEmpty(this.sourceBuffers[nextIndex])) {
+      this._setupSwapBuffers();
+    }
+    this.currentIndex = nextIndex;
   }
 
   // Update some or all buffer bindings.
@@ -84,7 +89,7 @@ export default class Transform {
     this._createFeedbackBuffers({feedbackBuffers});
     this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
 
-    this._setupSwapBuffers({feedbackBuffers});
+    // this._setupSwapBuffers();
     return this;
   }
 
@@ -148,7 +153,7 @@ export default class Transform {
     this.sourceBuffers[1] = {};
     this.feedbackBuffers[1] = {};
 
-    this._setupSwapBuffers({feedbackBuffers});
+    // this._setupSwapBuffers();
   }
 
   // auto create any feedback buffers
@@ -176,7 +181,7 @@ export default class Transform {
   }
 
   // setup buffers for swapping.
-  _setupSwapBuffers({feedbackBuffers}) {
+  _setupSwapBuffers() {
     if (!this.feedbackMap) {
       // feedbackMap required set up swap buffers.
       return;
