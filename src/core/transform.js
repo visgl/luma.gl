@@ -21,13 +21,11 @@ export default class Transform {
 
     this.gl = gl;
     this.model = null;
-    this._swapBuffers = false;
     this.currentIndex = 0;
     this.sourceBuffers = new Array(2);
     this.feedbackBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
     this._buffersCreated = {};
-    this._swapBuffersDirty = true;
 
     this._initialize(opts);
     Object.seal(this);
@@ -35,7 +33,9 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    Object.values(this._buffersCreated).map(buffer => buffer.delete());
+    for (const name in this._buffersCreated) {
+      this._buffersCreated[name].delete();
+    }
     this.model.delete();
   }
 
@@ -62,13 +62,8 @@ export default class Transform {
 
   // Swap source and destination buffers.
   swapBuffers() {
-    assert(this._swapBuffers);
-    const nextIndex = (this.currentIndex + 1) % 2;
-    // Setup swapbuffers first time swapBuffers are called.
-    if (this._swapBuffersDirty) {
-      this._setupSwapBuffers();
-    }
-    this.currentIndex = nextIndex;
+    assert(this.feedbackMap);
+    this.currentIndex = (this.currentIndex + 1) % 2;
   }
 
   // Update some or all buffer bindings.
@@ -91,7 +86,7 @@ export default class Transform {
     this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
 
     // Buffer have changed, need to re-setup swap buffers.
-    this._swapBuffersDirty = true;
+    this._setupSwapBuffers();
     return this;
   }
 
@@ -139,9 +134,9 @@ export default class Transform {
     }
 
     this.feedbackMap = feedbackMap;
-    this._swapBuffers = this._canSwapBuffers({feedbackMap, sourceBuffers});
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
+    this._setupSwapBuffers();
     this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
   }
 
@@ -179,6 +174,8 @@ export default class Transform {
   }
 
   // setup buffers for swapping.
+  // Second set of source and feedback objects are setup to point
+  // to corresponding feedback and source buffers.
   _setupSwapBuffers() {
     if (!this.feedbackMap) {
       // feedbackMap required set up swap buffers.
@@ -204,7 +201,6 @@ export default class Transform {
     if (this.transformFeedbacks[next]) {
       this.transformFeedbacks[next].setBuffers(this.feedbackBuffers[next]);
     }
-    this._swapBuffersDirty = false;
   }
 
   // build Model and TransformFeedback objects
@@ -226,23 +222,12 @@ export default class Transform {
       buffers: this.feedbackBuffers[0]
     });
 
-    if (this._swapBuffers) {
+    // If buffers are swappable setup second transform feedback object.
+    if (this.feedbackMap) {
       this.transformFeedbacks[1] = new TransformFeedback(this.gl, {
         program: this.model.program,
         buffers: this.feedbackBuffers[1]
       });
     }
-  }
-
-  // Returns true if buffers can be swappable, false otherwise.
-  _canSwapBuffers({feedbackMap, sourceBuffers}) {
-    if (!feedbackMap) {
-      return false;
-    }
-    const sourceBufferNames = Object.keys(feedbackMap);
-    if (sourceBufferNames.some(name => !(sourceBuffers[name] instanceof Buffer))) {
-      return false;
-    }
-    return true;
   }
 }
