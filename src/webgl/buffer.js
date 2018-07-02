@@ -29,8 +29,8 @@ export default class Buffer extends Resource {
   }
 
   get data() {
-    log.deprecated('Buffer.data', 'N/A', 'v6.0');
-    return this._data;
+    log.removed('Buffer.data', 'N/A', 'v6.0');
+    return null;
   }
 
   // Stores the accessor of data with the buffer, makes it easy to e.g. set it as an attribute later
@@ -74,7 +74,6 @@ export default class Buffer extends Resource {
     this.bytes = bytes;
     this.bytesUsed = bytes;
 
-    this._data = data; // TODO - remove
     this.debugData = data ? data.slice(0, DEBUG_DATA_LENGTH) : null;
 
     // Call after type is determined
