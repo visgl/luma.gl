@@ -1,11 +1,12 @@
 /* eslint-disable complexity */
 import GL from '../constants';
 import {Buffer} from '../webgl';
+import {uid} from '../utils';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
     const {
-      id = 'unnamed-attribute',
+      id = uid('attribute'),
       type,
       isIndexed = false
     } = opts;
@@ -83,7 +84,11 @@ export default class Attribute {
       if (!constant) {
         // Create buffer if needed
         this.buffer = this.buffer ||
-          new Buffer(this.gl, Object.assign({}, opts, {target: this.target, type: this.type}));
+          new Buffer(this.gl, Object.assign({}, opts, {
+            id: this.id,
+            target: this.target,
+            type: this.type
+          }));
         this.buffer.setData({data: value});
         this.type = this.buffer.accessor.type;
       }
