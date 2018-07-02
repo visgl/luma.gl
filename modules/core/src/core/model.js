@@ -402,6 +402,8 @@ export default class Model extends Object3D {
   }) {
     this.getModuleUniforms = x => {};
 
+    const id = this.id;
+
     if (!program) {
       // Assign default shaders if none are provided
       vs = vs || MODULAR_SHADERS.vs;
@@ -411,9 +413,9 @@ export default class Model extends Object3D {
       ({vs, fs} = assembleResult);
 
       if (shaderCache) {
-        program = shaderCache.getProgram(this.gl, {vs, fs, id: this.id});
+        program = shaderCache.getProgram(this.gl, {id, vs, fs});
       } else {
-        program = new Program(this.gl, {vs, fs, varyings, bufferMode});
+        program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
       }
 
       this.getModuleUniforms = assembleResult.getUniforms || (x => {});

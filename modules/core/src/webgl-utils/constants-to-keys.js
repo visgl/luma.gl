@@ -25,7 +25,7 @@ export function getKey(gl, value) {
   value = Number(value);
   for (const key in gl) {
     if (gl[key] === value) {
-      return `gl.${key}`;
+      return `GL.${key}`;
     }
   }
   return String(value);
@@ -36,7 +36,7 @@ export function getKeyType(gl, value) {
   value = Number(value);
   for (const key in gl) {
     if (gl[key] === value) {
-      return `gl.${key}`;
+      return `GL.${key}`;
     }
   }
   return String(value);

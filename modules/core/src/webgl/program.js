@@ -23,15 +23,6 @@ export default class Program extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
 
-    // For backwards compatibility, each program creates a vertex array.
-    // It can (should) be overridden in draw.
-    // this.vertexArray = null;
-
-    // Experimental flag to avoid deleting Program object while it is cached
-    this._isCached = false;
-
-    this.initialize(opts);
-
     this.stubRemovedMethods('Program', 'v6.0', [
       'setVertexArray',
       'setAttributes',
@@ -52,6 +43,11 @@ export default class Program extends Resource {
       'getAttributeInfo'
     ]);
 
+    // Experimental flag to avoid deleting Program object while it is cached
+    this._isCached = false;
+
+    this.initialize(opts);
+
     Object.seal(this);
 
     this._setId(opts.id);
@@ -60,10 +56,14 @@ export default class Program extends Resource {
   initialize(props = {}) {
     const {vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
     // Create shaders if needed
-    this.vs = typeof vs === 'string' ? new VertexShader(this.gl, vs) : vs;
-    this.fs = typeof fs === 'string' ? new FragmentShader(this.gl, fs) : fs;
-    assert(this.vs instanceof VertexShader, 'Program: bad vertex shader');
-    assert(this.fs instanceof FragmentShader, 'Program: bad fragment shader');
+    this.vs = typeof vs === 'string' ?
+      new VertexShader(this.gl, {id: `${props.id}-vs`, source: vs}) :
+      vs;
+    this.fs = typeof fs === 'string' ?
+      new FragmentShader(this.gl, {id: `${props.id}-fs`, source: fs}) :
+      fs;
+    assert(this.vs instanceof VertexShader);
+    assert(this.fs instanceof FragmentShader);
 
     // uniforms
     this.uniforms = {};
@@ -190,7 +190,7 @@ export default class Program extends Resource {
 
     if (somethingChanged) {
       _onChangeCallback();
-      checkUniformValues(uniforms, this.id);
+      checkUniformValues(uniforms, this.id, this._uniformSetters);
       Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
     }

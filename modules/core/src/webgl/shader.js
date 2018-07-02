@@ -23,26 +23,32 @@ export class Shader extends Resource {
   }
 
   /* eslint-disable max-statements */
-  constructor(gl, source, shaderType) {
+  constructor(gl, props) {
     assertWebGLContext(gl);
-    assert(typeof source === 'string', ERR_SOURCE);
 
-    super(gl, {id: getShaderName(source) || uid(Shader.getTypeName(shaderType))});
+    // Validate arguments
+    assert(typeof props.source === 'string', ERR_SOURCE);
 
-    this.shaderType = shaderType;
-    this.source = source;
+    // Deduce an id, from shader source, or supplied id, or shader type
+    const id =
+      getShaderName(props.source, null) ||
+      props.id ||
+      uid(`unnamed ${Shader.getTypeName(props.shaderType)}`);
 
-    this.opts.source = source;
-    this.initialize(this.opts);
+    super(gl, {id});
+
+    this.shaderType = props.shaderType;
+    this.source = props.source;
+
+    this.initialize(props);
   }
 
   initialize({source}) {
-    const shaderName = getShaderName(source);
+    const shaderName = getShaderName(source, null);
     if (shaderName) {
       this.id = uid(shaderName);
     }
     this._compile(source);
-    this.opts.source = source;
   }
 
   // Accessors
@@ -56,7 +62,7 @@ export class Shader extends Resource {
   }
 
   getName() {
-    return getShaderName(this.opts.source) || 'unnamed-shader';
+    return getShaderName(this.source) || 'unnamed-shader';
   }
 
   getSource() {
@@ -83,7 +89,7 @@ export class Shader extends Resource {
     if (!compileStatus) {
       const infoLog = this.gl.getShaderInfoLog(this.handle);
       const {shaderName, errors, warnings} =
-        parseGLSLCompilerError(infoLog, this.source, this.shaderType);
+        parseGLSLCompilerError(infoLog, this.source, this.shaderType, this.id);
       log.error(`GLSL compilation errors in ${shaderName}\n${errors}`)();
       log.warn(`GLSL compilation warnings in ${shaderName}\n${warnings}`)();
       throw new Error(`GLSL compilation errors in ${shaderName}`);
@@ -103,8 +109,13 @@ export class Shader extends Resource {
 }
 
 export class VertexShader extends Shader {
-  constructor(gl, source) {
-    super(gl, source, GL_VERTEX_SHADER);
+  constructor(gl, props) {
+    // DEPRECATED: Support old constructor signature: VertexShader(gl, source)
+    if (typeof props === 'string') {
+      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1');
+      props = {source: props};
+    }
+    super(gl, Object.assign({}, props, {shaderType: GL_VERTEX_SHADER}));
   }
 
   // PRIVATE METHODS
@@ -114,8 +125,14 @@ export class VertexShader extends Shader {
 }
 
 export class FragmentShader extends Shader {
-  constructor(gl, source) {
-    super(gl, source, GL_FRAGMENT_SHADER);
+  constructor(gl, props) {
+    // DEPRECATED: Support old constructor signature: FragmentShader(gl, source)
+    if (typeof props === 'string') {
+      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1');
+      props = {source: props};
+    }
+
+    super(gl, Object.assign({}, props, {shaderType: GL_FRAGMENT_SHADER}));
   }
 
   // PRIVATE METHODS

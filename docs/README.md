@@ -5,13 +5,14 @@ luma.gl is a Javascript framework that provides developers complete access to th
 
 ## Philosophy
 
-luma.gl is developed with certain ideas in mind. It is developed with the following design goals:
+Like most frameworks, luma.gl has been developed with a certain philosophy in mind, reflecting things its designers feel to be important to their work.
 
-- **A WebGL2-first API** - luma.gl enables applications to use the latest WebGL2 APIs (and write shaders in the new GLSL 3.00 ES syntax), while automatically remaining backwards compatible with WebGL1. No need to fiddle with WebGL extensions or shader versions, luma.gl handles translation/transpilation of WebGL2 to WebGL1 counterparts as needed).
-- **Expose WebGL to Programmers** - luma.gl intentionally exposes (rather than hides) the WebGL API, providing easy-to-use JavaScript class wrappers for all WebGL2 objects defined in the [WebGL2 API](https://www.khronos.org/registry/webgl/specs/latest/2.0/).
-- **Shader Programming** - luma.gl provides extensive facilities for developing, modularizing, debugging and profiling GLSL shaders.
-- **Performance First** - A strong focus on performance, which includes a preference for providing APIs on lower abstraction levels than many WebGL frameworks.
-- **Advanced GPU Programming** - targets use cases like GPU based computing using *transform feedback*, *instance rendering* for large data sets, and other WebGL2 and [GPGPU](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units) techniques.
+- **A WebGL2-first API** - luma.gl enables applications to code using the latest WebGL2 APIs and write their shaders in the latest GLSL 3.00 ES syntax, and (as far as possible) transparently keeps your application backwards compatible with WebGL1 (using WebGL extensions, shader transpilation and other techniques).
+- **Expose WebGL2 to Programmers** - while many WebGL frameworks make efforts to hide and wrap the WebGL2 API, luma.gl intentionally exposes it, providing JavaScript classes corresponding to all WebGL objects defined in the [WebGL2 Specification](https://www.khronos.org/registry/webgl/specs/latest/2.0/).
+- **Simplify use of the WebGL2 API** - Using the raw WebGL API is notoriously verbose and fiddly. luma.gl's classes provide the standard WebGL2 objects and methods, but take care of all the tedious default parameters and object bindings behind the scenes.
+- **Shader Programming** - luma.gl's shadertools is a GLSL module system that provides extensive facilities for developing, modularizing, debugging and profiling GLSL shaders.
+- **Performance First** - luma.gl has strong focus on performance, which includes a preference for providing APIs on lower abstraction levels than some popular WebGL frameworks, and an emphasis of using features such as *instanced rendering* for large data sets.
+- **Doing Computations on the GPU** - A focus on use cases like GPU based computing using *transform feedback*, and other WebGL2 and [GPGPU](https://en.wikipedia.org/wiki/General-purpose_computing_on_graphics_processing_units) techniques.
 
 
 ## History
@@ -29,20 +30,22 @@ Today, luma.gl is the foundational WebGL library in the vis.gl framework suite, 
 
 luma.gl is the natural choice if you are working with any of the WebGL-based frameworks in the vis.gl suite (deck.gl, kepler.gl etc).
 
-If not, and you are considering what WebGL framework to use in an independent projects, then as a first step towards a decision we recommend that you take a look at the things that have been built on luma.gl (e.g. vis.gl), make sure the luma.gl design philosophy resonates with you, and finally, review the luma.gl roadmap.
+If not, and you are considering what WebGL framework to use in an independent project, then as a first step towards a decision we recommend that you take a look at the things that have been built on luma.gl (e.g. vis.gl), make sure the luma.gl design philosophy resonates with you, and finally, review the luma.gl roadmap to see that the library is heading in a direction that is meaningful to you.
 
-We think that luma.gl is great if:
+We think that luma.gl could be a great choice if:
 
-* you want to work with (and perhaps learn) the WebGL2 API.
-* you want full control by working directly with WebGL.
-* you plan to do a lot of shader coding and you are focusing on rendering large data sets with "insane" performance.
+* you want to work with, learn, and leverage the power of the WebGL2 API.
+* you want "more control" by having the option of working close to WebGL.
+* you want to do shader coding
+* you are focusing on rendering large data sets with high performance.
 
-We think that luma.gl is currently not the strongest choice if:
+We feel that luma.gl is currently not the strongest choice if:
 
-* You need to load models from various formats
-* You need traditional game engine support for scenegraphs, materials, lighting, effects
+* You wish to avoid learning anything about WebGL, working exclusively with higher abstractions.
+* You need to load 3D models from various formats.
+* You need traditional game engine support for scenegraphs, complex materials, advanced lighting options, etc.
 
-If you are considering luma.gl because you are interested in WebGL2, it is worth noting that traditional WebGL frameworks seems slow to upgrade to WebGL2, either because of historical inertia (e.g. existing APIs do not provide an obvious upgrade path) or for philosophical reasons (e.g. maintainers feel that WebGL2 is not worthwhile for their use cases).
+If you are considering luma.gl because you are interested in using WebGL2 and you are looking for options, it is worth noting that some of the more mature WebGL frameworks have been rather slow to upgrade to WebGL2, either because of historical reasons (e.g. existing higher-level APIs do not provide an obvious upgrade path) or for philosophical reasons (e.g. maintainers feel that WebGL2 is not worthwhile for their particular use cases).
 
 If you are interested in using luma.gl with a higher abstraction level API, or just see what can be achieved with luma.gl, take a look at deck.gl and kepler.gl.
 

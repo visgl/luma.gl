@@ -22,7 +22,6 @@ const UNIFORM_SETTERS = {
   [GL.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
   [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value, 1)),
-
   [GL.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
   [GL.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
@@ -143,12 +142,13 @@ export function getUniformSetter(gl, location, info) {
   return setter.bind(null, gl, location);
 }
 
-// Basic checks of uniform values without knowledge of program
+// Basic checks of uniform values (with or without knowledge of program)
 // To facilitate early detection of e.g. undefined values in JavaScript
-export function checkUniformValues(uniforms, source) {
+export function checkUniformValues(uniforms, source, uniformMap) {
   for (const uniformName in uniforms) {
     const value = uniforms[uniformName];
-    if (!checkUniformValue(value)) {
+    const shouldCheck = !uniformMap || Boolean(uniformMap[uniformName]);
+    if (shouldCheck && !checkUniformValue(value)) {
       // Add space to source
       source = source ? `${source} ` : '';
       // Value could be unprintable so write the object on console

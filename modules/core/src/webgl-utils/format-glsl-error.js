@@ -6,13 +6,14 @@ import getShaderName, {getShaderTypeName} from './get-shader-name';
  * Based on https://github.com/wwwtyro/gl-format-compiler-error (public domain)
  */
 /* eslint-disable no-continue, max-statements */
-export function parseGLSLCompilerError(errLog, src, shaderType) {
+export function parseGLSLCompilerError(errLog, src, shaderType, shaderName) {
   const errorStrings = errLog.split(/\r?\n/);
   const errors = {};
   const warnings = {};
 
-  const name = getShaderName(src) || '(unnamed)';
-  const shaderName = `${getShaderTypeName(shaderType)} shader ${name}`;
+  // Patch the shader name
+  const name = shaderName || getShaderName(src) || '(unnamed)';
+  const shaderDescription = `${getShaderTypeName(shaderType)} shader ${name}`;
 
   // Parse the error - note: browser and driver dependent
   for (let i = 0; i < errorStrings.length; i++) {
@@ -24,7 +25,7 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
     const type = segments[0];
     const line = parseInt(segments[2], 10);
     if (isNaN(line)) {
-      throw new Error(`GLSL compilation error in ${shaderName}: ${errLog}`);
+      throw new Error(`GLSL compilation error in ${shaderDescription}: ${errLog}`);
     }
     if (type !== 'WARNING') {
       errors[line] = errorString;
@@ -37,7 +38,7 @@ export function parseGLSLCompilerError(errLog, src, shaderType) {
   const lines = addLineNumbers(src);
 
   return {
-    shaderName,
+    shaderName: shaderDescription,
     errors: formatErrors(errors, lines),
     warnings: formatErrors(warnings, lines)
   };
