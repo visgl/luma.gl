@@ -69,8 +69,15 @@ const FLOAT_ARRAY = {};
 const INT_ARRAY = {};
 const UINT_ARRAY = {};
 
-/* Functions to ensure the type of uniform values */
+const array1 = [0];
+
+// Functions to ensure the type of uniform values
+// TODO - Why is this necessary? The uniform*v funtions can consume Arrays
 function toTypedArray(value, uniformLength, Type, cache) {
+  if (Number.isFinite(value)) {
+    array1[0] = value;
+    value = array1;
+  }
   const length = value.length;
   if (length % uniformLength) {
     log.warn(`Uniform size should be multiples of ${uniformLength}`, value)();

@@ -86,10 +86,10 @@ void main(void) {
       isInstanced: 1,
       instanceCount: SIDE * SIDE,
       attributes: {
-        instanceSizes: {value: new Float32Array([1]), size: 1, instanced: 1, isGeneric: true},
-        instanceOffsets: {value: offsets, size: 2, instanced: 1},
-        instanceColors: {value: colors, size: 3, instanced: 1},
-        instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
+        instanceSizes: {value: new Float32Array([1]), instanced: 1, constant: true},
+        instanceOffsets: {value: offsets, instanced: 1},
+        instanceColors: {value: colors, instanced: 1},
+        instancePickingColors: {value: pickingColors, instanced: 1}
       }
     }));
   }

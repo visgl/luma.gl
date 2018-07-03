@@ -106,7 +106,7 @@ export default class VertexArray extends Resource {
   }
 
   // Resets all attributes (to default valued constants)
-  reset(clear = true, disableZero = false) {
+  reset(clear = true, disableZero = true) {
     if (clear) {
       this._unbindBuffers();
       this.bind(() => {
@@ -195,7 +195,7 @@ export default class VertexArray extends Resource {
     const location = this._getAttributeIndex(locationOrName);
     if (location < 0) {
       this.unused[locationOrName] = buffer;
-      log.warn(() => `${this.id} unused buffer attribute ${locationOrName}`)();
+      log.once(3, () => `unused buffer attribute ${locationOrName} in ${this.id}`)();
       return this;
     }
 

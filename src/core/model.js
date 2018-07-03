@@ -590,7 +590,9 @@ count: ${this.stats.profileFrameCount}`
       } else if (attribute) {
         attribute.update(descriptor);
       } else {
-        attribute = new Attribute(gl, descriptor);
+        attribute = new Attribute(gl, Object.assign({}, descriptor, {
+          id: attributeName
+        }));
       }
 
       this._attributes[attributeName] = attribute;
