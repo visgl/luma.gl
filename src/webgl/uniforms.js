@@ -21,7 +21,7 @@ const UNIFORM_SETTERS = {
   [GL.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
-  [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value, 1)),
+  [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value ? 1 : 0, 1)),
   [GL.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
   [GL.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
