@@ -1,5 +1,11 @@
 # Pre-releases
 
+## 6.0.0-beta.1 - July 3
+- Buffer: add getElementCount (#592)
+- Fix example (#593)
+- Buffer: Remove reference to data (#588)
+- Transform: Improve swap buffers (#586)
+
 ## 6.0.0-alpha.7 - June 27
 - Fix shader injection (#587)
 - Transform updates (#585)
