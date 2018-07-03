@@ -23,7 +23,7 @@ import assert from '../utils/assert';
 //   in an array, in a form that can be accepted by the setter.
 export const LUMA_SETTERS = {
   framebuffer: (gl, framebuffer) => {
-    const handle = framebuffer && framebuffer.handle ? framebuffer.handle : framebuffer;
+    const handle = framebuffer && 'handle' in framebuffer ? framebuffer.handle : framebuffer;
     return gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   },
   blend: (gl, value) => value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND),

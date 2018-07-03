@@ -1,4 +1,5 @@
 import Framebuffer from './framebuffer';
+import Renderbuffer from './renderbuffer';
 import Texture from './texture';
 import Sampler from './sampler';
 import {formatValue, log} from '../utils';
@@ -10,17 +11,17 @@ const UNIFORM_SETTERS = {
   // WEBGL1
 
   /* eslint-disable max-len */
-  [GL.FLOAT]: (gl, location, value) => gl.uniform1f(location, value),
+  [GL.FLOAT]: (gl, location, value) => gl.uniform1fv(location, toFloatArray(value, 1)),
   [GL.FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, toFloatArray(value, 2)),
   [GL.FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, toFloatArray(value, 3)),
   [GL.FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, toFloatArray(value, 4)),
 
-  [GL.INT]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL.INT]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value, 1)),
   [GL.INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
   [GL.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
-  [GL.BOOL]: (gl, location, value) => gl.uniform1i(location, value),
+  [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value, 1)),
   [GL.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
   [GL.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
@@ -35,7 +36,7 @@ const UNIFORM_SETTERS = {
 
   // WEBGL2 - unsigned integers, irregular matrices, additional texture samplers
 
-  [GL.UNSIGNED_INT]: (gl, location, value) => gl.uniform1ui(location, value),
+  [GL.UNSIGNED_INT]: (gl, location, value) => gl.uniform1uiv(location, toUIntArray(value, 1)),
   [GL.UNSIGNED_INT_VEC2]: (gl, location, value) => gl.uniform2uiv(location, toUIntArray(value, 2)),
   [GL.UNSIGNED_INT_VEC3]: (gl, location, value) => gl.uniform3uiv(location, toUIntArray(value, 3)),
   [GL.UNSIGNED_INT_VEC4]: (gl, location, value) => gl.uniform4uiv(location, toUIntArray(value, 4)),
@@ -166,6 +167,8 @@ function checkUniformValue(value) {
   } else if (value === true || value === false) {
     return true;
   } else if (value instanceof Texture || value instanceof Sampler) {
+    return true;
+  } else if (value instanceof Renderbuffer) {
     return true;
   } else if (value instanceof Framebuffer) {
     return Boolean(value.texture);
