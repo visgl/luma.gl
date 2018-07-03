@@ -77,7 +77,7 @@ export default class Buffer extends Resource {
     this.debugData = data ? data.slice(0, DEBUG_DATA_LENGTH) : null;
 
     // Call after type is determined
-    this.setAccessor(new Accessor(type ? {type} : {}, props));
+    this.setAccessor(new Accessor(type ? {type} : {}, props, props.accessor));
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
@@ -222,6 +222,12 @@ export default class Buffer extends Resource {
     return this;
   }
 
+  // returns number of elements in the buffer
+  getElementCount() {
+    const ArrayType = getTypedArrayFromGLType(this.accessor.type || GL.FLOAT, {clamped: false});
+    return this.bytes / ArrayType.BYTES_PER_ELEMENT;
+  }
+
   unbind({target = this.target, index = this.accessor && this.accessor.index} = {}) {
     const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {
@@ -249,9 +255,8 @@ export default class Buffer extends Resource {
 
   _getAvailableElementCount(srcByteOffset) {
     const ArrayType = getTypedArrayFromGLType(this.accessor.type || GL.FLOAT, {clamped: false});
-    const sourceElementCount = this.bytes / ArrayType.BYTES_PER_ELEMENT;
     const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
-    return sourceElementCount - sourceElementOffset;
+    return this.getElementCount() - sourceElementOffset;
   }
 
   // RESOURCE METHODS

@@ -195,3 +195,24 @@ test('WebGL#Buffer getData', t => {
 
   t.end();
 });
+
+test('WebGL#Buffer getElementCount', t => {
+  const {gl} = fixture;
+
+  let vertexCount;
+
+  const buffer1 = new Buffer(gl, {data: new Float32Array([1, 2, 3])});
+  vertexCount = buffer1.getElementCount();
+  t.equal(vertexCount, 3, 'Vertex count should match');
+
+  let buffer2 = new Buffer(gl, {data: new Int32Array([1, 2, 3, 4]), instanced: true});
+  vertexCount = buffer2.getElementCount();
+  t.equal(vertexCount, 4, 'Vertex count should match');
+
+  const {bytes, usage, type, accessor} = buffer1;
+  buffer2 = new Buffer(gl, {bytes, usage, type, accessor});
+  vertexCount = buffer2.getElementCount();
+  t.equal(vertexCount, 3, 'Vertex count should match');
+
+  t.end();
+});

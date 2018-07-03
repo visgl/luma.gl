@@ -161,8 +161,8 @@ export default class Transform {
       if (!feedbackBuffers || !feedbackBuffers[feedbackBufferName]) {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
-        const {bytes, type, usage, layout} = sourceBuffer;
-        const buffer = new Buffer(this.gl, {bytes, type, usage, layout});
+        const {bytes, type, usage, accessor} = sourceBuffer;
+        const buffer = new Buffer(this.gl, {bytes, type, usage, accessor});
 
         if (this._buffersCreated[feedbackBufferName]) {
           this._buffersCreated[feedbackBufferName].delete();
