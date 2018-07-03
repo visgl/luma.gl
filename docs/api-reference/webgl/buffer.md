@@ -200,6 +200,10 @@ Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 
 Returns a typed array containing the data from the buffer (if `dstData` was supplied it will be returned, otherwise this will be a freshly allocated array).
 
+### getElementCount() : Int
+
+Returns number of elements in the buffer. In a buffer created with Float32Array typed array, each float is an element and takes 4 bytes (or 32 bits).
+
 
 ## Types
 
