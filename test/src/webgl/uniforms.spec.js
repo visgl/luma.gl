@@ -90,6 +90,35 @@ void main(void) {
 }
 `;
 
+const WEBGL1_FRAGMENT_SHADER_ARRAY = `
+precision highp float;
+#define ARRAY_LENGTH 5
+
+uniform float f[ARRAY_LENGTH];
+uniform int i[ARRAY_LENGTH];
+uniform bool b[ARRAY_LENGTH];
+
+void main(void) {
+  float fValue;
+  for (int index = 0; index < ARRAY_LENGTH; index++) {
+    fValue += f[index];
+  }
+
+  int iValue;
+  for (int index = 0; index < ARRAY_LENGTH; index++) {
+    iValue += i[index];
+  }
+
+  bool bValue;
+  for (int index = 0; index < ARRAY_LENGTH; index++) {
+    bValue = bValue && b[index];
+  }
+
+
+  gl_FragColor.xyz = vec3(fValue, float(iValue), float(bValue));
+}
+`;
+
 const WEBGL1_GOOD_UNIFORMS = {
   f: 1.0,
   v2: new Float32Array([1, 2]), // FLOAT_VEC2  0x8B50
@@ -117,6 +146,12 @@ const WEBGL1_GOOD_UNIFORMS = {
 
 const ARRAY_UNIFORM_SIZE = {
   v4Array: 4
+};
+
+const WEBGL1_GOOD_UNIFORMS_ARRAY = {
+  f: new Float32Array([1.1, 2.4, 6.5, -10.4, 25]),
+  i: new Int32Array([40, -103, 34, 87, 26]),
+  b: new Int32Array([false, false, true, true, false])
 };
 
 // const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
@@ -232,6 +267,24 @@ const getExpectedUniformValues = () => {
   return result;
 };
 
+const getExpectedUniformValuesScalarArray = () => {
+  const result = {};
+  if (!isBrowser) {
+    // headless gl does not handle uniform arrays
+    return result; // eslint-disable-line
+  }
+
+  for (const uniformName in WEBGL1_GOOD_UNIFORMS_ARRAY) {
+    const value = WEBGL1_GOOD_UNIFORMS_ARRAY[uniformName];
+
+    for (const i in value) {
+      result[`${uniformName}[${i}]`] = value[i];
+    }
+  }
+
+  return result;
+};
+
 const getUniformValue = (program, locationName) => {
   const location = program.gl.getUniformLocation(program.handle, locationName);
   return program.gl.getUniform(program.handle, location);
@@ -297,6 +350,23 @@ const testSetUniform = (gl, t) => {
   t.end();
 };
 
+// Tests setting uniform scalar arrays
+const testSetUniformScalarArray = (gl, t) => {
+  const program = new Program(gl, {
+    vs: VERTEX_SHADER,
+    fs: WEBGL1_FRAGMENT_SHADER_ARRAY
+  });
+
+  const expectedValues = getExpectedUniformValuesScalarArray();
+
+  const uniforms = Object.assign({}, WEBGL1_GOOD_UNIFORMS_ARRAY);
+
+  t.comment('Test setting uniform arrays');
+  setUniformAndCheck(program, uniforms, expectedValues, t);
+
+  t.end();
+};
+
 test('WebGL#Uniforms Program setUniforms', t => {
   const {gl} = fixture;
 
@@ -308,6 +378,17 @@ test('WebGL2#Uniforms Program setUniforms', t => {
 
   if (gl2) {
     testSetUniform(gl2, t);
+  } else {
+    t.end();
+  }
+
+});
+
+test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
+  const {gl2} = fixture;
+
+  if (gl2) {
+    testSetUniformScalarArray(gl2, t);
   } else {
     t.end();
   }
