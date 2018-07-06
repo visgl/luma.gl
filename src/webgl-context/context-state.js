@@ -23,6 +23,7 @@ import assert from '../utils/assert';
 //   in an array, in a form that can be accepted by the setter.
 export const LUMA_SETTERS = {
   framebuffer: (gl, framebuffer) => {
+    // framebuffer is null when restoring to default framebuffer, otherwise use the WebGL handle.
     const handle = framebuffer && 'handle' in framebuffer ? framebuffer.handle : framebuffer;
     return gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   },
