@@ -36,9 +36,11 @@ export default class Framebuffer extends Resource {
   // Create a Framebuffer wrapper for the default framebuffer (target === null)
   static getDefaultFramebuffer(gl) {
     gl.luma = gl.luma || {};
-    if (!gl.luma.defaultFramebuffer) {
-      gl.luma.defaultFramebuffer = new Framebuffer(gl, {handle: null, attachments: {}});
-    }
+    gl.luma.defaultFramebuffer = gl.luma.defaultFramebuffer || new Framebuffer(gl, {
+      id: 'default-framebuffer',
+      handle: null,
+      attachments: {}
+    });
     // TODO - can we query for and get a handle to the GL.FRONT renderbuffer?
     return gl.luma.defaultFramebuffer;
   }
@@ -547,7 +549,7 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  log({priority = 0, message = ''} = {}) {
+  log(priority = 0, message = '') {
     if (priority > log.priority || typeof window === 'undefined') {
       return this;
     }

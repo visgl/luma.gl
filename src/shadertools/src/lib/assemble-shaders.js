@@ -146,7 +146,11 @@ function getApplicationDefines(defines = {}) {
       sourceText += '\n// APPLICATION DEFINES\n';
     }
     count++;
-    sourceText += `#define ${define.toUpperCase()} ${defines[define]}\n`;
+
+    const value = defines[define];
+    if (value || Number.isFinite(value)) {
+      sourceText += `#define ${define.toUpperCase()} ${defines[define]}\n`;
+    }
   }
   if (count === 0) {
     sourceText += '\n';
