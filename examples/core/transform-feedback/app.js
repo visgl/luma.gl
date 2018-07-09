@@ -114,6 +114,38 @@ const animationLoop = new AnimationLoop({
 
     const renderProgram = new Program(gl, {vs: VS_FEEDBACK, fs: FS_FEEDBACK});
 
+    // second pass, render to screen
+    setParameters(gl, {
+      clearColor: [0.0, 0.0, 0.0, 1.0]
+    });
+
+    const renderVertexArray = new VertexArray(gl, {
+      buffers: {
+        [POSITION_LOCATION]: {buffer: buffers.position, size: 4},
+        [COLOR_LOCATION]: {buffer: buffers.color, size: 4}
+      }
+    });
+
+    return {
+      transformFeedback,
+      transformProgram,
+      transformVertexArray,
+      renderProgram,
+      renderVertexArray
+    };
+  },
+
+  onRender({
+    gl,
+    transformFeedback,
+    transformProgram,
+    transformVertexArray,
+    renderProgram,
+    renderVertexArray
+  }) {
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     transformProgram.draw({
       drawMode: gl.TRIANGLES,
       vertexCount: VERTEX_COUNT,
@@ -127,26 +159,11 @@ const animationLoop = new AnimationLoop({
       }
     });
 
-    // second pass, render to screen
-    setParameters(gl, {
-      clearColor: [0.0, 0.0, 0.0, 1.0]
-    });
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    const renderVertexArray = new VertexArray(gl, {
-      buffers: {
-        [POSITION_LOCATION]: {buffer: buffers.position, size: 4},
-        [COLOR_LOCATION]: {buffer: buffers.color, size: 4}
-      }
-    });
-
     renderProgram.draw({
       drawMode: gl.TRIANGLE_FAN,
       vertexCount: VERTEX_COUNT,
       vertexArray: renderVertexArray
     });
-
-    return false; // Don't start animation loop
   },
 
   onFinalize({
