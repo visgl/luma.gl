@@ -13,9 +13,14 @@ A major release that focuses on WebGL performance and code size optimizations, A
 
 * **Attribute Management Optimizations** - `VertexArray` objects are now used for all attribute management in luma.gl, resulting in improved performance and a simpler, more consistent API. The `Program` and `Model` class APIs have been updated to use `VertexArray`.
 
-* **Buffer Memory Optimizations** - The `Buffer` class no longer holds on to the complete JavaScript typed arrays used during initialization. This can lead to significant memory savings in apps that use multiple large GPU buffers initialized from typed arrays.
+* **Buffer Memory Optimizations** - The `Buffer` class no longer holds on to the complete JavaScript typed arrays used during initialization. This can lead to significant memory savings in apps that use multiple large GPU buffers initialized from typed arrays. Also for convenience a new method `getElementCount` is added that returns number elements based on its size and type.
 
 * **Transform Feedback Improvements** - A new method `Model.transform` makes it easier to run basic transform feedback operations.
+
+
+### Transform class (WebGL2)
+
+[`Transform`](/docs/api-reference/core/transform.md) class was introduced in 5.2 as experimental is now official. This new class provides an easy-to-use interface to perform Transform Feedback operations. This class hides all WebGL complexity by internally creating and maintaining several objects.
 
 
 ### API Cleanup
