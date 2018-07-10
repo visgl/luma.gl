@@ -57,7 +57,8 @@ export default class TranformFeedback extends Resource {
   }
 
   pause() {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    // Rebinding to same handle seem to cause an issue , first found in Chrome version 67.
+    // this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.pauseTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
@@ -72,7 +73,8 @@ export default class TranformFeedback extends Resource {
   }
 
   end() {
-    this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
+    // Rebinding to same handle seem to cause an issue , first found in Chrome version 67.
+    // this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, this.handle);
     this.gl.endTransformFeedback();
     this.gl.bindTransformFeedback(GL_TRANSFORM_FEEDBACK, null);
     this._unbindBuffers();
