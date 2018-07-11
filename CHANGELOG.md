@@ -1,4 +1,8 @@
 # Pre-releases
+## 6.0.0-beta.2 - July 11
+- Fix multi-model render bug (#600)
+- Update whats-new doc (#595)
+- Fix: Uniform setting (#594)
 
 ## 6.0.0-beta.1 - July 3
 - Buffer: add getElementCount (#592)
