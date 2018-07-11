@@ -322,7 +322,7 @@ export default class Model extends Object3D {
     this.onBeforeRender();
     this._timerQueryStart();
 
-    this.program.draw(Object.assign(opts, {
+    this.program.draw(Object.assign({}, opts, {
       logPriority,
       framebuffer,
       parameters,
