@@ -21,8 +21,7 @@ const UNIFORM_SETTERS = {
   [GL.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
   [GL.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
-  // if value is not an array, convert bool value to 0 or 1.
-  [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(Array.isArray(value) || ArrayBuffer.isView(value) ? value : (value ? 1 : 0), 1)),
+  [GL.BOOL]: (gl, location, value) => gl.uniform1iv(location, toIntArray(value, 1)),
 
   [GL.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, toIntArray(value, 2)),
   [GL.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, toIntArray(value, 3)),
@@ -77,6 +76,10 @@ const array1 = [0];
 // Functions to ensure the type of uniform values
 // TODO - Why is this necessary? The uniform*v funtions can consume Arrays
 function toTypedArray(value, uniformLength, Type, cache) {
+  // convert boolean uniforms to Number
+  if (uniformLength === 1 && typeof value === 'boolean') {
+    value = value ? 1 : 0;
+  }
   if (Number.isFinite(value)) {
     array1[0] = value;
     value = array1;
