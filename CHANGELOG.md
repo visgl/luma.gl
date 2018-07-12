@@ -1,4 +1,7 @@
 # Pre-releases
+## 6.0.0-beta.3 - July 12
+- Fix: convert boolean uniforms to Numbers (#602)
+
 ## 6.0.0-beta.2 - July 11
 - Fix multi-model render bug (#600)
 - Update whats-new doc (#595)
