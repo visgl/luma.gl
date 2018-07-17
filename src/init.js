@@ -1,6 +1,10 @@
 import isBrowser from './utils/is-browser';
 import {global} from './utils/globals';
 import log from './utils/log';
+
+// TODO - when webgl2 gets ubiquitous, remove default support for webgl1 by dropping next line
+import './webgl1';
+
 // Version detection using babel plugin
 /* global __VERSION__ */
 const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';

@@ -1,6 +1,6 @@
 # Shader Assembly
 
-The `assembleShader` function provides a set of functions.
+The `assembleShader` function provides a number of features that help applications build up shaders in a structured way.
 
 
 ## Features
