@@ -33,6 +33,6 @@ const uniforms = getUniforms(props);
 Shader Modules are automatically converted ("transpiled") to the version of the shader you are importing them into.
 
 
-
 ## Shader Code Injection
 
+By using the `inject` parameter, code can be injected into existing shaders.

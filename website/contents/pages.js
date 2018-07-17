@@ -290,10 +290,10 @@ export const DOC_PAGES = [
         name: 'Drawing',
         content: 'developer-guide/drawing.md'
       },
-      {
-        name: 'Geometry',
-        content: 'developer-guide/geometry.md'
-      },
+      // {
+      //   name: 'Geometry',
+      //   content: 'developer-guide/geometry.md'
+      // },
       {
         name: 'Attributes',
         content: 'developer-guide/attributes.md'
@@ -301,14 +301,6 @@ export const DOC_PAGES = [
       {
         name: 'Portability',
         content: 'developer-guide/portability.md'
-      },
-      {
-        name: 'Building Apps',
-        content: 'developer-guide/building-apps.md'
-      },
-      {
-        name: 'Debugging',
-        content: 'developer-guide/debugging.md'
       },
       {
         name: 'Shadertools',
@@ -333,6 +325,14 @@ export const DOC_PAGES = [
       {
         name: 'Writing GLSL Code',
         content: 'developer-guide/shadertools/writing-glsl-shaders.md'
+      },
+      {
+        name: 'Building Apps',
+        content: 'developer-guide/building-apps.md'
+      },
+      {
+        name: 'Debugging',
+        content: 'developer-guide/debugging.md'
       }
       // {
       //   name: 'Extensions',
