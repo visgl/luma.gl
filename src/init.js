@@ -44,6 +44,5 @@ if (!global.luma) {
   };
 }
 
-
 export {global};
 export default global.luma;
