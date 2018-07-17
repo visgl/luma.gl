@@ -382,7 +382,9 @@ export default class VertexArray extends Resource {
     });
   }
 
-  // Constants values (for disabled vertex arrays) are storted on the WebGL context, not the VAO
+  // Updates all constant attribute values (constants are used when vertex attributes are disabled).
+  // This needs to be done repeatedly since in contrast to buffer bindings,
+  // constants are stored on the WebGL context, not the VAO
   _setConstantAttributes() {
     for (const location in this.values) {
       const constant = this.values[location];
@@ -406,7 +408,7 @@ export default class VertexArray extends Resource {
 
   _bindHandle(handle) {
     this.gl.bindVertexArray(handle);
-    // Make sure that any constant attributes are updated
+    // Make sure that any constant attributes are updated (stored on the context, not the VAO)
     if (handle === this.handle) {
       this._setConstantAttributes();
     }
