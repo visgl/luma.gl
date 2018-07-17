@@ -2,19 +2,15 @@
 
 ## Upgrading from v5.3 to v6.0
 
-luma.gl v6.0 underwent a major API cleanup.
+luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:
 
-* While the number of changes may look intimidating, most removed functions were in practice rarely used by applications, and the impact on typical luma.gl applications should be limited. The main result of these changes is a smaller, easier-to-learn API and smaller application bundles.
-* A few changes are related to moving attribute management from `Program` to `VertexArray`. If you work directly with `Program` instances you may need to do some updates, however if you work with the `Model` class there should little impact.
+* Most removed functions were in practice rarely used by applications, and the impact on typical luma.gl applications should be limited.
+* A number of API changes are related to moving attribute management from `Program` to `VertexArray`, however for higher level applications that work with the `Model` class rather than `Program` directly, there should not be much impact.
 
 
-### WebGL1 Support
+### GL Constants Import Path
 
-Support for WebGL1 browsers/environments (e.g Safari, Edge, Node.js with headless gl) is now optional. To ensure your app still supports WebGL1 contexts, import the "polyfills" before creating any WebGL contexts:
-
-```js
-import 'luma.gl/webgl1';
-```
+The biggest change for many apps will probably be that the static `GL` symbol (that contains all WebGL2 constants) must now be separately imported GL from 'luma.gl/constants'.
 
 
 ### Experimental Exports: New Naming Convention

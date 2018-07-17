@@ -13,13 +13,14 @@ const OES_vertex_array_object = 'OES_vertex_array_object';
 
 const GL_ELEMENT_ARRAY_BUFFER = 0x8893;
 
-const ERR_WEBGL1 = 'import "luma.gl/webgl1" to make luma.gl run in minimal WebGL1 environments';
+const ERR_WEBGL1 = 'Only WebGL2 contexts are supported by default. \
+To enable support for  older browsers, import "luma.gl/webgl1"';
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 const ERR_ATTRIBUTE_TYPE = 'VertexArray: attributes must be Buffer or typed array constant';
 
 export default class VertexArray extends Resource {
 
-  // Now always supported via client side polyfill
+  // Not correct if webgl1 polyfills not installed
   static isSupported(gl) {
     return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
   }
@@ -389,7 +390,9 @@ export default class VertexArray extends Resource {
     for (const location in this.values) {
       const constant = this.values[location];
       if (ArrayBuffer.isView(constant)) {
-        this._setConstant(location, constant);
+        this._setConstant(Number(location), constant);
+        this.gl.disableVertexAttribArray(Number(location));
+        this.gl.vertexAttribDivisor(Number(location), 0);
       }
     }
   }
@@ -397,7 +400,12 @@ export default class VertexArray extends Resource {
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
-    return this.gl.createVertexArray();
+    try {
+      return this.gl.createVertexArray();
+    } catch (error) {
+      log.error(ERR_WEBGL1)();
+      throw error;
+    }
   }
 
   _deleteHandle(handle) {
