@@ -1,4 +1,12 @@
 # Pre-releases
+
+## 6.0.0-rc.1 - July 17
+- Fix NPOT warnings (#611)
+- deck.gl v6 cleanup (#605)
+- Fix Transform demo link (#608)
+- Fix: set constant attributes every time VertexArray is bound (#604)
+- Update URLs to point to 6.0-release branch (#603)
+
 ## 6.0.0-beta.3 - July 12
 - Fix: convert boolean uniforms to Numbers (#602)
 
