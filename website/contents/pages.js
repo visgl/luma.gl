@@ -88,7 +88,7 @@ export const EXAMPLE_PAGES = [
         name: 'Transform',
         content: {
           demo: 'TransformDemo',
-          code: `${GITHUB_TREE}/examples/core/transform-feedback-instanced`
+          code: `${GITHUB_TREE}/examples/core/transform`
         }
       }
     ]
