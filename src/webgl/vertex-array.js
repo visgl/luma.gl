@@ -257,20 +257,7 @@ export default class VertexArray extends Resource {
     this.bind(() => {
       const {location} = accessInfo;
 
-      // TODO - use known type in configuration to allow non-typed arrays?
-      switch (arrayValue.constructor) {
-      case Float32Array:
-        this._setConstantFloatArray(location, arrayValue);
-        break;
-      case Int32Array:
-        this._setConstantIntArray(location, arrayValue);
-        break;
-      case Uint32Array:
-        this._setConstantUintArray(location, arrayValue);
-        break;
-      default:
-        assert(false);
-      }
+      this._setConstant(location, arrayValue);
 
       // To use the constant value, disable reading from arrays
 
@@ -310,6 +297,25 @@ export default class VertexArray extends Resource {
     this.configuration = null;
     this.bindOnUse = false;
     return this.setProps(props);
+  }
+
+  // Note: Constants are stored on the WebGL context, not the VAO
+  // TODO - cache these to avoid setting them unnecessarily?
+  // TODO - use known type (in configuration or passed in) to allow non-typed arrays?
+  _setConstant(location, array) {
+    switch (array.constructor) {
+    case Float32Array:
+      this._setConstantFloatArray(location, array);
+      break;
+    case Int32Array:
+      this._setConstantIntArray(location, array);
+      break;
+    case Uint32Array:
+      this._setConstantUintArray(location, array);
+      break;
+    default:
+      assert(false);
+    }
   }
 
   _setConstantFloatArray(location, array) {
@@ -376,6 +382,16 @@ export default class VertexArray extends Resource {
     });
   }
 
+  // Constants values (for disabled vertex arrays) are storted on the WebGL context, not the VAO
+  _setConstantAttributes() {
+    for (const location in this.values) {
+      const constant = this.values[location];
+      if (ArrayBuffer.isView(constant)) {
+        this._setConstant(location, constant);
+      }
+    }
+  }
+
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
@@ -390,10 +406,10 @@ export default class VertexArray extends Resource {
 
   _bindHandle(handle) {
     this.gl.bindVertexArray(handle);
-  }
-
-  _bind(handle) {
-    this.gl.bindVertexArray(handle);
+    // Make sure that any constant attributes are updated
+    if (handle === this.handle) {
+      this._setConstantAttributes();
+    }
   }
 
   // Generic getter for information about a vertex attribute at a given position
