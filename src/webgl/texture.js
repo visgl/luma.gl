@@ -218,7 +218,6 @@ export default class Texture extends Resource {
     this.type = type;
     this.dataFormat = dataFormat;
     this.border = border;
-    this.mipmaps = mipmaps;
 
     // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
     // TODO - compare v4 and v3
@@ -228,13 +227,14 @@ export default class Texture extends Resource {
     };
     const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
 
-    if (this._isNPOT()) {
+    if (this._isNPOT() && mipmaps) {
 
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
 
       this._updateForNPOT(parameters);
     }
+    this.mipmaps = mipmaps;
 
     this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps, parameters: glSettings});
 
