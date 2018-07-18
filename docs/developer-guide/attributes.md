@@ -23,7 +23,7 @@ Each attribute is a an array of numbers stored in GPU Memory (together with some
 
 ### Attribute Properties and Accessors
 
-Apart from the data that will be accessible in shaders, a `VertexArray` manages the following properties for each attrigute:
+Apart from the data that will be accessible in shaders, a `VertexArray` manages the following properties for each attribute:
 
 - Data type information: `size` (1-4 values per vertex), `type`
 - Data layout information: `offset`, `stride`.
