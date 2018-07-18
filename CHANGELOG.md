@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 6.0.0 - July 18
+- Update attribute docs (#613)
+- Update luma.gl version to ^6.0.0 in examples (#614)
+
 ## 6.0.0-rc.1 - July 17
 - Fix NPOT warnings (#611)
 - deck.gl v6 cleanup (#605)
