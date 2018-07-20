@@ -91,7 +91,7 @@ Describes luma.gl setting names and values
 | [blendColor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor)        | `GL.BLEND_COLOR`       |
 | [blendEquation](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation)     | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`] |
 | [blendFunc](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc)         | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`] |
-| [blendFuncSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquationSeparate) | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
+| [blendFuncSeparate](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFuncSeparate) | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
 
 | Parameter                 | Type            | Default         | Description |
 | ------------------------- | --------------- | --------------- | -------- |
