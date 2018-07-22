@@ -1,10 +1,12 @@
-const GL_FLOAT = 0x1406;
+import GL from '../constants';
+import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import assert from '../utils/assert';
 
 export default class Accessor {
 
   static get DEFAULTS() {
     return {
-      type: GL_FLOAT,
+      type: GL.FLOAT,
       size: 1,
       offset: 0,
       stride: 0,
@@ -12,6 +14,18 @@ export default class Accessor {
       integer: false,
       instanced: 0
     };
+  }
+
+  static getBytesPerElement(accessor) {
+    assert(accessor.type);
+    const ArrayType = getTypedArrayFromGLType(accessor.type);
+    return ArrayType.BYTES_PER_ELEMENT;
+  }
+
+  static getBytesPerVertex(accessor) {
+    assert(accessor.type && accessor.size);
+    const ArrayType = getTypedArrayFromGLType(accessor.type);
+    return ArrayType.BYTES_PER_ELEMENT * accessor.size;
   }
 
   /**
@@ -27,15 +41,32 @@ export default class Accessor {
    * @param {GLuint} stride=0 - supports strided arrays
    * @param {GLuint} offset=0 - supports strided arrays
    */
-  constructor(...optsList) {
-    optsList.forEach(opts => this._update(opts));
+  constructor(...accessors) {
+    accessors.forEach(opts => this._update(opts));
   }
 
+  // ACCESSORS
+
+  // TODO - remove>
+  get BYTES_PER_ELEMENT() {
+    return Accessor.getBytesPerElement(this);
+  }
+
+  get BYTES_PER_VERTEX() {
+    return Accessor.getBytesPerVertex(this);
+  }
+
+  // MODIFIERS
+
   // Combine with other accessors
-  getOptions(...optsList) {
+  merge(...accessors) {
     const combinedOpts = Object.assign({}, Accessor.DEFAULTS, this);
-    optsList.forEach(opts => this._update(opts, combinedOpts));
+    accessors.forEach(options => this._update(options, combinedOpts));
     return combinedOpts;
+  }
+
+  getOptions(...accessors) {
+    return this.merge(...accessors);
   }
 
   update(opts) {
@@ -43,10 +74,15 @@ export default class Accessor {
     return this;
   }
 
+  // PRIVATE
+
   /* eslint-disable complexity */
   _update(opts = {}, target = this) {
     if (opts.type !== undefined) {
       target.type = opts.type;
+      if (opts.type === GL.INT || opts.type === GL.UINT) {
+        target.integer = true;
+      }
     }
     if (opts.size !== undefined) {
       target.size = opts.size;

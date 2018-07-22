@@ -1,8 +1,8 @@
 # Attributes
 
-Attributes (aka "vertex attributes") are used to specify the data that the GPU should work on. Attributes contain input data to the vertex shader, the first shader stage in the GPU rendering pipeline and are the main mechanism through which the application feeds data to the GPU.
+Attributes (aka "vertex attributes") are used to specify the data that the GPU should work on. Attributes contain input data to the the first shader stage in the GPU rendering pipeline (aka the vertex shader). Attributes are the main mechanism through which the application feeds data to the GPU.
 
-To help apps set up and manage attributes, luma.gl provides the `VertexArray` class (which works as an "enhanced" WebGL `VertexArrayObject`).
+To help apps set up and manage attributes, luma.gl provides the `VertexArray` class (which manages a WebGL `VertexArrayObject`).
 
 References:
 
@@ -12,7 +12,7 @@ References:
 
 ## Overview
 
-### VertexArrays (aka VertexArrayObjects)
+### VertexArrays
 
 To provide data to the GPU, the program need to set up one or more "attributes" (the exact number depends on how many attributes the vertex shader program is using). These vertex attributes are stored in a luma.gl `VertexArray` instance.
 
@@ -154,7 +154,7 @@ At the start of shader execution, these indices (or 'locations') are matched wit
 
 ## Remarks
 
-> There are a suprising number of API complications and "gotchas" when using WebGL VertexArrayObjects. The various issues and version differences described here are handled by the luma.gl `VertexArray` API.
+There are a suprising number of API complications and "gotchas" when using WebGL VertexArrayObjects. The various issues and version differences described here are handled by the luma.gl `VertexArray` API.
 
 * Constant attributes: In raw WebGL, constant values are stored on the WebGL context, not the `VertexArrayObject`. Also these "global" values are reset every time a vertex attribute is enabled (set to a buffer). luma.gl transparently works around this by updating the constants on the WebGLRenderingContext every time a `VertexArray` is bound.
 * Constant attributes: Attribute location 0 cannot be set to a constant (i.e. cannot be disabled) in desktop OpenGL and in some desktop browsers (notably desktop Safari) this limitation also affects WebGL. In these cases, luma.gl transparently works around this issue by creating a buffer with the constant value repeated.

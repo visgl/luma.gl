@@ -303,6 +303,10 @@ export const DOC_PAGES = [
         content: 'developer-guide/portability.md'
       },
       {
+        name: 'Multi-Pass Rendering',
+        content: 'developer-guide/multipass/README.md'
+      },
+      {
         name: 'Shadertools',
         content: 'developer-guide/shadertools/README.md'
       },

@@ -1,7 +1,7 @@
 import luma from '../init';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../webgl-utils';
 import {uid} from '../utils';
-import {log} from '../utils';
+import {stubRemovedMethods} from '../utils';
 import assert from '../utils/assert';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
@@ -20,7 +20,6 @@ export default class Resource {
     // this.ext = polyfillContext(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
-    this.opts = opts;
     this._bound = false;
 
     // Set the handle
@@ -221,16 +220,9 @@ export default class Resource {
     return this;
   }
 
-  // Intall stubs for removed methods
+  // Install stubs for removed methods
   stubRemovedMethods(className, version, methodNames) {
-    const upgradeMessage = `See luma.gl ${version} Upgrade Guide at \
-http://uber.github.io/luma.gl/#/documentation/overview/upgrade-guide`;
-    methodNames.forEach(methodName => {
-      this[methodName] = () => {
-        log.removed(`Calling removed method ${className}.${methodName}: `, upgradeMessage);
-        throw new Error(methodName);
-      };
-    });
+    return stubRemovedMethods(this, className, version, methodNames);
   }
 
   // PUBLIC VIRTUAL METHODS

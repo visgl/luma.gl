@@ -10,6 +10,7 @@ import {withParameters} from '../webgl-context/context-state';
 import {checkUniformValues, areUniformsEqual} from '../webgl/uniforms';
 import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
+import {getKey} from '../webgl-utils/constants-to-keys';
 import {log, uid} from '../utils';
 import assert from '../utils/assert';
 
@@ -125,8 +126,10 @@ export default class Program extends Resource {
     if (logPriority !== undefined) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
-        `Framebuffer=${fb}: mode=${drawMode} verts=${vertexCount} instances=${instanceCount}` +
-        ` isIndexed=${isIndexed} isInstanced=${isInstanced}`;
+        `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
+        `instances=${instanceCount} indexType=${getKey(this.gl, indexType)} ` +
+        `isInstanced=${isInstanced} isIndexed=${isIndexed} ` +
+        `Framebuffer=${fb}`;
       log.log(logPriority, message)();
     }
 
@@ -135,7 +138,7 @@ export default class Program extends Resource {
     // TODO - move vertex array binding and transform feedback binding to withParameters?
     assert(vertexArray);
 
-    vertexArray.bind(() => {
+    vertexArray.bindForUse(vertexCount, () => {
 
       if (uniforms) {
         log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)');
@@ -157,7 +160,7 @@ export default class Program extends Resource {
           if (isIndexed && isInstanced) {
             this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
           } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-            this.gl.drawElementsRange(drawMode, start, end, vertexCount, indexType, offset);
+            this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
           } else if (isIndexed) {
             this.gl.drawElements(drawMode, vertexCount, indexType, offset);
           } else if (isInstanced) {

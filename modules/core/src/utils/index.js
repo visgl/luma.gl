@@ -5,3 +5,4 @@ export {uid, isPowerOfTwo, isObjectEmpty} from './utils';
 export {default as log} from './log';
 export {formatValue} from './format-value';
 export {default as assert} from './assert';
+export {stubRemovedMethods} from './stub-methods';

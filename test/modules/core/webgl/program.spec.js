@@ -53,11 +53,11 @@ test('WebGL#Program draw', t => {
 
   const program = new Program(gl, {fs, vs});
 
-  const vertexArray = new VertexArray(gl, {program})
-    .setAttributes({
-      positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
-      unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
-    });
+  const vertexArray = new VertexArray(gl, {program});
+  vertexArray.setAttributes({
+    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
+    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+  });
   t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
 
   program.draw({vertexArray, vertexCount: 3});

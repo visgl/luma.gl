@@ -5,6 +5,12 @@ A `Framebuffer` is a WebGL container object that the application can use for "of
 For additional information, see OpenGL Wiki [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) and [Framebuffer Object](https://www.khronos.org/opengl/wiki/Framebuffer_Object)
 
 
+## Functionality
+
+luma.gl adds 
+
+
+
 ## Usage
 
 Creating a framebuffer with default color and depth attachments
@@ -16,19 +22,8 @@ const framebuffer = new Framebuffer(gl, {
   color: true,
   depth: true
 });
+
 ```
-
-When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
-For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
-
-| Texture parameter       | Value |
-| ---                     | --- |
-| `GL.TEXTURE_MIN_FILTER` | `GL.NEAREST` |
-| `GL.TEXTURE_MAG_FILTER` | `GL.NEAREST` |
-| `GL.TEXTURE_WRAP_S`     | `GL.CLAMP_TO_EDGE` |
-| `GL.TEXTURE_WRAP_T`     | `GL.CLAMP_TO_EDGE` |
-For depth, new `Renderbuffer` object is created with `GL.DEPTH_COMPONENT16` format.
-
 
 Attaching textures and renderbuffers
 
@@ -44,7 +39,8 @@ framebuffer.attach({
 framebuffer.checkStatus(); // optional
 ```
 
-Resizing a framebuffer to the size of a window
+Resizing a framebuffer to the size of a window. Resizes all attachements with a single `framebuffer.resize()` call
+
 
 ```js
 // Note: this resizes (and possibly clears) all attachments
@@ -176,7 +172,7 @@ framebuffer.clear({
 
 ## Methods
 
-### constructor
+### constructor(gl : WebGLRenderingContext, props : Object)
 
 Creates a new framebuffer, optionally creating and attaching `Texture` and `Renderbuffer` attachments.
 
@@ -192,7 +188,6 @@ new Framebuffer(gl, {
 })
 ```
 
-* `gl` - (*WebGLContext*) - context
 * `id`= - (*String*) - An optional name (id) of the buffer.
 * `width`=`1` - (*number*) The width of the framebuffer.
 * `height`=`1` - (*number*) The height of the framebuffer.
@@ -203,13 +198,25 @@ new Framebuffer(gl, {
 
 The luma.gl `Framebuffer` constructor enables the creation of a framebuffer with all the proper attachments in a single step and also the `resize` method makes it easy to efficiently resize a all the attachments of a `Framebuffer` with a single method.
 
+When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
+For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
 
-### delete
+| Texture parameter       | Value |
+| ---                     | --- |
+| `GL.TEXTURE_MIN_FILTER` | `GL.NEAREST` |
+| `GL.TEXTURE_MAG_FILTER` | `GL.NEAREST` |
+| `GL.TEXTURE_WRAP_S`     | `GL.CLAMP_TO_EDGE` |
+| `GL.TEXTURE_WRAP_T`     | `GL.CLAMP_TO_EDGE` |
+
+For depth, new `Renderbuffer` object is created with `GL.DEPTH_COMPONENT16` format.
+
+
+### delete()
 
 Destroys the underlying WebGL object. When destroying `Framebuffer`s it can be important to consider that a `Framebuffer` can manage other objects that may also need to be destroyed.
 
 
-### initialize
+### initialize(props : Object) : Framebuffer
 
 Initializes the `Framebuffer` to match the supplied parameters. Unattaches any existing attachments, attaches any supplied attachments. All new attachments will be resized if they are not already at the right size.
 
@@ -224,7 +231,7 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 * `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
 
 
-### resize
+### resize({width: Number, height: Number}) : Framebuffer
 
 `Framebuffer.resize({width, height})`
 
@@ -241,7 +248,7 @@ Returns itself to enable chaining
 WebGL References see `initialize`.
 
 
-### attach
+### attach(attachments : Object) : Framebuffer
 
 Used to attach or unattach `Texture`s and `Renderbuffer`s from the `Framebuffer`s various attachment points.
 
