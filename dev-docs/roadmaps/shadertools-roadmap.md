@@ -1,9 +1,3 @@
-# RFC: shadertools improvements
-
-* **Author**: Ib Green
-* **Date**: Aug, 2017
-* **Status**: Draft
-
 ## Overview
 
 Extend our shader module support with a number of new concepts.

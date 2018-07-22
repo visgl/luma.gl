@@ -1,22 +1,19 @@
-# RFC Directory (luma.gl)
+# RFCs and Roadmaps (luma.gl)
 
-Implementation of non-trivial new luma.gl features should typically be started off with the creation of an RFC (Request for Comments) to make sure we have a complete story. It also allow the bigger team (as well as the community) to comment and contribute insights.
+Implementation of non-trivial new luma.gl features should typically be started off with the creation of an RFC (Request for Comments). For more details see [RFC Guidelines](../RFC-GUIDELINES.md) .
 
-| RFC Status       | Description |
-| ---              | --- |
-| **Proposed**     | Call for an RFC to be written |
-| **Draft**        | Work-in-progress, not ready for formal review |
-| **Pre-Approved** | No major initial objections, draft pre-approved for prototyping |
-| **Review**       | Ready for formal review |
-| **Approved**     | Approved, ready for implementation |
-| **Experimental** | Approved and implemented as experimental API |
-| **Implemented**  | Approved and implemented (as officially supported API) |
-| **Deferred**     | Review uncovered reasons not to proceed at this time |
-| **Rejected**     | Review uncovered reasons not to proceed |
 
-## Reviews
+## Roadmaps
 
-The core developers will review RFCs (and of course, comments from the community are always welcome). Recommended review criteria are being documented in [RFC Review Guidelines](../common/RFC-REVIEW-GUIDELINES.md).
+Writeups of directions in major areas of interest
+
+| Roadmap                                 | Description |
+| ---                                     | ---         |
+| [**Shadertools**](../roadmaps/shadertools-roadmap.md) | shader module system roadmap |
+| [**GPGPU**](../roadmaps/gpgpu-roadmap.md) | gpgpu roadmap |
+| [**Effects**](../roadmaps/effects-lighting-materials-roadmap.md) | Gradually build out our shader stack |
+| [**Scenegraph and Loaders**](../roadmaps/scenegraph-loaders-roadmap.md) | Improved scenegraph and loader support |
+
 
 ## Longer-Terms RFCs
 
@@ -25,9 +22,9 @@ These are early ideas not yet associated with any release
 | RFC | Author | Status | Description |
 | --- | --- | --- | --- |
 | **WIP/Draft** | | | |
-
-Possible other animation related RFCs:
-- integration with event handling (enter leave triggers for animations)
+| [**Off-Thread (aka Off-Screen) Rendering**](vNext/offscreen-render-rfc.md) | @pessimistress | **Experimental** | Use the new Off-Screen API to enable WebGL to run in a separate thread. Still requires browser flag. |
+| [**Automatic Shader Module Injection**](vNext/automatic-shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
+| [**Dist Size Reduction**](vNext/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
 
 ## v6.x RFCs
@@ -42,17 +39,20 @@ Current direction for luma.gl v6.x is to focus on:
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
-| [**Off-Thread (aka Off-Screen) Rendering**](v6.0/offscreen-render-rfc.md) | @pessimistress | **Review** | Use the new Off-Screen API to enable WebGL to run in a separate thread. |
-| [**Shadertools Improvements**](v6.0/shadertools-improvement-rfc.md) | @ibgreen | **Draft** | A number of mainly conceptual improvements of the shader module system. |
-| [**Shader Module Injection**](v6.1/shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
-| [**Dist Size Reduction**](v6.1/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
+
+
+## v6.1 RFCs
+
+| RFC | Author | Status | Description |
+| --- | ---    | ---    | ---         |
+| [**Multipass Rendering**](v6.1/multipass-rendering-rfc.md) | @ibgreen | **Draft** | Multipass rendering system for postprocessing effects and advanced rendering |
 
 
 ## v6.0 RFCs
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
-| [**Centralize Attribute Management in VertexArray**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Apprved** | Move attribute management to `VertexArray` |
+| [**Centralize Attribute Management in VertexArray**](v6.0/vertex-array-attributes-rfc.md) | @ibgreen | **Implemented** | Move attribute management to `VertexArray` |
 | [**Portable GLSL 3.00 Shader Modules**](v6.0/portable-glsl-300-rfc.md) | @ibgreen | **Implemented** | "Transpile" GLSL 3.00 to 1.00 and vice versa. |
 | [**Shader Fragment Injection**](v6.0/shader-fragment-injection-rfc.md) | @ibgreen | **Implemented** | Enables short fragments of code to be injected into existing shaders |
 
@@ -61,7 +61,7 @@ Current direction for luma.gl v6.x is to focus on:
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
-| [**New Transform Class**](v5.2/enhanced-transform-feedback-api.md) | @1chandu | **Review / Prototyped** | Simpler API for TransformFeedback |
+| [**New Transform Class**](v5.2/enhanced-transform-feedback-api.md) | @1chandu | **Implemented** | Simpler API for TransformFeedback |
 
 
 ## v5.0 RFCs

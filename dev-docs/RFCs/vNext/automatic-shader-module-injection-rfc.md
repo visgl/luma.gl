@@ -1,4 +1,4 @@
-# RFC: Shader Injection
+# RFC: Automatic Shader Module Injection
 
 * **Authors**: Ib Green
 * **Date**: Sep 2017
