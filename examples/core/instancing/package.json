@@ -1,7 +1,8 @@
 {
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
-    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d",
+    "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
     "luma.gl": "^6.0.0"

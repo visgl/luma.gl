@@ -28,6 +28,9 @@
   "workspaces": [
     "modules/*"
   ],
+  "sideEffects": [
+    "./src/init.js"
+  ],
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "(cd modules/core && npm run clean) && rm -fr node_modules",

@@ -1,7 +1,7 @@
 {
   "plugins": [
     "version-inline",
-    "scripts/babel-plugin-inline-gl-constants.js"
+    "./scripts/babel-plugin-inline-gl-constants.js"
   ],
   "env": {
     "es5": {

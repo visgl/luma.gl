@@ -17,7 +17,8 @@ const BABEL_CONFIG = {
   ].map(name => require.resolve(`babel-preset-${name}`)),
   plugins: [
     // website uses decorators
-    require.resolve('babel-plugin-transform-decorators-legacy')
+    require.resolve('babel-plugin-transform-decorators-legacy'),
+    resolve(__dirname, '../scripts/babel-plugin-inline-gl-constants.js')
   ]
 };
 

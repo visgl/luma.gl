@@ -1,7 +1,7 @@
 {
   "name": "luma.gl",
-  "version": "6.0.0-beta.1",
-  "description": "A WebGL JavaScript visualization library.",
+  "version": "6.1.0-alpha.1",
+  "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "contributors": [
     "Ib Green <ib@uber.com>",

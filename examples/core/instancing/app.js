@@ -1,4 +1,3 @@
-import GL from 'luma.gl/constants';
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
@@ -118,13 +117,13 @@ class AppAnimationLoop extends AnimationLoop {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
       depthTest: true,
-      depthFunc: GL.LEQUAL
+      depthFunc: gl.LEQUAL
     });
 
     gl.canvas.addEventListener('mousemove', mousemove);
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
-    this.cube =  new InstancedCube(gl, {
+    this.cube = new InstancedCube(gl, {
       _animationLoop: this,
       uniforms: {
         uTime: ({tick}) => tick * 0.1,
@@ -164,7 +163,7 @@ class AppAnimationLoop extends AnimationLoop {
     });
 
     // Draw the cubes
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.cube.draw();
   }
 

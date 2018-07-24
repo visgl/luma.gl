@@ -7,7 +7,7 @@ const COLOR_YELLOW = '\x1b[33m';
 module.exports = function _(opts) {
 
   console.log(  // eslint-disable-line
-    `${COLOR_YELLOW}luma.gl: babel GL.value replacement plugin loaded${COLOR_RESET}`);
+    `${COLOR_YELLOW}luma.gl: babel GL.value replacement plugin loaded: ${GL.LINES}${COLOR_RESET}`);
 
   return {
     visitor: {
@@ -32,18 +32,18 @@ module.exports = function _(opts) {
       MemberExpression(path, state) {
         const object = path.get('object');
         const property = path.get('property');
-        const value = GL[property];
+        const value = GL[property.node.name];
 
-        if (object.isIdentifier({name: 'GL'}) && value !== undefined) {
-          if (state.opts.verbose || state.opts.debug) {
-            console.error(`${COLOR_YELLOW}gl.${property.node.name} ==> ${value}${COLOR_RESET}`); // eslint-disable-line
-          }
-          path.replaceWith(opts.types.numericLiteral(value));
-        }
+        const isGLIdentifier =
+          object.isIdentifier({name: 'GL'}) ||
+          object.isIdentifier({name: 'gl'});
 
-        if (object.isIdentifier({name: 'gl'}) && value !== undefined) {
+        if (isGLIdentifier && value !== undefined) {
+
           if (state.opts.verbose || state.opts.debug) {
-            console.error(`${COLOR_YELLOW}gl.${property.node.name} ==> ${value}${COLOR_RESET}`); // eslint-disable-line
+            const filename = state.file.opts.filename;
+            // const line = object.start.line;
+            console.error(`${COLOR_YELLOW}${filename}: gl.${property.node.name} ==> ${value}${COLOR_RESET}`); // eslint-disable-line
           }
           path.replaceWith(opts.types.numericLiteral(value));
         }

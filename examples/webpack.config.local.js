@@ -29,12 +29,11 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   },
 
   resolve: {
-    // modules: [
-    //   resolve(__dirname, '../node_modules')
-    // ],
-
     // Imports the luma.gl library from its src directory in this repo
     alias: ALIASES
+    // For bundle size testing
+    // 'luma.gl': resolve(LIB_DIR, './dist/es6'),
+    // 'math.gl': resolve(LIB_DIR, './node_modules/math.gl')
   },
 
   module: {

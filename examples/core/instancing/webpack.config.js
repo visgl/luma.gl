@@ -2,7 +2,7 @@ const {resolve} = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const CONFIG = {
-  mode: 'development',
+  mode: 'production',
 
   entry: {
     app: resolve('./app.js')
