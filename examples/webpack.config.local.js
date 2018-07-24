@@ -8,12 +8,7 @@
 const {resolve} = require('path');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
-const LIB_DIR = resolve(__dirname, '..');
-const SRC_DIR = resolve(LIB_DIR, './src');
-
 const ALIASES = require('../aliases');
-
-
 
 // Support for hot reloading changes to the library:
 const LOCAL_DEVELOPMENT_CONFIG = {
