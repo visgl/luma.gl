@@ -24,8 +24,15 @@ import fp64arithmeticShader from './fp64-arithmetic.glsl';
 import fp64functionShader from './fp64-functions.glsl';
 
 const fp64shader = `${fp64arithmeticShader}\n${fp64functionShader}`;
-
+const CONST_UNIFORMS = {
+  // Used in LUMA_FP64_CODE_ELIMINATION_WORKAROUND
+  ONE: 1.0
+};
 export {fp64ify, fp64LowPart, fp64ifyMatrix4};
+
+function getUniforms() {
+  return Object.assign({}, CONST_UNIFORMS);
+}
 
 export default {
   name: 'fp64',
@@ -33,7 +40,8 @@ export default {
   fs: null,
   fp64ify,
   fp64LowPart,
-  fp64ifyMatrix4
+  fp64ifyMatrix4,
+  getUniforms
 };
 
 // Arithmetic only
