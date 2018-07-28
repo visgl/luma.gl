@@ -1,8 +1,25 @@
 # What's New
 
+
+## Version 6.1
+
+Date: Target August 24, 2018
+
+
+### New Multipass Rendering System
+
+luma.gl now provides a multipass rendering framework, based on a `MultiPassRenderer` class that accepts a list of render passes.
+
+
+### Suite of Composable Post-Processing Effects
+
+A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. In many cases, the underlying shaders have also been exposed as shader modules, providing additional composability options for advanced apps.
+
+
+
 ## Version 6.0
 
-Date: Target July 20, 2018
+Date: July 18, 2018
 
 <table style="border: 0;" align="center">
   <tbody>

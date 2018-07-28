@@ -74,6 +74,9 @@ export default class AnimationLoop {
     this.stop = this.stop.bind(this);
     this._renderFrame = this._renderFrame.bind(this);
 
+    this._onMousemove = this._onMousemove.bind(this);
+    this._onMouseleave = this._onMouseleave.bind(this);
+
     return this;
   }
 
@@ -112,6 +115,7 @@ export default class AnimationLoop {
         // Create the WebGL context
         this._createWebGLContext(opts);
         this._createFramebuffer();
+        this._startEventHandling();
 
         // Initialize the callback data
         this._initializeCallbackData();
@@ -240,7 +244,8 @@ export default class AnimationLoop {
 
       // Experimental
       _loop: this,
-      _animationLoop: this
+      _animationLoop: this,
+      _mousePosition: null      // Event props
     };
   }
 
@@ -355,5 +360,19 @@ export default class AnimationLoop {
         height: this.gl.drawingBufferHeight
       });
     }
+  }
+
+  // Event handling
+
+  _startEventHandling() {
+    this.gl.canvas.addEventListener('mousemove', this._onMousemove);
+    this.gl.canvas.addEventListener('mouseleave', this._onMouseleave);
+  }
+
+  _onMousemove(e) {
+    this.animationProps._mousePosition = [e.offsetX, e.offsetY];
+  }
+  _onMouseleave(e) {
+    this.animationProps._mousePosition = null;
   }
 }

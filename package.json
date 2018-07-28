@@ -56,7 +56,6 @@
     "babel-eslint": "^6.0.0",
     "babel-plugin-istanbul": "^4.1.1",
     "babel-plugin-version-inline": "^1.0.0",
-    "browserify": "^13.0.0",
     "coveralls": "^2.13.0",
     "eslint": "^3.0",
     "eslint-config-uber-es2015": "^3.0.0",

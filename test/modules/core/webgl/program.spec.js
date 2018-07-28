@@ -34,7 +34,6 @@ test('WebGL#Program construct/delete', t => {
 
   t.throws(
     () => new Program(gl),
-    /.*shader*/,
     'Program throws on missing shader');
 
   const program = new Program(gl, {vs, fs});

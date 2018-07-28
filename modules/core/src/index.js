@@ -83,6 +83,19 @@ export {default as _Attribute} from './core/attribute';
 export {default as _ShaderCache} from './core/shader-cache';
 export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
 
+// Multipass Rendering
+export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';
+export {default as _RenderState} from './multipass/render-state';
+export {default as _Pass} from './multipass/pass';
+export {default as _CompositePass} from './multipass/composite-pass';
+export {default as _ClearPass} from './multipass/clear-pass';
+export {default as _RenderPass} from './multipass/render-pass';
+export {default as _CopyPass} from './multipass/copy-pass';
+export {default as _TexturePass} from './multipass/texture-pass';
+// export {default as _MaskPass} from './multipass/mask-pass';
+// export {default as _ClearMaskPass} from './multipass/clearmask-pass';
+export {default as _PickingPass} from './multipass/picking-pass';
+
 // Geometry
 export {default as Geometry} from './geometry/geometry';
 export {default as ConeGeometry} from './geometry/cone-geometry';
