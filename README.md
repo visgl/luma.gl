@@ -20,19 +20,14 @@
 
 ## Overview
 
-luma.gl's provides easy-to-use WebGL2-based building blocks enabling high-performance GPU-based data visualization and computation in your browser.
+luma.gl is a set of WebGL2 components for high-performance GPU-based rendering and computation in the browser.
 
-See
-[**Examples**](http://uber.github.io/luma.gl/#/examples/overview) and
-[**Documentation**](http://uber.github.io/luma.gl/#/documentation/overview/introduction).
-[**What's New**](http://uber.github.io/luma.gl/#/documentation/overview/what-new).
+It is the engine that powers applications and frameworks like
 
-
-## Used By
-
-* [deck.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays, built using luma.gl.
+* [kepler.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
+* [deck.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
 
 
 # Installation, Running Examples etc
 
-For details, please refer to the extensive online website
+For details, please refer to the extensive [online website](https://uber.github.io/luma.gl).
