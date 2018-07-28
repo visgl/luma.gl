@@ -3,7 +3,7 @@
  *
  * Ported to luma.gl from THREE.js
  *
- * Attributions (per comments in original THREE.js files):
+ * Attributions: (per comments in original THREE.js files)
  * - ported to THREE.js from SSAO GLSL shader v1.2 by alteredq / http://alteredqualia.com/
  *   assembled by Martins Upitis (martinsh) (http://devlog-martinsh.blogspot.com)
  * - original technique by ArKano22 http://www.gamedev.net/topic/550699-ssao-no-halo-artifacts/

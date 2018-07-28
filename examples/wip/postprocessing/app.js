@@ -7,16 +7,17 @@ import {Matrix4, radians} from 'math.gl';
 import {
   _MultiPassRenderer as MultiPassRenderer,
   _ClearPass as ClearPass,
-  _RenderPass as RenderPass,
+  // _RenderPass as RenderPass,
   _PickingPass as PickingPass,
   _CopyPass as CopyPass
 } from 'luma.gl';
+
 import {
   depth,
-  SSAOPass,
-  OutlinePass,
-  ConvolutionPass
-} from '../../../packages/imageprocessing/src';
+  // SSAOPass,
+  OutlinePass
+  // ConvolutionPass
+} from 'luma.gl-imageprocessing';
 
 const INFO_HTML = `
 <p>

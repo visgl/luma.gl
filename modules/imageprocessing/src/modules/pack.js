@@ -1,5 +1,4 @@
 // Packing of floats into RGBA8
-// Ported to luma.gl from THREE.js (MIT license)
 /* eslint-disable camelcase */
 
 const fs = `\
