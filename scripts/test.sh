@@ -17,8 +17,13 @@ run_full_test() {
   # node test/start.js render
 }
 
-
 case $MODE in
+  "")
+    echo "test [ 'full' | fast' | 'bench' | 'ci' | 'cover' | 'examples' | 'lint' | size-es6' ]"
+    echo "Running 'full' test by default"
+    run_full_test;
+    break;;
+
   "full")
     run_full_test;
     break;;
@@ -64,8 +69,6 @@ case $MODE in
 
   *)
     # default test
-    echo "test [ 'full' | fast' | 'bench' | 'ci' | 'cover' | 'examples' | 'lint' | size-es6' ]"
-    echo "Running 'full' test by default"
-    run_full_test
-    ;;
+    node test/start.js $MODE
+    break;;
   esac

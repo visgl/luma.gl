@@ -1,7 +1,7 @@
 {
   "name": "luma.gl",
-  "version": "6.0.0-beta.1",
-  "description": "A WebGL JavaScript visualization library.",
+  "version": "6.1.0-alpha.1",
+  "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "contributors": [
     "Ib Green <ib@uber.com>",
@@ -37,13 +37,20 @@
     "headless.js",
     "webgl1.js"
   ],
+  "browser": {
+    "gl": false,
+    "gl/wrap": false
+  },
+  "sideEffects": [
+    "./src/init.js"
+  ],
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
-    "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5/packages dist/esm/packages dist/es6/packages",
-    "build-es6": "BABEL_ENV=es6 babel src --out-dir dist/es6 --source-maps && BABEL_ENV=es6 babel ../../packages --out-dir dist/es6/packages --source-maps",
-    "build-esm": "BABEL_ENV=esm babel src --out-dir dist/esm --source-maps && BABEL_ENV=esm babel ../../packages --out-dir dist/esm/packages --source-maps",
-    "build-es5": "BABEL_ENV=es5 babel src --out-dir dist/es5 --source-maps && BABEL_ENV=es5 babel ../../packages --out-dir dist/packages --source-maps",
-    "build-size": "(echo \"source size\" ; find src/ -name '*.js' | xargs cat | wc -c) && (echo \"dist esm size\" ; find dist/esm -name '*.js' | xargs cat | wc -c) && (echo \"dist/es6 size\" ; find dist/es6 -name '*.js' | xargs cat | wc -c)",
+    "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5 dist/esm dist/es6",
+    "build-es6": "BABEL_ENV=es6 babel src --out-dir dist/es6 --source-maps --ignore 'node_modules/'",
+    "build-esm": "BABEL_ENV=esm babel src --out-dir dist/esm --source-maps --ignore 'node_modules/'",
+    "build-es5": "BABEL_ENV=es5 babel src --out-dir dist/es5 --source-maps --ignore 'node_modules/'",
+    "build-size": "(echo \"source size\" ; find src/ -name '*.js' | xargs cat | wc -c) && (echo \"dist/es6 size\" ; find dist/es6 -name '*.js' | xargs cat | wc -c) && (echo \"dist esm size\" ; find dist/esm -name '*.js' | xargs cat | wc -c) && (echo \"dist es5 size\" ; find dist/es5 -name '*.js' | xargs cat | wc -c)",
     "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5 && npm run build-size",
     "cover": "NODE_ENV=test nyc --reporter html --reporter cobertura --reporter=lcov npm run test-cover",
     "lint": "eslint src test && npm run lint-yarn",

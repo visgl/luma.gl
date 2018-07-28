@@ -5,15 +5,10 @@
 // This enables using the examples to debug the main library source
 // without publishing or npm linking, with conveniences such hot reloading etc.
 
-const {resolve} = require('path');
+// const {resolve} = require('path');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
-const LIB_DIR = resolve(__dirname, '..');
-const SRC_DIR = resolve(LIB_DIR, './src');
-
 const ALIASES = require('../aliases');
-
-
 
 // Support for hot reloading changes to the library:
 const LOCAL_DEVELOPMENT_CONFIG = {
@@ -29,12 +24,11 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   },
 
   resolve: {
-    // modules: [
-    //   resolve(__dirname, '../node_modules')
-    // ],
-
     // Imports the luma.gl library from its src directory in this repo
     alias: ALIASES
+    // For bundle size testing
+    // 'luma.gl': resolve(LIB_DIR, './dist/es6'),
+    // 'math.gl': resolve(LIB_DIR, './node_modules/math.gl')
   },
 
   module: {

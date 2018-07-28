@@ -30,7 +30,7 @@
   ],
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
-    "clean": "(cd modules/core && npm run clean) && rm -fr node_modules",
+    "clean": "rm -fr dist dist-es6 && (cd modules/core && npm run clean)",
     "build": "(cd modules/core && npm run build)",
     "cover": "(cd modules/core && npm run cover)",
     "lint": "eslint modules test && npm run lint-yarn",
@@ -52,6 +52,7 @@
     "@babel/cli": "^7.0.0-beta",
     "@babel/core": "^7.0.0-beta",
     "@babel/preset-env": "^7.0.0-beta",
+    "@babel/preset-es2015": "^7.0.0-beta",
     "babel-eslint": "^6.0.0",
     "babel-plugin-istanbul": "^4.1.1",
     "babel-plugin-version-inline": "^1.0.0",
@@ -90,5 +91,8 @@
     "exclude": [
       "test/**/*.js"
     ]
-  }
+  },
+  "pre-commit": [
+    "test-fast"
+  ]
 }

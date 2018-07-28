@@ -10,8 +10,8 @@ _docs/
 coverage/
 node_modules/
 npm-debug.log
+stats.json
 
-examples/winds/data/*.html
 test/data/test.png
 
 package-lock.json
