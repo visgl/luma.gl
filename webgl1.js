@@ -1,2 +1,2 @@
 // Installs polyfills for webgl1
-require('./dist/es5/webgl1');
+console.log('luma.gl: import("luma.gl/webgl1") has no effect'); // eslint-disable-line

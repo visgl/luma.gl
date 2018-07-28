@@ -40,6 +40,7 @@
     "publish-prod": "(cd modules/core && npm run publish-prod)",
     "publish-beta": "(cd modules/core && npm run publish-beta)",
     "test": "scripts/test.sh",
+    "test-ci": "scripts/test.sh ci",
     "test-fast": "scripts/test.sh fast",
     "test-browser": "webpack-dev-server --config test/webpack.config.js --env.test_browser --progress --hot --open",
     "test-render": "webpack-dev-server --config test/webpack.config.js --env.render --progress --hot --open",

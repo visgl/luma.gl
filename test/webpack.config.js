@@ -127,7 +127,7 @@ const CONFIGS = {
     const config = Object.assign({}, TEST_CONFIG, {
       resolve: {
         alias: Object.assign({}, ALIASES, {
-          'luma.gl': resolve(__dirname, `../dist/${dist}`)
+          'luma.gl': resolve(__dirname, `../modules/core/dist/${dist}`)
         })
       }
     });
@@ -203,7 +203,7 @@ module.exports = (env = {}) => {
 
   const config = getConfig(env);
   // NOTE uncomment to display config
-  // console.log('webpack config', JSON.stringify(config));
+  console.log('webpack config', JSON.stringify(config));
 
   return config;
 };
