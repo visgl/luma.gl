@@ -1,4 +1,4 @@
-import {isOldIE} from '../../../src/utils';
+import {isOldIE} from 'luma.gl/utils';
 import test from 'tape-catch';
 
 test('isOldIE', t => {

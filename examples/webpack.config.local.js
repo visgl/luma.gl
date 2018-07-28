@@ -11,6 +11,10 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const LIB_DIR = resolve(__dirname, '..');
 const SRC_DIR = resolve(LIB_DIR, './src');
 
+const ALIASES = require('../aliases');
+
+
+
 // Support for hot reloading changes to the library:
 const LOCAL_DEVELOPMENT_CONFIG = {
   mode: 'development',
@@ -25,10 +29,12 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   },
 
   resolve: {
-    alias: {
-      // Imports the luma.gl library from the src directory in this repo
-      'luma.gl': SRC_DIR
-    }
+    // modules: [
+    //   resolve(__dirname, '../node_modules')
+    // ],
+
+    // Imports the luma.gl library from its src directory in this repo
+    alias: ALIASES
   },
 
   module: {

@@ -1,5 +1,7 @@
 const {resolve} = require('path');
 
+const ALIASES = require('../aliases');
+
 module.exports = {
 
   resolve: {
@@ -7,9 +9,7 @@ module.exports = {
       resolve(__dirname, '../node_modules')
     ],
 
-    alias: {
-      'luma.gl': resolve(__dirname, '../src')
-    }
+    alias: ALIASES
   }
 
 };

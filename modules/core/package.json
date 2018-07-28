@@ -1,0 +1,86 @@
+{
+  "name": "luma.gl",
+  "version": "6.0.0-beta.1",
+  "description": "A WebGL JavaScript visualization library.",
+  "license": "MIT",
+  "contributors": [
+    "Ib Green <ib@uber.com>",
+    "Nicolas Belmonte <nico@uber.com>",
+    "Rye Terrell <ryeterrell@ryeterrell.net",
+    "Shan He <shan@uber.com>",
+    "Mikola Lysenko <mikolalysenko@gmail.com",
+    "Wesam Manassra <manassra@uber.com>",
+    "Shaojing Li <shaojing@uber.com>",
+    "Ravi Akenapalli <chandu@uber.com>",
+    "Xiaoji Chen <xiaoji@uber.com>",
+    "Jian Huang <jianh@uber.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d"
+  ],
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
+  "esnext": "dist/es6/index.js",
+  "files": [
+    "src",
+    "dist",
+    "addons.js",
+    "constants.js",
+    "debug.js",
+    "headless.js",
+    "webgl1.js"
+  ],
+  "scripts": {
+    "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
+    "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5/packages dist/esm/packages dist/es6/packages",
+    "build-es6": "BABEL_ENV=es6 babel src --out-dir dist/es6 --source-maps && BABEL_ENV=es6 babel ../../packages --out-dir dist/es6/packages --source-maps",
+    "build-esm": "BABEL_ENV=esm babel src --out-dir dist/esm --source-maps && BABEL_ENV=esm babel ../../packages --out-dir dist/esm/packages --source-maps",
+    "build-es5": "BABEL_ENV=es5 babel src --out-dir dist/es5 --source-maps && BABEL_ENV=es5 babel ../../packages --out-dir dist/packages --source-maps",
+    "build-size": "(echo \"source size\" ; find src/ -name '*.js' | xargs cat | wc -c) && (echo \"dist esm size\" ; find dist/esm -name '*.js' | xargs cat | wc -c) && (echo \"dist/es6 size\" ; find dist/es6 -name '*.js' | xargs cat | wc -c)",
+    "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5 && npm run build-size",
+    "cover": "NODE_ENV=test nyc --reporter html --reporter cobertura --reporter=lcov npm run test-cover",
+    "lint": "eslint src test && npm run lint-yarn",
+    "lint-examples": "eslint examples",
+    "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
+    "publish-prod": "npm run build && npm run test-fast && npm publish",
+    "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
+    "bench": "node test/bench/node.js",
+    "bench-browser": "webpack-dev-server --config test/webpack.config.js  --env.bench --progress --hot --open",
+    "test": "npm run lint && npm run test-node && npm run build && npm run test-dist &&  npm run collect-metrics && npm run test-browser-puppet",
+    "test-ci": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics",
+    "test-cover": "NODE_ENV=test tape -r babel-register test/node.js && nyc report",
+    "test-fast": "node test/start.js test",
+    "test-fp64": "(cd src/shadertools/test && webpack-dev-server --progress --hot --open)",
+    "test-node": "node test/node.js",
+    "test-dist": "npm run build-es6 && node test/start.js test-dist",
+    "test-browser": "webpack-dev-server --config test/webpack.config.js --progress --hot --open --env.testBrowser ",
+    "test-browser-puppet": "node test/start.js test-browser",
+    "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",
+    "test-size-es6": "npm run build-es6 && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.analyze --env.es6",
+    "test-size-esm": "npm run build-esm && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.analyze --env.esm",
+    "collect-metrics": "./scripts/collect-metrics.sh"
+  },
+  "dependencies": {
+    "math.gl": "^2.0.0",
+    "probe.gl": "^1.0.0",
+    "seer": "^0.2.4",
+    "webgl-debug": "^2.0.0"
+  },
+  "nyc": {
+    "sourceMap": false,
+    "instrument": false,
+    "include": [
+      "src/**/*.js"
+    ],
+    "exclude": [
+      "test/**/*.js"
+    ]
+  }
+}
