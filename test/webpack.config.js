@@ -127,7 +127,7 @@ const CONFIGS = {
     const config = Object.assign({}, TEST_CONFIG, {
       resolve: {
         alias: Object.assign({}, ALIASES, {
-          'luma.gl': resolve(__dirname, `../modules/core/dist/${dist}`)
+          'luma.gl': resolve(__dirname, '../modules/core/')
         })
       }
     });
@@ -137,7 +137,7 @@ const CONFIGS = {
       config.resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
       break;
     case 'es5':
-      config.resolve.mainFields = ['main'];
+      config.resolve.mainFields = ['browser', 'main'];
       break;
     case 'esm':
     default:
@@ -203,7 +203,7 @@ module.exports = (env = {}) => {
 
   const config = getConfig(env);
   // NOTE uncomment to display config
-  console.log('webpack config', JSON.stringify(config));
+  // console.log('webpack config', JSON.stringify(config));
 
   return config;
 };

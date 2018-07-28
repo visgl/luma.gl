@@ -17,9 +17,13 @@ If this is desired, install headless gl using "npm install gl --save-dev" or "ya
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
+export let headlessGL = () => {
+  throw new Error(ERR_HEADLESSGL_LOAD);
+};
 
 if (!isBrowser) {
   try {
+    headlessGL = module.require('gl');
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
     console.info(ERR_HEADLESSGL_LOAD);

@@ -5,7 +5,9 @@
   "license": "MIT",
   "author": "Ib Green",
   "keywords": [
-    "babel-plugin"
+    "babel-plugin",
+    "webgl",
+    "gl constants"
   ],
-  "main": "src/babel-plugin-inline-gl-constants.js"
+  "main": "src/inline-gl-constants.js"
 }

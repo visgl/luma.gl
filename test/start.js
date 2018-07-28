@@ -60,6 +60,14 @@ case 'bench':
   require('./bench/index'); // Run the benchmarks
   break;
 
+case 'analyze':
+case 'analyze-size':
+  const util = require('util');
+  const exec = util.promisify(require('child_process').exec);
+  exec(
+    'webpack --config test/webpack.config.js --hide-modules --env.import-nothing --env.analyze --env.es6');
+  break;
+
 default:
   console.error(`Unknown test mode ${mode}`); // eslint-disable-line
 }

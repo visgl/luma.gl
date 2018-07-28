@@ -1,14 +1,18 @@
 /* eslint-disable no-console */
 /* global console */
 // const GL = require('luma.gl/constants');
-const GL = require('../../../src/constants.js');
+const GL = require('../../core/src/constants.js');
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 
+const DEBUG = false; // Set to true to force tracing
+
 module.exports = function _(opts) {
-  // console.log(
-  // `${COLOR_YELLOW}luma.gl: babel GL constant inlining plugin loaded: ${GL.LINES}${COLOR_RESET}`);
+  if (DEBUG) {
+    console.log(
+    `${COLOR_YELLOW}luma.gl: babel GL constant inlining plugin loaded: ${GL.LINES}${COLOR_RESET}`);
+  }
 
   return {
     visitor: {
@@ -20,7 +24,7 @@ module.exports = function _(opts) {
           if (specifier.type === 'ImportDefaultSpecifier') {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {
-              if (state.opts.verbose || state.opts.debug) {
+              if (DEBUG || state.opts.verbose || state.opts.debug) {
                 const filename = state.file.opts.filename;
                 const line = local.loc.start.line;
                 console.error(
@@ -43,7 +47,7 @@ module.exports = function _(opts) {
 
         if (isGLIdentifier && value !== undefined) {
 
-          if (state.opts.verbose || state.opts.debug) {
+          if (DEBUG || state.opts.verbose || state.opts.debug) {
             const filename = state.file.opts.filename;
             // const line = object.start.line;
             console.error(
