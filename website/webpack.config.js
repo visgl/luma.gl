@@ -4,6 +4,8 @@ const webpack = require('webpack');
 const rootDir = join(__dirname, '..');
 const libSources = join(rootDir, 'src');
 
+const ALIASES = require('../aliases');
+
 // Otherwise modules imported from outside this directory does not compile
 // Seems to be a Babel bug
 // https://github.com/babel/babel-loader/issues/149#issuecomment-191991686
@@ -48,11 +50,14 @@ const COMMON_CONFIG = {
   },
 
   resolve: {
-    alias: {
-      'luma.gl': libSources,
-      // TODO: need better way to expose math.gl to examples instead of this line
+    modules: [
+      resolve(__dirname, '../node_modules')
+    ],
+
+    alias: Object.assign({}, ALIASES, {
+    // TODO: need better way to expose math.gl to examples instead of this line
       'math.gl': join(__dirname, 'node_modules/math.gl')
-    }
+    })
   },
 
   node: {

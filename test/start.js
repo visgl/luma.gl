@@ -20,7 +20,7 @@ case 'test':
   require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
-  require('./src/debug/seer-integration');
+  require('./modules/core/debug/seer-integration');
   break;
 
 case 'test-dist':
@@ -31,7 +31,7 @@ case 'test-dist':
   require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
-  require('./src/debug/seer-integration');
+  require('./modules/core/debug/seer-integration');
   break;
 
 case 'test-ci':
@@ -39,7 +39,7 @@ case 'test-ci':
   require('../webgl1');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
-  require('./src/debug/seer-integration');
+  require('./modules/core/debug/seer-integration');
   break;
 
 case 'test-browser':
