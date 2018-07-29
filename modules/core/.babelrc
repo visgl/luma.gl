@@ -1,4 +1,5 @@
 {
+  "comments": false,
   "env": {
     "es5": {
       "presets": [

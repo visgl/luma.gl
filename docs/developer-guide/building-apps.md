@@ -16,40 +16,47 @@ When installed from npm, luma.gl and related libraries come with three separate 
 
 | Folder     | `mainField` | Description   |
 | ---        | ---         | --- |
-| `dist/es5` | `main`      | All code is transpiled into ES5 and exports/imports are transpiled into `commonjs` requires. The main reason to use this distribution is if your bundler does not support tree-shaking using `import`/`export` |
-| `dist/esm` | `module`    | Same as `dist/es5`, except `export` and `import` statements are left untranspiled to enable tree shaking. |
-| `dist/es6` | `esnext`    | This distribution uses `babel-preset-env` and with very few exceptions essentially untranspiled ES6/ES2015 code. This is the smallest distribution, that will three-shake best, and is intended to be the best choice if you are only targeting "evergreen" browsers. |
+| `dist/es6` | `esnext`    | The most compact distribution is with very few exceptions essentially untranspiled ES6/ES2015 code (via `babel-preset-env`). This is the smallest distribution, and is the best choice if you are only targeting modern "evergreen" browsers (e.g. not IE11 or older mobile devices). |
+| `dist/esm` | `module`    | Same as `dist/es5`, except `export` and `import` statements are left untranspiled to enable tree shaking. The main reason to use this distribution is if your are targeting older browsers (e.g. IE11 or older mobile devices). |
+| `dist/es5` | `main`      | All code is transpiled into ES5 and exports/imports are transpiled into `commonjs` requires. The main reason to use this distribution is if your bundler does not support tree-shaking using `import`/`export` syntax. |
 
 You will have to check the documentation of your particular bundler to see what configuration options are available:
 
-* Webpack 4 allows you to choose the `esnext` distribution by specifying a `resolve.mainFields` array.
-* Webpack 2 and later will pick `module` main field over `main` if it is available
-* For other bundlers, please refer to the respective documentation
+* Webpack 2 and later will pick the `esm` distribution by default (the `module` main field)
+* Webpack 4 allows you to choose the `esnext` distribution by specifying a new `resolve.mainFields` array in your application's webpack config.
+* For other bundlers, please refer to the respective documentation to see if you can control which distribution to use. If not, expect the `es5` distribution to be used.
 
 
 ### About Tree-Shaking
 
-luma.gl was designed from the start to leverage tree-shaking. This technique has been talked about for quite some time but has been slow in actually providing the expected benefits. With the combination of webpack 4 and babel 7 we are finally starting to see significant results, so you may want to experiment with upgrading your bundler if you are not getting results.
+luma.gl is designed to fully leverage tree-shaking. Tree-shaking should be possible with any supporting browser but development has currentle focusing on enabling the webpack 4 + babel 7 combination which provides excellent results.
 
-Note that tree-shaking still has limitations:
+Some things to be aware of when working with tree-shaking:
 
-* At least in webpack, tree shaking is done by the uglifierm, which is typically only run on production builds, so it is typically not possible to assess the benefits of tree shaking during development. In addition, this makes it even harder to make statements about bundle size impact from looking at bundle sizes in development builds. The recommendation is to always measure impact on your final production builds.
-* Static dependency analyzers err on the side of safety and will still include any symbol it is not sure will never be used.
-* This is compounded by the fact that there are side effects in various language feature that complicate or defeat current static dependency analysis techniques, causing "dead code" to still be bundled. The good news is that the analyzers are getting better.
-* Naturally, an application that uses all the functionality offered by the library will benefit little from tree shaking, whereas a small app that only uses a few layers should expect bigger savings.
+* At least in Webpack, tree shaking is done by the uglifier, which is typically only run as the very last step on production builds. This means that it is typically not possible to assess the benefits of tree shaking during development.
+* The lack of tree-shaking during development makes it hard to make statements about bundle size impact of a library just from looking at bundle sizes of development builds or the size of the library's npm module. Our recommendation is to always measure impact on your actual production builds.
 
 
-### Bundle Size Number
+### Pay for What you Use
 
-So, what bundle size impact should you expect? When do you know if you have set up your bundler optimally. To help answer these questions, we provide some numbers you can compare against. luma.gl has scripts that measure the size of a minified bundle after each build, which allows us to provide comparison numbers between releases.
+Naturally, an application that uses all the functionality offered by a framework will benefit little from tree shaking, whereas a small app that only uses a few selected components should expect big savings.
 
-| Dist | 6.0 Bundle (Compressed) | 5.2 Bundle (Compressed) | 5.1 Bundle (Compressed) | Comments |
-| ---  | ---                     | ---                     | ---                     | --- |
-| ES6  | 125 KB (36 KB)          | 160 KB (42 KB)          | N/A                     | ES6 dist, minimally transpiled) |
-| ESM  | 217 KB (51 KB)          | 230 KB (53 KB)          | 320 KB (80 KB)          | Transpiled, tree-shaking enabled   |
-| ES5  | 414 KB (92 KB)          | 392 KB (88 KB)          | 388 KB (88 KB)          | Transpiled to ES5, no tree-shaking |
+When we modularize luma.gl, we are less focused on the size of the entire library, and more on making sure that applications only pay for the features they actually use. Also we try to make the core set of functionality small.
 
-Notes:
+
+### Bundle Size Numbers
+
+So, what kind of impact on bundle sizes should you expect when using luma.gl? When do you know if you have set up your bundler optimally. To help answer these questions, we provide some numbers you can compare against. luma.gl has scripts that measure the size of a minified bundle after each build, which allows us to provide comparison numbers between releases. This bundle imports the `Module` and `AnimationLoop` classes, which are the basic building blocks of most apps.
+
+| es6-production  | 6.1 Bundle/Zip | 6.0 Bundle/Zip |
+| ---             | ---            | ---            |
+| es6-production  | 144KB  / 42KB  | 181KB  / 51KB  |
+| esm-production  | 209KB  / 49KB  | 281KB  / 66KB  |
+| es5-production  | 408KB  / 88KB  | 422KB  / 93KB  |
+| es6-development | 787KB  / 123KB | 926KB  / 165KB |
+| esm-development | 1048KB / 150KB | 1167KB / 192KB |
+| es5-development | 961KB  / 142KB | 1052KB / 182KB |
+
 
 * Numbers represent the minified bundle size of a minimal application, bundled with Webpack 4, which means that the `ES6` and ESM numbers benefit from tree shaking.
 * The number in parenthesis are the compressed bundle sizes. This is an indication of the how much extra size will be added to your compressed app bundle if you import luma.gl.

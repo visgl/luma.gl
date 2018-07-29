@@ -1,3 +1,3 @@
-import {Program} from 'luma.gl';
+import {Model, AnimationLoop} from 'luma.gl';
 
-console.log(Program); // eslint-disable-line
+console.log(Model, AnimationLoop); // eslint-disable-line
