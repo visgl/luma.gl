@@ -152,7 +152,7 @@ const CONFIGS = {
     const config = CONFIGS.size(env);
 
     Object.assign(config, {
-      mode: 'production',
+      mode: env.development ? 'development' : 'production',
 
       // Replace the entry point for webpack-dev-server
       entry: {
