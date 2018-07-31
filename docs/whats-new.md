@@ -15,6 +15,9 @@ luma.gl now provides a multipass rendering framework, based on a `MultiPassRende
 
 A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. In many cases, the underlying shaders have also been exposed as shader modules, providing additional composability options for advanced apps.
 
+### Transform class supports shader module assembly
+
+`Transform` constructor can now accept `modules` parameter, when used corresponding shader modules will be applied on vertex and fragment shaders.
 
 
 ## Version 6.0

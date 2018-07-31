@@ -118,6 +118,7 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
   * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
   * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Buffer` object.
   * `vs` (`String`) - vertex shader string.
+  * `modules` - shader modules to be applied.
   * `varyings` (`Array`) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackMap`. Either `varyings` or `feedbackMap` must be provided.
   * `feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
   * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.

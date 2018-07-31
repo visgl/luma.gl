@@ -93,9 +93,10 @@ export default class Transform {
   // Private
 
   _initialize({
-    // Program parameters
+    // Model parameters
     id = 'transform',
     vs,
+    modules = null,
     varyings,
     drawMode = GL.POINTS,
     elementCount,
@@ -137,7 +138,7 @@ export default class Transform {
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._setupSwapBuffers();
-    this._buildModel({id, vs, varyings: varyingsArray, drawMode, elementCount});
+    this._buildModel({id, vs, modules, varyings: varyingsArray, drawMode, elementCount});
   }
 
   // setup source and destination buffers
@@ -204,7 +205,7 @@ export default class Transform {
   }
 
   // build Model and TransformFeedback objects
-  _buildModel({id, vs, varyings, drawMode, elementCount}) {
+  _buildModel({id, vs, modules, varyings, drawMode, elementCount}) {
     // use a minimal fragment shader with matching version of vertex shader.
     const fs = getShaderVersion(vs) === 300 ? FS300 : FS100;
 
@@ -212,6 +213,7 @@ export default class Transform {
       id,
       vs,
       fs,
+      modules,
       varyings,
       drawMode,
       vertexCount: elementCount
