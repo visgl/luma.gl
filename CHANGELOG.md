@@ -1,5 +1,34 @@
 # Pre-releases
 
+## 6.1.0-alpha.1 - July 31
+- Bump math.gl to 2.1.0-alpha (#629)
+- Improve bundle size metrics (#627)
+- POC: Multipass Rendering System (#616)
+- Babel plugin to inline GLSL constants (DIST SIZE) (#561)
+- Introduce `modules` directory structure (#625)
+- Shader Module fp64: add const uniforms used in shader WAs (#622)
+- Add roadmap documents (#619)
+- Correct MDN link for blendFuncSeparate in docs (#617)
+
+## 6.0.0 - July 18
+- Update attribute docs (#613)
+- Update luma.gl version to ^6.0.0 in examples (#614)
+
+## 6.0.0-rc.1 - July 17
+- Fix NPOT warnings (#611)
+- deck.gl v6 cleanup (#605)
+- Fix Transform demo link (#608)
+- Fix: set constant attributes every time VertexArray is bound (#604)
+- Update URLs to point to 6.0-release branch (#603)
+
+## 6.0.0-beta.3 - July 12
+- Fix: convert boolean uniforms to Numbers (#602)
+
+## 6.0.0-beta.2 - July 11
+- Fix multi-model render bug (#600)
+- Update whats-new doc (#595)
+- Fix: Uniform setting (#594)
+
 ## 6.0.0-beta.1 - July 3
 - Buffer: add getElementCount (#592)
 - Fix example (#593)
