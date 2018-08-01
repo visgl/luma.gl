@@ -183,7 +183,7 @@ const CONFIGS = {
 };
 
 function getConfig(env) {
-  if (env.test || env.testBrowser) {
+  if (env.test || env.testBrowser || env.test_browser) {
     return CONFIGS.test(env);
   }
   if (env.bench) {
@@ -199,11 +199,11 @@ function getConfig(env) {
 module.exports = (env = {}) => {
   // env = getEnv(env);
   // NOTE uncomment to display env
-  // console.log('webpack env', JSON.stringify(env));
+  console.log('webpack env', JSON.stringify(env));
 
   const config = getConfig(env);
   // NOTE uncomment to display config
-  // console.log('webpack config', JSON.stringify(config));
+  console.log('webpack config', JSON.stringify(config, null, 2));
 
   return config;
 };
