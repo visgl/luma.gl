@@ -52,6 +52,7 @@ const COMMON_CONFIG = {
 
   resolve: {
     modules: [
+      resolve(__dirname, './node_modules'),
       resolve(__dirname, '../node_modules')
     ],
 
