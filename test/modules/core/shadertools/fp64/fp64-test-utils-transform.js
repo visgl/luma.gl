@@ -35,10 +35,6 @@ export function getRelativeError64(result, reference, index) {
   return Math.abs((reference64 - result64) / reference64);
 }
 
-export function getRelativeError(result, reference) {
-  return Math.abs((reference - result) / reference);
-}
-
 function getBinaryShader(operation) {
   const shader = `\
 attribute vec2 a;
