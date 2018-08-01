@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 6.1.0-alpha.2 - Aug 1
+- Fix scripts for new module structure (#633)
+- Fix test-fast script
+
 ## 6.1.0-alpha.1 - July 31
 - Bump math.gl to 2.1.0-alpha (#629)
 - Improve bundle size metrics (#627)
