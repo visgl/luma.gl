@@ -78,7 +78,7 @@ export {
   getNullPickingColor} from './core/picking-colors';
 
 // Experimental core exports
-export {default as _Transform} from './core/transform';
+export {default as Transform} from './core/transform';
 export {default as _Attribute} from './core/attribute';
 export {default as _ShaderCache} from './core/shader-cache';
 export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';

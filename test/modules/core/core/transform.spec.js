@@ -1,4 +1,4 @@
-import {Buffer, _Transform as Transform, _Attribute as Attribute} from 'luma.gl';
+import {Buffer, Transform, _Attribute as Attribute} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 

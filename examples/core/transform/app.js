@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 /* global window */
 import {AnimationLoop, Buffer, Model, pickModels, picking} from 'luma.gl';
-import {_Transform as Transform} from 'luma.gl';
+import {Transform} from 'luma.gl';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 

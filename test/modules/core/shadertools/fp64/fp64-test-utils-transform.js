@@ -22,7 +22,7 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
-import {Buffer, _Transform as Transform, fp64} from 'luma.gl';
+import {Buffer, Transform, fp64} from 'luma.gl';
 const {fp64ify} = fp64;
 
 export function getRelativeError64(result, reference, index) {

@@ -19,11 +19,11 @@ Experimental exports are now prefixed with underscore (\_). The `experimental` "
 
 ```js
 // NOW: luma.gl v6
-import {_Transform as Transform} from 'luma.gl';
+import {_Attribute as Attribute} from 'luma.gl';
 
 // BEFORE: luma.gl v5.x
 import {experimental} from 'luma.gl';
-const {Transform} = experimental;
+const {Attribute} = experimental;
 ```
 
 This change will enable tree-shaking bundlers to remove unused experimental exports, resulting in smaller final application bundles.
