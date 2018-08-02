@@ -41,6 +41,10 @@ function getFloat64(upper = 256) {
 export function getRelativeError64(result, reference) {
   const reference64 = reference[0] + reference[1];
   const result64 = result[0] + result[1];
+  // When refrence valu is < 1, dividing with it increases total value of difference.
+  if (reference64 < 1) {
+    return Math.abs(reference64 - result64);
+  }
   return Math.abs((reference64 - result64) / reference64);
 }
 

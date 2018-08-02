@@ -7,5 +7,6 @@ import './lib/resolve-modules.spec';
 
 import './modules';
 
-// TODO - The fp64 shader tests are still too flaky
+// TODO - Remove once WebGL1 support added to Transfrom
+// so `fp64-arithmetic-transform.spec` can test under WebGL1 and WebGL2
 // import '../src/modules/fp64/fp64-arithmetic.spec';
