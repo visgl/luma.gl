@@ -85,31 +85,17 @@ export default class Transform {
     this._createFeedbackBuffers({feedbackBuffers});
     this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
 
-    // Buffer have changed, need to re-setup swap buffers.
+    // Buffers have changed, need to re-setup swap buffers.
     this._setupSwapBuffers();
     return this;
   }
 
   // Private
 
-  _initialize({
-    // Model parameters
-    id = 'transform',
-    vs,
-    modules = null,
-    varyings,
-    drawMode = GL.POINTS,
-    elementCount,
-
-    // buffers
-    sourceBuffers,
-    feedbackBuffers = null,
-    feedbackMap = null,
-
-    // deprecated
-    destinationBuffers = null,
-    sourceDestinationMap = null
-  }) {
+  /* eslint-disable complexity */
+  _initialize(opts = {}) {
+    let {feedbackBuffers, feedbackMap} = opts;
+    const {destinationBuffers, sourceDestinationMap} = opts;
     if (destinationBuffers) {
       log.deprecated('destinationBuffers', 'feedbackBuffers')();
       feedbackBuffers = feedbackBuffers || destinationBuffers;
@@ -119,6 +105,7 @@ export default class Transform {
       feedbackMap = feedbackMap || sourceDestinationMap;
     }
 
+    const {sourceBuffers, vs, elementCount} = opts;
     assert(sourceBuffers && vs && elementCount >= 0);
     // If feedbackBuffers are not provided, sourceDestinationMap must be provided
     // to create destinaitonBuffers with layout of corresponding source buffer.
@@ -127,6 +114,7 @@ export default class Transform {
       assert(feedbackBuffers[bufferName] instanceof Buffer);
     }
 
+    const {varyings} = opts;
     // If varyings are not provided feedbackMap must be provided to deduce varyings
     assert(Array.isArray(varyings) || feedbackMap);
     let varyingsArray = varyings;
@@ -138,8 +126,13 @@ export default class Transform {
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._setupSwapBuffers();
-    this._buildModel({id, vs, modules, varyings: varyingsArray, drawMode, elementCount});
+    this._buildModel(Object.assign({}, opts, {
+      id: opts.id || 'transform-model',
+      drawMode: opts.drawMode || GL.POINTS,
+      varyings: varyingsArray
+    }));
   }
+  /* eslint-enable complexity */
 
   // setup source and destination buffers
   _setupBuffers({sourceBuffers = null, feedbackBuffers = null}) {
@@ -205,19 +198,15 @@ export default class Transform {
   }
 
   // build Model and TransformFeedback objects
-  _buildModel({id, vs, modules, varyings, drawMode, elementCount}) {
+  _buildModel(opts = {}) {
+    const {vs, elementCount} = opts;
     // use a minimal fragment shader with matching version of vertex shader.
     const fs = getShaderVersion(vs) === 300 ? FS300 : FS100;
 
-    this.model = new Model(this.gl, {
-      id,
-      vs,
+    this.model = new Model(this.gl, Object.assign({}, opts, {
       fs,
-      modules,
-      varyings,
-      drawMode,
       vertexCount: elementCount
-    });
+    }));
 
     this.transformFeedbacks[0] = new TransformFeedback(this.gl, {
       program: this.model.program,

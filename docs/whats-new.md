@@ -17,7 +17,7 @@ A number of classic WebGL/OpenGL post processing effects have been ported to lum
 
 ### Transform class supports shader module assembly
 
-`Transform` constructor can now accept `modules` parameter, when used corresponding shader modules will be applied on vertex and fragment shaders.
+`Transform` constructor now accepts all shader module parameters such as `modules`, `dependencies` and `inject` (see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)).
 
 
 ## Version 6.0
