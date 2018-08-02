@@ -19,7 +19,7 @@ Experimental exports are now prefixed with underscore (\_). The `experimental` "
 
 ```js
 // NOW: luma.gl v6
-import {_Attribute as Transform} from 'luma.gl';
+import {_Attribute as Attribute} from 'luma.gl';
 
 // BEFORE: luma.gl v5.x
 import {experimental} from 'luma.gl';
