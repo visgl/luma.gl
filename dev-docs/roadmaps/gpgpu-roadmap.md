@@ -1,5 +1,9 @@
 # GPGPU Roadmap
 
+* **Authors**: Ib Green and Ravi Akkenapally
+
+Status: Ongoing
+
 
 ## Overview
 
@@ -8,6 +12,8 @@ The vision for our GPGPU support is a collection of code that make it easy to ac
 Use cases include:
 
 * TransformFeedback
+* Aggregation
+* Contour generation
 * Textures (2D and 3D)
 * Integer Arithmetic
 * Compute Focused Shader Modules
@@ -15,29 +21,65 @@ Use cases include:
 
 In general, we will want to expose ourselves to/play with lots of existing code that does GPU compute, to study patterns, refactor code into reusable functions and classes, and move the most promising of those to our gpgpu library.
 
+References
 
-## Possible Tasks
+* Blog Post: [Automatic, GPU-based object highlighting in deck.gl Layers](https://medium.com/vis-gl/automatic-gpu-based-object-highlighting-in-deck-gl-layers-7fe3def44c89)
 
-### Shader Module Unit Testing Framework
+
+## Release Schedule
+
+* v6.0 (deck.gl)- Jul 2018 - ScreenGridLayer with GPU based grid aggregation.
+* v5.2 (luma.gl) - Apr 2018 - New Transform API, for GPGPU use cases.
+* v5.1 (luma.gl) - Feb 2018 - Improved Transformfeedback API.
+* v5.0 (deck.gl) - Dec 2017 - Automatic, GPU-based object highlighting in deck.gl Layers.
+
+
+## Features under development
+
+### v6.1
+
+#### Shader Module Unit Testing Framework
 
 Today we have a test suite for the fp64 shader module only. It contains some rather hacky code to get data between GPU and CPU (using textures) so that assertions can be made on the GPU. This code should be generalized so that it is easy (trivial) to add unit tests to all our shader modules.
 
-### Add Unit Tests to all Shader Modules
+#### Add Unit Tests to all Shader Modules
 
 See previous.
 
-### Support Compute-Focused Shader Modules
+#### Extend Transform to support WebGL1
+
+Current Transform uses WebGL2 TransformFeedback API and only supported by WebGL2, extend this class to support WebGL1 using float textures, so Transform can be used under WebGL1 and WebGL2.
+
+#### Contour generation on GPU
+
+Marching Squares algorithm used for iso-lines and iso-bands is suitable for GPU implementation. Build Contour Layer that generates iso-lines and iso-bands on GPU.
+
+
+### v6.2
+
+#### Heatmap generation on GPU
+
+Aggregation can be extended to build heatmaps, where multiple cells are processed in parallel on the GPU.
+
+#### GridLaye:r add GPUAggregation support.
+
+GPUGridLayer with limited features (compared to current GridLayer) is released as experimental layer in v6.0 that perform aggregation on GPU. Extend this layer to support remaining features (aggregation on user provided keys and support for min, max and average aggregation function)
+
+
+### vNext
+
+#### Support Compute-Focused Shader Modules
 
 The luma.gl shader module system has great potential as a building block for GPGPU. However currently it only supports specific `vs` or `fs` shaders which doesn’t fit. Add support for `cs` type shaders and change existing fp32 fp64 etc libs to use that.
 Note: this is a shader packaging improvement, not a WebGL compute shader feature.
 
 RFC
 
-### Build out our library of Math Shader Modules
+#### Build out our library of Math Shader Modules
 
 Fp32 and fp64 are great building blocks. We could add well-designed (api audited), reusable, documented shader modules for complex number support, interval arithmetic, root finding etc.
 
-### Dynamic Discovery of GPU limitations
+#### Dynamic Discovery of GPU limitations
 
 Today we sniff driver names to figure out if we need to flip on some fp64 patch path. Instead we could run a shader that checks whether the GPU is actually doing the right thing, and based on the result dynamically flip on the right flags.
 
@@ -48,7 +90,7 @@ An application could be to make deck.gl attribute animation work under non-WebGL
 
 Or make Wind example work on WebGL1
 
-### Existing work
+#### Existing work
 
 Study existing GPGPU frameworks. See if we can leverage/integrate or if there are good ideas that we can use.
 
@@ -56,59 +98,21 @@ Study existing GPGPU frameworks. See if we can leverage/integrate or if there ar
 
 Step 1: Reorganize code inside Wind Example
 
-Applications
-deck.gl - Precalculate WebMercator Transformations
-Currently the same lng/lats are reprojected every frame.
+#### Pre calculate WebMercator Transformations
 
-Why not use GPGPU to do initial projection as soon as the attribute has been updated?
-If we do it using a nice GPGPU abstraction the code should remain clean and maintainable.
+Currently the same lng/lats are reprojected every frame. Why not use GPGPU to do initial projection as soon as the attribute has been updated? If we do it using a nice GPGPU abstraction the code should remain clean and maintainable.
 
+#### Graph Edge bundling
 
-## GPGPU Use Cases and API Exploration
+Perform edge bundling on GPU.
 
-### Attribute mapping
+#### Shader module for binning
 
-Luma.gl can provide an API which internally uses  TF (WebGL2) or Float textures (WebGL1) to perform mapping of input data. The output can be an array of data items or handle to one or more Buffer objects.
+Add a shader module that performs grid and hexgon binning on GPU. We can take existing shader code from GPU Aggregator for grid binning.
 
-Input:
+### Ideas: For Discussion
 
-```
-[ {id: “data-1”, data: lngLatData, type: FLOAT, size: 2}, {id: “data-2”, data: Colors, type: FLOAT, size: 3} , etc..]
-```
-
-Input: Mapping function : shader code that performs the mapping
-Output:
-
-```
-[ {id: “data-1”, handle: buffer1 (instance of Buffer)}, {id: “data-2”, handle: buffer2]
-```
-
-Notes: This is a general API in luma.gl, we can use this to perform Mercator projections in deck.gl and re-use on every frame, it will be re-run only when needed (data change, viewport change, etc)
-
-Info Viz: Marching squares.
-This will need texel write, so just TF is not enough. First need to make aggregation work.
-
-Info Viz: Graph Edge bundling.
-
-Grid aggregation:
-Current setup
-Each point [lon, lat] is projected to screen space.
-Hexgon radius is set
-Using “d3-hexbin” module each point is mapped to a hex bin (defined by centroid and set of point belong to it).
-Possible steps
-Replace a-i with TF run:  Input : vec2, Output: vec2, in VertexShader do the projection. Perform Buffer.getData.
-Use FS and Float texture with two pass rendering : Ref: https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter32.html 
-Perform projection of each point to screen co-ordinates (x, y) (float vec2)
-Find out which hexagon (x, y) belongs to, map the hexagon to pixel on the texture, so a value (1,0,0) can be rendered with additive blending to that pixel. This has to be done in VS since we are changing the position and we need to render points to a frame buffer, where each point gets rendered to a single pixel.
-In the second pass loop over each pixel of this texture to see how many points belong to that texel, which is number of points.
-Unknowns/Yellow flags
-Hexgons are binned using d3-hexbin module, this alogrithm need to be implemented in GLSL shader.
-Mapping each centroid into a single pixel in VS
-
-
-## Ideas: For Discussion
-
-### Optimized f64 projection module
+#### Optimized f64 projection module
 
 We are not able to enable fp64 flag on some of our applications (like heaven) due to vast geometry being run through VS transformations. Existing clipping seem to be not enough, so this method explores an idea of clipping early.
 
@@ -118,12 +122,25 @@ Idea1: For each vertex processed add a varying which will contain 1.0 if inside 
 Idea2: Using TF generate two buffers, one containing vertices that passed and the other containing that failed. (this might not handle the cases that are partially visible)
 
 
-
-## Appendix: Previous Work
+## Appendix: Shipped features
 
 Work items that have been completed are placed here
 
-### TransformFeedback: Clear up the Confusion! (DONE)
+### v6.0
+
+### ScreenGridLayer with GPU based grid aggregation.
+
+ScreenGridLayer is updated to support aggregation on GPU. Depending on the data set aggregation on GPU can be 10-12X faster and capable of handling large data sets (MM) where CPU version freezes the UI.
+
+### v5.2
+
+#### Transform : Improved Transformfeedback API
+
+This new class provides an easy-to-use interface to Transform Feedback. It hides WebGL API complexity by internally creating and managing all required WebGL objects that are necessary to perform Transform Feedback operations. New demos and existing features (AttributeTransitions) are updated to use this newer class to reduce code complexity.
+
+### v5.1
+
+#### TransformFeedback: Clear up the Confusion!
 
 The luma.gl v5 TF API should be solid, although we keep hearing suggestions it is not. This Likely a mix of TF being hard to understand and some remaining minor bug.
 
@@ -134,6 +151,8 @@ Actions
 * Fix any remaining bugs in TransformFeedback / Buffer classes
 * Update any TF code/PRs: Wind example and Attribute animation
 
+### v5.0
 
+#### GPU based object highlighting
 
-
+Picking shader module has been enhanced to support custom and automatic object highlighting. Check [Blogpost](https://medium.com/vis-gl/automatic-gpu-based-object-highlighting-in-deck-gl-layers-7fe3def44c89) for more details.
