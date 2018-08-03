@@ -67,9 +67,6 @@ NOTE: Given this effort is to support WebGL1, all shaders must be in GLSL100 syn
 
 There can only be one vec4 (four component vector) output. When using WebGL2 TransformFeedback API, there can be more than one varying that can be captured into a Buffer. But given we are using full render cycle to render into color buffer, output is limited to one vec4.
 
-### GPU CPU sync
-
-Under WebGL2, `Transform` allows data to remain on GPU memory and be consumed by the render cycles without syncing with the CPU. But under WebGL1, we need to perform readPixels after every run, resulting in CPU and GPU sync.
 
 ## Conclusion:
 
