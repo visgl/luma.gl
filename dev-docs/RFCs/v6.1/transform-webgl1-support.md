@@ -16,6 +16,11 @@ With the introduction of `Transform` class, luma.gl provided an easy to use API 
 
 We should be able to setup a render pipeline (strictly using WebGL1 features), such that input parameters are provided as attributes to the VertexShader, inside VertexShader user provided operations are performed, and result is passed to FragmentShader, which writes the result to a pixel as fragment color.
 
+## Environments
+
+* Older browsers: sometimes support float textures
+* Headless gl: only supports instancing, no other extensions.
+
 ## Implementation details
 
 ### Render target
@@ -33,6 +38,18 @@ In this option, instead of using Framebuffer object we can use default render co
 We can start implementation with Option#1.
 
 Once the render target is setup, and data is rendered we can use `gl.readPixels` to read the data.
+
+### Inputs and Outputs
+
+Under WebGL2, all inputs and outputs are luma.gl `Buffer` objects. Due to WebGL1 limitation of buffer API (no async Texture to Buffer API) supporting `Buffer` objects require a CPU GPU sync for writing results from texture (render target) into a `Buffer`  object. To avoid such a sync and able to run a sequence of Transform operations (run -> swap -> run ...) we need to support luma.gl `Texture` objects as inputs and outputs.
+
+#### Textures as inputs outputs
+
+This has the advantage of avoiding sync between CPU and GPU, but its not free. The vertex shader `vs` provided by the user, needs to either have texture sample instructions to read the input or some be inserted by the system under the hood (shader injection ?).
+
+First phase can be implemented by always reading from Texture into a Buffer and then explore and extend the API to support `Textures`.
+
+TODO: code samples supporting `Textures`.
 
 ### Vertex Processing
 
