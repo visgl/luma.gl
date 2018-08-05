@@ -102,6 +102,7 @@ export default class Program extends Resource {
   // This function unifies those ways into a single call using common parameters with sane defaults
   draw({
     logPriority,
+
     drawMode = GL.TRIANGLES,
     vertexCount,
     offset = 0,
@@ -112,12 +113,14 @@ export default class Program extends Resource {
     isInstanced = false,
     instanceCount = 0,
 
-    vertexArray = null, // VertexArray.getDefaultArray(this.gl),
+    vertexArray = null,
     transformFeedback,
     framebuffer,
+    parameters = {},
+
+    // Deprecated
     uniforms = {},
-    samplers = {},
-    parameters = {}
+    samplers = {}
   }) {
     if (logPriority !== undefined) {
       const fb = framebuffer ? framebuffer.id : 'default';
@@ -134,7 +137,10 @@ export default class Program extends Resource {
 
     vertexArray.bind(() => {
 
-      this.setUniforms(uniforms, samplers);
+      if (uniforms) {
+        log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)');
+        this.setUniforms(uniforms, samplers);
+      }
 
       if (framebuffer !== undefined) {
         parameters = Object.assign({}, parameters, {framebuffer});

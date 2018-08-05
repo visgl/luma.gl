@@ -32,20 +32,6 @@ export default class Model extends Object3D {
     // intended to be subclassed, do not seal
   }
 
-  get vertexCount() {
-    if (Number.isFinite(this.props.vertexCount)) {
-      return this.props.vertexCount;
-    }
-    return this.geometry && this.geometry.getVertexCount();
-  }
-
-  get drawMode() {
-    if (Number.isFinite(this.props.drawMode)) {
-      return this.props.drawMode;
-    }
-    return this.geometry && this.geometry.drawMode;
-  }
-
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   initialize(props = {}) {
@@ -172,12 +158,29 @@ export default class Model extends Object3D {
 
   // GETTERS
 
+  get vertexCount() {
+    if (Number.isFinite(this.props.vertexCount)) {
+      return this.props.vertexCount;
+    }
+    return this.geometry && this.geometry.getVertexCount();
+  }
+
+  get drawMode() {
+    if (Number.isFinite(this.props.drawMode)) {
+      return this.props.drawMode;
+    }
+    return this.geometry && this.geometry.drawMode;
+  }
+
   getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
     this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
     if (this.geometry) {
       redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    }
+    if (this.animated) {
+      redraw = redraw || `animated model ${this.id}`;
     }
     return redraw;
   }
@@ -271,6 +274,20 @@ export default class Model extends Object3D {
     });
   }
 
+  // Updates (evaluates) all function valued uniforms based on a new set of animationProps
+  // experimental
+  _setAnimationProps(animationProps) {
+    if (this.animated) {
+      assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
+      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
+      this.program.setUniforms(animatedUniforms, {}, () => {
+        // if something changed
+        this._checkForDeprecatedUniforms(animatedUniforms);
+        this.setNeedsRedraw();
+      });
+    }
+  }
+
   updateModuleSettings(opts) {
     const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
@@ -324,6 +341,7 @@ export default class Model extends Object3D {
 
     this.program.draw(Object.assign({}, opts, {
       logPriority,
+      uniforms: null, // Already set (may contain "function values" not understood by Program)
       framebuffer,
       parameters,
       drawMode: this.getDrawMode(),
@@ -442,19 +460,8 @@ export default class Model extends Object3D {
   _refreshAnimationProps(animationProps) {
     // Try to read animationProps
     animationProps = animationProps || (this.animationLoop && this.animationLoop.animationProps);
-    this._setAnimationProps(animationProps);
-  }
-
-  // Generates and sets uniform values based on new animationProps
-  _setAnimationProps(animationProps) {
-    if (this.animated) {
-      assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
-      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
-      this.program.setUniforms(animatedUniforms, {}, () => {
-        // if something changed
-        this._checkForDeprecatedUniforms(animatedUniforms);
-        this.setNeedsRedraw();
-      });
+    if (animationProps) {
+      this._setAnimationProps(animationProps);
     }
   }
 
