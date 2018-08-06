@@ -31,7 +31,6 @@ export default class ShaderModuleRegistry {
     // Module name - Look up module
     const module = this.shaderModules[moduleOrName];
     if (!module) {
-      // console.log(`${moduleOrName} not in registered modules:`, modules);
       assert(false, `Unknown shader module ${moduleOrName}`);
     }
     return module;
@@ -53,7 +52,7 @@ export default class ShaderModuleRegistry {
 
     assert(module.name, 'shader module has no name');
 
-    if (!this.shaderModules[module.name] || (this.shaderModules[module.name] && ignoreMultipleRegistrations)) {
+    if (!this.shaderModules[module.name] || ignoreMultipleRegistrations) {
       module = new ShaderModule(module);
       module.dependencies = this.resolveModules(module.dependencies);
       this.shaderModules[module.name] = module;
