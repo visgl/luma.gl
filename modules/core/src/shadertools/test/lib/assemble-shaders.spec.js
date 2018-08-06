@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
-import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
+import {getShaderModule, registerShaderModules} from 'luma.gl/shadertools/src/lib/resolve-modules';
 import sinon from 'sinon';
 import test from 'tape-catch';
 
@@ -52,9 +52,10 @@ test('assembleShaders#getUniforms', t => {
 
   const testModuleSettings = {pickingActive: true};
 
+  const existing = getShaderModule(picking);
   // inject spy into the picking module's getUniforms
-  const picking2 = Object.assign(getShaderModule(picking), {
-    getUniforms: sinon.spy(getShaderModule(picking).getUniforms)
+  const picking2 = Object.assign(existing, {
+    getUniforms: sinon.spy(existing.getUniforms)
   });
 
   const testModule = {
