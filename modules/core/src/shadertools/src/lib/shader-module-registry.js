@@ -53,6 +53,7 @@ export default class ShaderModuleRegistry {
     assert(module.name, 'shader module has no name');
 
     if (!this.shaderModules[module.name] || ignoreMultipleRegistrations) {
+      // if ignoreMultipleRegistrations = true, we allow module to be re-registered
       module = new ShaderModule(module);
       module.dependencies = this.resolveModules(module.dependencies);
       this.shaderModules[module.name] = module;
