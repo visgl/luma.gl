@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
-import {getShaderModule, registerShaderModules} from 'luma.gl/shadertools/src/lib/resolve-modules';
+import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
 import sinon from 'sinon';
 import test from 'tape-catch';
 
