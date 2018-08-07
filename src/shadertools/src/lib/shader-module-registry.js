@@ -31,7 +31,6 @@ export default class ShaderModuleRegistry {
     // Module name - Look up module
     const module = this.shaderModules[moduleOrName];
     if (!module) {
-      // console.log(`${moduleOrName} not in registered modules:`, modules);
       assert(false, `Unknown shader module ${moduleOrName}`);
     }
     return module;
@@ -53,11 +52,12 @@ export default class ShaderModuleRegistry {
 
     assert(module.name, 'shader module has no name');
 
-    if (!this.shaderModules[module.name]) {
+    if (!this.shaderModules[module.name] || ignoreMultipleRegistrations) {
+      // if ignoreMultipleRegistrations = true, we allow module to be re-registered
       module = new ShaderModule(module);
       module.dependencies = this.resolveModules(module.dependencies);
       this.shaderModules[module.name] = module;
-    } else if (!ignoreMultipleRegistrations) {
+    } else {
       // TODO - instead verify that definition is not changing...
       throw new Error(`shader module ${module.name} already registered`);
     }
