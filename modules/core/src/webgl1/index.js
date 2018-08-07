@@ -4,5 +4,3 @@
 
 export {default as polyfillContext} from './polyfill-context';
 export {default as polyfillVertexArrayObject} from './polyfill-vertex-array-object';
-
-console.log('luma.gl: WebGL1 polyfills installed'); // eslint-disable-line
