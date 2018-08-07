@@ -52,9 +52,10 @@ test('assembleShaders#getUniforms', t => {
 
   const testModuleSettings = {pickingActive: true};
 
+  const existing = getShaderModule(picking);
   // inject spy into the picking module's getUniforms
-  const picking2 = Object.assign(getShaderModule(picking), {
-    getUniforms: sinon.spy(getShaderModule(picking).getUniforms)
+  const picking2 = Object.assign(existing, {
+    getUniforms: sinon.spy(existing.getUniforms)
   });
 
   const testModule = {
