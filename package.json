@@ -37,6 +37,10 @@
     "headless.js",
     "webgl1.js"
   ],
+  "browser": {
+    "gl": false,
+    "gl/wrap": false
+  },
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5/packages dist/esm/packages dist/es6/packages",
@@ -69,7 +73,7 @@
   },
   "dependencies": {
     "math.gl": "^2.0.0",
-    "probe.gl": "^1.0.0",
+    "probe.gl": "^1.0.4",
     "seer": "^0.2.4",
     "webgl-debug": "^2.0.0"
   },
