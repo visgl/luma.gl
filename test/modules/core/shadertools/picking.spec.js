@@ -27,7 +27,7 @@ const gl = fixture.gl2;
 
 registerShaderModules([picking]);
 
-const isPickedTestData = {
+const TEST_DATA = {
   vertexColorData: new Float32Array([
     0, 0, 0,
     255, 100, 150,
@@ -38,27 +38,28 @@ const isPickedTestData = {
     100, 150, 255,
     255, 255, 255,
     255, 100, 149.5 // // is picked with default threshold (1)
-  ]),
-  tests: [
-    {
-      pickingSelectedColor: null,
-      isPicked: [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    },
-    {
-      pickingSelectedColor: [255, 255, 255],
-      isPicked: [0, 0, 0, 0, 0, 0, 0, 1, 0]
-    },
-    {
-      pickingSelectedColor: [255, 100, 150],
-      isPicked: [0, 1, 0, 0, 0, 1, 0, 0, 1]
-    },
-    {
-      pickingSelectedColor: [255, 100, 150],
-      pickingThreshold: 5,
-      isPicked: [0, 1, 0, 1, 0, 1, 0, 0, 1]
-    }
-  ]
+  ])
 };
+
+const TEST_CASES = [
+  {
+    pickingSelectedColor: null,
+    isPicked: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+    pickingSelectedColor: [255, 255, 255],
+    isPicked: [0, 0, 0, 0, 0, 0, 0, 1, 0]
+  },
+  {
+    pickingSelectedColor: [255, 100, 150],
+    isPicked: [0, 1, 0, 0, 0, 1, 0, 0, 1]
+  },
+  {
+    pickingSelectedColor: [255, 100, 150],
+    pickingThreshold: 5,
+    isPicked: [0, 1, 0, 1, 0, 1, 0, 0, 1]
+  }
+];
 
 test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
   if (!Transform.isSupported(gl)) {
@@ -76,11 +77,11 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
     isPicked = float(isVertexPicked(vertexColor));
   }
   `;
-  const vertexColorData = isPickedTestData.vertexColorData;
+  const vertexColorData = TEST_DATA.vertexColorData;
 
   const elementCount = vertexColorData.length / 3;
-  const vertexColor = new Buffer(gl, {size: 3, data: vertexColorData});
-  const isPicked = new Buffer(gl, {size: 1, bytes: elementCount * 4});
+  const vertexColor = new Buffer(gl, vertexColorData);
+  const isPicked = new Buffer(gl, {bytes: elementCount * 4});
 
   const transform = new Transform(gl, {
     sourceBuffers: {
@@ -95,7 +96,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
     elementCount
   });
 
-  isPickedTestData.tests.forEach(testCase => {
+  TEST_CASES.forEach(testCase => {
     const uniforms = picking.getUniforms({
       pickingSelectedColor: testCase.pickingSelectedColor,
       pickingThreshold: testCase.pickingThreshold
@@ -132,11 +133,11 @@ test('picking#picking_setPickingColor', t => {
 
   const COLOR_SCALE = 1 / 255;
   const EPSILON = 0.00001;
-  const vertexColorData = isPickedTestData.vertexColorData;
+  const vertexColorData = TEST_DATA.vertexColorData;
 
   const elementCount = vertexColorData.length / 3;
-  const vertexColor = new Buffer(gl, {size: 3, data: vertexColorData});
-  const rgbColorASelected = new Buffer(gl, {size: 4, bytes: elementCount * 4 * 4});
+  const vertexColor = new Buffer(gl, vertexColorData);
+  const rgbColorASelected = new Buffer(gl, {bytes: elementCount * 4 * 4});
 
   const transform = new Transform(gl, {
     sourceBuffers: {
@@ -151,7 +152,7 @@ test('picking#picking_setPickingColor', t => {
     elementCount
   });
 
-  isPickedTestData.tests.forEach(testCase => {
+  TEST_CASES.forEach(testCase => {
     const uniforms = picking.getUniforms({
       pickingSelectedColor: testCase.pickingSelectedColor,
       pickingThreshold: testCase.pickingThreshold
@@ -160,16 +161,19 @@ test('picking#picking_setPickingColor', t => {
     transform.run({uniforms});
 
     const expectedData = testCase.isPicked.reduce((result, element, index) => {
-      const pickingColor = isPickedTestData.vertexColorData.slice(index * 3, index * 3 + 3).map(e => e * COLOR_SCALE);
+      const pickingColor = TEST_DATA.vertexColorData.slice(index * 3, index * 3 + 3).map(e => e * COLOR_SCALE);
       result.push(pickingColor[0], pickingColor[1], pickingColor[2], element);
       return result;
     }, []);
     const outData = transform.getBuffer('rgbColorASelected').getData();
 
     outData.forEach((out, index) => {
-      t.ok(Math.abs(out - expectedData[index]) < EPSILON, 'Vertex should correctly get picked');
+      if (Math.abs(out - expectedData[index]) > EPSILON) {
+        t.ok(false, 'Vertex should correctly get picked');
+      }
     });
   });
+  t.ok(true, 'picking_setPickingColor successful');
 
   t.end();
 });
