@@ -1,5 +1,14 @@
 # Pre-releases
 
+## 6.1.0-alpha.3 - Aug 7
+- picking shader module: Add Transform based unit tests (#636)
+- Animation fixes (#637)
+- Fix: re-register existing shader module if ignoreMultipleRegistrations = true (#639)
+- RFC: WebGL1 support for Transform (#635)
+- Update GPGPU roadmap doc (#634)
+- Rename export: _Transform to Transform (#624)
+- FP64: Unit tests using `Transform` (#631)
+
 ## 6.1.0-alpha.2 - Aug 1
 - Fix scripts for new module structure (#633)
 - Fix test-fast script
