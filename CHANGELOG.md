@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 6.0.1 - Aug 7
+- v6.0 Mark gl import as "server only" using package.json "browser" field (#626)
+- More comprehensive metrics collection (#628)
+
 ## 6.0.0 - July 18
 - Update attribute docs (#613)
 - Update luma.gl version to ^6.0.0 in examples (#614)
