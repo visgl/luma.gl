@@ -14,7 +14,8 @@ With the introduction of `Transform` class, luma.gl provided an easy to use API 
 
 ## Main idea
 
-We should be able to setup a render pipeline (strictly using WebGL1 features), such that input parameters are provided as attributes to the VertexShader, inside VertexShader user provided operations are performed, and result is passed to FragmentShader, which writes the result to a pixel as fragment color.
+We should be able to setup a render pipeline (strictly using WebGL1 features), such that input data is passed as textures to `VertexShader`, then each individual data items is accessed by performing a texture sample operation, apply user provided operations, and  pass the result to `FragmentShader`, which writes the result to a pixel as fragment color. A `readpixel` operation is performed for final results and returned.
+
 
 ## Environments
 
@@ -39,17 +40,195 @@ We can start implementation with Option#1.
 
 Once the render target is setup, and data is rendered we can use `gl.readPixels` to read the data.
 
-### Inputs and Outputs
+### Inputs
 
-Under WebGL2, all inputs and outputs are luma.gl `Buffer` objects. Due to WebGL1 limitation of buffer API (no async Texture to Buffer API) supporting `Buffer` objects require a CPU GPU sync for writing results from texture (render target) into a `Buffer`  object. To avoid such a sync and able to run a sequence of Transform operations (run -> swap -> run ...) we need to support luma.gl `Texture` objects as inputs and outputs.
+Under WebGL2, all inputs are luma.gl `Buffer` objects. Due to WebGL1 limitation of buffer API (no async Texture to Buffer API) supporting `Buffer` objects require a CPU GPU sync for writing results from texture (render target) into a `Buffer`  object. To avoid such a sync and able to run a sequence of Transform operations (run -> swap -> run ...) we need to support luma.gl `Texture` objects as inputs and outputs.
 
-#### Textures as inputs outputs
+Inputs can be specified in following three formats :
 
-This has the advantage of avoiding sync between CPU and GPU, but its not free. The vertex shader `vs` provided by the user, needs to either have texture sample instructions to read the input or some be inserted by the system under the hood (shader injection ?).
+1. TypedArray (WebGL1 and WebGL2, ex: Float32Array, Uint8Array, etc)
 
-First phase can be implemented by always reading from Texture into a Buffer and then explore and extend the API to support `Textures`.
+When using WebGL1, internally `Texture` object is built with user provided `TypedArray` and used to provided input to the VertexShader.
 
-TODO: code samples supporting `Textures`.
+2. Texture2D (WebGL1 and WebGL2)
+
+Supported by both WebGL1 and WebGL2, but only the formats that are supported by WebGL context being used.
+
+3. Buffer (WebGL2, luma.gl `Buffer` object)
+
+Only supported in WebGL2 and set as `attributes` on the `VertexShader`.
+
+
+* It is also possible to use any combination of above input methods when using WebGL2 and any combination of #1 and #2 when using WebGL1.
+
+To achieve this flexibility a minor change is needed in how VertexShader source (`vs` parameter) is specified on `Tranform` object. In existing version `vs` needs to specify all inputs using `attributes` (GLSL100) or `in` (GLSL300), that should be now removed as explained in below sample code
+
+#### Sample code
+
+##### Current usage
+
+```
+const VS = `\
+attribute float leftValue;
+attribute float rightValue;
+varying float outValue;
+
+void main()
+{
+  outValue = leftValue + rightValue;
+}
+`;
+
+...
+
+const leftValueBuffer = new Buffer(gl, { ... });
+const rightValueBuffer = new Buffer(gl, { ... });
+const outValueBuffer = new Buffer(gl, { ... });
+
+const transform = new Transform(gl, {
+  sourceBuffers: {
+    leftValue: leftValueBuffer,
+    rightValue: rightValueBuffer,
+  },
+  vs: VS,
+  feedBackBuffers: {
+    outValue: outValueBuffer
+  },
+  varyings: ['outValue'],
+  elementCount: 5
+});
+```
+
+##### Proposed usage
+
+VertexShader source shouldn't specify `attribute`/`in` input declaration.
+
+```
+const VS = `\
+varying float outValue;
+
+void main()
+{
+  outValue = leftValue + rightValue;
+}
+`;
+
+```
+
+When using `TypedArray` as inputs :
+
+```
+const leftArray = new Float32Array(gl, { ... });
+const rightArray = new Float32Array(gl, { ... });
+
+const transform = new Transform(gl, {
+  sourceBuffers: {
+    leftValue: leftArray,
+    rightValue: rightArray,
+  },
+  vs: VS,
+  varyings: ['outValue'],
+  elementCount: 5
+});
+
+```
+
+###### When using WebGL1
+
+A `Texture2D` object is internally created for each source and used as `sampler2D` uniform. Additional attribute (`transform_elementID`) is added to generate texture coordinates sample individual input elements.
+
+```
+const leftValue = new Texture2D(gl, {data: leftArray, ...});
+const rightValue = new Texture2D(gl, {data: leftArray, ...});
+```
+
+ Additional uniforms and sample instructions are inserted at the begging of the VertexShader.
+
+ ```
+ // Added uniforms
+ uniform sampler2D transform_leftValue_uSampler;
+ uniform sampler2D transform_rightValue_uSampler;
+ uniform vec2 transform_uTextureSize;
+
+ // Added attribute
+ attribute float transform_elementID;
+
+ varying float outValue;
+
+ void main()
+ {
+   // Injected instruction
+   const transform_texCoord = transform_getTexCoord(transform_elementID, transform_uTextureSize);
+   leftValue = texture2D(transform_leftValue_uSampler, texCoord);
+   rightValue = texture2D(transform_rightValue_uSampler, texCoord);
+
+   outValue = leftValue + rightValue;
+ }
+ ```
+
+In addition to above VertexShader changes, a passthrough FragmentShader is also used internally to write out data into FrameBuffer object.
+
+```
+const FS = `\
+precision highp float;
+varying float outValue;
+void main(void) {
+  // We will be packing float value into RGBA UNSIGNED_BYTE format
+  gl_FragColor = vec4(outValue * colorScale, 0, 0, 1.);
+}
+`;
+```
+
+We will use newly added `pack` module to convert a Float value into RGBA UNSIGNED_BYTE format.
+
+###### When using WebGL2
+
+A `Buffer` object is internally created for each input.
+
+```
+const leftValueBuffer = new Buffer(gl, leftArray);
+const rightValue = new Buffer(gl, rightArray);
+```
+
+And `attribute` definitions are injected into VertexShader. No other changes are needed.
+
+```
+const VS = `\
+
+// Injected attribute definitions
+attribute float leftValue;
+attribute float rightValue;
+
+varying float outValue;
+
+void main()
+{
+  outValue = leftValue + rightValue;
+}
+`;
+```
+
+When using `Texture2D` as input, most of the above mentioned changes are applicable except, no need to create `Texture2D` objects from `TypedArray`.
+
+### Outputs
+
+Following 3 variants of output access API will be added.
+
+1. getData(outputName) (WebGL1 and WebGL2)
+
+Takes output element name, and returns TypedArray containing the value. When using WebGL1, a `Framebuffer.readPixels` is performed on current Framebuffer target. Note, only one output is supported. When using WebGL2, `Buffer.getData` is performed on corresponding `Buffer` object.
+
+2. getTexture(outputName) (WebGL1 and WebGL2)
+
+Takes output element name and returns corresponding `Texture2D` object.
+
+3. getBuffer(outputName) (WebGL2)
+
+Takes output element name and returns corresponding `Buffer` object.
+
+* NOTE: Under WebGL2, there is flexibility of converting between Buffer and Texture objects without CPU and GPU sync using Pixel Buffer Objects.
+
+
 
 ### Vertex Processing
 
@@ -61,13 +240,18 @@ Fragment shader will be just a pass through shader, it will move varying value i
 
 NOTE: Given this effort is to support WebGL1, all shaders must be in GLSL100 syntax.
 
+
+## Offline Rendering (Bonus):
+
+`Offline Rendering`, is the ability to create textures offline, and use them for purposes like special light effects, filtering, etc. This effort to make `Transform` work under WebGL1 also gives us an API for `Offline Rendering`.
+
+
 ## Limitations
 
 ### Ouput (one vec4)
 
-There can only be one vec4 (four component vector) output. When using WebGL2 TransformFeedback API, there can be more than one varying that can be captured into a Buffer. But given we are using full render cycle to render into color buffer, output is limited to one vec4.
-
+When using WebGL2 TransformFeedback API, there can be more than one varying that can be captured into a Buffer. When using WebGL1 output is limited to a single float stream, FragmentShader can output a vec4, but we use all four channels to pack a single float value.
 
 ## Conclusion:
 
-Even though there are limitations, making Transform work on WebGL1 has a big potential, we will be able make `Transform` dependent features (Attribute transitions) and demos (Wind demo, particle simulations) available to WebGL1 contexts. And also all `Transform` based shader module unit testing can also be run under WebGL1.
+Even though there are limitations, making `Transform` work on WebGL1 has a big potential, we will be able make `Transform` dependent features (Attribute transitions) and demos (Wind demo, particle simulations) available to WebGL1 contexts and all `Transform` based shader module unit testing can also be run under WebGL1. And we can also use this API for `Offline Rendering`.
