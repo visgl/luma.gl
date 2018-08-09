@@ -26,6 +26,7 @@ const DEFAULT_PROPS = {};
 export default {
   name: 'pack',
   fs,
+  vs: fs,
   DEFAULT_PROPS,
   getUniforms: props => props
 };
