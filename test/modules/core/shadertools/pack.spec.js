@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {Buffer, Transform, registerShaderModules} from 'luma.gl';
+import {Buffer, Transform} from 'luma.gl';
 import test from 'tape-catch';
 import {default as pack} from '../../../../modules/imageprocessing/src/modules/pack';
 import {fixture} from 'luma.gl/test/setup';
@@ -27,13 +27,11 @@ const gl = fixture.gl2;
 
 const EPSILON = 1e-5;
 
-// failure when 1e-6
+// failure when EPSILON = 1e-6
 // expected: 100.54000091552734 actual: 100.54000854492188 diff: 0.00000762939453125
 
-// failure when 1e-7
+// failure when EPSILON = 1e-7
 // expected: 1.2640000581741333 actual: 1.2640001773834229 diff: 1.1920928955078125e-7
-
-registerShaderModules([pack]);
 
 // Random floats
 const TEST_DATA = [1e-4, 1e+4, 1e-6, 1.264, 100.54, -321.4872, 0, -0.231, 0.8082];
@@ -70,7 +68,7 @@ test('pack#floatToRGBA8tofloat)', t => {
     },
     vs: VS,
     varyings: ['outFloat'],
-    modules: ['pack'],
+    modules: [pack],
     elementCount
   });
 
