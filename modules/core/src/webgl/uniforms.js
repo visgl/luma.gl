@@ -222,7 +222,7 @@ export function areUniformsEqual(uniform1, uniform2) {
 
 // Prepares a table suitable for console.table
 /* eslint-disable max-statements */
-export function getUniformsTable({
+export function getDebugTableForUniforms({
   header = 'Uniforms',
   program,
   uniforms,

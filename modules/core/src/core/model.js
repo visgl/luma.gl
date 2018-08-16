@@ -4,7 +4,8 @@ import Object3D from './object-3d';
 import {getDrawMode} from '../geometry/geometry';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
-import {getUniformsTable} from '../webgl/uniforms';
+import {getDebugTableForUniforms} from '../webgl/uniforms';
+import {getDebugTableForVertexArray} from '../webgl/vertex-array';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
@@ -328,7 +329,7 @@ export default class Model extends Object3D {
 
     const logPriority = this._logDrawCallStart(2);
 
-    const drawParams = this.vertexArray.drawParams;
+    const drawParams = this.vertexArray.getDrawParams();
     if (drawParams.isInstanced && !this.isInstanced) {
       log.warn('Found instanced attributes on non-instanced model', this.id)();
     }
@@ -629,19 +630,20 @@ count: ${this.stats.profileFrameCount}`
       return;
     }
 
-    const attributeTable = vertexArray._getDebugTable({
+    const attributeTable = getDebugTableForVertexArray({
+      vertexArray,
       header: `${this.id} attributes`,
       attributes: this._attributes
     });
 
-    const {table: uniformTable, unusedTable, unusedCount} = getUniformsTable({
+    const {table: uniformTable, unusedTable, unusedCount} = getDebugTableForUniforms({
       header: `${this.id} uniforms`,
       program: this.program,
       uniforms: Object.assign({}, this.program.uniforms, uniforms)
     });
 
     // log missing uniforms
-    const {table: missingTable, count: missingCount} = getUniformsTable({
+    const {table: missingTable, count: missingCount} = getDebugTableForUniforms({
       header: `${this.id} uniforms`,
       program: this.program,
       uniforms: Object.assign({}, this.program.uniforms, uniforms),

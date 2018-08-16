@@ -2,7 +2,7 @@
 
 GPU buffers are effectively arrays of contiguous memory that has been "uploaded" to the GPU and can be accessed efficiently by the GPU.
 
-The cost of transferring memory between CPU and GPU depends. E.g. on whether your GPU is using a unified memory architecture or not, the memory bandwidth of your system etc. 
+The cost of transferring memory between CPU and GPU depends. E.g. on whether your GPU is using a unified memory architecture or not, the memory bandwidth of your system etc.
 
 A good rule of thumb:
 

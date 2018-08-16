@@ -50,8 +50,6 @@ void main(void) {
 }
 `;
     const fs = `\
-#define SHADER_NAME cube_fragment
-
 precision highp float;
 
 uniform samplerCube uTextureCube;

@@ -15,7 +15,7 @@ test('Model#construct/destruct', t => {
   });
 
   t.ok(model, 'Model constructor does not throw errors');
-  t.ok(model.vertexArray.handle, 'Created new vertexArray');
+  t.ok(model.vertexArray.vertexArrayObject.handle, 'Created new vertexArray');
   t.ok(model.program.handle, 'Created new program');
 
   model.delete();

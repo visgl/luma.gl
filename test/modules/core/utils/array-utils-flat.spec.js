@@ -18,19 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/* eslint-disable no-console, no-invalid-this */
-import {Bench} from 'probe.gl/bench';
+import test from 'tape-catch';
+import {fillArray} from 'luma.gl/utils/array-utils-flat';
 
-import shadersBench from './shaders.bench';
-import uniformsBench from './uniforms.bench';
-import arrayCopyBench from './array-copy.bench';
+const FILL_ARRAY_TEST_CASES = [
+  {
+    title: 'test array',
+    arguments: {target: new Float32Array(10), source: [1, 2], count: 5},
+    result: [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
+  }
+];
 
-const suite = new Bench();
+test('flatten#import', t => {
+  t.ok(typeof fillArray === 'function', 'fillArray imported OK');
+  t.end();
+});
 
-// add tests
-uniformsBench(suite);
-shadersBench(suite);
-arrayCopyBench(suite);
-
-// Run the suite
-suite.run();
+test('fillArray#tests', t => {
+  for (const tc of FILL_ARRAY_TEST_CASES) {
+    const result = fillArray(tc.arguments);
+    t.deepEqual(result, tc.result, `fillArray ${tc.title} returned expected result`);
+  }
+  t.end();
+});

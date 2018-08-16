@@ -121,6 +121,7 @@ Note:
 * In WebGL1, the default is `GL.ARRAY_BUFFER` which will work as a generic buffer.
 * In WebGL2, the default is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used (bound). From that point on, WebGL will consider it either as an element buffer or a generic buffer.
 
+
 ## Methods
 
 ### initialize(props : Object) : Buffer
@@ -186,6 +187,7 @@ Note:
 * `readOffset + sizereadOffset + size` must not exceeed the size of the source buffer object
 * `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
 * If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
+
 
 ### getData() : TypedArray (WEBGL2)
 
