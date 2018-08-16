@@ -1,6 +1,7 @@
-import {Buffer, Transform, _Attribute as Attribute} from 'luma.gl';
+import {Buffer, Transform, _Attribute as Attribute, Texture2D} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
+import GL from 'luma.gl/constants';
 
 const VS = `\
 #version 300 es
@@ -390,6 +391,65 @@ test('WebGL#Transform update', t => {
 
   expectedData = sourceData.map(x => x * 2);
   outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+const VSTexInput = `\
+#version 300 es
+in float inBuffer;
+in float inTexture;
+out float outValue;
+
+void main()
+{
+  outValue = inBuffer + inTexture;
+}
+`;
+
+test('WebGL#Transform run (source - texture)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const sourceData = new Float32Array([20, -31, 0, 23.45]);
+  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const sourceTexture = new Texture2D(gl2, {
+    data: sourceData,
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    mipmaps: false,
+    width: 2,
+    height: 2,
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    }
+  });
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inBuffer: sourceBuffer
+    },
+    _sourceTextures: {
+      inTexture: sourceTexture
+    },
+    vs: VSTexInput,
+    feedbackMap: {
+      inBuffer: 'outValue'
+    },
+    elementCount: sourceData.length
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
