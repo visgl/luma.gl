@@ -45,7 +45,7 @@ export default class ProgramConfiguration {
   _addAttribute(location, name, compositeType, size) {
     const {type, components} = decomposeCompositeGLType(compositeType);
     const accessor = new Accessor({type, size: size * components});
-    this._inferProperties(name, accessor);
+    this._inferProperties(location, name, accessor);
 
     const attributeInfo = {location, name, accessor}; // Base values
     this.attributeInfos.push(attributeInfo);
@@ -56,7 +56,7 @@ export default class ProgramConfiguration {
   _inferProperties(location, name, accessor) {
     if ((/instance/i).test(name)) {
       // Any attribute containing the word "instance" will be assumed to be instanced
-      accessor.merge({instanced: true});
+      accessor.update({instanced: true});
     }
   }
 
