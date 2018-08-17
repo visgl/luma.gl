@@ -18,22 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-const path = require('path');
+import test from 'tape-catch';
+import {flattenToTypedArray} from 'loaders.gl/loader-utils/flatten';
 
-const ALIASES = {
-  'luma.gl/test': path.resolve(__dirname, './test'),
-  'luma.gl': path.resolve(__dirname, './modules/core/src'),
-  'luma.gl-imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
-  'luma.gl-io': path.resolve(__dirname, './modules/io/src'),
-  'loaders.gl': path.resolve(__dirname, './modules/loaders/src')
-};
+const FLATTEN_VERTICES_TEST_CASES = [
+  {
+    title: 'empty array',
+    argument: [],
+    result: []
+  },
+  {
+    title: 'flat arrays',
+    argument: [1, 2, 3],
+    result: [1, 2, 3]
+  },
+  {
+    title: 'nested one level',
+    argument: [[1, 2], [1, 2, 3]],
+    result: [1, 2, 0, 1, 2, 3]
+  }
+  // {
+  //   title: 'nested empty',
+  //   argument: [1, [1, 2, 3], 3],
+  //   result: [1, 1, 2, 3, 3, 0]
+  // }
+];
 
-if (module.require) {
-  // Enables ES2015 import/export in Node.js
-  module.require('reify');
+test('flatten#import', t => {
+  t.ok(typeof flattenToTypedArray === 'function', 'flattenToTypedArray imported OK');
+  t.end();
+});
 
-  const moduleAlias = module.require('module-alias');
-  moduleAlias.addAliases(ALIASES);
-}
-
-module.exports = ALIASES;
+test('flatten#flattenToTypedArray', t => {
+  for (const tc of FLATTEN_VERTICES_TEST_CASES) {
+    const result = flattenToTypedArray(tc.argument);
+    t.deepEqual(result, tc.result, `flattenToTypedArray ${tc.title} returned expected result`);
+  }
+  t.end();
+});
