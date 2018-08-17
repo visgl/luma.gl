@@ -6,12 +6,14 @@ const VS_GLSL_300 = `\
 #version 300 es
 
 in vec4 positions;
+uniform sampler2D sampler;
 out vec4 vColor;
 
 void f(out float a, in float b) {}
 
 void main(void) {
   gl_Position = positions;
+  vec4 texColor = texture(sampler, texCoord);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -20,12 +22,14 @@ const VS_GLSL_100 = `\
 #version 300 es
 
 attribute vec4 positions;
+uniform sampler2D sampler;
 varying vec4 vColor;
 
 void f(out float a, in float b) {}
 
 void main(void) {
   gl_Position = positions;
+  vec4 texColor = texture2D(sampler, texCoord);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -36,11 +40,13 @@ const FS_GLSL_300 = `\
 precision highp float;
 
 out vec4 fragmentColor;
+uniform sampler2D sampler;
 in vec4 vColor;
 
 void f(out float a, in float b) {}
 
 void main(void) {
+  vec4 texColor = texture(sampler, texCoord);
   fragmentColor = vColor;
 }
 `;
@@ -51,11 +57,13 @@ const FS_GLSL_100 = `\
 precision highp float;
 
 out vec4 fragmentColor;
+uniform sampler2D sampler;
 varying vec4 vColor;
 
 void f(out float a, in float b) {}
 
 void main(void) {
+  vec4 texColor = texture2D(sampler, texCoord);
   fragmentColor = vColor;
 }
 `;

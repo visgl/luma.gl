@@ -16,8 +16,8 @@ function convertVertexShaderTo300(source) {
   return source
     .replace(/attribute\s+/g, 'in ')
     .replace(/varying\s+/g, 'out ')
-    .replace(/texture2D\s+/g, 'texture')
-    .replace(/textureCube\s+/g, 'texture');
+    .replace(/texture2D\(/g, 'texture(')
+    .replace(/textureCube\(+/g, 'texture(');
 
     // Deal with fragColor
     // .replace(/gl_fragColor/g, 'fragColor ');
