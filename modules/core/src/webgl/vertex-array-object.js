@@ -77,6 +77,7 @@ export default class VertexArrayObject extends Resource {
   }
 
   setProps(props) {
+    // TODO: decide which props should be supported
     return this;
   }
 

@@ -25,6 +25,7 @@ export default class ProgramConfiguration {
     return this.attributeInfosByName[locationOrName] || null;
   }
 
+  // Resolves an attribute name or index to an index
   getAttributeLocation(locationOrName) {
     const attributeInfo = this.getAttributeInfo(locationOrName);
     return attributeInfo ? attributeInfo.location : -1;

@@ -279,6 +279,35 @@ export const DOC_PAGES = [
     name: 'Developer Guide',
     children: [
       {
+        name: 'Shadertools',
+        children: [
+          {
+            name: 'Shadertools',
+            content: 'developer-guide/shadertools/README.md'
+          },
+          {
+            name: 'Shader Assembly',
+            content: 'developer-guide/shadertools/shader-assembly.md'
+          },
+          {
+            name: 'Using Shader Modules',
+            content: 'developer-guide/shadertools/using-shader-modules.md'
+          },
+          {
+            name: 'Model Integration',
+            content: 'developer-guide/shadertools/model-integration.md'
+          },
+          {
+            name: 'Creating Shader Modules',
+            content: 'developer-guide/shadertools/writing-shader-modules.md'
+          },
+          {
+            name: 'Writing GLSL Code',
+            content: 'developer-guide/shadertools/writing-glsl-shaders.md'
+          }
+        ]
+      },
+      {
         name: 'Welcome',
         content: 'developer-guide/README.md'
       },
@@ -295,6 +324,14 @@ export const DOC_PAGES = [
       //   content: 'developer-guide/geometry.md'
       // },
       {
+        name: 'Buffers',
+        content: 'developer-guide/attributes.md'
+      },
+      {
+        name: 'Accessors',
+        content: 'developer-guide/attributes.md'
+      },
+      {
         name: 'Attributes',
         content: 'developer-guide/attributes.md'
       },
@@ -305,30 +342,6 @@ export const DOC_PAGES = [
       {
         name: 'Multi-Pass Rendering',
         content: 'developer-guide/multipass/README.md'
-      },
-      {
-        name: 'Shadertools',
-        content: 'developer-guide/shadertools/README.md'
-      },
-      {
-        name: 'Shader Assembly',
-        content: 'developer-guide/shadertools/shader-assembly.md'
-      },
-      {
-        name: 'Using Shader Modules',
-        content: 'developer-guide/shadertools/using-shader-modules.md'
-      },
-      {
-        name: 'Model Integration',
-        content: 'developer-guide/shadertools/model-integration.md'
-      },
-      {
-        name: 'Creating Shader Modules',
-        content: 'developer-guide/shadertools/writing-shader-modules.md'
-      },
-      {
-        name: 'Writing GLSL Code',
-        content: 'developer-guide/shadertools/writing-glsl-shaders.md'
       },
       {
         name: 'Building Apps',

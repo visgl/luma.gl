@@ -1,8 +1,10 @@
 import test from 'tape-catch';
 import GL from 'luma.gl/constants';
-import {createGLContext, VertexArray, VertexArrayObject} from 'luma.gl';
+import {VertexArray, VertexArrayObject, Buffer} from 'luma.gl';
 
 import {fixture} from 'luma.gl/test/setup';
+
+const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
@@ -24,7 +26,7 @@ test('WebGL#VertexArray construct/delete', t => {
 });
 
 test('WebGL#VertexArray#enable', t => {
-  const gl = createGLContext();
+  const {gl} = fixture;
 
   const vertexArray = new VertexArray(gl);
 
@@ -40,3 +42,16 @@ test('WebGL#VertexArray#enable', t => {
 
   t.end();
 });
+
+test('WebGL#VertexArray#setAttributes(unused)', t => {
+  const {gl} = fixture;
+
+  const vertexArray = new VertexArray(gl);
+  vertexArray.setAttributes({
+    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+  });
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
+
+  t.end();
+});
+
