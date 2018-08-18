@@ -19,7 +19,7 @@ test('WebGL#Attribute constructor/update/delete', t => {
   }
   t.is(attribute.target, GL.ARRAY_BUFFER, 'Attribute target is inferred');
   t.is(attribute.type, GL.FLOAT, 'Attribute type is inferred');
-  t.is(attribute.instanced, 0, 'instanced prop is set');
+  t.is(attribute.divisor, 0, 'divisor prop is set');
 
   attribute.delete();
   t.notOk(buffer._handle, 'Buffer resource is released');
@@ -52,7 +52,7 @@ test('WebGL#Attribute update', t => {
   }
 
   attribute.update({isInstanced: true});
-  t.is(attribute.instanced, 1, 'instanced prop is updated');
+  t.is(attribute.divisor, 1, 'divisor prop is updated');
 
   attribute.delete();
 

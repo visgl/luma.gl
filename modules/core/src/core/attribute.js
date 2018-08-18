@@ -1,7 +1,7 @@
 /* eslint-disable complexity */
 import GL from '../constants';
 import {Buffer} from '../webgl';
-import {uid} from '../utils';
+import {log, uid} from '../utils';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
@@ -43,31 +43,10 @@ export default class Attribute {
     const {
       value,
       buffer,
-
-      // buffer options
-      size = this.size,
-      offset = this.offset || 0,
-      stride = this.stride || 0,
-      normalized = this.normalized || false,
-      integer = this.integer || false,
-      instanced = this.instanced || 0,
-
-      constant = this.constant || false,
-      isInstanced
+      constant = this.constant || false
     } = opts;
 
-    this.size = size;
-    this.offset = offset;
-    this.stride = stride;
-    this.normalized = normalized;
-    this.integer = integer;
     this.constant = constant;
-
-    if (isInstanced !== undefined) {
-      this.instanced = isInstanced ? 1 : 0;
-    } else {
-      this.instanced = instanced;
-    }
 
     if (buffer) {
       this.externalBuffer = buffer;
@@ -93,6 +72,8 @@ export default class Attribute {
         this.type = this.buffer.accessor.type;
       }
     }
+
+    this._setAccessor(opts);
   }
 
   getBuffer() {
@@ -111,6 +92,39 @@ export default class Attribute {
       return [buffer, this];
     }
     return null;
+  }
+
+  // Sets all accessor props except type
+  // TODO - store on `this.accessor`
+  _setAccessor(opts) {
+    const {
+      // accessor props
+      size = this.size,
+      offset = this.offset || 0,
+      stride = this.stride || 0,
+      normalized = this.normalized || false,
+      integer = this.integer || false,
+      divisor = this.divisor || 0,
+      instanced,
+      isInstanced
+    } = opts;
+
+    this.size = size;
+    this.offset = offset;
+    this.stride = stride;
+    this.normalized = normalized;
+    this.integer = integer;
+
+    this.divisor = divisor;
+
+    if (isInstanced !== undefined) {
+      log.deprecated('Attribute.isInstanced');
+      this.divisor = isInstanced ? 1 : 0;
+    }
+    if (instanced !== undefined) {
+      log.deprecated('Attribute.instanced');
+      this.divisor = instanced ? 1 : 0;
+    }
   }
 
   _validateAttributeDefinition() {
