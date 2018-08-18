@@ -441,11 +441,11 @@ export default class Texture extends Resource {
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
         assertWebGL2Context(this.gl);
-        // This texImage2D signature uses currently bound GL_PIXEL_UNPACK_BUFFER
+        // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
         this.gl.texSubImage2D(target,
           level, format, width, height, border, format, type, offset);
-        this.gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       } else {
         // Assume data is a browser supported object (ImageData, Canvas, ...)
         this.gl.texSubImage2D(target, level, x, y, format, type, data);
@@ -592,7 +592,7 @@ export default class Texture extends Resource {
 
     const {gl} = this;
 
-    // This signature of texImage2D uses currently bound GL_PIXEL_UNPACK_BUFFER
+    // This signature of texImage2D uses currently bound GL.PIXEL_UNPACK_BUFFER
     gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.target);
     // And as always, we must also bind the texture itself
     this.bind();
@@ -601,7 +601,7 @@ export default class Texture extends Resource {
       mipmapLevel, format, width, height, border, format, type, buffer.target);
 
     this.unbind();
-    gl.bindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, null);
+    gl.bindBuffer(GL.GL.PIXEL_UNPACK_BUFFER, null);
     return this;
   }
 

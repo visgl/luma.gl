@@ -5,6 +5,7 @@ const GL = require('../../core/src/constants.js');
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
+const COLOR_RED = '\x1b[31m';
 
 const DEBUG = false; // Set to true to force tracing
 
@@ -25,7 +26,7 @@ module.exports = function _(opts) {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {
               if (DEBUG || state.opts.verbose || state.opts.debug) {
-                const filename = state.file.opts.filename;
+                const filename = getFilename(state);
                 const line = local.loc.start.line;
                 console.error(
                   `${COLOR_YELLOW}${filename}:${line} Dropping GL import${COLOR_RESET}`);
@@ -45,13 +46,23 @@ module.exports = function _(opts) {
           object.isIdentifier({name: 'GL'}) ||
           object.isIdentifier({name: 'gl'});
 
-        if (isGLIdentifier && value !== undefined) {
+        if (isGLIdentifier) {
+          const filename = getFilename(state);
+          const constant = `${object.node.name}.${property.node.name}`;
+
+          if (value === undefined) {
+            if (property.node.name.toUpperCase() === property.node.name) {
+              const ERR_MESSAGE = 'Unknown GL constant, inlining failed';
+              console.error(
+                `${COLOR_RED}${filename}: ${constant} ==> ??? ${ERR_MESSAGE} ${COLOR_RESET}`);
+              path.buildCodeFrameError(`${constant} ${ERR_MESSAGE}`);
+              throw new Error(constant);
+            }
+            return;
+          }
 
           if (DEBUG || state.opts.verbose || state.opts.debug) {
-            const filename = state.file.opts.filename;
-            // const line = object.start.line;
-            console.error(
-              `${COLOR_YELLOW}${filename}: gl.${property.node.name} ==> ${value}${COLOR_RESET}`);
+            console.error(`${COLOR_YELLOW}${filename}: ${constant} ==> ${value}${COLOR_RESET}`);
           }
           path.replaceWith(opts.types.numericLiteral(value));
         }
@@ -59,3 +70,8 @@ module.exports = function _(opts) {
     }
   };
 };
+
+function getFilename(state) {
+  const filename = state.file.opts.sourceFileName;
+  return filename;
+}
