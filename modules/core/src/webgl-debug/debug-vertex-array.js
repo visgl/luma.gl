@@ -21,19 +21,16 @@ export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'}
   // Add used attributes
   const attributes = vertexArray.values;
 
-  for (const attributeName in attributes) {
-    const info = vertexArray._getAttributeInfo(attributeName);
+  for (const attributeLocation in attributes) {
+    const info = vertexArray._getAttributeInfo(attributeLocation);
     if (info) {
-      let rowHeader = `${attributeName}: ${info.name}`;
+      let rowHeader = `${attributeLocation}: ${info.name}`;
       const accessor = vertexArray.accessors[info.location];
       if (accessor) {
-        const typeAndName = getCompositeGLType(accessor.type, accessor.size);
-        if (typeAndName) { // eslint-disable-line
-          rowHeader = `${attributeName}: ${info.name} (${typeAndName.name})`;
-        }
+        rowHeader = `${attributeLocation}: ${getGLSLDeclaration(info.name, accessor)}`;
       }
       table[rowHeader] =
-        getDebugTableRow(vertexArray, attributes[attributeName], accessor, header);
+        getDebugTableRow(vertexArray, attributes[attributeLocation], accessor, header);
     }
   }
 
@@ -107,3 +104,12 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
 
 }
 /* eslint-ensable max-statements */
+
+function getGLSLDeclaration(name, accessor) {
+  const {type, size} = accessor;
+  const typeAndName = getCompositeGLType(type, size);
+  if (typeAndName) {
+    return `${name} (${typeAndName.name})`;
+  }
+  return name;
+}

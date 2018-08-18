@@ -7,7 +7,7 @@ const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 const COLOR_RED = '\x1b[31m';
 
-const DEBUG = false; // Set to true to force tracing
+const DEBUG = true; // Set to true to force tracing
 
 module.exports = function _(opts) {
   if (DEBUG) {

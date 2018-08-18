@@ -8,6 +8,7 @@ import log from '../utils/log';
 export default class ProgramConfiguration {
 
   constructor(program) {
+    this.id = program.id;
     this.attributeInfos = [];
     this.attributeInfosByName = {};
     this.varyings = [];
@@ -56,10 +57,13 @@ export default class ProgramConfiguration {
 
   // PRIVATE METHODS
 
+<<<<<<< Updated upstream
   _log() {
     log.console(this._getDebugTable());
   }
 
+=======
+>>>>>>> Stashed changes
   // linkProgram needs to have been called, although linking does not need to have been successful
   _readAttributesFromProgram(program) {
     const {gl} = program;
@@ -115,23 +119,5 @@ export default class ProgramConfiguration {
     const varying = {location, name, accessor}; // Base values
     this.varyings.push(varying);
     this.varyingsByName[varying.name] = varying; // For quick name based lookup
-  }
-
-  _getDebugTable() {
-    const table = {};
-
-    for (const attributeInfo of this.attributeInfos) {
-      if (attributeInfo) {
-        table[`in ${attributeInfo.name}`] = {accessor: JSON.stringify(attributeInfo.accessor)};
-      }
-    }
-
-    for (const varyingInfo of this.varyingInfos) {
-      if (varyingInfo) {
-        table[`out ${varyingInfo.name}`] = {accessor: JSON.stringify(varyingInfo.accessor)};
-      }
-    }
-
-    return table;
   }
 }

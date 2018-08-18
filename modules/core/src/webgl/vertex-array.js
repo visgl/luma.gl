@@ -82,7 +82,7 @@ export default class VertexArray {
       this.setAttributes(props.attributes);
     }
     if ('elements' in props) {
-      this.setElements(props.elements);
+      this.setElementBuffer(props.elements);
     }
     if ('bindOnUse' in props) {
       props = props.bindOnUse;
@@ -145,6 +145,7 @@ export default class VertexArray {
   setElementBuffer(elementBuffer = null, accessor = {}) {
     this.elements = elementBuffer; // Save value for debugging
     this.clearDrawParams();
+
     // Update vertexArray immediately if we have our own array
     if (!this.vertexArrayObject.isDefaultArray) {
       this.vertexArrayObject.setElementBuffer(elementBuffer, accessor);
@@ -156,7 +157,7 @@ export default class VertexArray {
   setBuffer(locationOrName, buffer, appAccessor = {}) {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-      return this.setElements(buffer);
+      return this.setElementBuffer(buffer);
     }
 
     const {location, accessor} =
@@ -166,6 +167,7 @@ export default class VertexArray {
       this.values[location] = buffer;
       this.accessors[location] = accessor;
       this.clearDrawParams();
+
       // Update vertexArray immediately if we have our own array
       if (!this.vertexArrayObject.isDefaultArray) {
         this.vertexArrayObject.setBuffer(location, buffer, accessor);
@@ -204,6 +206,10 @@ export default class VertexArray {
   // If required, unbind temporarily to avoid conflicting with TransformFeedback
   unbindBuffers() {
     this.vertexArrayObject.bind(() => {
+      if (this.elements) {
+        this.setElementBuffer(null);
+      }
+
       // Chrome does not like buffers that are bound to several binding points,
       // so we need to offer and unbind facility
       // WebGL offers disabling, but no clear way to set a VertexArray buffer to `null`
@@ -225,6 +231,10 @@ export default class VertexArray {
   // If required, rebind rebind after temporary unbind
   bindBuffers() {
     this.vertexArrayObject.bind(() => {
+      if (this.elements) {
+        this.setElementBuffer(this.elements);
+      }
+
       for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
         const buffer = this.values[location];
         if (buffer instanceof Buffer) {
@@ -244,27 +254,29 @@ export default class VertexArray {
   }
 
   bindForUse(length, func) {
-    if (Number.isFinite(length)) {
-      this._updateAttributeZeroBuffer(length);
-    }
 
-    // Make sure that any constant attributes are updated (stored on the context, not the VAO)
-    this._setConstantAttributes();
+    let value;
 
-    if (!this.hasVertexArrays) {
-      if (this.elements) {
-        this.setElementBuffer(this.elements);
+    this.vertexArrayObject.bind(() => {
+
+      if (Number.isFinite(length)) {
+        this._updateAttributeZeroBuffer(length);
       }
-      this.bindBuffers();
-    }
 
-    this.vertexArrayObject.bind();
-    const value = func();
-    this.vertexArrayObject.unbind();
+      // Make sure that any constant attributes are updated (stored on the context, not the VAO)
+      this._setConstantAttributes();
 
-    if (!this.hasVertexArrays) {
-      this.unbindBuffers();
-    }
+      if (!this.vertexArrayObject.hasVertexArrays) {
+        this.bindBuffers();
+      }
+
+      value = func();
+
+      if (!this.vertexArrayObject.hasVertexArrays) {
+        this.unbindBuffers();
+      }
+
+    });
 
     return value;
   }
@@ -328,7 +340,9 @@ export default class VertexArray {
     for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
       const constant = this.values[location];
       if (ArrayBuffer.isView(constant)) {
-        this.vertexArrayObject.enable(location, false);
+        if (this.vertexArrayObject.isDefault) {
+          this.vertexArrayObject.enable(location, false);
+        }
         VertexArrayObject.setConstant(this.gl, location, constant);
       }
     }

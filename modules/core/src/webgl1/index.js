@@ -3,4 +3,3 @@
 // The files in this directory should be self contained and not include any other files
 
 export {default as polyfillContext} from './polyfill-context';
-export {default as polyfillVertexArrayObject} from './polyfill-vertex-array-object';

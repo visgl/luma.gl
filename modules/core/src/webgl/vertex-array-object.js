@@ -99,7 +99,7 @@ export default class VertexArrayObject extends Resource {
 
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-      return this.setElements(buffer, accessor);
+      return this.setElementBuffer(buffer, accessor);
     }
 
     const {size, type, stride, offset, normalized, integer, divisor} = accessor;
