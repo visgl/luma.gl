@@ -18,14 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {Buffer, Transform, picking, registerShaderModules} from 'luma.gl';
+import {Buffer, Transform, picking} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 
 // TODO: test WebGL1 when Transform class is ready
 const gl = fixture.gl2;
-
-registerShaderModules([picking]);
 
 const TEST_DATA = {
   vertexColorData: new Float32Array([
@@ -92,7 +90,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
     },
     vs: VS,
     varyings: ['isPicked'],
-    modules: ['picking'],
+    modules: [picking],
     elementCount
   });
 
@@ -148,7 +146,7 @@ test('picking#picking_setPickingColor', t => {
     },
     vs: VS,
     varyings: ['rgbColorASelected'],
-    modules: ['picking'],
+    modules: [picking],
     elementCount
   });
 

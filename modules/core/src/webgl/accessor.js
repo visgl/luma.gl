@@ -45,6 +45,10 @@ export default class Accessor {
     accessors.forEach(opts => this._update(opts));
   }
 
+  toString() {
+    return JSON.stringify(this);
+  }
+
   // ACCESSORS
 
   // TODO - remove>
