@@ -9,6 +9,7 @@ import {assembleShaders} from '../shadertools/src';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
 import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 
@@ -626,6 +627,7 @@ count: ${this.stats.profileFrameCount}`
   }
 
   _logDrawCallEnd(priority, vertexArray, uniforms, framebuffer) {
+    // HACK: priority === undefined means logDrawCallStart didn't run
     if (priority === undefined) {
       return;
     }
@@ -659,9 +661,13 @@ count: ${this.stats.profileFrameCount}`
       // log.log(priority, 'Unused uniforms ', unusedTable)();
     }
 
+    const configTable = getDebugTableForProgramConfiguration(this.vertexArray.configuration);
+
     log.table(priority, attributeTable)();
 
     log.table(priority, uniformTable)();
+
+    log.table(priority + 1, configTable)();
 
     logModel(this, uniforms);
 

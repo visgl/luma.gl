@@ -10,8 +10,8 @@
 /* eslint-disable camelcase, brace-style */
 import GL from '../constants';
 import {getParameterPolyfill} from './polyfill-get-parameter';
-import polyfillVertexArrayObject from './polyfill-vertex-array-object';
-import {WebGLRenderingContext} from './webgl-rendering-context';
+// import polyfillVertexArrayObject from './polyfill-vertex-array-object';
+// import {WebGLRenderingContext} from './webgl-rendering-context';
 
 function assert(condition, message) {
   if (!condition) {
@@ -225,7 +225,7 @@ function installOverrides(gl, {target, target2}) {
 
 // Registers polyfill or mock functions for all known extensions
 export default function polyfillContext(gl) {
-  polyfillVertexArrayObject(WebGLRenderingContext, gl);
+  // polyfillVertexArrayObject(WebGLRenderingContext, gl);
   gl.luma = gl.luma || {};
   initializeExtensions(gl);
   if (!gl.luma.polyfilled) {

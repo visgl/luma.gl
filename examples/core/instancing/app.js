@@ -1,3 +1,4 @@
+import 'luma.gl/debug';
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
@@ -38,9 +39,9 @@ class InstancedCube extends Cube {
     );
 
     const vs = `\
+attribute float instanceSizes;
 attribute vec3 positions;
 attribute vec3 normals;
-attribute float instanceSizes;
 attribute vec2 instanceOffsets;
 attribute vec3 instanceColors;
 attribute vec2 instancePickingColors;
@@ -104,7 +105,7 @@ function mouseleave(e) {
 
 class AppAnimationLoop extends AnimationLoop {
   constructor() {
-    super({createFramebuffer: true});
+    super({createFramebuffer: true, debug: true});
   }
 
   getInfo() {

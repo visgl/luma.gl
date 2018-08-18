@@ -150,7 +150,7 @@ Binds the specified attribute in this vertex array to the supplied buffer
 [gl.vertexAttrib{I}Pointer](), [gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
 
 
-### setElements(buffer : Buffer [, accessor : Object]) : VertexArray
+### setElementBuffer(buffer : Buffer [, accessor : Object]) : VertexArray
 
 Binds the supplied buffer as index buffer (`GL.ELEMENT_ARRAY_BUFFER`).
 
