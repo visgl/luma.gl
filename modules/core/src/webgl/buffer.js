@@ -60,7 +60,7 @@ export default class Buffer extends Resource {
   }
 
   updateAccessor(opts) {
-    this.accessor.update(opts);
+    this.accessor = new Accessor(this.accessor, opts);
     return this;
   }
 
