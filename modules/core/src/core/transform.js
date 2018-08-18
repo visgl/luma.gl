@@ -16,7 +16,7 @@ export default class Transform {
     return isWebGL2(gl);
   }
 
-  constructor(gl, opts = {}) {
+  constructor(gl, props = {}) {
     assertWebGL2Context(gl);
 
     this.gl = gl;
@@ -27,7 +27,7 @@ export default class Transform {
     this.transformFeedbacks = new Array(2);
     this._buffersCreated = {};
 
-    this._initialize(opts);
+    this._initialize(props);
     Object.seal(this);
   }
 
@@ -93,9 +93,9 @@ export default class Transform {
   // Private
 
   /* eslint-disable complexity */
-  _initialize(opts = {}) {
-    let {feedbackBuffers, feedbackMap} = opts;
-    const {destinationBuffers, sourceDestinationMap} = opts;
+  _initialize(props = {}) {
+    let {feedbackBuffers, feedbackMap} = props;
+    const {destinationBuffers, sourceDestinationMap} = props;
     if (destinationBuffers) {
       log.deprecated('destinationBuffers', 'feedbackBuffers')();
       feedbackBuffers = feedbackBuffers || destinationBuffers;
@@ -105,7 +105,7 @@ export default class Transform {
       feedbackMap = feedbackMap || sourceDestinationMap;
     }
 
-    const {sourceBuffers, vs, elementCount} = opts;
+    const {sourceBuffers, vs, elementCount} = props;
     assert(sourceBuffers && vs && elementCount >= 0);
     // If feedbackBuffers are not provided, sourceDestinationMap must be provided
     // to create destinaitonBuffers with layout of corresponding source buffer.
@@ -114,7 +114,7 @@ export default class Transform {
       assert(feedbackBuffers[bufferName] instanceof Buffer);
     }
 
-    const {varyings} = opts;
+    const {varyings} = props;
     // If varyings are not provided feedbackMap must be provided to deduce varyings
     assert(Array.isArray(varyings) || feedbackMap);
     let varyingsArray = varyings;
@@ -126,9 +126,9 @@ export default class Transform {
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
     this._setupSwapBuffers();
-    this._buildModel(Object.assign({}, opts, {
-      id: opts.id || 'transform-model',
-      drawMode: opts.drawMode || GL.POINTS,
+    this._buildModel(Object.assign({}, props, {
+      id: props.id || 'transform-model',
+      drawMode: props.drawMode || GL.POINTS,
       varyings: varyingsArray
     }));
   }
@@ -198,12 +198,12 @@ export default class Transform {
   }
 
   // build Model and TransformFeedback objects
-  _buildModel(opts = {}) {
-    const {vs, elementCount} = opts;
+  _buildModel(props = {}) {
+    const {vs, elementCount} = props;
     // use a minimal fragment shader with matching version of vertex shader.
     const fs = getShaderVersion(vs) === 300 ? FS300 : FS100;
 
-    this.model = new Model(this.gl, Object.assign({}, opts, {
+    this.model = new Model(this.gl, Object.assign({}, props, {
       fs,
       vertexCount: elementCount
     }));

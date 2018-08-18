@@ -4,11 +4,11 @@ import Object3D from './object-3d';
 import {getDrawMode} from '../geometry/geometry';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
-import {getDebugTableForUniforms} from '../webgl/uniforms';
-import {getDebugTableForVertexArray} from '../webgl/vertex-array';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
+import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 
@@ -329,7 +329,7 @@ export default class Model extends Object3D {
 
     const logPriority = this._logDrawCallStart(2);
 
-    const drawParams = this.vertexArray.getDrawParams();
+    const drawParams = this.vertexArray.getDrawParams(this.props);
     if (drawParams.isInstanced && !this.isInstanced) {
       log.warn('Found instanced attributes on non-instanced model', this.id)();
     }

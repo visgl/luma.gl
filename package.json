@@ -49,10 +49,9 @@
     "collect-metrics": "./scripts/collect-metrics.sh"
   },
   "devDependencies": {
-    "@babel/cli": "^7.0.0-beta",
-    "@babel/core": "^7.0.0-beta",
-    "@babel/preset-env": "^7.0.0-beta",
-    "@babel/preset-es2015": "^7.0.0-beta",
+    "@babel/cli": "^7.0.0-rc",
+    "@babel/core": "^7.0.0-rc",
+    "@babel/preset-env": "^7.0.0-rc",
     "babel-eslint": "^6.0.0",
     "babel-plugin-istanbul": "^4.1.1",
     "babel-plugin-version-inline": "^1.0.0",
@@ -69,7 +68,6 @@
     "pre-commit": "^1.2.2",
     "puppeteer": "^1.2.0",
     "reify": "^0.4.4",
-    "sinon": "^4.1.3",
     "source-map-loader": "^0.2.1",
     "source-map-support": "^0.4.2",
     "tap-browser-color": "^0.1.2",

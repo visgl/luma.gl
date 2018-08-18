@@ -1,8 +1,9 @@
 // Contains metadata describing attribute configurations for a program's shaders
 // Much of this is automatically extracted from shaders after program linking
+import Accessor from './accessor';
 import {isWebGL2} from '../webgl-utils';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
-import Accessor from './accessor';
+import log from '../utils/log';
 
 export default class ProgramConfiguration {
 
@@ -24,9 +25,14 @@ export default class ProgramConfiguration {
     return this.attributeInfosByName[locationOrName] || null;
   }
 
-  getLocation(locationOrName) {
+  getAttributeLocation(locationOrName) {
     const attributeInfo = this.getAttributeInfo(locationOrName);
     return attributeInfo ? attributeInfo.location : -1;
+  }
+
+  getAttributeAccessor(locationOrName) {
+    const attributeInfo = this.getAttributeInfo(locationOrName);
+    return attributeInfo ? attributeInfo.accessor : null;
   }
 
   getVaryingInfo(locationOrName) {
@@ -42,31 +48,15 @@ export default class ProgramConfiguration {
     return varying ? varying.location : -1;
   }
 
-  _addAttribute(location, name, compositeType, size) {
-    const {type, components} = decomposeCompositeGLType(compositeType);
-    const accessor = new Accessor({type, size: size * components});
-    this._inferProperties(location, name, accessor);
-
-    const attributeInfo = {location, name, accessor}; // Base values
-    this.attributeInfos.push(attributeInfo);
-    this.attributeInfosByName[attributeInfo.name] = attributeInfo; // For quick name based lookup
+  getVaryingAccessor(locationOrName) {
+    const varying = this.getVaryingInfo();
+    return varying ? varying.accessor : null;
   }
 
-  // Extract additional attribute metadata from shader names (based on attribute naming conventions)
-  _inferProperties(location, name, accessor) {
-    if ((/instance/i).test(name)) {
-      // Any attribute containing the word "instance" will be assumed to be instanced
-      accessor.update({instanced: true});
-    }
-  }
+  // PRIVATE METHODS
 
-  _addVarying(location, name, compositeType, size) {
-    const {type, components} = decomposeCompositeGLType(compositeType);
-    const accessor = new Accessor({type, size: size * components});
-
-    const varying = {location, name, accessor}; // Base values
-    this.varyings.push(varying);
-    this.varyingsByName[varying.name] = varying; // For quick name based lookup
+  _log() {
+    log.console(this._getDebugTable());
   }
 
   // linkProgram needs to have been called, although linking does not need to have been successful
@@ -97,5 +87,50 @@ export default class ProgramConfiguration {
     }
 
     this.varyings.sort((a, b) => a.location - b.location);
+  }
+
+  _addAttribute(location, name, compositeType, size) {
+    const {type, components} = decomposeCompositeGLType(compositeType);
+    const accessor = new Accessor({type, size: size * components});
+    this._inferProperties(location, name, accessor);
+
+    const attributeInfo = {location, name, accessor}; // Base values
+    this.attributeInfos.push(attributeInfo);
+    this.attributeInfosByName[attributeInfo.name] = attributeInfo; // For quick name based lookup
+  }
+
+  // Extract additional attribute metadata from shader names (based on attribute naming conventions)
+  _inferProperties(location, name, accessor) {
+    if ((/instance/i).test(name)) {
+      // Any attribute containing the word "instance" will be assumed to be instanced
+      accessor.update({instanced: true});
+    }
+  }
+
+  _addVarying(location, name, compositeType, size) {
+    const {type, components} = decomposeCompositeGLType(compositeType);
+    const accessor = new Accessor({type, size: size * components});
+
+    const varying = {location, name, accessor}; // Base values
+    this.varyings.push(varying);
+    this.varyingsByName[varying.name] = varying; // For quick name based lookup
+  }
+
+  _getDebugTable() {
+    const table = {};
+
+    for (const attributeInfo of this.attributeInfos) {
+      if (attributeInfo) {
+        table[`in ${attributeInfo.name}`] = {accessor: JSON.stringify(attributeInfo.accessor)};
+      }
+    }
+
+    for (const varyingInfo of this.varyingInfos) {
+      if (varyingInfo) {
+        table[`out ${varyingInfo.name}`] = {accessor: JSON.stringify(varyingInfo.accessor)};
+      }
+    }
+
+    return table;
   }
 }

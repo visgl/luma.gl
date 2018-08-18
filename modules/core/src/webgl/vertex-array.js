@@ -4,9 +4,7 @@ import GL from '../constants';
 import Accessor from './accessor';
 import Buffer from './buffer';
 import VertexArrayObject from './vertex-array-object';
-import {glKey} from '../webgl-utils/constants-to-keys';
-import {getCompositeGLType} from '../webgl-utils/attribute-utils';
-import {log, formatValue, assert} from '../utils';
+import {log, assert} from '../utils';
 import {stubRemovedMethods} from '../utils';
 
 const ERR_ATTRIBUTE_TYPE =
@@ -97,10 +95,15 @@ export default class VertexArray {
     this.drawParams = null;
   }
 
-  getDrawParams(vertexCount) {
+  getDrawParams(appParameters) {
+    // Auto deduced draw parameters
     this.drawParams = this.drawParams || this._updateDrawParams();
-    this._updateAttributeZeroBuffer(vertexCount || this.drawParams.vertexCount);
-    return this.drawParams;
+
+    // Override with any application supplied draw parameters
+    const drawParams = Object.assign({}, this.drawParams, appParameters);
+
+    this._updateAttributeZeroBuffer(drawParams);
+    return drawParams;
   }
 
   // Set (bind) an array or map of vertex array buffers, either in numbered or named locations.
@@ -295,7 +298,7 @@ export default class VertexArray {
 
   _getAttributeIndex(locationOrName) {
     if (this.configuration) {
-      return this.configuration.getLocation(locationOrName);
+      return this.configuration.getAttributeLocation(locationOrName);
     }
     const location = Number(locationOrName);
     if (Number.isFinite(location)) {
@@ -307,11 +310,14 @@ export default class VertexArray {
   // NOTE: Desktop OpenGL cannot disable attribute 0
   // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
   // this-has-significant-performance-penalt
-  _updateAttributeZeroBuffer(length = 4) {
+  _updateAttributeZeroBuffer({vertexCount, instanceCount}) {
+    // TODO - Determine required length
+    const elementCount = Math.max(vertexCount | 0, instanceCount | 0);
+
     // Create buffer only when needed, and reuse it (avoids inflating buffer creation statistics)
     const constant = this.values[0];
     if (ArrayBuffer.isView(constant)) {
-      const size = 1;
+      const size = elementCount;
       this.buffer = this.buffer || new Buffer(this.gl, {size});
     }
   }
@@ -399,109 +405,3 @@ export default class VertexArray {
     return this.setElementBuffer(elementBuffer, accessor);
   }
 }
-
-// DEBUG FUNCTIONS
-
-export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'} = {}) {
-  if (!vertexArray.configuration) {
-    return {};
-  }
-
-  const table = {}; // {[header]: {}};
-
-  // Add index (elements) if available
-  if (vertexArray.elements) {
-    // const elements = Object.assign({size: 1}, vertexArray.elements);
-    table.ELEMENT_ARRAY_BUFFER =
-      getDebugTableRow(vertexArray, vertexArray.elements, null, header);
-  }
-
-  // Add used attributes
-  const attributes = vertexArray.values;
-
-  for (const attributeName in attributes) {
-    const info = vertexArray._getAttributeInfo(attributeName);
-    if (info) {
-      let rowHeader = `${attributeName}: ${info.name}`;
-      const accessor = vertexArray.accessors[info.location];
-      if (accessor) {
-        const typeAndName = getCompositeGLType(accessor.type, accessor.size);
-        if (typeAndName) { // eslint-disable-line
-          rowHeader = `${attributeName}: ${info.name} (${typeAndName.name})`;
-        }
-      }
-      table[rowHeader] =
-        getDebugTableRow(vertexArray, attributes[attributeName], accessor, header);
-    }
-  }
-
-  return table;
-}
-
-/* eslint-disable max-statements */
-function getDebugTableRow(vertexArray, attribute, accessor, header) {
-  // const round = xnum => Math.round(num * 10) / 10;
-  const {gl} = vertexArray;
-
-  let type = 'NOT PROVIDED';
-  let size = 'N/A';
-  let verts = 'N/A';
-  let bytes = 'N/A';
-
-  let isInteger;
-  let marker;
-  let value;
-
-  if (accessor) {
-    type = accessor.type;
-    size = accessor.size;
-
-    // Generate a type name by dropping Array from Float32Array etc.
-    type = String(type).replace('Array', '');
-
-    // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
-    isInteger = type.indexOf('nt') !== -1;
-  }
-
-  if (attribute instanceof Buffer) {
-    const buffer = attribute;
-
-    const {data, modified} = buffer.getDebugData();
-    marker = modified ? '*' : '';
-
-    value = data;
-    bytes = buffer.bytes;
-    verts = bytes / data.BYTES_PER_ELEMENT / size;
-
-    let format;
-
-    if (accessor) {
-      const instanced = accessor.divisor > 0;
-      format = `${instanced ? 'I ' : 'P '} ${verts} (x${size}=${bytes} bytes ${glKey(gl, type)})`;
-    } else {
-      // element buffer
-      isInteger = true;
-      format = `${bytes} bytes`;
-    }
-
-    return {
-      [header]: `${marker}${formatValue(value, {size, isInteger})}`,
-      'Format ': format
-    };
-  }
-
-  // CONSTANT VALUE
-  value = attribute;
-  size = attribute.length;
-  // Generate a type name by dropping Array from Float32Array etc.
-  type = String(attribute.constructor.name).replace('Array', '');
-  // Look for 'nt' to detect integer types, e.g. Int32Array, Uint32Array
-  isInteger = type.indexOf('nt') !== -1;
-
-  return {
-    [header]: `${formatValue(value, {size, isInteger})} (constant)`,
-    'Format ': `${size}x${type} (constant)`
-  };
-
-}
-/* eslint-ensable max-statements */
