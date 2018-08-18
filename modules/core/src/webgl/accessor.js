@@ -1,20 +1,19 @@
 import GL from '../constants';
 import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import log from '../utils/log';
 import assert from '../utils/assert';
 
-export default class Accessor {
+const DEFAULT_ACCESSOR_VALUES = {
+  offset: 0,
+  stride: 0,
+  type: GL.FLOAT,
+  size: 1,
+  divisor: 0,
+  normalized: false,
+  integer: false
+};
 
-  static get DEFAULTS() {
-    return {
-      type: GL.FLOAT,
-      size: 1,
-      offset: 0,
-      stride: 0,
-      normalized: false,
-      integer: false,
-      instanced: 0
-    };
-  }
+export default class Accessor {
 
   static getBytesPerElement(accessor) {
     assert(accessor.type);
@@ -28,21 +27,17 @@ export default class Accessor {
     return ArrayType.BYTES_PER_ELEMENT * accessor.size;
   }
 
-  /**
-   * Store characteristics of a data accessor
-   * This data can be used when updating vertex attributes with the associated buffer,
-   * freeing the application from keeping track of this metadata.
-   * @class
-   * {type, size, offset, stride, normalized, integer, instanced}
-   * @param {GLuint} size - number of values per element (1-4)
-   * @param {GLuint} type - type of values (e.g. gl.FLOAT)
-   * @param {GLbool} normalized=false - normalize integers to [-1,1] or [0,1]
-   * @param {GLuint} integer=false - WebGL2 only, int-to-float conversion
-   * @param {GLuint} stride=0 - supports strided arrays
-   * @param {GLuint} offset=0 - supports strided arrays
-   */
+  // Combines (merges) a list of accessors. On top of default values
+  // Usually [programAccessor, bufferAccessor, appAccessor]
+  // All props will be set in the returned object.
+  // TODO check for conflicts between values in the supplied accessors
+  static resolve(...accessors) {
+    return new Accessor(...[DEFAULT_ACCESSOR_VALUES, ...accessors]); // Default values
+  }
+
   constructor(...accessors) {
-    accessors.forEach(opts => this._update(opts));
+    accessors.forEach(accessor => this._assign(accessor)); // Merge in sequence
+    Object.freeze(this);
   }
 
   toString() {
@@ -60,65 +55,69 @@ export default class Accessor {
     return Accessor.getBytesPerVertex(this);
   }
 
-  // MODIFIERS
-
-  // Combine with other accessors
-  merge(...accessors) {
-    const combinedOpts = Object.assign({}, Accessor.DEFAULTS, this);
-    accessors.forEach(options => this._update(options, combinedOpts));
-    return combinedOpts;
-  }
-
-  getOptions(...accessors) {
-    return this.merge(...accessors);
-  }
-
-  update(opts) {
-    this._update(opts);
-    return this;
-  }
-
   // PRIVATE
 
-  /* eslint-disable complexity */
-  _update(opts = {}, target = this) {
-    if (opts.type !== undefined) {
-      target.type = opts.type;
-      if (opts.type === GL.INT || opts.type === GL.UINT) {
-        target.integer = true;
+  /* eslint-disable complexity, max-statements */
+  _assign(props = {}) {
+
+    // TYPE - not expected to be overridden
+    if (props.type !== undefined) {
+      if (this.type !== props.type) {
+        log.warn('accessor type mismatch');
+      }
+      this.type = props.type;
+
+      // Auto-deduce integer type?
+      if (props.type === GL.INT || props.type === GL.UINT) {
+        this.integer = true;
       }
     }
-    if (opts.size !== undefined) {
-      target.size = opts.size;
+
+    // SIZE - not expected to be overridden
+    if (props.size !== undefined) {
+      if (this.size !== props.size) {
+        log.warn('accessor size mismatch');
+      }
+      this.size = props.size;
     }
-    if (opts.offset !== undefined) {
-      target.offset = opts.offset;
+
+    // INSTANCE DIVISOR
+    if (props.divisor !== undefined) {
+      this.divisor = props.divisor;
     }
-    if (opts.stride !== undefined) {
-      target.stride = opts.stride;
+
+    if (props.offset !== undefined) {
+      this.offset = props.offset;
     }
-    if (opts.normalized !== undefined) {
-      target.normalized = opts.normalized;
+    if (props.stride !== undefined) {
+      this.stride = props.stride;
     }
-    if (opts.integer !== undefined) {
-      target.integer = opts.integer;
+    if (props.normalized !== undefined) {
+      this.normalized = props.normalized;
     }
-    if (opts.divisor !== undefined) {
-      target.divisor = opts.divisor;
+    if (props.integer !== undefined) {
+      this.integer = props.integer;
     }
 
     // Backwards compatibility
-    if (opts.instanced !== undefined) {
-      target.divisor = opts.instanced ? 1 : 0;
+    if (props.instanced !== undefined) {
+      log.deprecated('Accessor.instanced', 'Accessor.divisor');
+      this.divisor = props.instanced ? 1 : 0;
     }
-    if (opts.isInstanced !== undefined) {
-      target.divisor = opts.isInstanced ? 1 : 0;
+    if (props.isInstanced !== undefined) {
+      log.deprecated('Accessor.isInstanced', 'Accessor.divisor');
+      this.divisor = props.isInstanced ? 1 : 0;
     }
+
     // TODO - should this be supported?
-    if (opts.index !== undefined) {
-      target.index = opts.index ? 1 : 0;
+    if (props.index !== undefined) {
+      this.index = props.index ? 1 : 0;
     }
-    return target;
+
+    return this;
   }
-  /* eslint-enable complexity */
+  /* eslint-enable complexity, max-statements */
 }
+
+// TEST EXPORTS
+export {DEFAULT_ACCESSOR_VALUES};

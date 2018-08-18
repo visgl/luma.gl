@@ -25,6 +25,7 @@ export default class ProgramConfiguration {
     return this.attributeInfosByName[locationOrName] || null;
   }
 
+  // Resolves an attribute name or index to an index
   getAttributeLocation(locationOrName) {
     const attributeInfo = this.getAttributeInfo(locationOrName);
     return attributeInfo ? attributeInfo.location : -1;
@@ -91,10 +92,10 @@ export default class ProgramConfiguration {
 
   _addAttribute(location, name, compositeType, size) {
     const {type, components} = decomposeCompositeGLType(compositeType);
-    const accessor = new Accessor({type, size: size * components});
+    const accessor = {type, size: size * components};
     this._inferProperties(location, name, accessor);
 
-    const attributeInfo = {location, name, accessor}; // Base values
+    const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
     this.attributeInfos.push(attributeInfo);
     this.attributeInfosByName[attributeInfo.name] = attributeInfo; // For quick name based lookup
   }
@@ -103,7 +104,7 @@ export default class ProgramConfiguration {
   _inferProperties(location, name, accessor) {
     if ((/instance/i).test(name)) {
       // Any attribute containing the word "instance" will be assumed to be instanced
-      accessor.update({instanced: true});
+      accessor.divisor = 1;
     }
   }
 

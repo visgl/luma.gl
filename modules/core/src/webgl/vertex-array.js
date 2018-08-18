@@ -153,14 +153,14 @@ export default class VertexArray {
   }
 
   // Set a location in vertex attributes array to a buffer
-  setBuffer(locationOrName, buffer, optAccessor = {}) {
+  setBuffer(locationOrName, buffer, appAccessor = {}) {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       return this.setElements(buffer);
     }
 
     const {location, accessor} =
-      this._resolveLocationAndAccessor(locationOrName, buffer, buffer.accessor, optAccessor);
+      this._resolveLocationAndAccessor(locationOrName, buffer, buffer.accessor, appAccessor);
 
     if (location >= 0) {
       this.values[location] = buffer;
@@ -176,9 +176,9 @@ export default class VertexArray {
   }
 
   // Set attribute to constant value (small typed array corresponding to one vertex' worth of data)
-  setConstant(locationOrName, arrayValue, optAccessor = {}) {
+  setConstant(locationOrName, arrayValue, appAccessor = {}) {
     const {location, accessor} =
-      this._resolveLocationAndAccessor(locationOrName, arrayValue, {}, optAccessor);
+      this._resolveLocationAndAccessor(locationOrName, arrayValue, appAccessor);
 
     if (location >= 0) {
       arrayValue = this.vertexArrayObject._normalizeConstantArrayValue(arrayValue, accessor);
@@ -272,19 +272,18 @@ export default class VertexArray {
   // PRIVATE
 
   // Resolve locations and accessors
-  _resolveLocationAndAccessor(locationOrName, value, accessor1, accessor2) {
+  _resolveLocationAndAccessor(locationOrName, value, valueAccessor, appAccessor) {
     const location = this._getAttributeIndex(locationOrName);
-    if (!Number.isFinite(location)) {
+    if (!Number.isFinite(location) || location < 0) {
       this.unused[locationOrName] = value;
       log.once(3, () => `unused value ${locationOrName} in ${this.id}`)();
       return this;
     }
 
-    const accessInfo = this._getAttributeInfo(locationOrName, value, accessor2);
+    const accessInfo = this._getAttributeInfo(locationOrName);
 
-    // Override with any additional attribute configuration params
-    let accessor = accessInfo ? accessInfo.accessor : new Accessor();
-    accessor = accessor.getOptions(value, accessor1, accessor2);
+    // Resolve the partial accessors into a final accessor
+    const accessor = Accessor.resolve(accessInfo.accessor, valueAccessor, appAccessor);
 
     const {size, type} = accessor;
     assert(Number.isFinite(size) && Number.isFinite(type));
