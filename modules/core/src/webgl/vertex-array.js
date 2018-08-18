@@ -371,10 +371,11 @@ export default class VertexArray {
     }
 
     // Post-calculation checks
-    assert(Number.isFinite(drawParams.vertexCount));
-
     if (drawParams.indexCount === Infinity) {
       drawParams.indexCount = 0;
+    }
+    if (drawParams.vertexCount === Infinity) {
+      drawParams.vertexCount = 0;
     }
     if (drawParams.instanceCount === Infinity) {
       drawParams.instanceCount = 0;

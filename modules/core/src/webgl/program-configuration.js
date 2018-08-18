@@ -57,13 +57,6 @@ export default class ProgramConfiguration {
 
   // PRIVATE METHODS
 
-<<<<<<< Updated upstream
-  _log() {
-    log.console(this._getDebugTable());
-  }
-
-=======
->>>>>>> Stashed changes
   // linkProgram needs to have been called, although linking does not need to have been successful
   _readAttributesFromProgram(program) {
     const {gl} = program;
