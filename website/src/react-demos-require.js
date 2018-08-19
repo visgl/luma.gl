@@ -23,6 +23,8 @@ import {default as Lesson10} from '../../examples/lessons/10/app.js';
 import {default as Lesson11} from '../../examples/lessons/11/app.js';
 import {default as Lesson12} from '../../examples/lessons/12/app.js';
 import {default as Lesson13} from '../../examples/lessons/13/app.js';
+import {default as Lesson14} from '../../examples/lessons/14/app.js';
+import {default as Lesson15} from '../../examples/lessons/15/app.js';
 import {default as Lesson16} from '../../examples/lessons/16/app.js';
 
 /* eslint-disable */

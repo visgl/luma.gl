@@ -109,7 +109,7 @@ Common
 
 An appealing solution could be to simply inject a prologue of macros, like
 
-```glsl
+```
 // Auto-injected VERTEX SHADER prologue with GLSL 3.00 to GLSL 1.00 mappings
 #define in attribute
 #define out varying
@@ -119,7 +119,7 @@ An appealing solution could be to simply inject a prologue of macros, like
 
 However the keywords in question can arise in other places, which would break compilation:
 
-```glsl
+```
 vec2 project(vec2 p, out float z) { ... }
 ```
 

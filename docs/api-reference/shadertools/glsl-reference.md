@@ -63,7 +63,7 @@ Main sources of information for this page comes the Khronos WebGL reference card
 
 Structures
 
-```glsl
+```
 struct type-name {
  members
 } struct-name[]; // optional variable declaration, optionally an array
@@ -71,7 +71,7 @@ struct type-name {
 
 Arrays
 
-```glsl
+```
 float foo[3];
 ```
 
@@ -102,7 +102,7 @@ flat No interpolation
 
 Uniform variable declarations can be grouped into named interface blocks, for example:
 
-```glsl
+```
 uniform Transform {
  mat4 ModelViewProjectionMatrix;
  uniform mat3 NormalMatrix; // restatement of qualifier
@@ -112,7 +112,7 @@ uniform Transform {
 
 ### Layout Qualifiers (GLSL 3.00)
 
-```glsl
+```
 layout(layout-qualifier) block-declaration
 layout(layout-qualifier) in/out/uniform
 layout(layout-qualifier) in/out/uniform
@@ -270,7 +270,7 @@ Notes:
 | ---              | ---                        | ---         |
 | `gl_DepthRange`  | `gl_DepthRangeParameters`  | Specifies depth range in window coordinates. If an implementation does not support highp precision in the fragment language, and state is listed as highp, then that state will only be available as mediump in the fragment language. |
 
-```glsl
+```
 struct gl_DepthRangeParameters {
   highp float near; // n
   highp float far; // f
