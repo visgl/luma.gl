@@ -1,5 +1,5 @@
 /* eslint-disable camelcase, max-statements */
-import {padTo4Bytes, copyArrayBuffer, TextEncoder} from '../loader-utils';
+import {padTo4Bytes, copyArrayBuffer, TextEncoder} from '../common/loader-utils';
 
 const MAGIC_glTF = 0x676c5446; // glTF in Big-Endian ASCII
 

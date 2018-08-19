@@ -1,9 +1,9 @@
 /* eslint-disable */
 import test from 'tape-catch';
-import {toLowPrecision} from 'loaders.gl/loader-utils';
+import {toLowPrecision} from 'loaders.gl/common/loader-utils';
 
 import {encodeGLB, _packJsonArrays as packJsonArrays} from 'loaders.gl';
-import {parseGLB} from 'loaders.gl';
+import {GLBLoader} from 'loaders.gl';
 
 const TEST_CASES = {
   flat: {
@@ -46,7 +46,7 @@ test('GLBLoader#encode-and-parse', t => {
     const TEST_JSON = TEST_CASES[tcName];
 
     const glbFileBuffer = encodeGLB(TEST_JSON);
-    const json = parseGLB(glbFileBuffer);
+    const json = GLBLoader.parseBinary(glbFileBuffer);
 
     t.ok(Array.isArray(json.buffers), `${tcName} Encoded and parsed GLB - has JSON buffers field`);
     t.ok(
@@ -77,7 +77,7 @@ test('GLBLoader#encode-and-parse#full', t => {
   const TEST_JSON = TEST_CASES[tcName];
 
   const glbFileBuffer = encodeGLB(TEST_JSON);
-  const json = parseGLB(glbFileBuffer);
+  const json = GLBLoader.parseBinary(glbFileBuffer);
 
   // t.comment(JSON.stringify(TEST_JSON, null, 2));
   // t.comment(JSON.stringify(json, null, 2))

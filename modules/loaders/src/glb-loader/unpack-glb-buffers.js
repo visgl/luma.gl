@@ -1,4 +1,4 @@
-import assert from '../loader-utils/assert';
+import assert from '../common/loader-utils/assert';
 
 const TYPE_COMPONENTS = {
   SCALAR: 1,
