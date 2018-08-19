@@ -4,7 +4,7 @@
 /* eslint-disable max-len, max-statements */
 /* global Buffer */
 import test from 'tape-catch';
-import {parseDataUri} from 'loaders.gl/loader-utils/load-uri.js';
+import {parseDataUri} from 'loaders.gl/common/loader-utils/load-uri.js';
 
 test('parseDataUri', t => {
   let obj;
