@@ -4,7 +4,7 @@ module.exports = {
 
   meta: [{
     name: 'description',
-    content: 'JavaScript Components for WebGL 2',
-  }],
+    content: 'JavaScript Components for WebGL 2'
+  }]
 
 };

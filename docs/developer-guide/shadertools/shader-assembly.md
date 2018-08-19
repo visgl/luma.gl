@@ -22,7 +22,7 @@ A two part prologue is injected by default:
 
 A simple map of keys and values are injected as:
 
-```glsl
+```
 #define key1 value1
 #define key2 value2
 ...

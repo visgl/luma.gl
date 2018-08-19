@@ -144,7 +144,7 @@ framebuffer.configure({
 
 Writing to multiple framebuffer attachments in GLSL fragment shader
 
-```glsl
+```
 #extension GL_EXT_draw_buffers : require
 precision highp float;
 void main(void) {

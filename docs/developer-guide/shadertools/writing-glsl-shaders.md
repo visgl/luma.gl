@@ -99,14 +99,14 @@ The following features are only available in GLSL 3.00 and cannot be directly em
 
 Shaders have access to texture sizes and can query by pixel coordinates instead of uv coordinates.
 
-```glsl
+```
 vec2 size = textureSize(sampler, lod)
 vec4 values = texelFetch(sampler, ivec2Position, lod);
 ```
 
 #### Texture Arrays and 3D textures
 
-```glsl
+```
 vec4 color = texture(sampler2DArray, vec3(u, v, index));
 vec4 color = texture(sampler3D, vec3(u, v, depth));
 ```
@@ -117,7 +117,7 @@ vec4 color = texture(sampler3D, vec3(u, v, depth));
 
 #### Matrix functions
 
-```glsl
+```
 mat4 m = inverse(matrix);
 mat4 t = transpose(matrix);
 ```

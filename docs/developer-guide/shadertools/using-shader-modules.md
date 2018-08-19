@@ -16,7 +16,7 @@ const {vs, fs, getUniforms, moduleMap} = assembleShaders(gl, {
 
 To configure the shader module uniforms:
 
-```glsl
+```
 const {vs, fs, getUniforms, ...} = assembleShaders(gl, {..., modules: [...]});
 
 // create a program with the returned shaders using your preferred WebGL library
