@@ -5,6 +5,18 @@ Provides functions for parsing or generating the binary GLB containers used by g
 Takes a JavaScript data structure and encodes it as a JSON blob with binary data (e.g. typed arrays) extracted into a binary chunk.
 
 
+## Usage
+
+```
+import {GLBLoader, loadFile} from 'loaders.gl';
+
+loadFile(url, GLBLoader).then(data => {
+  // Application code here
+  ...
+});
+```
+
+
 ## Functions
 
 ### parseGLB(arrayBuffer : ArrayBuffer) : Object
