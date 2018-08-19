@@ -45,7 +45,9 @@ Current direction for luma.gl v6.x is to focus on:
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
-| [**Multipass Rendering**](v6.1/multipass-rendering-rfc.md) | @ibgreen | **Draft** | Multipass rendering system for postprocessing effects and advanced rendering |
+| [**Multipass Rendering**](v6.1/multipass-rendering-rfc.md) | @ibgreen | **Implemented** | Multipass rendering system for postprocessing effects and advanced rendering |
+| [**New Loaders Module**](v6.1/loader-module-rfc.md) | @ibgreen | **Review** | New loaders.gl submodule collecting framework-agnostic, thread-capable 3D format loaders. |
+| [**WebGL1 Support for Transforms**](v6.1/transform-webgl1-support-rfc.md) | @1chandu | **Review** | Use render to texture and float packing to emulate transform feedback under WebGL1 |
 
 
 ## v6.0 RFCs
