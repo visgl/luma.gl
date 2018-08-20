@@ -138,7 +138,7 @@ export default class Program extends Resource {
     // TODO - move vertex array binding and transform feedback binding to withParameters?
     assert(vertexArray);
 
-    vertexArray.bindForUse(vertexCount, () => {
+    vertexArray.bindForDraw(vertexCount, () => {
 
       if (uniforms) {
         log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)');

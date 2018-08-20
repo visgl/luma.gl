@@ -6,6 +6,7 @@ import Buffer from './buffer';
 import {isWebGL2} from '../webgl-utils';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
+import {isMobile, getBrowser} from 'probe.gl';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
@@ -14,8 +15,13 @@ const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArrayObject extends Resource {
 
-  // Not correct if webgl1 polyfills not installed
-  static isSupported(gl) {
+  static isSupported(gl, options = {}) {
+    // Attribute 0 can not be disable on most desktop OpenGL based browsers
+    if (options.constantAttributeZero) {
+      return isWebGL2(gl) || isMobile() || (getBrowser() === 'Chrome');
+    }
+
+    // Whether additional objects can be created
     return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
   }
 
@@ -135,11 +141,19 @@ export default class VertexArrayObject extends Resource {
   // TODO - handle single values for size 1 attributes?
   // TODO - convert classic arrays based on known type?
   enable(location, enable = true) {
-    location = Number(location);
-    this.bind(() => enable ?
-      this.gl.enableVertexAttribArray(location) :
-      this.gl.disableVertexAttribArray(location)
-    );
+    // Attribute 0 cannot be disabled in most desktop OpenGL based browsers
+    const disablingAttributeZero =
+      !enable &&
+      location === 0 &&
+      !VertexArrayObject.isSupported(this.gl, {constantAttributeZero: true});
+
+    if (!disablingAttributeZero) {
+      location = Number(location);
+      this.bind(() => enable ?
+        this.gl.enableVertexAttribArray(location) :
+        this.gl.disableVertexAttribArray(location)
+      );
+    }
     return this;
   }
 
