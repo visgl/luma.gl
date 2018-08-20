@@ -216,3 +216,23 @@ test('WebGL#Buffer getElementCount', t => {
 
   t.end();
 });
+
+test('WebGL#Buffer#setByteLength', t => {
+  const {gl} = fixture;
+
+  const buffer = new Buffer(gl, {byteLength: 100});
+  t.equal(buffer.byteLength, 100, 'byteLength should match');
+  t.equal(buffer.bytesUsed, 100, 'bytesUsed should match');
+
+  let didRealloc = buffer.setByteLength(90);
+  t.equal(didRealloc, false, 'Should not reallocate');
+  t.equal(buffer.byteLength, 100, 'byteLength should be unchanged');
+  t.equal(buffer.bytesUsed, 90, 'bytesUsed should have changed');
+
+  didRealloc = buffer.setByteLength(110);
+  t.equal(didRealloc, true, 'Should reallocate');
+  t.equal(buffer.byteLength, 110, 'byteLength should have changed');
+  t.equal(buffer.byteLength, 110, 'bytesUsed should have changed');
+
+  t.end();
+});
