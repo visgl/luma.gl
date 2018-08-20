@@ -21,6 +21,18 @@ export default function parseXML(xml) {
   throw new Error('No XML parser available');
 }
 
+export function parseXMLSupported() {
+  if (window.DOMParser) {
+    return true;
+  }
+
+  if (typeof window.ActiveXObject !== 'undefined' && new window.ActiveXObject('Microsoft.XMLDOM')) {
+    return true;
+  }
+
+  return false;
+}
+
 function isXMLParseError(parsedDocument) {
   const parser = new DOMParser();
   const erroneousParse = parser.parseFromString('<', 'text/xml');
