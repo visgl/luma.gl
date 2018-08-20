@@ -22,6 +22,10 @@ export default function parseXML(xml) {
 }
 
 export function parseXMLSupported() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
   if (window.DOMParser) {
     return true;
   }

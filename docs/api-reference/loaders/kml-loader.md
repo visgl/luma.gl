@@ -35,7 +35,7 @@ The parser will return a JavaScript object with a number of top-level array-valu
 
 ## Limitations
 
-* Currently XML parsing is only implemented in browsers, not in Node.js
+* Currently XML parsing is only implemented in browsers, not in Node.js. Check `KMLLoader.supported` to check at run-time.
 
 
 ## License/Credits/Attributions
