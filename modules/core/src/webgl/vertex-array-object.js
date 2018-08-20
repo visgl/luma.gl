@@ -167,7 +167,7 @@ export default class VertexArrayObject extends Resource {
     if (updateNeeded) {
       // Create a typed array that is big enough, and fill it with the required data
       const typedArray = getScratchArray(value.constructor, length);
-      fillArray({target: typedArray, source: constantValue});
+      fillArray({target: typedArray, source: constantValue, start: 0, count: length});
       this.buffer.subData(typedArray);
       this.bufferValue = value;
     }

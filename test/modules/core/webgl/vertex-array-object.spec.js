@@ -99,9 +99,22 @@ test('WebGL#VertexArrayObject#getConstantBuffer', t => {
   t.equal(buffer.byteLength, 1200, 'byteLength should match');
   t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
 
-  buffer = vertexAttributes.getConstantBuffer(50, new Float32Array([5, 3, 2]));
+  buffer = vertexAttributes.getConstantBuffer(5, new Float32Array([5, 3, 2]));
   t.equal(buffer.byteLength, 1200, 'byteLength should be unchanged');
-  t.equal(buffer.bytesUsed, 600, 'bytesUsed should have changed');
+  t.equal(buffer.bytesUsed, 60, 'bytesUsed should have changed');
+
+  const {gl2} = fixture;
+
+  if (gl2) {
+    const vertexAttributes2 = VertexArrayObject.getDefaultArray(gl2);
+    buffer = vertexAttributes2.getConstantBuffer(5, new Float32Array([5, 3, 2]));
+    t.equal(buffer.byteLength, 60, 'byteLength should be unchanged');
+    t.equal(buffer.bytesUsed, 60, 'bytesUsed should have changed');
+    const data = buffer.getData();
+    t.deepEqual(data, new Float32Array([5, 3, 2, 5, 3, 2, 5, 3, 2, 5, 3, 2, 5, 3, 2]),
+      'Constant buffer was correctly set');
+    t.comment(JSON.stringify(data));
+  }
 
   t.end();
 });

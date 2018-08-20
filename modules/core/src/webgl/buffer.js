@@ -82,7 +82,13 @@ export default class Buffer extends Resource {
       props = {data: props};
     }
 
-    const {data, offset = 0, srcOffset = 0, length} = props;
+    const {data, offset = 0, srcOffset = 0} = props;
+    const byteLength = props.byteLength || props.length;
+
+    // if (byteLength > this.byteLength) {
+    //   byteLength = this.byteLength;
+    // }
+
     assert(data);
 
     // Create the buffer - binding it here for the first time locks the type
@@ -90,9 +96,9 @@ export default class Buffer extends Resource {
     const target = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.target;
     this.gl.bindBuffer(target, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
-    if (srcOffset !== 0 || length !== undefined) {
+    if (srcOffset !== 0 || byteLength !== undefined) {
       assertWebGL2Context(this.gl);
-      this.gl.bufferSubData(this.target, offset, data, srcOffset, length || 0);
+      this.gl.bufferSubData(this.target, offset, data, srcOffset, byteLength);
     } else {
       this.gl.bufferSubData(target, offset, data);
     }
@@ -100,6 +106,10 @@ export default class Buffer extends Resource {
 
     // TODO - update local `data` if offsets are right
     this.debugData = null;
+
+    if (!this.accessor.type) {
+      this.setAccessor(new Accessor(this.accessor, {type: getGLTypeFromTypedArray(data)}));
+    }
 
     return this;
   }
