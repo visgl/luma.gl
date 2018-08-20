@@ -6,6 +6,7 @@ import './accessor.spec';
 
 // webgl
 import './buffer.spec';
+import './vertex-array-object.spec';
 import './vertex-array.spec';
 import './uniforms.spec';
 

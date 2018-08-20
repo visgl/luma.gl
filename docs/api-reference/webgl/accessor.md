@@ -23,6 +23,13 @@ Accessors can be resolved (merged) into a new Accessor. This is useful since whi
 | `normalize` | data access | N/A            | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
 | `integer`   | data access | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
 
+Notes:
+
+* `type` and `size` values for attributes are read from the shaders when a program is created and linked, and normally do not need to be supplied. Also any attribute with `instance` in its name will automatically be given an instance divisor of `1`.
+* `divisor` is automatically set to `1` for any attribute that has some capitalization of `instance` in the name.
+* `offset` and `stride` are typically used to interleave data in buffers and are normally left undefined (i.e. `0`).
+* `normalize` and `integer` need to be enabled by applications through an `Accessor`.
+
 
 ### `offset`
 

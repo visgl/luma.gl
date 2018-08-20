@@ -1,33 +1,11 @@
 import test from 'tape-catch';
 import GL from 'luma.gl/constants';
-import {createGLContext} from 'luma.gl';
 import {VertexArrayObject} from 'luma.gl';
 
 import {fixture} from 'luma.gl/test/setup';
 
-test('WebGL#VertexArrayObject construct/delete', t => {
+test('WebGL#VertexArrayObject (default)#enable', t => {
   const {gl} = fixture;
-
-  t.ok(VertexArrayObject.isSupported(gl), 'VertexArrayObject is supported');
-
-  t.throws(
-    () => new VertexArrayObject(),
-    'VertexArrayObject throws on missing gl context');
-
-  const vao = new VertexArrayObject(gl);
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject construction successful');
-
-  vao.delete();
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject delete successful');
-
-  vao.delete();
-  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject repeated delete successful');
-
-  t.end();
-});
-
-test('WebGL#VertexArrayObject#enable', t => {
-  const gl = createGLContext();
 
   const vertexAttributes = VertexArrayObject.getDefaultArray(gl);
 
@@ -49,11 +27,11 @@ test('WebGL#VertexArrayObject#enable', t => {
   }
 
   for (let i = 0; i < MAX_ATTRIBUTES; i++) {
-    vertexAttributes.disable(i);
+    vertexAttributes.enable(i, false);
   }
 
-  t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_ENABLED, {location: 0}), true,
-    'vertex attribute 0 should **NOT** be disabled');
+  // t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_ENABLED, {location: 0}), true,
+  //   'vertex attribute 0 should **NOT** be disabled');
 
   for (let i = 1; i < MAX_ATTRIBUTES; i++) {
     t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_ENABLED, {location: i}), false,
@@ -63,8 +41,62 @@ test('WebGL#VertexArrayObject#enable', t => {
   t.end();
 });
 
+test('WebGL#VertexArrayObject construct/delete', t => {
+  const {gl} = fixture;
+
+  if (!VertexArrayObject.isSupported(gl)) {
+    t.comment('VertexArrayObjects not supported, skipping tests');
+    t.end();
+    return;
+  }
+
+  t.throws(
+    () => new VertexArrayObject(),
+    'VertexArrayObject throws on missing gl context');
+
+  const vao = new VertexArrayObject(gl);
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject construction successful');
+
+  vao.delete();
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject delete successful');
+
+  vao.delete();
+  t.ok(vao instanceof VertexArrayObject, 'VertexArrayObject repeated delete successful');
+
+  t.end();
+});
+
 test('WebGL#vertexArrayObject#WebGL2 support', t => {
-  const gl = createGLContext({webgl2: true});
+  const {gl2: gl} = fixture;
+
+  if (!gl) {
+    t.comment('VertexArrayObjects not supported, skipping tests');
+    t.end();
+    return;
+  }
+
+  t.ok(VertexArrayObject.isSupported(gl), 'VertexArrayObject is supported');
+
+  const vertexAttributes = VertexArrayObject.getDefaultArray(gl);
+
+  const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
+
+  for (let i = 0; i < MAX_ATTRIBUTES; i++) {
+    t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_DIVISOR, {location: i}), 0,
+      `vertex attribute ${i} should have 0 divisor`);
+  }
+
+  t.end();
+});
+
+test('WebGL#vertexArrayObject#WebGL2 support', t => {
+  const {gl2: gl} = fixture;
+
+  if (!gl) {
+    t.comment('VertexArrayObjects not supported, skipping tests');
+    t.end();
+    return;
+  }
 
   t.ok(VertexArrayObject.isSupported(gl), 'VertexArrayObject is supported');
 

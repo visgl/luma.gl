@@ -8,7 +8,8 @@ export function getScratchArrayBuffer(byteLength) {
 }
 
 export function getScratchArray(Type, length) {
-  return getScratchArrayBuffer(Type.BYTES_PER_ELEMENT * length);
+  const scratchArrayBuffer = getScratchArrayBuffer(Type.BYTES_PER_ELEMENT * length);
+  return new Type(scratchArrayBuffer);
 }
 
 // Uses copyWithin to significantly speed up typed array value filling
