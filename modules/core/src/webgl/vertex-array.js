@@ -322,13 +322,13 @@ export default class VertexArray {
     for (let location = 1; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
       constant = this.values[location];
       if (ArrayBuffer.isView(constant)) {
-        this.setConstantAttribute(location, constant);
+        this._setConstantAttribute(location, constant);
       }
     }
   }
 
   _setConstantAttributeZero(constant, vertexCount) {
-    if (VertexArrayObject.isSupported({constantAttributeZero: true})) {
+    if (VertexArrayObject.isSupported(this.gl, {constantAttributeZero: true})) {
       this._setConstantAttribute(0, constant);
       return;
     }
