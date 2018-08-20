@@ -26,7 +26,7 @@ test('WebGL#VertexArrayObject (default)#enable', t => {
       `vertex attribute ${i} should now be enabled`);
   }
 
-  for (let i = 0; i < MAX_ATTRIBUTES; i++) {
+  for (let i = 1; i < MAX_ATTRIBUTES; i++) {
     vertexAttributes.enable(i, false);
   }
 

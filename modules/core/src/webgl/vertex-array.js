@@ -249,22 +249,14 @@ export default class VertexArray {
   // When a vertex array is about to be used, we must:
   // - Set constant attributes (since these are stored on the context and reset on bind)
   // - Check if we need to initialize the buffer
-  bind(func) {
-    return this.bindForUse(4, func);
-  }
-
-  bindForUse(length, func) {
-
+  bindForDraw(vertexCount, func) {
     let value;
 
     this.vertexArrayObject.bind(() => {
 
-      if (Number.isFinite(length)) {
-        this._updateAttributeZeroBuffer(length);
-      }
-
       // Make sure that any constant attributes are updated (stored on the context, not the VAO)
-      this._setConstantAttributes();
+      // Also handles attribute 0
+      this._setConstantAttributes(vertexCount);
 
       if (!this.vertexArrayObject.hasVertexArrays) {
         this.bindBuffers();
@@ -318,6 +310,45 @@ export default class VertexArray {
     return -1;
   }
 
+  // Updates all constant attribute values (constants are used when vertex attributes are disabled).
+  // This needs to be done repeatedly since in contrast to buffer bindings,
+  // constants are stored on the WebGL context, not the VAO
+  _setConstantAttributes(vertexCount) {
+    let constant = this.values[0];
+    if (ArrayBuffer.isView(constant)) {
+      this._setConstantAttributeZero(constant, vertexCount);
+    }
+
+    for (let location = 1; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
+      constant = this.values[location];
+      if (ArrayBuffer.isView(constant)) {
+        this.setConstantAttribute(location, constant);
+      }
+    }
+  }
+
+  _setConstantAttributeZero(constant, vertexCount) {
+    if (VertexArrayObject.isSupported({constantAttributeZero: true})) {
+      this._setConstantAttribute(0, constant);
+      return;
+    }
+
+    // Get a dummy buffer populated with repeated constants
+    const buffer = this.vertexArrayObject.getConstantBuffer(vertexCount);
+
+    // Set the buffer on location 0
+    this.vertexArrayObject.setBuffer(0, buffer, this.accessors[0]);
+  }
+
+  _setConstantAttribute(location, constant) {
+    VertexArrayObject.setConstant(this.gl, location, constant);
+
+    // If we are using the global VertexArrayObject, we need to disable the attribute now
+    if (this.vertexArrayObject.isDefault) {
+      this.vertexArrayObject.enable(location, false);
+    }
+  }
+
   // NOTE: Desktop OpenGL cannot disable attribute 0
   // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
   // this-has-significant-performance-penalt
@@ -330,21 +361,6 @@ export default class VertexArray {
     if (ArrayBuffer.isView(constant)) {
       const size = elementCount;
       this.buffer = this.buffer || new Buffer(this.gl, {size});
-    }
-  }
-
-  // Updates all constant attribute values (constants are used when vertex attributes are disabled).
-  // This needs to be done repeatedly since in contrast to buffer bindings,
-  // constants are stored on the WebGL context, not the VAO
-  _setConstantAttributes() {
-    for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
-      const constant = this.values[location];
-      if (ArrayBuffer.isView(constant)) {
-        if (this.vertexArrayObject.isDefault) {
-          this.vertexArrayObject.enable(location, false);
-        }
-        VertexArrayObject.setConstant(this.gl, location, constant);
-      }
     }
   }
 
