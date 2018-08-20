@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
-import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
-import {makeSpy} from 'probe.gl/test-utils';
+// import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
+// import {makeSpy} from 'probe.gl/test-utils';
 import test from 'tape-catch';
 
 const fixture = {
@@ -53,7 +53,7 @@ test('assembleShaders#getUniforms', t => {
   const testModuleSettings = {pickingActive: true};
 
   // inject spy into the picking module's getUniforms
-  const module = getShaderModule(picking);
+  // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
 
   let assembleResult;
