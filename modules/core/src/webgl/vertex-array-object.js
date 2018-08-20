@@ -55,6 +55,8 @@ export default class VertexArrayObject extends Resource {
     super(gl, Object.assign({}, opts, {id}));
 
     this.hasVertexArrays = VertexArrayObject.isSupported(gl);
+    this.buffer = null;
+    this.bufferValue = null;
 
     this.initialize(opts);
 
@@ -150,25 +152,27 @@ export default class VertexArrayObject extends Resource {
 
     const constantValue = this._normalizeConstantArrayValue(value, accessor);
 
-    const byteLength = constantValue * elementCount;
+    const byteLength = constantValue.byteLength * elementCount;
+    const length = constantValue.length * elementCount;
 
-    if (!this.buffer) {
-      this.buffer = new Buffer(this.gl, {byteLength});
-    }
+    let updateNeeded = !this.buffer;
 
-    const didResize = this.buffer.resize(byteLength);
+    this.buffer = this.buffer || new Buffer(this.gl, byteLength);
+    updateNeeded = updateNeeded || this.buffer.setByteLength(byteLength);
 
     // Reallocate and update contents if needed
-    const updateNeeded = didResize || constantValue !== this.bufferValue;
+    updateNeeded = updateNeeded ||
+      !this._compareConstantArrayValues(constantValue, this.bufferValue);
 
     if (updateNeeded) {
       // Create a typed array that is big enough, and fill it with the required data
-      const typedArray = getScratchArray(byteLength);
-      fillArray(typedArray, constantValue);
-
-      this.buffer.setData(typedArray);
+      const typedArray = getScratchArray(value.constructor, length);
+      fillArray({target: typedArray, source: constantValue});
+      this.buffer.subData(typedArray);
       this.bufferValue = value;
     }
+
+    return this.buffer;
   }
 
   // PRIVATE
@@ -180,6 +184,18 @@ export default class VertexArrayObject extends Resource {
       return new Float32Array(arrayValue);
     }
     return arrayValue;
+  }
+
+  _compareConstantArrayValues(v1, v2) {
+    if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
+      return false;
+    }
+    for (let i = 0; i < v1.length; ++i) {
+      if (v1[i] !== v2[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static _setConstantFloatArray(gl, location, array) {

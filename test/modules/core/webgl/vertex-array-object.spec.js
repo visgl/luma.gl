@@ -89,25 +89,19 @@ test('WebGL#vertexArrayObject#WebGL2 support', t => {
   t.end();
 });
 
-test('WebGL#vertexArrayObject#WebGL2 support', t => {
-  const {gl2: gl} = fixture;
-
-  if (!gl) {
-    t.comment('VertexArrayObjects not supported, skipping tests');
-    t.end();
-    return;
-  }
-
-  t.ok(VertexArrayObject.isSupported(gl), 'VertexArrayObject is supported');
+test('WebGL#VertexArrayObject#getConstantBuffer', t => {
+  const {gl} = fixture;
 
   const vertexAttributes = VertexArrayObject.getDefaultArray(gl);
 
-  const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
+  let buffer = vertexAttributes.getConstantBuffer(100, new Float32Array([5, 4, 3]));
 
-  for (let i = 0; i < MAX_ATTRIBUTES; i++) {
-    t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_DIVISOR, {location: i}), 0,
-      `vertex attribute ${i} should have 0 divisor`);
-  }
+  t.equal(buffer.byteLength, 1200, 'byteLength should match');
+  t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
+
+  buffer = vertexAttributes.getConstantBuffer(50, new Float32Array([5, 3, 2]));
+  t.equal(buffer.byteLength, 1200, 'byteLength should be unchanged');
+  t.equal(buffer.bytesUsed, 600, 'bytesUsed should have changed');
 
   t.end();
 });
