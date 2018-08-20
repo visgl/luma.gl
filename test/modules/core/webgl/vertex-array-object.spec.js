@@ -12,7 +12,7 @@ test('WebGL#VertexArrayObject (default)#enable', t => {
   const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
   t.ok(MAX_ATTRIBUTES >= 8, 'vertexAttributes.getMaxAttributes() >= 8');
 
-  for (let i = 0; i < MAX_ATTRIBUTES; i++) {
+  for (let i = 1; i < MAX_ATTRIBUTES; i++) {
     t.equal(vertexAttributes.getParameter(GL.VERTEX_ATTRIB_ARRAY_ENABLED, {location: i}), false,
       `vertex attribute ${i} should initially be disabled`);
   }
