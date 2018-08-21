@@ -16,12 +16,16 @@ const DEFAULT_ACCESSOR_VALUES = {
 export default class Accessor {
 
   static getBytesPerElement(accessor) {
+    // TODO: using `FLOAT` when type is not specified,
+    // ensure this assumption is valid or force API to specify type.
     const ArrayType = getTypedArrayFromGLType(accessor.type || GL.FLOAT);
     return ArrayType.BYTES_PER_ELEMENT;
   }
 
   static getBytesPerVertex(accessor) {
     assert(accessor.size);
+    // TODO: using `FLOAT` when type is not specified,
+    // ensure this assumption is valid or force API to specify type.
     const ArrayType = getTypedArrayFromGLType(accessor.type || GL.FLOAT);
     return ArrayType.BYTES_PER_ELEMENT * accessor.size;
   }
