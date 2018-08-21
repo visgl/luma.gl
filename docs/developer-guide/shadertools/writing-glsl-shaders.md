@@ -67,7 +67,7 @@ Fragment Shaders
 | `out`           | `gl_FragColor` |         |
 | `out`           | `gl_FragData`  |         |
 | `texture`       | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below. |
-| `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` under 3.00 |
+| `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
 | `gl_FragDepth`  | `gl_FragDepthEXT` | WebGL1: **EXT_frag_depth** |
 
 
@@ -183,4 +183,3 @@ your shader to conditionally use code.
 ## Remarks
 
 * **No Vertex Attributes** - At the moment shader modules are not expected to use attributes. It is up to the root application shaders to define attributes and call GLSL functions from the imported shader modules with the appropriate attributes. This is just a convention, not a hard limitation.
-
