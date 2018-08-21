@@ -6,16 +6,12 @@ function testText(text) {
   return text.startsWith(XML_HEADER);
 }
 
-function parseText(text) {
-  return parseXML(text);
-}
-
 export default {
   name: 'KML',
   extension: 'kml',
   supported: parseXMLSupported(),
   testText,
-  parseText,
+  parseText: parseXML,
   browserOnly: true,
   worker: false
 };

@@ -1,5 +1,5 @@
-import KMLReader from './kml-reader';
-import {parseXMLSupported} from './parse-xml';
+import XMLLoader from '../formats/xml-loader/xml-loader';
+import KMLParser from './kml-parser';
 
 const KML_HEADER = `\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -11,14 +11,15 @@ function testText(text) {
 }
 
 function parseText(text) {
-  const kmlLoader = new KMLReader(text);
+  const xml = XMLLoader.parseText(text);
+  const kmlLoader = new KMLParser(xml);
   return kmlLoader.parse();
 }
 
 export default {
   name: 'KML',
   extension: 'kml',
-  supported: parseXMLSupported(),
+  supported: XMLLoader.supported,
   testText,
   parseText,
   browserOnly: true,
