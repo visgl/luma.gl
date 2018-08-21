@@ -67,6 +67,7 @@
     "nyc": "^10.2.0",
     "pre-commit": "^1.2.2",
     "puppeteer": "^1.2.0",
+    "raw-loader": "^0.5.1",
     "reify": "^0.4.4",
     "source-map-loader": "^0.2.1",
     "source-map-support": "^0.4.2",

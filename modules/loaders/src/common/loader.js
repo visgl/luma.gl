@@ -1,11 +1,11 @@
-import {request} from 'd3-request';
+import {request as d3request} from 'd3-request';
 
 export function loadFile(url, loader, options = {}) {
   if (loader.parseBinary) {
     return loadBinary(url).then(data => loader.parseBinary(data, options));
   }
   if (loader.parseText) {
-    return request(url).then(text => loader.parseText(text, options));
+    return d3request(url).then(text => loader.parseText(text, options));
   }
   return Promise.reject(new Error(`Could not load ${url} using ${loader.name} loader`));
 }

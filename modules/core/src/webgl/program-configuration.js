@@ -3,7 +3,6 @@
 import Accessor from './accessor';
 import {isWebGL2} from '../webgl-utils';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
-import log from '../utils/log';
 
 export default class ProgramConfiguration {
 

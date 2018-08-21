@@ -13,19 +13,19 @@ function parseOBJMesh(text) {
   const texCoords = new Float32Array(mesh.textures);
 
   return {
-  	header: {},
-  	attributes: {
-  		indices,
-  		positions,
-  		normals,
-  		texCoords
-  	}
+    header: {},
+    attributes: {
+      indices,
+      positions,
+      normals,
+      texCoords
+    }
   };
 }
 
 export default {
-	name: 'OBJ',
-	extension: 'obj',
+  name: 'OBJ',
+  extension: 'obj',
   testText: testOBJFile,
-	parseText: parseOBJMesh
+  parseText: parseOBJMesh
 };

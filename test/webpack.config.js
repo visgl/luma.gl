@@ -72,6 +72,10 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
         test: /\.js$/,
         use: ['source-map-loader'],
         enforce: 'pre'
+      },
+      {
+        test: /\.kml$/,
+        use: 'raw-loader'
       }
     ]
   },
