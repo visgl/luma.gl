@@ -5,6 +5,17 @@
 
 Date: Target August 24, 2018
 
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <p><i>WebGL Improvements</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 
 ### New Multipass Rendering System
 
@@ -15,9 +26,15 @@ luma.gl now provides a multipass rendering framework, based on a `MultiPassRende
 
 A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. In many cases, the underlying shaders have also been exposed as shader modules, providing additional composability options for advanced apps.
 
+
 ### Transform class supports shader module assembly
 
 `Transform` constructor now accepts all shader module parameters such as `modules`, `dependencies` and `inject` (see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)).
+
+
+### New Loaders Submodule (Experimental)
+
+A selection of open source 3D loaders have been ported to a new submodule loaders.gl.
 
 
 ## Version 6.0
