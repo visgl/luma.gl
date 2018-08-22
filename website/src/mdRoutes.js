@@ -193,13 +193,13 @@ export default [
             markdown: require('../../docs/whats-new.md')
           },
           {
-            name: 'Roadmap',
+            name: 'Roadmaps',
             markdown: require('../../docs/roadmap.md')
           },
-          // {
-          //   name: 'Frequently Asked Questions',
-          //   markdown: require('../../docs/FAQ .md')
-          // },
+          {
+            name: 'Frequently Asked Questions',
+            markdown: require('../../docs/FAQ .md')
+          },
           {
             name: 'Upgrade Guide',
             markdown: require('../../docs/upgrade-guide.md')

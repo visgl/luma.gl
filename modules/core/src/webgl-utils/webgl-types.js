@@ -12,8 +12,9 @@ import {global} from '../utils/globals';
 import isBrowser from '../utils/is-browser';
 
 export const ERR_HEADLESSGL_LOAD = `\
-luma.gl: WebGL contexts can not be created in Node.js since headless gl is not installed. \
-If this is desired, install headless gl using "npm install gl --save-dev" or "yarn add -D gl"`;
+luma.gl: loaded under Node.js without headless gl installed, meaning that WebGL \
+contexts are not available. This may not be an error, as it is a standar setup for \
+e.g. isorender applications running on the server.`;
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
