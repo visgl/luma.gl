@@ -34,7 +34,7 @@
     "lint-examples": "eslint examples",
     "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
     "publish-prod": "npm run build && npm run test-fast && npm publish",
-    "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta",
+    "publish-beta": "yarn run build && yarn run test-fast && npm publish --tag beta",
     "bench": "node test/bench/node.js",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js  --env.bench --progress --hot --open",
     "test": "npm run lint && npm run test-node && npm run build && npm run test-dist &&  npm run collect-metrics && npm run test-browser-puppet",

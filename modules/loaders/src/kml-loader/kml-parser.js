@@ -1,12 +1,12 @@
 /**
  * Author - Nick Blackwell
  * License - MIT
- * Description - Defines a class, KmlReader which is a container for
+ * Description - Defines a class, KMLParser which is a container for
  * static kml parsing methods.
  */
 
 /**
- * KmlReader Class parses standard kml documents and returns objects
+ * KMLParser Class parses standard kml documents and returns objects
  * representiong it's data.
  * the optional transformations define the data within these objects,
  * ie, documentTransform (for Geolive)
@@ -17,67 +17,62 @@
 /* global console */
 /* eslint-disable no-console */
 
-import parseXML from './parse-xml';
+export default class KMLParser {
 
-export default class KmlReader {
-
-  constructor(kml) {
-    this.kml = kml;
-    if (typeof kml === 'string') {
-      this.kml = parseXML(kml);
-    }
+  constructor(xml) {
+    this.kml = xml;
   }
 
   parse() {
     return {
-      documents: this._filter(KmlReader.ParseDomDocuments(this.kml)),
-      folders: this._filter(KmlReader.ParseDomFolders(this.kml)),
-      markers: this._filter(KmlReader.ParseDomMarkers(this.kml)),
-      polygons: this._filter(KmlReader.ParseDomPolygons(this.kml)),
-      lines: this._filter(KmlReader.ParseDomLines(this.kml)),
-      overlays: this._filter(KmlReader.ParseDomGroundOverlays(this.kml)),
-      links: this._filter(KmlReader.ParseDomLinks(this.kml))
+      documents: this._filter(KMLParser.ParseDomDocuments(this.kml)),
+      folders: this._filter(KMLParser.ParseDomFolders(this.kml)),
+      markers: this._filter(KMLParser.ParseDomMarkers(this.kml)),
+      polygons: this._filter(KMLParser.ParseDomPolygons(this.kml)),
+      lines: this._filter(KMLParser.ParseDomLines(this.kml)),
+      overlays: this._filter(KMLParser.ParseDomGroundOverlays(this.kml)),
+      links: this._filter(KMLParser.ParseDomLinks(this.kml))
     };
   }
 
   parseDocuments(callback) {
-    const documentData = this._filter(KmlReader.ParseDomDocuments(this.kml));
+    const documentData = this._filter(KMLParser.ParseDomDocuments(this.kml));
     documentData.forEach((p, i) => callback(p, this.kml, documentData, i));
     return this;
   }
 
   parseFolders(callback) {
-    const folderData = this._filter(KmlReader.ParseDomFolders(this.kml));
+    const folderData = this._filter(KMLParser.ParseDomFolders(this.kml));
     folderData.forEach((p, i) => callback(p, this.kml, folderData, i));
     return this;
   }
 
   parseMarkers(callback) {
-    const markerData = this._filter(KmlReader.ParseDomMarkers(this.kml));
+    const markerData = this._filter(KMLParser.ParseDomMarkers(this.kml));
     markerData.forEach((p, i) => callback(p, this.kml, markerData, i));
     return this;
   }
 
   parsePolygons(callback) {
-    const polygonData = this._filter(KmlReader.ParseDomPolygons(this.kml));
+    const polygonData = this._filter(KMLParser.ParseDomPolygons(this.kml));
     polygonData.forEach((p, i) => callback(p, this.kml, polygonData, i));
     return this;
   }
 
   parseLines(callback) {
-    const lineData = this._filter(KmlReader.ParseDomLines(this.kml));
+    const lineData = this._filter(KMLParser.ParseDomLines(this.kml));
     lineData.forEach((p, i) => callback(p, this.kml, lineData, i));
     return this;
   }
 
   parseGroundOverlays(callback) {
-    const overlayData = this._filter(KmlReader.ParseDomGroundOverlays(this.kml));
+    const overlayData = this._filter(KMLParser.ParseDomGroundOverlays(this.kml));
     overlayData.forEach((o, i) => callback(o, this.kml, overlayData, i));
     return this;
   }
 
   parseNetworklinks(callback) {
-    const linkData = this._filter(KmlReader.ParseDomLinks(this.kml));
+    const linkData = this._filter(KMLParser.ParseDomLinks(this.kml));
     linkData.forEach((p, i) => callback(p, this.kml, linkData, i));
     return this;
   }
@@ -117,8 +112,8 @@ export default class KmlReader {
       const node = docsDomNodes.item(i);
       const docsData = Object.assign(
         {},
-        KmlReader.ParseDomDoc(node),
-        KmlReader.ParseNonSpatialDomData(node, {})
+        KMLParser.ParseDomDoc(node),
+        KMLParser.ParseNonSpatialDomData(node, {})
       );
 
       const transform = options => options;
@@ -133,15 +128,15 @@ export default class KmlReader {
 
   static ParseDomFolders(xmlDom) {
     const folders = [];
-    const folderDomNodes = KmlReader.ParseDomItems(xmlDom, 'Folder');
+    const folderDomNodes = KMLParser.ParseDomItems(xmlDom, 'Folder');
     for (let i = 0; i < folderDomNodes.length; i++) {
       const node = folderDomNodes[i];
       const folderData = Object.assign(
         {
           type: 'folder'
         },
-        KmlReader.ParseDomFolder(node),
-        KmlReader.ParseNonSpatialDomData(node, {})
+        KMLParser.ParseDomFolder(node),
+        KMLParser.ParseNonSpatialDomData(node, {})
       );
 
       const transform = options => options;
@@ -156,8 +151,8 @@ export default class KmlReader {
     for (let i = 0; i < linkDomNodes.length; i++) {
       const node = linkDomNodes.item(i);
       const linkData = Object.assign({},
-        KmlReader.ParseDomLink(node),
-        KmlReader.ParseNonSpatialDomData(node, {})
+        KMLParser.ParseDomLink(node),
+        KMLParser.ParseNonSpatialDomData(node, {})
       );
 
       const transform = options => options;
@@ -178,14 +173,14 @@ export default class KmlReader {
     };
     if (urls.length > 0) {
       const url = urls.item(0);
-      link.url = KmlReader.Value(url);
+      link.url = KMLParser.Value(url);
     }
     return link;
   }
 
   static ParseDomLines(xmlDom) {
     const lines = [];
-    const lineDomNodes = KmlReader.ParseDomItems(xmlDom, 'LineString');
+    const lineDomNodes = KMLParser.ParseDomItems(xmlDom, 'LineString');
     for (let i = 0; i < lineDomNodes.length; i++) {
 
       const node = lineDomNodes[i];
@@ -196,13 +191,13 @@ export default class KmlReader {
           lineColor: '#FF000000', // black
           lineWidth: 1,
           polyColor: '#77000000', // black semitransparent,
-          coordinates: KmlReader.ParseDomCoordinates(node) // returns an array of GLatLngs
+          coordinates: KMLParser.ParseDomCoordinates(node) // returns an array of GLatLngs
         },
-        KmlReader.ParseNonSpatialDomData(node, {}),
-        KmlReader.ResolveDomStyle(KmlReader.ParseDomStyle(node), xmlDom)
+        KMLParser.ParseNonSpatialDomData(node, {}),
+        KMLParser.ResolveDomStyle(KMLParser.ParseDomStyle(node), xmlDom)
       );
 
-      const rgb = KmlReader.convertKMLColorToRGB(polygonData.lineColor);
+      const rgb = KMLParser.convertKMLColorToRGB(polygonData.lineColor);
       polygonData.lineOpacity = rgb.opacity;
       polygonData.lineColor = rgb.color;
 
@@ -214,7 +209,7 @@ export default class KmlReader {
 
   static ParseDomGroundOverlays(xmlDom) {
     const lines = [];
-    const lineDomNodes = KmlReader.ParseDomItems(xmlDom, 'GroundOverlay');
+    const lineDomNodes = KMLParser.ParseDomItems(xmlDom, 'GroundOverlay');
     for (let i = 0; i < lineDomNodes.length; i++) {
 
       const node = lineDomNodes[i];
@@ -222,10 +217,10 @@ export default class KmlReader {
       const polygonData = Object.assign(
         {
           type: 'imageoverlay',
-          icon: KmlReader.ParseDomIcon(node),
-          bounds: KmlReader.ParseDomBounds(node)
+          icon: KMLParser.ParseDomIcon(node),
+          bounds: KMLParser.ParseDomBounds(node)
         },
-        KmlReader.ParseNonSpatialDomData(node, {})
+        KMLParser.ParseNonSpatialDomData(node, {})
       );
 
       lines.push(polygonData);
@@ -236,7 +231,7 @@ export default class KmlReader {
 
   static ParseDomPolygons(xmlDom) {
     const polygons = [];
-    const polygonDomNodes = KmlReader.ParseDomItems(xmlDom, 'Polygon');
+    const polygonDomNodes = KMLParser.ParseDomItems(xmlDom, 'Polygon');
 
     for (let i = 0; i < polygonDomNodes.length; i++) {
 
@@ -249,18 +244,18 @@ export default class KmlReader {
           lineColor: '#FF000000', // black
           lineWidth: 1,
           polyColor: '#77000000', // black semitransparent,
-          coordinates: KmlReader.ParseDomCoordinates(node) // returns an array of google.maps.LatLng
+          coordinates: KMLParser.ParseDomCoordinates(node) // returns an array of google.maps.LatLng
         },
-        KmlReader.ParseNonSpatialDomData(node, {}),
-        KmlReader.ResolveDomStyle(KmlReader.ParseDomStyle(node), xmlDom)
+        KMLParser.ParseNonSpatialDomData(node, {}),
+        KMLParser.ResolveDomStyle(KMLParser.ParseDomStyle(node), xmlDom)
       );
 
-      const lineRGB = KmlReader.convertKMLColorToRGB(polygonData.lineColor);
+      const lineRGB = KMLParser.convertKMLColorToRGB(polygonData.lineColor);
 
       polygonData.lineOpacity = lineRGB.opacity;
       polygonData.lineColor = lineRGB.color;
 
-      const polyRGB = KmlReader.convertKMLColorToRGB(polygonData.polyColor);
+      const polyRGB = KMLParser.convertKMLColorToRGB(polygonData.polyColor);
 
       polygonData.polyOpacity = (polygonData.fill) ? polyRGB.opacity : 0;
       polygonData.polyColor = polyRGB.color;
@@ -272,22 +267,22 @@ export default class KmlReader {
 
   static ParseDomMarkers(xmlDom) {
     const markers = [];
-    const markerDomNodes = KmlReader.ParseDomItems(xmlDom, 'Point');
+    const markerDomNodes = KMLParser.ParseDomItems(xmlDom, 'Point');
 
     for (let i = 0; i < markerDomNodes.length; i++) {
       const node = markerDomNodes[i];
-      const coords = KmlReader.ParseDomCoordinates(node);
+      const coords = KMLParser.ParseDomCoordinates(node);
       const marker = Object.assign(
         {
           type: 'point',
           coordinates: coords[0] // returns an array of google.maps.LatLng
         },
-        KmlReader.ParseNonSpatialDomData(node, {})
+        KMLParser.ParseNonSpatialDomData(node, {})
       );
 
-      let icon = KmlReader.ParseDomStyle(node);
+      let icon = KMLParser.ParseDomStyle(node);
       if (icon.charAt(0) === '#') {
-        icon = KmlReader.ResolveDomStyle(icon, xmlDom).icon;
+        icon = KMLParser.ResolveDomStyle(icon, xmlDom).icon;
       }
       if (icon) {
         // better to not have any hint of an icon (ie: icon:null) so default can be used by caller
@@ -301,13 +296,13 @@ export default class KmlReader {
   static ParseDomCoordinates(xmlDom) {
     const coordNodes = xmlDom.getElementsByTagName('coordinates');
     if (!coordNodes.length) {
-      console.warn(['KmlReader. DOM Node did not contain coordinates!', {
+      console.warn(['KMLParser. DOM Node did not contain coordinates!', {
         node: xmlDom
       }]);
       return null;
     }
     const node = coordNodes.item(0);
-    let s = KmlReader.Value(node);
+    let s = KMLParser.Value(node);
     s = s.trim();
     const coordStrings = s.split(' ');
     const coordinates = [];
@@ -326,7 +321,7 @@ export default class KmlReader {
   static ParseDomBounds(xmlDom) {
     const coordNodes = xmlDom.getElementsByTagName('LatLonBox');
     if (!coordNodes.length) {
-      console.warn(['KmlReader. DOM Node did not contain coordinates!', {
+      console.warn(['KMLParser. DOM Node did not contain coordinates!', {
         node: xmlDom
       }]);
       return null;
@@ -343,32 +338,32 @@ export default class KmlReader {
     let west = null;
 
     if (!norths.length) {
-      console.warn(['KmlReader. DOM LatLngBox Node did not contain north!', {
+      console.warn(['KMLParser. DOM LatLngBox Node did not contain north!', {
         node: xmlDom
       }]);
     } else {
-      north = parseFloat(KmlReader.Value(norths.item(0)));
+      north = parseFloat(KMLParser.Value(norths.item(0)));
     }
     if (!souths.length) {
-      console.warn(['KmlReader. DOM LatLngBox Node did not contain south!', {
+      console.warn(['KMLParser. DOM LatLngBox Node did not contain south!', {
         node: xmlDom
       }]);
     } else {
-      south = parseFloat(KmlReader.Value(souths.item(0)));
+      south = parseFloat(KMLParser.Value(souths.item(0)));
     }
     if (!easts.length) {
-      console.warn(['KmlReader. DOM LatLngBox Node did not contain east!', {
+      console.warn(['KMLParser. DOM LatLngBox Node did not contain east!', {
         node: xmlDom
       }]);
     } else {
-      east = parseFloat(KmlReader.Value(easts.item(0)));
+      east = parseFloat(KMLParser.Value(easts.item(0)));
     }
     if (!wests.length) {
-      console.warn(['KmlReader. DOM LatLngBox Node did not contain west!', {
+      console.warn(['KMLParser. DOM LatLngBox Node did not contain west!', {
         node: xmlDom
       }]);
     } else {
-      west = parseFloat(KmlReader.Value(wests.item(0)));
+      west = parseFloat(KMLParser.Value(wests.item(0)));
     }
     return {
       north,
@@ -392,16 +387,16 @@ export default class KmlReader {
 
     const names = xmlDom.getElementsByTagName('name');
     for (let i = 0; i < names.length; i++) {
-      if (KmlReader.WithinOffsetDom(xmlDom, names.item(i), config.maxOffset)) {
-        data.name = (KmlReader.Value(names.item(i)));
+      if (KMLParser.WithinOffsetDom(xmlDom, names.item(i), config.maxOffset)) {
+        data.name = (KMLParser.Value(names.item(i)));
         break;
       }
     }
 
     const descriptions = xmlDom.getElementsByTagName('description');
     for (let i = 0; i < descriptions.length; i++) {
-      if (KmlReader.WithinOffsetDom(xmlDom, descriptions.item(i), config.maxOffset)) {
-        data.description = (KmlReader.Value(descriptions.item(i)));
+      if (KMLParser.WithinOffsetDom(xmlDom, descriptions.item(i), config.maxOffset)) {
+        data.description = (KMLParser.Value(descriptions.item(i)));
         break;
       }
     }
@@ -412,10 +407,10 @@ export default class KmlReader {
 
     const extendedDatas = xmlDom.getElementsByTagName('ExtendedData');
     for (let i = 0; i < extendedDatas.length; i++) {
-      if (KmlReader.WithinOffsetDom(xmlDom, extendedDatas.item(i), config.maxOffset)) {
+      if (KMLParser.WithinOffsetDom(xmlDom, extendedDatas.item(i), config.maxOffset)) {
         for (let j = 0; j < extendedDatas.item(i).childNodes.length; j++) {
           const c = extendedDatas.item(i).childNodes.item(j);
-          const t = KmlReader.ParseTag(c);
+          const t = KMLParser.ParseTag(c);
           if (t.name !== '#text') { // eslint-disable-line
             data.tags[t.name] = t.value;
           }
@@ -438,11 +433,11 @@ export default class KmlReader {
       break;
     case 'ID':
       tags.name = 'ID';
-      tags.value = KmlReader.Value(xmlDom);
+      tags.value = KMLParser.Value(xmlDom);
       break;
     default:
       tags.name = xmlDom.nodeName;
-      tags.value = KmlReader.Value(xmlDom);
+      tags.value = KMLParser.Value(xmlDom);
       break;
     }
 
@@ -457,7 +452,7 @@ export default class KmlReader {
       }
       current = current.parentNode;
     }
-    console.error(['KmlReader. Could not find parent node within expected bounds.', {
+    console.error(['KMLParser. Could not find parent node within expected bounds.', {
       parentNode: parent,
       childNode: child,
       bounds: max
@@ -474,13 +469,13 @@ export default class KmlReader {
     const styles = xmlDom.getElementsByTagName('styleUrl');
     let style = config.defaultStyle;
     if (styles.length === 0) {
-      console.warn(['KmlReader. DOM Node did not contain styleUrl!', {
+      console.warn(['KMLParser. DOM Node did not contain styleUrl!', {
         node: xmlDom,
         options: config
       }]);
     } else {
       const node = styles.item(0);
-      style = (KmlReader.Value(node));
+      style = (KMLParser.Value(node));
     }
     return style;
   }
@@ -496,7 +491,7 @@ export default class KmlReader {
     let icon = config.defaultStyle;
     let scale = config.defaultScale;
     if (icons.length === 0) {
-      console.warn(['KmlReader. DOM Node did not contain Icon!', {
+      console.warn(['KMLParser. DOM Node did not contain Icon!', {
         node: xmlDom,
         options: config
       }]);
@@ -504,25 +499,25 @@ export default class KmlReader {
       const node = icons.item(0);
       const urls = node.getElementsByTagName('href');
       if (urls.length === 0) {
-        console.warn(['KmlReader. DOM Icon Node did not contain href!', {
+        console.warn(['KMLParser. DOM Icon Node did not contain href!', {
           node: xmlDom,
           options: config
         }]);
       } else {
         const hrefNode = urls.item(0);
-        icon = (KmlReader.Value(hrefNode));
+        icon = (KMLParser.Value(hrefNode));
       }
 
       const scales = node.getElementsByTagName('viewBoundScale');
       if (scales.length === 0) {
-        console.warn(['KmlReader. DOM Icon Node did not contain viewBoundScale!', {
+        console.warn(['KMLParser. DOM Icon Node did not contain viewBoundScale!', {
           node: xmlDom,
           options: config
         }]);
 
       } else {
         const scaleNode = scales.item(0);
-        scale = parseFloat(KmlReader.Value(scaleNode));
+        scale = parseFloat(KMLParser.Value(scaleNode));
       }
     }
     return {
@@ -549,12 +544,12 @@ export default class KmlReader {
           const colors = lineStyle.getElementsByTagName('color');
           if (colors.length > 0) {
             const color = colors.item(0);
-            data.lineColor = KmlReader.Value(color);
+            data.lineColor = KMLParser.Value(color);
           }
           const widths = lineStyle.getElementsByTagName('width');
           if (widths.length > 0) {
             const width = widths.item(0);
-            data.lineWidth = KmlReader.Value(width);
+            data.lineWidth = KMLParser.Value(width);
           }
         }
         if (polyStyles.length > 0) {
@@ -562,18 +557,18 @@ export default class KmlReader {
           const colors = polyStyle.getElementsByTagName('color');
           if (colors.length > 0) {
             const color = colors.item(0);
-            data.polyColor = KmlReader.Value(color);
+            data.polyColor = KMLParser.Value(color);
           }
           const outlines = polyStyle.getElementsByTagName('outline');
           if (outlines.length > 0) {
             const outline = outlines.item(0);
-            const o = KmlReader.Value(outline);
+            const o = KMLParser.Value(outline);
             data.outline = Boolean(o);
           }
         }
         if (iconStyles.length > 0) {
           const iconStyle = iconStyles.item(0);
-          const icon = KmlReader.Value(iconStyle);
+          const icon = KMLParser.Value(iconStyle);
           data.icon = icon;
         }
       }
@@ -671,8 +666,8 @@ export default class KmlReader {
     let str = '';
     try {
       if (node.childNodes && node.childNodes.length) {
-        Object.values(KmlReader.ChildNodesArray(node)).forEach(c => {
-          str += KmlReader.Value(c);
+        Object.values(KMLParser.ChildNodesArray(node)).forEach(c => {
+          str += KMLParser.Value(c);
         });
       }
     } catch (e) {
