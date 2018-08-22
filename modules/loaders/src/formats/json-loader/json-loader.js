@@ -1,9 +1,6 @@
 
 function parseText(text, options) {
-  if (options.fast) {
-    return JSON.parse(text);
-  }
-  throw new Error('JSONLoader');
+  return JSON.parse(text);
 }
 
 export default {
