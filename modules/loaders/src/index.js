@@ -3,8 +3,9 @@ export {loadFile} from './common/loader';
 export {loadUri} from './common/loader-utils/load-uri.js';
 export {smartFetch, smartParse} from './common/smart-fetch';
 
-// GLB/GLTF LOADERS
-export {default as GLBLoader} from './glb-loader/glb-loader';
+// GLB/GLTF LOADERS & WRITERS
+export {default as GLBLoader, GLBParser} from './glb-loader';
+export {default as GLBWriter, GLBBuilder} from './glb-writer';
 
 // MODEL LOADERS
 export {default as OBJLoader} from './obj-loader/obj-loader';
@@ -20,7 +21,3 @@ export {default as KMLLoader} from './kml-loader/kml-loader';
 export {default as JSONLoader} from './formats/json-loader/json-loader';
 export {default as CSVLoader} from './formats/csv-loader/csv-loader';
 export {default as XMLLoader} from './formats/xml-loader/xml-loader';
-
-// EXPERIMENTAL EXPORTS
-export {parseGLB, _GLBDecoder, _unpackGLBBuffers, _unpackJsonArrays} from './glb-loader';
-export {encodeGLB, _GLBEncoder, _GLBBufferPacker, _packJsonArrays} from './glb-writer';

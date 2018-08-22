@@ -1,19 +1,21 @@
 # loaders.gl
 
-A suite of framework-independent loaders (i.e. parsers) for 3D geometries and assets.
+A suite of framework-independent loaders (i.e. parsers) for 3D geometries and assets, as well as geospatial formats.
 
 Also includes a few "writers" (encoders) and some compression/decompression support.
 
-Supporting functionality that can perform actual loading.
+In addition to the loaders themselves which implement parsing of specific formats, loaders.gl also provides a core of functions that perform actual loading.
 
-Most of the loaders have been "curated" from the open source community, often from WebGL frameworks like THREE.js or from individual github repos.
+loaders.gl is to an extent an effort to "curate" some of the best existing loader code created by the open source community. The source is often based on loaders from other WebGL frameworks like THREE.js or individual github repos. Sometimes the core parser is just an installed npm module, and loaders.gl just provides a thin adaptor. Finally, some loaders are hand-crafted for loaders.gl.
 
 
 ## Main Features
 
 **Framework Agnosticism** - There is a wide range of excellent loaders for 3D formats available as open source under e.g. MIT and Apache license. However, many of these loaders were created for a specific 3D framework (e.g. THREE.js) and are not immediately usable outside of that framework.
 
-**Standard Format** - All loaders return a "standardized" JavaScript objects with a header key-value map and a map of typed arrays representing binary data attributes. The binary attributes can be uploaded directly to GPU buffers and used for rendering or GPGPU calculations.
+**Standard Format** - All 3D asset loaders return a "standardized" JavaScript objects with a header key-value map and a map of typed arrays representing binary data attributes. The binary attributes can be uploaded directly to GPU buffers and used for rendering or GPGPU calculations.
+
+**Data Normalization** - Especially for geospatial formats, the raw loaded data can have a lot of variations (e.g. `[lng, lat]` vs `{lat, lng}`). loaders.gl offers `normalize` options that lets your application work with data in a more consistent format across multiple loaders.
 
 **Loader Metadata** - Loaders are exported as objects that include metadata such as the name of the loader, the default extension, an optional test function and of course the parser function for the format.
 

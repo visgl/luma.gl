@@ -1,9 +1,8 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 
-import {_GLBEncoder as GLBEncoder, _GLBBufferPacker as GLBBufferPacker} from 'loaders.gl';
-
-import {_GLBDecoder as GLBDecoder, _unpackGLBBuffers as unpackGLBBuffers} from 'loaders.gl';
+import {GLBBuilder, GLBParser} from 'loaders.gl';
+import {_unpackGLBBuffers as unpackGLBBuffers} from 'loaders.gl/glb-loader';
 
 import TEST_JSON from './test-data.json';
 
@@ -13,24 +12,27 @@ const BUFFERS = [
   new Float32Array([8, 2, 4, 5])
 ];
 
-test('GLBLoader#encode-and-decode', t => {
-  const bufferPacker = new GLBBufferPacker();
-  const {arrayBuffer, jsonDescriptors} = bufferPacker.packBuffers(BUFFERS);
-  const json = Object.assign({}, TEST_JSON, jsonDescriptors);
+test('GLB#encode-and-decode', t => {
+  const glbBuilder = new GLBBuilder();
 
-  const glbFileBuffer = GLBEncoder.createGlbBuffer(json, arrayBuffer);
+  // Add buffers
+  for (const buffer of BUFFERS) {
+    glbBuilder.addBuffer(buffer, {size: 1});
+  }
 
-  t.equal(glbFileBuffer.byteLength, 1584, 'should be equal');
+  const glbFileBuffer = glbBuilder.encode(TEST_JSON);
 
-  const parsedData = GLBDecoder.parseGlbBuffer(glbFileBuffer);
+  t.equal(glbFileBuffer.byteLength, 1604, 'should be equal');
 
-  t.equal(parsedData.binaryByteOffset, 1556);
-  t.deepEqual(parsedData.json, json, 'JSON is equal');
+  const {arrayBuffer, json, binaryByteOffset} = GLBParser.parseBinary(glbFileBuffer);
 
-  const buffers2 = unpackGLBBuffers(arrayBuffer, json);
+  t.equal(binaryByteOffset, 1576);
+  t.deepEqual(json.json, TEST_JSON, 'JSON is equal');
+
+  const buffers2 = unpackGLBBuffers(arrayBuffer, json, binaryByteOffset);
 
   t.comment(JSON.stringify(BUFFERS));
   t.comment(JSON.stringify(buffers2));
-  t.deepEqual(buffers2, BUFFERS, 'should be deep equal');
+  t.deepEqual(buffers2, BUFFERS, 'buffers should be deep equal');
   t.end();
 });

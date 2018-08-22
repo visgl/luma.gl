@@ -1,11 +1,11 @@
 // Binary container format for glTF
 
-import GLBDecoder from './glb-decoder';
+import GLBParser from './glb-parser';
 import unpackGLBBuffers from './unpack-glb-buffers';
 import unpackJsonArrays from './unpack-json-arrays';
 
-function parseGLB(arrayBuffer, options = {}) {
-  const {json, binaryByteOffset} = GLBDecoder.parseGlbBuffer(arrayBuffer, options);
+export function parseGLB(arrayBuffer, options = {}) {
+  const {json, binaryByteOffset} = GLBParser.parseBinary(arrayBuffer, options);
   const unpackedBuffers = unpackGLBBuffers(arrayBuffer, json, binaryByteOffset);
   return unpackJsonArrays(json, unpackedBuffers);
 }
