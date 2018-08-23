@@ -44,8 +44,8 @@ const COMPONENT_TYPE_ARRAY = {
 };
 
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
-export default class GLBDecoder {
-  static parseGlbBuffer(glbArrayBuffer, options = {}) {
+export default class GLBParser {
+  static parseBinary(glbArrayBuffer, options = {}) {
     const {magic = MAGIC_glTF} = options;
 
     // GLB Header
@@ -75,7 +75,7 @@ export default class GLBDecoder {
 
     const binaryByteOffset = jsonChunkOffset + padTo4Bytes(jsonChunkLength) + GLB_CHUNK_HEADER_SIZE;
 
-    return {json, binaryByteOffset};
+    return {arrayBuffer: glbArrayBuffer, binaryByteOffset, json};
   }
 
   unpackBinaryObjects() {

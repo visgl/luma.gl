@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {toLowPrecision} from 'loaders.gl/common/loader-utils';
 
-import {encodeGLB, _packJsonArrays as packJsonArrays} from 'loaders.gl';
+import {encodeGLB, _packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
 import {GLBLoader} from 'loaders.gl';
 
 const TEST_CASES = {
@@ -41,7 +41,7 @@ const TEST_CASES = {
   full: require('./test-data.json')
 };
 
-test('GLBLoader#encode-and-parse', t => {
+test('GLB#encode-and-parse', t => {
   for (const tcName in TEST_CASES) {
     const TEST_JSON = TEST_CASES[tcName];
 
@@ -58,13 +58,9 @@ test('GLBLoader#encode-and-parse', t => {
       `${tcName} Encoded and parsed GLB - has JSON accessors field`
     );
 
-    delete json.buffers;
-    delete json.bufferViews;
-    delete json.accessors;
-
     t.deepEqual(
-      toLowPrecision(json),
-      toLowPrecision(packJsonArrays(TEST_JSON)),
+      toLowPrecision(json.json),
+      toLowPrecision(packBinaryJson(TEST_JSON)),
       `${tcName} Encoded and parsed GLB did not change data`
     );
   }
@@ -97,8 +93,8 @@ test('GLBLoader#encode-and-parse#full', t => {
   delete json.accessors;
 
   t.deepEqual(
-    json.state_updates[0].primitives.tracklets[0],
-    packJsonArrays(TEST_JSON.state_updates[0].primitives.tracklets[0]),
+    json.json.state_updates[0].primitives.tracklets[0],
+    packBinaryJson(TEST_JSON.state_updates[0].primitives.tracklets[0]),
     'Encoded and parsed GLB did not change data'
   );
 

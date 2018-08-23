@@ -75,7 +75,7 @@ test('pack#floatToRGBA8tofloat)', t => {
   transform.run();
 
   const outData = transform.getBuffer('outFloat').getData();
-  t.equal(inputData.length, outData.length, 'Array lenth should match');
+  t.equal(inputData.length, outData.length, 'Array length should match');
   inputData.forEach((element, index) => {
     const diff = Math.abs(element - outData[index]);
     if (diff > EPSILON) {

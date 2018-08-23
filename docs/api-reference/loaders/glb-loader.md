@@ -17,13 +17,19 @@ loadFile(url, GLBLoader).then(data => {
 ```
 
 
-## Functions
+## `GLBParser` class
 
-### parseGLB(arrayBuffer : ArrayBuffer) : Object
+The `GLBLoader` module exposes the `GLBParser` class with the following methods
 
-Parses an in-memory, GLB formatted `ArrayBuffer` into a JavaScript "JSON" data structure with inlined binary data fields.
+### constructor
+
+Creates a new `GLBParser` instance.
 
 
-### encodeGLB(json : Object) : ArrayBuffer
+### parse(arrayBuffer : ArrayBuffer) : Object
 
-Writes JavaScript JSON data structure into an arrayBuffer that can be written atomically to file, extracting binary fields from the data and placing these in a compact binary chunk following the "stripped" JSON chunk.
+Parses an in-memory, GLB formatted `ArrayBuffer` into:
+
+* `arrayBuffer` - just returns the input array buffer
+* `binaryByteOffset` - offset to the first byte in the binary chunk
+* `json` - a JavaScript "JSON" data structure with inlined binary data fields.

@@ -1,7 +1,6 @@
 // Public methods
-export {encodeGLB} from './glb-writer';
+export {default as default, encodeGLB} from './glb-writer';
 
-// Experimental exports, exposes internals
-export {default as _GLBEncoder} from './glb-encoder';
-export {default as _GLBBufferPacker} from './glb-buffer-packer';
-export {default as _packJsonArrays} from './pack-json-arrays';
+export {default as GLBBuilder} from './glb-builder';
+export {default as packBinaryJson} from './pack-binary-json';
+export {default as _packBinaryJson} from './pack-binary-json';

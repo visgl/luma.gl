@@ -1,10 +1,9 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 
-import {
-  _packJsonArrays as packJsonArrays,
-  _GLBBufferPacker as GLBBufferPacker
-} from 'loaders.gl';
+import {GLBBuilder} from 'loaders.gl';
+
+import {_packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
 
 const inputJSONTypedArraysMixed = {
   slices: [
@@ -59,32 +58,32 @@ const flattenArraysFalse = {
 };
 
 test('pack-and-unpack-json', t => {
-  let bufferPacker;
+  let glbBuilder;
   let json;
 
-  bufferPacker = new GLBBufferPacker();
-  json = packJsonArrays(inputJSONTypedArraysMixed, bufferPacker);
+  glbBuilder = new GLBBuilder();
+  json = packBinaryJson(inputJSONTypedArraysMixed, glbBuilder);
   t.comment(JSON.stringify(json));
-  t.equals(bufferPacker.sourceBuffers.length, 3, 'Right number of buffers extracted');
+  t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 
-  bufferPacker = new GLBBufferPacker();
-  json = packJsonArrays(inputJSONTypedArrays, bufferPacker);
+  glbBuilder = new GLBBuilder();
+  json = packBinaryJson(inputJSONTypedArrays, glbBuilder);
   t.comment(JSON.stringify(json));
-  t.equals(bufferPacker.sourceBuffers.length, 3, 'Right number of buffers extracted');
+  t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 
-  bufferPacker = new GLBBufferPacker();
-  json = packJsonArrays(inputJSONClassicArrays, bufferPacker);
+  glbBuilder = new GLBBuilder();
+  json = packBinaryJson(inputJSONClassicArrays, glbBuilder);
   t.comment(JSON.stringify(json));
-  t.equals(bufferPacker.sourceBuffers.length, 3, 'Right number of buffers extracted');
+  t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 
   t.end();
 });
 
 test('pack-and-unpack-json#flattenArrays:false', t => {
-  const bufferPacker = new GLBBufferPacker();
-  const json = packJsonArrays(flattenArraysFalse, bufferPacker, {flattenArrays: false});
+  const glbBuilder = new GLBBuilder();
+  const json = packBinaryJson(flattenArraysFalse, glbBuilder, {flattenArrays: false});
   t.comment(JSON.stringify(json));
-  t.equals(bufferPacker.sourceBuffers.length, 0, 'Right number of buffers extracted');
+  t.equals(glbBuilder.sourceBuffers.length, 0, 'Right number of buffers extracted');
   t.equals(
     JSON.stringify(flattenArraysFalse),
     JSON.stringify(json),
