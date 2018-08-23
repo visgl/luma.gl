@@ -69,7 +69,7 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
     marker = modified ? '*' : '';
 
     value = data;
-    bytes = buffer.bytes;
+    bytes = buffer.byteLength;
     verts = bytes / data.BYTES_PER_ELEMENT / size;
 
     let format;

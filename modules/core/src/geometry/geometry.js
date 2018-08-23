@@ -112,9 +112,7 @@ export default class Geometry {
 
       this._autoDetectAttribute(attributeName, attribute);
 
-      this.attributes[attributeName] = Object.assign({}, attribute, {
-        instanced: attribute.instanced || 0
-      });
+      this.attributes[attributeName] = attribute;
     }
     this.setNeedsRedraw();
     return this;
