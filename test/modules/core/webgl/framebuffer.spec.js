@@ -207,9 +207,6 @@ const FB_READPIXELS_TEST_CASES = [
   {
     format: GL.RGBA32F, clearColor: [0.214, -32.23, 1242, -123.847]
   },
-
-  // TODO: GL.RG and GL.RED formats not supported by readPixels when reading float data,
-  // but these formats (R32F and RG32F) are marked as renderable and filterable (Ref: OpenGL ES 3.2 spec, big texture table)
   {
     format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
   },
