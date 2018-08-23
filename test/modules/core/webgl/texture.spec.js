@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 
 import GL from 'luma.gl/constants';
-import {Texture2D, getKey} from 'luma.gl';
+import {Texture2D, getKey, isWebGL2} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
@@ -34,46 +34,57 @@ test('WebGL#Texture2D construct/delete', t => {
   t.end();
 });
 
+function isFormatSupported(format, glContext) {
+  format = Number(format);
+  const opts = Object.assign({format}, TEXTURE_FORMATS[format]);
+  if (!Texture2D.isSupported(glContext, {format}) || (!isWebGL2(glContext) && opts.compressed)) {
+    return false;
+  }
+  return true;
+}
 test('WebGL#Texture2D check formats', t => {
-  const {gl} = fixture;
+  const {gl, gl2} = fixture;
 
   const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
+  const WEBGL2_FORMATS = [GL.R32F, GL.RG32F, GL.RGB32F, GL.RGBA32F];
 
-  let supportedFormats = 0;
-  for (let format in TEXTURE_FORMATS) {
-    format = Number(format);
-    const opts = Object.assign({format}, TEXTURE_FORMATS[format]);
-    if (Texture2D.isSupported(gl, {format}) && !opts.compressed) {
-      supportedFormats++;
+  let unSupportedFormats = [];
+  WEBGL1_FORMATS.forEach(format => {
+    if (!isFormatSupported(format, gl)) {
+      unSupportedFormats.push(format);
     }
-  }
-  t.ok(supportedFormats >= WEBGL1_FORMATS.length,
-    'Texture2D - Correct number of formats supported in WebGL1');
+  });
 
+  t.ok(unSupportedFormats.length === 0, 'All WebGL1 formats are supported');
+
+  if (gl2) {
+    const gl2Formats = WEBGL1_FORMATS.concat(WEBGL2_FORMATS);
+    unSupportedFormats = [];
+    gl2Formats.forEach(format => {
+      if (!isFormatSupported(format, gl2)) {
+        unSupportedFormats.push(format);
+      }
+    });
+
+    t.ok(unSupportedFormats.length === 0, 'All WebGL2 formats are supported');
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
   t.end();
 });
 
-test('WebGL#Texture2D format creation', t => {
-  const {gl} = fixture;
-
-  for (let format in TEXTURE_FORMATS) {
-    const textureFormat = TEXTURE_FORMATS[format];
-
-    format = Number(format);
-    if (Texture2D.isSupported(gl, {format}) && !textureFormat.compressed) {
-
-      // const opts = Object.assign({format}, textureFormat);
-      // const texture = new Texture2D(gl, opts);
-      // t.equals(texture.format, format,
-      //   `Texture2D(${getKey(GL, format)}) created with correct format`);
-
-      // texture.delete();
-    }
-  }
-
-  t.end();
-});
-
+const DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const DATA = [1, 0.5, 0.25, 0.125];
+const UINT8_DATA = new Uint8Array(DATA);
+const UINT16_DATA = new Uint16Array(DATA);
+const FLOAT_DATA = new Float32Array(DATA);
+const TEXTURE_DATA = {
+  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
+  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.FLOAT]: FLOAT_DATA
+};
 // const RGB_TO = {
 //   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
 //   [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
@@ -83,57 +94,51 @@ test('WebGL#Texture2D format creation', t => {
 //   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
 // };
 
-const DATA = [1, 0.5, 0.25, 0.125];
-const UINT8_DATA = new Uint8Array(DATA);
-const UINT16_DATA = new Uint16Array(DATA);
-
-const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-};
-const DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-test('WebGL2#Texture2D format creation', t => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
+function testFormatCreation(t, glContext, withData = false) {
   for (let format in TEXTURE_FORMATS) {
-    const textureFormat = TEXTURE_FORMATS[format];
-
-    const {dataFormat, types, compressed} = textureFormat;
-    format = Number(format);
-
-    if (Texture2D.isSupported(gl2, {format}) && !compressed) {
-
-      let texture;
-
-      for (const type of types) {
-        // texture = new Texture2D(gl2, Object.assign({format, dataFormat, type}));
-        // t.equals(texture.format, format,
-        //   `Texture2D({format: ${glKey(gl, format)}, type: ${glKey(gl, type)},
-        //    dataFormat: ${glKey(gl, dataFormat)}) created`);
-        // texture.delete()
-        const data = TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA;
-        if (data) { // eslint-disable-line
-          texture = new Texture2D(gl2, {format, dataFormat, type, data, width: 1, height: 1});
-          t.equals(texture.format, format,
-            `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) created`);
-          texture.delete();
-        } else {
-          t.equals(texture.format, format,
-            `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, dataFormat)}) skipped`);
-        }
+    const formatInfo = TEXTURE_FORMATS[format];
+    for (let type of formatInfo.types) {
+      format = Number(format);
+      type = Number(type);
+      const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
+      const options = Object.assign({}, formatInfo, {
+        data,
+        format,
+        type,
+        mipmaps: format !== GL.RGB32F, // TODO: for some reason mipmap generation failing for RGB32F format
+        width: 1,
+        height: 1
+      });
+      if (Texture2D.isSupported(glContext, {format})) {
+        const texture = new Texture2D(glContext, options);
+        t.equals(texture.format, format,
+          `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, options.dataFormat)}) created`
+        );
+        texture.delete();
       }
     }
   }
+}
 
+test('WebGL#Texture2D format creation', t => {
+  const {gl, gl2} = fixture;
+  testFormatCreation(t, gl);
+  if (gl2) {
+    testFormatCreation(t, gl2);
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
+  t.end();
+});
+
+test('WebGL#Texture2D format creation with data', t => {
+  const {gl, gl2} = fixture;
+  testFormatCreation(t, gl, true);
+  if (gl2) {
+    testFormatCreation(t, gl2, true);
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
   t.end();
 });
 
