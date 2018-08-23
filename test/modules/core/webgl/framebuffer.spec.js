@@ -206,18 +206,18 @@ const FB_READPIXELS_TEST_CASES = [
 
   {
     format: GL.RGBA32F, clearColor: [0.214, -32.23, 1242, -123.847]
-  }
+  },
 
   // TODO: GL.RG and GL.RED formats not supported by readPixels when reading float data,
   // but these formats (R32F and RG32F) are marked as renderable and filterable (Ref: OpenGL ES 3.2 spec, big texture table)
-  // {
-  //   format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], expectedColor: [-0.214, 32.23]
-  // },
-  // {
-  //   format: GL.R32F, clearColor: [1, 0, 0, 0], expectedColor: [0.124]
-  // }
+  {
+    format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
+  },
+  {
+    format: GL.R32F, clearColor: [0.124, 0, 0, 0], expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
+  }
 
-  // TODO: Looks like RGB32F is not a renderable format. (Ref: OpenGL ES 3.2 spec, big texture table)
+  // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
   // {
   //   format: GL.RGB32F, clearColor: [-0.214, 32.23, 1242, 0], expectedColor: [-0.214, 32.23, 1242]
   // }
@@ -256,7 +256,7 @@ function testFramebufferReadPixels(t, gl) {
         y: 0,
         width: 1,
         height: 1,
-        format: dataFormat,
+        format: type === GL.FLOAT ? GL.RGBA : dataFormat, // For float textures only RGBA is supported.
         type});
 
       const expectedColor = testCase.expectedColor || testCase.clearColor;
