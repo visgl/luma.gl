@@ -383,7 +383,7 @@ export default class VertexArray {
       // index type is saved for drawElement calls
       drawParams.elementCount = this.elements.getElementCount(this.elements.accessor);
       drawParams.isIndexed = true;
-      drawParams.indexType = this.elements.type;
+      drawParams.indexType = this.elements.accessor.type;
     }
 
     // Post-calculation checks
