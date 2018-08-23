@@ -17,6 +17,10 @@ export function loadUri(uri, rootFolder = '.') {
   return fs.readFileAsync(filePath).then(buffer => ({buffer}));
 }
 
+export function parseDataUriToArrayBuffer(uri) {
+  return parseDataUriToBuffer(uri).buffer;
+}
+
 /**
  * Parses a data URI into a buffer, as well as retrieving its declared MIME type.
  *
