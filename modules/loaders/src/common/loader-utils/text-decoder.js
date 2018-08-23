@@ -2,7 +2,7 @@
 /* global window */
 
 // allowed encoding strings for utf-8
-const utf8Encodings = ['utf8', 'utf-8', 'unicode-1-1-utf-8'];
+export const utf8Encodings = ['utf8', 'utf-8', 'unicode-1-1-utf-8'];
 
 class TextDecoderPolyfill {
   constructor(encoding, options) {
@@ -45,4 +45,4 @@ class TextDecoderPolyfill {
   }
 }
 
-export const TextDecoder = typeof window !== 'undefined' ? window.TextDecoder : TextDecoderPolyfill;
+export default typeof window !== 'undefined' ? window.TextDecoder : TextDecoderPolyfill;
