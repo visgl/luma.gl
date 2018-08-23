@@ -46,7 +46,7 @@ export default class Buffer extends Resource {
   }
 
   // Stores the accessor of data with the buffer, makes it easy to e.g. set it as an attribute later
-  // {accessor,type,size = 1,offset = 0,stride = 0,normalized = false,integer = false,instanced = 0}
+  // {accessor,type,size = 1,offset = 0,stride = 0,normalized = false,integer = false,divisor = 0}
   setAccessor(opts) {
     this.accessor = opts;
     return this;

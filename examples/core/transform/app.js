@@ -248,8 +248,8 @@ const animationLoop = new AnimationLoop({
     const offsetBuffer = transform.getBuffer('v_offset');
     const rotationBuffer = transform.getBuffer('v_rotation');
 
-    offsetBuffer.updateAccessor({instanced: 1});
-    rotationBuffer.updateAccessor({instanced: 1});
+    offsetBuffer.updateAccessor({divisor: 1});
+    rotationBuffer.updateAccessor({divisor: 1});
 
     renderModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
     renderModel.draw({
@@ -263,8 +263,8 @@ const animationLoop = new AnimationLoop({
       }
     });
 
-    offsetBuffer.updateAccessor({instanced: 0});
-    rotationBuffer.updateAccessor({instanced: 0});
+    offsetBuffer.updateAccessor({divisor: 0});
+    rotationBuffer.updateAccessor({divisor: 0});
 
     const pickInfo = pickPosition && pickModels(gl, {
       models: [renderModel],

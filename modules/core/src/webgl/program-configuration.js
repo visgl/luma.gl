@@ -10,8 +10,8 @@ export default class ProgramConfiguration {
     this.id = program.id;
     this.attributeInfos = [];
     this.attributeInfosByName = {};
-    this.varyings = [];
-    this.varyingsByName = {};
+    this.varyingInfos = [];
+    this.varyingInfosByName = {};
     Object.seal(this);
     this._readAttributesFromProgram(program);
     this._readVaryingsFromProgram(program);
@@ -39,9 +39,9 @@ export default class ProgramConfiguration {
   getVaryingInfo(locationOrName) {
     const location = Number(locationOrName);
     if (Number.isFinite(location)) {
-      return this.varyings[location];
+      return this.varyingInfos[location];
     }
-    return this.varyingsByName[locationOrName] || null;
+    return this.varyingInfosByName[locationOrName] || null;
   }
 
   getVaryingIndex(locationOrName) {
@@ -83,7 +83,7 @@ export default class ProgramConfiguration {
       this._addVarying(location, name, type, size);
     }
 
-    this.varyings.sort((a, b) => a.location - b.location);
+    this.varyingInfos.sort((a, b) => a.location - b.location);
   }
 
   _addAttribute(location, name, compositeType, size) {
@@ -109,7 +109,7 @@ export default class ProgramConfiguration {
     const accessor = new Accessor({type, size: size * components});
 
     const varying = {location, name, accessor}; // Base values
-    this.varyings.push(varying);
-    this.varyingsByName[varying.name] = varying; // For quick name based lookup
+    this.varyingInfos.push(varying);
+    this.varyingInfosByName[varying.name] = varying; // For quick name based lookup
   }
 }
