@@ -30,7 +30,7 @@ const geometry = new Geometry(options);
 #### Parameters
 
 * `id` - (*string*, optional) An id for the model. If not provided, a random unique identifier will be created.
-* `drawType` - (*string*, optional) A string describing the drawType. Some options are `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`. Default's `TRIANGLES`.
+* `drawMode` - (*string*, optional) A string describing the drawMode. Some options are `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`. Default's `TRIANGLES`.
 * `attributes` - (*object*, optional) An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model.
 
 ### Typical Attributes
