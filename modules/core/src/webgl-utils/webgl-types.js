@@ -13,8 +13,8 @@ import isBrowser from '../utils/is-browser';
 
 export const ERR_HEADLESSGL_LOAD = `\
 luma.gl: loaded under Node.js without headless gl installed, meaning that WebGL \
-contexts are not available. This may not be an error, as it is a standar setup for \
-e.g. isorender applications running on the server.`;
+contexts can not be created. This may not be an error. For example, this is a \
+typical configuration for isorender applications running on the server.`;
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
