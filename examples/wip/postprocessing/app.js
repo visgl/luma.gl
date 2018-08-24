@@ -19,6 +19,8 @@ import {
   // ConvolutionPass
 } from 'luma.gl-imageprocessing';
 
+import * as glfx from 'luma.gl-glfx';
+
 const INFO_HTML = `
 <p>
 Cube drawn with <b>instanced rendering</b>.
@@ -208,6 +210,8 @@ class AppAnimationLoop extends AnimationLoop {
       // new ConvolutionPass(gl, {kernel: ConvolutionPass.KERNEL.EMBOSS}),
       // new ConvolutionPass(gl, {kernel: ConvolutionPass.KERNEL.EDGE_DETECT_3}),
       // new ConvolutionPass(gl, {kernel: ConvolutionPass.KERNEL.TRIANGLE_BLUR}),
+
+      new glfx.ShaderModulePass(gl, glfx.sepia, {amount: 1}),
 
       new CopyPass(gl, {screen: true})
     ]);

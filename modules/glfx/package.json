@@ -1,0 +1,36 @@
+{
+  "name": "luma-glfx",
+  "description": "glfx - image processing packaged as composable shader modules",
+  "private": "true",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": "",
+  "main": "lib/index.js",
+  "module": "es/index.js",
+  "jsnext:main": "es/index.js",
+  "files": [
+    "dist",
+    "lib",
+    "es",
+    "src"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --config-file ../../babel.config.js --out-dir dist/lib",
+    "build:es": "cross-env BABEL_ENV=es babel src --config-file ../../babel.config.js --out-dir dist/es",
+    "build:umd": "webpack",
+    "build:umd:min": "webpack --env minified",
+    "build": "mkdir -p dist/lib dist/es && npm run build:commonjs && npm run build:es && npm run build:umd && npm run build:umd:min"
+  },
+  "devDependencies": {
+    "babel-loader": "^8.0.0-beta",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-external-helpers": "^6.3.15",
+    "cross-env": "^5.0.5",
+    "eslint": "^4.8.0",
+    "eslint-loader": "^1.9.0"
+  },
+  "dependencies": {
+    "luma.gl": "^6.1.0-beta"
+  }
+}
