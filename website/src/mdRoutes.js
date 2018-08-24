@@ -45,7 +45,6 @@ export default [
       {
         name: 'Overview',
         markdown: require('./overview.md')
-
       },
       {
         name: 'Showcases',
@@ -198,7 +197,7 @@ export default [
           },
           {
             name: 'Frequently Asked Questions',
-            markdown: require('../../docs/FAQ .md')
+            markdown: require('../../docs/FAQ.md')
           },
           {
             name: 'Upgrade Guide',
@@ -272,8 +271,7 @@ export default [
               },
               {
                 name: 'Creating Shader Modules',
-                markdown:
-                  require('../../docs/developer-guide/shadertools/writing-shader-modules.md')
+                markdown: require('../../docs/developer-guide/shadertools/writing-shader-modules.md')
               },
               {
                 name: 'Writing GLSL Code',
@@ -399,7 +397,7 @@ export default [
               },
               {
                 name: 'GLSL Reference',
-                content: require('../../docs/api-reference/shadertools/glsl-reference.md')
+                markdown: require('../../docs/api-reference/shadertools/glsl-reference.md')
               }
             ]
           },
