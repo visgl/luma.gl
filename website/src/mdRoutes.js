@@ -239,6 +239,19 @@ export default [
         name: 'Developer Guide',
         children: [
           {
+            name: 'loaders.gl',
+            children: [
+              {
+                name: 'Overview',
+                markdown: require('../../docs/developer-guide/loaders.gl/README.md')
+              },
+              {
+                name: 'Understanding Loaders',
+                markdown: require('../../docs/developer-guide/loaders.gl/about-loaders.md')
+              }
+            ]
+          },
+          {
             name: 'Shadertools',
             children: [
               {
@@ -345,11 +358,44 @@ export default [
         name: 'API Reference',
         children: [
           {
+            name: 'loaders.gl Reference',
+            children: [
+              {
+                name: 'loadFile',
+                markdown: require('../../docs/api-reference/loader-api/load-file.md')
+              },
+              {
+                name: 'GLBLoader',
+                markdown: require('../../docs/api-reference/loaders/glb-loader.md')
+              },
+              {
+                name: 'PLYLoader',
+                markdown: require('../../docs/api-reference/loaders/ply-loader.md')
+              },
+              {
+                name: 'LASLoader',
+                markdown: require('../../docs/api-reference/loaders/las-loader.md')
+              },
+              {
+                name: 'PCDLoader',
+                markdown: require('../../docs/api-reference/loaders/pcd-loader.md')
+              },
+              {
+                name: 'OBJLoader',
+                markdown: require('../../docs/api-reference/loaders/obj-loader.md')
+              },
+              {
+                name: 'KMLLoader',
+                markdown: require('../../docs/api-reference/loaders/kml-loader.md')
+              }
+            ]
+          },
+          {
             name: 'Shadertools Reference',
             children: [
               {
                 name: 'Shadertools:assembleShaders',
-                content: 'api-reference/shadertools/assemble-shaders.md'
+                markdown: require('../../docs/api-reference/shadertools/assemble-shaders.md')
               },
               {
                 name: 'GLSL Reference',
@@ -362,12 +408,8 @@ export default [
             children: [
               {
                 name: 'picking',
-                content: 'api-reference/shadertools/shader-module-picking.md'
-              },
-              {
-                name: 'Shader Module:picking',
                 markdown: require('../../docs/api-reference/shadertools/shader-module-picking.md')
-              },
+              }
             ]
           },
           {

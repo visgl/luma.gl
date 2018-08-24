@@ -1,4 +1,4 @@
-// UTILS
+// LOADING FUNCTIONS
 export {loadFile} from './common/loader';
 export {loadUri} from './common/loader-utils/load-uri.js';
 export {smartFetch, smartParse} from './common/smart-fetch';
@@ -13,6 +13,7 @@ export {default as OBJLoader} from './obj-loader/obj-loader';
 // POINT CLOUD LOADERS
 export {default as PLYLoader} from './ply-loader/ply-loader';
 export {default as LAZLoader} from './laz-loader/laz-loader';
+export {default as PCDLoader} from './pcd-loader/pcd-loader';
 
 // GEOSPATIAL LOADERS
 export {default as KMLLoader} from './kml-loader/kml-loader';
