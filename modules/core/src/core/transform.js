@@ -129,33 +129,10 @@ export default class Transform {
 
   // Private
 
-  /* eslint-disable complexity, max-statements */
   _initialize(props = {}) {
-    let {feedbackBuffers, feedbackMap} = props;
-    const {destinationBuffers, sourceDestinationMap} = props;
-    if (destinationBuffers) {
-      log.deprecated('destinationBuffers', 'feedbackBuffers')();
-      feedbackBuffers = feedbackBuffers || destinationBuffers;
-    }
-    if (sourceDestinationMap) {
-      log.deprecated('sourceDestinationMap', 'feedbackMap')();
-      feedbackMap = feedbackMap || sourceDestinationMap;
-    }
+    const {feedbackBuffers, feedbackMap} = this._validateProps(props);
 
-    const {sourceBuffers, vs, elementCount} = props;
-    assert(sourceBuffers && vs && elementCount >= 0);
-    // If feedbackBuffers are not provided, sourceDestinationMap must be provided
-    // to create destinaitonBuffers with layout of corresponding source buffer.
-    assert(feedbackBuffers || feedbackMap, ' Transform needs feedbackBuffers or feedbackMap');
-    for (const bufferName in feedbackBuffers || {}) {
-      assert(feedbackBuffers[bufferName] instanceof Buffer);
-    }
-    const {_sourceTextures} = props;
-    for (const textureName in _sourceTextures || {}) {
-      assert(_sourceTextures[textureName] instanceof Texture2D);
-    }
-
-    const {varyings} = props;
+    const {sourceBuffers, varyings} = props;
     // If varyings are not provided feedbackMap must be provided to deduce varyings
     assert(Array.isArray(varyings) || feedbackMap);
     let varyingsArray = varyings;
@@ -174,8 +151,38 @@ export default class Transform {
       varyings: varyingsArray
     }));
   }
-  /* eslint-enable complexity, max-statements */
 
+  // assert on required parameters
+  _validateProps(props) {
+    let {feedbackBuffers, feedbackMap} = props;
+
+    // backward compitability
+    const {destinationBuffers, sourceDestinationMap} = props;
+    if (destinationBuffers) {
+      log.deprecated('destinationBuffers', 'feedbackBuffers')();
+      feedbackBuffers = feedbackBuffers || destinationBuffers;
+    }
+    if (sourceDestinationMap) {
+      log.deprecated('sourceDestinationMap', 'feedbackMap')();
+      feedbackMap = feedbackMap || sourceDestinationMap;
+    }
+
+    // assert on required parameters
+    const {sourceBuffers, vs, elementCount} = props;
+    assert(sourceBuffers && vs && elementCount >= 0);
+    // If feedbackBuffers are not provided, sourceDestinationMap must be provided
+    // to create destinaitonBuffers with layout of corresponding source buffer.
+    assert(feedbackBuffers || feedbackMap, ' Transform needs feedbackBuffers or feedbackMap');
+    for (const bufferName in feedbackBuffers || {}) {
+      assert(feedbackBuffers[bufferName] instanceof Buffer);
+    }
+    const {_sourceTextures} = props;
+    for (const textureName in _sourceTextures || {}) {
+      assert(_sourceTextures[textureName] instanceof Texture2D);
+    }
+
+    return {feedbackBuffers, feedbackMap};
+  }
   // setup source and destination buffers
   _setupBuffers({sourceBuffers = null, feedbackBuffers = null}) {
     this.sourceBuffers[0] = Object.assign({}, sourceBuffers);
