@@ -1,5 +1,8 @@
 # Pre-releases
 
+## 6.1.0-beta.2 - Aug 24
+- Attribute: fix update for buffer case. (#685)
+
 ## 6.1.0-beta.1 - Aug 24
 - New `PCDLoader` (#679)
 - Fix unit test (#682)
