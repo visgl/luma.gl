@@ -43,7 +43,7 @@ test('WebGL#Attribute update', t => {
   const {gl, gl2} = fixture;
 
   const attribute = new Attribute(gl2 || gl, {size: 4, value: value1});
-  const {buffer} = attribute;
+  let {buffer} = attribute;
 
   attribute.update({value: value2});
   t.is(attribute.buffer, buffer, 'Buffer is reused');
@@ -53,6 +53,14 @@ test('WebGL#Attribute update', t => {
 
   attribute.update({isInstanced: true});
   t.is(attribute.divisor, 1, 'divisor prop is updated');
+
+  attribute.update({isInstanced: false});
+  t.is(attribute.divisor, 0, 'divisor prop is updated');
+
+  // gpu aggregation use case
+  buffer = new Buffer(gl, {bytes: 1024, type: GL.FLOAT, instanced: 1});
+  attribute.update({buffer});
+  t.is(attribute.divisor, 1, 'divisor prop is updated using buffer prop');
 
   attribute.delete();
 

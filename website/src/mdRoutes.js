@@ -198,7 +198,7 @@ export default [
           },
           {
             name: 'Frequently Asked Questions',
-            markdown: require('../../docs/FAQ .md')
+            markdown: require('../../docs/FAQ.md')
           },
           {
             name: 'Upgrade Guide',
