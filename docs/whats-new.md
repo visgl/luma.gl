@@ -3,38 +3,49 @@
 
 ## Version 6.1
 
-Date: Target August 24, 2018
+Date: Target August 31, 2018
 
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
-        <p><i>WebGL Improvements</i></p>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/luma61-ssao-pass-thumb.gif" />
+        <p><i>Ambient Occlusion Render Pass</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/luma61-edge-pass-thumb.gif" />
+        <p><i>Edge Detection Render Pass</i></p>
       </td>
     </tr>
   </tbody>
 </table>
 
-
-### New Multipass Rendering System
-
-luma.gl now provides a multipass rendering framework, based on a `MultiPassRenderer` class that accepts a list of render passes.
+luma.gl 6.1 is a minor release that introduces a number of new experimental capabilities that are expected to be built out and become official over the next few releases.
 
 
-### Suite of Composable Post-Processing Effects
+### New Multipass Rendering System (Experimental)
 
-A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. In many cases, the underlying shaders have also been exposed as shader modules, providing additional composability options for advanced apps.
-
-
-### Transform class supports shader module assembly
-
-`Transform` constructor now accepts all shader module parameters such as `modules`, `dependencies` and `inject` (see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)).
+luma.gl now provides a composable multipass rendering framework, based on a `MultiPassRenderer` class that accepts a list of render passes.
 
 
-### New Loaders Submodule (Experimental)
+### Post-Processing Effects (Experimental)
 
-A selection of open source 3D loaders have been ported to a new submodule loaders.gl.
+A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. For maxiumum flexibility, many of the underlying shaders have also been exposed as shader modules, allowing filtering features to be used either directly in existing shaders or applied as a post-processing filter.
+
+
+### New loaders.gl Submodule (Experimental)
+
+A selection of open source 3D loaders have been ported to a new submodule `loaders.gl`. Initial focus is on point cloud loaders (PLY, LAZ, PCD), although a geospatial loader (KML) is also included. In addition it contains both read and write support for GLB (the glTF binary container format).
+
+
+### Transform Class now supports Shader Modules
+
+The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)), enabling the use of shader modules in transform feedback operations.
+
+
+### Documentation Search
+
+luma.gl is now using the [ocular](https://github.com/uber-web/ocular) document generator to build its website, which among other things enables search.
 
 
 ## Version 6.0
