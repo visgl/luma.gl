@@ -2,7 +2,7 @@
 // A pass that renders a given scene directly on screen or into the read buffer
 // for further processing.
 //
-// Attribution: This class and the multipass system were strongly inspired by
+// Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
 import Pass from './pass';

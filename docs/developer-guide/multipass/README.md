@@ -1,12 +1,13 @@
-# Multi Pass Rendering
+# Multi Pass Rendering (Experimental)
 
 The multi pass rendering system allows you to describe a complex rendering pipeline as a sequence of render passes that you can then execute at a later stage.
 
-This helps clearly articulate how the rendering pipeline is defined, and also allows the use of a number of pre-defined post processing effects.
+This helps the programmer articulate how the rendering pipeline is defined, and also allows the use of a number of pre-defined post processing effects in combination with custom rendering.
 
-References:
 
-* The luma.gl Multi Pass Rendering system was inspired by the `EffectComposer` system in THREE.js.
+## Attributions / Credits
+
+The luma.gl Multi Pass Rendering system was inspired by the `EffectComposer` system in THREE.js.
 
 
 ## Overview
