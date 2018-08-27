@@ -1,6 +1,6 @@
 {
   "name": "loaders.gl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-independent loaders for 3D graphics formats",
   "license": "MIT",
   "repository": {
@@ -9,9 +9,14 @@
   },
   "keywords": [
     "webgl",
-    "visualization",
-    "loaders",
-    "3d"
+    "loader",
+    "3d",
+    "point cloud",
+    "GLB",
+    "PLY",
+    "LAZ",
+    "PCD",
+    "KML"
   ],
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
