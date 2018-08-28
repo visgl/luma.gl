@@ -22,29 +22,33 @@ function parseJSONPointer(value) {
   return null;
 }
 
-// Recursively unpacks objects, replacing "JSON pointers" with typed arrays
 export default function unpackJsonArrays(json, buffers, options = {}) {
+  return unpackJsonArraysRecursive(json, json, buffers, options);
+}
+
+// Recursively unpacks objects, replacing "JSON pointers" with typed arrays
+function unpackJsonArraysRecursive(json, topJson, buffers, options = {}) {
   const object = json;
 
   const pointer = parseJSONPointer(object);
   if (pointer) {
     const [field, index] = pointer;
-    const value = json[field] && json[field][index];
+    const value = topJson[field] && topJson[field][index];
     if (!value) {
-      console.error(`Invalid JSON pointer ${object}`); // eslint-disable-line
+      console.error(`Invalid JSON pointer ${object}: #/${field}/${index}`); // eslint-disable-line
     }
   }
 
   // Copy array
   if (Array.isArray(object)) {
-    return object.map(element => unpackJsonArrays(element, buffers, options));
+    return object.map(element => unpackJsonArraysRecursive(element, topJson, buffers, options));
   }
 
   // Copy object
   if (object !== null && typeof object === 'object') {
     const newObject = {};
     for (const key in object) {
-      newObject[key] = unpackJsonArrays(object[key], buffers, options);
+      newObject[key] = unpackJsonArraysRecursive(object[key], topJson, buffers, options);
     }
     return newObject;
   }
