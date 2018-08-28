@@ -1,4 +1,5 @@
-// Based on binary-gltf-utils under MIT license: Copyright (c) 2016-17 Karl Cheng
+// Attributions
+// * Based on binary-gltf-utils under MIT license: Copyright (c) 2016-17 Karl Cheng
 
 const mimeTypeMap = new Map([
   ['image/png', getPngSize],
@@ -6,6 +7,10 @@ const mimeTypeMap = new Map([
   ['image/gif', getGifSize],
   ['image/bmp', getBmpSize]
 ]);
+
+const ERR_INVALID_TYPE = `Invalid MIME type. Supported MIME types are: ${Array.from(
+  mimeTypeMap.keys()
+).join(', ')}`;
 
 /**
  * Sniffs the contents of a file to attempt to deduce the image type and extract image size.
@@ -15,10 +20,6 @@ const mimeTypeMap = new Map([
  * @param {string} [mimeType]
  */
 export function getImageSize(contents, mimeType) {
-  const ERR_INVALID_TYPE = `Invalid MIME type. Supported MIME types are: ${Array.from(
-    mimeTypeMap.keys()
-  ).join(', ')}`;
-
   // Looking for only a specific MIME type.
   if (mimeType) {
     const handler = mimeTypeMap.get(mimeType);
@@ -56,9 +57,45 @@ function getPngSize(contents) {
     return null;
   }
 
-  const width = contents.readUInt32BE(16);
-  const height = contents.readUInt32BE(20);
-  return {width, height};
+  return {
+    width: contents.readUInt32BE(16),
+    height: contents.readUInt32BE(20)
+  };
+}
+
+/**
+ * Extract size from a binary GIF file
+ * @param {Buffer} contents
+ * TODO: GIF is not this simple
+ */
+function getGifSize(contents) {
+  // Check first 4 bytes of the GIF signature ("GIF8").
+  if (contents.readUInt32BE(0) !== 0x47494638) {
+    return null;
+  }
+
+  // GIF is little endian.
+  return {
+    width: contents.readUInt16LE(6),
+    height: contents.readUInt16LE(8)
+  };
+}
+
+/**
+ * @param {Buffer} contents
+ * TODO: BMP is not this simple
+ */
+function getBmpSize(contents) {
+  // Check magic number is valid (first 2 characters should be "BM").
+  if (contents.readUInt16BE(0) !== 0x424d) {
+    return null;
+  }
+
+  // BMP is little endian.
+  return {
+    width: contents.readUInt32LE(18),
+    height: contents.readUInt32LE(22)
+  };
 }
 
 /**
@@ -80,11 +117,10 @@ function getJpegSize(contents) {
 
     // The frame that contains the width and height of the JPEG image.
     if (sofMarkers.has(marker)) {
-      // Number of lines.
-      const height = contents.readUInt16BE(i + 5);
-      // Number of pixels per line.
-      const width = contents.readUInt16BE(i + 7);
-      return {width, height};
+      return {
+        height: contents.readUInt16BE(i + 5), // Number of lines
+        width: contents.readUInt16BE(i + 7) // Number of pixels per line
+      };
     }
 
     // Miscellaneous tables/data preceding the frame header.
@@ -128,37 +164,4 @@ function getJpegMarkers() {
   ]);
 
   return {tableMarkers, sofMarkers};
-}
-
-/**
- * Extract size from a binary GIF file
- * @param {Buffer} contents
- * TODO: GIF is not this simple
- */
-function getGifSize(contents) {
-  // Check first 4 bytes of the GIF signature ("GIF8").
-  if (contents.readUInt32BE(0) !== 0x47494638) {
-    return null;
-  }
-
-  // GIF is little endian.
-  const width = contents.readUInt16LE(6);
-  const height = contents.readUInt16LE(8);
-  return {width, height};
-}
-
-/**
- * @param {Buffer} contents
- * TODO: BMP is not this simple
- */
-function getBmpSize(contents) {
-  // Check magic number is valid (first 2 characters should be "BM").
-  if (contents.readUInt16BE(0) !== 0x424d) {
-    return null;
-  }
-
-  // BMP is little endian.
-  const width = contents.readUInt32LE(18);
-  const height = contents.readUInt32LE(22);
-  return {width, height};
 }
