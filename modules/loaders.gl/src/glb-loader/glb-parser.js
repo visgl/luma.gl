@@ -82,9 +82,9 @@ export default class GLBParser {
 
     // Write the JSON chunk
     const jsonChunkLength = dataView.getUint32(12, LE); // Byte length of json chunk
-    const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32 (JSON is 0)
+    const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32
 
-    const valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0;
+    let valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0; // Back compat
     assert(valid, `JSON chunk format ${jsonChunkFormat}`);
 
     // Create a "view" of the binary encoded JSON data
@@ -98,7 +98,13 @@ export default class GLBParser {
     // Parse the JSON text into a JavaScript data structure
     const json = JSON.parse(jsonText);
 
-    const binaryByteOffset = jsonChunkOffset + padTo4Bytes(jsonChunkLength) + GLB_CHUNK_HEADER_SIZE;
+    // TODO - BIN chunk can be optional
+    const binaryChunkStart = jsonChunkOffset + padTo4Bytes(jsonChunkLength);
+    const binaryByteOffset = binaryChunkStart + GLB_CHUNK_HEADER_SIZE;
+
+    const binChunkFormat = dataView.getUint32(binaryChunkStart + 4, LE); // Chunk format as uint32
+    valid = binChunkFormat === GLB_CHUNK_TYPE_BIN || binChunkFormat === 1; // Back compat
+    assert(valid, `BIN chunk format ${binChunkFormat}`);
 
     return {arrayBuffer: glbArrayBuffer, binaryByteOffset, json};
   }
