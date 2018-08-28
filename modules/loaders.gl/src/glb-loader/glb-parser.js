@@ -1,4 +1,6 @@
 /* eslint-disable camelcase, max-statements */
+import unpackGLBBuffers from './unpack-glb-buffers';
+import unpackJsonArrays from './unpack-binary-json';
 import {padTo4Bytes} from '../common/loader-utils/array-utils';
 import TextDecoder from '../common/loader-utils/text-decoder';
 import assert from '../common/loader-utils/assert';
@@ -45,7 +47,14 @@ const COMPONENT_TYPE_ARRAY = {
 
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
 export default class GLBParser {
+
   static parseBinary(glbArrayBuffer, options = {}) {
+    const {json, binaryByteOffset} = GLBParser._parseBinary(glbArrayBuffer, options);
+    const unpackedBuffers = unpackGLBBuffers(glbArrayBuffer, json, binaryByteOffset);
+    return unpackJsonArrays(json, unpackedBuffers);
+  }
+
+  static _parseBinary(glbArrayBuffer, options = {}) {
     const {magic = MAGIC_glTF} = options;
 
     // GLB Header

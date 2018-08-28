@@ -1,11 +1,8 @@
 import GLBBuilder from './glb-builder';
-import packBinaryJson from './pack-binary-json';
 import {toBuffer} from '../common/loader-utils/array-utils';
 
-export function encodeGLB(appJson, options) {
-  const glbBuilder = new GLBBuilder();
-  const packedAppJson = packBinaryJson(appJson, glbBuilder, options);
-  return glbBuilder.encode(packedAppJson, options);
+export function encodeGLB(json, options) {
+  return new GLBBuilder().encode(json, options);
 }
 
 export function writeGLBtoFile(filePath, options, json) {

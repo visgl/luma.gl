@@ -62,6 +62,16 @@ export default class GLBBuilder {
     return this.json.accessors.length - 1;
   }
 
+  // Checks if a binary buffer is a recognized image format (PNG, JPG, GIF, ...)
+  isImage(imageData) {
+    try {
+      getImageSize(imageData);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Adds a binary image. Builds glTF "JSON metadata" and saves buffer reference
   // Buffer will be copied into BIN chunk during "pack"
   addImage(imageData) {

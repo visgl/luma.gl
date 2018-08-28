@@ -24,7 +24,7 @@ test('GLB#encode-and-decode', t => {
 
   t.equal(glbFileBuffer.byteLength, 1604, 'should be equal');
 
-  const {arrayBuffer, json, binaryByteOffset} = GLBParser.parseBinary(glbFileBuffer);
+  const {arrayBuffer, json, binaryByteOffset} = GLBParser._parseBinary(glbFileBuffer);
 
   t.equal(binaryByteOffset, 1576);
   t.deepEqual(json.json, TEST_JSON, 'JSON is equal');
