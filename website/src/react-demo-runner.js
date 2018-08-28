@@ -1,5 +1,6 @@
 import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types';
+import InfoPanel from './components/info-panel';
 
 const propTypes = {
   demo: PropTypes.object,
@@ -11,7 +12,6 @@ const defaultProps = {
 };
 
 export default class DemoRunner extends Component {
-
   componentDidMount() {
     this.props.demo.start({
       canvas: this.props.canvas,
@@ -24,16 +24,19 @@ export default class DemoRunner extends Component {
   }
 
   render() {
-    const {width, height} = this.props;
+    const {width, height, name, demo, sourceLink} = this.props;
+    const controls = demo.getInfo && demo.getInfo();
+
     return (
-      <div className='fg' style={{width, height, padding: 0, border: 0}}>
+      <div className="fg" style={{width, height, padding: 0, border: 0}}>
         <canvas
           id={this.props.canvas}
-          style={{width: '100%', height: '100%', padding: 0, border: 0}}/>
+          style={{width: '100%', height: '100%', padding: 0, border: 0}}
+        />
+        <InfoPanel name={name} controls={controls} sourceLink={sourceLink} />
       </div>
     );
   }
-
 }
 
 DemoRunner.propTypes = propTypes;
