@@ -409,7 +409,7 @@ void main()
 }
 `;
 
-test('WebGL#Transform run (source - texture)', t => {
+test('WebGL#Transform run (source texture + feedback buffer)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -452,6 +452,214 @@ test('WebGL#Transform run (source - texture)', t => {
   const outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+const TEXTURE_BUFFER_TEST_CASES = [
+  // NOTE: elementCount is equal to width * height
+  // TODO: determine width and height based on elementCount and padding if needed
+  {
+    name: 'RED-FLOAT',
+    sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    vs: `\
+#version 300 es
+in float inBuffer;
+in float inTexture;
+out float outBuffer;
+out float outTexture;
+
+void main()
+{
+  outBuffer = inTexture + inBuffer;
+  outTexture = inTexture + inBuffer;
+}
+`
+  },
+  {
+    name: 'RGBA-UNSIGNED_BYTE',
+    sourceData: new Uint8Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    width: 2,
+    height: 2,
+    vs: `\
+#version 300 es
+in float inBuffer;
+in vec4 inTexture;
+out float outBuffer;
+out vec4 outTexture;
+
+void main()
+{
+  outBuffer = 2. * inBuffer;
+  outTexture = 2. *  inTexture;
+}
+`
+  }
+];
+
+test('WebGL#Transform run (source&destination texture + feedback buffer)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  TEXTURE_BUFFER_TEST_CASES.forEach(testCase => {
+    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+    const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
+    const sourceTexture = new Texture2D(gl2, {
+      data: sourceData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      sourceBuffers: {
+        inBuffer: sourceBuffer
+      },
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _renderToTexture: {
+        varying: 'outTexture',
+        refAttribute: 'inTexture'
+      },
+      vs,
+      feedbackMap: {
+        inBuffer: 'outBuffer'
+      },
+      elementCount: sourceData.length
+    });
+
+    transform.run();
+
+    const expectedData = sourceData.map(x => x * 2);
+    const outData = transform.getBuffer('outBuffer').getData();
+    t.deepEqual(outData, expectedData, `${name} Transform should write correct data into Buffer`);
+
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData();
+
+    // t.deepEqual(outData, expectedData, 'Transform should write correct data into Buffer');
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+  });
+
+  t.end();
+});
+
+const TEXTURE_TEST_CASES = [
+  // NOTE: elementCount is equal to width * height
+  // TODO: determine width and height based on elementCount and padding if needed
+  {
+    name: 'RED-FLOAT',
+    sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    vs: `\
+#version 300 es
+in float inTexture;
+out float outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  },
+  {
+    name: 'RGBA-UNSIGNED_BYTE',
+    sourceData: new Uint8Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    width: 2,
+    height: 2,
+    vs: `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  }
+];
+
+test('WebGL#Transform run (source&destination texture)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  TEXTURE_TEST_CASES.forEach(testCase => {
+    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+    // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
+    const sourceTexture = new Texture2D(gl2, {
+      data: sourceData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      // sourceBuffers: {
+      //   inBuffer: sourceBuffer
+      // },
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _renderToTexture: {
+        varying: 'outTexture',
+        refAttribute: 'inTexture'
+      },
+      vs,
+      // feedbackMap: {
+      //   inBuffer: 'outBuffer'
+      // },
+      elementCount: sourceData.length
+    });
+
+    transform.run();
+
+    const expectedData = sourceData.map(x => x * 2);
+    // const outData = transform.getBuffer('outBuffer').getData();
+    // t.deepEqual(outData, expectedData, `${name} Transform should write correct data into Buffer`);
+
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData();
+
+    // t.deepEqual(outData, expectedData, 'Transform should write correct data into Buffer');
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+  });
 
   t.end();
 });
