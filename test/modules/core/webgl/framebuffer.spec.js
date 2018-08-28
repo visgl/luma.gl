@@ -1,10 +1,11 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
 import GL from 'luma.gl/constants';
-import {Framebuffer, Renderbuffer, Texture2D, Buffer} from 'luma.gl';
+import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
+import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 
-const EPSILON = 0.0000001;
+const EPSILON = 1e-6;
 
 const TEST_CASES = [
   {
@@ -193,36 +194,74 @@ test('WebGL1#Framebuffer resize', t => {
   t.end();
 });
 
+const FB_READPIXELS_TEST_CASES = [
+  {
+    format: GL.RGBA, clearColor: [1, 0.5, 0.25, 0.125], expectedColor: [255, 128, 64, 32]
+  },
+
+  // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
+  // {
+  //   format: GL.RGB, clearColor: [1, 0.25, 0.125, 0], expectedColor: [255, 64, 32]
+  // },
+
+  {
+    format: GL.RGBA32F, clearColor: [0.214, -32.23, 1242, -123.847]
+  },
+  {
+    format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
+  },
+  {
+    format: GL.R32F, clearColor: [0.124, 0, 0, 0], expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
+  }
+
+  // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
+  // {
+  //   format: GL.RGB32F, clearColor: [-0.214, 32.23, 1242, 0], expectedColor: [-0.214, 32.23, 1242]
+  // }
+];
+
 function testFramebufferReadPixels(t, gl) {
-  const frameBufferOptions = {
-    attachments: {
-      [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
-      [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
+
+  for (const testCase of FB_READPIXELS_TEST_CASES) {
+    const format = testCase.format;
+    if (Texture2D.isSupported(gl, {format})) {
+      const formatInfo = TEXTURE_FORMATS[format];
+      const type = formatInfo.types[0]; // TODO : test all other types
+      const dataFormat = formatInfo.dataFormat;
+      const texOptions = Object.assign({}, formatInfo, {
+        format,
+        type,
+        mipmaps: format !== GL.RGB32F
+      });
+
+      const frameBufferOptions = {
+        attachments: {
+          [GL.COLOR_ATTACHMENT0]: new Texture2D(gl, texOptions),
+          [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
+        }
+      };
+
+      const framebuffer = new Framebuffer(gl, frameBufferOptions);
+
+      framebuffer.resize({width: 1000, height: 1000});
+      framebuffer.checkStatus();
+
+      framebuffer.clear({color: testCase.clearColor});
+
+      const color = framebuffer.readPixels({
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        format: type === GL.FLOAT ? GL.RGBA : dataFormat, // For float textures only RGBA is supported.
+        type});
+
+      const expectedColor = testCase.expectedColor || testCase.clearColor;
+      for (const index in color) {
+        t.ok(Math.abs(color[index] - expectedColor[index]) < EPSILON, `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}) returned expected value for channel:${index}`);
+      }
     }
-  };
-
-  const framebuffer = new Framebuffer(gl, frameBufferOptions);
-
-  framebuffer.resize({width: 1000, height: 1000});
-  framebuffer.checkStatus();
-
-  const clearColor = [1, 0.5, 0.25, 0.125];
-  const expectedColor = [255, 128, 64, 32];
-
-  framebuffer.clear({color: clearColor});
-
-  const color = framebuffer.readPixels({
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    format: gl.RGBA,
-    type: gl.UNSIGNED_BYTE});
-
-  t.equals(color[0], expectedColor[0], 'Readpixels returned expected value for Red channel');
-  t.equals(color[1], expectedColor[1], 'Readpixels returned expected value for Green channel');
-  t.equals(color[2], expectedColor[2], 'Readpixels returned expected value for Blue channel');
-  t.equals(color[3], expectedColor[3], 'Readpixels returned expected value for Alpha channel');
+  }
 }
 
 test('WebGL1#Framebuffer readPixels', t => {
