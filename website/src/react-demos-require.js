@@ -32,32 +32,86 @@ import React from 'react';
 import Demo from './react-demo-runner';
 /* eslint-enable */
 
-const InstancingDemo = props => (<Demo {...props} demo={Instancing}/>);
-const CubemapDemo = props => (<Demo {...props} demo={Cubemap}/>);
-// const CustomPickingDemo = props => (<Demo {...props} demo={CustomPicking}/>);
-// const DeferredRenderingDemo = props => (<Demo {...props} demo={DeferredRendering/>);
-const MandelbrotDemo = props => (<Demo {...props} demo={Mandelbrot}/>);
-const FragmentDemo = props => (<Demo {...props} demo={Fragment}/>);
+const examplesPath = 'https://github.com/uber/luma.gl/tree/master/examples';
+
+const InstancingDemo = props => (
+  <Demo {...props} demo={Instancing} sourceLink={`${examplesPath}/core/instancing/`} />
+);
+const CubemapDemo = props => (
+  <Demo {...props} demo={Cubemap} sourceLink={`${examplesPath}/core/cubemap/`} />
+);
+// const CustomPickingDemo = props => (<Demo {...props} demo={CustomPicking} />);
+// const DeferredRenderingDemo = props => (<Demo {...props} demo={DeferredRendering} />);
+const MandelbrotDemo = props => (
+  <Demo {...props} demo={Mandelbrot} sourceLink={`${examplesPath}/core/mandelbrot/`} />
+);
+const FragmentDemo = props => (
+  <Demo {...props} demo={Fragment} sourceLink={`${examplesPath}/core/fragment/`} />
+);
 // const ParticlesDemo = props => (<Demo {...props} demo={Particles}/>);
 // const PersistenceDemo = props => (<Demo {...props} demo={Persistence}/>);
-const PickingDemo = props => (<Demo {...props} demo={Picking}/>);
-const ShadowmapDemo = props => (<Demo {...props} demo={Shadowmap}/>);
-const TransformFeedbackDemo = props => (<Demo {...props} demo={TransformFeedback}/>);
+const PickingDemo = props => (
+  <Demo {...props} demo={Picking} sourceLink={`${examplesPath}/core/picking/`} />
+);
+const ShadowmapDemo = props => (
+  <Demo {...props} demo={Shadowmap} sourceLink={`${examplesPath}/core/shadowmap/`} />
+);
+const TransformFeedbackDemo = props => (
+  <Demo
+    {...props}
+    demo={TransformFeedback}
+    sourceLink={`${examplesPath}/core/transform-feedback/`}
+  />
+);
 
-const Lesson01Demo = props => (<Demo {...props} demo={Lesson01}/>);
-const Lesson02Demo = props => (<Demo {...props} demo={Lesson02}/>);
-const Lesson03Demo = props => (<Demo {...props} demo={Lesson03}/>);
-const Lesson04Demo = props => (<Demo {...props} demo={Lesson04}/>);
-const Lesson05Demo = props => (<Demo {...props} demo={Lesson05}/>);
-const Lesson06Demo = props => (<Demo {...props} demo={Lesson06}/>);
-const Lesson07Demo = props => (<Demo {...props} demo={Lesson07}/>);
-const Lesson08Demo = props => (<Demo {...props} demo={Lesson08}/>);
-const Lesson09Demo = props => (<Demo {...props} demo={Lesson09}/>);
-const Lesson10Demo = props => (<Demo {...props} demo={Lesson10}/>);
-const Lesson11Demo = props => (<Demo {...props} demo={Lesson11}/>);
-const Lesson12Demo = props => (<Demo {...props} demo={Lesson12}/>);
-const Lesson13Demo = props => (<Demo {...props} demo={Lesson13}/>);
-const Lesson16Demo = props => (<Demo {...props} demo={Lesson16}/>);
+const Lesson01Demo = props => (
+  <Demo {...props} demo={Lesson01} sourceLink={`${examplesPath}/lessons/01/`} />
+);
+const Lesson02Demo = props => (
+  <Demo {...props} demo={Lesson02} sourceLink={`${examplesPath}/lessons/02/`} />
+);
+const Lesson03Demo = props => (
+  <Demo {...props} demo={Lesson03} sourceLink={`${examplesPath}/lessons/03/`} />
+);
+const Lesson04Demo = props => (
+  <Demo {...props} demo={Lesson04} sourceLink={`${examplesPath}/lessons/04/`} />
+);
+const Lesson05Demo = props => (
+  <Demo {...props} demo={Lesson05} sourceLink={`${examplesPath}/lessons/05/`} />
+);
+const Lesson06Demo = props => (
+  <Demo {...props} demo={Lesson06} sourceLink={`${examplesPath}/lessons/06/`} />
+);
+const Lesson07Demo = props => (
+  <Demo {...props} demo={Lesson07} sourceLink={`${examplesPath}/lessons/07/`} />
+);
+const Lesson08Demo = props => (
+  <Demo {...props} demo={Lesson08} sourceLink={`${examplesPath}/lessons/08/`} />
+);
+const Lesson09Demo = props => (
+  <Demo {...props} demo={Lesson09} sourceLink={`${examplesPath}/lessons/09/`} />
+);
+const Lesson10Demo = props => (
+  <Demo {...props} demo={Lesson10} sourceLink={`${examplesPath}/lessons/10/`} />
+);
+const Lesson11Demo = props => (
+  <Demo {...props} demo={Lesson11} sourceLink={`${examplesPath}/lessons/11/`} />
+);
+const Lesson12Demo = props => (
+  <Demo {...props} demo={Lesson12} sourceLink={`${examplesPath}/lessons/12/`} />
+);
+const Lesson13Demo = props => (
+  <Demo {...props} demo={Lesson13} sourceLink={`${examplesPath}/lessons/13/`} />
+);
+const Lesson14Demo = props => (
+  <Demo {...props} demo={Lesson14} sourceLink={`${examplesPath}/lessons/14/`} />
+);
+const Lesson15Demo = props => (
+  <Demo {...props} demo={Lesson15} sourceLink={`${examplesPath}/lessons/15/`} />
+);
+const Lesson16Demo = props => (
+  <Demo {...props} demo={Lesson16} sourceLink={`${examplesPath}/lessons/16/`} />
+);
 
 module.exports = {
   InstancingDemo,
@@ -85,5 +139,7 @@ module.exports = {
   Lesson11Demo,
   Lesson12Demo,
   Lesson13Demo,
+  Lesson14Demo,
+  Lesson15Demo,
   Lesson16Demo
 };

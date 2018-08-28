@@ -82,7 +82,8 @@
     transition: opacity 0.4s;
   }
 
-  > div:before, > div:after {
+  > div:before,
+  > div:after {
     display: block;
     z-index: 1;
     position: absolute;
@@ -121,8 +122,40 @@
   > div:hover img {
     opacity: 0.2;
   }
-  > div:hover:before, > div:hover:after {
+  > div:hover:before,
+  > div:hover:after {
     opacity: 1;
   }
+}
 
+.options-panel {
+  width: 284px;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  margin: 88px 24px 24px;
+  padding: 12px 24px;
+  outline: none;
+
+  p {
+    margin-bottom: 16px;
+  }
+  code {
+    font-family: Consolas,Liberation Mono,Menlo,Courier,monospace!important;
+  }
+}
+
+.top-right {
+  right: 0;
+}
+
+.top-left,
+.top-right {
+  position: absolute;
+  top: 0;
+}
+body {
+  font-family: 'ff-clan-web-pro', 'Helvetica Neue', Helvetica, sans-serif !important;
+  font-size: 12px;
+  line-height: 22px;
 }
