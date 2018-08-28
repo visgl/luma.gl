@@ -11,7 +11,7 @@ let testFiles;
 
 // only load test files under node.js for now
 function loadTestFiles() {
-  const fs = module.require('fs');
+  const fs = module.require && module.require('fs');
   if (!testFiles && fs) {
     testFiles = new Map(['png', 'jpeg', 'gif', 'bmp', 'tiff'].map(type => {
       const imagePath = path.resolve(__dirname, `../../data/img1-preview.${type}`);

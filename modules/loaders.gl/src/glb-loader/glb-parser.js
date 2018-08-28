@@ -1,4 +1,6 @@
 /* eslint-disable camelcase, max-statements */
+import unpackGLBBuffers from './unpack-glb-buffers';
+import unpackJsonArrays from './unpack-binary-json';
 import {padTo4Bytes} from '../common/loader-utils/array-utils';
 import TextDecoder from '../common/loader-utils/text-decoder';
 import assert from '../common/loader-utils/assert';
@@ -9,6 +11,9 @@ const MAGIC_glTF = 0x676c5446; // glTF in Big-Endian ASCII
 
 const GLB_FILE_HEADER_SIZE = 12;
 const GLB_CHUNK_HEADER_SIZE = 8;
+
+const GLB_CHUNK_TYPE_JSON = 0x4E4F534A;
+const GLB_CHUNK_TYPE_BIN = 0x004E4942;
 
 const LE = true; // Binary GLTF is little endian.
 const BE = false; // Magic needs to be written as BE
@@ -43,9 +48,24 @@ const COMPONENT_TYPE_ARRAY = {
   5126: Float32Array
 };
 
+function getMagicString(dataView) {
+  return `\
+${String.fromCharCode(dataView.getUint8(0))}\
+${String.fromCharCode(dataView.getUint8(1))}\
+${String.fromCharCode(dataView.getUint8(2))}\
+${String.fromCharCode(dataView.getUint8(3))}`;
+}
+
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
 export default class GLBParser {
+
   static parseBinary(glbArrayBuffer, options = {}) {
+    const {json, binaryByteOffset} = GLBParser._parseBinary(glbArrayBuffer, options);
+    const unpackedBuffers = unpackGLBBuffers(glbArrayBuffer, json, binaryByteOffset);
+    return unpackJsonArrays(json, unpackedBuffers);
+  }
+
+  static _parseBinary(glbArrayBuffer, options = {}) {
     const {magic = MAGIC_glTF} = options;
 
     // GLB Header
@@ -53,14 +73,19 @@ export default class GLBParser {
     const magic1 = dataView.getUint32(0, BE); // Magic number (the ASCII string 'glTF').
     const version = dataView.getUint32(4, LE); // Version 2 of binary glTF container format
     const fileLength = dataView.getUint32(8, LE); // Total byte length of generated file
-    assert(magic1 === magic || magic1 === MAGIC_glTF);
-    assert(version === 2, 'Only .glb v2 supported');
+
+    assert(magic1 === MAGIC_glTF || magic1 === magic,
+      `Invalid GLB magic string ${getMagicString(dataView)}`);
+
+    assert(version === 2, `Invalid GLB version ${version}. Only .glb v2 supported`);
     assert(fileLength > 20);
 
     // Write the JSON chunk
     const jsonChunkLength = dataView.getUint32(12, LE); // Byte length of json chunk
-    const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32 (JSON is 0)
-    assert(jsonChunkFormat === 0);
+    const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32
+
+    let valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0; // Back compat
+    assert(valid, `JSON chunk format ${jsonChunkFormat}`);
 
     // Create a "view" of the binary encoded JSON data
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes
@@ -73,7 +98,13 @@ export default class GLBParser {
     // Parse the JSON text into a JavaScript data structure
     const json = JSON.parse(jsonText);
 
-    const binaryByteOffset = jsonChunkOffset + padTo4Bytes(jsonChunkLength) + GLB_CHUNK_HEADER_SIZE;
+    // TODO - BIN chunk can be optional
+    const binaryChunkStart = jsonChunkOffset + padTo4Bytes(jsonChunkLength);
+    const binaryByteOffset = binaryChunkStart + GLB_CHUNK_HEADER_SIZE;
+
+    const binChunkFormat = dataView.getUint32(binaryChunkStart + 4, LE); // Chunk format as uint32
+    valid = binChunkFormat === GLB_CHUNK_TYPE_BIN || binChunkFormat === 1; // Back compat
+    assert(valid, `BIN chunk format ${binChunkFormat}`);
 
     return {arrayBuffer: glbArrayBuffer, binaryByteOffset, json};
   }

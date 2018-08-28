@@ -62,17 +62,17 @@ test('pack-and-unpack-json', t => {
   let json;
 
   glbBuilder = new GLBBuilder();
-  json = packBinaryJson(inputJSONTypedArraysMixed, glbBuilder);
+  json = packBinaryJson(inputJSONTypedArraysMixed, glbBuilder, {flattenArrays: true});
   t.comment(JSON.stringify(json));
   t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 
   glbBuilder = new GLBBuilder();
-  json = packBinaryJson(inputJSONTypedArrays, glbBuilder);
+  json = packBinaryJson(inputJSONTypedArrays, glbBuilder, {flattenArrays: true});
   t.comment(JSON.stringify(json));
   t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 
   glbBuilder = new GLBBuilder();
-  json = packBinaryJson(inputJSONClassicArrays, glbBuilder);
+  json = packBinaryJson(inputJSONClassicArrays, glbBuilder, {flattenArrays: true});
   t.comment(JSON.stringify(json));
   t.equals(glbBuilder.sourceBuffers.length, 3, 'Right number of buffers extracted');
 

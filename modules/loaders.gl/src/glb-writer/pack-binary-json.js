@@ -1,13 +1,16 @@
 import {flattenToTypedArray} from '../common/loader-utils';
 
-const DEFAULT_TOKENIZE = index => `$$$${index}`;
-
 // Recursively packs (replaces) binary objects
 // Replaces "typed arrays" with "JSON pointers" to binary chunks tracked by glbBuilder
 //
 export default function packBinaryJson(json, glbBuilder, options = {}) {
-  const {tokenize = DEFAULT_TOKENIZE, flattenArrays = true} = options;
+  const {flattenArrays = false} = options;
   let object = json;
+
+  // Check if string has same syntax as our "JSON pointers", if so "escape it".
+  if (typeof object === 'string' && object.indexOf('#/') === 0) {
+    return `#${object}`;
+  }
 
   if (Array.isArray(object)) {
     // TODO - handle numeric arrays, flatten them etc.
@@ -21,8 +24,15 @@ export default function packBinaryJson(json, glbBuilder, options = {}) {
 
   // Typed arrays, pack them as binary
   if (ArrayBuffer.isView(object) && glbBuilder) {
+
+    if (glbBuilder.isImage(object)) {
+      const imageIndex = glbBuilder.addImage(object);
+      return `#/images/${imageIndex}`;
+    }
+
+    // if not an image, pack as accessor
     const bufferIndex = glbBuilder.addBuffer(object);
-    return tokenize(bufferIndex);
+    return `#/accessors/${bufferIndex}`;
   }
 
   if (object !== null && typeof object === 'object') {
