@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 
 import {GLBBuilder, GLBParser} from 'loaders.gl';
-import {_unpackGLBBuffers as unpackGLBBuffers} from 'loaders.gl/glb-loader';
+import unpackGLBBuffers from 'loaders.gl/glb-loader/unpack-glb-buffers';
 
 import TEST_JSON from './test-data.json';
 
@@ -24,15 +24,19 @@ test('GLB#encode-and-decode', t => {
 
   t.equal(glbFileBuffer.byteLength, 1604, 'should be equal');
 
-  const {arrayBuffer, json, binaryByteOffset} = GLBParser._parseBinary(glbFileBuffer);
+  const {arrayBuffer, json, binaryByteOffset} = new GLBParser(glbFileBuffer)._parseBinary();
 
   t.equal(binaryByteOffset, 1576);
   t.deepEqual(json.json, TEST_JSON, 'JSON is equal');
 
   const buffers2 = unpackGLBBuffers(arrayBuffer, json, binaryByteOffset);
 
+  for (const key in buffers2.accessors) {
+    delete buffers2.accessors[key].accessor;
+  }
+
   t.comment(JSON.stringify(BUFFERS));
-  t.comment(JSON.stringify(buffers2));
-  t.deepEqual(buffers2, BUFFERS, 'buffers should be deep equal');
+  t.comment(JSON.stringify(buffers2.accessors));
+  t.deepEqual(buffers2.accessors, BUFFERS, 'buffers should be deep equal');
   t.end();
 });

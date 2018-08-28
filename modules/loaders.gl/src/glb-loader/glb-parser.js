@@ -1,6 +1,6 @@
 /* eslint-disable camelcase, max-statements */
 import unpackGLBBuffers from './unpack-glb-buffers';
-import unpackJsonArrays from './unpack-binary-json';
+import unpackBinaryJson from './unpack-binary-json';
 import {padTo4Bytes} from '../common/loader-utils/array-utils';
 import TextDecoder from '../common/loader-utils/text-decoder';
 import assert from '../common/loader-utils/assert';
@@ -58,6 +58,7 @@ ${String.fromCharCode(dataView.getUint8(3))}`;
 
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
 export default class GLBParser {
+<<<<<<< HEAD
 
   static parseBinary(glbArrayBuffer, options = {}) {
     const {json, binaryByteOffset} = GLBParser._parseBinary(glbArrayBuffer, options);
@@ -66,10 +67,44 @@ export default class GLBParser {
   }
 
   static _parseBinary(glbArrayBuffer, options = {}) {
+=======
+  constructor(glbArrayBuffer) {
+    this.glbArrayBuffer = glbArrayBuffer;
+  }
+
+  // Only returns application JSON
+  parse(options = {}) {
+    const {json, binaryByteOffset} = this._parseBinary(this.glbArrayBuffer, options);
+    const unpackedBuffers = unpackGLBBuffers(this.glbArrayBuffer, json, binaryByteOffset);
+    const unpackedJson = unpackBinaryJson(json, unpackedBuffers);
+    return this._getApplicationJSON(unpackedJson, options);
+  }
+
+  // Returns both application JSON and glTF JSON, separated
+  parseWithMetadata(options = {}) {
+    const {json, binaryByteOffset} = this._parseBinary(this.glbArrayBuffer, options);
+    const unpackedBuffers = unpackGLBBuffers(this.glbArrayBuffer, json, binaryByteOffset);
+    const unpackedJson = unpackBinaryJson(json, unpackedBuffers);
+    return unpackedJson;
+  }
+
+  // PRIVATE
+
+  // Get JSON from json key
+  _getApplicationJSON(json, options) {
+    const jsonKey = options.jsonKey || 'json';
+    // Create glTF metadata object, with deleted application json key
+    const glTF = Object.assign({}, json);
+    delete glTF[jsonKey];
+    return {json: json[jsonKey], glTF};
+  }
+
+  _parseBinary(options = {}) {
+>>>>>>> GLBLoader cleanup
     const {magic = MAGIC_glTF} = options;
 
     // GLB Header
-    const dataView = new DataView(glbArrayBuffer);
+    const dataView = new DataView(this.glbArrayBuffer);
     const magic1 = dataView.getUint32(0, BE); // Magic number (the ASCII string 'glTF').
     const version = dataView.getUint32(4, LE); // Version 2 of binary glTF container format
     const fileLength = dataView.getUint32(8, LE); // Total byte length of generated file
@@ -89,7 +124,7 @@ export default class GLBParser {
 
     // Create a "view" of the binary encoded JSON data
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes
-    const jsonChunk = new Uint8Array(glbArrayBuffer, jsonChunkOffset, jsonChunkLength);
+    const jsonChunk = new Uint8Array(this.glbArrayBuffer, jsonChunkOffset, jsonChunkLength);
 
     // Decode the JSON binary array into clear text
     const textDecoder = new TextDecoder('utf8');
@@ -106,9 +141,10 @@ export default class GLBParser {
     valid = binChunkFormat === GLB_CHUNK_TYPE_BIN || binChunkFormat === 1; // Back compat
     assert(valid, `BIN chunk format ${binChunkFormat}`);
 
-    return {arrayBuffer: glbArrayBuffer, binaryByteOffset, json};
+    return {arrayBuffer: this.glbArrayBuffer, binaryByteOffset, json};
   }
 
+  /*
   unpackBinaryObjects() {
     const unpackedBinaryObjects = {
       images: [],
@@ -129,7 +165,7 @@ export default class GLBParser {
   }
 
   unpackImage(glTFImage) {
-    /* global window, Blob, Image */
+    /* global window, Blob, Image *
     const arrayBufferView = this.unpackBufferView(glTFImage.bufferView);
     const mimeType = glTFImage.mimeType || 'image/jpeg';
     const blob = new Blob([arrayBufferView], {type: mimeType});
@@ -161,4 +197,5 @@ export default class GLBParser {
     const byteOffset = glTFBufferView.byteOffset + this.binaryByteOffset;
     return new Uint8Array(byteOffset, glTFBufferView.byteLength);
   }
+  */
 }

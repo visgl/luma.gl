@@ -2,8 +2,8 @@
 import test from 'tape-catch';
 import {toLowPrecision} from 'loaders.gl/common/loader-utils';
 
-import {encodeGLB, _packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
-import {GLBLoader} from 'loaders.gl';
+import {GLBLoader, GLBBuilder} from 'loaders.gl';
+import {_packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
 
 const TEST_CASES = {
   flat: {
@@ -45,8 +45,8 @@ test('GLB#encode-and-parse', t => {
   for (const tcName in TEST_CASES) {
     const TEST_JSON = TEST_CASES[tcName];
 
-    const glbFileBuffer = encodeGLB(TEST_JSON);
-    const json = GLBLoader.parseBinary(glbFileBuffer);
+    const glbFileBuffer = new GLBBuilder().encode(TEST_JSON);
+    const json = GLBLoader.parseWithMetadata(glbFileBuffer);
 
     t.ok(Array.isArray(json.buffers), `${tcName} Encoded and parsed GLB - has JSON buffers field`);
     t.ok(
@@ -72,8 +72,8 @@ test('GLBLoader#encode-and-parse#full', t => {
   const tcName = 'full';
   const TEST_JSON = TEST_CASES[tcName];
 
-  const glbFileBuffer = encodeGLB(TEST_JSON);
-  const json = GLBLoader.parseBinary(glbFileBuffer);
+  const glbFileBuffer = new GLBBuilder().encode(TEST_JSON);
+  const json = GLBLoader.parseWithMetadata(glbFileBuffer);
 
   // t.comment(JSON.stringify(TEST_JSON, null, 2));
   // t.comment(JSON.stringify(json, null, 2))
