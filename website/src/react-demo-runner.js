@@ -24,7 +24,7 @@ export default class DemoRunner extends Component {
   }
 
   render() {
-    const {width, height, name, demo, sourceLink} = this.props;
+    const {width, height, name, demo, noPanel, sourceLink} = this.props;
     const controls = demo.getInfo && demo.getInfo();
 
     return (
@@ -33,7 +33,7 @@ export default class DemoRunner extends Component {
           id={this.props.canvas}
           style={{width: '100%', height: '100%', padding: 0, border: 0}}
         />
-        <InfoPanel name={name} controls={controls} sourceLink={sourceLink} />
+        {noPanel ? null : <InfoPanel name={name} controls={controls} sourceLink={sourceLink} />}
       </div>
     );
   }

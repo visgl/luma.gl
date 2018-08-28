@@ -31,7 +31,7 @@ class Hero extends Component {
     return (
       <section ref="banner" className="banner">
         <div className="f hero">
-          <InstancingDemo />
+          <InstancingDemo noPanel />
         </div>
         <div className="container">
           <h1>luma.gl</h1>
