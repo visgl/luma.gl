@@ -34,14 +34,13 @@ function testImage(t, typeToTest, acceptableTypes, canThrow) {
     const shouldPass = acceptableTypes.has(type);
     const buffer = image;
 
+    const mimeType = typeToTest !== 'all' ? `image/${typeToTest}` : undefined;
     if (shouldPass) {
-      const mimeType = typeToTest !== 'all' ? `image/${typeToTest}` : undefined;
-      t.comment(typeof buffer);
       const dimensions = getImageSize(buffer, mimeType);
       t.equals(dimensions.width, 480, `width, should work with ${type.toUpperCase()} files`);
       t.equals(dimensions.height, 320, `height, should work with ${type.toUpperCase()} files`);
     } else if (canThrow) {
-      t.throws(() => getImageSize[typeToTest](buffer),
+      t.throws(() => getImageSize(buffer, mimeType),
         `should not work with ${type.toUpperCase()} files`);
     // } else {
     //   t.equals(getImageSize[typeToTest](buffer), null,
