@@ -26,6 +26,8 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 export const TEXTURE_FORMATS = {
   // Unsized texture format - more performance
   [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
+  // TODO: format: GL.RGBA type: GL.FLOAT is supported in WebGL1 when 'OES_texure_float' is suported
+  // we need to update this table structure to specify extensions (gl1: 'OES_texure_float', gl2: false) for each type.
   [GL.RGBA]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
   [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
   [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},

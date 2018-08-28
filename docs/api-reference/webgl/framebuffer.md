@@ -313,6 +313,7 @@ Notes:
 
 * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
 * When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
+* When color attachment is a float texture with format less than 4 channels, i.e, `GL.R32F`, or  `GL.RG32F`, `readPixels` should still be called with a 4 component `format`(`GL.RGBA`), and default value (R:0, G:0, B: 0 and A: 1) will be returned for un-used channel.
 
 This function makes calls to the following WebGL APIs:
 
