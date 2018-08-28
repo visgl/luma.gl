@@ -45,6 +45,14 @@ const COMPONENT_TYPE_ARRAY = {
   5126: Float32Array
 };
 
+function getMagicString(dataView) {
+  return `\
+${String.fromCharCode(dataView.getUint8(0))}\
+${String.fromCharCode(dataView.getUint8(1))}\
+${String.fromCharCode(dataView.getUint8(2))}\
+${String.fromCharCode(dataView.getUint8(3))}`;
+}
+
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
 export default class GLBParser {
 
@@ -62,14 +70,17 @@ export default class GLBParser {
     const magic1 = dataView.getUint32(0, BE); // Magic number (the ASCII string 'glTF').
     const version = dataView.getUint32(4, LE); // Version 2 of binary glTF container format
     const fileLength = dataView.getUint32(8, LE); // Total byte length of generated file
-    assert(magic1 === magic || magic1 === MAGIC_glTF);
-    assert(version === 2, 'Only .glb v2 supported');
+
+    assert(magic1 === magic || magic1 === MAGIC_glTF,
+      `GLB magic string ${getMagicString(dataView)}`);
+
+    assert(version === 2, `GLB version ${version}. Only .glb v2 supported`);
     assert(fileLength > 20);
 
     // Write the JSON chunk
     const jsonChunkLength = dataView.getUint32(12, LE); // Byte length of json chunk
     const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32 (JSON is 0)
-    assert(jsonChunkFormat === 0);
+    assert(jsonChunkFormat === 0, `JSON chunk format ${jsonChunkFormat}`);
 
     // Create a "view" of the binary encoded JSON data
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes

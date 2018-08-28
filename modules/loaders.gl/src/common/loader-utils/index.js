@@ -9,7 +9,8 @@ export {default as TextEncoder} from './text-encoder';
 // Get MIME type and size from binary image data
 export {getImageSize} from './get-image-size';
 
-export {padTo4Bytes, copyArrayBuffer, toBuffer} from './array-utils';
+export {padTo4Bytes, copyArrayBuffer} from './array-utils';
+export {toBuffer, toArrayBuffer} from './binary-utils';
 
 export {flattenToTypedArray} from './flatten';
 

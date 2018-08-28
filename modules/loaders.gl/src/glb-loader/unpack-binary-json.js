@@ -31,7 +31,6 @@ export default function unpackJsonArrays(json, buffers, options = {}) {
     const [field, index] = pointer;
     const value = json[field] && json[field][index];
     if (!value) {
-      debugger;
       console.error(`Invalid JSON pointer ${object}`); // eslint-disable-line
     }
   }
