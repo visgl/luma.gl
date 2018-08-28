@@ -12,6 +12,9 @@ const MAGIC_glTF = 0x676c5446; // glTF in Big-Endian ASCII
 const GLB_FILE_HEADER_SIZE = 12;
 const GLB_CHUNK_HEADER_SIZE = 8;
 
+const GLB_CHUNK_TYPE_JSON = 0x4E4F534A;
+const GLB_CHUNK_TYPE_BIN = 0x004E4942;
+
 const LE = true; // Binary GLTF is little endian.
 const BE = false; // Magic needs to be written as BE
 
@@ -71,16 +74,18 @@ export default class GLBParser {
     const version = dataView.getUint32(4, LE); // Version 2 of binary glTF container format
     const fileLength = dataView.getUint32(8, LE); // Total byte length of generated file
 
-    assert(magic1 === magic || magic1 === MAGIC_glTF,
-      `GLB magic string ${getMagicString(dataView)}`);
+    assert(magic1 === MAGIC_glTF || magic1 === magic,
+      `Invalid GLB magic string ${getMagicString(dataView)}`);
 
-    assert(version === 2, `GLB version ${version}. Only .glb v2 supported`);
+    assert(version === 2, `Invalid GLB version ${version}. Only .glb v2 supported`);
     assert(fileLength > 20);
 
     // Write the JSON chunk
     const jsonChunkLength = dataView.getUint32(12, LE); // Byte length of json chunk
     const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32 (JSON is 0)
-    assert(jsonChunkFormat === 0, `JSON chunk format ${jsonChunkFormat}`);
+
+    const valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0;
+    assert(valid, `JSON chunk format ${jsonChunkFormat}`);
 
     // Create a "view" of the binary encoded JSON data
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes
