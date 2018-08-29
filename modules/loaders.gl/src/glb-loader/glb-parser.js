@@ -58,16 +58,6 @@ ${String.fromCharCode(dataView.getUint8(3))}`;
 
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
 export default class GLBParser {
-<<<<<<< HEAD
-
-  static parseBinary(glbArrayBuffer, options = {}) {
-    const {json, binaryByteOffset} = GLBParser._parseBinary(glbArrayBuffer, options);
-    const unpackedBuffers = unpackGLBBuffers(glbArrayBuffer, json, binaryByteOffset);
-    return unpackJsonArrays(json, unpackedBuffers);
-  }
-
-  static _parseBinary(glbArrayBuffer, options = {}) {
-=======
   constructor(glbArrayBuffer) {
     this.glbArrayBuffer = glbArrayBuffer;
   }
@@ -100,7 +90,6 @@ export default class GLBParser {
   }
 
   _parseBinary(options = {}) {
->>>>>>> GLBLoader cleanup
     const {magic = MAGIC_glTF} = options;
 
     // GLB Header

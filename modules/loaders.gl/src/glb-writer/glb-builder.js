@@ -173,7 +173,7 @@ export default class GLBBuilder {
 
     const binChunk = this.arrayBuffer;
     if (options.magic) {
-      console.warn('Custom glTF magic number no longer supported');
+      console.warn('Custom glTF magic number no longer supported'); // eslint-disable-line
     }
 
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes
