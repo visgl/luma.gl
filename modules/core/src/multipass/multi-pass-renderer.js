@@ -1,7 +1,7 @@
 //
 // A top-level composite render pass, that manages render state
 //
-// Attribution: This class and the multipass system were strongly inspired by
+// Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
 import CompositePass from './composite-pass';

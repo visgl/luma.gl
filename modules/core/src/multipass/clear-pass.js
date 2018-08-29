@@ -1,7 +1,7 @@
 //
 // A pass that clears the input buffer or the screen.
 //
-// Attribution: This class and the multipass system were strongly inspired by
+// Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
 import Pass from './pass';

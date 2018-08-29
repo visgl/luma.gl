@@ -1,7 +1,7 @@
 //
 // A pass that renders a given texture into screen space
 //
-// Attribution: This class and the multipass system were strongly inspired by
+// Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
 import {ClipSpace} from '../models';
