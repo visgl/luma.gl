@@ -1,6 +1,6 @@
 {
   "name": "loaders.gl",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Framework-independent loaders for 3D graphics formats",
   "license": "MIT",
   "repository": {
@@ -27,6 +27,9 @@
     "dist"
   ],
   "sideEffects": false,
+  "bin" : {
+    "glbdump" : "./scripts/glbdump"
+  },
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5 dist/esm dist/es6",

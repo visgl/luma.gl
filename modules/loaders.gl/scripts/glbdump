@@ -36,7 +36,7 @@ for (const filename of args) {
 }
 
 function logArray(key, array) {
-  for (const object of array) {
-    console.log(`${key.toUpperCase()}: ${JSON.stringify(object).slice(0, 60)}`);
-  }
+  array.forEach((object, i) =>
+    console.log(`${key.toUpperCase()}-${i}: ${JSON.stringify(object).slice(0, 60)}...`)
+  );
 }

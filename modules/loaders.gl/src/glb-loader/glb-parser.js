@@ -98,8 +98,10 @@ export default class GLBParser {
     const version = dataView.getUint32(4, LE); // Version 2 of binary glTF container format
     const fileLength = dataView.getUint32(8, LE); // Total byte length of generated file
 
-    assert(magic1 === MAGIC_glTF || magic1 === magic,
-      `Invalid GLB magic string ${getMagicString(dataView)}`);
+    let valid = magic1 === MAGIC_glTF || magic1 === magic;
+    if (!valid) {
+      console.warn(`Invalid GLB magic string ${getMagicString(dataView)}`);
+    }
 
     assert(version === 2, `Invalid GLB version ${version}. Only .glb v2 supported`);
     assert(fileLength > 20);
@@ -108,7 +110,7 @@ export default class GLBParser {
     const jsonChunkLength = dataView.getUint32(12, LE); // Byte length of json chunk
     const jsonChunkFormat = dataView.getUint32(16, LE); // Chunk format as uint32
 
-    let valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0; // Back compat
+    valid = jsonChunkFormat === GLB_CHUNK_TYPE_JSON || jsonChunkFormat === 0; // Back compat
     assert(valid, `JSON chunk format ${jsonChunkFormat}`);
 
     // Create a "view" of the binary encoded JSON data
