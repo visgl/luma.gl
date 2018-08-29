@@ -13,7 +13,15 @@ if (args.length === 0) {
   process.exit(0); // eslint-disable-line
 }
 
+const options = parseOptions();
+
 for (const filename of args) {
+  if (filename.indexOf('--') !== 0) {
+    dumpFile(filename);
+  }
+}
+
+function dumpFile(filename) {
   console.log(`\nGLB dump of ${filename}:`);
 
   const binary = fs.readFileSync(filename);
@@ -28,7 +36,13 @@ for (const filename of args) {
     const array = data[key];
     if (Array.isArray(array)) {
       logArray(key, array);
+    } else if (array && typeof array === 'object') {
+      logObject(key, array);
     }
+  }
+
+  if (options.dumpJSON) {
+    console.log(JSON.stringify(data, null, 2));
   }
 }
 
@@ -36,4 +50,29 @@ function logArray(key, array) {
   array.forEach((object, i) =>
     console.log(`${key.toUpperCase()}-${i}: ${JSON.stringify(object).slice(0, 60)}...`)
   );
+}
+
+function logObject(field, object) {
+  Object.keys(object).forEach((key, i) =>
+    console.log(`${field.toUpperCase()}-${i}: ${JSON.stringify(object[key]).slice(0, 60)}...`)
+  );
+}
+
+function parseOptions() {
+  const opts = {
+    dumpJSON: false
+  };
+
+  for (const arg of args) {
+    if (arg.indexOf('--') === 0) {
+      switch (arg) {
+      case '--json':
+        opts.dumpJSON = true;
+        break;
+      default:
+        console.warn(`Unknown option ${arg}`);
+      }
+    }
+  }
+  return opts;
 }

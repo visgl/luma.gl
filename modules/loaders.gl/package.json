@@ -1,6 +1,6 @@
 {
   "name": "loaders.gl",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Framework-independent loaders for 3D graphics formats",
   "license": "MIT",
   "repository": {
