@@ -100,10 +100,7 @@ export default class VertexArray {
     this.drawParams = this.drawParams || this._updateDrawParams();
 
     // Override with any application supplied draw parameters
-    const drawParams = Object.assign({}, this.drawParams, appParameters);
-
-    this._updateAttributeZeroBuffer(drawParams);
-    return drawParams;
+    return Object.assign({}, this.drawParams, appParameters);
   }
 
   // Set (bind) an array or map of vertex array buffers, either in numbered or named locations.
@@ -249,14 +246,14 @@ export default class VertexArray {
   // When a vertex array is about to be used, we must:
   // - Set constant attributes (since these are stored on the context and reset on bind)
   // - Check if we need to initialize the buffer
-  bindForDraw(vertexCount, func) {
+  bindForDraw(vertexCount, instanceCount, func) {
     let value;
 
     this.vertexArrayObject.bind(() => {
 
       // Make sure that any constant attributes are updated (stored on the context, not the VAO)
       // Also handles attribute 0
-      this._setConstantAttributes(vertexCount);
+      this._setConstantAttributes(vertexCount, instanceCount);
 
       if (!this.vertexArrayObject.hasVertexArrays) {
         this.bindBuffers();
@@ -313,10 +310,12 @@ export default class VertexArray {
   // Updates all constant attribute values (constants are used when vertex attributes are disabled).
   // This needs to be done repeatedly since in contrast to buffer bindings,
   // constants are stored on the WebGL context, not the VAO
-  _setConstantAttributes(vertexCount) {
+  _setConstantAttributes(vertexCount, instanceCount) {
+    // TODO - use accessor to determine what length to use
+    const elementCount = Math.max(vertexCount | 0, instanceCount | 0);
     let constant = this.values[0];
     if (ArrayBuffer.isView(constant)) {
-      this._setConstantAttributeZero(constant, vertexCount);
+      this._setConstantAttributeZero(constant, elementCount);
     }
 
     for (let location = 1; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
@@ -327,14 +326,14 @@ export default class VertexArray {
     }
   }
 
-  _setConstantAttributeZero(constant, vertexCount) {
+  _setConstantAttributeZero(constant, elementCount) {
     if (VertexArrayObject.isSupported(this.gl, {constantAttributeZero: true})) {
       this._setConstantAttribute(0, constant);
       return;
     }
 
     // Get a dummy buffer populated with repeated constants
-    const buffer = this.vertexArrayObject.getConstantBuffer(vertexCount);
+    const buffer = this.vertexArrayObject.getConstantBuffer(elementCount, constant);
 
     // Set the buffer on location 0
     this.vertexArrayObject.setBuffer(0, buffer, this.accessors[0]);
@@ -346,21 +345,6 @@ export default class VertexArray {
     // If we are using the global VertexArrayObject, we need to disable the attribute now
     if (this.vertexArrayObject.isDefault) {
       this.vertexArrayObject.enable(location, false);
-    }
-  }
-
-  // NOTE: Desktop OpenGL cannot disable attribute 0
-  // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
-  // this-has-significant-performance-penalt
-  _updateAttributeZeroBuffer({vertexCount, instanceCount}) {
-    // TODO - Determine required length
-    const elementCount = Math.max(vertexCount | 0, instanceCount | 0);
-
-    // Create buffer only when needed, and reuse it (avoids inflating buffer creation statistics)
-    const constant = this.values[0];
-    if (ArrayBuffer.isView(constant)) {
-      const size = elementCount;
-      this.buffer = this.buffer || new Buffer(this.gl, {size});
     }
   }
 
