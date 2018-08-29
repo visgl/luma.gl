@@ -1,5 +1,9 @@
 # Pre-releases
 
+## 6.1.0-beta.3 - Aug 29
+- Safari fixes (#697)
+- this adds the info panel component in luma.gl demos. (#690)
+
 ## 6.1.0-beta.2 - Aug 24
 - Attribute: fix update for buffer case. (#685)
 
