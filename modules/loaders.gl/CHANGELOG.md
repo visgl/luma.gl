@@ -2,6 +2,9 @@
 
 This is the CHANGELOG.md for loaders.gl.
 
+### 0.3.2 - Aug 29
+- Publish "scripts" directory
+
 ### 0.3.1 - Aug 29
 
 - Add `bin` field to package.json, attempt to export `glbdump`
