@@ -172,7 +172,9 @@ export default class GLBBuilder {
     this.json.json = appJson;
 
     const binChunk = this.arrayBuffer;
-    const {magic = MAGIC_glTF} = options;
+    if (options.magic) {
+      console.warn('Custom glTF magic number no longer supported'); // eslint-disable-line
+    }
 
     const jsonChunkOffset = GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE; // First headers: 20 bytes
 
@@ -188,7 +190,7 @@ export default class GLBBuilder {
     const dataView = new DataView(glbArrayBuffer);
 
     // GLB Header
-    dataView.setUint32(0, magic, BE); // Magic number (the ASCII string 'glTF').
+    dataView.setUint32(0, MAGIC_glTF, BE); // Magic number (the ASCII string 'glTF').
     dataView.setUint32(4, 2, LE); // Version 2 of binary glTF container format uint32
     dataView.setUint32(8, fileLength, LE); // Total byte length of generated file (uint32)
 

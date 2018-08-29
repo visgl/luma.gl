@@ -25,7 +25,7 @@ for (const filename of args) {
 
   const arrayBuffer = toArrayBuffer(binary);
 
-  const data = GLBParser.parseBinary(arrayBuffer, {ignoreMagic: true});
+  const data = new GLBParser(arrayBuffer).parseWithMetadata({ignoreMagic: true});
 
   for (const key in data) {
     const array = data[key];

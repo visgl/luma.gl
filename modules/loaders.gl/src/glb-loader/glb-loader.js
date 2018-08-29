@@ -3,11 +3,16 @@
 import GLBParser from './glb-parser';
 
 export function parseGLB(arrayBuffer, options = {}) {
-  return GLBParser.parseBinary(arrayBuffer, options);
+  return new GLBParser(arrayBuffer).parse(options);
+}
+
+export function parseWithMetadata(arrayBuffer, options = {}) {
+  return new GLBParser(arrayBuffer).parseWithMetadata(options);
 }
 
 export default {
   name: 'GLB',
   extension: 'glb',
-  parseBinary: parseGLB
+  parseBinary: parseGLB,
+  parseWithMetadata
 };

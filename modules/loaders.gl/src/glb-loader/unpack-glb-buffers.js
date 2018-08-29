@@ -35,14 +35,23 @@ export default function unpackGLBBuffers(arrayBuffer, json, binaryByteOffset) {
   }
 
   const bufferViews = json.bufferViews || [];
-  const accessors = json.accessors || [];
 
   for (let i = 0; i < bufferViews.length; ++i) {
     const bufferView = bufferViews[i];
     assert(bufferView.byteLength >= 0);
   }
 
-  const sourceBuffers = [];
+  return {
+    accessors: unpackAccessors(arrayBuffer, bufferViews, json),
+    images: unpackImages(arrayBuffer, bufferViews, json)
+  };
+}
+
+function unpackAccessors(arrayBuffer, bufferViews, json) {
+  // unpack accessors
+  const accessors = json.accessors || [];
+
+  const accessorBuffers = [];
 
   for (let i = 0; i < accessors.length; ++i) {
     const accessor = accessors[i];
@@ -54,10 +63,35 @@ export default function unpackGLBBuffers(arrayBuffer, json, binaryByteOffset) {
     // Create a new typed array as a view into the combined buffer
     const {ArrayType, length} = getArrayTypeAndLength(accessor, bufferView);
     const array = new ArrayType(arrayBuffer, bufferView.byteOffset, length);
-    sourceBuffers.push(array);
+    // Store the metadata on the array (e.g. needed to determine number of components per element)
+    array.accessor = accessor;
+    accessorBuffers.push(array);
   }
 
-  return sourceBuffers;
+  return accessorBuffers;
+}
+
+function unpackImages(arrayBuffer, bufferViews, json) {
+  // unpack images
+  const images = json.images || [];
+
+  const imageBuffers = [];
+
+  for (let i = 0; i < images.length; ++i) {
+    const image = images[i];
+    assert(image);
+
+    const bufferView = bufferViews[image.bufferView];
+    assert(bufferView);
+
+    // Create a new typed array as a view into the combined buffer
+    const array = new Uint8Array(arrayBuffer, bufferView.byteOffset, bufferView.byteLength);
+    // Store the metadata on the array (e.g. needed to determine number of components per element)
+    array.imate = image;
+    imageBuffers.push(array);
+  }
+
+  return imageBuffers;
 }
 
 // Helper methods

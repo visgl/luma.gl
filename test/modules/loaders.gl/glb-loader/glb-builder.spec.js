@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 
 import {GLBBuilder} from 'loaders.gl';
-import {_unpackGLBBuffers as unpackGLBBuffers} from 'loaders.gl/glb-loader';
+import unpackGLBBuffers from 'loaders.gl/glb-loader/unpack-glb-buffers';
 
 const BUFFERS = [
   new Int8Array([3, 2, 3]),
@@ -30,9 +30,12 @@ test('pack-and-unpack-binary-buffers', t => {
   t.equal(json.bufferViews[2].byteLength, 16, 'should be equal');
 
   const buffers2 = unpackGLBBuffers(arrayBuffer, json);
+  for (const key in buffers2.accessors) {
+    delete buffers2.accessors[key].accessor;
+  }
 
   t.comment(JSON.stringify(BUFFERS));
-  t.comment(JSON.stringify(buffers2));
-  t.deepEqual(BUFFERS, buffers2, 'should be deep equal');
+  t.comment(JSON.stringify(buffers2.accessors));
+  t.deepEqual(BUFFERS, buffers2.accessors, 'should be deep equal');
   t.end();
 });

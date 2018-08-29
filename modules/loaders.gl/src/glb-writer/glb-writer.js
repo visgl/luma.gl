@@ -1,7 +1,7 @@
 import GLBBuilder from './glb-builder';
-import {toBuffer} from '../common/loader-utils/array-utils';
+import {toBuffer} from '../common/loader-utils/binary-utils';
 
-export function encodeGLB(json, options) {
+function encodeGLB(json, options) {
   return new GLBBuilder().encode(json, options);
 }
 
