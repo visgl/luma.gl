@@ -1,9 +1,6 @@
-#!/usr/bin/env node
-
 /* global console, process */
 /* eslint-disable no-console */
 
-require('reify');
 const {GLBParser} = require('../src/glb-loader');
 const {toArrayBuffer} = require('../src/common/loader-utils');
 
@@ -12,7 +9,7 @@ const fs = require('fs');
 const [,, ...args] = process.argv;
 
 if (args.length === 0) {
-  console.log('glbdump files...');
+  console.log('glbdump: no glb files specifed...');
   process.exit(0); // eslint-disable-line
 }
 

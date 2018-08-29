@@ -2,6 +2,9 @@
 
 This is the CHANGELOG.md for loaders.gl.
 
+### 0.3.3 - Aug 29
+- Publish ".bin" directory
+
 ### 0.3.2 - Aug 29
 - Publish "scripts" directory
 
