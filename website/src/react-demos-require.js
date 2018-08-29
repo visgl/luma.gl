@@ -8,6 +8,7 @@ import {default as Fragment} from '../../examples/core/fragment/app.js';
 // import {default as Persistence} from '../../examples/core/persistence/app.js';
 import {default as Picking} from '../../examples/core/picking/app.js';
 import {default as Shadowmap} from '../../examples/core/shadowmap/app.js';
+import {default as Transform} from '../../examples/core/transform/app.js';
 import {default as TransformFeedback} from '../../examples/core/transform-feedback/app.js';
 
 import {default as Lesson01} from '../../examples/lessons/01/app.js';
@@ -55,6 +56,9 @@ const PickingDemo = props => (
 );
 const ShadowmapDemo = props => (
   <Demo {...props} demo={Shadowmap} sourceLink={`${examplesPath}/core/shadowmap/`} />
+);
+const TransformDemo = props => (
+  <Demo {...props} demo={Transform} sourceLink={`${examplesPath}/core/Transform/`} />
 );
 const TransformFeedbackDemo = props => (
   <Demo
@@ -124,6 +128,7 @@ module.exports = {
   // PersistenceDemo,
   PickingDemo,
   ShadowmapDemo,
+  TransformDemo,
   TransformFeedbackDemo,
 
   Lesson01Demo,

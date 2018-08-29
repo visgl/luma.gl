@@ -16,6 +16,7 @@ const {
   //  PersistenceDemo,
   PickingDemo,
   ShadowmapDemo,
+  TransformDemo,
   TransformFeedbackDemo,
   Lesson01Demo,
   Lesson02Demo,
@@ -86,6 +87,10 @@ export default [
           {
             name: 'Shadowmap',
             component: ShadowmapDemo
+          },
+          {
+            name: 'Transform',
+            component: TransformDemo
           },
           {
             name: 'Transform Feedback',
