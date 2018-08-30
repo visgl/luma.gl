@@ -241,6 +241,10 @@ export const DOC_PAGES = [
         content: 'roadmap.md'
       },
       {
+        name: 'Frequently Asked Questions',
+        content: 'FAQ.md'
+      },
+      {
         name: 'Upgrade Guide',
         content: 'upgrade-guide.md'
       }
@@ -278,6 +282,19 @@ export const DOC_PAGES = [
   {
     name: 'Developer Guide',
     children: [
+      {
+        name: 'loaders.gl',
+        children: [
+          {
+            name: 'Overview',
+            content: 'developer-guide/loaders.gl/README.md'
+          },
+          {
+            name: 'Understanding Loaders',
+            content: 'developer-guide/loaders.gl/about-loaders.md'
+          }
+        ]
+      },
       {
         name: 'Shadertools',
         children: [
@@ -368,6 +385,39 @@ export const DOC_PAGES = [
   {
     name: 'API Reference',
     children: [
+      {
+        name: 'loaders.gl Reference',
+        children: [
+          {
+            name: 'loadFile',
+            content: 'api-reference/loader-api/load-file.md'
+          },
+          {
+            name: 'GLBLoader',
+            content: 'api-reference/loaders/glb-loader.md'
+          },
+          {
+            name: 'PLYLoader',
+            content: 'api-reference/loaders/ply-loader.md'
+          },
+          {
+            name: 'LASLoader',
+            content: 'api-reference/loaders/las-loader.md'
+          },
+          {
+            name: 'PCDLoader',
+            content: 'api-reference/loaders/pcd-loader.md'
+          },
+          {
+            name: 'OBJLoader',
+            content: 'api-reference/loaders/obj-loader.md'
+          },
+          {
+            name: 'KMLLoader',
+            content: 'api-reference/loaders/kml-loader.md'
+          }
+        ]
+      },
       {
         name: 'AnimationLoop',
         content: 'api-reference/core/animation-loop.md'
