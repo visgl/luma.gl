@@ -43,11 +43,6 @@ A selection of open source 3D loaders have been ported to a new submodule `loade
 The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)), enabling the use of shader modules in transform feedback operations.
 
 
-### Documentation Search
-
-luma.gl is now using the [ocular](https://github.com/uber-web/ocular) document generator to build its website, which among other things enables search.
-
-
 ## Version 6.0
 
 Date: July 18, 2018
