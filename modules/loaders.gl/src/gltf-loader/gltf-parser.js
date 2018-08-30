@@ -97,8 +97,7 @@ export default class GLTFParser {
   _get(array, index) {
     const object = this.gltf[array] && this.gltf[array][index];
     if (!object) {
-      console.warn(`glTF file error: Could not resolve ${array}[${index}]`);
-      throw new Error(`glTF file error: Could not resolve ${array}[${index}]`);
+      console.warn(`glTF file error: Could not resolve ${array}[${index}]`); // eslint-disable-line
     }
     return object;
   }

@@ -20,6 +20,7 @@ const BE = false; // Magic needs to be written as BE
 
 // glTF ACCESSOR CONSTANTS
 
+/*
 const TYPE_COMPONENTS = {
   SCALAR: 1,
   VEC2: 2,
@@ -47,6 +48,7 @@ const COMPONENT_TYPE_ARRAY = {
   5125: Uint32Array,
   5126: Float32Array
 };
+*/
 
 function getMagicString(dataView) {
   return `\
@@ -100,7 +102,7 @@ export default class GLBParser {
 
     let valid = magic1 === MAGIC_glTF || magic1 === magic;
     if (!valid) {
-      console.warn(`Invalid GLB magic string ${getMagicString(dataView)}`);
+      console.warn(`Invalid GLB magic string ${getMagicString(dataView)}`); // eslint-disable-line
     }
 
     assert(version === 2, `Invalid GLB version ${version}. Only .glb v2 supported`);

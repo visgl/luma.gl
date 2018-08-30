@@ -18,7 +18,7 @@ export default class glTFConfigLuma extends glTFConfig {
       size: accessor.components,
       offset: accessor.byteOffset || 0,
       stride: accessor.byteStride || 0
-    })
+    });
   }
 
   createPrimitive(primitive) {
@@ -51,7 +51,8 @@ export default class glTFConfigLuma extends glTFConfig {
   needsPOT() {
     // Has a wrapping mode (either wrapS or wrapT) equal to REPEAT or MIRRORED_REPEAT, or
     // Has a minification filter (minFilter) that uses mipmapping
-    // (NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR, LINEAR_MIPMAP_NEAREST, or LINEAR_MIPMAP_LINEAR).
+    // (NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR,
+    // LINEAR_MIPMAP_NEAREST, or LINEAR_MIPMAP_LINEAR).
     return false;
   }
 }
