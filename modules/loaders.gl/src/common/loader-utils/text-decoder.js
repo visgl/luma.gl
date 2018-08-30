@@ -32,6 +32,10 @@ class TextDecoderPolyfill {
       throw new TypeError('stream option must be boolean');
     }
 
+    if (view instanceof ArrayBuffer) {
+      view = new Uint8Array(view);
+    }
+
     if (!ArrayBuffer.isView(view)) {
       throw new TypeError('passed argument must be an array buffer view');
     } else {
@@ -40,7 +44,12 @@ class TextDecoderPolyfill {
       arr.forEach((charcode, i) => {
         charArr[i] = String.fromCharCode(charcode);
       });
-      return decodeURIComponent(escape(charArr.join('')));
+      const text = charArr.join('');
+      try {
+        return decodeURIComponent(escape(text));
+      } catch (error) {
+        return text;
+      }
     }
   }
 }

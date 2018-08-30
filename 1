@@ -1,0 +1,1664 @@
+yarn run v1.9.4
+$ scripts/test.sh fast 2
+Running test suite in "test" mode...
+luma.gl: WebGL debug support installed
+luma: WebGL1 context (stack-gl,ANGLE)
+TAP version 13
+# Utils#uid
+ok 1 Type of uid() is correct
+ok 2 uid("prefix") starts with prefix
+# Utils#isPowerOfTwo
+ok 3 should be truthy
+ok 4 should be truthy
+ok 5 should be truthy
+ok 6 should be truthy
+ok 7 should be truthy
+ok 8 should be truthy
+# flatten#import
+ok 9 fillArray imported OK
+# fillArray#tests
+ok 10 fillArray test array returned expected result
+# isOldIE
+ok 11 should return true for IE 10
+ok 12 should return true for IE 11
+ok 13 should return false for IE 12
+ok 14 should return false for Chrome
+# Object#Geometries
+ok 15 ConeGeometry: expected positions to be Float32Array
+ok 16 ConeGeometry: expected normals to be Float32Array
+ok 17 ConeGeometry: expected textCoords to be Float32Array
+ok 18 ConeGeometry: indices (if present) must be Uint16Array
+ok 19 CubeGeometry: expected positions to be Float32Array
+ok 20 CubeGeometry: expected normals to be Float32Array
+ok 21 CubeGeometry: expected textCoords to be Float32Array
+ok 22 CubeGeometry: indices (if present) must be Uint16Array
+ok 23 CylinderGeometry: expected positions to be Float32Array
+ok 24 CylinderGeometry: expected normals to be Float32Array
+ok 25 CylinderGeometry: expected textCoords to be Float32Array
+ok 26 CylinderGeometry: indices (if present) must be Uint16Array
+ok 27 IcoSphereGeometry: expected positions to be Float32Array
+ok 28 IcoSphereGeometry: expected normals to be Float32Array
+ok 29 IcoSphereGeometry: expected textCoords to be Float32Array
+ok 30 IcoSphereGeometry: indices (if present) must be Uint16Array
+ok 31 PlaneGeometry: expected positions to be Float32Array
+ok 32 PlaneGeometry: expected normals to be Float32Array
+ok 33 PlaneGeometry: expected textCoords to be Float32Array
+ok 34 PlaneGeometry: indices (if present) must be Uint16Array
+ok 35 SphereGeometry: expected positions to be Float32Array
+ok 36 SphereGeometry: expected normals to be Float32Array
+ok 37 SphereGeometry: expected textCoords to be Float32Array
+ok 38 SphereGeometry: indices (if present) must be Uint16Array
+# flatten#import
+ok 39 flattenToTypedArray imported OK
+# flatten#flattenToTypedArray
+ok 40 flattenToTypedArray empty array returned expected result
+ok 41 flattenToTypedArray flat arrays returned expected result
+ok 42 flattenToTypedArray nested one level returned expected result
+# parseDataUri
+ok 43 should record down correct MIME type
+ok 44 should be truthy
+ok 45 should work with non-padded base64 data URIs
+ok 46 should be truthy
+ok 47 should work with padded base64 data URIs
+ok 48 should be truthy
+ok 49 should work with plain data URIs
+ok 50 should set default MIME type
+ok 51 should be truthy
+ok 52 should work with default MIME type
+ok 53 should allow implicit text/plain with charset
+ok 54 should be truthy
+ok 55 should allow implicit text/plain with charset
+# getImageSize#png
+ok 56 width, should work with PNG files
+ok 57 height, should work with PNG files
+# getImageSize#jpeg
+ok 58 width, should work with JPEG files
+ok 59 height, should work with JPEG files
+# getImageSize#gif
+ok 60 width, should work with GIF files
+ok 61 height, should work with GIF files
+# getImageSize#bmp
+ok 62 width, should work with BMP files
+ok 63 height, should work with BMP files
+# getImageSize#all
+ok 64 width, should work with PNG files
+ok 65 height, should work with PNG files
+ok 66 width, should work with JPEG files
+ok 67 height, should work with JPEG files
+ok 68 width, should work with GIF files
+ok 69 height, should work with GIF files
+ok 70 width, should work with BMP files
+ok 71 height, should work with BMP files
+ok 72 should not work with TIFF files
+# smartFetch
+# XML parsing not available
+# pack-and-unpack-binary-buffers
+ok 73 should be equal
+ok 74 should be equal
+ok 75 should be equal
+ok 76 should be equal
+ok 77 should be equal
+ok 78 should be equal
+# [{"0":3,"1":2,"2":3},{"0":6,"1":2,"2":4,"3":5},{"0":8,"1":2,"2":4,"3":5}]
+# [{"0":3,"1":2,"2":3},{"0":6,"1":2,"2":4,"3":5},{"0":8,"1":2,"2":4,"3":5}]
+ok 79 should be deep equal
+# pack-and-unpack-json
+# {"slices":[{"primitives":"#/accessors/0"},{"primitives":"#/accessors/1"},{"primitives":"#/accessors/2"}]}
+ok 80 Right number of buffers extracted
+# {"slices":[{"primitives":"#/accessors/0"},{"primitives":"#/accessors/1"},{"primitives":"#/accessors/2"}]}
+ok 81 Right number of buffers extracted
+# {"slices":[{"primitives":"#/accessors/0"},{"primitives":"#/accessors/1"},{"primitives":"#/accessors/2"}]}
+ok 82 Right number of buffers extracted
+# pack-and-unpack-json#flattenArrays:false
+# {"slices":[{"primitives1":[3,2,3],"primitives2":[[6,2],[4,5]],"primitives3":[[8,2],[4,5]]}]}
+ok 83 Right number of buffers extracted
+ok 84 Returned JSON structurally equivalent
+# GLB#encode-and-decode
+ok 85 should be equal
+ok 86 should be equal
+ok 87 JSON is equal
+# [{"0":3,"1":2,"2":3},{"0":6,"1":2,"2":4,"3":5},{"0":8,"1":2,"2":4,"3":5}]
+# [{"0":3,"1":2,"2":3},{"0":6,"1":2,"2":4,"3":5},{"0":8,"1":2,"2":4,"3":5}]
+ok 88 buffers should be deep equal
+# GLB#encode-and-parse
+ok 89 flat Encoded and parsed GLB - has JSON buffers field
+ok 90 flat Encoded and parsed GLB - has JSON bufferViews field
+ok 91 flat Encoded and parsed GLB - has JSON accessors field
+ok 92 flat Encoded and parsed GLB did not change data
+ok 93 nested Encoded and parsed GLB - has JSON buffers field
+ok 94 nested Encoded and parsed GLB - has JSON bufferViews field
+ok 95 nested Encoded and parsed GLB - has JSON accessors field
+ok 96 nested Encoded and parsed GLB did not change data
+ok 97 full Encoded and parsed GLB - has JSON buffers field
+ok 98 full Encoded and parsed GLB - has JSON bufferViews field
+ok 99 full Encoded and parsed GLB - has JSON accessors field
+ok 100 full Encoded and parsed GLB did not change data
+# GLBLoader#encode-and-parse#full
+ok 101 full Encoded and parsed GLB - has JSON buffers field
+ok 102 full Encoded and parsed GLB - has JSON bufferViews field
+ok 103 full Encoded and parsed GLB - has JSON accessors field
+ok 104 Encoded and parsed GLB did not change data
+# GLTF#
+ok 105 GLTFLoader was imported
+ok 106 GLTFParser was imported
+not ok 107 TypeError: GLTFParser is not a constructor
+  ---
+    operator: error
+    expected: |-
+      undefined
+    actual: |-
+      [TypeError: GLTFParser is not a constructor]
+    at: Test.exports.Test.run (/Users/ib/Documents/luma.gl/node_modules/tape-catch/index.js:29:10)
+    stack: |-
+      TypeError: GLTFParser is not a constructor
+          at Test.t (/Users/ib/Documents/luma.gl/test/modules/loaders.gl/gltf-loader/gltf-loader.spec.js:10:22)
+          at Test.bound [as _cb] (/Users/ib/Documents/luma.gl/node_modules/tape/lib/test.js:76:32)
+          at Test.exports.Test.run (/Users/ib/Documents/luma.gl/node_modules/tape-catch/index.js:26:10)
+          at Test.bound [as run] (/Users/ib/Documents/luma.gl/node_modules/tape/lib/test.js:76:32)
+          at Immediate.next (/Users/ib/Documents/luma.gl/node_modules/tape/lib/results.js:71:15)
+          at runCallback (timers.js:810:20)
+          at tryOnImmediate (timers.js:768:5)
+          at processImmediate [as _immediateCallback] (timers.js:745:5)
+  ...
+# KMLLoader#testText
+ok 108 Correctly accepted valid KML
+ok 109 Correctly rejected invalid KML
+# KMLLoader#parseText
+# XML parsing not available
+# PCDLoader#parseText
+ok 110 Documents were found
+ok 111 position attribute was found
+ok 112 Color attribute was found
+# isOldIE
+ok 113 should return true for IE 10
+ok 114 should return true for IE 11
+ok 115 should return false for IE 12
+ok 116 should return false for Chrome
+# injectShader#import
+ok 117 injectShader import successful
+# injectShader#injectShader
+ok 118 correctly injected
+ok 119 correctly injected
+# injectShader#assembleShaders
+ok 120 correctly injected
+ok 121 correctly injected
+# transpileShader#import
+ok 122 transpileShader import successful
+# transpileShader#versions
+ok 123 correctly transpiled
+ok 124 correctly transpiled
+ok 125 correctly transpiled
+ok 126 correctly transpiled
+ok 127 correctly transpiled
+ok 128 correctly transpiled
+# assembleShaders#import
+ok 129 assembleShaders import successful
+# assembleShaders#version_directive
+ok 130 version directive should be first statement
+ok 131 version directive should be first statement
+# assembleShaders#getUniforms
+ok 132 getUniforms should be function
+ok 133 getUniforms should be function
+ok 134 module getUniforms is called with correct context
+# ShaderModules#import
+ok 135 resolveModules import successful
+ok 136 getDependencyGraph import successful
+# ShaderModules#getShaderDependencies
+ok 137 Module order is correct
+# ShaderModules#getDependencyGraph
+ok 138 Module dependecny is correct
+# shadertools#module imports are defined
+ok 139 registerShaderModules is defined
+ok 140 setDefaultShaderModules is defined
+ok 141 fp32 is defined
+ok 142 fp64 is defined
+ok 143 project is defined
+ok 144 dirlight is defined
+ok 145 picking is defined
+ok 146 diffuse is defined
+# WebGL#polyfillContext
+ok 147 polyfillContext defined
+ok 148 extensions were returned
+# getParameterPolyfill#import
+ok 149 getParameterPolyfill imported OK
+# getParameterPolyfill#WebGL1
+ok 150 Returns valid value
+ok 151 Returns valid value
+ok 152 Returns valid value
+ok 153 Returns valid value
+ok 154 Returns valid value
+ok 155 Returns valid value
+ok 156 Returns valid value
+ok 157 Returns valid value
+ok 158 Returns valid value
+ok 159 Returns valid value
+ok 160 Returns valid value
+ok 161 Returns valid value
+ok 162 Returns valid value
+ok 163 Returns valid value
+ok 164 Returns valid value
+ok 165 Returns valid value
+ok 166 Returns valid value
+ok 167 Returns valid value
+ok 168 Returns valid value
+ok 169 Returns valid value
+ok 170 Returns valid value
+ok 171 Returns valid value
+ok 172 Returns valid value
+ok 173 Returns valid value
+ok 174 Returns valid value
+ok 175 Returns valid value
+ok 176 Returns valid value
+ok 177 Returns valid value
+ok 178 Returns valid value
+ok 179 Returns valid value
+ok 180 Returns valid value
+ok 181 Returns valid value
+ok 182 Returns valid value
+ok 183 Returns valid value
+ok 184 Returns valid value
+ok 185 Returns valid value
+# getParameterPolyfill#WebGL2
+# WebGL2 not available, skipping tests
+# WebGL#getShaderName
+ok 186 getShaderName extracted correct name
+ok 187 getShaderName extracted default name
+# WebGL#formatGLSLError
+ok 188 formatGLSLError generated correct error
+# Shader-utils#getShaderVersion
+ok 189 Version should match
+ok 190 Version should match
+ok 191 Version should match
+ok 192 Version should match
+ok 193 Version should match
+ok 194 Version should match
+# WebGL#makeDebugContext
+ok 195 makeDebugContext defined
+ok 196 extensions were returned
+# WebGLState#imports
+ok 197 trackContextState imported OK
+ok 198 trackContextState imported OK
+ok 199 trackContextState imported OK
+# WebGLState#deepEqual
+ok 200 null
+ok 201 number
+ok 202 shallow-equal array 1
+ok 203 deep-equal array
+ok 204 deep-equal array/typed array
+ok 205 different arrays
+# WebGLState#trackContextState
+ok 206 trackContextState call succeeded
+# WebGLState#push & pop
+ok 207 default: got expected value 1 for key: 2849
+ok 208 default: got expected value false for key: 2884
+ok 209 default: got expected value 1029 for key: 2885
+ok 210 default: got expected value 2305 for key: 2886
+ok 211 default: got expected value [0,1] for key: 2928
+ok 212 default: got expected value false for key: 2929
+ok 213 default: got expected value true for key: 2930
+ok 214 default: got expected value 1 for key: 2931
+ok 215 default: got expected value 513 for key: 2932
+ok 216 default: got expected value false for key: 2960
+ok 217 default: got expected value 0 for key: 2961
+ok 218 default: got expected value 519 for key: 2962
+ok 219 default: got expected value 4294967295 for key: 2963
+ok 220 default: got expected value 7680 for key: 2964
+ok 221 default: got expected value 7680 for key: 2965
+ok 222 default: got expected value 7680 for key: 2966
+ok 223 default: got expected value 0 for key: 2967
+ok 224 default: got expected value 4294967295 for key: 2968
+ok 225 default: got expected value [0,0,1024,1024] for key: 2978
+ok 226 default: got expected value true for key: 3024
+ok 227 default: got expected value false for key: 3042
+ok 228 default: got expected value [0,0,1024,1024] for key: 3088
+ok 229 default: got expected value false for key: 3089
+ok 230 default: got expected value [0,0,0,0] for key: 3106
+ok 231 default: got expected value [true,true,true,true] for key: 3107
+ok 232 default: got expected value 0 for key: 3314
+ok 233 default: got expected value 0 for key: 3315
+ok 234 default: got expected value 0 for key: 3316
+ok 235 default: got expected value 4 for key: 3317
+ok 236 default: got expected value 0 for key: 3330
+ok 237 default: got expected value 0 for key: 3331
+ok 238 default: got expected value 0 for key: 3332
+ok 239 default: got expected value 4 for key: 3333
+ok 240 default: got expected value 0 for key: 10752
+ok 241 default: got expected value [0,0,0,0] for key: 32773
+ok 242 default: got expected value 32774 for key: 32777
+ok 243 default: got expected value false for key: 32823
+ok 244 default: got expected value 0 for key: 32824
+ok 245 default: got expected value 0 for key: 32877
+ok 246 default: got expected value 0 for key: 32878
+ok 247 default: got expected value 1 for key: 32938
+ok 248 default: got expected value false for key: 32939
+ok 249 default: got expected value 0 for key: 32968
+ok 250 default: got expected value 1 for key: 32969
+ok 251 default: got expected value 0 for key: 32970
+ok 252 default: got expected value 1 for key: 32971
+ok 253 default: got expected value 4352 for key: 33170
+ok 254 default: got expected value 519 for key: 34816
+ok 255 default: got expected value 7680 for key: 34817
+ok 256 default: got expected value 7680 for key: 34818
+ok 257 default: got expected value 7680 for key: 34819
+ok 258 default: got expected value 32774 for key: 34877
+ok 259 default: got expected value 4352 for key: 35723
+ok 260 default: got expected value false for key: 35977
+ok 261 default: got expected value 0 for key: 36003
+ok 262 default: got expected value 4294967295 for key: 36004
+ok 263 default: got expected value 4294967295 for key: 36005
+ok 264 default: got expected value null for key: 36006
+ok 265 default: got expected value null for key: 36010
+ok 266 default: got expected value false for key: 37440
+ok 267 default: got expected value false for key: 37441
+ok 268 default: got expected value 37444 for key: 37443
+luma: gl.INVALID_ENUM in gl.blendEquationSeparate(gl.FUNC_SUBTRACT, /*UNKNOWN WebGL ENUM*/ 0x8007)
+ok 269 first set: got expected set value 2 for key: 2849
+ok 270 first set: got expected set value true for key: 2884
+ok 271 first set: got expected set value 1028 for key: 2885
+ok 272 first set: got expected set value 2304 for key: 2886
+ok 273 first set: got expected set value [0.5,1] for key: 2928
+ok 274 first set: got expected set value true for key: 2929
+ok 275 first set: got expected set value false for key: 2930
+ok 276 first set: got expected set value 0 for key: 2931
+ok 277 first set: got expected set value 512 for key: 2932
+ok 278 first set: got expected set value true for key: 2960
+ok 279 first set: got expected set value 15 for key: 2961
+ok 280 first set: got expected set value 512 for key: 2962
+ok 281 first set: got expected set value 3149642683 for key: 2963
+ok 282 first set: got expected set value 7681 for key: 2964
+ok 283 first set: got expected set value 7682 for key: 2965
+ok 284 first set: got expected set value 7683 for key: 2966
+ok 285 first set: got expected set value 0.5 for key: 2967
+ok 286 first set: got expected set value 3435973836 for key: 2968
+ok 287 first set: got expected set value [0,0,100,100] for key: 2978
+ok 288 first set: got expected set value false for key: 3024
+ok 289 first set: got expected set value true for key: 3042
+ok 290 first set: got expected set value [0,0,100,100] for key: 3088
+ok 291 first set: got expected set value true for key: 3089
+ok 292 first set: got expected set value [0.5,0.5,0.5,0] for key: 3106
+ok 293 first set: got expected set value [false,false,false,true] for key: 3107
+ok 294 first set: got expected set value 8 for key: 3317
+ok 295 first set: got expected set value 8 for key: 3333
+ok 296 first set: got expected set value 1 for key: 10752
+ok 297 first set: got expected set value [0.5,0.5,0.5,0] for key: 32773
+ok 298 first set: got expected set value 32778 for key: 32777
+ok 299 first set: got expected set value true for key: 32823
+ok 300 first set: got expected set value 1 for key: 32824
+ok 301 first set: got expected set value 0 for key: 32938
+ok 302 first set: got expected set value true for key: 32939
+ok 303 first set: got expected set value 774 for key: 32968
+ok 304 first set: got expected set value 768 for key: 32969
+ok 305 first set: got expected set value 772 for key: 32970
+ok 306 first set: got expected set value 770 for key: 32971
+ok 307 first set: got expected set value 4353 for key: 33170
+ok 308 first set: got expected set value 515 for key: 34816
+ok 309 first set: got expected set value 7681 for key: 34817
+ok 310 first set: got expected set value 7682 for key: 34818
+ok 311 first set: got expected set value 7683 for key: 34819
+ok 312 first set: got expected set value 32775 for key: 34877
+ok 313 first set: got expected set value 0.5 for key: 36003
+ok 314 first set: got expected set value 286331153 for key: 36004
+ok 315 first set: got expected set value 3722304989 for key: 36005
+ok 316 first set: got expected set value true for key: 37440
+ok 317 first set: got expected set value true for key: 37441
+ok 318 first set: got expected set value 0 for key: 37443
+luma: gl.INVALID_ENUM in gl.blendEquationSeparate(gl.FUNC_REVERSE_SUBTRACT, /*UNKNOWN WebGL ENUM*/ 0x8008)
+ok 319 second set: got expected value 3 for key: 2849
+ok 320 second set: got expected value false for key: 2884
+ok 321 second set: got expected value 1032 for key: 2885
+ok 322 second set: got expected value 2305 for key: 2886
+ok 323 second set: got expected value [1,1] for key: 2928
+ok 324 second set: got expected value false for key: 2929
+ok 325 second set: got expected value true for key: 2930
+ok 326 second set: got expected value 0.5 for key: 2931
+ok 327 second set: got expected value 519 for key: 2932
+ok 328 second set: got expected value false for key: 2960
+ok 329 second set: got expected value 1 for key: 2961
+ok 330 second set: got expected value 513 for key: 2962
+ok 331 second set: got expected value 4008636142 for key: 2963
+ok 332 second set: got expected value 7682 for key: 2964
+ok 333 second set: got expected value 7683 for key: 2965
+ok 334 second set: got expected value 7682 for key: 2966
+ok 335 second set: got expected value 1 for key: 2967
+ok 336 second set: got expected value 4008636142 for key: 2968
+ok 337 second set: got expected value [0,0,200,200] for key: 2978
+ok 338 second set: got expected value true for key: 3024
+ok 339 second set: got expected value true for key: 3042
+ok 340 second set: got expected value [0,0,200,200] for key: 3088
+ok 341 second set: got expected value false for key: 3089
+ok 342 second set: got expected value [1,1,0.5,0] for key: 3106
+ok 343 second set: got expected value [false,false,true,true] for key: 3107
+ok 344 second set: got expected value 2 for key: 3317
+ok 345 second set: got expected value 2 for key: 3333
+ok 346 second set: got expected value 2 for key: 10752
+ok 347 second set: got expected value [1,1,0.5,0] for key: 32773
+ok 348 second set: got expected value 32779 for key: 32777
+ok 349 second set: got expected value false for key: 32823
+ok 350 second set: got expected value 2 for key: 32824
+ok 351 second set: got expected value 0.5 for key: 32938
+ok 352 second set: got expected value false for key: 32939
+ok 353 second set: got expected value 775 for key: 32968
+ok 354 second set: got expected value 769 for key: 32969
+ok 355 second set: got expected value 773 for key: 32970
+ok 356 second set: got expected value 771 for key: 32971
+ok 357 second set: got expected value 4354 for key: 33170
+ok 358 second set: got expected value 516 for key: 34816
+ok 359 second set: got expected value 7682 for key: 34817
+ok 360 second set: got expected value 7683 for key: 34818
+ok 361 second set: got expected value 7682 for key: 34819
+ok 362 second set: got expected value 32776 for key: 34877
+ok 363 second set: got expected value 1 for key: 36003
+ok 364 second set: got expected value 572662306 for key: 36004
+ok 365 second set: got expected value 2863311530 for key: 36005
+ok 366 second set: got expected value false for key: 37440
+ok 367 second set: got expected value false for key: 37441
+ok 368 second set: got expected value 37444 for key: 37443
+luma: gl.INVALID_ENUM in gl.getParameter(gl.LINE_WIDTH)
+ok 369 first pop: got expected value 2 for key: 2849
+ok 370 first pop: got expected value true for key: 2884
+ok 371 first pop: got expected value 1028 for key: 2885
+ok 372 first pop: got expected value 2304 for key: 2886
+ok 373 first pop: got expected value [0.5,1] for key: 2928
+ok 374 first pop: got expected value true for key: 2929
+ok 375 first pop: got expected value false for key: 2930
+ok 376 first pop: got expected value 0 for key: 2931
+ok 377 first pop: got expected value 512 for key: 2932
+ok 378 first pop: got expected value true for key: 2960
+ok 379 first pop: got expected value 15 for key: 2961
+ok 380 first pop: got expected value 512 for key: 2962
+ok 381 first pop: got expected value 3149642683 for key: 2963
+ok 382 first pop: got expected value 7681 for key: 2964
+ok 383 first pop: got expected value 7682 for key: 2965
+ok 384 first pop: got expected value 7683 for key: 2966
+ok 385 first pop: got expected value 0.5 for key: 2967
+ok 386 first pop: got expected value 3435973836 for key: 2968
+ok 387 first pop: got expected value [0,0,100,100] for key: 2978
+ok 388 first pop: got expected value false for key: 3024
+ok 389 first pop: got expected value true for key: 3042
+ok 390 first pop: got expected value [0,0,100,100] for key: 3088
+ok 391 first pop: got expected value true for key: 3089
+ok 392 first pop: got expected value [0.5,0.5,0.5,0] for key: 3106
+ok 393 first pop: got expected value [false,false,false,true] for key: 3107
+ok 394 first pop: got expected value 8 for key: 3317
+ok 395 first pop: got expected value 8 for key: 3333
+ok 396 first pop: got expected value 1 for key: 10752
+ok 397 first pop: got expected value [0.5,0.5,0.5,0] for key: 32773
+ok 398 first pop: got expected value 32778 for key: 32777
+ok 399 first pop: got expected value true for key: 32823
+ok 400 first pop: got expected value 1 for key: 32824
+ok 401 first pop: got expected value 0 for key: 32938
+ok 402 first pop: got expected value true for key: 32939
+ok 403 first pop: got expected value 774 for key: 32968
+ok 404 first pop: got expected value 768 for key: 32969
+ok 405 first pop: got expected value 772 for key: 32970
+ok 406 first pop: got expected value 770 for key: 32971
+ok 407 first pop: got expected value 4353 for key: 33170
+ok 408 first pop: got expected value 515 for key: 34816
+ok 409 first pop: got expected value 7681 for key: 34817
+ok 410 first pop: got expected value 7682 for key: 34818
+ok 411 first pop: got expected value 7683 for key: 34819
+ok 412 first pop: got expected value 32775 for key: 34877
+ok 413 first pop: got expected value 0.5 for key: 36003
+ok 414 first pop: got expected value 286331153 for key: 36004
+ok 415 first pop: got expected value 3722304989 for key: 36005
+ok 416 first pop: got expected value true for key: 37440
+ok 417 first pop: got expected value true for key: 37441
+ok 418 first pop: got expected value 0 for key: 37443
+ok 419 second pop: got expected value 1 for key: 2849
+ok 420 second pop: got expected value false for key: 2884
+ok 421 second pop: got expected value 1029 for key: 2885
+ok 422 second pop: got expected value 2305 for key: 2886
+ok 423 second pop: got expected value [0,1] for key: 2928
+ok 424 second pop: got expected value false for key: 2929
+ok 425 second pop: got expected value true for key: 2930
+ok 426 second pop: got expected value 1 for key: 2931
+ok 427 second pop: got expected value 513 for key: 2932
+ok 428 second pop: got expected value false for key: 2960
+ok 429 second pop: got expected value 0 for key: 2961
+ok 430 second pop: got expected value 519 for key: 2962
+ok 431 second pop: got expected value 4294967295 for key: 2963
+ok 432 second pop: got expected value 7680 for key: 2964
+ok 433 second pop: got expected value 7680 for key: 2965
+ok 434 second pop: got expected value 7680 for key: 2966
+ok 435 second pop: got expected value 0 for key: 2967
+ok 436 second pop: got expected value 4294967295 for key: 2968
+ok 437 second pop: got expected value [0,0,1024,1024] for key: 2978
+ok 438 second pop: got expected value true for key: 3024
+ok 439 second pop: got expected value false for key: 3042
+ok 440 second pop: got expected value [0,0,1024,1024] for key: 3088
+ok 441 second pop: got expected value false for key: 3089
+ok 442 second pop: got expected value [0,0,0,0] for key: 3106
+ok 443 second pop: got expected value [true,true,true,true] for key: 3107
+ok 444 second pop: got expected value 0 for key: 3314
+ok 445 second pop: got expected value 0 for key: 3315
+ok 446 second pop: got expected value 0 for key: 3316
+ok 447 second pop: got expected value 4 for key: 3317
+ok 448 second pop: got expected value 0 for key: 3330
+ok 449 second pop: got expected value 0 for key: 3331
+ok 450 second pop: got expected value 0 for key: 3332
+ok 451 second pop: got expected value 4 for key: 3333
+ok 452 second pop: got expected value 0 for key: 10752
+ok 453 second pop: got expected value [0,0,0,0] for key: 32773
+ok 454 second pop: got expected value 32774 for key: 32777
+ok 455 second pop: got expected value false for key: 32823
+ok 456 second pop: got expected value 0 for key: 32824
+ok 457 second pop: got expected value 0 for key: 32877
+ok 458 second pop: got expected value 0 for key: 32878
+ok 459 second pop: got expected value 1 for key: 32938
+ok 460 second pop: got expected value false for key: 32939
+ok 461 second pop: got expected value 0 for key: 32968
+ok 462 second pop: got expected value 1 for key: 32969
+ok 463 second pop: got expected value 0 for key: 32970
+ok 464 second pop: got expected value 1 for key: 32971
+ok 465 second pop: got expected value 4352 for key: 33170
+ok 466 second pop: got expected value 519 for key: 34816
+ok 467 second pop: got expected value 7680 for key: 34817
+ok 468 second pop: got expected value 7680 for key: 34818
+ok 469 second pop: got expected value 7680 for key: 34819
+ok 470 second pop: got expected value 32774 for key: 34877
+ok 471 second pop: got expected value 4352 for key: 35723
+ok 472 second pop: got expected value false for key: 35977
+ok 473 second pop: got expected value 0 for key: 36003
+ok 474 second pop: got expected value 4294967295 for key: 36004
+ok 475 second pop: got expected value 4294967295 for key: 36005
+ok 476 second pop: got expected value null for key: 36006
+ok 477 second pop: got expected value null for key: 36010
+ok 478 second pop: got expected value false for key: 37440
+ok 479 second pop: got expected value false for key: 37441
+ok 480 second pop: got expected value 37444 for key: 37443
+# WebGLState#gl API
+ok 481 got expected value 1
+ok 482 got expected value false
+ok 483 got expected value 1029
+ok 484 got expected value 2305
+ok 485 got expected value [0,1]
+ok 486 got expected value false
+ok 487 got expected value true
+ok 488 got expected value 1
+ok 489 got expected value 513
+ok 490 got expected value false
+ok 491 got expected value 0
+ok 492 got expected value 519
+ok 493 got expected value 4294967295
+ok 494 got expected value 7680
+ok 495 got expected value 7680
+ok 496 got expected value 7680
+ok 497 got expected value 0
+ok 498 got expected value 4294967295
+ok 499 got expected value [0,0,1024,1024]
+ok 500 got expected value true
+ok 501 got expected value false
+ok 502 got expected value [0,0,1024,1024]
+ok 503 got expected value false
+ok 504 got expected value [0,0,0,0]
+ok 505 got expected value [true,true,true,true]
+ok 506 got expected value 0
+ok 507 got expected value 0
+ok 508 got expected value 0
+ok 509 got expected value 4
+ok 510 got expected value 0
+ok 511 got expected value 0
+ok 512 got expected value 0
+ok 513 got expected value 4
+ok 514 got expected value 0
+ok 515 got expected value [0,0,0,0]
+ok 516 got expected value 32774
+ok 517 got expected value false
+ok 518 got expected value 0
+ok 519 got expected value 0
+ok 520 got expected value 0
+ok 521 got expected value 1
+ok 522 got expected value false
+ok 523 got expected value 0
+ok 524 got expected value 1
+ok 525 got expected value 0
+ok 526 got expected value 1
+ok 527 got expected value 4352
+ok 528 got expected value 519
+ok 529 got expected value 7680
+ok 530 got expected value 7680
+ok 531 got expected value 7680
+ok 532 got expected value 32774
+ok 533 got expected value 4352
+ok 534 got expected value false
+ok 535 got expected value 0
+ok 536 got expected value 4294967295
+ok 537 got expected value 4294967295
+ok 538 got expected value null
+ok 539 got expected value null
+ok 540 got expected value false
+ok 541 got expected value false
+ok 542 got expected value 37444
+ok 543 got expected value 2
+ok 544 got expected value true
+ok 545 got expected value 1028
+ok 546 got expected value 2304
+ok 547 got expected value [0.5,1]
+ok 548 got expected value true
+ok 549 got expected value false
+ok 550 got expected value 0
+ok 551 got expected value 512
+ok 552 got expected value true
+ok 553 got expected value 15
+ok 554 got expected value 3435973836
+ok 555 got expected value [0,0,100,100]
+ok 556 got expected value false
+ok 557 got expected value true
+ok 558 got expected value [0,0,100,100]
+ok 559 got expected value true
+ok 560 got expected value [0.5,0.5,0.5,0]
+ok 561 got expected value [false,false,false,true]
+ok 562 got expected value 8
+ok 563 got expected value 8
+ok 564 got expected value [0.5,0.5,0.5,0]
+ok 565 got expected value true
+ok 566 got expected value 4353
+ok 567 got expected value 3722304989
+ok 568 got expected value true
+ok 569 got expected value true
+ok 570 got expected value 0
+ok 571 got expected value 1
+ok 572 got expected value false
+ok 573 got expected value 1029
+ok 574 got expected value 2305
+ok 575 got expected value [0,1]
+ok 576 got expected value false
+ok 577 got expected value true
+ok 578 got expected value 1
+ok 579 got expected value 513
+ok 580 got expected value false
+ok 581 got expected value 0
+ok 582 got expected value 519
+ok 583 got expected value 4294967295
+ok 584 got expected value 7680
+ok 585 got expected value 7680
+ok 586 got expected value 7680
+ok 587 got expected value 0
+ok 588 got expected value 4294967295
+ok 589 got expected value [0,0,1024,1024]
+ok 590 got expected value true
+ok 591 got expected value false
+ok 592 got expected value [0,0,1024,1024]
+ok 593 got expected value false
+ok 594 got expected value [0,0,0,0]
+ok 595 got expected value [true,true,true,true]
+ok 596 got expected value 0
+ok 597 got expected value 0
+ok 598 got expected value 0
+ok 599 got expected value 4
+ok 600 got expected value 0
+ok 601 got expected value 0
+ok 602 got expected value 0
+ok 603 got expected value 4
+ok 604 got expected value 0
+ok 605 got expected value [0,0,0,0]
+ok 606 got expected value 32774
+ok 607 got expected value false
+ok 608 got expected value 0
+ok 609 got expected value 0
+ok 610 got expected value 0
+ok 611 got expected value 1
+ok 612 got expected value false
+ok 613 got expected value 0
+ok 614 got expected value 1
+ok 615 got expected value 0
+ok 616 got expected value 1
+ok 617 got expected value 4352
+ok 618 got expected value 519
+ok 619 got expected value 7680
+ok 620 got expected value 7680
+ok 621 got expected value 7680
+ok 622 got expected value 32774
+ok 623 got expected value 4352
+ok 624 got expected value false
+ok 625 got expected value 0
+ok 626 got expected value 4294967295
+ok 627 got expected value 4294967295
+ok 628 got expected value null
+ok 629 got expected value null
+ok 630 got expected value false
+ok 631 got expected value false
+ok 632 got expected value 37444
+# WebGL#set and get
+ok 633 got expected value false
+ok 634 got expected value true
+# WebGL#composite setter
+ok 635 got expected default value 519
+ok 636 got expected default value 0
+ok 637 got expected default value 4294967295
+ok 638 got expected updated value 512
+ok 639 got expected updated value 0.5
+ok 640 got expected updated defuault value 4294967295
+# WebGLState#get all parameters
+ok 641 got expected value 2 after setParameters for GL.LINE_WIDTH
+ok 642 got expected value true after setParameters for GL.CULL_FACE
+ok 643 got expected value 1028 after setParameters for GL.CULL_FACE_MODE
+ok 644 got expected value 2304 after setParameters for GL.FRONT_FACE
+ok 645 got expected value [0.5,1] after setParameters for GL.DEPTH_RANGE
+ok 646 got expected value true after setParameters for GL.DEPTH_TEST
+ok 647 got expected value false after setParameters for GL.DEPTH_WRITEMASK
+ok 648 got expected value 0 after setParameters for GL.DEPTH_CLEAR_VALUE
+ok 649 got expected value 512 after setParameters for GL.DEPTH_FUNC
+ok 650 got expected value true after setParameters for GL.STENCIL_TEST
+ok 651 got expected value 15 after setParameters for GL.STENCIL_CLEAR_VALUE
+ok 652 got expected value [0,0,100,100] after setParameters for GL.VIEWPORT
+ok 653 got expected value false after setParameters for GL.DITHER
+ok 654 got expected value true after setParameters for GL.BLEND
+ok 655 got expected value [0,0,100,100] after setParameters for GL.SCISSOR_BOX
+ok 656 got expected value true after setParameters for GL.SCISSOR_TEST
+ok 657 got expected value [0.5,0.5,0.5,0] after setParameters for GL.COLOR_CLEAR_VALUE
+ok 658 got expected value [false,false,false,true] after setParameters for GL.COLOR_WRITEMASK
+ok 659 got expected value 8 after setParameters for GL.UNPACK_ALIGNMENT
+ok 660 got expected value 8 after setParameters for GL.PACK_ALIGNMENT
+ok 661 got expected value [0.5,0.5,0.5,0] after setParameters for GL.BLEND_COLOR
+ok 662 got expected value true after setParameters for GL.POLYGON_OFFSET_FILL
+ok 663 got expected value 4353 after setParameters for GL.GENERATE_MIPMAP_HINT
+ok 664 got expected value true after setParameters for GL.UNPACK_FLIP_Y_WEBGL
+ok 665 got expected value true after setParameters for GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+ok 666 got expected value 0 after setParameters for GL.UNPACK_COLORSPACE_CONVERSION_WEBGL
+ok 667 got expected value 2 after getParameters for GL.LINE_WIDTH
+ok 668 got expected value true after getParameters for GL.CULL_FACE
+ok 669 got expected value 1028 after getParameters for GL.CULL_FACE_MODE
+ok 670 got expected value 2304 after getParameters for GL.FRONT_FACE
+ok 671 got expected value [0.5,1] after getParameters for GL.DEPTH_RANGE
+ok 672 got expected value true after getParameters for GL.DEPTH_TEST
+ok 673 got expected value false after getParameters for GL.DEPTH_WRITEMASK
+ok 674 got expected value 0 after getParameters for GL.DEPTH_CLEAR_VALUE
+ok 675 got expected value 512 after getParameters for GL.DEPTH_FUNC
+ok 676 got expected value true after getParameters for GL.STENCIL_TEST
+ok 677 got expected value 15 after getParameters for GL.STENCIL_CLEAR_VALUE
+ok 678 got expected value [0,0,100,100] after getParameters for GL.VIEWPORT
+ok 679 got expected value false after getParameters for GL.DITHER
+ok 680 got expected value true after getParameters for GL.BLEND
+ok 681 got expected value [0,0,100,100] after getParameters for GL.SCISSOR_BOX
+ok 682 got expected value true after getParameters for GL.SCISSOR_TEST
+ok 683 got expected value [0.5,0.5,0.5,0] after getParameters for GL.COLOR_CLEAR_VALUE
+ok 684 got expected value [false,false,false,true] after getParameters for GL.COLOR_WRITEMASK
+ok 685 got expected value 8 after getParameters for GL.UNPACK_ALIGNMENT
+ok 686 got expected value 8 after getParameters for GL.PACK_ALIGNMENT
+ok 687 got expected value [0.5,0.5,0.5,0] after getParameters for GL.BLEND_COLOR
+ok 688 got expected value true after getParameters for GL.POLYGON_OFFSET_FILL
+ok 689 got expected value 4353 after getParameters for GL.GENERATE_MIPMAP_HINT
+ok 690 got expected value true after getParameters for GL.UNPACK_FLIP_Y_WEBGL
+ok 691 got expected value true after getParameters for GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+ok 692 got expected value 0 after getParameters for GL.UNPACK_COLORSPACE_CONVERSION_WEBGL
+# WebGL#reset
+ok 693 got expected value 2 after setParameters for GL.LINE_WIDTH
+ok 694 got expected value true after setParameters for GL.CULL_FACE
+ok 695 got expected value 1028 after setParameters for GL.CULL_FACE_MODE
+ok 696 got expected value 2304 after setParameters for GL.FRONT_FACE
+ok 697 got expected value [0.5,1] after setParameters for GL.DEPTH_RANGE
+ok 698 got expected value true after setParameters for GL.DEPTH_TEST
+ok 699 got expected value false after setParameters for GL.DEPTH_WRITEMASK
+ok 700 got expected value 0 after setParameters for GL.DEPTH_CLEAR_VALUE
+ok 701 got expected value 512 after setParameters for GL.DEPTH_FUNC
+ok 702 got expected value true after setParameters for GL.STENCIL_TEST
+ok 703 got expected value 15 after setParameters for GL.STENCIL_CLEAR_VALUE
+ok 704 got expected value [0,0,100,100] after setParameters for GL.VIEWPORT
+ok 705 got expected value false after setParameters for GL.DITHER
+ok 706 got expected value true after setParameters for GL.BLEND
+ok 707 got expected value [0,0,100,100] after setParameters for GL.SCISSOR_BOX
+ok 708 got expected value true after setParameters for GL.SCISSOR_TEST
+ok 709 got expected value [0.5,0.5,0.5,0] after setParameters for GL.COLOR_CLEAR_VALUE
+ok 710 got expected value [false,false,false,true] after setParameters for GL.COLOR_WRITEMASK
+ok 711 got expected value 8 after setParameters for GL.UNPACK_ALIGNMENT
+ok 712 got expected value 8 after setParameters for GL.PACK_ALIGNMENT
+ok 713 got expected value [0.5,0.5,0.5,0] after setParameters for GL.BLEND_COLOR
+ok 714 got expected value true after setParameters for GL.POLYGON_OFFSET_FILL
+ok 715 got expected value 4353 after setParameters for GL.GENERATE_MIPMAP_HINT
+ok 716 got expected value true after setParameters for GL.UNPACK_FLIP_Y_WEBGL
+ok 717 got expected value true after setParameters for GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+ok 718 got expected value 0 after setParameters for GL.UNPACK_COLORSPACE_CONVERSION_WEBGL
+ok 719 got expected value 1 after resetParameters for GL.LINE_WIDTH
+ok 720 got expected value false after resetParameters for GL.CULL_FACE
+ok 721 got expected value 1029 after resetParameters for GL.CULL_FACE_MODE
+ok 722 got expected value 2305 after resetParameters for GL.FRONT_FACE
+ok 723 got expected value [0,1] after resetParameters for GL.DEPTH_RANGE
+ok 724 got expected value false after resetParameters for GL.DEPTH_TEST
+ok 725 got expected value true after resetParameters for GL.DEPTH_WRITEMASK
+ok 726 got expected value 1 after resetParameters for GL.DEPTH_CLEAR_VALUE
+ok 727 got expected value 513 after resetParameters for GL.DEPTH_FUNC
+ok 728 got expected value false after resetParameters for GL.STENCIL_TEST
+ok 729 got expected value 0 after resetParameters for GL.STENCIL_CLEAR_VALUE
+ok 730 got expected value [0,0,1024,1024] after resetParameters for GL.VIEWPORT
+ok 731 got expected value true after resetParameters for GL.DITHER
+ok 732 got expected value false after resetParameters for GL.BLEND
+ok 733 got expected value [0,0,1024,1024] after resetParameters for GL.SCISSOR_BOX
+ok 734 got expected value false after resetParameters for GL.SCISSOR_TEST
+ok 735 got expected value [0,0,0,0] after resetParameters for GL.COLOR_CLEAR_VALUE
+ok 736 got expected value [true,true,true,true] after resetParameters for GL.COLOR_WRITEMASK
+ok 737 got expected value 4 after resetParameters for GL.UNPACK_ALIGNMENT
+ok 738 got expected value 4 after resetParameters for GL.PACK_ALIGNMENT
+ok 739 got expected value [0,0,0,0] after resetParameters for GL.BLEND_COLOR
+ok 740 got expected value false after resetParameters for GL.POLYGON_OFFSET_FILL
+ok 741 got expected value 4352 after resetParameters for GL.GENERATE_MIPMAP_HINT
+ok 742 got expected value false after resetParameters for GL.UNPACK_FLIP_Y_WEBGL
+ok 743 got expected value false after resetParameters for GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+ok 744 got expected value 37444 after resetParameters for GL.UNPACK_COLORSPACE_CONVERSION_WEBGL
+# WebGLState#setParameters framebuffer
+ok 745 setParameters should set framebuffer binding
+ok 746 setParameters should set framebuffer binding
+# WebGLState#setParameters read-framebuffer (WebGL2 only)
+# WebGL2 not available, skipping tests
+# WebGL helpers#queryManager
+ok 747 Imported correctly
+# WebGL#headless context creation
+ok 748 Context creation ok
+# WebGL#glGetDebugInfo
+ok 749 info.vendor ok
+ok 750 info.renderer ok
+# webgl#caps#imports
+ok 751 hasFeature defined
+ok 752 hasFeatures defined
+ok 753 getFeatures defined
+# webgl#caps#getFeatures
+ok 754 VERTEX_ARRAY_OBJECT: is an allowed (boolean) value
+ok 755 TIMER_QUERY: is an allowed (boolean) value
+ok 756 INSTANCED_RENDERING: is an allowed (boolean) value
+ok 757 MULTIPLE_RENDER_TARGETS: is an allowed (boolean) value
+ok 758 ELEMENT_INDEX_UINT32: is an allowed (boolean) value
+ok 759 BLEND_EQUATION_MINMAX: is an allowed (boolean) value
+ok 760 COLOR_ENCODING_SRGB: is an allowed (boolean) value
+ok 761 TEXTURE_DEPTH: is an allowed (boolean) value
+ok 762 TEXTURE_FLOAT: is an allowed (boolean) value
+ok 763 TEXTURE_HALF_FLOAT: is an allowed (boolean) value
+ok 764 TEXTURE_FILTER_LINEAR_FLOAT: is an allowed (boolean) value
+ok 765 TEXTURE_FILTER_LINEAR_HALF_FLOAT: is an allowed (boolean) value
+ok 766 TEXTURE_FILTER_ANISOTROPIC: is an allowed (boolean) value
+ok 767 COLOR_ATTACHMENT_RGBA32F: is an allowed (boolean) value
+ok 768 COLOR_ATTACHMENT_FLOAT: is an allowed (boolean) value
+ok 769 COLOR_ATTACHMENT_HALF_FLOAT: is an allowed (boolean) value
+ok 770 GLSL_FRAG_DATA: is an allowed (boolean) value
+ok 771 GLSL_FRAG_DEPTH: is an allowed (boolean) value
+ok 772 GLSL_DERIVATIVES: is an allowed (boolean) value
+ok 773 GLSL_TEXTURE_LOD: is an allowed (boolean) value
+# webgl#caps#hasFeatures(WebGL1)
+ok 774 hasFeatures defined
+ok 775 COLOR_ATTACHMENT_FLOAT is never supported under WebGL1
+ok 776 COLOR_ATTACHMENT_HALF_FLOAT is never supported under WebGL1
+# webgl#caps#hasFeatures(WebGL2)
+# webgl#caps#canCompileGLGSExtension
+ok 777 canCompileGLGSExtension defined
+ok 778 returns true when feature can be compiled
+ok 779 getShaderParameter should not be called when userAgent is not IE 11
+ok 780 returns true when feature can be compiled
+ok 781 getShaderParameter should be called when userAgent is IE 11
+ok 782 memoizes previous call
+ok 783 returns false when feature can not be compiled
+ok 784 should throw exception if feature does not exist
+# WebGL#getContextInfo
+ok 785 getContextInfo defined
+ok 786 info has limits
+ok 787 info has info
+# WebGL1#getContextInfo#limits
+ok 788 GL.MAX_TEXTURE_SIZE: actual limit 64 >= webgl1 limit 64
+ok 789 GL.MAX_TEXTURE_SIZE: webgl2 limit 2048 >= webgl1 limit 64
+ok 790 GL.MAX_VIEWPORT_DIMS: actual limit 16384,16384 webgl2 limit 0,0
+ok 791 32883: actual limit 0 >= webgl1 limit 0
+ok 792 32883: webgl2 limit 256 >= webgl1 limit 0
+ok 793 33000: actual limit 0 >= webgl1 limit 0
+ok 794 33000: webgl2 limit 0 >= webgl1 limit 0
+ok 795 33001: actual limit 0 >= webgl1 limit 0
+ok 796 33001: webgl2 limit 0 >= webgl1 limit 0
+ok 797 GL.ALIASED_POINT_SIZE_RANGE: actual limit 1,8191 webgl2 limit 1,1
+ok 798 GL.ALIASED_LINE_WIDTH_RANGE: actual limit 1,1 webgl2 limit 1,1
+ok 799 GL.MAX_RENDERBUFFER_SIZE: actual limit 16384 >= webgl1 limit 1
+ok 800 GL.MAX_RENDERBUFFER_SIZE: webgl2 limit 1 >= webgl1 limit 1
+ok 801 34045: actual limit 0 >= webgl1 limit 0
+ok 802 34045: webgl2 limit 0 >= webgl1 limit 0
+ok 803 GL.MAX_CUBE_MAP_TEXTURE_SIZE: actual limit 16384 >= webgl1 limit 16
+ok 804 GL.MAX_CUBE_MAP_TEXTURE_SIZE: webgl2 limit 16 >= webgl1 limit 16
+ok 805 34852: actual limit 0 >= webgl1 limit 0
+ok 806 34852: webgl2 limit 4 >= webgl1 limit 0
+ok 807 GL.MAX_VERTEX_ATTRIBS: actual limit 16 >= webgl1 limit 8
+ok 808 GL.MAX_VERTEX_ATTRIBS: webgl2 limit 8 >= webgl1 limit 8
+ok 809 GL.MAX_TEXTURE_IMAGE_UNITS: actual limit 16 >= webgl1 limit 8
+ok 810 GL.MAX_TEXTURE_IMAGE_UNITS: webgl2 limit 8 >= webgl1 limit 8
+ok 811 35071: actual limit 0 >= webgl1 limit 0
+ok 812 35071: webgl2 limit 256 >= webgl1 limit 0
+ok 813 35076: actual limit 0 >= webgl1 limit 0
+ok 814 35076: webgl2 limit -8 >= webgl1 limit 0
+ok 815 35077: actual limit 0 >= webgl1 limit 0
+ok 816 35077: webgl2 limit 7 >= webgl1 limit 0
+ok 817 35371: actual limit 0 >= webgl1 limit 0
+ok 818 35371: webgl2 limit 0 >= webgl1 limit 0
+ok 819 35373: actual limit 0 >= webgl1 limit 0
+ok 820 35373: webgl2 limit 0 >= webgl1 limit 0
+ok 821 35374: actual limit 0 >= webgl1 limit 0
+ok 822 35374: webgl2 limit 0 >= webgl1 limit 0
+ok 823 35375: actual limit 0 >= webgl1 limit 0
+ok 824 35375: webgl2 limit 0 >= webgl1 limit 0
+ok 825 35376: actual limit 0 >= webgl1 limit 0
+ok 826 35376: webgl2 limit 0 >= webgl1 limit 0
+ok 827 35377: actual limit 0 >= webgl1 limit 0
+ok 828 35377: webgl2 limit 0 >= webgl1 limit 0
+ok 829 35379: actual limit 0 >= webgl1 limit 0
+ok 830 35379: webgl2 limit 0 >= webgl1 limit 0
+ok 831 35380: actual limit 0 >= webgl1 limit 0
+ok 832 35380: webgl2 limit 0 >= webgl1 limit 0
+ok 833 35657: actual limit 0 >= webgl1 limit 0
+ok 834 35657: webgl2 limit 0 >= webgl1 limit 0
+ok 835 35658: actual limit 0 >= webgl1 limit 0
+ok 836 35658: webgl2 limit 0 >= webgl1 limit 0
+ok 837 35659: actual limit 0 >= webgl1 limit 0
+ok 838 35659: webgl2 limit 0 >= webgl1 limit 0
+ok 839 GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS: actual limit 16 >= webgl1 limit 0
+ok 840 GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS: webgl2 limit 0 >= webgl1 limit 0
+ok 841 GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS: actual limit 32 >= webgl1 limit 8
+ok 842 GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS: webgl2 limit 8 >= webgl1 limit 8
+ok 843 35968: actual limit 0 >= webgl1 limit 0
+ok 844 35968: webgl2 limit 0 >= webgl1 limit 0
+ok 845 35978: actual limit 0 >= webgl1 limit 0
+ok 846 35978: webgl2 limit 0 >= webgl1 limit 0
+ok 847 35979: actual limit 0 >= webgl1 limit 0
+ok 848 35979: webgl2 limit 0 >= webgl1 limit 0
+ok 849 36063: actual limit 0 >= webgl1 limit 0
+ok 850 36063: webgl2 limit 4 >= webgl1 limit 0
+ok 851 36183: actual limit 0 >= webgl1 limit 0
+ok 852 36183: webgl2 limit 0 >= webgl1 limit 0
+ok 853 36203: actual limit 0 >= webgl1 limit 0
+ok 854 36203: webgl2 limit 0 >= webgl1 limit 0
+ok 855 GL.MAX_VERTEX_UNIFORM_VECTORS: actual limit 1024 >= webgl1 limit 128
+ok 856 GL.MAX_VERTEX_UNIFORM_VECTORS: webgl2 limit 128 >= webgl1 limit 128
+ok 857 GL.MAX_VARYING_VECTORS: actual limit 32 >= webgl1 limit 8
+ok 858 GL.MAX_VARYING_VECTORS: webgl2 limit 8 >= webgl1 limit 8
+ok 859 GL.MAX_FRAGMENT_UNIFORM_VECTORS: actual limit 1024 >= webgl1 limit 16
+ok 860 GL.MAX_FRAGMENT_UNIFORM_VECTORS: webgl2 limit 16 >= webgl1 limit 16
+ok 861 37137: actual limit 0 >= webgl1 limit 0
+ok 862 37137: webgl2 limit 0 >= webgl1 limit 0
+ok 863 37154: actual limit 0 >= webgl1 limit 0
+ok 864 37154: webgl2 limit 0 >= webgl1 limit 0
+ok 865 37157: actual limit 0 >= webgl1 limit 0
+ok 866 37157: webgl2 limit 0 >= webgl1 limit 0
+ok 867 37447: actual limit 0 >= webgl1 limit 0
+ok 868 37447: webgl2 limit 0 >= webgl1 limit 0
+# WebGL2#getContextInfo#limits
+# WebGL#state
+ok 869 getParameter imported ok
+ok 870 getParameters imported ok
+ok 871 setParameters imported ok
+ok 872 withParameters imported ok
+ok 873 resetParameters imported ok
+ok 874 TEST_EXPORTS ok
+# WebGLState#getParameter
+ok 875 2849: got a value 1
+ok 876 2884: got a value false
+ok 877 2885: got a value 1029
+ok 878 2886: got a value 2305
+ok 879 2928: got a value [0,1]
+ok 880 2929: got a value false
+ok 881 2930: got a value true
+ok 882 2931: got a value 1
+ok 883 2932: got a value 513
+ok 884 2960: got a value false
+ok 885 2961: got a value 0
+ok 886 2962: got a value 519
+ok 887 2963: got a value 4294967295
+ok 888 2964: got a value 7680
+ok 889 2965: got a value 7680
+ok 890 2966: got a value 7680
+ok 891 2967: got a value 0
+ok 892 2968: got a value 4294967295
+ok 893 2978: got a value [0,0,1024,1024]
+ok 894 3024: got a value true
+ok 895 3042: got a value false
+ok 896 3088: got a value [0,0,1024,1024]
+ok 897 3089: got a value false
+ok 898 3106: got a value [0,0,0,0]
+ok 899 3107: got a value [true,true,true,true]
+ok 900 3314: got a value 0
+ok 901 3315: got a value 0
+ok 902 3316: got a value 0
+ok 903 3317: got a value 4
+ok 904 3330: got a value 0
+ok 905 3331: got a value 0
+ok 906 3332: got a value 0
+ok 907 3333: got a value 4
+ok 908 10752: got a value 0
+ok 909 32773: got a value [0,0,0,0]
+ok 910 32777: got a value 32774
+ok 911 32823: got a value false
+ok 912 32824: got a value 0
+ok 913 32877: got a value 0
+ok 914 32878: got a value 0
+ok 915 32938: got a value 1
+ok 916 32939: got a value false
+ok 917 32968: got a value 0
+ok 918 32969: got a value 1
+ok 919 32970: got a value 0
+ok 920 32971: got a value 1
+ok 921 33170: got a value 4352
+ok 922 34816: got a value 519
+ok 923 34817: got a value 7680
+ok 924 34818: got a value 7680
+ok 925 34819: got a value 7680
+ok 926 34877: got a value 32774
+ok 927 35723: got a value 4352
+ok 928 35977: got a value false
+ok 929 36003: got a value 0
+ok 930 36004: got a value 4294967295
+ok 931 36005: got a value 4294967295
+ok 932 36006: got a value null
+ok 933 36010: got a value null
+ok 934 37440: got a value false
+ok 935 37441: got a value false
+ok 936 37443: got a value 37444
+# WebGLState#getParameter (WebGL2)
+# WebGLState#setParameters (Mixing enum and function style keys)
+luma: gl.INVALID_ENUM in gl.pixelStorei(/*UNKNOWN WebGL ENUM*/ 0x806d, gl.NEVER)
+luma: gl.INVALID_ENUM in gl.pixelStorei(/*UNKNOWN WebGL ENUM*/ 0x806e, /*UNKNOWN WebGL ENUM*/ 0x20)
+luma: gl.INVALID_ENUM in gl.enable(/*UNKNOWN WebGL ENUM*/ 0x8c89)
+luma: gl.INVALID_ENUM in gl.blendEquationSeparate(gl.FUNC_SUBTRACT, /*UNKNOWN WebGL ENUM*/ 0x8007)
+luma: gl.INVALID_ENUM in gl.hint(35723, 4353)
+ok 937 got expected value 2 for key: GL.LINE_WIDTH
+ok 938 got expected value true for key: GL.CULL_FACE
+ok 939 got expected value 1028 for key: GL.CULL_FACE_MODE
+ok 940 got expected value 2304 for key: GL.FRONT_FACE
+ok 941 got expected value [0.5,1] for key: GL.DEPTH_RANGE
+ok 942 got expected value true for key: GL.DEPTH_TEST
+ok 943 got expected value false for key: GL.DEPTH_WRITEMASK
+ok 944 got expected value 0 for key: GL.DEPTH_CLEAR_VALUE
+ok 945 got expected value 512 for key: GL.DEPTH_FUNC
+ok 946 got expected value true for key: GL.STENCIL_TEST
+ok 947 got expected value 15 for key: GL.STENCIL_CLEAR_VALUE
+ok 948 got expected value 512 for key: GL.STENCIL_FUNC
+ok 949 got expected value 3149642683 for key: GL.STENCIL_VALUE_MASK
+ok 950 got expected value 7681 for key: GL.STENCIL_FAIL
+ok 951 got expected value 7682 for key: GL.STENCIL_PASS_DEPTH_FAIL
+ok 952 got expected value 7683 for key: GL.STENCIL_PASS_DEPTH_PASS
+ok 953 got expected value 0.5 for key: GL.STENCIL_REF
+ok 954 got expected value 3435973836 for key: GL.STENCIL_WRITEMASK
+ok 955 got expected value [0,0,100,100] for key: GL.VIEWPORT
+ok 956 got expected value false for key: GL.DITHER
+ok 957 got expected value true for key: GL.BLEND
+ok 958 got expected value [0,0,100,100] for key: GL.SCISSOR_BOX
+ok 959 got expected value true for key: GL.SCISSOR_TEST
+ok 960 got expected value [0.5,0.5,0.5,0] for key: GL.COLOR_CLEAR_VALUE
+ok 961 got expected value [false,false,false,true] for key: GL.COLOR_WRITEMASK
+ok 962 got expected value 8 for key: GL.UNPACK_ALIGNMENT
+ok 963 got expected value 8 for key: GL.PACK_ALIGNMENT
+ok 964 got expected value 1 for key: GL.POLYGON_OFFSET_UNITS
+ok 965 got expected value [0.5,0.5,0.5,0] for key: GL.BLEND_COLOR
+ok 966 got expected value 32778 for key: GL.BLEND_EQUATION
+ok 967 got expected value true for key: GL.POLYGON_OFFSET_FILL
+ok 968 got expected value 1 for key: GL.POLYGON_OFFSET_FACTOR
+ok 969 got expected value 0 for key: GL.SAMPLE_COVERAGE_VALUE
+ok 970 got expected value true for key: GL.SAMPLE_COVERAGE_INVERT
+ok 971 got expected value 774 for key: GL.BLEND_DST_RGB
+ok 972 got expected value 768 for key: GL.BLEND_SRC_RGB
+ok 973 got expected value 772 for key: GL.BLEND_DST_ALPHA
+ok 974 got expected value 770 for key: GL.BLEND_SRC_ALPHA
+ok 975 got expected value 4353 for key: GL.GENERATE_MIPMAP_HINT
+ok 976 got expected value 515 for key: GL.STENCIL_BACK_FUNC
+ok 977 got expected value 7681 for key: GL.STENCIL_BACK_FAIL
+ok 978 got expected value 7682 for key: GL.STENCIL_BACK_PASS_DEPTH_FAIL
+ok 979 got expected value 7683 for key: GL.STENCIL_BACK_PASS_DEPTH_PASS
+ok 980 got expected value 32775 for key: GL.BLEND_EQUATION_ALPHA
+ok 981 got expected value 0.5 for key: GL.STENCIL_BACK_REF
+ok 982 got expected value 286331153 for key: GL.STENCIL_BACK_VALUE_MASK
+ok 983 got expected value 3722304989 for key: GL.STENCIL_BACK_WRITEMASK
+ok 984 got expected value true for key: GL.UNPACK_FLIP_Y_WEBGL
+ok 985 got expected value true for key: GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+ok 986 got expected value 0 for key: GL.UNPACK_COLORSPACE_CONVERSION_WEBGL
+# WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
+luma: gl.INVALID_ENUM in gl.pixelStorei(/*UNKNOWN WebGL ENUM*/ 0x806d, gl.NONE)
+luma: gl.INVALID_ENUM in gl.pixelStorei(/*UNKNOWN WebGL ENUM*/ 0x806e, gl.NONE)
+luma: gl.INVALID_ENUM in gl.hint(35723, 4352)
+luma: gl.INVALID_ENUM in gl.disable(/*UNKNOWN WebGL ENUM*/ 0x8c89)
+ok 987 got expected value 515 for key: GL.STENCIL_FUNC
+ok 988 got expected value 3149642683 for key: GL.STENCIL_VALUE_MASK
+ok 989 got expected value 7681 for key: GL.STENCIL_FAIL
+ok 990 got expected value 7682 for key: GL.STENCIL_PASS_DEPTH_FAIL
+ok 991 got expected value 7683 for key: GL.STENCIL_PASS_DEPTH_PASS
+ok 992 got expected value 0.5 for key: GL.STENCIL_REF
+ok 993 got expected value 1 for key: GL.BLEND_DST_RGB
+ok 994 got expected value 770 for key: GL.BLEND_SRC_RGB
+ok 995 got expected value 1 for key: GL.BLEND_DST_ALPHA
+ok 996 got expected value 770 for key: GL.BLEND_SRC_ALPHA
+ok 997 got expected value 515 for key: GL.STENCIL_BACK_FUNC
+ok 998 got expected value 7681 for key: GL.STENCIL_BACK_FAIL
+ok 999 got expected value 7682 for key: GL.STENCIL_BACK_PASS_DEPTH_FAIL
+ok 1000 got expected value 7683 for key: GL.STENCIL_BACK_PASS_DEPTH_PASS
+ok 1001 got expected value 0.5 for key: GL.STENCIL_BACK_REF
+ok 1002 got expected value 3149642683 for key: GL.STENCIL_BACK_VALUE_MASK
+# WebGLState#withParameters
+ok 1003 got expected value [0,0,0,0]
+ok 1004 got expected value false
+ok 1005 got expected value [0,1,0,1]
+ok 1006 got expected value true
+ok 1007 got expected value [0,0,0,0]
+ok 1008 got expected value false
+# WebGLState#withParameters: recursive
+ok 1009 got expected value [0,0,0,0]
+ok 1010 got expected value false
+ok 1011 got expected value 771
+ok 1012 got expected value 32774
+ok 1013 got expected value [0,1,0,1]
+ok 1014 got expected value true
+ok 1015 got expected un changed value 771
+ok 1016 got expected un changed value 32774
+ok 1017 got expected value [0,1,0,1]
+ok 1018 got expected value true
+ok 1019 got expected changed value 0
+ok 1020 got expected changed value 32778
+ok 1021 got expected value 771
+ok 1022 got expected value 32774
+ok 1023 got expected value [0,0,0,0]
+ok 1024 got expected value false
+ok 1025 got expected initial value 771
+ok 1026 got expected initial value 32774
+# WebGLState#BlendEquationMinMax
+luma: gl.INVALID_ENUM in gl.blendEquationSeparate(/*UNKNOWN WebGL ENUM*/ 0x8008, /*UNKNOWN WebGL ENUM*/ 0x8007)
+ok 1027 WebGL1 Context : expected value, GL.MAX received for GL.BLEND_EQUATION
+ok 1028 WebGL1 Context : expected value, GL.MIN received for GL.BLEND_EQUATION_ALPHA
+luma: gl.INVALID_ENUM in gl.blendEquationSeparate(/*UNKNOWN WebGL ENUM*/ 0x8008, /*UNKNOWN WebGL ENUM*/ 0x8008)
+ok 1029 WebGL1 Context : expected value, GL.MAX received for GL.BLEND_EQUATION
+ok 1030 WebGL1 Context : expected value, GL.MAX received for GL.BLEND_EQUATION_ALPHA
+# WebGL2 Context not available, skipping tests
+# WebGLState#bindFramebuffer (WebGL1)
+ok 1031 Initial draw frambuffer binding should be null
+ok 1032 setParameters should set framebuffer binding
+# WebGLState#bindFramebuffer (WebGL2)
+# WebGL2 not available, skipping tests
+# WebGLState#withParameters framebuffer
+ok 1033 Initial draw frambuffer binding should be null
+ok 1034 withParameters should bind framebuffer
+ok 1035 Inner withParameters should bind framebuffer
+ok 1036 Inner withParameters should restore draw framebuffer binding
+ok 1037 withParameters should restore framebuffer bidning
+# WebGLState#withParameters empty parameters object
+ok 1038 got expected value [0,0,0,0]
+ok 1039 got expected value false
+ok 1040 got expected value [0,0,0,0]
+ok 1041 got expected value false
+ok 1042 got expected value [0,0,0,0]
+ok 1043 got expected value false
+# Accessor#import
+ok 1044 Accessor import successful
+# Accessor#construct
+ok 1045 Accessor constructed correctly
+ok 1046 Accessor constructed correctly
+# Accessor#resolve
+ok 1047 Accessor resolved correctly
+# WebGL#Buffer constructor/delete
+ok 1048 Created gl context
+ok 1049 Buffer throws on missing gl context
+ok 1050 Buffer construction successful
+ok 1051 Buffer delete successful
+ok 1052 Buffer repeated delete successful
+# WebGL#Buffer bind/unbind
+ok 1053 Buffer bind/unbind successful
+# WebGL#Buffer bind/unbind with index
+# WebGL2 not available, skipping tests
+# WebGL#Buffer construction
+ok 1054 Buffer(ARRAY_BUFFER) successful
+ok 1055 Buffer(ELEMENT_ARRAY_BUFFER) successful
+# WebGL#Buffer initialize/subData
+ok 1056 Buffer.subData(ARRAY_BUFFER) successful
+ok 1057 Buffer.subData(ARRAY_BUFFER) successful
+ok 1058 buffer.initialize(ELEMENT_ARRAY_BUFFER) successful
+ok 1059 Buffer.subData(ARRAY_ELEMENT_BUFFER) successful
+# WebGL#Buffer copyData
+# WebGL2 not available, skipping tests
+# WebGL#Buffer getData
+# WebGL2 not available, skipping tests
+# WebGL#Buffer getElementCount
+ok 1060 Vertex count should match
+ok 1061 Vertex count should match
+ok 1062 Vertex count should match
+# WebGL#Buffer#setByteLength
+ok 1063 byteLength should match
+ok 1064 bytesUsed should match
+ok 1065 Should not reallocate
+ok 1066 byteLength should be unchanged
+ok 1067 bytesUsed should have changed
+ok 1068 Should reallocate
+ok 1069 byteLength should have changed
+ok 1070 bytesUsed should have changed
+# WebGL#VertexArrayObject (default)#enable
+ok 1071 vertexAttributes.getMaxAttributes() >= 8
+ok 1072 vertex attribute 1 should initially be disabled
+ok 1073 vertex attribute 2 should initially be disabled
+ok 1074 vertex attribute 3 should initially be disabled
+ok 1075 vertex attribute 4 should initially be disabled
+ok 1076 vertex attribute 5 should initially be disabled
+ok 1077 vertex attribute 6 should initially be disabled
+ok 1078 vertex attribute 7 should initially be disabled
+ok 1079 vertex attribute 8 should initially be disabled
+ok 1080 vertex attribute 9 should initially be disabled
+ok 1081 vertex attribute 10 should initially be disabled
+ok 1082 vertex attribute 11 should initially be disabled
+ok 1083 vertex attribute 12 should initially be disabled
+ok 1084 vertex attribute 13 should initially be disabled
+ok 1085 vertex attribute 14 should initially be disabled
+ok 1086 vertex attribute 15 should initially be disabled
+ok 1087 vertex attribute 0 should now be enabled
+ok 1088 vertex attribute 1 should now be enabled
+ok 1089 vertex attribute 2 should now be enabled
+ok 1090 vertex attribute 3 should now be enabled
+ok 1091 vertex attribute 4 should now be enabled
+ok 1092 vertex attribute 5 should now be enabled
+ok 1093 vertex attribute 6 should now be enabled
+ok 1094 vertex attribute 7 should now be enabled
+ok 1095 vertex attribute 8 should now be enabled
+ok 1096 vertex attribute 9 should now be enabled
+ok 1097 vertex attribute 10 should now be enabled
+ok 1098 vertex attribute 11 should now be enabled
+ok 1099 vertex attribute 12 should now be enabled
+ok 1100 vertex attribute 13 should now be enabled
+ok 1101 vertex attribute 14 should now be enabled
+ok 1102 vertex attribute 15 should now be enabled
+ok 1103 vertex attribute 1 should now be disabled
+ok 1104 vertex attribute 2 should now be disabled
+ok 1105 vertex attribute 3 should now be disabled
+ok 1106 vertex attribute 4 should now be disabled
+ok 1107 vertex attribute 5 should now be disabled
+ok 1108 vertex attribute 6 should now be disabled
+ok 1109 vertex attribute 7 should now be disabled
+ok 1110 vertex attribute 8 should now be disabled
+ok 1111 vertex attribute 9 should now be disabled
+ok 1112 vertex attribute 10 should now be disabled
+ok 1113 vertex attribute 11 should now be disabled
+ok 1114 vertex attribute 12 should now be disabled
+ok 1115 vertex attribute 13 should now be disabled
+ok 1116 vertex attribute 14 should now be disabled
+ok 1117 vertex attribute 15 should now be disabled
+# WebGL#VertexArrayObject construct/delete
+# VertexArrayObjects not supported, skipping tests
+# WebGL#vertexArrayObject#WebGL2 support
+# VertexArrayObjects not supported, skipping tests
+# WebGL#VertexArrayObject#getConstantBuffer
+ok 1118 byteLength should match
+ok 1119 bytesUsed should match
+ok 1120 byteLength should be unchanged
+ok 1121 bytesUsed should have changed
+# WebGL#VertexArray construct/delete
+ok 1122 VertexArray throws on missing gl context
+ok 1123 VertexArray construction successful
+ok 1124 VertexArray delete successful
+ok 1125 VertexArray repeated delete successful
+# WebGL#VertexArray#enable
+ok 1126 vertexArray.getMaxAttributes() >= 8
+ok 1127 vertex attribute 1 should initially be disabled
+ok 1128 vertex attribute 2 should initially be disabled
+ok 1129 vertex attribute 3 should initially be disabled
+ok 1130 vertex attribute 4 should initially be disabled
+ok 1131 vertex attribute 5 should initially be disabled
+ok 1132 vertex attribute 6 should initially be disabled
+ok 1133 vertex attribute 7 should initially be disabled
+ok 1134 vertex attribute 8 should initially be disabled
+ok 1135 vertex attribute 9 should initially be disabled
+ok 1136 vertex attribute 10 should initially be disabled
+ok 1137 vertex attribute 11 should initially be disabled
+ok 1138 vertex attribute 12 should initially be disabled
+ok 1139 vertex attribute 13 should initially be disabled
+ok 1140 vertex attribute 14 should initially be disabled
+ok 1141 vertex attribute 15 should initially be disabled
+# WebGL#VertexArray#setAttributes(unused)
+ok 1142 VertexArray set buffers successful
+# WebGL#Uniforms pre verify uniforms
+ok 1143 should be truthy
+# WebGL#Uniforms Program uniform locations
+ok 1144 Program found uniform setter f
+ok 1145 Program found uniform setter v2
+ok 1146 Program found uniform setter v3
+ok 1147 Program found uniform setter v4
+ok 1148 Program found uniform setter v4Array
+ok 1149 Program found uniform setter i
+ok 1150 Program found uniform setter iv2
+ok 1151 Program found uniform setter iv3
+ok 1152 Program found uniform setter iv4
+ok 1153 Program found uniform setter b
+ok 1154 Program found uniform setter bv2
+ok 1155 Program found uniform setter bv3
+ok 1156 Program found uniform setter bv4
+ok 1157 Program found uniform setter m2
+ok 1158 Program found uniform setter m3
+ok 1159 Program found uniform setter m4
+ok 1160 Program found uniform setter s2d
+# WebGL#Uniforms Program setUniforms
+# Test setting typed arrays
+ok 1161 Set uniforms successful
+ok 1162 f set correctly
+ok 1163 v2 set correctly
+ok 1164 v3 set correctly
+ok 1165 v4 set correctly
+ok 1166 i set correctly
+ok 1167 iv2 set correctly
+ok 1168 iv3 set correctly
+ok 1169 iv4 set correctly
+ok 1170 b set correctly
+ok 1171 bv2 set correctly
+ok 1172 bv3 set correctly
+ok 1173 bv4 set correctly
+ok 1174 m2 set correctly
+ok 1175 m3 set correctly
+ok 1176 m4 set correctly
+ok 1177 s2d set correctly
+# Test setting plain arrays
+ok 1178 Set uniforms successful
+ok 1179 f set correctly
+ok 1180 v2 set correctly
+ok 1181 v3 set correctly
+ok 1182 v4 set correctly
+ok 1183 i set correctly
+ok 1184 iv2 set correctly
+ok 1185 iv3 set correctly
+ok 1186 iv4 set correctly
+ok 1187 b set correctly
+ok 1188 bv2 set correctly
+ok 1189 bv3 set correctly
+ok 1190 bv4 set correctly
+ok 1191 m2 set correctly
+ok 1192 m3 set correctly
+ok 1193 m4 set correctly
+ok 1194 s2d set correctly
+# Test setting malformed typed arrays
+ok 1195 Set uniforms successful
+ok 1196 f set correctly
+ok 1197 v2 set correctly
+ok 1198 v3 set correctly
+ok 1199 v4 set correctly
+ok 1200 i set correctly
+ok 1201 iv2 set correctly
+ok 1202 iv3 set correctly
+ok 1203 iv4 set correctly
+ok 1204 b set correctly
+ok 1205 bv2 set correctly
+ok 1206 bv3 set correctly
+ok 1207 bv4 set correctly
+ok 1208 m2 set correctly
+ok 1209 m3 set correctly
+ok 1210 m4 set correctly
+ok 1211 s2d set correctly
+# WebGL2#Uniforms Program setUniforms
+# WebGL2#Uniforms Program setUniforms for scalar arrays
+# WebGL#Uniforms areUniformsEqual
+ok 1212 Numeric values
+ok 1213 Numeric values
+ok 1214 Texture objects
+ok 1215 Texture objects
+ok 1216 null
+ok 1217 Array vs array
+ok 1218 TypedArray vs array
+ok 1219 Array different length
+ok 1220 Array vs null
+# WebGL#Texture2D construct/delete
+ok 1221 Texture2D throws on missing gl context
+ok 1222 Texture2D construction successful
+# {}
+ok 1223 Texture2D delete successful
+ok 1224 Texture2D repeated delete successful
+# WebGL#Texture2D check formats
+ok 1225 All WebGL1 formats are supported
+# WebGL2 not available, skipping tests
+# WebGL#Texture2D format creation
+ok 1226 Texture2D({format: GL.ALPHA, type: GL.UNSIGNED_BYTE, dataFormat: GL.ALPHA) created
+ok 1227 Texture2D({format: GL.RGB, type: GL.UNSIGNED_BYTE, dataFormat: GL.RGB) created
+ok 1228 Texture2D({format: GL.RGB, type: GL.UNSIGNED_SHORT_5_6_5, dataFormat: GL.RGB) created
+ok 1229 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_BYTE, dataFormat: GL.RGBA) created
+ok 1230 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_SHORT_4_4_4_4, dataFormat: GL.RGBA) created
+ok 1231 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_SHORT_5_5_5_1, dataFormat: GL.RGBA) created
+ok 1232 Texture2D({format: GL.LUMINANCE, type: GL.UNSIGNED_BYTE, dataFormat: GL.LUMINANCE) created
+ok 1233 Texture2D({format: GL.LUMINANCE_ALPHA, type: GL.UNSIGNED_BYTE, dataFormat: GL.LUMINANCE_ALPHA) created
+# WebGL2 not available, skipping tests
+# WebGL#Texture2D format creation with data
+ok 1234 Texture2D({format: GL.ALPHA, type: GL.UNSIGNED_BYTE, dataFormat: GL.ALPHA) created
+ok 1235 Texture2D({format: GL.RGB, type: GL.UNSIGNED_BYTE, dataFormat: GL.RGB) created
+ok 1236 Texture2D({format: GL.RGB, type: GL.UNSIGNED_SHORT_5_6_5, dataFormat: GL.RGB) created
+ok 1237 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_BYTE, dataFormat: GL.RGBA) created
+ok 1238 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_SHORT_4_4_4_4, dataFormat: GL.RGBA) created
+ok 1239 Texture2D({format: GL.RGBA, type: GL.UNSIGNED_SHORT_5_5_5_1, dataFormat: GL.RGBA) created
+ok 1240 Texture2D({format: GL.LUMINANCE, type: GL.UNSIGNED_BYTE, dataFormat: GL.LUMINANCE) created
+ok 1241 Texture2D({format: GL.LUMINANCE_ALPHA, type: GL.UNSIGNED_BYTE, dataFormat: GL.LUMINANCE_ALPHA) created
+# WebGL2 not available, skipping tests
+# WebGL#Texture2D setParameters
+ok 1242 Texture2D construction successful
+ok 1243 Texture2D.setParameters({[GL.TEXTURE_MAG_FILTER]: GL.NEAREST}) read back OK
+ok 1244 Texture2D.setParameters({[GL.TEXTURE_MAG_FILTER]: GL.LINEAR}) read back OK
+ok 1245 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.NEAREST}) read back OK
+ok 1246 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.LINEAR}) read back OK
+ok 1247 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.NEAREST_MIPMAP_NEAREST}) read back OK
+ok 1248 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST}) read back OK
+ok 1249 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.NEAREST_MIPMAP_LINEAR}) read back OK
+ok 1250 Texture2D.setParameters({[GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR}) read back OK
+ok 1251 Texture2D.setParameters({[GL.TEXTURE_WRAP_S]: GL.REPEAT}) read back OK
+ok 1252 Texture2D.setParameters({[GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE}) read back OK
+ok 1253 Texture2D.setParameters({[GL.TEXTURE_WRAP_S]: GL.MIRRORED_REPEAT}) read back OK
+ok 1254 Texture2D.setParameters({[GL.TEXTURE_WRAP_T]: GL.REPEAT}) read back OK
+ok 1255 Texture2D.setParameters({[GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE}) read back OK
+ok 1256 Texture2D.setParameters({[GL.TEXTURE_WRAP_T]: GL.MIRRORED_REPEAT}) read back OK
+ok 1257 Texture2D delete successful
+# WebGL2#Texture2D setParameters
+# WebGL2 not available, skipping tests
+# WebGL#Texture2D NPOT Workaround: texture creation
+luma: texture: Texture(texture-22,500x512) is Non-Power-Of-Two, disabling mipmaping
+ok 1258 Texture2D construction successful
+ok 1259 NPOT textuer min filter is set to LINEAR
+ok 1260 NPOT textuer wrap_s is set to CLAMP_TO_EDGE
+ok 1261 NPOT textuer wrap_t is set to CLAMP_TO_EDGE
+luma: texture: Texture(texture-23,512x600) is Non-Power-Of-Two, disabling mipmaping
+ok 1262 Texture2D construction successful
+ok 1263 NPOT textuer min filter is set to NEAREST
+ok 1264 NPOT textuer wrap_s is set to CLAMP_TO_EDGE
+ok 1265 NPOT textuer wrap_t is set to CLAMP_TO_EDGE
+# WebGL#Texture2D NPOT Workaround: setParameters
+luma: texture: Texture(texture-24,100x100) is Non-Power-Of-Two, disabling mipmaping
+ok 1266 Texture2D construction successful
+ok 1267 NPOT textuer min filter is set to LINEAR
+ok 1268 NPOT textuer wrap_s is set to CLAMP_TO_EDGE
+ok 1269 NPOT textuer wrap_t is set to CLAMP_TO_EDGE
+# WebGL2#Texture2D NPOT Workaround: texture creation
+# WebGL2 not available, skipping tests
+# WebGL2#Texture2D NPOT Workaround: setParameters
+# WebGL2 not available, skipping tests
+# WebGL#Renderbuffer construct/delete
+ok 1270 Renderbuffer throws on missing gl context
+ok 1271 Renderbuffer construction successful
+ok 1272 Renderbuffer delete successful
+ok 1273 Renderbuffer repeated delete successful
+# WebGL#Renderbuffer format creation
+# WebGL2#Renderbuffer format creation
+# WebGL2 not available, skipping tests
+# WebGL#Framebuffer construct/delete
+ok 1274 Framebuffer throws on missing gl context
+ok 1275 Framebuffer construction successful
+ok 1276 Framebuffer delete successful
+ok 1277 Framebuffer repeated delete successful
+# Framebuffer#getDefaultFramebuffer
+ok 1278 getDefaultFramebuffer successful
+ok 1279 defaultFramebuffer.resize({width, height}) throws
+ok 1280 defaultFramebuffer.resize() successful
+ok 1281 defaultFramebuffer status ok
+# WebGL1#Framebuffer attachments
+ok 1282 Framebuffer options constructed for "Default attachments"
+ok 1283 Framebuffer checkStatus success as expected for "Default attachments"
+ok 1284 Framebuffer options constructed for "No attachments"
+ok 1285 Framebuffer checkStatus failure as expected for "No attachments"
+ok 1286 Framebuffer options constructed for "Simple Depth Renderbuffer + Color Texture"
+ok 1287 Framebuffer checkStatus success as expected for "Simple Depth Renderbuffer + Color Texture"
+ok 1288 Framebuffer options constructed for "Simple Stencil Renderbuffer + Color Texture"
+ok 1289 Framebuffer checkStatus success as expected for "Simple Stencil Renderbuffer + Color Texture"
+ok 1290 Framebuffer options constructed for "Combined Depth/Stencil Renderbuffer + Color Texture"
+ok 1291 Framebuffer checkStatus success as expected for "Combined Depth/Stencil Renderbuffer + Color Texture"
+# WebGL2#Framebuffer attachments
+# WebGL2 not available, skipping tests
+# WebGL1#Framebuffer resize
+ok 1292 Framebuffer width updated correctly on resize
+ok 1293 Framebuffer height updated correctly on resize
+ok 1294 Framebuffer width updated correctly on resize
+ok 1295 Framebuffer height updated correctly on resize
+# WebGL1#Framebuffer readPixels
+ok 1296 Readpixels({format: GL.RGBA, type: GL.UNSIGNED_BYTE) returned expected value for channel:0
+ok 1297 Readpixels({format: GL.RGBA, type: GL.UNSIGNED_BYTE) returned expected value for channel:1
+ok 1298 Readpixels({format: GL.RGBA, type: GL.UNSIGNED_BYTE) returned expected value for channel:2
+ok 1299 Readpixels({format: GL.RGBA, type: GL.UNSIGNED_BYTE) returned expected value for channel:3
+# WebGL2#Framebuffer readPixels
+# WebGL2 not available, skipping tests
+# WebGL#Framebuffer readPixelsToBuffer
+# WebGL2 not available, skipping tests
+# WebGL#Framebuffer readPixelsToBuffer (buffer creation)
+# WebGL2 not available, skipping tests
+# WebGL2#Framebuffer blit
+# WebGL2 not available, skipping tests
+# WebGL#Program construct/delete
+ok 1300 Program throws on missing gl context
+ok 1301 Program throws on missing shader
+ok 1302 Program construction successful
+ok 1303 Program delete successful
+ok 1304 Program repeated delete successful
+# WebGL#Program draw
+ok 1305 VertexArray set buffers successful
+ok 1306 Program draw successful
+ok 1307 Program draw with parameters is successful
+# WebGL#Program caching
+ok 1308 Program should not be deleted
+ok 1309 Program should be deleted
+# WebGL2#ProgramConfiguration
+ok 1310 ProgramConfiguration import successful
+ok 1311 ProgramConfiguration construction successful
+# WebGL2#ProgramConfiguration#varyings
+# WebGL2 not available, skipping tests
+# WebGL#draw
+ok 1312 Created gl context
+ok 1313 Program construction successful
+# WebGL2#Sampler setParameters
+# Sampler not available, skipping tests
+# WebGL#UniformBufferLayout
+ok 1314 Std140Layout correct
+# WebGL#UniformBufferLayout getData
+# WebGL2 not available, skipping tests
+# WebGL#UniformBufferLayout setData
+# WebGL2 not available, skipping tests
+# WebGL#TransformFeedback isSupported
+ok 1315 isSupported returns correct result
+ok 1316 isSupported returns correct result
+# WebGL#TransformFeedback constructor/delete
+# WebGL2 not available, skipping tests
+# WebGL#TransformFeedback bindBuffers
+# WebGL2 not available, skipping tests
+# WebGL#Attribute constructor/update/delete
+ok 1317 Attribute construction successful
+ok 1318 Attribute creates buffer
+ok 1319 Attribute target is inferred
+ok 1320 Attribute type is inferred
+ok 1321 divisor prop is set
+ok 1322 Buffer resource is released
+ok 1323 Attribute buffer is deleted
+ok 1324 Indexed attribute construction successful
+ok 1325 Attribute does not create buffer when external buffer is supplied
+ok 1326 Attribute target is inferred
+ok 1327 External buffer is not deleted
+# WebGL#Attribute update
+ok 1328 Buffer is reused
+ok 1329 divisor prop is updated
+ok 1330 divisor prop is updated
+ok 1331 divisor prop is updated using buffer prop
+# WebGL#Attribute getBuffer
+ok 1332 getBuffer returns own buffer
+ok 1333 getBuffer returns user supplied buffer
+ok 1334 getBuffer returns own buffer
+ok 1335 getBuffer returns null for generic attributes
+ok 1336 getBuffer returns user supplied buffer
+# WebGL#Attribute getValue
+ok 1337 getValue returns own buffer
+ok 1338 getValue returns user supplied buffer
+ok 1339 getValue returns own buffer
+ok 1340 getValue returns generic value
+ok 1341 getValue returns user supplied buffer
+# Experimental#ShaderCache import
+ok 1342 ShaderCache import successful
+# Experimental#ShaderCache construct/delete
+ok 1343 ShaderCache construction successful
+ok 1344 ShaderCache delete successful
+# Experimental#ShaderCache get cached vertex shaders
+ok 1345 Got good VertexShader from cache
+ok 1346 Got good VertexShader from cache
+ok 1347 Second VertexShader was cached
+ok 1348 Got good VertexShader from cache
+ok 1349 Third VertexShader was not cached
+# Experimental#ShaderCache get cached fragment shaders
+ok 1350 Got good FragmentShader from cache
+ok 1351 Got good FragmentShader from cache
+ok 1352 Second FragmentShader was cached
+ok 1353 Got good FragmentShader from cache
+ok 1354 Third FragmentShader was not cached
+# Experimental#ShaderCache - construct Program from cached shaders
+ok 1355 Program constructed from cached shaders successful 
+ok 1356 Program delete successful
+ok 1357 Program constructed from cached shaders successful after delete of first program
+# Experimental#ShaderCache - check default Program caching
+ok 1358 Program construction successful 
+ok 1359 Program construction successful 
+ok 1360 Should receive new program
+# Experimental#ShaderCache - check Program caching with same id
+ok 1361 Program construction successful 
+ok 1362 Program construction successful 
+ok 1363 Should receive cached program
+# Experimental#ShaderCache - check Program caching with different id
+ok 1364 Program construction successful 
+ok 1365 Program construction successful 
+ok 1366 Should receive new Program instance
+# Experimental#ShaderCache - check Program caching with varyings
+# WebGL2 not available, skipping tests
+# Experimental#ShaderCache - deleting non-cached program
+ok 1367 Program construction successful 
+ok 1368 Program should be deleted
+# Experimental#ShaderCache - deleting cached program
+ok 1369 Program construction successful 
+ok 1370 Program should not be deleted
+# Model#construct/destruct
+ok 1371 Model constructor does not throw errors
+ok 1372 Created new program
+ok 1373 Deleted vertexArray
+ok 1374 Deleted program
+# Model#setAttribute
+ok 1375 Created new buffers for attributes
+ok 1376 Did not create new buffers
+ok 1377 Deleted created buffers for attributes
+# WebGL#Transform constructor/delete
+ok 1378 Buffer throws on missing gl context
+ok 1379 Buffer throws on missing gl context
+# WebGL2 not available, skipping tests
+# WebGL#Transform run
+# WebGL2 not available, skipping tests
+# WebGL#Transform run (Attribute)
+# WebGL2 not available, skipping tests
+# WebGL#Transform run (constant Attribute)
+# WebGL2 not available, skipping tests
+# WebGL#Transform swapBuffers
+# WebGL2 not available, skipping tests
+# WebGL#Transform swapBuffers + update
+# WebGL2 not available, skipping tests
+# WebGL#Transform swapBuffers without varyings
+# WebGL2 not available, skipping tests
+# WebGL#Transform update
+# WebGL2 not available, skipping tests
+# fp64#sum_fp64
+# Transform not supported, skipping tests
+# fp64#sub_fp64
+# Transform not supported, skipping tests
+# fp64#mul_fp64
+# Transform not supported, skipping tests
+# fp64#div_fp64
+# Transform not supported, skipping tests
+# fp64#sqrt_fp64
+# Transform not supported, skipping tests
+# picking#isVertexPicked(pickingSelectedColor invalid)
+# Transform not available, skipping tests
+# picking#picking_setPickingColor
+# Transform not available, skipping tests
+# pack#floatToRGBA8tofloat)
+# Transform not available, skipping tests
+# Seer overrides
+ok 1380 The one should still be the chosen one
+ok 1381 The one should have been sacrified
+ok 1382 Nested values can be overriden too
+
+1..1382
+# tests 1382
+# pass  1381
+# fail  1
+
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

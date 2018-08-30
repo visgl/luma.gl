@@ -3,7 +3,7 @@ import test from 'tape-catch';
 import {toLowPrecision} from 'loaders.gl/common/loader-utils';
 
 import {GLBLoader, GLBBuilder} from 'loaders.gl';
-import {_packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
+import packBinaryJson from 'loaders.gl/glb-writer/pack-binary-json';
 
 const TEST_CASES = {
   flat: {
@@ -38,7 +38,7 @@ const TEST_CASES = {
     ]
   },
 
-  full: require('./test-data.json')
+  full: require('../data/glb/test-data.json')
 };
 
 test('GLB#encode-and-parse', t => {
