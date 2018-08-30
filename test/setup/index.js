@@ -3,6 +3,8 @@ import test_ from 'tape-catch';
 import tapePromise from 'tape-promise';
 export default tapePromise(test_);
 
+export {default as deepCopy} from './deep-copy';
+
 // Avoid generating a lot of big context divs
 import 'luma.gl/debug';
 import {setContextDefaults} from 'luma.gl';

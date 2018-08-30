@@ -41,3 +41,8 @@ export {default as KMLLoader} from './kml-loader/kml-loader';
 export {default as JSONLoader} from './formats/json-loader/json-loader';
 export {default as CSVLoader} from './formats/csv-loader/csv-loader';
 export {default as XMLLoader} from './formats/xml-loader/xml-loader';
+
+//  INSTANTIATORS (TODO: MOVE FROM LOADERS.GL to LUMA.GL)
+
+// GLTF LOADER
+export {default as GLTFInstantiator} from './gltf-instantiator/gltf-instantiator';

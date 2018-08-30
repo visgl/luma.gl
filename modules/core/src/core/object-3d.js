@@ -5,16 +5,21 @@ import assert from '../utils/assert';
 export default class Object3D {
 
   constructor({id, display = true}) {
+    // whether to display the object at all
+    this.id = id || uid(this.constructor.name);
+    this.display = true;
+
     // model position, rotation, scale and all in all matrix
     this.position = new Vector3();
     this.rotation = new Vector3();
     this.scale = new Vector3(1, 1, 1);
     this.matrix = new Matrix4();
 
-    // whether to display the object at all
-    this.id = id || uid(this.constructor.name);
-    this.display = true;
     this.userData = {};
+  }
+
+  toString() {
+    return `{id: ${this.id}, children: ${this.children})}`;
   }
 
   setPosition(position) {

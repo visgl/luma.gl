@@ -68,8 +68,8 @@ export {default as _Accessor} from './webgl/accessor';
 export {clearBuffer as _clearBuffer} from './webgl/clear';
 
 // CORE
-// export {default as Object3D} from './core/object-3d';
-// export {default as Group} from './core/group';
+export {default as Object3D} from './core/object-3d';
+export {default as Group} from './core/group';
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as pickModels} from './core/pick-models';
