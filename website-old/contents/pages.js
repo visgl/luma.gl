@@ -241,6 +241,10 @@ export const DOC_PAGES = [
         content: 'roadmap.md'
       },
       {
+        name: 'Frequently Asked Questions',
+        content: 'FAQ.md'
+      },
+      {
         name: 'Upgrade Guide',
         content: 'upgrade-guide.md'
       }
@@ -278,6 +282,19 @@ export const DOC_PAGES = [
   {
     name: 'Developer Guide',
     children: [
+      {
+        name: 'loaders.gl',
+        children: [
+          {
+            name: 'Overview',
+            content: 'developer-guide/loaders.gl/README.md'
+          },
+          {
+            name: 'Understanding Loaders',
+            content: 'developer-guide/loaders.gl/about-loaders.md'
+          }
+        ]
+      },
       {
         name: 'Shadertools',
         children: [
@@ -539,6 +556,39 @@ export const DOC_PAGES = [
       {
         name: 'GLSL Reference',
         content: 'api-reference/shadertools/glsl-reference.md'
+      }
+    ]
+  },
+  {
+    name: 'loaders.gl Reference',
+    children: [
+      {
+        name: 'loadFile',
+        content: 'api-reference/loader-api/load-file.md'
+      },
+      {
+        name: 'GLB Loader',
+        content: 'api-reference/loaders/glb-loader.md'
+      },
+      {
+        name: 'PLY Loader',
+        content: 'api-reference/loaders/ply-loader.md'
+      },
+      {
+        name: 'LAS Loader',
+        content: 'api-reference/loaders/las-loader.md'
+      },
+      {
+        name: 'PCD Loader',
+        content: 'api-reference/loaders/pcd-loader.md'
+      },
+      {
+        name: 'OBJ Loader',
+        content: 'api-reference/loaders/obj-loader.md'
+      },
+      {
+        name: 'KML Loader',
+        content: 'api-reference/loaders/kml-loader.md'
       }
     ]
   }
