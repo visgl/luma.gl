@@ -1,5 +1,5 @@
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/master';
-const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/6.1-release';
+const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/6.1-release';
 
 export const EXAMPLE_PAGES = [
   {
@@ -386,39 +386,6 @@ export const DOC_PAGES = [
     name: 'API Reference',
     children: [
       {
-        name: 'loaders.gl Reference',
-        children: [
-          {
-            name: 'loadFile',
-            content: 'api-reference/loader-api/load-file.md'
-          },
-          {
-            name: 'GLBLoader',
-            content: 'api-reference/loaders/glb-loader.md'
-          },
-          {
-            name: 'PLYLoader',
-            content: 'api-reference/loaders/ply-loader.md'
-          },
-          {
-            name: 'LASLoader',
-            content: 'api-reference/loaders/las-loader.md'
-          },
-          {
-            name: 'PCDLoader',
-            content: 'api-reference/loaders/pcd-loader.md'
-          },
-          {
-            name: 'OBJLoader',
-            content: 'api-reference/loaders/obj-loader.md'
-          },
-          {
-            name: 'KMLLoader',
-            content: 'api-reference/loaders/kml-loader.md'
-          }
-        ]
-      },
-      {
         name: 'AnimationLoop',
         content: 'api-reference/core/animation-loop.md'
       },
@@ -589,6 +556,39 @@ export const DOC_PAGES = [
       {
         name: 'GLSL Reference',
         content: 'api-reference/shadertools/glsl-reference.md'
+      }
+    ]
+  },
+  {
+    name: 'loaders.gl Reference',
+    children: [
+      {
+        name: 'loadFile',
+        content: 'api-reference/loader-api/load-file.md'
+      },
+      {
+        name: 'GLB Loader',
+        content: 'api-reference/loaders/glb-loader.md'
+      },
+      {
+        name: 'PLY Loader',
+        content: 'api-reference/loaders/ply-loader.md'
+      },
+      {
+        name: 'LAS Loader',
+        content: 'api-reference/loaders/las-loader.md'
+      },
+      {
+        name: 'PCD Loader',
+        content: 'api-reference/loaders/pcd-loader.md'
+      },
+      {
+        name: 'OBJ Loader',
+        content: 'api-reference/loaders/obj-loader.md'
+      },
+      {
+        name: 'KML Loader',
+        content: 'api-reference/loaders/kml-loader.md'
       }
     ]
   }

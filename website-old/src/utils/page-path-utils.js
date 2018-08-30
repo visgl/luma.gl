@@ -14,7 +14,9 @@ export function generatePaths(tree, {docUrls = false, parentPath = ''} = {}) {
     tree.forEach(branch => generatePaths(branch, {docUrls, parentPath}));
   }
   if (tree.name) {
-    tree.path = tree.name.match(/(3D|API|WebGL|([A-Z]|^)[a-z]+|\d+)/g).join('-').toLowerCase();
+    tree.path = tree.name.match(
+      /(3D|API|WebGL|GLB|PLY|LAS|PCD|OBJ|KML|([A-Z]|^)[a-z]+|\d+)/g).join('-'
+    ).toLowerCase();
   }
   if (tree.children) {
     generatePaths(tree.children, {docUrls, parentPath: `${parentPath}/${tree.path}`});

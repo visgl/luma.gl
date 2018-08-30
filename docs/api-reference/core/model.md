@@ -10,7 +10,7 @@ A `Model` holds all the data necessary to draw an object, e.g.:
 
 In addition to exposing the functionality provided by the managed WebGL resources, `Model` also provides the following features:
 
-* Shader Module integration: [see `Shader Modules`](/docs/api-reference/shadertools/README.md)
+* Shader Module integration: [see `Shader Modules`](/docs/developer-guide/shadertools/README.md)
 * Automatic creation of GPU `Buffer`s from typed array attributes
 * Detailed debug logging of draw calls
 
