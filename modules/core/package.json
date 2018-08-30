@@ -41,9 +41,6 @@
     "gl": false,
     "gl/wrap": false
   },
-  "sideEffects": [
-    "./src/init.js"
-  ],
   "scripts": {
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5 dist/esm dist/es6",
