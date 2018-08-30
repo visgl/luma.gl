@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {OBJLoader, KMLLoader, smartParse} from 'loaders.gl';
 
-import KML from '../kml-loader/KML_Samples.kml';
+import KML from '../data/kml/KML_Samples.kml';
 
 const LOADERS = [
   OBJLoader, KMLLoader

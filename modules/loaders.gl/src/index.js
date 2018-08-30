@@ -3,9 +3,24 @@ export {loadFile} from './common/loader';
 export {loadUri} from './common/loader-utils/load-uri.js';
 export {smartFetch, smartParse} from './common/smart-fetch';
 
-// GLB/GLTF LOADERS & WRITERS
-export {default as GLBLoader, GLBParser} from './glb-loader';
-export {default as GLBWriter, GLBBuilder} from './glb-writer';
+// UTILS
+
+// Get MIME type and size from binary image data
+export {getImageSize} from './common/loader-utils/get-image-size';
+// Convert between Buffers and ArrayBuffers
+export {toArrayBuffer, toBuffer} from './common/loader-utils/binary-utils';
+// TextEncoder/Decoder polyfills for Node.js
+export {default as TextDecoder} from './common/loader-utils/text-decoder';
+export {default as TextEncoder} from './common/loader-utils/text-encoder';
+
+// LOADERS
+
+// GLB LOADER & WRITER
+export {default as GLBLoader} from './glb-loader/glb-loader';
+export {default as GLBParser} from './glb-loader/glb-parser';
+
+export {default as GLBWriter} from './glb-writer/glb-writer';
+export {default as GLBBuilder} from './glb-writer/glb-builder';
 
 // MODEL LOADERS
 export {default as OBJLoader} from './obj-loader/obj-loader';

@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {KMLLoader} from 'loaders.gl';
 
-import KML from './KML_Samples.kml';
+import KML from '../data/kml/KML_Samples.kml';
 
 const INVALID_KML = `\
 <?xml version="1.0" encoding="UTF-8"?>

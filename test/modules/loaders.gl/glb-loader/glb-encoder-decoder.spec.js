@@ -4,7 +4,7 @@ import test from 'tape-catch';
 import {GLBBuilder, GLBParser} from 'loaders.gl';
 import unpackGLBBuffers from 'loaders.gl/glb-loader/unpack-glb-buffers';
 
-import TEST_JSON from './test-data.json';
+import TEST_JSON from '../data/glb/test-data.json';
 
 const BUFFERS = [
   new Int8Array([3, 2, 3]),

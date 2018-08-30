@@ -3,7 +3,7 @@ import test from 'tape-catch';
 
 import {GLBBuilder} from 'loaders.gl';
 
-import {_packBinaryJson as packBinaryJson} from 'loaders.gl/glb-writer';
+import packBinaryJson from 'loaders.gl/glb-writer/pack-binary-json';
 
 const inputJSONTypedArraysMixed = {
   slices: [
