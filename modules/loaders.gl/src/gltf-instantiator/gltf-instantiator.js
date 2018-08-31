@@ -1,4 +1,4 @@
-import {Buffer, Accessor, Texture2D, Model, Group} from 'luma.gl';
+import {Buffer, Texture2D, Model, Group} from 'luma.gl';
 
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph

@@ -49,9 +49,9 @@
     "collect-metrics": "./scripts/collect-metrics.sh"
   },
   "devDependencies": {
-    "@babel/cli": "^7.0.0-rc",
-    "@babel/core": "^7.0.0-rc",
-    "@babel/preset-env": "^7.0.0-rc",
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
     "babel-eslint": "^6.0.0",
     "babel-plugin-istanbul": "^4.1.1",
     "babel-plugin-version-inline": "^1.0.0",
