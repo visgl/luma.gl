@@ -28,7 +28,10 @@
     ".bin"
   ],
   "sideEffects": false,
-  "bin" : {
+  "browser": {
+    "fs": false
+  },
+  "bin": {
     "glbdump" : "./.bin/glbdump"
   },
   "scripts": {
