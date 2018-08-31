@@ -90,11 +90,11 @@ export default [
             component: ShadowmapDemo
           },
           {
-            name: 'Transform',
+            name: 'Transform (WebGL2)',
             component: TransformDemo
           },
           {
-            name: 'Transform Feedback',
+            name: 'Transform Feedback (WebGL2)',
             component: TransformFeedbackDemo
           }
         ]
