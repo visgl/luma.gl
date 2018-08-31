@@ -7,10 +7,10 @@ import {_transform as transform} from '../shadertools/src';
 import {isWebGL2, assertWebGL2Context, getShaderVersion} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log} from '../utils';
+import {updateTextureAttributes} from './transform-shader-utils';
 
 const FS100 = 'void main() {}';
 const FS300 = `#version 300 es\n${FS100}`;
-const REGEX_START_OF_MAIN = /main\s*\([^\)]*\)\s*\{\n?/; // Beginning of main
 
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {
@@ -38,7 +38,7 @@ export default class Transform {
     this.sourceTextures = new Array(2);
     this.feedbackBuffers = new Array(2);
     this.transformFeedbacks = new Array(2);
-    this._buffersCreated = {};
+    this._createdBuffers = {};
     this.elementIDBuffer = null;
 
     this._initialize(props);
@@ -47,8 +47,8 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    for (const name in this._buffersCreated) {
-      this._buffersCreated[name].delete();
+    for (const name in this._createdBuffers) {
+      this._createdBuffers[name].delete();
     }
     this.model.delete();
   }
@@ -121,7 +121,7 @@ export default class Transform {
       return;
     }
     if (this.elementCount < elementCount) {
-      this._createElementIDBuffer(elementCount);
+      this._updateElementIDBuffer(elementCount);
     }
     this.model.setVertexCount(elementCount);
     this.elementCount = elementCount;
@@ -215,10 +215,10 @@ export default class Transform {
         const {bytes, type, usage, accessor} = sourceBuffer;
         const buffer = new Buffer(this.gl, {bytes, type, usage, accessor});
 
-        if (this._buffersCreated[feedbackBufferName]) {
-          this._buffersCreated[feedbackBufferName].delete();
+        if (this._createdBuffers[feedbackBufferName]) {
+          this._createdBuffers[feedbackBufferName].delete();
         }
-        this._buffersCreated[feedbackBufferName] = buffer;
+        this._createdBuffers[feedbackBufferName] = buffer;
         this.feedbackBuffers[current][feedbackBufferName] = buffer;
       }
     }
@@ -227,9 +227,9 @@ export default class Transform {
   // Create a buffer and add to list of buffers to be deleted.
   _createNewBuffer(name, opts) {
     const buffer = new Buffer(this.gl, opts);
-    if (this._buffersCreated[name]) {
-      this._buffersCreated[name].delete();
-      this._buffersCreated[name] = buffer;
+    if (this._createdBuffers[name]) {
+      this._createdBuffers[name].delete();
+      this._createdBuffers[name] = buffer;
     }
     return buffer;
   }
@@ -305,20 +305,21 @@ export default class Transform {
     }
   }
 
-  // create buffer to access source texture's individual pixels.
-  _createElementIDBuffer(elementCount) {
+  // create/update buffer to access source texture's individual pixels.
+  _updateElementIDBuffer(elementCount) {
     if (!this.hasSourceTextures) {
       return;
     }
-    if (this.elementIDBuffer) {
-      this.elementIDBuffer.delete();
-    }
-    // TODO: can attribute be a uint
+    // NOTE: using float so this will work with GLSL 1.0 shaders.
     const elementIds = new Float32Array(elementCount);
     elementIds.forEach((_, index, array) => {
       array[index] = index;
     });
-    this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, size: 1});
+    if (!this.elementIDBuffer) {
+      this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, size: 1});
+    } else {
+      this.elementIDBuffer.setData({data: elementIds});
+    }
   }
 
   // build and return shader releated parameters
@@ -336,86 +337,6 @@ export default class Transform {
     if (!this.hasSourceTextures) {
       return {vs, uniforms};
     }
-    let updatedVs = vs;
-    let mainInstructions = null;
-    const texAttributeNames = Object.keys(this.sourceTextures[this.currentIndex]);
-    if (texAttributeNames.length > 0) {
-      const vsLines = updatedVs.split('\n');
-      const updateVsLines = vsLines.slice();
-      const defNameMap = texAttributeNames.reduce((result, name) => {
-        const def = `${name};`;
-        result[def] = name;
-        return result;
-      }, {});
-      const sampleInstructions = [];
-      vsLines.forEach((line, index, lines) => {
-        const updated = this._processTextureAttributes(line, defNameMap);
-        if (updated) {
-          const {updatedLine, sampleInstruction, samplerUniforms} = updated;
-          updateVsLines[index] = updatedLine;
-          sampleInstructions.push(sampleInstruction);
-          Object.assign(uniforms, samplerUniforms);
-        }
-      });
-      updatedVs = updateVsLines.join('\n');
-      mainInstructions = mainInstructions ?
-        mainInstructions + sampleInstructions : sampleInstructions;
-    }
-
-    if (mainInstructions) {
-      updatedVs = updatedVs.replace(REGEX_START_OF_MAIN, match => match + mainInstructions);
-    }
-
-    return {vs: updatedVs, uniforms};
-  }
-
-  // build required definitions, sample instructions and uniforms for each texture attribute
-  _processTextureAttributes(line, defNameMap) {
-    const samplerUniforms = {};
-    const words = line.replace(/^\s+/, '').split(/\s+/);
-    const [qualifier, size, definition] = words;
-    if (
-      (qualifier !== 'attribute' && qualifier !== 'in') ||
-      !size ||
-      !definition
-    ) {
-      return null;
-    }
-    // check if a texture source is specified for this attribute
-    const name = defNameMap[definition];
-    if (name) {
-      assert(this.sourceTextures[0][name]);
-      const updatedLine = `\
-uniform sampler2D transform_uSampler_${definition} \// ${line}
-uniform vec2 transform_uSize_${definition}`;
-      const channels = sizeToChannels(size);
-      const sampler = `transform_uSampler_${name}`;
-      const texSize = `transform_uSize_${name}`;
-      const sampleInstruction =
-        `  ${size} ${name} = transform_getInput(${sampler}, ${texSize}).${channels};\n`;
-
-      const samplerName = `transform_uSampler_${name}`;
-      const sizeName = `transform_uSize_${name}`;
-      const {width, height} = this.sourceTextures[this.currentIndex][name];
-      samplerUniforms[samplerName] = this.sourceTextures[this.currentIndex][name];
-      samplerUniforms[sizeName] = [width, height];
-
-      return {updatedLine, sampleInstruction, samplerUniforms};
-    }
-    return null;
-  }
-}
-
-// Utility methods
-
-function sizeToChannels(size) {
-  switch (size) {
-  case 'float': return 'x';
-  case 'vec2': return 'xy';
-  case 'vec3': return 'xyz';
-  case 'vec4': return 'xyzw';
-  default :
-    assert(false);
-    return null;
+    return updateTextureAttributes(vs, this.sourceTextures[this.currentIndex]);
   }
 }
