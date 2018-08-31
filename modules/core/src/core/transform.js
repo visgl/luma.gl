@@ -72,6 +72,7 @@ export default class Transform {
     this.model.setAttributes(attributes);
     this.model.transform({
       transformFeedback: this.transformFeedbacks[this.currentIndex],
+      uniforms,
       unbindModels
     });
   }
