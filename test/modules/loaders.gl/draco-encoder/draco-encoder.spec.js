@@ -1,13 +1,13 @@
 // const fs = require('fs');
 // const path = require('path');
 
-// import {DRACOCompressor} from 'loaders.gl';
+// import {DRACOEncoder} from 'loaders.gl';
 
 import test from 'tape-catch';
 
 test('pack-and-unpack-buffers', t => {
   /*
-  const dracoCompressor = new DRACOCompressor();
+  const dracoCompressor = new DRACOEncoder();
 
   fs.readFile(path.resolve(__dirname, './bunny.drc'), (err, data) => {
     if (err) {

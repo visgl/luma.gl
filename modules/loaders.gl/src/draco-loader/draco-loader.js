@@ -1,4 +1,9 @@
-import parseDRACO from './draco-parser';
+import DRACODecoder from './draco-parser';
+
+function parseDRACO(arrayBuffer, options) {
+  const dracoDecoder = new DRACODecoder();
+  return dracoDecoder.decode(arrayBuffer, options);
+}
 
 export default {
   name: 'DRACO',

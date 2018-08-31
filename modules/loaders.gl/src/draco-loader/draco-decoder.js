@@ -8,15 +8,15 @@ const GEOMETRY_TYPE = {
   POINT_CLOUD: 1
 };
 
-// Native Draco attribute type to Three.JS attribute type.
+// Native Draco attribute names to GLTF attribute names.
 const ATTRIBUTE_MAP = {
   position: 'POSITION',
   normal: 'NORMAL',
-  color: 'COLOR',
-  uv: 'TEX_COORD'
+  color: 'COLOR_0',
+  uv: 'TEXCOORD_0'
 };
 
-export default class DRACODecompressor {
+export default class DRACODecoder {
   constructor() {
     this.decoderModule = draco3d.createDecoderModule({});
   }
@@ -45,13 +45,13 @@ export default class DRACODecompressor {
   }
 
   // NOTE: caller must call `destroyGeometry` on the return value after using it
-  decompressGeometry(arrayBuffer) {
+  decode(arrayBuffer) {
     const buffer = new this.decoderModule.DecoderBuffer();
     buffer.Init(new Int8Array(arrayBuffer), arrayBuffer.byteLength);
 
     const decoder = new this.decoderModule.Decoder();
 
-    let geometry;
+    const data = {};
     let dracoStatus;
     let dracoGeometry;
 
@@ -62,18 +62,22 @@ export default class DRACODecompressor {
       case this.decoderModule.TRIANGULAR_MESH:
         dracoGeometry = new this.decoderModule.Mesh();
         dracoStatus = decoder.DecodeBufferToMesh(buffer, dracoGeometry);
-        geometry = {
+        data.header = {
           type: GEOMETRY_TYPE.TRIANGULAR_MESH,
           faceCount: dracoGeometry.num_faces(),
           attributeCount: dracoGeometry.num_attributes(),
-          vertexCount: dracoGeometry.num_points(),
-          dracoGeometry
+          vertexCount: dracoGeometry.num_points()
         };
         break;
 
       case this.decoderModule.POINT_CLOUD:
         dracoGeometry = new this.decoderModule.PointCloud();
         dracoStatus = decoder.DecodeBufferToPointCloud(buffer, dracoGeometry);
+        data.header = {
+          type: GEOMETRY_TYPE.POINT_CLOUD,
+          attributeCount: dracoGeometry.num_attributes(),
+          vertexCount: dracoGeometry.num_points()
+        };
         break;
 
       default:
@@ -89,14 +93,14 @@ export default class DRACODecompressor {
         throw new Error(message);
       }
 
-      this.extractDRACOGeometry(decoder, dracoGeometry, geometry);
+      this.extractDRACOGeometry(decoder, dracoGeometry, data);
 
     } finally {
       this.decoderModule.destroy(decoder);
       this.decoderModule.destroy(buffer);
     }
 
-    return geometry;
+    return data;
   }
 
   extractDRACOGeometry(decoder, dracoGeometry, geometry, geometryType) {
@@ -112,7 +116,9 @@ export default class DRACODecompressor {
 
     // For meshes, we need indices to define the faces.
     if (geometryType === this.decoderModule.TRIANGULAR_MESH) {
-      attributes.indices = this.getMeshIndices();
+      attributes.indices = this.drawMode === 'TRIANGLE_STRIP' ?
+        this.getMeshStripIndices() :
+        this.getMeshFaceIndices();
     }
 
     attributes.drawMode = this.drawMode;
@@ -182,19 +188,7 @@ export default class DRACODecompressor {
   }
 
   // For meshes, we need indices to define the faces.
-  getMeshIndices(decoder, dracoGeometry) {
-
-    // if (this.drawMode === TRIANGLE_STRIP) {
-    //   const dracoArray = new this.decoderModule.DracoInt32Array();
-    //   const numStrips = decoder.GetTriangleStripsFromMesh(dracoGeometry, dracoArray);
-    //   const indices = new Uint32Array(dracoArray.size());
-    //   for (let i = 0; i < dracoArray.size(); ++i) {
-    //     indices[i] = dracoArray.GetValue(i);
-    //   }
-    //   this.decoderModule.destroy(dracoArray);
-    //   return indices;
-    // }
-
+  getMeshFaceIndices(decoder, dracoGeometry) {
     // Example on how to retrieve mesh and attributes.
     const numFaces = dracoGeometry.num_faces();
 
@@ -209,6 +203,18 @@ export default class DRACODecompressor {
       indices[index + 2] = dracoArray.GetValue(2);
     }
 
+    this.decoderModule.destroy(dracoArray);
+    return indices;
+  }
+
+  // For meshes, we need indices to define the faces.
+  getMeshStripIndices(decoder, dracoGeometry) {
+    const dracoArray = new this.decoderModule.DracoInt32Array();
+    const numStrips = decoder.GetTriangleStripsFromMesh(dracoGeometry, dracoArray);
+    const indices = new Uint32Array(dracoArray.size());
+    for (let i = 0; i < dracoArray.size(); ++i) {
+      indices[i] = dracoArray.GetValue(i);
+    }
     this.decoderModule.destroy(dracoArray);
     return indices;
   }

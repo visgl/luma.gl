@@ -26,7 +26,7 @@ const DEFAULT_ENCODING_OPTIONS = {
   }
 };
 
-export default class DRACOCompressor {
+export default class DRACOEncoder {
   constructor() {
     this.encoderModule = draco3d.createEncoderModule({});
     this.encoder = new this.encoderModule.Encoder();

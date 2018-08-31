@@ -1,1 +1,0 @@
-import './draco-compressor.spec';
