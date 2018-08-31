@@ -78,14 +78,14 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
-        name: 'Transform Feedback',
+        name: 'Transform Feedback (WebGL2)',
         content: {
           demo: 'TransformFeedbackDemo',
           code: `${GITHUB_TREE}/examples/core/transform-feedback`
         }
       },
       {
-        name: 'Transform',
+        name: 'Transform  (WebGL2)',
         content: {
           demo: 'TransformDemo',
           code: `${GITHUB_TREE}/examples/core/transform`
