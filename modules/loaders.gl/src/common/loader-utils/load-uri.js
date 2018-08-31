@@ -1,6 +1,6 @@
 // Based on binary-gltf-utils under MIT license: Copyright (c) 2016-17 Karl Cheng
 import path from 'path';
-import fs from 'fs';
+const fs = module.require && module.require('fs');
 
 /* global Buffer */
 
@@ -11,6 +11,10 @@ export function loadUri(uri, rootFolder = '.') {
 
   if (uri.startsWith('data:')) {
     return Promise.resolve(parseDataUri(uri));
+  }
+
+  if (!fs) {
+    return Promise.reject(new Error('Cannot load file URIs in browser'));
   }
 
   const filePath = path.join((rootFolder = '.'), uri);

@@ -74,12 +74,15 @@ export default class GLTFInstantiator {
   }
 
   createAccessor(accessor) {
+    return null;
+    /*
     return new Accessor({
       type: accessor.componentType,
       size: accessor.components,
       offset: accessor.byteOffset || 0,
       stride: accessor.byteStride || 0
     });
+    */
   }
 
   createTexture(gltfTexture) {
