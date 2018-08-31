@@ -1,15 +1,13 @@
 // LOADING FUNCTIONS
+
 export {loadFile} from './common/loader';
 export {loadUri} from './common/loader-utils/load-uri.js';
 export {smartFetch, smartParse} from './common/smart-fetch';
 
 // UTILS
 
-// Get MIME type and size from binary image data
 export {getImageSize} from './common/loader-utils/get-image-size';
-// Convert between Buffers and ArrayBuffers
 export {toArrayBuffer, toBuffer} from './common/loader-utils/binary-utils';
-// TextEncoder/Decoder polyfills for Node.js
 export {default as TextDecoder} from './common/loader-utils/text-decoder';
 export {default as TextEncoder} from './common/loader-utils/text-encoder';
 
@@ -33,6 +31,7 @@ export {default as OBJLoader} from './obj-loader/obj-loader';
 export {default as PLYLoader} from './ply-loader/ply-loader';
 export {default as LAZLoader} from './laz-loader/laz-loader';
 export {default as PCDLoader} from './pcd-loader/pcd-loader';
+export {default as DRACOLoader} from './draco-loader/draco-loader';
 
 // GEOSPATIAL LOADERS
 export {default as KMLLoader} from './kml-loader/kml-loader';
@@ -42,7 +41,9 @@ export {default as JSONLoader} from './formats/json-loader/json-loader';
 export {default as CSVLoader} from './formats/csv-loader/csv-loader';
 export {default as XMLLoader} from './formats/xml-loader/xml-loader';
 
-//  INSTANTIATORS (TODO: MOVE FROM LOADERS.GL to LUMA.GL)
+// COMPRESSORS/DECOMPRESSORS
+export {default as DRACOCompressor} from './draco-compression/draco-compressor';
+export {default as DRACODecompressor} from './draco-compression/draco-decompressor';
 
-// GLTF LOADER
+//  INSTANTIATORS (TODO: MOVE FROM LOADERS.GL to LUMA.GL)
 export {default as GLTFInstantiator} from './gltf-instantiator/gltf-instantiator';
