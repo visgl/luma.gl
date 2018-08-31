@@ -7,8 +7,7 @@
         }]
       ],
       "plugins": [
-        "version-inline",
-        "@babel/proposal-class-properties"
+        "version-inline"
       ]
     },
     "esm": {
@@ -18,8 +17,7 @@
         }]
       ],
       "plugins": [
-        "version-inline",
-        "@babel/proposal-class-properties"
+        "version-inline"
       ]
     },
     "es6": {
@@ -37,8 +35,7 @@
         }]
       ],
       "plugins": [
-        "version-inline",
-        "@babel/proposal-class-properties"
+        "version-inline"
       ]
     },
     "test": {
