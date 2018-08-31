@@ -1,0 +1,50 @@
+{
+  "env": {
+    "es5": {
+      "presets": [
+        [ "@babel/env", {
+          "modules": "commonjs"
+        }]
+      ],
+      "plugins": [
+        "version-inline",
+        "@babel/proposal-class-properties"
+      ]
+    },
+    "esm": {
+      "presets": [
+        [ "@babel/env", {
+          "modules": false
+        }]
+      ],
+      "plugins": [
+        "version-inline",
+        "@babel/proposal-class-properties"
+      ]
+    },
+    "es6": {
+      "presets": [
+        [ "@babel/env", {
+          "targets": {
+            "chrome": "60",
+            "edge": "15",
+            "firefox": "53",
+            "ios": "10.3",
+            "safari": "10.1",
+            "node": "8"
+          },
+          "modules": false
+        }]
+      ],
+      "plugins": [
+        "version-inline",
+        "@babel/proposal-class-properties"
+      ]
+    },
+    "test": {
+      "plugins": [
+        "istanbul"
+      ]
+    }
+  }
+}
