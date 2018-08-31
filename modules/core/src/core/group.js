@@ -4,6 +4,7 @@ import assert from '../utils/assert';
 
 export default class Group extends Object3D {
   constructor(opts = {}) {
+    opts = Array.isArray(opts) ? {children: opts} : opts;
     const {children = []} = opts;
     children.every(child => assert(child instanceof Object3D));
     super(opts);

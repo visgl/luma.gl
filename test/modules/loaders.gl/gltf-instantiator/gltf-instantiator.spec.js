@@ -1,31 +1,30 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
+import {fixture, deepCopy} from 'luma.gl/test/setup';
 
-import {deepCopy} from 'luma.gl/test/setup';
-import {GLBParser, GLTFLoader, GLTFParser, toArrayBuffer} from 'loaders.gl';
+import {GLBParser, GLTFParser, GLTFInstantiator, toArrayBuffer} from 'loaders.gl';
 
 import path from 'path';
 
 const GLTF_JSON = deepCopy(require('../data/gltf-2.0/2CylinderEngine.gltf.json'));
 
-test('GLTFLoader#imports', t => {
-  t.ok(GLTFLoader, 'GLTFLoader was imported');
+test('GLTFInstantiator#imports', t => {
   t.ok(GLTFParser, 'GLTFParser was imported');
-
-  const gltfParser = new GLTFParser({});
-  t.ok(gltfParser, 'GLTFParser was instantiated');
-
+  t.ok(GLTFInstantiator, 'GLTFInstantiator was imported');
   t.end();
 });
 
-test('GLTFParse#parse JSON', t => {
+test('GLTFInstantiator#instantiate JSON', t => {
   const gltf = new GLTFParser(GLTF_JSON).resolve({});
   t.ok(gltf, 'GLTFParser returned parsed data');
 
+  const scenes = new GLTFInstantiator(fixture.gl).instantiate(gltf);
+  t.ok(scenes, 'GLTFInstantiator returned scenegraphs');
+
   t.end();
 });
 
-test('GLTFParse#parse binary', t => {
+test('GLTFInstantiator#instantiate binary', t => {
   const fs = module.require && module.require('fs');
   if (!fs) {
     t.comment('binary data tests only available under Node.js');
@@ -40,5 +39,9 @@ test('GLTFParse#parse binary', t => {
   const gltf = new GLTFParser(json).resolve({});
   t.ok(gltf, 'GLTFParser returned parsed data');
 
+  const scenes = new GLTFInstantiator(fixture.gl).instantiate(gltf);
+  t.ok(scenes, 'GLTFInstantiator returned scenegraphs');
+
   t.end();
 });
+

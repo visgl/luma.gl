@@ -108,21 +108,21 @@ export default class GLTFParser {
   resolve(options = {}) {
     const {gltf} = this;
 
-    (gltf.bufferViews || []).forEach(bufView => this.resolveBufferView(bufView));
+    (gltf.bufferViews || []).forEach((bufView, i) => this.resolveBufferView(bufView, i));
 
-    (gltf.images || []).forEach(image => this.resolveImage(image));
-    (gltf.samplers || []).forEach(sampler => this.resolveSampler(sampler));
-    (gltf.textures || []).forEach(texture => this.resolveTexture(texture));
+    (gltf.images || []).forEach((image, i) => this.resolveImage(image, i));
+    (gltf.samplers || []).forEach((sampler, i) => this.resolveSampler(sampler, i));
+    (gltf.textures || []).forEach((texture, i) => this.resolveTexture(texture, i));
 
-    (gltf.accessors || []).forEach(accessor => this.resolveAccessor(accessor));
-    (gltf.materials || []).forEach(material => this.resolveMaterial(material));
-    (gltf.meshes || []).forEach(mesh => this.resolveMesh(mesh));
+    (gltf.accessors || []).forEach((accessor, i) => this.resolveAccessor(accessor, i));
+    (gltf.materials || []).forEach((material, i) => this.resolveMaterial(material, i));
+    (gltf.meshes || []).forEach((mesh, i) => this.resolveMesh(mesh, i));
 
-    (gltf.nodes || []).forEach(node => this.resolveNode(node));
+    (gltf.nodes || []).forEach((node, i) => this.resolveNode(node, i));
 
-    (gltf.skins || []).forEach(skin => this.resolveSkin(skin));
+    (gltf.skins || []).forEach((skin, i) => this.resolveSkin(skin, i));
 
-    (gltf.scenes || []).forEach(scene => this.resolveScene(scene));
+    (gltf.scenes || []).forEach((scene, i) => this.resolveScene(scene, i));
 
     if (gltf.scene) {
       gltf.scene = gltf.scenes[this.gltf.scene];
@@ -132,11 +132,13 @@ export default class GLTFParser {
   }
   /* eslint-enable complexity */
 
-  resolveScene(scene) {
+  resolveScene(scene, index) {
+    scene.id = `scene-${index}`;
     scene.nodes = (scene.nodes || []).map(node => this.getNode(node));
   }
 
-  resolveNode(node) {
+  resolveNode(node, index) {
+    node.id = `node-${index}`;
     node.children = (node.children || []).map(child => this.getNode(child));
     if (node.mesh) {
       node.mesh = this.getMesh(node.mesh);
@@ -149,11 +151,13 @@ export default class GLTFParser {
     }
   }
 
-  resolveSkin(skin) {
+  resolveSkin(skin, index) {
+    skin.id = `skin-${index}`;
     skin.inverseBindMatrices = this.getAccessor(skin.inverseBindMatrices);
   }
 
-  resolveMesh(mesh) {
+  resolveMesh(mesh, index) {
+    mesh.id = `mesh-${index}`;
     for (const primitive of mesh.primitives) {
       for (const attribute in primitive.attributes) {
         primitive.attributes[attribute] = this.getAccessor(primitive.attributes[attribute]);
@@ -167,7 +171,8 @@ export default class GLTFParser {
     }
   }
 
-  resolveMaterial(material) {
+  resolveMaterial(material, index) {
+    material.id = `material-${index}`;
     if (material.normalTexture) {
       this.normalTexture = this.getTexture(material.normalTexture);
     }
@@ -189,42 +194,42 @@ export default class GLTFParser {
     }
   }
 
-  resolveAccessor(accessor) {
+  resolveAccessor(accessor, index) {
+    accessor.id = `accessor-${index}`;
     accessor.bufferView = this.getBufferView(accessor.bufferView);
 
     // Look up enums
     accessor.bytesPerComponent = this.enumAccessorBytes(accessor);
     accessor.components = this.enumAccessorType(accessor);
     accessor.bytesPerElement = accessor.bytesPerComponent * accessor.components;
-    return accessor;
   }
 
-  resolveTexture(texture) {
+  resolveTexture(texture, index) {
+    texture.id = `texture-${index}`;
     texture.sampler = this.getSampler(texture.sampler);
     texture.source = this.getImage(texture.source);
-    return texture;
   }
 
-  resolveSampler(sampler) {
+  resolveSampler(sampler, index) {
+    sampler.id = `sampler-${index}`;
     // Map textual parameters to GL parameter values
-    // Replace sampler with remapped parameters
+    this.parameters = {};
     for (const key in sampler) {
       const glEnum = this.enumSamplerParameter(sampler[key]);
-      sampler[glEnum] = sampler[key];
-      delete sampler.key;
+      this.parameters[glEnum] = sampler[key];
     }
-    return sampler;
   }
 
-  resolveImage(image) {
+  resolveImage(image, index) {
+    image.id = `image-${index}`;
     if (image.bufferView) {
       image.bufferView = this.getBufferView(image.bufferView);
     }
     // TODO - Handle URIs etc
-    return image;
   }
 
-  resolveBufferView(bufferView) {
+  resolveBufferView(bufferView, index) {
+    bufferView.id = `bufferView-${index}`;
     bufferView.buffer = this.getBuffer(bufferView.buffer);
   }
 
