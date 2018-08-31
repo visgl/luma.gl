@@ -34,8 +34,6 @@ export {default as PCDLoader} from './pcd-loader/pcd-loader';
 
 export {default as DRACOLoader} from './draco-loader/draco-loader';
 export {default as DRACODecoder} from './draco-loader/draco-decoder';
-
-// COMPRESSORS/DECOMPRESSORS
 export {default as DRACOEncoder} from './draco-encoder/draco-encoder';
 
 // GEOSPATIAL LOADERS
@@ -45,7 +43,6 @@ export {default as KMLLoader} from './kml-loader/kml-loader';
 export {default as JSONLoader} from './formats/json-loader/json-loader';
 export {default as CSVLoader} from './formats/csv-loader/csv-loader';
 export {default as XMLLoader} from './formats/xml-loader/xml-loader';
-
 
 //  INSTANTIATORS (TODO: MOVE FROM LOADERS.GL to LUMA.GL)
 export {default as GLTFInstantiator} from './gltf-instantiator/gltf-instantiator';

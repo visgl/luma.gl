@@ -31,7 +31,8 @@ test('DRACOLoader#parseBinary', t => {
   const data = DRACOLoader.parseBinary(binary);
 
   t.ok(data.header, 'Documents were found');
-  t.equal(data.attributes.position.length, 179250, 'position attribute was found');
+  // t.comment(JSON.stringify(data));
+  t.equal(data.attributes.POSITION.length, 104502, 'position attribute was found');
 
   t.end();
 });

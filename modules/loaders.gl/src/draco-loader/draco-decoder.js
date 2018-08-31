@@ -107,12 +107,14 @@ export default class DRACODecoder {
     // const numPoints = dracoGeometry.num_points();
     // const numAttributes = dracoGeometry.num_attributes();
 
+    // Structure for converting to WebGL framework specific attributes later
+    const attributes = this.getAttributes(decoder, dracoGeometry);
+
     const positionAttribute = this.getPositionAttribute(decoder, dracoGeometry);
 
     this.getPositionAttributeMetadata(positionAttribute);
 
-    // Structure for converting to WebGL framework specific attributes later
-    const attributes = this.getAttributes(decoder, dracoGeometry);
+    attributes.POSITION = positionAttribute;
 
     // For meshes, we need indices to define the faces.
     if (geometryType === this.decoderModule.TRIANGULAR_MESH) {
@@ -122,6 +124,8 @@ export default class DRACODecoder {
     }
 
     attributes.drawMode = this.drawMode;
+
+    geometry.attributes = attributes;
 
     return geometry;
   }
@@ -133,7 +137,10 @@ export default class DRACODecoder {
       throw new Error('DRACO decompressor: No position attribute found.');
     }
 
-    return decoder.GetAttribute(dracoGeometry, positionAttributeId);
+    const dracoAttribute = decoder.GetAttribute(dracoGeometry, positionAttributeId);
+    const {typedArray} = this.getAttributeTypedArray(
+      decoder, dracoGeometry, dracoAttribute, Float32Array, 'position');
+    return typedArray;
   }
 
   getPositionAttributeMetadata(positionAttribute) {
@@ -164,16 +171,16 @@ export default class DRACODecoder {
       // The native attribute type is only used when no unique Id is provided.
       // For example, loading .drc files.
 
-      if (attributeUniqueIdMap[attributeName] === undefined) {
-        const attributeType = this.decoderModule[ATTRIBUTE_MAP[attributeName]];
-        const attributeId = decoder.GetAttributeId(dracoGeometry, attributeType);
-        if (attributeId !== -1) {
-          const dracoAttribute = decoder.GetAttribute(dracoGeometry, attributeId);
-          this.getAttributeTypedArray(
-            decoder, dracoGeometry, dracoAttribute, Float32Array, attributeName
-          );
-        }
+      // if (attributeUniqueIdMap[attributeName] === undefined) {
+      const attributeType = this.decoderModule[attributeName];
+      const attributeId = decoder.GetAttributeId(dracoGeometry, attributeType);
+      if (attributeId !== -1) {
+        const dracoAttribute = decoder.GetAttribute(dracoGeometry, attributeId);
+        this.getAttributeTypedArray(
+          decoder, dracoGeometry, dracoAttribute, Float32Array, attributeName
+        );
       }
+      // }
     }
 
     // // Add attributes of user specified unique id. E.g. GLTF models.
@@ -210,7 +217,7 @@ export default class DRACODecoder {
   // For meshes, we need indices to define the faces.
   getMeshStripIndices(decoder, dracoGeometry) {
     const dracoArray = new this.decoderModule.DracoInt32Array();
-    const numStrips = decoder.GetTriangleStripsFromMesh(dracoGeometry, dracoArray);
+    /* const numStrips = */ decoder.GetTriangleStripsFromMesh(dracoGeometry, dracoArray);
     const indices = new Uint32Array(dracoArray.size());
     for (let i = 0; i < dracoArray.size(); ++i) {
       indices[i] = dracoArray.GetValue(i);
@@ -219,7 +226,7 @@ export default class DRACODecoder {
     return indices;
   }
 
-  getAttributeTypedArray(decoder, dracoGeometry, dracoAttribute, attributeName, attributeType) {
+  getAttributeTypedArray(decoder, dracoGeometry, dracoAttribute, attributeType, attributeName) {
     if (dracoAttribute.ptr === 0) {
       const message = `DRACO decode bad attribute ${attributeName}`;
       // console.error(message);
@@ -278,7 +285,7 @@ export default class DRACODecoder {
       break;
 
     default:
-      const errorMsg = 'THREE.DRACOLoader: Unexpected attribute type.';
+      const errorMsg = 'DRACO decoder: unexpected attribute type.';
       // console.error(errorMsg);
       throw new Error(errorMsg);
 
