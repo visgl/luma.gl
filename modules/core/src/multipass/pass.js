@@ -47,7 +47,9 @@ export default class Pass {
       () => this._renderPass(renderParams)
     );
 
-    renderParams.outputBuffer.log(3, this.id);
+    if (this.props.debug) {
+      renderParams.outputBuffer.log(0, this.id);
+    }
 
     if (this.props.swap) {
       renderState._swapFramebuffers();

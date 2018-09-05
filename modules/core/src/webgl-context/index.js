@@ -16,7 +16,6 @@ export {
 } from './context-limits';
 
 export {
-  pageLoadPromise,
   getPageLoadPromise,
   createCanvas,
   getCanvas
@@ -30,4 +29,6 @@ export {
   createBrowserContext
 } from './create-browser-context';
 
-export {default as trackContextState} from './track-context-state';
+export {
+  default as trackContextState
+} from './track-context-state';

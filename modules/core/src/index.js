@@ -97,6 +97,9 @@ export {default as _TexturePass} from './multipass/texture-pass';
 // export {default as _ClearMaskPass} from './multipass/clearmask-pass';
 export {default as _PickingPass} from './multipass/picking-pass';
 
+export {default as _ShaderModulePass} from './multipass/shader-module-pass';
+export {default as _Canvas} from './multipass/canvas';
+
 // Geometry
 export {default as Geometry} from './geometry/geometry';
 export {default as ConeGeometry} from './geometry/cone-geometry';
@@ -137,6 +140,7 @@ export {
   registerShaderModules
 } from './shadertools/src/lib/resolve-modules';
 export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
+export {normalizeShaderModule} from './shadertools/src/lib/filters/normalize-module';
 
 // shader modules
 export {default as fp32} from './shadertools/src/modules/fp32/fp32';
