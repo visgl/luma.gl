@@ -23,6 +23,7 @@ test('DRACOLoader#parseBinary', t => {
   if (!fs) {
     t.comment('binary data tests only available under Node.js');
     t.end();
+    return;
   }
 
   const file = fs.readFileSync(path.resolve(__dirname, '../data/draco/bunny.drc'));

@@ -7,7 +7,6 @@
 //    - Exports types from headless gl when running under Node.js
 
 /* eslint-disable quotes, no-console */
-/* global console */
 import {global} from '../utils/globals';
 import isBrowser from '../utils/is-browser';
 
@@ -27,7 +26,8 @@ if (!isBrowser) {
     headlessGL = module.require('gl');
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
-    console.info(ERR_HEADLESSGL_LOAD);
+    // /* global console */
+    // console.info(ERR_HEADLESSGL_LOAD);
   }
 }
 

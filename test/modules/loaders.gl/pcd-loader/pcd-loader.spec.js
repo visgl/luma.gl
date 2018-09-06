@@ -3,7 +3,7 @@ import test from 'tape-catch';
 import {PCDLoader} from 'loaders.gl';
 import {TextEncoder, toArrayBuffer} from 'loaders.gl/common/loader-utils';
 
-import PCD from '../data/pcd/simple-ascii.pcd';
+import PCD from '../data/pcd/simple-ascii.pcd.js';
 
 test('PCDLoader#parseText', t => {
   const binaryPCD = new TextEncoder().encode(PCD);
