@@ -13,17 +13,20 @@
 // loading. For example, the following maps the properties
 // “diffuse_(red|green|blue)” in the file to standard color names.
 //
-// parsePLY(data, {propertyNameMapping: {
-//  diffuse_red: 'red',
-//  diffuse_green: 'green',
-//  diffuse_blue: 'blue'
-// }});
+// parsePLY(data, {
+//   propertyNameMapping: {
+//     diffuse_red: 'red',
+//     diffuse_green: 'green',
+//     diffuse_blue: 'blue'
+//   }
+// });
 
 import TextDecoder from '../common/loader-utils/text-decoder';
 
 export default function parsePLY(data, options = {}) {
   let attributes;
   let header;
+
   if (data instanceof ArrayBuffer) {
     const text = new TextDecoder().decode(data);
     header = parseHeader(text, options);

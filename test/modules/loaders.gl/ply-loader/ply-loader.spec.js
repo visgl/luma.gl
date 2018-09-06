@@ -7,8 +7,6 @@ import PLY from '../data/ply/cube_att.ply.js';
 test('PLYLoader#parseText', t => {
   const data = PLYLoader.parseText(PLY);
 
-  t.comment(JSON.stringify(data));
-
   t.ok(data.header, 'Documents were found');
   t.equal(data.attributes.vertices.length, 72, 'position attribute was found');
   t.equal(data.attributes.normals.length, 72, 'Color attribute was found');
@@ -30,7 +28,6 @@ test('PLYLoader#parseBinary', t => {
   // const binaryPLY = toArrayBuffer(file);
 
   const data = PLYLoader.parseText(file);
-  t.comment(JSON.stringify(data));
 
   t.ok(data.header, 'Documents were found');
 
