@@ -452,6 +452,7 @@ export default class Framebuffer extends Resource {
 
     gl.readBuffer(prevBuffer);
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+
     return texture;
   }
 

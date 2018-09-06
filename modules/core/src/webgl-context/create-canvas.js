@@ -6,18 +6,7 @@ import {isBrowser} from '../utils';
 const isPage = isBrowser && typeof document !== 'undefined';
 let isPageLoaded = isPage && document.readyState === 'complete';
 
-export const pageLoadPromise = isPage ?
-  new Promise((resolve, reject) => {
-    if (isPageLoaded) {
-      resolve(document);
-      return;
-    }
-    window.onload = () => {
-      isPageLoaded = true;
-      resolve(document);
-    };
-  }) :
-  Promise.resolve({});
+let pageLoadPromise;
 
 /**
  * Returns a promise that resolves when the page is loaded
@@ -25,6 +14,20 @@ export const pageLoadPromise = isPage ?
  * @return {Promise} - resolves when the page is loaded
  */
 export function getPageLoadPromise() {
+  if (!pageLoadPromise) {
+    pageLoadPromise = isPage ?
+      new Promise((resolve, reject) => {
+        if (isPageLoaded) {
+          resolve(document);
+          return;
+        }
+        window.onload = () => {
+          isPageLoaded = true;
+          resolve(document);
+        };
+      }) :
+      Promise.resolve({});
+  }
   return pageLoadPromise;
 }
 

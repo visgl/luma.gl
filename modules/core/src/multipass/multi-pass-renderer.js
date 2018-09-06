@@ -21,5 +21,6 @@ export default class MultiPassRenderer extends CompositePass {
     for (const pass of passes) {
       pass.render(this.renderState, animationProps);
     }
+    return this;
   }
 }

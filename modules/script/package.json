@@ -1,0 +1,29 @@
+{
+  "name": "luma.gl-scripts",
+  "description": "Scripting with luma.gl",
+  "license": "MIT",
+  "version": "0.0.0",
+  "private": "true",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "3D"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber/deck.gl.git"
+  },
+  "main": "dist/lumagl.min.js",
+  "scripts": {
+    "start": "webpack-dev-server --env.dev --progress --open",
+    "build:prod": "webpack",
+    "build:dev": "webpack --env.dev",
+    "build": "yarn build:dev"
+  },
+  "dependencies": {
+    "luma.gl": ">=6.1.0-beta.4"
+  }
+}

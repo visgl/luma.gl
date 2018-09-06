@@ -1,5 +1,5 @@
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
-import {pageLoadPromise} from '../webgl-context';
+import {getPageLoadPromise} from '../webgl-context';
 import {makeDebugContext} from '../webgl-context/debug-context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 import {log} from '../utils';
@@ -106,7 +106,7 @@ export default class AnimationLoop {
     // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
       // Wait for start promise before rendering frame
-      this._startPromise = pageLoadPromise
+      this._startPromise = getPageLoadPromise()
       .then(() => {
         if (this._stopped) {
           return null;
@@ -255,22 +255,24 @@ export default class AnimationLoop {
     this.animationProps.needsRedraw = this.needsRedraw;
     this.needsRedraw = null;
 
-    // CallbackData width and height represent drawing buffer width and height
-    const width = this.gl.drawingBufferWidth;
-    const height = this.gl.drawingBufferHeight;
+    const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
+    }
+    if (aspect !== this.animationProps.aspect) {
+      this.setNeedsRedraw('drawing buffer aspect changed');
     }
 
     this.animationProps.width = width;
     this.animationProps.height = height;
-    this.animationProps.aspect = height > 0 ? width / height : 1;
+    this.animationProps.aspect = aspect;
+
     this.animationProps.needsRedraw = this.needsRedraw;
 
     // Increment tick
     this.animationProps.time = Date.now() - this.animationProps.startTime;
-    this.animationProps.tick++;
-    this.animationProps.tock = Math.floor(this.animationProps.time / 1000 * 60);
+    this.animationProps.tick = Math.floor(this.animationProps.time / 1000 * 60);
+    this.animationProps.tock++;
 
     // experimental
     this.animationProps._offScreen = this.offScreen;
@@ -328,6 +330,23 @@ export default class AnimationLoop {
         div.innerHTML = html;
       }
     }
+  }
+
+  _getSizeAndAspect() {
+    // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+    const width = this.gl.drawingBufferWidth;
+    const height = this.gl.drawingBufferHeight;
+
+    // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
+    let aspect = 1;
+    const {clientWidth, clientHeight} = this.gl.canvas;
+    if (clientWidth >= 0 && clientHeight >= 0) {
+      aspect = height > 0 ? clientWidth / clientHeight : 1;
+    } else if (width > 0 && height > 0) {
+      aspect = width / height;
+    }
+
+    return {width, height, aspect};
   }
 
   // Default viewport setup

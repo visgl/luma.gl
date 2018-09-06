@@ -1,5 +1,16 @@
 # What's New
 
+## Version 6.2
+
+Date: Target September 12, 2018
+
+Mini release to add
+
+### ShaderModulePass (Exerimental)
+
+Shader modules that expose "standard" filtering and sampling functions can be given extra metadata (the `passes` field) enabling easy construction of a `ShaderModulePass`. Look for `ShaderPass` badges in the documentation of shader modules.
+
+
 
 ## Version 6.1
 
