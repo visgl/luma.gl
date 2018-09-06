@@ -21,8 +21,6 @@
 // TODO - need to clean up this code to follow lint rules, disable for now
 /* eslint-disable */
 
-import 'babel-polyfill';
-
 import {document, window} from 'global';
 import {Buffer, createGLContext, Program, setParameters, assembleShaders, registerShaderModules, fp64} from 'luma.gl';
 

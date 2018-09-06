@@ -37,7 +37,6 @@ void main(void) {
 `;
 
 const program = new Program(gl, {vs: VS, fs: FS});
-program.use();
 
 const projectionMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const projectionMatrixTyped = new Float32Array(projectionMatrix);

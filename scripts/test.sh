@@ -3,6 +3,8 @@
 
 set -e
 
+BASEDIR=$(dirname "$0")
+
 MODE=$1
 
 run_lint() {
@@ -29,7 +31,7 @@ case $MODE in
     break;;
 
   "fast")
-    node test/start.js test
+    node test/start.js fast
     break;;
 
   "bench")
@@ -39,14 +41,16 @@ case $MODE in
 
   "ci")
     # run by Travis CI
-    node test/start.js test-ci
     npm run build
+    npm run cover
+    npm run bench
     npm run collect-metrics
     break;;
 
   "cover")
-    NODE_ENV=test tape -r babel-register test/node.js
-    nyc report
+    # Seems to need to be run from each package.json root...
+    (cd $BASEDIR/../modules/core && NODE_ENV=test BABEL_ENV=cover npx nyc node $BASEDIR/../test/start.js cover)
+    npx nyc report
     break;;
 
   "dist")

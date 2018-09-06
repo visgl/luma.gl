@@ -164,7 +164,7 @@ export default class DRACODecoder {
 
   getAttributes(decoder, dracoGeometry) {
     const attributes = {};
-    const attributeUniqueIdMap = {};
+    // const attributeUniqueIdMap = {};
 
     // Add native Draco attribute type to geometry.
     for (const attributeName in ATTRIBUTE_MAP) {

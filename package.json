@@ -40,7 +40,7 @@
     "publish-prod": "(cd modules/core && npm run publish-prod)",
     "publish-beta": "(cd modules/core && npm run publish-beta)",
     "test": "scripts/test.sh",
-    "test-ci": "scripts/test.sh ci",
+    "test-ci": "scripts/test.sh cover && scripts/test.sh bench",
     "test-fast": "scripts/test.sh fast",
     "test-browser": "webpack-dev-server --config test/webpack.config.js --env.test_browser --progress --hot --open",
     "test-render": "webpack-dev-server --config test/webpack.config.js --env.render --progress --hot --open",
@@ -52,9 +52,11 @@
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
+    "@babel/register": "^7.0.0",
     "babel-eslint": "^6.0.0",
     "babel-plugin-istanbul": "^4.1.1",
     "babel-plugin-version-inline": "^1.0.0",
+    "codecov": "^3.1.0",
     "coveralls": "^2.13.0",
     "eslint": "^3.0",
     "eslint-config-uber-es2015": "^3.0.0",
@@ -64,7 +66,7 @@
     "markdownlint-cli": "^0.8.1",
     "mkdirp": "^0.5.1",
     "module-alias": "^2.0.0",
-    "nyc": "^10.2.0",
+    "nyc": "^13.0.0",
     "pre-commit": "^1.2.2",
     "puppeteer": "^1.2.0",
     "raw-loader": "^0.5.1",
@@ -79,16 +81,6 @@
     "webpack-bundle-analyzer": "^2.11.1",
     "webpack-cli": "^2.0.13",
     "webpack-dev-server": "^3.1.1"
-  },
-  "nyc": {
-    "sourceMap": false,
-    "instrument": false,
-    "include": [
-      "src/**/*.js"
-    ],
-    "exclude": [
-      "test/**/*.js"
-    ]
   },
   "pre-commit": [
     "test-fast"
