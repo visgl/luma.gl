@@ -14,8 +14,8 @@ run_lint() {
 
 run_full_test() {
   run_lint
-  node test/start.js test
-  node test/start.js test-browser
+  node test/start.js src
+  node test/start.js browser
   # node test/start.js render
 }
 
@@ -46,7 +46,7 @@ case $MODE in
 
   "dist")
     npm run build
-    node test/start.js test-dist
+    node test/start.js dist
     break;;
 
   "examples")

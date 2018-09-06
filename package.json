@@ -32,7 +32,7 @@
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && (cd modules/core && npm run clean)",
     "build": "(cd modules/core && npm run build)",
-    "cover": "(cd modules/core && npm run cover)",
+    "cover": "NODE_ENV=cover nyc node test/start",
     "lint": "eslint modules test && npm run lint-yarn",
     "lint-examples": "eslint examples",
     "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
@@ -41,10 +41,6 @@
     "publish-beta": "(cd modules/core && npm run publish-beta)",
     "test": "scripts/test.sh",
     "test-ci": "scripts/test.sh cover && scripts/test.sh bench",
-    "test-fast": "scripts/test.sh fast",
-    "test-browser": "webpack-dev-server --config test/webpack.config.js --env.test_browser --progress --hot --open",
-    "test-render": "webpack-dev-server --config test/webpack.config.js --env.render --progress --hot --open",
-    "bench": "scripts/test.sh bench",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js --env.bench --progress --hot --open",
     "collect-metrics": "./scripts/collect-metrics.sh"
   },
@@ -53,14 +49,14 @@
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/register": "^7.0.0",
-    "babel-eslint": "^6.0.0",
-    "babel-plugin-istanbul": "^4.1.1",
+    "babel-eslint": "^9.0.0",
+    "babel-plugin-istanbul": "^5.0.0",
     "babel-plugin-version-inline": "^1.0.0",
     "codecov": "^3.1.0",
     "coveralls": "^2.13.0",
     "eslint": "^3.0",
     "eslint-config-uber-es2015": "^3.0.0",
-    "eslint-plugin-babel": "^4.0.0",
+    "eslint-plugin-babel": "^5.1.0",
     "gl": "^4.0.2",
     "html-webpack-plugin": "^3.0.7",
     "markdownlint-cli": "^0.8.1",
@@ -83,6 +79,6 @@
     "webpack-dev-server": "^3.1.1"
   },
   "pre-commit": [
-    "test-fast"
+    "test"
   ]
 }

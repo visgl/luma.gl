@@ -1,6 +1,6 @@
 import {AnimationLoop} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+// import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#AnimationLoop constructor', t => {
   t.ok(AnimationLoop);
