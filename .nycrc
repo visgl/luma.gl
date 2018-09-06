@@ -1,0 +1,13 @@
+{
+  "require": [
+    "@babel/register"
+  ],
+  "sourceMap": false,
+  "instrument": false,
+  "include": [
+    "modules/**/*.js"
+  ],
+  "exclude": [
+    "test/**/*.js"
+  ]
+}

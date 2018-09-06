@@ -54,7 +54,7 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
 
   // Bundle the tests for running in the browser
   entry: {
-    'test-browser': resolve(__dirname, './test-browser.js')
+    'test-browser': resolve(__dirname, './browser.js')
   },
 
   // Generate a bundle in dist folder

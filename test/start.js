@@ -23,7 +23,7 @@ case 'test':
   require('./modules/core/debug/seer-integration');
   break;
 
-case 'test-dist':
+case 'dist':
   // Load deck.gl itself from the dist folder
   const dist = arg === 'default' ? 'es6' : arg;
   moduleAlias.addAlias('luma.gl', path.resolve(`./dist/${dist}`));
@@ -40,7 +40,7 @@ case 'cover':
   require('./modules/core/debug/seer-integration');
   break;
 
-case 'test-browser':
+case 'browser':
   new BrowserTestDriver().run({
     process: 'webpack-dev-server',
     parameters: ['--config', 'test/webpack.config.js', '--env.testBrowser'],
@@ -48,7 +48,6 @@ case 'test-browser':
   });
   break;
 
-case 'test-render':
 case 'render':
   new BrowserTestDriver().run({
     process: 'webpack-dev-server',
@@ -71,4 +70,7 @@ case 'analyze-size':
 
 default:
   console.error(`Unknown test mode ${mode}`); // eslint-disable-line
+  require('./index-webgl-independent-tests');
+  require('./index-webgl-dependent-tests');
+  require('./modules/core/debug/seer-integration');
 }

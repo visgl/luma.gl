@@ -72,6 +72,6 @@ module.exports = function _(opts) {
 };
 
 function getFilename(state) {
-  const filename = state.file.opts.sourceFileName;
+  const filename = state.file.opts.filename;
   return filename;
 }
