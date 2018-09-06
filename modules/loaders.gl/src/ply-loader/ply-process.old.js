@@ -5,10 +5,9 @@ import PLYParser from './ply-parser';
  * @param {Binary} data
  * @return {*} parsed point cloud
  */
-export function parsePLY(
-  data,
-  {normalize = true, faceNormal = true, vertexNormal = true, flip = true} = {}
-) {
+export function parsePLY(data, options = {}) {
+  const {normalize = true, faceNormal = true, vertexNormal = true, flip = true} = options;
+
   // Linearize the unnecessary callback interface from PLYloader
   let result = null;
   const parser = new PLYParser();
@@ -42,7 +41,10 @@ export function parsePLY(
     }
   }
 
-  return result;
+  return {
+    header: {},
+    attributes: result
+  };
 }
 
 export function generateNormals({vertex: {x, y, z}, face: {vertex_indices: triangles}}, flip) {

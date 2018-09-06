@@ -19,3 +19,18 @@
 ## KML
 
 Standard Google KML sample file.
+
+
+## PLY
+
+Samples from Google Draco `testdata`:
+
+* bun_zipper.ply
+* cube_att.ply
+
+
+## DRC
+
+Samples from Google Draco `testdata`:
+
+

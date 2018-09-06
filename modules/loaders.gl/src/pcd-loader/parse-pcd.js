@@ -1,12 +1,13 @@
-/**
- * @author Filipe Caixeta / http://filipecaixeta.com.br
- * @author Mugen87 / https://github.com/Mugen87
- *
- * Description: A THREE loader for PCD ascii and binary files.
- *
- * Limitations: Compressed binary files are not supported.
- *
- */
+// PCD Loader, adapted from THREE.js (MIT license)
+//
+// Attributions per original THREE.js source file:
+//
+// @author Filipe Caixeta / http://filipecaixeta.com.br
+// @author Mugen87 / https://github.com/Mugen87
+//
+// Description: A loader for PCD ascii and binary files.
+// Limitations: Compressed binary files are not supported.
+
 import TextDecoder from '../common/loader-utils/text-decoder';
 
 const LITTLE_ENDIAN = true;
