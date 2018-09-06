@@ -30,21 +30,12 @@ case $MODE in
     run_full_test;
     break;;
 
+  "lint")
+    run_lint
+    break;;
+
   "fast")
     node test/start.js fast
-    break;;
-
-  "bench")
-    node test/start.js bench
-    node test/start.js bench-browser
-    break;;
-
-  "ci")
-    # run by Travis CI
-    npm run build
-    npm run cover
-    npm run bench
-    npm run collect-metrics
     break;;
 
   "cover")
@@ -62,14 +53,24 @@ case $MODE in
     node test/node-examples.js
     break;;
 
-  "lint")
-    run_lint
+  "bench")
+    node test/start.js bench
+    node test/start.js bench-browser
     break;;
 
   "size-es6")
     npm run build
     NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.es6
     break;;
+
+  "ci")
+    # run by Travis CI
+    npm run build
+    npm run cover
+    npm run bench
+    npm run collect-metrics
+    break;;
+
 
   *)
     # default test
