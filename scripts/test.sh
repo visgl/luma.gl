@@ -65,10 +65,10 @@ case $MODE in
 
   "ci")
     # run by Travis CI
-    npm run build
+    node test/start.js bench
+    $BASEDIR/collect-metrics-fast.sh
     npm run cover
-    npm run bench
-    npm run collect-metrics
+    (cd $BASEDIR/../modules/core && npm run build-es6)
     break;;
 
 
