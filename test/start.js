@@ -16,6 +16,7 @@ const arg = process.argv.length >= 4 ? process.argv[3] : 'default';
 console.log(`Running test suite in "${mode}" mode...`); // eslint-disable-line
 
 switch (mode) {
+case 'fast':
 case 'test':
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
@@ -32,8 +33,8 @@ case 'test-dist':
   require('./modules/core/debug/seer-integration');
   break;
 
-case 'test-ci':
-  // Run a smaller selection of the tests (avoid overwhelming Travis CI)
+case 'cover':
+  require('@babel/register');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./modules/core/debug/seer-integration');
