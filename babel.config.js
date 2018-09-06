@@ -48,7 +48,8 @@ CONFIG.es5 = Object.assign({}, CONFIG.default, {
 });
 
 CONFIG.cover = Object.assign({}, CONFIG.default);
-CONFIG.cover.plugins = CONFIG.cover.plugins.concat(['istanbul']);
+// constant inlining seems to cause problems for nyc
+CONFIG.cover.plugins = ['version-inline', 'istanbul'];
 
 module.exports = function getConfig(api) {
 

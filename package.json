@@ -42,7 +42,7 @@
     "test": "scripts/test.sh",
     "test-ci": "scripts/test.sh cover && scripts/test.sh bench",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js --env.bench --progress --hot --open",
-    "collect-metrics": "./scripts/collect-metrics.sh",
+    "collect-metrics": "scripts/collect-metrics.sh",
     "pre-commit": "scripts/test.sh fast"
   },
   "devDependencies": {
