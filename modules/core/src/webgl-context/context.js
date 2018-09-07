@@ -20,17 +20,19 @@ export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
-export function isWebGL(gl) {
-  return Boolean(gl && (
-    gl instanceof WebGLRenderingContext ||
-    gl.ARRAY_BUFFER === GL_ARRAY_BUFFER
+// HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
+export function isWebGL(glContext) {
+  return Boolean(glContext && (
+    glContext instanceof WebGLRenderingContext ||
+    glContext.ARRAY_BUFFER === GL_ARRAY_BUFFER
   ));
 }
 
-export function isWebGL2(gl) {
-  return Boolean(gl && (
-    gl instanceof WebGL2RenderingContext ||
-    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D
+// HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
+export function isWebGL2(glContext) {
+  return Boolean(glContext && (
+    glContext instanceof WebGL2RenderingContext ||
+    glContext.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D
   ));
 }
 
