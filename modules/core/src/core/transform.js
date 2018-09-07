@@ -128,7 +128,7 @@ export default class Transform {
       framebuffer = this.framebuffers[this.currentIndex];
       assert(framebuffer);
 
-      // TODO: pass them as parameters?
+      // TODO: pass them as parameters? Otherwise we are changing global viwport state.
       this.gl.viewport(0, 0, framebuffer.width, framebuffer.height);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     }
