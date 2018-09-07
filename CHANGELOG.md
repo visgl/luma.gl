@@ -1,4 +1,13 @@
-# Pre-releases
+## 6.1.0 - September 6
+- Fix isWebGL2 (defeat GL constant inlining) (#716)
+
+## 6.1.0-beta.4 - Aug 30
+- Website fixes for Safari (#706)
+- Disable `sideEffects` field to fix minified builds (#701)
+- Cut Ocular section from Whats-new
+- Update whats new (#687)
+- Add loader, Faq links to website-old (#700)
+- (6.1-release-links) Add Transform demo link (#698)
 
 ## 6.1.0-beta.3 - Aug 29
 - Safari fixes (#697)

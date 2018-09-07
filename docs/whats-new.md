@@ -3,7 +3,7 @@
 
 ## Version 6.1
 
-Date: Target August 31, 2018
+Date: September 6, 2018
 
 <table style="border: 0;" align="center">
   <tbody>
