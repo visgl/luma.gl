@@ -4,6 +4,16 @@ This example is a luma.gl port of [glfx.js](https://github.com/evanw/glfx.js/), 
 
 All the glfx have been packaged as reusable luma.gl shader modules.
 
+
+## Running
+
+```
+yarn
+yarn build
+open index.html
+```
+
+
 ## TODO
 
 Effects:

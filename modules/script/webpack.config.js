@@ -7,12 +7,12 @@ const ROOT = resolve(PACKAGE_ROOT, '../..');
 // babel-plugin-version-inline uses the package version from the working directory
 // Therefore we need to manually import the correct version from the core
 // This is called in prepublishOnly, after lerna bumps the package versions
-const CORE_VERSION = require(resolve(ROOT, 'node_modules/luma.gl/package.json')).version;
+const CORE_VERSION = require(resolve(ROOT, './package.json')).version;
 
 const config = {
   resolve: {
     alias: {
-      'luma.gl': resolve(ROOT, 'node_modules/luma.gl/src')
+      'luma.gl': resolve(ROOT, './modules/core/src')
     }
   },
 
@@ -34,7 +34,7 @@ const config = {
 };
 
 const devConfig = Object.assign({}, config, {
-  entry: resolve(PACKAGE_ROOT, 'test/index.js'),
+  entry: resolve(PACKAGE_ROOT, 'src/index.js'),
 
   mode: 'development',
 
