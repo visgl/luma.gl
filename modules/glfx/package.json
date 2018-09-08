@@ -31,6 +31,6 @@
     "eslint-loader": "^1.9.0"
   },
   "dependencies": {
-    "luma.gl": "^6.1.0-beta"
+    "luma.gl": "^6.1.0"
   }
 }

@@ -5037,7 +5037,7 @@ lru-cache@^4.0.1, lru-cache@^4.1.1:
     pseudomap "^1.0.2"
     yallist "^2.1.2"
 
-luma.gl@>=6.1.0-beta.4, luma.gl@^6.1.0-beta:
+luma.gl@>=6.1.0-beta.4, luma.gl@^6.1.0:
   version "6.1.0"
   resolved "https://registry.yarnpkg.com/luma.gl/-/luma.gl-6.1.0.tgz#17e48a21f904f27b3b285d67aa1070ade462e9b7"
   dependencies:

@@ -3,7 +3,8 @@
   "license": "MIT",
   "contributors": [
     "Evan Wallace",
-    "David McArthur <daviestar@gmail.com>"
+    "David McArthur <daviestar@gmail.com>",
+    "Ib Green <ib@uber.com>"
   ],
   "scripts": {
     "start": "open index.html",
@@ -13,7 +14,7 @@
     "build": "mkdir -p dist && (cd ../../modules/script && yarn build:dev && cp dist/lumagl.js ../../examples/glfx/dist)"
   },
   "dependencies": {
-    "luma.gl": "^6.1.0-beta.4"
+    "luma.gl": "^6.1.0"
   },
   "devDependencies": {
     "babel-loader": "^8.0.0-beta",
