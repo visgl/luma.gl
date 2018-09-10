@@ -4,15 +4,26 @@
 const vs = `\
 attribute float transform_elementID;
 
+// returns half of pixel size, used to move the pixel position to center of the pixel.
+vec2 transform_getPixelSizeHalf(vec2 size) {
+  return vec2(1.) / (2. * size);
+}
+
+// returns current elements pixel indeces [x, y],
+// where x ranges in [0 to texSize-1] and y ranges in [0 to texSize-1]
+vec2 transform_getPixelIndices(vec2 texSize, vec2 pixelSizeHalf) {
+  // Add safe offset (half of pixel height) before doing floor
+  float yIndex = floor((transform_elementID / texSize[0]) + pixelSizeHalf[1]);
+  float xIndex = transform_elementID - (yIndex * texSize[0]);
+  return vec2(xIndex, yIndex);
+}
+
 // returns current elementID's texture co-ordianate
 vec2 transform_getTexCoord(vec2 size) {
-  float yOffset =  1. / (2. * size[1]);
-  float xOffset =  1. / (2. * size[0]);
-  float yIndex = floor((transform_elementID / size[0]) + yOffset );
-  float xIndex = transform_elementID - (yIndex * size[0]);
-  xIndex = (xIndex / size[0]) + xOffset;
-  yIndex = (yIndex / size[1]) + yOffset;
-  return vec2(xIndex, yIndex);
+  vec2 pixelSizeHalf = transform_getPixelSizeHalf(size);
+  vec2 indices = transform_getPixelIndices(size, pixelSizeHalf);
+  vec2 coord = indices / size + pixelSizeHalf;
+  return coord;
 }
 
 // returns current elementID's position
