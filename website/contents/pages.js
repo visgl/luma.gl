@@ -342,11 +342,11 @@ export const DOC_PAGES = [
       // },
       {
         name: 'Buffers',
-        content: 'developer-guide/attributes.md'
+        content: 'developer-guide/buffers.md'
       },
       {
         name: 'Accessors',
-        content: 'developer-guide/attributes.md'
+        content: 'developer-guide/accessors.md'
       },
       {
         name: 'Attributes',
