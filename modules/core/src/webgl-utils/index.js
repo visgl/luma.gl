@@ -39,3 +39,5 @@ export {
 export {getKeyValue, getKey, getKeyType} from './constants-to-keys';
 
 export {getShaderVersion} from './shader-utils';
+
+export {cloneTextureFrom} from './texture-utils';

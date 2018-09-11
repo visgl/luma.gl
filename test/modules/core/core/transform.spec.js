@@ -409,7 +409,7 @@ void main()
 }
 `;
 
-test('WebGL#Transform run (source - texture)', t => {
+test('WebGL#Transform run (source texture + feedback buffer)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -452,6 +452,357 @@ test('WebGL#Transform run (source - texture)', t => {
   const outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+const TEXTURE_BUFFER_TEST_CASES = [
+  // NOTE: elementCount is equal to width * height
+  // TODO: determine width and height based on elementCount and padding if needed
+  {
+    name: 'RED-FLOAT',
+    sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    vs: `\
+#version 300 es
+in float inBuffer;
+in float inTexture;
+out float outBuffer;
+out float outTexture;
+
+void main()
+{
+  outBuffer = inTexture + inBuffer;
+  outTexture = inTexture + inBuffer;
+}
+`
+  },
+  {
+    name: 'RGBA-UNSIGNED_BYTE',
+    sourceData: new Uint8Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    width: 2,
+    height: 2,
+    vs: `\
+#version 300 es
+in float inBuffer;
+in vec4 inTexture;
+out float outBuffer;
+out vec4 outTexture;
+
+void main()
+{
+  outBuffer = 2. * inBuffer;
+  outTexture = 2. *  inTexture;
+}
+`
+  }
+];
+
+test('WebGL#Transform run (source&destination texture + feedback buffer)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  TEXTURE_BUFFER_TEST_CASES.forEach(testCase => {
+    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+    const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
+    const sourceTexture = new Texture2D(gl2, {
+      data: sourceData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      sourceBuffers: {
+        inBuffer: sourceBuffer
+      },
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _renderToTexture: {
+        varying: 'outTexture',
+        refAttribute: 'inTexture'
+      },
+      vs,
+      feedbackMap: {
+        inBuffer: 'outBuffer'
+      },
+      elementCount: sourceData.length
+    });
+
+    transform.run();
+
+    const expectedData = sourceData.map(x => x * 2);
+    const outData = transform.getBuffer('outBuffer').getData();
+    t.deepEqual(outData, expectedData, `${name} Transform should write correct data into Buffer`);
+
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData();
+
+    // t.deepEqual(outData, expectedData, 'Transform should write correct data into Buffer');
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+  });
+
+  t.end();
+});
+
+const TEXTURE_TEST_CASES = [
+  // NOTE: elementCount is equal to width * height
+  // TODO: determine width and height based on elementCount and padding if needed
+  {
+    name: 'RED-FLOAT',
+    sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    vs: `\
+#version 300 es
+in float inTexture;
+out float outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  },
+  {
+    name: 'RGBA-UNSIGNED_BYTE',
+    sourceData: new Uint8Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    width: 2,
+    height: 2,
+    vs: `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  }
+];
+
+test('WebGL#Transform run (source&destination texture)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  TEXTURE_TEST_CASES.forEach(testCase => {
+    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+    // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
+    const sourceTexture = new Texture2D(gl2, {
+      data: sourceData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _renderToTexture: {
+        varying: 'outTexture',
+        refAttribute: 'inTexture'
+      },
+      vs,
+      elementCount: sourceData.length
+    });
+
+    transform.run();
+
+    const expectedData = sourceData.map(x => x * 2);
+
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData();
+
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+  });
+
+  t.end();
+});
+
+const VS_MINIFICAION = `\
+#version 300 es
+in float inTexture;
+out float outTexture;
+uniform vec2 scale;
+uniform vec2 offset;
+
+// TODO: review and move it to 'transform' module
+// overloaded versions that can access neighboring pixels using scale and offset.
+
+// returns the top left texture coordiante corresponding to 4X4 block in higher level texture.
+// size: minified texture size
+// scale: usually (2, 2)
+vec2 transform_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
+  // use actual (scaled) texture size to calcualte offset (multiplied by scale)
+  vec2 scaledSize = size * scale;
+  vec2 pixelOffset = transform_getPixelSizeHalf(scaledSize);
+
+  // use the minified texture size to generate indices
+  vec2 pixelIndices = transform_getPixelIndices(size, pixelOffset);
+
+  // now scale the indices to point to correct 4X4 block
+  pixelIndices = pixelIndices * scale;
+
+  // generate tex coordinate using actual size
+  vec2 texCoord = pixelIndices / scaledSize;
+
+  return texCoord + (offset / scaledSize) + pixelOffset;
+}
+
+// can be used to retrieve neighbor pixels values
+// returns current pixel's neighbors using scale and offset
+vec4 transform_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
+  vec2 texCoord = transform_getTexCoord(size, scale, offset);
+  vec4 textureColor = texture(texSampler, texCoord);
+  return textureColor;
+}
+
+void main()
+{
+  vec2 size = transform_uSize_outTexture;
+  vec2 scale = vec2(2., 2.);
+  vec4 pixel = transform_getInput(transform_uSampler_inTexture, size, scale, offset);
+  outTexture = pixel.x;
+}
+`;
+
+test('WebGL#Transform run (texture minification)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const WIDTH = 8;
+  const HEIGHT = 8;
+  const TEX_OPTIONS = {
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    mipmaps: false,
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    }
+  };
+
+  let sourceData = new Float32Array(WIDTH * HEIGHT).map((_, index) => index % WIDTH);
+
+  /* eslint-disable no-multi-spaces */
+  sourceData = new Float32Array([
+    0, 1,  10, 11,  20, 21,  30, 31,
+    2, 3,  12, 13,  22, 23,  32, 33,
+
+    40, 41,  50, 51,  60, 61,  70, 71,
+    42, 43,  52, 53,  62, 63,  72, 73,
+
+    80, 81,  90, 91,  100, 101,  110, 111,
+    82, 83,  92, 93,  102, 103,  112, 113,
+
+    120, 121,  130, 131,  140, 141,  150, 151,
+    122, 123,  132, 133,  142, 143,  152, 153
+  ]);
+  /* eslint-enable no-multi-spaces */
+
+  const expectedArray = new Array(WIDTH * HEIGHT / 4).fill(0);
+  const TEST_CASES = [
+    {
+      name: 'current-pixel',
+      offset: [0, 0],
+      expected: expectedArray.map((_, index) => index * 10)
+    },
+    {
+      name: 'right-pixel',
+      offset: [1, 0],
+      expected: expectedArray.map((_, index) => index * 10 + 1)
+    },
+    {
+      name: 'botom-pixel',
+      offset: [0, 1],
+      expected: expectedArray.map((_, index) => index * 10 + 2)
+    },
+    {
+      name: 'botom-right-pixel',
+      offset: [1, 1],
+      expected: expectedArray.map((_, index) => index * 10 + 3)
+    }
+  ];
+
+  const sourceTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
+    data: sourceData,
+    width: WIDTH,
+    height: HEIGHT
+  }));
+
+  const destinationTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
+    width: WIDTH / 2,
+    height: HEIGHT / 2
+  }));
+
+  const SCALE = [2, 2];
+
+  const dstPixelCount = WIDTH * HEIGHT / 4;
+
+  const transform = new Transform(gl2, {
+    _sourceTextures: {
+      inTexture: sourceTexture
+    },
+    _renderToTexture: {
+      varying: 'outTexture',
+      texture: destinationTexture
+    },
+    vs: VS_MINIFICAION,
+    elementCount: dstPixelCount
+  });
+
+  TEST_CASES.forEach(testCase => {
+    const {name, offset, expected} = testCase;
+    transform.run({uniforms: {
+      scale: SCALE,
+      offset
+    }});
+
+    const outTexData = transform.getData();
+
+    t.deepEqual(outTexData, expected, `Transform should access neighbor pixels correctly for ${name}`);
+  });
 
   t.end();
 });

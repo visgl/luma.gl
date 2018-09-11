@@ -30,5 +30,6 @@ test.onFailure(() => callExposedFunction('testDone', {success: false}));
 test('Browser tests', t => {
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
+  // require('./modules/core/core/transform.spec');
   t.end();
 });
