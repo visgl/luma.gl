@@ -32,13 +32,14 @@ vec2 matrixWarp_warp(vec2 coord) {
 }
 `;
 
+// TODO: FIXME
+/* eslint-disable */
+
 const uniforms = {
   matrix: inverse ? getInverse(matrix) : matrix,
   useTextureSpace: false
 };
 
-// TODO: FIXME
-/* eslint-disable */
 function getMatrix(matrix, inverse, useTextureSpace) {
   // Flatten all members of matrix into one big list
   matrix = Array.prototype.concat.apply([], matrix);
