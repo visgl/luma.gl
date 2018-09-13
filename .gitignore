@@ -17,6 +17,7 @@ test/data/test.png
 package-lock.json
 */**/yarn.lock
 yarn-error.log
+lerna-debug.log
 
 .project
 .DS_Store

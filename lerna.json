@@ -1,0 +1,18 @@
+{
+  "lerna": "2.0.0",
+  "version": "6.1.0-alpha.3",
+  "commands": {
+    "publish": {
+      "ignore": [
+        "test",
+        "*.md"
+      ]
+    },
+    "bootstrap": {}
+  },
+  "npmClient": "yarn",
+  "useWorkspaces": true,
+  "packages": [
+    "modules/*"
+  ]
+}

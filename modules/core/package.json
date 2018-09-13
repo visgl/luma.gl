@@ -71,25 +71,11 @@
     ]
   },
   "deprecatedScripts": {
-    "build-script": "webpack",
     "build-size": "(echo \"source size\" ; find src/ -name '*.js' | xargs cat | wc -c) && (echo \"dist/es6 size\" ; find dist/es6 -name '*.js' | xargs cat | wc -c) && (echo \"dist esm size\" ; find dist/esm -name '*.js' | xargs cat | wc -c) && (echo \"dist es5 size\" ; find dist/es5 -name '*.js' | xargs cat | wc -c)",
+    "clean": "rm -fr dist && mkdir -p dist/es5 dist/esm dist/es6",
     "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5 && npm run build-size",
-    "lint": "eslint src test && npm run lint-yarn",
-    "lint-examples": "eslint examples",
-    "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
-    "bench": "node test/bench/node.js",
-    "bench-browser": "webpack-dev-server --config test/webpack.config.js  --env.bench --progress --hot --open",
-    "test": "npm run lint && npm run test-node && npm run build && npm run test-dist &&  npm run collect-metrics && npm run test-browser-puppet",
-    "test-ci": "npm run lint && npm run build && npm run test-node && npm run test-dist &&  npm run collect-metrics",
-    "test-fast": "node ../../test/start.js test",
-    "test-fp64": "(cd src/shadertools/test && webpack-dev-server --progress --hot --open)",
-    "test-node": "node test/node.js",
-    "test-dist": "npm run build-es6 && node test/start.js test-dist",
-    "test-browser": "webpack-dev-server --config test/webpack.config.js --progress --hot --open --env.testBrowser ",
-    "test-browser-puppet": "node test/start.js test-browser",
-    "test-shader": "npm run build-dist && budo src/test/fp64-shader.spec.js:build/test-bundle.js --dir test --live --open --watch-glob '**/*.{html,css,scss,js,glsl}' -- -t babelify -t brfs-babel",
-    "test-size-es6": "npm run build-es6 && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.analyze --env.es6",
-    "test-size-esm": "npm run build-esm && NODE_ENV=production webpack --config test/webpack.config.js --env.import-nothing --env.analyze --env.esm",
-    "collect-metrics": "./scripts/collect-metrics.sh"
+    "build-es6": "BABEL_ENV=es6 babel src --config-file ../../babel.config.js --out-dir dist/es6 --source-maps --ignore 'node_modules/'",
+    "build-esm": "BABEL_ENV=esm babel src --config-file ../../babel.config.js --out-dir dist/esm --source-maps --ignore 'node_modules/'",
+    "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   }
 }
