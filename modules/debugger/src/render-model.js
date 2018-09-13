@@ -17,8 +17,8 @@ export default ({model, context, colorMode = COLOR_MODE.NONE}) => {
   const shaders = getShaders(model);
 
   // draw params
-  const {uniforms} = model;
-  const {instancedAttributes, vertexAttributes, indices, vertexCount} = sortAttributes(
+  const {uniforms} = model.program;
+  const {instancedAttributes, vertexAttributes, indices, attributeValues, vertexCount} = sortAttributes(
     model._attributes
   );
   const drawMode = model.getDrawMode();
@@ -26,13 +26,13 @@ export default ({model, context, colorMode = COLOR_MODE.NONE}) => {
 
   // iterate through all instances
   for (let i = 0; i < instanceCount; i++) {
-    const ai = getAttributeAtIndex(instancedAttributes, i);
+    const ai = getAttributeAtIndex(instancedAttributes, i, attributeValues);
     const positions = [];
     const colors = [];
 
     // iterate through all vertices
     for (let j = 0; j < vertexCount; j++) {
-      const aj = Object.assign({}, ai, getAttributeAtIndex(vertexAttributes, j));
+      const aj = Object.assign({}, ai, getAttributeAtIndex(vertexAttributes, j, attributeValues));
 
       const {position, color} = renderVertex(shaders, uniforms, aj, colorMode);
       positions[j] = position;
@@ -64,6 +64,7 @@ function getShaders(model) {
 
 // Sort attributes by instanced and indexed
 function sortAttributes(attributes) {
+  const attributeValues = {};
   const instancedAttributes = {};
   const vertexAttributes = {};
   let indexAttribute = null;
@@ -73,38 +74,38 @@ function sortAttributes(attributes) {
     const attribute = attributes[attributeName];
     if (attribute.isIndexed) {
       indexAttribute = attribute;
-    } else if (attribute.instanced) {
+    } else if (attribute.divisor) {
       instancedAttributes[attributeName] = attribute;
     } else {
       vertexAttributes[attributeName] = attribute;
-      if (!attribute.isGeneric) {
-        vertexCount = attribute.getBuffer().data.length / attribute.size;
+      if (!attribute.constant) {
+        vertexCount = attribute.getBuffer().getElementCount() / attribute.size;
       }
     }
+    attributeValues[attributeName] = !attribute.constant && attribute.getBuffer().getData();
   }
 
   let indices;
   if (indexAttribute) {
-    indices = indexAttribute.getBuffer().data;
+    indices = attributeValues[indexAttribute.id];
   } else {
     indices = Array.from({length: vertexCount}, (d, i) => i);
   }
 
-  return {instancedAttributes, vertexAttributes, indices, vertexCount};
+  return {instancedAttributes, vertexAttributes, indices, attributeValues, vertexCount};
 }
 
 // Get single attribute value by vertex index
-function getAttributeAtIndex(attributes, i) {
+function getAttributeAtIndex(attributes, i, values) {
   const result = {};
 
   for (const attributeName in attributes) {
     const attribute = attributes[attributeName];
-    if (attribute.isGeneric) {
+    if (attribute.constant) {
       result[attributeName] = attribute.value;
     } else {
       const {size} = attribute;
-      const buffer = attribute.getBuffer();
-      const value = buffer.data.subarray(i * size, (i + 1) * size);
+      const value = values[attributeName].subarray(i * size, (i + 1) * size);
       result[attributeName] = Array.from(value);
     }
   }
