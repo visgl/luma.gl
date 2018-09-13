@@ -50,10 +50,22 @@ Optional module with all the GL constants.
 Optional module with all the debug functionality. In particular bigger features like:
 
 * Khronos Context Instrumentation
-* Shader transpilation: GLSL -> JS
+* Shader transpilation: GLSL -> JS?
 * TBD: Logging of uniforms etc, bundle size reduction vs. convenience
 
 Justification: Allows us to add heavy debug functionality without impacting bundle size of production builds.
+
+
+### @luma.gl/filters (TBD)
+
+All the image (screen space filters)
+
+Contents: modules/imageprocessing, modules/glfx
+
+TBDS:
+
+* name (e.g. `@luma.gl/imageprocessing`, @luma.gl/postprocessing)
+* should general 3d post processing be included, or should we have a separate module for that (@luma.gl/postprocessing)?
 
 
 ### @luma.gl/geometries (TBD)
@@ -65,7 +77,6 @@ Justification: A bit like deck.gl/layers.
 Issues:
 * We export both geometries and matching Model wrappers. Maybe some API improvement can avoid this?
 * We don't have that many geometries, and of those, some are pretty core (Cube / ClipspaceModel), some are less so (truncated-cone-geometry).
-
 
 
 ## Scripting support
@@ -92,7 +103,10 @@ Would be nice!
 
 ### loaders.gl
 
+Contents: `modules/loaders.gl`, `modules/io`.
+
 Being broken out to separate repo, should be completed before the submodule split is completed.
+
 
 
 
