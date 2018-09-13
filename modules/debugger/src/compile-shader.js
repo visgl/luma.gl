@@ -1,7 +1,3 @@
-/*
- * Need to manunally fix this bug in node_modules/glsl-transpiler/lib/operators.js:
- * https://github.com/stackgl/glsl-transpiler/issues/34
- */
 import Compiler from 'glsl-transpiler';
 
 const normalize = source =>
