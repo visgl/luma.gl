@@ -54,12 +54,6 @@ export function compileFragmentShader(name, source) {
   const compiledSource = compileFS(source);
   const {compiler} = compileFS;
 
-  // TODO - input validation?
-  // const stats = {
-  //   uniforms: compiler.uniforms,
-  //   varyings: compiler.varyings,
-  //   functions: compiler.functions
-  // };
   compiler.reset();
 
   return evalScript(

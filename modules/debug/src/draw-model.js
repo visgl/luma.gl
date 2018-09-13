@@ -13,7 +13,7 @@ const MIN_DEPTH_COLOR = [1, 1, 0, 1];
 const MAX_DEPTH_COLOR = [0, 0, 1, 1];
 const DISCARDED_FRAG_COLOR = [1, 0, 0, 1];
 
-export default ({model, context, colorMode = COLOR_MODE.NONE}) => {
+export default ({model, draw, colorMode = COLOR_MODE.NONE}) => {
   const shaders = getShaders(model);
 
   // draw params
@@ -39,7 +39,7 @@ export default ({model, context, colorMode = COLOR_MODE.NONE}) => {
       colors[j] = color;
     }
 
-    context.draw({indices, drawMode, positions, colors});
+    draw({indices, drawMode, positions, colors});
   }
 };
 

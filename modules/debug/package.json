@@ -1,7 +1,8 @@
 {
-  "name": "luma.gl-debugger",
+  "name": "@luma.gl/debug",
+  "private": true,
   "version": "0.0.1",
-  "description": "Debugger for luma.gl",
+  "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -1,20 +1,22 @@
 import GL from 'luma.gl/constants';
+import drawModel from './draw-model';
 
 /* Draws WebGL style wireframe in a 2d canvas */
-export default class DrawingContext {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.context = canvas.getContext('2d');
-  }
+export default class DebugContext {
+  constructor(sourceCanvas) {
+    this.sourceCanvas = sourceCanvas;
+    this.canvas = this._createCanvas(sourceCanvas.offsetParent);
+    this.context = this.canvas.getContext('2d');
 
-  resize({width, height}) {
-    this.canvas.width = width;
-    this.canvas.height = height;
+    this._draw = this._draw.bind(this);
   }
 
   clear(opts = {}) {
-    const {context} = this;
-    const {width, height} = this.canvas;
+    const {canvas, context} = this;
+    const {clientWidth: width, clientHeight: height} = this.sourceCanvas;
+
+    canvas.width = width;
+    canvas.height = height;
     context.clearRect(0, 0, width, height);
 
     for (const name in opts) {
@@ -22,8 +24,15 @@ export default class DrawingContext {
     }
   }
 
+  drawModel(model, opts) {
+    drawModel(Object.assign({}, opts, {
+      model,
+      draw: this._draw
+    }));
+  }
+
   /* eslint-disable complexity */
-  draw({drawMode, indices, positions, colors}) {
+  _draw({drawMode, indices, positions, colors}) {
     this.positions = positions.map(this._clipspaceToScreen, this);
     this.colors = colors.map(this._rgbaToColor, this);
 
@@ -82,6 +91,18 @@ export default class DrawingContext {
     }
   }
   /* eslint-enable complexity */
+
+  _createCanvas(container) {
+    const canvas = document.createElement('canvas');
+    container.append(canvas);
+    Object.assign(canvas.style, {
+      position: 'absolute',
+      left: '0px',
+      top: '0px',
+      pointerEvents: 'none'
+    });
+    return canvas;
+  }
 
   _clipspaceToScreen(position) {
     const {width, height} = this.canvas;

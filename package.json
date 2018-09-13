@@ -27,7 +27,7 @@
   ],
   "workspaces": [
     "modules/core",
-    "modules/debugger",
+    "modules/debug",
     "modules/loaders.gl"
   ],
   "browser": {
