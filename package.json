@@ -26,22 +26,24 @@
     "3d"
   ],
   "workspaces": [
-    "modules/*"
+    "modules/core",
+    "modules/loaders.gl"
   ],
   "browser": {
     "fs": false
   },
   "scripts": {
+    "bootstrap": "scripts/bootstrap.sh",
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "rm -fr dist dist-es6 && (cd modules/core && npm run clean)",
-    "build": "(cd modules/core && npm run build)",
+    "build": "lerna run build",
     "cover": "NODE_ENV=cover nyc node test/start",
     "lint": "eslint modules test && npm run lint-yarn",
     "lint-examples": "eslint examples",
     "lint-yarn": "!(grep -q unpm.u yarn.lock) || (echo 'Please rebuild yarn.lock file using public npmrc' && false)",
     "lint-docs": "scripts/lint-markdown.sh",
-    "publish-prod": "(cd modules/core && npm run publish-prod)",
-    "publish-beta": "(cd modules/core && npm run publish-beta)",
+    "publish-prod": "lerna publish --cd-version minor",
+    "publish-beta": "lerna publish --npm-tag beta --cd-version prerelease",
     "test": "scripts/test.sh",
     "test-ci": "scripts/test.sh cover && scripts/test.sh bench",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js --env.bench --progress --hot --open",
@@ -63,6 +65,7 @@
     "eslint-plugin-babel": "^5.1.0",
     "gl": "^4.0.2",
     "html-webpack-plugin": "^3.0.7",
+    "lerna": "^2.9.1",
     "markdownlint-cli": "^0.8.1",
     "mkdirp": "^0.5.1",
     "module-alias": "^2.0.0",
