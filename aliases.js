@@ -26,7 +26,8 @@ const ALIASES = {
   'luma.gl-imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
   'luma.gl-glfx': path.resolve(__dirname, './modules/glfx/src'),
   'luma.gl-io': path.resolve(__dirname, './modules/io/src'),
-  'loaders.gl': path.resolve(__dirname, './modules/loaders.gl/src')
+  'loaders.gl': path.resolve(__dirname, './modules/loaders.gl/src'),
+  '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src')
 };
 
 if (module.require) {
