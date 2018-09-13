@@ -5,7 +5,15 @@ import drawModel from './draw-model';
 export default class DebugContext {
   constructor(sourceCanvas) {
     this.sourceCanvas = sourceCanvas;
-    this.canvas = this._createCanvas(sourceCanvas.offsetParent);
+
+    const container = sourceCanvas.offsetParent;
+    /* global window */
+    const containerStyle = window.getComputedStyle(container);
+    if (containerStyle.position === 'static') {
+      container.style.position = 'relative';
+    }
+
+    this.canvas = this._createCanvas(container);
     this.context = this.canvas.getContext('2d');
 
     this._draw = this._draw.bind(this);
