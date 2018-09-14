@@ -22,9 +22,9 @@ require('tap-browser-color')();
 
 const test = require('tape');
 
-// const {callExposedFunction} = require('probe.gl/test-utils');
-// test.onFinish(() => callExposedFunction('testDone', {success: true}));
-// test.onFailure(() => callExposedFunction('testDone', {success: false}));
+const {callExposedFunction} = require('probe.gl/test-utils');
+test.onFinish(() => callExposedFunction('testDone', {success: true}));
+test.onFailure(() => callExposedFunction('testDone', {success: false}));
 
 test('Browser tests', t => {
   require('./index-webgl-independent-tests');
