@@ -34,6 +34,6 @@
   },
   "dependencies": {
     "luma.gl": "^6.1.0-alpha.3",
-    "glsl-transpiler": "1.5.9"
+    "glsl-transpiler": "^1.7.1"
   }
 }

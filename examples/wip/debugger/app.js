@@ -46,7 +46,7 @@ uniform mat4 uProjection;
 varying vec3 vPosition;
 
 void main(void) {
-  gl_Position = (uProjection * (uView * uModel)) * vec4(positions, 1.0);
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
   vPosition = positions;
 }
 `;
@@ -80,7 +80,7 @@ varying vec3 vPosition;
 varying vec3 vNormal;
 
 void main(void) {
-  gl_Position = (uProjection * (uView * uModel)) * vec4(positions, 1.0);
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
   vPosition = vec3(uModel * vec4(positions,1));
   vNormal = vec3(uModel * vec4(normals, 1));
 }
