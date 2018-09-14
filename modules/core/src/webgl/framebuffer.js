@@ -272,13 +272,16 @@ export default class Framebuffer extends Resource {
     type, // Auto deduced from pixelArray or gl.UNSIGNED_BYTE
     pixelArray = null,
     attachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
-  }) {
+  } = {}) {
     const {gl} = this;
 
     // TODO - Set and unset gl.readBuffer
     if (attachment === GL.COLOR_ATTACHMENT0 && this.handle === null) {
       attachment = GL.FRONT;
     }
+
+    // Deduce the type from color attachment if not provided.
+    type = type || this.attachments[GL.COLOR_ATTACHMENT0].type;
 
     // Deduce type and allocated pixelArray if needed
     if (!pixelArray) {

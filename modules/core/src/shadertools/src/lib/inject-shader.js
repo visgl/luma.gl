@@ -1,5 +1,6 @@
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
 import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
+import assert from 'assert';
 
 // TODO - experimental
 const MODULE_INJECTORS = {
@@ -66,3 +67,15 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
   return source;
 }
 /* eslint-enable complexity */
+
+// Takes an array of inject objects and combines them into one
+export function combineInjects(injects) {
+  const result = {};
+  assert(Array.isArray(injects) && injects.length > 1);
+  injects.forEach(inject => {
+    for (const key in inject) {
+      result[key] = result[key] ? `${result[key]}\n${inject[key]}` : inject[key];
+    }
+  });
+  return result;
+}
