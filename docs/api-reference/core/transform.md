@@ -107,6 +107,84 @@ transform.update({
 transform.run();
 ```
 
+### Use case : Reading source data from texture object (Experimental)
+
+In addition to reading data from Buffer objects, Transform can read from texture objects. Transform allows to access texture data in the same way as buffer data and internally generates required texture co-ordinates and sample instructions.
+
+```js
+// simple shader that adds data from a buffer and texture to generate new buffer.
+
+const vs = `\
+#version 300 es
+in float inBuffer;
+in float inTexture;
+out float outBuffer;
+
+void main()
+{
+  outBuffer = inTexture + inBuffer;
+}`;
+
+const sourceBuffer = new Buffer(...);
+const sourceTexture = new Texture2D(...);
+
+const transform = new Transform(gl2, {
+  sourceBuffers: {
+    inBuffer: sourceBuffer
+  },
+  // specify source texture object using input attribute name
+  _sourceTextures: {
+    inTexture: sourceTexture
+  },
+  vs,
+  feedbackMap: {
+    inBuffer: 'outBuffer'
+  },
+  elementCount
+});
+
+transform.run();
+
+// resulting buffer contains sum of input buffer and texture data.
+const outData = transform.getBuffer('outBuffer').getData();
+
+```
+
+### Use case : Generating a texture object (Experimental)
+
+In addition to reading data from a texture object, Transform can generate texture object, by rendering data into it offline. Source data can be either buffer(s), texture(s) or any combination.
+
+```js
+const vs = `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+const sourceTexture = new Texture2D(...);
+const transform = new Transform(gl2, {
+  _sourceTextures: {
+    inTexture: sourceTexture
+  },
+  _renderToTexture: {
+    varying: 'outTexture',
+    refAttribute: 'inTexture'
+  },
+  vs,
+  elementCount
+});
+
+transform.run();
+
+const outTexture = transform._getTargetTexture();
+
+```
+
+
 ## Constructor
 
 ### Transform(gl : WebGL2RenderingContext, props: Object)
@@ -123,10 +201,15 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
   * `feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
   * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
   * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
+  * `_sourceTextures` (`Object`) EXPERIMENTAL - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
+  * `_renderToTexture` (`Object`) EXPERIMENTAL - contains following key-value pairs that define target texture.
+    * `varying` (`String`) : varying name used in vertex shader who's data should go into target texture.
+    * `texture` (`Texture2D`, optional) : `Texture2D` object where data to be rendered into.
+    * `refAttribute` (`String`, optional) : Name of the reference source texture attribute, from which a new texture object is cloned. Either `texture` or `refAttribute` must be supplied.
 
 Notes:
 
-* Internally, creates `Model` and `TransformFeedback` instances
+* Internally, creates `Model` and `TransformFeedback` instances.
 
 
 ### delete() : Transform
@@ -142,13 +225,16 @@ Returns current destination buffer corresponding to given varying name.
 
 * `varyingName` (`String`) - varying name.
 
+### getData(varyingName : String, Optional) : ArrayBufferView
+
+Reads and returns data from current destination buffer corresponding to the given varying name. When no 'varyingName' is provided, it reads and returns data from current target texture.
 
 ### run({uniforms : Object, unbindModels : Object}) : Transform
 
 Performs one transform feedback iteration.
 
 * `uniforms`=`null` (`Object` = {}, Optional) - Sets uniforms before rendering.
-* `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feeback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+* `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feedback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
 
 
 ### update(props) : Transform
@@ -163,3 +249,8 @@ Updates buffer bindings with provided buffer objects for one or more source or d
 ### swapBuffers() : Transform
 
 Swaps source and destination buffers. If buffer swapping is used, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
+
+
+### _getTargetTexture() : Texture2D/null (EXPERIMENTAL)
+
+When transform is setup to render to a texture, returns current target texture, otherwise null.
