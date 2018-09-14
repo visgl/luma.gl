@@ -59,7 +59,7 @@ module.exports = function getConfig(api) {
   const config = CONFIG[env] || CONFIG.default;
   // Uncomment to debug
   // eslint-disable-next-line
-  console.error(env, config.plugins);
+  // console.error(env, config.plugins);
   return config;
 };
 
