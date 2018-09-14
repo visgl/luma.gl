@@ -1,36 +1,27 @@
 import Compiler from 'glsl-transpiler';
 
-const normalize = source =>
-  source
+function normalize(source) {
+  return source
     // prepr does not like #define without value
     .replace(/^(#define \w+) *$/gm, ($0, $1) => `${$1} 1`);
+}
 
-const compileVS = Compiler({
-  uniform: name => `uniforms.${name}`,
-  attribute: name => `attributes.${name}`
-});
-
-const compileFS = Compiler({
-  uniform: name => `uniforms.${name}`,
-  attribute: name => `attributes.${name}`,
-  varying: name => `varyings.${name}`
-});
+function getVersion(source) {
+  return source.slice(0, 9) === '#version ' ? '300 es' : '100 es';
+}
 
 // @returns JavaScript function of the transpiled shader
 export function compileVertexShader(name, source) {
   source = normalize(source);
 
+  const compileVS = Compiler({
+    uniform: name => `uniforms.${name}`,
+    attribute: name => `attributes.${name}`,
+    version: getVersion(source)
+  });
+
   const compiledSource = compileVS(source);
   const {compiler} = compileVS;
-
-  // TODO - input validation?
-  const stats = {
-    attributes: compiler.attributes,
-    uniforms: compiler.uniforms,
-    varyings: compiler.varyings,
-    functions: compiler.functions
-  };
-  compiler.reset();
 
   return evalScript(
     `function vs(uniforms, attributes) {
@@ -40,7 +31,7 @@ export function compileVertexShader(name, source) {
   main();
   return {
     gl_Position,
-    varyings: {${Object.keys(stats.varyings).join(', ')}}
+    varyings: {${Object.keys(compiler.varyings).join(', ')}}
   };
 }`,
     name
@@ -51,10 +42,14 @@ export function compileVertexShader(name, source) {
 export function compileFragmentShader(name, source) {
   source = normalize(source);
 
-  const compiledSource = compileFS(source);
-  const {compiler} = compileFS;
+  const compileFS = Compiler({
+    uniform: name => `uniforms.${name}`,
+    attribute: name => `attributes.${name}`,
+    varying: name => `varyings.${name}`,
+    version: getVersion(source)
+  });
 
-  compiler.reset();
+  const compiledSource = compileFS(source);
 
   return evalScript(
     `function fs(uniforms, varyings) {
