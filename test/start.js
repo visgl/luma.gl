@@ -25,13 +25,18 @@ case 'test':
 
 case 'dist':
   require('@babel/register')({
-    // ignore: [filepath => {
-    //   if (filepath.indexOf('node_modules') >= -1) {
-    //     if (filepath.indexOf('node'))
-    //     console.log(filepath);
-    //     return false;
-    //   }
-    // }]
+    ignore: [
+      // Only transpile import/export in babel/runtime (of all things)
+      // `reify` does not appear to trigger on node_modules
+      filepath => {
+        if (filepath.indexOf('node_modules') !== -1) {
+          if (filepath.indexOf('@babel/runtime') === -1) {
+            return true;
+          }
+        }
+        return false;
+      }
+    ]
   });
   // Load deck.gl itself from the dist folder
   const dist = arg === 'default' ? 'esm' : arg;
