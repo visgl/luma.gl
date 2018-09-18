@@ -24,9 +24,23 @@ case 'test':
   break;
 
 case 'dist':
+  require('@babel/register')({
+    ignore: [
+      // Only transpile import/export in babel/runtime (of all things)
+      // `reify` does not appear to trigger on node_modules
+      filepath => {
+        if (filepath.indexOf('node_modules') !== -1) {
+          if (filepath.indexOf('@babel/runtime') === -1) {
+            return true;
+          }
+        }
+        return false;
+      }
+    ]
+  });
   // Load deck.gl itself from the dist folder
-  const dist = arg === 'default' ? 'es6' : arg;
-  moduleAlias.addAlias('luma.gl', path.resolve(`./dist/${dist}`));
+  const dist = arg === 'default' ? 'esm' : arg;
+  moduleAlias.addAlias('luma.gl', path.resolve(`./modules/core/dist/${dist}`));
 
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');

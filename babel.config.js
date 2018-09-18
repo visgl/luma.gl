@@ -30,6 +30,10 @@ CONFIG.es6 = Object.assign({}, CONFIG.default, {
   ]
 });
 
+CONFIG.es6.plugins = CONFIG.es6.plugins.concat([
+  ['@babel/plugin-transform-runtime', {useESModules: true}]
+]);
+
 CONFIG.esm = Object.assign({}, CONFIG.default, {
   presets: [
     ['@babel/env', {
@@ -37,6 +41,10 @@ CONFIG.esm = Object.assign({}, CONFIG.default, {
     }]
   ]
 });
+
+CONFIG.esm.plugins = CONFIG.esm.plugins.concat([
+  ['@babel/plugin-transform-runtime', {useESModules: true}]
+]);
 
 CONFIG.es5 = Object.assign({}, CONFIG.default, {
   presets: [
@@ -46,6 +54,10 @@ CONFIG.es5 = Object.assign({}, CONFIG.default, {
     }]
   ]
 });
+
+CONFIG.es5.plugins = CONFIG.es5.plugins.concat([
+  ['@babel/plugin-transform-runtime']
+]);
 
 CONFIG.cover = Object.assign({}, CONFIG.default);
 // constant inlining seems to cause problems for nyc

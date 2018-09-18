@@ -52,6 +52,7 @@
     "publish-beta": "npm run build && npm run test-fast && npm publish --tag beta"
   },
   "dependencies": {
+    "@babel/runtime": "^7.0.0",
     "math.gl": "^2.1.0-alpha",
     "probe.gl": "^2.0.0-beta",
     "seer": "^0.2.4",
