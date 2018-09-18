@@ -11,6 +11,7 @@ coverage/
 node_modules/
 npm-debug.log
 stats.json
+.reify-cache
 
 test/data/test.png
 

@@ -45,8 +45,8 @@ case $MODE in
     break;;
 
   "dist")
-    npm run build
-    node test/start.js dist
+    # npm run build
+    babel-node test/start.js dist
     break;;
 
   "examples")

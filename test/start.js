@@ -24,9 +24,18 @@ case 'test':
   break;
 
 case 'dist':
+  require('@babel/register')({
+    // ignore: [filepath => {
+    //   if (filepath.indexOf('node_modules') >= -1) {
+    //     if (filepath.indexOf('node'))
+    //     console.log(filepath);
+    //     return false;
+    //   }
+    // }]
+  });
   // Load deck.gl itself from the dist folder
-  const dist = arg === 'default' ? 'es6' : arg;
-  moduleAlias.addAlias('luma.gl', path.resolve(`./dist/${dist}`));
+  const dist = arg === 'default' ? 'esm' : arg;
+  moduleAlias.addAlias('luma.gl', path.resolve(`./modules/core/dist/${dist}`));
 
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');

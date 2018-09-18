@@ -54,6 +54,8 @@
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
+    "@babel/node": "^7.0.0",
+    "@babel/plugin-transform-runtime": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/register": "^7.0.0",
     "babel-eslint": "^9.0.0",
@@ -74,7 +76,7 @@
     "pre-commit": "^1.2.2",
     "puppeteer": "^1.2.0",
     "raw-loader": "^0.5.1",
-    "reify": "^0.4.4",
+    "reify": "^0.17.3",
     "source-map-loader": "^0.2.1",
     "source-map-support": "^0.4.2",
     "tap-browser-color": "^0.1.2",
