@@ -280,8 +280,10 @@ export default class Framebuffer extends Resource {
       attachment = GL.FRONT;
     }
 
+    assert(this.attachments[attachment]);
+
     // Deduce the type from color attachment if not provided.
-    type = type || this.attachments[GL.COLOR_ATTACHMENT0].type;
+    type = type || this.attachments[attachment].type;
 
     // Deduce type and allocated pixelArray if needed
     if (!pixelArray) {

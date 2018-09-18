@@ -19,5 +19,6 @@ export function cloneTextureFrom(refTexture, overrides) {
     width, height, format, type, dataFormat, border, mipmaps
   }, overrides);
 
+  // TODO: move this to `Texture` class as instance method and use this.constructor
   return new TextureType(gl, textureOptions);
 }
