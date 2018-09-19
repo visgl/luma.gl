@@ -106,7 +106,7 @@ export default class Transform {
     }
 
     const {sourceBuffers, vs, elementCount} = props;
-    assert(sourceBuffers && vs && elementCount >= 0);
+    assert(vs && elementCount >= 0);
     // If feedbackBuffers are not provided, sourceDestinationMap must be provided
     // to create destinaitonBuffers with layout of corresponding source buffer.
     assert(feedbackBuffers || feedbackMap, ' Transform needs feedbackBuffers or feedbackMap');
