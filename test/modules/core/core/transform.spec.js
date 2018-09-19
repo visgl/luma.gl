@@ -39,6 +39,16 @@ void main()
 }
 `;
 
+const VS_NO_SOURCE_BUFFER = `\
+varying float outValue;
+uniform float uValue;
+
+void main()
+{
+  outValue = uValue * 2.;
+}
+`;
+
 test('WebGL#Transform constructor/delete', t => {
   const {gl, gl2} = fixture;
 
@@ -111,6 +121,37 @@ test('WebGL#Transform run', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getBuffer('outValue').getData();
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+test('WebGL#Transform run (no source buffer)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const INPUT = 101;
+  const outBuffer = new Buffer(gl2, 4);
+
+  const transform = new Transform(gl2, {
+    feedbackBuffers: {
+      outValue: outBuffer
+    },
+    vs: VS_NO_SOURCE_BUFFER,
+    varyings: ['outValue'],
+    elementCount: 1
+  });
+
+  transform.run({uniforms: {uValue: INPUT}});
+
+  const expectedData = [INPUT * 2];
   const outData = transform.getBuffer('outValue').getData();
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
