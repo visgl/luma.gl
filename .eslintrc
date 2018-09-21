@@ -3,12 +3,13 @@
     "uber-es2015",
     "prettier"
   ],
+  "plugins": [
+    "tree-shaking"
+  ],
   "rules": {
     "guard-for-in": 0,
     "no-inline-comments": 0,
     "camelcase": 0,
-  },
-  "parserOptions": {
-    "ecmaVersion": 2017
+    "tree-shaking/no-side-effects-in-initialization": 0
   }
 }

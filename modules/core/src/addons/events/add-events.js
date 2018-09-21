@@ -371,6 +371,7 @@ export class EventsProxy {
   }
 }
 
+// eslint-disable-next-line
 Object.assign(EventsProxy.prototype, {
   hovered: false,
   pressed: false,

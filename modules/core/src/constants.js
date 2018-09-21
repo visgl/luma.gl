@@ -5,6 +5,7 @@
 // These constants are defined on the WebGLRenderingContext interface.
 
 /* eslint-disable key-spacing, max-len, no-inline-comments, camelcase */
+// eslint-disable-next-line
 module.exports = {
   // Clearing buffers
   // Constants passed to clear() to clear buffer masks.
