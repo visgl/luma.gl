@@ -41,10 +41,6 @@
     "gl": false,
     "gl/wrap": false
   },
-  "sideEffects": [
-    "init.js",
-    "seer-integration.js"
-  ],
   "scripts": {
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5 dist/esm dist/es6",
     "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5",
