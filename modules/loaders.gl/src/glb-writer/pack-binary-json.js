@@ -2,7 +2,7 @@ import {flattenToTypedArray} from '../common/loader-utils';
 
 // Recursively packs (replaces) binary objects
 // Replaces "typed arrays" with "JSON pointers" to binary chunks tracked by glbBuilder
-//
+// eslint-disable-next-line complexity
 export default function packBinaryJson(json, glbBuilder, options = {}) {
   const {flattenArrays = false} = options;
   let object = json;

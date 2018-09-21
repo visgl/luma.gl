@@ -1,4 +1,4 @@
-/* global DOMParser */
+/* global window */
 export default function parseXML(xml) {
   if (window.DOMParser) {
     const xmlDoc = new window.DOMParser().parseFromString(xml, 'application/xml');
@@ -38,7 +38,7 @@ export function parseXMLSupported() {
 }
 
 function isXMLParseError(parsedDocument) {
-  const parser = new DOMParser();
+  const parser = new window.DOMParser();
   const erroneousParse = parser.parseFromString('<', 'text/xml');
   const parsererrorNS = erroneousParse.getElementsByTagName('parsererror')[0].namespaceURI;
 

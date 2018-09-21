@@ -1,16 +1,14 @@
 {
-  "parser": "babel-eslint",
   "extends": [
-    "eslint-config-uber-es2015"
+    "uber-es2015",
+    "prettier"
   ],
   "rules": {
     "guard-for-in": 0,
-    "generator-star-spacing": 0,
-    "func-names": 0,
     "no-inline-comments": 0,
-    "no-multi-str": 0
+    "camelcase": 0,
   },
-  "globals": {
-    "window": false,
-  },
+  "parserOptions": {
+    "ecmaVersion": 2017
+  }
 }

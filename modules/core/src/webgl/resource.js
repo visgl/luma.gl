@@ -134,6 +134,7 @@ export default class Resource {
 
   // Many resources support a getParameter call -
   // getParameters will get all parameters - slow but useful for debugging
+  // eslint-disable-next-line complexity
   getParameters(opts = {}) {
     const {parameters, keys} = {};
 
