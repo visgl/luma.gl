@@ -46,8 +46,8 @@ Current direction for luma.gl v6.x is to focus on:
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
 | [**luma.gl Module Structure**](v6.2/module-structure-rfc.md) | @ibgreen | **Draft** | Outlines module structure to be used in monorepo transition. |
-| [**Floating Point Textures in Transforms**](v6.1/transform-float-textures-rfc.md) | @1chandu | **Review** | Floating Point Texture Support in `Transform` class |
-| [**WebGL1 Support for Transforms**](v6.1/transform-webgl1-support-rfc.md) | @1chandu | **Review** | Use render to texture and float packing to emulate transform feedback under WebGL1 |
+| [**Floating Point Textures in Transforms**](v6.2/transform-float-textures-rfc.md) | @1chandu | **Review** | Floating Point Texture Support in `Transform` class |
+| [**WebGL1 Support for Transforms**](v6.2/transform-webgl1-support-rfc.md) | @1chandu | **Review** | Use render to texture and float packing to emulate transform feedback under WebGL1 |
 
 
 ## v6.1 RFCs

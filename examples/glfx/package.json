@@ -7,22 +7,18 @@
     "Ib Green <ib@uber.com>"
   ],
   "scripts": {
-    "start": "open index.html",
-    "build:umd": "webpack",
-    "build:umd:min": "webpack --env minified",
-    "build:2": "mkdir -p dist/lib dist/es && npm run build:umd && npm run build:umd:min",
-    "build": "mkdir -p dist && (cd ../../modules/script && yarn build:dev && cp dist/lumagl.js ../../examples/glfx/dist)"
+    "start": "yarn build-lib && open index.html",
+    "build": "mkdir -p dist/lib dist/es && yarn build-dev && yarn build-prod",
+    "build-dev": "webpack",
+    "build-prod": "webpack --env minified",
+    "build-lib": "mkdir -p dist && (cd ../../modules/script && yarn build-dev && cp dist/lumagl.js ../../examples/glfx/dist)"
   },
   "dependencies": {
     "luma.gl": "^6.1.0"
   },
   "devDependencies": {
-    "babel-loader": "^8.0.0-beta",
-    "babel-plugin-add-module-exports": "^0.2.1",
-    "babel-plugin-external-helpers": "^6.3.15",
+    "babel-loader": "^8.0.0",
     "cross-env": "^5.0.5",
-    "eslint": "^4.8.0",
-    "eslint-loader": "^1.9.0",
     "webpack": "^4.3.0",
     "webpack-dev-server": "^3.1.1"
   }

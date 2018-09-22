@@ -1,0 +1,142 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #222;
+    overflow: hidden;
+}
+
+#error {
+    background-color: red;
+}
+
+#pbrMath {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    color: white;
+    padding: 15px;
+    font-size: 50px;
+    font-style: italic;
+    text-align: center;
+}
+
+#inputs {
+    position: absolute;
+    left: 10px;
+    bottom: 120px;
+    color: white;
+    padding: 15px;
+    font-size: 50px;
+    font-style: italic;
+    text-align: center;
+}
+
+#pbrMath, #inputs, .dg {
+    user-select: none;
+}
+
+.pbrMathSub {
+    padding: 0px;
+    font-size: 50px;
+    color: white;
+    display: inline-block;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background-color .3s ease;
+}
+
+.reset {
+    display: inline;
+}
+
+a.source,
+a.source:visited {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    color: white;
+    text-decoration: none;
+}
+
+a.source:hover {
+    text-decoration: underline;
+}
+
+.activeComponent {
+    background-color: darkslategray;
+}
+
+.pinnedComponent {
+    background-color: darkslateblue;
+}
+
+hr.line {
+    display: block;
+    padding: 0;
+    border: 1px solid;
+    color: white;
+    text-align: center;
+    width: 100%;
+    margin: 1px;
+}
+
+.note {
+    font-style: normal;
+    font-size: 19px;
+}
+
+.pixelPicker {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    color: white;
+    height: 30px;
+    padding: 10px;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.pixelPicker span {
+    display: inline-block;
+    white-space: pre;
+}
+
+#pixelPickerColor {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    border: 1px solid black;
+}
+
+@keyframes spinKeys {
+    0%,50%,100% {
+        animation-timing-function: cubic-bezier(0.5,0.5,0.5,0.5);
+    }
+
+    0% {
+        transform: rotate(0);
+    }
+
+    50% {
+        transform: rotate(180deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#loadSpinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    margin: -50px 0 0 -50px;
+    border: 5px solid;
+    border-color: #fff transparent transparent transparent;
+    border-radius: 50%;
+    animation: spinKeys 4s infinite linear;
+}

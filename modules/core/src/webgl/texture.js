@@ -194,6 +194,7 @@ export default class Texture extends Resource {
       recreate = false,
       parameters = {},
       pixelStore = {},
+      textureUnit = undefined,
       // Deprecated parameters
       unpackFlipY = true
     } = opts;
@@ -222,6 +223,12 @@ export default class Texture extends Resource {
     this.type = type;
     this.dataFormat = dataFormat;
     this.border = border;
+    this.textureUnit = textureUnit;
+
+    if (Number.isFinite(this.textureUnit)) {
+      this.gl.activeTexture(GL.TEXTURE0 + this.textureUnit);
+      this.gl.bindTexture(this.target, this.handle);
+    }
 
     // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
     // TODO - compare v4 and v3

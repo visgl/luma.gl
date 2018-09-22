@@ -9,7 +9,7 @@ import {installParameterDefinitions} from './webgl-debug/debug-parameters';
 console.log('luma.gl: WebGL debug support imported'); // eslint-disable-line
 
 // eslint-disable-next-line
-module.exports = function installDebugger() {
+export default function installDebugger() {
   installParameterDefinitions();
   console.log('luma.gl: WebGL debug support installed'); // eslint-disable-line
 }
