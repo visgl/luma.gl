@@ -4,13 +4,18 @@
 // https://github.com/webpack/webpack/issues/4039
 
 /* global window, global */
+const _global = typeof window === 'undefined' ? global : window;
+
 const lumaGL = require('luma.gl');
 require('luma.gl/debug');
 
 const filters = require('../../glfx/src');
 
-const _global = typeof window === 'undefined' ? global : window;
+const mathGL = require('math.gl');
 
 _global.luma = Object.assign({}, _global.luma, lumaGL, {filters});
+
+_global.mathgl = mathGL;
+
 
 module.exports = _global.luma;

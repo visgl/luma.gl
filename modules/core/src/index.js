@@ -151,6 +151,8 @@ export {default as dirlight} from './shadertools/src/modules/dirlight/dirlight';
 export {default as picking} from './shadertools/src/modules/picking/picking';
 export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 
+export {default as pbr} from './shadertools/src/modules/pbr/pbr';
+
 // DEPRECATED EXPORTS IN v6.0
 
 export {default as ClipSpaceQuad} from './models/clip-space';
