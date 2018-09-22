@@ -1,16 +1,15 @@
 {
-  "parser": "babel-eslint",
   "extends": [
-    "eslint-config-uber-es2015"
+    "uber-es2015",
+    "prettier"
+  ],
+  "plugins": [
+    "tree-shaking"
   ],
   "rules": {
     "guard-for-in": 0,
-    "generator-star-spacing": 0,
-    "func-names": 0,
     "no-inline-comments": 0,
-    "no-multi-str": 0
-  },
-  "globals": {
-    "window": false,
-  },
+    "camelcase": 0,
+    "tree-shaking/no-side-effects-in-initialization": 0
+  }
 }

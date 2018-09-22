@@ -195,7 +195,7 @@ function installGetterOverride(gl, functionName) {
   const originalGetterFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
-  gl[functionName] = function(...params) {
+  gl[functionName] = function get(...params) {
     const pname = params[0];
 
     // WebGL limits are not prepopulated in the cache, we must
@@ -225,7 +225,7 @@ function installSetterSpy(gl, functionName, setter) {
   const originalSetterFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
-  gl[functionName] = function(...params) {
+  gl[functionName] = function set(...params) {
     // Update the value
     // Call the setter with the state cache and the params so that it can store the parameters
     const {valueChanged, oldValue} = setter(gl.state._updateCache, ...params);

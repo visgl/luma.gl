@@ -1,6 +1,5 @@
 {
   "rules": {
-    "max-len": 0,
     "tree-shaking/no-side-effects-in-initialization": 0
   }
 }

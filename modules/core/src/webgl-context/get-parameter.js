@@ -101,6 +101,7 @@ export function getContextLimits(gl) {
   return gl.luma.limits;
 }
 
+// eslint-disable-next-line complexity
 export function getParameter(gl, originalFunc, pname) {
   const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
   const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.

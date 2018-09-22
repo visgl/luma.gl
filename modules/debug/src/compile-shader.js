@@ -11,7 +11,7 @@ function getVersion(source) {
 }
 
 // @returns JavaScript function of the transpiled shader
-export function compileVertexShader(name, source) {
+export function compileVertexShader(shaderName, source) {
   source = normalize(source);
 
   const compileVS = Compiler({
@@ -34,12 +34,12 @@ export function compileVertexShader(name, source) {
     varyings: {${Object.keys(compiler.varyings).join(', ')}}
   };
 }`,
-    name
+    shaderName
   );
 }
 
 // @returns JavaScript function of the transpiled shader
-export function compileFragmentShader(name, source) {
+export function compileFragmentShader(shaderName, source) {
   source = normalize(source);
 
   const compileFS = Compiler({
@@ -66,7 +66,7 @@ export function compileFragmentShader(name, source) {
     isDiscarded
   };
 }`,
-    name
+    shaderName
   );
 }
 

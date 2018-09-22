@@ -464,6 +464,7 @@ export default class Framebuffer extends Resource {
   // WEBGL2 INTERFACE
 
   // Copies a rectangle of pixels between framebuffers
+  // eslint-disable-next-line complexity
   blit({
     srcFramebuffer,
     attachment = GL.COLOR_ATTACHMENT0,

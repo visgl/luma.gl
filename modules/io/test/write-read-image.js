@@ -18,6 +18,7 @@ const IMAGE = {
 };
 
 // Test that we can write and read an image, and that result is identical
+/* eslint-disable func-names */
 test('io#write-read-image', async function(t) {
   await promisify(mkdirp)(TEST_DIR);
   const file = fs.createWriteStream(TEST_FILE);

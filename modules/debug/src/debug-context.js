@@ -1,5 +1,6 @@
 import GL from 'luma.gl/constants';
 import drawModel from './draw-model';
+/* global document */
 
 /* Draws WebGL style wireframe in a 2d canvas */
 export default class DebugContext {
