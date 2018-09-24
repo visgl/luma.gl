@@ -201,8 +201,9 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
   * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
   #### Experimental ####
   * `_sourceTextures` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
-  * `_targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object it is used as is, if `String` it must be one of the source texture attributes name, a new texture object is clone from corresponding texture and used as color attachment.
+  * `_targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object, it is used as is, if `String`, it must be one of the source texture attributes name, a new texture object is cloned from corresponding texture and used as color attachment.
   * `_targetTextureVarying` (`String`) : varying name used in vertex shader who's data should go into target texture.
+  * `_swapTexture` (`String`) : source texture attribute name, that is swapped with target texture every time `swap()` is called.
 
 Notes:
 
@@ -247,9 +248,11 @@ Updates buffer bindings with provided buffer objects for one or more source or d
 * `props.elementCount` (`Integer`, Optional) - Number set to vertex count when rendering the model. If not supplied, the previously set element count is used.
 
 
-### swapBuffers() : Transform
+### swap() : Transform
 
-Swaps source and destination buffers. If buffer swapping is used, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
+Swaps source and destination buffers and textures. Buffer swapping is performed when `feedbackMap` is provided and texture swapping is performed when `_swapTexture` is provided. If buffer swapping is needed, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
+
+NOTE: `swapBuffers()` is deprecated, instead use `swap()`.
 
 
 ### _getTargetTexture() : Texture2D/null (EXPERIMENTAL)

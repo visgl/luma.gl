@@ -13,6 +13,7 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
   let sourceCount = texAttributeNames.length;
   let targetTextureType = null;
   const uniforms = {};
+  const samplerTextureMap = {};
   let updatedVs = vs;
   let finalInject = {};
 
@@ -23,11 +24,12 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
       if (sourceCount > 0) {
         const updated = processAttributeDefinition(line, sourceTextureMap);
         if (updated) {
-          const {updatedLine, inject, samplerUniforms} = updated;
+          const {updatedLine, inject} = updated;
           updateVsLines[index] = updatedLine;
           // sampleInstructions.push(sampleInstruction);
           finalInject = combineInjects([finalInject, inject]);
-          Object.assign(uniforms, samplerUniforms);
+          Object.assign(uniforms, updated.uniforms);
+          Object.assign(samplerTextureMap, updated.samplerTextureMap);
           sourceCount--;
         }
       }
@@ -54,7 +56,19 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
     }
     updatedVs = updateVsLines.join('\n');
   }
-  return {vs: updatedVs, uniforms, targetTextureType, inject: finalInject};
+  return {
+    // updated vertex shader (commented texture attribute definition)
+    vs: updatedVs,
+    // sampler size unitforms
+    uniforms,
+    // type (float, vec2, vec3 of vec4) target texture varying
+    targetTextureType,
+    // required vertex and fragment shader injects
+    inject: finalInject,
+    // map of sampler name to texture name, can be used to set attributes
+    // usefull when swapping textures, as source and destination texture change when swap is called.
+    samplerTextureMap,
+  };
 }
 
 // Checks if provided line is defining an attribute, if so returns details otherwise null
@@ -82,8 +96,8 @@ export function getVaryingType(line, varying) {
 
 // build required definitions, sample instructions and uniforms for each texture attribute
 export function processAttributeDefinition(line, textureMap) {
-  const samplerUniforms = {};
-
+  const uniforms = {};
+  const samplerTextureMap = {};
   const attributeData = getAttributeDefinition(line);
   if (!attributeData) {
     return null;
@@ -98,14 +112,24 @@ export function processAttributeDefinition(line, textureMap) {
       `  ${type} ${name} = transform_getInput(${samplerName}, ${sizeName}).${channels};\n`;
 
     const {width, height} = textureMap[name];
-    samplerUniforms[samplerName] = textureMap[name];
-    samplerUniforms[sizeName] = [width, height];
+    samplerTextureMap[samplerName] = name;
+    uniforms[sizeName] = [width, height];
     const inject = {
       'vs:#decl': uniformDeclerations,
       'vs:#main-start': sampleInstruction
     };
 
-    return {updatedLine, inject, samplerUniforms};
+    // samplerNameMap
+    return {
+      // update vertex shader line.
+      updatedLine,
+      // inject object with sampler instructions.
+      inject,
+      // sampler size uniforms
+      uniforms,
+      // sampler name to texture name map
+      samplerTextureMap
+    };
   }
   return null;
 }

@@ -233,7 +233,7 @@ test('WebGL#Transform run (constant Attribute)', t => {
   t.end();
 });
 
-test('WebGL#Transform swapBuffers', t => {
+test('WebGL#Transform swap', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -259,7 +259,7 @@ test('WebGL#Transform swapBuffers', t => {
 
   transform.run();
 
-  transform.swapBuffers();
+  transform.swap();
   transform.run();
 
   const expectedData = sourceData.map(x => x * 4);
@@ -270,7 +270,7 @@ test('WebGL#Transform swapBuffers', t => {
   t.end();
 });
 
-test('WebGL#Transform swapBuffers + update', t => {
+test('WebGL#Transform swap + update', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -295,7 +295,7 @@ test('WebGL#Transform swapBuffers + update', t => {
   });
 
   transform.run();
-  transform.swapBuffers();
+  transform.swap();
 
   // Increase the buffer size
   sourceData = new Float32Array([1, 2, 3, 4, 5, 6, 7]);
@@ -313,7 +313,7 @@ test('WebGL#Transform swapBuffers + update', t => {
   let expectedData = sourceData.map(x => x * 2);
   let outData = transform.getData({varyingName :'outValue'});
 
-  transform.swapBuffers();
+  transform.swap();
   transform.run();
 
   expectedData = sourceData.map(x => x * 4);
@@ -324,7 +324,7 @@ test('WebGL#Transform swapBuffers + update', t => {
   t.end();
 });
 
-test('WebGL#Transform swapBuffers without varyings', t => {
+test('WebGL#Transform swap without varyings', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -354,7 +354,7 @@ test('WebGL#Transform swapBuffers without varyings', t => {
 
   transform.run();
 
-  transform.swapBuffers();
+  transform.swap();
   transform.run();
 
   const expectedDoubleData = sourceData1.map(x => x * 4);
@@ -675,18 +675,27 @@ test('WebGL#Transform run (source&destination texture)', t => {
       },
       _targetTexture: 'inTexture',
       _targetTextureVarying: 'outTexture',
+      _swapTexture: 'inTexture',
       vs,
       elementCount: sourceData.length
     });
 
     transform.run();
 
-    const expectedData = sourceData.map(x => x * 2);
+    let expectedData = sourceData.map(x => x * 2);
+    // By default getData reads data from current Framebuffer.
+    let outTexData = transform.getData({packed: true});
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+
+    transform.swap();
+    transform.run();
+    expectedData = sourceData.map(x => x * 4);
 
     // By default getData reads data from current Framebuffer.
-    const outTexData = transform.getData({packed: true});
+    outTexData = transform.getData({packed: true});
 
-    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+    t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
+
   });
 
   t.end();
