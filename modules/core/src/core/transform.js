@@ -177,27 +177,41 @@ export default class Transform {
   }
 
   // Update some or all buffer bindings.
-  update({sourceBuffers = null, feedbackBuffers = null, elementCount = this.elementCount}) {
-    if (!sourceBuffers && !feedbackBuffers) {
-      log.warn('Transform : no buffers updated')();
-      return this;
+  update(opts = {}) {
+
+    if (opts.elementCount) {
+        this._setElementCount(opts.elementCount);
     }
 
-    this._setElementCount(elementCount);
-
-    for (const bufferName in feedbackBuffers) {
-      assert(feedbackBuffers[bufferName] instanceof Buffer);
-    }
-
+    const {sourceBuffers = null, feedbackBuffers = null} = opts;
     const {currentIndex} = this;
-    Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
-    Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
-    this._createFeedbackBuffers({feedbackBuffers});
-    this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+    if (sourceBuffers || feedbackBuffers) {
+      for (const bufferName in feedbackBuffers) {
+        assert(feedbackBuffers[bufferName] instanceof Buffer);
+      }
 
-    // Buffers have changed, need to re-setup swap buffers.
-    this._setupSwapBuffers();
-    return this;
+      Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
+      Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
+      this._createFeedbackBuffers({feedbackBuffers});
+      this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+
+      // Buffers have changed, need to re-setup swap buffers.
+      this._setupSwapBuffers();
+    }
+
+    const {_sourceTextures, _targetTexture} = opts;
+    if (_sourceTextures || _targetTexture) {
+      Object.assign(this.sourceTextures[currentIndex], _sourceTextures);
+      const targetTexture = this._getDestinationTexture(_targetTexture);
+      if (targetTexture) {
+        this.targetTextures[currentIndex] =  this._getDestinationTexture(_targetTexture);
+        this.framebuffers[currentIndex].update({
+          [GL.COLOR_ATTACHMENT0]: this.targetTextures[currentIndex]
+        });
+      }
+      // textures have changed, need to re-setup swap textures.
+      this._setupSwapTextures();
+    }
   }
 
   // set texture filtering parameters on source textures.

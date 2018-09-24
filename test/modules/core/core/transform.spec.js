@@ -701,6 +701,70 @@ test('WebGL#Transform run (source&destination texture)', t => {
   t.end();
 });
 
+test('WebGL#Transform run (source&destination texture update)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  TEXTURE_TEST_CASES.forEach(testCase => {
+    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+    // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
+    const sourceTexture = new Texture2D(gl2, {
+      data: sourceData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _targetTexture: 'inTexture',
+      _targetTextureVarying: 'outTexture',
+      _swapTexture: 'inTexture',
+      vs,
+      elementCount: sourceData.length
+    });
+
+    transform.run();
+
+    const updateData = sourceData.map(x => x + 3);
+    const updateTexture = new Texture2D(gl2, {
+      data: updateData,
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+
+    transform.update({_sourceTextures: {inTexture: updateTexture}})
+    transform.run();
+
+    const expectedData = updateData.map(x => x * 2);
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData({packed: true});
+    t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+
+  });
+
+  t.end();
+});
+
 const VS_MINIFICAION = `\
 #version 300 es
 in float inTexture;
