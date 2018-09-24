@@ -577,10 +577,8 @@ test('WebGL#Transform run (source&destination texture + feedback buffer)', t => 
       _sourceTextures: {
         inTexture: sourceTexture
       },
-      _renderToTexture: {
-        varying: 'outTexture',
-        refAttribute: 'inTexture'
-      },
+      _targetTextureVarying: 'outTexture',
+      _targetTexture: 'inTexture',
       vs,
       feedbackMap: {
         inBuffer: 'outBuffer'
@@ -675,10 +673,8 @@ test('WebGL#Transform run (source&destination texture)', t => {
       _sourceTextures: {
         inTexture: sourceTexture
       },
-      _renderToTexture: {
-        varying: 'outTexture',
-        refAttribute: 'inTexture'
-      },
+      _targetTexture: 'inTexture',
+      _targetTextureVarying: 'outTexture',
       vs,
       elementCount: sourceData.length
     });
@@ -825,10 +821,8 @@ test('WebGL#Transform run (texture minification)', t => {
     _sourceTextures: {
       inTexture: sourceTexture
     },
-    _renderToTexture: {
-      varying: 'outTexture',
-      texture: destinationTexture
-    },
+    _targetTexture: destinationTexture,
+    _targetTextureVarying: 'outTexture',
     vs: VS_MINIFICAION,
     elementCount: dstPixelCount
   });

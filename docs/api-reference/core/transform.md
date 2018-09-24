@@ -170,10 +170,8 @@ const transform = new Transform(gl2, {
   _sourceTextures: {
     inTexture: sourceTexture
   },
-  _renderToTexture: {
-    varying: 'outTexture',
-    refAttribute: 'inTexture'
-  },
+  _targetTexture: 'inTexture',
+  _targetTextureVarying: 'outTexture',
   vs,
   elementCount
 });
@@ -201,15 +199,14 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
   * `feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
   * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
   * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
-  * `_sourceTextures` (`Object`) EXPERIMENTAL - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
-  * `_renderToTexture` (`Object`) EXPERIMENTAL - contains following key-value pairs that define target texture.
-    * `varying` (`String`) : varying name used in vertex shader who's data should go into target texture.
-    * `texture` (`Texture2D`, optional) : `Texture2D` object where data to be rendered into.
-    * `refAttribute` (`String`, optional) : Name of the reference source texture attribute, from which a new texture object is cloned. Either `texture` or `refAttribute` must be supplied.
+  #### Experimental ####
+  * `_sourceTextures` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
+  * `_targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object it is used as is, if `String` it must be one of the source texture attributes name, a new texture object is clone from corresponding texture and used as color attachment.
+  * `_targetTextureVarying` (`String`) : varying name used in vertex shader who's data should go into target texture.
 
 Notes:
 
-* Internally, creates `Model` and `TransformFeedback` instances.
+* Internally, creates `Model`, `TransformFeedback` and `Framebuffer` instances.
 
 
 ### delete() : Transform

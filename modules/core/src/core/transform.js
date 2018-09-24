@@ -196,7 +196,7 @@ export default class Transform {
 
   _initialize(props = {}) {
     const {feedbackBuffers, feedbackMap} = this._validateProps(props);
-    const {sourceBuffers, varyings, _renderToTexture} = props;
+    const {sourceBuffers, varyings, _targetTexture, _targetTextureVarying} = props;
 
     let varyingsArray = varyings;
     if (feedbackMap && !Array.isArray(varyings)) {
@@ -204,8 +204,8 @@ export default class Transform {
     }
     this.varyingsArray = varyingsArray;
     this.feedbackMap = feedbackMap;
-    if (_renderToTexture) {
-      this.targetTextureVarying = _renderToTexture.varying;
+    if (_targetTexture) {
+      this.targetTextureVarying = _targetTextureVarying;
       this.renderingToTexture = true;
       assert(this.targetTextureVarying);
     }
@@ -238,12 +238,12 @@ export default class Transform {
 
     // assert on required parameters
     const {sourceBuffers, vs, elementCount, varyings} = props;
-    const {_sourceTextures, _renderToTexture} = props;
+    const {_sourceTextures, _targetTexture, _targetTextureVarying} = props;
 
     assert(
       vs &&
       // destinations are provided
-      (varyings || feedbackMap || _renderToTexture) &&
+      (varyings || feedbackMap || _targetTexture) &&
       // when only writting to textures auto-duduce from texture dimenstions
       elementCount
     );
@@ -254,6 +254,9 @@ export default class Transform {
     for (const textureName in _sourceTextures || {}) {
       assert(_sourceTextures[textureName] instanceof Texture2D);
     }
+
+    // If rendering to texture , varying is provided
+    assert (!_targetTexture || _targetTextureVarying);
 
     return {feedbackBuffers, feedbackMap};
   }
@@ -270,15 +273,14 @@ export default class Transform {
 
   // setup source and destination textures
   _setupTextures(props = {}) {
-    const {_sourceTextures} = props;
+    const {_sourceTextures, _targetTexture} = props;
     // Setup source texture
     this.sourceTextures[0] = Object.assign({}, _sourceTextures);
     this.sourceTextures[1] = {};
     this.hasSourceTextures = Object.keys(this.sourceTextures[0]).length > 0;
 
     if (this.targetTextureVarying) {
-      const texture = props._renderToTexture.texture ||
-        this._getDestinationTexture(props._renderToTexture.refAttribute);
+      const texture = this._getDestinationTexture(_targetTexture);
       // Either a texture or refAttribute must be provided
       assert(texture);
       this.targetTextures[0] = texture;
@@ -286,9 +288,12 @@ export default class Transform {
     }
   }
 
-  _getDestinationTexture(attribute) {
+  _getDestinationTexture(textureOrAttribute) {
 
-    const refTexture = this.sourceTextures[0][attribute];
+    if (textureOrAttribute instanceof Texture2D) {
+      return textureOrAttribute;
+    }
+    const refTexture = this.sourceTextures[0][textureOrAttribute];
     if (!refTexture) {
       return null;
     }
