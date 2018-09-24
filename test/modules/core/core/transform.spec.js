@@ -122,7 +122,7 @@ test('WebGL#Transform run', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
-  const outData = transform.getData('outValue');
+  const outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -188,7 +188,7 @@ test('WebGL#Transform run (Attribute)', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
-  const outData = transform.getData('outValue');
+  const outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -226,7 +226,7 @@ test('WebGL#Transform run (constant Attribute)', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * MULTIPLIER);
-  const outData = transform.getData('outValue');
+  const outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -263,7 +263,7 @@ test('WebGL#Transform swapBuffers', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 4);
-  const outData = transform.getData('outValue');
+  const outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -311,13 +311,13 @@ test('WebGL#Transform swapBuffers + update', t => {
   transform.run();
 
   let expectedData = sourceData.map(x => x * 2);
-  let outData = transform.getData('outValue');
+  let outData = transform.getData({varyingName :'outValue'});
 
   transform.swapBuffers();
   transform.run();
 
   expectedData = sourceData.map(x => x * 4);
-  outData = transform.getData('outValue');
+  outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -360,8 +360,8 @@ test('WebGL#Transform swapBuffers without varyings', t => {
   const expectedDoubleData = sourceData1.map(x => x * 4);
   const expectedHalfData = sourceData2.map(x => x * 0.25);
 
-  const doubleData = transform.getData('doubleValue');
-  const halfData = transform.getData('halfValue');
+  const doubleData = transform.getData({varyingName :'doubleValue'});
+  const halfData = transform.getData({varyingName :'halfValue'});
 
   t.deepEqual(doubleData, expectedDoubleData, 'Transform.getData: is successful');
   t.deepEqual(halfData, expectedHalfData, 'Transform.getData: is successful');
@@ -411,7 +411,7 @@ test('WebGL#Transform update', t => {
   transform.run();
 
   expectedData = sourceData.map(x => x * 2);
-  outData = transform.getData('outValue');
+  outData = transform.getData({varyingName :'outValue'});
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   sourceData = new Float32Array([3, 4, 5, 2, -3, 0]);
@@ -431,7 +431,7 @@ test('WebGL#Transform update', t => {
   transform.run();
 
   expectedData = sourceData.map(x => x * 2);
-  outData = transform.getData('outValue');
+  outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -490,7 +490,7 @@ test('WebGL#Transform run (source texture + feedback buffer)', t => {
   transform.run();
 
   const expectedData = sourceData.map(x => x * 2);
-  const outData = transform.getData('outValue');
+  const outData = transform.getData({varyingName :'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
@@ -589,11 +589,11 @@ test('WebGL#Transform run (source&destination texture + feedback buffer)', t => 
     transform.run();
 
     const expectedData = sourceData.map(x => x * 2);
-    const outData = transform.getData('outBuffer');
+    const outData = transform.getData({varyingName :'outBuffer'});
     t.deepEqual(outData, expectedData, `${name} Transform should write correct data into Buffer`);
 
     // By default getData reads data from current Framebuffer.
-    const outTexData = transform.getData();
+    const outTexData = transform.getData({varyingName: 'outTexture', packed: true});
 
     // t.deepEqual(outData, expectedData, 'Transform should write correct data into Buffer');
     t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
@@ -684,7 +684,7 @@ test('WebGL#Transform run (source&destination texture)', t => {
     const expectedData = sourceData.map(x => x * 2);
 
     // By default getData reads data from current Framebuffer.
-    const outTexData = transform.getData();
+    const outTexData = transform.getData({packed: true});
 
     t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
   });
@@ -834,7 +834,7 @@ test('WebGL#Transform run (texture minification)', t => {
       offset
     }});
 
-    const outTexData = transform.getData();
+    const outTexData = transform.getData({packed: true});
 
     t.deepEqual(outTexData, expected, `Transform should access neighbor pixels correctly for ${name}`);
   });

@@ -88,7 +88,7 @@ export default class Transform {
   }
 
   // Return data either from Buffer or from Texture
-  getData(varyingName = null) {
+  getData({varyingName = null, packed = false} = {}) {
     // Either there should be specified feedbackBuffer or we should be rendering to a texture
     if (varyingName && this.feedbackBuffers[this.currentIndex][varyingName]) {
       return this.feedbackBuffers[this.currentIndex][varyingName].getData();
@@ -99,15 +99,21 @@ export default class Transform {
 
     const pixels = this.framebuffers[this.currentIndex].readPixels();
 
-    // readPixels returns 4 elements for each pixel, extract relevant data only
-    const data = [];
+    if (!packed) {
+      return pixels;
+    }
+
+    // readPixels returns 4 elements for each pixel, pack the elements when requested
+    const ArrayType = pixels.constructor;
     const channelCount = typeToChannelCount(this.targetTextureType);
+    const packedPixels = new ArrayType(pixels.length * channelCount / 4);
+    let packCount = 0;
     for (let i = 0; i < pixels.length; i += 4) {
       for (let j = 0; j < channelCount; j++) {
-        data.push(pixels[i + j]);
+        packedPixels[packCount++] = pixels[i + j];
       }
     }
-    return data;
+    return packedPixels;
   }
 
   // Run one transform feedback loop.
