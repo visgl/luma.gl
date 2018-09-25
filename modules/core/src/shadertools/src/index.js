@@ -20,3 +20,6 @@ export {
   typeToChannelCount,
   convertToVec4
 } from './utils/shader-utils';
+
+// experimental
+export {default as _transform} from './modules/transform/transform';

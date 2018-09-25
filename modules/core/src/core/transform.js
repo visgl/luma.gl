@@ -1,13 +1,27 @@
 import GL from '../constants';
 import Model from './model';
 import Buffer from '../webgl/buffer';
+import Framebuffer from '../webgl/framebuffer';
+import Texture2D from '../webgl/texture-2d';
 import TransformFeedback from '../webgl/transform-feedback';
-import {isWebGL2, assertWebGL2Context, getShaderVersion} from '../webgl-utils';
+import {
+  _transform as transform,
+  getPassthroughFS,
+  typeToChannelCount
+} from '../shadertools/src';
+import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl-utils';
 import assert from '../utils/assert';
-import {log} from '../utils';
+import {log, isObjectEmpty} from '../utils';
+import {updateForTextures} from './transform-shader-utils';
 
-const FS100 = 'void main() {}';
-const FS300 = `#version 300 es\n${FS100}`;
+// Texture parameters needed so sample can precisely pick pixel for given element id.
+const SRC_TEX_PARAMETER_OVERRIDES = {
+  [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+  [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+  [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+  [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+};
+const FS_OUTPUT_VARIABLE = 'transform_output';
 
 export default class Transform {
 
@@ -21,11 +35,31 @@ export default class Transform {
 
     this.gl = gl;
     this.model = null;
+    this.elementCount = 0;
     this.currentIndex = 0;
+
+    // Source and destination resources are stored in two element Arrays for easier swapping when
+    // 'feedbackMap' is provided. If not only the first array elment is used.
+
+    // Each array element is an object with attribute name as Key and Buffer object as value.
     this.sourceBuffers = new Array(2);
+
+    // Each array element is an object with attribute name as Key and Texture object as value.
+    this.sourceTextures = new Array(2);
+
+    // Each array element is an object with varying name as Key and Buffer object as value.
     this.feedbackBuffers = new Array(2);
+
+    // Each array element is a Texture object used as color attachment for framebuffer.
+    this.targetTextures = new Array(2);
+
+    // Each array element is a TransformFeedback object.
     this.transformFeedbacks = new Array(2);
-    this._buffersCreated = {};
+
+    // Each array element is a Framebuffer object.
+    this.framebuffers = new Array(2);
+    this._createdBuffers = {};
+    this.elementIDBuffer = null;
 
     this._initialize(props);
     Object.seal(this);
@@ -33,14 +67,10 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    for (const name in this._buffersCreated) {
-      this._buffersCreated[name].delete();
+    for (const name in this._createdBuffers) {
+      this._createdBuffers[name].delete();
     }
     this.model.delete();
-  }
-
-  get elementCount() {
-    return this.model.getVertexCount();
   }
 
   // Return Buffer object for given varying name.
@@ -49,52 +79,197 @@ export default class Transform {
     return this.feedbackBuffers[this.currentIndex][varyingName];
   }
 
-  // Run one transform feedback loop.
-  run({uniforms = {}, unbindModels = []} = {}) {
-    this.model.setAttributes(this.sourceBuffers[this.currentIndex]);
-    this.model.transform({
-      transformFeedback: this.transformFeedbacks[this.currentIndex],
-      parameters: {[GL.RASTERIZER_DISCARD]: true},
-      uniforms,
-      unbindModels
-    });
+  // Returns the color attachment textuer from current framebuffer target
+  _getTargetTexture() {
+    if (this.framebuffers[this.currentIndex]) {
+      return this.framebuffers[this.currentIndex].attachments[GL.COLOR_ATTACHMENT0];
+    }
+    return null;
   }
 
-  // Swap source and destination buffers.
+  // Return data either from Buffer or from Texture
+  getData({varyingName = null, packed = false} = {}) {
+    // Either there should be specified feedbackBuffer or we should be rendering to a texture
+    if (varyingName && this.feedbackBuffers[this.currentIndex][varyingName]) {
+      return this.feedbackBuffers[this.currentIndex][varyingName].getData();
+    }
+
+    // When varyingName is not provided return data from framebuffer object.
+    assert(!varyingName || varyingName === this.targetTextureVarying);
+
+    const pixels = this.framebuffers[this.currentIndex].readPixels();
+
+    if (!packed) {
+      return pixels;
+    }
+
+    // readPixels returns 4 elements for each pixel, pack the elements when requested
+    const ArrayType = pixels.constructor;
+    const channelCount = typeToChannelCount(this.targetTextureType);
+    const packedPixels = new ArrayType(pixels.length * channelCount / 4);
+    let packCount = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      for (let j = 0; j < channelCount; j++) {
+        packedPixels[packCount++] = pixels[i + j];
+      }
+    }
+    return packedPixels;
+  }
+
+  _getInputs() {
+    const samplerUniforms = {};
+    const current = this.currentIndex;
+
+    // Buffer inputs
+    const attributes = Object.assign({}, this.sourceBuffers[current]);
+
+    // Texture inputs
+    if (this.hasSourceTextures) {
+      attributes.transform_elementID = this.elementIDBuffer;
+      for (const sampler in this.samplerTextureMap) {
+        let textureName = this.samplerTextureMap[sampler];
+        samplerUniforms[sampler] = this.sourceTextures[current][textureName];
+      }
+      this._setSourceTextureParameters();
+    }
+    return {attributes, samplerUniforms};
+  }
+
+  // Run one transform feedback loop.
+  /* eslint-disable camelcase */
+  run({uniforms = {}, unbindModels = []} = {}) {
+    const {attributes, samplerUniforms} = this._getInputs();
+    const updatedUniforms = {};
+    Object.assign(updatedUniforms, samplerUniforms, uniforms);
+    let framebuffer = null;
+    let discard = true;
+
+    if (this.renderingToTexture) {
+      discard = false;
+      framebuffer = this.framebuffers[this.currentIndex];
+      assert(framebuffer);
+
+      // TODO: pass them as parameters? Otherwise we are changing global viwport state.
+      this.gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+      this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    }
+    this.model.setAttributes(attributes);
+    this.model.transform({
+      transformFeedback: this.transformFeedbacks[this.currentIndex],
+      uniforms: updatedUniforms,
+      unbindModels,
+      discard,
+      framebuffer
+    });
+  }
+  /* eslint-enable camelcase */
+
+  // Swap source and destination buffers and textures.
   swapBuffers() {
-    assert(this.feedbackMap);
+    log.deprecated('swapBuffers()', 'swap()');
+    this.swap();
+  }
+
+  // Swap source and destination buffers and textures.
+  swap() {
+    assert(this.feedbackMap || this._swapTexture);
     this.currentIndex = (this.currentIndex + 1) % 2;
   }
 
   // Update some or all buffer bindings.
-  update({sourceBuffers = null, feedbackBuffers = null, elementCount = this.elementCount}) {
-    if (!sourceBuffers && !feedbackBuffers) {
-      log.warn('Transform : no buffers updated')();
-      return this;
+  update(opts = {}) {
+
+    if (opts.elementCount) {
+        this._setElementCount(opts.elementCount);
     }
 
-    this.model.setVertexCount(elementCount);
-
-    for (const bufferName in feedbackBuffers) {
-      assert(feedbackBuffers[bufferName] instanceof Buffer);
-    }
-
+    const {sourceBuffers = null, feedbackBuffers = null} = opts;
     const {currentIndex} = this;
-    Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
-    Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
-    this._createFeedbackBuffers({feedbackBuffers});
-    this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+    if (sourceBuffers || feedbackBuffers) {
+      for (const bufferName in feedbackBuffers) {
+        assert(feedbackBuffers[bufferName] instanceof Buffer);
+      }
 
-    // Buffers have changed, need to re-setup swap buffers.
-    this._setupSwapBuffers();
-    return this;
+      Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
+      Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
+      this._createFeedbackBuffers({feedbackBuffers});
+      this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+
+      // Buffers have changed, need to re-setup swap buffers.
+      this._setupSwapBuffers();
+    }
+
+    const {_sourceTextures, _targetTexture} = opts;
+    if (_sourceTextures || _targetTexture) {
+      Object.assign(this.sourceTextures[currentIndex], _sourceTextures);
+      const targetTexture = this._getDestinationTexture(_targetTexture);
+      if (targetTexture) {
+        this.targetTextures[currentIndex] =  this._getDestinationTexture(_targetTexture);
+        this.framebuffers[currentIndex].update({
+          [GL.COLOR_ATTACHMENT0]: this.targetTextures[currentIndex]
+        });
+      }
+      // textures have changed, need to re-setup swap textures.
+      this._setupSwapTextures();
+    }
+  }
+
+  // set texture filtering parameters on source textures.
+  _setSourceTextureParameters() {
+    const index = this.currentIndex;
+    for (const name in this.sourceTextures[index]) {
+      this.sourceTextures[index][name].setParameters(SRC_TEX_PARAMETER_OVERRIDES);
+    }
+  }
+
+  // set element count and updated elementID buffer if needed.
+  _setElementCount(elementCount) {
+    if (this.elementCount === elementCount) {
+      return;
+    }
+    if (this.elementCount < elementCount) {
+      this._updateElementIDBuffer(elementCount);
+    }
+    this.model.setVertexCount(elementCount);
+    this.elementCount = elementCount;
   }
 
   // Private
 
-  /* eslint-disable complexity */
   _initialize(props = {}) {
+    const {feedbackBuffers, feedbackMap} = this._validateProps(props);
+    const {sourceBuffers, varyings, _targetTexture, _targetTextureVarying, _swapTexture} = props;
+
+    let varyingsArray = varyings;
+    if (feedbackMap && !Array.isArray(varyings)) {
+      varyingsArray = Object.values(feedbackMap);
+    }
+    this.varyingsArray = varyingsArray;
+    this.feedbackMap = feedbackMap;
+    this._swapTexture = _swapTexture;
+    if (_targetTexture) {
+      this.targetTextureVarying = _targetTextureVarying;
+      this.renderingToTexture = true;
+      assert(this.targetTextureVarying);
+    }
+
+    this._setupBuffers({sourceBuffers, feedbackBuffers});
+    this._setupTextures(props);
+    this._setupSwapBuffers();
+    this._setupSwapTextures();
+    this._buildModel(Object.assign({}, props, {
+      id: props.id || 'transform-model',
+      drawMode: props.drawMode || GL.POINTS,
+      varyings: varyingsArray
+    }));
+  }
+
+  // assert on required parameters
+  /* eslint-disable complexity */
+  _validateProps(props) {
     let {feedbackBuffers, feedbackMap} = props;
+
+    // backward compitability
     const {destinationBuffers, sourceDestinationMap} = props;
     if (destinationBuffers) {
       log.deprecated('destinationBuffers', 'feedbackBuffers')();
@@ -105,32 +280,32 @@ export default class Transform {
       feedbackMap = feedbackMap || sourceDestinationMap;
     }
 
-    const {sourceBuffers, vs, elementCount} = props;
-    assert(vs && elementCount >= 0);
-    // If feedbackBuffers are not provided, sourceDestinationMap must be provided
-    // to create destinaitonBuffers with layout of corresponding source buffer.
-    assert(feedbackBuffers || feedbackMap, ' Transform needs feedbackBuffers or feedbackMap');
+    // assert on required parameters
+    const {sourceBuffers, vs, elementCount, varyings} = props;
+    const {_sourceTextures, _targetTexture, _targetTextureVarying, _swapTexture} = props;
+
+    assert(
+      vs &&
+      // destinations are provided
+      (varyings || feedbackMap || _targetTexture) &&
+      // when only writting to textures auto-duduce from texture dimenstions
+      elementCount
+    );
+
     for (const bufferName in feedbackBuffers || {}) {
       assert(feedbackBuffers[bufferName] instanceof Buffer);
     }
-
-    const {varyings} = props;
-    // If varyings are not provided feedbackMap must be provided to deduce varyings
-    assert(Array.isArray(varyings) || feedbackMap);
-    let varyingsArray = varyings;
-    if (!Array.isArray(varyings)) {
-      varyingsArray = Object.values(feedbackMap);
+    for (const textureName in _sourceTextures || {}) {
+      assert(_sourceTextures[textureName] instanceof Texture2D);
     }
 
-    this.feedbackMap = feedbackMap;
+    // If rendering to texture , varying is provided
+    assert (!_targetTexture || _targetTextureVarying);
 
-    this._setupBuffers({sourceBuffers, feedbackBuffers});
-    this._setupSwapBuffers();
-    this._buildModel(Object.assign({}, props, {
-      id: props.id || 'transform-model',
-      drawMode: props.drawMode || GL.POINTS,
-      varyings: varyingsArray
-    }));
+    // swap texture must be a valid source texture
+    assert(!_swapTexture || _sourceTextures[_swapTexture]);
+
+    return {feedbackBuffers, feedbackMap};
   }
   /* eslint-enable complexity */
 
@@ -143,6 +318,45 @@ export default class Transform {
     this.feedbackBuffers[1] = {};
   }
 
+  // setup source and destination textures
+  _setupTextures(props = {}) {
+    const {_sourceTextures, _targetTexture} = props;
+    // Setup source texture
+    this.sourceTextures[0] = Object.assign({}, _sourceTextures);
+    this.sourceTextures[1] = {};
+    this.hasSourceTextures = Object.keys(this.sourceTextures[0]).length > 0;
+
+    if (this.targetTextureVarying) {
+      const texture = this._getDestinationTexture(_targetTexture);
+      // Either a texture or refAttribute must be provided
+      assert(texture);
+      this.targetTextures[0] = texture;
+      this.targetTextures[1] = null;
+    }
+  }
+
+  _getDestinationTexture(textureOrAttribute) {
+
+    if (textureOrAttribute instanceof Texture2D) {
+      return textureOrAttribute;
+    }
+    const refTexture = this.sourceTextures[0][textureOrAttribute];
+    if (!refTexture) {
+      return null;
+    }
+    return cloneTextureFrom(refTexture, {
+      parameters: {
+        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+        [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+        [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+      },
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+  }
+
   // auto create any feedback buffers
   _createFeedbackBuffers({feedbackBuffers}) {
     if (!this.feedbackMap) {
@@ -152,19 +366,31 @@ export default class Transform {
     const current = this.currentIndex;
     for (const sourceBufferName in this.feedbackMap) {
       const feedbackBufferName = this.feedbackMap[sourceBufferName];
-      if (!feedbackBuffers || !feedbackBuffers[feedbackBufferName]) {
+      if (feedbackBufferName !== this.targetTextureVarying &&
+          (!feedbackBuffers || !feedbackBuffers[feedbackBufferName])
+      ) {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
         const {bytes, type, usage, accessor} = sourceBuffer;
         const buffer = new Buffer(this.gl, {bytes, type, usage, accessor});
 
-        if (this._buffersCreated[feedbackBufferName]) {
-          this._buffersCreated[feedbackBufferName].delete();
-          this._buffersCreated[feedbackBufferName] = buffer;
+        if (this._createdBuffers[feedbackBufferName]) {
+          this._createdBuffers[feedbackBufferName].delete();
         }
+        this._createdBuffers[feedbackBufferName] = buffer;
         this.feedbackBuffers[current][feedbackBufferName] = buffer;
       }
     }
+  }
+
+  // Create a buffer and add to list of buffers to be deleted.
+  _createNewBuffer(name, opts) {
+    const buffer = new Buffer(this.gl, opts);
+    if (this._createdBuffers[name]) {
+      this._createdBuffers[name].delete();
+      this._createdBuffers[name] = buffer;
+    }
+    return buffer;
   }
 
   // setup buffers for swapping.
@@ -178,16 +404,22 @@ export default class Transform {
     const current = this.currentIndex;
     const next = (current + 1) % 2;
 
-    for (const sourceBufferName in this.feedbackMap) {
-      const feedbackBufferName = this.feedbackMap[sourceBufferName];
+    // Copy all buffers/textures so un-mapped sources will remain same
+    Object.assign(this.sourceBuffers[next], this.sourceBuffers[current]);
+    Object.assign(this.feedbackBuffers[next], this.feedbackBuffers[current]);
 
-      this.sourceBuffers[next][sourceBufferName] =
-        this.feedbackBuffers[current][feedbackBufferName];
-      this.feedbackBuffers[next][feedbackBufferName] =
-        this.sourceBuffers[current][sourceBufferName];
+    for (const srcName in this.feedbackMap) {
+      const dstName = this.feedbackMap[srcName];
+      // TODO: add textureMap and remove this if loop
+      if (dstName !== this.targetTextureVarying) {
+        this.sourceBuffers[next][srcName] =
+          this.feedbackBuffers[current][dstName];
+        this.feedbackBuffers[next][dstName] =
+          this.sourceBuffers[current][srcName];
 
-      // make sure the new destination buffer is a Buffer object
-      assert(this.feedbackBuffers[next][feedbackBufferName] instanceof Buffer);
+        // make sure the new destination buffer is a Buffer object
+        assert(this.feedbackBuffers[next][dstName] instanceof Buffer);
+      }
     }
 
     // When triggered by `update()` TranformFeedback objects are already set up,
@@ -195,19 +427,65 @@ export default class Transform {
     if (this.transformFeedbacks[next]) {
       this.transformFeedbacks[next].setBuffers(this.feedbackBuffers[next]);
     }
+
+    // TODO: add swap support for targetTexture and framebuffers
+  }
+
+
+  // setup textures for swapping.
+  _setupSwapTextures() {
+    if (!this._swapTexture || !this.targetTextureVarying) {
+      // Must be rendering to a texture and _swapTexture is provided
+      return;
+    }
+    const current = this.currentIndex;
+    const next = (current + 1) % 2;
+
+    Object.assign(this.sourceTextures[next], this.sourceTextures[current]);
+
+    this.sourceTextures[next][this._swapTexture] = this.targetTextures[current];
+    this.targetTextures[next] = this.sourceTextures[current][this._swapTexture];
+
+    // When triggered by `update()` Framebuffer objects are already set up,
+    // if so update buffers
+    if (this.framebuffers[next]) {
+      this.framebuffers[next].update({
+        [GL.COLOR_ATTACHMENT0]: this.targetTextures[next]
+      });
+    }
+
   }
 
   // build Model and TransformFeedback objects
   _buildModel(props = {}) {
-    const {vs, elementCount} = props;
-    // use a minimal fragment shader with matching version of vertex shader.
-    const fs = getShaderVersion(vs) === 300 ? FS300 : FS100;
 
+    const {vs, fs, modules, uniforms, inject, samplerTextureMap} = this._getShaders(props);
     this.model = new Model(this.gl, Object.assign({}, props, {
+      vs,
       fs,
-      vertexCount: elementCount
+      vertexCount: props.elementCount,
+      modules,
+      uniforms,
+      inject
     }));
+    this.samplerTextureMap = samplerTextureMap;
 
+    // setup TF to capture varyings.
+    this._setupTransformFeedback();
+
+    // setup Framebuffer object for rendering to Texture.
+    this._setupFramebuffers();
+
+    // create buffer to access source texture pixesl.
+    this._setElementCount(props.elementCount);
+
+  }
+
+  // setup TransformFeedback objects to capture the results
+  _setupTransformFeedback() {
+    if (isObjectEmpty(this.feedbackBuffers[0])) {
+      return;
+    }
     this.transformFeedbacks[0] = new TransformFeedback(this.gl, {
       program: this.model.program,
       buffers: this.feedbackBuffers[0]
@@ -220,5 +498,77 @@ export default class Transform {
         buffers: this.feedbackBuffers[1]
       });
     }
+  }
+
+  // setup framebuffers with texture attachments, to which results are rendered
+  _setupFramebuffers() {
+    if (!this.renderingToTexture) {
+      return;
+    }
+
+    let {width, height} = this.targetTextures[0];
+    this.framebuffers[0] = new Framebuffer(this.gl, {
+      id: `${this.id || 'transform'}-framebuffer-0`,
+      width,
+      height,
+      attachments: {
+        [GL.COLOR_ATTACHMENT0]: this.targetTextures[0]
+      }
+    });
+
+    if (this._swapTexture) {
+      ({width, height} = this.targetTextures[1]);
+
+      this.framebuffers[1] = new Framebuffer(this.gl, {
+        id: `${this.id || 'transform'}-framebuffer-1`,
+        width,
+        height,
+        attachments: {
+          [GL.COLOR_ATTACHMENT0]: this.targetTextures[1]
+        }
+      });
+    }
+  }
+
+  // create/update buffer to access source texture's individual pixels.
+  _updateElementIDBuffer(elementCount) {
+    if (!this.hasSourceTextures) {
+      return;
+    }
+    // NOTE: using float so this will work with GLSL 1.0 shaders.
+    const elementIds = new Float32Array(elementCount);
+    elementIds.forEach((_, index, array) => {
+      array[index] = index;
+    });
+    if (!this.elementIDBuffer) {
+      this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, size: 1});
+    } else {
+      this.elementIDBuffer.setData({data: elementIds});
+    }
+  }
+
+  // build and return shader releated parameters
+  _getShaders(props = {}) {
+    const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = this._processVertexShader(props.vs);
+    this.targetTextureType = targetTextureType;
+    const fs = getPassthroughFS({
+      version: getShaderVersion(vs),
+      input: this.targetTextureVarying,
+      inputType: targetTextureType,
+      ouput: FS_OUTPUT_VARIABLE
+    });
+    const modules = this.hasSourceTextures ?
+      [transform].concat(props.modules || []) : props.modules;
+    return {vs, fs, modules, uniforms, inject, samplerTextureMap};
+  }
+
+  // scan and update vertex shader for texture atrributes.
+  _processVertexShader(vs) {
+    return updateForTextures({
+      vs,
+      sourceTextureMap: this.sourceTextures[this.currentIndex],
+      targetTextureVarying: this.targetTextureVarying,
+      targetTexture: this.targetTextures[this.currentIndex]
+    });
   }
 }
