@@ -127,7 +127,7 @@ export default class Transform {
     if (this.hasSourceTextures) {
       attributes.transform_elementID = this.elementIDBuffer;
       for (const sampler in this.samplerTextureMap) {
-        let textureName = this.samplerTextureMap[sampler];
+        const textureName = this.samplerTextureMap[sampler];
         samplerUniforms[sampler] = this.sourceTextures[current][textureName];
       }
       this._setSourceTextureParameters();
@@ -136,11 +136,11 @@ export default class Transform {
   }
 
   // Run one transform feedback loop.
-  /* eslint-disable camelcase */
-  run({uniforms = {}, unbindModels = []} = {}) {
+  run(opts = {}) {
     const {attributes, samplerUniforms} = this._getInputs();
-    const updatedUniforms = {};
-    Object.assign(updatedUniforms, samplerUniforms, uniforms);
+    const uniforms = Object.assign({}, samplerUniforms, opts.uniforms);;
+    const parameters = Object.assign({}, opts.parameters);
+    const {clearRenderTarget = true} = opts;
     let framebuffer = null;
     let discard = true;
 
@@ -148,21 +148,20 @@ export default class Transform {
       discard = false;
       framebuffer = this.framebuffers[this.currentIndex];
       assert(framebuffer);
-
-      // TODO: pass them as parameters? Otherwise we are changing global viwport state.
-      this.gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-      this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+      parameters.viewport = [0, 0, framebuffer.width, framebuffer.height]
+      if (clearRenderTarget) {
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+      }
     }
     this.model.setAttributes(attributes);
-    this.model.transform({
+    this.model.transform(Object.assign({}, opts, {
       transformFeedback: this.transformFeedbacks[this.currentIndex],
-      uniforms: updatedUniforms,
-      unbindModels,
+      uniforms,
       discard,
-      framebuffer
-    });
+      framebuffer,
+      parameters,
+    }));
   }
-  /* eslint-enable camelcase */
 
   // Swap source and destination buffers and textures.
   swapBuffers() {
@@ -281,7 +280,7 @@ export default class Transform {
     }
 
     // assert on required parameters
-    const {sourceBuffers, vs, elementCount, varyings} = props;
+    const {vs, elementCount, varyings} = props;
     const {_sourceTextures, _targetTexture, _targetTextureVarying, _swapTexture} = props;
 
     assert(
