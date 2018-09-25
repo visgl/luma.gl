@@ -1,5 +1,47 @@
 # Pre-releases
 
+## 6.2.0-alpha.1 - Sep 25
+
+- Transform: user parameters for viewport (#738)
+- Part- 2 Transform: Texture support: add source destination texture support (#729)
+- Add Khronos PBR Reference example (#737)
+- Upgrade outdated lint, fix issues, introduce tree-shaking linter plugin (#736)
+- Bump dependencies to take advantage of @babel/runtime (#735)
+- Transform: remove assert on sourceBuffer (#733)
+- Add babel runtime (#732)
+- Part-1: Transform texture support: add shader and texture utility methods (#728)
+- upgrade glsl-transpiler (#730)
+- Minor fixes (#723)
+- Fix browser script (#720)
+- Add debug example (#726)
+- Add Debugger Module (#722)
+- Set up lerna (#721)
+- RFC: Module Structure (#725)
+- Fix build (#719)
+- fix luma.gl bad links
+- glfx: image processing shaders packaged as luma.gl modules, plus example (#717)
+- Fix isWebGL2 (defeat GL constant inlining) (#716)
+- ShaderModulePass (#712)
+- Fix PLYLoader (#714)
+- Use babel 7 config file (#713)
+- Restore test coverage (#711)
+- loaders.gl: Add DRACO decompression support (#661)
+- loaders.gl: Exclude `fs` in browsers (#709)
+- Merge pull request #708 from uber/xx/loaders.gl
+- resolve comments
+- remove unnecessary dependencies
+- add loader .babelrc to fix es5 compile
+- loaders.gl: GLTFInstantiator, initial plumbing (#707)
+- Initial GLTFParser (#703)
+- Disable `sideEffects` field to fix minified builds (#701)
+- loaders.gl: Test reorganization (#699)
+- loaders.gl@0.3.4
+- loaders.gl@0.3.4
+- loaders.gl@0.3.2
+- loaders.gl@0.3.1
+
+## 6.1.0 - Sep 6
+
 ## 6.1.0-alpha.3 - Aug 7
 - picking shader module: Add Transform based unit tests (#636)
 - Animation fixes (#637)
