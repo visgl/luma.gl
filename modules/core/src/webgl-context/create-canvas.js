@@ -17,7 +17,8 @@ export function getPageLoadPromise() {
   if (!pageLoadPromise) {
     pageLoadPromise = isPage ?
       new Promise((resolve, reject) => {
-        if (isPageLoaded) {
+        if (isPage && document.readyState === 'complete') {
+          isPageLoaded = true;
           resolve(document);
           return;
         }
