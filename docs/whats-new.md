@@ -6,10 +6,13 @@ Date: Target September 12, 2018
 
 Mini release to add
 
-### ShaderModulePass (Exerimental)
+### ShaderModulePass (Experimental)
 
 Shader modules that expose "standard" filtering and sampling functions can be given extra metadata (the `passes` field) enabling easy construction of a `ShaderModulePass`. Look for `ShaderPass` badges in the documentation of shader modules.
 
+### Transform Texture support (Experimental)
+
+`Transform` class was introduced in 6.0 provides easy API to perform WebGL's complicated `TransformFeedback`. We are now extending this class to provide same easy API to read and write into textures. Running image filters, performing offline rendering and custom texture mip-map generation are some of the use-cases. Moreover, texture and buffer access can be combined, i.e. using single `Transform` instance buffers can be captured using `TransformFeedback` and data can be propagated beyond vertex shader to generate a texture.
 
 
 ## Version 6.1

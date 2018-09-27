@@ -656,7 +656,6 @@ test('WebGL#Transform run (source&destination texture)', t => {
 
   TEXTURE_TEST_CASES.forEach(testCase => {
     const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-    // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
     const sourceTexture = new Texture2D(gl2, {
       data: sourceData,
       format,
@@ -760,6 +759,97 @@ test('WebGL#Transform run (source&destination texture update)', t => {
     const outTexData = transform.getData({packed: true});
     t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
 
+  });
+
+  t.end();
+});
+
+const OFFLINE_RENDERING_TEST_CASES = [
+  {
+    name: 'RED-FLOAT',
+    format: GL.R32F,
+    dataFormat: GL.RED,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    expected: 123,
+    position: new Float32Array([1, 1,  -1, 1,  1, -1,  -1, -1]),
+    vs: `\
+#version 300 es
+in vec2 position;
+out float outTexture;
+
+void main()
+{
+  outTexture = 123.;
+  gl_Position = vec4(position, 0., 1.);
+}
+`
+  },
+  {
+    name: 'RGBA-UNSIGNED_BYTE',
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    width: 2,
+    height: 2,
+    expected: 255,
+    position: new Float32Array([1, 1,  -1, 1,  1, -1,  -1, -1]),
+    vs: `\
+#version 300 es
+in vec2 position;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = vec4(1.);
+  gl_Position = vec4(position, 0., 1.);
+}
+`
+  }
+];
+
+test('WebGL#Transform run (offline rendering)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  OFFLINE_RENDERING_TEST_CASES.forEach(testCase => {
+    const {position, format, dataFormat, type, width, height, name, vs, expected} = testCase;
+    const _targetTexture = new Texture2D(gl2, {
+      format,
+      dataFormat,
+      type,
+      mipmaps: false,
+      width,
+      height,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    });
+    const transform = new Transform(gl2, {
+      sourceBuffers: {
+        position: new Buffer(gl2, position)
+      },
+      _targetTexture,
+      _targetTextureVarying: 'outTexture',
+      vs,
+      drawMode: GL.TRIANGLE_STRIP,
+      elementCount: position.length / 2
+    });
+
+    transform.run();
+
+
+    const outTexData = transform.getData({packed: true});
+    const testPassed = outTexData.every(item => {
+      return item === expected;
+    });
+    t.ok(testPassed, `${name} Transform should write correct data into Texture`)
   });
 
   t.end();
