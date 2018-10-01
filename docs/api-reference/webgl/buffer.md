@@ -27,7 +27,7 @@ const buffer = new Buffer(gl, {byteLength: 200});
 const buffer = new Buffer(gl).initialize({byteLength: 200});
 ```
 
-Allocating and initializating a buffer
+Allocating and initializing a buffer
 ```js
 const buffer = new Buffer(gl, {
   target: GL.ELEMENTS_ARRAY_BUFFER,

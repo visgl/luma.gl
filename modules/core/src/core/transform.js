@@ -124,7 +124,8 @@ export default class Transform {
     const attributes = Object.assign({}, this.sourceBuffers[current]);
 
     // Texture inputs
-    if (this.hasSourceTextures) {
+    if (this.hasSourceTextures || this.targetTextureVarying) {
+      // TODO: add option not generate position using element id.
       attributes.transform_elementID = this.elementIDBuffer;
       for (const sampler in this.samplerTextureMap) {
         const textureName = this.samplerTextureMap[sampler];
@@ -192,7 +193,9 @@ export default class Transform {
       Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
       Object.assign(this.feedbackBuffers[currentIndex], feedbackBuffers);
       this._createFeedbackBuffers({feedbackBuffers});
-      this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+      if (this.transformFeedbacks[currentIndex]) {
+        this.transformFeedbacks[currentIndex].setBuffers(this.feedbackBuffers[currentIndex]);
+      }
 
       // Buffers have changed, need to re-setup swap buffers.
       this._setupSwapBuffers();
@@ -531,7 +534,7 @@ export default class Transform {
 
   // create/update buffer to access source texture's individual pixels.
   _updateElementIDBuffer(elementCount) {
-    if (!this.hasSourceTextures) {
+    if (!this.hasSourceTextures && !this.targetTextureVarying) {
       return;
     }
     // NOTE: using float so this will work with GLSL 1.0 shaders.
@@ -554,9 +557,9 @@ export default class Transform {
       version: getShaderVersion(vs),
       input: this.targetTextureVarying,
       inputType: targetTextureType,
-      ouput: FS_OUTPUT_VARIABLE
+      output: FS_OUTPUT_VARIABLE
     });
-    const modules = this.hasSourceTextures ?
+    const modules = this.hasSourceTextures || this.targetTextureVarying ?
       [transform].concat(props.modules || []) : props.modules;
     return {vs, fs, modules, uniforms, inject, samplerTextureMap};
   }
