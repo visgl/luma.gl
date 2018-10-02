@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 /* global window */
-import {AnimationLoop, Buffer, Model, pickModels, picking} from 'luma.gl';
-import {Transform} from 'luma.gl';
+import {AnimationLoop, Buffer, Model, pickModels, picking, Transform, isWebGL2} from 'luma.gl';
+import {Log, COLOR} from 'probe.gl';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -122,8 +122,10 @@ void main()
 `;
 
 const NUM_INSTANCES = 1000;
+const log = new Log({id: 'transform'}).enable();
 
 let pickPosition = [0, 0];
+let isDemoSupported = true;
 function mousemove(e) {
   pickPosition = [e.offsetX, e.offsetY];
 }
@@ -134,7 +136,7 @@ function mouseleave(e) {
 const animationLoop = new AnimationLoop({
   glOptions: {
     webgl2: true,
-    webgl1: false,
+    webgl1: true,
     debug: true
   },
 
@@ -142,6 +144,11 @@ const animationLoop = new AnimationLoop({
 
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
+    isDemoSupported = isWebGL2(gl);
+    if (!isDemoSupported) {
+      log.log({message: 'WebGL2 requried for this demo', color: COLOR.RED})();
+      return {isDemoSupported};
+    }
     gl.canvas.addEventListener('mousemove', mousemove);
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
@@ -219,7 +226,8 @@ const animationLoop = new AnimationLoop({
       colorBuffer,
       offsetBuffer,
       renderModel,
-      transform
+      transform,
+      isDemoSupported
     };
   },
   /* eslint-enable max-statements */
@@ -237,6 +245,9 @@ const animationLoop = new AnimationLoop({
     time
   }) {
 
+    if (!isDemoSupported) {
+      return;
+    }
     transform.run({
       uniforms: {
         u_time: time
@@ -283,12 +294,20 @@ const animationLoop = new AnimationLoop({
   },
 
   onFinalize({renderModel, transform}) {
-    renderModel.delete();
-    transform.delete();
+    if (renderModel) {
+      renderModel.delete();
+    }
+    if (transform) {
+      transform.delete();
+    }
   }
 });
 
 animationLoop.getInfo = () => INFO_HTML;
+
+animationLoop.isNotSupported = () => {
+  return isDemoSupported ? null : 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+}
 
 export default animationLoop;
 

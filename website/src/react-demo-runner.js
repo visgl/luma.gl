@@ -27,6 +27,16 @@ export default class DemoRunner extends Component {
     const {width, height, name, demo, noPanel, sourceLink} = this.props;
     const controls = demo.getInfo && demo.getInfo();
 
+    const notSupported = demo.isNotSupported && demo.isNotSupported();
+
+    if (notSupported) {
+      return (
+        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+          <h2> {notSupported} </h2>
+        </div>
+      );
+    }
+
     return (
       <div className="fg" style={{width, height, padding: 0, border: 0}}>
         <canvas
