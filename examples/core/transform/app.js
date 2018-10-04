@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 /* global window */
 import {AnimationLoop, Buffer, Model, pickModels, picking, Transform, isWebGL2} from 'luma.gl';
-import {Log, COLOR} from 'probe.gl';
+import {Log} from 'probe.gl';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -16,6 +16,9 @@ const INFO_HTML = `
   </a>
 `;
 /* eslint-enable max-len */
+
+// Text to be displayed on environments when this demos is not supported.
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
 
 const EMIT_VS = `\
 #version 300 es
@@ -146,7 +149,7 @@ const animationLoop = new AnimationLoop({
   onInitialize({canvas, gl}) {
     isDemoSupported = isWebGL2(gl);
     if (!isDemoSupported) {
-      log.log({message: 'WebGL2 requried for this demo', color: COLOR.RED})();
+      log.error(ALT_TEXT)();
       return {isDemoSupported};
     }
     gl.canvas.addEventListener('mousemove', mousemove);
@@ -304,9 +307,11 @@ const animationLoop = new AnimationLoop({
 });
 
 animationLoop.getInfo = () => INFO_HTML;
-
-animationLoop.isNotSupported = () => {
-  return isDemoSupported ? null : 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+animationLoop.isSupported = () => {
+  return isDemoSupported;
+}
+animationLoop.getAltText = () => {
+  return ALT_TEXT;
 }
 
 export default animationLoop;

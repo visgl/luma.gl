@@ -1,12 +1,14 @@
 /* eslint-disable camelcase */
 import {AnimationLoop, Buffer, Model, isWebGL2} from 'luma.gl';
-import {Log, COLOR} from 'probe.gl';
+import {Log} from 'probe.gl';
 
 const INFO_HTML = `
 <p>
 Gradient calculated on the GPU using <code>Transform Feedback</code>.
 </p>
 `;
+// Text to be displayed on environments when this demos is not supported.
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
 
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
@@ -82,7 +84,7 @@ const animationLoop = new AnimationLoop({
   onInitialize({canvas, gl}) {
     isDemoSupported = isWebGL2(gl);
     if (!isDemoSupported) {
-      log.log({message: 'WebGL2 requried for this demo', color: COLOR.RED})();
+      log.error(ALT_TEXT)();
       return {};
     }
     // ---- SETUP BUFFERS ---- //
@@ -139,10 +141,12 @@ const animationLoop = new AnimationLoop({
 });
 
 animationLoop.getInfo = () => INFO_HTML;
-animationLoop.isNotSupported = () => {
-  return isDemoSupported ? null : 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+animationLoop.isSupported = () => {
+  return isDemoSupported;
 }
-
+animationLoop.getAltText = () => {
+  return ALT_TEXT;
+}
 
 export default animationLoop;
 
