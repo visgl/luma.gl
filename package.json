@@ -86,9 +86,9 @@
     "tape": "^4.9.0",
     "tape-catch": "^1.0.4",
     "tape-promise": "^1.1.0",
-    "webpack": "4.3.0",
+    "webpack": "^4.20.2",
     "webpack-bundle-analyzer": "^2.11.1",
-    "webpack-cli": "^2.0.13",
+    "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.1"
   },
   "pre-commit": [

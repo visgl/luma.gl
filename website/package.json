@@ -62,9 +62,9 @@
     "style-loader": "^0.20.1",
     "transform-loader": "^0.2.3",
     "url-loader": "^0.5.7",
-    "webpack": "^4.3.0",
+    "webpack": "^4.20.2",
     "webpack-bundle-analyzer": "^2.11.1",
-    "webpack-cli": "^2.0.13",
+    "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.1",
     "webpack-hot-middleware": "^2.17.1",
     "webworkify-webpack-dropin": "^1.1.9"
