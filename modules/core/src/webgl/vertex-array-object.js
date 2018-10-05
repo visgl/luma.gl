@@ -6,7 +6,7 @@ import Buffer from './buffer';
 import {isWebGL2} from '../webgl-utils';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
-import {isMobile, getBrowser} from 'probe.gl';
+import {getBrowser} from 'probe.gl';
 
 /* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
@@ -17,8 +17,9 @@ export default class VertexArrayObject extends Resource {
 
   static isSupported(gl, options = {}) {
     // Attribute 0 can not be disable on most desktop OpenGL based browsers
+    // and on iOS Safari browser.
     if (options.constantAttributeZero) {
-      return isWebGL2(gl) || isMobile() || (getBrowser() === 'Chrome');
+      return isWebGL2(gl) || (getBrowser() === 'Chrome');
     }
 
     // Whether additional objects can be created
