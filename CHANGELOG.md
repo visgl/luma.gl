@@ -1,5 +1,15 @@
 # Pre-releases
 
+## 6.2.0-beta.1 - Oct 05
+
+- Revert to non ocular website (#748)
+- Apply attribute-0 WA to mobile browsers (#746)
+- Add helpful string on canvas, for WebGL2 only demos (#744)
+- Add loader, Faq links to website-old (#700)
+- Add filter example (#741)
+- Transform: Add whats new and some fixes. (#740)
+- AnimationLoop: fix isPageLoaded (#739
+
 ## 6.2.0-alpha.1 - Sep 25
 
 - Transform: user parameters for viewport (#738)
