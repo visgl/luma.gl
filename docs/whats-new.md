@@ -4,6 +4,21 @@
 
 Date: Target September 12, 2018
 
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/render-pass.gif" />
+        <p><i>glfx port using ShaderModulePass</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/transform-texture.gif" />
+        <p><i>Transform: edge detection</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 Mini release to add
 
 ### ShaderModulePass (Experimental)
