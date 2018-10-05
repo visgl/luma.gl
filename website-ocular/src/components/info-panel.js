@@ -1,21 +1,21 @@
 import React, {PureComponent} from 'react';
 
-import * as Demos from '../../contents/demos.js';
-
 export default class InfoPanel extends PureComponent {
-
   render() {
-    const {demo} = this.props;
-    const DemoComponent = Demos[demo];
-    const controls = DemoComponent.getInfo && DemoComponent.getInfo() || '';
+    const { name, controls, sourceLink} = this.props;
 
     return (
       <div className="options-panel top-right" tabIndex="0">
-        <h3>{demo}</h3>
+        <h3>{name}</h3>
         <div className="control-panel" dangerouslySetInnerHTML={{__html: controls}} />
 
-        {this.props.children}
-
+        {sourceLink && (
+          <div className="source-link">
+            <a href={sourceLink} target="_new">
+              {'View Code ↗'}
+            </a>
+          </div>
+        )}
       </div>
     );
   }
