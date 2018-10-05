@@ -1,3 +1,7 @@
+## 6.1.0 - October 5
+- Apply attribute-0 WA to mobile browsers (#746)
+- fix luma.gl bad links
+
 ## 6.1.0 - September 6
 - Fix isWebGL2 (defeat GL constant inlining) (#716)
 
