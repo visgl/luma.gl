@@ -1,9 +1,14 @@
 {
   "lerna": "2.0.0",
-  "version": "6.2.0-beta.1",
-  "commands": {
+  "version": "6.2.0-beta.2",
+  "npmClient": "yarn",
+  "useWorkspaces": true,
+  "packages": [
+    "modules/*"
+  ],
+  "command": {
     "publish": {
-      "ignore": [
+      "ignoreChanges": [
         "test",
         "*.md",
         "loaders.gl",
@@ -11,10 +16,5 @@
       ]
     },
     "bootstrap": {}
-  },
-  "npmClient": "yarn",
-  "useWorkspaces": true,
-  "packages": [
-    "modules/*"
-  ]
+  }
 }
