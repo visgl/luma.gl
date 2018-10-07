@@ -1,6 +1,6 @@
 # Pre-releases
 
-## 6.2.0-beta.2 - Oct 05
+## 6.2.0-beta.1 - Oct 07
 
 - Revert to non ocular website (#748)
 - Apply attribute-0 WA to mobile browsers (#746)
