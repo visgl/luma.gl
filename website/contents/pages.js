@@ -494,11 +494,11 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/texture-cube.md'
       },
       {
-        name: 'Transform (Experimental)',
+        name: 'Transform (WebGL2)',
         content: 'api-reference/core/transform.md'
       },
       {
-        name: 'TransformFeedback',
+        name: 'TransformFeedback (WebGL2)',
         content: 'api-reference/webgl/transform-feedback.md'
       },
       {
