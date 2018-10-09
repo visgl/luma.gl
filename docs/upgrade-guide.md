@@ -262,8 +262,8 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 
 | Symbol               | Replacement      | Comment |
 | ---                  | ---              | --- |
-| `withState`          | `withParameters` | [New WebGL state management](/docs/api-reference/webgl/context-state/with-parameters.md) |
-| `glContextWithState` | `withParameters` | [New WebGL state management](/docs/api-reference/webgl/context-state/with-parameters.md) |
+| `withState`          | `withParameters` | [New WebGL state management](/docs/api-reference/webgl/context/with-parameters.md) |
+| `glContextWithState` | `withParameters` | [New WebGL state management](/docs/api-reference/webgl/context/with-parameters.md) |
 
 
 ## API Change

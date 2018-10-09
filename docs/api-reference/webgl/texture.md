@@ -76,7 +76,7 @@ The texture class cannot be constructed directly. It is a base class that provid
 The constructors for these classes should be used to create textures. They constructors all take common parameters, many of which are specified in this document.
 
 * Sampling parameters are described in [`Sampler`](/docs/api-reference/webgl/sampler.md).
-* Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context-state/get-parameters.md).
+* Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context/get-parameters.md).
 
 
 ### generateMipmap
