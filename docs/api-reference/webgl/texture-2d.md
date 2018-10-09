@@ -98,4 +98,4 @@ new Texture2D(gl, {
 Notes:
 * setting `mipmaps` to true when `format` set to `RGB32F` will fail, even though `RGB32F` is supported texture format (with EXT_color_buffer_float), it is not supported as renderable format.
 
-Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture.md). Sampler parameters are specified in [Sampler](/docs/api-reference/webgl/sampler.md), and pixel store parameters are specified in [State Management](/docs/api-reference/webgl/context-state/get-parameters.md)
+Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture.md). Sampler parameters are specified in [Sampler](/docs/api-reference/webgl/sampler.md), and pixel store parameters are specified in [State Management](/docs/api-reference/webgl/context/get-parameters.md)
