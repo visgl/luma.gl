@@ -127,7 +127,7 @@ export default class Query extends Resource {
   end() {
     // Note: calling end does not affect the pending promise
     if (this.target) {
-      this.ext.endQuery(this.target);
+      this.gl.endQuery(this.target);
       this.target = null;
     }
     return this;
