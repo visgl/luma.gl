@@ -17,6 +17,8 @@ const defaultProps = {
   canvas: 'demo-canvas'
 };
 
+const DEFAULT_ALT_TEXT = 'THIS DEMO IS NOT SUPPORTED';
+
 class DemoRunner extends Component {
 
   componentDidMount() {
@@ -51,6 +53,21 @@ class DemoRunner extends Component {
 
   render() {
     const {width, height} = this.props;
+
+    const demo = Demos[this.props.demo];
+    if (demo) {
+      const notSupported = demo.isSupported && !demo.isSupported();
+
+      if (notSupported) {
+        const altText = demo.getAltText ? demo.getAltText() : DEFAULT_ALT_TEXT;
+        return (
+          <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+            <h2> {altText} </h2>
+          </div>
+        );
+      }
+    }
+
     return (
       <canvas id={this.props.canvas} style={{width, height, padding: 0, border: 0}}/>
     );
