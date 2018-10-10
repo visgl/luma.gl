@@ -2,7 +2,7 @@
 
 ## Version 6.2
 
-Date: Target September 12, 2018
+Date: Target October 10, 2018
 
 <table style="border: 0;" align="center">
   <tbody>

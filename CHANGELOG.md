@@ -1,6 +1,16 @@
 # Pre-releases
 
-## 6.2.0-beta.1 - Oct 07
+## 6.2.0-beta.3 - Oct 09
+
+- Port PR#744  from ocular website version (#753)
+- fix the wrong luma.gl version and recover test dependency
+- Fix various documentation links
+- Add WebGL2 markers for Transform and TF docs
+- Website: Update links to point to 6.2-release branch
+- Add gifs for 6.2 whats-new (#749)
+- Bump examples/website to 6.2.0-beta (#751)
+
+## 6.2.0-beta.2 - Oct 07
 
 - Revert to non ocular website (#748)
 - Apply attribute-0 WA to mobile browsers (#746)
