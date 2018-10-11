@@ -1,6 +1,6 @@
 # Pre-releases
 
-## Next
+## 6.2.0-beta.4 - Oct 11
 - Bump probe.gl to 2.0.1
 - Fix lerna.json
 
