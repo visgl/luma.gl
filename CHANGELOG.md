@@ -1,6 +1,10 @@
 # Pre-releases
 
-## 6.2.0-beta.3 - Oct 09
+## Next
+- Bump probe.gl to 2.0.1
+- Fix lerna.json
+
+## 6.2.0-beta.3 - Oct 09 (Private)
 
 - Port PR#744  from ocular website version (#753)
 - fix the wrong luma.gl version and recover test dependency

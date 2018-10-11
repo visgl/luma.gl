@@ -8,7 +8,7 @@
   ],
   "command": {
     "publish": {
-      "ignoreChanges": [
+      "ignore": [
         "test",
         "*.md",
         "loaders.gl",
@@ -16,5 +16,8 @@
       ]
     },
     "bootstrap": {}
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
