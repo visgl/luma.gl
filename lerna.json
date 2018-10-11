@@ -1,7 +1,12 @@
 {
   "lerna": "2.0.0",
   "version": "6.2.0-alpha.1",
-  "commands": {
+  "npmClient": "yarn",
+  "useWorkspaces": true,
+  "packages": [
+    "modules/*"
+  ],
+  "command": {
     "publish": {
       "ignore": [
         "test",
@@ -12,9 +17,7 @@
     },
     "bootstrap": {}
   },
-  "npmClient": "yarn",
-  "useWorkspaces": true,
-  "packages": [
-    "modules/*"
-  ]
+  "publishConfig": {
+    "access": "public"
+  }
 }

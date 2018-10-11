@@ -5316,9 +5316,9 @@ probe.gl@^2.0.0-beta:
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-probe.gl@^2.0.0-beta.4:
-  version "2.0.0-beta.4"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-2.0.0-beta.4.tgz#a6f6b2f4ac38e9a0cb62ad26e20aa31f33f3befc"
+probe.gl@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-2.0.1.tgz#e42dfe02eca9ef262cdf89a24e1a4c0856e989e0"
   dependencies:
     "@babel/runtime" "^7.0.0"
 
