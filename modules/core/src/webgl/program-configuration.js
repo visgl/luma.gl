@@ -64,7 +64,11 @@ export default class ProgramConfiguration {
     for (let index = 0; index < count; index++) {
       const {name, type, size} = gl.getActiveAttrib(program.handle, index);
       const location = gl.getAttribLocation(program.handle, name);
-      this._addAttribute(location, name, type, size);
+      // Add only user provided attributes, for built-in attributes like
+      // `gl_InstanceID` locaiton will be < 0
+      if (location >= 0) {
+        this._addAttribute(location, name, type, size);
+      }
     }
 
     this.attributeInfos.sort((a, b) => a.location - b.location);
