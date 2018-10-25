@@ -192,20 +192,20 @@ export default class Program extends Resource {
     // we must still rebind texture units to current program's textures before drawing
     // If modifying, test with `picking` example on website
     let somethingChanged = false;
-    const updatedUniforms = {};
+    const changedUniforms = {};
     for (const key in uniforms) {
       if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
         somethingChanged = true;
-        updatedUniforms[key] = uniforms[key];
+        changedUniforms[key] = uniforms[key];
       }
     }
 
     if (somethingChanged) {
       _onChangeCallback();
-      checkUniformValues(updatedUniforms, this.id, this._uniformSetters);
+      checkUniformValues(changedUniforms, this.id, this._uniformSetters);
       Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
-      this._setUniforms(updatedUniforms, this.samplers);
+      this._setUniforms(changedUniforms);
     }
 
     return this;
@@ -213,26 +213,25 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
-  // This needs to be done before every render
+  // This needs to be done before every draw call
   _bindTextures() {
     for (const uniformName in this.uniforms) {
-      let uniform = this.uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
-      const sampler = this.samplers[uniformName];
 
-      if (uniformSetter) {
+      if (uniformSetter && uniformSetter.textureIndex !== undefined) {
+        let uniform = this.uniforms[uniformName];
+        const sampler = this.samplers[uniformName];
+
         if (uniform instanceof Framebuffer) {
           uniform = uniform.texture;
         }
         if (uniform instanceof Texture) {
-          const texture = uniform;
-          const {textureIndex} = uniformSetter;
           // Bind texture to index
-          texture.bind(textureIndex);
-          // Bind a sampler (if supplied) to index
-          if (sampler) {
-            sampler.bind(textureIndex);
-          }
+          uniform.bind(uniformSetter.textureIndex);
+        }
+        // Bind a sampler (if supplied) to index
+        if (sampler) {
+          sampler.bind(uniformSetter.textureIndex);
         }
       }
     }
@@ -241,13 +240,12 @@ export default class Program extends Resource {
   // Apply a set of uniform values to a program
   // Only uniforms actually present in the linked program will be updated.
   /* eslint-disable max-depth */
-  _setUniforms(uniforms, samplers = {}) {
+  _setUniforms(uniforms) {
     this.gl.useProgram(this.handle);
 
     for (const uniformName in uniforms) {
       let uniform = uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
-      const sampler = samplers[uniformName];
 
       if (uniformSetter) {
         if (uniform instanceof Framebuffer) {
@@ -263,10 +261,6 @@ export default class Program extends Resource {
           const {textureIndex} = uniformSetter;
 
           texture.bind(textureIndex);
-          // Bind a sampler (if supplied) to index
-          if (sampler) {
-            sampler.bind(textureIndex);
-          }
 
           // Set the uniform sampler to the texture index
           uniformSetter(textureIndex);
