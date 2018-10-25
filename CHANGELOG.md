@@ -1,5 +1,10 @@
 # Pre-releases
 
+## 5.3.1 - Oct 25
+- [Fix] Cannot resolve 'gl' warning in webpack 4 (#760)
+- TranformFeedback: fix bug surfaced due to Chrome change (#599)
+- Update whats-new, documentaiton urls
+
 ## 5.3.0 - June 1
 ## 5.3.0-rc.1 - May 24
 - Website: URL fixes (#524)
