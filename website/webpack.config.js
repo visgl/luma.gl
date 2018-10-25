@@ -23,7 +23,7 @@ const BABEL_CONFIG = {
 };
 
 const COMMON_CONFIG = {
-  mode: 'production',
+  mode: 'development',
 
   entry: ['./src/main'],
 

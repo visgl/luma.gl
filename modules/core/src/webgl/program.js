@@ -145,6 +145,8 @@ export default class Program extends Resource {
         this.setUniforms(uniforms, samplers);
       }
 
+      this._bindTextures();
+
       if (framebuffer !== undefined) {
         parameters = Object.assign({}, parameters, {framebuffer});
       }
@@ -190,38 +192,60 @@ export default class Program extends Resource {
     // we must still rebind texture units to current program's textures before drawing
     // If modifying, test with `picking` example on website
     let somethingChanged = false;
+    const changedUniforms = {};
     for (const key in uniforms) {
       if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
         somethingChanged = true;
-        break;
+        changedUniforms[key] = uniforms[key];
       }
     }
 
     if (somethingChanged) {
       _onChangeCallback();
-      checkUniformValues(uniforms, this.id, this._uniformSetters);
+      checkUniformValues(changedUniforms, this.id, this._uniformSetters);
       Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
+      this._setUniforms(changedUniforms);
     }
-
-    // TODO - should only set updated uniforms
-    this._setUniforms(this.uniforms, this.samplers);
 
     return this;
   }
 
   // PRIVATE METHODS
 
+  // This needs to be done before every draw call
+  _bindTextures() {
+    for (const uniformName in this.uniforms) {
+      const uniformSetter = this._uniformSetters[uniformName];
+
+      if (uniformSetter && uniformSetter.textureIndex !== undefined) {
+        let uniform = this.uniforms[uniformName];
+        const sampler = this.samplers[uniformName];
+
+        if (uniform instanceof Framebuffer) {
+          uniform = uniform.texture;
+        }
+        if (uniform instanceof Texture) {
+          // Bind texture to index
+          uniform.bind(uniformSetter.textureIndex);
+        }
+        // Bind a sampler (if supplied) to index
+        if (sampler) {
+          sampler.bind(uniformSetter.textureIndex);
+        }
+      }
+    }
+  }
+
   // Apply a set of uniform values to a program
   // Only uniforms actually present in the linked program will be updated.
   /* eslint-disable max-depth */
-  _setUniforms(uniforms, samplers = {}) {
+  _setUniforms(uniforms) {
     this.gl.useProgram(this.handle);
 
     for (const uniformName in uniforms) {
       let uniform = uniforms[uniformName];
       const uniformSetter = this._uniformSetters[uniformName];
-      const sampler = samplers[uniformName];
 
       if (uniformSetter) {
         if (uniform instanceof Framebuffer) {
@@ -236,14 +260,7 @@ export default class Program extends Resource {
           const texture = uniform;
           const {textureIndex} = uniformSetter;
 
-          // TODO - this should be separated out from uniform setting, since it needs to be done
-          // before every draw even if uniforms have not changed
           texture.bind(textureIndex);
-
-          // Bind a sampler (if supplied) to index
-          if (sampler) {
-            sampler.bind(textureIndex);
-          }
 
           // Set the uniform sampler to the texture index
           uniformSetter(textureIndex);
