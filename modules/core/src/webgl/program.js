@@ -145,6 +145,8 @@ export default class Program extends Resource {
         this.setUniforms(uniforms, samplers);
       }
 
+      this._bindTextures();
+
       if (framebuffer !== undefined) {
         parameters = Object.assign({}, parameters, {framebuffer});
       }
@@ -190,27 +192,51 @@ export default class Program extends Resource {
     // we must still rebind texture units to current program's textures before drawing
     // If modifying, test with `picking` example on website
     let somethingChanged = false;
+    const updatedUniforms = {};
     for (const key in uniforms) {
       if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
         somethingChanged = true;
-        break;
+        updatedUniforms[key] = uniforms[key];
       }
     }
 
     if (somethingChanged) {
       _onChangeCallback();
-      checkUniformValues(uniforms, this.id, this._uniformSetters);
+      checkUniformValues(updatedUniforms, this.id, this._uniformSetters);
       Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
+      this._setUniforms(updatedUniforms, this.samplers);
     }
-
-    // TODO - should only set updated uniforms
-    this._setUniforms(this.uniforms, this.samplers);
 
     return this;
   }
 
   // PRIVATE METHODS
+
+  // This needs to be done before every render
+  _bindTextures() {
+    for (const uniformName in this.uniforms) {
+      let uniform = this.uniforms[uniformName];
+      const uniformSetter = this._uniformSetters[uniformName];
+      const sampler = this.samplers[uniformName];
+
+      if (uniformSetter) {
+        if (uniform instanceof Framebuffer) {
+          uniform = uniform.texture;
+        }
+        if (uniform instanceof Texture) {
+          const texture = uniform;
+          const {textureIndex} = uniformSetter;
+          // Bind texture to index
+          texture.bind(textureIndex);
+          // Bind a sampler (if supplied) to index
+          if (sampler) {
+            sampler.bind(textureIndex);
+          }
+        }
+      }
+    }
+  }
 
   // Apply a set of uniform values to a program
   // Only uniforms actually present in the linked program will be updated.
@@ -236,10 +262,7 @@ export default class Program extends Resource {
           const texture = uniform;
           const {textureIndex} = uniformSetter;
 
-          // TODO - this should be separated out from uniform setting, since it needs to be done
-          // before every draw even if uniforms have not changed
           texture.bind(textureIndex);
-
           // Bind a sampler (if supplied) to index
           if (sampler) {
             sampler.bind(textureIndex);
