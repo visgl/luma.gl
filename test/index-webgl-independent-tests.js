@@ -2,4 +2,3 @@
 
 import './modules/core/utils';
 import './modules/core/geometry';
-import './modules/loaders.gl';

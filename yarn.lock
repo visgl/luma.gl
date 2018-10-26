@@ -1594,13 +1594,13 @@ command-join@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/command-join/-/command-join-2.0.0.tgz#52e8b984f4872d952ff1bdc8b98397d27c7144cf"
 
-commander@2, commander@^2.13.0, commander@^2.8.1, commander@^2.9.0:
-  version "2.18.0"
-  resolved "https://registry.yarnpkg.com/commander/-/commander-2.18.0.tgz#2bf063ddee7c7891176981a2cc798e5754bc6970"
-
 commander@2.17.x, commander@~2.17.1:
   version "2.17.1"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.17.1.tgz#bd77ab7de6de94205ceacc72f1716d29f20a77bf"
+
+commander@^2.13.0, commander@^2.8.1, commander@^2.9.0:
+  version "2.18.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-2.18.0.tgz#2bf063ddee7c7891176981a2cc798e5754bc6970"
 
 commander@~2.13.0:
   version "2.13.0"
@@ -1985,31 +1985,6 @@ cyclist@~0.2.2:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-0.2.2.tgz#1b33792e11e914a2fd6d6ed6447464444e5fa640"
 
-d3-collection@1:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/d3-collection/-/d3-collection-1.0.7.tgz#349bd2aa9977db071091c13144d5e4f16b5b310e"
-
-d3-dispatch@1:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/d3-dispatch/-/d3-dispatch-1.0.5.tgz#e25c10a186517cd6c82dd19ea018f07e01e39015"
-
-d3-dsv@1:
-  version "1.0.10"
-  resolved "https://registry.yarnpkg.com/d3-dsv/-/d3-dsv-1.0.10.tgz#4371c489a2a654a297aca16fcaf605a6f31a6f51"
-  dependencies:
-    commander "2"
-    iconv-lite "0.4"
-    rw "1"
-
-d3-request@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/d3-request/-/d3-request-1.0.6.tgz#a1044a9ef4ec28c824171c9379fae6d79474b19f"
-  dependencies:
-    d3-collection "1"
-    d3-dispatch "1"
-    d3-dsv "1"
-    xmlhttprequest "1"
-
 dargs@^4.0.1:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/dargs/-/dargs-4.1.0.tgz#03a9dbb4b5c2f139bf14ae53f0b8a2a6a86f4e17"
@@ -2293,10 +2268,6 @@ dot-prop@^3.0.0:
   resolved "https://registry.yarnpkg.com/dot-prop/-/dot-prop-3.0.0.tgz#1b708af094a49c9a0e7dbcad790aba539dac1177"
   dependencies:
     is-obj "^1.0.0"
-
-draco3d@^1.3.3:
-  version "1.3.4"
-  resolved "https://registry.yarnpkg.com/draco3d/-/draco3d-1.3.4.tgz#b17e4fedd4b4b946c9eb8df2e1d2f470a953cdb8"
 
 duplexer3@^0.1.4:
   version "0.1.4"
@@ -3484,15 +3455,15 @@ https-proxy-agent@^2.2.1:
     agent-base "^4.1.0"
     debug "^3.1.0"
 
-iconv-lite@0.4, iconv-lite@^0.4.17, iconv-lite@^0.4.24, iconv-lite@^0.4.4:
+iconv-lite@0.4.19:
+  version "0.4.19"
+  resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.19.tgz#f7468f60135f5e5dad3399c0a81be9a1603a082b"
+
+iconv-lite@^0.4.17, iconv-lite@^0.4.24, iconv-lite@^0.4.4:
   version "0.4.24"
   resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.24.tgz#2022b4b25fbddc21d2f524974a474aafe733908b"
   dependencies:
     safer-buffer ">= 2.1.2 < 3"
-
-iconv-lite@0.4.19:
-  version "0.4.19"
-  resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.19.tgz#f7468f60135f5e5dad3399c0a81be9a1603a082b"
 
 ieee754@^1.1.4:
   version "1.1.12"
@@ -4258,12 +4229,13 @@ lru-cache@^4.0.1, lru-cache@^4.1.1:
     pseudomap "^1.0.2"
     yallist "^2.1.2"
 
-luma.gl@^6.1.0-alpha.3:
-  version "6.1.1"
-  resolved "https://registry.yarnpkg.com/luma.gl/-/luma.gl-6.1.1.tgz#75aec475aff3c1258e25f731d90647516c09186d"
+luma.gl@^6.2.0-alpha.1:
+  version "6.2.0"
+  resolved "https://registry.yarnpkg.com/luma.gl/-/luma.gl-6.2.0.tgz#449760dc735e2e89a55bb78697c8dd1093626b2c"
   dependencies:
-    math.gl "^2.1.0-alpha"
-    probe.gl "^2.0.0-beta"
+    "@babel/runtime" "^7.0.0"
+    math.gl "^2.2.0"
+    probe.gl "^2.0.1"
     seer "^0.2.4"
     webgl-debug "^2.0.0"
 
@@ -4326,7 +4298,7 @@ markdownlint@~0.8.1:
   dependencies:
     markdown-it "8.4.1"
 
-math.gl@^2.1.0-alpha, math.gl@^2.2.0:
+math.gl@^2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/math.gl/-/math.gl-2.2.0.tgz#301dcda760ae235f5fdf471dd67ef2aa8c74d659"
   dependencies:
@@ -5310,12 +5282,6 @@ private@^0.1.6:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
 
-probe.gl@^2.0.0-beta:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-2.0.0.tgz#42df14da22c2991c96daf21d381ea02fe398329e"
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-
 probe.gl@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-2.0.1.tgz#e42dfe02eca9ef262cdf89a24e1a4c0856e989e0"
@@ -5848,10 +5814,6 @@ run-queue@^1.0.0, run-queue@^1.0.3:
   resolved "https://registry.yarnpkg.com/run-queue/-/run-queue-1.0.3.tgz#e848396f057d223f24386924618e25694161ec47"
   dependencies:
     aproba "^1.1.1"
-
-rw@1:
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/rw/-/rw-1.3.3.tgz#3f862dfa91ab766b14885ef4d01124bfda074fb4"
 
 rx-lite-aggregates@^4.0.8:
   version "4.0.8"
@@ -6918,10 +6880,6 @@ webgl-debug@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/webgl-debug/-/webgl-debug-2.0.1.tgz#dc11bea3d947764bce061fdb5a23109c13787c95"
 
-webgl-obj-loader@^1.1.3:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/webgl-obj-loader/-/webgl-obj-loader-1.1.3.tgz#80ad1232328c99e8cb81c20bfc1a7559dfb3043e"
-
 webpack-bundle-analyzer@^2.11.1:
   version "2.13.1"
   resolved "https://registry.yarnpkg.com/webpack-bundle-analyzer/-/webpack-bundle-analyzer-2.13.1.tgz#07d2176c6e86c3cdce4c23e56fae2a7b6b4ad526"
@@ -7148,10 +7106,6 @@ ws@^5.1.1:
   resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.2.tgz#dffef14866b8e8dc9133582514d1befaf96e980f"
   dependencies:
     async-limiter "~1.0.0"
-
-xmlhttprequest@1:
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/xmlhttprequest/-/xmlhttprequest-1.8.0.tgz#67fe075c5c24fef39f9d65f5f7b7fe75171968fc"
 
 xregexp@4.0.0:
   version "4.0.0"
