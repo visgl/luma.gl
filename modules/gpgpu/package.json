@@ -1,6 +1,6 @@
 {
-  "name": "@luma.gl/glfx",
-  "description": "glfx - image processing packaged as composable shader modules",
+  "name": "@luma.gl/gpgpu",
+  "description": "general purpose gpu calculation",
   "private": "true",
   "version": "0.0.1",
   "license": "MIT",
@@ -13,8 +13,7 @@
   "esnext": "dist/es6/index.js",
   "files": [
     "src",
-    "dist",
-    "README.md"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
