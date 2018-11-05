@@ -1,13 +1,22 @@
 {
-  "name": "@luma.gl/glfx",
-  "description": "glfx - image processing packaged as composable shader modules",
-  "private": "true",
-  "version": "0.0.1",
+  "name": "@luma.gl/io",
+  "version": "1.0.0",
+  "description": "Advanced io for luma.gl",
   "license": "MIT",
+  "author": "Ib Green <ib@uber.com>",
+  "contributors": [
+    "Mikola Lysenko <mikolalysenko@gmail.com"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
   },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d"
+  ],
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
   "esnext": "dist/es6/index.js",

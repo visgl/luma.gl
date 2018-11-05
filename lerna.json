@@ -11,8 +11,12 @@
       "ignore": [
         "test",
         "*.md",
-        "loaders.gl",
-        "@luma.gl/debug"
+        "@luma.gl/debug",
+        "@luma.gl/glfx",
+        "@luma.gl/gpgpu",
+        "@luma.gl/imageprocessing",
+        "@luma.gl/io",
+        "@luma.gl/scripts"
       ]
     },
     "bootstrap": {}
