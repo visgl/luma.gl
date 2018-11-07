@@ -44,10 +44,10 @@ void main(void) {
 const QUAD_VERTEX = `\
 #version 300 es
 
-layout(location=0) in vec4 aPosition;
+layout(location=0) in vec3 aPosition;
 
 void main() {
-    gl_Position = aPosition;
+    gl_Position = vec4(aPosition, 1.0);
 }
 `;
 
@@ -112,12 +112,12 @@ void main() {
 `
 
 const NUM_ROWS = 5;
-const BOXES_PER_ROW = 5;
+const BOXES_PER_ROW = 20;
 const NUM_BOXES = BOXES_PER_ROW * NUM_ROWS;
 const NEAR = 0.1;
 const FAR = 10.0;
-const FOCAL_LENGTH = 1.0;
-const FOCUS_DISTANCE = 2.0;
+const FOCAL_LENGTH = 2.0;
+const FOCUS_DISTANCE = 3.0;
 const MAGNIFICATION = FOCAL_LENGTH / Math.abs(FOCUS_DISTANCE - FOCAL_LENGTH);
 const FSTOP = 2.8;
 const BLUR_COEFFICIENT = FOCAL_LENGTH * MAGNIFICATION / FSTOP;
@@ -141,11 +141,13 @@ export const animationLoopOptions = {
     const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
 
     const sceneProgram = new Program(gl, {
+      id: "SCENE_PROGRAM",
       vs: SCENE_VERTEX,
       fs: SCENE_FRAGMENT
     });
 
     const dofProgram = new Program(gl, {
+      id: "DOF_PROGRAM",
       vs: QUAD_VERTEX,
       fs: DOF_FRAGMENT,
       uniforms: {
@@ -174,9 +176,9 @@ export const animationLoopOptions = {
     }
 
     const quadVertexArray = new VertexArray(gl, {
-      dofProgram,
+      program: dofProgram,
       attributes: {
-        positions: new Buffer(gl, new Float32Array(QUAD_VERTS))
+        aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
       },
 
     });
@@ -235,6 +237,9 @@ export const animationLoopOptions = {
 
     for (let i = 0; i < NUM_BOXES; ++i) {
       let box = boxes[i];
+      box.rotation[0] += 0.03;
+      box.rotation[1] += 0.02;
+      box.updateMatrix();
       box.draw({
         uniforms: {
           uView: camView,
@@ -258,7 +263,6 @@ export const animationLoopOptions = {
 
     dofProgram.draw({
       vertexArray: quadVertexArray,
-      
       drawMode: gl.TRIANGLE_STRIP,
       vertexCount: 4,
       framebuffer: dofFramebuffer
