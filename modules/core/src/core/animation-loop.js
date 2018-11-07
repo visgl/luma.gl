@@ -1,3 +1,4 @@
+import AnimationLoopProxy from './animation-loop-proxy';
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
 import {getPageLoadPromise} from '../webgl-context';
 import {makeDebugContext} from '../webgl-context/debug-context';
@@ -97,6 +98,10 @@ export default class AnimationLoop {
       this.useDevicePixels = props.useDevicePixels;
     }
     return this;
+  }
+
+  getWorker() {
+    return AnimationLoopProxy.createWorker(this);
   }
 
   // Starts a render loop if not already running

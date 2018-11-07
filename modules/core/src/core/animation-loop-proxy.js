@@ -1,5 +1,4 @@
 /* global window */
-import AnimationLoop from './animation-loop';
 import {getPageLoadPromise, createCanvas} from '../webgl-context';
 import {requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 

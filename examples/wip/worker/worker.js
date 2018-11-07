@@ -6,6 +6,5 @@ import animationLoop from '../../core/instancing/app';
 // import animationLoop from '../../core/shadowmap/app';
 // import animationLoop from '../../core/transform/app';
 // import animationLoop from '../../core/transform-feedback/app';
-import {_AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
 
-export default AnimationLoopProxy.createWorker(animationLoop);
+export default animationLoop.getWorker();
