@@ -29,6 +29,18 @@ export function loadFile(url, opts) {
 export function loadImage(url, opts) {
   url = pathPrefix ? pathPrefix + url : url;
 
+  if (typeof Image === 'undefined') {
+    // In a web worker
+    // XMLHttpRequest throws invalid URL error if using relative path
+    // resolve url relative to original base
+    url = new URL(url, location.pathname).href;
+    return requestFile({url, responseType: 'arraybuffer'})
+      .then(arraybuffer => {
+        const blob = new Blob([new Uint8Array(arraybuffer)]);
+        return createImageBitmap(blob);
+      });
+  }
+
   return new Promise((resolve, reject) => {
     try {
       const image = new Image();
