@@ -7,24 +7,50 @@ export default class AnimationLoopProxy {
 
   // Create the script for the rendering worker.
   // @param opts {object} - options to construct an AnimationLoop instance
-  static createWorker(opts) {
+  static createWorker(animationLoop) {
     return self => {
 
-      self.animationLoop = new AnimationLoop(Object.assign({}, opts, {
-        offScreen: true,
+      animationLoop.offscreen = true;
+      animationLoop.setProps({
         // Prevent the animation loop from trying to access DOM properties
         useDevicePixels: false,
         autoResizeDrawingBuffer: false
-      }));
+      });
+
       self.canvas = null;
 
-      self.addEventListener('message', evt => {
-        const {animationLoop} = self;
+      function initializeCanvas(canvas) {
+        const eventHandlers = new Map();
 
+        canvas.addEventListener = (type, handler) => {
+          self.postMessage({command: 'addEventListener', type});
+          if (!eventHandlers.has(type)) {
+            eventHandlers.set(type, []);
+          }
+          eventHandlers.get(type).push(handler);
+        };
+        canvas.removeEventListener = (type, handler) => {
+          self.postMessage({command: 'removeEventListener', type});
+          const handlers = eventHandlers.get(type);
+          if (handlers) {
+            handlers.splice(handlers.indexOf(handler), 1);
+          }
+        };
+        canvas.dispatchEvent = (type, event) => {
+          const handlers = eventHandlers.get(type);
+          if (handlers) {
+            handlers.forEach(handler => handler(event));
+          }
+        };
+
+        self.canvas = canvas;
+      }
+
+      self.addEventListener('message', evt => {
         switch (evt.data.command) {
 
         case 'start':
-          self.canvas = evt.data.opts.canvas;
+          initializeCanvas(evt.data.opts.canvas);
           animationLoop.start(evt.data.opts);
           break;
 
@@ -35,6 +61,10 @@ export default class AnimationLoopProxy {
         case 'resize':
           self.canvas.width = evt.data.width;
           self.canvas.height = evt.data.height;
+          break;
+
+        case 'event':
+          self.canvas.dispatchEvent(evt.data.type, evt.data.event);
           break;
 
         default:
@@ -56,7 +86,6 @@ export default class AnimationLoopProxy {
     autoResizeDrawingBuffer = true
   }) {
     this.props = {
-      worker,
       onInitialize,
       onFinalize,
       autoResizeDrawingBuffer,
@@ -64,6 +93,7 @@ export default class AnimationLoopProxy {
     };
 
     // state
+    this.worker = worker;
     this.canvas = null;
     this.width = null;
     this.height = null;
@@ -73,6 +103,8 @@ export default class AnimationLoopProxy {
     this._startPromise = null;
 
     // bind methods
+    this._onMessage = this._onMessage.bind(this);
+    this._onEvent = this._onEvent.bind(this);
     this._updateFrame = this._updateFrame.bind(this);
   }
 
@@ -83,6 +115,8 @@ export default class AnimationLoopProxy {
     this._stopped = false;
     // console.debug(`Starting ${this.constructor.name}`);
     if (!this._animationFrameId) {
+      this.worker.onmessage = this._onMessage;
+
       // Wait for start promise before rendering frame
       this._startPromise = getPageLoadPromise()
       .then(() => {
@@ -106,11 +140,48 @@ export default class AnimationLoopProxy {
       this._stopped = true;
       this.props.onFinalize(this);
     }
-    this.props.worker.postMessage({command: 'stop'});
+    this.worker.postMessage({command: 'stop'});
     return this;
   }
 
   // PRIVATE METHODS
+
+  _onMessage(evt) {
+    switch (evt.data.command) {
+      case 'addEventListener':
+        this.canvas.addEventListener(evt.data.type, this._onEvent);
+        break;
+
+      case 'removeEventListener':
+        this.canvas.removeEventListener(evt.data.type, this._onEvent);
+        break;
+
+      default:
+    }
+  }
+
+  _onEvent(evt) {
+    const devicePixelRatio = this.props.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
+    const type = evt.type;
+
+    const safeEvent = {};
+    for (const key in evt) {
+      let value = evt[key];
+      const valueType = typeof value;
+      if (key === 'offsetX' || key === 'offsetY') {
+        value *= devicePixelRatio;
+      }
+      if (valueType === 'number' || valueType === 'boolean' || valueType === 'string') {
+        safeEvent[key] = value;
+      }
+    }
+
+    this.worker.postMessage({
+      command: 'event',
+      type,
+      event: safeEvent
+    });
+  }
 
   _updateFrame() {
     this._resizeCanvasDrawingBuffer();
@@ -128,7 +199,7 @@ export default class AnimationLoopProxy {
     const offscreenCanvas = screenCanvas.transferControlToOffscreen();
 
     // Transfer the offscreen canvas to the worker
-    this.props.worker.postMessage({
+    this.worker.postMessage({
       command: 'start',
       opts: Object.assign({}, opts, {canvas: offscreenCanvas})
     }, [offscreenCanvas]);
@@ -146,7 +217,7 @@ export default class AnimationLoopProxy {
       if (this.width !== width || this.height !== height) {
         this.width = width;
         this.height = height;
-        this.props.worker.postMessage({
+        this.worker.postMessage({
           command: 'resize',
           width,
           height

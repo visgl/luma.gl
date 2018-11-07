@@ -213,7 +213,7 @@ export default class AnimationLoop {
     this.onRender(this.animationProps);
     // end callback
 
-    if (this.offScreen) {
+    if (this.offScreen && this.gl.commit) {
       // commit returns a Promise
       this.gl.commit().then(this._renderFrame);
     } else {
