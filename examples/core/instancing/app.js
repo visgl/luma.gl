@@ -95,14 +95,6 @@ void main(void) {
   }
 }
 
-let pickPosition = [0, 0];
-function mousemove(e) {
-  pickPosition = [e.offsetX, e.offsetY];
-}
-function mouseleave(e) {
-  pickPosition = null;
-}
-
 class AppAnimationLoop extends AnimationLoop {
   constructor() {
     super({createFramebuffer: true, debug: true});
@@ -120,9 +112,6 @@ class AppAnimationLoop extends AnimationLoop {
       depthTest: true,
       depthFunc: gl.LEQUAL
     });
-
-    gl.canvas.addEventListener('mousemove', mousemove);
-    gl.canvas.addEventListener('mouseleave', mouseleave);
 
     this.cube = new InstancedCube(gl, {
       _animationLoop: this,
@@ -147,12 +136,12 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
-    const {gl, framebuffer, useDevicePixels} = animationProps;
+    const {gl, framebuffer, useDevicePixels, _mousePosition} = animationProps;
 
     // "Pick" the cube under the mouse
-    const pickInfo = pickPosition && pickModels(gl, {
+    const pickInfo = _mousePosition && pickModels(gl, {
       models: [this.cube],
-      position: pickPosition,
+      position: _mousePosition,
       useDevicePixels,
       framebuffer
     });
@@ -179,6 +168,6 @@ const animationLoop = new AppAnimationLoop();
 export default animationLoop;
 
 /* global window */
-if (!window.website) {
+if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();
 }
