@@ -29,15 +29,24 @@ const SCENE_VERTEX = `\
 
 layout(location=0) in vec3 positions;
 layout(location=1) in vec3 normals;
+layout(location=2) in vec4 modelMatCol1;
+layout(location=3) in vec4 modelMatCol2;
+layout(location=4) in vec4 modelMatCol3;
+layout(location=5) in vec4 modelMatCol4;
 
-uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 out vec3 normal;
 
 void main(void) {
-  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-  normal = vec3(uModel * vec4(normals, 0.0));
+  mat4 modelMat = mat4(
+    modelMatCol1,
+    modelMatCol2,
+    modelMatCol3,
+    modelMatCol4
+  );
+  gl_Position = uProjection * uView * modelMat * vec4(positions, 1.0);
+  normal = vec3(modelMat * vec4(normals, 0.0));
 }
 `;
 
@@ -127,8 +136,6 @@ let texelOffset = new Float32Array(2);
 export const animationLoopOptions = {
   onInitialize: ({gl}) => {
 
-    let cubeGeo = new CubeGeometry();
-
     setParameters(gl, {
       depthTest: true,
       depthFunc: GL.LEQUAL
@@ -158,29 +165,79 @@ export const animationLoopOptions = {
       },
     });
 
-    let boxes = new Array(NUM_BOXES);
+    let boxXforms = new Array(NUM_BOXES);
+    let boxMatrices = new Float32Array(NUM_BOXES * 16);
     let boxI = 0;
     for (let j = 0; j < NUM_ROWS; ++j) {
         let rowOffset = (j - Math.floor(NUM_ROWS / 2));
         for (let i = 0; i < BOXES_PER_ROW; ++i) {
-            boxes[boxI] = new Model(gl, { 
-              geometry: cubeGeo, 
-              program: sceneProgram,
-            });
-            boxes[boxI].setScale([0.4, 0.4, 0.4]);
-            boxes[boxI].setRotation([-boxI / Math.PI, 0, boxI / Math.PI]);
-            boxes[boxI].setPosition([-i + 2 - rowOffset, 0, -i + 2 + rowOffset]);
-            boxes[boxI].updateMatrix();
-            ++boxI;
+          let scale = [0.4, 0.4, 0.4];
+          let rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
+          let translate = [-i + 2 - rowOffset, 0, -i + 2 + rowOffset];
+          boxXforms[boxI] = {
+            scale: scale,
+            translate: translate,
+            rotate: rotate,
+            matrix: new Matrix4().translate(translate).rotateXYZ(rotate).scale(scale)
+          };
+            
+          boxMatrices.set(boxXforms[boxI].matrix, boxI * 16);
+        ++boxI;
         }
     }
+
+    let cubeGeo = new CubeGeometry().getAttributes();
+    let positionBuffer = new Buffer(gl, cubeGeo.positions.value);
+    let normalBuffer = new Buffer(gl, cubeGeo.normals.value);
+    let indexBuffer = new Buffer(gl, { data: cubeGeo.indices.value, target: gl.ELEMENT_ARRAY_BUFFER });
+    let matrixBuffer = new Buffer(gl, boxMatrices);
+
+    let instancedBoxes = new Model(gl, { 
+      program: sceneProgram,
+      attributes: {
+        positions: positionBuffer,
+        normals: normalBuffer,
+        modelMatCol1: {
+          buffer: matrixBuffer,
+          size: 4,
+          stride: 64,
+          offset: 0,
+          divisor: 1
+        },
+        modelMatCol2: {
+          buffer: matrixBuffer,
+          size: 4,
+          stride: 64,
+          offset: 16,
+          divisor: 1
+        },
+        modelMatCol3: {
+          buffer: matrixBuffer,
+          size: 4,
+          stride: 64,
+          offset: 32,
+          divisor: 1
+        },
+        modelMatCol4: {
+          buffer: matrixBuffer,
+          size: 4,
+          stride: 64,
+          offset: 48,
+          divisor: 1
+        },
+        indices: indexBuffer
+      },
+      instanced: true,
+      instanceCount: NUM_BOXES,
+      drawMode: GL.TRIANGLES,
+      vertexCount: cubeGeo.indices.value.length
+    });
 
     const quadVertexArray = new VertexArray(gl, {
       program: dofProgram,
       attributes: {
         aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
-      },
-
+      }
     });
 
     let mainFramebuffer = new Framebuffer(gl, {
@@ -220,7 +277,10 @@ export const animationLoopOptions = {
     let dofFramebuffer = new Framebuffer(gl, { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, depth: false});
 
     return {
-      boxes,
+      instancedBoxes,
+      boxXforms,
+      boxMatrices,
+      matrixBuffer,
       mainFramebuffer,
       dofFramebuffer,
       quadVertexArray,
@@ -228,7 +288,7 @@ export const animationLoopOptions = {
     };
   },
 
-  onRender: ({gl, tick, width, height, aspect, boxes, mainFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
+  onRender: ({gl, tick, width, height, aspect, instancedBoxes, boxMatrices, boxXforms, matrixBuffer, mainFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
 
     clear(gl, {color: [0, 0, 0, 1], depth: true, framebuffer: mainFramebuffer});
 
@@ -236,19 +296,22 @@ export const animationLoopOptions = {
     const camProj = new Matrix4().perspective({fov: radians(75), aspect, near: 0.1, far: 30});
 
     for (let i = 0; i < NUM_BOXES; ++i) {
-      let box = boxes[i];
-      box.rotation[0] += 0.03;
-      box.rotation[1] += 0.02;
-      box.updateMatrix();
-      box.draw({
-        uniforms: {
-          uView: camView,
-          uProjection: camProj,
-          uModel: box.matrix
-        },
-        framebuffer: mainFramebuffer
-      });
+      let box = boxXforms[i];
+      box.rotate[0] += 0.01;
+      box.rotate[1] += 0.02;
+      box.matrix.identity().translate(box.translate).rotateXYZ(box.rotate).scale(box.scale);
+      boxMatrices.set(box.matrix, i * 16);
     }
+
+    matrixBuffer.setData(boxMatrices);
+
+    instancedBoxes.draw({
+      uniforms: {
+        uView: camView,
+        uProjection: camProj
+      },
+      framebuffer: mainFramebuffer
+    });
 
     clear(gl, {color: [0, 0, 0, 1], framebuffer: dofFramebuffer});
 
