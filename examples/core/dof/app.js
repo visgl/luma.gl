@@ -78,8 +78,6 @@ const DOF_FRAGMENT=`\
 precision highp float;
 #define SHADER_NAME dof.fs
 
-layout(std140, column_major) uniform;
-
 #define MAX_BLUR 20.0
 
 uniform vec2  uDepthRange; 
@@ -263,16 +261,16 @@ export const animationLoopOptions = {
       // Set up instanced model to draw boxes.
       ////////////////////////////////////////////
 
-      let cubeGeo = new CubeGeometry().getAttributes();
-      let positionBuffer = new Buffer(gl, cubeGeo.positions.value);
-      let normalBuffer = new Buffer(gl, cubeGeo.normals.value);
-      let uvBuffer = new Buffer(gl, cubeGeo.texCoords.value);
-      let indexBuffer = new Buffer(gl, { data: cubeGeo.indices.value, target: gl.ELEMENT_ARRAY_BUFFER });
+      const cubeGeo = new CubeGeometry().getAttributes();
+      const positionBuffer = new Buffer(gl, cubeGeo.positions.value);
+      const normalBuffer = new Buffer(gl, cubeGeo.normals.value);
+      const uvBuffer = new Buffer(gl, cubeGeo.texCoords.value);
+      const indexBuffer = new Buffer(gl, { data: cubeGeo.indices.value, target: gl.ELEMENT_ARRAY_BUFFER });
 
       // This containes the instanced matrix attributes
       let matrixBuffer = new Buffer(gl, boxMatrices);
 
-      let instancedBoxes = new Model(gl, { 
+      const instancedBoxes = new Model(gl, { 
         program: sceneProgram,
         attributes: {
           positions: positionBuffer,
@@ -344,6 +342,9 @@ export const animationLoopOptions = {
 
   onRender: ({gl, tick, width, height, aspect, instancedBoxes, boxMatrices, boxXforms, matrixBuffer, mainFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
 
+    mainFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+
     clear(gl, {color: [0, 0, 0, 1], depth: true, framebuffer: mainFramebuffer});
 
     const camView = new Matrix4().lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
@@ -379,6 +380,8 @@ export const animationLoopOptions = {
     /////////////////
     // Apply DOF
     /////////////////
+
+    // Horizontal DOF blur
     clear(gl, {color: [0, 0, 0, 1], framebuffer: dofFramebuffer});
 
     // texelOffset determines the direction of the blur
@@ -391,7 +394,6 @@ export const animationLoopOptions = {
         uDepth: mainFramebuffer.depth
     });
 
-    // Horizontal DOF blur
     dofProgram.draw({
       vertexArray: quadVertexArray,
       drawMode: gl.TRIANGLE_STRIP,
@@ -399,6 +401,7 @@ export const animationLoopOptions = {
       framebuffer: dofFramebuffer
     });
 
+    // Vertical DOF blur
     clear(gl, {color: [0, 0, 0, 1]});
 
     texelOffset[0] = 0;
