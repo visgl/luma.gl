@@ -1,24 +1,33 @@
 import GL from 'luma.gl/constants';
-import {AnimationLoop, Framebuffer, Cube, setParameters, clear, CubeGeometry, Model, Program, Texture2D, VertexArray, Buffer} from 'luma.gl';
+import {AnimationLoop, Framebuffer, Cube, setParameters, clear, CubeGeometry, Model, Program, Texture2D, VertexArray, Buffer, loadTextures} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
+
+/*
+  Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
+  Origirnal algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field 
+*/
 
 const INFO_HTML = `
 <p>
-  Simple <b>shadow mapping</b>.
+  <b>Depth of Field</b>.
 <p>
-A luma.gl <code>Cube</code>, rendering into a shadowmap framebuffer
-and then rendering onto the screen.
+Several instanced luma.gl <code>Cubes</code> rendered with a Depth of Field 
+post-processing effect.
 `;
 
 const SCENE_FRAGMENT = `\
 #version 300 es
 precision highp float;
-in vec3 normal;
+#define SHADER_NAME scene.fs
+
+in vec3 vNormal;
+in vec2 vUV;
+uniform sampler2D uTexture;
 
 out vec4 fragColor;
 void main(void) {
-  float d = clamp(dot(normalize(normal), normalize(vec3(1.0, 1.0, 0.2))), 0.0, 1.0);
-  fragColor.rgb = vec3(0.1, 0.1, 1.0) * d + 0.1;
+  float d = clamp(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 0.2))), 0.0, 1.0);
+  fragColor.rgb = texture(uTexture, vUV).rgb * (d + 0.1);
   fragColor.a = 1.0;
 }
 `;
@@ -29,14 +38,16 @@ const SCENE_VERTEX = `\
 
 layout(location=0) in vec3 positions;
 layout(location=1) in vec3 normals;
-layout(location=2) in vec4 modelMatCol1;
-layout(location=3) in vec4 modelMatCol2;
-layout(location=4) in vec4 modelMatCol3;
-layout(location=5) in vec4 modelMatCol4;
+layout(location=2) in vec2 uvs;
+layout(location=3) in vec4 modelMatCol1;
+layout(location=4) in vec4 modelMatCol2;
+layout(location=5) in vec4 modelMatCol3;
+layout(location=6) in vec4 modelMatCol4;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
-out vec3 normal;
+out vec3 vNormal;
+out vec2 vUV;
 
 void main(void) {
   mat4 modelMat = mat4(
@@ -46,12 +57,14 @@ void main(void) {
     modelMatCol4
   );
   gl_Position = uProjection * uView * modelMat * vec4(positions, 1.0);
-  normal = vec3(modelMat * vec4(normals, 0.0));
+  vNormal = vec3(modelMat * vec4(normals, 0.0));
+  vUV = uvs;
 }
 `;
 
 const QUAD_VERTEX = `\
 #version 300 es
+#define SHADER_NAME quad.vs
 
 layout(location=0) in vec3 aPosition;
 
@@ -63,6 +76,7 @@ void main() {
 const DOF_FRAGMENT=`\
 #version 300 es
 precision highp float;
+#define SHADER_NAME dof.fs
 
 layout(std140, column_major) uniform;
 
@@ -119,7 +133,7 @@ void main() {
     fragColor = color;
 }
 `
-
+const QUAD_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
 const NUM_ROWS = 5;
 const BOXES_PER_ROW = 20;
 const NUM_BOXES = BOXES_PER_ROW * NUM_ROWS;
@@ -141,11 +155,13 @@ export const animationLoopOptions = {
       depthFunc: GL.LEQUAL
     });
 
-    const QUAD_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
     const PPM = Math.sqrt(gl.drawingBufferWidth * gl.drawingBufferWidth + gl.drawingBufferHeight * gl.drawingBufferHeight) / 35;   
-
     const projMat = new Matrix4();
     const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
+
+    ////////////////////////////
+    // Create programs
+    ////////////////////////////
 
     const sceneProgram = new Program(gl, {
       id: "SCENE_PROGRAM",
@@ -164,6 +180,11 @@ export const animationLoopOptions = {
         uPPM: PPM
       },
     });
+
+
+    //////////////////////////////////////////
+    // Initial transforms for instanced boxes
+    //////////////////////////////////////////
 
     let boxXforms = new Array(NUM_BOXES);
     let boxMatrices = new Float32Array(NUM_BOXES * 16);
@@ -186,61 +207,13 @@ export const animationLoopOptions = {
         }
     }
 
-    let cubeGeo = new CubeGeometry().getAttributes();
-    let positionBuffer = new Buffer(gl, cubeGeo.positions.value);
-    let normalBuffer = new Buffer(gl, cubeGeo.normals.value);
-    let indexBuffer = new Buffer(gl, { data: cubeGeo.indices.value, target: gl.ELEMENT_ARRAY_BUFFER });
-    let matrixBuffer = new Buffer(gl, boxMatrices);
 
-    let instancedBoxes = new Model(gl, { 
-      program: sceneProgram,
-      attributes: {
-        positions: positionBuffer,
-        normals: normalBuffer,
-        modelMatCol1: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 0,
-          divisor: 1
-        },
-        modelMatCol2: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 16,
-          divisor: 1
-        },
-        modelMatCol3: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 32,
-          divisor: 1
-        },
-        modelMatCol4: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 48,
-          divisor: 1
-        },
-        indices: indexBuffer
-      },
-      instanced: true,
-      instanceCount: NUM_BOXES,
-      drawMode: GL.TRIANGLES,
-      vertexCount: cubeGeo.indices.value.length
-    });
+    ////////////////////////////////////////////////
+    // Set up frambuffers. 
+    ////////////////////////////////////////////////
 
-    const quadVertexArray = new VertexArray(gl, {
-      program: dofProgram,
-      attributes: {
-        aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
-      }
-    });
-
-    let mainFramebuffer = new Framebuffer(gl, {
+    // Need to ensure both color and depth targets can be sampled.
+    const mainFramebuffer = new Framebuffer(gl, {
       width: gl.drawingBufferWidth,
       height: gl.drawingBufferHeight,
       attachments: {
@@ -274,18 +247,99 @@ export const animationLoopOptions = {
       }
     })
 
-    let dofFramebuffer = new Framebuffer(gl, { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, depth: false});
+    // Postprocessing FBO doesn't need a depth attachment.
+    const dofFramebuffer = new Framebuffer(gl, { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, depth: false});
 
-    return {
-      instancedBoxes,
-      boxXforms,
-      boxMatrices,
-      matrixBuffer,
-      mainFramebuffer,
-      dofFramebuffer,
-      quadVertexArray,
-      dofProgram
-    };
+    return loadTextures(gl, {
+      urls: ['webgl-logo.png'],
+      mipmaps: true,
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+      }
+    }).then((textures) => {
+
+      ////////////////////////////////////////////
+      // Set up instanced model to draw boxes.
+      ////////////////////////////////////////////
+
+      let cubeGeo = new CubeGeometry().getAttributes();
+      let positionBuffer = new Buffer(gl, cubeGeo.positions.value);
+      let normalBuffer = new Buffer(gl, cubeGeo.normals.value);
+      let uvBuffer = new Buffer(gl, cubeGeo.texCoords.value);
+      let indexBuffer = new Buffer(gl, { data: cubeGeo.indices.value, target: gl.ELEMENT_ARRAY_BUFFER });
+
+      // This containes the instanced matrix attributes
+      let matrixBuffer = new Buffer(gl, boxMatrices);
+
+      let instancedBoxes = new Model(gl, { 
+        program: sceneProgram,
+        attributes: {
+          positions: positionBuffer,
+          normals: normalBuffer,
+          uvs: uvBuffer,
+
+          // Attributes are limited to 4 components,
+          // So we have to split the matrices across
+          // 4 attributes. They're reconstructed in 
+          // the vertex shader.
+          modelMatCol1: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 0,
+            divisor: 1
+          },
+          modelMatCol2: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 16,
+            divisor: 1
+          },
+          modelMatCol3: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 32,
+            divisor: 1
+          },
+          modelMatCol4: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 48,
+            divisor: 1
+          },
+          indices: indexBuffer
+        },
+        uniforms: {
+          uTexture: textures[0]
+        },
+        instanced: true,
+        instanceCount: NUM_BOXES,
+        drawMode: GL.TRIANGLES,
+        vertexCount: cubeGeo.indices.value.length
+      });
+
+      const quadVertexArray = new VertexArray(gl, {
+        program: dofProgram,
+        attributes: {
+          aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
+        }
+      });
+
+      return {
+        instancedBoxes,
+        boxXforms,
+        boxMatrices,
+        matrixBuffer,
+        mainFramebuffer,
+        dofFramebuffer,
+        quadVertexArray,
+        dofProgram
+      };
+    });
   },
 
   onRender: ({gl, tick, width, height, aspect, instancedBoxes, boxMatrices, boxXforms, matrixBuffer, mainFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
@@ -294,6 +348,11 @@ export const animationLoopOptions = {
 
     const camView = new Matrix4().lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
     const camProj = new Matrix4().perspective({fov: radians(75), aspect, near: 0.1, far: 30});
+
+    ////////////////////////////////////////
+    // Update model matrix data and then
+    // update the attribute buffer
+    ////////////////////////////////////////
 
     for (let i = 0; i < NUM_BOXES; ++i) {
       let box = boxXforms[i];
@@ -305,6 +364,10 @@ export const animationLoopOptions = {
 
     matrixBuffer.setData(boxMatrices);
 
+    ////////////////////////////////////
+    // Draw boxes to main framebuffer
+    ////////////////////////////////////
+
     instancedBoxes.draw({
       uniforms: {
         uView: camView,
@@ -313,8 +376,12 @@ export const animationLoopOptions = {
       framebuffer: mainFramebuffer
     });
 
+    /////////////////
+    // Apply DOF
+    /////////////////
     clear(gl, {color: [0, 0, 0, 1], framebuffer: dofFramebuffer});
 
+    // texelOffset determines the direction of the blur
     texelOffset[0] = 1;
     texelOffset[1] = 0;
 
@@ -324,6 +391,7 @@ export const animationLoopOptions = {
         uDepth: mainFramebuffer.depth
     });
 
+    // Horizontal DOF blur
     dofProgram.draw({
       vertexArray: quadVertexArray,
       drawMode: gl.TRIANGLE_STRIP,
