@@ -9,7 +9,7 @@ const CONFIG = {
   },
 
   plugins: [
-    new HtmlWebpackPlugin({title: 'Shadowmap'})
+    new HtmlWebpackPlugin({title: 'Depth of Field'})
   ]
 };
 
