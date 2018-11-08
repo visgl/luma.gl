@@ -1,8 +1,8 @@
 {
-  "name": "luma.gl-examples-shadowmap",
-  "description": "An es6 shadowmap example for luma.gl.",
+  "name": "luma.gl-examples-dof",
+  "description": "An es6 Depth of Field example for luma.gl.",
   "contributors": [
-    "Rye Terrell <ryeterrell@ryeterrell.net"
+    "Tarek Sherif <tareksherif@pm.me>"
   ],
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
