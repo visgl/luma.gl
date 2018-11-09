@@ -1,11 +1,14 @@
 {
   "name": "@luma.gl/glfx",
   "description": "glfx - image processing packaged as composable shader modules",
-  "version": "0.0.1",
+  "version": "6.3.0-alpha.2",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
