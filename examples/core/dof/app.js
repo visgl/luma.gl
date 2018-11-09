@@ -229,9 +229,9 @@ export const animationLoopOptions = {
     const projMat = new Matrix4();
     const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
 
-    ////////////////////////////
-    // Create programs
-    ////////////////////////////
+    ///////////////////////////////////////
+    // Create postprocessing pass program.
+    ///////////////////////////////////////
 
     const dofProgram = new Program(gl, {
       id: "DOF_PROGRAM",
@@ -243,9 +243,9 @@ export const animationLoopOptions = {
     });
 
 
-    ////////////////////////////////////////////////
+    //////////////////////
     // Set up frambuffers. 
-    ////////////////////////////////////////////////
+    //////////////////////
 
     // Need to ensure both color and depth targets can be sampled.
     const sceneFramebuffer = new Framebuffer(gl, {
@@ -286,9 +286,9 @@ export const animationLoopOptions = {
     const dofFramebuffer = new Framebuffer(gl, { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, depth: false});
 
 
-    ////////////////////////////////////////////////
+    /////////////////////
     // Input handlers. 
-    ////////////////////////////////////////////////
+    /////////////////////
 
     const focalLengthInput = document.getElementById("focal-length");
     focalLengthInput.value = focalLength;
@@ -317,9 +317,10 @@ export const animationLoopOptions = {
       }
     }).then((textures) => {
 
-      ////////////////////////////////////////////
-      // Set up instanced model to draw boxes.
-      ////////////////////////////////////////////
+      /////////////////////////////////////////////////////
+      // Create instanced model and initialize transform 
+      // matrices.
+      /////////////////////////////////////////////////////
 
       const instancedCubes = new InstancedCube(gl, {
         count: NUM_CUBES,
@@ -348,6 +349,11 @@ export const animationLoopOptions = {
       }
 
       instancedCubes.updateMatrixBuffer();
+
+      /////////////////////////////////////////////
+      // Full-screen quad VAO for postprocessing
+      // passes.
+      /////////////////////////////////////////////
 
       const quadVertexArray = new VertexArray(gl, {
         program: dofProgram,
@@ -382,7 +388,7 @@ export const animationLoopOptions = {
 
     ////////////////////////////////////////
     // Update model matrix data and then
-    // update the attribute buffer
+    // update the attribute buffer.
     ////////////////////////////////////////
 
     for (let i = 0; i < NUM_CUBES; ++i) {
@@ -396,7 +402,7 @@ export const animationLoopOptions = {
     instancedCubes.updateMatrixBuffer();
 
     ////////////////////////////////////
-    // Draw boxes to main framebuffer
+    // Draw cubes to scene framebuffer
     ////////////////////////////////////
 
     instancedCubes.draw({
