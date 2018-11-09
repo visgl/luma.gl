@@ -22,5 +22,8 @@
     "build-dev": "webpack --env.dev --config webpack.config.js",
     "build-prod": "webpack --config webpack.config.js",
     "build": "npm run build-prod"
+  },
+  "dependencies": {
+    "@luma.gl/glfx": "^6.3.0-alpha.2"
   }
 }

@@ -13,9 +13,6 @@
     "build-prod": "webpack --env minified",
     "build-lib": "mkdir -p dist && (cd ../../modules/script && yarn build-dev && cp dist/lumagl.js ../../examples/glfx/dist)"
   },
-  "dependencies": {
-    "luma.gl": "^6.1.0"
-  },
   "devDependencies": {
     "babel-loader": "^8.0.0",
     "cross-env": "^5.0.5",
