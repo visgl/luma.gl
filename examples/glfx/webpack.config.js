@@ -20,7 +20,7 @@ if (env === 'minified') {
 
 module.exports = {
   mode,
-  entry: path.resolve(__dirname, '../../modules/glfx/src/index.js'),
+  entry: path.resolve(__dirname, './app.js'),
   devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, './dist'),
