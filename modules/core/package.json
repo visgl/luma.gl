@@ -35,7 +35,8 @@
     "constants.js",
     "debug.js",
     "headless.js",
-    "webgl1.js"
+    "webgl1.js",
+    "README.md"
   ],
   "browser": {
     "gl": false,

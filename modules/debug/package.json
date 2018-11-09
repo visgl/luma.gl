@@ -19,7 +19,8 @@
   "esnext": "dist/es6/index.js",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
   "browser": {
