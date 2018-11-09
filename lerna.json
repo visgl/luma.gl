@@ -11,8 +11,6 @@
       "ignore": [
         "test",
         "*.md",
-        "@luma.gl/debug",
-        "@luma.gl/glfx",
         "@luma.gl/gpgpu",
         "@luma.gl/imageprocessing",
         "@luma.gl/io",

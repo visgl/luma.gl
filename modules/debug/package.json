@@ -1,6 +1,5 @@
 {
   "name": "@luma.gl/debug",
-  "private": true,
   "version": "0.0.1",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",

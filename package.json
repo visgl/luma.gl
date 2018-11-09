@@ -34,7 +34,7 @@
   "scripts": {
     "bootstrap": "scripts/bootstrap.sh",
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
-    "clean": "rm -fr dist dist-es6 && (cd modules/core && npm run clean)",
+    "clean": "lerna clean --yes && rm -rf node_modules",
     "build": "lerna run build",
     "cover": "NODE_ENV=cover nyc node test/start",
     "lint": "eslint modules test && npm run lint-yarn",
