@@ -1,5 +1,5 @@
 import GL from 'luma.gl/constants';
-import {AnimationLoop, Framebuffer, Cube, setParameters, clear, CubeGeometry, Model, Program, Texture2D, VertexArray, Buffer, loadTextures} from 'luma.gl';
+import {AnimationLoop, Framebuffer, Cube, setParameters, clear, CubeGeometry, Model, Program, Texture2D, VertexArray, Buffer, loadTextures, isWebGL2} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 /*
@@ -25,6 +25,9 @@ post-processing effect.
 </div>
 
 `;
+
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+let isDemoSupported = true;
 
 const QUAD_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
 const NUM_ROWS = 5;
@@ -220,6 +223,11 @@ void main() {
 
 export const animationLoopOptions = {
   onInitialize: ({gl}) => {
+    isDemoSupported = isWebGL2(gl);
+    if (!isDemoSupported) {
+      console.error(ALT_TEXT);
+      return {isDemoSupported};
+    }
 
     setParameters(gl, {
       depthTest: true,
@@ -374,6 +382,10 @@ export const animationLoopOptions = {
 
   onRender: ({gl, tick, width, height, aspect, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
 
+    if (!isDemoSupported) {
+          return;
+    }
+
     sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
 
@@ -402,7 +414,7 @@ export const animationLoopOptions = {
     instancedCubes.updateMatrixBuffer();
 
     ////////////////////////////////////
-    // Draw cubes to scene framebuffer
+    // Draw cubes to scene framebuffer.
     ////////////////////////////////////
 
     instancedCubes.draw({
@@ -466,6 +478,12 @@ export const animationLoopOptions = {
 const animationLoop = new AnimationLoop(animationLoopOptions);
 
 animationLoop.getInfo = () => INFO_HTML;
+animationLoop.isSupported = () => {
+  return isDemoSupported;
+};
+animationLoop.getAltText = () => {
+  return ALT_TEXT;
+};
 
 export default animationLoop;
 
