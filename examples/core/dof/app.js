@@ -371,6 +371,8 @@ export const animationLoopOptions = {
       });
 
       return {
+        projMat,
+        viewMat,
         instancedCubes,
         sceneFramebuffer,
         dofFramebuffer,
@@ -380,7 +382,7 @@ export const animationLoopOptions = {
     });
   },
 
-  onRender: ({gl, tick, width, height, aspect, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
+  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
 
     if (!isDemoSupported) {
           return;
@@ -395,8 +397,8 @@ export const animationLoopOptions = {
 
     clear(gl, {color: [0, 0, 0, 1], depth: true, framebuffer: sceneFramebuffer});
 
-    const camView = new Matrix4().lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
-    const camProj = new Matrix4().perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
+    projMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
+    viewMat.lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
 
     ////////////////////////////////////////
     // Update model matrix data and then
@@ -419,8 +421,8 @@ export const animationLoopOptions = {
 
     instancedCubes.draw({
       uniforms: {
-        uView: camView,
-        uProjection: camProj
+        uProjection: projMat,
+        uView: viewMat
       },
       framebuffer: sceneFramebuffer
     });
