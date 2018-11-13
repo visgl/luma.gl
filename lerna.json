@@ -1,6 +1,6 @@
 {
   "lerna": "2.0.0",
-  "version": "6.3.0-alpha.1",
+  "version": "6.3.0-alpha.2",
   "npmClient": "yarn",
   "useWorkspaces": true,
   "packages": [
@@ -11,8 +11,10 @@
       "ignore": [
         "test",
         "*.md",
-        "loaders.gl",
-        "@luma.gl/debug"
+        "@luma.gl/gpgpu",
+        "@luma.gl/imageprocessing",
+        "@luma.gl/io",
+        "@luma.gl/scripts"
       ]
     },
     "bootstrap": {}

@@ -219,10 +219,12 @@ export default class AnimationLoop {
     // end callback
 
     if (this.offScreen && this.gl.commit) {
+      // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
       // commit returns a Promise
       this.gl.commit().then(this._renderFrame);
     } else {
-      // Request another render frame (now )
+      // Either on-screen or gl.commit not supported (Chrome)
+      // Request another render frame now
       this._animationFrameId = requestAnimationFrame(this._renderFrame);
     }
   }

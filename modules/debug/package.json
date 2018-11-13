@@ -1,12 +1,14 @@
 {
   "name": "@luma.gl/debug",
-  "private": true,
-  "version": "0.0.1",
+  "version": "6.3.0-alpha.2",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "webgl",
@@ -19,7 +21,8 @@
   "esnext": "dist/es6/index.js",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
   "browser": {
@@ -33,7 +36,7 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "luma.gl": "^6.2.0-alpha.1",
-    "glsl-transpiler": "^1.7.1"
+    "glsl-transpiler": "^1.7.1",
+    "luma.gl": "^6.3.0-alpha.2"
   }
 }

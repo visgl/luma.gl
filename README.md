@@ -24,7 +24,7 @@ luma.gl is a set of WebGL2 components for high-performance GPU-based rendering a
 
 It is the engine that powers applications and frameworks like
 
-* [kepler.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
+* [kepler.gl](https://github.com/uber/kepler.gl) WebGL based visualization overlays
 * [deck.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
 
 

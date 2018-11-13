@@ -1,22 +1,19 @@
 {
-  "name": "@luma.gl/glfx",
-  "description": "glfx - image processing packaged as composable shader modules",
-  "version": "6.3.0-alpha.2",
+  "name": "@luma.gl/gpgpu",
+  "description": "general purpose gpu calculation",
+  "private": "true",
+  "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
   "esnext": "dist/es6/index.js",
   "files": [
     "src",
-    "dist",
-    "README.md"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
