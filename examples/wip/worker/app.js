@@ -1,4 +1,4 @@
-import {AnimationLoopProxy} from 'luma.gl';
+import {_AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
 import createWorker from 'webworkify-webpack';
 
 // Required by webworkify-webpack :(
@@ -10,7 +10,5 @@ export default animationLoop;
 
 /* global window */
 if (!window.website) {
-  animationLoop.start({
-    width: '100%'
-  });
+  animationLoop.start();
 }
