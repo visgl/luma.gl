@@ -151,6 +151,6 @@ animationLoop.getAltText = () => {
 export default animationLoop;
 
 /* global window */
-if (!window.website) {
+if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();
 }
