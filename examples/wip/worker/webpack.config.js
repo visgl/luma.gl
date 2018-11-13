@@ -4,6 +4,11 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CONFIG = {
   mode: 'development',
 
+  devServer: {
+    // Static assets
+    contentBase: resolve(__dirname, '../../core/picking/')
+  },
+
   entry: {
     app: resolve('./app.js')
   },

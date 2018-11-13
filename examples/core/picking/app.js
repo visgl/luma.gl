@@ -25,7 +25,7 @@ const PLANETS = [
   {name: 'Venus', textureUrl: 'venus.jpg'}
 ];
 
-let pickPosition = [0, 0];
+let pickedModelId = '';
 
 const animationLoop = new AnimationLoop({
   createFramebuffer: true,
@@ -40,14 +40,6 @@ const animationLoop = new AnimationLoop({
       clearDepth: 1,
       depthTest: true,
       depthFunc: GL.LEQUAL
-    });
-
-    canvas.addEventListener('mousemove', function mousemove(e) {
-      pickPosition = [e.offsetX, e.offsetY];
-    });
-
-    canvas.addEventListener('mouseleave', function mouseleave(e) {
-      pickPosition = null;
     });
 
     return loadTextures(gl, {
@@ -86,7 +78,7 @@ const animationLoop = new AnimationLoop({
       planets
     }));
   },
-  onRender: ({gl, aspect, planets, framebuffer, useDevicePixels}) => {
+  onRender: ({gl, aspect, planets, framebuffer, useDevicePixels, _mousePosition}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     const projectionMatrix = new Matrix4().perspective({fov: radians(75), aspect});
@@ -99,19 +91,23 @@ const animationLoop = new AnimationLoop({
         moduleSettings: {
           modelMatrix: planet.matrix,
           viewMatrix,
-          projectionMatrix
+          projectionMatrix,
+          pickingSelectedColor: planet.id === pickedModelId ? [1, 1, 1] : null,
+          pickingThreshold: 1
         }
       });
     }
 
-    const pickedModel = pickPosition && pickModels(gl, {
+    const pickedModel = _mousePosition && pickModels(gl, {
       models: planets,
-      position: pickPosition,
+      position: _mousePosition,
       framebuffer,
       useDevicePixels
     });
 
-    const div = document.getElementById('planet-name');
+    pickedModelId = pickedModel ? pickedModel.model.id : null;
+
+    const div = typeof document === 'undefined' ? null : document.getElementById('planet-name');
     if (pickedModel && div) {
       div.innerHTML = pickedModel.model.id;
       div.style.left = `${pickPosition[0]}px`;
