@@ -19,7 +19,7 @@ export function loadFile(url, opts) {
   return requestFile(opts);
 }
 
-/* global Image */
+/* global Image, Blob, URL, createImageBitmap, location */
 
 /*
  * Loads images asynchronously
