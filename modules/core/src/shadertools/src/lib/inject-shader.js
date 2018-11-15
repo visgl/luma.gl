@@ -8,7 +8,6 @@ const MODULE_INJECTORS = {
   [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
 };
 
-// const REGEX_DECLARATIONS = /^(#version[^\n]*\n)?/; // Beginning of file
 const REGEX_START_OF_MAIN = /void main\s*\([^\)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
 
@@ -21,7 +20,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
   for (const key in inject) {
     const fragment = inject[key];
     switch (key) {
-      // declarations are injected at beginning of shader
+      // declarations are injected before the main function
       case 'vs:#decl':
         if (isVertex) {
           source = source.replace(REGEX_START_OF_MAIN, match => fragment + match);
