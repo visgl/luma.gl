@@ -30,6 +30,7 @@ out vec4 vColor;
 void f(out float a, in float b) {}
 
 uniform float uNewUniform;
+
 void main(void) {
   gl_Position = positions;
   vColor = vec4(1., 0., 0., 1.);
@@ -62,6 +63,7 @@ in vec4 vColor;
 void f(out float a, in float b) {}
 
 uniform bool uDiscard;
+
 void main(void) {
   if (uDiscard} { discard } else {
   fragmentColor = vColor;

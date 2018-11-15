@@ -23,7 +23,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
       // declarations are injected before the main function
     case 'vs:#decl':
       if (isVertex) {
-        source = source.replace(REGEX_START_OF_MAIN, match => fragment + match);
+        source = source.replace(REGEX_START_OF_MAIN, match => `${fragment}\n${match}`);
       }
       break;
     // main code is injected at the end of main function
@@ -39,7 +39,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
       break;
     case 'fs:#decl':
       if (!isVertex) {
-        source = source.replace(REGEX_START_OF_MAIN, match => fragment + match);
+        source = source.replace(REGEX_START_OF_MAIN, match => `${fragment}\n${match}`);
       }
       break;
     case 'fs:#main-start':
