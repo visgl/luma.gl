@@ -23,13 +23,13 @@ void main(void) {
 
 const VS_GLSL_RESOLVED = `\
 #version 300 es
-uniform float uNewUniform;
 
 in vec4 positions;
 out vec4 vColor;
 
 void f(out float a, in float b) {}
 
+uniform float uNewUniform;
 void main(void) {
   gl_Position = positions;
   vColor = vec4(1., 0., 0., 1.);
@@ -53,7 +53,6 @@ void main(void) {
 
 const FS_GLSL_RESOLVED = `\
 #version 300 es
-uniform bool uDiscard;
 
 precision highp float;
 
@@ -62,6 +61,7 @@ in vec4 vColor;
 
 void f(out float a, in float b) {}
 
+uniform bool uDiscard;
 void main(void) {
   if (uDiscard} { discard } else {
   fragmentColor = vColor;
