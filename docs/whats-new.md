@@ -2,11 +2,16 @@
 
 ## Version 6.3
 
-Date: Targeting November 16, 2018
+Date: November 16, 2018
 
 ### Uniform Caching
 
-`Program.setUniforms` now only update the changed uniforms, improving performance.
+Uniforms are now cached at `Program` object, Improves performance by eliminating uniform setter calls when uniform values are not changed. 
+
+### New submodules
+
+* `@luma.gl/debug` - an experimental module for debugging WebGL shaders on CPU
+* `@luma.gl/glfx` - shader modules for image processing
 
 ### Offscreen Rendering (Experimental)
 
