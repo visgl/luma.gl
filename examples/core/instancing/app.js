@@ -158,7 +158,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onFinalize({gl}) {
-    gl.canvas.removeEventListener('mousemove', mousemove);
     this.cube.delete();
   }
 }

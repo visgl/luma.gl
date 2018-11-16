@@ -110,8 +110,8 @@ const animationLoop = new AnimationLoop({
     const div = typeof document === 'undefined' ? null : document.getElementById('planet-name');
     if (pickedModel && div) {
       div.innerHTML = pickedModel.model.id;
-      div.style.left = `${pickPosition[0]}px`;
-      div.style.top = `${pickPosition[1]}px`;
+      div.style.left = `${_mousePosition[0]}px`;
+      div.style.top = `${_mousePosition[1]}px`;
       div.style.display = 'block';
       div.style.fontWeight = 'bold';
     } else if (div) {
