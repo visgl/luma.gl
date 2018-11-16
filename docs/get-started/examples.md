@@ -19,7 +19,7 @@ yarn start   # or npm start
 
 ## Using the Latest Release Branch
 
-Note that luma.gl development happens on the `master` branch. While the goal is to always keep examples on `master` in working condition, they can temporarly be broken due to the core code being refactored for the next release. If you run into issues, or just want to be sure that you are running the latest stable version of the examples, just check out the latest release branch (e.g. `6.0-release`), and re-install and run the examples.
+Note that luma.gl development happens on the `master` branch. While the goal is to always keep examples on `master` in working condition, they can temporarly be broken due to the core code being refactored for the next release. If you run into issues, or just want to be sure that you are running the latest stable version of the examples, just check out the latest release branch (e.g. `6.3-release`), and re-install and run the examples.
 
 To see available release branches:
 
@@ -30,7 +30,7 @@ git branch | grep -release
 To check out a release branch:
 
 ```
-git checkout 6.0-release
+git checkout 6.3-release
 ```
 
 To go back to master:
