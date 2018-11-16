@@ -182,6 +182,10 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
+  _clearNeedsRedraw() {
+    this.needsRedraw = null;
+  }
+
   _setupFrame() {
     if (this._onSetupFrame) {
       // call callback
@@ -210,6 +214,9 @@ export default class AnimationLoop {
     // call callback
     this.onRender(this.animationProps);
     // end callback
+
+    // clear needsRedraw flag
+    this._clearNeedsRedraw();
 
     if (this.offScreen && this.gl.commit) {
       // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
@@ -251,9 +258,6 @@ export default class AnimationLoop {
 
   // Update the context object that will be passed to app callbacks
   _updateCallbackData() {
-    // Update redraw reason
-    this.animationProps.needsRedraw = this.needsRedraw;
-    this.needsRedraw = null;
 
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
