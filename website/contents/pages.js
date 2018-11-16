@@ -390,6 +390,10 @@ export const DOC_PAGES = [
         content: 'api-reference/core/animation-loop.md'
       },
       {
+        name: 'AnimationLoopProxy (Experimental)',
+        content: 'api-reference/core/animation-loop-proxy.md'
+      },
+      {
         name: 'Attribute',
         content: 'api-reference/core/attribute.md'
       },

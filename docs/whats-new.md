@@ -1,8 +1,25 @@
 # What's New
 
+## Version 6.3
+
+Date: November 16, 2018
+
+### Uniform Caching
+
+Uniforms are now cached at `Program` object, which improves performance by eliminating uniform setter calls when uniform values are not changed. 
+
+### New submodules
+
+* `@luma.gl/debug` - an experimental module for debugging WebGL shaders on CPU
+* `@luma.gl/glfx` - shader modules for image processing
+
+### Offscreen Rendering (Experimental)
+
+A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/uber/luma.gl/tree/master/examples/wip/worker).
+
 ## Version 6.2
 
-Date: Target September 12, 2018
+Date: September 12, 2018
 
 <table style="border: 0;" align="center">
   <tbody>
