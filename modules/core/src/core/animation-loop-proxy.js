@@ -1,6 +1,8 @@
 /* global window */
-import {getPageLoadPromise, createCanvas} from '../webgl-context';
+import {getPageLoadPromise, getCanvas} from '../webgl-context';
 import {requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
+import {log} from '../utils';
+import assert from '../utils/assert';
 
 export default class AnimationLoopProxy {
 
@@ -9,7 +11,6 @@ export default class AnimationLoopProxy {
   static createWorker(animationLoop) {
     return self => {
 
-      animationLoop.offscreen = true;
       animationLoop.setProps({
         // Prevent the animation loop from trying to access DOM properties
         useDevicePixels: false,
@@ -77,21 +78,26 @@ export default class AnimationLoopProxy {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor({
-    worker,
-    onInitialize = () => {},
-    onFinalize = () => {},
-    useDevicePixels = true,
-    autoResizeDrawingBuffer = true
-  }) {
+  constructor(worker, opts = {}) {
+    const {
+      onInitialize = () => {},
+      onFinalize = () => {},
+      useDevicePixels = true,
+      autoResizeDrawingBuffer = true
+    } = opts;
+
     this.props = {
       onInitialize,
-      onFinalize,
-      autoResizeDrawingBuffer,
-      useDevicePixels
+      onFinalize
     };
 
+    this.setProps({
+      autoResizeDrawingBuffer,
+      useDevicePixels
+    });
+
     // state
+    assert(worker instanceof Worker);
     this.worker = worker;
     this.canvas = null;
     this.width = null;
@@ -105,6 +111,16 @@ export default class AnimationLoopProxy {
     this._onMessage = this._onMessage.bind(this);
     this._onEvent = this._onEvent.bind(this);
     this._updateFrame = this._updateFrame.bind(this);
+  }
+
+  setProps(props) {
+    if ('autoResizeDrawingBuffer' in props) {
+      this.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
+    }
+    if ('useDevicePixels' in props) {
+      this.useDevicePixels = props.useDevicePixels;
+    }
+    return this;
   }
 
   /* Public methods */
@@ -160,7 +176,7 @@ export default class AnimationLoopProxy {
   }
 
   _onEvent(evt) {
-    const devicePixelRatio = this.props.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
+    const devicePixelRatio = this.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
     const type = evt.type;
 
     const safeEvent = {};
@@ -189,11 +205,11 @@ export default class AnimationLoopProxy {
 
   _createAndTransferCanvas(opts) {
     // Create a canvas on the main thread
-    const screenCanvas = createCanvas(opts);
+    const screenCanvas = getCanvas(opts);
 
     // Create an offscreen canvas controlling the main canvas
     if (!screenCanvas.transferControlToOffscreen) {
-      onError('OffscreenCanvas is not available. Enable Experimental canvas features in chrome://flags'); // eslint-disable-line
+      log.error('OffscreenCanvas is not available in your browser.')(); // eslint-disable-line
     }
     const offscreenCanvas = screenCanvas.transferControlToOffscreen();
 
@@ -208,8 +224,8 @@ export default class AnimationLoopProxy {
   }
 
   _resizeCanvasDrawingBuffer() {
-    if (this.props.autoResizeDrawingBuffer) {
-      const devicePixelRatio = this.props.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
+    if (this.autoResizeDrawingBuffer) {
+      const devicePixelRatio = this.useDevicePixels ? (window.devicePixelRatio || 1) : 1;
       const width = this.canvas.clientWidth * devicePixelRatio;
       const height = this.canvas.clientHeight * devicePixelRatio;
 
