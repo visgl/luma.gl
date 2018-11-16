@@ -4,7 +4,7 @@ import createWorker from 'webworkify-webpack';
 // Required by webworkify-webpack :(
 const worker = createWorker(require.resolve('./worker'));
 
-const animationLoop = new AnimationLoopProxy({worker});
+const animationLoop = new AnimationLoopProxy(worker);
 
 export default animationLoop;
 

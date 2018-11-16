@@ -1,4 +1,3 @@
-import AnimationLoopProxy from './animation-loop-proxy';
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
 import {getPageLoadPromise} from '../webgl-context';
 import {makeDebugContext} from '../webgl-context/debug-context';
@@ -25,7 +24,6 @@ export default class AnimationLoop {
       onRender = () => {},
       onFinalize = () => {},
 
-      offScreen = false,
       gl = null,
       glOptions = {},
       debug = false,
@@ -61,7 +59,6 @@ export default class AnimationLoop {
 
     // state
     this.gl = gl;
-    this.offScreen = offScreen;
     this.needsRedraw = null;
 
     this.setProps({
@@ -98,10 +95,6 @@ export default class AnimationLoop {
       this.useDevicePixels = props.useDevicePixels;
     }
     return this;
-  }
-
-  getWorker() {
-    return AnimationLoopProxy.createWorker(this);
   }
 
   // Starts a render loop if not already running
@@ -300,6 +293,8 @@ export default class AnimationLoop {
 
   // Either uses supplied or existing context, or calls provided callback to create one
   _createWebGLContext(opts) {
+    this.offScreen = opts.canvas && typeof OffscreenCanvas !== 'undefined' && opts.canvas instanceof OffscreenCanvas;
+
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);
     this.gl = this.props.gl || this.onCreateContext(opts);

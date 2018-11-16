@@ -20,7 +20,7 @@ Autocreates a canvas/context
 ```js
 import {AnimationLoop} from 'luma.gl';
 
-new AnimationLoop({
+const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     // Keys in the object returned here will be available in onRenderFrame
     return {
@@ -32,20 +32,13 @@ new AnimationLoop({
     clipSpaceQuad.render({uTime: tick * 0.01});
   }
 });
+
+animationLoop.start();
 ```
 
 Use a canvas in the existing DOM through its HTML id
 ```js
-import {AnimationLoop, createGLContext} from 'luma.gl';
-
-new AnimationLoop({
-  onCreateContext() {
-    return createGLContext({canvas: 'canvas-0'}))
-  },
-  ...
-  onInitialize({gl}) { ... }
-  onRender({...}) { ... }
-});
+animationLoop.start({id: 'my-canvas'});
 ```
 
 ## Methods
@@ -66,18 +59,24 @@ new AnimationLoop({
 
 * `onCreateContext`=`null` (callback) - function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.
 * `onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
+* `onRender`=`null` (callback) - Called on every animation frame.
 * `onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
-* `onRenderFrame`=`null` (callback) - Calling `frame` will automatically start the animation. If this is not desired, follow immediately with a `stop()`.
 * `autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRenderFrame` is called. Set to false to control viewport size.
 * `autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
+* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
+* `gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
+* `glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
+* `debug`=`false` (bool) - Enable debug mode will provide more validations and error messages, but less performant.
+* `createFramebuffer`=`false` (bool) - If true, will make a `framebuffer` (FrameBuffer) parameter available to `onInitialize` and `onRender` callbacks.
 
 
 ### start
 
 Restarts the animation
 
-`animationLoop.start()`
+`animationLoop.start(options)`
 
+* `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
 
 ### stop
 
@@ -109,43 +108,26 @@ Notes:
 * `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
 
-## Callbacks
+## Callback Parameters
 
-The callbacks that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters.
-
-
-### onInitialize
-
-The callback will be called with an initial object containing a gl context object. Can return a promise (e.g. for texture or model loads)
-
-For the `onInitialize` callback, the parameter object will contain the following fields:
+The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters:
 
 | Parameter | Type | Description |
 | ---       | ---  | --- |
-| `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. Note that if the context is associated with a canvas, it is accessible through `gl.canvas` |
+| `_animationLoop` | `AnimationLoop` | (**experimental**) The calling `AnimationLoop` instance |
+| `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. |
+| `canvas`  | `HTMLCanvasElement` or `OffscreenCanvas` | The canvas associated with this context. |
 | `width`   | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
-
 | `height`  | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
 | `aspect`  | The canvas aspect ratio (width/height) to update projection matrices |
 | `useDevicePixels` | Boolean indicating if canvas is utilizes full resolution of Retina/
-
-
-### onRenderFrame
-
-For the `onRenderFrame` callback, the parameter object will contain the following fields:
-
-| Parameter | Type | Description |
-| ---       | ---  | --- |
-| `animationLoop` | `AnimationLoop` | The calling `AnimationLoop` |
-| `gl`      | `WebGLRenderingContext` | This `AnimationLoop`'s gl context. Note that if the context is associated with a canvas, it is accessible through `gl.canvas` |
-| `width`   | `Number` | The drawing buffer width, in "device" pixels (can be different from canvas.width). |
-| `height`  | `Number` | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
-| `aspect`  | `Number` | The canvas aspect ratio (width/height) to update projection matrices |
 | `needsRedraw` | `String` | Redraw flag (will be automatically set if drawingBuffer resizes) |
-| `useDevicePixels` | `Boolean` | Does canvas utilize full resolution of Retina/HD displays. |
 | `time`    | `Number` | Milliseconds since `AnimationLoop` was created (monotonic). |
 | `tick`    | `Number` | Counter that updates for every frame rendered (monotonic). |
-| ...       | Any fields in the object that was returned by `onInitialize` method. |
+| `framebuffer` | `FrameBuffer` | Availabel if `createFrameBuffer: true` was passed to the constructor. |
+| `_mousePosition` | `[x, y]` or `null` | (**experimental**) Current mouse position over the canvas. |
+| `_offScreen` | `Boolean` | (**experimental**) If the animation loop is rendering to an OffscreenCanvas. |
+| ...       | Any fields in the object that was returned by the `onInitialize` method. |
 
 
 ## Remarks
