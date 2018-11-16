@@ -6,7 +6,7 @@ Date: November 16, 2018
 
 ### Uniform Caching
 
-Uniforms are now cached at `Program` object, Improves performance by eliminating uniform setter calls when uniform values are not changed. 
+Uniforms are now cached at `Program` object, which improves performance by eliminating uniform setter calls when uniform values are not changed. 
 
 ### New submodules
 
