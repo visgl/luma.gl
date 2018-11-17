@@ -218,3 +218,13 @@ export function areUniformsEqual(uniform1, uniform2) {
   }
   return uniform1 === uniform2;
 }
+
+/**
+ * Creates a copy of the uniform
+ */
+export function getUniformCopy(uniform) {
+  if (Array.isArray(uniform) || ArrayBuffer.isView(uniform)) {
+    return uniform.slice();
+  }
+  return uniform;
+}
