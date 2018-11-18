@@ -7,7 +7,7 @@ import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {withParameters} from '../webgl-context/context-state';
-import {checkUniformValues, areUniformsEqual} from '../webgl/uniforms';
+import {checkUniformValues, areUniformsEqual, getUniformCopy} from '../webgl/uniforms';
 import {assertWebGL2Context, isWebGL2} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {getKey} from '../webgl-utils/constants-to-keys';
@@ -197,13 +197,13 @@ export default class Program extends Resource {
       if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
         somethingChanged = true;
         changedUniforms[key] = uniforms[key];
+        this.uniforms[key] = getUniformCopy(uniforms[key]);
       }
     }
 
     if (somethingChanged) {
       _onChangeCallback();
       checkUniformValues(changedUniforms, this.id, this._uniformSetters);
-      Object.assign(this.uniforms, uniforms);
       Object.assign(this.samplers, samplers);
       this._setUniforms(changedUniforms);
     }
