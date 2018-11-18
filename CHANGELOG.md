@@ -1,5 +1,37 @@
 # Pre-releases
 
+## 6.3.0-beta.2 - Nov 17
+
+- Cache copy of uniform (#782)
+- Fix: mouse position variable (#781)
+- Fix needsRedraw (#779)
+- 6.3 whats new (#778)
+- API audit and documentation of AnimationLoopProxy class (#776)
+- Fixed injection location for function declaration in inject shader (#774)
+- Fix lint (#773)
+- Make `loadImage` work in web workers (#768)
+- Fix offscreen rendering for Chrome 70 (#767)
+- update links
+
+## 6.3.0-beta.1
+
+- polish dependencies (#772)
+
+## v6.3.0-alpha.2
+
+- prepare to publish @luma.gl/debug and @luma.gl/glfx
+- add readme for submodules (#771)
+- Fixed link for kepler.gl (#763)
+- module split work (#765)
+- remove loaders.gl module (#762)
+
+## v6.3.0-alpha.1
+
+- Perf: only set changed uniforms (#761)
+- ProgramConfiguration: Do not track built-in attributes to avoid crashes when we look for attribute definition. (#758)
+- Bump probe.gl and fix lerna
+- Fix typo in webgl/query.js (#754
+
 ## 6.2.0-alpha.1 - Sep 25
 
 - Transform: user parameters for viewport (#738)
