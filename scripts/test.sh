@@ -35,6 +35,7 @@ case $MODE in
     break;;
 
   "fast")
+    run_lint
     node test/start.js fast
     break;;
 

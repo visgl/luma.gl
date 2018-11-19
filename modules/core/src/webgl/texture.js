@@ -315,14 +315,14 @@ export default class Texture extends Resource {
     target = this.target,
     pixels = null,
     data = null,
-    width,
-    height,
+    width = this.width,
+    height = this.height,
     level = 0,
-    format = GL.RGBA,
-    type,
-    dataFormat,
+    format = this.format,
+    type = this.type,
+    dataFormat = this.dataFormat,
     offset = 0,
-    border = 0,
+    border = this.border,
     compressed = false,
     parameters = {}
   }) {
@@ -354,13 +354,18 @@ export default class Texture extends Resource {
         // WebGL2 enables creating textures directly from a WebGL buffer
         assertWebGL2Context(gl);
         gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-        gl.texImage2D(target, level, format, width, height, border, format, type, offset);
+        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
+        gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
         break;
       case 'browser-object':
-        gl.texImage2D(target, level, format, format, type, data);
+        if (isWebGL2(gl)) {
+          gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+        } else {
+          gl.texImage2D(target, level, format, dataFormat, type, data);
+        }
         break;
       case 'compressed':
-        gl.compressedTexImage2D(this.target, level, format, width, height, border, data);
+        gl.compressedTexImage2D(target, level, format, width, height, border, data);
         break;
       default:
         assert(false, 'Unknown image data type');
@@ -404,15 +409,15 @@ export default class Texture extends Resource {
     data = null,
     x = 0,
     y = 0,
-    width,
-    height,
+    width = this.width,
+    height = this.height,
     level = 0,
-    format = GL.RGBA,
-    type,
-    dataFormat,
+    format = this.format,
+    type = this.type,
+    dataFormat = this.dataFormat,
     compressed = false,
     offset = 0,
-    border = 0,
+    border = this.border,
     parameters = {}
   }) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
@@ -445,21 +450,23 @@ export default class Texture extends Resource {
           level, x, y, width, height, format, data);
       } else if (data === null) {
         this.gl.texSubImage2D(target,
-          level, format, width, height, border, dataFormat, type, null);
+          level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
         this.gl.texSubImage2D(target,
-          level, x, y, width, height, format, type, data, offset);
+          level, x, y, width, height, dataFormat, type, data, offset);
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
         assertWebGL2Context(this.gl);
         // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
         this.gl.texSubImage2D(target,
-          level, format, width, height, border, format, type, offset);
+          level, x, y, width, height, dataFormat, type, offset);
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-      } else {
+      } else if (isWebGL2(this.gl)) {
         // Assume data is a browser supported object (ImageData, Canvas, ...)
-        this.gl.texSubImage2D(target, level, x, y, format, type, data);
+        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data);
+      } else {
+        this.gl.texSubImage2D(target, level, x, y, dataFormat, type, data);
       }
     });
 
