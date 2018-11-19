@@ -24,6 +24,9 @@ to calculate reflection and refraction directions from the prism normals
 
 function readHTMLControls() {
   /* global document */
+  if (typeof document === 'undefined') {
+    return {uReflect: 1, uRefract: 1};
+  }
   const reflectionElement = document.getElementById('reflection');
   const refractionElement = document.getElementById('refraction');
 
@@ -184,15 +187,16 @@ function getFaceTextures({size}) {
   };
 
   let face = 0;
+  const canvas = typeof document === 'undefined' ? new OffscreenCanvas(size, size) : document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
 
   for (const sign of signs) {
     for (const axis of axes) {
-      const canvas = document.createElement('canvas');
+      // reset canvas
       canvas.width = size;
       canvas.height = size;
-      const ctx = canvas.getContext('2d');
       drawTexture({ctx, sign, axis, size});
-      textures[TextureCube.FACES[face++]] = canvas;
+      textures[TextureCube.FACES[face++]] = ctx.getImageData(0, 0, size, size);
     }
   }
   return textures;
