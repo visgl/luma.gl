@@ -1,4 +1,7 @@
-# Pre-releases
+
+## 6.3.0 - Nov 19
+
+- Fix Texture.setImageData and setSubImageData (#787)
 
 ## 6.3.0-beta.2 - Nov 17
 

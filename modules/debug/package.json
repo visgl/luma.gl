@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/debug",
-  "version": "6.3.0-beta.2",
+  "version": "6.3.0",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,6 @@
   },
   "dependencies": {
     "glsl-transpiler": "^1.7.1",
-    "luma.gl": "^6.3.0-beta.2"
+    "luma.gl": "^6.3.0"
   }
 }
