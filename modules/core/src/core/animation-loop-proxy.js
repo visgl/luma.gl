@@ -1,4 +1,4 @@
-/* global window */
+/* global window, Worker */
 import {getPageLoadPromise, getCanvas} from '../webgl-context';
 import {requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 import {log} from '../utils';

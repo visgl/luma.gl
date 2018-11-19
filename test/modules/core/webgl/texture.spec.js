@@ -1,3 +1,4 @@
+/* global document */
 /* eslint-disable max-len */
 import test from 'tape-catch';
 
@@ -366,14 +367,13 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
 
 test('WebGL1#Texture2D setImageData', t => {
   const {gl} = fixture;
-  let data;
   
   // data: null
   const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
   t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
-  data = new Uint8Array([0, 1, 2, 3, 128, 201, 255, 255]);
+  const data = new Uint8Array([0, 1, 2, 3, 128, 201, 255, 255]);
   texture.setImageData({data});
   t.deepEquals(readTexturePixels(texture), data, 'Pixels are set correctly');
 
@@ -437,14 +437,12 @@ test('WebGL2#Texture2D setImageData', t => {
 test('WebGL1#Texture2D setSubImageData', t => {
   const {gl} = fixture;
 
-  let data;
-
   // data: null
   const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
   t.deepEquals(readTexturePixels(texture), new Uint8Array(8), 'Pixels are empty');
 
   // data: typed array
-  data = new Uint8Array([1, 2, 3, 4]);
+  const data = new Uint8Array([1, 2, 3, 4]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
   t.deepEquals(readTexturePixels(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0]), 'Pixels are set correctly');
 

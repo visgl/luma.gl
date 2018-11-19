@@ -8,7 +8,6 @@ import {withParameters} from '../webgl-context/context-state';
 
 import {WebGLBuffer} from '../webgl-utils';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
-import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 
 import {log, uid, isPowerOfTwo} from '../utils';
 import assert from '../utils/assert';

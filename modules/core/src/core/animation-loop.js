@@ -1,3 +1,4 @@
+/* global OffscreenCanvas */
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
 import {getPageLoadPromise} from '../webgl-context';
 import {makeDebugContext} from '../webgl-context/debug-context';
