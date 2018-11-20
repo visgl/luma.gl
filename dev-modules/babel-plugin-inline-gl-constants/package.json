@@ -9,5 +9,5 @@
     "webgl",
     "gl constants"
   ],
-  "main": "src/inline-gl-constants.js"
+  "main": "index.js"
 }
