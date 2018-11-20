@@ -1,0 +1,31 @@
+const minimatch = require("minimatch")
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '../..');
+const INLINE_COMMENT_REGEX = /\/\/.*/g;
+const BLOCK_COMMENT_REGEX = /\/\*(\*(?!\/)|[^*])*\*\//g;
+const DEFAULT_PATTERNS = ['*.js'];
+
+module.exports = function _(opts) {
+  return {
+    visitor: {
+      StringLiteral(path, state) {
+        if(filterFile(state)) {
+          path.node.value = path.node.value.replace(INLINE_COMMENT_REGEX, '').replace(BLOCK_COMMENT_REGEX, '');
+        }
+      }
+    }
+  };
+};
+
+function filterFile(state) {
+  const filename = state.file.opts.filename;
+  const patterns = state.opts.patterns || DEFAULT_PATTERNS;
+
+  return patterns.some(function(p) {
+    if (p[0] === '.') {
+      p = path.resolve(ROOT, p);
+    }
+    return minimatch(filename, p);
+  });
+}

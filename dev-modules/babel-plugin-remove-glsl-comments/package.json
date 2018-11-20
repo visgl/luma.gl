@@ -1,0 +1,11 @@
+{
+  "name": "babel-plugin-remove-glsl-comments",
+  "version": "0.0.0",
+  "description": "Babel plugin for removing glsl comments",
+  "keywords": [
+    "babel-plugin",
+    "webgl",
+    "glsl"
+  ],
+  "main": "index.js"
+}
