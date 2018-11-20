@@ -27,12 +27,13 @@ const TEST_CASES = [
     filename: 'some/path/math.js',
     output: `
       function(a, b) {
-        return a + b; 
+        return a + b;
       }
     `
   }, {
     title: 'multiple inline comments',
-    input: `// a function to add numbers
+    input: `
+      // a function to add numbers
       function(a, b) {
         return a + b; // add a and b
       }
@@ -40,12 +41,13 @@ const TEST_CASES = [
     filename: 'math.glsl.js',
     output: `
       function(a, b) {
-        return a + b; 
+        return a + b;
       }
     `
   }, {
     title: 'multiline block comments',
-    input: `/**
+    input: `
+      /**
       * a function to add numbers
       * @params a (number)
       * @params b (number)
@@ -58,7 +60,7 @@ const TEST_CASES = [
     filename: 'math.glsl.js',
     output: `
       function(a, b) {
-        return a + b; 
+        return a + b;
       }
     `
   }

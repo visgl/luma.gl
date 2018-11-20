@@ -2,8 +2,8 @@ const minimatch = require("minimatch")
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
-const INLINE_COMMENT_REGEX = /\/\/.*/g;
-const BLOCK_COMMENT_REGEX = /\/\*(\*(?!\/)|[^*])*\*\//g;
+const INLINE_COMMENT_REGEX = /\s*\/\/.*/g;
+const BLOCK_COMMENT_REGEX = /\s*\/\*(\*(?!\/)|[^*])*\*\//g;
 const DEFAULT_PATTERNS = ['*.js'];
 
 module.exports = function _(opts) {
