@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /* global console */
 // const GL = require('luma.gl/constants');
-const GL = require('../../core/src/constants.js');
+const GL = require('../../modules/core/src/constants.js');
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
