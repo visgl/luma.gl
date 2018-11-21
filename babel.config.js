@@ -16,7 +16,7 @@ const CONFIG = {
     ],
     plugins: [
       'version-inline',
-      './modules/babel-plugin-inline-gl-constants'
+      './dev-modules/babel-plugin-inline-gl-constants'
     ]
   }
 };
