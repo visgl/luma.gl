@@ -16,7 +16,10 @@ const CONFIG = {
     ],
     plugins: [
       'version-inline',
-      './dev-modules/babel-plugin-inline-gl-constants'
+      './dev-modules/babel-plugin-inline-gl-constants',
+      ['./dev-modules/babel-plugin-remove-glsl-comments', {
+        patterns: ['./modules/core/src/shadertools/src/modules/**/*.js']
+      }]
     ]
   }
 };
