@@ -45,8 +45,15 @@
   </div>
   <div class="thumb">
     <div class="bg-black" data-title="Transform Feedback">
-      <a href="#/examples/core-examples/transform-feedback">
+      <a href="#/examples/core-examples/transform-feedback-webgl-2">
         <img src="images/example-transform-feedback.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Depth of Field">
+      <a href="#/examples/core-examples/depth-field-webgl-2">
+        <img src="images/example-dof.jpg" />
       </a>
     </div>
   </div>

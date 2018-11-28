@@ -13,6 +13,7 @@ export {default as FragmentDemo} from '../../examples/core/fragment/app.js';
 export {default as PickingDemo} from '../../examples/core/picking/app.js';
 export {default as ShadowmapDemo} from '../../examples/core/shadowmap/app.js';
 export {default as TransformFeedbackDemo} from '../../examples/core/transform-feedback/app.js';
+export {default as DOFDemo} from '../../examples/core/dof/app.js';
 export {default as TransformDemo} from
   '../../examples/core/transform/app.js';
 
