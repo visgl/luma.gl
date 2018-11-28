@@ -90,6 +90,14 @@ export const EXAMPLE_PAGES = [
           demo: 'TransformDemo',
           code: `${GITHUB_TREE}/examples/core/transform`
         }
+      },
+      {
+        name: 'Depth of Field  (WebGL2)',
+        content: {
+          demo: 'DOFDemo',
+          code: `${GITHUB_TREE}/examples/core/dof`,
+          path: `${RAW_GITHUB}/examples/core/dof/`
+        }
       }
     ]
   },
