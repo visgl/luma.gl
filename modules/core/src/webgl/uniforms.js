@@ -114,8 +114,14 @@ function toUIntArray(value, uniformLength) {
 }
 
 export function parseUniformName(name) {
-  // name = name[name.length - 1] === ']' ?
-  // name.substr(0, name.length - 3) : name;
+  // Shortcut to avoid redundant or bad matches
+  if (name[name.length - 1] !== ']') {
+    return {
+      name,
+      length: name.length,
+      isArray: false
+    }
+  }
 
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^\[]*)(\[[0-9]+\])?/;
