@@ -118,7 +118,7 @@ export function parseUniformName(name) {
   if (name[name.length - 1] !== ']') {
     return {
       name,
-      length: name.length,
+      length: 1,
       isArray: false
     }
   }
