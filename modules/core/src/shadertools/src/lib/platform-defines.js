@@ -81,7 +81,7 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 `;
   }
   if (hasFeatures(gl, FEATURES.GLSL_FRAG_DATA) &&
-  canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA)
+  canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA, {behavior: 'require'})
   ) {
     versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available

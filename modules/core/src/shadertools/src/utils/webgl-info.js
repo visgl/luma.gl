@@ -88,8 +88,8 @@ export function canCompileGLGSExtension(gl, cap, opts = {}) {
   }
 
   const extensionName = feature[0];
-  // "#extension extensionName require" results in error when not supported
-  const source = `#extension GL_${extensionName} : require\nvoid main(void) {}`;
+  const behavior = opts.behavior || 'enable';
+  const source = `#extension GL_${extensionName} : ${behavior}\nvoid main(void) {}`;
 
   const shader = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(shader, source);
