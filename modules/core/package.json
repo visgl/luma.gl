@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "6.3.0-alpha.2",
+  "version": "7.0.0-alpha.1",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "contributors": [
