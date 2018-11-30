@@ -3,7 +3,7 @@ import test from 'tape-catch';
 import {Program, Texture2D} from 'luma.gl';
 import {isBrowser} from 'luma.gl/utils';
 import {equals} from 'math.gl';
-import {checkUniformValues, areUniformsEqual} from 'luma.gl/webgl/uniforms';
+import {checkUniformValues, areUniformsEqual, parseUniformName} from 'luma.gl/webgl/uniforms';
 
 import {fixture} from 'luma.gl/test/setup';
 
@@ -453,5 +453,20 @@ test('WebGL#Uniforms areUniformsEqual', t => {
     t.is(areUniformsEqual(testCase.value1, testCase.value2), testCase.equals, testCase.title);
   });
 
+  t.end();
+});
+
+test('WebGL#Uniforms parseUniformName', t => {
+  const regularUniform = parseUniformName('position');
+  t.equal(regularUniform.name, 'position');
+  t.ok(!regularUniform.isArray);
+
+  const arrayUniform = parseUniformName('position[0]');
+  t.equal(arrayUniform.name, 'position');
+  t.ok(arrayUniform.isArray);
+
+  const structArrayUniform = parseUniformName('lights[0].color');
+  t.equal(structArrayUniform.name, 'lights[0].color');
+  t.ok(!structArrayUniform.isArray);
   t.end();
 });
