@@ -1,3 +1,6 @@
+## 6.3.1 - Dec 04
+
+- IE browser WA: disable adding draw_buffers extension to shader source (#794)
 
 ## 6.3.0 - Nov 19
 
