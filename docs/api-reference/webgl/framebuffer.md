@@ -7,7 +7,7 @@ For additional information, see OpenGL Wiki [Framebuffer](https://www.khronos.or
 
 ## Functionality
 
-luma.gl adds 
+luma.gl adds
 
 
 
@@ -231,6 +231,16 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 * `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
 
 
+### update(opts: Object) : Framebuffer
+
+Updates Framebuffers attachments using provided Texture and Renderbuffer objects. Optionally sets read and draw buffers when using WebGL2 context.
+
+* `attachments` - a map of attachments.
+* `readBuffer` - Buffer to be set as read buffer (WebGL2)
+* `drawBuffers` - Buffers to be set as draw buffers (WebGL2)
+* `clearAttachments` - When set to true, will first unattach all  binding points, default value is `false`.
+* `resizeAttachments` - When set to true, all attachments will be re-sized to Framebuffers size, default value is `true`.
+
 ### resize({width: Number, height: Number}) : Framebuffer
 
 `Framebuffer.resize({width, height})`
@@ -248,13 +258,17 @@ Returns itself to enable chaining
 WebGL References see `initialize`.
 
 
-### attach(attachments : Object) : Framebuffer
+### attach(attachments : Object, opts: Object) : Framebuffer
 
 Used to attach or unattach `Texture`s and `Renderbuffer`s from the `Framebuffer`s various attachment points.
 
 `Framebuffer.attach(attachments)`
 
 * `attachments` - a map of attachments.
+* opts
+  * `clearAttachments` - When set to true, will first unattach all  binding points, default value is `false`.
+  * `resizeAttachments` - When set to true, all attachments will be re-sized to Framebuffers size, default value is `true`.
+
 
 Returns itself to enable chaining.
 

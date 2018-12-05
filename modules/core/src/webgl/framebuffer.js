@@ -128,9 +128,10 @@ export default class Framebuffer extends Resource {
     attachments = {},
     readBuffer,
     drawBuffers,
-    clearAttachments = false
+    clearAttachments = false,
+    resizeAttachments = true
   }) {
-    this.attach(attachments, {clearAttachments});
+    this.attach(attachments, {clearAttachments, resizeAttachments});
 
     const {gl} = this;
     // Multiple render target support, set read buffer and draw buffers
@@ -175,7 +176,7 @@ export default class Framebuffer extends Resource {
   }
 
   // Attach from a map of attachments
-  attach(attachments, {clearAttachments = false} = {}) {
+  attach(attachments, {clearAttachments = false, resizeAttachments = true} = {}) {
     const newAttachments = {};
 
     // Any current attachments need to be removed, add null values to map
@@ -212,7 +213,7 @@ export default class Framebuffer extends Resource {
       }
 
       // Resize objects
-      if (object) {
+      if (resizeAttachments && object) {
         object.resize({width: this.width, height: this.height});
       }
     }
