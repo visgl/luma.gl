@@ -485,7 +485,6 @@ export default class Texture extends Resource {
   copyFramebuffer({
     target = this.target,
     framebuffer,
-    offset = 0,
     x = 0,
     y = 0,
     width,
@@ -499,7 +498,7 @@ export default class Texture extends Resource {
     }
 
     // target
-    this.bind();
+    this.bind(0);
     this.gl.copyTexImage2D(
       this.target, level, internalFormat, x, y, width, height, border);
     this.unbind();
@@ -508,6 +507,40 @@ export default class Texture extends Resource {
       framebuffer.unbind();
     }
   }
+
+  /**
+   * Updates defined area of a two-dimensional texture image or cube-map texture image with
+   * pixels from the current framebuffer (rather than from client memory).
+   * (gl.copyTexSubImage2D wrapper)
+   *
+   * Note: does not allocated memory for the texture, it is assumed the texture has enough memory for the copy.
+   */
+  copySubFramebuffer({
+    target = this.target,
+    framebuffer,
+    xOffset = 0,
+    yOffset = 0,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0
+  }) {
+    if (framebuffer) {
+      framebuffer.bind();
+    }
+
+    // target
+    this.bind(0);
+    this.gl.copyTexSubImage2D(
+      this.target, level, xOffset, yOffset, x, y, width, height);
+    this.unbind();
+
+    if (framebuffer) {
+      framebuffer.unbind();
+    }
+  }
+
 
   getActiveUnit() {
     return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;

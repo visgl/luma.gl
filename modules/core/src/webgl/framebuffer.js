@@ -668,8 +668,17 @@ export default class Framebuffer extends Resource {
   }
 
   _unattach({attachment}) {
-    this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
-    this.gl.framebufferRenderbuffer(GL.FRAMEBUFFER, attachment, GL.RENDERBUFFER, null);
+    const oldAttachment = this.attachments[attachment];
+    if (!oldAttachment) {
+      return;
+    }
+    if (oldAttachment instanceof Renderbuffer) {
+      // render buffer
+      this.gl.framebufferRenderbuffer(GL.FRAMEBUFFER, attachment, GL.RENDERBUFFER, null);
+    } else {
+      // Must be a texture attachment
+      this.gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, GL.TEXTURE_2D, null, 0);
+    }
     delete this.attachments[attachment];
   }
 

@@ -165,7 +165,6 @@ Note that binding a texture into a Framebuffer's color buffer and rendering can 
   Texture.copyFramebuffer({
     target = this.target,
     framebuffer,
-    offset = 0,
     x = 0,
     y = 0,
     width,
@@ -179,6 +178,31 @@ Note that binding a texture into a Framebuffer's color buffer and rendering can 
 The following WebGL APIs are called in the function
 
 [gl.copyTexImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexImage2D), [gl.bindFramebuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
+
+
+### copySubFramebuffer
+
+Updates defined area of a two-dimensional texture image or cube-map texture image with pixels from the current framebuffer (rather than from client memory). (gl.copyTexSubImage2D wrapper)
+
+Note: does not allocated memory for the texture, it is assumed the texture has enough memory for the copy.
+
+```js
+  Texture.copySubFramebuffer({
+    target = this.target,
+    framebuffer,
+    xOffset = 0,
+    yOffset = 0,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    level = 0
+  });
+```
+
+The following WebGL APIs are called in the function
+
+[gl.copyTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexSubImage2D), [gl.bindFramebuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
 ### getActiveUnit
