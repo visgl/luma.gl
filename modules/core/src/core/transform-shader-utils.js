@@ -6,13 +6,12 @@ const SIZE_UNIFORM_PREFIX = 'transform_uSize_';
 const VS_POS_VARIABLE = 'transform_position';
 
 // Scan provided vertex shader
-// for each texture attribute, inject sampler instructions and build uniforms for size and sampler
+// for each texture attribute, inject sampler instructions and build uniforms for sampler
 // for texture target, get varying type and inject position instruction
 export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, targetTexture}) {
   const texAttributeNames = Object.keys(sourceTextureMap);
   let sourceCount = texAttributeNames.length;
   let targetTextureType = null;
-  const uniforms = {};
   const samplerTextureMap = {};
   let updatedVs = vs;
   let finalInject = {};
@@ -28,7 +27,6 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
           updateVsLines[index] = updatedLine;
           // sampleInstructions.push(sampleInstruction);
           finalInject = combineInjects([finalInject, inject]);
-          Object.assign(uniforms, updated.uniforms);
           Object.assign(samplerTextureMap, updated.samplerTextureMap);
           sourceCount--;
         }
@@ -41,8 +39,6 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
     if (targetTextureVarying) {
       assert(targetTexture);
       const sizeName = `${SIZE_UNIFORM_PREFIX}${targetTextureVarying}`;
-      const {width, height} = targetTexture;
-      uniforms[sizeName] = [width, height];
 
       const uniformDeclaration = `uniform vec2 ${sizeName};\n`;
       const posInstructions = `\
@@ -59,8 +55,6 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
   return {
     // updated vertex shader (commented texture attribute definition)
     vs: updatedVs,
-    // sampler size unitforms
-    uniforms,
     // type (float, vec2, vec3 of vec4) target texture varying
     targetTextureType,
     // required vertex and fragment shader injects
@@ -69,6 +63,22 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
     // usefull when swapping textures, as source and destination texture change when swap is called.
     samplerTextureMap,
   };
+}
+
+// builds and returns an object contaning size uniform for each texture
+export function getSizeUniforms({sourceTextureMap, targetTextureVarying, targetTexture}) {
+  const uniforms = {};
+  let width;
+  let height;
+  if (targetTextureVarying) {
+    ({width, height} = targetTexture);
+    uniforms[`${SIZE_UNIFORM_PREFIX}${targetTextureVarying}`] = [width, height];
+  }
+  for (const textureName in sourceTextureMap) {
+    ({width, height} = sourceTextureMap[textureName]);
+    uniforms[`${SIZE_UNIFORM_PREFIX}${textureName}`] =  [width, height];
+  }
+  return uniforms;
 }
 
 // Checks if provided line is defining an attribute, if so returns details otherwise null
@@ -94,9 +104,8 @@ export function getVaryingType(line, varying) {
   return qualaiferDetails.name === varying ? qualaiferDetails.type : null;
 }
 
-// build required definitions, sample instructions and uniforms for each texture attribute
+// build required definitions, sample instructions for each texture attribute
 export function processAttributeDefinition(line, textureMap) {
-  const uniforms = {};
   const samplerTextureMap = {};
   const attributeData = getAttributeDefinition(line);
   if (!attributeData) {
@@ -111,9 +120,7 @@ export function processAttributeDefinition(line, textureMap) {
     const sampleInstruction =
       `  ${type} ${name} = transform_getInput(${samplerName}, ${sizeName}).${channels};\n`;
 
-    const {width, height} = textureMap[name];
     samplerTextureMap[samplerName] = name;
-    uniforms[sizeName] = [width, height];
     const inject = {
       'vs:#decl': uniformDeclerations,
       'vs:#main-start': sampleInstruction
@@ -125,8 +132,6 @@ export function processAttributeDefinition(line, textureMap) {
       updatedLine,
       // inject object with sampler instructions.
       inject,
-      // sampler size uniforms
-      uniforms,
       // sampler name to texture name map
       samplerTextureMap
     };

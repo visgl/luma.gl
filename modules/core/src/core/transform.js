@@ -12,7 +12,7 @@ import {
 import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log, isObjectEmpty} from '../utils';
-import {updateForTextures} from './transform-shader-utils';
+import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {
@@ -60,6 +60,9 @@ export default class Transform {
     this.framebuffers = new Array(2);
     this._createdBuffers = {};
     this.elementIDBuffer = null;
+
+    // reference source texture name for target texture
+    this._targetRefTexName = null;
 
     this._initialize(props);
     Object.seal(this);
@@ -116,8 +119,13 @@ export default class Transform {
     return packedPixels;
   }
 
+  // returns current framebuffer object that is being used.
+  getFramebuffer() {
+    return this.framebuffers[this.currentIndex];
+  }
+
   _getInputs() {
-    const samplerUniforms = {};
+    const uniforms = {};
     const current = this.currentIndex;
 
     // Buffer inputs
@@ -129,17 +137,26 @@ export default class Transform {
       attributes.transform_elementID = this.elementIDBuffer;
       for (const sampler in this.samplerTextureMap) {
         const textureName = this.samplerTextureMap[sampler];
-        samplerUniforms[sampler] = this.sourceTextures[current][textureName];
+        uniforms[sampler] = this.sourceTextures[current][textureName];
       }
+      // Also update size uniforms , add samplerSizeMap
       this._setSourceTextureParameters();
+
+      // get texture size uniforms
+      const sizeUniforms = getSizeUniforms({
+        sourceTextureMap: this.sourceTextures[current],
+        targetTextureVarying: this.targetTextureVarying,
+        targetTexture: this.targetTextures[current]
+      });
+      Object.assign(uniforms, sizeUniforms);
     }
-    return {attributes, samplerUniforms};
+    return {attributes, uniforms};
   }
 
   // Run one transform feedback loop.
   run(opts = {}) {
-    const {attributes, samplerUniforms} = this._getInputs();
-    const uniforms = Object.assign({}, samplerUniforms, opts.uniforms);;
+    const {attributes, uniforms} = this._getInputs();
+    Object.assign(uniforms, opts.uniforms);
     const parameters = Object.assign({}, opts.parameters);
     const {clearRenderTarget = true} = opts;
     let framebuffer = null;
@@ -204,13 +221,9 @@ export default class Transform {
     const {_sourceTextures, _targetTexture} = opts;
     if (_sourceTextures || _targetTexture) {
       Object.assign(this.sourceTextures[currentIndex], _sourceTextures);
-      const targetTexture = this._getDestinationTexture(_targetTexture);
-      if (targetTexture) {
-        this.targetTextures[currentIndex] =  this._getDestinationTexture(_targetTexture);
-        this.framebuffers[currentIndex].update({
-          [GL.COLOR_ATTACHMENT0]: this.targetTextures[currentIndex]
-        });
-      }
+      // if _targetTexture specified use it, other wise rebuild traget texture using
+      // '_targetRefTexName' as coresponding source texture may have been update.
+      this._updateTargetTexture(_targetTexture || this._targetRefTexName, currentIndex);
       // textures have changed, need to re-setup swap textures.
       this._setupSwapTextures();
     }
@@ -234,6 +247,25 @@ export default class Transform {
     }
     this.model.setVertexCount(elementCount);
     this.elementCount = elementCount;
+  }
+
+  _updateTargetTexture(texture, index) {
+    const targetTexture = this._buildTargetTexture(texture);
+    if (targetTexture) {
+      this.targetTextures[index] =  targetTexture;
+      if (this.framebuffers[index]) {
+        // First update texture without re-sizing attachments
+        this.framebuffers[index].update({
+          attachments: {[GL.COLOR_ATTACHMENT0]: this.targetTextures[index]},
+          resizeAttachments: false
+        });
+        // Resize to new taget texture size
+        this.framebuffers[index].resize({
+          width: targetTexture.width,
+          height: targetTexture.height
+        });
+      }
+    }
   }
 
   // Private
@@ -329,7 +361,7 @@ export default class Transform {
     this.hasSourceTextures = Object.keys(this.sourceTextures[0]).length > 0;
 
     if (this.targetTextureVarying) {
-      const texture = this._getDestinationTexture(_targetTexture);
+      const texture = this._buildTargetTexture(_targetTexture);
       // Either a texture or refAttribute must be provided
       assert(texture);
       this.targetTextures[0] = texture;
@@ -337,7 +369,7 @@ export default class Transform {
     }
   }
 
-  _getDestinationTexture(textureOrAttribute) {
+  _buildTargetTexture(textureOrAttribute) {
 
     if (textureOrAttribute instanceof Texture2D) {
       return textureOrAttribute;
@@ -346,6 +378,9 @@ export default class Transform {
     if (!refTexture) {
       return null;
     }
+    // save reference texture name, when corresponding source texture is updated
+    // we also update target texture.
+    this._targetRefTexName = textureOrAttribute;
     return cloneTextureFrom(refTexture, {
       parameters: {
         [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -446,16 +481,8 @@ export default class Transform {
     Object.assign(this.sourceTextures[next], this.sourceTextures[current]);
 
     this.sourceTextures[next][this._swapTexture] = this.targetTextures[current];
-    this.targetTextures[next] = this.sourceTextures[current][this._swapTexture];
 
-    // When triggered by `update()` Framebuffer objects are already set up,
-    // if so update buffers
-    if (this.framebuffers[next]) {
-      this.framebuffers[next].update({
-        [GL.COLOR_ATTACHMENT0]: this.targetTextures[next]
-      });
-    }
-
+    this._updateTargetTexture(this.sourceTextures[current][this._swapTexture], next);
   }
 
   // build Model and TransformFeedback objects
