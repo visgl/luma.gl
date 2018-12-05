@@ -5,8 +5,9 @@ import GL from '../constants';
 
 export const HP_BUILD_VS_UTILS = `\
 // returns the top left texture coordiante corresponding to 4X4 block in higher level texture.
-// size: minified texture size
+// size: lower level texture size
 // scale: usually (2, 2)
+// offset: offset with-in 4X4 block of higher level texture
 vec2 hp_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
   // use actual (scaled) texture size to calcualte offset (multiplied by scale)
   vec2 scaledSize = size * scale;
@@ -26,7 +27,11 @@ vec2 hp_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
   return texCoord + (offset / scaledSize) + inPixelOffset;
 }
 
-// returns current pixel's neighbors using scale and offset
+// returns pixel value from higher level texture based on scale and offset
+// texSampler: higher level texture sampler
+// size: lower level texture size
+// scale: usually (2, 2)
+// offset: offset with-in 4X4 block of higher level texture
 vec4 hp_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
   vec2 texCoord = hp_getTexCoord(size, scale, offset);
   vec4 textureColor = texture2D(texSampler, texCoord);
@@ -34,7 +39,7 @@ vec4 hp_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
 }
 `;
 
-// Histopyramid building texture
+// Vertex shader to build histopyramid
 const HP_BUILD_VS = `\
 attribute vec4 inTexture;
 varying vec4 outTexture;
@@ -56,6 +61,9 @@ function isPowerOfTwo(x){
 }
 
 // builds histopyramid for a given texture and returns individual levels and flatended pyramid texture
+// Returns object
+// * pyramidTextures: Array with all individual mip levels
+// * flatPyramidTexture: Texture with all mip levels laid out horizontally
 export function getHistoPyramid({gl, texture}) {
   // Texture must be a power of two sized square texture
   const {width, height} = texture;
@@ -73,7 +81,6 @@ export function getHistoPyramid({gl, texture}) {
   // build empty textures
   for (let i = 1; i < levelCount; i++) {
     const size = width / Math.pow(2, i);
-    // flatPyramidSize += size;
     pyramidTextures.push(cloneTextureFrom(texture, {
       width: size,
       height: size
@@ -83,7 +90,6 @@ export function getHistoPyramid({gl, texture}) {
   const flatPyramidTexture = cloneTextureFrom(texture, {
     width: flatPyramidSize,
     height: flatPyramidSize,
-    // textureUnit: 0 // safe unit while working between two source and destination texture (0 and 1)
     parameters: {
       [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST

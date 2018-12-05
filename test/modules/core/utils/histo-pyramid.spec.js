@@ -47,8 +47,6 @@ test('histo-pyramid#hp_getTexCoord', t => {
   }
   `;
 
-  // const size = new Buffer(gl, new Float32Array([2, 2]));
-  // const scale = new Buffer(gl, new Float32Array([2, 2]));
   const offset = new Buffer(gl, new Float32Array([
     0, 0,
     1, 0,
@@ -67,8 +65,6 @@ test('histo-pyramid#hp_getTexCoord', t => {
 
   const transform = new Transform(gl, {
     sourceBuffers: {
-      // size,
-      // scale,
       offset
     },
     feedbackBuffers: {
@@ -87,7 +83,6 @@ test('histo-pyramid#hp_getTexCoord', t => {
     }
   });
 
-//  const expectedData = new Float32Array([0,0]);
   const outData = transform.getBuffer('texcoord').getData();
   t.ok(equals(expectedTexcoord, outData), 'texcoordinates should match');
   t.end();
@@ -225,7 +220,6 @@ void main()
   outTexture = pixel.x + rightPixel.x + bottomPixel.x + rightBottomPixel.x;
 }
 `;
-
 
 test('histo-pyramid#Minification to 1X1)', t => {
   const {gl2} = fixture;

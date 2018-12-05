@@ -154,6 +154,7 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 export {default as pbr} from './shadertools/src/modules/pbr/pbr';
 
 export {getHistoPyramid} from './utils/histo-pyramid';
+
 // DEPRECATED EXPORTS IN v6.0
 
 export {default as ClipSpaceQuad} from './models/clip-space';

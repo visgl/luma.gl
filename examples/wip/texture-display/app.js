@@ -1,3 +1,7 @@
+/*
+  Test app to verify a texture contents, takes a texture and maps each pixel to a grid cell.
+*/
+
 import {AnimationLoop, Model, Texture2D, Buffer, setParameters, getHistoPyramid} from 'luma.gl';
 import GL from 'luma.gl/constants';
 
@@ -37,10 +41,11 @@ uniform sampler2D uSampler;
 void main(void) {
   vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
   gl_FragColor = vec4(textureColor.rgb, 1.0);
-  // gl_FragColor.r = 1.0;
 }
 `;
-const MARGIN = 0.2; // pixels
+
+// margin between grid cells
+const MARGIN = 0.2;
 
 function generateTriangleVerticesInRect(start, end) {
   const startX = start[0] + MARGIN;
@@ -48,8 +53,6 @@ function generateTriangleVerticesInRect(start, end) {
   const endX = end[0] - MARGIN;
   const endY = end[1] - MARGIN;
 
-  // [1, 1,  -1, 1,  1, -1,  -1, -1];
-  // [1, 1,  -1, 1,  1, -1,  -1, -1]
   return [endX, endY,  startX, endY,  endX, startY, startX, startY];
 }
 
@@ -58,7 +61,6 @@ function generateOffsetsForGrid(windowSize, cellSize) {
   const offsets = [];
   for (let x = 0; x < windowSize[0]; x = x + cellSize[0]) {
     for (let y = 0; y < windowSize[1]; y = y + cellSize[1]) {
-      // const newPoints = generateTriangleVerticesInRect([x, y], [x + cellSize[0], y + cellSize[1]]);
       offsets.push(x, y);
     }
   }
@@ -79,7 +81,15 @@ function getTextureToDisplay(gl) {
   const pixelCount = texWidth * texHeight;
   const textureData = new Float32Array(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) {
-    textureData[i * 4] = Math.random() / 15;
+    // textureData[i * 4] = Math.random() / 50;
+    const channel = Math.random() * 3.0;
+    if (channel > 2) {
+      textureData[i * 4] = Math.random() / 20;
+    } else if (channel > 1) {
+      textureData[i * 4 + 1] = Math.random() / 20;
+    } else {
+      textureData[i * 4 + 2] = Math.random() / 20;
+    }
   }
 
   const texture = new Texture2D(gl, {
@@ -98,11 +108,8 @@ function getTextureToDisplay(gl) {
   });
 
   const hpResults = getHistoPyramid({gl, texture});
-  // return hpResults.pyramidTextures[2]; // TODO- not working for 1X1, when updated shader to hard coded color
+  // return hpResults.pyramidTextures[2];
   return hpResults.flatPyramidTexture;
-  // -here-
-  // given hard coded color is working texture write is ok
-  // texture sample must be bad. verify texture co-ordinate generation when rendering to 1 X 1 texture
 }
 
 const animationLoop = new AnimationLoop({
@@ -146,8 +153,8 @@ const animationLoop = new AnimationLoop({
       },
       isInstanced: 1,
       instanceCount: gridOffsetsData.length / 2,
-      vertexCount: 4, // gridVertices.length / 2,
-      drawMode: GL.TRIANGLE_STRIP // GL.LINE_STRIP // TRIANGLE_STRIP
+      vertexCount: 4,
+      drawMode: GL.TRIANGLE_STRIP
     });
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
