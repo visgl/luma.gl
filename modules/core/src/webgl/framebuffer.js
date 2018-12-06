@@ -113,7 +113,7 @@ export default class Framebuffer extends Resource {
       }
     } else {
       // Create any requested default attachments
-      attachments = this._createDefaultAttachments({color, depth, stencil, width, height});
+      attachments = this._createDefaultAttachments(color, depth, stencil, width, height);
     }
 
     this.update({clearAttachments: true, attachments, readBuffer, drawBuffers});
@@ -201,7 +201,7 @@ export default class Framebuffer extends Resource {
       const descriptor = newAttachments[attachment];
       let object = descriptor;
       if (!object) {
-        this._unattach({attachment});
+        this._unattach(attachment);
       } else if (object instanceof Renderbuffer) {
         this._attachRenderbuffer({attachment, renderbuffer: object});
       } else if (Array.isArray(descriptor)) {
@@ -607,7 +607,7 @@ export default class Framebuffer extends Resource {
 
   // PRIVATE METHODS
 
-  _createDefaultAttachments({color, depth, stencil, width, height}) {
+  _createDefaultAttachments(color, depth, stencil, width, height) {
     let defaultAttachments = null;
 
     // Add a color buffer if requested and not supplied
@@ -673,7 +673,7 @@ export default class Framebuffer extends Resource {
     return defaultAttachments;
   }
 
-  _unattach({attachment}) {
+  _unattach(attachment) {
     const oldAttachment = this.attachments[attachment];
     if (!oldAttachment) {
       return;

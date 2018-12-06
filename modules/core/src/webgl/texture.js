@@ -683,14 +683,14 @@ export default class Texture extends Resource {
     // Deduce compression from format
     compressed = compressed || (textureFormat && textureFormat.compressed);
 
-    ({width, height} = this._deduceImageSize({data, width, height}));
+    ({width, height} = this._deduceImageSize(data, width, height));
 
     return {dataFormat, type, compressed, width, height, format, data};
   }
 
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
   // eslint-disable-next-line complexity
-  _deduceImageSize({data, width, height}) {
+  _deduceImageSize(data, width, height) {
     let size;
 
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
