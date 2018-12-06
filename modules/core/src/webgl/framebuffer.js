@@ -401,6 +401,8 @@ export default class Framebuffer extends Resource {
   // }
 
   // Copy a rectangle from a framebuffer attachment into a texture (at an offset)
+  // NOTE: assumes texture has enough storage allocated
+  // eslint-disable-next-line complexity
   copyToTexture({
     // Target
     texture,
@@ -419,12 +421,15 @@ export default class Framebuffer extends Resource {
   }) {
     const {gl} = this;
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    const prevBuffer = gl.readBuffer(attachment);
-
-    width = Number.isFinite(width) ? width : texture.width;
-    height = Number.isFinite(height) ? height : texture.height;
-
+    // TODO - support gl.readBuffer (WebGL2 only)
+    // const prevBuffer = gl.readBuffer(attachment);
+    assert(target || texture);
     // target
+    if (texture) {
+      width = Number.isFinite(width) ? width : texture.width;
+      height = Number.isFinite(height) ? height : texture.height;
+      texture.bind(0);
+    }
     switch (texture.target) {
     case GL.TEXTURE_2D:
     case GL.TEXTURE_CUBE_MAP:
@@ -455,10 +460,10 @@ export default class Framebuffer extends Resource {
       break;
     default:
     }
-
-    gl.readBuffer(prevBuffer);
+    if (texture) {
+      texture.unbind();
+    }
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-
     return texture;
   }
 

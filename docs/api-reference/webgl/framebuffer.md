@@ -87,14 +87,15 @@ withParameters(gl, {framebuffer: framebuffer1}, () => {
 Reading data from a framebuffer color attachment.
 
 ```js
-// With CPU and GPU sync
+// Reading into an Array (CPU memory), results in a CPU and GPU sync
 const data = framebuffer.readPixels({
   x: 0,
   y: 0,
   width: 10,
   height: 10});
 
-// Without CPU and GPU sync
+
+// Reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync
 const buffer = framebuffer.readPixelsToBuffer({
   x: 0,
   y: 0,
@@ -108,7 +109,30 @@ const data = buffer.getData();
 model.setAttributes({
   attribute_name: buffer
 });
+
+
+// Reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync
+
+framebuffer.copyToTexture({
+  texture, // Texture object to which data to be copied
+
+  // offset within texture
+  xoffset,
+  yoffset,
+  zoffset,
+
+  // rectangular area in framebuffer which needs to be copied
+  x,
+  y,
+  width,
+  height,
+});
+
+
 ```
+
+Reading data from a framebuffer into a texture.
+
 
 Blitting between framebuffers (WebGL2)
 
@@ -290,25 +314,48 @@ This function makes calls to the following WebGL APIs:
 [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL2 only)
 
 
-### checkStatus
+### checkStatus() : Framebuffer
 
 Check that the framebuffer contains a valid combination of attachments
 
 [`gl.checkFramebufferStatus`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/checkFramebufferStatus), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
-### clear
+### clear(opts: Object) : Framebuffer
 
 Clears the contents (pixels) of the framebuffer attachments.
 
-* `color` (Boolean or Array) - clears all active color buffers (any selected `drawBuffer`s) with either the provided color or the default color.
-* `depth`
-* `stencil`
-* `drawBuffers`=`[]` - An array of color values, with indices matching the buffers selected by `drawBuffers` argument.
+* opts
+  * `color` (Boolean or Array) - clears all active color buffers (any selected `drawBuffer`s) with either the provided color or the default color.
+  * `depth`
+  * `stencil`
+  * `drawBuffers`=`[]` - An array of color values, with indices matching the buffers selected by `drawBuffers` argument.
 
+Notes:
 * The scissor box bounds the cleared region.
 * The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect the operation of `clear`.
 * Alpha function, blend function, logical operation, stenciling, texture mapping, and depth-buffering are ignored by `clear`.
+
+
+### copyToTexture(opts: Object) : Framebuffer
+
+Copies pixels from the this framebuffer into the specified area of a two-dimensional texture image or cube-map texture image. (gl.copyTexSubImage2D and gl.copyTexSubImage3D wrapper)
+
+* opts
+
+  Target options
+  * `texture` (Texture, optional) - If provided this object will be bound and data copied into it, if not provided `target` must be set.
+  * `target` (GLenum, optional) - Binding point where target texture is currently bound. Either `texture` or `target` must be specified.
+  * `xoffset` (GLint, optional, default: 0) - X offset with in target texture.
+  * `yoffset` (GLint, optional, default: 0) - Y offset with in target texture.
+  * `zoffset` (GLint, optional, default: 0, WebGL2) - Z offset with in target texture, when using copying into 2D Array of 3D texture.
+
+  Source options
+  * `x` (GLint, optional, default: 0) - x coordinate of the lower left corner where to start copying.
+  * `y` (GLint, optional, default: 0) - y coordinate of the lower left corner where to start copying.
+  * `width` (GLint, optional, default: texture.width) - Width of the are to be copied, if not specified defaults to texture's width
+  * `height` (GLint, optional, default: texture.height) - Height of the area to be copied, if not specified defaults to texture.height.
+
 
 ### readPixels
 
