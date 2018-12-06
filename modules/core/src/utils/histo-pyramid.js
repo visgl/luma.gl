@@ -118,9 +118,10 @@ export function getHistoPyramid({gl, texture}) {
     transform.run();
 
     // copy the result to the flaten pyramid texture
-    flatPyramidTexture.copySubFramebuffer({
-      framebuffer: transform.getFramebuffer(),
-      xOffset: flatOffset,
+    const framebuffer = transform.getFramebuffer();
+    framebuffer.copyToTexture({
+      texture: flatPyramidTexture,
+      xoffset: flatOffset,
       width: outSize[0],
       height: outSize[1]
     });
