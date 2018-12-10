@@ -113,7 +113,7 @@ export default class Framebuffer extends Resource {
       }
     } else {
       // Create any requested default attachments
-      attachments = this._createDefaultAttachments({color, depth, stencil, width, height});
+      attachments = this._createDefaultAttachments(color, depth, stencil, width, height);
     }
 
     this.update({clearAttachments: true, attachments, readBuffer, drawBuffers});
@@ -128,9 +128,10 @@ export default class Framebuffer extends Resource {
     attachments = {},
     readBuffer,
     drawBuffers,
-    clearAttachments = false
+    clearAttachments = false,
+    resizeAttachments = true
   }) {
-    this.attach(attachments, {clearAttachments});
+    this.attach(attachments, {clearAttachments, resizeAttachments});
 
     const {gl} = this;
     // Multiple render target support, set read buffer and draw buffers
@@ -175,7 +176,7 @@ export default class Framebuffer extends Resource {
   }
 
   // Attach from a map of attachments
-  attach(attachments, {clearAttachments = false} = {}) {
+  attach(attachments, {clearAttachments = false, resizeAttachments = true} = {}) {
     const newAttachments = {};
 
     // Any current attachments need to be removed, add null values to map
@@ -200,7 +201,7 @@ export default class Framebuffer extends Resource {
       const descriptor = newAttachments[attachment];
       let object = descriptor;
       if (!object) {
-        this._unattach({attachment});
+        this._unattach(attachment);
       } else if (object instanceof Renderbuffer) {
         this._attachRenderbuffer({attachment, renderbuffer: object});
       } else if (Array.isArray(descriptor)) {
@@ -212,7 +213,7 @@ export default class Framebuffer extends Resource {
       }
 
       // Resize objects
-      if (object) {
+      if (resizeAttachments && object) {
         object.resize({width: this.width, height: this.height});
       }
     }
@@ -400,6 +401,8 @@ export default class Framebuffer extends Resource {
   // }
 
   // Copy a rectangle from a framebuffer attachment into a texture (at an offset)
+  // NOTE: assumes texture has enough storage allocated
+  // eslint-disable-next-line complexity
   copyToTexture({
     // Target
     texture,
@@ -418,12 +421,15 @@ export default class Framebuffer extends Resource {
   }) {
     const {gl} = this;
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    const prevBuffer = gl.readBuffer(attachment);
-
-    width = Number.isFinite(width) ? width : texture.width;
-    height = Number.isFinite(height) ? height : texture.height;
-
+    // TODO - support gl.readBuffer (WebGL2 only)
+    // const prevBuffer = gl.readBuffer(attachment);
+    assert(target || texture);
     // target
+    if (texture) {
+      width = Number.isFinite(width) ? width : texture.width;
+      height = Number.isFinite(height) ? height : texture.height;
+      texture.bind(0);
+    }
     switch (texture.target) {
     case GL.TEXTURE_2D:
     case GL.TEXTURE_CUBE_MAP:
@@ -454,10 +460,10 @@ export default class Framebuffer extends Resource {
       break;
     default:
     }
-
-    gl.readBuffer(prevBuffer);
+    if (texture) {
+      texture.unbind();
+    }
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-
     return texture;
   }
 
@@ -601,7 +607,7 @@ export default class Framebuffer extends Resource {
 
   // PRIVATE METHODS
 
-  _createDefaultAttachments({color, depth, stencil, width, height}) {
+  _createDefaultAttachments(color, depth, stencil, width, height) {
     let defaultAttachments = null;
 
     // Add a color buffer if requested and not supplied
@@ -667,9 +673,18 @@ export default class Framebuffer extends Resource {
     return defaultAttachments;
   }
 
-  _unattach({attachment}) {
-    this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
-    this.gl.framebufferRenderbuffer(GL.FRAMEBUFFER, attachment, GL.RENDERBUFFER, null);
+  _unattach(attachment) {
+    const oldAttachment = this.attachments[attachment];
+    if (!oldAttachment) {
+      return;
+    }
+    if (oldAttachment instanceof Renderbuffer) {
+      // render buffer
+      this.gl.framebufferRenderbuffer(GL.FRAMEBUFFER, attachment, GL.RENDERBUFFER, null);
+    } else {
+      // Must be a texture attachment
+      this.gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, GL.TEXTURE_2D, null, 0);
+    }
     delete this.attachments[attachment];
   }
 

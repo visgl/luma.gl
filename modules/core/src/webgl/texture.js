@@ -485,7 +485,6 @@ export default class Texture extends Resource {
   copyFramebuffer({
     target = this.target,
     framebuffer,
-    offset = 0,
     x = 0,
     y = 0,
     width,
@@ -499,7 +498,7 @@ export default class Texture extends Resource {
     }
 
     // target
-    this.bind();
+    this.bind(0);
     this.gl.copyTexImage2D(
       this.target, level, internalFormat, x, y, width, height, border);
     this.unbind();
@@ -684,14 +683,14 @@ export default class Texture extends Resource {
     // Deduce compression from format
     compressed = compressed || (textureFormat && textureFormat.compressed);
 
-    ({width, height} = this._deduceImageSize({data, width, height}));
+    ({width, height} = this._deduceImageSize(data, width, height));
 
     return {dataFormat, type, compressed, width, height, format, data};
   }
 
   /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
   // eslint-disable-next-line complexity
-  _deduceImageSize({data, width, height}) {
+  _deduceImageSize(data, width, height) {
     let size;
 
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
