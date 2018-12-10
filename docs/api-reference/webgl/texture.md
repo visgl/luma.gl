@@ -165,7 +165,6 @@ Note that binding a texture into a Framebuffer's color buffer and rendering can 
   Texture.copyFramebuffer({
     target = this.target,
     framebuffer,
-    offset = 0,
     x = 0,
     y = 0,
     width,
