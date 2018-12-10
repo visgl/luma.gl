@@ -22,7 +22,6 @@ These are early ideas not yet associated with any release
 | RFC | Author | Status | Description |
 | --- | --- | --- | --- |
 | **WIP/Draft** | | | |
-| [**Off-Thread (aka Off-Screen) Rendering**](vNext/offscreen-render-rfc.md) | @pessimistress | **Experimental** | Use the new Off-Screen API to enable WebGL to run in a separate thread. Still requires browser flag. |
 | [**Automatic Shader Module Injection**](vNext/automatic-shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
 | [**Dist Size Reduction**](vNext/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
@@ -33,6 +32,7 @@ These are early ideas not yet associated with any release
 | --- | ---    | ---    | ---         |
 | [**glTF2 support**](v7.0/gltf-support-rfc.md) | @ibgreen | **Draft** | Proposes a multi-step approach to full glTF2 support. |
 | [**Framebuffer/Texture API cleanup**](v6.2/framebuffer-texture-api-rfc.md) | @ibgreen | **Draft** | API changes to improve tree-shakeability of the big `Texture` and `Framebuffer` classes. |
+| [**Off-Thread (aka Off-Screen) Rendering**](vNext/offscreen-render-rfc.md) | @pessimistress | **Experimental** | Use the new Off-Screen API to enable WebGL to run in a separate thread. Still requires browser flag. |
 
 
 ## v6.2 RFCs
