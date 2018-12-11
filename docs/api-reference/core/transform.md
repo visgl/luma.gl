@@ -223,6 +223,7 @@ Returns current destination buffer corresponding to given varying name.
 
 * `varyingName` (`String`) - varying name.
 
+
 ### getData(opts : Object, Optional) : ArrayBufferView
 
 Reads and returns data from current destination buffer corresponding to the given varying name. When no 'varyingName' is provided, it reads and returns data from current target texture.
@@ -230,6 +231,11 @@ Reads and returns data from current destination buffer corresponding to the give
 * `opts` (`Object`={}) - options
   * `varyingName` (`String`, Optional) - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.
   * `packed` (Boolean, Optional, Default: false) - applicable only when reading data from target texture, when true, data is packed to the actual size varyings. When false return array contains 4 values (R, G, B and A) for each element. Un-used element value will be 0 for R, G and B and 1 for A channel.
+
+
+### getFramebuffer() : Framebuffer
+
+When rendering to a texture, i.e. `_targetTexture` is set, `Transform` class internally setups a `Framebuffer` object. `getFramebuffer()` returns this `Framebuffer` object.
 
 ### run({uniforms : Object, unbindModels : Object}) : Transform
 
