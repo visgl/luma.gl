@@ -153,6 +153,7 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 
 export {default as pbr} from './shadertools/src/modules/pbr/pbr';
 
+// TODO: move to gpgpu module.
 export {getHistoPyramid} from './utils/histo-pyramid';
 
 // DEPRECATED EXPORTS IN v6.0

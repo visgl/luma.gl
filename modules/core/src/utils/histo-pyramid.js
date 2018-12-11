@@ -1,14 +1,16 @@
+// TODO: move to gpgpu module.
+
 import Transform from '../core/transform';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 import {log} from '../utils';
 import GL from '../constants';
 
-export const HP_BUILD_VS_UTILS = `\
+export const HISTOPYRAMID_BUILD_VS_UTILS = `\
 // returns the top left texture coordiante corresponding to 4X4 block in higher level texture.
 // size: lower level texture size
 // scale: usually (2, 2)
 // offset: offset with-in 4X4 block of higher level texture
-vec2 hp_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
+vec2 histoPyramid_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
   // use actual (scaled) texture size to calcualte offset (multiplied by scale)
   vec2 scaledSize = size * scale;
 
@@ -32,15 +34,15 @@ vec2 hp_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
 // size: lower level texture size
 // scale: usually (2, 2)
 // offset: offset with-in 4X4 block of higher level texture
-vec4 hp_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
-  vec2 texCoord = hp_getTexCoord(size, scale, offset);
+vec4 histoPyramid_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
+  vec2 texCoord = histoPyramid_getTexCoord(size, scale, offset);
   vec4 textureColor = texture2D(texSampler, texCoord);
   return textureColor;
 }
 `;
 
 // Vertex shader to build histopyramid
-const HP_BUILD_VS = `\
+const HISTOPYRAMID_BUILD_VS = `\
 attribute vec4 inTexture;
 varying vec4 outTexture;
 
@@ -48,10 +50,10 @@ void main()
 {
   vec2 size = transform_uSize_outTexture;
   vec2 scale = vec2(2., 2.);
-  vec4 pixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0));
-  vec4 rightPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0));
-  vec4 bottomPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1));
-  vec4 rightBottomPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1));
+  vec4 pixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0));
+  vec4 rightPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0));
+  vec4 bottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1));
+  vec4 rightBottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1));
   outTexture = pixel + rightPixel + bottomPixel + rightBottomPixel;
 }
 `;
@@ -103,7 +105,7 @@ export function getHistoPyramid({gl, texture}) {
     },
     _targetTexture: pyramidTextures[1],
     _targetTextureVarying: 'outTexture',
-    vs: `${HP_BUILD_VS_UTILS}${HP_BUILD_VS}`,
+    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${HISTOPYRAMID_BUILD_VS}`,
     elementCount: pyramidTextures[1].width * pyramidTextures[1].height
   });
 

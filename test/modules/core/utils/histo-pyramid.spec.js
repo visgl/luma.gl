@@ -24,11 +24,11 @@ import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
 import transformModule from '../../../../modules/core/src/shadertools/src/modules/transform/transform';
-import {HP_BUILD_VS_UTILS} from '../../../../modules/core/src/utils/histo-pyramid';
+import {HISTOPYRAMID_BUILD_VS_UTILS} from '../../../../modules/core/src/utils/histo-pyramid';
 
 const gl = fixture.gl2;
 
-test('histo-pyramid#hp_getTexCoord', t => {
+test('histo-pyramid#histoPyramid_getTexCoord', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -43,7 +43,7 @@ test('histo-pyramid#hp_getTexCoord', t => {
 
   void main()
   {
-    texcoord = hp_getTexCoord(size, scale, offset);
+    texcoord = histoPyramid_getTexCoord(size, scale, offset);
   }
   `;
 
@@ -70,7 +70,7 @@ test('histo-pyramid#hp_getTexCoord', t => {
     feedbackBuffers: {
       texcoord
     },
-    vs: `${HP_BUILD_VS_UTILS}${VS}`,
+    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${VS}`,
     varyings: ['texcoord'],
     modules: [transformModule],
     elementCount
@@ -89,7 +89,7 @@ test('histo-pyramid#hp_getTexCoord', t => {
 });
 
 
-const HP_GETINPUT_VS = `\
+const HISTOPYRAMID_GETINPUT_VS = `\
 attribute float inTexture;
 varying float outTexture;
 uniform vec2 pixelOffset;
@@ -97,12 +97,12 @@ void main()
 {
   vec2 size = transform_uSize_outTexture;
   vec2 scale = vec2(2., 2.);
-  vec4 pixel = hp_getInput(transform_uSampler_inTexture, size, scale, pixelOffset);
+  vec4 pixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, pixelOffset);
   outTexture = pixel.x;
 }
 `;
 
-test('histo-pyramid#hp_getInput', t => {
+test('histo-pyramid#histoPyramid_getInput', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -186,7 +186,7 @@ test('histo-pyramid#hp_getInput', t => {
     },
     _targetTexture: destinationTexture,
     _targetTextureVarying: 'outTexture',
-    vs: HP_BUILD_VS_UTILS + HP_GETINPUT_VS,
+    vs: HISTOPYRAMID_BUILD_VS_UTILS + HISTOPYRAMID_GETINPUT_VS,
     elementCount: dstPixelCount
   });
 
@@ -205,7 +205,7 @@ test('histo-pyramid#hp_getInput', t => {
   t.end();
 });
 
-const HP_BUILD_VS = `\
+const HISTOPYRAMID_BUILD_VS = `\
 attribute float inTexture;
 varying float outTexture;
 
@@ -213,10 +213,10 @@ void main()
 {
   vec2 size = transform_uSize_outTexture;
   vec2 scale = vec2(2., 2.);
-  vec4 pixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0));
-  vec4 rightPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0));
-  vec4 bottomPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1));
-  vec4 rightBottomPixel = hp_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1));
+  vec4 pixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0));
+  vec4 rightPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0));
+  vec4 bottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1));
+  vec4 rightBottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1));
   outTexture = pixel.x + rightPixel.x + bottomPixel.x + rightBottomPixel.x;
 }
 `;
@@ -272,7 +272,7 @@ test('histo-pyramid#Minification to 1X1)', t => {
     },
     _targetTexture: destinationTexture,
     _targetTextureVarying: 'outTexture',
-    vs: HP_BUILD_VS_UTILS + HP_BUILD_VS,
+    vs: HISTOPYRAMID_BUILD_VS_UTILS + HISTOPYRAMID_BUILD_VS,
     elementCount
   });
 
