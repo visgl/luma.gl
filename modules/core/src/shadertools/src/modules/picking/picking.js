@@ -81,10 +81,10 @@ vec4 picking_filterHighlightColor(vec4 color) {
   if (selected) {
     vec4 highLightColor = picking_uHighlightColor * COLOR_SCALE;
 
-    float resultAlpha = highLightColor.a + color.a * (1.0 - highLightColor.a);
+    float highLightAlpha = highLightColor.a;
+    float highLightRatio = highLightAlpha / (highLightAlpha + color.a * (1.0 - highLightAlpha));
 
-    vec3 resultRGB = (highLightColor.rgb * highLightColor.a
-     + color.rgb * color.a * (1.0 - highLightColor.a)) / resultAlpha;
+    vec3 resultRGB = mix(color.rgb, highLightColor.rgb, highLightRatio);
     return vec4(resultRGB, color.a);
   } else {
     return color;
