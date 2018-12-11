@@ -249,6 +249,7 @@ export default class Transform {
     this.elementCount = elementCount;
   }
 
+  // sets target texture for rendering by updating framebuffer
   _updateTargetTexture(texture, index) {
     const targetTexture = this._buildTargetTexture(texture);
     if (targetTexture) {
@@ -369,6 +370,7 @@ export default class Transform {
     }
   }
 
+  // Builds target texture using source reference or provided texture object.
   _buildTargetTexture(textureOrAttribute) {
 
     if (textureOrAttribute instanceof Texture2D) {
