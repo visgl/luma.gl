@@ -77,7 +77,18 @@ const float COLOR_SCALE = 1. / 255.;
  */
 vec4 picking_filterHighlightColor(vec4 color) {
   bool selected = bool(picking_vRGBcolor_Aselected.a);
-  return selected ? (picking_uHighlightColor * COLOR_SCALE) : color;
+
+  if (selected) {
+    vec4 highLightColor = picking_uHighlightColor * COLOR_SCALE;
+
+    float highLightAlpha = highLightColor.a;
+    float highLightRatio = highLightAlpha / (highLightAlpha + color.a * (1.0 - highLightAlpha));
+
+    vec3 resultRGB = mix(color.rgb, highLightColor.rgb, highLightRatio);
+    return vec4(resultRGB, color.a);
+  } else {
+    return color;
+  }
 }
 
 /*
