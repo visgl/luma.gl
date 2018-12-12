@@ -2,7 +2,7 @@ import {uid} from '../utils';
 import {Vector3, Matrix4} from 'math.gl';
 import assert from '../utils/assert';
 
-export default class Object3D {
+export default class Node {
 
   constructor({id, display = true}) {
     // whether to display the object at all

@@ -1,4 +1,4 @@
-import GL from '@luma.gl/constants';
+import GL from '../constants';
 import Attribute from './attribute';
 import Node from './node';
 import {getDrawMode} from '../geometry/geometry';
@@ -24,7 +24,7 @@ const LOG_DRAW_TIMEOUT = 10000;
 const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
-export default class Model extends Node {
+export default class MeshModel extends Node {
   constructor(gl, props = {}) {
     super(props);
     assert(isWebGL(gl));
