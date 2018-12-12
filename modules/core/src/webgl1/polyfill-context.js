@@ -170,7 +170,8 @@ const WEBGL_CONTEXT_POLYFILLS = {
 
 function initializeExtensions(gl) {
   gl.luma.extensions = {};
-  const EXTENSIONS = gl.getSupportedExtensions();
+  // `getSupportedExtensions` can return null when context is lost.
+  const EXTENSIONS = gl.getSupportedExtensions() || [];
   for (const extension of EXTENSIONS) {
     gl.luma[extension] = gl.getExtension(extension);
   }
