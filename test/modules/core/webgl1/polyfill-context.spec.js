@@ -29,14 +29,15 @@ test('WebGL#polyfillContext getSupportedExtensions when context is lost', t => {
 
   const extensions = polyfillContext(gl);
   t.ok(extensions, 'extensions were returned');
+  getSupportedExtensionsSpy.restore();
 
   if (gl2) {
     const getSupportedExtensions2Spy = makeSpy(gl2, 'getSupportedExtensions');
     getSupportedExtensions2Spy.returns(null);
     const extensions2 = polyfillContext(gl2);
     t.ok(extensions2, 'extensions were returned');
+    getSupportedExtensions2Spy.restore();
   }
-
 
   t.end();
 });
