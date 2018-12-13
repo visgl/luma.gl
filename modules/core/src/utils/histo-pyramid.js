@@ -9,6 +9,13 @@ import GL from '../constants';
 // Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
 
 export const HISTOPYRAMID_BUILD_VS_UTILS = `\
+// Get current vertex pixel indices for a given size
+vec2 histoPyramid_getPixelIndices(vec2 size) {
+  vec2 pixelOffset = transform_getPixelSizeHalf(size);
+  vec2 pixelIndices = transform_getPixelIndices(size, pixelOffset);
+  return pixelIndices;
+}
+
 // returns the top left texture coordiante corresponding to 4X4 block in higher level texture.
 // size: lower level texture size
 // scale: usually (2, 2)
@@ -18,9 +25,11 @@ vec2 histoPyramid_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
   vec2 scaledSize = size * scale;
 
   // use minified texture size to find corresponding pixel index in out texture
-  vec2 pixelOffset = transform_getPixelSizeHalf(size);
-  // use the minified texture size to generate indices
-  vec2 pixelIndices = transform_getPixelIndices(size, pixelOffset);
+
+  // vec2 pixelOffset = transform_getPixelSizeHalf(size);
+  // // use the minified texture size to generate indices
+  // vec2 pixelIndices = transform_getPixelIndices(size, pixelOffset);
+  vec2 pixelIndices = histoPyramid_getPixelIndices(size);
 
   // now scale the indices to point to correct 4X4 block
   pixelIndices = pixelIndices * scale;
@@ -39,6 +48,10 @@ vec2 histoPyramid_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
 // offset: offset with-in 4X4 block of higher level texture
 vec4 histoPyramid_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
   vec2 texCoord = histoPyramid_getTexCoord(size, scale, offset);
+  // to handle the padding, when texture is padded to nearest power of two some indices may be outside of input texture
+  // if (texCoord.x > 1. || texCoord.y > 1.) {
+  //   return vec4(0., 0., 0., 0);
+  // }
   vec4 textureColor = texture2D(texSampler, texCoord);
   return textureColor;
 }
@@ -61,8 +74,123 @@ void main()
 }
 `;
 
-function isPowerOfTwo(x){
+// Vertex shader to build histopyramid
+const HISTOPYRAMID_BASE_BUILD_VS = `\
+attribute vec4 inTexture;
+varying vec4 outTexture;
+uniform int channel;
+uniform vec4 padingPixelValue;
+
+void main()
+{
+  vec2 size = transform_uSize_outTexture;
+  // vec2 scale = vec2(2., 2.);
+  vec2 scale = transform_uSize_inTexture / transform_uSize_outTexture;
+
+  // Verify if reference to a input texture pixel is out of bounds, if so treat the pixel as (0, 0)
+  // vec2 pixelOffset = transform_getPixelSizeHalf(size);
+  // vec2 pixelIndices = transform_getPixelIndices(size, pixelOffset);
+  vec2 pixelIndices = histoPyramid_getPixelIndices(size);
+  // now scale the indices padded size to point to correct 4X4 block
+  pixelIndices = pixelIndices * vec2(2, 2);
+
+  vec2 baseLevelSize = transform_uSize_inTexture;
+
+  bool xInside = pixelIndices.x < baseLevelSize.x;
+  bool yInside = pixelIndices.y < baseLevelSize.y;
+  bool xPlusOneInside = pixelIndices.x + 1. < baseLevelSize.x;
+  bool yPlusOneInside = pixelIndices.y + 1. < baseLevelSize.y;
+
+  vec4 pixel = (xInside && yInside)
+    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0))
+    : padingPixelValue;
+
+  vec4 rightPixel = (xPlusOneInside && yInside)
+    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0))
+    : padingPixelValue;
+
+  vec4 topPixel = (xInside && yPlusOneInside)
+    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1))
+    : padingPixelValue;
+
+  vec4 rightTopPixel = (xPlusOneInside && yPlusOneInside)
+    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1))
+    : padingPixelValue;
+
+  if (channel == 0) {
+    outTexture = vec4(pixel.r, rightPixel.r, topPixel.r, rightTopPixel.r);
+  }
+  if (channel == 1) {
+    outTexture = vec4(pixel.g, rightPixel.g, topPixel.g, rightTopPixel.g);
+  }
+  if (channel == 2) {
+    outTexture = vec4(pixel.b, rightPixel.b, topPixel.b, rightTopPixel.b);
+  }
+  if (channel == 3) {
+    outTexture = vec4(pixel.a, rightPixel.a, topPixel.a, rightTopPixel.a);
+  }
+}
+`;
+
+function isPowerOfTwo(x) {
     return ((x !== 0) && !(x & (x - 1)));
+}
+
+function nextPowerOfTwo(x) {
+  const p = Math.ceil(Math.log2(x));
+  return Math.pow(2, p);
+}
+
+
+const channelToIndexMap = {
+  ['r']: 0,
+  ['x']: 0,
+  ['g']: 1,
+  ['y']: 1,
+  ['b']: 2,
+  ['z']: 2,
+  ['a']: 3,
+  ['w']: 3
+};
+
+// returns a base level texture that packs given weight into a texture
+// each 4 X 4 region is mapped into RGBA channels of single pixel
+// returned texture is a squred power of two sized texture
+// R -> lower left, G -> lower right B -> upper left A -> upper right
+export function buildHistopyramidBaseLevel(gl, opts) {
+  const {texture, channel = 'r', _readData = false} = opts;
+  let {width, height} = texture;
+  width = nextPowerOfTwo(width);
+  height = nextPowerOfTwo(height);
+  // Use sqaured next power of two size, then use half of it since we are packing 4X4 group into a single RGBA pixel
+  const size = (width > height ? width : height) / 2;
+  const baseTexture = cloneTextureFrom(texture, {
+    width: size,
+    height: size
+  });
+
+  // build individual pyramid textures
+  const transform = new Transform(gl, {
+    _sourceTextures: {
+      inTexture: texture
+    },
+    _targetTexture: baseTexture,
+    _targetTextureVarying: 'outTexture',
+    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${HISTOPYRAMID_BASE_BUILD_VS}`,
+    elementCount: baseTexture.width * baseTexture.height
+  });
+  transform.run({
+    uniforms: {
+      channel: channelToIndexMap[channel] || 0,
+      padingPixelValue: [0, 0, 0, 0]
+    }
+  });
+  // Debug only, remove later
+  let textureData;
+  if (_readData) {
+    textureData = transform.getData({packed: true});
+  }
+  return {textureData, baseTexture};
 }
 
 // builds histopyramid for a given texture and returns individual levels and flatended pyramid texture

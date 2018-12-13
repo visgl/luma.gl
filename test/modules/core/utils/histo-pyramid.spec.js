@@ -24,7 +24,7 @@ import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
 import transformModule from '../../../../modules/core/src/shadertools/src/modules/transform/transform';
-import {HISTOPYRAMID_BUILD_VS_UTILS} from '../../../../modules/core/src/utils/histo-pyramid';
+import {HISTOPYRAMID_BUILD_VS_UTILS, buildHistopyramidBaseLevel} from '../../../../modules/core/src/utils/histo-pyramid';
 
 const gl = fixture.gl2;
 
@@ -88,6 +88,78 @@ test('histo-pyramid#histoPyramid_getTexCoord', t => {
   t.end();
 });
 
+test('histo-pyramid#histoPyramid_getPixelIndices', t => {
+  if (!Transform.isSupported(gl)) {
+    t.comment('Transform not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const VS = `\
+  attribute float dummyAttribute;
+  varying vec2 pixelIndices;
+  uniform vec2 size;
+
+  void main()
+  {
+    pixelIndices = histoPyramid_getPixelIndices(size);
+    // pixelIndices.x = float(transform_elementID);
+    // pixelIndices.y = size.x;
+  }
+  `;
+  function getExpected(size) {
+    const result = [];
+    for(let y = 0; y < size[1]; y++) {
+      for(let x = 0; x < size[1]; x++) {
+        result.push(x, y);
+      }
+    }
+    return result;
+  }
+  const TEST_CASES = [
+    {
+      size: [2, 2],
+    },
+    {
+      size: [3, 3]
+    },
+    {
+      size: [4, 4]
+    }
+  ];
+
+  const pixelIndices = new Buffer(gl, 10 * 10 * 2 * 4); // enough to hold 10X10 size
+  const transform = new Transform(gl, {
+    _sourceTextures: {
+      // dummy attribute to enable texture functionality
+      inTexture: new Texture2D(gl)
+    },
+    feedbackBuffers: {
+      pixelIndices
+    },
+    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${VS}`,
+    varyings: ['pixelIndices'],
+    modules: [transformModule],
+    elementCount: 1
+  });
+
+  TEST_CASES.forEach(testCase => {
+    const {size} = testCase;
+    const expected = getExpected(size);
+    const elementCount = size[0]*size[1];
+      transform.update({elementCount});
+      transform.run({
+        uniforms: {
+          size
+        }
+      });
+
+      const outData = transform.getBuffer('pixelIndices').getData().slice(0, expected.length);
+      t.ok(equals(expected, outData), 'pixelIndices should match');
+  });
+
+  t.end();
+});
 
 const HISTOPYRAMID_GETINPUT_VS = `\
 attribute float inTexture;
@@ -283,6 +355,114 @@ test('histo-pyramid#Minification to 1X1)', t => {
   const outTexData = transform.getData({packed: true});
 
   t.deepEqual(outTexData, [expectedData], `Transform should access neighbor pixels correctly for 1X1 minification`);
+
+  t.end();
+});
+
+test('histo-pyramid#buildHistopyramidBaseLevel)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const TEST_CASES = [
+    {
+      name: 'Squre power of two texture 2X2',
+      width: 2,
+      height: 2,
+      // // sourceData 2X2 texture
+      // 0 1 2 3   	4 5 6 7
+      // 8 9 10 11  	12 13 14 15
+      // // will get transformed into 1X1 texture
+      // 0 4 8 12
+      expectedData: [0, 4, 8, 12]
+    },
+    {
+      name: 'Squre power of two texture 4X4',
+      width: 4,
+      height: 4,
+      // // sourceData: 4X4 texture
+      // 0 1 2 3   	  4 5 6 7	      8 9 10 11  	12 13 14 15
+      // 16 17 18 19 	20 21 22 23 	24 25 26 27	28 29 30 31
+      //
+      // 32 33 34 35	36 37 38 39	 40 41 42 43	44 45 46 47
+      // 48 49 50 51	52 53 54 55	 56 57 58 59	60 61 62 63
+      // will get transformed into 2X2 texture
+      // 0 4 16 20     8 12 24 28
+      // 32 36 48 52	40 44 56 60
+      expectedData: [0, 4, 16, 20, 8, 12, 24, 28, 32, 36, 48, 52, 40, 44, 56, 60]
+    },
+    {
+      name: 'Squre non power of two texture 3X3',
+      width: 3,
+      height: 3,
+      // // sourceData: 3X3 texture
+      // 0 1 2 3   	  4 5 6 7	      8 9 10 11
+      // 12 13 14 15	16 17 18 19 	20 21 22 23
+      // 24 25 26 27	28 29 30 31	  32 33 34 35
+
+      // Texture sample should emulate following padding
+      // 0 1 2 3   	4 5 6 7	       8 9 10 11	 0 0 0 0
+      // 12 13 14 15	16 17 18 19  20 21 22 23 0 0 0 0
+      //
+      // 24 25 26 27	28 29 30 31	  32 33 34 35	0 0 0 0
+      // 0 0 0 0	    0 0 0 0	      0 0 0 0	    0 0 0 0
+
+      // will get transformed into 2X2 texture
+      // 0 4 12 16	8 0 20 0
+      // 24 28 0 0	32 0 0 0
+      expectedData: [0, 4, 12, 16, 8, 0, 20, 0, 24, 28, 0, 0, 32, 0, 0, 0]
+    },
+    {
+      name: 'Non squre non power of two texture 1X3',
+      width: 1,
+      height: 3,
+      // // sourceData: 3X3 texture
+      // 0 1 2 3
+      // 4 5 6 7
+      // 8 9 10 11
+
+      // Texture sample should emulate following padding
+      // 0 1 2 3    0 0 0 0	  0 0 0 0   0 0 0 0
+      // 4 5 6 7    0 0 0 0	  0 0 0 0   0 0 0 0
+      // 8 9 10 11  0 0 0 0	  0 0 0 0   0 0 0 0
+      // 0 0 0 0	  0 0 0 0	  0 0 0 0	  0 0 0 0
+
+      // will get transformed into 2X2 texture
+      // 0 0 4 0	0 0 0 0
+      // 8 0 0 0	0 0 0 0
+      expectedData: [0, 0, 4, 0,  0, 0, 0, 0,  8, 0, 0, 0,  0, 0, 0, 0]
+    }
+
+  ];
+  const TEX_OPTIONS = {
+    format: GL.RGBA32F,
+    dataFormat: GL.RGBA,
+    type: GL.FLOAT,
+    mipmaps: false,
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    }
+  };
+
+  TEST_CASES.forEach(testCase => {
+    const {width, height, name, expectedData} = testCase;
+    const sourceData = new Float32Array(width * height * 4).fill().map((_, index) => index);
+
+    const sourceTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width,
+      height
+    }));
+
+    const {textureData} = buildHistopyramidBaseLevel(gl2, {texture: sourceTexture, _readData: true});
+
+    t.deepEqual(textureData, expectedData, `${name}: should return corret base texture`);
+
+  });
 
   t.end();
 });
