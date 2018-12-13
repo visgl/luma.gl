@@ -1,0 +1,15 @@
+{
+  "name": "luma.gl-examples-texture-display",
+  "description": "An example to display a texture.",
+  "scripts": {
+    "start": "webpack-dev-server --progress --hot --open -d",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
+  },
+  "dependencies": {
+    "luma.gl": "^6.3.0"
+  },
+  "devDependencies": {
+    "webpack": "^4.3.0",
+    "webpack-dev-server": "^3.1.1"
+  }
+}
