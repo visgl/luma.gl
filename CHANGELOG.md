@@ -1,3 +1,7 @@
+## 6.3.2 - Dec 13
+
+- 25492bfa Update polyfillContext extension initialization to non-iterable returned from getSupportedExtensions (#808)
+
 ## 6.3.1 - Dec 04
 
 - IE browser WA: disable adding draw_buffers extension to shader source (#794)
