@@ -4,6 +4,7 @@ import Buffer from '../webgl/buffer';
 import Framebuffer from '../webgl/framebuffer';
 import Texture2D from '../webgl/texture-2d';
 import TransformFeedback from '../webgl/transform-feedback';
+import {combineInjects} from '../shadertools/src/lib/inject-shader';
 import {
   _transform as transform,
   getPassthroughFS,
@@ -581,6 +582,7 @@ export default class Transform {
   // build and return shader releated parameters
   _getShaders(props = {}) {
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = this._processVertexShader(props.vs);
+    const combinedInject = combineInjects([props.inject || {}, inject])
     this.targetTextureType = targetTextureType;
     const fs = getPassthroughFS({
       version: getShaderVersion(vs),
@@ -590,7 +592,7 @@ export default class Transform {
     });
     const modules = this.hasSourceTextures || this.targetTextureVarying ?
       [transform].concat(props.modules || []) : props.modules;
-    return {vs, fs, modules, uniforms, inject, samplerTextureMap};
+    return {vs, fs, modules, uniforms, inject: combinedInject, samplerTextureMap};
   }
 
   // scan and update vertex shader for texture atrributes.

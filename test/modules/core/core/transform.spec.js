@@ -854,3 +854,60 @@ test('WebGL#Transform run (offline rendering)', t => {
 
   t.end();
 });
+
+test('WebGL#Transform run with shader injects', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const vs = `\
+attribute float inValue;
+varying float outValue;
+
+float sum(float a, float b) {
+  return a + b;
+}
+
+void main()
+{
+  outValue = 2.0 * inValue;
+}
+`;
+
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const inject = {
+    'vs:#decl': `
+attribute float injectedAttribute;
+varying float injectedVarying;
+`,
+    'vs:#main-start': '  if (true) { injectedVarying = sum(1., injectedAttribute); } else {\n',
+    'vs:#main-end': '  }\n'
+  }
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      injectedAttribute: sourceBuffer
+    },
+    vs,
+    inject,
+    feedbackMap: {
+      injectedAttribute: 'injectedVarying'
+    },
+    varyings: ['injectedVarying'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x + 1);
+  const outData = transform.getData({varyingName :'injectedVarying'});
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
