@@ -5,6 +5,9 @@ import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 import {log} from '../utils';
 import GL from '../constants';
 
+// Following methods implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
+// Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
+
 export const HISTOPYRAMID_BUILD_VS_UTILS = `\
 // returns the top left texture coordiante corresponding to 4X4 block in higher level texture.
 // size: lower level texture size
