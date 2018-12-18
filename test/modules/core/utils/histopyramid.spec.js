@@ -25,16 +25,18 @@ import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
 import transformModule from '../../../../modules/core/src/shadertools/src/modules/transform/transform';
 import {
-  HISTOPYRAMID_BUILD_VS_UTILS,
-  HISTOPYRAMID_TRAVERSAL_UTILS,
   buildHistopyramidBaseLevel,
   getHistoPyramid,
   histoPyramidGenerateIndices
-} from '../../../../modules/core/src/utils/histo-pyramid';
+} from '../../../../modules/core/src/utils/histopyramid';
+import {
+  HISTOPYRAMID_BUILD_VS_UTILS,
+  HISTOPYRAMID_TRAVERSAL_UTILS
+} from '../../../../modules/core/src/utils/histopyramid-shaders';
 
 const gl = fixture.gl2;
 
-test('histo-pyramid#histoPyramid_getTexCoord', t => {
+test('histopyramid#histoPyramid_getTexCoord', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -94,7 +96,7 @@ test('histo-pyramid#histoPyramid_getTexCoord', t => {
   t.end();
 });
 
-test('histo-pyramid#histoPyramid_getPixelIndices', t => {
+test('histopyramid#histoPyramid_getPixelIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -180,7 +182,7 @@ void main()
 }
 `;
 
-test('histo-pyramid#histoPyramid_getInput', t => {
+test('histopyramid#histoPyramid_getInput', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -299,7 +301,7 @@ void main()
 }
 `;
 
-test('histo-pyramid#Minification to 1X1)', t => {
+test('histopyramid#Minification to 1X1)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -448,7 +450,7 @@ const HISTOPYRAMID_TEST_CASES = [
   }
 ];
 
-test('histo-pyramid#getHistoPyramid)', t => {
+test('histopyramid#getHistoPyramid)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -488,7 +490,7 @@ test('histo-pyramid#getHistoPyramid)', t => {
   t.end();
 });
 
-test('histo-pyramid#histopyramid_traversal_findRangeIndex', t => {
+test('histopyramid#histopyramid_traversal_findRangeIndex', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -538,7 +540,7 @@ test('histo-pyramid#histopyramid_traversal_findRangeIndex', t => {
   t.end();
 });
 
-test('histo-pyramid#histopyramid_traversal_findRangeIndex consecutive calls', t => {
+test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -586,7 +588,7 @@ test('histo-pyramid#histopyramid_traversal_findRangeIndex consecutive calls', t 
 });
 
 
-test('histo-pyramid#histopyramid_traversal_mapIndexToCoord', t => {
+test('histopyramid#histopyramid_traversal_mapIndexToCoord', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -623,7 +625,7 @@ test('histo-pyramid#histopyramid_traversal_mapIndexToCoord', t => {
   t.end();
 });
 
-test('histo-pyramid#histopyramid_traversal_getWeight', t => {
+test('histopyramid#histopyramid_traversal_getWeight', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -722,7 +724,7 @@ test('histo-pyramid#histopyramid_traversal_getWeight', t => {
   t.end();
 });
 
-test('histo-pyramid#histoPyramidGenerateIndices', t => {
+test('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
