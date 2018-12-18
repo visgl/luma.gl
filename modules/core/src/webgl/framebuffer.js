@@ -307,7 +307,7 @@ export default class Framebuffer extends Resource {
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
     log.deprecated('Framebuffer.copyToTexture({...})', 'copyFramebufferToTexture({framebuffer, ...})')();
-    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this}));
+    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this, subCopy: true}));
   }
 
   // WEBGL2 INTERFACE
@@ -315,7 +315,7 @@ export default class Framebuffer extends Resource {
   // Copies a rectangle of pixels between framebuffers
   // eslint-disable-next-line complexity
   blit(opts = {}) {
-    log.deprecated('Framebuffer.copyToTexture({...})', 'copyFramebufferToTexture({dstFramebuffer: framebuffer, ...})')();
+    log.deprecated('Framebuffer.blit({...})', 'blitFramebuffer({dstFramebuffer: framebuffer, ...})')();
     return blitFramebuffer(Object.assign({}, opts, {dstFramebuffer: this}));
   }
 

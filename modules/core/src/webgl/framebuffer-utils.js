@@ -1,7 +1,7 @@
 
 import Buffer from './buffer';
 import GL from '../constants';
-import {assert} from '../utils';
+import {assert, log} from '../utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {withParameters} from '../webgl-context';
@@ -161,18 +161,27 @@ export function copyFramebufferToTexture({
   xoffset = 0,
   yoffset = 0,
   zoffset = 0,
-  mipmapLevel = 0,
+  width, // defaults to texture width
+  height, // defaults to texture height
+  level = 0,
+  internalFormat = GL.RGBA,
+  border = 0,
 
   // Source
   framebuffer,
   attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   x = 0,
   y = 0,
-  width, // defaults to texture width
-  height // defaults to texture height
+
+  subCopy = false, // whether doing a complete copy or a specific region of framebuffer
+  mipmapLevel // deprecated
 }) {
   assert(framebuffer);
   const {gl, handle} = framebuffer;
+  if (mipmapLevel) {
+    log.deprecated('mipmapLevel', 'level')();
+    level = mipmapLevel;
+  }
   const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
@@ -183,35 +192,41 @@ export function copyFramebufferToTexture({
     height = Number.isFinite(height) ? height : texture.height;
     texture.bind(0);
   }
-  switch (texture.target) {
-  case GL.TEXTURE_2D:
-  case GL.TEXTURE_CUBE_MAP:
-    gl.copyTexSubImage2D(
-      target || texture.target,
-      mipmapLevel,
-      xoffset,
-      yoffset,
-      x,
-      y,
-      width,
-      height
-    );
-    break;
-  case GL.TEXTURE_2D_ARRAY:
-  case GL.TEXTURE_3D:
-    gl.copyTexSubImage3D(
-      target || texture.target,
-      mipmapLevel,
-      xoffset,
-      yoffset,
-      zoffset,
-      x,
-      y,
-      width,
-      height
-    );
-    break;
-  default:
+
+  if (!subCopy) {
+    gl.copyTexImage2D(
+      target || texture.target, level, internalFormat, x, y, width, height, border);
+  } else {
+    switch (texture.target) {
+    case GL.TEXTURE_2D:
+    case GL.TEXTURE_CUBE_MAP:
+      gl.copyTexSubImage2D(
+        target || texture.target,
+        level,
+        xoffset,
+        yoffset,
+        x,
+        y,
+        width,
+        height
+      );
+      break;
+    case GL.TEXTURE_2D_ARRAY:
+    case GL.TEXTURE_3D:
+      gl.copyTexSubImage3D(
+        target || texture.target,
+        level,
+        xoffset,
+        yoffset,
+        zoffset,
+        x,
+        y,
+        width,
+        height
+      );
+      break;
+    default:
+    }
   }
   if (texture) {
     texture.unbind();
