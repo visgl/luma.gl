@@ -1,6 +1,6 @@
-import Node from './node';
+import ScenegraphNode from './scenegraph-node';
 
-export default class Camera extends Node {
+export default class Camera extends ScenegraphNode {
   constructor(opts = {}) {
     super(opts);
     this.projectionMatrix = opts.projectionMatrix;
