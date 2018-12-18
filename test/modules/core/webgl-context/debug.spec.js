@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 
-import 'luma.gl/debug';
+import '@luma.gl/debug';
 
 import {createGLContext, makeDebugContext} from 'luma.gl';
 
