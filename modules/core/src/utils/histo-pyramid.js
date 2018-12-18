@@ -1,8 +1,9 @@
 // TODO: move to gpgpu module.
 
 import Transform from '../core/transform';
+import Buffer from '../webgl/buffer';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
-import {log} from '../utils';
+import {assert} from '../utils';
 import GL from '../constants';
 
 // Following methods implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
@@ -70,7 +71,13 @@ void main()
   vec4 rightPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0));
   vec4 bottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1));
   vec4 rightBottomPixel = histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1));
-  outTexture = pixel + rightPixel + bottomPixel + rightBottomPixel;
+  // outTexture = pixel + rightPixel + bottomPixel + rightBottomPixel;
+  outTexture = vec4(
+    pixel.r + pixel.g + pixel.b + pixel.a,
+    rightPixel.r + rightPixel.g + rightPixel.b + rightPixel.a,
+    bottomPixel.r + bottomPixel.g + bottomPixel.b + bottomPixel.a,
+    rightBottomPixel.r + rightBottomPixel.g + rightBottomPixel.b + rightBottomPixel.a
+  );
 }
 `;
 
@@ -132,6 +139,97 @@ void main()
 }
 `;
 
+export const HISTOPYRAMID_TRAVERSAL_UTILS = `\
+// Check 2X2 texture block to find relative index the given key index falls into
+// 2X2 block is represented by a single RGBA weight
+int histopyramid_traversal_findRangeIndex(float currentKey, vec4 weights, out float lowerBound) {
+  lowerBound = 0.;
+  float higherBound = 0.;
+  int relativeIndex = 0;
+  for (int i = 0; i < 4; i++) {
+    higherBound = lowerBound + weights[i];
+    relativeIndex = i;
+    if (currentKey >= lowerBound && currentKey < higherBound) {
+      break;
+    }
+    lowerBound = higherBound;
+  }
+  return relativeIndex;
+}
+
+// Maps index in 4X4 block to texture coordiante
+// Assumes the traversal order of lower-left -> lower->right -> upper-left -> upper->right
+vec2 histopyramid_traversal_mapIndexToCoord(int index) {
+  // relativeIndex ->  relativeCoordiante
+  // 0 -> (0, 0)
+  // 1 -> (1, 0)
+  // 2 -> (0, 1)
+  // 3 -> (1, 1)
+  float relativeX = mod(float(index), 2.);
+  float relativeY = (index > 1) ? 1. : 0.;
+  return vec2(relativeX, relativeY);
+}
+
+// Reads weight value from flat histopyramid
+vec4 histopyramid_traversal_getWeight(sampler2D flatPyramid, vec2 size, int level, int numLevels, vec2 offset) {
+  // horizontal offset in flat pyramid for current level
+  float xOffset = pow(2., float(numLevels)) - pow(2., float(numLevels - level));
+  vec2 lowerLeft = vec2(xOffset, 0.);
+  vec2 pixelIndices = lowerLeft + offset;
+
+  vec2 pixelSizeHalf = transform_getPixelSizeHalf(size);
+  vec2 coord = pixelIndices / size + pixelSizeHalf;
+
+  return texture2D(flatPyramid, coord);
+}
+`;
+
+
+const HISTOPYRAMID_TRAVERSAL_VS = `\
+attribute float keyIndex;
+attribute vec4 flatPyramidTexture;
+varying vec4 locationAndIndex;
+const int MAX_LEVELS = 12; // assuming max texture size of 4K
+
+uniform int numLevels;
+
+void main()
+{
+  vec2 p = vec2(0., 0.);
+  float currentKey = keyIndex;
+  // for(int level = numLevels - 1; level <= 0; level--) {
+  for(int i = 1; i <= MAX_LEVELS; i++) {
+    int level = numLevels - i;
+    // #1. Get the current pixel values based on current level and current p
+    vec4 weights = histopyramid_traversal_getWeight(transform_uSampler_flatPyramidTexture, transform_uSize_flatPyramidTexture, level, numLevels, p);
+
+    // #2. Check the all weights in current 2X2 (4 values in RGBA channels) and determine the relative coordinate
+    float lowerBound = 0.;
+    int relativeIndex = histopyramid_traversal_findRangeIndex(currentKey, weights, lowerBound);
+    vec2 relativeCoord = histopyramid_traversal_mapIndexToCoord(relativeIndex);
+
+
+    //#3. Update P and key-index
+    p = 2.0 * p + relativeCoord;
+
+
+    currentKey -= lowerBound;
+    if (level == 0) { break; } // Work around for const expression restriction on for loops
+
+    // // _HACK
+    // // locationAndIndex = weights;
+    // locationAndIndex = vec4(-1.);
+    // locationAndIndex.r = float(i);
+    // locationAndIndex.g = currentKey;
+    // locationAndIndex.b = lowerBound;
+    // if (level == 0) { break; } // Work around for const expression restriction on for loops
+    // currentKey -= lowerBound;
+    // locationAndIndex.a = currentKey;
+  }
+  locationAndIndex = vec4(p, currentKey, keyIndex);
+}
+`;
+
 function isPowerOfTwo(x) {
     return ((x !== 0) && !(x & (x - 1)));
 }
@@ -185,41 +283,14 @@ export function buildHistopyramidBaseLevel(gl, opts) {
       padingPixelValue: [0, 0, 0, 0]
     }
   });
-  // Debug only, remove later
+  // _readData is debug only option
   let textureData;
-  if (_readData) {
+  // when base textuer size is 1X1, there are no more level to be generated
+  // so read the texture data to be provided as base level data.
+  if (_readData || size === 1) {
     textureData = transform.getData({packed: true});
   }
-  return {textureData, baseTexture};
-}
-
-// builds histopyramid for a given texture and returns individual levels and flatended pyramid texture
-// Returns object
-// * pyramidTextures: Array with all individual mip levels
-// * flatPyramidTexture: Texture with all mip levels laid out horizontally
-export function getHistoPyramid({gl, texture}) {
-  // Texture must be a power of two sized square texture
-  const {width, height} = texture;
-  if (width !== height || !isPowerOfTwo(width)) {
-    log.error(`getHistoPyramid: texture: ${texture.id} is not a square power of two texture`)();
-    return null;
-  }
-  const levelCount = Math.log2(width) + 1;
-  const pyramidTextures = [];
-
-  // flat pyramid should fit in original texture size as level-0 texture is half the size
-  const flatPyramidSize = width;
-
-  pyramidTextures.push(texture);
-  // build empty textures
-  for (let i = 1; i < levelCount; i++) {
-    const size = width / Math.pow(2, i);
-    pyramidTextures.push(cloneTextureFrom(texture, {
-      width: size,
-      height: size
-    }));
-  }
-
+  const flatPyramidSize = size * 2;
   const flatPyramidTexture = cloneTextureFrom(texture, {
     width: flatPyramidSize,
     height: flatPyramidSize,
@@ -228,38 +299,110 @@ export function getHistoPyramid({gl, texture}) {
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
     },
   });
-
-  // build individual pyramid textures
-  const transform = new Transform(gl, {
-    _sourceTextures: {
-      inTexture: pyramidTextures[0]
-    },
-    _targetTexture: pyramidTextures[1],
-    _targetTextureVarying: 'outTexture',
-    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${HISTOPYRAMID_BUILD_VS}`,
-    elementCount: pyramidTextures[1].width * pyramidTextures[1].height
+  const framebuffer = transform.getFramebuffer();
+  framebuffer.copyToTexture({
+    texture: flatPyramidTexture,
+    xoffset: 0,
+    width: size,
+    height: size
   });
 
-  let flatOffset = 0;
-  for (let i = 1; i < levelCount; i++) {
-    const outSize = [pyramidTextures[i].width, pyramidTextures[i].height];
-    transform.update({
-      _sourceTextures: {inTexture: pyramidTextures[i - 1]},
-      _targetTexture: pyramidTextures[i],
-      elementCount: pyramidTextures[i].width * pyramidTextures[i].height
-    });
-    transform.run();
+  return {textureData, baseTexture, flatPyramidTexture};
+}
 
-    // copy the result to the flaten pyramid texture
-    const framebuffer = transform.getFramebuffer();
-    framebuffer.copyToTexture({
-      texture: flatPyramidTexture,
-      xoffset: flatOffset,
-      width: outSize[0],
-      height: outSize[1]
+// builds histopyramid for a given texture and returns individual levels and flatended pyramid texture
+// Returns object
+// * pyramidTextures: Array with all individual mip levels
+// * flatPyramidTexture: Texture with all mip levels laid out horizontally
+export function getHistoPyramid(gl, opts) {
+  const {textureData, baseTexture, flatPyramidTexture} = buildHistopyramidBaseLevel(gl, opts);
+  // texture = baseTexture;
+  // Texture must be a power of two sized square texture
+  const {width, height} = baseTexture;
+  assert(width === height && isPowerOfTwo(width));
+  // {
+  //   log.error(`getHistoPyramid: texture: ${opts.texture.id} is not a square power of two texture`)();
+  //   return null;
+  // }
+  const levelCount = Math.log2(width) + 1;
+  const pyramidTextures = [baseTexture];
+
+  let topLevelData = textureData;
+  if (levelCount > 1) {
+    // build empty textures for rest of the pyramid
+    for (let i = 1; i < levelCount; i++) {
+      const size = width / Math.pow(2, i);
+      pyramidTextures.push(cloneTextureFrom(baseTexture, {
+        width: size,
+        height: size
+      }));
+    }
+
+    // build individual pyramid textures
+    const transform = new Transform(gl, {
+      _sourceTextures: {
+        inTexture: pyramidTextures[0]
+      },
+      _targetTexture: pyramidTextures[1],
+      _targetTextureVarying: 'outTexture',
+      vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${HISTOPYRAMID_BUILD_VS}`,
+      elementCount: pyramidTextures[1].width * pyramidTextures[1].height
     });
 
-    flatOffset += outSize[0];
+    let flatOffset = width;
+    for (let i = 1; i < levelCount; i++) {
+      const outSize = [pyramidTextures[i].width, pyramidTextures[i].height];
+      transform.update({
+        _sourceTextures: {inTexture: pyramidTextures[i - 1]},
+        _targetTexture: pyramidTextures[i],
+        elementCount: pyramidTextures[i].width * pyramidTextures[i].height
+      });
+      transform.run();
+
+      // copy the result to the flaten pyramid texture
+      const framebuffer = transform.getFramebuffer();
+      framebuffer.copyToTexture({
+        texture: flatPyramidTexture,
+        xoffset: flatOffset,
+        width: outSize[0],
+        height: outSize[1]
+      });
+
+      flatOffset += outSize[0];
+    }
+    topLevelData =  transform.getData();
   }
-  return {pyramidTextures, flatPyramidTexture};
+
+  return {pyramidTextures, flatPyramidTexture, levelCount, topLevelData};
+}
+
+export function histoPyramidGenerateIndices(gl, opts) {
+
+  const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(gl, opts);
+
+  const keyIndexCount = topLevelData[0] + topLevelData[1] + topLevelData[2] + topLevelData[3];
+  const keyIndex = new Buffer(gl, new Float32Array(keyIndexCount).map((_, index) => index));
+  const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
+
+  const transform = new Transform(gl, {
+    sourceBuffers: {
+      keyIndex,
+    },
+    _sourceTextures: {
+      flatPyramidTexture
+    },
+    feedbackBuffers: {
+      locationAndIndex
+    },
+    varyings: ['locationAndIndex'],
+    vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${HISTOPYRAMID_TRAVERSAL_VS}`,
+    elementCount: keyIndexCount
+  });
+  transform.run({
+    uniforms: {
+      numLevels: levelCount
+    }
+  });
+
+  return {locationAndIndexBuffer: locationAndIndex}
 }

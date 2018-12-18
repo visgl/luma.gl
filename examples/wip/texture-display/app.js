@@ -68,20 +68,23 @@ function generateOffsetsForGrid(windowSize, cellSize) {
 }
 
 function getTextureToDisplay(gl) {
-  const texWidth = 32;
-  const texHeight = 32;
 
+  // const texWidth = 4;
+  // const texHeight = 4;
   // const textureData = new Float32Array([
-  //   1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
-  //   0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
-  //   0, 0, 0, 0,  0, 0, 0, 0,  3, 0, 0, 0,  0, 0, 0, 0,
-  //   0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  4, 0, 0, 0
+  //   3, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
+  //   0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
+  //   0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  3, 0, 0, 0,
+  //   0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
   // ]).map(x => x / 10);
 
+  const texWidth = 32;
+  const texHeight = 32;
   const pixelCount = texWidth * texHeight;
   const textureData = new Float32Array(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) {
     // textureData[i * 4] = Math.random() / 50;
+
     const channel = Math.random() * 3.0;
     if (channel > 2) {
       textureData[i * 4] = Math.random() / 20;
@@ -102,14 +105,18 @@ function getTextureToDisplay(gl) {
       [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
     },
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    },
     dataFormat: GL.RGBA,
     width: texWidth,
     height: texHeight,
   });
 
-  const hpResults = getHistoPyramid({gl, texture});
+  const hpResults = getHistoPyramid(gl, {texture});
   // return hpResults.pyramidTextures[2];
   return hpResults.flatPyramidTexture;
+  // return texture;
 }
 
 const animationLoop = new AnimationLoop({
