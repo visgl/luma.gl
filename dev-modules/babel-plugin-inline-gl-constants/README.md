@@ -63,7 +63,7 @@ $ babel --plugins inline-gl-constants script.js
 
 ### Via Node API
 
-```javascript
+```js
 require("babel-core").transform("code", {
   plugins: ["inline-gl-constants"]
 });
