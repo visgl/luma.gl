@@ -53,7 +53,7 @@ The `WebGLDeveloperTools` are automatically installed when luma.gl is installed,
 To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
 
 ```js
-import "luma.gl/debug";
+import '@luma.gl/debug';
 const gl = getDebugContext(gl);
 ```
 

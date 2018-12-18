@@ -57,8 +57,7 @@
     "@babel/runtime": "^7.0.0",
     "math.gl": "^2.2.0",
     "probe.gl": "^2.0.1",
-    "seer": "^0.2.4",
-    "webgl-debug": "^2.0.0"
+    "seer": "^0.2.4"
   },
   "nyc": {
     "require": [

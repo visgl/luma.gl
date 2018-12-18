@@ -1,5 +1,3 @@
-import 'luma.gl/debug';
-
 import {
   createGLContext,
   Model,

@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "glsl-transpiler": "^1.8.5",
-    "luma.gl": "^7.0.0-alpha.2"
+    "luma.gl": "^7.0.0-alpha.2",
+    "webgl-debug": "^2.0.1"
   }
 }
