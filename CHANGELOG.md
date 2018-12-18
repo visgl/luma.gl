@@ -1,4 +1,27 @@
-# Pre-releases
+# 7.0 Pre-releases
+
+## 7.0.0-alpha.2 - Dec 17, 2018
+
+- Transform: fix Inject option (#812)
+- Add reference to Histopyramid paper (#811)
+- Merge pull request #808 from wentsul/handle-null-webgl-context
+- retore stub after test completion
+- Add utility methods for Histopyramid generation based on Transform (#803)
+- blend auto-highlight color and original color when an object is picked (#799)
+- Update polyfillContext extension initialization to non-iterable returned from getSupportedExtensions
+- New RFCs (#804)
+- Transform Texture functionality enhancements (#802)
+- Add support for copyTexSubImage2D, misc fixes (#801)
+- IE browser WA: disable adding draw_buffers extension to shader source (#794)
+
+## 7.0.0-alpha.1 - Nov 29, 2018
+
+- add shortcut for uniform parse (#796)
+- Dof example (#769)
+- Add plugin to strip GLSL comments (#792)
+- move custom babel plugin to dev-modules (#791)
+- Fix inline version in published builds (#790)
+
 
 ## 6.2.0-alpha.1 - Sep 25
 
