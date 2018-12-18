@@ -6,7 +6,7 @@ export default tapePromise(test_);
 export {default as deepCopy} from './deep-copy';
 
 // Avoid generating a lot of big context divs
-import 'luma.gl/debug';
+import '@luma.gl/debug';
 import {setContextDefaults} from 'luma.gl';
 setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
 

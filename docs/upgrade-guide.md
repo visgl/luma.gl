@@ -1,5 +1,21 @@
 # Upgrade Guide
 
+## Upgrading from v6.x to v7.0
+
+### Debug functionality moved to separate npm module
+
+Debug functionality is now more cleanly separated from the main library and needs to be imported from a separate npm module:
+
+To upgrade, just replace
+```
+import "luma.gl/debug";
+````
+with
+```
+import "@luma.gl/debug";
+```
+
+
 ## Upgrading from v5.3 to v6.0
 
 luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:
