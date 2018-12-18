@@ -2822,6 +2822,10 @@ flat-cache@^1.2.1:
     graceful-fs "^4.1.2"
     write "^0.2.1"
 
+float-regex@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/float-regex/-/float-regex-1.0.0.tgz#f80fa91d672c6b924842034bd87a0dd72069d2ef"
+
 flush-write-stream@^1.0.0:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/flush-write-stream/-/flush-write-stream-1.0.3.tgz#c5d586ef38af6097650b49bc41b55fabb19f35bd"
@@ -3173,21 +3177,23 @@ glsl-tokenizer@^2.0.2:
   dependencies:
     through2 "^0.6.3"
 
-glsl-tokenizer@^2.1.4:
+glsl-tokenizer@^2.1.4, glsl-tokenizer@^2.1.5:
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/glsl-tokenizer/-/glsl-tokenizer-2.1.5.tgz#1c2e78c16589933c274ba278d0a63b370c5fee1a"
   dependencies:
     through2 "^0.6.3"
 
-glsl-transpiler@^1.7.1:
-  version "1.7.2"
-  resolved "https://registry.yarnpkg.com/glsl-transpiler/-/glsl-transpiler-1.7.2.tgz#c488a55edaf750ce4fbb502da1e8eb785731851e"
+glsl-transpiler@^1.8.5:
+  version "1.8.5"
+  resolved "https://registry.yarnpkg.com/glsl-transpiler/-/glsl-transpiler-1.8.5.tgz#e25477109a7a538f3e24ba422c1af6fcd0556f14"
   dependencies:
     array-flatten "^2.0.0"
+    float-regex "^1.0.0"
     glsl-parser "^2.0.1"
-    glsl-tokenizer "^2.1.4"
+    glsl-tokenizer "^2.1.5"
     inherits "^2.0.1"
-    prepr "^1.1.0"
+    pick-by-alias "^1.2.0"
+    prepr "^1.1.2"
     xtend "^4.0.1"
 
 got@^6.7.1:
@@ -5165,6 +5171,10 @@ performance-now@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/performance-now/-/performance-now-2.1.0.tgz#6309f4e0e5fa913ec1c69307ae364b4b377c9e7b"
 
+pick-by-alias@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/pick-by-alias/-/pick-by-alias-1.2.0.tgz#5f7cb2b1f21a6e1e884a0c87855aa4a37361107b"
+
 pify@^2.0.0, pify@^2.3.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-2.3.0.tgz#ed141a6ac043a849ea588498e7dca8b15330e90c"
@@ -5253,7 +5263,7 @@ prepend-http@^1.0.1:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/prepend-http/-/prepend-http-1.0.4.tgz#d4f4562b0ce3696e41ac52d0e002e57a635dc6dc"
 
-prepr@^1.1.0:
+prepr@^1.1.2:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/prepr/-/prepr-1.2.0.tgz#176c09e3f773b8c7968435d4faaf3b72bbe4ca5b"
   dependencies:

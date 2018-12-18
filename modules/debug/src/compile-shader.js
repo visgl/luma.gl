@@ -1,4 +1,5 @@
 import Compiler from 'glsl-transpiler';
+import {getUniformNormalizer} from './normalize-uniforms';
 
 function normalize(source) {
   return source
@@ -8,6 +9,29 @@ function normalize(source) {
 
 function getVersion(source) {
   return source.slice(0, 9) === '#version ' ? '300 es' : '100 es';
+}
+
+export function compileShaderModule(moduleName, source) {
+  source = normalize(source);
+
+  const compileModule = Compiler({
+    uniform: name => `uniforms.${name}`,
+    version: getVersion(source)
+  });
+
+  const compiledSource = compileModule(source);
+  const {compiler} = compileModule;
+
+  return evalScript(
+    `function vs(uniforms) {
+  ${getUniformNormalizer(compiler.uniforms)}
+  ${compiledSource}
+  return {
+    ${Object.keys(compiler.functions).join(',')}
+  };
+}`,
+  moduleName
+  );
 }
 
 // @returns JavaScript function of the transpiled shader
@@ -26,6 +50,7 @@ export function compileVertexShader(shaderName, source) {
   return evalScript(
     `function vs(uniforms, attributes) {
   var gl_Position;
+  ${getUniformNormalizer(compiler.uniforms)}
   ${compiledSource}
   /* End of shader code */
   main();
@@ -50,6 +75,7 @@ export function compileFragmentShader(shaderName, source) {
   });
 
   const compiledSource = compileFS(source);
+  const {compiler} = compileFS;
 
   return evalScript(
     `function fs(uniforms, varyings) {
@@ -58,6 +84,7 @@ export function compileFragmentShader(shaderName, source) {
   function discard() {
     isDiscarded = true;
   }
+  ${getUniformNormalizer(compiler.uniforms)}
   ${compiledSource}
   /* End of shader code */
   main();
