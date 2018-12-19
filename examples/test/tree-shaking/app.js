@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {AnimationLoop, createGLContext, Cube} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 

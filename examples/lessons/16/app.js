@@ -7,7 +7,7 @@
 // 5. Verify lookAt matrix used. (do we need it?)
 
 /* eslint-disable max-statements, indent, no-multi-spaces */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {
   AnimationLoop, Model, Cube, Sphere, Geometry,
   Texture2D, Program, Renderbuffer, Framebuffer, setParameters,

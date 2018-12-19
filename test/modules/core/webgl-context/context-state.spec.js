@@ -2,7 +2,7 @@
 
 import test from 'tape-catch';
 
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {getParameter, getParameters, setParameters, withParameters, resetParameters, Framebuffer} from 'luma.gl';
 import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
 

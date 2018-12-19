@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import Accessor, {DEFAULT_ACCESSOR_VALUES} from 'luma.gl/webgl/accessor';
 
 const TEST_CASES_FOR_CONSTRUCTOR = [

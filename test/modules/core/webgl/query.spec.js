@@ -3,7 +3,7 @@
 import test from 'tape-catch';
 import {pollContext, Query} from 'luma.gl';
 import util from 'util';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {fixture} from 'luma.gl/test/setup';
 
 function testQueryConstructDelete(gl, t) {

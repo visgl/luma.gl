@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-catch';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';

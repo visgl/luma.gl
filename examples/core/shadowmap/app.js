@@ -1,4 +1,4 @@
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {AnimationLoop, Framebuffer, Cube, setParameters, clear} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 

@@ -23,7 +23,7 @@ const max = 34921;
 #### in
 
 ```js
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 ...
 const max = GL.MAX_VERTEX_ATTRIBS;
 ```
