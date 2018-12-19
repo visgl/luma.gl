@@ -4,13 +4,11 @@ import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl-utils';
 import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
-import trackContextState from './track-context-stat && global.makeDebugContexte';
+import trackContextState from './track-context-state';
 import {glGetDebugInfo} from './context-limits';
 import queryManager from '../webgl-utils/query-manager';
 
-
-import {log, isBrowser} from '../utils';
-import {global} from '../../utils/globals';
+import {log, isBrowser, global} from '../utils';
 import assert from '../utils/assert';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
@@ -113,19 +111,16 @@ export function createGLContext(opts = {}) {
 
   // Add debug instrumentation to the context
   if (isBrowser && debug) {
-
     if (!global.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
       gl = global.makeDebugContext(gl, {debug});
       // Debug forces log level to at least 1
       log.priority = Math.max(log.priority, 1);
-      // Log some debug info about the context
     }
-
   }
 
-  // Log context information
+  // Log some debug info about the newly created context
   logInfo(gl);
 
   // Add to seer integration
