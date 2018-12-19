@@ -2,7 +2,7 @@
  * A traditional stencil buffer based outline pass.
  */
 
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {_Pass as Pass, withParameters, setParameters} from 'luma.gl';
 
 export default class OutlinePass extends Pass {

@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {Program} from 'luma.gl';
 import ProgramConfiguration from 'luma.gl/webgl/program-configuration';
 import {fixture} from 'luma.gl/test/setup';

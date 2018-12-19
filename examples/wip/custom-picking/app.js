@@ -1,5 +1,5 @@
 /* global document */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {AnimationLoop, Model, setParameters, project, picking, pickModels} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import HeightmapGeometry from './heightmap-geometry';

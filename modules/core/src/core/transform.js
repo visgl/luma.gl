@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Model from './model';
 import Buffer from '../webgl/buffer';
 import Framebuffer from '../webgl/framebuffer';

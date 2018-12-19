@@ -1,5 +1,5 @@
 /* eslint-disable complexity */
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {Buffer} from '../webgl';
 import {log, uid} from '../utils';
 

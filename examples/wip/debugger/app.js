@@ -1,4 +1,4 @@
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {AnimationLoop, TextureCube, Cube, setParameters} from 'luma.gl';
 import {_DebugContext as DebugContext} from '@luma.gl/debug';
 import {Matrix4, radians} from 'math.gl';

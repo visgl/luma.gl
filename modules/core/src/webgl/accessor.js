@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 import log from '../utils/log';
 import assert from '../utils/assert';

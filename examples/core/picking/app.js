@@ -1,5 +1,5 @@
 /* global document */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {
   AnimationLoop, setParameters, loadTextures, Buffer,
   Sphere, project, diffuse, picking, pickModels,

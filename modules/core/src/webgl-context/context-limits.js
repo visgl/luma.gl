@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments, max-len */
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {isWebGL2} from '../webgl-utils';
 
 const WEBGL_LIMITS = {

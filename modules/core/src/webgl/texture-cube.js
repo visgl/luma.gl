@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Texture from './texture';
 import assert from '../utils/assert';
 

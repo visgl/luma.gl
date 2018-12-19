@@ -4,7 +4,7 @@ import Transform from '../core/transform';
 import Buffer from '../webgl/buffer';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 import {assert} from '../utils';
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS,

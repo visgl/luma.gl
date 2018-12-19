@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments */
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Resource from './resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';

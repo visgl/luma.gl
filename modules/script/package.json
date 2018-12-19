@@ -24,6 +24,8 @@
     "build": "npm run build-prod"
   },
   "dependencies": {
-    "@luma.gl/glfx": "^6.3.0-alpha.2"
+    "@luma.gl/constants": "^7.0.0-alpha.2",
+    "@luma.gl/glfx": "^6.3.0-alpha.2",
+    "luma.gl": "^7.0.0-alpha.2"
   }
 }

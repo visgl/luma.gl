@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 
 const OES_element_index = 'OES_element_index';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';

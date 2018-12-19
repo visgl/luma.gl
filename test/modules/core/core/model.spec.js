@@ -1,4 +1,4 @@
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import luma from 'luma.gl/init';
 import {Buffer, _Attribute as Attribute, Model, Cube} from 'luma.gl';
 import test from 'tape-catch';

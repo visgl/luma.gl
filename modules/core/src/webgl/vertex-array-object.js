@@ -1,6 +1,6 @@
 // WebGL2 VertexArrayObject class
 
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Resource from './resource';
 import Buffer from './buffer';
 import {isWebGL2} from '../webgl-utils';

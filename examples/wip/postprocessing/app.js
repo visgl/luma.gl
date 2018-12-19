@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 // import 'luma.gl/debug';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {AnimationLoop, setParameters, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 

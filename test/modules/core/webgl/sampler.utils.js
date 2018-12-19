@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {getKey} from 'luma.gl';
 
 // Sampler Parameters

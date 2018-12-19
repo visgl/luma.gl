@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 

@@ -1,0 +1,36 @@
+{
+  "name": "@luma.gl/constants",
+  "version": "7.0.0-alpha.2",
+  "description": "WebGL and WebGL2 constants",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "glsl",
+    "debug",
+    "3d"
+  ],
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "esnext": "src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "browser": {
+    "fs": false
+  },
+  "scripts": {
+    "clean": "echo nothing to clean",
+    "build": "echo nothing to build"
+  },
+  "dependencies": {
+  }
+}

@@ -3,7 +3,7 @@
 */
 
 import {AnimationLoop, Model, Texture2D, Buffer, setParameters, _getHistoPyramid as getHistoPyramid} from 'luma.gl';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 
 const INFO_HTML = `
 Example to display a texture

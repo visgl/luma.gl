@@ -1,4 +1,4 @@
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
 import {AnimationLoop, loadTextures, setParameters, Sphere} from 'luma.gl';
 import {Vector3, Matrix4} from 'math.gl';

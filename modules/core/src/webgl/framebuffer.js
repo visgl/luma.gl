@@ -16,7 +16,7 @@ import {glKey} from '../webgl-utils/constants-to-keys';
 import {log} from '../utils';
 import assert from '../utils/assert';
 
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 

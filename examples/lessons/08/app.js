@@ -1,5 +1,5 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
 import {AnimationLoop, Cube, loadTextures, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';

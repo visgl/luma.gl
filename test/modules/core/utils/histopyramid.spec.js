@@ -19,20 +19,20 @@
 // THE SOFTWARE.
 
 import {Buffer, Transform, Texture2D} from 'luma.gl';
-import GL from 'luma.gl/constants';
+import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
-import transformModule from '../../../../modules/core/src/shadertools/src/modules/transform/transform';
+import transformModule from 'luma.gl/shadertools/src/modules/transform/transform';
 import {
   buildHistopyramidBaseLevel,
   getHistoPyramid,
   histoPyramidGenerateIndices
-} from '../../../../modules/core/src/utils/histopyramid';
+} from 'luma.gl/utils/histopyramid';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS
-} from '../../../../modules/core/src/utils/histopyramid-shaders';
+} from 'luma.gl/utils/histopyramid-shaders';
 
 const gl = fixture.gl2;
 

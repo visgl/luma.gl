@@ -1,2 +1,3 @@
 // eslint-disable-next-line
-module.exports = require('./dist/es5/constants');
+console.warn('"import `luma.gl/constants`"" has been replaced with "import `@luma.gl/constants`"');
+require('@luma.gl/constants');
