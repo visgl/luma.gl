@@ -5,7 +5,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 
 import {withParameters} from '../webgl-context/context-state';
-import {copyFramebufferToTexture} from './framebuffer-utils.js';
+import {copyFramebufferToTexture} from './copy-and-blit.js';
 
 import {WebGLBuffer} from '../webgl-utils';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';

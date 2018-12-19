@@ -18,6 +18,8 @@ import './program.spec';
 import './program-configuration.spec';
 import './draw.spec';
 
+import './copy-and-blit.spec.js';
+
 // Extensions / webgl2
 // import './query.spec'; // TODO - Chrome has disabled...
 

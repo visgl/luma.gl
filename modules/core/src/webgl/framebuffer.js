@@ -15,7 +15,7 @@ import {
   copyFramebufferToImage,
   copyFramebufferToTexture,
   blitFramebuffer
-} from './framebuffer-utils.js';
+} from './copy-and-blit.js';
 
 import {log} from '../utils';
 import assert from '../utils/assert';
