@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments */
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {isWebGL2} from '../webgl-utils';
 import Resource from './resource';
 import assert from '../utils/assert';

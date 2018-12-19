@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Attribute from './attribute';
 import Object3D from './object-3d';
 import {getDrawMode} from '../geometry/geometry';

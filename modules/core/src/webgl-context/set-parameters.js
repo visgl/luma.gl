@@ -1,7 +1,7 @@
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {isWebGL2} from '../webgl-utils';
 import assert from '../utils/assert';
 

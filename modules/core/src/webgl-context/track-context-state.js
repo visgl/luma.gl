@@ -1,7 +1,7 @@
 // Support for listening to context state changes and intercepting state queries
 //
 // NOTE: this system does not handle buffer bindings
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {setParameters, getParameters, GL_PARAMETER_DEFAULTS} from './set-parameters';
 import assert from '../utils/assert';
 

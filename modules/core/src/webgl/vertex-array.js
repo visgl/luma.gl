@@ -1,6 +1,6 @@
 // VertexArray class
 
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Accessor from './accessor';
 import Buffer from './buffer';
 import VertexArrayObject from './vertex-array-object';

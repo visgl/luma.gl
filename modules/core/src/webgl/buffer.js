@@ -1,4 +1,4 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Resource from './resource';
 import Accessor from './accessor';
 import {assertWebGL2Context} from '../webgl-utils';

@@ -3,7 +3,7 @@ import Renderbuffer from './renderbuffer';
 import Texture from './texture';
 import Sampler from './sampler';
 import {log} from '../utils';
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 
 const UNIFORM_SETTERS = {
 

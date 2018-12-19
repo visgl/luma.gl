@@ -1,5 +1,5 @@
 // ClipSpace
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import {Model} from '../core';
 import {Geometry} from '../geometry';
 
