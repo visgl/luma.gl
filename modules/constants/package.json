@@ -16,9 +16,9 @@
     "debug",
     "3d"
   ],
-  "main": "src/constants.js",
-  "module": "src/constants.js",
-  "esnext": "src/constants.js",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "esnext": "src/index.js",
   "files": [
     "src",
     "README.md"
