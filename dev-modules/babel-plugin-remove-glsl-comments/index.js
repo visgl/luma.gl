@@ -1,7 +1,6 @@
 const minimatch = require("minimatch")
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '../..');
 const INLINE_COMMENT_REGEX = /\s*\/\/.*/g;
 const BLOCK_COMMENT_REGEX = /\s*\/\*(\*(?!\/)|[^*])*\*\//g;
 const DEFAULT_PATTERNS = ['*.js'];
@@ -24,7 +23,7 @@ function filterFile(state) {
 
   return patterns.some(function(p) {
     if (p[0] === '.') {
-      p = path.resolve(ROOT, p);
+      p = path.resolve(p);
     }
     return minimatch(filename, p);
   });
