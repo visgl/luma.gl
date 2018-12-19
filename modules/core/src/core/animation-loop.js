@@ -1,7 +1,6 @@
 /* global OffscreenCanvas */
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl-context';
 import {getPageLoadPromise} from '../webgl-context';
-import {makeDebugContext} from '../webgl-context/debug-context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl-utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
@@ -306,10 +305,6 @@ export default class AnimationLoop {
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
-    }
-
-    if (this.props.debug) {
-      this.gl = makeDebugContext(this.gl);
     }
 
     // Reset the WebGL context.
