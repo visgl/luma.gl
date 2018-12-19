@@ -306,8 +306,8 @@ export default class Framebuffer extends Resource {
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
-    log.deprecated('Framebuffer.copyToTexture({...})', 'copyFramebufferToTexture({framebuffer, ...})')();
-    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this, subCopy: true}));
+    log.deprecated('Framebuffer.copyToTexture({...})', 'copyFramebufferToTexture({framebuffer, isSubCopy: true, ...})')();
+    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this, isSubCopy: true}));
   }
 
   // WEBGL2 INTERFACE

@@ -1,5 +1,6 @@
 
 import Buffer from './buffer';
+import Framebuffer from '../webgl/framebuffer';
 import GL from '../constants';
 import {assert, log} from '../utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
@@ -7,7 +8,7 @@ import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {withParameters} from '../webgl-context';
 import {assertWebGL2Context} from '../webgl-utils';
 import {flipRows, scalePixels} from '../webgl-utils';
-
+import {toFramebuffer} from '../webgl-utils/texture-utils';
 
 // NOTE: Slow requires roundtrip to GPU
 // App can provide pixelArray or have it auto allocated by this method
@@ -24,6 +25,7 @@ export function copyFramebufferToArray({
   pixelArray = null,
   attachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
 } = {}) {
+  framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   const {gl, handle, attachments} = framebuffer;
   width = width || framebuffer.width;
@@ -40,14 +42,7 @@ export function copyFramebufferToArray({
   type = type || attachments[attachment].type;
 
   // Deduce type and allocated pixelArray if needed
-  if (!pixelArray) {
-    // Allocate pixel array if not already available, using supplied type
-    type = type || gl.UNSIGNED_BYTE;
-    const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
-    const components = glFormatToComponents(format);
-    // TODO - check for composite type (components = 1).
-    pixelArray = pixelArray || new ArrayType(width * height * components);
-  }
+  pixelArray = getPixelArray(pixelArray, type, format, width, height);
 
   // Pixel array available, if necessary, deduce type from it.
   type = type || getGLTypeFromTypedArray(pixelArray);
@@ -72,6 +67,7 @@ export function copyFramebufferToBuffer({
   buffer = null, // A new Buffer object is created when not provided.
   byteOffset = 0 // byte offset in buffer object
 }) {
+  framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   const {gl} = framebuffer;
   width = width || framebuffer.width;
@@ -110,6 +106,7 @@ export function copyFramebufferToDataUrl({
   attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   maxHeight = Number.MAX_SAFE_INTEGER
 } = {}) {
+  framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   let data = copyFramebufferToArray({framebuffer, attachment});
 
@@ -143,6 +140,7 @@ export function copyFramebufferToImage({
   attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   maxHeight = Number.MAX_SAFE_INTEGER
 } = {}) {
+  framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   /* global Image */
   const dataUrl = copyFramebufferToDataUrl({framebuffer, attachment});
@@ -173,9 +171,10 @@ export function copyFramebufferToTexture({
   x = 0,
   y = 0,
 
-  subCopy = false, // whether doing a complete copy or a specific region of framebuffer
+  isSubCopy = false, // whether doing a complete copy or a specific region of framebuffer
   mipmapLevel // deprecated
 }) {
+  framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   const {gl, handle} = framebuffer;
   if (mipmapLevel) {
@@ -193,7 +192,7 @@ export function copyFramebufferToTexture({
     texture.bind(0);
   }
 
-  if (!subCopy) {
+  if (!isSubCopy) {
     gl.copyTexImage2D(
       target || texture.target, level, internalFormat, x, y, width, height, border);
   } else {
@@ -284,4 +283,25 @@ export function blitFramebuffer({
   gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
 
   return dstFramebuffer;
+}
+
+// Helper methods
+
+function getFramebuffer(source) {
+  if (!(source instanceof Framebuffer)) {
+    return toFramebuffer(source);
+  }
+  return source;
+}
+
+function getPixelArray(pixelArray, type, format, width, height) {
+  if (pixelArray) {
+    return pixelArray;
+  }
+  // Allocate pixel array if not already available, using supplied type
+  type = type || GL.UNSIGNED_BYTE;
+  const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
+  const components = glFormatToComponents(format);
+  // TODO - check for composite type (components = 1).
+  return new ArrayType(width * height * components);
 }
