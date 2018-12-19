@@ -154,7 +154,11 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 export {default as pbr} from './shadertools/src/modules/pbr/pbr';
 
 // TODO: move to gpgpu module.
-export {getHistoPyramid} from './utils/histo-pyramid';
+export {
+  buildHistopyramidBaseLevel as _buildHistopyramidBaseLevel,
+  getHistoPyramid as _getHistoPyramid,
+  histoPyramidGenerateIndices as _histoPyramidGenerateIndices
+} from './utils/histopyramid';
 
 // DEPRECATED EXPORTS IN v6.0
 
