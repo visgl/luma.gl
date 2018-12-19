@@ -38,8 +38,6 @@ export {
   hasFeatures,
   getFeatures,
   canCompileGLGSExtension} from './webgl-context/context-features';
-export {
-  makeDebugContext} from './webgl-context/debug-context';
 
 // WebGL1 classes
 export {default as Buffer} from './webgl/buffer';
@@ -153,12 +151,24 @@ export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 
 export {default as pbr} from './shadertools/src/modules/pbr/pbr';
 
+// UTILS - mainly for sub-modules
+export {default as assert} from './utils/assert';
+export {default as log} from './utils/log';
+export {global, window, document, self} from './utils/globals';
+export {default as isBrowser} from './utils/is-browser';
+export {default as isOldIE} from './utils/is-old-ie';
+export {stubRemovedMethods} from './utils/stub-methods';
+
 // TODO: move to gpgpu module.
 export {
   buildHistopyramidBaseLevel as _buildHistopyramidBaseLevel,
   getHistoPyramid as _getHistoPyramid,
   histoPyramidGenerateIndices as _histoPyramidGenerateIndices
 } from './utils/histopyramid';
+
+// TO BE REMOVED IN v7
+export {
+  makeDebugContext} from './webgl-context/debug-context';
 
 // DEPRECATED EXPORTS IN v6.0
 
