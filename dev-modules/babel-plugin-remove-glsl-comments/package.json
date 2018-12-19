@@ -12,5 +12,8 @@
     "webgl",
     "glsl"
   ],
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "minimatch": "^3.0.0"
+  }
 }
