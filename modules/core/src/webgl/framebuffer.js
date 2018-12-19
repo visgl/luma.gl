@@ -9,12 +9,12 @@ import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {glKey} from '../webgl-utils/constants-to-keys';
 
 import {
-  copyFramebufferToArray,
-  copyFramebufferToBuffer,
-  copyFramebufferToDataUrl,
-  copyFramebufferToImage,
-  copyFramebufferToTexture,
-  blitFramebuffer
+  copyToArray,
+  copyToBuffer,
+  copyToDataUrl,
+  copyToImage,
+  copyToTexture,
+  blit
 } from './copy-and-blit.js';
 
 import {log} from '../utils';
@@ -269,27 +269,27 @@ export default class Framebuffer extends Resource {
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
   readPixels(opts = {}) {
-    log.deprecated('Framebuffer.readPixel({...})', 'copyFramebufferToArray({framebuffer, ...})')();
-    return copyFramebufferToArray(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.readPixel({...})', 'copyToArray({framebuffer, ...})')();
+    return copyToArray(Object.assign({}, opts, {framebuffer: this}));
   }
 
   // Reads data into provided buffer object asynchronously
   // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
   readPixelsToBuffer(opts = {}) {
-    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyFramebufferToBuffer({framebuffer, ...})')();
-    return copyFramebufferToBuffer(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyToBuffer({framebuffer, ...})')();
+    return copyToBuffer(Object.assign({}, opts, {framebuffer: this}));
   }
 
   // Reads pixels as a dataUrl
   copyToDataUrl(opts = {}) {
-    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyFramebufferToDataUrl({framebuffer, ...})')();
-    return copyFramebufferToDataUrl(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyToDataUrl({framebuffer, ...})')();
+    return copyToDataUrl(Object.assign({}, opts, {framebuffer: this}));
   }
 
   // Reads pixels into an HTML Image
   copyToImage(opts = {}) {
-    log.deprecated('Framebuffer.copyToImage({...})', 'copyFramebufferToImage({framebuffer, ...})')();
-    return copyFramebufferToImage(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.copyToImage({...})', 'copyToImage({framebuffer, ...})')();
+    return copyToImage(Object.assign({}, opts, {framebuffer: this}));
   }
 
   // copyToFramebuffer({width, height}) {
@@ -306,8 +306,8 @@ export default class Framebuffer extends Resource {
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
-    log.deprecated('Framebuffer.copyToTexture({...})', 'copyFramebufferToTexture({framebuffer, isSubCopy: true, ...})')();
-    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this, isSubCopy: true}));
+    log.deprecated('Framebuffer.copyToTexture({...})', 'copyToTexture({framebuffer, isSubCopy: true, ...})')();
+    return copyToTexture(Object.assign({}, opts, {framebuffer: this, isSubCopy: true}));
   }
 
   // WEBGL2 INTERFACE
@@ -315,8 +315,8 @@ export default class Framebuffer extends Resource {
   // Copies a rectangle of pixels between framebuffers
   // eslint-disable-next-line complexity
   blit(opts = {}) {
-    log.deprecated('Framebuffer.blit({...})', 'blitFramebuffer({dstFramebuffer: framebuffer, ...})')();
-    return blitFramebuffer(Object.assign({}, opts, {dstFramebuffer: this}));
+    log.deprecated('Framebuffer.blit({...})', 'blit({dstFramebuffer: framebuffer, ...})')();
+    return blit(Object.assign({}, opts, {dstFramebuffer: this}));
   }
 
   // signals to the GL that it need not preserve all pixels of a specified region of the framebuffer

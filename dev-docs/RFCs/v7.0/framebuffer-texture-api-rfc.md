@@ -30,10 +30,10 @@ The key proposal is to move methods from Framebuffer and Texture into global fun
 
 | Method                         | Replacement |
 | ---                            | ---         |
-| `Frambuffer.copyToDataUrl`     |  copyFramebufferToDataUrl |
-| `Frambuffer.copyToImage`       |  copyFramebufferToImage |
+| `Frambuffer.copyToDataUrl`     |  copyToDataUrl |
+| `Frambuffer.copyToImage`       |  copyToImage |
 | `Frambuffer.copyToFramebuffer` |  copyFramebuffer |
-| `Frambuffer.copyToTexture`     |  copyFramebufferToTexture |
+| `Frambuffer.copyToTexture`     |  copyToTexture |
 | `Frambuffer.blit`              |  blitFramebuffer |
 | `Texture.setImageData`         |  setTextureImageData |
 | `Texture.setSubImageData`      |  setTextureSubImageData |

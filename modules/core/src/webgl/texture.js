@@ -5,7 +5,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 
 import {withParameters} from '../webgl-context/context-state';
-import {copyFramebufferToTexture} from './copy-and-blit.js';
+import {copyToTexture} from './copy-and-blit.js';
 
 import {WebGLBuffer} from '../webgl-utils';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
@@ -484,8 +484,8 @@ export default class Texture extends Resource {
    * rendering can be faster.
    */
   copyFramebuffer(opts = {}) {
-    log.deprecated('Texture.copyFramebuffer({...})', 'copyFramebufferToTexture({texture, ...})')();
-    return copyFramebufferToTexture(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Texture.copyFramebuffer({...})', 'copyToTexture({texture, ...})')();
+    return copyToTexture(Object.assign({}, opts, {framebuffer: this}));
   }
 
   getActiveUnit() {

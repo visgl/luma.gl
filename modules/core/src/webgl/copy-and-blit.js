@@ -14,7 +14,7 @@ import {toFramebuffer} from '../webgl-utils/texture-utils';
 // App can provide pixelArray or have it auto allocated by this method
 // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
 //  newly allocated by this method unless provided by app.
-export function copyFramebufferToArray({
+export function copyToArray({
   framebuffer,
   x = 0,
   y = 0,
@@ -56,7 +56,7 @@ export function copyFramebufferToArray({
 
 // Reads data into provided buffer object asynchronously
 // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
-export function copyFramebufferToBuffer({
+export function copyToBuffer({
   framebuffer,
   x = 0,
   y = 0,
@@ -101,14 +101,14 @@ export function copyFramebufferToBuffer({
 }
 
 // Reads pixels as a dataUrl
-export function copyFramebufferToDataUrl({
+export function copyToDataUrl({
   framebuffer,
   attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   maxHeight = Number.MAX_SAFE_INTEGER
 } = {}) {
   framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
-  let data = copyFramebufferToArray({framebuffer, attachment});
+  let data = copyToArray({framebuffer, attachment});
 
   // Scale down
   let {width, height} = framebuffer;
@@ -134,7 +134,7 @@ export function copyFramebufferToDataUrl({
 }
 
 // Reads pixels into an HTML Image
-export function copyFramebufferToImage({
+export function copyToImage({
   framebuffer,
   image = null,
   attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
@@ -143,7 +143,7 @@ export function copyFramebufferToImage({
   framebuffer = getFramebuffer(framebuffer);
   assert(framebuffer);
   /* global Image */
-  const dataUrl = copyFramebufferToDataUrl({framebuffer, attachment});
+  const dataUrl = copyToDataUrl({framebuffer, attachment});
   image = image || new Image();
   image.src = dataUrl;
   return image;
@@ -152,7 +152,7 @@ export function copyFramebufferToImage({
 // Copy a rectangle from a framebuffer attachment into a texture (at an offset)
 // NOTE: assumes texture has enough storage allocated
 // eslint-disable-next-line complexity
-export function copyFramebufferToTexture({
+export function copyToTexture({
   // Target
   texture,
   target, // for cubemaps
@@ -238,7 +238,7 @@ export function copyFramebufferToTexture({
 
 // Copies a rectangle of pixels between framebuffers
 // eslint-disable-next-line complexity
-export function blitFramebuffer({
+export function blit({
   srcFramebuffer,
   dstFramebuffer,
   attachment = GL.COLOR_ATTACHMENT0,
