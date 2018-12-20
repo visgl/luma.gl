@@ -269,27 +269,27 @@ export default class Framebuffer extends Resource {
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
   readPixels(opts = {}) {
-    log.deprecated('Framebuffer.readPixel({...})', 'copyToArray({framebuffer, ...})')();
-    return copyToArray(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.readPixel({...})', 'copyToArray({source: framebuffer, ...})')();
+    return copyToArray(Object.assign({}, opts, {source: this, targetPixelArray: opts.pixelArray}));
   }
 
   // Reads data into provided buffer object asynchronously
   // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
   readPixelsToBuffer(opts = {}) {
-    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyToBuffer({framebuffer, ...})')();
-    return copyToBuffer(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyToBuffer({source: framebuffer, ...})')();
+    return copyToBuffer(Object.assign({}, opts, {source: this}));
   }
 
   // Reads pixels as a dataUrl
   copyToDataUrl(opts = {}) {
-    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyToDataUrl({framebuffer, ...})')();
-    return copyToDataUrl(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyToDataUrl({source: framebuffer, ...})')();
+    return copyToDataUrl(Object.assign({}, opts, {source: this}));
   }
 
   // Reads pixels into an HTML Image
   copyToImage(opts = {}) {
-    log.deprecated('Framebuffer.copyToImage({...})', 'copyToImage({framebuffer, ...})')();
-    return copyToImage(Object.assign({}, opts, {framebuffer: this}));
+    log.deprecated('Framebuffer.copyToImage({...})', 'copyToImage({source: framebuffer, ...})')();
+    return copyToImage(Object.assign({}, opts, {source: this, targetImage: opts.image}));
   }
 
   // copyToFramebuffer({width, height}) {
@@ -306,8 +306,8 @@ export default class Framebuffer extends Resource {
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
-    log.deprecated('Framebuffer.copyToTexture({...})', 'copyToTexture({framebuffer, isSubCopy: true, ...})')();
-    return copyToTexture(Object.assign({}, opts, {framebuffer: this, isSubCopy: true}));
+    log.deprecated('Framebuffer.copyToTexture({...})', 'copyToTexture({source: framebuffer, ...})')();
+    return copyToTexture(Object.assign({}, opts, {source: this}));
   }
 
   // WEBGL2 INTERFACE

@@ -15,6 +15,21 @@ with
 import "@luma.gl/debug";
 ```
 
+### Copy and Blit methods
+
+Flollowing member function of `Framebuffer` and `Texture` classes are now deprecated instead use corresponding global methods.
+
+| Deprecated method              | Replacement |
+| ---                            | ---         |
+| `Framebuffer.readPixels`       |  `copyToArray` |
+| `Framebuffer.readPixelsToBuffer`|  `copyToBuffer` |
+| `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
+| `Frambuffer.copyToImage`       |  `copyToImage` |
+| `Frambuffer.copyToFramebuffer` |  `copyFramebuffer` |
+| `Frambuffer.copyToTexture`     |  `copyToTexture` |
+| `Frambuffer.blit`              |  `blit` |
+| `Texture.copyFramebuffer`      |  `copyToTexture` |
+
 
 ## Upgrading from v5.3 to v6.0
 

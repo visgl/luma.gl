@@ -11,21 +11,30 @@ import {flipRows, scalePixels} from '../webgl-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
 
 // NOTE: Slow requires roundtrip to GPU
-// App can provide pixelArray or have it auto allocated by this method
+// Copies data from a Framebuffer or a Texture object into ArrayBuffer object.
+// App can provide targetPixelArray or have it auto allocated by this method
 // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
 //  newly allocated by this method unless provided by app.
 export function copyToArray({
-  framebuffer,
+  // Source
+  source,
   x = 0,
   y = 0,
   width,
   height,
   format = GL.RGBA,
-  type, // Auto deduced from pixelArray or gl.UNSIGNED_BYTE
-  pixelArray = null,
-  attachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
+  type, // Auto deduced from source or targetPixelArray if not provided
+  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
+
+  // Target
+  targetPixelArray = null,
+  pixelArray // deprecated
 } = {}) {
-  framebuffer = getFramebuffer(framebuffer);
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
+  if (pixelArray) {
+    log.deprecated('pixelArray', 'targetPixelArray')();
+    targetPixelArray = pixelArray;
+  }
   assert(framebuffer);
   const {gl, handle, attachments} = framebuffer;
   width = width || framebuffer.width;
@@ -42,22 +51,22 @@ export function copyToArray({
   type = type || attachments[attachment].type;
 
   // Deduce type and allocated pixelArray if needed
-  pixelArray = getPixelArray(pixelArray, type, format, width, height);
+  targetPixelArray = getPixelArray(targetPixelArray, type, format, width, height);
 
   // Pixel array available, if necessary, deduce type from it.
-  type = type || getGLTypeFromTypedArray(pixelArray);
+  type = type || getGLTypeFromTypedArray(targetPixelArray);
 
   const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
-  gl.readPixels(x, y, width, height, format, type, pixelArray);
+  gl.readPixels(x, y, width, height, format, type, targetPixelArray);
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-
-  return pixelArray;
+  if (deleteFramebuffer) { framebuffer.delete(); }
+  return targetPixelArray;
 }
 
-// Reads data into provided buffer object asynchronously
-// This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+// NOTE: doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+// Copies data from a Framebuffer or a Texture object into a Buffer object.
 export function copyToBuffer({
-  framebuffer,
+  source,
   x = 0,
   y = 0,
   width ,
@@ -67,7 +76,7 @@ export function copyToBuffer({
   buffer = null, // A new Buffer object is created when not provided.
   byteOffset = 0 // byte offset in buffer object
 }) {
-  framebuffer = getFramebuffer(framebuffer);
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   const {gl} = framebuffer;
   width = width || framebuffer.width;
@@ -96,87 +105,41 @@ export function copyToBuffer({
     gl.readPixels(x, y, width, height, format, type, byteOffset);
   });
   buffer.unbind({target: GL.PIXEL_PACK_BUFFER});
+  if (deleteFramebuffer) { framebuffer.delete(); }
 
   return buffer;
 }
 
-// Reads pixels as a dataUrl
-export function copyToDataUrl({
-  framebuffer,
-  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-  maxHeight = Number.MAX_SAFE_INTEGER
-} = {}) {
-  framebuffer = getFramebuffer(framebuffer);
-  assert(framebuffer);
-  let data = copyToArray({framebuffer, attachment});
-
-  // Scale down
-  let {width, height} = framebuffer;
-  while (height > maxHeight) {
-    ({data, width, height} = scalePixels({data, width, height}));
-  }
-
-  // Flip to top down coordinate system
-  flipRows({data, width, height});
-
-  /* global document */
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-
-  // Copy the pixels to a 2D canvas
-  const imageData = context.createImageData(width, height);
-  imageData.data.set(data);
-  context.putImageData(imageData, 0, 0);
-
-  return canvas.toDataURL();
-}
-
-// Reads pixels into an HTML Image
-export function copyToImage({
-  framebuffer,
-  image = null,
-  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-  maxHeight = Number.MAX_SAFE_INTEGER
-} = {}) {
-  framebuffer = getFramebuffer(framebuffer);
-  assert(framebuffer);
-  /* global Image */
-  const dataUrl = copyToDataUrl({framebuffer, attachment});
-  image = image || new Image();
-  image.src = dataUrl;
-  return image;
-}
-
-// Copy a rectangle from a framebuffer attachment into a texture (at an offset)
-// NOTE: assumes texture has enough storage allocated
-// eslint-disable-next-line complexity
+// Copy a rectangle from a Framebuffer or Texture object into a texture (at an offset)
+// eslint-disable-next-line complexity, max-statements
 export function copyToTexture({
+  // Source
+  source,
+  x = 0,
+  y = 0,
+  // attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
+
   // Target
   texture,
   target, // for cubemaps
-  xoffset = 0,
-  yoffset = 0,
-  zoffset = 0,
+  xoffset,
+  yoffset,
+  zoffset,
   width, // defaults to texture width
   height, // defaults to texture height
   level = 0,
   internalFormat = GL.RGBA,
   border = 0,
 
-  // Source
-  framebuffer,
-  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-  x = 0,
-  y = 0,
-
-  isSubCopy = false, // whether doing a complete copy or a specific region of framebuffer
   mipmapLevel // deprecated
 }) {
-  framebuffer = getFramebuffer(framebuffer);
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   const {gl, handle} = framebuffer;
+  const isSubCopy = (typeof xoffset !== 'undefined' || typeof yoffset !== 'undefined' || typeof zoffset !== 'undefined');
+  xoffset = xoffset || 0;
+  yoffset = yoffset || 0;
+  zoffset = zoffset || 0;
   if (mipmapLevel) {
     log.deprecated('mipmapLevel', 'level')();
     level = mipmapLevel;
@@ -185,7 +148,7 @@ export function copyToTexture({
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
   assert(target || texture);
-  // target
+  target = target || texture.target;
   if (texture) {
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
@@ -196,7 +159,7 @@ export function copyToTexture({
     gl.copyTexImage2D(
       target || texture.target, level, internalFormat, x, y, width, height, border);
   } else {
-    switch (texture.target) {
+    switch (target) {
     case GL.TEXTURE_2D:
     case GL.TEXTURE_CUBE_MAP:
       gl.copyTexSubImage2D(
@@ -231,16 +194,74 @@ export function copyToTexture({
     texture.unbind();
   }
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+  if (deleteFramebuffer) { framebuffer.delete(); }
   return texture;
 }
 
-// WEBGL2 INTERFACE
+// Reads pixels from a Framebuffer or Texture object to a dataUrl
+export function copyToDataUrl({
+  source,
+  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
+  maxHeight = Number.MAX_SAFE_INTEGER
+} = {}) {
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
+  assert(framebuffer);
+  let data = copyToArray({framebuffer, attachment});
 
-// Copies a rectangle of pixels between framebuffers
-// eslint-disable-next-line complexity
+  // Scale down
+  let {width, height} = framebuffer;
+  while (height > maxHeight) {
+    ({data, width, height} = scalePixels({data, width, height}));
+  }
+
+  // Flip to top down coordinate system
+  flipRows({data, width, height});
+
+  /* global document */
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+
+  // Copy the pixels to a 2D canvas
+  const imageData = context.createImageData(width, height);
+  imageData.data.set(data);
+  context.putImageData(imageData, 0, 0);
+  if (deleteFramebuffer) { framebuffer.delete(); }
+
+  return canvas.toDataURL();
+}
+
+// Reads pixels from a Framebuffer or Texture object into an HTML Image
+export function copyToImage({
+  // Source
+  source,
+  attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
+
+  // Target
+  targetImage = null,
+  image, // deprecated
+} = {}) {
+  if (image) {
+    log.deprecated('image', 'targetImage')();
+    targetImage = image;
+  }
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
+  assert(framebuffer);
+  /* global Image */
+  const dataUrl = copyToDataUrl({framebuffer, attachment});
+  targetImage = targetImage || new Image();
+  targetImage.src = dataUrl;
+  if (deleteFramebuffer) { framebuffer.delete(); }
+  return targetImage;
+}
+
+// NOTE: WEBLG2 only
+// Copies a rectangle of pixels between Framebuffer or Texture objects
+// eslint-disable-next-line max-statements, complexity
 export function blit({
-  srcFramebuffer,
-  dstFramebuffer,
+  source,
+  destination,
   attachment = GL.COLOR_ATTACHMENT0,
   srcX0 = 0, srcY0 = 0, srcX1, srcY1,
   dstX0 = 0, dstY0 = 0, dstX1, dstY1,
@@ -250,6 +271,10 @@ export function blit({
   mask = 0,
   filter = GL.NEAREST
 }) {
+  const {framebuffer: srcFramebuffer, deleteFramebuffer: deleteSrcFramebuffer} = getFramebuffer(source);
+  const {framebuffer: dstFramebuffer, deleteFramebuffer: deleteDstFramebuffer} = getFramebuffer(destination);
+
+  assert(srcFramebuffer);
   assert(dstFramebuffer);
   const {gl, handle, width, height, readBuffer} = dstFramebuffer;
   assertWebGL2Context(gl);
@@ -267,6 +292,15 @@ export function blit({
   if (stencil) {
     mask |= GL.STENCIL_BUFFER_BIT;
   }
+
+  if (deleteSrcFramebuffer || deleteDstFramebuffer) {
+    // Either source or destiantion was a texture object, which is wrapped in a Framebuffer objecgt as color attachment.
+    // Overwrite the mask to `COLOR_BUFFER_BIT`
+    if (mask & (GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT)) {
+      mask = GL.COLOR_BUFFER_BIT;
+      log.warn('Blitting from or into a Texture object, forcing mask to GL.COLOR_BUFFER_BIT')();
+    }
+  }
   assert(mask);
 
   srcX1 = srcX1 === undefined ? srcFramebuffer.width : srcX1;
@@ -281,6 +315,8 @@ export function blit({
   gl.readBuffer(readBuffer);
   gl.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
   gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
+  if (deleteSrcFramebuffer) { srcFramebuffer.delete(); }
+  if (deleteDstFramebuffer) { dstFramebuffer.delete(); }
 
   return dstFramebuffer;
 }
@@ -289,9 +325,9 @@ export function blit({
 
 function getFramebuffer(source) {
   if (!(source instanceof Framebuffer)) {
-    return toFramebuffer(source);
+    return {framebuffer: toFramebuffer(source), deleteFramebuffer: true};
   }
-  return source;
+  return {framebuffer: source, deleteFramebuffer: false};
 }
 
 function getPixelArray(pixelArray, type, format, width, height) {

@@ -11,7 +11,7 @@ import {
 } from 'luma.gl/webgl/copy-and-blit.js';
 
 const EPSILON = 1e-6;
-
+const {abs} = Math
 
 const FB_READPIXELS_TEST_CASES = [
   {
@@ -85,7 +85,7 @@ function testCopyFramebufferToArray(t, gl) {
         }
 
         const color = copyToArray({
-          framebuffer: source,
+          source,
           x: 0,
           y: 0,
           width,
@@ -128,7 +128,6 @@ function testCopyFramebufferToBuffer(t, bufferCreation) {
 
   [true, false].forEach(sourceIsFramebuffer => {
     const gl = gl2;
-    const {abs} = Math;
     const dataBytes = 6 * 4; // 6 floats
     const clearColor = [0.25, -0.35, 12340.25, 0.005];
     let source;
@@ -161,7 +160,7 @@ function testCopyFramebufferToBuffer(t, bufferCreation) {
 
     const color = new Float32Array(6);
     const buffer = copyToBuffer({
-      framebuffer: source,
+      source,
       width: 1,
       height: 1,
       type: GL.FLOAT,
@@ -187,29 +186,28 @@ test('WebGL#CopyAndBlit readPixelsToBuffer (buffer creation)', t => {
   testCopyFramebufferToBuffer(t, true);
 });
 
+const DEFAULT_TEXTURE_OPTIONS = {
+  format: GL.RGBA,
+  mipmap: false,
+  width: 1,
+  height: 1,
+  data: null
+};
+
+function createTexture(gl, opts) {
+  return new Texture2D(gl, Object.assign({}, DEFAULT_TEXTURE_OPTIONS, opts));
+}
+
 function testCopyFramebufferToTexture(t, gl) {
   [true, false].forEach(isSubCopy => {
     [true, false].forEach(sourceIsFramebuffer => {
-      const {abs} = Math;
       // const dataBytes = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
       const clearColor = [1, 0.5, 0.25, 0.125]
 
-      const sourceTexture = new Texture2D(gl, {
-        format: GL.RGBA,
-        // type: GL.FLOAT,
-        // dataFormat: GL.RGBA,
-        mipmap: false,
-        width: 1,
-        height: 1,
-        data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
-      });
+      const sourceTexture = createTexture(gl, {data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)});
 
-      const destinationTexture = new Texture2D(gl, {
-        format: GL.RGBA,
-        // type: GL.FLOAT,
-        // dataFormat: GL.RGBA,
-        mipmap: false,
+      const destinationTexture = createTexture(gl, {
         // allocate extra size to test x/y offsets when using sub copy
         width: 2,
         height: 2,
@@ -231,22 +229,20 @@ function testCopyFramebufferToTexture(t, gl) {
         source = sourceTexture;
       }
 
-      // const color = new Float32Array(6);
-      copyToTexture({
+      const opts = {
         texture: destinationTexture,
-        framebuffer: source,
-        xoffset: isSubCopy ? 1 : 0,
-        yoffset: isSubCopy ? 1 : 0,
+        source,
         width: 1,
-        height: 1,
-        // type: GL.FLOAT,
-        // buffer: bufferCreation ? null : pbo,
-        // byteOffset: 2 * 4 // start from 3rd element
-        isSubCopy
-      });
+        height: 1
+      };
+      if (isSubCopy) {
+        opts.xoffset = 1;
+        opts.yoffset = 1;
+      }
+      copyToTexture(opts);
 
       // Read data form destination texture
-      const color = copyToArray({framebuffer: destinationTexture});
+      const color = copyToArray({source: destinationTexture});
       const colorOffset = isSubCopy ? 4 * 3 /* skip first 3 pixels */ : 0;
 
       t.ok(abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON, `Red channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
@@ -273,7 +269,79 @@ test('WebGL2#copyToTexture', t => {
   }
 });
 
-test('WebGL2#CopyAndBlit blit', t => {
+/* eslint-disable max-statements */
+function testBlit(t, gl) {
+  [true, false].forEach(destinationIsFramebuffer => {
+    [true, false].forEach(sourceIsFramebuffer => {
+      // const dataBytes = 6 * 4; // 6 floats
+      const sourceColor = [255, 128, 64, 32];
+      const clearColor = [1, 0.5, 0.25, 0.125]
+
+      const sourceTexture = createTexture(gl, {data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)});
+
+      const destinationTexture = createTexture(gl, {
+        // allocate extra size to test x/y offsets when using sub copy
+        width: 2,
+        height: 2,
+        // allocate memory with 0's
+        data: new Uint8Array(4 * 4)
+      });
+
+      let source;
+      if (sourceIsFramebuffer) {
+        const framebuffer = new Framebuffer(gl, {
+          attachments: {
+            [GL.COLOR_ATTACHMENT0]: sourceTexture
+          }
+        });
+        framebuffer.checkStatus();
+        framebuffer.clear({color: clearColor});
+        source = framebuffer;
+      } else {
+        source = sourceTexture;
+      }
+      let destination;
+      if (destinationIsFramebuffer) {
+        const framebuffer = new Framebuffer(gl, {
+          width: 2,
+          height: 2,
+          attachments: {
+            [GL.COLOR_ATTACHMENT0]: destinationTexture
+          }
+        });
+        framebuffer.checkStatus();
+        framebuffer.clear({color: [0, 0, 0, 0]});
+        destination = framebuffer;
+      } else {
+        destination = destinationTexture;
+      }
+
+
+      // const color = new Float32Array(6);
+      blit({
+        destination,
+        source,
+        dstX0: 1,
+        dstY0: 1
+      });
+
+      // Read data form destination texture
+      const color = copyToArray({source: destination});
+      const colorOffset = 4 * 3; /* skip first 3 pixels */
+
+      const src = `${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'}`;
+      const dst = `${destinationIsFramebuffer ? 'Framebuffer' : 'Texture'}`;
+      t.ok(abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON, `Red channel should have correct value when blintting from ${src} to ${dst}`);
+      t.ok(abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON, `Green channel should have correct value when blintting from ${src} to ${dst}`);
+      t.ok(abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON, `Blue channel should have correct value when blintting from ${src} to ${dst}`);
+      t.ok(abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON, `Alpha channel should have correct value when blintting from ${src} to ${dst}`);
+    });
+  });
+  t.end();
+}
+/* eslint-disable max-statements */
+
+test('WebGL2#CopyAndBlit blit no-crash', t => {
   const {gl2} = fixture;
   if (gl2) {
 
@@ -282,12 +350,12 @@ test('WebGL2#CopyAndBlit blit', t => {
         const framebufferSrc = new Framebuffer(gl2);
         const framebufferDst = new Framebuffer(gl2);
         blit({
-          srcFramebuffer: framebufferSrc,
+          source: framebufferSrc,
           srcX0: 0,
           srcY0: 0,
           srcX1: 1,
           srcY1: 1,
-          dstFramebuffer: framebufferDst,
+          destination: framebufferDst,
           dstX0: 0,
           dstY0: 0,
           dstX1: 1,
@@ -302,4 +370,14 @@ test('WebGL2#CopyAndBlit blit', t => {
     t.comment('WebGL2 not available, skipping tests');
   }
   t.end();
+});
+
+test('WebGL2#blit', t => {
+  const {gl2} = fixture;
+  if (gl2) {
+    testBlit(t, gl2);
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+  }
 });

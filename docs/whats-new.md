@@ -1,5 +1,11 @@
 # What's New
 
+## Version 7.0
+
+### Copy and Blit methods
+
+Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that peform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
+
 ## Version 6.3
 
 Date: November 16, 2018

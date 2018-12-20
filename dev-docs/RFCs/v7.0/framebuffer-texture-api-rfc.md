@@ -24,22 +24,25 @@ The problem is that:
 
 ## Proposals
 
-The key proposal is to move methods from Framebuffer and Texture into global functions.
+* The key proposal is to move methods from Framebuffer and Texture into global functions.
 
 > TBD - some work remains to unify the proposal
 
 | Method                         | Replacement |
 | ---                            | ---         |
-| `Frambuffer.copyToDataUrl`     |  copyToDataUrl |
-| `Frambuffer.copyToImage`       |  copyToImage |
-| `Frambuffer.copyToFramebuffer` |  copyFramebuffer |
-| `Frambuffer.copyToTexture`     |  copyToTexture |
-| `Frambuffer.blit`              |  blitFramebuffer |
+| `Framebuffer.readPixels`       |  `copyToArray` |
+| `Framebuffer.readPixelsToBuffer`|  `copyToBuffer` |
+| `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
+| `Frambuffer.copyToImage`       |  `copyToImage` |
+| `Frambuffer.copyToFramebuffer` |  `copyFramebuffer` |
+| `Frambuffer.copyToTexture`     |  `copyToTexture` |
+| `Frambuffer.blit`              |  `blit` |
+| `Texture.copyFramebuffer`      |  `copyToTexture` |
 | `Texture.setImageData`         |  setTextureImageData |
 | `Texture.setSubImageData`      |  setTextureSubImageData |
 | `Texture.setImage3D`           |  setImage3D |
 
-
+* Make all methods that accept `Framebuffer` objects as source or target, to accept `Texture` object in addition to `Framebuffer` object. Internally we will implement a utility method to wrap `Texture` object into a `Framebuffer` object.
 
 ## Deprecation
 

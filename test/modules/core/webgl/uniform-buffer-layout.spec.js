@@ -139,7 +139,7 @@ test('WebGL#UniformBufferLayout setData', t => {
       inValue: sourceBuffer
     },
     vs: VS,
-    sourceDestinationMap: {
+    feedbackMap: {
       inValue: 'outValue'
     },
     varyings: ['outValue'],
