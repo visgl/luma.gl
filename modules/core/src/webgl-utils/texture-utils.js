@@ -2,7 +2,7 @@ import Texture2D from '../webgl/texture-2d';
 import TextureCube from '../webgl/texture-cube';
 import Texture3D from '../webgl/texture-3d';
 import Framebuffer from '../webgl/framebuffer';
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import assert from 'assert';
 
 // Clone a new texture object from a reference texture object.

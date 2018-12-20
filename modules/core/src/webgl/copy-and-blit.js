@@ -1,7 +1,7 @@
 
+import GL from '@luma.gl/constants';
 import Buffer from './buffer';
 import Framebuffer from '../webgl/framebuffer';
-import GL from '../constants';
 import {assert, log} from '../utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
