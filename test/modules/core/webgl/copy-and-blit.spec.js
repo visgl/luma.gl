@@ -39,7 +39,7 @@ const FB_READPIXELS_TEST_CASES = [
   // }
 ];
 
-function testCopyFramebufferToArray(t, gl) {
+function testCopyToArray(t, gl) {
 
   [true, false].forEach(sourceIsFramebuffer => {
     for (const testCase of FB_READPIXELS_TEST_CASES) {
@@ -104,21 +104,21 @@ function testCopyFramebufferToArray(t, gl) {
 
 test('WebGL1#CopyAndBlit copyToArray', t => {
   const {gl} = fixture;
-  testCopyFramebufferToArray(t, gl);
+  testCopyToArray(t, gl);
   t.end();
 });
 
 test('WebGL2#CopyAndBlit readPixels', t => {
   const {gl2} = fixture;
   if (gl2) {
-    testCopyFramebufferToArray(t, gl2);
+    testCopyToArray(t, gl2);
   } else {
     t.comment('WebGL2 not available, skipping tests');
   }
   t.end();
 });
 
-function testCopyFramebufferToBuffer(t, bufferCreation) {
+function testCopyToBuffer(t, bufferCreation) {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -179,11 +179,11 @@ function testCopyFramebufferToBuffer(t, bufferCreation) {
 }
 
 test('WebGL#CopyAndBlit readPixelsToBuffer', t => {
-  testCopyFramebufferToBuffer(t, false);
+  testCopyToBuffer(t, false);
 });
 
 test('WebGL#CopyAndBlit readPixelsToBuffer (buffer creation)', t => {
-  testCopyFramebufferToBuffer(t, true);
+  testCopyToBuffer(t, true);
 });
 
 const DEFAULT_TEXTURE_OPTIONS = {
@@ -198,7 +198,7 @@ function createTexture(gl, opts) {
   return new Texture2D(gl, Object.assign({}, DEFAULT_TEXTURE_OPTIONS, opts));
 }
 
-function testCopyFramebufferToTexture(t, gl) {
+function testCopyToTexture(t, gl) {
   [true, false].forEach(isSubCopy => {
     [true, false].forEach(sourceIsFramebuffer => {
       // const dataBytes = 6 * 4; // 6 floats
@@ -256,13 +256,13 @@ function testCopyFramebufferToTexture(t, gl) {
 
 test('WebGL#copyToTexture', t => {
   const {gl} = fixture;
-  testCopyFramebufferToTexture(t, gl);
+  testCopyToTexture(t, gl);
 });
 
 test('WebGL2#copyToTexture', t => {
   const {gl2} = fixture;
   if (gl2) {
-    testCopyFramebufferToTexture(t, gl2);
+    testCopyToTexture(t, gl2);
   } else {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
