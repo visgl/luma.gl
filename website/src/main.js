@@ -3,7 +3,7 @@ import 'babel-polyfill';
 import 'babel-register';
 
 // Enable debugging
-// import 'luma.gl/debug';
+// import '@luma.gl/debug';
 // import {setContextDefaults} from 'luma.gl';
 // setContextDefaults({debug: true});
 
