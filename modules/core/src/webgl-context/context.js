@@ -8,7 +8,8 @@ import trackContextState from './track-context-state';
 import {glGetDebugInfo} from './context-limits';
 import queryManager from '../webgl-utils/query-manager';
 
-import {log, isBrowser, global} from '../utils';
+import {log, isBrowser} from '../utils';
+import {global} from '../utils/globals';
 import assert from '../utils/assert';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
