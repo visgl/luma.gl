@@ -410,6 +410,10 @@ export const DOC_PAGES = [
         content: 'api-reference/webgl/buffer.md'
       },
       {
+        name: 'Copy and Blit',
+        content: 'api-reference/webgl/copy-and-blit.md'
+      },
+      {
         name: 'Framebuffer',
         content: 'api-reference/webgl/framebuffer.md'
       },

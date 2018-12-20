@@ -2,6 +2,7 @@
 
 import Transform from '../core/transform';
 import Buffer from '../webgl/buffer';
+import {copyToTexture} from '../webgl/copy-and-blit';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 import {assert} from '../utils';
 import GL from '@luma.gl/constants';
@@ -85,7 +86,8 @@ export function buildHistopyramidBaseLevel(gl, opts) {
     },
   });
   const framebuffer = transform.getFramebuffer();
-  framebuffer.copyToTexture({
+  copyToTexture({
+    source: framebuffer,
     texture: flatPyramidTexture,
     xoffset: 0,
     width: size,
@@ -140,7 +142,8 @@ export function getHistoPyramid(gl, opts) {
 
       // copy the result to the flaten pyramid texture
       const framebuffer = transform.getFramebuffer();
-      framebuffer.copyToTexture({
+      copyToTexture({
+        source: framebuffer,
         texture: flatPyramidTexture,
         xoffset: flatOffset,
         width: outSize[0],

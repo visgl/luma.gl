@@ -357,7 +357,9 @@ Copies pixels from the this framebuffer into the specified area of a two-dimensi
   * `height` (GLint, optional, default: texture.height) - Height of the area to be copied, if not specified defaults to texture.height.
 
 
-### readPixels
+### readPixels **DEPRECATED**
+
+NOTE: deprecated , instead use [`copyToArray`](/docs/api-reference/webgl/copy-and-blit.md)
 
 Reads data into an Array object and returns it. A new Array object is created when not provided. This method requires a sync between CPU and GPU as pixel values are copied from GPU texture memory to CPU Array object memory. This could introduce a delay as it waits for GPU to finish updating the texture. For asynchronous read, check `readPixelsToBuffer` method.
 
@@ -380,7 +382,10 @@ This function makes calls to the following WebGL APIs:
 
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
-### readPixelsToBuffer (WebGL2)
+
+### readPixelsToBuffer (WebGL2) **DEPRECATED**
+
+NOTE: deprecated , instead use [`copyToBuffer`](/docs/api-reference/webgl/copy-and-blit.md)
 
 Reads data into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
 
@@ -406,7 +411,9 @@ This function makes calls to the following WebGL APIs:
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.bindBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
-### blit (WebGL2)
+### blit (WebGL2) **DEPRECATED**
+
+NOTE: deprecated , instead use [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
 
 Copies a rectangle of pixels between framebuffers
 

@@ -155,7 +155,10 @@ Note: does not allocate storage
 WebGL References [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/compressedTexSubImage2D), [gl.texSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texSubImage2D), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture), [gl.bindBuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
-### copyFramebuffer
+### copyFramebuffer **DEPRECATED**
+
+NOTE: deprecated , instead use [`copyToTexture`](/docs/api-reference/webgl/copy-and-blit.md)
+
 
 Defines a two-dimensional texture image or cube-map texture image with pixels from the current framebuffer (rather than from client memory). (gl.copyTexImage2D wrapper)
 

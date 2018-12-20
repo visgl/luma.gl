@@ -5,6 +5,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 
 import {withParameters} from '../webgl-context/context-state';
+import {copyToTexture} from './copy-and-blit.js';
 
 import {WebGLBuffer} from '../webgl-utils';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
@@ -482,30 +483,9 @@ export default class Texture extends Resource {
    * Note that binding a texture into a Framebuffer's color buffer and
    * rendering can be faster.
    */
-  copyFramebuffer({
-    target = this.target,
-    framebuffer,
-    x = 0,
-    y = 0,
-    width,
-    height,
-    level = 0,
-    internalFormat = GL.RGBA,
-    border = 0
-  }) {
-    if (framebuffer) {
-      framebuffer.bind();
-    }
-
-    // target
-    this.bind(0);
-    this.gl.copyTexImage2D(
-      this.target, level, internalFormat, x, y, width, height, border);
-    this.unbind();
-
-    if (framebuffer) {
-      framebuffer.unbind();
-    }
+  copyFramebuffer(opts = {}) {
+    log.deprecated('Texture.copyFramebuffer({...})', 'copyToTexture({texture, ...})')();
+    return copyToTexture(Object.assign({}, opts, {framebuffer: this}));
   }
 
   getActiveUnit() {

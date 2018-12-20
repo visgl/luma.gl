@@ -1,17 +1,21 @@
 import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
-import Buffer from './buffer';
 import {clear, clearBuffer} from './clear';
 
-import {withParameters} from '../webgl-context';
 import {getFeatures} from '../webgl-context/context-features';
 
-import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
-import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
-import {flipRows, scalePixels} from '../webgl-utils';
 import {glKey} from '../webgl-utils/constants-to-keys';
+
+import {
+  copyToArray,
+  copyToBuffer,
+  copyToDataUrl,
+  copyToImage,
+  copyToTexture,
+  blit
+} from './copy-and-blit.js';
 
 import {log} from '../utils';
 import assert from '../utils/assert';
@@ -264,130 +268,28 @@ export default class Framebuffer extends Resource {
   // App can provide pixelArray or have it auto allocated by this method
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
-  readPixels({
-    x = 0,
-    y = 0,
-    width = this.width,
-    height = this.height,
-    format = GL.RGBA,
-    type, // Auto deduced from pixelArray or gl.UNSIGNED_BYTE
-    pixelArray = null,
-    attachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
-  } = {}) {
-    const {gl} = this;
-
-    // TODO - Set and unset gl.readBuffer
-    if (attachment === GL.COLOR_ATTACHMENT0 && this.handle === null) {
-      attachment = GL.FRONT;
-    }
-
-    assert(this.attachments[attachment]);
-
-    // Deduce the type from color attachment if not provided.
-    type = type || this.attachments[attachment].type;
-
-    // Deduce type and allocated pixelArray if needed
-    if (!pixelArray) {
-      // Allocate pixel array if not already available, using supplied type
-      type = type || gl.UNSIGNED_BYTE;
-      const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
-      const components = glFormatToComponents(format);
-      // TODO - check for composite type (components = 1).
-      pixelArray = pixelArray || new ArrayType(width * height * components);
-    }
-
-    // Pixel array available, if necessary, deduce type from it.
-    type = type || getGLTypeFromTypedArray(pixelArray);
-
-    const prevHandle = this.gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    this.gl.readPixels(x, y, width, height, format, type, pixelArray);
-    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-
-    return pixelArray;
+  readPixels(opts = {}) {
+    log.deprecated('Framebuffer.readPixel({...})', 'copyToArray({source: framebuffer, ...})')();
+    return copyToArray(Object.assign({}, opts, {source: this, targetPixelArray: opts.pixelArray}));
   }
 
   // Reads data into provided buffer object asynchronously
   // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
-  readPixelsToBuffer({
-    x = 0,
-    y = 0,
-    width = this.width,
-    height = this.height,
-    format = GL.RGBA,
-    type, // When not provided, auto deduced from buffer or GL.UNSIGNED_BYTE
-    buffer = null, // A new Buffer object is created when not provided.
-    byteOffset = 0 // byte offset in buffer object
-  }) {
-    const {gl} = this;
-
-    // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-    assertWebGL2Context(gl);
-
-    // deduce type if not available.
-    type = type || (buffer ? buffer.type : GL.UNSIGNED_BYTE);
-
-    if (!buffer) {
-      // Create new buffer with enough size
-      const components = glFormatToComponents(format);
-      const byteCount = glTypeToBytes(type);
-      const bytes = byteOffset + (width * height * components * byteCount);
-      buffer = new Buffer(gl, {
-        bytes,
-        type,
-        size: components
-      });
-    }
-
-    buffer.bind({target: GL.PIXEL_PACK_BUFFER});
-    withParameters(gl, {framebuffer: this}, () => {
-      gl.readPixels(x, y, width, height, format, type, byteOffset);
-    });
-    buffer.unbind({target: GL.PIXEL_PACK_BUFFER});
-
-    return buffer;
+  readPixelsToBuffer(opts = {}) {
+    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyToBuffer({source: framebuffer, ...})')();
+    return copyToBuffer(Object.assign({}, opts, {source: this}));
   }
 
   // Reads pixels as a dataUrl
-  copyToDataUrl({
-    attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-    maxHeight = Number.MAX_SAFE_INTEGER
-  } = {}) {
-    let data = this.readPixels({attachment});
-
-    // Scale down
-    let {width, height} = this;
-    while (height > maxHeight) {
-      ({data, width, height} = scalePixels({data, width, height}));
-    }
-
-    // Flip to top down coordinate system
-    flipRows({data, width, height});
-
-    /* global document */
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-
-    // Copy the pixels to a 2D canvas
-    const imageData = context.createImageData(width, height);
-    imageData.data.set(data);
-    context.putImageData(imageData, 0, 0);
-
-    return canvas.toDataURL();
+  copyToDataUrl(opts = {}) {
+    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyToDataUrl({source: framebuffer, ...})')();
+    return copyToDataUrl(Object.assign({}, opts, {source: this}));
   }
 
   // Reads pixels into an HTML Image
-  copyToImage({
-    image = null,
-    attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-    maxHeight = Number.MAX_SAFE_INTEGER
-  } = {}) {
-    /* global Image */
-    const dataUrl = this.readDataUrl({attachment});
-    image = image || new Image();
-    image.src = dataUrl;
-    return image;
+  copyToImage(opts = {}) {
+    log.deprecated('Framebuffer.copyToImage({...})', 'copyToImage({source: framebuffer, ...})')();
+    return copyToImage(Object.assign({}, opts, {source: this, targetImage: opts.image}));
   }
 
   // copyToFramebuffer({width, height}) {
@@ -403,117 +305,18 @@ export default class Framebuffer extends Resource {
   // Copy a rectangle from a framebuffer attachment into a texture (at an offset)
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
-  copyToTexture({
-    // Target
-    texture,
-    target, // for cubemaps
-    xoffset = 0,
-    yoffset = 0,
-    zoffset = 0,
-    mipmapLevel = 0,
-
-    // Source
-    attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-    x = 0,
-    y = 0,
-    width, // defaults to texture width
-    height // defaults to texture height
-  }) {
-    const {gl} = this;
-    const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    // TODO - support gl.readBuffer (WebGL2 only)
-    // const prevBuffer = gl.readBuffer(attachment);
-    assert(target || texture);
-    // target
-    if (texture) {
-      width = Number.isFinite(width) ? width : texture.width;
-      height = Number.isFinite(height) ? height : texture.height;
-      texture.bind(0);
-    }
-    switch (texture.target) {
-    case GL.TEXTURE_2D:
-    case GL.TEXTURE_CUBE_MAP:
-      gl.copyTexSubImage2D(
-        target || texture.target,
-        mipmapLevel,
-        xoffset,
-        yoffset,
-        x,
-        y,
-        width,
-        height
-      );
-      break;
-    case GL.TEXTURE_2D_ARRAY:
-    case GL.TEXTURE_3D:
-      gl.copyTexSubImage3D(
-        target || texture.target,
-        mipmapLevel,
-        xoffset,
-        yoffset,
-        zoffset,
-        x,
-        y,
-        width,
-        height
-      );
-      break;
-    default:
-    }
-    if (texture) {
-      texture.unbind();
-    }
-    gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-    return texture;
+  copyToTexture(opts = {}) {
+    log.deprecated('Framebuffer.copyToTexture({...})', 'copyToTexture({source: framebuffer, ...})')();
+    return copyToTexture(Object.assign({}, opts, {source: this}));
   }
 
   // WEBGL2 INTERFACE
 
   // Copies a rectangle of pixels between framebuffers
   // eslint-disable-next-line complexity
-  blit({
-    srcFramebuffer,
-    attachment = GL.COLOR_ATTACHMENT0,
-    srcX0 = 0, srcY0 = 0, srcX1, srcY1,
-    dstX0 = 0, dstY0 = 0, dstX1, dstY1,
-    color = true,
-    depth = false,
-    stencil = false,
-    mask = 0,
-    filter = GL.NEAREST
-  }) {
-    const {gl} = this;
-    assertWebGL2Context(gl);
-
-    if (!srcFramebuffer.handle && attachment === GL.COLOR_ATTACHMENT0) {
-      attachment = GL.FRONT;
-    }
-
-    if (color) {
-      mask |= GL.COLOR_BUFFER_BIT;
-    }
-    if (depth) {
-      mask |= GL.DEPTH_BUFFER_BIT;
-    }
-    if (stencil) {
-      mask |= GL.STENCIL_BUFFER_BIT;
-    }
-    assert(mask);
-
-    srcX1 = srcX1 === undefined ? srcFramebuffer.width : srcX1;
-    srcY1 = srcY1 === undefined ? srcFramebuffer.height : srcY1;
-    dstX1 = dstX1 === undefined ? this.width : dstX1;
-    dstY1 = dstY1 === undefined ? this.height : dstY1;
-
-    const prevDrawHandle = gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, this.handle);
-    const prevReadHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, srcFramebuffer.handle);
-    gl.readBuffer(attachment);
-    gl.blitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
-    gl.readBuffer(this.readBuffer);
-    gl.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
-    gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
-
-    return this;
+  blit(opts = {}) {
+    log.deprecated('Framebuffer.blit({...})', 'blit({dstFramebuffer: framebuffer, ...})')();
+    return blit(Object.assign({}, opts, {dstFramebuffer: this}));
   }
 
   // signals to the GL that it need not preserve all pixels of a specified region of the framebuffer
