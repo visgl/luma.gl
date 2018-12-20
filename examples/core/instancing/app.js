@@ -1,4 +1,4 @@
-import 'luma.gl/debug';
+import '@luma.gl/debug';
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
