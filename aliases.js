@@ -28,7 +28,8 @@ const ALIASES = {
   '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
   '@luma.gl/io': path.resolve(__dirname, './modules/io/src'),
   '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src'),
-  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src')
+  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
+  '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src')
 };
 
 if (module.require) {
