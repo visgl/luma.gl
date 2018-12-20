@@ -48,8 +48,7 @@
     "test-browser": "webpack-dev-server --config test/webpack.config.js --env.test --progress --hot --open",
     "bench-browser": "webpack-dev-server --config test/webpack.config.js --env.bench --progress --hot --open",
     "collect-metrics": "scripts/collect-metrics.sh",
-    "pre-commit": "scripts/test.sh fast",
-    "pre-push": "^0.1.1"
+    "pre-commit": "scripts/test.sh fast"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
@@ -89,7 +88,8 @@
     "webpack": "^4.20.2",
     "webpack-bundle-analyzer": "^2.11.1",
     "webpack-cli": "^3.1.2",
-    "webpack-dev-server": "^3.1.1"
+    "webpack-dev-server": "^3.1.1",
+    "pre-push": "^0.1.1"
   },
   "pre-commit": [
     "pre-commit"
