@@ -1,9 +1,11 @@
-# Copy and Blit
+# Readback, Copy and Blit
 
 `luma.gl` offers a set of functions that copy or blit data from and to Texture and Framebuffer objects. Image data can also be copied into Buffer, TypedArray, Images or Urls.
 
 
-### copyToArray(opts: Object) : TypedArray
+## Readback Functions
+
+### readPixelsToArray(source : Framebuffer|Texture [, opts: Object]) : TypedArray
 
 Reads data from a `Framebuffer` or `Texture` object into a TypedArray object and returns it. A new TypedArray object is created when not provided. This method requires a sync between CPU and GPU as pixel values are copied from GPU texture memory to CPU Array object memory. This could introduce a delay as it waits for GPU to finish updating the texture. For asynchronous read, check `copyToBuffer` method.
 
@@ -30,7 +32,7 @@ This function makes calls to the following WebGL APIs:
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
-### copyToBuffer(opts: Object) : Buffer (WebGL2)
+### readPixelsToBuffer(source : Framebuffer|Texture, opts: Object) : Buffer (WebGL2)
 
 Reads data from a `Framebuffer` or `Texture` object into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
 
@@ -58,7 +60,15 @@ This function makes calls to the following WebGL APIs:
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.bindBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
+## Copy Functions
+
 ### copyToTexture(opts: Object) : Texture
+
+copyToTexture({
+  source: fb,
+  target: texture,
+  ...
+});
 
 Copies pixels from a `Framebuffer` or `Texture` object into the specified area of a two-dimensional texture image or cube-map texture image. (gl.copyTexImage2D, gl.copyTexSubImage2D and gl.copyTexSubImage3D wrapper)
 
@@ -122,6 +132,8 @@ This function makes calls to the following WebGL APIs:
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
+## Blit Functions
+
 ### blit(opts: Object) : (WebGL2)
 
 Copies a rectangle of pixels from a `Texture` or `Framebuffer` object into a `Texture` or `Framebuffer` object.
@@ -135,8 +147,8 @@ Source options:
   * `opts.srcY1` (`GLint`) - Higher Y bound of copy rectangle in source.
 
 Target options:
-  * `opts.destination` (`Texture` or `Framebuffer`) - This object will be bound and data is copied into it.
-  * `opts.dstX0` (`GLint`, default: `0`) - Lower X bound of copy rectangle in destination.
+  * `opts.target` (`Texture` or `Framebuffer`) - This object will be bound and data is copied into it.
+  * `opts.targetX0` (`GLint`, default: `0`) - Lower X bound of copy rectangle in destination.
   * `opts.dstY0` (`GLint`, default: `0`) - Lower Y bound of copy rectangle in destination.
   * `opts.dstX1` (`GLint`) - Higher X bound of copy rectangle in destination.
   * `opts.dstY1` (`GLint`) - Higher Y bound of copy rectangle in destination.
