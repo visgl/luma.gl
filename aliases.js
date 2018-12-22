@@ -21,14 +21,15 @@
 const path = require('path');
 
 const ALIASES = {
-  'dev-modules': path.resolve(__dirname, './dev-modules'),
   'luma.gl/test': path.resolve(__dirname, './test'),
   'luma.gl': path.resolve(__dirname, './modules/core/src'),
-  '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
-  '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
-  '@luma.gl/io': path.resolve(__dirname, './modules/io/src'),
+  'dev-modules': path.resolve(__dirname, './dev-modules'),
+  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
   '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src'),
-  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src')
+  '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
+  '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
+  '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
+  '@luma.gl/io': path.resolve(__dirname, './modules/io/src')
 };
 
 if (module.require) {

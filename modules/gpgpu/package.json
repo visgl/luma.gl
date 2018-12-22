@@ -1,21 +1,33 @@
 {
   "name": "@luma.gl/gpgpu",
-  "description": "general purpose gpu calculation",
-  "private": "true",
-  "version": "0.0.1",
+  "version": "7.0.0-alpha.2",
+  "description": "Set of gpgpu utility methods based on luma.gl",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "glsl",
+    "gpgpu",
+    "3d"
+  ],
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
   "esnext": "dist/es6/index.js",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
+  "browser": {
+    "fs": false
+  },
   "scripts": {
     "clean": "rm -fr dist && mkdir -p dist/es5 dist/esm dist/es6",
     "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5",

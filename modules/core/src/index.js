@@ -7,6 +7,7 @@ require('./init');
 export {
   isWebGL,
   isWebGL2} from './webgl-utils/webgl-checks';
+export {cloneTextureFrom} from './webgl-utils/texture-utils';
 export {
   getKeyValue,
   getKey} from './webgl-utils/constants-to-keys';
@@ -49,6 +50,15 @@ export {default as Texture2D} from './webgl/texture-2d';
 export {default as TextureCube} from './webgl/texture-cube';
 
 export {clear, clearBuffer} from './webgl/clear';
+
+// Copy and Blit
+export {
+  copyToArray,
+  copyToBuffer,
+  copyToTexture,
+  copyToDataUrl,
+  copyToImage
+} from './webgl/copy-and-blit';
 
 // WebGL2 classes & Extensions
 export {default as FenceSync} from './webgl/fence-sync';
@@ -158,13 +168,6 @@ export {global, window, document, self} from './utils/globals';
 export {default as isBrowser} from './utils/is-browser';
 export {default as isOldIE} from './utils/is-old-ie';
 export {stubRemovedMethods} from './utils/stub-methods';
-
-// TODO: move to gpgpu module.
-export {
-  buildHistopyramidBaseLevel as _buildHistopyramidBaseLevel,
-  getHistoPyramid as _getHistoPyramid,
-  histoPyramidGenerateIndices as _histoPyramidGenerateIndices
-} from './utils/histopyramid';
 
 // TO BE REMOVED IN v7
 export {
