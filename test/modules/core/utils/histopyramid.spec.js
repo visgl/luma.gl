@@ -25,14 +25,14 @@ import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
 import transformModule from '../../../../modules/core/src/shadertools/src/modules/transform/transform';
 import {
-  buildHistopyramidBaseLevel,
-  getHistoPyramid,
-  histoPyramidGenerateIndices
-} from '../../../../modules/core/src/utils/histopyramid';
+  _buildHistopyramidBaseLevel as buildHistopyramidBaseLevel,
+  _getHistoPyramid as getHistoPyramid,
+  _histoPyramidGenerateIndices as histoPyramidGenerateIndices
+} from '@luma.gl/gpgpu';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS
-} from '../../../../modules/core/src/utils/histopyramid-shaders';
+} from '@luma.gl/gpgpu/histopyramid/histopyramid-shaders';
 
 const gl = fixture.gl2;
 

@@ -1,10 +1,5 @@
-// TODO: move to gpgpu module.
-
-import Transform from '../core/transform';
-import Buffer from '../webgl/buffer';
-import {cloneTextureFrom} from '../webgl-utils/texture-utils';
-import {assert} from '../utils';
-import GL from '../constants';
+import {Transform, Buffer, cloneTextureFrom} from 'luma.gl';
+import GL from 'luma.gl/constants';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS,
@@ -16,9 +11,10 @@ import {
 // Following methods implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
 // Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
 
-function isPowerOfTwo(x) {
-    return ((x !== 0) && !(x & (x - 1)));
-}
+// TODO: enable to assert on texture dimension
+// function isPowerOfTwo(x) {
+//     return ((x !== 0) && !(x & (x - 1)));
+// }
 
 function nextPowerOfTwo(x) {
   const p = Math.ceil(Math.log2(x));
@@ -101,8 +97,8 @@ export function buildHistopyramidBaseLevel(gl, opts) {
 // * flatPyramidTexture: Texture with all mip levels laid out horizontally
 export function getHistoPyramid(gl, opts) {
   const {textureData, baseTexture, flatPyramidTexture} = buildHistopyramidBaseLevel(gl, opts);
-  const {width, height} = baseTexture;
-  assert(width === height && isPowerOfTwo(width));
+  const {width} = baseTexture;
+  // assert(width === height && isPowerOfTwo(width));
   const levelCount = Math.log2(width) + 1;
   const pyramidTextures = [baseTexture];
 

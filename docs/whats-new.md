@@ -1,5 +1,13 @@
 # What's New
 
+## Version 7.0
+
+
+### New submodule
+
+* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+
+
 ## Version 6.3
 
 Date: November 16, 2018

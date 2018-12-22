@@ -11,7 +11,6 @@
       "ignoreChanges": [
         "test",
         "*.md",
-        "@luma.gl/gpgpu",
         "@luma.gl/imageprocessing",
         "@luma.gl/io",
         "@luma.gl/scripts"
