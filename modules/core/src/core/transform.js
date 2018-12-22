@@ -14,6 +14,7 @@ import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from 
 import assert from '../utils/assert';
 import {log, isObjectEmpty} from '../utils';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
+import {readPixelsToArray} from '../webgl/copy-and-blit';
 
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {
@@ -105,7 +106,7 @@ export default class Transform {
     // When varyingName is not provided return data from framebuffer object.
     assert(!varyingName || varyingName === this.targetTextureVarying);
 
-    const pixels = this.framebuffers[this.currentIndex].readPixels();
+    const pixels = readPixelsToArray(this.framebuffers[this.currentIndex]);
 
     if (!packed) {
       return pixels;

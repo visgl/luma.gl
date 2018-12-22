@@ -3,7 +3,7 @@
 import test from 'tape-catch';
 
 import GL from '@luma.gl/constants';
-import {Framebuffer, Buffer, Texture2D, getKey, isWebGL2} from 'luma.gl';
+import {Buffer, Texture2D, getKey, isWebGL2, readPixelsToArray} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
@@ -367,15 +367,15 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
 
 test('WebGL1#Texture2D setImageData', t => {
   const {gl} = fixture;
-  
+
   // data: null
   const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
-  t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
+  t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
   const data = new Uint8Array([0, 1, 2, 3, 128, 201, 255, 255]);
   texture.setImageData({data});
-  t.deepEquals(readTexturePixels(texture), data, 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -389,7 +389,7 @@ test('WebGL1#Texture2D setImageData', t => {
     imageData.data[7] = 1;
     ctx.putImageData(imageData, 0, 0);
     texture.setImageData({data: canvas});
-    t.deepEquals(readTexturePixels(texture), new Uint8Array([0, 0, 128, 255, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(readPixelsToArray(texture), new Uint8Array([0, 0, 128, 255, 0, 0, 0, 1]), 'Pixels are set correctly');
   }
 
   t.end();
@@ -407,18 +407,18 @@ test('WebGL2#Texture2D setImageData', t => {
 
   // data: null
   const texture = new Texture2D(gl2, {data: null, width: 2, height: 1, format: GL.RGBA32F, type: GL.FLOAT, mipmap: false});
-  t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
+  t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
   data = new Float32Array([0.1, 0.2, -3, -2, 0, 0.5, 128, 255]);
   texture.setImageData({data});
-  t.deepEquals(readTexturePixels(texture), data, 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
 
   // data: buffer
   data = new Float32Array([21, 0.82, 0, 1, 0, 255, 128, 3.333]);
   const buffer = new Buffer(gl2, {size: 4, type: GL.FLOAT, data});
   texture.setImageData({data: buffer});
-  t.deepEquals(readTexturePixels(texture), data, 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -428,7 +428,7 @@ test('WebGL2#Texture2D setImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 2, 1);
     texture.setImageData({data: canvas});
-    t.deepEquals(readTexturePixels(texture), new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(readPixelsToArray(texture), new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]), 'Pixels are set correctly');
   }
 
   t.end();
@@ -439,12 +439,12 @@ test('WebGL1#Texture2D setSubImageData', t => {
 
   // data: null
   const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
-  t.deepEquals(readTexturePixels(texture), new Uint8Array(8), 'Pixels are empty');
+  t.deepEquals(readPixelsToArray(texture), new Uint8Array(8), 'Pixels are empty');
 
   // data: typed array
   const data = new Uint8Array([1, 2, 3, 4]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0]), 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0]), 'Pixels are set correctly');
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -454,7 +454,7 @@ test('WebGL1#Texture2D setSubImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 1, 1);
     texture.setSubImageData({data: canvas, x: 1, y: 0, width: 1, height: 1});
-    t.deepEquals(readTexturePixels(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 255]), 'Pixels are set correctly');
+    t.deepEquals(readPixelsToArray(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 255]), 'Pixels are set correctly');
   }
 
   t.end();
@@ -472,18 +472,18 @@ test('WebGL2#Texture2D setSubImageData', t => {
 
   // data: null
   const texture = new Texture2D(gl2, {data: null, width: 2, height: 1, format: GL.RGBA32F, type: GL.FLOAT, mipmap: false});
-  t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
+  t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
   data = new Float32Array([0.1, 0.2, -3, -2]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0]), 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0]), 'Pixels are set correctly');
 
   // data: buffer
   data = new Float32Array([-3, 255, 128, 3.333]);
   const buffer = new Buffer(gl2, {size: 4, type: GL.FLOAT, data});
   texture.setSubImageData({data: buffer, x: 1, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333]), 'Pixels are set correctly');
+  t.deepEquals(readPixelsToArray(texture), new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333]), 'Pixels are set correctly');
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -493,24 +493,8 @@ test('WebGL2#Texture2D setSubImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 1, 1);
     texture.setSubImageData({data: canvas, x: 1, y: 0, width: 1, height: 1});
-    t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(readPixelsToArray(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1]), 'Pixels are set correctly');
   }
 
   t.end();
 });
-
-/* Utility: returns the pixels of a texture */
-function readTexturePixels(texture) {
-  const {gl} = texture;
-  const framebuffer = new Framebuffer(gl, {
-    width: texture.width,
-    height: texture.height,
-    attachments: {
-      [GL.COLOR_ATTACHMENT0]: texture
-    }
-  });
-  const pixelsArray = framebuffer.readPixels();
-  framebuffer.delete();
-  return pixelsArray;
-}
-

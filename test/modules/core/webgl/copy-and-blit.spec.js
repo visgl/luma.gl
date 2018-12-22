@@ -4,8 +4,8 @@ import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
-  copyToArray,
-  copyToBuffer,
+  readPixelsToArray,
+  readPixelsToBuffer,
   copyToTexture,
   blit
 } from 'luma.gl/webgl/copy-and-blit.js';
@@ -84,14 +84,14 @@ function testCopyToArray(t, gl) {
           source = texture;
         }
 
-        const color = copyToArray({
-          source,
-          x: 0,
-          y: 0,
-          width,
-          height,
-          format: type === GL.FLOAT ? GL.RGBA : dataFormat, // For float textures only RGBA is supported.
-          type});
+        const color = readPixelsToArray(source, {
+          sourceX: 0,
+          sourceY: 0,
+          sourceWidth: width,
+          sourceHeight: height,
+          sourceFormat: type === GL.FLOAT ? GL.RGBA : dataFormat, // For float textures only RGBA is supported.
+          sourceType: type
+        });
 
         const expectedColor = testCase.expectedColor || testCase.clearColor;
         for (const index in color) {
@@ -102,7 +102,7 @@ function testCopyToArray(t, gl) {
   });
 }
 
-test('WebGL1#CopyAndBlit copyToArray', t => {
+test('WebGL1#CopyAndBlit readPixelsToArray', t => {
   const {gl} = fixture;
   testCopyToArray(t, gl);
   t.end();
@@ -159,13 +159,12 @@ function testCopyToBuffer(t, bufferCreation) {
     }
 
     const color = new Float32Array(6);
-    const buffer = copyToBuffer({
-      source,
-      width: 1,
-      height: 1,
-      type: GL.FLOAT,
-      buffer: bufferCreation ? null : pbo,
-      byteOffset: 2 * 4 // start from 3rd element
+    const buffer = readPixelsToBuffer(source, {
+      sourceWidth: 1,
+      sourceHeight: 1,
+      sourceType: GL.FLOAT,
+      target: bufferCreation ? null : pbo,
+      targetByteOffset: 2 * 4 // start from 3rd element
     });
     buffer.getData({dstData: color});
 
@@ -230,19 +229,17 @@ function testCopyToTexture(t, gl) {
       }
 
       const opts = {
-        texture: destinationTexture,
-        source,
         width: 1,
         height: 1
       };
       if (isSubCopy) {
-        opts.xoffset = 1;
-        opts.yoffset = 1;
+        opts.targetX = 1;
+        opts.targetY = 1;
       }
-      copyToTexture(opts);
+      copyToTexture(source, destinationTexture, opts);
 
       // Read data form destination texture
-      const color = copyToArray({source: destinationTexture});
+      const color = readPixelsToArray(destinationTexture);
       const colorOffset = isSubCopy ? 4 * 3 /* skip first 3 pixels */ : 0;
 
       t.ok(abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON, `Red channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
@@ -318,15 +315,13 @@ function testBlit(t, gl) {
 
 
       // const color = new Float32Array(6);
-      blit({
-        destination,
-        source,
-        dstX0: 1,
-        dstY0: 1
+      blit(source, destination, {
+        targetX0: 1,
+        targetY0: 1
       });
 
       // Read data form destination texture
-      const color = copyToArray({source: destination});
+      const color = readPixelsToArray(destination);
       const colorOffset = 4 * 3; /* skip first 3 pixels */
 
       const src = `${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'}`;
@@ -349,17 +344,15 @@ test('WebGL2#CopyAndBlit blit no-crash', t => {
       () => {
         const framebufferSrc = new Framebuffer(gl2);
         const framebufferDst = new Framebuffer(gl2);
-        blit({
-          source: framebufferSrc,
-          srcX0: 0,
-          srcY0: 0,
-          srcX1: 1,
-          srcY1: 1,
-          destination: framebufferDst,
-          dstX0: 0,
-          dstY0: 0,
-          dstX1: 1,
-          dstY1: 1,
+        blit(framebufferSrc, framebufferDst, {
+          sourceX0: 0,
+          sourceY0: 0,
+          sourceX1: 1,
+          sourceY1: 1,
+          targetX0: 0,
+          targetY0: 0,
+          targetX1: 1,
+          targetY1: 1,
           color: true,
           depth: true,
           stencil: true});
