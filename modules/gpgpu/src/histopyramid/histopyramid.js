@@ -11,6 +11,7 @@ import {
 // Following methods implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
 // Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
 
+// TODO: enable to assert on texture dimension
 // function isPowerOfTwo(x) {
 //     return ((x !== 0) && !(x & (x - 1)));
 // }
