@@ -2,9 +2,10 @@ import React, {Component} from 'react';
 import Link from 'gatsby-link';
 import Stats from 'stats.js';
 
-import {InstancingDemo} from '../../../../src/react-demos';
+import DemoRunner from '../../../../src/demo-runner';
+import demos from '../../../../src/demos';
 
-console.log(InstancingDemo);
+const HeroDemo = demos.Instancing;
 
 export default class Hero extends Component {
 
@@ -33,7 +34,7 @@ export default class Hero extends Component {
     return (
       <section ref="banner" className="banner">
         <div className="f hero">
-          <InstancingDemo noPanel />
+          <DemoRunner demo={HeroDemo.demo} sourceLink={HeroDemo.path} noPanel />
         </div>
         <div className="container">
           <h1>luma.gl</h1>

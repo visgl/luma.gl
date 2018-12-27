@@ -2,4 +2,4 @@
 if (typeof window !== 'undefined') {
   window.website = true;
 }
-module.exports = require('./react-demo-list');
+module.exports = require('./demo-list');

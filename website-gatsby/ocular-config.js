@@ -1,9 +1,10 @@
-const DOC_FOLDER = `${__dirname}/../docs/`;
-const ROOT_FOLDER = `${__dirname}/../`;
+const DEMOS = require('./src/demos.json');
 
 module.exports = {
-  DOC_FOLDER,
-  ROOT_FOLDER,
+  DOC_FOLDER: `${__dirname}/../docs/`,
+  ROOT_FOLDER: `${__dirname}/../`,
+
+  DEMOS,
 
   webpack: {
     resolve: {

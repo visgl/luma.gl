@@ -1,4 +1,5 @@
 import log, {COLOR} from '../utils/log';
+import {getSiteConfig} from '../gatsby-config/site-config';
 
 const path = require("path");
 
@@ -7,6 +8,8 @@ const INDEX_PAGE = path.resolve(__dirname, '../pages/index.jsx');
 
 // PATHS TO REACT COMPONENTS
 const DOC_PAGE = path.resolve(__dirname, '../templates/doc.jsx');
+const EXAMPLE_PAGE = path.resolve(__dirname, '../templates/example.jsx');
+
 // const POST_PAGE = path.resolve('../src/templates/post.jsx');
 // const TAG_PAGE = path.resolve(__dirname, '../src/templates/tag.jsx');
 // const CATEGORY_PAGE = path.resolve(__dirname, '../src/templates/category.jsx');
@@ -16,13 +19,16 @@ const DOC_PAGE = path.resolve(__dirname, '../templates/doc.jsx');
 // by gatsby.
 // We use graphgl to query for nodes and iterate
 export default function createPages({ graphql, actions }) {
-  log.log({color: COLOR.BLUE}, 'ocular generating pages');
+  log.log({color: COLOR.BLUE}, 'ocular generating pages')();
 
   createStaticPages({ graphql, actions });
+
+  createExamplePages({ graphql, actions });
 
   const promise = Promise.all([
     createDocPages({ graphql, actions })
   ]);
+
   return promise;
 }
 
@@ -33,6 +39,27 @@ function createStaticPages({ graphql, actions }) {
     component: INDEX_PAGE,
     path: '/'
   });
+}
+
+function createExamplePages({ graphql, actions }) {
+  const { createPage } = actions;
+
+  const {DEMOS} = getSiteConfig();
+
+  for (const demoName in DEMOS) {
+    const demo = DEMOS[demoName];
+
+    log.log({color: COLOR.CYAN}, `Creating example page ${JSON.stringify(demo)}`)();
+
+    createPage({
+      path: demo.path,
+      component: EXAMPLE_PAGE,
+      context: {
+        slug: demoName
+      }
+    });
+  }
+
 }
 
 // Walks all markdown nodes and creates a doc page for each node

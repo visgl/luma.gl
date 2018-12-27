@@ -77,7 +77,7 @@ export default function getGatsbyConfig(config) {
       //   }
       // },
 
-      // Generates gatsby nodes for markdown files in the in the docs folder
+      // Generates gatsby nodes for markdown files and JSON file in the in the docs folder
       {
         resolve: 'gatsby-source-filesystem',
         options: {
@@ -85,6 +85,15 @@ export default function getGatsbyConfig(config) {
           path: config.DOC_FOLDER
         }
       },
+
+      // Generates gatsby nodes for markdown files in the in the docs folder
+      // {
+      //   resolve: 'gatsby-source-filesystem',
+      //   options: {
+      //     name: 'examples',
+      //     path: urljoin(config.ROOT_FOLDER, 'examples')
+      //   }
+      // },
 
       // Transforms markdown (.md) nodes, converting the raw markdown to HTML
       {

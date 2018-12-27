@@ -37,18 +37,20 @@ function traverseTableOfContents(chapters, docNodes, level) {
 
 function processEntry(chapter, entry, docNodes) {
   if (!entry.entry) {
-    log.warn({color: COLOR.RED}, 'missing entry in chapter', chapter.title, entry)();
+    // TODO/ib - make probe's log.warn emit color
+    // log.warn({color: COLOR.RED}, 'missing entry in chapter', chapter.title, entry)();
+    log.log({color: COLOR.RED}, 'missing entry in chapter', chapter.title, entry)();
     return;
   }
   const slug = entry.entry.replace(/\.[^/.]+$/, '').replace('/README', '');
   const docNode = docNodes[slug] || null;
   if (!docNode || !docNode.id) {
-    log.warn('unmatched toc entry', chapter.title, slug, docNode)();
+    // TODO/ib - make probe's log.warn emit color
+    log.log({color: COLOR.RED}, 'unmatched toc entry', chapter.title, slug, docNode)();
   } else {
     entry.id = [ docNode.id ];
     entry.markdown = [ docNode.id ];
     entry.childMarkdownRemark = docNode;
-    log.warn('matched toc entry',
-      chapter.title, entry.entry, docNode && docNode.id)();
+    log.log({color: COLOR.YELLOW}, 'doc page', chapter.title, entry.entry)();
   }
 }

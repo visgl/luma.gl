@@ -3,8 +3,8 @@ import React, {Component} from 'react';
 // import {connect} from 'react-redux';
 import Stats from 'stats.js';
 
-import {InstancingDemo} from '../../../../src/react-demos';
-// import DemoRunner from '../../../../src/react-demo-runner';
+import {InstancingDemo} from '../../../../src/demos';
+// import DemoRunner from '../../../../src/demo-runner';
 
 // import {setHeaderOpacity} from '../actions/app-actions';
 
