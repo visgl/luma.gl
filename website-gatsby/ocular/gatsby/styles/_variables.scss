@@ -1,0 +1,75 @@
+$primary: #7989B7;
+$secondary: #CCC7E4;
+$black: #2E3446;
+$black-20: #213746;
+$black-40: #5A666D;
+$white: #EDEDED;
+$white-40: #8D9BA3;
+
+$footer-height: 13rem;
+$topbar-height: 4rem;
+$topbar-maxheight: 8rem;
+$toc-width: 17rem;
+$mobile: 576px;
+
+@font-face {
+    font-family: ff-clan-web-pro;
+    font-style: normal;
+    font-weight: 100;
+    src: url(https://uber-design-herokuapp-com.global.ssl.fastly.net/03b64805a8cd2d53fadc5814445c2fb5.woff2) format("woff2"),
+        url(https://uber-design-herokuapp-com.global.ssl.fastly.net/341462317dd033a9d3d14a14a55e9d09.woff) format("woff")
+}
+@font-face {
+    font-family: ff-clan-web-pro;
+    font-style: normal;
+    font-weight: 400;
+    src: url(https://uber-design-herokuapp-com.global.ssl.fastly.net/ca614426b50ca7d007056aa00954764b.woff2) format("woff2"),
+        url(https://uber-design-herokuapp-com.global.ssl.fastly.net/a9e39356639e85c045725ab277a8d423.woff) format("woff")
+}
+@font-face {
+    font-family: ff-clan-web-pro;
+    font-style: normal;
+    font-weight: 500;
+    src: url(https://uber-design-herokuapp-com.global.ssl.fastly.net/ca104da8af9a2e0771e8fe2b31f8ec1e.woff2) format("woff2"),
+        url(https://uber-design-herokuapp-com.global.ssl.fastly.net/f39b50d5fd213136c91b31d423ab89f1.woff) format("woff")
+}
+@font-face {
+    font-family: ff-clan-web-pro;
+    font-style: normal;
+    font-weight: 600;
+    src: url(https://uber-design-herokuapp-com.global.ssl.fastly.net/ad875b9818771a1350232d99278c40e8.woff2) format("woff2"),
+        url(https://uber-design-herokuapp-com.global.ssl.fastly.net/49e5932ee0897877dbf33c945b7e408f.woff) format("woff")
+}
+
+body {
+  font-family: "ff-clan-web-pro", "Helvetica Neue", Helvetica, sans-serif !important;
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.banner .container {
+  text-shadow: none;
+  padding-left: 24px;
+  h1 {
+    font-size: 5em;
+    text-shadow: none;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-weight: 700;
+    margin: 96px 0 8px;
+    padding: 96px 24px 8px;
+  }
+  p {
+    text-shadow: none;
+    padding: 12px 24px;
+  }
+  .btn {
+    margin-left: 24px;
+  }
+}
+
+.header-content {
+  .logo, .site-links .site-link {
+    text-transform: uppercase;
+  }
+}

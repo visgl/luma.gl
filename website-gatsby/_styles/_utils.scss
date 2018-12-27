@@ -1,0 +1,141 @@
+// Copyright (c) 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+/**
+ * Flexbox
+ */
+
+.f { display: flex; }
+
+.f1 { flex: 1; }
+
+.fac {
+  display: flex;
+  align-items: center;
+}
+
+.fjc {
+  display: flex;
+  justify-content: center;
+}
+
+.fje {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.z {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fg {
+  flex-grow: 1;
+}
+
+.fw {
+  flex-wrap: wrap;
+}
+
+.fcol {
+  flex-direction: column;
+}
+
+/**
+ * Margins & Paddings
+ */
+
+.p { padding: 1rem; }
+.p-bottom { padding-bottom: 1rem; }
+.p-right { padding-right: 1rem; }
+.p-left { padding-left: 1rem; }
+.p-top { padding-top: 1rem; }
+
+.p2 { padding: 2rem; }
+.p2-bottom { padding-bottom: 2rem; }
+.p2-right { padding-right: 2rem; }
+.p2-left { padding-left: 2rem; }
+.p2-top { padding-top: 2rem; }
+
+.p4 {
+  padding: 4rem;
+  @media screen and (max-width: $mobile) {
+    padding: 0.5rem 1rem;
+  }
+}
+
+.p4-bottom { padding-bottom: 4rem; }
+.p4-right { padding-right: 4rem; }
+.p4-left { padding-left: 4rem; }
+.p4-top { padding-top: 4rem; }
+
+.ph { padding: 0 1rem; }
+.ph2 { padding: 0 2rem; }
+
+.mv1 {
+  > * + * {
+    margin-top: 1rem !important;
+  }
+}
+
+.mv2 {
+  > * + * {
+    margin-top: 2rem !important;
+  }
+}
+
+.mh1 {
+  > * + * {
+    margin-left: 1rem !important;
+  }
+}
+
+.m { margin: 1rem; }
+.m-bottom { margin-bottom: 1rem; }
+.m-right { margin-right: 1rem; }
+.m-left { margin-left: 1rem; }
+.m-top { margin-top: 1rem; }
+
+.m2 { margin: 2rem; }
+.m2-bottom { margin-bottom: 2rem; }
+.m2-right { margin-right: 2rem; }
+.m2-left { margin-left: 2rem; }
+.m2-top { margin-top: 2rem; }
+
+.m4 { margin: 4rem; }
+.m4-bottom { margin-bottom: 4rem; }
+.m4-right { margin-right: 4rem; }
+.m4-left { margin-left: 4rem; }
+.m4-top { margin-top: 4rem; }
+
+.hide {
+  display: none;
+}
+
+/**
+ * Responsive
+ */
+
+@media screen and (max-width: $mobile) {
+  .hide-mobile {
+    display: none;
+  }
+}
