@@ -19,7 +19,7 @@ const EXAMPLE_PAGE = path.resolve(__dirname, '../templates/example.jsx');
 // by gatsby.
 // We use graphgl to query for nodes and iterate
 export default function createPages({ graphql, actions }) {
-  log.log({color: COLOR.BLUE}, 'ocular generating pages')();
+  log.log({color: COLOR.CYAN}, 'ocular generating pages')();
 
   createStaticPages({ graphql, actions });
 

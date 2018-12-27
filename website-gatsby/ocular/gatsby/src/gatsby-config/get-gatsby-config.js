@@ -3,7 +3,7 @@ import urljoin from 'url-join';
 import log, {COLOR} from '../utils/log';
 
 export default function getGatsbyConfig(config) {
-  log.log({color: COLOR.YELLOW}, `BUILDING GATSBY CONFIG FROM ${JSON.stringify(config, null, 3)}`)();
+  log.log({color: COLOR.CYAN}, `BUILDING GATSBY CONFIG FROM ${JSON.stringify(config, null, 3)}`)();
 
   return {
     pathPrefix: config.pathPrefix,

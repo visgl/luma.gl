@@ -9,7 +9,7 @@ let globalOptions = {};
 const docNodes = {};
 
 export function onCreateWebpackConfig({ actions }) {
-  log.log({color: COLOR.BLUE}, 'Updating webpack config')();
+  // log.log({color: COLOR.BLUE}, 'Updating webpack config')();
   actions.setWebpackConfig(Object.assign({
   	// nulling out `fs` avoids issues with certain node modules getting bundled,
   	// e.g. headless-gl gets bundled by luma.gl if installed in root folder

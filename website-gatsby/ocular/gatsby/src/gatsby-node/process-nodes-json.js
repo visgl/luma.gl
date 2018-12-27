@@ -51,6 +51,6 @@ function processEntry(chapter, entry, docNodes) {
     entry.id = [ docNode.id ];
     entry.markdown = [ docNode.id ];
     entry.childMarkdownRemark = docNode;
-    log.log({color: COLOR.YELLOW}, 'doc page', chapter.title, entry.entry)();
+    log.log({color: COLOR.CYAN}, 'doc page', chapter.title, entry.entry)();
   }
 }
