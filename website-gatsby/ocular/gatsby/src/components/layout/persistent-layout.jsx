@@ -10,9 +10,11 @@ import styled from 'styled-components'
 import '../../../styles/main.scss'
 
 import SEO from '../common/SEO'
-import Header from './header'
-// import Footer from './footer';
+
 import TableOfContents from './table-of-contents'
+import Header from './header'
+// TODO/ib - restore footer
+// import Footer from './footer';
 
 import { ContextProviderComponent, ContextConsumerComponent } from "./persistent-layout-context"
 
@@ -121,7 +123,7 @@ export default class Layout extends React.Component {
           { children }
         </BodyContainerFull>
 
-        { /* <Footer /> */ }
+        {/* <Footer /> */}
 
       </div>
     );
@@ -143,10 +145,11 @@ export default class Layout extends React.Component {
             const {config, tableOfContents, allSEOMarkdown} = context.data;
             return (
               <div>
-                <Helmet>
-                  <title>{config.siteTitle}</title>
-                </Helmet>
-                { allSEOMarkdown && <SEO postEdges={allSEOMarkdown} /> }
+                { allSEOMarkdown ? <SEO postEdges={allSEOMarkdown} /> : (
+                  <Helmet>
+                    <title>{config.siteTitle}</title>
+                  </Helmet>
+                )}
                 { pageContext.toc ?
                     this.renderBodyWithTOC(config, tableOfContents) :
                     this.renderBodyFull(config)

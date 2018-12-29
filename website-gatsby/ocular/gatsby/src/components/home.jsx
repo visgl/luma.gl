@@ -21,7 +21,7 @@
 import React, {Component} from 'react';
 // import {StaticQuery, graphql} from 'gatsby';
 
-import Hero from './hero';
+import {getReactComponent} from '../gatsby-config/component-registry';
 
 export default class Home extends Component {
   render() {
@@ -33,6 +33,8 @@ export default class Home extends Component {
       HOME_BULLETS = [],
       PROJECT_TYPE
     } = config;
+
+    const Hero = getReactComponent('Hero');
 
     return (
       <div className="fg">

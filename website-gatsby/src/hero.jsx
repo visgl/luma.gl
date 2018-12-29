@@ -2,8 +2,8 @@ import React, {Component} from 'react';
 import {Link} from 'gatsby';
 import Stats from 'stats.js';
 
-import DemoRunner from '../../../../src/demo-runner';
-import demos from '../../../../src/demos';
+import DemoRunner from './demo-runner';
+import demos from './demos';
 
 const HeroDemo = demos.Instancing;
 
