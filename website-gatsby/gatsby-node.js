@@ -1,6 +1,3 @@
-// Enables ES6 imports in any imported file (not in this file).
-require('reify');
-
 const config = require('./ocular-config');
 const {getGatsbyNodeCallbacks} = require('./ocular/gatsby');
 

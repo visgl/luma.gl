@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "author": "Ruben Harutyunyan <vagr9k@gmail.com>",
   "dependencies": {
+    "@babel/preset-env": "^7.2.3",
+    "@babel/register": "^7.0.0",
     "babel-plugin-styled-components": "^1.10.0",
     "classnames": "^2.2.6",
     "gatsby": "2.0.77",
@@ -46,7 +48,6 @@
     "react-icons": "^2.2.7",
     "react-share": "^2.0.0",
     "react-twitter-widgets": "^1.7.1",
-    "reify": "^0.18.1",
     "stats.js": "^0.17.0",
     "styled-components": "^4.1.0",
     "url-join": "^4.0.0"

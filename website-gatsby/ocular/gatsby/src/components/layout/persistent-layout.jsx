@@ -5,8 +5,6 @@
 import React from 'react'
 import Helmet from 'react-helmet'
 import styled from 'styled-components'
-import {graphql} from 'gatsby';
-
 // import { StaticQuery, graphql } from 'gatsby'
 
 import '../../../styles/main.scss'
@@ -19,32 +17,6 @@ import TableOfContents from './table-of-contents'
 import { ContextProviderComponent, ContextConsumerComponent } from "./persistent-layout-context"
 
 export { ContextConsumerComponent } from './persistent-layout-context';
-
-export const query = graphql`
-  fragment SiteInformation on Site {
-    siteMetadata {
-      config {
-        siteTitle,
-        siteLogo,
-        siteDescription,
-        PROJECT_NAME,
-        PROJECT_TYPE,
-        HOME_HEADING,
-        HOME_BULLETS {
-          text
-          desc
-          img
-        }
-      }
-    }
-  }
-`;
-
-// const IndexHeadContainer = styled.div`
-//   background: ${props => props.theme.brand};
-//   padding: ${props => props.theme.sitePadding};
-//   text-align: center;
-// `
 
 const BodyGrid = styled.div`
   height: 100vh;
@@ -169,7 +141,6 @@ export default class Layout extends React.Component {
             // TODO - use StaticQuery to directly query for common data here in this file,
             // instead of using this crazy react context to forward data from children.
             const {config, tableOfContents, allSEOMarkdown} = context.data;
-            debugger
             return (
               <div>
                 <Helmet>
@@ -189,10 +160,10 @@ export default class Layout extends React.Component {
   }
 }
 
+/*
 // TODO/ib - If we can get this to work, we can query for all common data here
 // and leave path/slug-dependent queries to the pages
 // Unfortunately, currently this static query just hangs...
-/*
 export default props => (
   <StaticQuery query={graphql`
 query StaticQuery {
