@@ -1,5 +1,7 @@
 import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types';
+import {setPathPrefix} from 'luma.gl';
+
 import InfoPanel from './info-panel';
 
 const propTypes = {
@@ -15,6 +17,14 @@ const DEFAULT_ALT_TEXT = 'THIS DEMO IS NOT SUPPORTED';
 
 export default class DemoRunner extends Component {
   componentDidMount() {
+    const {sourceLink} = this.props;
+
+    // Ensure the example can find its images
+    // TODO - ideally we should extract images from example source?
+    const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
+    setPathPrefix(`${RAW_GITHUB}/${sourceLink}`);
+
+    // Start the actual example
     this.props.demo.start({
       canvas: this.props.canvas,
       debug: true

@@ -39,9 +39,9 @@ export default {
   Fragment: {demo: Fragment, path: 'examples/core/fragment/'},
   // Particles: {}
   // Persistence: {}
-  // Picking: {demo: Picking, path: 'examples/core/picking/'},
+  Picking: {demo: Picking, path: 'examples/core/picking/'},
   Shadowmap: {demo: Shadowmap, path: 'examples/core/shadowmap/'},
-  Transform: {demo: Transform, path: 'examples/core/Transform/'},
+  Transform: {demo: Transform, path: 'examples/core/transform/'},
   TransformFeedbackDemo: {demo: TransformFeedback, path: 'examples/core/transform-feedback/'},
 
   Lesson01: {demo: Lesson01, path: 'examples/lessons/01/'},

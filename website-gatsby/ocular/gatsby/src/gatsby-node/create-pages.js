@@ -5,8 +5,9 @@ const path = require("path");
 
 // PATHS TO REACT PAGES
 const INDEX_PAGE = path.resolve(__dirname, '../pages/index.jsx');
+const EXAMPLES_PAGE = path.resolve(__dirname, '../pages/examples.jsx');
 
-// PATHS TO REACT COMPONENTS
+// PATHS TO REACT PAGE TEMPLATES
 const DOC_PAGE = path.resolve(__dirname, '../templates/doc.jsx');
 const EXAMPLE_PAGE = path.resolve(__dirname, '../templates/example.jsx');
 
@@ -32,12 +33,21 @@ export default function createPages({ graphql, actions }) {
   return promise;
 }
 
+// Create static pages
+// NOTE: gatsby does automatically build pages from **top level** `/pages`, folder
+// but in ocular we keep those pages in the installed structure so gatsby can't see them
+
 function createStaticPages({ graphql, actions }) {
   const { createPage } = actions;
 
   createPage({
     component: INDEX_PAGE,
-    path: '/'
+    path: '/',
+  });
+
+  createPage({
+    component: EXAMPLES_PAGE,
+    path: '/examples'
   });
 }
 
@@ -65,11 +75,6 @@ function createExamplePages({ graphql, actions }) {
 // Walks all markdown nodes and creates a doc page for each node
 function createDocPages({ graphql, actions }) {
   const { createPage } = actions;
-
-  // for (const key in docNodes) {
-  //   const node = docNodes[key];
-  //   console.log(node.fields.slug, node.fields.path);
-  // }
 
   return new Promise((resolve, reject) => {
     resolve(
@@ -119,7 +124,8 @@ function createDocPages({ graphql, actions }) {
             path: edge.node.fields.path,
             component: DOC_PAGE,
             context: {
-              slug: edge.node.fields.path
+              slug: edge.node.fields.path,
+              toc: true
             }
           });
         });

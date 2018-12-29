@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import Link from 'gatsby-link';
+import {Link} from 'gatsby';
 import Stats from 'stats.js';
 
 import DemoRunner from '../../../../src/demo-runner';
@@ -39,7 +39,7 @@ export default class Hero extends Component {
         <div className="container">
           <h1>luma.gl</h1>
           <p>A WebGL2-Powered Framework for GPU-based Visualization and Computation</p>
-          <Link to="/docs" className="btn">
+          <Link to="/docs/get-started" className="btn">
             GET STARTED
           </Link>
         </div>

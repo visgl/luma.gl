@@ -24,11 +24,15 @@ import React, {Component} from 'react';
 import Hero from './hero';
 
 export default class Home extends Component {
-  renderHTML(data) {
+  render() {
+    const {config = {}, contributors = []} = this.props;
+
     const {
-      HOME_HEADING, HOME_RIGHT = '...', HOME_BULLETS, PROJECT_TYPE
-    } = data.site.siteMetadata.config;
-    const {contributors = []} = this.props;
+      HOME_HEADING,
+      HOME_RIGHT = '...',
+      HOME_BULLETS = [],
+      PROJECT_TYPE
+    } = config;
 
     return (
       <div className="fg">
@@ -47,15 +51,15 @@ export default class Home extends Component {
 
               <hr className="short" />
 
-              {HOME_BULLETS.map((bull, i) => (
+              {HOME_BULLETS.map((bullet, i) => (
                 <div key={i}>
                   <h3 className="fac">
-                    <img src={bull.img} className="m-right" alt=""/>
-                    {bull.text}
+                    <img src={bullet.img} className="m-right" alt=""/>
+                    {bullet.text}
                   </h3>
-                  {bull.desc && (
+                  {bullet.desc && (
                     <p>
-                      {bull.desc}
+                      {bullet.desc}
                     </p>
                   )}
                 </div>
@@ -103,54 +107,4 @@ export default class Home extends Component {
       </div>
     );
   }
-
-  render() {
-    const {data} = this.props;
-    return this.renderHTML(data);
-  }
 }
-
-// TODO/ib - The following is supposed to work but just hangs
-// Would allow each component to query for what it needs
-
-// const QUERY = graphql`
-// query {
-//   site {
-//     siteMetadata {
-//       config {
-//         PROJECT_TYPE,
-//         HOME_HEADING,
-//         HOME_BULLETS {
-//           text
-//           desc
-//           img
-//         }
-//       }
-//     }
-//   }
-// }
-// `;
-
-// export default () => (
-//   <StaticQuery
-//     query={graphql`
-// query {
-//   site {
-//     siteMetadata {
-//       config {
-//         PROJECT_TYPE,
-//         HOME_HEADING,
-//         HOME_BULLETS {
-//           text
-//           desc
-//           img
-//         }
-//       }
-//     }
-//   }
-// }
-// `}
-//     render={data => <Home data={data} />}
-//   />
-// );
-

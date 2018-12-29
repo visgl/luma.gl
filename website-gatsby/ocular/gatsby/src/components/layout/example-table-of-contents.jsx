@@ -20,10 +20,7 @@
 
 import React, { PureComponent } from 'react'
 import cx from 'classnames'
-// import { Link } from 'react-router-dom'
-import Link from 'gatsby-link';
-// import { connect } from 'react-redux'
-// import { trees } from 'routes'
+import {Link} from 'gatsby';
 
 const getRootPath = pathname => `/${pathname.split('/')[1]}`
 

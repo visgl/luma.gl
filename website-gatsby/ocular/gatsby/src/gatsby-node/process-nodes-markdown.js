@@ -30,7 +30,6 @@ export function cleanupMarkdownNode(
     case 'MarkdownRemark':
     case 'Markdown':
       addSourceInstanceName(...arguments);
-      // console.log('MarkdownRemark', node.fields.sourceInstanceName);
       processed = true;
       break;
 
@@ -39,12 +38,9 @@ export function cleanupMarkdownNode(
   }
 
   // if (!processed) {
-  //   // console.log('Unknown node');
   //   if (node.internal.mediaType ==- 'application/json') {
-  //     console.log(node);
   //   }
   //   if (node.id === 'table-of-contents') {
-  //     console.log(node);
   //   }
   //   console.warn('Ocular ignoring node',
   //     node.absolutePath, node.internal.mediaType, node.internal.type, node.sourceInstanceName);
@@ -106,8 +102,6 @@ export function processNewMarkdownNode({ node, actions, getNode }, docNodes) {
     createNodeField({ node, name: 'slug', value: relPath });
     node.frontmatter.path = relPath;
   }
-
-  // console.log('setting path to ', relPath, node.fields.slug);
 
   docNodes[relPath] = node;
 }

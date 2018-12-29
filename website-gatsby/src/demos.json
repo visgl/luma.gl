@@ -5,7 +5,7 @@
   "Fragment": {"path": "examples/core/fragment/"},
   "Picking": {"path": "examples/core/picking/"},
   "Shadowmap": {"path": "examples/core/shadowmap/"},
-  "Transform": {"path": "examples/core/Transform/"},
+  "Transform": {"path": "examples/core/transform/"},
   "TransformFeedbackDemo": {"path": "examples/core/transform-feedback/"},
 
   "Lesson01": {"path": "examples/lessons/01/"},

@@ -1,4 +1,4 @@
-import log, {COLOR} from '../utils/log';
+// import log, {COLOR} from '../utils/log';
 
 import createPages from './create-pages';
 import {processNewMarkdownNode, cleanupMarkdownNode, addSiblingNodes} from './process-nodes-markdown';

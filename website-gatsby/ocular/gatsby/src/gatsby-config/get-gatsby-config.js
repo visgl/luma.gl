@@ -27,26 +27,34 @@ export default function getGatsbyConfig(config) {
     },
 
     plugins: [
+      // TODO/ib - remove
+      'gatsby-plugin-lodash',
+
       // Reads metadata from the React Helmet component
       'gatsby-plugin-react-helmet',
 
-      // Drop-in support for SASS/SCSS stylesheets
-      'gatsby-plugin-sass',
+      // A Gatsby plugin for styled-components with built-in server-side rendering support.
+      'gatsby-plugin-styled-components',
 
-      /*
+      // Drop-in support for SASS/SCSS stylesheets
       {
         resolve: `gatsby-plugin-sass`,
+        /*
         options: {
           includePaths: [
             path.resolve(__dirname, '../../styles'),
             path.resolve(__dirname, '../../../styles')
           ],
         }
+        */
       },
-      */
 
-      // A Gatsby plugin for styled-components with built-in server-side rendering support.
-      'gatsby-plugin-styled-components',
+      {
+        resolve: `gatsby-plugin-layout`,
+        options: {
+          component: require.resolve(`${__dirname}/../components/layout/persistent-layout.jsx`)
+        }
+      },
 
       // Bring Google Fonts to Gatsby.
       {
@@ -55,9 +63,6 @@ export default function getGatsbyConfig(config) {
           fonts: [`crimson text:400, 400i, 700, 700i`, `space mono:400,700`]
         }
       },
-
-      // TODO/ib/ib - remove
-      'gatsby-plugin-lodash',
 
       // Generates gatsby nodes for files in the static folder
       {
@@ -158,10 +163,6 @@ export default function getGatsbyConfig(config) {
       // Intercepts local links from markdown and other non-react pages and
       // does a client-side pushState to avoid the browser having to refresh the page.
       'gatsby-plugin-catch-links',
-
-      // Loads Twitter JavaScript for embedding tweets. Lets you add tweets to markdown/other places.
-      // Note: when copying the embed code, just copy the blockquote section and not the script.
-      'gatsby-plugin-twitter',
 
       // Create a sitemap for your Gatsby site.
       'gatsby-plugin-sitemap',

@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 import React, {Component} from 'react';
+import PropTypes from 'prop-types';
 import StarIcon from 'react-icons/lib/go/star';
 import GithubIcon from 'react-icons/lib/go/mark-github';
 
@@ -26,9 +27,11 @@ import cx from 'classnames';
 // import {trees} from 'routes';
 // import {toggleMenu, setHeaderOpacity} from 'reducers/ui';
 
-import Link from 'gatsby-link';
+import {Link} from 'gatsby';
 
-import "../../../styles/main.scss"
+const propTypes = {
+  config: PropTypes.object.isRequired
+};
 
 /*
 import {connect} from 'react-redux';
@@ -60,13 +63,14 @@ export default class Header extends Component {
   }
 
   render() {
-    const {data, pathname, isMenuOpen, opacity, stargazers_count, githubLoading} = this.props;
+    // TODO/ib - replace data with config
+    const {config = {}, pathname, isMenuOpen, opacity, stargazers_count, githubLoading} = this.props;
 
     const {
       // ADDITIONAL_LINKS,
       PROJECT_TYPE, PROJECT_NAME, PROJECT_URL,
       // PROJECTS
-    } = data.site.siteMetadata.config;
+    } = config;
 
     return (
       <header className={cx({open: isMenuOpen})}>
@@ -136,3 +140,5 @@ export default class Header extends Component {
   }
 
 }
+
+Header.propTypes = propTypes;
