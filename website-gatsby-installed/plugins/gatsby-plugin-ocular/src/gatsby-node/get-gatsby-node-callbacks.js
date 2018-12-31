@@ -1,14 +1,14 @@
-// import log, {COLOR} from '../utils/log';
+const {log, COLOR} = require('../utils/log');
 
-import createPages from './create-pages';
-import {processNewMarkdownNode, cleanupMarkdownNode, addSiblingNodes} from './process-nodes-markdown';
-import {processNewDocsJsonNode} from './process-nodes-json';
+const createPages = require('./create-pages');
+const {processNewMarkdownNode, cleanupMarkdownNode, addSiblingNodes} = require('./process-nodes-markdown');
+const {processNewDocsJsonNode} = require('./process-nodes-json');
 
 // TODO/ib - avoid globals
 let globalOptions = {};
 const docNodes = {};
 
-export function onCreateWebpackConfig({ actions }) {
+function onCreateWebpackConfig({ actions }) {
   // log.log({color: COLOR.BLUE}, 'Updating webpack config')();
   actions.setWebpackConfig(Object.assign({
   	// nulling out `fs` avoids issues with certain node modules getting bundled,
@@ -17,7 +17,9 @@ export function onCreateWebpackConfig({ actions }) {
   }, globalOptions.webpack));
 }
 
-export function onCreateNode({ node, actions, getNode }) {
+function onCreateNode({ node, actions, getNode }) {
+  // log.log({color: COLOR.CYAN}, `Processed node`)();
+
   // Add missing fields to markdown nodes
   cleanupMarkdownNode({ node, actions, getNode });
 
@@ -37,7 +39,7 @@ export function onCreateNode({ node, actions, getNode }) {
   }
 }
 
-export function setFieldsOnGraphQLNodeType({ type, actions }) {
+function setFieldsOnGraphQLNodeType({ type, actions }) {
   const { name } = type;
   const { createNodeField } = actions;
   if (name === "MarkdownRemark") {
@@ -46,7 +48,7 @@ export function setFieldsOnGraphQLNodeType({ type, actions }) {
 };
 
 // gatsby-node default implementation, user can just export these from gatsby-node
-export default function getGatsbyConfig(options = {}) {
+module.exports = function getGatsbyNodeCallbacks(options = {}) {
   globalOptions = options;
   return {
     onCreateWebpackConfig,

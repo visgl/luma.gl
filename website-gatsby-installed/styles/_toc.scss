@@ -1,0 +1,191 @@
+// Copyright (c) 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+@import 'variables';
+
+.toc {
+  position: fixed;
+  width: $toc-width;
+  height: calc(100% - #{$topbar-height});
+
+  padding: 1rem;
+
+  flex-shrink: 0;
+
+  z-index: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+  transition: all 300ms;
+  white-space: nowrap;
+
+  > div {
+    padding-bottom: 80px;
+  }
+
+  .subpages {
+    transition: max-height 0.3s;
+    overflow: hidden;
+  }
+
+  li {
+    list-style: none;
+    line-height: 40px;
+  }
+
+  a {
+    display: block;
+  }
+
+  .link {
+    padding-left: 28px;
+    color: $black-20;
+    background: transparent;
+    border-style: solid;
+    border-width: 0 0 0 4px;
+    border-color: transparent;
+    font-size: 14px;
+    &:hover {
+      color: $white-40;
+    }
+    &.active {
+      color: $primary;
+      font-weight: bold;
+      border-color: $primary;
+      border-image: linear-gradient(to bottom, $primary 0%, $secondary 100%);
+      border-image-slice: 2;
+    }
+  }
+
+  .list-header {
+    position: relative;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
+    padding: 24px 0 8px 24px;
+    color: $white-40;
+  }
+
+  .list-header:not(.active):not(.expanded):before {
+    content: '+';
+    font-weight: 600;
+    color: $white-40;
+    position: absolute;
+    top: 21px;
+    left: 0;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .list-header:not(.active):not(.expanded) + .subpages {
+    max-height: 0 !important;
+  }
+}
+
+.toc + * {
+  margin-left: $toc-width;
+}
+
+.navigation {
+  position: relative;
+  max-width: 100%;
+  .next,
+  .prev {
+    background: #f7f7f7;
+    border-radius: 4px;
+    width: 200px;
+    height: fit-content;
+    padding: 10px 30px;
+    position: absolute;
+    margin-bottom: 1rem;
+    transition: background 0.2s;
+    .label {
+      color: #ccc;
+      font-size: 14px;
+    }
+    &:hover {
+      background: #f0f0f0;
+    }
+    * {
+      position: relative;
+    }
+  }
+  .next {
+    right: 2rem;
+    .label {
+      text-align: right;
+      left: 16px;
+      &:after {
+        border: 0 solid currentColor;
+        border-width: 2px 2px 0 0;
+        content: '';
+        display: inline-block;
+        margin: 0 0 0 6px;
+        transform: rotate(45deg);
+        width: 8px;
+        height: 8px;
+      }
+    }
+  }
+  .prev {
+    left: 2rem;
+    .label {
+      left: -16px;
+      &:before {
+        border: 0 solid currentColor;
+        border-width: 0 0 2px 2px;
+        content: '';
+        display: inline-block;
+        margin: 0 6px 0 0;
+        transform: rotate(45deg);
+        width: 8px;
+        height: 8px;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: $mobile) {
+  .toc {
+    position: absolute;
+    width: 100vw;
+    height: 0;
+    padding: 0;
+
+    > div {
+      padding-top: $topbar-maxheight;
+      padding-bottom: 1rem;
+    }
+
+    &.open {
+      padding: 1rem;
+      height: 100%;
+      & + * {
+        display: none;
+      }
+    }
+
+    & + * {
+      margin-left: 0;
+    }
+  }
+}

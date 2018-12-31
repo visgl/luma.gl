@@ -1,0 +1,27 @@
+{
+  "Instancing": {"path": "examples/core/instancing/"},
+  "Cubemap": {"path": "examples/core/cubemap/"},
+  "Mandelbrot": {"path": "examples/core/mandelbrot/"},
+  "Fragment": {"path": "examples/core/fragment/"},
+  "Picking": {"path": "examples/core/picking/"},
+  "Shadowmap": {"path": "examples/core/shadowmap/"},
+  "Transform": {"path": "examples/core/transform/"},
+  "TransformFeedbackDemo": {"path": "examples/core/transform-feedback/"},
+
+  "Lesson01": {"path": "examples/lessons/01/"},
+  "Lesson02": {"path": "examples/lessons/02/"},
+  "Lesson03": {"path": "examples/lessons/03/"},
+  "Lesson04": {"path": "examples/lessons/04/"},
+  "Lesson05": {"path": "examples/lessons/05/"},
+  "Lesson06": {"path": "examples/lessons/06/"},
+  "Lesson07": {"path": "examples/lessons/07/"},
+  "Lesson08": {"path": "examples/lessons/08/"},
+  "Lesson09": {"path": "examples/lessons/09/"},
+  "Lesson10": {"path": "examples/lessons/10/"},
+  "Lesson11": {"path": "examples/lessons/11/"},
+  "Lesson12": {"path": "examples/lessons/12/"},
+  "Lesson13": {"path": "examples/lessons/13/"},
+  "Lesson14": {"path": "examples/lessons/14/"},
+  "Lesson15": {"path": "examples/lessons/15/"},
+  "Lesson16": {"path": "examples/lessons/16/"}
+}

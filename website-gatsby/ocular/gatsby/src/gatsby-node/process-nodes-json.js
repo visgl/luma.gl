@@ -1,10 +1,10 @@
-import log, {COLOR} from '../utils/log';
+const {log, COLOR} = require('../utils/log');
 
 let tableOfContents = [];
 
 // Patches up new markdown nodes
 //
-export function processNewDocsJsonNode({
+module.exports.processNewDocsJsonNode = function processNewDocsJsonNode({
   node, actions, getNode
 }, docNodes) {
   traverseTableOfContents(node.chapters, docNodes, 1);
@@ -16,7 +16,7 @@ export function processNewDocsJsonNode({
   )(); // , Object.keys(docNodes));
 }
 
-export function getTableOfContents() {
+module.exports.getTableOfContents = function getTableOfContents() {
   log.log('QUERIED tableOfContents', Object.keys(tableOfContents.chapters).length)();
   // , Object.keys(docNodes));
   return tableOfContents;

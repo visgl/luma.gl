@@ -1,8 +1,8 @@
-import urljoin from 'url-join';
+const urljoin = require('url-join');
 
-import log, {COLOR} from '../utils/log';
+const {log, COLOR} = require('../utils/log');
 
-export default function getGatsbyConfig(config) {
+module.exports = function getGatsbyConfig(config) {
   log.log({color: COLOR.CYAN}, `BUILDING GATSBY CONFIG FROM ${JSON.stringify(config, null, 3)}`)();
 
   return {
@@ -27,9 +27,6 @@ export default function getGatsbyConfig(config) {
     },
 
     plugins: [
-      // TODO/ib - remove
-      'gatsby-plugin-lodash',
-
       // Reads metadata from the React Helmet component
       'gatsby-plugin-react-helmet',
 
@@ -288,4 +285,3 @@ export default function getGatsbyConfig(config) {
     ]
   };
 }
-

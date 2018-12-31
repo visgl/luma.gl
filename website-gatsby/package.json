@@ -2,7 +2,24 @@
   "name": "ocular-gatsby-website",
   "description": "GatsbyJS setup for rendering markdown docs.",
   "version": "0.0.0",
-  "author": "Ruben Harutyunyan <vagr9k@gmail.com>",
+  "license": "MIT",
+  "main": "n/a",
+  "keywords": [
+    "gatsby"
+  ],
+  "scripts": {
+    "develop": "gatsby develop",
+    "dev": "npm run develop",
+    "serve": "gatsby serve",
+    "build": "gatsby build",
+    "build:pp": "gatsby build --prefix-paths",
+    "build:gh": "npm run clean && npm run build:pp && gh-pages -d public",
+    "clean": "rm -rf public && rm -rf .cache",
+    "lint:js": "eslint --ext .js,.jsx .",
+    "lint:md": "remark content/posts/",
+    "write-good": "write-good $(glob 'content/posts/**/*.md')",
+    "format:js": "prettier '**/*.{js,jsx}' --write"
+  },
   "dependencies": {
     "@babel/preset-env": "^7.2.3",
     "@babel/register": "^7.0.0",
@@ -68,24 +85,6 @@
     "stylelint": "^9.7.1",
     "stylelint-config-standard": "^18.0.0",
     "write-good": "^0.13.1"
-  },
-  "keywords": [
-    "gatsby"
-  ],
-  "license": "MIT",
-  "main": "n/a",
-  "scripts": {
-    "develop": "gatsby develop",
-    "dev": "npm run develop",
-    "serve": "gatsby serve",
-    "build": "gatsby build",
-    "build:pp": "gatsby build --prefix-paths",
-    "build:gh": "npm run clean && npm run build:pp && gh-pages -d public",
-    "clean": "rm -rf public && rm -rf .cache",
-    "lint:js": "eslint --ext .js,.jsx .",
-    "lint:md": "remark content/posts/",
-    "write-good": "write-good $(glob 'content/posts/**/*.md')",
-    "format:js": "prettier '**/*.{js,jsx}' --write"
   },
   "remarkConfig": {
     "plugins": [
