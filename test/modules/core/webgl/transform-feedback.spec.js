@@ -1,7 +1,26 @@
-import {TransformFeedback, Buffer} from 'luma.gl';
+import {TransformFeedback, Buffer, Model} from 'luma.gl';
+import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 
 import {fixture} from 'luma.gl/test/setup';
+
+const VS = `\
+attribute float inValue;
+varying float outValue;
+void main()
+{
+  outValue = 2.0 * inValue;
+}
+`;
+
+const FS = `\
+varying float outValue;
+void main()
+{
+  gl_FragColor.x = outValue;
+}
+`;
+
 
 test('WebGL#TransformFeedback isSupported', t => {
   const {gl, gl2} = fixture;
@@ -73,6 +92,50 @@ test('WebGL#TransformFeedback bindBuffers', t => {
 
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
   */
+
+  t.end();
+});
+
+function testDataCapture({t, gl2, offset = 0}) {
+  const inData = new Float32Array([10, 20, 31, 0, -57]);
+  const vertexCount = inData.length;
+  const inBuffer = new Buffer(gl2, {data: inData});
+  const outBuffer = new Buffer(gl2, 10 * 4); // allocate memory for 10 floats
+  const model = new Model(gl2, {
+    vs: VS,
+    fs: FS,
+    attributes: {inValue: inBuffer},
+    varyings: ['outValue'],
+    drawMode: GL.POINTS,
+    vertexCount: 5
+  });
+  const tf = new TransformFeedback(gl2, {
+    buffers: {outValue: {buffer: outBuffer, offset}},
+    configuration: model.program.configuration
+  });
+
+  model.draw({
+    transformFeedback: tf
+  });
+
+  const outData = outBuffer.getData().slice(offset, offset + vertexCount);
+  t.deepEqual(outData, inData.map(x => x * 2), `Data should be captured in buffer when offset is ${offset}`);
+}
+test('WebGL#TransformFeedback capture', t => {
+
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  // zero offset
+  testDataCapture({t, gl2, offset: 0});
+
+  // non-zero offset
+  testDataCapture({t, gl2, offset: 2});
 
   t.end();
 });
