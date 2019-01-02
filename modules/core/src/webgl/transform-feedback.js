@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
 import Resource from './resource';
+import Buffer from './buffer';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {log, isObjectEmpty} from '../utils';
 
@@ -60,20 +61,23 @@ export default class TransformFeedback extends Resource {
     return this;
   }
 
-  setBuffer(locationOrName, buffer, size, offset = 0) {
+  setBuffer(locationOrName, bufferOrParams) {
     const location = this._getVaryingIndex(locationOrName);
+    const {buffer, sizeInBytes, offsetInBytes} = this._getBufferParams(bufferOrParams)
+
     if (location < 0) {
       this.unused[locationOrName] = buffer;
       log.warn(() => `${this.id} unused varying buffer ${locationOrName}`)();
       return this;
     }
 
-    this.buffers[location] = buffer;
+    this.buffers[location] = bufferOrParams;
 
     // Need to avoid chrome bug where buffer that is already bound to a different target
     // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
     if (!this.bindOnUse) {
-      this._bindBuffer(location, buffer, size, offset);
+
+      this._bindBuffer(location, buffer, offsetInBytes, sizeInBytes);
     }
 
     return this;
@@ -95,6 +99,25 @@ export default class TransformFeedback extends Resource {
 
   // PRIVATE METHODS
 
+  _getBufferParams(bufferOrParams) {
+    let offsetInBytes;
+    let sizeInBytes;
+    let buffer;
+    if (bufferOrParams instanceof Buffer === false) {
+      buffer = bufferOrParams.buffer;
+      sizeInBytes = bufferOrParams.sizeInBytes;
+      offsetInBytes = bufferOrParams.offsetInBytes;
+    } else {
+      buffer = bufferOrParams;
+    }
+    // to use bindBufferRange, either offset or size must be specified, use default value for the other.
+    if (offsetInBytes !== undefined || sizeInBytes !== undefined) {
+      offsetInBytes = offsetInBytes || 0;
+      sizeInBytes = sizeInBytes || buffer.byteLength - offsetInBytes;
+    }
+    return {buffer, offsetInBytes, sizeInBytes};
+  }
+
   _getVaryingInfo(locationOrName) {
     return this.configuration && this.configuration.getVaryingInfo(locationOrName);
   }
@@ -112,7 +135,8 @@ export default class TransformFeedback extends Resource {
   _bindBuffers() {
     if (this.bindOnUse) {
       for (const bufferIndex in this.buffers) {
-        this._bindBuffer(bufferIndex, this.buffers[bufferIndex]);
+        const {buffer, sizeInBytes, offsetInBytes} = this._getBufferParams(this.buffers[bufferIndex])
+        this._bindBuffer(bufferIndex, buffer, offsetInBytes, sizeInBytes);
       }
     }
   }
@@ -125,12 +149,12 @@ export default class TransformFeedback extends Resource {
     }
   }
 
-  _bindBuffer(index, buffer, offset = 0, size) {
+  _bindBuffer(index, buffer, offsetInBytes = 0, sizeInBytes) {
     const handle = buffer && buffer.handle;
-    if (!handle || size === undefined) {
+    if (!handle || sizeInBytes === undefined) {
       this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
-      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, offset, size);
+      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, offsetInBytes, sizeInBytes);
     }
     return this;
   }

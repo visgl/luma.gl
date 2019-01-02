@@ -79,8 +79,11 @@ export default class Transform {
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    assert(varyingName && this.feedbackBuffers[this.currentIndex][varyingName]);
-    return this.feedbackBuffers[this.currentIndex][varyingName];
+    const bufferOrParams = varyingName ?  this.feedbackBuffers[this.currentIndex][varyingName] : null;
+    if (!bufferOrParams) {
+      return null;
+    }
+    return bufferOrParams instanceof Buffer ? bufferOrParams : bufferOrParams.buffer;
   }
 
   // Returns the color attachment textuer from current framebuffer target
@@ -94,8 +97,9 @@ export default class Transform {
   // Return data either from Buffer or from Texture
   getData({varyingName = null, packed = false} = {}) {
     // Either there should be specified feedbackBuffer or we should be rendering to a texture
-    if (varyingName && this.feedbackBuffers[this.currentIndex][varyingName]) {
-      return this.feedbackBuffers[this.currentIndex][varyingName].getData();
+    const buffer = this.getBuffer(varyingName);
+    if (buffer) {
+      return buffer.getData();
     }
 
     // When varyingName is not provided return data from framebuffer object.
@@ -205,7 +209,7 @@ export default class Transform {
     const {currentIndex} = this;
     if (sourceBuffers || feedbackBuffers) {
       for (const bufferName in feedbackBuffers) {
-        assert(feedbackBuffers[bufferName] instanceof Buffer);
+        assert(feedbackBuffers[bufferName] instanceof Buffer || feedbackBuffers[bufferName].buffer instanceof Buffer);
       }
 
       Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
@@ -329,7 +333,7 @@ export default class Transform {
     );
 
     for (const bufferName in feedbackBuffers || {}) {
-      assert(feedbackBuffers[bufferName] instanceof Buffer);
+      assert(feedbackBuffers[bufferName] instanceof Buffer || feedbackBuffers[bufferName].buffer instanceof Buffer);
     }
     for (const textureName in _sourceTextures || {}) {
       assert(_sourceTextures[textureName] instanceof Texture2D);

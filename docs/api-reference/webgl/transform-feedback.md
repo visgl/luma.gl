@@ -92,7 +92,10 @@ Reinitializes an existing `TransformFeedback` object with new props.
 ### setProps(props : Object) : TransformFeedback
 
 * `props.program`= (Object) - Gets a mapping of varying name to buffer indices from a linked program if supplied.
-* `props.buffers`=(Object) - Map of buffers to use for recording vertex shader outputs.
+* `props.buffers`=(Object) - Map of location index or name to Buffer object or buffer parameters object. If buffer parameters object is supplied, it contains following fields.
+  * `buffer`=(Buffer) - Buffer object to be bound.
+  * `offsetInBytes`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+  * `sizeInBytes`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
 * `props.bindOnUse`=`true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
 
 Notes:
@@ -109,6 +112,14 @@ WebGL APIS [`gl.deleteTransformFeedback`](https://developer.mozilla.org/en-US/do
 
 ### setBuffers(buffers: Object) : TransformFeedback
 
+* `buffers`=(Object) - Map of location index or name to Buffer object or buffer parameters object. If buffer parameters object is supplied, it contains following fields.
+  * `buffer`=(Buffer) - Buffer object to be bound.
+  * `offsetInBytes`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+  * `sizeInBytes`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+
+Notes:
+
+* To use `gl.bindBufferRange`, either `offsetInByts` or `sizeInBytes` must be specified, when only one is specified, default value is used for the other, when both not specified, `gl.bindBufferBase` is used for binding.
 
 WebGL APIs [`gl.bindBufferBase`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferBase), [`gl.bindBufferRange`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferRange)
 
