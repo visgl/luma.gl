@@ -12,6 +12,7 @@ export {default as lighting} from './modules/lighting/lighting';
 export {default as dirlight} from './modules/dirlight/dirlight';
 export {default as picking} from './modules/picking/picking';
 export {default as diffuse} from './modules/diffuse/diffuse';
+export {default as phonglighting} from './modules/phong-lighting/phong-lighting';
 
 export {
   getQualifierDetails,

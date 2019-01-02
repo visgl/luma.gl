@@ -143,6 +143,17 @@ export {
   parseModel
 } from './io';
 
+// lighting
+export {
+  DirectionalLight,
+  AmbientLight,
+  PointLight
+} from './lighting/light-source';
+export {default as LightingEffect} from './lighting/lighting-effect';
+
+// material
+export {default as PhongMaterial} from './materials/phong-material';
+
 // shadertools
 export {
   setDefaultShaderModules,
@@ -160,6 +171,7 @@ export {default as dirlight} from './shadertools/src/modules/dirlight/dirlight';
 export {default as picking} from './shadertools/src/modules/picking/picking';
 export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
 
+export {default as phonglighting} from './shadertools/src/modules/phong-lighting/phong-lighting';
 export {default as pbr} from './shadertools/src/modules/pbr/pbr';
 
 // UTILS - mainly for sub-modules
