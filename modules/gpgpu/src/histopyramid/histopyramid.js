@@ -81,10 +81,8 @@ export function buildHistopyramidBaseLevel(gl, opts) {
     },
   });
   const framebuffer = transform.getFramebuffer();
-  copyToTexture({
-    source: framebuffer,
-    texture: flatPyramidTexture,
-    xoffset: 0,
+  copyToTexture(framebuffer, flatPyramidTexture, {
+    targetX: 0,
     width: size,
     height: size
   });
@@ -137,10 +135,8 @@ export function getHistoPyramid(gl, opts) {
 
       // copy the result to the flaten pyramid texture
       const framebuffer = transform.getFramebuffer();
-      copyToTexture({
-        source: framebuffer,
-        texture: flatPyramidTexture,
-        xoffset: flatOffset,
+      copyToTexture(framebuffer, flatPyramidTexture, {
+        targetX: flatOffset,
         width: outSize[0],
         height: outSize[1]
       });

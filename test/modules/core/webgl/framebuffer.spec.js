@@ -252,7 +252,7 @@ test('WebGL2#Framebuffer texture attach and read', t => {
         let pixels;
         t.doesNotThrow(
           () => {
-            pixels = framebuffer.readPixels();
+            pixels = radPixelsToArray(framebuffer);
           },
           'Framebuffer.readPixels returned'
         );

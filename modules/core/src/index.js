@@ -53,11 +53,12 @@ export {clear, clearBuffer} from './webgl/clear';
 
 // Copy and Blit
 export {
-  copyToArray,
-  copyToBuffer,
-  copyToTexture,
+  readPixelsToArray,
+  readPixelsToBuffer,
   copyToDataUrl,
-  copyToImage
+  copyToImage,
+  copyToTexture,
+  blit
 } from './webgl/copy-and-blit';
 
 // WebGL2 classes & Extensions

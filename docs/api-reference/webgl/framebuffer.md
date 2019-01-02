@@ -84,71 +84,15 @@ withParameters(gl, {framebuffer: framebuffer1}, () => {
 // framebuffer1 is not longer bound
 ```
 
-Reading data from a framebuffer color attachment.
+### Reading, copying or blitting data from a Framebuffer attachment.
 
-```js
-// Reading into an Array (CPU memory), results in a CPU and GPU sync
-const data = framebuffer.readPixels({
-  x: 0,
-  y: 0,
-  width: 10,
-  height: 10});
+For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/copy-and-blit.md)
 
+For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/copy-and-blit.md)
 
-// Reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync
-const buffer = framebuffer.readPixelsToBuffer({
-  x: 0,
-  y: 0,
-  width: 10,
-  height: 10});
+For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/copy-and-blit.md)
 
-// Returned `Buffer` object can be used to read data into an Array object ...
-const data = buffer.getData();
-
-//or can be used as source for a vertex shader attribute using `Model` object.
-model.setAttributes({
-  attribute_name: buffer
-});
-
-
-// Reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync
-
-framebuffer.copyToTexture({
-  texture, // Texture object to which data to be copied
-
-  // offset within texture
-  xoffset,
-  yoffset,
-  zoffset,
-
-  // rectangular area in framebuffer which needs to be copied
-  x,
-  y,
-  width,
-  height,
-});
-
-
-```
-
-Reading data from a framebuffer into a texture.
-
-
-Blitting between framebuffers (WebGL2)
-
-```js
-framebuffer.blit({
-  srcFramebuffer: ..., srcX: 0, srcy:0, srcWidth, srcHeight,
-  dstX:, dstY, dstWidth, destHeight
-});
-```
-
-Invalidating framebuffers (WebGL2)
-
-```js
-framebuffer.invalidate(); // GPU can release the data for all attachments
-framebuffer.invalidate({attachments: [...]}); // GPU can release the data for specified attachments
-```
+For blitting between framebuffers (WebGL2), check [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
 
 
 ### Using Multiple Render Targets
@@ -335,109 +279,6 @@ Notes:
 * The scissor box bounds the cleared region.
 * The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect the operation of `clear`.
 * Alpha function, blend function, logical operation, stenciling, texture mapping, and depth-buffering are ignored by `clear`.
-
-
-### copyToTexture(opts: Object) : Framebuffer
-
-Copies pixels from the this framebuffer into the specified area of a two-dimensional texture image or cube-map texture image. (gl.copyTexSubImage2D and gl.copyTexSubImage3D wrapper)
-
-* opts
-
-  Target options
-  * `texture` (Texture, optional) - If provided this object will be bound and data copied into it, if not provided `target` must be set.
-  * `target` (GLenum, optional) - Binding point where target texture is currently bound. Either `texture` or `target` must be specified.
-  * `xoffset` (GLint, optional, default: 0) - X offset with in target texture.
-  * `yoffset` (GLint, optional, default: 0) - Y offset with in target texture.
-  * `zoffset` (GLint, optional, default: 0, WebGL2) - Z offset with in target texture, when using copying into 2D Array of 3D texture.
-
-  Source options
-  * `x` (GLint, optional, default: 0) - x coordinate of the lower left corner where to start copying.
-  * `y` (GLint, optional, default: 0) - y coordinate of the lower left corner where to start copying.
-  * `width` (GLint, optional, default: texture.width) - Width of the are to be copied, if not specified defaults to texture's width
-  * `height` (GLint, optional, default: texture.height) - Height of the area to be copied, if not specified defaults to texture.height.
-
-
-### readPixels **DEPRECATED**
-
-NOTE: deprecated , instead use [`copyToArray`](/docs/api-reference/webgl/copy-and-blit.md)
-
-Reads data into an Array object and returns it. A new Array object is created when not provided. This method requires a sync between CPU and GPU as pixel values are copied from GPU texture memory to CPU Array object memory. This could introduce a delay as it waits for GPU to finish updating the texture. For asynchronous read, check `readPixelsToBuffer` method.
-
-Parameters
-* `x` - (*number*, default: 0) X offset of the area to be copied,
-* `y` - (*number*, default: 0) Y offset of the area to be copied,
-* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
-* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
-* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
-* `type` - (*GLenum*, default: type of `pixelArray` or `UNSIGNED_BYTE`) The type of the data.
-* `pixelArray` - (*Array*, default: null) Array object, into which data to be copied.
-
-Notes:
-
-* Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
-* When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
-* When color attachment is a float texture with format less than 4 channels, i.e, `GL.R32F`, or  `GL.RG32F`, `readPixels` should still be called with a 4 component `format`(`GL.RGBA`), and default value (R:0, G:0, B: 0 and A: 1) will be returned for un-used channel.
-
-This function makes calls to the following WebGL APIs:
-
-[`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
-
-### readPixelsToBuffer (WebGL2) **DEPRECATED**
-
-NOTE: deprecated , instead use [`copyToBuffer`](/docs/api-reference/webgl/copy-and-blit.md)
-
-Reads data into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
-
-A CPU and GPU sync will be triggered when the returned buffer data is read using `buffer.getData()`, but applications can delay this read, which can reduces the delay due to the sync, or the sync can be completely avoided by using the `Buffer` as the source of input to the GPU (either as `ARRAY_BUFFER` or `PIXEL_UNPACK_BUFFER`).
-
-Parameters
-* `x` - (*number*, default: 0) X offset of the area to be copied,
-* `y` - (*number*, default: 0) Y offset of the area to be copied,
-* `width` - (*number*, default: framebuffer width) The width of the area to be copied,
-* `height` - (*number*, default: framebuffer height) The height of the area to be copied,
-* `format` - (*GLenum*, default: GL.RGBA) The format of the data.
-* `type` - (*GLenum*, default: type of `buffer` or `UNSIGNED_BYTE`) The type of the data.
-* `buffer` - (*Buffer*) Buffer object, into which data to be copied.
-* `byteOffset` - (*number*, default: 0) Byte offset from which data should be copied into buffer.
-
-Notes:
-
-* Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
-* When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
-
-This function makes calls to the following WebGL APIs:
-
-[`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.bindBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
-
-
-### blit (WebGL2) **DEPRECATED**
-
-NOTE: deprecated , instead use [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
-
-Copies a rectangle of pixels between framebuffers
-
-Parameters
-* `srcFramebuffer` - which source framebuffer to blit from
-* `readBuffer`=`GL.COLOR_ATTACHMENT0` - which color attachment to blit from
-* `drawBuffers`=`[GL.COLOR_ATTACHMENT0]` - which attachments to blit to
-* `srcX0`=`0`
-* `srcY0`=`0`
-* `srcX1`
-* `srcY1`
-* `dstX0`=`0`
-* `dstY0`=`0`
-* `dstX1`
-* `dstY1`
-* `mask`=`GL.COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT`
-* `filter`=`GL.NEAREST` - specifies interpolation mode if stretching is needed. `GL.LINEAR` can be used exclusively for color buffers.
-
-* There are a number of restrictions when blitting between integer and floating point formats.
-
-This function makes calls to the following WebGL APIs:
-
-[`gl.blitFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/blitFramebuffer), [`gl.readBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/readBuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
 
 ### invalidate (WebGL2)
 

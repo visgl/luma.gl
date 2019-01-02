@@ -155,34 +155,6 @@ Note: does not allocate storage
 WebGL References [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/compressedTexSubImage2D), [gl.texSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texSubImage2D), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture), [gl.bindBuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
-### copyFramebuffer **DEPRECATED**
-
-NOTE: deprecated , instead use [`copyToTexture`](/docs/api-reference/webgl/copy-and-blit.md)
-
-
-Defines a two-dimensional texture image or cube-map texture image with pixels from the current framebuffer (rather than from client memory). (gl.copyTexImage2D wrapper)
-
-Note that binding a texture into a Framebuffer's color buffer and rendering can be faster than `copyFramebuffer`.
-
-```js
-  Texture.copyFramebuffer({
-    target = this.target,
-    framebuffer,
-    x = 0,
-    y = 0,
-    width,
-    height,
-    level = 0,
-    internalFormat = GL.RGBA,
-    border = 0
-  });
-```
-
-The following WebGL APIs are called in the function
-
-[gl.copyTexImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexImage2D), [gl.bindFramebuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
-
 ### getActiveUnit
 
 Returns number of active textures.

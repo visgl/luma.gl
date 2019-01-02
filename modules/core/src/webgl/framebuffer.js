@@ -8,14 +8,7 @@ import {getFeatures} from '../webgl-context/context-features';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {glKey} from '../webgl-utils/constants-to-keys';
 
-import {
-  copyToArray,
-  copyToBuffer,
-  copyToDataUrl,
-  copyToImage,
-  copyToTexture,
-  blit
-} from './copy-and-blit.js';
+import {copyToDataUrl} from './copy-and-blit.js';
 
 import {log} from '../utils';
 import assert from '../utils/assert';
@@ -269,27 +262,27 @@ export default class Framebuffer extends Resource {
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
   readPixels(opts = {}) {
-    log.deprecated('Framebuffer.readPixel({...})', 'copyToArray({source: framebuffer, ...})')();
-    return copyToArray(Object.assign({}, opts, {source: this, targetPixelArray: opts.pixelArray}));
+    log.error('Framebuffer.readPixels() is no logner supported, use readPixelsToArray(framebuffer)')();
+    return null;
   }
 
   // Reads data into provided buffer object asynchronously
   // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
   readPixelsToBuffer(opts = {}) {
-    log.deprecated('Framebuffer.readPixelsToBuffer({...})', 'copyToBuffer({source: framebuffer, ...})')();
-    return copyToBuffer(Object.assign({}, opts, {source: this}));
+    log.error('Framebuffer.readPixelsToBuffer()is no logner supported, use readPixelsToBuffer(framebuffer)')();
+    return null;
   }
 
   // Reads pixels as a dataUrl
   copyToDataUrl(opts = {}) {
-    log.deprecated('Framebuffer.copyToDataUrl({...})', 'copyToDataUrl({source: framebuffer, ...})')();
-    return copyToDataUrl(Object.assign({}, opts, {source: this}));
+    log.error('Framebuffer.copyToDataUrl() is no logner supported, use copyToDataUrl(framebuffer)')();
+    return null;
   }
 
   // Reads pixels into an HTML Image
   copyToImage(opts = {}) {
-    log.deprecated('Framebuffer.copyToImage({...})', 'copyToImage({source: framebuffer, ...})')();
-    return copyToImage(Object.assign({}, opts, {source: this, targetImage: opts.image}));
+    log.error('Framebuffer.copyToImage() is no logner supported, use copyToImage(framebuffer)')();
+    return null;
   }
 
   // copyToFramebuffer({width, height}) {
@@ -306,8 +299,8 @@ export default class Framebuffer extends Resource {
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
-    log.deprecated('Framebuffer.copyToTexture({...})', 'copyToTexture({source: framebuffer, ...})')();
-    return copyToTexture(Object.assign({}, opts, {source: this}));
+    log.error('Framebuffer.copyToTexture({...}) is no logner supported, use copyToTexture(source, target, opts})')();
+    return null;
   }
 
   // WEBGL2 INTERFACE
@@ -315,8 +308,8 @@ export default class Framebuffer extends Resource {
   // Copies a rectangle of pixels between framebuffers
   // eslint-disable-next-line complexity
   blit(opts = {}) {
-    log.deprecated('Framebuffer.blit({...})', 'blit({dstFramebuffer: framebuffer, ...})')();
-    return blit(Object.assign({}, opts, {dstFramebuffer: this}));
+    log.error('Framebuffer.blit({...}) is no logner supported, use blit(source, target, opts)')();
+    return null;
   }
 
   // signals to the GL that it need not preserve all pixels of a specified region of the framebuffer
@@ -382,7 +375,7 @@ export default class Framebuffer extends Resource {
   show() {
     /* global window */
     if (typeof window !== 'undefined') {
-      window.open(this.copyToDataUrl(), 'luma-debug-texture');
+      window.open(copyToDataUrl(this), 'luma-debug-texture');
     }
     return this;
   }
@@ -392,7 +385,7 @@ export default class Framebuffer extends Resource {
       return this;
     }
     message = message || `Framebuffer ${this.id}`;
-    const image = this.copyToDataUrl({maxHeight: 100});
+    const image = copyToDataUrl(this, {maxHeight: 100});
     log.image({priority, message, image}, message)();
     return this;
   }

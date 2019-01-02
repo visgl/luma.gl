@@ -30,11 +30,10 @@ The problem is that:
 
 | Method                         | Replacement |
 | ---                            | ---         |
-| `Framebuffer.readPixels`       |  `copyToArray` |
-| `Framebuffer.readPixelsToBuffer`|  `copyToBuffer` |
+| `Framebuffer.readPixels`       |  `readPixelsToArray` |
+| `Framebuffer.readPixelsToBuffer`|  `readPixelsToBuffer` |
 | `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
 | `Frambuffer.copyToImage`       |  `copyToImage` |
-| `Frambuffer.copyToFramebuffer` |  `copyFramebuffer` |
 | `Frambuffer.copyToTexture`     |  `copyToTexture` |
 | `Frambuffer.blit`              |  `blit` |
 | `Texture.copyFramebuffer`      |  `copyToTexture` |
