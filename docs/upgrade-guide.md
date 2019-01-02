@@ -23,8 +23,8 @@ Following member function of `Framebuffer` and `Texture` classes are no longer s
 | ---                            | ---         |
 | `Framebuffer.readPixels`       |  `readPixelsToArray` |
 | `Framebuffer.readPixelsToBuffer`|  `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`     |  `readPixelsToDataUrl` |
-| `Frambuffer.copyToImage`       |  `readPixelsToImage` |
+| `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
+| `Frambuffer.copyToImage`       |  `copyToImage` |
 | `Frambuffer.copyToTexture`     |  `copyToTexture` |
 | `Frambuffer.blit`              |  `blit` |
 | `Texture.copyFramebuffer`      |  `copyToTexture` |
@@ -57,13 +57,13 @@ This table lists parameter mapping between old and new function.
 | opts.buffer | opts.target |
 | opts.byteOffset | opts.targetByteOffset |
 
-| Framebuffer.copyToDataUrl | readPixelsToDataUrl |
+| Framebuffer.copyToDataUrl | copyToDataUrl |
 | ------------           | ---- |
 | - | source |
 | opts.attachment | opts.sourceAttachment |
 | opts.maxheight | opts.targetMaxHeight |
 
-| Framebuffer.copyToImage | readPixelsToImage |
+| Framebuffer.copyToImage | copyToImage |
 | ------------           | ---- |
 | - | source |
 | opts.attachment | opts.sourceAttachment |

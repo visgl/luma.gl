@@ -104,7 +104,7 @@ export function readPixelsToBuffer(source, {
 }
 
 // Reads pixels from a Framebuffer or Texture object to a dataUrl
-export function readPixelsToDataUrl(source, {
+export function copyToDataUrl(source, {
   sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   targetMaxHeight = Number.MAX_SAFE_INTEGER
 } = {}) {
@@ -134,12 +134,12 @@ export function readPixelsToDataUrl(source, {
 }
 
 // Reads pixels from a Framebuffer or Texture object into an HTML Image
-export function readPixelsToImage(source, {
+export function copyToImage(source, {
   sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
   targetImage = null
 } = {}) {
   /* global Image */
-  const dataUrl = readPixelsToDataUrl({source, sourceAttachment});
+  const dataUrl = copyToDataUrl(source, {sourceAttachment});
   targetImage = targetImage || new Image();
   targetImage.src = dataUrl;
   return targetImage;

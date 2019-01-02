@@ -34,7 +34,6 @@ The problem is that:
 | `Framebuffer.readPixelsToBuffer`|  `readPixelsToBuffer` |
 | `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
 | `Frambuffer.copyToImage`       |  `copyToImage` |
-| `Frambuffer.copyToFramebuffer` |  `copyFramebuffer` |
 | `Frambuffer.copyToTexture`     |  `copyToTexture` |
 | `Frambuffer.blit`              |  `blit` |
 | `Texture.copyFramebuffer`      |  `copyToTexture` |

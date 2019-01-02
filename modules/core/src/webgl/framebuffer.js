@@ -8,7 +8,7 @@ import {getFeatures} from '../webgl-context/context-features';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {glKey} from '../webgl-utils/constants-to-keys';
 
-import {readPixelsToDataUrl} from './copy-and-blit.js';
+import {copyToDataUrl} from './copy-and-blit.js';
 
 import {log} from '../utils';
 import assert from '../utils/assert';
@@ -275,13 +275,13 @@ export default class Framebuffer extends Resource {
 
   // Reads pixels as a dataUrl
   copyToDataUrl(opts = {}) {
-    log.error('Framebuffer.copyToDataUrl() is no logner supported, use readPixelsToDataUrl(framebuffer)')();
+    log.error('Framebuffer.copyToDataUrl() is no logner supported, use copyToDataUrl(framebuffer)')();
     return null;
   }
 
   // Reads pixels into an HTML Image
   copyToImage(opts = {}) {
-    log.error('Framebuffer.copyToImage() is no logner supported, use readPixelsToImage(framebuffer)')();
+    log.error('Framebuffer.copyToImage() is no logner supported, use copyToImage(framebuffer)')();
     return null;
   }
 
@@ -375,7 +375,7 @@ export default class Framebuffer extends Resource {
   show() {
     /* global window */
     if (typeof window !== 'undefined') {
-      window.open(readPixelsToDataUrl(this), 'luma-debug-texture');
+      window.open(copyToDataUrl(this), 'luma-debug-texture');
     }
     return this;
   }
@@ -385,7 +385,7 @@ export default class Framebuffer extends Resource {
       return this;
     }
     message = message || `Framebuffer ${this.id}`;
-    const image = readPixelsToDataUrl(this, {maxHeight: 100});
+    const image = copyToDataUrl(this, {maxHeight: 100});
     log.image({priority, message, image}, message)();
     return this;
   }

@@ -55,8 +55,8 @@ export {clear, clearBuffer} from './webgl/clear';
 export {
   readPixelsToArray,
   readPixelsToBuffer,
-  readPixelsToDataUrl,
-  readPixelsToImage,
+  copyToDataUrl,
+  copyToImage,
   copyToTexture,
   blit
 } from './webgl/copy-and-blit';

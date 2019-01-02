@@ -30,7 +30,6 @@ This function makes calls to the following WebGL APIs:
 
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
-
 ### readPixelsToBuffer(source : Framebuffer|Texture, opts: Object) : Buffer (WebGL2)
 
 Reads data from a `Framebuffer` or `Texture` object into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
@@ -58,7 +57,9 @@ This function makes calls to the following WebGL APIs:
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer), [`gl.bindBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
-### readPixelsToDataUrl(source : Framebuffer|Texture, opts: Object) : Data URL
+## Copy Functions
+
+### copyToDataUrl(source : Framebuffer|Texture, opts: Object) : Data URL
 
 Reads data form a `Texture` or `Framebuffer` object and returns a `Data URL` containing the pixel data in PNG format.
 
@@ -75,10 +76,9 @@ This function makes calls to the following WebGL APIs:
 
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
+### copyToImage(source : Framebuffer|Texture, opts: Object) : Image
 
-### readPixelsToImage(source : Framebuffer|Texture, opts: Object) : Image
-
-Reads data form a `Texture` or `Framebuffer` object and returns a `Image` containing the pixel data in PNG format.
+Reads data form a `Texture` or `Framebuffer` object and copies it to provided image, new `Image` instance is created if not provided.
 
   * `source` (`Texture` or `Framebuffer`) - This object will be bound and data copied from it.
 
@@ -92,9 +92,6 @@ Note:
 This function makes calls to the following WebGL APIs:
 
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
-
-## Copy Functions
 
 ### copyToTexture(source : Framebuffer|Texture, target: Texture|GL-enum, opts: Object) : Texture
 
@@ -116,6 +113,7 @@ Notes:
 This function makes calls to the following WebGL APIs:
 
 [`gl.copyTexImage2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexImage2D), [`gl.copyTexSubImage2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/copyTexSubImage2D) and [`gl,copyTexSubImage3D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/copyTexSubImage3D)
+
 
 ## Blit Functions
 
