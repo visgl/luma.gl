@@ -129,6 +129,43 @@ test('WebGL#Transform run', t => {
   t.end();
 });
 
+
+test('WebGL#Transform run (feedbackBuffer offset)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const outBuffer = new Buffer(gl2, 10 * 4); // 10 floats
+  const offset = 3;
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    vs: VS,
+    feedbackBuffers: {
+      outValue: {buffer: outBuffer, offsetInBytes: 4 * offset}
+    },
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getData({varyingName :'outValue'}).slice(offset, offset + 5);
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+
 test('WebGL#Transform run (no source buffer)', t => {
   const {gl2} = fixture;
 
