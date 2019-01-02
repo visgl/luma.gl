@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
 import Resource from './resource';
+import Buffer from './buffer';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {log, isObjectEmpty} from '../utils';
 
@@ -98,6 +99,25 @@ export default class TransformFeedback extends Resource {
 
   // PRIVATE METHODS
 
+  _getBufferParams(bufferOrParams) {
+    let offsetInBytes;
+    let sizeInBytes;
+    let buffer;
+    if (bufferOrParams instanceof Buffer === false) {
+      buffer = bufferOrParams.buffer;
+      sizeInBytes = bufferOrParams.sizeInBytes;
+      offsetInBytes = bufferOrParams.offsetInBytes;
+    } else {
+      buffer = bufferOrParams;
+    }
+    // to use bindBufferRange, either offset or size must be specified, use default value for the other.
+    if (offsetInBytes !== undefined || sizeInBytes !== undefined) {
+      offsetInBytes = offsetInBytes || 0;
+      sizeInBytes = sizeInBytes || buffer.byteLength - offsetInBytes;
+    }
+    return {buffer, offsetInBytes, sizeInBytes};
+  }
+
   _getVaryingInfo(locationOrName) {
     return this.configuration && this.configuration.getVaryingInfo(locationOrName);
   }
@@ -139,24 +159,6 @@ export default class TransformFeedback extends Resource {
     return this;
   }
 
-  _getBufferParams(bufferOrParams) {
-    let offsetInBytes;
-    let sizeInBytes;
-    let buffer;
-    if (bufferOrParams instanceof Resource === false) {
-      buffer = bufferOrParams.buffer;
-      sizeInBytes = bufferOrParams.sizeInBytes;
-      offsetInBytes = bufferOrParams.offsetInBytes;
-    } else {
-      buffer = bufferOrParams;
-    }
-    // to use bindBufferRange, either offset or size must be specified, use default value for the other.
-    if (offsetInBytes !== undefined || sizeInBytes !== undefined) {
-      offsetInBytes = offsetInBytes || 0;
-      sizeInBytes = sizeInBytes || buffer.byteLength - offsetInBytes;
-    }
-    return {buffer, offsetInBytes, sizeInBytes};
-  }
   // RESOURCE METHODS
 
   _createHandle() {

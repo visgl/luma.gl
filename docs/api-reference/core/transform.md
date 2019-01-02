@@ -259,7 +259,7 @@ Updates buffer bindings with provided buffer objects for one or more source or d
 
 ### swap() : Transform
 
-Swaps source and destination buffers and textures. Buffer swapping is performed when `feedbackMap` is provided and texture swapping is performed when `_swapTexture` is provided. If buffer swapping is needed, `sourceBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
+Swaps source and destination buffers and textures. Buffer swapping is performed when `feedbackMap` is provided and texture swapping is performed when `_swapTexture` is provided. If buffer swapping is needed, `sourceBuffers` and `feedbackBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
 
 NOTE: `swapBuffers()` is deprecated, instead use `swap()`.
 

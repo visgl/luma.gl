@@ -79,8 +79,11 @@ export default class Transform {
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    assert(varyingName && this.feedbackBuffers[this.currentIndex][varyingName]);
-    return this.feedbackBuffers[this.currentIndex][varyingName].buffer || this.feedbackBuffers[this.currentIndex][varyingName];
+    const bufferOrParams = varyingName ?  this.feedbackBuffers[this.currentIndex][varyingName] : null;
+    if (!bufferOrParams) {
+      return null;
+    }
+    return bufferOrParams instanceof Buffer ? bufferOrParams : bufferOrParams.buffer;
   }
 
   // Returns the color attachment textuer from current framebuffer target
@@ -94,8 +97,8 @@ export default class Transform {
   // Return data either from Buffer or from Texture
   getData({varyingName = null, packed = false} = {}) {
     // Either there should be specified feedbackBuffer or we should be rendering to a texture
-    if (varyingName && this.feedbackBuffers[this.currentIndex][varyingName]) {
-      const buffer = this.feedbackBuffers[this.currentIndex][varyingName].buffer || this.feedbackBuffers[this.currentIndex][varyingName];
+    const buffer = this.getBuffer(varyingName);
+    if (buffer) {
       return buffer.getData();
     }
 
