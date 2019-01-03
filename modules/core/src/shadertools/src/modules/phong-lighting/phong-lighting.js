@@ -22,7 +22,7 @@ import LightingEffect from '../../../../lighting/lighting-effect';
 import lightingShader from './phong-lighting.glsl';
 
 export default {
-  name: 'phong-lighting',
+  name: 'lighting',
   vs: lightingShader,
   getUniforms
 };
