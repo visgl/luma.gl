@@ -1,0 +1,11 @@
+{
+  "plugins": ["react"],
+  "rules": {
+    "react/prefer-stateless-function": "off",
+    "react/prop-types": "off",
+    "react/no-danger": "off"
+  },
+  "env": {
+    "browser": true
+  }
+}

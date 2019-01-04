@@ -1,13 +1,16 @@
-const {setSiteConfig, registerReactComponent} = require('./ocular/gatsby');
+const {registerReactComponent} = require('gatsby-plugin-ocular/api');
 const config = require('./ocular-config');
 
-// const Hero = require('./src/hero').default ;
+const Hero = require('./src/components/hero').default ;
+const DemoRunner = require('./src/components/demo-runner').default;
+const DEMOS = require('./src/components/demos').default;
 
-registerReactComponent('Hero', 'Hero');
+registerReactComponent('Hero', Hero);
+registerReactComponent('DemoRunner', DemoRunner);
+registerReactComponent('DEMOS', DEMOS);
 
-// TODO/ib - Major hack to work around broken StaticQuery in persistent-layout.js.
-// Makes config available in the browser.
-exports.onClientEntry = () => {
-  setSiteConfig(config);
-  console.log("We've started!", config)
+module.exports.onClientEntry = () => {
+  console.log("Ocular started!", config)
 }
+
+module.exports.wrapPageElement = require(`./src/wrap-page`);

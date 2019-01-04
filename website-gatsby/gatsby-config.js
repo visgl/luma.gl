@@ -1,8 +1,5 @@
-const {getGatsbyConfig, setSiteConfig, registerReactComponent} = require('./ocular/gatsby');
+const {getGatsbyConfig} = require('gatsby-plugin-ocular/api');
 
 const config = require('./ocular-config');
 
-setSiteConfig(config);
-
 module.exports = getGatsbyConfig(config);
-
