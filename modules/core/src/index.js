@@ -149,7 +149,6 @@ export {
   AmbientLight,
   PointLight
 } from './lighting/light-source';
-export {default as LightingEffect} from './lighting/lighting-effect';
 
 // material
 export {default as PhongMaterial} from './materials/phong-material';

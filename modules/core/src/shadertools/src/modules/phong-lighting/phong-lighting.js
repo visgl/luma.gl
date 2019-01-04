@@ -1,24 +1,3 @@
-// Copyright (c) 2015 - 2018 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-import LightingEffect from '../../../../lighting/lighting-effect';
 import lightingShader from './phong-lighting.glsl';
 
 export default {
@@ -29,26 +8,27 @@ export default {
 
 const INITIAL_MODULE_OPTIONS = {};
 
-function getLightSourceUniforms(lightEffect) {
+function getLightSourceUniforms({ambientLight, pointLights, directionalLights}) {
   const lightSourceUniforms = {};
 
-  if (lightEffect.ambientLight) {
-    lightSourceUniforms['lighting_ambientLight.color'] = lightEffect.ambientLight.color;
-    lightSourceUniforms['lighting_ambientLight.intensity'] = lightEffect.ambientLight.intensity;
+  if (ambientLight) {
+    lightSourceUniforms['lighting_ambientLight.color'] = ambientLight.color;
+    lightSourceUniforms['lighting_ambientLight.intensity'] = ambientLight.intensity;
   }
 
   let index = 0;
-  for (const i in lightEffect.pointLights) {
-    const pointLight = lightEffect.pointLights[i];
+  for (const i in pointLights) {
+    const pointLight = pointLights[i];
     lightSourceUniforms[`lighting_pointLight[${index}].color`] = pointLight.color;
     lightSourceUniforms[`lighting_pointLight[${index}].intensity`] = pointLight.intensity;
     lightSourceUniforms[`lighting_pointLight[${index}].position`] = pointLight.position;
     index++;
   }
-  lightSourceUniforms.lighting_pointLightNumber = index;
+  lightSourceUniforms.lighting_pointLightNumber = pointLights.length;
 
-  for (const i in lightEffect.directionalLights) {
-    const directionalLight = lightEffect.directionalLights[i];
+  index = 0;
+  for (const i in directionalLights) {
+    const directionalLight = directionalLights[i];
     lightSourceUniforms[`lighting_directionalLight[${index}].color`] = directionalLight.color;
     lightSourceUniforms[`lighting_directionalLight[${index}].intensity`] =
       directionalLight.intensity;
@@ -56,7 +36,7 @@ function getLightSourceUniforms(lightEffect) {
       directionalLight.direction;
     index++;
   }
-  lightSourceUniforms.lighting_directionalLightNumber = lightEffect.directionalLights.length;
+  lightSourceUniforms.lighting_directionalLightNumber = directionalLights.length;
 
   return lightSourceUniforms;
 }
@@ -71,25 +51,21 @@ function getMaterialUniforms(material) {
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  let lightEffect;
-  if (opts.effects && Array.isArray(opts.effects)) {
-    for (const i in opts.effects) {
-      const effect = opts.effects[i];
-      if (effect instanceof LightingEffect) {
-        lightEffect = effect;
-        break;
-      }
-    }
-  }
+  const {
+    ambientLight,
+    pointLights,
+    directionalLights,
+    material
+  } = opts;
 
-  if (!lightEffect || !opts.material) {
+  if (!(ambientLight || pointLights || directionalLights) || !material) {
     return {};
   }
 
   const lightUniforms = Object.assign(
     {},
-    getLightSourceUniforms(lightEffect),
-    getMaterialUniforms(opts.material)
+    getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
+    getMaterialUniforms(material)
   );
 
   return lightUniforms;

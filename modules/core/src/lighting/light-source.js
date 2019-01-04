@@ -1,3 +1,5 @@
+import {Vector3} from 'math.gl';
+
 // default light source parameters
 const DEFAULT_LIGHT_POSITION = [0.0, 0.0, 1.0];
 const DEFAULT_LIGHT_DIRECTION = [0.0, 0.0, -1.0];
@@ -16,14 +18,11 @@ export class DirectionalLight extends LightSource {
   constructor(props) {
     super(props);
     const {direction = DEFAULT_LIGHT_DIRECTION} = props;
-    this.direction = direction;
+    this.direction = Vector3(direction).normalize().toArray();
   }
 }
 
 export class AmbientLight extends LightSource {
-  constructor(props) {
-    super(props);
-  }
 }
 
 export class PointLight extends LightSource {
