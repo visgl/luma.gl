@@ -6,10 +6,14 @@
 
 Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that peform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
 
-
 ### New submodule
 
 * `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+
+
+### PBR and Material System
+
+Physically-Based Rendering is now supported and the new `PBRMaterial` class can be used to set up parameters. Material can be selected per model.
 
 
 ## Version 6.3

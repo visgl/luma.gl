@@ -19,100 +19,102 @@ import "@luma.gl/debug";
 
 Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use corresponding global methods.
 
-| Removed method              | Replacement |
-| ---                            | ---         |
-| `Framebuffer.readPixels`       |  `readPixelsToArray` |
+| Removed method                  | Replacement |
+| ---                             | ---         |
+| `Framebuffer.readPixels`        |  `readPixelsToArray` |
 | `Framebuffer.readPixelsToBuffer`|  `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`     |  `copyToDataUrl` |
-| `Frambuffer.copyToImage`       |  `copyToImage` |
-| `Frambuffer.copyToTexture`     |  `copyToTexture` |
-| `Frambuffer.blit`              |  `blit` |
-| `Texture.copyFramebuffer`      |  `copyToTexture` |
+| `Frambuffer.copyToDataUrl`      |  `copyToDataUrl` |
+| `Frambuffer.copyToImage`        |  `copyToImage` |
+| `Frambuffer.copyToTexture`      |  `copyToTexture` |
+| `Frambuffer.blit`               |  `blit` |
+| `Texture.copyFramebuffer`       |  `copyToTexture` |
 
 Names of various parameters to these methods are also changed in an effort to use same convention for all read-back, copy and blit methods, and make it less confusing.
 
 This table lists parameter mapping between old and new function.
 
-| Framebuffer.readPixels | readPixelsToArray |
-| ------------           | ---- |
-| - | source |
-| opts.x | opts.sourceX |
-| opts.y | opts.sourceY |
-| opts.width | opts.sourceWidth |
-| opts.height | opts.sourceHeight |
-| opts.format | opts.sourceFormat |
-| opts.type | opts.sourceType |
-| opts.attachment | opts.sourceAttachment |
-| opts.pixelArray | opts.target |
+| `Framebuffer.readPixels` | `readPixelsToArray` |
+| ------------             | ---- |
+| -                        | `source` |
+| `opts.x`                 | `opts.sourceX` |
+| `opts.y`                 | `opts.sourceY` |
+| `opts.width`             | `opts.sourceWidth` |
+| `opts.height`            | `opts.sourceHeight` |
+| `opts.format`            | `opts.sourceFormat` |
+| `opts.type`              | `opts.sourceType` |
+| `opts.attachment`        | `opts.sourceAttachment` |
+| `opts.pixelArray`        | `opts.target` |
 
-| Framebuffer.readPixelsToBuffer | readPixelsToBuffer |
-| ------------           | ---- |
-| - | source |
-| opts.x | opts.sourceX |
-| opts.y | opts.sourceY |
-| opts.width | opts.sourceWidth |
-| opts.height | opts.sourceHeight |
-| opts.format | opts.sourceFormat |
-| opts.type | opts.sourceType |
-| opts.buffer | opts.target |
-| opts.byteOffset | opts.targetByteOffset |
+| `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer` |
+| ------------      | ---- |
+| -                 | `source` |
+| `opts.x`          | `opts.sourceX` |
+| `opts.y`          | `opts.sourceY` |
+| `opts.width`      | `opts.sourceWidth` |
+| `opts.height`     | `opts.sourceHeight` |
+| `opts.format`     | `opts.sourceFormat` |
+| `opts.type`       | `opts.sourceType` |
+| `opts.buffer`     | `opts.target` |
+| `opts.byteOffset` | `opts.targetByteOffset` |
 
-| Framebuffer.copyToDataUrl | copyToDataUrl |
-| ------------           | ---- |
-| - | source |
-| opts.attachment | opts.sourceAttachment |
-| opts.maxheight | opts.targetMaxHeight |
+| `Framebuffer.copyToDataUrl` | `copyToDataUrl` |
+| ------------      | ---- |
+| -                 | `source` |
+| `opts.attachment` | `opts.sourceAttachment` |
+| `opts.maxheight`  | `opts.targetMaxHeight` |
 
-| Framebuffer.copyToImage | copyToImage |
-| ------------           | ---- |
-| - | source |
-| opts.attachment | opts.sourceAttachment |
-| opts.image | opts.targetImage |
+| `Framebuffer.copyToImage` | `copyToImage` |
+| ------------              | ---- |
+| -                         | `source` |
+| `opts.attachment`         | `opts.sourceAttachment` |
+| `opts.image`              | `opts.targetImage` |
 
-| Framebuffer.copyToTexture | copyToTexture |
-| ------------           | ---- |
-| - | source |
-| opts.target | target |
-| opts.texture | target |
-| opts.x | opts.sourceX |
-| opts.y | opts.sourceY |
-| opts.xoffset | opts.targetX |
-| opts.yoffset | opts.targetY |
-| opts.zoffset | opts.targetZ |
-| opts.width | opts.width |
-| opts.height | opts.height |
-| opts.internalFormat | opts.targetInternalFormat |
-| opts.mipmapLevel | opts.targetMipmapLevel |
+| `Framebuffer.copyToTexture` | `copyToTexture` |
+| ------------          | ---- |
+| -                     | `source` |
+| `opts.target`         | `target` |
+| `opts.texture`        | `target` |
+| `opts.x`              | `opts.sourceX` |
+| `opts.y`              | `opts.sourceY` |
+| `opts.xoffset`        | `opts.targetX` |
+| `opts.yoffset`        | `opts.targetY` |
+| `opts.zoffset`        | `opts.targetZ` |
+| `opts.width`          | `opts.width` |
+| `opts.height`         | `opts.height` |
+| `opts.internalFormat` | `opts.targetInternalFormat` |
+| `opts.mipmapLevel`    | `opts.targetMipmapLevel` |
 
-| Texture.copyFramebuffer | copyToTexture |
+| `Texture.copyFramebuffer` | `copyToTexture` |
 | ------------           | ---- |
-| opts.framebuffer | source |
-| opts.target | target |
-| opts.x | opts.sourceX |
-| opts.y | opts.sourceY |
-| opts.width | opts.width |
-| opts.height | opts.height |
-| opts.internalFormat | opts.targetInternalFormat |
-| opts.level | opts.targetMipmapLevel |
+| `opts.framebuffer` | `source` |
+| `opts.target`      | `target` |
+| `opts.x`           | `opts.sourceX` |
+| `opts.y`           | `opts.sourceY` |
+| `opts.width`       | `opts.width` |
+| `opts.height`      | `opts.height` |
+| `opts.internalFormat` | `opts.targetInternalFormat` |
+| `opts.level`       | `opts.targetMipmapLevel` |
 
-| Framebuffer.blit | blit |
-| ------------           | ---- |
-| opts.srcFramebuffer | source |
-| - | target |
-| opts.attachment | opts.sourceAttachment |
-| opts.srcX0 | opts.sourceX0 |
-| opts.srcX1 | opts.sourceX1 |
-| opts.srcY0 | opts.sourceY0 |
-| opts.srcY1 | opts.sourceY1 |
-| opts.dstX0 | opts.targetX0 |
-| opts.dstX1 | opts.targetX1 |
-| opts.dstY0 | opts.targetY0 |
-| opts.dstY1 | opts.targetY1 |
-| opts.color | opts.color |
-| opts.depth | opts.depth |
-| opts.stencil | opts.stencil |
-| opts.mask | opts.mask |
-| opts.filter | opts.filter |
+| `Framebuffer.blit` | `blit` |
+| ------------       | ---- |
+| `opts.srcFramebuffer` | `source` |
+| -                 | `target` |
+| `opts.attachment` | `opts.sourceAttachment` |
+| `opts.srcX0`      | `opts.sourceX0` |
+| `opts.srcX1`      | `opts.sourceX1` |
+| `opts.srcY0`      | `opts.sourceY0` |
+| `opts.srcY1`      | `opts.sourceY1` |
+| `opts.dstX0`      | `opts.targetX0` |
+| `opts.dstX1`      | `opts.targetX1` |
+| `opts.dstY0`      | `opts.targetY0` |
+| `opts.dstY1`      | `opts.targetY1` |
+| `opts.color`      | `opts.color` |
+| `opts.depth`      | `opts.depth` |
+| `opts.stencil`    | `opts.stencil` |
+| `opts.mask`       | `opts.mask` |
+| `opts.filter`     | `opts.filter` |
+
+
 
 ## Upgrading from v5.3 to v6.0
 
