@@ -1,3 +1,5 @@
+import Material from './material'
+
 const defaultProps = {
   ambient: 0.4,
   diffuse: 0.6,
@@ -5,8 +7,9 @@ const defaultProps = {
   specularColor: [255, 255, 255]
 };
 
-export default class PhongMaterial {
+export default class PhongMaterial extends Material {
   constructor(props) {
+    super(props);
     props = Object.assign({}, defaultProps, props);
     Object.assign(this, props);
   }
