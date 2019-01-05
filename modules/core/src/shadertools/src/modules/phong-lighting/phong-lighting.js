@@ -24,7 +24,7 @@ function getLightSourceUniforms({ambientLight, pointLights, directionalLights}) 
     lightSourceUniforms[`lighting_pointLight[${index}].position`] = pointLight.position;
     index++;
   }
-  lightSourceUniforms.lighting_pointLightNumber = pointLights.length;
+  lightSourceUniforms.lighting_pointLightCount = pointLights.length;
 
   index = 0;
   for (const i in directionalLights) {
@@ -36,7 +36,7 @@ function getLightSourceUniforms({ambientLight, pointLights, directionalLights}) 
       directionalLight.direction;
     index++;
   }
-  lightSourceUniforms.lighting_directionalLightNumber = directionalLights.length;
+  lightSourceUniforms.lighting_directionalLightCount = directionalLights.length;
 
   return lightSourceUniforms;
 }

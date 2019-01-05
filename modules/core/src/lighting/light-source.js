@@ -20,7 +20,7 @@ export class DirectionalLight extends LightSource {
   constructor(props) {
     super(props);
     const {direction = DEFAULT_LIGHT_DIRECTION} = props;
-    this.direction = Vector3(direction).normalize().toArray();
+    this.direction = new Vector3(direction).normalize().toArray();
   }
 }
 
