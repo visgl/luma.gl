@@ -18,7 +18,7 @@ const CONFIG = {
       'version-inline',
       './dev-modules/babel-plugin-inline-gl-constants',
       ['./dev-modules/babel-plugin-remove-glsl-comments', {
-        patterns: ['**/shadertools/**/*.js']
+        patterns: ['**/shadertools/src/modules/**/*.js']
       }]
     ]
   }
