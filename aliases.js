@@ -22,6 +22,7 @@ const path = require('path');
 
 const ALIASES = {
   'luma.gl/test': path.resolve(__dirname, './test'),
+  'luma.gl/constants': path.resolve(__dirname, './modules/core/constants'),
   'luma.gl': path.resolve(__dirname, './modules/core/src'),
   'dev-modules': path.resolve(__dirname, './dev-modules'),
   '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
