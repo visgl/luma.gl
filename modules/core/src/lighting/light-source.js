@@ -7,7 +7,7 @@ const DEFAULT_LIGHT_DIRECTION = [0.0, 0.0, -1.0];
 const DEFAULT_LIGHT_INTENSITY = 1.0;
 const DEFAULT_LIGHT_COLOR = [255, 255, 255];
 
-class LightSource extends Object3D{
+class LightSource extends Object3D {
   constructor(props) {
     super(props);
     const {color = DEFAULT_LIGHT_COLOR, intensity = DEFAULT_LIGHT_INTENSITY} = props;
