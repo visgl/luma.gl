@@ -194,8 +194,8 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
   * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
   * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer a particular offset and size.
     * `buffer`=(Buffer) - Buffer object to be bound.
-    * `offsetInBytes`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-    * `sizeInBytes`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+    * `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+    * `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
   * `vs` (`String`) - vertex shader string.
   * `modules` - shader modules to be applied.
   * `varyings` (`Array`) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackMap`. Either `varyings` or `feedbackMap` must be provided.

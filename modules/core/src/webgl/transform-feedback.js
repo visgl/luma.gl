@@ -63,7 +63,7 @@ export default class TransformFeedback extends Resource {
 
   setBuffer(locationOrName, bufferOrParams) {
     const location = this._getVaryingIndex(locationOrName);
-    const {buffer, sizeInBytes, offsetInBytes} = this._getBufferParams(bufferOrParams)
+    const {buffer, byteSize, byteOffset} = this._getBufferParams(bufferOrParams)
 
     if (location < 0) {
       this.unused[locationOrName] = buffer;
@@ -77,7 +77,7 @@ export default class TransformFeedback extends Resource {
     // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
     if (!this.bindOnUse) {
 
-      this._bindBuffer(location, buffer, offsetInBytes, sizeInBytes);
+      this._bindBuffer(location, buffer, byteOffset, byteSize);
     }
 
     return this;
@@ -100,22 +100,22 @@ export default class TransformFeedback extends Resource {
   // PRIVATE METHODS
 
   _getBufferParams(bufferOrParams) {
-    let offsetInBytes;
-    let sizeInBytes;
+    let byteOffset;
+    let byteSize;
     let buffer;
     if (bufferOrParams instanceof Buffer === false) {
       buffer = bufferOrParams.buffer;
-      sizeInBytes = bufferOrParams.sizeInBytes;
-      offsetInBytes = bufferOrParams.offsetInBytes;
+      byteSize = bufferOrParams.byteSize;
+      byteOffset = bufferOrParams.byteOffset;
     } else {
       buffer = bufferOrParams;
     }
     // to use bindBufferRange, either offset or size must be specified, use default value for the other.
-    if (offsetInBytes !== undefined || sizeInBytes !== undefined) {
-      offsetInBytes = offsetInBytes || 0;
-      sizeInBytes = sizeInBytes || buffer.byteLength - offsetInBytes;
+    if (byteOffset !== undefined || byteSize !== undefined) {
+      byteOffset = byteOffset || 0;
+      byteSize = byteSize || buffer.byteLength - byteOffset;
     }
-    return {buffer, offsetInBytes, sizeInBytes};
+    return {buffer, byteOffset, byteSize};
   }
 
   _getVaryingInfo(locationOrName) {
@@ -135,8 +135,8 @@ export default class TransformFeedback extends Resource {
   _bindBuffers() {
     if (this.bindOnUse) {
       for (const bufferIndex in this.buffers) {
-        const {buffer, sizeInBytes, offsetInBytes} = this._getBufferParams(this.buffers[bufferIndex])
-        this._bindBuffer(bufferIndex, buffer, offsetInBytes, sizeInBytes);
+        const {buffer, byteSize, byteOffset} = this._getBufferParams(this.buffers[bufferIndex])
+        this._bindBuffer(bufferIndex, buffer, byteOffset, byteSize);
       }
     }
   }
@@ -149,12 +149,12 @@ export default class TransformFeedback extends Resource {
     }
   }
 
-  _bindBuffer(index, buffer, offsetInBytes = 0, sizeInBytes) {
+  _bindBuffer(index, buffer, byteOffset = 0, byteSize) {
     const handle = buffer && buffer.handle;
-    if (!handle || sizeInBytes === undefined) {
+    if (!handle || byteSize === undefined) {
       this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
-      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, offsetInBytes, sizeInBytes);
+      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteSize);
     }
     return this;
   }

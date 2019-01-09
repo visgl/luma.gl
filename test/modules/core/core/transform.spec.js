@@ -149,7 +149,7 @@ test('WebGL#Transform run (feedbackBuffer offset)', t => {
     },
     vs: VS,
     feedbackBuffers: {
-      outValue: {buffer: outBuffer, offsetInBytes: 4 * offset}
+      outValue: {buffer: outBuffer, byteOffset: 4 * offset}
     },
     varyings: ['outValue'],
     elementCount: 5
