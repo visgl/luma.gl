@@ -4,7 +4,7 @@
 
 ### Copy and Blit methods
 
-Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that peform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
+Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that perform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
 
 
 ### New submodule

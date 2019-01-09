@@ -96,7 +96,7 @@ test('WebGL#TransformFeedback bindBuffers', t => {
   t.end();
 });
 
-function testDataCapture({t, gl2, offsetInBytes}) {
+function testDataCapture({t, gl2, byteOffset}) {
   const inData = new Float32Array([10, 20, 31, 0, -57]);
   const vertexCount = inData.length;
   const inBuffer = new Buffer(gl2, {data: inData});
@@ -109,9 +109,9 @@ function testDataCapture({t, gl2, offsetInBytes}) {
     drawMode: GL.POINTS,
     vertexCount: 5
   });
-  const offset = offsetInBytes ? offsetInBytes / 4 : 0;
+  const offset = byteOffset ? byteOffset / 4 : 0;
   const tf = new TransformFeedback(gl2, {
-    buffers: {outValue: {buffer: outBuffer, offsetInBytes}},
+    buffers: {outValue: {buffer: outBuffer, byteOffset}},
     configuration: model.program.configuration
   });
 
@@ -136,7 +136,7 @@ test('WebGL#TransformFeedback capture', t => {
   testDataCapture({t, gl2});
 
   // with offset
-  testDataCapture({t, gl2, offsetInBytes: 2 * 4});
+  testDataCapture({t, gl2, byteOffset: 2 * 4});
 
   t.end();
 });
