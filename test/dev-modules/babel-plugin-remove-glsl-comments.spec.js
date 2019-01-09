@@ -1,82 +1,136 @@
+import babel from '@babel/core';
 import plugin from 'dev-modules/babel-plugin-remove-glsl-comments';
 import test from 'tape-catch';
 
-const PATTERNS = ['*.glsl.js', 'some/path/**/*.js'];
+const ES6_ENV = {
+  targets: {chrome: '60'},
+  modules: false
+};
+
+const STRING_LITERAL = `
+// JavaScript comment
+const shader = '\\n  /* block comment */\\n  float add(float a, float b) {\\n    return a + b; // inline comment 1\\n  }\\n\\n  /*\\n   * multiline block comment\\n   */\\n  float sub(float a, float b) {\\n    // inline comment 2\\n    return a - b;\\n  }\\n';
+`;
+
+const TEMPLATE_LITERAL = `
+// JavaScript comment
+const shader = \`
+  /* block comment */
+  float add(float a, float b) {
+    return a + b; // inline comment 1
+  }
+
+  /*
+   * multiline block comment
+   */
+  float sub(float a, float b) {
+    // inline comment 2
+    return a - b;
+  }
+\`;
+`
+
+const EXPECTED_OUTPUT = `
+  float add(float a, float b) {
+    return a + b;
+  }
+  float sub(float a, float b) {
+    return a - b;
+  }
+`;
+
+const TEMPLATE_LITERAL_COMPLEX = `
+const shader = \`
+  /* generated $\{new Date().toLocaleString()\} */
+  float add(float a, float b) {
+    return a + b; // inline comment 1
+  }
+  // ID $\{Math.random()\}
+\`;
+`;
 
 const TEST_CASES = [
   {
+    title: 'string literal (es5)',
+    input: STRING_LITERAL,
+    output: `
+      // JavaScript comment
+      var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";
+    `
+  },
+  {
+    title: 'string literal (es6)',
+    env: ES6_ENV,
+    input: STRING_LITERAL,
+    output: `
+      // JavaScript comment
+      const shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";`
+  },
+  {
+    title: 'template literal (es5)',
+    input: TEMPLATE_LITERAL,
+    output: `
+      // JavaScript comment
+      var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";
+    `
+  },
+  {
+    title: 'template literal (es6)',
+    env: ES6_ENV,
+    input: TEMPLATE_LITERAL,
+    output: `
+      // JavaScript comment
+      const shader = \`${EXPECTED_OUTPUT}\`;`
+  },
+  {
+    title: 'template literal complex (es5)',
+    input: TEMPLATE_LITERAL_COMPLEX,
+    output: `var shader = "
+  /* generated ".concat(new Date().toLocaleString(), " */
+  float add(float a, float b) {
+    return a + b;
+  }
+  // ID ").concat(Math.random(), "
+");`.replace(/\n/g, '\\n')
+  },
+  {
+    title: 'template literal complex (es6)',
+    env: ES6_ENV,
+    input: TEMPLATE_LITERAL_COMPLEX,
+    output: `const shader = \`
+  /* generated $\{new Date().toLocaleString()\} */
+  float add(float a, float b) {
+    return a + b;
+  }
+  // ID $\{Math.random()\}
+\`;`
+  },
+  {
     title: 'invalid filename',
-    input: `
-      function(a, b) {
-        return a + b; // add a and b
-      }
-    `,
+    env: ES6_ENV,
     filename: 'math.js',
-    output: `
-      function(a, b) {
-        return a + b; // add a and b
-      }
-    `
-  }, {
-    title: 'inline comments',
-    input: `
-      function(a, b) {
-        return a + b; // add a and b
-      }
-    `,
-    filename: 'some/path/math.js',
-    output: `
-      function(a, b) {
-        return a + b;
-      }
-    `
-  }, {
-    title: 'multiple inline comments',
-    input: `
-      // a function to add numbers
-      function(a, b) {
-        return a + b; // add a and b
-      }
-    `,
-    filename: 'math.glsl.js',
-    output: `
-      function(a, b) {
-        return a + b;
-      }
-    `
-  }, {
-    title: 'multiline block comments',
-    input: `
-      /**
-      * a function to add numbers
-      * @params a (number)
-      * @params b (number)
-      * @returns (number)
-      */
-      function(a, b) {
-        return a + b; // add a and b
-      }
-    `,
-    filename: 'math.glsl.js',
-    output: `
-      function(a, b) {
-        return a + b;
-      }
-    `
+    patterns: ['*.glsl.js'],
+    input: TEMPLATE_LITERAL,
+    output: TEMPLATE_LITERAL
   }
 ];
 
+// Remove whitespace before comparing
+function clean(code) {
+  return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
+}
+
+/* eslint-disable */
 test('RemoveGLSLComments Babel Plugin', t => {
 
-  const stringLiteralVisitor = plugin().visitor.StringLiteral;
-  const opts = {patterns: PATTERNS};
-
   TEST_CASES.forEach(testCase => {
-    const path = {node: {value: testCase.input}};
-    const state = {file: {opts: {filename: testCase.filename}}, opts};
-    stringLiteralVisitor(path, state);
-    t.is(path.node.value, testCase.output, testCase.title);
-  })
+    const {code} = babel.transform(testCase.input, {
+      presets: [['@babel/env', testCase.env]],
+      plugins: [[plugin, {patterns: testCase.patterns}]],
+      filename: testCase.filename || 'test.js'
+    });
+    t.is(clean(code), clean(testCase.output), testCase.title);
+  });
 
   t.end();
 });

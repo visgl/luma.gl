@@ -33,6 +33,17 @@ main() {
 const vs = '\nuniform mat4 viewMatrix;\nuniform mat4 projectionMatrix;\nuniform mat3 modelMatrix;\n\nattribute vec3 positions;\nattribute vec3 instancePositions;\n\nmain() {\n  vec4 worldPosition = vec4(instancePositions + modelMatrix * positions, 1.);\n  gl_Position = projectionMatrix * viewMatrix * worldPosition;\n}\n';
 ```
 
+Note: for safety, this plugin does not remove dynamically generated comments, e.g.
+
+```js
+const vs = `/* MODULE ${name} STARTS */`;
+```
+
+```js
+const vs = `// END OF ${name}`;
+```
+
+
 ## Installation
 
 ```sh
