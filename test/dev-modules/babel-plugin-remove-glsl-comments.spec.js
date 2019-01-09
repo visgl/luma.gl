@@ -7,103 +7,86 @@ const ES6_ENV = {
   modules: false
 };
 
-const STRING_LITERAL = `
-// JavaScript comment
-const shader = '\\n  /* block comment */\\n  float add(float a, float b) {\\n    return a + b; // inline comment 1\\n  }\\n\\n  /*\\n   * multiline block comment\\n   */\\n  float sub(float a, float b) {\\n    // inline comment 2\\n    return a - b;\\n  }\\n';
+const EXAMPLE = `
+/* block comment */
+float add(float a, float b) {
+  return a + b; // inline comment 1
+}
+
+/*
+ * multiline block comment
+ */
+float sub(float a, float b) {
+  // inline comment 2
+  return a - b;
+}
 `;
-
-const TEMPLATE_LITERAL = `
-// JavaScript comment
-const shader = \`
-  /* block comment */
-  float add(float a, float b) {
-    return a + b; // inline comment 1
-  }
-
-  /*
-   * multiline block comment
-   */
-  float sub(float a, float b) {
-    // inline comment 2
-    return a - b;
-  }
-\`;
-`
 
 const EXPECTED_OUTPUT = `
-  float add(float a, float b) {
-    return a + b;
-  }
-  float sub(float a, float b) {
-    return a - b;
-  }
+float add(float a, float b) {
+  return a + b;
+}
+float sub(float a, float b) {
+  return a - b;
+}
 `;
 
-const TEMPLATE_LITERAL_COMPLEX = `
+const STRING_LITERAL = `// JavaScript comment\n  const shader = '${EXAMPLE.replace(/\n/g, '\\n')}';`;
+const TEMPLATE_LITERAL = `// JavaScript comment\n  const shader = \`${EXAMPLE}\`;`;
+const RESULT_STRING = `// JavaScript comment\n  var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";`;
+const RESULT_TEMPLATE = `// JavaScript comment\n  var shader = \`${EXPECTED_OUTPUT}\`;`;
+
+const COMPLEX_TEMPLATE_LITERAL = `
 const shader = \`
   /* generated $\{new Date().toLocaleString()\} */
   float add(float a, float b) {
-    return a + b; // inline comment 1
+    return a + b; // inline comment
   }
-  // ID $\{Math.random()\}
-\`;
+  // ID $\{Math.random()\}\`;
 `;
+
+const COMPLEX_RESULT_STRING = `var shader = "
+  /* generated ".concat(new Date().toLocaleString(), " */
+  float add(float a, float b) {
+    return a + b;
+  }
+  // ID ").concat(Math.random());`.replace(/\n/g, '\\n');
+
+const COMPLEX_RESULT_TEMPLATE = COMPLEX_TEMPLATE_LITERAL.replace(' // inline comment', '');
 
 const TEST_CASES = [
   {
     title: 'string literal (es5)',
     input: STRING_LITERAL,
-    output: `
-      // JavaScript comment
-      var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";
-    `
+    output: RESULT_STRING
   },
   {
     title: 'string literal (es6)',
     env: ES6_ENV,
     input: STRING_LITERAL,
-    output: `
-      // JavaScript comment
-      const shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";`
+    output: RESULT_STRING.replace('var ', 'const ')
   },
   {
     title: 'template literal (es5)',
     input: TEMPLATE_LITERAL,
-    output: `
-      // JavaScript comment
-      var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";
-    `
+    output: RESULT_STRING
   },
   {
     title: 'template literal (es6)',
     env: ES6_ENV,
     input: TEMPLATE_LITERAL,
-    output: `
-      // JavaScript comment
-      const shader = \`${EXPECTED_OUTPUT}\`;`
+    output: RESULT_TEMPLATE.replace('var ', 'const ')
   },
   {
     title: 'template literal complex (es5)',
-    input: TEMPLATE_LITERAL_COMPLEX,
-    output: `var shader = "
-  /* generated ".concat(new Date().toLocaleString(), " */
-  float add(float a, float b) {
-    return a + b;
-  }
-  // ID ").concat(Math.random(), "
-");`.replace(/\n/g, '\\n')
+    input: COMPLEX_TEMPLATE_LITERAL,
+    output: COMPLEX_RESULT_STRING
   },
   {
     title: 'template literal complex (es6)',
     env: ES6_ENV,
-    input: TEMPLATE_LITERAL_COMPLEX,
-    output: `const shader = \`
-  /* generated $\{new Date().toLocaleString()\} */
-  float add(float a, float b) {
-    return a + b;
-  }
-  // ID $\{Math.random()\}
-\`;`
+    input: COMPLEX_TEMPLATE_LITERAL,
+    output: COMPLEX_RESULT_TEMPLATE
   },
   {
     title: 'invalid filename',
@@ -120,7 +103,6 @@ function clean(code) {
   return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
 }
 
-/* eslint-disable */
 test('RemoveGLSLComments Babel Plugin', t => {
 
   TEST_CASES.forEach(testCase => {
