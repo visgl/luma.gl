@@ -141,12 +141,12 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    let vertexLightingProgram = new Program(gl, {
+    const vertexLightingProgram = new Program(gl, {
       fs: VERTEX_LIGHTING_FRAGMENT_SHADER,
       vs: VERTEX_LIGHTING_VERTEX_SHADER,
     });
 
-    let fragmentLightingProgram = new Program(gl, {
+    const fragmentLightingProgram = new Program(gl, {
       fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
       vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
     });
@@ -155,7 +155,7 @@ const animationLoop = new AnimationLoop({
       urls: ['moon.gif']
     })
     .then(textures => {
-      let moon = new Sphere(gl, {
+      const moon = new Sphere(gl, {
         program: fragmentLightingProgram,
         uniforms: {
           uSampler: textures[0]
@@ -167,17 +167,19 @@ const animationLoop = new AnimationLoop({
       return loadTextures(gl, {
         urls: ['crate.gif']
       })
-      .then(textures => {
-        let cube = new Cube(gl, {
+      .then(textures2 => {
+        const cube = new Cube(gl, {
           program: fragmentLightingProgram,
           uniforms: {
-            uSampler: textures[0]
+            uSampler: textures2[0]
           }
         });
         return {moon, cube, vertexLightingProgram, fragmentLightingProgram};
       });
     });
   },
+
+  // eslint-disable-next-line complexity
   onRender: ({
     gl, tick, aspect, moon, cube, vertexLightingProgram, fragmentLightingProgram
   }) => {
@@ -188,13 +190,13 @@ const animationLoop = new AnimationLoop({
     .rotateX(radians(-30))
     .transformVector3([0, 0, 5]);
 
-    let uVMatrix = new Matrix4()
+    const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    let element = null;
-    let useLighting = (element = document.getElementById("lighting")) ? element.checked : true;
-    let useTextures = (element = document.getElementById("textures")) ? element.checked : true;
-    let useFragmentLighting = (element = document.getElementById("per-fragment")) ? element.checked : true;
+    const element = null;
+    const useLighting = (element = document.getElementById("lighting")) ? element.checked : true;
+    const useTextures = (element = document.getElementById("textures")) ? element.checked : true;
+    const useFragmentLighting = (element = document.getElementById("per-fragment")) ? element.checked : true;
 
     if (useFragmentLighting) {
       moon.program = fragmentLightingProgram;
@@ -215,19 +217,19 @@ const animationLoop = new AnimationLoop({
     });
 
     if (useLighting) {
-      let ambientColor = new Vector3(
+      const ambientColor = new Vector3(
         parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
         parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
       );
 
-      let pointLightingLocation = new Vector3(
+      const pointLightingLocation = new Vector3(
         parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
         parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
         parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
       );
 
-      let pointLightColor = new Vector3(
+      const pointLightColor = new Vector3(
         parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
         parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
