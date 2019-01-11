@@ -1,15 +1,43 @@
 # What's New
 
+## Version 7.x
+
+Target Date: Q1, 2019
+
+### glTF 2.0 Support
+
+luma.gl can now load binary GLB files (with the help of loaders.gl). There are certain limitations.
+
+
+### glTF2 Compatible Scenegraph
+
+The scene graph support in luma.gl has been completely overhauled and designed to closely follow glTF2, simplifying loading and manipulation of glTF formatted data in luma.gl. A `Model` is now a positioned `Mesh`, and a `Mesh` can consist of multiple `Primitive` instances, each with a different geometry and material.
+
+
+### Unified Read/Copy/Blit functions for Framebuffers and Textures
+
+A set of global methods that perform copying data to and from `Framebuffer` objects. All functions that read from or write to a `Framebuffer` object now also accept a `Texture` object, relieving the application from the boilerplate of having to create and configure a `Framebuffer` just to do a simple operation on a `Texture`.
+
+Several member function of `Framebuffer` and `Texture` classes are now replaced by these global functions.
+
+
 ## Version 7.0
+
+Target Date: Jan 30, 2019
+
+### New submodule for GPGPU functions
+
+* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+
+
+### PBR (Physically Based) Rendering and Material
+
+Physically-Based Rendering is now supported and the new `PBRMaterial` class can be used to set up parameters. Material can be selected per model.
+
 
 ### Copy and Blit methods
 
-Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that perform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
-
-
-### New submodule
-
-* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that peform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
 
 
 ## Version 6.3
