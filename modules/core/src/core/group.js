@@ -1,4 +1,4 @@
-import Node from './node';
+import Node from './scenegraph-node';
 import {Matrix4} from 'math.gl';
 import assert from '../utils/assert';
 

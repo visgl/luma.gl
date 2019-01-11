@@ -2,13 +2,16 @@ import GL from '@luma.gl/constants';
 import BaseModel from './base-model';
 import Attribute from './attribute';
 import {getDrawMode} from '../geometry/geometry';
-import {Buffer, Query, Program, TransformFeedback, clear} from '../webgl';
-import {isWebGL} from '../webgl-utils';
+import {Buffer, Query, Program, TransformFeedback} from '../webgl';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
-import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
+import {removeModel, logModel} from '../debug/seer-integration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
+
+import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 

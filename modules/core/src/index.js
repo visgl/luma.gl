@@ -77,7 +77,7 @@ export {default as _Accessor} from './webgl/accessor';
 export {clearBuffer as _clearBuffer} from './webgl/clear';
 
 // CORE - Scenegraph
-export {default as Node} from './core/node';
+export {default as Node} from './core/scenegraph-node';
 export {default as Group} from './core/group';
 export {default as Mesh} from './core/mesh';
 export {default as Camera} from './core/camera';
@@ -191,7 +191,7 @@ export {
 
 // DEPRECATED EXPORTS IN v7.0
 
-export {default as Object3D} from './core/node';
+export {default as Object3D} from './core/scenegraph-node';
 
 // DEPRECATED EXPORTS IN v6.0
 

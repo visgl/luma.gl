@@ -1,4 +1,4 @@
-import Node from './node';
+import Node from './scenegraph-node';
 import Model from './model';
 import assert from '../utils/assert';
 

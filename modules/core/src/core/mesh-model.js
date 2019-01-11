@@ -1,6 +1,6 @@
-import GL from '../constants';
+import GL from '@luma.gl/constants';
 import Attribute from './attribute';
-import Node from './node';
+import Node from './scenegraph-node';
 import {getDrawMode} from '../geometry/geometry';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
