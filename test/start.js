@@ -18,6 +18,7 @@ console.log(`Running test suite in "${mode}" mode...`); // eslint-disable-line
 switch (mode) {
 case 'fast':
 case 'test':
+  require('./dev-modules');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./modules/core/debug/seer-integration');
@@ -49,6 +50,7 @@ case 'dist':
 
 case 'cover':
   require('@babel/register');
+  require('./dev-modules');
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
   require('./modules/core/debug/seer-integration');
@@ -84,7 +86,4 @@ case 'analyze-size':
 
 default:
   console.error(`Unknown test mode ${mode}`); // eslint-disable-line
-  require('./index-webgl-independent-tests');
-  require('./index-webgl-dependent-tests');
-  require('./modules/core/debug/seer-integration');
 }

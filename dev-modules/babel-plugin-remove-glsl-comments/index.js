@@ -1,16 +1,27 @@
-const minimatch = require("minimatch")
+const minimatch = require("minimatch");
 const path = require('path');
 
-const INLINE_COMMENT_REGEX = /\s*\/\/.*/g;
+// inline comment is only safe to remove if it's followed by a return (i.e. end of comment)
+const INLINE_COMMENT_REGEX = /\s*\/\/.*[\n\r]/g;
 const BLOCK_COMMENT_REGEX = /\s*\/\*(\*(?!\/)|[^*])*\*\//g;
-const DEFAULT_PATTERNS = ['*.js'];
+const DEFAULT_PATTERNS = ['**/*.js'];
 
 module.exports = function _(opts) {
   return {
     visitor: {
+      TemplateLiteral(path, state) {
+        if(filterFile(state)) {
+          path.node.quasis.forEach(node => {
+            node.value = {
+              raw: handleString(node.value.raw),
+              cooked: handleString(node.value.cooked)
+            };
+          });
+        }
+      },
       StringLiteral(path, state) {
         if(filterFile(state)) {
-          path.node.value = path.node.value.replace(INLINE_COMMENT_REGEX, '').replace(BLOCK_COMMENT_REGEX, '');
+          path.node.value = handleString(path.node.value);
         }
       }
     }
@@ -18,7 +29,7 @@ module.exports = function _(opts) {
 };
 
 function filterFile(state) {
-  const filename = state.file.opts.filename;
+  const {filename} = state;
   const patterns = state.opts.patterns || DEFAULT_PATTERNS;
 
   return patterns.some(function(p) {
@@ -27,4 +38,8 @@ function filterFile(state) {
     }
     return minimatch(filename, p);
   });
+}
+
+function handleString(str) {
+  return str.replace(INLINE_COMMENT_REGEX, '\n').replace(BLOCK_COMMENT_REGEX, '');
 }
