@@ -1,5 +1,5 @@
 import {TransformFeedback, Buffer, Model} from 'luma.gl';
-import GL from '@luma.gl/constants';
+import GL from 'luma.gl/constants';
 import test from 'tape-catch';
 
 import {fixture} from 'luma.gl/test/setup';
