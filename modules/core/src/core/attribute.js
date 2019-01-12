@@ -60,7 +60,7 @@ export default class Attribute {
       this.externalBuffer = null;
       this.value = value;
 
-      if (!constant) {
+      if (!constant && this.gl) {
         // Create buffer if needed
         this.buffer = this.buffer ||
           new Buffer(this.gl, Object.assign({}, opts, {
