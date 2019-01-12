@@ -36,6 +36,9 @@ test('WebGL#Attribute constructor/update/delete', t => {
   attribute.delete();
   t.ok(buffer._handle, 'External buffer is not deleted');
 
+  attribute = new Attribute(gl, {size: 1, isIndexed: true});
+  t.is(attribute.type, GL.UNSIGNED_INT, 'type is auto inferred');
+
   t.end();
 });
 

@@ -2,6 +2,7 @@
 import GL from '@luma.gl/constants';
 import {Buffer} from '../webgl';
 import {log, uid} from '../utils';
+import {hasFeature, FEATURES} from '../webgl-context/context-features';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
@@ -17,6 +18,10 @@ export default class Attribute {
     this.isIndexed = isIndexed;
     this.target = isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
     this.type = type;
+
+    if (isIndexed && !type) {
+      this.type = gl && hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
+    }
 
     // Initialize the attribute descriptor, with WebGL and metadata fields
     this.value = null;
