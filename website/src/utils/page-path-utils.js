@@ -1,5 +1,5 @@
 function getDocUrl(filename) {
-  let url = `https://raw.githubusercontent.com/uber/luma.gl/6.3-release/docs/${filename}`;
+  let url = `https://raw.githubusercontent.com/uber/luma.gl/6.4-release/docs/${filename}`;
   if (filename.indexOf('markdown') !== -1) {
     url = filename;
   }
