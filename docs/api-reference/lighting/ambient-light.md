@@ -1,6 +1,6 @@
 # AmbientLight
 
-Create an ambient light source which illuminates all the objects equally.
+Create an ambient light source which illuminates all the objects equally.Ambient light comes from all directions, adding ambient light ensures that object colors are rendered but does not show structure in 3D objects like directional and point lights do. Only one ambient light is supported.
 
 
 ## Usage
@@ -22,7 +22,6 @@ The constructor for the `AmbientLight` class. Use this to create a new `AmbientL
 ```js
 const ambientLight = new AmbientLight({color, intensity});
 ```
-#### Parameters
 
 * `color` - (*array*,)  RGB color of ambient light source, default value is `[255, 255, 255]`.
 * `intensity` - (*number*) Strength of ambient light source, default value is `1.0`.

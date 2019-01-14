@@ -1,6 +1,6 @@
 # PhongMaterial
 
-A material class specifies reflection properties of a shinny surface, uses `Blinn-Phong` model for underlying implementation. 
+A material class specifies reflection properties of a shiny surface, uses [Blinn-Phong](https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model) model for underlying implementation. 
 
 
 ## Usage
@@ -24,7 +24,6 @@ The constructor for the `PhongMaterial` class. Use this to create a new `PhongMa
 ```js
 const phongMaterial = new PhongMaterial({ambient, diffuse, shininess, specularColor});
 ```
-#### Parameters
 
 * `ambient` - (*number*,) Ambient light reflection ratio, default value is `0.4`.
 * `diffuse` - (*number*) Diffuse light reflection ratio, default value is `0.6`.

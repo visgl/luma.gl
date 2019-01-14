@@ -1,6 +1,6 @@
 # PointLight
 
-Create a point light source which emits from a point in all directions.
+Create a point light source which emits from a point in all directions.Point lights attenuation is not available. At most 5 directional lights can be supported.
 
 
 ## Usage

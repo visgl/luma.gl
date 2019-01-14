@@ -9,7 +9,7 @@ const defaultProps = {
 
 export default class PhongMaterial extends Material {
   constructor(props) {
-    super();
+    super(props);
     props = Object.assign({}, defaultProps, props);
     Object.assign(this, props);
   }

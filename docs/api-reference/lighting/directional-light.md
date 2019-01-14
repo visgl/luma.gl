@@ -1,6 +1,6 @@
 # DirectionalLight
 
-Create a directional light source which emits from a specific direction.
+Create a directional light source which emits from a specific direction.A directional light can be considered "infinitely" far away (like the Sun) and does not attenuate with distance. At most 5 directional lights can be supported.
 
 
 ## Usage
@@ -23,7 +23,6 @@ The constructor for the `DirectionalLight` class. Use this to create a new `Dire
 ```js
 const directionalLight = new DirectionalLight({color, intensity, direction});
 ```
-#### Parameters
 
 * `color` - (*array*,)  RGB color of directional light source, default value is `[255, 255, 255]`.
 * `intensity` - (*number*) Strength of directional light source, default value is `1.0`.
