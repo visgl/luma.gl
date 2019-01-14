@@ -76,10 +76,14 @@ export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 export {default as _Accessor} from './webgl/accessor';
 export {clearBuffer as _clearBuffer} from './webgl/clear';
 
-// CORE
-export {default as Object3D} from './core/object-3d';
+// CORE - Scenegraph
+export {default as Node} from './core/scenegraph-node';
 export {default as Group} from './core/group';
+export {default as Mesh} from './core/mesh';
+export {default as Camera} from './core/camera';
 export {default as Model} from './core/model';
+
+// CORE
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as pickModels} from './core/pick-models';
 export {
@@ -184,6 +188,10 @@ export {stubRemovedMethods} from './utils/stub-methods';
 // TO BE REMOVED IN v7
 export {
   makeDebugContext} from './webgl-context/debug-context';
+
+// DEPRECATED EXPORTS IN v7.0
+
+export {default as Object3D} from './core/scenegraph-node';
 
 // DEPRECATED EXPORTS IN v6.0
 
