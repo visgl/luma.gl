@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {Buffer, Transform, picking} from 'luma.gl';
+import {Buffer, Transform} from 'luma.gl';
+import {picking} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 

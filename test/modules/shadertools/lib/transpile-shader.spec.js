@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import transpileShader from 'luma.gl/shadertools/src/lib/transpile-shader';
+import transpileShader from '@luma.gl/shadertools/lib/transpile-shader';
 import test from 'tape-catch';
 
 // 300 version should use 'textureCube()'' instead of 'texture()'

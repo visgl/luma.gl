@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
-import {createGLContext, assembleShaders, picking, fp64} from 'luma.gl';
-// import {getShaderModule} from 'luma.gl/shadertools/src/lib/resolve-modules';
-// import {makeSpy} from 'probe.gl/test-utils';
+import {createGLContext} from 'luma.gl';
+import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {

@@ -30,7 +30,8 @@ const ALIASES = {
   '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
   '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
   '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
-  '@luma.gl/io': path.resolve(__dirname, './modules/io/src')
+  '@luma.gl/io': path.resolve(__dirname, './modules/io/src'),
+  '@luma.gl/shadertools': path.resolve(__dirname, './modules/shadertools/src')
 };
 
 if (module.require) {

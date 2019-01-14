@@ -4,7 +4,7 @@ import {
   typeToChannelSuffix,
   typeToChannelCount,
   convertToVec4
-} from '../../src/utils/shader-utils';
+} from '@luma.gl/shadertools/utils/shader-utils';
 import test from 'tape-catch';
 
 test('shader-utils#getQualifierDetails', t => {

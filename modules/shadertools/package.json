@@ -1,0 +1,50 @@
+{
+  "name": "@luma.gl/shadertools",
+  "version": "7.0.0-alpha.3",
+  "description": "Shader module system for luma.gl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "glsl",
+    "debug",
+    "3d",
+    "glsl",
+    "shader",
+    "vertex",
+    "fragment",
+    "glsl link",
+    "glsl module"
+  ],
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
+  "esnext": "dist/es6/index.js",
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "browser": {
+    "fs": false
+  },
+  "scripts": {
+    "clean": "rm -fr dist && mkdir -p dist/es5 dist/esm dist/es6",
+    "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5",
+    "build-es6": "BABEL_ENV=es6 babel src --config-file ../../babel.config.js --out-dir dist/es6 --source-maps --ignore 'node_modules/'",
+    "build-esm": "BABEL_ENV=esm babel src --config-file ../../babel.config.js --out-dir dist/esm --source-maps --ignore 'node_modules/'",
+    "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
+  },
+  "dependencies": {
+    "@luma.gl/constants": "^7.0.0-alpha.3",
+    "glsl-transpiler": "^1.8.5",
+    "luma.gl": "^7.0.0-alpha.3",
+    "webgl-debug": "^2.0.1"
+  }
+}

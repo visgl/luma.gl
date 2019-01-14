@@ -1,7 +1,6 @@
 import test from 'tape-catch';
 
 import GL from '@luma.gl/constants';
-import GL_DEPRECATED from 'luma.gl/constants';
 
 test('@luma.gl/constants', t => {
   t.equal(typeof GL, 'object', '@luma.gl/constants is an object');
@@ -9,6 +8,8 @@ test('@luma.gl/constants', t => {
 });
 
 test('luma.gl/constants (DEPRECATED)', t => {
-  t.equal(GL_DEPRECATED, GL, 'luma.gl/constants still importing constants');
+  t.comment('Intentionally triggering deprecation warning!');
+  const GL_DEPRECATED = require('luma.gl/constants');
+  t.equal(GL_DEPRECATED, GL, 'luma.gl/constants still correctly importing constants');
   t.end();
 });

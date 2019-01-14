@@ -4,12 +4,12 @@ import Buffer from '../webgl/buffer';
 import Framebuffer from '../webgl/framebuffer';
 import Texture2D from '../webgl/texture-2d';
 import TransformFeedback from '../webgl/transform-feedback';
-import {combineInjects} from '../shadertools/src/lib/inject-shader';
+import {combineInjects} from '@luma.gl/shadertools';
 import {
   _transform as transform,
   getPassthroughFS,
   typeToChannelCount
-} from '../shadertools/src';
+} from '@luma.gl/shadertools';
 import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log, isObjectEmpty} from '../utils';

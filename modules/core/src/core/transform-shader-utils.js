@@ -1,5 +1,5 @@
 import assert from 'assert';
-import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '../shadertools/src';
+import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
 
 const SAMPLER_UNIFORM_PREFIX = 'transform_uSampler_';
 const SIZE_UNIFORM_PREFIX = 'transform_uSize_';
