@@ -79,7 +79,6 @@ export {clearBuffer as _clearBuffer} from './webgl/clear';
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as Mesh} from './core/mesh';
-export {default as Material} from './core/material';
 
 export {default as pickModels} from './core/pick-models';
 export {
@@ -158,7 +157,9 @@ export {
 } from './lighting/light-source';
 
 // material
+export {default as Material} from './materials/material';
 export {default as PhongMaterial} from './materials/phong-material';
+export {default as PBRMaterial} from './materials/pbr-material';
 
 // shadertools
 export {
