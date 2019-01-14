@@ -1,5 +1,5 @@
 import Model from '../scenegraph/model';
-import {SphereGeometry} from '../geometry';
+import {SphereGeometry} from '../geometries';
 import {uid} from '../utils';
 
 export default class Sphere extends Model {

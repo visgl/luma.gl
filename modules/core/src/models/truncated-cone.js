@@ -1,5 +1,5 @@
 import Model from '../scenegraph/model';
-import {TruncatedConeGeometry} from '../geometry';
+import {TruncatedConeGeometry} from '../geometries';
 
 export default class TruncatedCone extends Model {
   constructor(gl, opts = {}) {

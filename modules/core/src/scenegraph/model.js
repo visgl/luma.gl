@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import BaseModel from './base-model';
 import Attribute from '../core/attribute';
-import {getDrawMode} from '../geometry/geometry';
+import {getDrawMode} from '../core/geometry';
 import {Buffer, Query, Program, TransformFeedback} from '../webgl';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';

@@ -1,5 +1,5 @@
 import Model from '../scenegraph/model';
-import {ConeGeometry} from '../geometry';
+import {ConeGeometry} from '../geometries';
 
 export default class Cone extends Model {
   constructor(gl, opts = {}) {

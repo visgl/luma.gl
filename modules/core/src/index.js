@@ -78,6 +78,7 @@ export {clearBuffer as _clearBuffer} from './webgl/clear';
 
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
+export {default as Geometry} from './core/geometry';
 export {default as Mesh} from './core/mesh';
 
 export {default as pickModels} from './core/pick-models';
@@ -115,15 +116,14 @@ export {default as _PickingPass} from './multipass/picking-pass';
 export {default as _ShaderModulePass} from './multipass/shader-module-pass';
 export {default as _Canvas} from './multipass/canvas';
 
-// Geometry
-export {default as Geometry} from './geometry/geometry';
-export {default as ConeGeometry} from './geometry/cone-geometry';
-export {default as CubeGeometry} from './geometry/cube-geometry';
-export {default as CylinderGeometry} from './geometry/cylinder-geometry';
-export {default as IcoSphereGeometry} from './geometry/ico-sphere-geometry';
-export {default as PlaneGeometry} from './geometry/plane-geometry';
-export {default as SphereGeometry} from './geometry/sphere-geometry';
-export {default as TruncatedConeGeometry} from './geometry/truncated-cone-geometry';
+// Geometries
+export {default as ConeGeometry} from './geometries/cone-geometry';
+export {default as CubeGeometry} from './geometries/cube-geometry';
+export {default as CylinderGeometry} from './geometries/cylinder-geometry';
+export {default as IcoSphereGeometry} from './geometries/ico-sphere-geometry';
+export {default as PlaneGeometry} from './geometries/plane-geometry';
+export {default as SphereGeometry} from './geometries/sphere-geometry';
+export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 // Models
 export {default as Cone} from './models/cone';

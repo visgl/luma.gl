@@ -1,5 +1,5 @@
 import Model from '../scenegraph/model';
-import {PlaneGeometry} from '../geometry';
+import {PlaneGeometry} from '../geometries';
 import {uid} from '../utils';
 
 export default class Plane extends Model {

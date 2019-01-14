@@ -1,4 +1,4 @@
-import Geometry from './geometry';
+import Geometry from '../core/geometry';
 
 const INDEX_OFFSETS = {
   x: [2, 0, 1],
