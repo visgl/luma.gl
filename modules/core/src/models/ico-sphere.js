@@ -1,4 +1,4 @@
-import {Model} from '../core';
+import Model from '../scenegraph/model';
 import {IcoSphereGeometry} from '../geometry';
 
 export default class IcoSphere extends Model {

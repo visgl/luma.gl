@@ -1,4 +1,4 @@
-import {Model} from '../core';
+import Model from '../scenegraph/model';
 import {SphereGeometry} from '../geometry';
 import {uid} from '../utils';
 

@@ -76,15 +76,11 @@ export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
 export {default as _Accessor} from './webgl/accessor';
 export {clearBuffer as _clearBuffer} from './webgl/clear';
 
-// CORE - Scenegraph
-export {default as Node} from './core/scenegraph-node';
-export {default as Group} from './core/group';
-export {default as Mesh} from './core/mesh';
-export {default as Camera} from './core/camera';
-export {default as Model} from './core/model';
-
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
+export {default as Mesh} from './core/mesh';
+export {default as Material} from './core/material';
+
 export {default as pickModels} from './core/pick-models';
 export {
   encodePickingColor,
@@ -96,6 +92,13 @@ export {default as Transform} from './core/transform';
 export {default as _Attribute} from './core/attribute';
 export {default as _ShaderCache} from './core/shader-cache';
 export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
+
+// SCENEGRAPH
+export {default as ScenegraphNode} from './scenegraph/scenegraph-node';
+export {default as Group} from './scenegraph/group';
+export {default as Camera} from './scenegraph/camera';
+export {default as Model} from './scenegraph/model';
+export {default as MeshModel} from './scenegraph/mesh-model';
 
 // Multipass Rendering
 export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';
@@ -191,7 +194,7 @@ export {
 
 // DEPRECATED EXPORTS IN v7.0
 
-export {default as Object3D} from './core/scenegraph-node';
+export {default as Object3D} from './scenegraph/scenegraph-node';
 
 // DEPRECATED EXPORTS IN v6.0
 

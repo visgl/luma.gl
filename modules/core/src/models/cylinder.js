@@ -1,5 +1,5 @@
+import Model from '../scenegraph/model';
 import {CylinderGeometry} from '../geometry';
-import Model from '../core/model';
 
 export default class Cylinder extends Model {
   constructor(gl, opts = {}) {

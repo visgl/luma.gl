@@ -1,18 +1,17 @@
 import GL from '@luma.gl/constants';
-import BaseModel from './base-model';
-import Attribute from './attribute';
+import Attribute from '../core/attribute';
+import Node from './scenegraph-node';
 import {getDrawMode} from '../geometry/geometry';
-import {Buffer, Query, Program, TransformFeedback} from '../webgl';
+import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
+import {isWebGL} from '../webgl-utils';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
-import {logModel} from '../debug/seer-integration';
-// import {removeModel} from '../debug/seer-integration';
-import {log, isObjectEmpty} from '../utils';
-import assert from '../utils/assert';
-
+import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
 import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
 import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
+import {log, isObjectEmpty} from '../utils';
+import assert from '../utils/assert';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
@@ -25,24 +24,64 @@ const LOG_DRAW_TIMEOUT = 10000;
 const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
-export default class Model extends BaseModel {
+export default class MeshModel extends Node {
   constructor(gl, props = {}) {
-    super(gl, props);
+    super(props);
+    assert(isWebGL(gl));
+    this.gl = gl;
+    this.lastLogTime = 0; // TODO - move to probe.gl
+    this.initialize(props);
+    // intended to be subclassed, do not seal
   }
 
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   initialize(props = {}) {
-    super.initialize(props);
+    this.props = {};
+    this.program = this._createProgram(props);
+
+    // Create a vertex array configured after this program
+    this.vertexArray = new VertexArray(this.gl, {program: this.program});
+
+    // Initialize state
+    this.userData = {};
+    this.needsRedraw = true;
+
+    // Model manages uniform animation
+    this.animatedUniforms = {};
+    this.animated = false;
+    this.animationLoop = null; // if set, used as source for animationProps
+
+    this.timerQueryEnabled = false;
+    this.timeElapsedQuery = undefined;
+    this.lastQueryReturned = true;
+
+    this.stats = {
+      accumulatedFrameTime: 0,
+      averageFrameTime: 0,
+      profileFrameCount: 0
+    };
+
+    // picking options
+    this.pickable = true;
+    // this.pick = pick || (() => false);
+
+    this.setProps(props);
+
+    // Make sure we have some reasonable default uniforms in place
+    this.setUniforms(Object.assign(
+      {},
+      this.getModuleUniforms(), // Get all default uniforms
+      this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
+    ));
 
     // Attributes and buffers
 
-    // Model manages auto Buffer creation from typed arrays
-    this._attributes = {}; // All attributes
-    this.attributes = {}; // User defined attributes
-
     // geometry might have set drawMode and vertexCount
     this.isInstanced = props.isInstanced || props.instanced;
+
+    this.onBeforeRender = props.onBeforeRender || (() => {});
+    this.onAfterRender = props.onAfterRender || (() => {});
 
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
@@ -51,7 +90,7 @@ export default class Model extends BaseModel {
   /* eslint-enable max-statements */
 
   setProps(props) {
-    super.setProps(props);
+    Object.assign(this.props, props);
 
     // params
     // if ('drawMode' in props) {
@@ -71,25 +110,46 @@ export default class Model extends BaseModel {
     if ('attributes' in props) {
       this.setAttributes(props.attributes);
     }
+    if ('uniforms' in props) {
+      this.setUniforms(props.uniforms, props.samplers);
+    }
+
+    if ('pickable' in props) {
+      this.pickable = props.pickable;
+    }
+
+    // Experimental props
+    if ('timerQueryEnabled' in props) {
+      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
+      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
+        log.warn('GPU timer not supported')();
+      }
+    }
     if ('_feedbackBuffers' in props) {
       this._setFeedbackBuffers(props._feedbackBuffers);
     }
+    if ('_animationProps' in props) {
+      this._setAnimationProps(props._animationProps);
+    }
+    if ('_animationLoop' in props) {
+      this.animationLoop = props._animationLoop;
+    }
   }
 
-  // delete() {
-  //   // delete all attributes created by this model
-  //   // TODO - should buffer deletes be handled by vertex array?
-  //   for (const key in this._attributes) {
-  //     if (this._attributes[key] !== this.attributes[key]) {
-  //       this._attributes[key].delete();
-  //     }
-  //   }
+  delete() {
+    // delete all attributes created by this model
+    // TODO - should buffer deletes be handled by vertex array?
+    for (const key in this._attributes) {
+      if (this._attributes[key] !== this.attributes[key]) {
+        this._attributes[key].delete();
+      }
+    }
 
-  //   this.program.delete();
-  //   this.vertexArray.delete();
+    this.program.delete();
+    this.vertexArray.delete();
 
-  //   removeModel(this.id);
-  // }
+    removeModel(this.id);
+  }
 
   destroy() {
     this.delete();
@@ -111,6 +171,19 @@ export default class Model extends BaseModel {
     return this.geometry && this.geometry.drawMode;
   }
 
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    if (this.geometry) {
+      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
+    }
+    if (this.animated) {
+      redraw = redraw || `animated model ${this.id}`;
+    }
+    return redraw;
+  }
+
   getDrawMode() {
     return this.drawMode;
   }
@@ -123,11 +196,24 @@ export default class Model extends BaseModel {
     return this.instanceCount;
   }
 
+  getProgram() {
+    return this.program;
+  }
+
   getAttributes() {
     return this.attributes;
   }
 
+  getUniforms() {
+    return this.program.getUniforms;
+  }
+
   // SETTERS
+
+  setNeedsRedraw(redraw = true) {
+    this.needsRedraw = redraw;
+    return this;
+  }
 
   setDrawMode(drawMode) {
     this.props.drawMode = getDrawMode(drawMode);
@@ -171,11 +257,112 @@ export default class Model extends BaseModel {
     return this;
   }
 
+  // TODO - should actually set the uniforms
+  setUniforms(uniforms = {}, samplers = {}) {
+    // Let Seer override edited uniforms
+    uniforms = Object.assign({}, uniforms);
+    getOverrides(this.id, uniforms);
+
+    // Resolve any animated uniforms so that we have an initial value
+    uniforms = this._extractAnimatedUniforms(uniforms);
+
+    this.program.setUniforms(uniforms, samplers, () => {
+      // if something changed
+      this._checkForDeprecatedUniforms(uniforms);
+      this.setNeedsRedraw();
+    });
+  }
+
+  // Updates (evaluates) all function valued uniforms based on a new set of animationProps
+  // experimental
+  _setAnimationProps(animationProps) {
+    if (this.animated) {
+      assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
+      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
+      this.program.setUniforms(animatedUniforms, {}, () => {
+        // if something changed
+        this._checkForDeprecatedUniforms(animatedUniforms);
+        this.setNeedsRedraw();
+      });
+    }
+  }
+
+  updateModuleSettings(opts) {
+    const uniforms = this.getModuleUniforms(opts || {});
+    return this.setUniforms(uniforms);
+  }
+
   // DRAW CALLS
 
-  draw(opts = {}) {
-    return this.drawGeometry(opts);
+  clear(opts) {
+    clear(this.program.gl, opts);
+    return this;
   }
+
+  /* eslint-disable max-statements  */
+  draw(opts = {}) {
+    const {
+      moduleSettings = null,
+      framebuffer,
+      uniforms = {},
+      attributes = {},
+      samplers = {},
+      transformFeedback = this.transformFeedback,
+      parameters = {},
+      vertexArray = this.vertexArray,
+      animationProps
+    } = opts;
+
+    // Update module settings
+
+    addModel(this);
+
+    // Update model with any just provided attributes, settings or uniforms
+    this.setAttributes(attributes);
+    this.updateModuleSettings(moduleSettings);
+    this.setUniforms(uniforms, samplers);
+
+    // Animate any function valued uniforms
+    this._refreshAnimationProps(animationProps);
+
+    const logPriority = this._logDrawCallStart(2);
+
+    const drawParams = this.vertexArray.getDrawParams(this.props);
+    if (drawParams.isInstanced && !this.isInstanced) {
+      log.warn('Found instanced attributes on non-instanced model', this.id)();
+    }
+
+    const {isIndexed, indexType} = drawParams;
+    const {isInstanced, instanceCount} = this;
+
+    this.onBeforeRender();
+    this._timerQueryStart();
+
+    this.program.draw(Object.assign({}, opts, {
+      logPriority,
+      uniforms: null, // Already set (may contain "function values" not understood by Program)
+      framebuffer,
+      parameters,
+      drawMode: this.getDrawMode(),
+      vertexCount: this.getVertexCount(),
+      vertexArray,
+      transformFeedback,
+      isIndexed,
+      indexType,
+      isInstanced,
+      instanceCount
+    }));
+
+    this._timerQueryEnd();
+    this.onAfterRender();
+
+    this.setNeedsRedraw(false);
+
+    this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
+
+    return this;
+  }
+  /* eslint-enable max-statements  */
 
   // Draw call for transform feedback
   transform(opts = {}) {

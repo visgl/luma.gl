@@ -1,5 +1,5 @@
+import Model from '../scenegraph/model';
 import {CubeGeometry} from '../geometry';
-import {Model} from '../core';
 import {uid} from '../utils';
 
 export default class Cube extends Model {

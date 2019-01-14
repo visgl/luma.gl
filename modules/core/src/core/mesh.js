@@ -1,13 +1,11 @@
-import Node from './scenegraph-node';
-import Model from './model';
-import assert from '../utils/assert';
+// import assert from '../utils/assert';
 
-export default class Mesh extends Node {
+export default class Mesh {
   constructor(opts = {}) {
     opts = Array.isArray(opts) ? {primitives: opts} : opts;
     const {primitives = []} = opts;
-    primitives.every(primitive => assert(primitive instanceof Model));
-    super(opts);
+    // primitives.every(primitive => assert(primitive instanceof Model));
+    // super(opts);
     this.primitives = primitives;
   }
 
@@ -16,7 +14,7 @@ export default class Mesh extends Node {
       if (Array.isArray(primitive)) {
         this.add(...primitive);
       } else {
-        assert(primitive instanceof Model);
+        // assert(primitive instanceof Model);
         this.primitives.push(primitive);
       }
     }
