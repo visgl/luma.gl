@@ -20,6 +20,8 @@ export default class Attribute {
     this.type = type;
 
     if (isIndexed && !type) {
+      // If the attribute is indices, auto infer the correct type
+      // WebGL2 and WebGL1 w/ uint32 index extension support accepts Uint32Array, otherwise Uint16Array
       this.type = gl && hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
     }
 

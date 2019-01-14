@@ -39,6 +39,9 @@ test('WebGL#Attribute constructor/update/delete', t => {
   attribute = new Attribute(gl, {size: 1, isIndexed: true});
   t.is(attribute.type, GL.UNSIGNED_INT, 'type is auto inferred');
 
+  attribute = new Attribute(null, {size: 4, value: value1});
+  t.ok(attribute instanceof Attribute, 'Attribute construction successful without GL context');
+
   t.end();
 });
 
