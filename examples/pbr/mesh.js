@@ -75,7 +75,7 @@ class Mesh {
 
       // Material
       var materialName = primitive.material;
-      if (materialName) {
+      if (materialName !== undefined) {
         this.material = gltf.materials[materialName];
       }
       var imageInfos = this.initTextures(gl, gltf);
