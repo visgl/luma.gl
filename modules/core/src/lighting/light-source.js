@@ -1,5 +1,5 @@
 import {Vector3} from 'math.gl';
-import ScenegraphNode from '../core/scenegraph-node';
+import ScenegraphNode from '../scenegraph/scenegraph-node';
 
 // default light source parameters
 const DEFAULT_LIGHT_POSITION = [0.0, 0.0, 1.0];

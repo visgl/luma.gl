@@ -1,4 +1,4 @@
-import Geometry from './geometry';
+import Geometry from '../core/geometry';
 import {uid} from '../utils';
 
 export default class PlaneGeometry extends Geometry {
