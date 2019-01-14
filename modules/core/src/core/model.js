@@ -5,7 +5,8 @@ import {getDrawMode} from '../geometry/geometry';
 import {Buffer, Query, Program, TransformFeedback} from '../webgl';
 import {MODULAR_SHADERS} from '../shadertools/src/shaders';
 import {assembleShaders} from '../shadertools/src';
-import {removeModel, logModel} from '../debug/seer-integration';
+import {logModel} from '../debug/seer-integration';
+// import {removeModel} from '../debug/seer-integration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 
@@ -75,20 +76,20 @@ export default class Model extends BaseModel {
     }
   }
 
-  delete() {
-    // delete all attributes created by this model
-    // TODO - should buffer deletes be handled by vertex array?
-    for (const key in this._attributes) {
-      if (this._attributes[key] !== this.attributes[key]) {
-        this._attributes[key].delete();
-      }
-    }
+  // delete() {
+  //   // delete all attributes created by this model
+  //   // TODO - should buffer deletes be handled by vertex array?
+  //   for (const key in this._attributes) {
+  //     if (this._attributes[key] !== this.attributes[key]) {
+  //       this._attributes[key].delete();
+  //     }
+  //   }
 
-    this.program.delete();
-    this.vertexArray.delete();
+  //   this.program.delete();
+  //   this.vertexArray.delete();
 
-    removeModel(this.id);
-  }
+  //   removeModel(this.id);
+  // }
 
   destroy() {
     this.delete();
