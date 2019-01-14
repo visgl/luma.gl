@@ -31,10 +31,6 @@ void main()
 }
 `;
 
-function defined(value) {
-  return value !== undefined && value !== null;
-}
-
 class Mesh {
   constructor(gl, scene, globalState, modelPath, gltf, meshIdx) {
     this.modelPath = modelPath;
@@ -79,7 +75,7 @@ class Mesh {
 
       // Material
       var materialName = primitive.material;
-      if (defined(materialName)) {
+      if (materialName !== undefined) {
         this.material = gltf.materials[materialName];
       }
       var imageInfos = this.initTextures(gl, gltf);
@@ -231,7 +227,7 @@ class Mesh {
     this.applyState(gl, globalState);
 
     // Draw
-    if (defined(this.indicesAccessor)) {
+    if (this.indicesAccessor) {
       gl.drawElements(gl.TRIANGLES, this.indicesAccessor.count, gl.UNSIGNED_SHORT, this.indicesAccessor.byteOffset);
     }
 
@@ -320,7 +316,7 @@ class Mesh {
     var samplerIndex;
 
     // Base Color
-    var baseColorFactor = pbrMat && defined(pbrMat.baseColorFactor) ? pbrMat.baseColorFactor : [1.0, 1.0, 1.0, 1.0];
+    var baseColorFactor = pbrMat && pbrMat.baseColorFactor ? pbrMat.baseColorFactor : [1.0, 1.0, 1.0, 1.0];
     this.localState.uniforms['u_BaseColorFactor'] = {
       funcName: 'uniform4f',
       vals: baseColorFactor
@@ -334,8 +330,8 @@ class Mesh {
     }
 
     // Metallic-Roughness
-    var metallic = (pbrMat && defined(pbrMat.metallicFactor)) ? pbrMat.metallicFactor : 1.0;
-    var roughness = (pbrMat && defined(pbrMat.roughnessFactor)) ? pbrMat.roughnessFactor : 1.0;
+    var metallic = (pbrMat && pbrMat.metallicFactor) ? pbrMat.metallicFactor : 1.0;
+    var roughness = (pbrMat && pbrMat.roughnessFactor) ? pbrMat.roughnessFactor : 1.0;
     this.localState.uniforms['u_MetallicRoughnessValues'] = {
       funcName: 'uniform2f',
       vals: [metallic, roughness]
@@ -351,7 +347,7 @@ class Mesh {
     // Normals
     if (this.material && this.material.normalTexture && gltf.textures.length > this.material.normalTexture.index) {
       imageInfos['normal'] = this.getImageInfo(gl, gltf, this.material.normalTexture.index, 'uniform1i', 'u_NormalSampler', gl.RGBA);
-      var normalScale = defined(this.material.normalTexture.scale) ? this.material.normalTexture.scale : 1.0;
+      var normalScale = this.material.normalTexture.scale ? this.material.normalTexture.scale : 1.0;
       this.localState.uniforms['u_NormalScale'] = { 'funcName': 'uniform1f', 'vals': [normalScale] };
       this.defines.HAS_NORMALMAP = 1;
     }
@@ -369,7 +365,7 @@ class Mesh {
     if (this.material && this.material.emissiveTexture) {
       imageInfos['emissive'] = this.getImageInfo(gl, gltf, this.material.emissiveTexture.index, 'uniform1i', 'u_EmissiveSampler', this.hasSRGBExt ? this.hasSRGBExt.SRGB_EXT : gl.RGBA);
       this.defines.HAS_EMISSIVEMAP = 1;
-      var emissiveFactor = defined(this.material.emissiveFactor) ? this.material.emissiveFactor : [0.0, 0.0, 0.0];
+      var emissiveFactor = this.material.emissiveFactor ? this.material.emissiveFactor : [0.0, 0.0, 0.0];
       this.localState.uniforms['u_EmissiveFactor'] = {
         funcName: 'uniform3f',
         vals: emissiveFactor
@@ -382,7 +378,7 @@ class Mesh {
     // AO
     if (this.material && this.material.occlusionTexture) {
       imageInfos['occlusion'] = this.getImageInfo(gl, gltf, this.material.occlusionTexture.index, 'uniform1i', 'u_OcclusionSampler', gl.RGBA);
-      var occlusionStrength = defined(this.material.occlusionTexture.strength) ? this.material.occlusionTexture.strength : 1.0;
+      var occlusionStrength = this.material.occlusionTexture.strength ? this.material.occlusionTexture.strength : 1.0;
       this.localState.uniforms['u_OcclusionStrength'] = { 'funcName': 'uniform1f', 'vals': [occlusionStrength] };
       this.defines.HAS_OCCLUSIONMAP = 1;
     }
@@ -405,7 +401,7 @@ class Mesh {
 
     reader.onload = function(e) {
       var arrayBuffer = reader.result;
-      var start = defined(bufferView.byteOffset) ? bufferView.byteOffset : 0;
+      var start = bufferView.byteOffset ? bufferView.byteOffset : 0;
       var end = start + bufferView.byteLength;
       var slicedBuffer = arrayBuffer.slice(start, end);
       var data;
@@ -478,11 +474,11 @@ class Mesh {
     gl.useProgram(program);
 
     var applyUniform = function(u, uniformName) {
-      if (!defined(localState.uniformLocations[uniformName])) {
+      if (!localState.uniformLocations[uniformName]) {
         localState.uniformLocations[uniformName] = gl.getUniformLocation(program, uniformName);
       }
 
-      if (u.funcName && defined(localState.uniformLocations[uniformName]) && u.vals) {
+      if (u.funcName && localState.uniformLocations[uniformName] && u.vals) {
         gl[u.funcName](localState.uniformLocations[uniformName], ...u.vals);
       }
     };
