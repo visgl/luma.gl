@@ -2,8 +2,6 @@
 
 const {loadImage, Texture2D} = luma;
 
-// const {Matrix4} = mathgl;
-
 // eslint-disable-next-line
 class Scene {
   constructor(gl, glState, model, gltf) {
@@ -107,7 +105,7 @@ function drawNodeRecursive(gl, scene, node, parentTransform) {
 
   const localTransform = getNodeTransform(node).multiplyRight(parentTransform);
 
-  if (node.mesh && node.mesh < scene.meshes.length) {
+  if (node.mesh !== undefined && node.mesh < scene.meshes.length) {
     scene.meshes[node.mesh].drawMesh(
       gl, localTransform, scene.viewMatrix, scene.projectionMatrix, scene.globalState
     );
@@ -123,6 +121,7 @@ function drawNodeRecursive(gl, scene, node, parentTransform) {
 function getNodeTransform(node) {
   // Transform
   let localTransform;
+
   if (node.matrix) {
     localTransform = new Matrix4(node.matrix);
   } else {
@@ -140,6 +139,8 @@ function getNodeTransform(node) {
     // const scale = node.scale ? node.scale : [1.0, 1.0, 1.0];
     // const rotation = node.rotation ? node.rotation : [0.0, 0.0, 0.0, 1.0];
     // const translate = node.translation ? node.translation : [0.0, 0.0, 0.0];
-    //mat4.fromRotationTranslationScale(localTransform, rotation, translate, scale);
+    // mat4.fromRotationTranslationScale(localTransform, rotation, translate, scale);
   }
+
+  return localTransform;
 }
