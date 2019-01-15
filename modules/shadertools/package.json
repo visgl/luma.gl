@@ -42,9 +42,6 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@luma.gl/constants": "^7.0.0-alpha.3",
-    "glsl-transpiler": "^1.8.5",
-    "luma.gl": "^7.0.0-alpha.3",
-    "webgl-debug": "^2.0.1"
+    "@luma.gl/constants": "^7.0.0-alpha.3"
   }
 }

@@ -56,6 +56,7 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "@luma.gl/constants": "^7.0.0-alpha.3",
+    "@luma.gl/shadertools": "^7.0.0-alpha.3",
     "math.gl": "^2.2.0",
     "probe.gl": "^2.0.1",
     "seer": "^0.2.4"
