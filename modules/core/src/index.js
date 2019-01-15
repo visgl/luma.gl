@@ -153,6 +153,41 @@ export {
 // material
 export {default as PhongMaterial} from './materials/phong-material';
 
+// TODO/CLEAN UP FOR V7
+//  We should have a minimal set of forwarding exports from shadertools (ideally none)
+//  Analyze risk of breaking apps
+export {
+  registerShaderModules,
+  setDefaultShaderModules,
+  assembleShaders,
+
+  // HELPERS
+  combineInjects,
+  normalizeShaderModule,
+
+  // SHADER MODULES
+  fp32,
+  fp64,
+  project,
+  lighting,
+  dirlight,
+  picking,
+  diffuse,
+  phonglighting,
+
+  // experimental
+  _transform,
+
+  MODULAR_SHADERS,
+
+  getQualifierDetails,
+  getPassthroughFS,
+  typeToChannelSuffix,
+  typeToChannelCount,
+  convertToVec4
+} from '@luma.gl/shadertools';
+
+
 // TO BE REMOVED IN v7
 export {
   makeDebugContext} from './webgl-context/debug-context';
