@@ -1,6 +1,8 @@
 const {resolve} = require('path');
 const webpack = require('webpack');
 
+const ALIASES = require('../../aliases');
+
 const PACKAGE_ROOT = resolve(__dirname, '.');
 const ROOT = resolve(PACKAGE_ROOT, '../..');
 // This is used to define the __VERSION__ constant in core/lib/init.js
@@ -11,9 +13,7 @@ const CORE_VERSION = require(resolve(ROOT, './package.json')).version;
 
 const config = {
   resolve: {
-    alias: {
-      'luma.gl': resolve(ROOT, './modules/core/src')
-    }
+    alias: ALIASES
   },
 
   module: {

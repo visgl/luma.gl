@@ -153,34 +153,6 @@ export {
 // material
 export {default as PhongMaterial} from './materials/phong-material';
 
-// shadertools
-export {
-  setDefaultShaderModules,
-  registerShaderModules
-} from './shadertools/src/lib/resolve-modules';
-export {assembleShaders} from './shadertools/src/lib/assemble-shaders';
-export {normalizeShaderModule} from './shadertools/src/lib/filters/normalize-module';
-
-// shader modules
-export {default as fp32} from './shadertools/src/modules/fp32/fp32';
-export {default as fp64} from './shadertools/src/modules/fp64/fp64';
-export {default as project} from './shadertools/src/modules/project/project';
-export {default as lighting} from './shadertools/src/modules/lighting/lighting';
-export {default as dirlight} from './shadertools/src/modules/dirlight/dirlight';
-export {default as picking} from './shadertools/src/modules/picking/picking';
-export {default as diffuse} from './shadertools/src/modules/diffuse/diffuse';
-
-export {default as phonglighting} from './shadertools/src/modules/phong-lighting/phong-lighting';
-export {default as pbr} from './shadertools/src/modules/pbr/pbr';
-
-// UTILS - mainly for sub-modules
-export {default as assert} from './utils/assert';
-export {default as log} from './utils/log';
-export {global, window, document, self} from './utils/globals';
-export {default as isBrowser} from './utils/is-browser';
-export {default as isOldIE} from './utils/is-old-ie';
-export {stubRemovedMethods} from './utils/stub-methods';
-
 // TO BE REMOVED IN v7
 export {
   makeDebugContext} from './webgl-context/debug-context';
@@ -192,3 +164,10 @@ export {default as ClipSpaceQuad} from './models/clip-space';
 // DEPRECATED EXPORTS IN v5.3
 
 export {glGet, glKey, glKeyType} from './webgl-utils/constants-to-keys';
+
+
+// UNDOCUMENTED API
+// TODO - Should these be exposed?
+
+export {default as log} from './utils/log';
+export {global} from './utils/globals';

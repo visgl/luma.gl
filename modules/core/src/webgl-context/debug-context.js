@@ -61,7 +61,9 @@ export function getDebugContext(gl) {
 
   // Create a new debug context
   class WebGLDebugContext {}
-  const debugContext = global.WebGLDebug.makeDebugContext(gl, onGLError, onValidateGLFunc);
+  const debugContext = global.WebGLDebug ?
+    global.WebGLDebug.makeDebugContext(gl, onGLError, onValidateGLFunc)
+    : gl;
   Object.assign(WebGLDebugContext.prototype, debugContext);
 
   // Store the debug context

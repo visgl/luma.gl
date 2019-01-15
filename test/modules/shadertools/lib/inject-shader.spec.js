@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
-import injectShader, {combineInjects} from 'luma.gl/shadertools/src/lib/inject-shader';
-import {assembleShaders, createGLContext} from 'luma.gl';
+import {createGLContext} from 'luma.gl';
+import {assembleShaders} from '@luma.gl/shadertools';
+import injectShader, {combineInjects} from '@luma.gl/shadertools/lib/inject-shader';
 import test from 'tape-catch';
 
 const fixture = {

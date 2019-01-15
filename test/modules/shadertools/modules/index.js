@@ -1,3 +1,7 @@
+import './fp64/fp64-arithmetic-transform.spec';
+import './picking.spec';
+import './pack.spec';
+
 import {
   registerShaderModules,
   setDefaultShaderModules,
@@ -8,7 +12,7 @@ import {
   dirlight,
   picking,
   diffuse
-} from 'luma.gl';
+} from '@luma.gl/shadertools';
 
 import test from 'tape-catch';
 

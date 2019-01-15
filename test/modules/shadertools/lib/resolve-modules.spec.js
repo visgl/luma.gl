@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {resolveModules, TEST_EXPORTS} from 'luma.gl/shadertools/src/lib/resolve-modules';
+import {resolveModules, TEST_EXPORTS} from '@luma.gl/shadertools/lib/resolve-modules';
 const {getDependencyGraph} = TEST_EXPORTS;
 
 // Dummy shader modules with dependencies

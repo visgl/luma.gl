@@ -23,7 +23,7 @@ import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 import {equals} from 'math.gl';
-import transformModule from 'luma.gl/shadertools/src/modules/transform/transform';
+import {_transform as transformModule} from '@luma.gl/shadertools';
 import {
   _buildHistopyramidBaseLevel as buildHistopyramidBaseLevel,
   _getHistoPyramid as getHistoPyramid,

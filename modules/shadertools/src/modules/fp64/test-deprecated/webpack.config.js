@@ -1,6 +1,6 @@
 // This is a Webpack 2 configuration file
 const {resolve} = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+// const webpack = require('webpack');
 
 module.exports = {
   devServer: {
@@ -12,7 +12,7 @@ module.exports = {
 
   // Bundle the tests for running in the browser
   entry: {
-    'test-fp64': resolve('./index-fp64.js')
+    'test-fp64': resolve('fp64-shader.spec.js')
   },
 
   // Generate a bundle in dist folder
@@ -24,9 +24,7 @@ module.exports = {
   devtool: '#inline-source-maps',
 
   resolve: {
-    alias: {
-      'luma.gl': resolve('../../../src')
-    }
+    alias: require('../../../../../../../aliases')
   },
 
   module: {
@@ -42,7 +40,5 @@ module.exports = {
     fs: 'empty'
   },
 
-  plugins: [
-    new HtmlWebpackPlugin({title: 'Shader Module Tests'})
-  ]
+  plugins: []
 };
