@@ -1,10 +1,14 @@
 import GL from '@luma.gl/constants';
-import {Buffer, _Attribute as Attribute} from 'luma.gl';
+import {Buffer, _Attribute as Attribute, Framebuffer, Model, readPixelsToArray} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 
 const value1 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
 const value2 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
+
+function isHeadlessGL(gl) {
+  return gl.getExtension('STACKGL_resize_drawingbuffer');
+}
 
 test('WebGL#Attribute constructor/update/delete', t => {
   const {gl, gl2} = fixture;
@@ -117,6 +121,133 @@ test('WebGL#Attribute getValue', t => {
   t.is(attribute.getValue()[0], buffer, 'getValue returns user supplied buffer');
 
   attribute.delete();
+
+  t.end();
+});
+
+// If the vertex shader has more components than the array provides,
+// the extras are given values from the vector (0, 0, 0, 1) for the missing XYZW components.
+// https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_format
+test('Attribute#missing component', t => {
+
+  if (isHeadlessGL(fixture.gl)) {
+    // headless-gl does not seem to implement this behavior
+    t.comment('Skipping headless-gl');
+    t.end();
+    return;
+  }
+
+  const contexts = {
+    WebGL1: fixture.gl,
+    WebGL2: fixture.gl2
+  };
+
+  const getModel = (gl, {attributeName, type, accessor}) => new Model(gl, {
+    vs: `
+  attribute vec3 position;
+  attribute ${type} ${attributeName};
+  varying vec4 vColor;
+  void main(void) {
+    vColor = vec4(${accessor});
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+    gl_PointSize = 2.0;
+  }
+  `,
+    fs: `
+  precision highp float;
+  varying vec4 vColor;
+  void main(void) {
+    gl_FragColor = vColor;
+  }
+  `,
+    drawMode: GL.POINTS,
+    vertexCount: 4,
+    attributes: {
+      position: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])}
+    }
+  });
+
+  const testCases = [
+    // This doesn't work for vec2
+    // {
+    //   attributeName: 'texCoord',
+    //   type: 'vec2',
+    //   accessor: 'texCoord, 0.0, 1.0',
+    //   attributes: {
+    //     size: {
+    //       size: 1,
+    //       value: new Float32Array([0.5, 1, 0.25, 0])
+    //     }
+    //   },
+    //   output: [128, 0, 0, 255, 255, 0, 0, 255, 64, 0, 0, 255, 0, 0, 0, 255]
+    // },
+    {
+      attributeName: 'size',
+      type: 'vec3',
+      accessor: 'size, 1.0',
+      attributes: {
+        size: {
+          size: 2,
+          value: new Float32Array([0.5, 0, 1, 0.5, 0, 1, 0.5, 1])
+        }
+      },
+      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
+    },
+    {
+      attributeName: 'size',
+      type: 'vec3',
+      accessor: 'size, 1.0',
+      attributes: {
+        size: {
+          size: 2,
+          stride: 12,
+          value: new Float32Array([0.5, 0, 1, 1, 0.5, 1, 0, 1, 1, 0.5, 1, 1])
+        }
+      },
+      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
+    },
+    {
+      attributeName: 'color',
+      type: 'vec4',
+      accessor: 'color / 255.0',
+      attributes: {
+        color: {
+          size: 3,
+          value: new Uint8ClampedArray([32, 100, 40, 64, 64, 64, 128, 0, 0, 255, 18, 255])
+        }
+      },
+      output: [32, 100, 40, 1, 64, 64, 64, 1, 128, 0, 0, 1, 255, 18, 255, 1]
+    }
+  ];
+
+  for (const contextName in contexts) {
+    const gl = contexts[contextName];
+
+    if (gl) {
+      t.comment(contextName);
+
+      testCases.forEach(tc => {
+        const model = getModel(gl, tc);
+        const framebuffer = new Framebuffer(gl, {width: 2, height: 2});
+
+        model.draw({
+          framebuffer,
+          attributes: tc.attributes,
+          parameters: {viewport: [0, 0, 2, 2]}
+        });
+
+        t.deepEqual(
+          Array.from(readPixelsToArray(framebuffer)),
+          tc.output,
+          `${tc.type} missing components have expected values`
+        );
+
+        // Release resources
+        framebuffer.delete();
+        model.delete();
+      });
+    }
+  }
 
   t.end();
 });
