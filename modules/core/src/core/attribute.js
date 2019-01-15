@@ -2,6 +2,7 @@
 import GL from '../constants';
 import {Buffer} from '../webgl';
 import {log, uid} from '../utils';
+import {hasFeature, FEATURES} from '../webgl-context/context-features';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
@@ -17,6 +18,12 @@ export default class Attribute {
     this.isIndexed = isIndexed;
     this.target = isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
     this.type = type;
+
+    if (isIndexed && !type) {
+      // If the attribute is indices, auto infer the correct type
+      // WebGL2 and WebGL1 w/ uint32 index extension support accepts Uint32Array, otherwise Uint16Array
+      this.type = gl && hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
+    }
 
     // Initialize the attribute descriptor, with WebGL and metadata fields
     this.value = null;
@@ -60,7 +67,7 @@ export default class Attribute {
       this.externalBuffer = null;
       this.value = value;
 
-      if (!constant) {
+      if (!constant && this.gl) {
         // Create buffer if needed
         this.buffer = this.buffer ||
           new Buffer(this.gl, Object.assign({}, opts, {
