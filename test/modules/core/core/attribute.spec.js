@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Buffer, _Attribute as Attribute} from 'luma.gl';
+import {Buffer, _Attribute as Attribute, Framebuffer, Model, readPixelsToArray} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'luma.gl/test/setup';
 
@@ -117,6 +117,101 @@ test('WebGL#Attribute getValue', t => {
   t.is(attribute.getValue()[0], buffer, 'getValue returns user supplied buffer');
 
   attribute.delete();
+
+  t.end();
+});
+
+// If the vertex shader has more components than the array provides,
+// the extras are given values from the vector (0, 0, 0, 1) for the missing XYZW components.
+// https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_format
+test('Attribute#missing component', t => {
+
+  if (fixture.gl.getExtension('STACKGL_resize_drawingbuffer')) {
+    // headless-gl does not seem to implement this behavior
+    t.comment('Skipping headless-gl');
+    t.end();
+    return;
+  }
+
+  const contexts = {
+    WebGL1: fixture.gl,
+    WebGL2: fixture.gl2
+  };
+
+  const modelProps = {
+    vs: `
+  attribute vec3 position;
+  attribute vec4 color;
+  varying vec4 vColor;
+  void main(void) {
+    vColor = vec4(position.xz, color.ra / 255.);
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+    gl_PointSize = 2.0;
+  }
+  `,
+    fs: `
+  precision highp float;
+  varying vec4 vColor;
+  void main(void) {
+    gl_FragColor = vColor;
+  }
+  `,
+    drawMode: GL.POINTS,
+    vertexCount: 4
+  };
+
+  const testCases = [
+    {
+      position: {
+        size: 2,
+        value: new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1])
+      },
+      color: {
+        size: 3,
+        value: new Uint8ClampedArray([32, 0, 0, 64, 0, 0, 128, 0, 0, 255, 0, 0])
+      }
+    },
+    {
+      position: {
+        size: 2,
+        stride: 12, // 3 * 4 bytes per element
+        value: new Float32Array([-1, -1, 0.5, 1, -1, 1, -1, 1, 0.5, 1, 1, 1])
+      },
+      color: {
+        size: 3,
+        stride: 4, // 4 * 1 byte per element
+        value: new Uint8ClampedArray([32, 0, 0, 100, 64, 0, 0, 100, 128, 0, 0, 100, 255, 0, 0, 100])
+      }
+    }
+  ];
+
+  for (const contextName in contexts) {
+    const gl = contexts[contextName];
+
+    if (gl) {
+      t.comment(contextName);
+      const model = new Model(gl, modelProps);
+      const framebuffer = new Framebuffer(gl, {width: 2, height: 2});
+
+      testCases.forEach(attributes => {
+        model.draw({
+          framebuffer,
+          attributes,
+          parameters: {viewport: [0, 0, 2, 2]}
+        });
+
+        t.deepEqual(
+          Array.from(readPixelsToArray(framebuffer)),
+          [0, 0, 32, 1, 255, 0, 64, 1, 0, 0, 128, 1, 255, 0, 255, 1],
+          'missing components have expected values'
+        );
+      });
+
+      // Release resources
+      framebuffer.delete();
+      model.delete();
+    }
+  }
 
   t.end();
 });
