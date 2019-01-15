@@ -142,13 +142,13 @@ test('Attribute#missing component', t => {
     WebGL2: fixture.gl2
   };
 
-  const modelProps = {
+  const getModel = (gl, {attributeName, type, accessor}) => new Model(gl, {
     vs: `
   attribute vec3 position;
-  attribute vec4 color;
+  attribute ${type} ${attributeName};
   varying vec4 vColor;
   void main(void) {
-    vColor = vec4(position.xz, color.ra / 255.);
+    vColor = vec4(${accessor});
     gl_Position = vec4(position.xy, 0.0, 1.0);
     gl_PointSize = 2.0;
   }
@@ -161,31 +161,62 @@ test('Attribute#missing component', t => {
   }
   `,
     drawMode: GL.POINTS,
-    vertexCount: 4
-  };
+    vertexCount: 4,
+    attributes: {
+      position: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])}
+    }
+  });
 
   const testCases = [
+    // This doesn't work for vec2
+    // {
+    //   attributeName: 'texCoord',
+    //   type: 'vec2',
+    //   accessor: 'texCoord, 0.0, 1.0',
+    //   attributes: {
+    //     size: {
+    //       size: 1,
+    //       value: new Float32Array([0.5, 1, 0.25, 0])
+    //     }
+    //   },
+    //   output: [128, 0, 0, 255, 255, 0, 0, 255, 64, 0, 0, 255, 0, 0, 0, 255]
+    // },
     {
-      position: {
-        size: 2,
-        value: new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1])
+      attributeName: 'size',
+      type: 'vec3',
+      accessor: 'size, 1.0',
+      attributes: {
+        size: {
+          size: 2,
+          value: new Float32Array([0.5, 0, 1, 0.5, 0, 1, 0.5, 1])
+        }
       },
-      color: {
-        size: 3,
-        value: new Uint8ClampedArray([32, 0, 0, 64, 0, 0, 128, 0, 0, 255, 0, 0])
-      }
+      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
     },
     {
-      position: {
-        size: 2,
-        stride: 12, // 3 * 4 bytes per element
-        value: new Float32Array([-1, -1, 0.5, 1, -1, 1, -1, 1, 0.5, 1, 1, 1])
+      attributeName: 'size',
+      type: 'vec3',
+      accessor: 'size, 1.0',
+      attributes: {
+        size: {
+          size: 2,
+          stride: 12,
+          value: new Float32Array([0.5, 0, 1, 1, 0.5, 1, 0, 1, 1, 0.5, 1, 1])
+        }
       },
-      color: {
-        size: 3,
-        stride: 4, // 4 * 1 byte per element
-        value: new Uint8ClampedArray([32, 0, 0, 100, 64, 0, 0, 100, 128, 0, 0, 100, 255, 0, 0, 100])
-      }
+      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
+    },
+    {
+      attributeName: 'color',
+      type: 'vec4',
+      accessor: 'color / 255.0',
+      attributes: {
+        color: {
+          size: 3,
+          value: new Uint8ClampedArray([32, 100, 40, 64, 64, 64, 128, 0, 0, 255, 18, 255])
+        }
+      },
+      output: [32, 100, 40, 1, 64, 64, 64, 1, 128, 0, 0, 1, 255, 18, 255, 1]
     }
   ];
 
@@ -194,26 +225,27 @@ test('Attribute#missing component', t => {
 
     if (gl) {
       t.comment(contextName);
-      const model = new Model(gl, modelProps);
-      const framebuffer = new Framebuffer(gl, {width: 2, height: 2});
 
-      testCases.forEach(attributes => {
+      testCases.forEach(tc => {
+        const model = getModel(gl, tc);
+        const framebuffer = new Framebuffer(gl, {width: 2, height: 2});
+
         model.draw({
           framebuffer,
-          attributes,
+          attributes: tc.attributes,
           parameters: {viewport: [0, 0, 2, 2]}
         });
 
         t.deepEqual(
           Array.from(readPixelsToArray(framebuffer)),
-          [0, 0, 32, 1, 255, 0, 64, 1, 0, 0, 128, 1, 255, 0, 255, 1],
-          'missing components have expected values'
+          tc.output,
+          `${tc.type} missing components have expected values`
         );
-      });
 
-      // Release resources
-      framebuffer.delete();
-      model.delete();
+        // Release resources
+        framebuffer.delete();
+        model.delete();
+      });
     }
   }
 
