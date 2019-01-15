@@ -6,6 +6,10 @@ import {fixture} from 'luma.gl/test/setup';
 const value1 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
 const value2 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
 
+function isHeadlessGL(gl) {
+  return gl.getExtension('STACKGL_resize_drawingbuffer');
+}
+
 test('WebGL#Attribute constructor/update/delete', t => {
   const {gl, gl2} = fixture;
 
@@ -126,7 +130,7 @@ test('WebGL#Attribute getValue', t => {
 // https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_format
 test('Attribute#missing component', t => {
 
-  if (fixture.gl.getExtension('STACKGL_resize_drawingbuffer')) {
+  if (isHeadlessGL(fixture.gl)) {
     // headless-gl does not seem to implement this behavior
     t.comment('Skipping headless-gl');
     t.end();
