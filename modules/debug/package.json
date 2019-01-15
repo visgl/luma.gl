@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/debug",
-  "version": "7.0.0-alpha.3",
+  "version": "7.0.0-alpha.4",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
@@ -38,7 +38,7 @@
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.3",
     "glsl-transpiler": "^1.8.5",
-    "luma.gl": "^7.0.0-alpha.3",
+    "luma.gl": "^7.0.0-alpha.4",
     "webgl-debug": "^2.0.1"
   }
 }

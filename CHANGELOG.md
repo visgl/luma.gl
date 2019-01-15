@@ -1,5 +1,36 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.4 - Jan 14, 2019
+
+- Attribute enhancements (#846)
+- lighting docs (#841)
+- Add tests for dev-modules; fix glsl-remove-comments bug (#844)
+- Gatsby-based website (#830)
+- Transform: rename buffer params (#843)
+- Fix deprecated constant export (#840)
+
+## v7.0.0-alpha.3 - Jan 7, 2019
+
+- restrict scope of glsl comment remove plugin (#839)
+- phong lighting module and new lighting classes (#836)
+- Update copy-blit funciton names, unify parameter naming in all methods. (#829)
+- Transform: Add offset/size support for feedback buffers. (#834)
+- Prepare GPGPU module for publishing, move histopyramid methods. (#828)
+- Update copy-and-blit.md
+- update test dependency
+- Move Framebuffer copy utitlity methods into global scope (#816)
+- add pre-push to enable auto testing for push action
+- Fix website build (#826)
+- Remove old (duplicate) files (#825)
+- Fix a crash (#824)
+- Move makeDebugContext to `@luma.gl/debug` (#822)
+- Create separate module for WebGL constants (#819)
+- Histopyramid: Traversal (#814)
+- Prepare dev modules for publish (#820)
+- Move API Tracing to debug module (#818)
+- Move shader module test util into debug submodule (#817)
+
+
 ## 7.0.0-alpha.2 - Dec 17, 2018
 
 - Transform: fix Inject option (#812)
