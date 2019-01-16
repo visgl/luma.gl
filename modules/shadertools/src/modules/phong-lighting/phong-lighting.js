@@ -59,13 +59,14 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   } = opts;
 
   if (!(ambientLight || pointLights || directionalLights) || !material) {
-    return {};
+    return {lighting_enabled: false};
   }
 
   const lightUniforms = Object.assign(
     {},
     getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
-    getMaterialUniforms(material)
+    getMaterialUniforms(material),
+    {lighting_enabled: true}
   );
 
   return lightUniforms;
