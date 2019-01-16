@@ -1,5 +1,12 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.5 - Jan 16, 2019
+
+- disable lighting by default (#852)
+- Forward shadertools exports (temporarily) to avoid breaking deck.gl (#851)
+- Add tests for missing attribute components (#850)
+- Move shadertools to separate module (#847)
+
 ## v7.0.0-alpha.4 - Jan 14, 2019
 
 - Attribute enhancements (#846)
