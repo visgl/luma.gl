@@ -49,7 +49,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 position_worldspace, vec3 no
   if (lighting_uEnabled) {
     vec3 camera_pos_worldspace = project_uCameraPosition;
     vec3 view_direction = normalize(camera_pos_worldspace - position_worldspace);
-    vec3 lightColor = lighting_uAmbient * surfaceColor * lighting_uAmbientLight.intensity;
+    lightColor = lighting_uAmbient * surfaceColor * lighting_uAmbientLight.intensity;
 
     for (int i = 0; i < MAX_LIGHTS; i++) {
       if (i >= lighting_uPointLightCount) {
