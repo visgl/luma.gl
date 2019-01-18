@@ -66,8 +66,12 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   }
 
   const {ambientLight, pointLights, directionalLights, material} = opts;
+  const hasLights =
+    ambientLight ||
+    (pointLights && pointLights.length > 0) ||
+    (directionalLights && directionalLights.length > 0);
 
-  if (!(ambientLight || (pointLights && pointLights.length > 0) || (directionalLights && directionalLights.length > 0)) || !material) {
+  if (!hasLights || !material) {
     return {lighting_uEnabled: false};
   }
 
