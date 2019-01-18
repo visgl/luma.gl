@@ -2,9 +2,11 @@ import Compiler from 'glsl-transpiler';
 import {getUniformNormalizer} from './normalize-uniforms';
 
 function normalize(source) {
-  return source
-    // prepr does not like #define without value
-    .replace(/^(#define \w+) *$/gm, ($0, $1) => `${$1} 1`);
+  return (
+    source
+      // prepr does not like #define without value
+      .replace(/^(#define \w+) *$/gm, ($0, $1) => `${$1} 1`)
+  );
 }
 
 function getVersion(source) {
@@ -30,7 +32,7 @@ export function compileShaderModule(moduleName, source) {
     ${Object.keys(compiler.functions).join(',')}
   };
 }`,
-  moduleName
+    moduleName
   );
 }
 

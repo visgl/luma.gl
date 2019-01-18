@@ -6,7 +6,6 @@ import {log} from '../utils';
 import GL from '../constants';
 
 const UNIFORM_SETTERS = {
-
   // WEBGL1
 
   /* eslint-disable max-len */
@@ -26,9 +25,12 @@ const UNIFORM_SETTERS = {
   [GL.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, toIntArray(value, 4)),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL.FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, toFloatArray(value, 4)),
-  [GL.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, toFloatArray(value, 9)),
-  [GL.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, toFloatArray(value, 16)),
+  [GL.FLOAT_MAT2]: (gl, location, value) =>
+    gl.uniformMatrix2fv(location, false, toFloatArray(value, 4)),
+  [GL.FLOAT_MAT3]: (gl, location, value) =>
+    gl.uniformMatrix3fv(location, false, toFloatArray(value, 9)),
+  [GL.FLOAT_MAT4]: (gl, location, value) =>
+    gl.uniformMatrix4fv(location, false, toFloatArray(value, 16)),
 
   [GL.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL.SAMPLER_CUBE]: (gl, location, value) => gl.uniform1i(location, value),
@@ -41,12 +43,18 @@ const UNIFORM_SETTERS = {
   [GL.UNSIGNED_INT_VEC4]: (gl, location, value) => gl.uniform4uiv(location, toUIntArray(value, 4)),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL.FLOAT_MAT2x3]: (gl, location, value) => gl.uniformMatrix2x3fv(location, false, toFloatArray(value, 6)),
-  [GL.FLOAT_MAT2x4]: (gl, location, value) => gl.uniformMatrix2x4fv(location, false, toFloatArray(value, 8)),
-  [GL.FLOAT_MAT3x2]: (gl, location, value) => gl.uniformMatrix3x2fv(location, false, toFloatArray(value, 6)),
-  [GL.FLOAT_MAT3x4]: (gl, location, value) => gl.uniformMatrix3x4fv(location, false, toFloatArray(value, 12)),
-  [GL.FLOAT_MAT4x2]: (gl, location, value) => gl.uniformMatrix4x2fv(location, false, toFloatArray(value, 8)),
-  [GL.FLOAT_MAT4x3]: (gl, location, value) => gl.uniformMatrix4x3fv(location, false, toFloatArray(value, 12)),
+  [GL.FLOAT_MAT2x3]: (gl, location, value) =>
+    gl.uniformMatrix2x3fv(location, false, toFloatArray(value, 6)),
+  [GL.FLOAT_MAT2x4]: (gl, location, value) =>
+    gl.uniformMatrix2x4fv(location, false, toFloatArray(value, 8)),
+  [GL.FLOAT_MAT3x2]: (gl, location, value) =>
+    gl.uniformMatrix3x2fv(location, false, toFloatArray(value, 6)),
+  [GL.FLOAT_MAT3x4]: (gl, location, value) =>
+    gl.uniformMatrix3x4fv(location, false, toFloatArray(value, 12)),
+  [GL.FLOAT_MAT4x2]: (gl, location, value) =>
+    gl.uniformMatrix4x2fv(location, false, toFloatArray(value, 8)),
+  [GL.FLOAT_MAT4x3]: (gl, location, value) =>
+    gl.uniformMatrix4x3fv(location, false, toFloatArray(value, 12)),
 
   [GL.SAMPLER_3D]: (gl, location, value) => gl.uniform1i(location, value),
   [GL.SAMPLER_2D_SHADOW]: (gl, location, value) => gl.uniform1i(location, value),
@@ -120,7 +128,7 @@ export function parseUniformName(name) {
       name,
       length: 1,
       isArray: false
-    }
+    };
   }
 
   // if array name then clean the array brackets

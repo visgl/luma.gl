@@ -104,17 +104,17 @@ function getFileErrorMessage(e) {
   // Map event's error codes to static error codes so that we can
   // externalize error code to error message mapping
   switch (e.target.error.code) {
-  case e.target.error.NOT_FOUND_ERR:
-    return 'File not found.';
-  case e.target.error.NOT_READABLE_ERR:
-    return 'File not readable.';
-  case e.target.error.ABORT_ERR:
-    return 'Read operation was aborted.';
-  case e.target.error.SECURITY_ERR:
-    return 'File is in a locked state.';
-  case e.target.error.ENCODING_ERR:
-    return 'File is too long to encode in "data://" URL.';
-  default:
-    return 'Read error.';
+    case e.target.error.NOT_FOUND_ERR:
+      return 'File not found.';
+    case e.target.error.NOT_READABLE_ERR:
+      return 'File not readable.';
+    case e.target.error.ABORT_ERR:
+      return 'Read operation was aborted.';
+    case e.target.error.SECURITY_ERR:
+      return 'File is in a locked state.';
+    case e.target.error.ENCODING_ERR:
+      return 'File is too long to encode in "data://" URL.';
+    default:
+      return 'Read error.';
   }
 }

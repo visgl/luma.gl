@@ -82,15 +82,15 @@ export function getPos(e, win) {
     for (let i = 0; i < l; ++i) {
       evt = e.touches[i];
       touchesPos.push({
-        x: evt.pageX || (evt.clientX + doc.scrollLeft),
-        y: evt.pageY || (evt.clientY + doc.scrollTop)
+        x: evt.pageX || evt.clientX + doc.scrollLeft,
+        y: evt.pageY || evt.clientY + doc.scrollTop
       });
     }
     return touchesPos;
   }
   const page = {
-    x: e.pageX || (e.clientX + doc.scrollLeft),
-    y: e.pageY || (e.clientY + doc.scrollTop)
+    x: e.pageX || e.clientX + doc.scrollLeft,
+    y: e.pageY || e.clientY + doc.scrollTop
   };
   return [page];
 }
@@ -108,7 +108,6 @@ export function stop(e) {
 }
 
 export class EventsProxy {
-
   constructor(domElem, opt) {
     this.scene = opt.scene;
     this.domElem = domElem;
@@ -132,11 +131,14 @@ export class EventsProxy {
     }
 
     if (opt.enableMouse) {
-      ['mouseup', 'mousedown', 'mousemove', 'mouseover', 'mouseout']
-      .forEach(action => {
-        domElem.addEventListener(action, (e, win) => {
-          this[action](this.eventInfo(action, e, win));
-        }, false);
+      ['mouseup', 'mousedown', 'mousemove', 'mouseover', 'mouseout'].forEach(action => {
+        domElem.addEventListener(
+          action,
+          (e, win) => {
+            this[action](this.eventInfo(action, e, win));
+          },
+          false
+        );
       });
 
       // "well, this is embarrassing..."
@@ -146,24 +148,36 @@ export class EventsProxy {
       } else {
         type = 'DOMMouseScroll';
       }
-      domElem.addEventListener(type, (e, win) => {
-        this['mousewheel'](this.eventInfo('mousewheel', e, win));
-      }, false);
+      domElem.addEventListener(
+        type,
+        (e, win) => {
+          this['mousewheel'](this.eventInfo('mousewheel', e, win));
+        },
+        false
+      );
     }
 
     if (opt.enableTouch) {
       ['touchstart', 'touchmove', 'touchend'].forEach(action => {
-        domElem.addEventListener(action, (e, win) => {
-          this[action](this.eventInfo(action, e, win));
-        }, false);
+        domElem.addEventListener(
+          action,
+          (e, win) => {
+            this[action](this.eventInfo(action, e, win));
+          },
+          false
+        );
       });
     }
 
     if (opt.enableKeyboard) {
       ['keydown', 'keyup'].forEach(action => {
-        document.addEventListener(action, (e, win) => {
-          this[action](this.eventInfo(action, e, win));
-        }, false);
+        document.addEventListener(
+          action,
+          (e, win) => {
+            this[action](this.eventInfo(action, e, win));
+          },
+          false
+        );
       });
     }
   }
@@ -175,7 +189,7 @@ export class EventsProxy {
     const size = this.getSize();
     const relative = opt.relative;
     const centerOrigin = opt.centerOrigin;
-    const pos = opt.cachePosition && this.pos || _getPos(domElem);
+    const pos = (opt.cachePosition && this.pos) || _getPos(domElem);
     const ge = get(e, win);
     const epos = getPos(e, win);
     const origPos = {x: epos[0].x, y: epos[0].y};
@@ -188,7 +202,8 @@ export class EventsProxy {
       x = epos[i].x;
       y = epos[i].y;
       if (relative) {
-        x -= pos.x; y -= pos.y;
+        x -= pos.x;
+        y -= pos.y;
         if (centerOrigin) {
           x -= size.width / 2;
           y -= size.height / 2;
@@ -201,18 +216,18 @@ export class EventsProxy {
     }
 
     switch (type) {
-    case 'mousewheel':
-      evt.wheel = getWheel(ge);
-      break;
-    case 'keydown':
-    case 'keyup':
-      Object.assign(evt, getKey(ge));
-      break;
-    case 'mouseup':
-      evt.isRightClick = isRightClick(ge);
-      break;
-    default:
-      break;
+      case 'mousewheel':
+        evt.wheel = getWheel(ge);
+        break;
+      case 'keydown':
+      case 'keyup':
+        Object.assign(evt, getKey(ge));
+        break;
+      case 'mouseup':
+        evt.isRightClick = isRightClick(ge);
+        break;
+      default:
+        break;
     }
 
     let cacheTarget;
@@ -232,8 +247,8 @@ export class EventsProxy {
         if (cacheTarget) {
           return cacheTarget;
         }
-        return (cacheTarget = opt.picking &&
-          scene.pick(origPos.x - pos.x, origPos.y - pos.y) || true);
+        return (cacheTarget =
+          (opt.picking && scene.pick(origPos.x - pos.x, origPos.y - pos.y)) || true);
       }
     });
     // wrap native event
@@ -291,8 +306,7 @@ export class EventsProxy {
     }
   }
 
-  mouseover(e) {
-  }
+  mouseover(e) {}
 
   mousemove(e) {
     if (this.pressed) {

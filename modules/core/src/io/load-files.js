@@ -11,10 +11,11 @@ export function loadTexture(gl, url, opts = {}) {
   const {urls, onProgress = noop} = opts;
   assert(typeof url === 'string', 'loadTexture: url must be string');
 
-  return loadImages(Object.assign({urls, onProgress}, opts))
-  .then(images => images.map((img, i) => {
-    return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
-  }));
+  return loadImages(Object.assign({urls, onProgress}, opts)).then(images =>
+    images.map((img, i) => {
+      return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
+    })
+  );
 }
 
 /*
@@ -24,18 +25,20 @@ export function loadFiles(opts = {}) {
   const {urls, onProgress = noop} = opts;
   assert(urls.every(url => typeof url === 'string'), 'loadImages: {urls} must be array of strings');
   let count = 0;
-  return Promise.all(urls.map(
-    url => {
+  return Promise.all(
+    urls.map(url => {
       const promise = loadFile(Object.assign({url}, opts));
-      promise.then(file => onProgress({
-        progress: ++count / urls.length,
-        count,
-        total: urls.length,
-        url
-      }));
+      promise.then(file =>
+        onProgress({
+          progress: ++count / urls.length,
+          count,
+          total: urls.length,
+          url
+        })
+      );
       return promise;
-    }
-  ));
+    })
+  );
 }
 
 /*
@@ -45,35 +48,39 @@ export function loadImages(opts = {}) {
   const {urls, onProgress = noop} = opts;
   assert(urls.every(url => typeof url === 'string'), 'loadImages: {urls} must be array of strings');
   let count = 0;
-  return Promise.all(urls.map(
-    url => {
+  return Promise.all(
+    urls.map(url => {
       const promise = loadImage(url, opts);
-      promise.then(file => onProgress({
-        progress: ++count / urls.length,
-        count,
-        total: urls.length,
-        url
-      }));
+      promise.then(file =>
+        onProgress({
+          progress: ++count / urls.length,
+          count,
+          total: urls.length,
+          url
+        })
+      );
       return promise;
-    }
-  ));
+    })
+  );
 }
 
 export function loadTextures(gl, opts = {}) {
   const {urls, onProgress = noop} = opts;
-  assert(urls.every(url => typeof url === 'string'),
-    'loadTextures: {urls} must be array of strings');
+  assert(
+    urls.every(url => typeof url === 'string'),
+    'loadTextures: {urls} must be array of strings'
+  );
 
-  return loadImages(Object.assign({urls, onProgress}, opts))
-  .then(images => images.map((img, i) => {
-    return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
-  }));
+  return loadImages(Object.assign({urls, onProgress}, opts)).then(images =>
+    images.map((img, i) => {
+      return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
+    })
+  );
 }
 
 export function loadProgram(gl, opts = {}) {
   const {vs, fs, onProgress = noop} = opts;
-  return loadFiles(Object.assign({urls: [vs, fs], onProgress}, opts))
-  .then(
+  return loadFiles(Object.assign({urls: [vs, fs], onProgress}, opts)).then(
     ([vsText, fsText]) => new Program(gl, Object.assign({vs: vsText, fs: fsText}, opts))
   );
 }
@@ -81,8 +88,9 @@ export function loadProgram(gl, opts = {}) {
 // Loads a simple JSON format
 export function loadModel(gl, opts = {}) {
   const {url, onProgress = noop} = opts;
-  return loadFiles(Object.assign({urls: [url], onProgress}, opts))
-  .then(([file]) => parseModel(gl, Object.assign({file}, opts)));
+  return loadFiles(Object.assign({urls: [url], onProgress}, opts)).then(([file]) =>
+    parseModel(gl, Object.assign({file}, opts))
+  );
 }
 
 export function parseModel(gl, opts = {}) {
@@ -101,11 +109,10 @@ export function parseModel(gl, opts = {}) {
     }
   }
 
-  return new Model(gl, Object.assign(
-    {program, geometry: new Geometry({attributes})},
-    modelOptions,
-    opts
-  ));
+  return new Model(
+    gl,
+    Object.assign({program, geometry: new Geometry({attributes})}, modelOptions, opts)
+  );
 }
 
 function parseJSON(file) {

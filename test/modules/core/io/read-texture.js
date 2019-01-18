@@ -34,16 +34,12 @@ test('WebGL#read-texture', t => {
   t.ok(program instanceof Program, 'Program construction successful');
 
   const triangle = new Buffer(gl).setData({
-    data: new Float32Array([
-      -4, 4,
-      4, 4,
-      0, -4]),
+    data: new Float32Array([-4, 4, 4, 4, 0, -4]),
     size: 2
   });
   t.ok(triangle instanceof Buffer, 'Buffer construction successful');
 
-  return loadImage(DATA_URL)
-  .then(image => {
+  return loadImage(DATA_URL).then(image => {
     const texture = new Texture2D(gl, {pixels: image, mipmap: true});
     t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
 
@@ -56,11 +52,10 @@ test('WebGL#read-texture', t => {
 
     const pixels = new Uint8Array(2 * 2 * 4);
     gl.readPixels(0, 0, 2, 2, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    t.same(pixels, new Uint8Array([
-      255, 0, 255, 255,
-      255, 0, 255, 255,
-      255, 0, 255, 255,
-      255, 0, 255, 255
-    ]), 'modified pixels ok');
+    t.same(
+      pixels,
+      new Uint8Array([255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255]),
+      'modified pixels ok'
+    );
   });
 });

@@ -8,10 +8,7 @@ test('WebGL#Buffer constructor/delete', t => {
   const {gl} = fixture;
   t.ok(isWebGL(gl), 'Created gl context');
 
-  t.throws(
-    () => new Buffer(),
-    /.*WebGLRenderingContext.*/,
-    'Buffer throws on missing gl context');
+  t.throws(() => new Buffer(), /.*WebGLRenderingContext.*/, 'Buffer throws on missing gl context');
 
   const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER});
   t.ok(buffer instanceof Buffer, 'Buffer construction successful');
@@ -70,9 +67,9 @@ test('WebGL#Buffer construction', t => {
     target: GL.ELEMENT_ARRAY_BUFFER,
     data: new Float32Array([1, 2, 3])
   })
-  .bind()
-  .unbind()
-  .delete();
+    .bind()
+    .unbind()
+    .delete();
   t.ok(buffer instanceof Buffer, 'Buffer(ELEMENT_ARRAY_BUFFER) successful');
 
   t.end();
@@ -137,10 +134,12 @@ test('WebGL#Buffer copyData', t => {
   expectedData = new Float32Array([1, 2, 6]);
   t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size successful');
 
-  destinationBuffer.copyData({sourceBuffer,
+  destinationBuffer.copyData({
+    sourceBuffer,
     readOffset: Float32Array.BYTES_PER_ELEMENT,
     writeOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
-    size: Float32Array.BYTES_PER_ELEMENT});
+    size: Float32Array.BYTES_PER_ELEMENT
+  });
   receivedData = destinationBuffer.getData();
   expectedData = new Float32Array([1, 2, 2]);
   t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size and offsets successful');
@@ -168,7 +167,7 @@ test('WebGL#Buffer getData', t => {
     srcByteOffset: Float32Array.BYTES_PER_ELEMENT
   });
   expectedData = new Float32Array([2, 3]);
-  t.deepEqual(expectedData, receivedData, 'Buffer.getData: with \'dstData\' parameter successful');
+  t.deepEqual(expectedData, receivedData, "Buffer.getData: with 'dstData' parameter successful");
 
   receivedData = buffer.getData({
     srcByteOffset: Float32Array.BYTES_PER_ELEMENT,
@@ -185,7 +184,11 @@ test('WebGL#Buffer getData', t => {
     length: 1
   });
   expectedData = new Float32Array([0, 3]);
-  t.deepEqual(expectedData, receivedData, 'Buffer.getData: with src/dst offsets and length successful');
+  t.deepEqual(
+    expectedData,
+    receivedData,
+    'Buffer.getData: with src/dst offsets and length successful'
+  );
 
   data = new Uint8Array([128, 255, 1]);
   buffer = new Buffer(gl2, {data});

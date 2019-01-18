@@ -3,12 +3,7 @@ import {uid} from '../utils';
 
 export default class SphereGeometry extends Geometry {
   constructor(opts = {}) {
-    const {
-      nlat = 10,
-      nlong = 10,
-      radius = 1,
-      id = uid('sphere-geometry')
-    } = opts;
+    const {nlat = 10, nlong = 10, radius = 1, id = uid('sphere-geometry')} = opts;
 
     super(Object.assign({}, opts, {id, attributes: getSphereAttributes(nlat, nlong, radius)}));
   }
@@ -40,7 +35,6 @@ function getSphereAttributes(nlat, nlong, radius) {
   // Create positions, normals and texCoords
   for (let y = 0; y <= nlat; y++) {
     for (let x = 0; x <= nlong; x++) {
-
       const u = x / nlong;
       const v = y / nlat;
 

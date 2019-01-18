@@ -27,15 +27,33 @@ const gl = fixture.gl2;
 
 const TEST_DATA = {
   vertexColorData: new Float32Array([
-    0, 0, 0,
-    255, 100, 150,
-    50, 50, 50,
-    251, 103, 153, // is picked only when threshold is 5
-    150, 100, 255,
-    254.5, 100, 150, // is picked with default threshold (1)
-    100, 150, 255,
-    255, 255, 255,
-    255, 100, 149.5 // // is picked with default threshold (1)
+    0,
+    0,
+    0,
+    255,
+    100,
+    150,
+    50,
+    50,
+    50,
+    251,
+    103,
+    153, // is picked only when threshold is 5
+    150,
+    100,
+    255,
+    254.5,
+    100,
+    150, // is picked with default threshold (1)
+    100,
+    150,
+    255,
+    255,
+    255,
+    255,
+    255,
+    100,
+    149.5 // // is picked with default threshold (1)
   ])
 };
 
@@ -159,7 +177,9 @@ test('picking#picking_setPickingColor', t => {
     transform.run({uniforms});
 
     const expectedData = testCase.isPicked.reduce((result, element, index) => {
-      const pickingColor = TEST_DATA.vertexColorData.slice(index * 3, index * 3 + 3).map(e => e * COLOR_SCALE);
+      const pickingColor = TEST_DATA.vertexColorData
+        .slice(index * 3, index * 3 + 3)
+        .map(e => e * COLOR_SCALE);
       result.push(pickingColor[0], pickingColor[1], pickingColor[2], element);
       return result;
     }, []);

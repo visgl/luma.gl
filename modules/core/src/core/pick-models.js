@@ -40,7 +40,6 @@ export default function pickModels(gl, props) {
   // }, () => {
   const group = new Group({children: models});
   return group.traverseReverse(model => {
-
     if (model.pickable) {
       // Clear the frame buffer
       clear(gl, {framebuffer, color: true, depth: true});
@@ -58,7 +57,8 @@ export default function pickModels(gl, props) {
         width: 1,
         height: 1,
         format: gl.RGBA,
-        type: gl.UNSIGNED_BYTE});
+        type: gl.UNSIGNED_BYTE
+      });
 
       const isPicked = color[0] !== 0 || color[1] !== 0 || color[2] !== 0;
 

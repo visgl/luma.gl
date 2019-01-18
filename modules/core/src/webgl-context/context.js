@@ -14,7 +14,7 @@ import assert from '../utils/assert';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
 const GL_ARRAY_BUFFER = 0x8892;
-const GL_TEXTURE_BINDING_3D = 0x806A;
+const GL_TEXTURE_BINDING_3D = 0x806a;
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
@@ -22,18 +22,19 @@ export const ERR_WEBGL2 = 'Requires WebGL2';
 
 // HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
 export function isWebGL(glContext) {
-  return Boolean(glContext && (
-    glContext instanceof WebGLRenderingContext ||
-    glContext.ARRAY_BUFFER === GL_ARRAY_BUFFER
-  ));
+  return Boolean(
+    glContext &&
+      (glContext instanceof WebGLRenderingContext || glContext.ARRAY_BUFFER === GL_ARRAY_BUFFER)
+  );
 }
 
 // HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
 export function isWebGL2(glContext) {
-  return Boolean(glContext && (
-    glContext instanceof WebGL2RenderingContext ||
-    glContext.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D
-  ));
+  return Boolean(
+    glContext &&
+      (glContext instanceof WebGL2RenderingContext ||
+        glContext.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
+  );
 }
 
 export function assertWebGLContext(gl) {
@@ -50,7 +51,7 @@ const contextDefaults = {
   // COMMON CONTEXT PARAMETERS
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
-  webgl1: true,  // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
+  webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   throwOnFailure: true,
   manageState: true,
   // BROWSER CONTEXT PARAMETERS

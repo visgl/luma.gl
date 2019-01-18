@@ -121,8 +121,7 @@ test('Experimental#ShaderCache - construct Program from cached shaders', t => {
     vs: shaderCache.getVertexShader(gl, VS1),
     fs: shaderCache.getFragmentShader(gl, FS1)
   });
-  t.ok(program instanceof Program,
-    'Program constructed from cached shaders successful ');
+  t.ok(program instanceof Program, 'Program constructed from cached shaders successful ');
 
   program = program.delete();
   t.ok(program instanceof Program, 'Program delete successful');
@@ -131,8 +130,10 @@ test('Experimental#ShaderCache - construct Program from cached shaders', t => {
     vs: shaderCache.getVertexShader(gl, VS1),
     fs: shaderCache.getFragmentShader(gl, FS1)
   });
-  t.ok(program2 instanceof Program,
-    'Program constructed from cached shaders successful after delete of first program');
+  t.ok(
+    program2 instanceof Program,
+    'Program constructed from cached shaders successful after delete of first program'
+  );
 
   t.end();
 });

@@ -62,15 +62,15 @@ const TEST_CASES = [
 */
 
 test('WebGL#UniformBufferLayout', t => {
-
   const std140 = new UniformBufferLayout({
     uEnabled: GL.BOOL,
     uProjectionMatrix: GL.FLOAT_MAT4
-  })
-    .setUniforms({
-      uEnabled: true,
-      uProjectionMatrix: Array(16).fill(0).map((_, i) => i)
-    });
+  }).setUniforms({
+    uEnabled: true,
+    uProjectionMatrix: Array(16)
+      .fill(0)
+      .map((_, i) => i)
+  });
 
   const value = std140.getData();
   t.ok(value, 'Std140Layout correct');
@@ -90,7 +90,10 @@ test('WebGL#UniformBufferLayout getData', t => {
 
   const uniformBlockIndex = program.getUniformBlockIndex('uboStruct');
   program.uniformBlockBinding(uniformBlockIndex, UBO_INDEX);
-  const indices = program.getActiveUniformBlockParameter(uniformBlockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+  const indices = program.getActiveUniformBlockParameter(
+    uniformBlockIndex,
+    GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES
+  );
 
   // float offsests
   const offsets = program.getActiveUniforms(indices, GL.UNIFORM_OFFSET).map(x => x / 4);
@@ -101,13 +104,12 @@ test('WebGL#UniformBufferLayout getData', t => {
     vec2_1: GL.FLOAT_VEC2,
     vec3_1: GL.FLOAT_VEC3,
     vec4_1: GL.FLOAT_VEC4
-  })
-    .setUniforms({
-      float_1: 1.0,
-      vec2_1: VEC2,
-      vec3_1: VEC3,
-      vec4_1: VEC4
-    });
+  }).setUniforms({
+    float_1: 1.0,
+    vec2_1: VEC2,
+    vec3_1: VEC3,
+    vec4_1: VEC4
+  });
 
   const data = std140.getData();
 
@@ -152,13 +154,12 @@ test('WebGL#UniformBufferLayout setData', t => {
     vec2_1: GL.FLOAT_VEC2,
     vec3_1: GL.FLOAT_VEC3,
     vec4_1: GL.FLOAT_VEC4
-  })
-    .setUniforms({
-      float_1: 1.0,
-      vec2_1: VEC2,
-      vec3_1: VEC3,
-      vec4_1: VEC4
-    });
+  }).setUniforms({
+    float_1: 1.0,
+    vec2_1: VEC2,
+    vec3_1: VEC3,
+    vec4_1: VEC4
+  });
 
   const data = std140.getData();
   const ubo = new Buffer(gl2, {

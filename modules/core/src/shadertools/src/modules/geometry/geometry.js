@@ -1,8 +1,7 @@
 // Cheap lighting - single directional light, single dot product, one uniform
 
 /* eslint-disable camelcase */
-const DEFAULT_MODULE_OPTIONS = {
-};
+const DEFAULT_MODULE_OPTIONS = {};
 
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};

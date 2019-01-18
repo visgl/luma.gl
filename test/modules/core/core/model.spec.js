@@ -30,13 +30,15 @@ test('Model#setAttribute', t => {
   const buffer1 = new Buffer(gl, {size: 2, data: new Float32Array(4).fill(1)});
   const buffer2 = new Buffer(gl, {data: new Float32Array(8)});
 
-  const {
-    active: initialActiveBuffers = 0
-  } = stats.resourceMap.Buffer || {};
+  const {active: initialActiveBuffers = 0} = stats.resourceMap.Buffer || {};
 
   const model = new Cube(gl, {});
 
-  t.is(stats.resourceMap.Buffer.active - initialActiveBuffers, 4, 'Created new buffers for attributes');
+  t.is(
+    stats.resourceMap.Buffer.active - initialActiveBuffers,
+    4,
+    'Created new buffers for attributes'
+  );
 
   model.setAttributes({
     instanceSizes: new Attribute(gl, {size: 1, buffer: buffer1}),
@@ -48,7 +50,11 @@ test('Model#setAttribute', t => {
 
   model.delete();
 
-  t.is(stats.resourceMap.Buffer.active - initialActiveBuffers, 0, 'Deleted created buffers for attributes');
+  t.is(
+    stats.resourceMap.Buffer.active - initialActiveBuffers,
+    0,
+    'Deleted created buffers for attributes'
+  );
 
   buffer1.delete();
   buffer2.delete();

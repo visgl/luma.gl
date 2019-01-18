@@ -4,7 +4,9 @@ import {Sampler} from 'luma.gl';
 import {fixture} from 'luma.gl/test/setup';
 
 import {
-  testSamplerParameters, SAMPLER_PARAMETERS, SAMPLER_PARAMETERS_WEBGL2
+  testSamplerParameters,
+  SAMPLER_PARAMETERS,
+  SAMPLER_PARAMETERS_WEBGL2
 } from './sampler.utils';
 
 test('WebGL2#Sampler setParameters', t => {

@@ -42,7 +42,5 @@ module.exports = {
     fs: 'empty'
   },
 
-  plugins: [
-    new HtmlWebpackPlugin({title: 'Shader Module Tests'})
-  ]
+  plugins: [new HtmlWebpackPlugin({title: 'Shader Module Tests'})]
 };

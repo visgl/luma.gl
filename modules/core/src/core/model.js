@@ -72,11 +72,13 @@ export default class Model extends Object3D {
     this.setProps(props);
 
     // Make sure we have some reasonable default uniforms in place
-    this.setUniforms(Object.assign(
-      {},
-      this.getModuleUniforms(), // Get all default uniforms
-      this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
-    ));
+    this.setUniforms(
+      Object.assign(
+        {},
+        this.getModuleUniforms(), // Get all default uniforms
+        this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
+      )
+    );
 
     // Attributes and buffers
 
@@ -88,7 +90,6 @@ export default class Model extends Object3D {
 
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
-
   }
   /* eslint-enable max-statements */
 
@@ -341,20 +342,22 @@ export default class Model extends Object3D {
     this.onBeforeRender();
     this._timerQueryStart();
 
-    this.program.draw(Object.assign({}, opts, {
-      logPriority,
-      uniforms: null, // Already set (may contain "function values" not understood by Program)
-      framebuffer,
-      parameters,
-      drawMode: this.getDrawMode(),
-      vertexCount: this.getVertexCount(),
-      vertexArray,
-      transformFeedback,
-      isIndexed,
-      indexType,
-      isInstanced,
-      instanceCount
-    }));
+    this.program.draw(
+      Object.assign({}, opts, {
+        logPriority,
+        uniforms: null, // Already set (may contain "function values" not understood by Program)
+        framebuffer,
+        parameters,
+        drawMode: this.getDrawMode(),
+        vertexCount: this.getVertexCount(),
+        vertexArray,
+        transformFeedback,
+        isIndexed,
+        indexType,
+        isInstanced,
+        instanceCount
+      })
+    );
 
     this._timerQueryEnd();
     this.onAfterRender();
@@ -369,15 +372,9 @@ export default class Model extends Object3D {
 
   // Draw call for transform feedback
   transform(opts = {}) {
-    const {
-      discard = true,
-      feedbackBuffers,
-      unbindModels = []
-    } = opts;
+    const {discard = true, feedbackBuffers, unbindModels = []} = opts;
 
-    let {
-      parameters
-    } = opts;
+    let {parameters} = opts;
 
     if (feedbackBuffers) {
       this._setFeedbackBuffers(feedbackBuffers);
@@ -450,10 +447,12 @@ export default class Model extends Object3D {
 
   _checkForDeprecatedUniforms(uniforms) {
     // deprecated picking uniforms
-    DEPRECATED_PICKING_UNIFORMS.forEach((uniform) => {
+    DEPRECATED_PICKING_UNIFORMS.forEach(uniform => {
       if (uniform in uniforms) {
-        log.deprecated(uniform,
-          'use picking shader module and Model class updateModuleSettings()')();
+        log.deprecated(
+          uniform,
+          'use picking shader module and Model class updateModuleSettings()'
+        )();
       }
     });
   }
@@ -523,9 +522,11 @@ export default class Model extends Object3D {
     }
 
     const {gl} = this.program;
-    this.transformFeedback = this.transformFeedback || new TransformFeedback(gl, {
-      program: this.program
-    });
+    this.transformFeedback =
+      this.transformFeedback ||
+      new TransformFeedback(gl, {
+        program: this.program
+      });
 
     this.transformFeedback.setBuffers(feedbackBuffers);
 
@@ -565,7 +566,9 @@ export default class Model extends Object3D {
           this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
 
         // Log stats
-        log.log(LOG_DRAW_PRIORITY, `\
+        log.log(
+          LOG_DRAW_PRIORITY,
+          `\
 GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
 average ${this.stats.averageFrameTime}ms \
 accumulated: ${this.stats.accumulatedFrameTime}ms \
@@ -580,13 +583,14 @@ count: ${this.stats.profileFrameCount}`
   // TODO - do we need the separation between "attributes" and "buffers"
   // couldn't apps just create buffers directly?
   _createBuffersFromAttributeDescriptors(attributes) {
-    const {program: {gl}} = this;
+    const {
+      program: {gl}
+    } = this;
 
     // const attributes = {};
     const buffers = {};
 
     for (const attributeName in attributes) {
-
       const descriptor = attributes[attributeName];
 
       let attribute = this._attributes[attributeName];
@@ -594,18 +598,24 @@ count: ${this.stats.profileFrameCount}`
       if (descriptor instanceof Attribute) {
         attribute = descriptor;
       } else if (descriptor instanceof Buffer) {
-        attribute = attribute || new Attribute(gl,
-          Object.assign({}, descriptor, descriptor.layout, {
-            id: attributeName
-          })
-        );
+        attribute =
+          attribute ||
+          new Attribute(
+            gl,
+            Object.assign({}, descriptor, descriptor.layout, {
+              id: attributeName
+            })
+          );
         attribute.update({buffer: descriptor});
       } else if (attribute) {
         attribute.update(descriptor);
       } else {
-        attribute = new Attribute(gl, Object.assign({}, descriptor, {
-          id: attributeName
-        }));
+        attribute = new Attribute(
+          gl,
+          Object.assign({}, descriptor, {
+            id: attributeName
+          })
+        );
       }
 
       this._attributes[attributeName] = attribute;
@@ -617,7 +627,7 @@ count: ${this.stats.profileFrameCount}`
 
   _logDrawCallStart(priority) {
     const logDrawTimeout = priority > 3 ? 0 : LOG_DRAW_TIMEOUT;
-    if (log.priority < priority || (Date.now() - this.lastLogTime < logDrawTimeout)) {
+    if (log.priority < priority || Date.now() - this.lastLogTime < logDrawTimeout) {
       return undefined;
     }
 

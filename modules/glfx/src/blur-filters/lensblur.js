@@ -66,28 +66,42 @@ function lensBlur(radius, brightness, angle) {
   // dynamic range source photograph which we don't have.
   gl.lensBlurPrePass = gl.lensBlurPrePass || new Shader(null, '');
 
-  gl.lensBlur0 = gl.lensBlur0 || new Shader(null, common + '\
+  gl.lensBlur0 =
+    gl.lensBlur0 ||
+    new Shader(null, common + '\
     void main() {\
       gl_FragColor = sample(delta0);\
     }\
   ');
-  gl.lensBlur1 = gl.lensBlur1 || new Shader(null, common + '\
+  gl.lensBlur1 =
+    gl.lensBlur1 ||
+    new Shader(
+      null,
+      common +
+        '\
     void main() {\
       gl_FragColor = (sample(delta0) + sample(delta1)) * 0.5;\
     }\
-  ');
-  gl.lensBlur2 = gl.lensBlur2 || new Shader(null, common + '\
+  '
+    );
+  gl.lensBlur2 =
+    gl.lensBlur2 ||
+    new Shader(
+      null,
+      common +
+        '\
     void main() {\
       vec4 color = (sample(delta0) + 2.0 * texture2D(texture1, texCoord)) / 3.0;\
       gl_FragColor = pow(color, vec4(power));\
     }\
-  ').textures({ texture1: 1 });
+  '
+    ).textures({texture1: 1});
 
   // Generate
   var dir = [];
   for (var i = 0; i < 3; i++) {
-    var a = angle + i * Math.PI * 2 / 3;
-    dir.push([radius * Math.sin(a) / this.width, radius * Math.cos(a) / this.height]);
+    var a = angle + (i * Math.PI * 2) / 3;
+    dir.push([(radius * Math.sin(a)) / this.width, (radius * Math.cos(a)) / this.height]);
   }
   var power = Math.pow(10, clamp(-1, brightness, 1));
 
@@ -98,13 +112,25 @@ function lensBlur(radius, brightness, angle) {
 
   // Blur two rhombi in parallel into extraTexture
   window._.extraTexture.ensureFormat(window._.texture);
-  simpleShader.call(this, gl.lensBlur0, {
-    delta0: dir[0]
-  }, window._.texture, window._.extraTexture);
-  simpleShader.call(this, gl.lensBlur1, {
-    delta0: dir[1],
-    delta1: dir[2]
-  }, window._.extraTexture, window._.extraTexture);
+  simpleShader.call(
+    this,
+    gl.lensBlur0,
+    {
+      delta0: dir[0]
+    },
+    window._.texture,
+    window._.extraTexture
+  );
+  simpleShader.call(
+    this,
+    gl.lensBlur1,
+    {
+      delta0: dir[1],
+      delta1: dir[2]
+    },
+    window._.extraTexture,
+    window._.extraTexture
+  );
 
   // Blur the last rhombus and combine with extraTexture
   simpleShader.call(this, gl.lensBlur0, {

@@ -34,11 +34,10 @@ export function loadImage(url, opts) {
     // XMLHttpRequest throws invalid URL error if using relative path
     // resolve url relative to original base
     url = new URL(url, location.pathname).href;
-    return requestFile({url, responseType: 'arraybuffer'})
-      .then(arraybuffer => {
-        const blob = new Blob([new Uint8Array(arraybuffer)]);
-        return createImageBitmap(blob);
-      });
+    return requestFile({url, responseType: 'arraybuffer'}).then(arraybuffer => {
+      const blob = new Blob([new Uint8Array(arraybuffer)]);
+      return createImageBitmap(blob);
+    });
   }
 
   return new Promise((resolve, reject) => {

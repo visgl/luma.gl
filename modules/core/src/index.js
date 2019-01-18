@@ -4,13 +4,9 @@
 require('./init');
 
 // WebGL
-export {
-  isWebGL,
-  isWebGL2} from './webgl-utils/webgl-checks';
+export {isWebGL, isWebGL2} from './webgl-utils/webgl-checks';
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
-export {
-  getKeyValue,
-  getKey} from './webgl-utils/constants-to-keys';
+export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 export {
   createGLContext,
   destroyGLContext,
@@ -18,8 +14,7 @@ export {
   pollGLContext,
   setContextDefaults
 } from './webgl-context/context';
-export {
-  trackContextState} from './webgl-context';
+export {trackContextState} from './webgl-context';
 export {
   resetParameters,
   getParameter,
@@ -27,18 +22,21 @@ export {
   setParameter,
   setParameters,
   withParameters,
-  getModifiedParameters} from './webgl-context/context-state';
+  getModifiedParameters
+} from './webgl-context/context-state';
 export {
   getContextInfo,
   getGLContextInfo,
   getContextLimits,
-  glGetDebugInfo} from './webgl-context/context-limits';
+  glGetDebugInfo
+} from './webgl-context/context-limits';
 export {
   FEATURES,
   hasFeature,
   hasFeatures,
   getFeatures,
-  canCompileGLGSExtension} from './webgl-context/context-features';
+  canCompileGLGSExtension
+} from './webgl-context/context-features';
 
 // WebGL1 classes
 export {default as Buffer} from './webgl/buffer';
@@ -72,10 +70,7 @@ export {default as Group} from './core/group';
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as pickModels} from './core/pick-models';
-export {
-  encodePickingColor,
-  decodePickingColor,
-  getNullPickingColor} from './core/picking-colors';
+export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
 
 // Experimental core exports
 export {default as Transform} from './core/transform';
@@ -162,8 +157,7 @@ export {default as isOldIE} from './utils/is-old-ie';
 export {stubRemovedMethods} from './utils/stub-methods';
 
 // TO BE REMOVED IN v7
-export {
-  makeDebugContext} from './webgl-context/debug-context';
+export {makeDebugContext} from './webgl-context/debug-context';
 
 // DEPRECATED EXPORTS IN v6.0
 

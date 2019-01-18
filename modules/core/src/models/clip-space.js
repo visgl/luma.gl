@@ -21,29 +21,27 @@ void main(void) {
 `;
 
 /* eslint-disable indent, no-multi-spaces */
-const POSITIONS = [
-  -1, -1,
-   1, -1,
-  -1,  1,
-   1,  1
-];
+const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 
 export default class ClipSpace extends Model {
   constructor(gl, opts) {
-    const TEX_COORDS = POSITIONS.map(coord => coord === -1 ? 0 : coord);
+    const TEX_COORDS = POSITIONS.map(coord => (coord === -1 ? 0 : coord));
 
-    super(gl, Object.assign({}, opts, {
-      vs: CLIPSPACE_VERTEX_SHADER,
-      geometry: new Geometry({
-        drawMode: GL.TRIANGLE_STRIP,
-        vertexCount: 4,
-        attributes: {
-          aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
-          aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
-          aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
-        }
+    super(
+      gl,
+      Object.assign({}, opts, {
+        vs: CLIPSPACE_VERTEX_SHADER,
+        geometry: new Geometry({
+          drawMode: GL.TRIANGLE_STRIP,
+          vertexCount: 4,
+          attributes: {
+            aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
+            aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
+            aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
+          }
+        })
       })
-    }));
+    );
     this.setVertexCount(4);
   }
 }

@@ -78,7 +78,7 @@ export function buildHistopyramidBaseLevel(gl, opts) {
     parameters: {
       [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
-    },
+    }
   });
   const framebuffer = transform.getFramebuffer();
   framebuffer.copyToTexture({
@@ -107,10 +107,12 @@ export function getHistoPyramid(gl, opts) {
     // build empty textures for rest of the pyramid
     for (let i = 1; i < levelCount; i++) {
       const size = width / Math.pow(2, i);
-      pyramidTextures.push(cloneTextureFrom(baseTexture, {
-        width: size,
-        height: size
-      }));
+      pyramidTextures.push(
+        cloneTextureFrom(baseTexture, {
+          width: size,
+          height: size
+        })
+      );
     }
 
     // build individual pyramid textures
@@ -145,7 +147,7 @@ export function getHistoPyramid(gl, opts) {
 
       flatOffset += outSize[0];
     }
-    topLevelData =  transform.getData();
+    topLevelData = transform.getData();
   }
 
   return {pyramidTextures, flatPyramidTexture, levelCount, topLevelData};
@@ -155,7 +157,6 @@ export function getHistoPyramid(gl, opts) {
 // Returns object
 // *locationAndIndexBuffer : Buffer contains one vec4 for each non zero weight. XY represent loation, Z represents local-key index and W represent key-index
 export function histoPyramidGenerateIndices(gl, opts) {
-
   const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(gl, opts);
 
   const keyIndexCount = topLevelData[0] + topLevelData[1] + topLevelData[2] + topLevelData[3];
@@ -164,7 +165,7 @@ export function histoPyramidGenerateIndices(gl, opts) {
 
   const transform = new Transform(gl, {
     sourceBuffers: {
-      keyIndex,
+      keyIndex
     },
     _sourceTextures: {
       flatPyramidTexture
@@ -182,5 +183,5 @@ export function histoPyramidGenerateIndices(gl, opts) {
     }
   });
 
-  return {locationAndIndexBuffer: locationAndIndex}
+  return {locationAndIndexBuffer: locationAndIndex};
 }

@@ -41,7 +41,5 @@ export default {
   uniforms,
   fs,
 
-  passes: [
-    {filter: true}
-  ]
+  passes: [{filter: true}]
 };

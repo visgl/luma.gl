@@ -41,7 +41,7 @@ class XHR {
     this.req.onabort = e => onAbort(e);
     this.req.onprogress = e => {
       if (e.lengthComputable) {
-        onProgress(e, Math.round(e.loaded / e.total * 100));
+        onProgress(e, Math.round((e.loaded / e.total) * 100));
       } else {
         onProgress(e, -1);
       }
@@ -59,9 +59,9 @@ class XHR {
       try {
         const {req, method, noCache, sendAsBinary, responseType} = this;
 
-        const url = noCache ?
-          this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + Date.now() :
-          this.url;
+        const url = noCache
+          ? this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + Date.now()
+          : this.url;
 
         req.open(method, url, this.async);
 

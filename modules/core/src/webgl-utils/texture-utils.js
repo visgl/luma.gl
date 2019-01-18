@@ -7,17 +7,26 @@ import assert from 'assert';
 export function cloneTextureFrom(refTexture, overrides) {
   assert(
     refTexture instanceof Texture2D ||
-    refTexture instanceof TextureCube ||
-    refTexture instanceof Texture3D
+      refTexture instanceof TextureCube ||
+      refTexture instanceof Texture3D
   );
 
   const TextureType = refTexture.constructor;
 
   const {gl, width, height, format, type, dataFormat, border, mipmaps} = refTexture;
 
-  const textureOptions = Object.assign({
-    width, height, format, type, dataFormat, border, mipmaps
-  }, overrides);
+  const textureOptions = Object.assign(
+    {
+      width,
+      height,
+      format,
+      type,
+      dataFormat,
+      border,
+      mipmaps
+    },
+    overrides
+  );
 
   // TODO: move this to `Texture` class as instance method and use this.constructor
   return new TextureType(gl, textureOptions);

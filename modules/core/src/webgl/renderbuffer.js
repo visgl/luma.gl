@@ -5,12 +5,12 @@ import Resource from './resource';
 import assert from '../utils/assert';
 
 // Define local GL constants to optimize minification
-const GL_RENDERBUFFER = 0x8D41;
-const GL_SAMPLES = 0x80A9;
-const GL_RENDERBUFFER_WIDTH = 0x8D42;
-const GL_RENDERBUFFER_HEIGHT = 0x8D43;
-const GL_RENDERBUFFER_INTERNAL_FORMAT = 0x8D44;
-const GL_RENDERBUFFER_SAMPLES = 0x8CAB;
+const GL_RENDERBUFFER = 0x8d41;
+const GL_SAMPLES = 0x80a9;
+const GL_RENDERBUFFER_WIDTH = 0x8d42;
+const GL_RENDERBUFFER_HEIGHT = 0x8d43;
+const GL_RENDERBUFFER_INTERNAL_FORMAT = 0x8d44;
+const GL_RENDERBUFFER_SAMPLES = 0x8cab;
 
 // Define local extension strings to optimize minification
 // const SRGB = 'EXT_sRGB';
@@ -86,7 +86,6 @@ function isFormatSupported(gl, format, formats) {
 }
 
 export default class Renderbuffer extends Resource {
-
   static isSupported(gl, {format} = {}) {
     return !format || isFormatSupported(gl, format, RENDERBUFFER_FORMATS);
   }

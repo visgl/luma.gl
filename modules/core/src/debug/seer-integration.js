@@ -20,13 +20,13 @@ export const addModel = model => {
  * Log a model uniforms and attributes.
  */
 export const logModel = (model, uniforms) => {
-  if (!seer.isReady() || seer.throttle(`luma.gl:${model.id}`, 1E3)) {
+  if (!seer.isReady() || seer.throttle(`luma.gl:${model.id}`, 1e3)) {
     return;
   }
 
-  const attributesObject = model.geometry ?
-    Object.assign({}, model.geometry.attributes, model.attributes) :
-    model.attributes;
+  const attributesObject = model.geometry
+    ? Object.assign({}, model.geometry.attributes, model.attributes)
+    : model.attributes;
   const uniformsObject = Object.assign({}, model.uniforms, uniforms);
 
   seer.multiUpdate('luma.gl', model.id, [

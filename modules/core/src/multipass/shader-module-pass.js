@@ -80,21 +80,24 @@ function normalizePasses(gl, module, id, props) {
     const fs = getFragmentShaderForRenderPass(module, pass);
     const idn = `${id}-${passes.length + 1}`;
 
-    return new ShaderModuleSinglePass(gl, Object.assign({
-      id: idn,
-      model: getModel(gl, module, fs, idn, props),
-      uniforms: pass.uniforms
-    }, props));
+    return new ShaderModuleSinglePass(
+      gl,
+      Object.assign(
+        {
+          id: idn,
+          model: getModel(gl, module, fs, idn, props),
+          uniforms: pass.uniforms
+        },
+        props
+      )
+    );
   });
 }
 
 function getModel(gl, module, fs, id, props) {
   const model = new ClipSpace(gl, {id, fs, modules: [module]});
 
-  const uniforms = Object.assign(
-    module.getUniforms(),
-    module.getUniforms(props)
-  );
+  const uniforms = Object.assign(module.getUniforms(), module.getUniforms(props));
 
   model.setUniforms(uniforms);
   return model;
@@ -132,7 +135,6 @@ void main() {
 `;
 
 function getFragmentShaderForRenderPass(module, pass = module) {
-
   if (pass.filter) {
     const func = typeof pass.filter === 'string' ? pass.filter : `${module.name}_filterColor`;
     return FILTER_FS_TEMPLATE(func);

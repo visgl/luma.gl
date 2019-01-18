@@ -7,7 +7,9 @@ import {Framebuffer, Buffer, Texture2D, getKey, isWebGL2} from 'luma.gl';
 
 import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
 import {
-  testSamplerParameters, SAMPLER_PARAMETERS, SAMPLER_PARAMETERS_WEBGL2
+  testSamplerParameters,
+  SAMPLER_PARAMETERS,
+  SAMPLER_PARAMETERS_WEBGL2
 } from './sampler.utils';
 
 import {fixture} from 'luma.gl/test/setup';
@@ -74,7 +76,27 @@ test('WebGL#Texture2D check formats', t => {
   t.end();
 });
 
-const DEFAULT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const DEFAULT_TEXTURE_DATA = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0
+]);
 const DATA = [1, 0.5, 0.25, 0.125];
 const UINT8_DATA = new Uint8Array(DATA);
 const UINT16_DATA = new Uint16Array(DATA);
@@ -112,8 +134,13 @@ function testFormatCreation(t, glContext, withData = false) {
       });
       if (Texture2D.isSupported(glContext, {format})) {
         const texture = new Texture2D(glContext, options);
-        t.equals(texture.format, format,
-          `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}, dataFormat: ${getKey(GL, options.dataFormat)}) created`
+        t.equals(
+          texture.format,
+          format,
+          `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(
+            GL,
+            type
+          )}, dataFormat: ${getKey(GL, options.dataFormat)}) created`
         );
         texture.delete();
       }
@@ -203,7 +230,6 @@ test('WebGL#Texture2D setParameters', t => {
 });
 
 test('WebGL2#Texture2D setParameters', t => {
-
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -304,7 +330,11 @@ test('WebGL2#Texture2D NPOT Workaround: texture creation', t => {
 
   // Default values are un-changed.
   let minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.NEAREST_MIPMAP_LINEAR, 'NPOT textuer min filter is set to NEAREST_MIPMAP_LINEAR');
+  t.equals(
+    minFilter,
+    GL.NEAREST_MIPMAP_LINEAR,
+    'NPOT textuer min filter is set to NEAREST_MIPMAP_LINEAR'
+  );
   let wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
   t.equals(wrapS, GL.REPEAT, 'NPOT textuer wrap_s is set to REPEAT');
   let wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
@@ -356,7 +386,11 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
 
   // Above parameters are not changed for NPOT texture when using WebGL2 context.
   const minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.LINEAR_MIPMAP_NEAREST, 'NPOT textuer min filter is set to LINEAR_MIPMAP_NEAREST');
+  t.equals(
+    minFilter,
+    GL.LINEAR_MIPMAP_NEAREST,
+    'NPOT textuer min filter is set to LINEAR_MIPMAP_NEAREST'
+  );
   const wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
   t.equals(wrapS, GL.MIRRORED_REPEAT, 'NPOT textuer wrap_s is set to MIRRORED_REPEAT');
   const wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
@@ -367,7 +401,7 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
 
 test('WebGL1#Texture2D setImageData', t => {
   const {gl} = fixture;
-  
+
   // data: null
   const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
   t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
@@ -389,7 +423,11 @@ test('WebGL1#Texture2D setImageData', t => {
     imageData.data[7] = 1;
     ctx.putImageData(imageData, 0, 0);
     texture.setImageData({data: canvas});
-    t.deepEquals(readTexturePixels(texture), new Uint8Array([0, 0, 128, 255, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(
+      readTexturePixels(texture),
+      new Uint8Array([0, 0, 128, 255, 0, 0, 0, 1]),
+      'Pixels are set correctly'
+    );
   }
 
   t.end();
@@ -406,7 +444,14 @@ test('WebGL2#Texture2D setImageData', t => {
   let data;
 
   // data: null
-  const texture = new Texture2D(gl2, {data: null, width: 2, height: 1, format: GL.RGBA32F, type: GL.FLOAT, mipmap: false});
+  const texture = new Texture2D(gl2, {
+    data: null,
+    width: 2,
+    height: 1,
+    format: GL.RGBA32F,
+    type: GL.FLOAT,
+    mipmap: false
+  });
   t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
@@ -428,7 +473,11 @@ test('WebGL2#Texture2D setImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 2, 1);
     texture.setImageData({data: canvas});
-    t.deepEquals(readTexturePixels(texture), new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(
+      readTexturePixels(texture),
+      new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]),
+      'Pixels are set correctly'
+    );
   }
 
   t.end();
@@ -444,7 +493,11 @@ test('WebGL1#Texture2D setSubImageData', t => {
   // data: typed array
   const data = new Uint8Array([1, 2, 3, 4]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0]), 'Pixels are set correctly');
+  t.deepEquals(
+    readTexturePixels(texture),
+    new Uint8Array([1, 2, 3, 4, 0, 0, 0, 0]),
+    'Pixels are set correctly'
+  );
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -454,7 +507,11 @@ test('WebGL1#Texture2D setSubImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 1, 1);
     texture.setSubImageData({data: canvas, x: 1, y: 0, width: 1, height: 1});
-    t.deepEquals(readTexturePixels(texture), new Uint8Array([1, 2, 3, 4, 0, 0, 0, 255]), 'Pixels are set correctly');
+    t.deepEquals(
+      readTexturePixels(texture),
+      new Uint8Array([1, 2, 3, 4, 0, 0, 0, 255]),
+      'Pixels are set correctly'
+    );
   }
 
   t.end();
@@ -471,19 +528,34 @@ test('WebGL2#Texture2D setSubImageData', t => {
   let data;
 
   // data: null
-  const texture = new Texture2D(gl2, {data: null, width: 2, height: 1, format: GL.RGBA32F, type: GL.FLOAT, mipmap: false});
+  const texture = new Texture2D(gl2, {
+    data: null,
+    width: 2,
+    height: 1,
+    format: GL.RGBA32F,
+    type: GL.FLOAT,
+    mipmap: false
+  });
   t.deepEquals(readTexturePixels(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
   data = new Float32Array([0.1, 0.2, -3, -2]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0]), 'Pixels are set correctly');
+  t.deepEquals(
+    readTexturePixels(texture),
+    new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0]),
+    'Pixels are set correctly'
+  );
 
   // data: buffer
   data = new Float32Array([-3, 255, 128, 3.333]);
   const buffer = new Buffer(gl2, {size: 4, type: GL.FLOAT, data});
   texture.setSubImageData({data: buffer, x: 1, y: 0, width: 1, height: 1});
-  t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333]), 'Pixels are set correctly');
+  t.deepEquals(
+    readTexturePixels(texture),
+    new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333]),
+    'Pixels are set correctly'
+  );
 
   // data: canvas
   if (typeof document !== 'undefined') {
@@ -493,7 +565,11 @@ test('WebGL2#Texture2D setSubImageData', t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 1, 1);
     texture.setSubImageData({data: canvas, x: 1, y: 0, width: 1, height: 1});
-    t.deepEquals(readTexturePixels(texture), new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1]), 'Pixels are set correctly');
+    t.deepEquals(
+      readTexturePixels(texture),
+      new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1]),
+      'Pixels are set correctly'
+    );
   }
 
   t.end();
@@ -513,4 +589,3 @@ function readTexturePixels(texture) {
   framebuffer.delete();
   return pixelsArray;
 }
-

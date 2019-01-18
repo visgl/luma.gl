@@ -14,7 +14,6 @@ const DEFAULT_ACCESSOR_VALUES = {
 };
 
 export default class Accessor {
-
   static getBytesPerElement(accessor) {
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
@@ -62,7 +61,6 @@ export default class Accessor {
 
   /* eslint-disable complexity, max-statements */
   _assign(props = {}) {
-
     // TYPE - not expected to be overridden
     if (props.type !== undefined) {
       if (this.type !== props.type) {

@@ -13,7 +13,7 @@ const ERR_ATTRIBUTE_TYPE =
 export default class VertexArray {
   constructor(gl, opts = {}) {
     // Use program's id if program is supplied but no id is supplied
-    const id = opts.id || opts.program && opts.program.id;
+    const id = opts.id || (opts.program && opts.program.id);
     // super(gl, Object.assign({}, opts, {id}));
 
     this.id = id;
@@ -28,14 +28,20 @@ export default class VertexArray {
     this.drawParams = null;
     this.buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
 
-    this.vertexArrayObject = VertexArrayObject.isSupported(gl) ?
-      new VertexArrayObject(gl) :
-      VertexArrayObject.getDefaultArray(gl);
+    this.vertexArrayObject = VertexArrayObject.isSupported(gl)
+      ? new VertexArrayObject(gl)
+      : VertexArrayObject.getDefaultArray(gl);
 
     // Issue errors when using removed methods
     stubRemovedMethods(this, 'VertexArray', 'v6.0', [
-      'setBuffers', 'setGeneric', 'clearBindings', 'setLocations', 'setGenericValues',
-      'setDivisor', 'enable', 'disable'
+      'setBuffers',
+      'setGeneric',
+      'clearBindings',
+      'setLocations',
+      'setGenericValues',
+      'setDivisor',
+      'enable',
+      'disable'
     ]);
 
     this.initialize(opts);
@@ -157,8 +163,12 @@ export default class VertexArray {
       return this.setElementBuffer(buffer);
     }
 
-    const {location, accessor} =
-      this._resolveLocationAndAccessor(locationOrName, buffer, buffer.accessor, appAccessor);
+    const {location, accessor} = this._resolveLocationAndAccessor(
+      locationOrName,
+      buffer,
+      buffer.accessor,
+      appAccessor
+    );
 
     if (location >= 0) {
       this.values[location] = buffer;
@@ -176,8 +186,11 @@ export default class VertexArray {
 
   // Set attribute to constant value (small typed array corresponding to one vertex' worth of data)
   setConstant(locationOrName, arrayValue, appAccessor = {}) {
-    const {location, accessor} =
-      this._resolveLocationAndAccessor(locationOrName, arrayValue, appAccessor);
+    const {location, accessor} = this._resolveLocationAndAccessor(
+      locationOrName,
+      arrayValue,
+      appAccessor
+    );
 
     if (location >= 0) {
       arrayValue = this.vertexArrayObject._normalizeConstantArrayValue(arrayValue, accessor);
@@ -250,7 +263,6 @@ export default class VertexArray {
     let value;
 
     this.vertexArrayObject.bind(() => {
-
       // Make sure that any constant attributes are updated (stored on the context, not the VAO)
       // Also handles attribute 0
       this._setConstantAttributes(vertexCount, instanceCount);
@@ -264,7 +276,6 @@ export default class VertexArray {
       if (!this.vertexArrayObject.hasVertexArrays) {
         this.unbindBuffers();
       }
-
     });
 
     return value;

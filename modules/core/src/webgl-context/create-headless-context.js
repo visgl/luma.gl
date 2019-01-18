@@ -1,10 +1,10 @@
 import {headlessGL} from '../webgl-utils/webgl-types';
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =
-'Failed to create WebGL context in Node.js, headless gl not available';
+  'Failed to create WebGL context in Node.js, headless gl not available';
 
 const ERR_HEADLESSGL_FAILED =
-'Failed to create WebGL context in Node.js, headless gl returned null';
+  'Failed to create WebGL context in Node.js, headless gl returned null';
 
 // Create headless gl context (for running under Node.js)
 export function createHeadlessContext({width, height, opts, onError}) {

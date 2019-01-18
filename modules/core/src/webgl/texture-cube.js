@@ -20,22 +20,16 @@ export default class TextureCube extends Texture {
 
   /* eslint-disable max-len, max-statements */
   initialize(opts = {}) {
-    const {
-      format = GL.RGBA,
-      mipmaps = true
-    } = opts;
+    const {format = GL.RGBA, mipmaps = true} = opts;
 
-    let {
-      width = 1,
-      height = 1,
-      type = GL.UNSIGNED_BYTE,
-      dataFormat
-    } = opts;
+    let {width = 1, height = 1, type = GL.UNSIGNED_BYTE, dataFormat} = opts;
 
     // Deduce width and height based on one of the faces
     ({type, dataFormat} = this._deduceParameters({format, type, dataFormat}));
     ({width, height} = this._deduceImageSize({
-      data: opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X], width, height
+      data: opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X],
+      width,
+      height
     }));
 
     // Enforce cube

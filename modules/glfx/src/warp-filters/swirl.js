@@ -51,7 +51,5 @@ export default {
   fs,
   dependencies: [warp],
 
-  passes: [
-    {sampler: true}
-  ]
+  passes: [{sampler: true}]
 };

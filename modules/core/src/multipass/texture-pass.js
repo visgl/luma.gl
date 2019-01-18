@@ -19,7 +19,6 @@ void main() {
 `;
 
 export default class TexturePass extends Pass {
-
   constructor(gl, options = {}) {
     super(gl, Object.assign({id: 'texture-pass'}, options));
     const {texture, opacity = 1.0} = options;

@@ -52,7 +52,5 @@ export default {
   fs,
   dependencies: [random],
 
-  passes: [
-    {sampler: true}
-  ]
+  passes: [{sampler: true}]
 };

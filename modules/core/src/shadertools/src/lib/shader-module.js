@@ -29,14 +29,14 @@ export default class ShaderModule {
   getModuleSource(type, targetGLSLVersion) {
     let moduleSource;
     switch (type) {
-    case VERTEX_SHADER:
-      moduleSource = transpileShader(this.vs || '', targetGLSLVersion, true);
-      break;
-    case FRAGMENT_SHADER:
-      moduleSource = transpileShader(this.fs || '', targetGLSLVersion, false);
-      break;
-    default:
-      assert(false);
+      case VERTEX_SHADER:
+        moduleSource = transpileShader(this.vs || '', targetGLSLVersion, true);
+        break;
+      case FRAGMENT_SHADER:
+        moduleSource = transpileShader(this.fs || '', targetGLSLVersion, false);
+        break;
+      default:
+        assert(false);
     }
 
     if (typeof moduleSource !== 'string') {
@@ -71,11 +71,11 @@ ${moduleSource}\
   _parseDeprecationDefinitions(deprecations = []) {
     deprecations.forEach(def => {
       switch (def.type) {
-      case 'function':
-        def.regex = new RegExp(`\\b${def.old}\\(`);
-        break;
-      default:
-        def.regex = new RegExp(`${def.type} ${def.old};`);
+        case 'function':
+          def.regex = new RegExp(`\\b${def.old}\\(`);
+          break;
+        default:
+          def.regex = new RegExp(`${def.type} ${def.old};`);
       }
     });
 

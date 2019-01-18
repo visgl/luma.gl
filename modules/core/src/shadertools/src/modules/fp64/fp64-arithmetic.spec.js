@@ -40,5 +40,5 @@ test('fp64#div_fp64', t => {
 });
 
 test('fp64#sqrt_fp64', t => {
-  testcase(gl, {glslFunc: 'sqrt_fp64', op: (a) => Math.sqrt(a), limit: 128, t});
+  testcase(gl, {glslFunc: 'sqrt_fp64', op: a => Math.sqrt(a), limit: 128, t});
 });

@@ -6,11 +6,7 @@ import {hasFeature, FEATURES} from '../webgl-context/context-features';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
-    const {
-      id = uid('attribute'),
-      type,
-      isIndexed = false
-    } = opts;
+    const {id = uid('attribute'), type, isIndexed = false} = opts;
 
     // Options that cannot be changed later
     this.gl = gl;
@@ -22,7 +18,8 @@ export default class Attribute {
     if (isIndexed && !type) {
       // If the attribute is indices, auto infer the correct type
       // WebGL2 and WebGL1 w/ uint32 index extension support accepts Uint32Array, otherwise Uint16Array
-      this.type = gl && hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
+      this.type =
+        gl && hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
     }
 
     // Initialize the attribute descriptor, with WebGL and metadata fields
@@ -47,11 +44,7 @@ export default class Attribute {
   }
 
   update(opts) {
-    const {
-      value,
-      buffer,
-      constant = this.constant || false
-    } = opts;
+    const {value, buffer, constant = this.constant || false} = opts;
 
     this.constant = constant;
 
@@ -69,12 +62,16 @@ export default class Attribute {
 
       if (!constant && this.gl) {
         // Create buffer if needed
-        this.buffer = this.buffer ||
-          new Buffer(this.gl, Object.assign({}, opts, {
-            id: this.id,
-            target: this.target,
-            type: this.type
-          }));
+        this.buffer =
+          this.buffer ||
+          new Buffer(
+            this.gl,
+            Object.assign({}, opts, {
+              id: this.id,
+              target: this.target,
+              type: this.type
+            })
+          );
         this.buffer.setData({data: value});
         this.type = this.buffer.accessor.type;
       }

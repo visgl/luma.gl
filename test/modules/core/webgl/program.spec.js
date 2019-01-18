@@ -30,11 +30,10 @@ test('WebGL#Program construct/delete', t => {
   t.throws(
     () => new Program(),
     /.*WebGLRenderingContext.*/,
-    'Program throws on missing gl context');
+    'Program throws on missing gl context'
+  );
 
-  t.throws(
-    () => new Program(gl),
-    'Program throws on missing shader');
+  t.throws(() => new Program(gl), 'Program throws on missing shader');
 
   const program = new Program(gl, {vs, fs});
   t.ok(program instanceof Program, 'Program construction successful');

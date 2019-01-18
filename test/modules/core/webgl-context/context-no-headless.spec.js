@@ -14,7 +14,8 @@ if (!webGLTypesAvailable) {
     t.throws(
       () => createGLContext(),
       /WebGL API is missing/,
-      'createGLContext throws when headless is not included');
+      'createGLContext throws when headless is not included'
+    );
     t.end();
   });
 }

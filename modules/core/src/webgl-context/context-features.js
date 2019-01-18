@@ -87,14 +87,11 @@ function getFeature(gl, cap) {
   assert(feature, cap);
 
   // Get extension name from table
-  const extensionName = isWebGL2(gl) ?
-    feature[1] || feature[0] :
-    feature[0];
+  const extensionName = isWebGL2(gl) ? feature[1] || feature[0] : feature[0];
 
   // Check if the value is dependent on checking an extension
-  const value = typeof extensionName === 'string' ?
-    Boolean(gl.getExtension(extensionName)) :
-    extensionName;
+  const value =
+    typeof extensionName === 'string' ? Boolean(gl.getExtension(extensionName)) : extensionName;
 
   assert(value === false || value === true);
 
@@ -122,7 +119,6 @@ export function getFeatures(gl) {
     for (const cap in WEBGL_FEATURES) {
       gl.luma.caps[cap] = getFeature(gl, cap);
     }
-
   }
   return gl.luma.caps;
 }

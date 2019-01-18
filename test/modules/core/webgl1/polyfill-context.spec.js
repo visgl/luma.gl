@@ -20,7 +20,6 @@ test('WebGL#polyfillContext', t => {
   t.end();
 });
 
-
 test('WebGL#polyfillContext getSupportedExtensions when context is lost', t => {
   const {gl, gl2} = fixture;
 

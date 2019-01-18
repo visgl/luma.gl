@@ -9,9 +9,7 @@ const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
 
-  t.throws(
-    () => new VertexArray(),
-    'VertexArray throws on missing gl context');
+  t.throws(() => new VertexArray(), 'VertexArray throws on missing gl context');
 
   const vao = new VertexArray(gl);
   t.ok(vao instanceof VertexArray, 'VertexArray construction successful');
@@ -34,9 +32,9 @@ test('WebGL#VertexArray#enable', t => {
   t.ok(MAX_ATTRIBUTES >= 8, 'vertexArray.getMaxAttributes() >= 8');
 
   for (let i = 1; i < MAX_ATTRIBUTES; i++) {
-    const param = vertexArray.vertexArrayObject.getParameter(
-      GL.VERTEX_ATTRIB_ARRAY_ENABLED, {location: i}
-    );
+    const param = vertexArray.vertexArrayObject.getParameter(GL.VERTEX_ATTRIB_ARRAY_ENABLED, {
+      location: i
+    });
     t.equal(param, false, `vertex attribute ${i} should initially be disabled`);
   }
 
@@ -54,4 +52,3 @@ test('WebGL#VertexArray#setAttributes(unused)', t => {
 
   t.end();
 });
-

@@ -41,15 +41,20 @@ test('assembleShaders#version_directive', t => {
     modules: [picking]
   });
   // Verify version directive remains as first line.
-  t.equal(assembleResult.vs.indexOf('#version 300 es'), 0,
-    'version directive should be first statement');
-  t.equal(assembleResult.fs.indexOf('#version 300 es'), 0,
-    'version directive should be first statement');
+  t.equal(
+    assembleResult.vs.indexOf('#version 300 es'),
+    0,
+    'version directive should be first statement'
+  );
+  t.equal(
+    assembleResult.fs.indexOf('#version 300 es'),
+    0,
+    'version directive should be first statement'
+  );
   t.end();
 });
 
 test('assembleShaders#getUniforms', t => {
-
   const testModuleSettings = {pickingActive: true};
 
   // inject spy into the picking module's getUniforms

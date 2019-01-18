@@ -28,9 +28,9 @@ export const FUNCTION_STYLE_SETTINGS_SET1 = {
   // Note: Dynamic value. If scissor test enabled we expect users to set correct scissor box
   scissor: new Int32Array([0, 0, 100, 100]),
   stencilTest: true,
-  clearStencil: 0xF,
-  stencilMask: [0xCCCCCCCC, 0xDDDDDDDD],
-  stencilFunc: [GL.NEVER, 0.5, 0xBBBBBBBB, GL.LEQUAL, 0.5, 0x11111111],
+  clearStencil: 0xf,
+  stencilMask: [0xcccccccc, 0xdddddddd],
+  stencilFunc: [GL.NEVER, 0.5, 0xbbbbbbbb, GL.LEQUAL, 0.5, 0x11111111],
   stencilOp: [GL.REPLACE, GL.INCR, GL.DECR, GL.REPLACE, GL.INCR, GL.DECR],
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   viewport: new Int32Array([0, 0, 100, 100]),

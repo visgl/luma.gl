@@ -31,7 +31,7 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
   }
   // const expected = errStrs.join(' or ');
   if (ndx < 0) {
-    const msg = `getError expected${(glErrors.length > 1) ? ' one of: ' : ': '}`;
+    const msg = `getError expected${glErrors.length > 1 ? ' one of: ' : ': '}`;
     console.error('FAIL ' + msg);
   }
 }
@@ -58,14 +58,28 @@ export function initializeTexTarget(gl) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, framebuffer.width, framebuffer.height, 0, gl.RGBA, gl.FLOAT, null);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA32F,
+    framebuffer.width,
+    framebuffer.height,
+    0,
+    gl.RGBA,
+    gl.FLOAT,
+    null
+  );
 
   const renderbuffer = gl.createRenderbuffer();
   gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, framebuffer.width, framebuffer.height);
+  gl.renderbufferStorage(
+    gl.RENDERBUFFER,
+    gl.DEPTH_COMPONENT16,
+    framebuffer.width,
+    framebuffer.height
+  );
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
   gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
-
 }
 
 export function render(gl) {

@@ -41,14 +41,14 @@ export const GL_PARAMETER_DEFAULTS = {
   [GL.SCISSOR_BOX]: new Int32Array([0, 0, 1024, 1024]),
   [GL.STENCIL_TEST]: false,
   [GL.STENCIL_CLEAR_VALUE]: 0,
-  [GL.STENCIL_WRITEMASK]: 0xFFFFFFFF,
-  [GL.STENCIL_BACK_WRITEMASK]: 0xFFFFFFFF,
+  [GL.STENCIL_WRITEMASK]: 0xffffffff,
+  [GL.STENCIL_BACK_WRITEMASK]: 0xffffffff,
   [GL.STENCIL_FUNC]: GL.ALWAYS,
   [GL.STENCIL_REF]: 0,
-  [GL.STENCIL_VALUE_MASK]: 0xFFFFFFFF,
+  [GL.STENCIL_VALUE_MASK]: 0xffffffff,
   [GL.STENCIL_BACK_FUNC]: GL.ALWAYS,
   [GL.STENCIL_BACK_REF]: 0,
-  [GL.STENCIL_BACK_VALUE_MASK]: 0xFFFFFFFF,
+  [GL.STENCIL_BACK_VALUE_MASK]: 0xffffffff,
   [GL.STENCIL_FAIL]: GL.KEEP,
   [GL.STENCIL_PASS_DEPTH_FAIL]: GL.KEEP,
   [GL.STENCIL_PASS_DEPTH_PASS]: GL.KEEP,
@@ -81,7 +81,7 @@ export const GL_PARAMETER_DEFAULTS = {
 
 // SETTER TABLES - ENABLES SETTING ANY PARAMETER WITH A COMMON API
 
-const enable = (gl, value, key) => value ? gl.enable(key) : gl.disable(key);
+const enable = (gl, value, key) => (value ? gl.enable(key) : gl.disable(key));
 const hint = (gl, value, key) => gl.hint(key, value);
 const pixelStorei = (gl, value, key) => gl.pixelStorei(key, value);
 
@@ -169,44 +169,47 @@ export const GL_PARAMETER_SETTERS = {
 
 // COMPOSITE_WEBGL_PARAMETER_
 const COMPOSITE_GL_PARAMETER_SETTERS = {
-  blendEquation: (gl, values) => gl.blendEquationSeparate(
-    values[GL.BLEND_EQUATION_RGB],
-    values[GL.BLEND_EQUATION_ALPHA]
-  ),
-  blendFunc: (gl, values) => gl.blendFuncSeparate(
-    values[GL.BLEND_SRC_RGB],
-    values[GL.BLEND_DST_RGB],
-    values[GL.BLEND_SRC_ALPHA],
-    values[GL.BLEND_DST_ALPHA]
-  ),
-  polygonOffset: (gl, values) => gl.polygonOffset(
-    values[GL.POLYGON_OFFSET_FACTOR],
-    values[GL.POLYGON_OFFSET_UNITS]
-  ),
-  sampleCoverage: (gl, values) => gl.sampleCoverage(
-    values[GL.SAMPLE_COVERAGE_VALUE],
-    values[GL.SAMPLE_COVERAGE_INVERT]
-  ),
-  stencilFuncFront: (gl, values) => gl.stencilFuncSeparate(GL.FRONT,
-    values[GL.STENCIL_FUNC],
-    values[GL.STENCIL_REF],
-    values[GL.STENCIL_VALUE_MASK]
-  ),
-  stencilFuncBack: (gl, values) => gl.stencilFuncSeparate(GL.BACK,
-    values[GL.STENCIL_BACK_FUNC],
-    values[GL.STENCIL_BACK_REF],
-    values[GL.STENCIL_BACK_VALUE_MASK]
-  ),
-  stencilOpFront: (gl, values) => gl.stencilOpSeparate(GL.FRONT,
-    values[GL.STENCIL_FAIL],
-    values[GL.STENCIL_PASS_DEPTH_FAIL],
-    values[GL.STENCIL_PASS_DEPTH_PASS]
-  ),
-  stencilOpBack: (gl, values) => gl.stencilOpSeparate(GL.BACK,
-    values[GL.STENCIL_BACK_FAIL],
-    values[GL.STENCIL_BACK_PASS_DEPTH_FAIL],
-    values[GL.STENCIL_BACK_PASS_DEPTH_PASS]
-  )
+  blendEquation: (gl, values) =>
+    gl.blendEquationSeparate(values[GL.BLEND_EQUATION_RGB], values[GL.BLEND_EQUATION_ALPHA]),
+  blendFunc: (gl, values) =>
+    gl.blendFuncSeparate(
+      values[GL.BLEND_SRC_RGB],
+      values[GL.BLEND_DST_RGB],
+      values[GL.BLEND_SRC_ALPHA],
+      values[GL.BLEND_DST_ALPHA]
+    ),
+  polygonOffset: (gl, values) =>
+    gl.polygonOffset(values[GL.POLYGON_OFFSET_FACTOR], values[GL.POLYGON_OFFSET_UNITS]),
+  sampleCoverage: (gl, values) =>
+    gl.sampleCoverage(values[GL.SAMPLE_COVERAGE_VALUE], values[GL.SAMPLE_COVERAGE_INVERT]),
+  stencilFuncFront: (gl, values) =>
+    gl.stencilFuncSeparate(
+      GL.FRONT,
+      values[GL.STENCIL_FUNC],
+      values[GL.STENCIL_REF],
+      values[GL.STENCIL_VALUE_MASK]
+    ),
+  stencilFuncBack: (gl, values) =>
+    gl.stencilFuncSeparate(
+      GL.BACK,
+      values[GL.STENCIL_BACK_FUNC],
+      values[GL.STENCIL_BACK_REF],
+      values[GL.STENCIL_BACK_VALUE_MASK]
+    ),
+  stencilOpFront: (gl, values) =>
+    gl.stencilOpSeparate(
+      GL.FRONT,
+      values[GL.STENCIL_FAIL],
+      values[GL.STENCIL_PASS_DEPTH_FAIL],
+      values[GL.STENCIL_PASS_DEPTH_PASS]
+    ),
+  stencilOpBack: (gl, values) =>
+    gl.stencilOpSeparate(
+      GL.BACK,
+      values[GL.STENCIL_BACK_FAIL],
+      values[GL.STENCIL_BACK_PASS_DEPTH_FAIL],
+      values[GL.STENCIL_BACK_PASS_DEPTH_PASS]
+    )
 };
 
 // GETTER TABLE - FOR READING OUT AN ENTIRE CONTEXT
@@ -277,7 +280,8 @@ export function setParameters(gl, values) {
       // Composite setters should only be called once, so save them
       if (typeof setter === 'string') {
         compositeSetters[setter] = true;
-      } else { // if (gl[glConstant] !== undefined) {
+      } else {
+        // if (gl[glConstant] !== undefined) {
         // TODO - added above check since this is being called on WebGL2 values in WebGL1...
         // TODO - deep equal on values? only call setter if value has changed?
         // NOTE - the setter will automatically update this.state

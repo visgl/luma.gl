@@ -1,4 +1,3 @@
-
 // returns GLSL shader version of given shader string
 export function getShaderVersion(source) {
   let version = 100;

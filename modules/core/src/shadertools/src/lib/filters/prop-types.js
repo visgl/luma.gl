@@ -40,25 +40,25 @@ export function parsePropTypes(propDefs) {
 // * or just a default value, in which case type and name inference is used
 function parsePropType(name, propDef) {
   switch (getTypeOf(propDef)) {
-  case 'object':
-    propDef = normalizePropType(name, propDef);
-    return parsePropDefinition(propDef);
+    case 'object':
+      propDef = normalizePropType(name, propDef);
+      return parsePropDefinition(propDef);
 
-  case 'array':
-    return guessArrayType(name, propDef);
+    case 'array':
+      return guessArrayType(name, propDef);
 
-  case 'boolean':
-    return {name, type: 'boolean', value: propDef};
+    case 'boolean':
+      return {name, type: 'boolean', value: propDef};
 
-  case 'number':
-    return guessNumberType(name, propDef);
+    case 'number':
+      return guessNumberType(name, propDef);
 
-  case 'function':
-    return {name, type: 'function', value: propDef};
-  // return guessFunctionType(name, propDef);
+    case 'function':
+      return {name, type: 'function', value: propDef};
+    // return guessFunctionType(name, propDef);
 
-  default:
-    return {name, type: 'unknown', value: propDef};
+    default:
+      return {name, type: 'unknown', value: propDef};
   }
 }
 
@@ -93,7 +93,7 @@ function parsePropDefinition(propDef) {
 
 function guessNumberType(name, value) {
   const isKnownProp =
-    (/radius|scale|width|height|pixel|size|miter/i).test(name) && (/^((?!scale).)*$/).test(name);
+    /radius|scale|width|height|pixel|size|miter/i.test(name) && /^((?!scale).)*$/.test(name);
   const max = isKnownProp ? 100 : 1;
   const min = 0;
   return {

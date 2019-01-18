@@ -28,7 +28,10 @@ export const TEXTURE_FORMATS = {
   [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
   // TODO: format: GL.RGBA type: GL.FLOAT is supported in WebGL1 when 'OES_texure_float' is suported
   // we need to update this table structure to specify extensions (gl1: 'OES_texure_float', gl2: false) for each type.
-  [GL.RGBA]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
+  [GL.RGBA]: {
+    dataFormat: GL.RGBA,
+    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]
+  },
   [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
   [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
   [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
@@ -124,7 +127,8 @@ function isFormatSupported(gl, format) {
   if (!info) {
     return false;
   }
-  if (info.gl1 === undefined && info.gl2 === undefined) { // No info - always supported
+  if (info.gl1 === undefined && info.gl2 === undefined) {
+    // No info - always supported
     return true;
   }
   const value = isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1;
@@ -134,16 +138,18 @@ function isFormatSupported(gl, format) {
 function isLinearFilteringSupported(gl, format) {
   const info = TEXTURE_FORMATS[format];
   switch (info && info.types[0]) {
-  // Both WebGL1 and WebGL2?
-  case GL.FLOAT: return gl.getExtension('OES_texture_float_linear');
-  // Not in WebGL2?
-  case GL.HALF_FLOAT: return gl.getExtension('OES_texture_half_float_linear');
-  default: return true;
+    // Both WebGL1 and WebGL2?
+    case GL.FLOAT:
+      return gl.getExtension('OES_texture_float_linear');
+    // Not in WebGL2?
+    case GL.HALF_FLOAT:
+      return gl.getExtension('OES_texture_half_float_linear');
+    default:
+      return true;
   }
 }
 
 export default class Texture extends Resource {
-
   static isSupported(gl, {format, linearFiltering} = {}) {
     let supported = true;
     if (format) {
@@ -213,7 +219,13 @@ export default class Texture extends Resource {
 
     // Deduce width and height
     ({width, height, dataFormat} = this._deduceParameters({
-      format, type, dataFormat, compressed: false, data, width, height
+      format,
+      type,
+      dataFormat,
+      compressed: false,
+      data,
+      width,
+      height
     }));
 
     // Store opts for accessors
@@ -239,7 +251,6 @@ export default class Texture extends Resource {
     const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
 
     if (this._isNPOT() && mipmaps) {
-
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
 
@@ -247,7 +258,17 @@ export default class Texture extends Resource {
     }
     this.mipmaps = mipmaps;
 
-    this.setImageData({data, width, height, format, type, dataFormat, border, mipmaps, parameters: glSettings});
+    this.setImageData({
+      data,
+      width,
+      height,
+      format,
+      type,
+      dataFormat,
+      border,
+      mipmaps,
+      parameters: glSettings
+    });
 
     if (mipmaps) {
       this.generateMipmap();
@@ -332,7 +353,14 @@ export default class Texture extends Resource {
     }
 
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-      format, type, dataFormat, compressed, data, width, height}));
+      format,
+      type,
+      dataFormat,
+      compressed,
+      data,
+      width,
+      height
+    }));
 
     const {gl} = this;
     gl.bindTexture(this.target, this.handle);
@@ -342,36 +370,46 @@ export default class Texture extends Resource {
 
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
-      case 'null':
-        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
-        break;
-      case 'typed-array':
-        // Looks like this assert is not necessary, as offset is ignored under WebGL1
-        // assert((offset === 0 || isWebGL2(gl)), 'offset supported in WebGL2 only');
-        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data, offset);
-        break;
-      case 'buffer':
-        // WebGL2 enables creating textures directly from a WebGL buffer
-        assertWebGL2Context(gl);
-        gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-        gl.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
-        gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-        break;
-      case 'browser-object':
-        if (isWebGL2(gl)) {
+        case 'null':
           gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
-        } else {
-          gl.texImage2D(target, level, format, dataFormat, type, data);
-        }
-        break;
-      case 'compressed':
-        gl.compressedTexImage2D(target, level, format, width, height, border, data);
-        break;
-      default:
-        assert(false, 'Unknown image data type');
+          break;
+        case 'typed-array':
+          // Looks like this assert is not necessary, as offset is ignored under WebGL1
+          // assert((offset === 0 || isWebGL2(gl)), 'offset supported in WebGL2 only');
+          gl.texImage2D(
+            target,
+            level,
+            format,
+            width,
+            height,
+            border,
+            dataFormat,
+            type,
+            data,
+            offset
+          );
+          break;
+        case 'buffer':
+          // WebGL2 enables creating textures directly from a WebGL buffer
+          assertWebGL2Context(gl);
+          gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
+          gl.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
+          gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+          break;
+        case 'browser-object':
+          if (isWebGL2(gl)) {
+            gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+          } else {
+            gl.texImage2D(target, level, format, dataFormat, type, data);
+          }
+          break;
+        case 'compressed':
+          gl.compressedTexImage2D(target, level, format, width, height, border, data);
+          break;
+        default:
+          assert(false, 'Unknown image data type');
       }
     });
-
   }
   /* eslint-enable max-len, max-statements, complexity */
 
@@ -421,7 +459,14 @@ export default class Texture extends Resource {
     parameters = {}
   }) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-      format, type, dataFormat, compressed, data, width, height}));
+      format,
+      type,
+      dataFormat,
+      compressed,
+      data,
+      width,
+      height
+    }));
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
@@ -446,21 +491,17 @@ export default class Texture extends Resource {
     withParameters(this.gl, parameters, () => {
       // TODO - x,y parameters
       if (compressed) {
-        this.gl.compressedTexSubImage2D(target,
-          level, x, y, width, height, format, data);
+        this.gl.compressedTexSubImage2D(target, level, x, y, width, height, format, data);
       } else if (data === null) {
-        this.gl.texSubImage2D(target,
-          level, x, y, width, height, dataFormat, type, null);
+        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
-        this.gl.texSubImage2D(target,
-          level, x, y, width, height, dataFormat, type, data, offset);
+        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data, offset);
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
         assertWebGL2Context(this.gl);
         // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
-        this.gl.texSubImage2D(target,
-          level, x, y, width, height, dataFormat, type, offset);
+        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, offset);
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       } else if (isWebGL2(this.gl)) {
         // Assume data is a browser supported object (ImageData, Canvas, ...)
@@ -499,8 +540,7 @@ export default class Texture extends Resource {
 
     // target
     this.bind(0);
-    this.gl.copyTexImage2D(
-      this.target, level, internalFormat, x, y, width, height, border);
+    this.gl.copyTexImage2D(this.target, level, internalFormat, x, y, width, height, border);
     this.unbind();
 
     if (framebuffer) {
@@ -579,16 +619,34 @@ export default class Texture extends Resource {
   }) {
     if (ArrayBuffer.isView(pixels)) {
       this.gl.texImage3D(
-        this.target, level, internalformat,
-        width, height, depth, border, format, type, pixels);
+        this.target,
+        level,
+        internalformat,
+        width,
+        height,
+        depth,
+        border,
+        format,
+        type,
+        pixels
+      );
       return this;
     }
 
     if (pixels instanceof Buffer) {
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
       this.gl.texImage3D(
-        this.target, level, internalformat,
-        width, height, depth, border, format, type, offset);
+        this.target,
+        level,
+        internalformat,
+        width,
+        height,
+        depth,
+        border,
+        format,
+        type,
+        offset
+      );
     }
 
     return this;
@@ -708,8 +766,14 @@ export default class Texture extends Resource {
     }
 
     assert(size, 'Could not deduced texture size');
-    assert(width === undefined || size.width === width, 'Deduced texture width does not match supplied width');
-    assert(height === undefined || size.height === height, 'Deduced texture height does not match supplied height');
+    assert(
+      width === undefined || size.width === width,
+      'Deduced texture width does not match supplied width'
+    );
+    assert(
+      height === undefined || size.height === height,
+      'Deduced texture height does not match supplied height'
+    );
 
     return size;
   }
@@ -726,15 +790,15 @@ export default class Texture extends Resource {
 
   _getParameter(pname) {
     switch (pname) {
-    case GL.TEXTURE_WIDTH:
-      return this.width;
-    case GL.TEXTURE_HEIGHT:
-      return this.height;
-    default:
-      this.gl.bindTexture(this.target, this.handle);
-      const value = this.gl.getTexParameter(this.target, pname);
-      this.gl.bindTexture(this.target, null);
-      return value;
+      case GL.TEXTURE_WIDTH:
+        return this.width;
+      case GL.TEXTURE_HEIGHT:
+        return this.height;
+      default:
+        this.gl.bindTexture(this.target, this.handle);
+        const value = this.gl.getTexParameter(this.target, pname);
+        this.gl.bindTexture(this.target, null);
+        return value;
     }
   }
 
@@ -748,19 +812,19 @@ export default class Texture extends Resource {
     // the WebGL committe expose two parameter setting functions in JavaScript.
     // For now, pick the float version for parameters specified as GLfloat.
     switch (pname) {
-    case GL.TEXTURE_MIN_LOD:
-    case GL.TEXTURE_MAX_LOD:
-      this.gl.texParameterf(this.handle, pname, param);
-      break;
+      case GL.TEXTURE_MIN_LOD:
+      case GL.TEXTURE_MAX_LOD:
+        this.gl.texParameterf(this.handle, pname, param);
+        break;
 
-    case GL.TEXTURE_WIDTH:
-    case GL.TEXTURE_HEIGHT:
-      assert(false);
-      break;
+      case GL.TEXTURE_WIDTH:
+      case GL.TEXTURE_HEIGHT:
+        assert(false);
+        break;
 
-    default:
-      this.gl.texParameteri(this.target, pname, param);
-      break;
+      default:
+        this.gl.texParameteri(this.target, pname, param);
+        break;
     }
 
     this.gl.bindTexture(this.target, null);
@@ -768,7 +832,7 @@ export default class Texture extends Resource {
   }
 
   _isNPOT() {
-    return (!isWebGL2(this.gl) && (!isPowerOfTwo(this.width) || (!isPowerOfTwo(this.height))));
+    return !isWebGL2(this.gl) && (!isPowerOfTwo(this.width) || !isPowerOfTwo(this.height));
   }
 
   // Update default settings which are not supported by NPOT textures.
@@ -790,21 +854,21 @@ export default class Texture extends Resource {
   _getNPOTParam(pname, param) {
     if (this._isNPOT()) {
       switch (pname) {
-      case GL.TEXTURE_MIN_FILTER:
-        if (NPOT_MIN_FILTERS.indexOf(param) === -1) {
-          // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
-          param = GL.LINEAR;
-        }
-        break;
-      case GL.TEXTURE_WRAP_S:
-      case GL.TEXTURE_WRAP_T:
-        if (param !== GL.CLAMP_TO_EDGE) {
-          // log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)();
-          param = GL.CLAMP_TO_EDGE;
-        }
-        break;
-      default:
-        break;
+        case GL.TEXTURE_MIN_FILTER:
+          if (NPOT_MIN_FILTERS.indexOf(param) === -1) {
+            // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
+            param = GL.LINEAR;
+          }
+          break;
+        case GL.TEXTURE_WRAP_S:
+        case GL.TEXTURE_WRAP_T:
+          if (param !== GL.CLAMP_TO_EDGE) {
+            // log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)();
+            param = GL.CLAMP_TO_EDGE;
+          }
+          break;
+        default:
+          break;
       }
     }
     return param;

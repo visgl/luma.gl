@@ -3,7 +3,6 @@ import Texture from './texture';
 import {assertWebGLContext} from '../webgl-utils';
 
 export default class Texture2D extends Texture {
-
   static isSupported(gl, opts) {
     return Texture.isSupported(gl, opts);
   }

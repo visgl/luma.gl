@@ -93,10 +93,12 @@ export function getGLContextInfo(gl) {
     gl.luma.info = {
       [GL.VENDOR]: gl.getParameter(GL.VENDOR),
       [GL.RENDERER]: gl.getParameter(GL.RENDERER),
-      [GL.UNMASKED_VENDOR_WEBGL]:
-        gl.getParameter((info && info.UNMASKED_VENDOR_WEBGL) || GL.VENDOR),
-      [GL.UNMASKED_RENDERER_WEBGL]:
-        gl.getParameter((info && info.UNMASKED_RENDERER_WEBGL) || GL.RENDERER),
+      [GL.UNMASKED_VENDOR_WEBGL]: gl.getParameter(
+        (info && info.UNMASKED_VENDOR_WEBGL) || GL.VENDOR
+      ),
+      [GL.UNMASKED_RENDERER_WEBGL]: gl.getParameter(
+        (info && info.UNMASKED_RENDERER_WEBGL) || GL.RENDERER
+      ),
       [GL.VERSION]: gl.getParameter(GL.VERSION),
       [GL.SHADING_LANGUAGE_VERSION]: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
     };

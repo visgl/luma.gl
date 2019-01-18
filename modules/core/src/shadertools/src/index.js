@@ -1,8 +1,6 @@
 // shadertools
 export {assembleShaders} from './lib/assemble-shaders';
-export {
-  registerShaderModules,
-  setDefaultShaderModules} from './lib/resolve-modules';
+export {registerShaderModules, setDefaultShaderModules} from './lib/resolve-modules';
 export {combineInjects} from './lib/inject-shader';
 // shader modules
 export {default as fp32} from './modules/fp32/fp32';

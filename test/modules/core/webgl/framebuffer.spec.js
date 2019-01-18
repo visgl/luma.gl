@@ -10,17 +10,17 @@ const EPSILON = 1e-6;
 const TEST_CASES = [
   {
     title: 'Default attachments',
-    getOpts: (gl) => ({}),
+    getOpts: gl => ({}),
     pass: true
   },
   {
     title: 'No attachments',
-    getOpts: (gl) => ({attachments: {}}),
+    getOpts: gl => ({attachments: {}}),
     pass: false
   },
   {
     title: 'Simple Depth Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16})
@@ -30,7 +30,7 @@ const TEST_CASES = [
   },
   {
     title: 'Simple Stencil Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.STENCIL_INDEX8})
@@ -40,7 +40,7 @@ const TEST_CASES = [
   },
   {
     title: 'Combined Depth/Stencil Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
@@ -78,19 +78,17 @@ test('WebGL#Framebuffer construct/delete', t => {
   t.throws(
     () => new Framebuffer(),
     /.*WebGLRenderingContext.*/,
-    'Framebuffer throws on missing gl context');
+    'Framebuffer throws on missing gl context'
+  );
 
   const framebuffer = new Framebuffer(gl);
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer construction successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer construction successful');
 
   framebuffer.delete();
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer delete successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer delete successful');
 
   framebuffer.delete();
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer repeated delete successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer repeated delete successful');
 
   t.end();
 });
@@ -99,23 +97,16 @@ test('Framebuffer#getDefaultFramebuffer', t => {
   const {gl} = fixture;
 
   const framebuffer = Framebuffer.getDefaultFramebuffer(gl);
-  t.ok(framebuffer instanceof Framebuffer,
-    'getDefaultFramebuffer successful');
+  t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
   t.throws(
     () => framebuffer.resize({width: 1000, height: 1000}),
     'defaultFramebuffer.resize({width, height}) throws'
   );
 
-  t.doesNotThrow(
-    () => framebuffer.resize(),
-    'defaultFramebuffer.resize() successful'
-  );
+  t.doesNotThrow(() => framebuffer.resize(), 'defaultFramebuffer.resize() successful');
 
-  t.doesNotThrow(
-    () => framebuffer.checkStatus(),
-    'defaultFramebuffer status ok'
-  );
+  t.doesNotThrow(() => framebuffer.checkStatus(), 'defaultFramebuffer status ok');
 
   t.end();
 });
@@ -124,12 +115,9 @@ function testFramebuffer(t, gl) {
   for (const tc of TEST_CASES) {
     let opts;
 
-    t.doesNotThrow(
-      () => {
-        opts = tc.getOpts(gl);
-      },
-      `Framebuffer options constructed for "${tc.title}"`
-    );
+    t.doesNotThrow(() => {
+      opts = tc.getOpts(gl);
+    }, `Framebuffer options constructed for "${tc.title}"`);
 
     const testFramebufferOpts = () => {
       const framebuffer = new Framebuffer(gl, opts);
@@ -144,9 +132,15 @@ function testFramebuffer(t, gl) {
     };
 
     if (tc.pass) {
-      t.doesNotThrow(testFramebufferOpts, `Framebuffer checkStatus success as expected for "${tc.title}"`);
+      t.doesNotThrow(
+        testFramebufferOpts,
+        `Framebuffer checkStatus success as expected for "${tc.title}"`
+      );
     } else {
-      t.throws(testFramebufferOpts, `Framebuffer checkStatus failure as expected for "${tc.title}"`);
+      t.throws(
+        testFramebufferOpts,
+        `Framebuffer checkStatus failure as expected for "${tc.title}"`
+      );
     }
   }
 }
@@ -196,7 +190,9 @@ test('WebGL1#Framebuffer resize', t => {
 
 const FB_READPIXELS_TEST_CASES = [
   {
-    format: GL.RGBA, clearColor: [1, 0.5, 0.25, 0.125], expectedColor: [255, 128, 64, 32]
+    format: GL.RGBA,
+    clearColor: [1, 0.5, 0.25, 0.125],
+    expectedColor: [255, 128, 64, 32]
   },
 
   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
@@ -205,13 +201,18 @@ const FB_READPIXELS_TEST_CASES = [
   // },
 
   {
-    format: GL.RGBA32F, clearColor: [0.214, -32.23, 1242, -123.847]
+    format: GL.RGBA32F,
+    clearColor: [0.214, -32.23, 1242, -123.847]
   },
   {
-    format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
+    format: GL.RG32F,
+    clearColor: [-0.214, 32.23, 0, 0],
+    expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
   },
   {
-    format: GL.R32F, clearColor: [0.124, 0, 0, 0], expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
+    format: GL.R32F,
+    clearColor: [0.124, 0, 0, 0],
+    expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
   }
 
   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
@@ -221,7 +222,6 @@ const FB_READPIXELS_TEST_CASES = [
 ];
 
 function testFramebufferReadPixels(t, gl) {
-
   for (const testCase of FB_READPIXELS_TEST_CASES) {
     const format = testCase.format;
     if (Texture2D.isSupported(gl, {format})) {
@@ -254,11 +254,18 @@ function testFramebufferReadPixels(t, gl) {
         width: 1,
         height: 1,
         format: type === GL.FLOAT ? GL.RGBA : dataFormat, // For float textures only RGBA is supported.
-        type});
+        type
+      });
 
       const expectedColor = testCase.expectedColor || testCase.clearColor;
       for (const index in color) {
-        t.ok(Math.abs(color[index] - expectedColor[index]) < EPSILON, `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}) returned expected value for channel:${index}`);
+        t.ok(
+          Math.abs(color[index] - expectedColor[index]) < EPSILON,
+          `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(
+            GL,
+            type
+          )}) returned expected value for channel:${index}`
+        );
       }
     }
   }
@@ -323,10 +330,22 @@ function testReadPixelsToBuffer(t, bufferCreation) {
   });
   buffer.getData({dstData: color});
 
-  t.ok(abs(clearColor[0] - color[2]) < EPSILON, 'Readpixels returned expected value for Red channel');
-  t.ok(abs(clearColor[1] - color[3]) < EPSILON, 'Readpixels returned expected value for Green channel');
-  t.ok(abs(clearColor[2] - color[4]) < EPSILON, 'Readpixels returned expected value for Blue channel');
-  t.ok(abs(clearColor[3] - color[5]) < EPSILON, 'Readpixels returned expected value for Alpha channel');
+  t.ok(
+    abs(clearColor[0] - color[2]) < EPSILON,
+    'Readpixels returned expected value for Red channel'
+  );
+  t.ok(
+    abs(clearColor[1] - color[3]) < EPSILON,
+    'Readpixels returned expected value for Green channel'
+  );
+  t.ok(
+    abs(clearColor[2] - color[4]) < EPSILON,
+    'Readpixels returned expected value for Blue channel'
+  );
+  t.ok(
+    abs(clearColor[3] - color[5]) < EPSILON,
+    'Readpixels returned expected value for Alpha channel'
+  );
 
   t.end();
 }
@@ -342,27 +361,24 @@ test('WebGL#Framebuffer readPixelsToBuffer (buffer creation)', t => {
 test('WebGL2#Framebuffer blit', t => {
   const {gl2} = fixture;
   if (gl2) {
-
-    t.doesNotThrow(
-      () => {
-        const framebufferSrc = new Framebuffer(gl2);
-        const framebufferDst = new Framebuffer(gl2);
-        framebufferDst.blit({
-          srcFramebuffer: framebufferSrc,
-          srcX0: 0,
-          srcY0: 0,
-          srcX1: 1,
-          srcY1: 1,
-          dstX0: 0,
-          dstY0: 0,
-          dstX1: 1,
-          dstY1: 1,
-          color: true,
-          depth: true,
-          stencil: true});
-      },
-      'Framebuffer blit successful'
-    );
+    t.doesNotThrow(() => {
+      const framebufferSrc = new Framebuffer(gl2);
+      const framebufferDst = new Framebuffer(gl2);
+      framebufferDst.blit({
+        srcFramebuffer: framebufferSrc,
+        srcX0: 0,
+        srcY0: 0,
+        srcX1: 1,
+        srcY1: 1,
+        dstX0: 0,
+        dstY0: 0,
+        dstX1: 1,
+        dstY1: 1,
+        color: true,
+        depth: true,
+        stencil: true
+      });
+    }, 'Framebuffer blit successful');
   } else {
     t.comment('WebGL2 not available, skipping tests');
   }

@@ -32,7 +32,8 @@ test('ShaderModules#getShaderDependencies', t => {
   t.deepEqual(
     result.map(module => module.name),
     [fp32.name, project.name, fp64.name, project64.name],
-    'Module order is correct');
+    'Module order is correct'
+  );
   t.end();
 });
 
@@ -44,11 +45,15 @@ test('ShaderModules#getDependencyGraph', t => {
     moduleMap: {},
     moduleDepth
   });
-  t.deepEqual(moduleDepth, {
-    [fp32.name]: 2,
-    [project.name]: 1,
-    [fp64.name]: 1,
-    [project64.name]: 0
-  }, 'Module dependecny is correct');
+  t.deepEqual(
+    moduleDepth,
+    {
+      [fp32.name]: 2,
+      [project.name]: 1,
+      [fp64.name]: 1,
+      [project64.name]: 0
+    },
+    'Module dependecny is correct'
+  );
   t.end();
 });

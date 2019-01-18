@@ -435,14 +435,11 @@ export const FRAMEBUFFER_ATTACHMENT_PARAMETERS = [
 ];
 
 export const FRAMEBUFFER_STATUS = {
-  [GL.FRAMEBUFFER_COMPLETE]:
-    'Success. Framebuffer is correctly set up',
+  [GL.FRAMEBUFFER_COMPLETE]: 'Success. Framebuffer is correctly set up',
   [GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT]:
     'Framebuffer attachment types mismatched or some attachment point not attachment complete',
-  [GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT]:
-    'Framebuffer has no attachment',
-  [GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS]:
-    'Framebuffer attachments do not have the same size',
+  [GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT]: 'Framebuffer has no attachment',
+  [GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS]: 'Framebuffer attachments do not have the same size',
   [GL.FRAMEBUFFER_UNSUPPORTED]:
     'Framebuffer attachment format not supported or depth and stencil attachments are not same',
   // When using a WebGL 2 context, the following values can be returned
