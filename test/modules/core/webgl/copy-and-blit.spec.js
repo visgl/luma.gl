@@ -11,11 +11,14 @@ import {
 } from 'luma.gl/webgl/copy-and-blit.js';
 
 const EPSILON = 1e-6;
-const {abs} = Math
+const {abs} = Math;
 
 const FB_READPIXELS_TEST_CASES = [
   {
-    format: GL.RGBA, clearColor: [1, 0.5, 0.25, 0.125], textureColor: new Uint8Array([255, 128, 64, 32]), expectedColor: [255, 128, 64, 32]
+    format: GL.RGBA,
+    clearColor: [1, 0.5, 0.25, 0.125],
+    textureColor: new Uint8Array([255, 128, 64, 32]),
+    expectedColor: [255, 128, 64, 32]
   },
 
   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
@@ -24,13 +27,21 @@ const FB_READPIXELS_TEST_CASES = [
   // },
 
   {
-    format: GL.RGBA32F, clearColor: [0.214, -32.23, 1242, -123.847], textureColor: new Float32Array([0.214, -32.23, 1242, -123.847])
+    format: GL.RGBA32F,
+    clearColor: [0.214, -32.23, 1242, -123.847],
+    textureColor: new Float32Array([0.214, -32.23, 1242, -123.847])
   },
   {
-    format: GL.RG32F, clearColor: [-0.214, 32.23, 0, 0], textureColor: new Float32Array([-0.214, 32.23]), expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
+    format: GL.RG32F,
+    clearColor: [-0.214, 32.23, 0, 0],
+    textureColor: new Float32Array([-0.214, 32.23]),
+    expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
   },
   {
-    format: GL.R32F, clearColor: [0.124, 0, 0, 0], textureColor: new Float32Array([0.124]), expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
+    format: GL.R32F,
+    clearColor: [0.124, 0, 0, 0],
+    textureColor: new Float32Array([0.124]),
+    expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
   }
 
   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
@@ -40,7 +51,6 @@ const FB_READPIXELS_TEST_CASES = [
 ];
 
 function testCopyToArray(t, gl) {
-
   [true, false].forEach(sourceIsFramebuffer => {
     for (const testCase of FB_READPIXELS_TEST_CASES) {
       const format = testCase.format;
@@ -95,7 +105,13 @@ function testCopyToArray(t, gl) {
 
         const expectedColor = testCase.expectedColor || testCase.clearColor;
         for (const index in color) {
-          t.ok(Math.abs(color[index] - expectedColor[index]) < EPSILON, `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(GL, type)}) returned expected value for channel:${index}`);
+          t.ok(
+            Math.abs(color[index] - expectedColor[index]) < EPSILON,
+            `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(
+              GL,
+              type
+            )}) returned expected value for channel:${index}`
+          );
         }
       }
     }
@@ -168,10 +184,30 @@ function testCopyToBuffer(t, bufferCreation) {
     });
     buffer.getData({dstData: color});
 
-    t.ok(abs(clearColor[0] - color[2]) < EPSILON, `Red channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source`);
-    t.ok(abs(clearColor[1] - color[3]) < EPSILON, `Green channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source`);
-    t.ok(abs(clearColor[2] - color[4]) < EPSILON, `Blue channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source`);
-    t.ok(abs(clearColor[3] - color[5]) < EPSILON, `Alpha channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source`);
+    t.ok(
+      abs(clearColor[0] - color[2]) < EPSILON,
+      `Red channel should have correct value when using ${
+        sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+      } as source`
+    );
+    t.ok(
+      abs(clearColor[1] - color[3]) < EPSILON,
+      `Green channel should have correct value when using ${
+        sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+      } as source`
+    );
+    t.ok(
+      abs(clearColor[2] - color[4]) < EPSILON,
+      `Blue channel should have correct value when using ${
+        sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+      } as source`
+    );
+    t.ok(
+      abs(clearColor[3] - color[5]) < EPSILON,
+      `Alpha channel should have correct value when using ${
+        sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+      } as source`
+    );
   });
 
   t.end();
@@ -202,9 +238,11 @@ function testCopyToTexture(t, gl) {
     [true, false].forEach(sourceIsFramebuffer => {
       // const dataBytes = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
-      const clearColor = [1, 0.5, 0.25, 0.125]
+      const clearColor = [1, 0.5, 0.25, 0.125];
 
-      const sourceTexture = createTexture(gl, {data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)});
+      const sourceTexture = createTexture(gl, {
+        data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
+      });
 
       const destinationTexture = createTexture(gl, {
         // allocate extra size to test x/y offsets when using sub copy
@@ -242,10 +280,30 @@ function testCopyToTexture(t, gl) {
       const color = readPixelsToArray(destinationTexture);
       const colorOffset = isSubCopy ? 4 * 3 /* skip first 3 pixels */ : 0;
 
-      t.ok(abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON, `Red channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
-      t.ok(abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON, `Green channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
-      t.ok(abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON, `Blue channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
-      t.ok(abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON, `Alpha channel should have correct value when using ${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'} as source, isSubCopy=${isSubCopy}`);
+      t.ok(
+        abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON,
+        `Red channel should have correct value when using ${
+          sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+        } as source, isSubCopy=${isSubCopy}`
+      );
+      t.ok(
+        abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON,
+        `Green channel should have correct value when using ${
+          sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+        } as source, isSubCopy=${isSubCopy}`
+      );
+      t.ok(
+        abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON,
+        `Blue channel should have correct value when using ${
+          sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+        } as source, isSubCopy=${isSubCopy}`
+      );
+      t.ok(
+        abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON,
+        `Alpha channel should have correct value when using ${
+          sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+        } as source, isSubCopy=${isSubCopy}`
+      );
     });
   });
   t.end();
@@ -272,9 +330,11 @@ function testBlit(t, gl) {
     [true, false].forEach(sourceIsFramebuffer => {
       // const dataBytes = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
-      const clearColor = [1, 0.5, 0.25, 0.125]
+      const clearColor = [1, 0.5, 0.25, 0.125];
 
-      const sourceTexture = createTexture(gl, {data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)});
+      const sourceTexture = createTexture(gl, {
+        data: sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
+      });
 
       const destinationTexture = createTexture(gl, {
         // allocate extra size to test x/y offsets when using sub copy
@@ -313,7 +373,6 @@ function testBlit(t, gl) {
         destination = destinationTexture;
       }
 
-
       // const color = new Float32Array(6);
       blit(source, destination, {
         targetX0: 1,
@@ -326,10 +385,22 @@ function testBlit(t, gl) {
 
       const src = `${sourceIsFramebuffer ? 'Framebuffer' : 'Texture'}`;
       const dst = `${destinationIsFramebuffer ? 'Framebuffer' : 'Texture'}`;
-      t.ok(abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON, `Red channel should have correct value when blintting from ${src} to ${dst}`);
-      t.ok(abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON, `Green channel should have correct value when blintting from ${src} to ${dst}`);
-      t.ok(abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON, `Blue channel should have correct value when blintting from ${src} to ${dst}`);
-      t.ok(abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON, `Alpha channel should have correct value when blintting from ${src} to ${dst}`);
+      t.ok(
+        abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON,
+        `Red channel should have correct value when blintting from ${src} to ${dst}`
+      );
+      t.ok(
+        abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON,
+        `Green channel should have correct value when blintting from ${src} to ${dst}`
+      );
+      t.ok(
+        abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON,
+        `Blue channel should have correct value when blintting from ${src} to ${dst}`
+      );
+      t.ok(
+        abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON,
+        `Alpha channel should have correct value when blintting from ${src} to ${dst}`
+      );
     });
   });
   t.end();
@@ -339,26 +410,23 @@ function testBlit(t, gl) {
 test('WebGL2#CopyAndBlit blit no-crash', t => {
   const {gl2} = fixture;
   if (gl2) {
-
-    t.doesNotThrow(
-      () => {
-        const framebufferSrc = new Framebuffer(gl2);
-        const framebufferDst = new Framebuffer(gl2);
-        blit(framebufferSrc, framebufferDst, {
-          sourceX0: 0,
-          sourceY0: 0,
-          sourceX1: 1,
-          sourceY1: 1,
-          targetX0: 0,
-          targetY0: 0,
-          targetX1: 1,
-          targetY1: 1,
-          color: true,
-          depth: true,
-          stencil: true});
-      },
-      'Framebuffer blit successful'
-    );
+    t.doesNotThrow(() => {
+      const framebufferSrc = new Framebuffer(gl2);
+      const framebufferDst = new Framebuffer(gl2);
+      blit(framebufferSrc, framebufferDst, {
+        sourceX0: 0,
+        sourceY0: 0,
+        sourceX1: 1,
+        sourceY1: 1,
+        targetX0: 0,
+        targetY0: 0,
+        targetX1: 1,
+        targetY1: 1,
+        color: true,
+        depth: true,
+        stencil: true
+      });
+    }, 'Framebuffer blit successful');
   } else {
     t.comment('WebGL2 not available, skipping tests');
   }

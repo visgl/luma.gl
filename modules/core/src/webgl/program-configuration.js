@@ -5,7 +5,6 @@ import {isWebGL2} from '../webgl-utils';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 
 export default class ProgramConfiguration {
-
   constructor(program) {
     this.id = program.id;
     this.attributeInfos = [];
@@ -102,7 +101,7 @@ export default class ProgramConfiguration {
 
   // Extract additional attribute metadata from shader names (based on attribute naming conventions)
   _inferProperties(location, name, accessor) {
-    if ((/instance/i).test(name)) {
+    if (/instance/i.test(name)) {
       // Any attribute containing the word "instance" will be assumed to be instanced
       accessor.divisor = 1;
     }

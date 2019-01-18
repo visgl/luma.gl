@@ -44,8 +44,7 @@ test('webgl#caps#getFeatures', t => {
 
   for (const cap in FEATURES) {
     const value = info[cap];
-    t.ok(value === false || value === true,
-      `${cap}: is an allowed (boolean) value`);
+    t.ok(value === false || value === true, `${cap}: is an allowed (boolean) value`);
   }
 
   t.end();
@@ -81,7 +80,8 @@ test('webgl#caps#hasFeatures(WebGL2)', t => {
 test('webgl#caps#canCompileGLGSExtension', t => {
   const {gl} = fixture;
 
-  const userAgentNonIE = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36';
+  const userAgentNonIE =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36';
   const userAgentOldIE = 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko';
 
   t.ok(typeof canCompileGLGSExtension === 'function', 'canCompileGLGSExtension defined');

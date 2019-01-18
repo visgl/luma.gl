@@ -19,8 +19,8 @@ export function uid(id = 'id') {
  * @return {Array} Returns true if the given number is power of 2, false otherwise.
  **/
 export function isPowerOfTwo(n) {
-  assert((typeof n === 'number'), 'Input must be a number');
-  return n && ((n & (n - 1)) === 0);
+  assert(typeof n === 'number', 'Input must be a number');
+  return n && (n & (n - 1)) === 0;
 }
 
 // Returns true if given object is empty, false otherwise.

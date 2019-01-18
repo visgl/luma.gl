@@ -18,17 +18,12 @@ function testQueryConstructDelete(gl, t) {
     t.comment('Query is not supported, testing graceful fallback');
   }
 
-  t.throws(
-    () => new Query(),
-    /.*WebGLRenderingContext.*/,
-    'Query throws on missing gl context');
+  t.throws(() => new Query(), /.*WebGLRenderingContext.*/, 'Query throws on missing gl context');
 
   let timerQuery;
-  t.doesNotThrow(
-    () => {
-      timerQuery = new Query(gl);
-    },
-    'Query construction successful');
+  t.doesNotThrow(() => {
+    timerQuery = new Query(gl);
+  }, 'Query construction successful');
 
   timerQuery.delete();
   t.ok(timerQuery instanceof Query, 'Query delete successful');
@@ -63,23 +58,29 @@ function testQueryBeginCancel(gl, t) {
     onError: error => t.pass(`Query 1: ${error}`)
   });
 
-  timerQuery.cancel().cancel().cancel();
+  timerQuery
+    .cancel()
+    .cancel()
+    .cancel();
   t.ok(timerQuery instanceof Query, 'Query multiple cancel successful');
 
   timerQuery.beginTimeElapsedQuery();
   t.ok(timerQuery instanceof Query, 'Query begin successful');
 
-  timerQuery.cancel().cancel().cancel();
+  timerQuery
+    .cancel()
+    .cancel()
+    .cancel();
   t.ok(timerQuery instanceof Query, 'Query multiple cancel successful');
 
   timerQuery.promise
-  .then(_ => {
-    t.end();
-  })
-  .catch(error => {
-    t.pass(`Query promise reset by cancel or not implemented ${error}`);
-    t.end();
-  });
+    .then(_ => {
+      t.end();
+    })
+    .catch(error => {
+      t.pass(`Query promise reset by cancel or not implemented ${error}`);
+      t.end();
+    });
 }
 
 test('WebGL#Query begin/cancel', t => {
@@ -99,12 +100,12 @@ test('WebGL2#Query begin/cancel', t => {
 
 function testQueryCompleteFail(gl, t) {
   // Completed query
-  const timerQuery = Query.isSupported(gl) ?
-    new Query(gl, {
-      onComplete: result => t.pass(`Query 2: ${result}ms`),
-      onError: error => t.fail(`Query 2: ${error}`)
-    }) :
-    new Query(gl);
+  const timerQuery = Query.isSupported(gl)
+    ? new Query(gl, {
+        onComplete: result => t.pass(`Query 2: ${result}ms`),
+        onError: error => t.fail(`Query 2: ${error}`)
+      })
+    : new Query(gl);
 
   timerQuery.beginTimeElapsedQuery().end();
   t.ok(timerQuery.promise instanceof Promise, 'Query begin/end successful');

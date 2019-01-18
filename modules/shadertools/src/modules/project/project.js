@@ -30,8 +30,9 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS, prevUniforms = {}) {
 
   // COMPOSITE UNIFORMS
   if (opts.projectionMatrix !== undefined || opts.viewMatrix !== undefined) {
-    uniforms.viewProjectionMatrix = new Matrix4(opts.projectionMatrix)
-      .multiplyRight(opts.viewMatrix);
+    uniforms.viewProjectionMatrix = new Matrix4(opts.projectionMatrix).multiplyRight(
+      opts.viewMatrix
+    );
   }
 
   return uniforms;

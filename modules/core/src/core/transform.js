@@ -5,11 +5,7 @@ import Framebuffer from '../webgl/framebuffer';
 import Texture2D from '../webgl/texture-2d';
 import TransformFeedback from '../webgl/transform-feedback';
 import {combineInjects} from '@luma.gl/shadertools';
-import {
-  _transform as transform,
-  getPassthroughFS,
-  typeToChannelCount
-} from '@luma.gl/shadertools';
+import {_transform as transform, getPassthroughFS, typeToChannelCount} from '@luma.gl/shadertools';
 import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl-utils';
 import assert from '../utils/assert';
 import {log, isObjectEmpty} from '../utils';
@@ -26,7 +22,6 @@ const SRC_TEX_PARAMETER_OVERRIDES = {
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
 export default class Transform {
-
   static isSupported(gl) {
     // For now WebGL2 only
     return isWebGL2(gl);
@@ -80,7 +75,9 @@ export default class Transform {
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    const bufferOrParams = varyingName ?  this.feedbackBuffers[this.currentIndex][varyingName] : null;
+    const bufferOrParams = varyingName
+      ? this.feedbackBuffers[this.currentIndex][varyingName]
+      : null;
     if (!bufferOrParams) {
       return null;
     }
@@ -115,7 +112,7 @@ export default class Transform {
     // readPixels returns 4 elements for each pixel, pack the elements when requested
     const ArrayType = pixels.constructor;
     const channelCount = typeToChannelCount(this.targetTextureType);
-    const packedPixels = new ArrayType(pixels.length * channelCount / 4);
+    const packedPixels = new ArrayType((pixels.length * channelCount) / 4);
     let packCount = 0;
     for (let i = 0; i < pixels.length; i += 4) {
       for (let j = 0; j < channelCount; j++) {
@@ -172,19 +169,21 @@ export default class Transform {
       discard = false;
       framebuffer = this.framebuffers[this.currentIndex];
       assert(framebuffer);
-      parameters.viewport = [0, 0, framebuffer.width, framebuffer.height]
+      parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
       if (clearRenderTarget) {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       }
     }
     this.model.setAttributes(attributes);
-    this.model.transform(Object.assign({}, opts, {
-      transformFeedback: this.transformFeedbacks[this.currentIndex],
-      uniforms,
-      discard,
-      framebuffer,
-      parameters,
-    }));
+    this.model.transform(
+      Object.assign({}, opts, {
+        transformFeedback: this.transformFeedbacks[this.currentIndex],
+        uniforms,
+        discard,
+        framebuffer,
+        parameters
+      })
+    );
   }
 
   // Swap source and destination buffers and textures.
@@ -201,16 +200,18 @@ export default class Transform {
 
   // Update some or all buffer bindings.
   update(opts = {}) {
-
     if (opts.elementCount) {
-        this._setElementCount(opts.elementCount);
+      this._setElementCount(opts.elementCount);
     }
 
     const {sourceBuffers = null, feedbackBuffers = null} = opts;
     const {currentIndex} = this;
     if (sourceBuffers || feedbackBuffers) {
       for (const bufferName in feedbackBuffers) {
-        assert(feedbackBuffers[bufferName] instanceof Buffer || feedbackBuffers[bufferName].buffer instanceof Buffer);
+        assert(
+          feedbackBuffers[bufferName] instanceof Buffer ||
+            feedbackBuffers[bufferName].buffer instanceof Buffer
+        );
       }
 
       Object.assign(this.sourceBuffers[currentIndex], sourceBuffers);
@@ -259,7 +260,7 @@ export default class Transform {
   _updateTargetTexture(texture, index) {
     const targetTexture = this._buildTargetTexture(texture);
     if (targetTexture) {
-      this.targetTextures[index] =  targetTexture;
+      this.targetTextures[index] = targetTexture;
       if (this.framebuffers[index]) {
         // First update texture without re-sizing attachments
         this.framebuffers[index].update({
@@ -298,11 +299,13 @@ export default class Transform {
     this._setupTextures(props);
     this._setupSwapBuffers();
     this._setupSwapTextures();
-    this._buildModel(Object.assign({}, props, {
-      id: props.id || 'transform-model',
-      drawMode: props.drawMode || GL.POINTS,
-      varyings: varyingsArray
-    }));
+    this._buildModel(
+      Object.assign({}, props, {
+        id: props.id || 'transform-model',
+        drawMode: props.drawMode || GL.POINTS,
+        varyings: varyingsArray
+      })
+    );
   }
 
   // assert on required parameters
@@ -327,21 +330,24 @@ export default class Transform {
 
     assert(
       vs &&
-      // destinations are provided
-      (varyings || feedbackMap || _targetTexture) &&
-      // when only writting to textures auto-duduce from texture dimenstions
-      elementCount
+        // destinations are provided
+        (varyings || feedbackMap || _targetTexture) &&
+        // when only writting to textures auto-duduce from texture dimenstions
+        elementCount
     );
 
     for (const bufferName in feedbackBuffers || {}) {
-      assert(feedbackBuffers[bufferName] instanceof Buffer || feedbackBuffers[bufferName].buffer instanceof Buffer);
+      assert(
+        feedbackBuffers[bufferName] instanceof Buffer ||
+          feedbackBuffers[bufferName].buffer instanceof Buffer
+      );
     }
     for (const textureName in _sourceTextures || {}) {
       assert(_sourceTextures[textureName] instanceof Texture2D);
     }
 
     // If rendering to texture , varying is provided
-    assert (!_targetTexture || _targetTextureVarying);
+    assert(!_targetTexture || _targetTextureVarying);
 
     // swap texture must be a valid source texture
     assert(!_swapTexture || _sourceTextures[_swapTexture]);
@@ -378,7 +384,6 @@ export default class Transform {
 
   // Builds target texture using source reference or provided texture object.
   _buildTargetTexture(textureOrAttribute) {
-
     if (textureOrAttribute instanceof Texture2D) {
       return textureOrAttribute;
     }
@@ -411,8 +416,9 @@ export default class Transform {
     const current = this.currentIndex;
     for (const sourceBufferName in this.feedbackMap) {
       const feedbackBufferName = this.feedbackMap[sourceBufferName];
-      if (feedbackBufferName !== this.targetTextureVarying &&
-          (!feedbackBuffers || !feedbackBuffers[feedbackBufferName])
+      if (
+        feedbackBufferName !== this.targetTextureVarying &&
+        (!feedbackBuffers || !feedbackBuffers[feedbackBufferName])
       ) {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
@@ -457,10 +463,8 @@ export default class Transform {
       const dstName = this.feedbackMap[srcName];
       // TODO: add textureMap and remove this if loop
       if (dstName !== this.targetTextureVarying) {
-        this.sourceBuffers[next][srcName] =
-          this.feedbackBuffers[current][dstName];
-        this.feedbackBuffers[next][dstName] =
-          this.sourceBuffers[current][srcName];
+        this.sourceBuffers[next][srcName] = this.feedbackBuffers[current][dstName];
+        this.feedbackBuffers[next][dstName] = this.sourceBuffers[current][srcName];
 
         // make sure the new destination buffer is a Buffer object
         assert(this.feedbackBuffers[next][dstName] instanceof Buffer);
@@ -475,7 +479,6 @@ export default class Transform {
 
     // TODO: add swap support for targetTexture and framebuffers
   }
-
 
   // setup textures for swapping.
   _setupSwapTextures() {
@@ -495,16 +498,18 @@ export default class Transform {
 
   // build Model and TransformFeedback objects
   _buildModel(props = {}) {
-
     const {vs, fs, modules, uniforms, inject, samplerTextureMap} = this._getShaders(props);
-    this.model = new Model(this.gl, Object.assign({}, props, {
-      vs,
-      fs,
-      vertexCount: props.elementCount,
-      modules,
-      uniforms,
-      inject
-    }));
+    this.model = new Model(
+      this.gl,
+      Object.assign({}, props, {
+        vs,
+        fs,
+        vertexCount: props.elementCount,
+        modules,
+        uniforms,
+        inject
+      })
+    );
     this.samplerTextureMap = samplerTextureMap;
 
     // setup TF to capture varyings.
@@ -515,7 +520,6 @@ export default class Transform {
 
     // create buffer to access source texture pixesl.
     this._setElementCount(props.elementCount);
-
   }
 
   // setup TransformFeedback objects to capture the results
@@ -586,8 +590,10 @@ export default class Transform {
 
   // build and return shader releated parameters
   _getShaders(props = {}) {
-    const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = this._processVertexShader(props.vs);
-    const combinedInject = combineInjects([props.inject || {}, inject])
+    const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = this._processVertexShader(
+      props.vs
+    );
+    const combinedInject = combineInjects([props.inject || {}, inject]);
     this.targetTextureType = targetTextureType;
     const fs = getPassthroughFS({
       version: getShaderVersion(vs),
@@ -595,8 +601,10 @@ export default class Transform {
       inputType: targetTextureType,
       output: FS_OUTPUT_VARIABLE
     });
-    const modules = this.hasSourceTextures || this.targetTextureVarying ?
-      [transform].concat(props.modules || []) : props.modules;
+    const modules =
+      this.hasSourceTextures || this.targetTextureVarying
+        ? [transform].concat(props.modules || [])
+        : props.modules;
     return {vs, fs, modules, uniforms, inject: combinedInject, samplerTextureMap};
   }
 

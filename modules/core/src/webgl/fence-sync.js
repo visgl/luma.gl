@@ -41,19 +41,19 @@ export default class FenceSync extends Resource {
     const result = this.gl.clientWaitSync(this.handle, flags, timeout);
     // TODO - map to boolean?
     switch (result) {
-    case GL.ALREADY_SIGNALED:
-      // Indicates that sync object was signaled when this method was called.
-      break;
-    case GL.TIMEOUT_EXPIRED:
-      // Indicates that timeout time passed, sync object did not become signaled
-      break;
-    case GL.CONDITION_SATISFIED:
-      // Indicates that sync object was signaled before timeout expired.
-      break;
-    case GL.WAIT_FAILED:
-      // Indicates that an error occurred during execution.
-      break;
-    default:
+      case GL.ALREADY_SIGNALED:
+        // Indicates that sync object was signaled when this method was called.
+        break;
+      case GL.TIMEOUT_EXPIRED:
+        // Indicates that timeout time passed, sync object did not become signaled
+        break;
+      case GL.CONDITION_SATISFIED:
+        // Indicates that sync object was signaled before timeout expired.
+        break;
+      case GL.WAIT_FAILED:
+        // Indicates that an error occurred during execution.
+        break;
+      default:
     }
     return result;
   }

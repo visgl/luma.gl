@@ -8,12 +8,12 @@
 import isOldIE from './is-old-ie';
 import assert from './assert';
 
-const GL_TEXTURE_BINDING_3D = 0x806A;
+const GL_TEXTURE_BINDING_3D = 0x806a;
 
-const GL_VENDOR = 0x1F00;
-const GL_RENDERER = 0x1F01;
-const GL_VERSION = 0x1F02;
-const GL_SHADING_LANGUAGE_VERSION = 0x8B8C;
+const GL_VENDOR = 0x1f00;
+const GL_RENDERER = 0x1f01;
+const GL_VERSION = 0x1f02;
+const GL_SHADING_LANGUAGE_VERSION = 0x8b8c;
 
 // Defines luma.gl "feature" names and semantics
 const WEBGL_FEATURES = {
@@ -33,10 +33,11 @@ Object.keys(WEBGL_FEATURES).forEach(key => {
 export {FEATURES};
 
 function isWebGL2(gl) {
-  return Boolean(gl && (
-    (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext ||
-    gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
-  ));
+  return Boolean(
+    gl &&
+      ((typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) ||
+        gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
+  );
 }
 
 export function getContextInfo(gl) {
@@ -61,8 +62,12 @@ function identifyGPUVendor(vendor, renderer) {
   if (vendor.match(/INTEL/i) || renderer.match(/INTEL/i)) {
     return 'INTEL';
   }
-  if (vendor.match(/AMD/i) || renderer.match(/AMD/i) ||
-    vendor.match(/ATI/i) || renderer.match(/ATI/i)) {
+  if (
+    vendor.match(/AMD/i) ||
+    renderer.match(/AMD/i) ||
+    vendor.match(/ATI/i) ||
+    renderer.match(/ATI/i)
+  ) {
     return 'AMD';
   }
   return 'UNKNOWN GPU';
@@ -114,14 +119,11 @@ function getFeature(gl, cap) {
   assert(feature, cap);
 
   // Get extension name from table
-  const extensionName = isWebGL2(gl) ?
-    feature[1] || feature[0] :
-    feature[0];
+  const extensionName = isWebGL2(gl) ? feature[1] || feature[0] : feature[0];
 
   // Check if the value is dependent on checking an extension
-  const value = typeof extensionName === 'string' ?
-    Boolean(gl.getExtension(extensionName)) :
-    extensionName;
+  const value =
+    typeof extensionName === 'string' ? Boolean(gl.getExtension(extensionName)) : extensionName;
 
   assert(value === false || value === true);
 

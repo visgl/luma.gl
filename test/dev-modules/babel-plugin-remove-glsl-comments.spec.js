@@ -31,9 +31,15 @@ float sub(float a, float b) {
 }
 `;
 
-const STRING_LITERAL = `// JavaScript comment\n  const shader = '${EXAMPLE.replace(/\n/g, '\\n')}';`;
+const STRING_LITERAL = `// JavaScript comment\n  const shader = '${EXAMPLE.replace(
+  /\n/g,
+  '\\n'
+)}';`;
 const TEMPLATE_LITERAL = `// JavaScript comment\n  const shader = \`${EXAMPLE}\`;`;
-const RESULT_STRING = `// JavaScript comment\n  var shader = "${EXPECTED_OUTPUT.replace(/\n/g, '\\n')}";`;
+const RESULT_STRING = `// JavaScript comment\n  var shader = "${EXPECTED_OUTPUT.replace(
+  /\n/g,
+  '\\n'
+)}";`;
 const RESULT_TEMPLATE = `// JavaScript comment\n  var shader = \`${EXPECTED_OUTPUT}\`;`;
 
 const COMPLEX_TEMPLATE_LITERAL = `
@@ -100,11 +106,13 @@ const TEST_CASES = [
 
 // Remove whitespace before comparing
 function clean(code) {
-  return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
+  return code
+    .replace('"use strict";', '')
+    .replace(/\n\s+/g, '\n')
+    .trim();
 }
 
 test('RemoveGLSLComments Babel Plugin', t => {
-
   TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       presets: [['@babel/env', testCase.env]],

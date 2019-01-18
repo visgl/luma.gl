@@ -33,7 +33,9 @@ vec4 denoise_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 
 const uniforms = {
   strength: {
-    value: 0.5, min: 0, max: 0.1,
+    value: 0.5,
+    min: 0,
+    max: 0.1,
     adjust: strength => 0.53 + 200 * Math.pow(1 - strength, 4) // TODO - JS preprocessing
   }
 };
@@ -43,8 +45,5 @@ export default {
   uniforms,
   fs,
 
-  passes: [
-    {sampler: true},
-    {sampler: true}
-  ]
+  passes: [{sampler: true}, {sampler: true}]
 };

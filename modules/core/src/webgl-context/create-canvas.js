@@ -15,19 +15,19 @@ let pageLoadPromise;
  */
 export function getPageLoadPromise() {
   if (!pageLoadPromise) {
-    pageLoadPromise = isPage ?
-      new Promise((resolve, reject) => {
-        if (isPage && document.readyState === 'complete') {
-          isPageLoaded = true;
-          resolve(document);
-          return;
-        }
-        window.onload = () => {
-          isPageLoaded = true;
-          resolve(document);
-        };
-      }) :
-      Promise.resolve({});
+    pageLoadPromise = isPage
+      ? new Promise((resolve, reject) => {
+          if (isPage && document.readyState === 'complete') {
+            isPageLoaded = true;
+            resolve(document);
+            return;
+          }
+          window.onload = () => {
+            isPageLoaded = true;
+            resolve(document);
+          };
+        })
+      : Promise.resolve({});
   }
   return pageLoadPromise;
 }

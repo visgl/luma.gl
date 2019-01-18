@@ -48,7 +48,5 @@ export default {
   uniforms,
   dependencies: [warp],
 
-  passes: [
-    {sampler: true}
-  ]
+  passes: [{sampler: true}]
 };

@@ -7,7 +7,6 @@ const INDEX_OFFSETS = {
 };
 
 export default class TruncatedConeGeometry extends Geometry {
-
   // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
   // copyright 2011 Google Inc. new BSD License
   // (http://www.opensource.org/licenses/bsd-license.php).
@@ -59,8 +58,7 @@ export default class TruncatedConeGeometry extends Geometry {
         v = 1;
         ringRadius = topRadius;
       } else {
-        ringRadius = bottomRadius +
-          (topRadius - bottomRadius) * (i / nvertical);
+        ringRadius = bottomRadius + (topRadius - bottomRadius) * (i / nvertical);
       }
       if (i === -2 || i === nvertical + 2) {
         ringRadius = 0;
@@ -68,16 +66,16 @@ export default class TruncatedConeGeometry extends Geometry {
       }
       y -= height / 2;
       for (let j = 0; j < vertsAroundEdge; j++) {
-        const sin = msin(j * mpi * 2 / nradial);
-        const cos = mcos(j * mpi * 2 / nradial);
+        const sin = msin((j * mpi * 2) / nradial);
+        const cos = mcos((j * mpi * 2) / nradial);
 
         positions[i3 + indexOffset[0]] = sin * ringRadius;
         positions[i3 + indexOffset[1]] = y;
         positions[i3 + indexOffset[2]] = cos * ringRadius;
 
-        normals[i3 + indexOffset[0]] = (i < 0 || i > nvertical) ? 0 : (sin * cosSlant);
-        normals[i3 + indexOffset[1]] = (i < 0) ? -1 : (i > nvertical ? 1 : sinSlant);
-        normals[i3 + indexOffset[2]] = (i < 0 || i > nvertical) ? 0 : (cos * cosSlant);
+        normals[i3 + indexOffset[0]] = i < 0 || i > nvertical ? 0 : sin * cosSlant;
+        normals[i3 + indexOffset[1]] = i < 0 ? -1 : i > nvertical ? 1 : sinSlant;
+        normals[i3 + indexOffset[2]] = i < 0 || i > nvertical ? 0 : cos * cosSlant;
 
         texCoords[i2 + 0] = j / nradial;
         texCoords[i2 + 1] = v;
@@ -99,13 +97,15 @@ export default class TruncatedConeGeometry extends Geometry {
       }
     }
 
-    super(Object.assign({}, opts, {
-      attributes: {
-        positions,
-        normals,
-        texCoords,
-        indices
-      }
-    }));
+    super(
+      Object.assign({}, opts, {
+        attributes: {
+          positions,
+          normals,
+          texCoords,
+          indices
+        }
+      })
+    );
   }
 }

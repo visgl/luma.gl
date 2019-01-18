@@ -9,7 +9,8 @@ test('WebGL#Texture3D construct/delete', t => {
   t.throws(
     () => new Texture3D(),
     /.*WebGLRenderingContext.*/,
-    'Texture3D throws on missing gl context');
+    'Texture3D throws on missing gl context'
+  );
 
   const texture = new Texture3D(gl);
   t.ok(texture instanceof Texture3D, 'Texture3D construction successful');

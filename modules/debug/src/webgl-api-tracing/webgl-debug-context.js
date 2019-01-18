@@ -13,13 +13,13 @@ function getContextData(gl) {
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
 export function makeDebugContext(gl, {debug = true} = {}) {
-  if (gl === null) { // Return to ensure we don't create a context in this case.
+  if (gl === null) {
+    // Return to ensure we don't create a context in this case.
     return null;
   }
 
   return debug ? getDebugContext(gl) : getRealContext(gl);
 }
-
 
 // Enable or disable debug checks in debug contexts
 // Non-debug contexts do not have checks (to ensure performance)
@@ -30,7 +30,8 @@ export function enableDebug(debug) {
 
 // Returns the real context from either of the real/debug contexts
 export function getRealContext(gl) {
-  if (gl === null) { // Return to ensure we don't create a context in this case.
+  if (gl === null) {
+    // Return to ensure we don't create a context in this case.
     return null;
   }
 
@@ -41,7 +42,8 @@ export function getRealContext(gl) {
 
 // Returns the debug context from either of the real/debug contexts
 export function getDebugContext(gl) {
-  if (gl === null) { // Return to ensure we don't create a context in this case.
+  if (gl === null) {
+    // Return to ensure we don't create a context in this case.
     return null;
   }
 
@@ -102,8 +104,8 @@ function onValidateGLFunc(functionName, functionArgs) {
 
   if (log.break) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
-    const isBreakpoint = log.break &&
-      log.break.every(breakOn => functionString.indexOf(breakOn) !== -1);
+    const isBreakpoint =
+      log.break && log.break.every(breakOn => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }

@@ -48,9 +48,7 @@ export function getUniforms({
 
 function getDirectionalUniforms({color, direction}) {
   // Normalize lighting direction vector
-  const dir = new Vector3(direction.x, direction.y, direction.z)
-    .normalize()
-    .scale(-1, -1, -1);
+  const dir = new Vector3(direction.x, direction.y, direction.z).normalize().scale(-1, -1, -1);
 
   return {
     directionalColor: [color.r, color.g, color.b],

@@ -35,9 +35,7 @@ export default class AnimationLoop {
       autoResizeDrawingBuffer = true
     } = props;
 
-    let {
-      useDevicePixels = true
-    } = props;
+    let {useDevicePixels = true} = props;
 
     if ('useDevicePixelRatio' in props) {
       log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
@@ -105,36 +103,35 @@ export default class AnimationLoop {
     if (!this._animationFrameId) {
       // Wait for start promise before rendering frame
       this._startPromise = getPageLoadPromise()
-      .then(() => {
-        if (this._stopped) {
-          return null;
-        }
-
-        // Create the WebGL context
-        this._createWebGLContext(opts);
-        this._createFramebuffer();
-        this._startEventHandling();
-
-        // Initialize the callback data
-        this._initializeCallbackData();
-        this._updateCallbackData();
-
-        // Default viewport setup, in case onInitialize wants to render
-        this._resizeCanvasDrawingBuffer();
-        this._resizeViewport();
-
-        // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this.onInitialize(this.animationProps);
-      })
-      .then(appContext => {
-        if (!this._stopped) {
-          this._addCallbackData(appContext || {});
-          if (appContext !== false && !this._animationFrameId) {
-            this._animationFrameId = requestAnimationFrame(this._renderFrame);
+        .then(() => {
+          if (this._stopped) {
+            return null;
           }
-        }
-      });
 
+          // Create the WebGL context
+          this._createWebGLContext(opts);
+          this._createFramebuffer();
+          this._startEventHandling();
+
+          // Initialize the callback data
+          this._initializeCallbackData();
+          this._updateCallbackData();
+
+          // Default viewport setup, in case onInitialize wants to render
+          this._resizeCanvasDrawingBuffer();
+          this._resizeViewport();
+
+          // Note: onIntialize can return a promise (in case it needs to load resources)
+          return this.onInitialize(this.animationProps);
+        })
+        .then(appContext => {
+          if (!this._stopped) {
+            this._addCallbackData(appContext || {});
+            if (appContext !== false && !this._animationFrameId) {
+              this._animationFrameId = requestAnimationFrame(this._renderFrame);
+            }
+          }
+        });
     }
     return this;
   }
@@ -252,13 +249,12 @@ export default class AnimationLoop {
       // Experimental
       _loop: this,
       _animationLoop: this,
-      _mousePosition: null      // Event props
+      _mousePosition: null // Event props
     };
   }
 
   // Update the context object that will be passed to app callbacks
   _updateCallbackData() {
-
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
@@ -275,7 +271,7 @@ export default class AnimationLoop {
 
     // Increment tick
     this.animationProps.time = Date.now() - this.animationProps.startTime;
-    this.animationProps.tick = Math.floor(this.animationProps.time / 1000 * 60);
+    this.animationProps.tick = Math.floor((this.animationProps.time / 1000) * 60);
     this.animationProps.tock++;
 
     // experimental
@@ -297,7 +293,10 @@ export default class AnimationLoop {
 
   // Either uses supplied or existing context, or calls provided callback to create one
   _createWebGLContext(opts) {
-    this.offScreen = opts.canvas && typeof OffscreenCanvas !== 'undefined' && opts.canvas instanceof OffscreenCanvas;
+    this.offScreen =
+      opts.canvas &&
+      typeof OffscreenCanvas !== 'undefined' &&
+      opts.canvas instanceof OffscreenCanvas;
 
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);

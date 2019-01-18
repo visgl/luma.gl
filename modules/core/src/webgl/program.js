@@ -17,10 +17,9 @@ import assert from '../utils/assert';
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 // const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
-const GL_SEPARATE_ATTRIBS = 0x8C8D;
+const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
 export default class Program extends Resource {
-
   constructor(gl, opts = {}) {
     super(gl, opts);
 
@@ -57,12 +56,10 @@ export default class Program extends Resource {
   initialize(props = {}) {
     const {vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
     // Create shaders if needed
-    this.vs = typeof vs === 'string' ?
-      new VertexShader(this.gl, {id: `${props.id}-vs`, source: vs}) :
-      vs;
-    this.fs = typeof fs === 'string' ?
-      new FragmentShader(this.gl, {id: `${props.id}-fs`, source: fs}) :
-      fs;
+    this.vs =
+      typeof vs === 'string' ? new VertexShader(this.gl, {id: `${props.id}-vs`, source: vs}) : vs;
+    this.fs =
+      typeof fs === 'string' ? new FragmentShader(this.gl, {id: `${props.id}-fs`, source: fs}) : fs;
     assert(this.vs instanceof VertexShader);
     assert(this.fs instanceof FragmentShader);
 
@@ -139,7 +136,6 @@ export default class Program extends Resource {
     assert(vertexArray);
 
     vertexArray.bindForDraw(vertexCount, instanceCount, () => {
-
       if (uniforms) {
         log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)');
         this.setUniforms(uniforms, samplers);
@@ -156,27 +152,24 @@ export default class Program extends Resource {
         transformFeedback.begin(primitiveMode);
       }
 
-      withParameters(this.gl, parameters,
-        () => {
-          // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-          if (isIndexed && isInstanced) {
-            this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-          } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-            this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-          } else if (isIndexed) {
-            this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-          } else if (isInstanced) {
-            this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-          } else {
-            this.gl.drawArrays(drawMode, offset, vertexCount);
-          }
+      withParameters(this.gl, parameters, () => {
+        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+        if (isIndexed && isInstanced) {
+          this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+        } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+          this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+        } else if (isIndexed) {
+          this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+        } else if (isInstanced) {
+          this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+        } else {
+          this.gl.drawArrays(drawMode, offset, vertexCount);
         }
-      );
+      });
 
       if (transformFeedback) {
         transformFeedback.end();
       }
-
     });
 
     return this;
@@ -291,13 +284,13 @@ export default class Program extends Resource {
     for (const shaderHandle of shaderHandles) {
       const type = this.gl.getShaderParameter(this.handle, GL.SHADER_TYPE);
       switch (type) {
-      case GL.VERTEX_SHADER:
-        opts.vs = new VertexShader({handle: shaderHandle});
-        break;
-      case GL.FRAGMENT_SHADER:
-        opts.fs = new FragmentShader({handle: shaderHandle});
-        break;
-      default:
+        case GL.VERTEX_SHADER:
+          opts.vs = new VertexShader({handle: shaderHandle});
+          break;
+        case GL.FRAGMENT_SHADER:
+          opts.fs = new FragmentShader({handle: shaderHandle});
+          break;
+        default:
       }
     }
     return opts;
@@ -357,8 +350,7 @@ export default class Program extends Resource {
   }
 
   // stub for shader chache, should reset uniforms to default valiues
-  reset() {
-  }
+  reset() {}
 
   // TO BE REMOVED in v7?
 

@@ -59,7 +59,5 @@ export default {
   uniforms,
   fs,
 
-  passes: [
-    {sampler: true}
-  ]
+  passes: [{sampler: true}]
 };

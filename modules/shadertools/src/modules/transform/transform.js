@@ -1,4 +1,3 @@
-
 // Private shader module used by `Transform`
 
 const vs = `\

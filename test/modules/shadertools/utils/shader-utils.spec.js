@@ -42,8 +42,11 @@ test('shader-utils#getQualifierDetails', t => {
   QUALIFIER_TEST_CASES.forEach(testCase => {
     const {line, qualifiers, expected} = testCase;
     const result = getQualifierDetails(line, qualifiers);
-    t.deepEqual(result, expected,
-      `getQualifierDetails should return valid values when line=${line}`);
+    t.deepEqual(
+      result,
+      expected,
+      `getQualifierDetails should return valid values when line=${line}`
+    );
   });
   t.end();
 });
@@ -78,8 +81,11 @@ void main() {
   PASSTHROUGH_TEST_CASES.forEach(testCase => {
     const {version, input, inputType, output, expected} = testCase;
     const result = getPassthroughFS({version, input, inputType, output});
-    t.equal(result, expected,
-      `Passthrough shader should match when version=${version} type=${inputType}`);
+    t.equal(
+      result,
+      expected,
+      `Passthrough shader should match when version=${version} type=${inputType}`
+    );
   });
   t.end();
 });
@@ -101,12 +107,21 @@ test('shader-utils#typeToChannelCount', t => {
 });
 
 test('shader-utils#convertToVec4', t => {
-  t.equal(convertToVec4('one', 'float'), 'vec4(one, 0.0, 0.0, 1.0)',
-    'convertToVec4 should return right value for float');
-  t.equal(convertToVec4('one', 'vec2'), 'vec4(one, 0.0, 1.0)',
-    'convertToVec4 should return right value for vec2');
-  t.equal(convertToVec4('one', 'vec3'), 'vec4(one, 1.0)',
-    'convertToVec4 should return right value for vec3');
+  t.equal(
+    convertToVec4('one', 'float'),
+    'vec4(one, 0.0, 0.0, 1.0)',
+    'convertToVec4 should return right value for float'
+  );
+  t.equal(
+    convertToVec4('one', 'vec2'),
+    'vec4(one, 0.0, 1.0)',
+    'convertToVec4 should return right value for vec2'
+  );
+  t.equal(
+    convertToVec4('one', 'vec3'),
+    'vec4(one, 1.0)',
+    'convertToVec4 should return right value for vec3'
+  );
   t.equal(convertToVec4('one', 'vec4'), 'one', 'convertToVec4 should return right value for vec4');
   t.end();
 });

@@ -3,8 +3,8 @@ import {Vector3} from 'math.gl';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 
-const ICO_POSITIONS = [-1,0,0, 0,1,0, 0,0,-1, 0,0,1, 0,-1,0, 1,0,0];
-const ICO_INDICES = [3,4,5,3,5,1,3,1,0,3,0,4,4,0,2,4,2,5,2,0,1,5,2,1];
+const ICO_POSITIONS = [-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, -1, 0, 1, 0, 0];
+const ICO_INDICES = [3, 4, 5, 3, 5, 1, 3, 1, 0, 3, 0, 4, 4, 0, 2, 4, 2, 5, 2, 0, 1, 5, 2, 1];
 
 export default class IcoSphereGeometry extends Geometry {
   constructor(opts = {}) {
@@ -50,7 +50,7 @@ export default class IcoSphereGeometry extends Geometry {
 
         positions.push(xm, ym, zm);
 
-        return (pointMemo[key] = (positions.length / 3 - 1));
+        return (pointMemo[key] = positions.length / 3 - 1);
       };
     })();
 
@@ -61,11 +61,7 @@ export default class IcoSphereGeometry extends Geometry {
         const b = getMiddlePoint(indices[j + 1], indices[j + 2]);
         const c = getMiddlePoint(indices[j + 2], indices[j + 0]);
 
-        indices2.push(
-          c, indices[j + 0], a,
-          a, indices[j + 1], b,
-          b, indices[j + 2], c,
-          a, b, c);
+        indices2.push(c, indices[j + 0], a, a, indices[j + 1], b, b, indices[j + 2], c, a, b, c);
       }
       indices = indices2;
     }
@@ -106,29 +102,18 @@ export default class IcoSphereGeometry extends Geometry {
       const phi3 = Math.atan2(y3, x3) + PI;
       const v3 = theta3 / PI;
       const u3 = 1 - phi3 / PI2;
-      const vec1 = [
-        x3 - x2,
-        y3 - y2,
-        z3 - z2
-      ];
-      const vec2 = [
-        x1 - x2,
-        y1 - y2,
-        z1 - z2
-      ];
+      const vec1 = [x3 - x2, y3 - y2, z3 - z2];
+      const vec2 = [x1 - x2, y1 - y2, z1 - z2];
       const normal = new Vector3(vec1).cross(vec2).normalize();
       let newIndex;
 
-      if ((u1 === 0 || u2 === 0 || u3 === 0) &&
-          (u1 === 0 || u1 > 0.5) &&
-            (u2 === 0 || u2 > 0.5) &&
-              (u3 === 0 || u3 > 0.5)) {
-
-        positions.push(
-          positions[in1 + 0],
-          positions[in1 + 1],
-          positions[in1 + 2]
-        );
+      if (
+        (u1 === 0 || u2 === 0 || u3 === 0) &&
+        (u1 === 0 || u1 > 0.5) &&
+        (u2 === 0 || u2 > 0.5) &&
+        (u3 === 0 || u3 > 0.5)
+      ) {
+        positions.push(positions[in1 + 0], positions[in1 + 1], positions[in1 + 2]);
         newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
@@ -137,11 +122,7 @@ export default class IcoSphereGeometry extends Geometry {
         normals[newIndex * 3 + 1] = normal.y;
         normals[newIndex * 3 + 2] = normal.z;
 
-        positions.push(
-          positions[in2 + 0],
-          positions[in2 + 1],
-          positions[in2 + 2]
-        );
+        positions.push(positions[in2 + 0], positions[in2 + 1], positions[in2 + 2]);
         newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
@@ -150,11 +131,7 @@ export default class IcoSphereGeometry extends Geometry {
         normals[newIndex * 3 + 1] = normal.y;
         normals[newIndex * 3 + 2] = normal.z;
 
-        positions.push(
-          positions[in3 + 0],
-          positions[in3 + 1],
-          positions[in3 + 2]
-        );
+        positions.push(positions[in3 + 0], positions[in3 + 1], positions[in3 + 2]);
         newIndex = positions.length / 3 - 1;
         indices.push(newIndex);
         texCoords[newIndex * 2 + 0] = 1;
@@ -178,13 +155,15 @@ export default class IcoSphereGeometry extends Geometry {
       texCoords[iu3 + 1] = v3;
     }
 
-    super(Object.assign({}, opts, {
-      attributes: {
-        positions: new Float32Array(positions),
-        normals: new Float32Array(normals),
-        texCoords: new Float32Array(texCoords),
-        indices: new Uint16Array(indices)
-      }
-    }));
+    super(
+      Object.assign({}, opts, {
+        attributes: {
+          positions: new Float32Array(positions),
+          normals: new Float32Array(normals),
+          texCoords: new Float32Array(texCoords),
+          indices: new Uint16Array(indices)
+        }
+      })
+    );
   }
 }

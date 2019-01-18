@@ -78,7 +78,6 @@ const Image = getImage();
 // Export the standard WebGL types
 export {
   Image,
-
   WebGLRenderingContext,
   WebGLProgram,
   WebGLShader,
@@ -89,6 +88,5 @@ export {
   WebGLUniformLocation,
   WebGLActiveInfo,
   WebGLShaderPrecisionFormat,
-
   WebGL2RenderingContext
 };

@@ -19,7 +19,8 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
   if (sourceCount > 0 || targetTextureVarying) {
     const vsLines = updatedVs.split('\n');
     const updateVsLines = vsLines.slice();
-    vsLines.forEach((line, index, lines) => { // TODO add early exit
+    vsLines.forEach((line, index, lines) => {
+      // TODO add early exit
       if (sourceCount > 0) {
         const updated = processAttributeDefinition(line, sourceTextureMap);
         if (updated) {
@@ -61,7 +62,7 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
     inject: finalInject,
     // map of sampler name to texture name, can be used to set attributes
     // usefull when swapping textures, as source and destination texture change when swap is called.
-    samplerTextureMap,
+    samplerTextureMap
   };
 }
 
@@ -76,7 +77,7 @@ export function getSizeUniforms({sourceTextureMap, targetTextureVarying, targetT
   }
   for (const textureName in sourceTextureMap) {
     ({width, height} = sourceTextureMap[textureName]);
-    uniforms[`${SIZE_UNIFORM_PREFIX}${textureName}`] =  [width, height];
+    uniforms[`${SIZE_UNIFORM_PREFIX}${textureName}`] = [width, height];
   }
   return uniforms;
 }
@@ -117,8 +118,7 @@ export function processAttributeDefinition(line, textureMap) {
     const {samplerName, sizeName, uniformDeclerations} = getSamplerDeclerations(name);
 
     const channels = typeToChannelSuffix(type);
-    const sampleInstruction =
-      `  ${type} ${name} = transform_getInput(${samplerName}, ${sizeName}).${channels};\n`;
+    const sampleInstruction = `  ${type} ${name} = transform_getInput(${samplerName}, ${sizeName}).${channels};\n`;
 
     samplerTextureMap[samplerName] = name;
     const inject = {

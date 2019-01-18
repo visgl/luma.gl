@@ -2,7 +2,6 @@ import Geometry from './geometry';
 import {uid} from '../utils';
 
 export default class PlaneGeometry extends Geometry {
-
   // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
   // copyright 2011 Google Inc. new BSD License
   // (http://www.opensource.org/licenses/bsd-license.php).
@@ -44,38 +43,38 @@ export default class PlaneGeometry extends Geometry {
         texCoords[i2 + 1] = v;
 
         switch (type) {
-        case 'x,y':
-          positions[i3 + 0] = c1len * u - c1len * 0.5;
-          positions[i3 + 1] = c2len * v - c2len * 0.5;
-          positions[i3 + 2] = offset;
+          case 'x,y':
+            positions[i3 + 0] = c1len * u - c1len * 0.5;
+            positions[i3 + 1] = c2len * v - c2len * 0.5;
+            positions[i3 + 2] = offset;
 
-          normals[i3 + 0] = 0;
-          normals[i3 + 1] = 0;
-          normals[i3 + 2] = flipCull ? 1 : -1;
-          break;
+            normals[i3 + 0] = 0;
+            normals[i3 + 1] = 0;
+            normals[i3 + 2] = flipCull ? 1 : -1;
+            break;
 
-        case 'x,z':
-          positions[i3 + 0] = c1len * u - c1len * 0.5;
-          positions[i3 + 1] = offset;
-          positions[i3 + 2] = c2len * v - c2len * 0.5;
+          case 'x,z':
+            positions[i3 + 0] = c1len * u - c1len * 0.5;
+            positions[i3 + 1] = offset;
+            positions[i3 + 2] = c2len * v - c2len * 0.5;
 
-          normals[i3 + 0] = 0;
-          normals[i3 + 1] = flipCull ? 1 : -1;
-          normals[i3 + 2] = 0;
-          break;
+            normals[i3 + 0] = 0;
+            normals[i3 + 1] = flipCull ? 1 : -1;
+            normals[i3 + 2] = 0;
+            break;
 
-        case 'y,z':
-          positions[i3 + 0] = offset;
-          positions[i3 + 1] = c1len * u - c1len * 0.5;
-          positions[i3 + 2] = c2len * v - c2len * 0.5;
+          case 'y,z':
+            positions[i3 + 0] = offset;
+            positions[i3 + 1] = c1len * u - c1len * 0.5;
+            positions[i3 + 2] = c2len * v - c2len * 0.5;
 
-          normals[i3 + 0] = flipCull ? 1 : -1;
-          normals[i3 + 1] = 0;
-          normals[i3 + 2] = 0;
-          break;
+            normals[i3 + 0] = flipCull ? 1 : -1;
+            normals[i3 + 1] = 0;
+            normals[i3 + 2] = 0;
+            break;
 
-        default:
-          break;
+          default:
+            break;
         }
 
         i2 += 2;

@@ -6,10 +6,7 @@ import assert from '../utils/assert';
  * Installs a spy on Canvas.getContext
  * calls the provided callback with the {context}
  */
-export function trackContextCreation({
-  onContextCreate = () => null,
-  onContextCreated = () => {}
-}) {
+export function trackContextCreation({onContextCreate = () => null, onContextCreated = () => {}}) {
   assert(onContextCreate || onContextCreated);
   if (typeof HTMLCanvasElement !== 'undefined') {
     const getContext = HTMLCanvasElement.prototype.getContext;

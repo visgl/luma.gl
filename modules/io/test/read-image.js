@@ -10,8 +10,7 @@ iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVQIW2P8z\
 const DATA_URL = `data:image/png;base64,${PNG_BITS}`;
 
 test('io#read-image', t => {
-  loadImage(DATA_URL)
-  .then(image => {
+  loadImage(DATA_URL).then(image => {
     t.equals(image.width, 2, 'width');
     t.equals(image.height, 2, 'height');
     t.end();

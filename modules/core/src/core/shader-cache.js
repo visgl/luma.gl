@@ -3,7 +3,6 @@ import Program from '../webgl/program';
 import assert from '../utils/assert';
 
 export default class ShaderCache {
-
   /**
    * A cache of compiled shaders, keyed by shader source strings.
    * Compilation of long shaders can be time consuming.
@@ -107,10 +106,13 @@ export default class ShaderCache {
     const {vs, fs} = opts;
     const vertexShader = this.getVertexShader(gl, vs);
     const fragmentShader = this.getFragmentShader(gl, fs);
-    return new Program(this.gl, Object.assign({}, opts, {
-      vs: vertexShader,
-      fs: fragmentShader
-    }));
+    return new Program(
+      this.gl,
+      Object.assign({}, opts, {
+        vs: vertexShader,
+        fs: fragmentShader
+      })
+    );
   }
 
   _resetProgram(program, opts) {

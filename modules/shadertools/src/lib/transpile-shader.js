@@ -3,12 +3,12 @@
 // RFC: https://github.com/uber/luma.gl/blob/master/dev-docs/RFCs/v6.0/portable-glsl-300-rfc.md
 export default function transpileShader(source, targetGLSLVersion, isVertex) {
   switch (targetGLSLVersion) {
-  case 300:
-    return isVertex ? convertVertexShaderTo300(source) : convertFragmentShaderTo300(source);
-  case 100:
-    return isVertex ? convertVertexShaderTo100(source) : convertFragmentShaderTo100(source);
-  default:
-    throw new Error(`unknown GLSL version ${targetGLSLVersion}`);
+    case 300:
+      return isVertex ? convertVertexShaderTo300(source) : convertFragmentShaderTo300(source);
+    case 100:
+      return isVertex ? convertVertexShaderTo100(source) : convertFragmentShaderTo100(source);
+    default:
+      throw new Error(`unknown GLSL version ${targetGLSLVersion}`);
   }
 }
 
@@ -19,8 +19,8 @@ function convertVertexShaderTo300(source) {
     .replace(/texture2D\(/g, 'texture(')
     .replace(/textureCube\(+/g, 'texture(');
 
-    // Deal with fragColor
-    // .replace(/gl_fragColor/g, 'fragColor ');
+  // Deal with fragColor
+  // .replace(/gl_fragColor/g, 'fragColor ');
 }
 
 function convertFragmentShaderTo300(source) {
@@ -29,8 +29,8 @@ function convertFragmentShaderTo300(source) {
     .replace(/texture2D\(/g, 'texture(')
     .replace(/textureCube\(/g, 'texture(');
 
-    // Deal with fragColor
-    // .replace(/gl_fragColor/g, 'fragColor ');
+  // Deal with fragColor
+  // .replace(/gl_fragColor/g, 'fragColor ');
 }
 
 function convertVertexShaderTo100(source) {
@@ -43,10 +43,8 @@ function convertVertexShaderTo100(source) {
 
 function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
-  return source
-    .replace(/^in\s+/gm, 'varying ')
-    .replace(/texture\(/g, 'texture2D(');
+  return source.replace(/^in\s+/gm, 'varying ').replace(/texture\(/g, 'texture2D(');
 
-    // Deal with fragColor
-    // .replace(/^out\s+/g, 'varying ')
+  // Deal with fragColor
+  // .replace(/^out\s+/g, 'varying ')
 }

@@ -26,8 +26,7 @@ const EXT_disjoint_timer_query = 'EXT_disjoint_timer_query';
 const EXT_disjoint_timer_query_webgl2 = 'EXT_disjoint_timer_query_webgl2';
 const EXT_texture_filter_anisotropic = 'EXT_texture_filter_anisotropic';
 
-const ERR_VAO_NOT_SUPPORTED =
-  'VertexArray requires WebGL2 or OES_vertex_array_object extension';
+const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_object extension';
 
 // Return true if WebGL2 context
 function isWebGL2(gl) {
@@ -53,7 +52,9 @@ const WEBGL_CONTEXT_POLYFILLS = {
   [OES_vertex_array_object]: {
     meta: {suffix: 'OES'},
     // NEW METHODS
-    createVertexArray: () => { assert(false, ERR_VAO_NOT_SUPPORTED); },
+    createVertexArray: () => {
+      assert(false, ERR_VAO_NOT_SUPPORTED);
+    },
     deleteVertexArray: () => {},
     bindVertexArray: () => {},
     isVertexArray: () => false
@@ -76,18 +77,30 @@ const WEBGL_CONTEXT_POLYFILLS = {
     meta: {
       suffix: 'WEBGL'
     },
-    drawBuffers: () => { assert(false); }
+    drawBuffers: () => {
+      assert(false);
+    }
   },
   [EXT_disjoint_timer_query]: {
     meta: {suffix: 'EXT'},
     // WebGL1: Polyfills the WebGL2 Query API
-    createQuery: () => { assert(false); },
-    deleteQuery: () => { assert(false); },
-    beginQuery: () => { assert(false); },
+    createQuery: () => {
+      assert(false);
+    },
+    deleteQuery: () => {
+      assert(false);
+    },
+    beginQuery: () => {
+      assert(false);
+    },
     endQuery: () => {},
-    getQuery(handle, pname) { return this.getQueryObject(handle, pname); },
+    getQuery(handle, pname) {
+      return this.getQueryObject(handle, pname);
+    },
     // The WebGL1 extension uses getQueryObject rather then getQueryParameter
-    getQueryParameter(handle, pname) { return this.getQueryObject(handle, pname); },
+    getQueryParameter(handle, pname) {
+      return this.getQueryObject(handle, pname);
+    },
     // plus the additional `queryCounter` method
     queryCounter: () => {},
     getQueryObject: () => {}
@@ -115,11 +128,15 @@ const WEBGL_CONTEXT_POLYFILLS = {
 
       let result;
       switch (pname) {
-      // WebGL1 attributes will never be integer
-      case GL.VERTEX_ATTRIB_ARRAY_INTEGER: result = !webgl2 ? false : undefined; break;
+        // WebGL1 attributes will never be integer
+        case GL.VERTEX_ATTRIB_ARRAY_INTEGER:
+          result = !webgl2 ? false : undefined;
+          break;
         // if instancing is not available, return 0 meaning divisor has not been set
-      case GL.VERTEX_ATTRIB_ARRAY_DIVISOR: result = !webgl2 && !ext ? 0 : undefined; break;
-      default:
+        case GL.VERTEX_ATTRIB_ARRAY_DIVISOR:
+          result = !webgl2 && !ext ? 0 : undefined;
+          break;
+        default:
       }
 
       return result !== undefined ? result : originalFunc(location, pname);
@@ -128,10 +145,13 @@ const WEBGL_CONTEXT_POLYFILLS = {
     getProgramParameter: (gl, originalFunc, program, pname) => {
       if (!isWebGL2(gl)) {
         switch (pname) {
-        case GL.TRANSFORM_FEEDBACK_BUFFER_MODE: return GL.SEPARATE_ATTRIBS;
-        case GL.TRANSFORM_FEEDBACK_VARYINGS: return 0;
-        case GL.ACTIVE_UNIFORM_BLOCKS: return 0;
-        default:
+          case GL.TRANSFORM_FEEDBACK_BUFFER_MODE:
+            return GL.SEPARATE_ATTRIBS;
+          case GL.TRANSFORM_FEEDBACK_VARYINGS:
+            return 0;
+          case GL.ACTIVE_UNIFORM_BLOCKS:
+            return 0;
+          default:
         }
       }
       return originalFunc(program, pname);
@@ -139,21 +159,21 @@ const WEBGL_CONTEXT_POLYFILLS = {
     getInternalformatParameter: (gl, originalFunc, target, format, pname) => {
       if (!isWebGL2(gl)) {
         switch (pname) {
-        case GL.SAMPLES:
-          return new Int32Array([0]);
-        default:
+          case GL.SAMPLES:
+            return new Int32Array([0]);
+          default:
         }
       }
       return gl.getInternalformatParameter(target, format, pname);
     },
     getTexParameter(gl, originalFunc, target, pname) {
       switch (pname) {
-      case GL.TEXTURE_MAX_ANISOTROPY_EXT:
-        const {extensions} = gl.luma;
-        const ext = extensions[EXT_texture_filter_anisotropic];
-        pname = (ext && ext.TEXTURE_MAX_ANISOTROPY_EXT) || GL.TEXTURE_MAX_ANISOTROPY_EXT;
-        break;
-      default:
+        case GL.TEXTURE_MAX_ANISOTROPY_EXT:
+          const {extensions} = gl.luma;
+          const ext = extensions[EXT_texture_filter_anisotropic];
+          pname = (ext && ext.TEXTURE_MAX_ANISOTROPY_EXT) || GL.TEXTURE_MAX_ANISOTROPY_EXT;
+          break;
+        default:
       }
       return originalFunc(target, pname);
     },

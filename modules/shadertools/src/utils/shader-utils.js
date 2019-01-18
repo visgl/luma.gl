@@ -8,11 +8,7 @@ export function getQualifierDetails(line, qualifiers) {
   const words = line.replace(/^\s+/, '').split(/\s+/);
   // TODO add support for precession qualifiers (highp, mediump and lowp)
   const [qualifier, type, definition] = words;
-  if (
-    !qualifiers.includes(qualifier) ||
-    !type ||
-    !definition
-  ) {
+  if (!qualifiers.includes(qualifier) || !type || !definition) {
     return null;
   }
   const name = definition.split(';')[0];
@@ -46,38 +42,50 @@ void main() {
 // convert glsl type to suffix
 export function typeToChannelSuffix(type) {
   switch (type) {
-  case 'float': return 'x';
-  case 'vec2': return 'xy';
-  case 'vec3': return 'xyz';
-  case 'vec4': return 'xyzw';
-  default :
-    assert(false);
-    return null;
+    case 'float':
+      return 'x';
+    case 'vec2':
+      return 'xy';
+    case 'vec3':
+      return 'xyz';
+    case 'vec4':
+      return 'xyzw';
+    default:
+      assert(false);
+      return null;
   }
 }
 
 // convert glsl type to channel count
 export function typeToChannelCount(type) {
   switch (type) {
-  case 'float': return 1;
-  case 'vec2': return 2;
-  case 'vec3': return 3;
-  case 'vec4': return 4;
-  default :
-    assert(false);
-    return null;
+    case 'float':
+      return 1;
+    case 'vec2':
+      return 2;
+    case 'vec3':
+      return 3;
+    case 'vec4':
+      return 4;
+    default:
+      assert(false);
+      return null;
   }
 }
 
 // Returns glsl instruction for converting to vec4
 export function convertToVec4(variable, type) {
   switch (type) {
-  case 'float': return `vec4(${variable}, 0.0, 0.0, 1.0)`;
-  case 'vec2': return `vec4(${variable}, 0.0, 1.0)`;
-  case 'vec3': return `vec4(${variable}, 1.0)`;
-  case 'vec4': return variable;
-  default :
-    assert(false);
-    return null;
+    case 'float':
+      return `vec4(${variable}, 0.0, 0.0, 1.0)`;
+    case 'vec2':
+      return `vec4(${variable}, 0.0, 1.0)`;
+    case 'vec3':
+      return `vec4(${variable}, 1.0)`;
+    case 'vec4':
+      return variable;
+    default:
+      assert(false);
+      return null;
   }
 }

@@ -4,7 +4,6 @@ import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import Resource from './resource';
 
 export default class Sampler extends Resource {
-
   static isSupported(gl) {
     return isWebGL2(gl);
   }
@@ -46,13 +45,13 @@ export default class Sampler extends Resource {
     // the WebGL committe expose two parameter setting functions in JavaScript.
     // For now, pick the float version for parameters specified as GLfloat.
     switch (pname) {
-    case GL.TEXTURE_MIN_LOD:
-    case GL.TEXTURE_MAX_LOD:
-      this.gl.samplerParameterf(this.handle, pname, param);
-      break;
-    default:
-      this.gl.samplerParameteri(this.handle, pname, param);
-      break;
+      case GL.TEXTURE_MIN_LOD:
+      case GL.TEXTURE_MAX_LOD:
+        this.gl.samplerParameterf(this.handle, pname, param);
+        break;
+      default:
+        this.gl.samplerParameteri(this.handle, pname, param);
+        break;
     }
     return this;
   }

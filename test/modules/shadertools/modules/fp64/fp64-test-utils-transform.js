@@ -109,13 +109,19 @@ export function runTests(gl, {glslFunc, binary, op, limit = 256, testCases, t}) 
   }
 
   const {a, b, a_fp64, b_fp64, expected_fp64, transform} = setupFloatTest(gl, {
-    glslFunc, binary, op, limit, testCases
+    glslFunc,
+    binary,
+    op,
+    limit,
+    testCases
   });
   transform.run({uniforms: {ONE: 1}});
   const gpu_result = transform.getBuffer('result').getData();
   for (let idx = 0; idx < testCases.length; idx++) {
     const relativeError = getRelativeError64(gpu_result, expected_fp64, 2 * idx);
-    const args = binary ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})` : `(${a[idx].toPrecision(2)})`;
+    const args = binary
+      ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
+      : `(${a[idx].toPrecision(2)})`;
     const message = `${glslFunc}${args}: error=${relativeError}, within ${EPSILON}`;
     t.ok(relativeError < EPSILON, message);
     if (relativeError >= EPSILON) {

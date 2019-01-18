@@ -18,15 +18,19 @@ import GL from '@luma.gl/constants';
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
 export default class Framebuffer extends Resource {
-
-  static isSupported(gl, {
-    colorBufferFloat,    // Whether floating point textures can be rendered and read
-    colorBufferHalfFloat // Whether half float textures can be rendered and read
-  } = {}) {
+  static isSupported(
+    gl,
+    {
+      colorBufferFloat, // Whether floating point textures can be rendered and read
+      colorBufferHalfFloat // Whether half float textures can be rendered and read
+    } = {}
+  ) {
     let supported = true;
-    supported = colorBufferFloat &&
+    supported =
+      colorBufferFloat &&
       gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'WEBGL.color_buffer_float');
-    supported = colorBufferHalfFloat &&
+    supported =
+      colorBufferHalfFloat &&
       gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'EXT_color_buffer_half_float');
     return supported;
   }
@@ -34,11 +38,13 @@ export default class Framebuffer extends Resource {
   // Create a Framebuffer wrapper for the default framebuffer (target === null)
   static getDefaultFramebuffer(gl) {
     gl.luma = gl.luma || {};
-    gl.luma.defaultFramebuffer = gl.luma.defaultFramebuffer || new Framebuffer(gl, {
-      id: 'default-framebuffer',
-      handle: null,
-      attachments: {}
-    });
+    gl.luma.defaultFramebuffer =
+      gl.luma.defaultFramebuffer ||
+      new Framebuffer(gl, {
+        id: 'default-framebuffer',
+        handle: null,
+        attachments: {}
+      });
     // TODO - can we query for and get a handle to the GL.FRONT renderbuffer?
     return gl.luma.defaultFramebuffer;
   }
@@ -74,13 +80,17 @@ export default class Framebuffer extends Resource {
   }
 
   get depth() {
-    return this.attachments[GL.DEPTH_ATTACHMENT] ||
-      this.attachments[GL.DEPTH_STENCIL_ATTACHMENT] || null;
+    return (
+      this.attachments[GL.DEPTH_ATTACHMENT] || this.attachments[GL.DEPTH_STENCIL_ATTACHMENT] || null
+    );
   }
 
   get stencil() {
-    return this.attachments[GL.STENCIL_ATTACHMENT] ||
-      this.attachments[GL.DEPTH_STENCIL_ATTACHMENT] || null;
+    return (
+      this.attachments[GL.STENCIL_ATTACHMENT] ||
+      this.attachments[GL.DEPTH_STENCIL_ATTACHMENT] ||
+      null
+    );
   }
 
   initialize({
@@ -219,9 +229,11 @@ export default class Framebuffer extends Resource {
 
     // Assign to attachments and remove any nulls to get a clean attachment map
     Object.assign(this.attachments, attachments);
-    Object.keys(this.attachments).filter(key => !this.attachments[key]).forEach(key => {
-      delete this.attachments[key];
-    });
+    Object.keys(this.attachments)
+      .filter(key => !this.attachments[key])
+      .forEach(key => {
+        delete this.attachments[key];
+      });
   }
 
   checkStatus() {
@@ -235,12 +247,7 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  clear({
-    color,
-    depth,
-    stencil,
-    drawBuffers = []
-  } = {}) {
+  clear({color, depth, stencil, drawBuffers = []} = {}) {
     // Bind framebuffer and delegate to global clear functions
     const prevHandle = this.gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
 
@@ -262,20 +269,26 @@ export default class Framebuffer extends Resource {
   // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
   //  newly allocated by this method unless provided by app.
   readPixels(opts = {}) {
-    log.error('Framebuffer.readPixels() is no logner supported, use readPixelsToArray(framebuffer)')();
+    log.error(
+      'Framebuffer.readPixels() is no logner supported, use readPixelsToArray(framebuffer)'
+    )();
     return null;
   }
 
   // Reads data into provided buffer object asynchronously
   // This function doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
   readPixelsToBuffer(opts = {}) {
-    log.error('Framebuffer.readPixelsToBuffer()is no logner supported, use readPixelsToBuffer(framebuffer)')();
+    log.error(
+      'Framebuffer.readPixelsToBuffer()is no logner supported, use readPixelsToBuffer(framebuffer)'
+    )();
     return null;
   }
 
   // Reads pixels as a dataUrl
   copyToDataUrl(opts = {}) {
-    log.error('Framebuffer.copyToDataUrl() is no logner supported, use copyToDataUrl(framebuffer)')();
+    log.error(
+      'Framebuffer.copyToDataUrl() is no logner supported, use copyToDataUrl(framebuffer)'
+    )();
     return null;
   }
 
@@ -299,7 +312,9 @@ export default class Framebuffer extends Resource {
   // NOTE: assumes texture has enough storage allocated
   // eslint-disable-next-line complexity
   copyToTexture(opts = {}) {
-    log.error('Framebuffer.copyToTexture({...}) is no logner supported, use copyToTexture(source, target, opts})')();
+    log.error(
+      'Framebuffer.copyToTexture({...}) is no logner supported, use copyToTexture(source, target, opts})'
+    )();
     return null;
   }
 
@@ -434,33 +449,31 @@ export default class Framebuffer extends Resource {
     if (depth && stencil) {
       // TODO - handle separate stencil
       defaultAttachments = defaultAttachments || {};
-      defaultAttachments[GL.DEPTH_STENCIL_ATTACHMENT] =
-        new Renderbuffer(this.gl, {
-          id: `${this.id}-depth-stencil`,
-          format: GL.DEPTH24_STENCIL8,
-          width,
-          height: 111
-        });
-        // TODO - optional texture
-        // new Texture2D(this.gl, {
-        //   id: `${this.id}-depth-stencil`,
-        //   format: GL.DEPTH24_STENCIL8,
-        //   dataFormat: GL.DEPTH_STENCIL,
-        //   type: GL.UNSIGNED_INT_24_8,
-        //   width,
-        //   height,
-        //   mipmaps: false
-        // });
+      defaultAttachments[GL.DEPTH_STENCIL_ATTACHMENT] = new Renderbuffer(this.gl, {
+        id: `${this.id}-depth-stencil`,
+        format: GL.DEPTH24_STENCIL8,
+        width,
+        height: 111
+      });
+      // TODO - optional texture
+      // new Texture2D(this.gl, {
+      //   id: `${this.id}-depth-stencil`,
+      //   format: GL.DEPTH24_STENCIL8,
+      //   dataFormat: GL.DEPTH_STENCIL,
+      //   type: GL.UNSIGNED_INT_24_8,
+      //   width,
+      //   height,
+      //   mipmaps: false
+      // });
     } else if (depth) {
       // Add a depth buffer if requested and not supplied
       defaultAttachments = defaultAttachments || {};
-      defaultAttachments[GL.DEPTH_ATTACHMENT] =
-        new Renderbuffer(this.gl, {
-          id: `${this.id}-depth`,
-          format: GL.DEPTH_COMPONENT16,
-          width,
-          height
-        });
+      defaultAttachments[GL.DEPTH_ATTACHMENT] = new Renderbuffer(this.gl, {
+        id: `${this.id}-depth`,
+        format: GL.DEPTH_COMPONENT16,
+        width,
+        height
+      });
     } else if (stencil) {
       // TODO - handle separate stencil
       assert(false);
@@ -502,23 +515,23 @@ export default class Framebuffer extends Resource {
     gl.bindTexture(texture.target, texture.handle);
 
     switch (texture.target) {
-    case GL.TEXTURE_2D_ARRAY:
-    case GL.TEXTURE_3D:
-      gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
-      break;
+      case GL.TEXTURE_2D_ARRAY:
+      case GL.TEXTURE_3D:
+        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        break;
 
-    case GL.TEXTURE_CUBE_MAP:
-      // layer must be a cubemap face (or if index, converted to cube map face)
-      const face = mapIndexToCubeMapFace(layer);
-      gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, face, texture.handle, level);
-      break;
+      case GL.TEXTURE_CUBE_MAP:
+        // layer must be a cubemap face (or if index, converted to cube map face)
+        const face = mapIndexToCubeMapFace(layer);
+        gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, face, texture.handle, level);
+        break;
 
-    case GL.TEXTURE_2D:
-      gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, GL.TEXTURE_2D, texture.handle, level);
-      break;
+      case GL.TEXTURE_2D:
+        gl.framebufferTexture2D(GL.FRAMEBUFFER, attachment, GL.TEXTURE_2D, texture.handle, level);
+        break;
 
-    default:
-      assert(false, 'Illegal texture type');
+      default:
+        assert(false, 'Illegal texture type');
     }
 
     gl.bindTexture(texture.target, null);
@@ -531,8 +544,10 @@ export default class Framebuffer extends Resource {
       gl.readBuffer(readBuffer);
     } else {
       // Setting to color attachment 0 is a noop, so allow it in WebGL1
-      assert(readBuffer === GL.COLOR_ATTACHMENT0 || readBuffer === GL.BACK,
-        ERR_MULTIPLE_RENDERTARGETS);
+      assert(
+        readBuffer === GL.COLOR_ATTACHMENT0 || readBuffer === GL.BACK,
+        ERR_MULTIPLE_RENDERTARGETS
+      );
     }
     this.readBuffer = readBuffer;
   }
@@ -547,9 +562,11 @@ export default class Framebuffer extends Resource {
         ext.drawBuffersWEBGL(drawBuffers);
       } else {
         // Setting a single draw buffer to color attachment 0 is a noop, allow in WebGL1
-        assert(drawBuffers.length === 1 &&
-          (drawBuffers[0] === GL.COLOR_ATTACHMENT0 || drawBuffers[0] === GL.BACK),
-          ERR_MULTIPLE_RENDERTARGETS);
+        assert(
+          drawBuffers.length === 1 &&
+            (drawBuffers[0] === GL.COLOR_ATTACHMENT0 || drawBuffers[0] === GL.BACK),
+          ERR_MULTIPLE_RENDERTARGETS
+        );
       }
     }
     this.drawBuffers = drawBuffers;
@@ -563,21 +580,21 @@ export default class Framebuffer extends Resource {
     const caps = getFeatures(this.gl);
 
     switch (pname) {
-    case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
-      return !caps.webgl2 ? 0 : null;
-    case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
-    case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
-      return !caps.webgl2 ? 8 : null;
-    case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
-      return !caps.webgl2 ? GL.UNSIGNED_INT : null;
-    case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-      return !caps.webgl2 && !caps.EXT_sRGB ? GL.LINEAR : null;
-    default:
-      return null;
+      case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
+        return !caps.webgl2 ? 0 : null;
+      case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
+      case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
+      case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
+      case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
+      case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
+      case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
+        return !caps.webgl2 ? 8 : null;
+      case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
+        return !caps.webgl2 ? GL.UNSIGNED_INT : null;
+      case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
+        return !caps.webgl2 && !caps.EXT_sRGB ? GL.LINEAR : null;
+      default:
+        return null;
     }
   }
   /* eslint-enable complexity */

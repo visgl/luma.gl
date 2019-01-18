@@ -7,7 +7,6 @@
 import Pass from './pass';
 
 export default class MaskPass extends Pass {
-
   constructor(gl, props) {
     super(gl, Object.assign({id: 'mask-pass'}, props));
     this.inverse = false;
@@ -41,7 +40,7 @@ export default class MaskPass extends Pass {
     gl.depthMask(true);
 
     // only render where stencil is set to 1
-    gl.stencilFunc(gl.EQUAL, 1, 0xffffffff);  // draw if == 1
+    gl.stencilFunc(gl.EQUAL, 1, 0xffffffff); // draw if == 1
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
   }
 }

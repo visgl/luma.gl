@@ -68,6 +68,5 @@ export default function uniformsBench(suite) {
     })
     .add('Set mat4 uniform from Int32Array', () => {
       program.setUniforms({uPMatrix: projectionMatrixIntTyped});
-    })
-    ;
+    });
 }

@@ -46,11 +46,7 @@ function getMatrix(matrix, inverse, useTextureSpace) {
 
   // Extract a 3x3 matrix out of the arguments
   if (matrix.length == 4) {
-    matrix = [
-      matrix[0], matrix[1], 0,
-      matrix[2], matrix[3], 0,
-      0, 0, 1
-    ];
+    matrix = [matrix[0], matrix[1], 0, matrix[2], matrix[3], 0, 0, 0, 1];
   } else if (matrix.length != 9) {
     throw 'can only warp with 2x2 or 3x3 matrix';
   }
@@ -64,7 +60,5 @@ export default {
   fs,
   dependencies: [warp],
 
-  passes: [
-    {sampler: true}
-  ]
+  passes: [{sampler: true}]
 };

@@ -11,9 +11,4 @@ const window_ = globals.window || globals.self || globals.global;
 const global_ = globals.global || globals.self || globals.window;
 const document_ = globals.document || {};
 
-export {
-  self_ as self,
-  window_ as window,
-  global_ as global,
-  document_ as document
-};
+export {self_ as self, window_ as window, global_ as global, document_ as document};

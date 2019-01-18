@@ -6,19 +6,22 @@ import assert from '../utils/assert';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
-const GL_FRAGMENT_SHADER = 0x8B30;
-const GL_VERTEX_SHADER = 0x8B31;
-const GL_COMPILE_STATUS = 0x8B81;
-const GL_SHADER_TYPE = 0x8B4F;
+const GL_FRAGMENT_SHADER = 0x8b30;
+const GL_VERTEX_SHADER = 0x8b31;
+const GL_COMPILE_STATUS = 0x8b81;
+const GL_SHADER_TYPE = 0x8b4f;
 
 // For now this is an internal class
 export class Shader extends Resource {
-
   static getTypeName(shaderType) {
     switch (shaderType) {
-    case GL_VERTEX_SHADER: return 'vertex-shader';
-    case GL_FRAGMENT_SHADER: return 'fragment-shader';
-    default: assert(false); return 'unknown';
+      case GL_VERTEX_SHADER:
+        return 'vertex-shader';
+      case GL_FRAGMENT_SHADER:
+        return 'fragment-shader';
+      default:
+        assert(false);
+        return 'unknown';
     }
   }
 
@@ -72,9 +75,9 @@ export class Shader extends Resource {
   // Debug method - Returns translated source if available
   getTranslatedSource() {
     const extension = this.gl.getExtension('WEBGL_debug_shaders');
-    return extension ?
-      extension.getTranslatedShaderSource(this.handle) :
-      'No translated source available. WEBGL_debug_shaders not implemented';
+    return extension
+      ? extension.getTranslatedShaderSource(this.handle)
+      : 'No translated source available. WEBGL_debug_shaders not implemented';
   }
 
   // PRIVATE METHODS
@@ -88,8 +91,12 @@ export class Shader extends Resource {
     const compileStatus = this.getParameter(GL_COMPILE_STATUS);
     if (!compileStatus) {
       const infoLog = this.gl.getShaderInfoLog(this.handle);
-      const {shaderName, errors, warnings} =
-        parseGLSLCompilerError(infoLog, this.source, this.shaderType, this.id);
+      const {shaderName, errors, warnings} = parseGLSLCompilerError(
+        infoLog,
+        this.source,
+        this.shaderType,
+        this.id
+      );
       log.error(`GLSL compilation errors in ${shaderName}\n${errors}`)();
       log.warn(`GLSL compilation warnings in ${shaderName}\n${warnings}`)();
       throw new Error(`GLSL compilation errors in ${shaderName}`);

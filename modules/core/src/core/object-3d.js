@@ -3,7 +3,6 @@ import {Vector3, Matrix4} from 'math.gl';
 import assert from '../utils/assert';
 
 export default class Object3D {
-
   constructor({id, display = true}) {
     // whether to display the object at all
     this.id = id || uid(this.constructor.name);
@@ -103,7 +102,6 @@ export default class Object3D {
 
   // TODO - copied code, not yet vetted
   transform() {
-
     if (!this.parent) {
       this.endPosition.set(this.position);
       this.endRotation.set(this.rotation);

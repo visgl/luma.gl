@@ -5,7 +5,6 @@ import Texture from '../webgl/texture';
 import Buffer from './buffer';
 
 export default class Texture3D extends Texture {
-
   static isSupported(gl) {
     return isWebGL2(gl);
   }
@@ -68,16 +67,32 @@ export default class Texture3D extends Texture {
     if (ArrayBuffer.isView(pixels)) {
       this.gl.texImage3D(
         this.target,
-        level, internalformat,
-        width, height, depth, border, format, type, pixels);
+        level,
+        internalformat,
+        width,
+        height,
+        depth,
+        border,
+        format,
+        type,
+        pixels
+      );
       return;
     }
     if (pixels instanceof Buffer) {
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
       this.gl.texImage3D(
         this.target,
-        level, internalformat,
-        width, height, depth, border, format, type, offset);
+        level,
+        internalformat,
+        width,
+        height,
+        depth,
+        border,
+        format,
+        type,
+        offset
+      );
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
     }
   }

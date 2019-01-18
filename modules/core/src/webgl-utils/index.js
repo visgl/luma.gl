@@ -3,7 +3,6 @@ export {
   Image,
   WebGLRenderingContext,
   WebGL2RenderingContext,
-
   WebGLProgram,
   WebGLShader,
   WebGLBuffer,
@@ -13,27 +12,21 @@ export {
   WebGLUniformLocation,
   WebGLActiveInfo,
   WebGLShaderPrecisionFormat,
-
   webGLTypesAvailable
 } from './webgl-types';
 
-export {
-  isWebGL,
-  isWebGL2,
-  assertWebGLContext,
-  assertWebGL2Context
-} from './webgl-checks';
+export {isWebGL, isWebGL2, assertWebGLContext, assertWebGL2Context} from './webgl-checks';
 
-export {
-  requestAnimationFrame,
-  cancelAnimationFrame
-} from './request-animation-frame';
+export {requestAnimationFrame, cancelAnimationFrame} from './request-animation-frame';
 
 export {default as formatGLSLCompilerError, parseGLSLCompilerError} from './format-glsl-error';
 export {default as getShaderName} from './get-shader-name';
 
 export {
-  getGLTypeFromTypedArray, getTypedArrayFromGLType, flipRows, scalePixels
+  getGLTypeFromTypedArray,
+  getTypedArrayFromGLType,
+  flipRows,
+  scalePixels
 } from './typed-array-utils';
 
 export {getKeyValue, getKey, getKeyType} from './constants-to-keys';

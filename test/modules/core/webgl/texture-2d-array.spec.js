@@ -4,7 +4,6 @@ import {Texture2DArray} from 'luma.gl2';
 import {fixture} from 'luma.gl/test/setup';
 
 test('WebGL#Texture2DArray', tt => {
-
   if (!Texture2DArray.isSupported(fixture.gl)) {
     tt.comment('- Texture2DArray not supported, skipping tests');
     tt.end();
@@ -17,7 +16,8 @@ test('WebGL#Texture2DArray', tt => {
     t.throws(
       () => new Texture2DArray(),
       /.*WebGLRenderingContext.*/,
-      'Texture2DArray throws on missing gl context');
+      'Texture2DArray throws on missing gl context'
+    );
 
     const texture = new Texture2DArray(gl2);
     t.ok(texture instanceof Texture2DArray, 'Texture2DArray construction successful');
@@ -42,5 +42,4 @@ test('WebGL#Texture2DArray', tt => {
 
     t.end();
   });
-
 });

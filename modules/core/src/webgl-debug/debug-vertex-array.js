@@ -14,8 +14,7 @@ export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'}
   // Add index (elements) if available
   if (vertexArray.elements) {
     // const elements = Object.assign({size: 1}, vertexArray.elements);
-    table.ELEMENT_ARRAY_BUFFER =
-      getDebugTableRow(vertexArray, vertexArray.elements, null, header);
+    table.ELEMENT_ARRAY_BUFFER = getDebugTableRow(vertexArray, vertexArray.elements, null, header);
   }
 
   // Add used attributes
@@ -29,8 +28,12 @@ export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'}
       if (accessor) {
         rowHeader = `${attributeLocation}: ${getGLSLDeclaration(info.name, accessor)}`;
       }
-      table[rowHeader] =
-        getDebugTableRow(vertexArray, attributes[attributeLocation], accessor, header);
+      table[rowHeader] = getDebugTableRow(
+        vertexArray,
+        attributes[attributeLocation],
+        accessor,
+        header
+      );
     }
   }
 
@@ -101,7 +104,6 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
     [header]: `${formatValue(value, {size, isInteger})} (constant)`,
     'Format ': `${size}x${type} (constant)`
   };
-
 }
 /* eslint-ensable max-statements */
 

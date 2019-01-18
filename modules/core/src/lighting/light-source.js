@@ -24,8 +24,7 @@ export class DirectionalLight extends LightSource {
   }
 }
 
-export class AmbientLight extends LightSource {
-}
+export class AmbientLight extends LightSource {}
 
 export class PointLight extends LightSource {
   constructor(props) {

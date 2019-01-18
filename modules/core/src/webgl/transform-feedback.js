@@ -8,7 +8,6 @@ import {log, isObjectEmpty} from '../utils';
 // See https://github.com/KhronosGroup/WebGL/issues/2346
 
 export default class TransformFeedback extends Resource {
-
   static isSupported(gl) {
     return isWebGL2(gl);
   }
@@ -63,7 +62,7 @@ export default class TransformFeedback extends Resource {
 
   setBuffer(locationOrName, bufferOrParams) {
     const location = this._getVaryingIndex(locationOrName);
-    const {buffer, byteSize, byteOffset} = this._getBufferParams(bufferOrParams)
+    const {buffer, byteSize, byteOffset} = this._getBufferParams(bufferOrParams);
 
     if (location < 0) {
       this.unused[locationOrName] = buffer;
@@ -76,7 +75,6 @@ export default class TransformFeedback extends Resource {
     // Need to avoid chrome bug where buffer that is already bound to a different target
     // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
     if (!this.bindOnUse) {
-
       this._bindBuffer(location, buffer, byteOffset, byteSize);
     }
 
@@ -135,7 +133,7 @@ export default class TransformFeedback extends Resource {
   _bindBuffers() {
     if (this.bindOnUse) {
       for (const bufferIndex in this.buffers) {
-        const {buffer, byteSize, byteOffset} = this._getBufferParams(this.buffers[bufferIndex])
+        const {buffer, byteSize, byteOffset} = this._getBufferParams(this.buffers[bufferIndex]);
         this._bindBuffer(bufferIndex, buffer, byteOffset, byteSize);
       }
     }

@@ -48,6 +48,5 @@ export default function coreLayersBench(suite) {
     })
     .add('Program from cached shaders', () => {
       return new Program(gl, {vs, fs});
-    })
-    ;
+    });
 }

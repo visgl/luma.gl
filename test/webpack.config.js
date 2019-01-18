@@ -84,9 +84,7 @@ const TEST_CONFIG = Object.assign({}, COMMON_CONFIG, {
     alias: Object.assign({}, ALIASES)
   },
 
-  plugins: [
-    new HtmlWebpackPlugin({title: 'luma.gl tests'})
-  ]
+  plugins: [new HtmlWebpackPlugin({title: 'luma.gl tests'})]
 });
 
 // Get first key in an object
@@ -113,17 +111,19 @@ function getDist(env) {
 }
 
 const CONFIGS = {
-  test: env => Object.assign({}, TEST_CONFIG, {
-    plugins: [new HtmlWebpackPlugin()]
-  }),
+  test: env =>
+    Object.assign({}, TEST_CONFIG, {
+      plugins: [new HtmlWebpackPlugin()]
+    }),
 
-  bench: env => Object.assign({}, TEST_CONFIG, {
-    entry: {
-      'test-browser': resolve(__dirname, './bench/browser.js')
-    },
+  bench: env =>
+    Object.assign({}, TEST_CONFIG, {
+      entry: {
+        'test-browser': resolve(__dirname, './bench/browser.js')
+      },
 
-    plugins: [new HtmlWebpackPlugin()]
-  }),
+      plugins: [new HtmlWebpackPlugin()]
+    }),
 
   size: env => {
     const dist = getDist(env);
@@ -137,14 +137,14 @@ const CONFIGS = {
     });
 
     switch (dist) {
-    case 'es6':
-      config.resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
-      break;
-    case 'es5':
-      config.resolve.mainFields = ['browser', 'main'];
-      break;
-    case 'esm':
-    default:
+      case 'es6':
+        config.resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
+        break;
+      case 'es5':
+        config.resolve.mainFields = ['browser', 'main'];
+        break;
+      case 'esm':
+      default:
     }
     return config;
   },

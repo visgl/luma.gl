@@ -5,17 +5,22 @@ import {_Pass as Pass, ClipSpaceQuad} from 'luma.gl';
 import convolution from '../modules/convolution';
 
 export default class ConvolutionPass extends Pass {
-
   static get KERNEL() {
     return convolution.KERNEL;
   }
 
   constructor(gl, props = {}) {
-    super(gl, Object.assign({
-      id: 'convolution-pass',
-      swap: true,
-      kernel: convolution.KERNEL.NORMAL
-    }, props));
+    super(
+      gl,
+      Object.assign(
+        {
+          id: 'convolution-pass',
+          swap: true,
+          kernel: convolution.KERNEL.NORMAL
+        },
+        props
+      )
+    );
 
     this.clipspace = new ClipSpaceQuad(gl, {
       id: 'convolution-pass',
