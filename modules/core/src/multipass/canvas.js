@@ -59,7 +59,6 @@ export default class Canvas {
 
     // Check if the canvas is not the same size.
     if (gl.canvas.width !== width || gl.canvas.height !== height) {
-
       // Make the canvas the same size
       gl.canvas.width = width;
       gl.canvas.height = height;
@@ -179,18 +178,20 @@ export default class Canvas {
     this.height = height;
     this.texture = new Texture2D(this.gl, {width, height, format: gl.RGBA, type});
     this.spareTexture = new Texture2D(this.gl, {width, height, format: gl.RGBA, type});
-    this.extraTexture = this.extraTexture ||
-      new Texture2D(this.gl, {width: 0, height: 0, format: gl.RGBA, type});
-    this.flippedModel = this.flippedModel || new Model(this.gl, {
-      vs: DEFAULT_VS,
-      fs: `\
+    this.extraTexture =
+      this.extraTexture || new Texture2D(this.gl, {width: 0, height: 0, format: gl.RGBA, type});
+    this.flippedModel =
+      this.flippedModel ||
+      new Model(this.gl, {
+        vs: DEFAULT_VS,
+        fs: `\
 uniform sampler2D texture;
 varying vec2 texCoord;
 void main() {
   gl_FragColor = texture2D(texture, vec2(texCoord.x, 1.0 - texCoord.y));
 }
 `
-    });
+      });
     this.isInitialized = true;
   }
 }

@@ -51,8 +51,5 @@ export default {
   uniforms,
   fs,
   dependencies: [random],
-  passes: [
-    {sampler: true, uniforms: {delta: [1, 0]}},
-    {sampler: true, uniforms: {delta: [0, 1]}}
-  ]
+  passes: [{sampler: true, uniforms: {delta: [1, 0]}}, {sampler: true, uniforms: {delta: [0, 1]}}]
 };

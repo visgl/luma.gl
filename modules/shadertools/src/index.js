@@ -2,11 +2,8 @@
 
 // DOCUMENTED APIS
 
-export {
-  registerShaderModules,
-  setDefaultShaderModules} from './lib/resolve-modules';
-export {
-  assembleShaders} from './lib/assemble-shaders';
+export {registerShaderModules, setDefaultShaderModules} from './lib/resolve-modules';
+export {assembleShaders} from './lib/assemble-shaders';
 
 // HELPERS
 

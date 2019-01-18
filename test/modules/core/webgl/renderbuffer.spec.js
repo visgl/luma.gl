@@ -14,19 +14,17 @@ test('WebGL#Renderbuffer construct/delete', t => {
   t.throws(
     () => new Renderbuffer(),
     /.*WebGLRenderingContext.*/,
-    'Renderbuffer throws on missing gl context');
+    'Renderbuffer throws on missing gl context'
+  );
 
   const renderbuffer = new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16, width: 1, height: 1});
-  t.ok(renderbuffer instanceof Renderbuffer,
-    'Renderbuffer construction successful');
+  t.ok(renderbuffer instanceof Renderbuffer, 'Renderbuffer construction successful');
 
   renderbuffer.delete();
-  t.ok(renderbuffer instanceof Renderbuffer,
-    'Renderbuffer delete successful');
+  t.ok(renderbuffer instanceof Renderbuffer, 'Renderbuffer delete successful');
 
   renderbuffer.delete();
-  t.ok(renderbuffer instanceof Renderbuffer,
-    'Renderbuffer repeated delete successful');
+  t.ok(renderbuffer instanceof Renderbuffer, 'Renderbuffer repeated delete successful');
 
   t.end();
 });
@@ -38,8 +36,11 @@ test('WebGL#Renderbuffer format creation', t => {
     format = Number(format);
     if (Renderbuffer.isSupported(gl, {format})) {
       const renderbuffer = new Renderbuffer(gl, {format});
-      t.equals(renderbuffer.format, format,
-        `Renderbuffer(${glKey(gl, format)}) created with correct format`);
+      t.equals(
+        renderbuffer.format,
+        format,
+        `Renderbuffer(${glKey(gl, format)}) created with correct format`
+      );
       renderbuffer.delete();
     }
   }
@@ -60,8 +61,11 @@ test('WebGL2#Renderbuffer format creation', t => {
     const format = Number(format_);
     if (Renderbuffer.isSupported(gl2, {format})) {
       const renderbuffer = new Renderbuffer(gl2, {format});
-      t.equals(renderbuffer.format, format,
-        `Renderbuffer(${glKey(gl2, format)}) created with correct format`);
+      t.equals(
+        renderbuffer.format,
+        format,
+        `Renderbuffer(${glKey(gl2, format)}) created with correct format`
+      );
       renderbuffer.delete();
     }
   }

@@ -24,7 +24,12 @@
 /* global window, document, */
 
 import {Buffer, Program, assembleShaders, registerShaderModules, fp64} from 'luma.gl';
-import {initializeGL, initializeTexTarget, render, getGPUOutput} from '../../../test/gpu-test-utils';
+import {
+  initializeGL,
+  initializeTexTarget,
+  render,
+  getGPUOutput
+} from '../../../test/gpu-test-utils';
 
 const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 
@@ -98,11 +103,14 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op}) {
 
   const vs = binary ? getBinaryShader(glslFunc) : getUnaryShader(glslFunc);
 
-  const program = new Program(gl, assembleShaders(gl, {
-    vs,
-    fs: FS_RENDER_VCOLOR,
-    modules: ['fp64']
-  }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs,
+      fs: FS_RENDER_VCOLOR,
+      modules: ['fp64']
+    })
+  );
 
   program
     .setBuffers({
@@ -123,7 +131,10 @@ const EPSILON = 1e-14;
 export function testcase(gl, {glslFunc, binary, op, limit = 256, t}) {
   for (let idx0 = 0; idx0 < ITERATIONS; idx0++) {
     const {a, b, a_fp64, b_fp64, expected_fp64} = setupFloatTest(gl, {
-      glslFunc, binary, op, limit
+      glslFunc,
+      binary,
+      op,
+      limit
     });
     render(gl);
     const gpu_result = getGPUOutput(gl);

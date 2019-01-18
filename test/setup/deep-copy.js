@@ -1,4 +1,3 @@
-
 // Recursively copies objects
 export default function deepCopy(object) {
   if (Array.isArray(object)) {

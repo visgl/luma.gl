@@ -34,7 +34,7 @@ const EPSILON = 1e-5;
 // expected: 1.2640000581741333 actual: 1.2640001773834229 diff: 1.1920928955078125e-7
 
 // Random floats
-const TEST_DATA = [1e-4, 1e+4, 1e-6, 1.264, 100.54, -321.4872, 0, -0.231, 0.8082];
+const TEST_DATA = [1e-4, 1e4, 1e-6, 1.264, 100.54, -321.4872, 0, -0.231, 0.8082];
 
 test('pack#floatToRGBA8tofloat)', t => {
   if (!Transform.isSupported(gl)) {
@@ -79,7 +79,11 @@ test('pack#floatToRGBA8tofloat)', t => {
   inputData.forEach((element, index) => {
     const diff = Math.abs(element - outData[index]);
     if (diff > EPSILON) {
-      t.fail(`Invalid data found at index: ${index} expected: ${element} actual: ${outData[index]} diff: ${diff}`);
+      t.fail(
+        `Invalid data found at index: ${index} expected: ${element} actual: ${
+          outData[index]
+        } diff: ${diff}`
+      );
     }
   });
 

@@ -46,13 +46,15 @@ export const SAMPLER_PARAMETERS = {
   [GL.TEXTURE_WRAP_S]: {
     [GL.REPEAT]: 'use fractional part of texture coordinates',
     [GL.CLAMP_TO_EDGE]: 'clamp texture coordinates',
-    [GL.MIRRORED_REPEAT]: 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    [GL.MIRRORED_REPEAT]:
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
 
   [GL.TEXTURE_WRAP_T]: {
     [GL.REPEAT]: 'use fractional part of texture coordinates',
     [GL.CLAMP_TO_EDGE]: 'clamp texture coordinates',
-    [GL.MIRRORED_REPEAT]: 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    [GL.MIRRORED_REPEAT]:
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   }
 };
 
@@ -60,12 +62,14 @@ export const SAMPLER_PARAMETERS_WEBGL2 = {
   [GL.TEXTURE_WRAP_R]: {
     [GL.REPEAT]: 'use fractional part of texture coordinates',
     [GL.CLAMP_TO_EDGE]: 'clamp texture coordinates',
-    [GL.MIRRORED_REPEAT]: 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    [GL.MIRRORED_REPEAT]:
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
 
   [GL.TEXTURE_COMPARE_MODE]: {
     [GL.NONE]: 'no comparison of `r` coordinate is performed',
-    [GL.COMPARE_REF_TO_TEXTURE]: 'interpolated and clamped `r` texture coordinate is compared to currently bound depth texture, result is assigned to the red channel'
+    [GL.COMPARE_REF_TO_TEXTURE]:
+      'interpolated and clamped `r` texture coordinate is compared to currently bound depth texture, result is assigned to the red channel'
   },
 
   [GL.TEXTURE_COMPARE_FUNC]: {
@@ -92,8 +96,11 @@ export function testSamplerParameters({t, texture, parameters}) {
       });
       const name = texture.constructor.name;
       const newValue = texture.getParameter(parameter);
-      t.equals(newValue, value,
-        `${name}.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}}) read back OK`);
+      t.equals(
+        newValue,
+        value,
+        `${name}.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}}) read back OK`
+      );
     }
   }
 }

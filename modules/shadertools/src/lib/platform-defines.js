@@ -1,19 +1,18 @@
 import {getContextInfo, hasFeatures, canCompileGLGSExtension, FEATURES} from '../utils/webgl-info';
 
 export function getPlatformShaderDefines(gl) {
-
   const debugInfo = getContextInfo(gl);
 
   switch (debugInfo.gpuVendor.toLowerCase()) {
-  case 'nvidia':
-    return `\
+    case 'nvidia':
+      return `\
 #define NVIDIA_GPU
 // Nvidia optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
 
-  case 'intel':
-    return `\
+    case 'intel':
+      return `\
 #define INTEL_GPU
 // Intel optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -23,17 +22,17 @@ export function getPlatformShaderDefines(gl) {
 #define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
 `;
 
-  case 'amd':
-    // AMD Does not eliminate fp64 code
-    return `\
+    case 'amd':
+      // AMD Does not eliminate fp64 code
+      return `\
 #define AMD_GPU
 `;
 
-  default:
-    // We don't know what GPU it is, could be that the GPU driver or
-    // browser is not implementing UNMASKED_RENDERER constant and not
-    // reporting a correct name
-    return `\
+    default:
+      // We don't know what GPU it is, could be that the GPU driver or
+      // browser is not implementing UNMASKED_RENDERER constant and not
+      // reporting a correct name
+      return `\
 #define DEFAULT_GPU
 // Prevent driver from optimizing away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -46,7 +45,7 @@ export function getPlatformShaderDefines(gl) {
 }
 
 export function getVersionDefines(gl, glslVersion, isFragment) {
-// Add shadertools defines to let shaders portably v1/v3 check for features
+  // Add shadertools defines to let shaders portably v1/v3 check for features
   let versionDefines = `\
 #if (__VERSION__ > 120)
 
@@ -80,8 +79,9 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 #endif
 `;
   }
-  if (hasFeatures(gl, FEATURES.GLSL_FRAG_DATA) &&
-  canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA, {behavior: 'require'})
+  if (
+    hasFeatures(gl, FEATURES.GLSL_FRAG_DATA) &&
+    canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA, {behavior: 'require'})
   ) {
     versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available

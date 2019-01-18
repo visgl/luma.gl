@@ -9,7 +9,6 @@ import assert from '../utils/assert';
 const DEBUG_DATA_LENGTH = 10;
 
 export default class Buffer extends Resource {
-
   constructor(gl, props = {}) {
     super(gl, props);
     this.stubRemovedMethods('Buffer', 'v6.0', ['layout', 'setLayout', 'getIndexedParameter']);
@@ -148,8 +147,10 @@ export default class Buffer extends Resource {
       dstAvailableElementCount = dstElementCount - dstElementOffset;
     } else {
       // Allocate ArrayBufferView with enough size to copy all eligible data.
-      dstAvailableElementCount =
-        Math.min(sourceAvailableElementCount, length || sourceAvailableElementCount);
+      dstAvailableElementCount = Math.min(
+        sourceAvailableElementCount,
+        length || sourceAvailableElementCount
+      );
       dstElementCount = dstElementOffset + dstAvailableElementCount;
     }
 
@@ -181,7 +182,10 @@ export default class Buffer extends Resource {
    * @returns {Buffer} - Returns itself for chaining.
    */
   bind({
-    target = this.target, index = this.accessor && this.accessor.index, offset = 0, size
+    target = this.target,
+    index = this.accessor && this.accessor.index,
+    offset = 0,
+    size
   } = {}) {
     // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
     // be used as direct binding points, they will not affect transform feedback or

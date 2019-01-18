@@ -3,9 +3,9 @@ import {log, global} from 'luma.gl';
 export {COLOR_MODE} from './glsl-to-js-compiler/draw-model';
 export {default as _DebugContext} from './glsl-to-js-compiler/debug-context';
 export {
-	compileShaderModule,
-	compileVertexShader,
-	compileFragmentShader
+  compileShaderModule,
+  compileVertexShader,
+  compileFragmentShader
 } from './glsl-to-js-compiler/compile-shader';
 
 // Register the Khronons WebGLDebugger module that lets us instrument WebGLContexts

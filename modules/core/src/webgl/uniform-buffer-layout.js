@@ -94,9 +94,12 @@ export default class UniformBufferLayout {
   // Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes)
   _alignTo(size, count) {
     switch (count) {
-    case 1: return size; // Pad upwards to even multiple of 2
-    case 2: return size + size % 2; // Pad upwards to even multiple of 2
-    default: return size + (4 - size % 4) % 4; // Pad upwards to even multiple of 4
+      case 1:
+        return size; // Pad upwards to even multiple of 2
+      case 2:
+        return size + (size % 2); // Pad upwards to even multiple of 2
+      default:
+        return size + ((4 - (size % 4)) % 4); // Pad upwards to even multiple of 4
     }
   }
 }

@@ -7,17 +7,17 @@ import {fixture} from 'luma.gl/test/setup';
 const TEST_CASES = [
   {
     title: 'Default attachments',
-    getOpts: (gl) => ({}),
+    getOpts: gl => ({}),
     pass: true
   },
   {
     title: 'No attachments',
-    getOpts: (gl) => ({attachments: {}}),
+    getOpts: gl => ({attachments: {}}),
     pass: false
   },
   {
     title: 'Simple Depth Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16})
@@ -27,7 +27,7 @@ const TEST_CASES = [
   },
   {
     title: 'Simple Stencil Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.STENCIL_INDEX8})
@@ -37,7 +37,7 @@ const TEST_CASES = [
   },
   {
     title: 'Combined Depth/Stencil Renderbuffer + Color Texture',
-    getOpts: (gl) => ({
+    getOpts: gl => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
@@ -75,19 +75,17 @@ test('WebGL#Framebuffer construct/delete', t => {
   t.throws(
     () => new Framebuffer(),
     /.*WebGLRenderingContext.*/,
-    'Framebuffer throws on missing gl context');
+    'Framebuffer throws on missing gl context'
+  );
 
   const framebuffer = new Framebuffer(gl);
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer construction successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer construction successful');
 
   framebuffer.delete();
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer delete successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer delete successful');
 
   framebuffer.delete();
-  t.ok(framebuffer instanceof Framebuffer,
-    'Framebuffer repeated delete successful');
+  t.ok(framebuffer instanceof Framebuffer, 'Framebuffer repeated delete successful');
 
   t.end();
 });
@@ -96,23 +94,16 @@ test('Framebuffer#getDefaultFramebuffer', t => {
   const {gl} = fixture;
 
   const framebuffer = Framebuffer.getDefaultFramebuffer(gl);
-  t.ok(framebuffer instanceof Framebuffer,
-    'getDefaultFramebuffer successful');
+  t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
   t.throws(
     () => framebuffer.resize({width: 1000, height: 1000}),
     'defaultFramebuffer.resize({width, height}) throws'
   );
 
-  t.doesNotThrow(
-    () => framebuffer.resize(),
-    'defaultFramebuffer.resize() successful'
-  );
+  t.doesNotThrow(() => framebuffer.resize(), 'defaultFramebuffer.resize() successful');
 
-  t.doesNotThrow(
-    () => framebuffer.checkStatus(),
-    'defaultFramebuffer status ok'
-  );
+  t.doesNotThrow(() => framebuffer.checkStatus(), 'defaultFramebuffer status ok');
 
   t.end();
 });
@@ -121,12 +112,9 @@ function testFramebuffer(t, gl) {
   for (const tc of TEST_CASES) {
     let opts;
 
-    t.doesNotThrow(
-      () => {
-        opts = tc.getOpts(gl);
-      },
-      `Framebuffer options constructed for "${tc.title}"`
-    );
+    t.doesNotThrow(() => {
+      opts = tc.getOpts(gl);
+    }, `Framebuffer options constructed for "${tc.title}"`);
 
     const testFramebufferOpts = () => {
       const framebuffer = new Framebuffer(gl, opts);
@@ -141,9 +129,15 @@ function testFramebuffer(t, gl) {
     };
 
     if (tc.pass) {
-      t.doesNotThrow(testFramebufferOpts, `Framebuffer checkStatus success as expected for "${tc.title}"`);
+      t.doesNotThrow(
+        testFramebufferOpts,
+        `Framebuffer checkStatus success as expected for "${tc.title}"`
+      );
     } else {
-      t.throws(testFramebufferOpts, `Framebuffer checkStatus failure as expected for "${tc.title}"`);
+      t.throws(
+        testFramebufferOpts,
+        `Framebuffer checkStatus failure as expected for "${tc.title}"`
+      );
     }
   }
 }

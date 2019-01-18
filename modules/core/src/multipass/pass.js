@@ -10,7 +10,7 @@ import {withParameters} from '../webgl-context';
 export default class Pass {
   constructor(gl, props) {
     const {id = 'pass'} = props;
-    this.id = id;           // id of this pass
+    this.id = id; // id of this pass
     this.gl = gl;
     this.props = {enabled: true, screen: false, swap: false};
     Object.assign(this.props, props);
@@ -43,8 +43,8 @@ export default class Pass {
       renderParams.outputBuffer = renderState.readBuffer;
     }
 
-    withParameters(gl, {framebuffer: renderParams.outputBuffer},
-      () => this._renderPass(renderParams)
+    withParameters(gl, {framebuffer: renderParams.outputBuffer}, () =>
+      this._renderPass(renderParams)
     );
 
     if (this.props.debug) {

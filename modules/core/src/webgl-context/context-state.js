@@ -1,9 +1,6 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from '@luma.gl/constants';
-import {
-  pushContextState,
-  popContextState
-} from '../webgl-context/track-context-state';
+import {pushContextState, popContextState} from '../webgl-context/track-context-state';
 import {
   getParameter,
   getParameters,
@@ -28,7 +25,7 @@ export const LUMA_SETTERS = {
     const handle = framebuffer && 'handle' in framebuffer ? framebuffer.handle : framebuffer;
     return gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   },
-  blend: (gl, value) => value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND),
+  blend: (gl, value) => (value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND)),
   blendColor: (gl, value) => gl.blendColor(...value),
   blendEquation: (gl, args) => {
     args = isArray(args) ? args : [args, args];
@@ -45,15 +42,15 @@ export const LUMA_SETTERS = {
 
   colorMask: (gl, value) => gl.colorMask(...value),
 
-  cull: (gl, value) => value ? gl.enable(GL.CULL_FACE) : gl.disable(GL.CULL_FACE),
+  cull: (gl, value) => (value ? gl.enable(GL.CULL_FACE) : gl.disable(GL.CULL_FACE)),
   cullFace: (gl, value) => gl.cullFace(value),
 
-  depthTest: (gl, value) => value ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST),
+  depthTest: (gl, value) => (value ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST)),
   depthFunc: (gl, value) => gl.depthFunc(value),
   depthMask: (gl, value) => gl.depthMask(value),
   depthRange: (gl, value) => gl.depthRange(...value),
 
-  dither: (gl, value) => value ? gl.enable(GL.DITHER) : gl.disable(GL.DITHER),
+  dither: (gl, value) => (value ? gl.enable(GL.DITHER) : gl.disable(GL.DITHER)),
 
   derivativeHint: (gl, value) => {
     // gl1: 'OES_standard_derivatives'
@@ -72,10 +69,10 @@ export const LUMA_SETTERS = {
 
   sampleCoverage: (gl, value) => gl.sampleCoverage(...value),
 
-  scissorTest: (gl, value) => value ? gl.enable(GL.SCISSOR_TEST) : gl.disable(GL.SCISSOR_TEST),
+  scissorTest: (gl, value) => (value ? gl.enable(GL.SCISSOR_TEST) : gl.disable(GL.SCISSOR_TEST)),
   scissor: (gl, value) => gl.scissor(...value),
 
-  stencilTest: (gl, value) => value ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST),
+  stencilTest: (gl, value) => (value ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST)),
   stencilMask: (gl, value) => {
     value = isArray(value) ? value : [value, value];
     const [mask, backMask] = value;

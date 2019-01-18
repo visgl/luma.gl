@@ -21,7 +21,6 @@ void main()
 }
 `;
 
-
 test('WebGL#TransformFeedback isSupported', t => {
   const {gl, gl2} = fixture;
   t.notok(TransformFeedback.isSupported(gl), 'isSupported returns correct result');
@@ -40,8 +39,9 @@ test('WebGL#TransformFeedback constructor/delete', t => {
 
   t.throws(
     () => new TransformFeedback(),
-    (/.*Requires WebGL2.*/),
-    'Buffer throws on missing gl context');
+    /.*Requires WebGL2.*/,
+    'Buffer throws on missing gl context'
+  );
 
   const tf = new TransformFeedback(gl2);
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback construction successful');
@@ -120,10 +120,13 @@ function testDataCapture({t, gl2, byteOffset}) {
   });
 
   const outData = outBuffer.getData().slice(offset, offset + vertexCount);
-  t.deepEqual(outData, inData.map(x => x * 2), `Data should be captured in buffer when offset is ${offset}`);
+  t.deepEqual(
+    outData,
+    inData.map(x => x * 2),
+    `Data should be captured in buffer when offset is ${offset}`
+  );
 }
 test('WebGL#TransformFeedback capture', t => {
-
   const {gl2} = fixture;
 
   if (!gl2) {

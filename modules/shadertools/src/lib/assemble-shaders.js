@@ -31,16 +31,10 @@ export function assembleShaders(gl, opts = {}) {
 
 // Pulls together complete source code for either a vertex or a fragment shader
 // adding prologues, requested module chunks, and any final injections.
-function assembleShader(gl, {
-  id,
-  source,
-  type,
-  modules = [],
-  defines = {},
-  inject = {},
-  prologue = true,
-  log
-}) {
+function assembleShader(
+  gl,
+  {id, source, type, modules = [], defines = {}, inject = {}, prologue = true, log}
+) {
   assert(typeof source === 'string', 'shader source must be a string');
 
   const isVertex = type === VERTEX_SHADER;
@@ -60,29 +54,31 @@ function assembleShader(gl, {
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
   // Add precision declaration for fragment shaders
-  let assembledSource = prologue ? `\
+  let assembledSource = prologue
+    ? `\
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(defines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
-` : `${versionLine}
+`
+    : `${versionLine}
 `;
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
   for (const module of modules) {
     switch (module.name) {
-    case 'inject':
-      injectStandardStubs = true;
-      break;
+      case 'inject':
+        injectStandardStubs = true;
+        break;
 
-    default:
-      module.checkDeprecations(coreSource, log);
-      const moduleSource = module.getModuleSource(type, glslVersion);
-      // Add the module source, and a #define that declares it presence
-      assembledSource += moduleSource;
+      default:
+        module.checkDeprecations(coreSource, log);
+        const moduleSource = module.getModuleSource(type, glslVersion);
+        // Add the module source, and a #define that declares it presence
+        assembledSource += moduleSource;
     }
   }
 
@@ -100,7 +96,6 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 // function of each shader module and combine the results into one object that
 // can be passed to setUniforms.
 function assembleGetUniforms(modules) {
-
   return function getUniforms(opts) {
     const uniforms = {};
     for (const module of modules) {
@@ -111,7 +106,6 @@ function assembleGetUniforms(modules) {
     }
     return uniforms;
   };
-
 }
 
 // Returns a map with module names as keys, resolving to their module definitions
@@ -131,10 +125,12 @@ function assembleModuleMap(modules) {
 // If id is provided and no SHADER_NAME constant is present in source, create one
 function getShaderName({id, source, type}) {
   const injectShaderName = id && typeof id === 'string' && source.indexOf('SHADER_NAME') === -1;
-  return injectShaderName ? `
+  return injectShaderName
+    ? `
 #define SHADER_NAME ${id}_${SHADER_TYPE[type]}
 
-` : '';
+`
+    : '';
 }
 
 // Generates application defines from an object

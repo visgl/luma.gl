@@ -16,9 +16,10 @@ export function setDefaultShaderModules(modules) {
  * Registers an array of shader modules
  * @param {Object[]} shaderModuleList - Array of shader modules
  */
-export function registerShaderModules(shaderModuleList, {
-  ignoreMultipleRegistrations = false
-} = {}) {
+export function registerShaderModules(
+  shaderModuleList,
+  {ignoreMultipleRegistrations = false} = {}
+) {
   shaderModuleRegistry.registerShaderModules(shaderModuleList, {ignoreMultipleRegistrations});
 }
 

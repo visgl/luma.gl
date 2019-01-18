@@ -55,18 +55,8 @@ test('histopyramid#histoPyramid_getTexCoord', t => {
   }
   `;
 
-  const offset = new Buffer(gl, new Float32Array([
-    0, 0,
-    1, 0,
-    0, 1,
-    1, 1
-  ]));
-  const expectedTexcoord = [
-    0.25, 0.25,
-    0.75, 0.25,
-    0.25, 0.75,
-    0.75, 0.75
-  ];
+  const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
+  const expectedTexcoord = [0.25, 0.25, 0.75, 0.25, 0.25, 0.75, 0.75, 0.75];
 
   const texcoord = new Buffer(gl, 8 * 4); // 8 floats
   const elementCount = 4;
@@ -117,8 +107,8 @@ test('histopyramid#histoPyramid_getPixelIndices', t => {
   `;
   function getExpected(size) {
     const result = [];
-    for(let y = 0; y < size[1]; y++) {
-      for(let x = 0; x < size[1]; x++) {
+    for (let y = 0; y < size[1]; y++) {
+      for (let x = 0; x < size[1]; x++) {
         result.push(x, y);
       }
     }
@@ -126,7 +116,7 @@ test('histopyramid#histoPyramid_getPixelIndices', t => {
   }
   const TEST_CASES = [
     {
-      size: [2, 2],
+      size: [2, 2]
     },
     {
       size: [3, 3]
@@ -154,16 +144,19 @@ test('histopyramid#histoPyramid_getPixelIndices', t => {
   TEST_CASES.forEach(testCase => {
     const {size} = testCase;
     const expected = getExpected(size);
-    const elementCount = size[0]*size[1];
-      transform.update({elementCount});
-      transform.run({
-        uniforms: {
-          size
-        }
-      });
+    const elementCount = size[0] * size[1];
+    transform.update({elementCount});
+    transform.run({
+      uniforms: {
+        size
+      }
+    });
 
-      const outData = transform.getBuffer('pixelIndices').getData().slice(0, expected.length);
-      t.ok(equals(expected, outData), 'pixelIndices should match');
+    const outData = transform
+      .getBuffer('pixelIndices')
+      .getData()
+      .slice(0, expected.length);
+    t.ok(equals(expected, outData), 'pixelIndices should match');
   });
 
   t.end();
@@ -207,21 +200,77 @@ test('histopyramid#histoPyramid_getInput', t => {
 
   /* eslint-disable no-multi-spaces */
   sourceData = new Float32Array([
-    0, 1,  10, 11,  20, 21,  30, 31,
-    2, 3,  12, 13,  22, 23,  32, 33,
+    0,
+    1,
+    10,
+    11,
+    20,
+    21,
+    30,
+    31,
+    2,
+    3,
+    12,
+    13,
+    22,
+    23,
+    32,
+    33,
 
-    40, 41,  50, 51,  60, 61,  70, 71,
-    42, 43,  52, 53,  62, 63,  72, 73,
+    40,
+    41,
+    50,
+    51,
+    60,
+    61,
+    70,
+    71,
+    42,
+    43,
+    52,
+    53,
+    62,
+    63,
+    72,
+    73,
 
-    80, 81,  90, 91,  100, 101,  110, 111,
-    82, 83,  92, 93,  102, 103,  112, 113,
+    80,
+    81,
+    90,
+    91,
+    100,
+    101,
+    110,
+    111,
+    82,
+    83,
+    92,
+    93,
+    102,
+    103,
+    112,
+    113,
 
-    120, 121,  130, 131,  140, 141,  150, 151,
-    122, 123,  132, 133,  142, 143,  152, 153
+    120,
+    121,
+    130,
+    131,
+    140,
+    141,
+    150,
+    151,
+    122,
+    123,
+    132,
+    133,
+    142,
+    143,
+    152,
+    153
   ]);
   /* eslint-enable no-multi-spaces */
 
-  const expectedArray = new Array(WIDTH * HEIGHT / 4).fill(0);
+  const expectedArray = new Array((WIDTH * HEIGHT) / 4).fill(0);
   const TEST_CASES = [
     {
       name: 'current-pixel',
@@ -245,20 +294,26 @@ test('histopyramid#histoPyramid_getInput', t => {
     }
   ];
 
-  const sourceTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
-    data: sourceData,
-    width: WIDTH,
-    height: HEIGHT
-  }));
+  const sourceTexture = new Texture2D(
+    gl2,
+    Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width: WIDTH,
+      height: HEIGHT
+    })
+  );
 
-  const destinationTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
-    width: WIDTH / 2,
-    height: HEIGHT / 2
-  }));
+  const destinationTexture = new Texture2D(
+    gl2,
+    Object.assign({}, TEX_OPTIONS, {
+      width: WIDTH / 2,
+      height: HEIGHT / 2
+    })
+  );
 
   const SCALE = [2, 2];
 
-  const dstPixelCount = WIDTH * HEIGHT / 4;
+  const dstPixelCount = (WIDTH * HEIGHT) / 4;
 
   const transform = new Transform(gl2, {
     _sourceTextures: {
@@ -272,14 +327,20 @@ test('histopyramid#histoPyramid_getInput', t => {
 
   TEST_CASES.forEach(testCase => {
     const {name, offset, expected} = testCase;
-    transform.run({uniforms: {
-      scale: SCALE,
-      pixelOffset: offset
-    }});
+    transform.run({
+      uniforms: {
+        scale: SCALE,
+        pixelOffset: offset
+      }
+    });
 
     const outTexData = transform.getData({packed: true});
 
-    t.deepEqual(outTexData, expected, `Transform should access neighbor pixels correctly for ${name}`);
+    t.deepEqual(
+      outTexData,
+      expected,
+      `Transform should access neighbor pixels correctly for ${name}`
+    );
   });
 
   t.end();
@@ -322,25 +383,28 @@ test('histopyramid#Minification to 1X1)', t => {
     }
   };
 
-  const sourceData = new Float32Array([
-    0, 1,
-    2, 3
-  ]);
+  const sourceData = new Float32Array([0, 1, 2, 3]);
   let expectedData = 0;
   sourceData.forEach(value => {
     expectedData += value;
-  })
+  });
 
-  const sourceTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
-    data: sourceData,
-    width: WIDTH,
-    height: HEIGHT
-  }));
+  const sourceTexture = new Texture2D(
+    gl2,
+    Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width: WIDTH,
+      height: HEIGHT
+    })
+  );
 
-  const destinationTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
-    width: WIDTH / 2,
-    height: HEIGHT / 2
-  }));
+  const destinationTexture = new Texture2D(
+    gl2,
+    Object.assign({}, TEX_OPTIONS, {
+      width: WIDTH / 2,
+      height: HEIGHT / 2
+    })
+  );
 
   const SCALE = [2, 2];
 
@@ -356,13 +420,19 @@ test('histopyramid#Minification to 1X1)', t => {
     elementCount
   });
 
-  transform.run({uniforms: {
-    scale: SCALE
-  }});
+  transform.run({
+    uniforms: {
+      scale: SCALE
+    }
+  });
 
   const outTexData = transform.getData({packed: true});
 
-  t.deepEqual(outTexData, [expectedData], `Transform should access neighbor pixels correctly for 1X1 minification`);
+  t.deepEqual(
+    outTexData,
+    [expectedData],
+    `Transform should access neighbor pixels correctly for 1X1 minification`
+  );
 
   t.end();
 });
@@ -442,7 +512,7 @@ const HISTOPYRAMID_TEST_CASES = [
     // will get transformed into 2X2 texture
     // 0 0 4 0	0 0 0 0
     // 8 0 0 0	0 0 0 0
-    expectedBaseLevelData: [0, 0, 4, 0,  0, 0, 0, 0,  8, 0, 0, 0,  0, 0, 0, 0],
+    expectedBaseLevelData: [0, 0, 4, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0],
 
     // top level
     // 24 28 52 32
@@ -473,18 +543,28 @@ test('histopyramid#getHistoPyramid)', t => {
     const {width, height, name, expectedBaseLevelData, expectedTopLevelData} = testCase;
     const sourceData = new Float32Array(width * height * 4).fill().map((_, index) => index);
 
-    const sourceTexture = new Texture2D(gl2, Object.assign({}, TEX_OPTIONS, {
-      data: sourceData,
-      width,
-      height
-    }));
+    const sourceTexture = new Texture2D(
+      gl2,
+      Object.assign({}, TEX_OPTIONS, {
+        data: sourceData,
+        width,
+        height
+      })
+    );
 
-    const {textureData} = buildHistopyramidBaseLevel(gl2, {texture: sourceTexture, _readData: true});
+    const {textureData} = buildHistopyramidBaseLevel(gl2, {
+      texture: sourceTexture,
+      _readData: true
+    });
 
     t.deepEqual(textureData, expectedBaseLevelData, `${name}: should return corret base texture`);
 
     const {topLevelData} = getHistoPyramid(gl2, {texture: sourceTexture});
-    t.deepEqual(topLevelData, expectedTopLevelData, `${name}: should return corret top level texture`);
+    t.deepEqual(
+      topLevelData,
+      expectedTopLevelData,
+      `${name}: should return corret top level texture`
+    );
   });
 
   t.end();
@@ -509,7 +589,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', t => {
   }
   `;
 
-  const weights = new Buffer(gl, new Float32Array([3, 2, 3, 1,  1, 2, 0, 5,  0, 1, 2, 3]));
+  const weights = new Buffer(gl, new Float32Array([3, 2, 3, 1, 1, 2, 0, 5, 0, 1, 2, 3]));
   const currentKey = new Buffer(gl, new Float32Array([4, 3, 1]));
   const relativeIndex = new Buffer(gl, 3 * 4); // 3 floats
   const lowerBound = new Buffer(gl, 3 * 4);
@@ -533,8 +613,8 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', t => {
 
   transform.run();
 
-  const actualRelativeIndex = transform.getData({varyingName :'relativeIndex'});
-  const actualLowerBound = transform.getData({varyingName :'lowerBound'});
+  const actualRelativeIndex = transform.getData({varyingName: 'relativeIndex'});
+  const actualLowerBound = transform.getData({varyingName: 'lowerBound'});
   t.ok(equals(expectedRelativeIndex, actualRelativeIndex), 'relative index should match');
   t.ok(equals(expectedLowerBound, actualLowerBound), 'lower bound should match');
   t.end();
@@ -580,13 +660,12 @@ test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', t =
 
   transform.run();
 
-  const lb1 = transform.getData({varyingName :'lowerBound1'});
-  const lb2 = transform.getData({varyingName :'lowerBound2'});
+  const lb1 = transform.getData({varyingName: 'lowerBound1'});
+  const lb2 = transform.getData({varyingName: 'lowerBound2'});
   t.ok(equals([5], lb1), 'lb1 should be 5');
   t.ok(equals([0], lb2), 'lb2 should be 0');
   t.end();
 });
-
 
 test('histopyramid#histopyramid_traversal_mapIndexToCoord', t => {
   if (!Transform.isSupported(gl)) {
@@ -610,8 +689,8 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', t => {
   const expectedCoord = [0, 0, 1, 0, 0, 1, 1, 1];
 
   const transform = new Transform(gl, {
-    sourceBuffers: { index },
-    feedbackBuffers: { coord },
+    sourceBuffers: {index},
+    feedbackBuffers: {coord},
     vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
     varyings: ['coord'],
     modules: [transformModule],
@@ -620,7 +699,7 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', t => {
 
   transform.run();
 
-  const actualCoord = transform.getData({varyingName :'coord'});
+  const actualCoord = transform.getData({varyingName: 'coord'});
   t.ok(equals(expectedCoord, actualCoord), 'texcoordinates should match');
   t.end();
 });
@@ -678,37 +757,49 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
   };
   const sourceData = new Float32Array(4 * 4 * 4).fill().map((_, index) => index);
 
-  const sourceTexture = new Texture2D(gl, Object.assign({}, TEX_OPTIONS, {
-    data: sourceData,
-    width,
-    height
-  }));
+  const sourceTexture = new Texture2D(
+    gl,
+    Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width,
+      height
+    })
+  );
 
   const {flatPyramidTexture} = getHistoPyramid(gl, {texture: sourceTexture}); // _TODO: follow (gl, opts)
   const size = [flatPyramidTexture.width, flatPyramidTexture.height];
 
   // level 0 is 1X1
   const level = new Buffer(gl, new Float32Array([0, 0, 0, 0, 1]));
-  const offset = new Buffer(gl, new Float32Array([
-    0, 0,
-    1, 0,
-    0, 1,
-    1, 1,
-    0, 0
-  ]));
+  const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1, 0, 0]));
   const weight = new Buffer(gl, 20 * 4); // 20 floats
 
   const expectedWeight = [
-    0, 4, 16, 20,
-    8, 12, 24, 28,
-    32, 36, 48, 52,
-    40, 44, 56, 60,
-    40, 72, 168, 200
+    0,
+    4,
+    16,
+    20,
+    8,
+    12,
+    24,
+    28,
+    32,
+    36,
+    48,
+    52,
+    40,
+    44,
+    56,
+    60,
+    40,
+    72,
+    168,
+    200
   ];
 
   const transform = new Transform(gl, {
     sourceBuffers: {level, offset},
-    feedbackBuffers: { weight },
+    feedbackBuffers: {weight},
     vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
     varyings: ['weight'],
     modules: [transformModule],
@@ -719,7 +810,7 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
     uniforms: {flatPyramid: flatPyramidTexture, numLevels, size}
   });
 
-  const actualWeight = transform.getData({varyingName :'weight'});
+  const actualWeight = transform.getData({varyingName: 'weight'});
   t.ok(equals(expectedWeight, actualWeight), 'texcoordinates should match');
   t.end();
 });
@@ -741,25 +832,91 @@ test('histopyramid#histoPyramidGenerateIndices', t => {
     }
   };
   const sourceData = new Float32Array([
-    1, 0, 0, 0,   1, 0, 0, 0,   0, 0, 0, 0,   1, 0, 0, 0,
-    1, 0, 0, 0,   0, 0, 0, 0,   1, 0, 0, 0,   0, 0, 0, 0,
-    0, 0, 0, 0,   2, 0, 0, 0,   0, 0, 0, 0,   1, 0, 0, 0,
-    1, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
   ]);
 
-  const sourceTexture = new Texture2D(gl, Object.assign({}, TEX_OPTIONS, {
-    data: sourceData,
-    width: 4,
-    height: 4
-  }));
+  const sourceTexture = new Texture2D(
+    gl,
+    Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width: 4,
+      height: 4
+    })
+  );
 
-  const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {texture: sourceTexture, _readData: true}); // _TODO: follow (gl, opts)
+  const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {
+    texture: sourceTexture,
+    _readData: true
+  }); // _TODO: follow (gl, opts)
   const locationAndIndexData = locationAndIndexBuffer.getData();
   const actualData = [];
   // Given order of vertex generation can be different between CPU and GPU, extract
   // individual co-ordinates and key-index values and compare for equality.
-  for (let i = 0; i < locationAndIndexData.length; i+=4) {
-    actualData.push(locationAndIndexData.slice(i, i+3)); // ignore keyIndex value
+  for (let i = 0; i < locationAndIndexData.length; i += 4) {
+    actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
   }
   const expectedData = [
     [0, 0, 0],
@@ -776,7 +933,7 @@ test('histopyramid#histoPyramidGenerateIndices', t => {
   let foundIndex = true;
   expectedData.forEach(index => {
     foundIndex = foundIndex && actualData.some(actualIndex => equals(index, actualIndex));
-  })
+  });
   t.ok(foundIndex, 'Generated indices should match');
   t.end();
 });

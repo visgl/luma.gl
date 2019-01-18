@@ -26,9 +26,7 @@ export function compressImage(image, type) {
   canvas.getContext('2d').drawImage(image, 0, 0);
 
   // Get raw image data
-  const data =
-    canvas.toDataURL(type || 'png')
-      .replace(/^data:image\/(png|jpg);base64,/, '');
+  const data = canvas.toDataURL(type || 'png').replace(/^data:image\/(png|jpg);base64,/, '');
 
   // Dump data into stream and return
   const result = through();

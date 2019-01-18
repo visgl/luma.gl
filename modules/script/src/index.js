@@ -17,5 +17,4 @@ _global.luma = Object.assign({}, _global.luma, lumaGL, {filters});
 
 _global.mathgl = mathGL;
 
-
 module.exports = _global.luma;

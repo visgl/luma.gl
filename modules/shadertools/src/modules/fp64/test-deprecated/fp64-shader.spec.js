@@ -22,7 +22,15 @@
 /* eslint-disable */
 
 import {document, window} from 'global';
-import {Buffer, createGLContext, Program, setParameters, assembleShaders, registerShaderModules, fp64} from 'luma.gl';
+import {
+  Buffer,
+  createGLContext,
+  Program,
+  setParameters,
+  assembleShaders,
+  registerShaderModules,
+  fp64
+} from 'luma.gl';
 
 const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 
@@ -31,47 +39,48 @@ const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 function glEnumToString(gl, value) {
   // Optimization for the most common enum:
   if (value === gl.NO_ERROR) {
-    return "NO_ERROR";
+    return 'NO_ERROR';
   }
   for (var p in gl) {
     if (gl[p] == value) {
       return p;
     }
   }
-  return "0x" + value.toString(16);
-};
+  return '0x' + value.toString(16);
+}
 
 function addSpan(contents, div) {
   if (div == undefined) {
-    var divs = document.body.getElementsByClassName("testInfo");
+    var divs = document.body.getElementsByClassName('testInfo');
     var lastDiv = divs[divs.length - 1];
     div = lastDiv;
   }
 
-  var span = document.createElement("span");
+  var span = document.createElement('span');
   div.appendChild(span);
   span.innerHTML = contents + '<br />';
 }
 
 function addDiv(contents) {
-  var testInfoDiv = document.createElement("div");
+  var testInfoDiv = document.createElement('div');
   document.body.appendChild(testInfoDiv);
-  testInfoDiv.setAttribute("class", "testInfo");
+  testInfoDiv.setAttribute('class', 'testInfo');
 
   return testInfoDiv;
 }
 
 function logToConsole(msg) {
-  if (window.console)
-    window.console.log(msg);
+  if (window.console) window.console.log(msg);
 }
 
 function escapeHTML(text) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
 function testPassed(msg) {
-  addSpan('<span><span class="pass" style="color:green">PASS</span> ' + escapeHTML(msg) + '</span>');
+  addSpan(
+    '<span><span class="pass" style="color:green">PASS</span> ' + escapeHTML(msg) + '</span>'
+  );
   logToConsole('PASS ' + msg);
 }
 
@@ -84,22 +93,22 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
   if (!glErrors.length) {
     glErrors = [glErrors];
   }
-  opt_msg = opt_msg || "";
+  opt_msg = opt_msg || '';
   var err = gl.getError();
   var ndx = glErrors.indexOf(err);
   var errStrs = [];
   for (var ii = 0; ii < glErrors.length; ++ii) {
     errStrs.push(glEnumToString(gl, glErrors[ii]));
   }
-  var expected = errStrs.join(" or ");
+  var expected = errStrs.join(' or ');
   if (ndx < 0) {
-    var msg = "getError expected" + ((glErrors.length > 1) ? " one of: " : ": ");
-    testFailed(msg + expected +  ". Was " + glEnumToString(gl, err) + " : " + opt_msg);
+    var msg = 'getError expected' + (glErrors.length > 1 ? ' one of: ' : ': ');
+    testFailed(msg + expected + '. Was ' + glEnumToString(gl, err) + ' : ' + opt_msg);
   } else {
     //var msg = "getError was " + ((glErrors.length > 1) ? "one of: " : "expected value: ");
     //testPassed(msg + expected + " : " + opt_msg);
   }
-};
+}
 
 // Special utility functions for df64 tests
 
@@ -114,20 +123,18 @@ function getFloat64(upper = 256) {
 }
 
 function getVec4Float64() {
-  return [getFloat64(), getFloat64(), getFloat64(), getFloat64()]
+  return [getFloat64(), getFloat64(), getFloat64(), getFloat64()];
 }
 
 function getMat4Float64() {
   var result = [];
-  for (var i = 0; i < 16; i++)
-  {
+  for (var i = 0; i < 16; i++) {
     result.push(getFloat64());
   }
   return result;
 }
 
-function initializeGL(canvas)
-{
+function initializeGL(canvas) {
   const gl = createGLContext(canvas);
   setParameters(gl, {
     viewport: [0, 0, canvas.width, canvas.height],
@@ -144,8 +151,7 @@ function initializeGL(canvas)
   return gl;
 }
 
-function initializeTexTarget(gl)
-{
+function initializeTexTarget(gl) {
   var framebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   framebuffer.width = 10;
@@ -156,26 +162,37 @@ function initializeTexTarget(gl)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, framebuffer.width, framebuffer.height, 0, gl.RGBA, gl.FLOAT, null);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA32F,
+    framebuffer.width,
+    framebuffer.height,
+    0,
+    gl.RGBA,
+    gl.FLOAT,
+    null
+  );
 
   var renderbuffer = gl.createRenderbuffer();
   gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, framebuffer.width, framebuffer.height);
+  gl.renderbufferStorage(
+    gl.RENDERBUFFER,
+    gl.DEPTH_COMPONENT16,
+    framebuffer.width,
+    framebuffer.height
+  );
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
   gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
-
 }
 
-function render(gl)
-{
+function render(gl) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-  glErrorShouldBe(gl, gl.NO_ERROR, "no error from draw");
+  glErrorShouldBe(gl, gl.NO_ERROR, 'no error from draw');
 }
 
-function getGPUOutput(gl)
-{
-
+function getGPUOutput(gl) {
   var width = gl.canvas.width;
   var height = gl.canvas.height;
   var buf = new Float32Array(width * height * 4);
@@ -185,23 +202,39 @@ function getGPUOutput(gl)
   return buf;
 }
 
-function checkError(result, reference)
-{
+function checkError(result, reference) {
   var currentDiv = addDiv();
   var line;
-  addSpan("------------------------", currentDiv);
+  addSpan('------------------------', currentDiv);
 
   let referece64 = reference[0] + reference[1];
   let result64 = result[0] + result[1];
 
-  line = 'CPU output: (' + reference[0].toString() + ',' + reference[1].toString() + ') = ' + referece64.toString() + '<br>';
+  line =
+    'CPU output: (' +
+    reference[0].toString() +
+    ',' +
+    reference[1].toString() +
+    ') = ' +
+    referece64.toString() +
+    '<br>';
   addSpan(line, currentDiv);
-  line = "GPU output: (" + result[0].toString() + ',' + result[1].toString() + ',' + result[2].toString() + ',' + result[3].toString() + ') = ' + result64.toString() + '<br>';
+  line =
+    'GPU output: (' +
+    result[0].toString() +
+    ',' +
+    result[1].toString() +
+    ',' +
+    result[2].toString() +
+    ',' +
+    result[3].toString() +
+    ') = ' +
+    result64.toString() +
+    '<br>';
   addSpan(line, currentDiv);
 
-  line = "error: " + Math.abs((referece64 - result64) / referece64) + '<br>';
+  line = 'error: ' + Math.abs((referece64 - result64) / referece64) + '<br>';
   addSpan(line, currentDiv);
-
 
   // var referenceBits = new Int32Array(reference.buffer);
   // var resultBits = new Int32Array(result.buffer);
@@ -236,7 +269,7 @@ function test_float_add(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // float +
+  // float +
   const float0 = getFloat64();
   const float1 = getFloat64();
   const float_ref = float0 + float1;
@@ -245,22 +278,26 @@ function test_float_add(gl, testName) {
   const float1_vec2 = fp64ify(float1);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_add.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }
-    ));
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    b: float1_vec2,
-    ONE: 1.0
-  });
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_add.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      b: float1_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "(" + float0_vec2.toString() + ') + (' + float1_vec2.toString() + ')<br>';
+  line = '(' + float0_vec2.toString() + ') + (' + float1_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -269,7 +306,7 @@ function test_float_sub(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // float -
+  // float -
   const float0 = getFloat64();
   const float1 = getFloat64();
   const float_ref = float0 - float1;
@@ -278,22 +315,27 @@ function test_float_sub(gl, testName) {
   const float1_vec2 = fp64ify(float1);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
       vs: require('./vs_float_sub.glsl'),
       fs: require('./fs.glsl'),
       modules: ['fp64']
-    }));
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    b: float1_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      b: float1_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "(" + float0_vec2.toString() + ') - (' + float1_vec2.toString() + ')<br>';
+  line = '(' + float0_vec2.toString() + ') - (' + float1_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -302,7 +344,7 @@ function test_float_mul(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // float x
+  // float x
   const float0 = getFloat64(128);
   const float1 = getFloat64(128);
 
@@ -312,22 +354,27 @@ function test_float_mul(gl, testName) {
   const float1_vec2 = fp64ify(float1);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-    vs: require('./vs_float_mul.glsl'),
-    fs: require('./fs.glsl'),
-    modules: ['fp64']
-  }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_mul.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    b: float1_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      b: float1_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "(" + float0_vec2.toString() + ') * (' + float1_vec2.toString() + ')<br>';
+  line = '(' + float0_vec2.toString() + ') * (' + float1_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -336,7 +383,7 @@ function test_float_div(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // float /
+  // float /
   const float0 = getFloat64(128);
   const float1 = getFloat64(128);
   const float_ref = float0 / float1;
@@ -345,22 +392,27 @@ function test_float_div(gl, testName) {
   const float1_vec2 = fp64ify(float1);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-    vs: require('./vs_float_div.glsl'),
-    fs: require('./fs.glsl'),
-    modules: ['fp64']
-  }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_div.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    b: float1_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      b: float1_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "(" + float0_vec2.toString() + ') / (' + float1_vec2.toString() + ')<br>';
+  line = '(' + float0_vec2.toString() + ') / (' + float1_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -369,28 +421,33 @@ function test_float_sqrt(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // sqrt
+  // sqrt
   const float0 = getFloat64(128);
   const float_ref = Math.sqrt(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_sqrt.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_sqrt.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "sqrt(" + float0_vec2.toString() + ')<br>';
+  line = 'sqrt(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -399,28 +456,33 @@ function test_float_exp(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // exp
+  // exp
   const float0 = getFloat64(6);
   const float_ref = Math.exp(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_exp.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_exp.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "exp(" + float0_vec2.toString() + ')<br>';
+  line = 'exp(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -429,59 +491,68 @@ function test_float_log(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // log
+  // log
   const float0 = getFloat64(24);
   const float_ref = Math.log(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_log.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_log.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "log(" + float0_vec2.toString() + ')<br>';
+  line = 'log(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
-
 
 function test_float_sin(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // sin
+  // sin
   const float0 = getFloat64(8);
   const float_ref = Math.sin(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_sin.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_sin.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "sin(" + float0_vec2.toString() + ')<br>';
+  line = 'sin(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -490,28 +561,33 @@ function test_float_cos(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // cos
+  // cos
   const float0 = getFloat64(8);
   const float_ref = Math.cos(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_cos.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_cos.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "cos(" + float0_vec2.toString() + ')<br>';
+  line = 'cos(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -520,28 +596,33 @@ function test_float_tan(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // tan
+  // tan
   const float0 = getFloat64(8);
   const float_ref = Math.tan(float0);
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_tan.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_tan.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "tan(" + float0_vec2.toString() + ')<br>';
+  line = 'tan(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -550,28 +631,33 @@ function test_float_radians(gl, testName) {
   var currentDiv = addDiv();
   addSpan(testName, currentDiv);
 
- // radians
+  // radians
   const float0 = getFloat64(16);
-  const float_ref = float0 * Math.PI / 180.0;
+  const float_ref = (float0 * Math.PI) / 180.0;
 
   const float0_vec2 = fp64ify(float0);
   const float_ref_vec2 = fp64ify(float_ref);
 
-  const program = new Program(gl, assembleShaders(gl, {
-        vs: require('./vs_float_radians.glsl'),
-        fs: require('./fs.glsl'),
-        modules: ['fp64']
-      }));
+  const program = new Program(
+    gl,
+    assembleShaders(gl, {
+      vs: require('./vs_float_radians.glsl'),
+      fs: require('./fs.glsl'),
+      modules: ['fp64']
+    })
+  );
 
-  program.setBuffers({
-    positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
-  }).setUniforms({
-    a: float0_vec2,
-    ONE: 1.0
-  });
+  program
+    .setBuffers({
+      positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
+    })
+    .setUniforms({
+      a: float0_vec2,
+      ONE: 1.0
+    });
 
   var line;
-  line = "tan(" + float0_vec2.toString() + ')<br>';
+  line = 'tan(' + float0_vec2.toString() + ')<br>';
   addSpan(line, currentDiv);
   return float_ref_vec2;
 }
@@ -589,7 +675,6 @@ window.onload = () => {
   var gl = initializeGL(canvas);
   initializeTexTarget(gl);
 
-
   registerShaderModules([fp64]);
 
   var idx0;
@@ -598,10 +683,10 @@ window.onload = () => {
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_add(gl, "Float addition test");
+    var cpu_result = test_float_add(gl, 'Float addition test');
 
     render(gl);
 
@@ -609,15 +694,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_sub(gl, "Float subtraction test");
+    var cpu_result = test_float_sub(gl, 'Float subtraction test');
 
     render(gl);
 
@@ -625,15 +710,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_mul(gl, "Float multiplication test");
+    var cpu_result = test_float_mul(gl, 'Float multiplication test');
 
     render(gl);
 
@@ -641,15 +726,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_div(gl, "Float division test");
+    var cpu_result = test_float_div(gl, 'Float division test');
 
     render(gl);
 
@@ -657,15 +742,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_sqrt(gl, "Float sqrt test");
+    var cpu_result = test_float_sqrt(gl, 'Float sqrt test');
 
     render(gl);
 
@@ -673,15 +758,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_exp(gl, "Float exp test");
+    var cpu_result = test_float_exp(gl, 'Float exp test');
 
     render(gl);
 
@@ -689,15 +774,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_log(gl, "Float log test");
+    var cpu_result = test_float_log(gl, 'Float log test');
 
     render(gl);
 
@@ -705,31 +790,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-    var cpu_result = test_float_sin(gl, "Float sin test");
-
-    render(gl);
-
-    var gpu_result = getGPUOutput(gl);
-
-    checkError(gpu_result, cpu_result);
-
-    addSpan("------------------------", currentDiv);
-   }
-
-  for (idx0 = 0; idx0 < loop; idx0++) {
-    var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
-
-    var cpu_result = test_float_cos(gl, "Float cos test");
+    var cpu_result = test_float_sin(gl, 'Float sin test');
 
     render(gl);
 
@@ -737,18 +806,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
-
-
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-
-    var cpu_result = test_float_tan(gl, "Float tan test");
+    var cpu_result = test_float_cos(gl, 'Float cos test');
 
     render(gl);
 
@@ -756,16 +822,15 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
 
   for (idx0 = 0; idx0 < loop; idx0++) {
     var currentDiv = addDiv();
-    addSpan("------------------------", currentDiv);
-    addSpan("Loop No. " + test_no++, currentDiv);
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
 
-
-    var cpu_result = test_float_radians(gl, "Float radians test");
+    var cpu_result = test_float_tan(gl, 'Float tan test');
 
     render(gl);
 
@@ -773,6 +838,22 @@ window.onload = () => {
 
     checkError(gpu_result, cpu_result);
 
-    addSpan("------------------------", currentDiv);
+    addSpan('------------------------', currentDiv);
   }
-}
+
+  for (idx0 = 0; idx0 < loop; idx0++) {
+    var currentDiv = addDiv();
+    addSpan('------------------------', currentDiv);
+    addSpan('Loop No. ' + test_no++, currentDiv);
+
+    var cpu_result = test_float_radians(gl, 'Float radians test');
+
+    render(gl);
+
+    var gpu_result = getGPUOutput(gl);
+
+    checkError(gpu_result, cpu_result);
+
+    addSpan('------------------------', currentDiv);
+  }
+};

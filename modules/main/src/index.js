@@ -4,13 +4,9 @@
 require('./init');
 
 // WebGL
-export {
-  isWebGL,
-  isWebGL2} from '@luma.g/core';
+export {isWebGL, isWebGL2} from '@luma.g/core';
 export {cloneTextureFrom} from '@luma.g/core';
-export {
-  getKeyValue,
-  getKey} from '@luma.g/core';
+export {getKeyValue, getKey} from '@luma.g/core';
 export {
   createGLContext,
   destroyGLContext,
@@ -18,8 +14,7 @@ export {
   pollGLContext,
   setContextDefaults
 } from '@luma.g/core';
-export {
-  trackContextState} from '@luma.g/core';
+export {trackContextState} from '@luma.g/core';
 export {
   resetParameters,
   getParameter,
@@ -27,18 +22,16 @@ export {
   setParameter,
   setParameters,
   withParameters,
-  getModifiedParameters} from '@luma.g/core';
-export {
-  getContextInfo,
-  getGLContextInfo,
-  getContextLimits,
-  glGetDebugInfo} from '@luma.g/core';
+  getModifiedParameters
+} from '@luma.g/core';
+export {getContextInfo, getGLContextInfo, getContextLimits, glGetDebugInfo} from '@luma.g/core';
 export {
   FEATURES,
   hasFeature,
   hasFeatures,
   getFeatures,
-  canCompileGLGSExtension} from '@luma.g/core';
+  canCompileGLGSExtension
+} from '@luma.g/core';
 
 // WebGL1 classes
 export {default as Buffer} from '@luma.g/core';
@@ -82,10 +75,7 @@ export {default as Group} from '@luma.g/core';
 export {default as Model} from '@luma.g/core';
 export {default as AnimationLoop} from '@luma.g/core';
 export {default as pickModels} from '@luma.g/core';
-export {
-  encodePickingColor,
-  decodePickingColor,
-  getNullPickingColor} from '@luma.g/core';
+export {encodePickingColor, decodePickingColor, getNullPickingColor} from '@luma.g/core';
 
 // Experimental core exports
 export {default as Transform} from '@luma.g/core';
@@ -144,20 +134,13 @@ export {
 } from '@luma.g/core';
 
 // lighting
-export {
-  DirectionalLight,
-  AmbientLight,
-  PointLight
-} from '@luma.g/core';
+export {DirectionalLight, AmbientLight, PointLight} from '@luma.g/core';
 
 // material
 export {default as PhongMaterial} from '@luma.g/core';
 
 // shadertools
-export {
-  setDefaultShaderModules,
-  registerShaderModules
-} from '@luma.g/shadertools';
+export {setDefaultShaderModules, registerShaderModules} from '@luma.g/shadertools';
 export {assembleShaders} from '@luma.g/shadertools';
 export {normalizeShaderModule} from '@luma.g/shadertools';
 

@@ -7,9 +7,10 @@ let defaultShaderModules = [];
  * Registers an array of shader modules
  * @param {Object[]} shaderModuleList - Array of shader modules
  */
-export function registerShaderModules(shaderModuleList, {
-  ignoreMultipleRegistrations = false
-} = {}) {
+export function registerShaderModules(
+  shaderModuleList,
+  {ignoreMultipleRegistrations = false} = {}
+) {
   for (const shaderModule of shaderModuleList) {
     registerShaderModule(shaderModule, {ignoreMultipleRegistrations});
   }
@@ -127,11 +128,11 @@ export function getDependencyGraph({modules, level, result}) {
 function parseDeprecationDefinitions(deprecations = []) {
   deprecations.forEach(def => {
     switch (def.type) {
-    case 'function':
-      def.regex = new RegExp(`\\b${def.old}\\(`);
-      break;
-    default:
-      def.regex = new RegExp(`${def.type} ${def.old};`);
+      case 'function':
+        def.regex = new RegExp(`\\b${def.old}\\(`);
+        break;
+      default:
+        def.regex = new RegExp(`${def.type} ${def.old};`);
     }
   });
 

@@ -20,7 +20,6 @@ void main() {
 `;
 
 export default class CopyPass extends Pass {
-
   constructor(gl, props = {}) {
     super(gl, Object.assign({id: 'copy-pass', swap: true}, props));
     this.clipspace = new ClipSpace(gl, {id: 'copy-pass', fs});

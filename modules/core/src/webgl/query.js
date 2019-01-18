@@ -12,19 +12,18 @@ const ERR_TIMER_QUERY_NOT_SUPPORTED = 'Timer queries require "EXT_disjoint_timer
 
 const GL_QUERY_COUNTER_BITS_EXT = 0x8864; // # bits in query result for the given target.
 
-const GL_QUERY_RESULT = 0x8866;           // Returns a GLuint containing the query result.
+const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.
 const GL_QUERY_RESULT_AVAILABLE = 0x8867; // whether query result is available.
 
-const GL_TIME_ELAPSED_EXT = 0x88BF;       // Elapsed time (in nanoseconds).
-const GL_TIMESTAMP_EXT = 0x8E28;          // The current time.
-const GL_GPU_DISJOINT_EXT = 0x8FBB;       // Whether GPU performed any disjoint operation.
+const GL_TIME_ELAPSED_EXT = 0x88bf; // Elapsed time (in nanoseconds).
+const GL_TIMESTAMP_EXT = 0x8e28; // The current time.
+const GL_GPU_DISJOINT_EXT = 0x8fbb; // Whether GPU performed any disjoint operation.
 
-const GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 0x8C88; // #primitives written to feedback buffers
-const GL_ANY_SAMPLES_PASSED = 0x8C2F;             // Occlusion query (if drawing passed depth test)
-const GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8D6A;  // Occlusion query less accurate/faster version
+const GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 0x8c88; // #primitives written to feedback buffers
+const GL_ANY_SAMPLES_PASSED = 0x8c2f; // Occlusion query (if drawing passed depth test)
+const GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8d6a; // Occlusion query less accurate/faster version
 
 export default class Query extends Resource {
-
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
   static isSupported(gl, opts = []) {
@@ -36,19 +35,20 @@ export default class Query extends Resource {
 
     for (const key of opts) {
       switch (key) {
-      case 'queries':
-        supported = supported && webgl2;
-        break;
-      case 'timers':
-        supported = supported && hasTimerQuery;
-        break;
-      case 'timestamps':
-        const queryCounterBits =
-          hasTimerQuery ? gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT) : 0;
-        supported = supported && (queryCounterBits > 0);
-        break;
-      default:
-        assert(false);
+        case 'queries':
+          supported = supported && webgl2;
+          break;
+        case 'timers':
+          supported = supported && hasTimerQuery;
+          break;
+        case 'timestamps':
+          const queryCounterBits = hasTimerQuery
+            ? gl.getQuery(GL_TIMESTAMP_EXT, GL_QUERY_COUNTER_BITS_EXT)
+            : 0;
+          supported = supported && queryCounterBits > 0;
+          break;
+        default:
+          assert(false);
       }
     }
 
@@ -59,10 +59,7 @@ export default class Query extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
 
-    const {
-      onComplete = noop,
-      onError = noop
-    } = opts;
+    const {onComplete = noop, onError = noop} = opts;
 
     this.target = null;
     this.onComplete = onComplete;

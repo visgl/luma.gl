@@ -9,7 +9,8 @@ test('WebGL#TextureCube construct/delete', t => {
   t.throws(
     () => new TextureCube(),
     /.*WebGLRenderingContext.*/,
-    'TextureCube throws on missing gl context');
+    'TextureCube throws on missing gl context'
+  );
 
   const texture = new TextureCube(gl);
   t.ok(texture instanceof TextureCube, 'TextureCube construction successful');

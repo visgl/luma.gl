@@ -19,11 +19,10 @@ import luma from '../../init';
  * @return {*} bytes
  */
 export function compressImage(image, type = 'png') {
-  return savePixels(ndarray(
-    image.data,
-    [image.width, image.height, 4],
-    [4, image.width * 4, 1],
-    0), type.replace('image/', ''));
+  return savePixels(
+    ndarray(image.data, [image.width, image.height, 4], [4, image.width * 4, 1], 0),
+    type.replace('image/', '')
+  );
 }
 
 const getPixelsAsync = promisify(getPixels);

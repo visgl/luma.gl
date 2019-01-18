@@ -14,12 +14,11 @@ const OES_vertex_array_object = 'OES_vertex_array_object';
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArrayObject extends Resource {
-
   static isSupported(gl, options = {}) {
     // Attribute 0 can not be disable on most desktop OpenGL based browsers
     // and on iOS Safari browser.
     if (options.constantAttributeZero) {
-      return isWebGL2(gl) || (getBrowser() === 'Chrome');
+      return isWebGL2(gl) || getBrowser() === 'Chrome';
     }
 
     // Whether additional objects can be created
@@ -37,8 +36,8 @@ export default class VertexArrayObject extends Resource {
 
   static getMaxAttributes(gl) {
     // TODO - should be cached per context
-    VertexArrayObject.MAX_ATTRIBUTES = VertexArrayObject.MAX_ATTRIBUTES ||
-      gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+    VertexArrayObject.MAX_ATTRIBUTES =
+      VertexArrayObject.MAX_ATTRIBUTES || gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
     return VertexArrayObject.MAX_ATTRIBUTES;
   }
 
@@ -48,17 +47,24 @@ export default class VertexArrayObject extends Resource {
   // TODO - remember/cache values to avoid setting them unnecessarily?
   static setConstant(gl, location, array) {
     switch (array.constructor) {
-    case Float32Array: VertexArrayObject._setConstantFloatArray(gl, location, array); break;
-    case Int32Array: VertexArrayObject._setConstantIntArray(gl, location, array); break;
-    case Uint32Array: VertexArrayObject._setConstantUintArray(gl, location, array); break;
-    default: assert(false);
+      case Float32Array:
+        VertexArrayObject._setConstantFloatArray(gl, location, array);
+        break;
+      case Int32Array:
+        VertexArrayObject._setConstantIntArray(gl, location, array);
+        break;
+      case Uint32Array:
+        VertexArrayObject._setConstantUintArray(gl, location, array);
+        break;
+      default:
+        assert(false);
     }
   }
 
   // Create a VertexArray
   constructor(gl, opts = {}) {
     // Use program's id if program but no id is supplied
-    const id = opts.id || opts.program && opts.program.id;
+    const id = opts.id || (opts.program && opts.program.id);
     super(gl, Object.assign({}, opts, {id}));
 
     this.hasVertexArrays = VertexArrayObject.isSupported(gl);
@@ -105,7 +111,6 @@ export default class VertexArrayObject extends Resource {
 
   // Set a location in vertex attributes array to a bufferk, enables the location, sets divisor
   setBuffer(location, buffer, accessor) {
-
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       return this.setElementBuffer(buffer, accessor);
@@ -150,9 +155,11 @@ export default class VertexArrayObject extends Resource {
 
     if (!disablingAttributeZero) {
       location = Number(location);
-      this.bind(() => enable ?
-        this.gl.enableVertexAttribArray(location) :
-        this.gl.disableVertexAttribArray(location)
+      this.bind(
+        () =>
+          enable
+            ? this.gl.enableVertexAttribArray(location)
+            : this.gl.disableVertexAttribArray(location)
       );
     }
     return this;
@@ -176,8 +183,8 @@ export default class VertexArrayObject extends Resource {
     updateNeeded = updateNeeded || this.buffer.setByteLength(byteLength);
 
     // Reallocate and update contents if needed
-    updateNeeded = updateNeeded ||
-      !this._compareConstantArrayValues(constantValue, this.bufferValue);
+    updateNeeded =
+      updateNeeded || !this._compareConstantArrayValues(constantValue, this.bufferValue);
 
     if (updateNeeded) {
       // Create a typed array that is big enough, and fill it with the required data
@@ -215,33 +222,60 @@ export default class VertexArrayObject extends Resource {
 
   static _setConstantFloatArray(gl, location, array) {
     switch (array.length) {
-    case 1: gl.vertexAttrib1fv(location, array); break;
-    case 2: gl.vertexAttrib2fv(location, array); break;
-    case 3: gl.vertexAttrib3fv(location, array); break;
-    case 4: gl.vertexAttrib4fv(location, array); break;
-    default: assert(false);
+      case 1:
+        gl.vertexAttrib1fv(location, array);
+        break;
+      case 2:
+        gl.vertexAttrib2fv(location, array);
+        break;
+      case 3:
+        gl.vertexAttrib3fv(location, array);
+        break;
+      case 4:
+        gl.vertexAttrib4fv(location, array);
+        break;
+      default:
+        assert(false);
     }
   }
 
   static _setConstantIntArray(gl, location, array) {
     assert(isWebGL2(gl));
     switch (array.length) {
-    case 1: gl.vertexAttribI1iv(location, array); break;
-    case 2: gl.vertexAttribI2iv(location, array); break;
-    case 3: gl.vertexAttribI3iv(location, array); break;
-    case 4: gl.vertexAttribI4iv(location, array); break;
-    default: assert(false);
+      case 1:
+        gl.vertexAttribI1iv(location, array);
+        break;
+      case 2:
+        gl.vertexAttribI2iv(location, array);
+        break;
+      case 3:
+        gl.vertexAttribI3iv(location, array);
+        break;
+      case 4:
+        gl.vertexAttribI4iv(location, array);
+        break;
+      default:
+        assert(false);
     }
   }
 
   static _setConstantUintArray(gl, location, array) {
     assert(isWebGL2(gl));
     switch (array.length) {
-    case 1: gl.vertexAttribI1uiv(location, array); break;
-    case 2: gl.vertexAttribI2uiv(location, array); break;
-    case 3: gl.vertexAttribI3uiv(location, array); break;
-    case 4: gl.vertexAttribI4uiv(location, array); break;
-    default: assert(false);
+      case 1:
+        gl.vertexAttribI1uiv(location, array);
+        break;
+      case 2:
+        gl.vertexAttribI2uiv(location, array);
+        break;
+      case 3:
+        gl.vertexAttribI3uiv(location, array);
+        break;
+      case 4:
+        gl.vertexAttribI4uiv(location, array);
+        break;
+      default:
+        assert(false);
     }
   }
 
@@ -274,8 +308,10 @@ export default class VertexArrayObject extends Resource {
     assert(Number.isFinite(location));
     return this.bind(() => {
       switch (pname) {
-      case GL.VERTEX_ATTRIB_ARRAY_POINTER: return this.gl.getVertexAttribOffset(location, pname);
-      default: return this.gl.getVertexAttrib(location, pname);
+        case GL.VERTEX_ATTRIB_ARRAY_POINTER:
+          return this.gl.getVertexAttribOffset(location, pname);
+        default:
+          return this.gl.getVertexAttrib(location, pname);
       }
     });
   }

@@ -51,12 +51,7 @@ function getMaterialUniforms(material) {
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  const {
-    ambientLight,
-    pointLights,
-    directionalLights,
-    material
-  } = opts;
+  const {ambientLight, pointLights, directionalLights, material} = opts;
 
   if (!(ambientLight || pointLights || directionalLights) || !material) {
     return {};

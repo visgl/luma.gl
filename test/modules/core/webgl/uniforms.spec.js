@@ -7,22 +7,10 @@ import {checkUniformValues, areUniformsEqual, parseUniformName} from 'luma.gl/we
 
 import {fixture} from 'luma.gl/test/setup';
 
-const MATRIX_2 = [
-  1, 0,
-  0, 1
-];
+const MATRIX_2 = [1, 0, 0, 1];
 
-const MATRIX_3 = [
-  1, 0, 0,
-  0, 1, 0,
-  0, 0, 1
-];
-const MATRIX_4 = [
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1
-];
+const MATRIX_3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+const MATRIX_4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
 const VERTEX_SHADER = `
 precision highp float;
@@ -140,7 +128,7 @@ const WEBGL1_GOOD_UNIFORMS = {
   m3: new Float32Array(MATRIX_3), // FLOAT_MAT3  0x8B5B
   m4: new Float32Array(MATRIX_4), // FLOAT_MAT4  0x8B5C
 
-  s2d: new Texture2D(fixture.gl)    // SAMPLER_2D  0x8B5E
+  s2d: new Texture2D(fixture.gl) // SAMPLER_2D  0x8B5E
   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
 };
 
@@ -217,8 +205,7 @@ const WEBGL1_GOOD_UNIFORMS_ARRAY = {
 // const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
 test('WebGL#Uniforms pre verify uniforms', t => {
-  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS,
-    'Uniform values are well formed'));
+  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS, 'Uniform values are well formed'));
 
   // t.throws()
 
@@ -339,8 +326,8 @@ const testSetUniform = (gl, t) => {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];
     if (value.length) {
       // Convert to wrong typed array
-      uniforms[uniformName] = (value instanceof Float32Array) ?
-        new Int32Array(value) : new Float32Array(value);
+      uniforms[uniformName] =
+        value instanceof Float32Array ? new Int32Array(value) : new Float32Array(value);
     }
   }
 
@@ -381,7 +368,6 @@ test('WebGL2#Uniforms Program setUniforms', t => {
   } else {
     t.end();
   }
-
 });
 
 test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
@@ -392,7 +378,6 @@ test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
   } else {
     t.end();
   }
-
 });
 
 test('WebGL#Uniforms areUniformsEqual', t => {
@@ -406,42 +391,50 @@ test('WebGL#Uniforms areUniformsEqual', t => {
       value1: 1,
       value2: 1,
       equals: true
-    }, {
+    },
+    {
       title: 'Numeric values',
       value1: 1,
       value2: 2,
       equals: false
-    }, {
+    },
+    {
       title: 'Texture objects',
       value1: TEST_TEXTURE,
       value2: TEST_TEXTURE,
       equals: true
-    }, {
+    },
+    {
       title: 'Texture objects',
       value1: TEST_TEXTURE,
       value2: new Texture2D(gl),
       equals: false
-    }, {
+    },
+    {
       title: 'null',
       value1: null,
       value2: null,
       equals: true
-    }, {
+    },
+    {
       title: 'Array vs array',
       value1: [0, 0, 0],
       value2: [0, 0, 0],
       equals: true
-    }, {
+    },
+    {
       title: 'TypedArray vs array',
       value1: new Float32Array(3),
       value2: [0, 0, 0],
       equals: true
-    }, {
+    },
+    {
       title: 'Array different length',
       value1: [0, 0, 0, 0],
       value2: new Float32Array(3),
       equals: false
-    }, {
+    },
+    {
       title: 'Array vs null',
       value1: new Float32Array(3),
       value2: null,

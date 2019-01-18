@@ -4,7 +4,6 @@ import {window} from 'luma.gl/utils/globals';
 import {setOverride, getOverrides} from 'luma.gl/debug/seer-integration';
 
 test('Seer overrides', t => {
-
   const uniforms = {
     ONE: 'neo',
     opacity: 0.2,
@@ -26,5 +25,4 @@ test('Seer overrides', t => {
   t.equal(uniforms.viewportSize[0], 4, 'Nested values can be overriden too');
 
   t.end();
-
 });

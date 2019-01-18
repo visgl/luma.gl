@@ -227,8 +227,7 @@ export default class Resource {
   }
 
   // PUBLIC VIRTUAL METHODS
-  initialize(opts) {
-  }
+  initialize(opts) {}
 
   // PROTECTED METHODS - These must be overridden by subclass
   _createHandle() {

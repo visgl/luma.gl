@@ -75,10 +75,7 @@ export default {
   fs,
   dependencies: [random],
 
-  passes: [
-    {sampler: true, uniforms: {invert: false}},
-    {sampler: true, uniforms: {invert: true}}
-  ]
+  passes: [{sampler: true, uniforms: {invert: false}}, {sampler: true, uniforms: {invert: true}}]
 };
 
 /*

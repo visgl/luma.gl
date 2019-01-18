@@ -5,7 +5,7 @@ function formatArrayValue(v, opts) {
   let string = '[';
   for (let i = 0; i < v.length && i < maxElts; ++i) {
     if (i > 0) {
-      string += `,${(i % size === 0) ? ' ' : ''}`;
+      string += `,${i % size === 0 ? ' ' : ''}`;
     }
     string += formatValue(v[i], opts);
   }

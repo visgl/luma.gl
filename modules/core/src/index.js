@@ -4,13 +4,9 @@
 require('./init');
 
 // WebGL
-export {
-  isWebGL,
-  isWebGL2} from './webgl-utils/webgl-checks';
+export {isWebGL, isWebGL2} from './webgl-utils/webgl-checks';
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
-export {
-  getKeyValue,
-  getKey} from './webgl-utils/constants-to-keys';
+export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 export {
   createGLContext,
   destroyGLContext,
@@ -18,8 +14,7 @@ export {
   pollGLContext,
   setContextDefaults
 } from './webgl-context/context';
-export {
-  trackContextState} from './webgl-context';
+export {trackContextState} from './webgl-context';
 export {
   resetParameters,
   getParameter,
@@ -27,18 +22,21 @@ export {
   setParameter,
   setParameters,
   withParameters,
-  getModifiedParameters} from './webgl-context/context-state';
+  getModifiedParameters
+} from './webgl-context/context-state';
 export {
   getContextInfo,
   getGLContextInfo,
   getContextLimits,
-  glGetDebugInfo} from './webgl-context/context-limits';
+  glGetDebugInfo
+} from './webgl-context/context-limits';
 export {
   FEATURES,
   hasFeature,
   hasFeatures,
   getFeatures,
-  canCompileGLGSExtension} from './webgl-context/context-features';
+  canCompileGLGSExtension
+} from './webgl-context/context-features';
 
 // WebGL1 classes
 export {default as Buffer} from './webgl/buffer';
@@ -82,10 +80,7 @@ export {default as Group} from './core/group';
 export {default as Model} from './core/model';
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as pickModels} from './core/pick-models';
-export {
-  encodePickingColor,
-  decodePickingColor,
-  getNullPickingColor} from './core/picking-colors';
+export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
 
 // Experimental core exports
 export {default as Transform} from './core/transform';
@@ -145,11 +140,7 @@ export {
 } from './io';
 
 // lighting
-export {
-  DirectionalLight,
-  AmbientLight,
-  PointLight
-} from './lighting/light-source';
+export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-source';
 
 // material
 export {default as PhongMaterial} from './materials/phong-material';
@@ -161,11 +152,9 @@ export {
   registerShaderModules,
   setDefaultShaderModules,
   assembleShaders,
-
   // HELPERS
   combineInjects,
   normalizeShaderModule,
-
   // SHADER MODULES
   fp32,
   fp64,
@@ -175,12 +164,9 @@ export {
   picking,
   diffuse,
   phonglighting,
-
   // experimental
   _transform,
-
   MODULAR_SHADERS,
-
   getQualifierDetails,
   getPassthroughFS,
   typeToChannelSuffix,
@@ -188,10 +174,8 @@ export {
   convertToVec4
 } from '@luma.gl/shadertools';
 
-
 // TO BE REMOVED IN v7
-export {
-  makeDebugContext} from './webgl-context/debug-context';
+export {makeDebugContext} from './webgl-context/debug-context';
 
 // DEPRECATED EXPORTS IN v6.0
 
@@ -200,7 +184,6 @@ export {default as ClipSpaceQuad} from './models/clip-space';
 // DEPRECATED EXPORTS IN v5.3
 
 export {glGet, glKey, glKeyType} from './webgl-utils/constants-to-keys';
-
 
 // UNDOCUMENTED API
 // TODO - Should these be exposed?

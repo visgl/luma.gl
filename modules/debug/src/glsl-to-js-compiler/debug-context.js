@@ -34,10 +34,12 @@ export default class DebugContext {
   }
 
   drawModel(model, opts) {
-    drawModel(Object.assign({}, opts, {
-      model,
-      draw: this._draw
-    }));
+    drawModel(
+      Object.assign({}, opts, {
+        model,
+        draw: this._draw
+      })
+    );
   }
 
   /* eslint-disable complexity */
@@ -123,7 +125,7 @@ export default class DebugContext {
       return null;
     }
 
-    return [(x / w + 1) * width / 2, (1 - y / w) * height / 2];
+    return [((x / w + 1) * width) / 2, ((1 - y / w) * height) / 2];
   }
 
   _rgbaToColor(color) {

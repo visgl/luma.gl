@@ -129,7 +129,6 @@ test('WebGL#Attribute getValue', t => {
 // the extras are given values from the vector (0, 0, 0, 1) for the missing XYZW components.
 // https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_format
 test('Attribute#missing component', t => {
-
   if (isHeadlessGL(fixture.gl)) {
     // headless-gl does not seem to implement this behavior
     t.comment('Skipping headless-gl');
@@ -142,8 +141,9 @@ test('Attribute#missing component', t => {
     WebGL2: fixture.gl2
   };
 
-  const getModel = (gl, {attributeName, type, accessor}) => new Model(gl, {
-    vs: `
+  const getModel = (gl, {attributeName, type, accessor}) =>
+    new Model(gl, {
+      vs: `
   attribute vec3 position;
   attribute ${type} ${attributeName};
   varying vec4 vColor;
@@ -153,19 +153,19 @@ test('Attribute#missing component', t => {
     gl_PointSize = 2.0;
   }
   `,
-    fs: `
+      fs: `
   precision highp float;
   varying vec4 vColor;
   void main(void) {
     gl_FragColor = vColor;
   }
   `,
-    drawMode: GL.POINTS,
-    vertexCount: 4,
-    attributes: {
-      position: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])}
-    }
-  });
+      drawMode: GL.POINTS,
+      vertexCount: 4,
+      attributes: {
+        position: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])}
+      }
+    });
 
   const testCases = [
     // This doesn't work for vec2

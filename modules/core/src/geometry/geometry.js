@@ -11,27 +11,19 @@ export const DRAW_MODE = {
   TRIANGLES: 0x0004, // draw triangles. Each set of three vertices creates a separate triangle.
   TRIANGLE_STRIP: 0x0005, // draw a connected group of triangles.
   TRIANGLE_FAN: 0x0006 // draw a connected group of triangles.
-                       // Each vertex connects to the previous and the first vertex in the fan.
+  // Each vertex connects to the previous and the first vertex in the fan.
 };
 
 // Helper function to handle string draw modes - when using this library without WebGL constants
 export function getDrawMode(drawMode) {
-  const mode = typeof drawMode === 'string' ?
-    DRAW_MODE[drawMode] || DRAW_MODE.TRIANGLES :
-    drawMode;
+  const mode = typeof drawMode === 'string' ? DRAW_MODE[drawMode] || DRAW_MODE.TRIANGLES : drawMode;
   assert(mode >= 0 && mode <= DRAW_MODE.TRIANGLE_FAN, 'Illegal drawMode');
   return mode;
 }
 
 export default class Geometry {
-
   constructor(opts = {}) {
-    const {
-      id,
-      drawMode = DRAW_MODE.TRIANGLES,
-      vertexCount = undefined,
-      attributes
-    } = opts;
+    const {id, drawMode = DRAW_MODE.TRIANGLES, vertexCount = undefined, attributes} = opts;
 
     this.id = id || uid(this.constructor.name);
     this.drawMode = getDrawMode(drawMode);
@@ -107,8 +99,10 @@ export default class Geometry {
       // Wrap "unwrapped" arrays and try to autodetect their type
       attribute = ArrayBuffer.isView(attribute) ? {value: attribute} : attribute;
 
-      assert(ArrayBuffer.isView(attribute.value),
-        `${this._print(attributeName)}: must be typed array or object with value as typed array`);
+      assert(
+        ArrayBuffer.isView(attribute.value),
+        `${this._print(attributeName)}: must be typed array or object with value as typed array`
+      );
 
       this._autoDetectAttribute(attributeName, attribute);
 
@@ -123,40 +117,39 @@ export default class Geometry {
   _autoDetectAttribute(attributeName, attribute) {
     let category;
     switch (attributeName) {
-    case 'indices':
-      category = category || 'indices';
-      break;
-    case 'texCoords':
-    case 'texCoord1':
-    case 'texCoord2':
-    case 'texCoord3':
-      category = 'uvs';
-      break;
-    case 'vertices':
-    case 'positions':
-    case 'normals':
-    case 'pickingColors':
-      category = 'vectors';
-      break;
+      case 'indices':
+        category = category || 'indices';
+        break;
+      case 'texCoords':
+      case 'texCoord1':
+      case 'texCoord2':
+      case 'texCoord3':
+        category = 'uvs';
+        break;
+      case 'vertices':
+      case 'positions':
+      case 'normals':
+      case 'pickingColors':
+        category = 'vectors';
+        break;
     }
 
     // Check for categorys
     switch (category) {
-    case 'vectors':
-      attribute.size = attribute.size || 3;
-      break;
-    case 'uvs':
-      attribute.size = attribute.size || 2;
-      break;
-    case 'indices':
-      attribute.size = attribute.size || 1;
-      attribute.isIndexed = attribute.isIndexed === undefined ? true : attribute.isIndexed;
-      assert(
-        attribute.value instanceof Uint16Array ||
-        attribute.value instanceof Uint32Array,
-        'attribute array for "indices" must be of integer type'
-      );
-      break;
+      case 'vectors':
+        attribute.size = attribute.size || 3;
+        break;
+      case 'uvs':
+        attribute.size = attribute.size || 2;
+        break;
+      case 'indices':
+        attribute.size = attribute.size || 1;
+        attribute.isIndexed = attribute.isIndexed === undefined ? true : attribute.isIndexed;
+        assert(
+          attribute.value instanceof Uint16Array || attribute.value instanceof Uint32Array,
+          'attribute array for "indices" must be of integer type'
+        );
+        break;
     }
 
     assert(attribute.size, `attribute ${attributeName} needs size`);

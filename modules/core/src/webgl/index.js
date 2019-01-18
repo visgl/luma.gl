@@ -18,35 +18,19 @@ export {
   WebGLActiveInfo,
   WebGLShaderPrecisionFormat,
   WebGL2RenderingContext,
-
   webGLTypesAvailable
 } from '../webgl-utils';
 
-export {
-  isWebGL,
-  isWebGL2,
-  createGLContext,
-  destroyGLContext
-} from '../webgl-context/context';
+export {isWebGL, isWebGL2, createGLContext, destroyGLContext} from '../webgl-context/context';
 
-export {
-  withParameters,
-  resetParameters
-} from '../webgl-context/context-state';
+export {withParameters, resetParameters} from '../webgl-context/context-state';
 
-export {
-  getContextInfo
-} from '../webgl-context/context-limits';
+export {getContextInfo} from '../webgl-context/context-limits';
 
 // Functions
-export {
-  clear
-} from './clear';
+export {clear} from './clear';
 
-export {
-  parseUniformName,
-  getUniformSetter
-} from './uniforms';
+export {parseUniformName, getUniformSetter} from './uniforms';
 
 // WebGL1 objects
 export {default as Buffer} from './buffer';
