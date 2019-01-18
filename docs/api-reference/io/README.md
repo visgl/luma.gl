@@ -174,13 +174,15 @@ Enables loading of multiple remote images asynchronously and returns an array wi
 Loads multiple textures from image urls asynchronously and in parallel.
 
 ```js
-	const textures = await loadTextures({paths, params, ...options});
+	const textures = await loadTextures(gl, options);
 ```
 
-1. paths - (*array*) An array of strings pointing to image urls.
+1. gl - (*WebGLContext*)
 2. options - (*object*) An object containing the following options:
-
-* noCache - (*boolean*, optional, default=false)
-  If true a random number will be appended to the url in order to
-  force the reload of the file and avoid the use of the cache.
+  - urls - (*array*) An array of strings pointing to image urls.
+  - onProgress - (*function*) Callback during loading.
+  - noCache - (*boolean*, optional, default=false)
+    If true a random number will be appended to the url in order to
+    force the reload of the file and avoid the use of the cache.
+  - Any additional options to forwarded to the `Texture2D` constructor.
 

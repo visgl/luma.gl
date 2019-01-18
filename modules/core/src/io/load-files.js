@@ -66,9 +66,7 @@ export function loadTextures(gl, opts = {}) {
 
   return loadImages(Object.assign({urls, onProgress}, opts))
   .then(images => images.map((img, i) => {
-    let params = Array.isArray(opts.parameters) ? opts.parameters[i] : opts.parameters;
-    params = params === undefined ? {} : params;
-    return new Texture2D(gl, {id: urls[i], parameters: params, data: img});
+    return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
   }));
 }
 

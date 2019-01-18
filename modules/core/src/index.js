@@ -135,6 +135,7 @@ export {
   setPathPrefix,
   loadFile,
   loadImage,
+  loadTexture,
   loadFiles,
   loadImages,
   loadTextures,
