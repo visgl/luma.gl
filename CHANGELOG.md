@@ -1,5 +1,9 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.6 - Jan 16, 2019
+
+- Fix parameter forwarding in loadTextures (#853)
+
 ## v7.0.0-alpha.5 - Jan 16, 2019
 
 - disable lighting by default (#852)
