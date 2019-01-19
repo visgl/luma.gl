@@ -1,13 +1,13 @@
-import {Buffer, Texture2D, Model, Group} from 'luma.gl';
+import Buffer from '../../webgl/buffer';
+import Group from '../group';
+import Model from '../model';
 
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
 export default class GLTFInstantiator {
-  constructor(gl) {
+  constructor(gl, options = {}) {
     this.gl = gl;
-    this.options = {
-      removeEmptyGroups: true
-    };
+    this.options = options;
   }
 
   instantiate(gltf) {
@@ -27,75 +27,95 @@ export default class GLTFInstantiator {
 
   createNode(gltfNode) {
     const gltfMeshes = gltfNode.children || [];
-    const meshes = gltfMeshes.map(node => this.createMesh(node));
-    // Option: Avoid group if single Mesh
-    let node = (this.options.removeEmptyGroups && meshes.length === 1) && meshes[0];
-    node = node || new Group({
+    const children = gltfMeshes.map(child => this.createNode(child));
+    // TODO: Check if we can have both children nodes and meshes!
+    if (gltfNode.mesh) {
+      children.push(this.createMesh(gltfNode.mesh));
+    }
+    const node = new Group({
       id: gltfNode.name || gltfNode.id,
-      children: meshes
+      children
     });
+    if (gltfNode.matrix) {
+      node.setMatrix(gltfNode.matrix);
+    }
     return node;
   }
 
   createMesh(gltfMesh) {
+    // TODO: avoid changing the gltf
     if (!gltfMesh._mesh) {
       const gltfPrimitives = gltfMesh.primitives || [];
       const primitives = gltfPrimitives.map(
         (gltfPrimitive, i) => this.createPrimitive(gltfPrimitive, i, gltfMesh)
       );
-      // Option: avoid group if single Primitive
-      let mesh = (this.options.removeEmptyGroups && primitives.length === 1) && primitives[0];
-      mesh = mesh || new Group({
+      const mesh = new Group({
         id: gltfMesh.name || gltfMesh.id,
         children: primitives
       });
       gltfMesh._mesh = mesh;
     }
+
     return gltfMesh._mesh;
   }
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
     const attributes = this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices);
     // TODO - handle gltfPrimitive.material
-    return new Model(this.gl, {
+    const model = new Model(this.gl, {
       id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}=${i}`,
-      attributes,
-      drawMode: gltfPrimitive.mode
+      drawMode: gltfPrimitive.mode || 4,
+      vertexCount: 2046 // from indices count
     });
+    model.setProps({attributes});
+    this.options.getImage(0).then(img => model.setUniforms({ tex: img }));
+    return model;
   }
 
   createAttributes(attributes, indices) {
-    return {};
+    const result = {};
+    Object.keys(attributes).forEach(attrName => {
+      result[attrName] = this.createBuffer(attributes[attrName]);
+    });
+    if (indices) {
+      const opts = Object.assign({target: this.gl.ELEMENT_ARRAY_BUFFER}, this.createAccessor(indices));
+      result.indices = new Buffer(this.gl, opts);
+    }
+    console.log("attributes>>", attributes, result);
+    return result;
   }
 
   createBuffer(accessor) {
-    accessor = this.createAccessor(accessor);
-    return new Buffer(this.gl, accessor).setData();
+    const opts = this.createAccessor(accessor);
+    return new Buffer(this.gl, opts);
   }
 
   createAccessor(accessor) {
-    return null;
-    /*
-    return new Accessor({
+    console.log("AAAA",accessor)
+    if (accessor.bufferView.byteStride) {
+      console.log("bufferView has byteStride, see https://github.com/uber-web/loaders.gl/issues/45");
+    }
+
+    return {
       type: accessor.componentType,
-      size: accessor.components,
+      // size: accessor.count, ????
       offset: accessor.byteOffset || 0,
-      stride: accessor.byteStride || 0
-    });
-    */
+      stride: accessor.byteStride || 0,
+      data: accessor.data
+    };
   }
 
-  createTexture(gltfTexture) {
-    if (!gltfTexture._texture) {
-      const texture = Texture2D(this.gl, {
-        id: gltfTexture.name || gltfTexture.id,
-        // TODO - create sampler in WebGL2
-        parameters: gltfTexture.sampler.parameters
-      });
-      gltfTexture._texture = texture;
-    }
-    return gltfTexture._texture;
-  }
+  // createTexture(gltfTexture) {
+  //   if (!gltfTexture._texture) {
+  //     const texture = Texture2D(this.gl, {
+  //       id: gltfTexture.name || gltfTexture.id,
+  //       // TODO - create sampler in WebGL2
+  //       parameters: gltfTexture.sampler.parameters
+  //     });
+  //     gltfTexture._texture = texture;
+  //   }
+  //   return gltfTexture._texture;
+  // }
 
   // TODO - create sampler in WebGL2
   createSampler(gltfSampler) {

@@ -47,7 +47,7 @@ export default class Group extends Node {
       if (child instanceof Group) {
         result = child.traverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        child.setMatrix(modelMatrix); // TODO: can child has his own matrix?
         result = visitor(child, {});
       }
       // Abort if a result was returned
@@ -69,7 +69,7 @@ export default class Group extends Node {
       if (child instanceof Group) {
         result = child.traverseReverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        child.setMatrix(modelMatrix); // TODO: can child has his own matrix?
         result = visitor(child, {});
       }
       // Abort if a result was returned

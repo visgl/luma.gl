@@ -21,7 +21,7 @@ class Controls {
   resetCamera() {
     this.roll = Math.PI;
     this.pitch = 0.0;
-    this.translate = 4.0;
+    this.translate = 2.5;
     this.mouseDown = false;
   }
 

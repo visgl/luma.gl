@@ -329,6 +329,40 @@ export default class BaseModel extends ScenegraphNode {
       vs = vs || MODULAR_SHADERS.vs;
       fs = fs || MODULAR_SHADERS.fs;
 
+      vs = `
+        attribute vec3 POSITION;
+        attribute vec3 NORMAL;
+        attribute vec2 TEXCOORD_0;
+
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+
+        varying vec3 normal;
+        varying vec2 tc;
+
+        void main(void) {
+          gl_Position = uProjection * uView * uModel * vec4(POSITION, 1.0);
+          normal = vec3(uModel * vec4(NORMAL, 0.0));
+          tc = TEXCOORD_0;
+        }
+      `;
+      fs = `
+        precision highp float;
+
+        uniform sampler2D tex;
+
+        varying vec3 normal;
+        varying vec2 tc;
+
+        void main(void) {
+          float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.5, 1.0);
+          vec4 t = texture2D(tex, vec2(tc.x, -tc.y));
+          gl_FragColor = vec4(d * t.r, d * t.g, d * t.b, 1.0);
+        }
+      `;
+      console.log("******* Using the good fs/vs **********");
+
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
       ({vs, fs} = assembleResult);
 
