@@ -14,6 +14,9 @@ function getLightSourceUniforms({ambientLight, pointLights, directionalLights}) 
   if (ambientLight) {
     lightSourceUniforms['lighting_uAmbientLight.color'] = ambientLight.color;
     lightSourceUniforms['lighting_uAmbientLight.intensity'] = ambientLight.intensity;
+  } else {
+    lightSourceUniforms['lighting_uAmbientLight.color'] = [0, 0, 0];
+    lightSourceUniforms['lighting_uAmbientLight.intensity'] = 0.0;
   }
 
   let index = 0;
@@ -51,10 +54,25 @@ function getMaterialUniforms(material) {
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  const {ambientLight, pointLights, directionalLights, material} = opts;
-
-  if (!(ambientLight || pointLights || directionalLights) || !material) {
+  if (
+    !(
+      'ambientLight' in opts ||
+      'pointLights' in opts ||
+      'directionalLights' in opts ||
+      'material' in opts
+    )
+  ) {
     return {};
+  }
+
+  const {ambientLight, pointLights, directionalLights, material} = opts;
+  const hasLights =
+    ambientLight ||
+    (pointLights && pointLights.length > 0) ||
+    (directionalLights && directionalLights.length > 0);
+
+  if (!hasLights || !material) {
+    return {lighting_uEnabled: false};
   }
 
   const lightUniforms = Object.assign(
