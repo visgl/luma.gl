@@ -1,3 +1,39 @@
+# 6.4 Pre-Release
+
+## 6.4.0-alpha.2 - Jan 18, 2019
+
+- Attribute enhancements (#846)
+- Fix parameter forwarding in loadTextures (#853)
+- fix lint scripts (#854)
+
+## 6.4.0-alpha.1 - Jan 11, 2019
+
+- move custom babel plugin to dev-modules (#791)
+- Add plugin to strip GLSL comments (#792)
+- Dof example (#769)
+- add shortcut for uniform parse (#796)
+- Add support for copyTexSubImage2D, misc fixes (#801)
+- Transform Texture functionality enhancements (#802)
+- Update polyfillContext extension initialization to non-iterable returned from getSupportedExtensions
+- blend auto-highlight color and original color when an object is picked (#799)
+- Add utility methods for Histopyramid generation based on Transform (#803)
+- retore stub after test completion
+- Update polyfillContext extension initialization to handle getSupportedExtensions returning null
+- Add reference to Histopyramid paper (#811)
+- Transform: fix Inject option (#812)
+- Move shader module test util into debug submodule (#817)
+- Prepare dev modules for publish (#820)
+- Histopyramid: Traversal (#814)
+- Fix website build (#826)
+- add pre-push to enable auto testing for push action
+- update test dependency
+- Prepare GPGPU module for publishing, move histopyramid methods. (#828)
+- Transform: Add offset/size support for feedback buffers. (#834)
+- restrict scope of glsl comment remove plugin (#839)
+- Add tests for dev-modules; fix glsl-remove-comments bug (#844)
+
+# 6.3 Release
+
 ## 6.3.2 - Dec 13
 
 - 25492bfa Update polyfillContext extension initialization to non-iterable returned from getSupportedExtensions (#808)

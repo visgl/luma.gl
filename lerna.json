@@ -1,6 +1,6 @@
 {
   "lerna": "2.0.0",
-  "version": "6.4.0-alpha.1",
+  "version": "6.4.0-alpha.2",
   "npmClient": "yarn",
   "useWorkspaces": true,
   "packages": [
@@ -8,12 +8,14 @@
   ],
   "command": {
     "publish": {
-      "ignoreChanges": [
-        "test",
-        "*.md",
+      "ignore": [
         "@luma.gl/imageprocessing",
         "@luma.gl/io",
         "@luma.gl/scripts"
+      ],
+      "ignoreChanges": [
+        "test",
+        "*.md"
       ]
     },
     "bootstrap": {}
