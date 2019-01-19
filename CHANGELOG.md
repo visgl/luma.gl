@@ -1,5 +1,9 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.7 - Jan 16, 2019
+
+- add new lighting glsl API and better check for lighting_uEnabled. (#856)
+
 ## v7.0.0-alpha.6 - Jan 16, 2019
 
 - Fix parameter forwarding in loadTextures (#853)
