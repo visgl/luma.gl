@@ -38,7 +38,7 @@ animationLoop.start();
 
 Use a canvas in the existing DOM through its HTML id
 ```js
-animationLoop.start({id: 'my-canvas'});
+animationLoop.start({canvas: 'my-canvas'});
 ```
 
 ## Methods
