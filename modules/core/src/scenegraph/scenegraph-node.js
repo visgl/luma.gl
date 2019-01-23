@@ -40,8 +40,12 @@ export default class ScenegraphNode {
     return this;
   }
 
-  setMatrix(matrixArray) {
-    this.matrix.copy(matrixArray);
+  setMatrix(matrix, copyMatrix = true) {
+    if (copyMatrix) {
+      this.matrix.copy(matrix);
+    } else {
+      this.matrix = matrix;
+    }
   }
 
   setMatrixComponents({position, rotation, scale, update = true}) {

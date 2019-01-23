@@ -217,7 +217,7 @@ export default class Model extends BaseModel {
 
   // PRIVATE METHODS
 
-  _createProgramXXX({
+  _createProgram({
     vs = null,
     fs = null,
     // 1: Modular shaders

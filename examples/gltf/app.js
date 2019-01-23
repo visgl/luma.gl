@@ -1,6 +1,5 @@
 import {GLTFParser} from '@loaders.gl/gltf';
-import GL from '@luma.gl/constants';
-import {AnimationLoop, Framebuffer, Cube, setParameters, clear, GLTFInstantiator, Texture2D} from 'luma.gl';
+import {AnimationLoop, setParameters, clear, GLTFInstantiator, log} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 // const GLTF_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/2CylinderEngine/glTF-Binary/2CylinderEngine.glb";
@@ -18,29 +17,19 @@ export const animationLoopOptions = {
   onInitialize: ({gl}) => {
     const models = [];
 
-    const gltfParser = new GLTFParser();
-    fetch(GLTF_URL).then(res => res.arrayBuffer()).then(data => {
-      gltfParser.parse(data);
-      const instantiator = new GLTFInstantiator(gl, {
-        getImage: index => {
-          const img = gltfParser.getImage(index).image;
-          const promise = new Promise(resolve => {
-            img.onload = () => {
-              resolve(new Texture2D(gl, { data: img, format: GL.RGB }));
-            };
-          });
+    window.fetch(GLTF_URL).then(res => res.arrayBuffer()).then(data => {
 
-          return promise;
-        }
-      });
-      const scene = gltfParser.getScene(0);
-      const lumaScene = instantiator.createScene(gltfParser.getScene(0));
-      console.log("gltfParser.getScene(0) = ", scene);
-      console.log("gltfParser = ", gltfParser);
-      console.log("lumaScene = ", lumaScene);
+      const gltfParser = new GLTFParser();
+      const gltf = gltfParser.parse(data);
 
-      lumaScene.traverse(node => {
-        console.log("N=", node);
+      const instantiator = new GLTFInstantiator(gl);
+      const lumaScenes = instantiator.instantiate(gltf);
+
+      log.info(4, "gltfParser: ", gltfParser)();
+      log.info(4, "instantiator.instantiate(): ", lumaScenes)();
+
+      lumaScenes[0].traverse(node => {
+        log.info(4, "Using model: ", node)();
         models.push(node);
       });
     });

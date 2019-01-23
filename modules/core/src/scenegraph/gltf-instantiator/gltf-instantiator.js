@@ -1,16 +1,55 @@
 import Buffer from '../../webgl/buffer';
+import Texture2D from '../../webgl/texture-2d';
 import Group from '../group';
 import Model from '../model';
+import log from '../../utils/log';
+
+const vs = `
+  attribute vec3 POSITION;
+  attribute vec3 NORMAL;
+  attribute vec2 TEXCOORD_0;
+
+  uniform mat4 uModel;
+  uniform mat4 uView;
+  uniform mat4 uProjection;
+
+  varying vec3 normal;
+  varying vec2 tc;
+
+  void main(void) {
+    gl_Position = uProjection * uView * uModel * vec4(POSITION, 1.0);
+    normal = vec3(uModel * vec4(NORMAL, 0.0));
+    tc = TEXCOORD_0;
+  }
+`;
+
+const fs = `
+  precision highp float;
+
+  uniform sampler2D tex;
+
+  varying vec3 normal;
+  varying vec2 tc;
+
+  void main(void) {
+    float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.5, 1.0);
+    vec4 t = texture2D(tex, vec2(tc.x, -tc.y));
+    gl_FragColor = vec4(d * t.r, d * t.g, d * t.b, 1.0);
+  }
+`;
+
+const DEFAULT_OPTIONS = {};
 
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
 export default class GLTFInstantiator {
   constructor(gl, options = {}) {
     this.gl = gl;
-    this.options = options;
+    this.options = Object.assign({}, DEFAULT_OPTIONS, options);
   }
 
   instantiate(gltf) {
+    this.gltf = gltf;
     const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
@@ -59,16 +98,24 @@ export default class GLTFInstantiator {
     return gltfMesh._mesh;
   }
 
+  getVertexCount(attributes) {
+    // TODO: implement this
+  }
+
   createPrimitive(gltfPrimitive, i, gltfMesh) {
     const attributes = this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices);
     // TODO - handle gltfPrimitive.material
+
     const model = new Model(this.gl, {
       id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}=${i}`,
       drawMode: gltfPrimitive.mode || 4,
-      vertexCount: 2046 // from indices count
+      vertexCount: gltfPrimitive.indices ? gltfPrimitive.indices.count : this.getVertexCount(gltfPrimitive.attributes),
+      vs,
+      fs
     });
     model.setProps({attributes});
-    this.options.getImage(0).then(img => model.setUniforms({ tex: img }));
+
+    this.loadImage(0).then(img => model.setUniforms({ tex: new Texture2D(this.gl, { data: img }) }));
     return model;
   }
 
@@ -81,28 +128,40 @@ export default class GLTFInstantiator {
       const opts = Object.assign({target: this.gl.ELEMENT_ARRAY_BUFFER}, this.createAccessor(indices));
       result.indices = new Buffer(this.gl, opts);
     }
-    console.log("attributes>>", attributes, result);
+
+    log.info(4, "glTF Attributes", {attributes, generated: result})();
+
     return result;
   }
 
   createBuffer(accessor) {
+    // TODO: make sure we only create one buffer per buffer view
     const opts = this.createAccessor(accessor);
     return new Buffer(this.gl, opts);
   }
 
   createAccessor(accessor) {
-    console.log("AAAA",accessor)
     if (accessor.bufferView.byteStride) {
-      console.log("bufferView has byteStride, see https://github.com/uber-web/loaders.gl/issues/45");
+      log.warn("bufferView has byteStride, see https://github.com/uber-web/loaders.gl/issues/45")();
     }
 
     return {
       type: accessor.componentType,
-      // size: accessor.count, ????
       offset: accessor.byteOffset || 0,
-      stride: accessor.byteStride || 0,
+      stride: accessor.byteStride || 0, // see https://github.com/uber-web/loaders.gl/issues/45
       data: accessor.data
     };
+  }
+
+  loadImage(index) {
+    const img = this.gltf.images[index].image;
+
+    if (img.naturalWidth === 0 || img.complete === false) {
+      // Image not loaded
+      return new Promise(resolve => (img.onload = () => resolve(img)));
+    }
+
+    return Promise.resolve(img);
   }
 
   // createTexture(gltfTexture) {
