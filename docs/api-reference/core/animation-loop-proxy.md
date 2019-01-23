@@ -1,4 +1,4 @@
-# AnimationLoopProxy (Expermental)
+# AnimationLoopProxy (Experimental)
 
 > This class is experimental. Its API may change between minor releases.
 
