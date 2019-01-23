@@ -8,14 +8,11 @@ import {Geometry} from '../geometry';
 function noop() {}
 
 export function loadTexture(gl, url, opts = {}) {
-  const {urls, onProgress = noop} = opts;
   assert(typeof url === 'string', 'loadTexture: url must be string');
 
-  return loadImages(Object.assign({urls, onProgress}, opts)).then(images =>
-    images.map((img, i) => {
-      return new Texture2D(gl, Object.assign({id: urls[i]}, opts, {data: img}));
-    })
-  );
+  return loadImage(url, opts).then(image => {
+    return new Texture2D(gl, Object.assign({id: url}, opts, {data: image}));
+  });
 }
 
 /*
