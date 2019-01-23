@@ -46,7 +46,7 @@
         },
         {
           "name": "Using with other Frameworks",
-          "content": "get-started/using-with-other-frameworks"
+          "entry": "docs/get-started/using-with-other-frameworks"
         }
       ]
     },
@@ -79,6 +79,10 @@
             {
               "name": "Writing GLSL Code",
               "entry": "docs/developer-guide/shadertools/writing-glsl-shaders"
+            },
+            {
+              "name": "Using GLSL 3.00 ES",
+              "entry": "docs/developer-guide/using-glsl-300-es.md"
             }
           ]
         },
@@ -90,12 +94,12 @@
               "entry": "docs/developer-guide/drawing"
             },
             {
-              "name": "Geometry",
-              "entry": "docs/developer-guide/geometry"
-            },
-            {
               "name": "Buffers",
               "entry": "docs/developer-guide/buffers"
+            },
+            {
+              "name": "Stencil Buffers",
+              "entry": "docs/developer-guide/stencil-buffers"
             },
             {
               "name": "Attributes",
@@ -107,15 +111,11 @@
             },
             {
               "name": "Extensions",
-              "entry": "docs/user-guide/extensions"
+              "entry": "docs/developer-guide/extensions"
             },
             {
-              "name": "WebGL2",
-              "entry": "docs/user-guide/webgl2"
-            },
-            {
-              "name": "GPGPU Programming",
-              "entry": "docs/user-guide/gpgpu"
+              "name": "Transform Feedback",
+              "entry": "docs/developer-guide/transform-feedback"
             }
           ]
         },
@@ -136,12 +136,20 @@
               "entry": "docs/developer-guide/building-apps"
             },
             {
+              "name": "Configuring",
+              "entry": "docs/developer-guide/configuring"
+            },
+            {
               "name": "Debugging",
               "entry": "docs/developer-guide/debugging"
             },
             {
               "name": "Portability",
               "entry": "docs/developer-guide/portability"
+            },
+            {
+              "name": "Programs and shaders",
+              "entry": "docs/developer-guide/programs-and-shaders.md"
             }
           ]
         },
@@ -166,6 +174,14 @@
               "entry": "docs/api-reference/core/animation-loop"
             },
             {
+              "name": "AnimationLoopProxy (Experimental)",
+              "entry": "docs/api-reference/core/animation-loop-proxy"
+            },
+            {
+              "name": "Attribute",
+              "entry": "docs/api-reference/core/attribute"
+            },
+            {
               "name": "Model",
               "entry": "docs/api-reference/core/model"
             },
@@ -179,11 +195,133 @@
             },
             {
               "name": "Object3d",
-              "entry": "core/object-3d"
+              "entry": "docs/api-reference/core/object-3d"
             },
             {
               "name": "Group",
-              "entry": "docs/core/group"
+              "entry": "docs/api-reference/core/group"
+            },
+            {
+              "name": "Transform",
+              "entry": "docs/api-reference/core/transform"
+            }
+          ]
+        },
+        {
+          "title": "addons",
+          "entries": [
+            {
+              "name": "Event",
+              "entry": "docs/api-reference/addons/event"
+            }
+          ]
+        },
+        {
+          "title": "IO",
+          "entries": [
+            {
+              "name": "IO Module",
+              "entry": "docs/api-reference/io/README"
+            }
+          ]
+        },
+        {
+          "title": "Lighting",
+          "entries": [
+            {
+              "name": "Ambient Light",
+              "entry": "docs/api-reference/lighting/ambient-light"
+            },
+            {
+              "name": "Directional Light",
+              "entry": "docs/api-reference/lighting/directional-light"
+            },
+            {
+              "name": "Point Light",
+              "entry": "docs/api-reference/lighting/point-light"
+            }
+          ]
+        },
+        {
+          "title": "Loaders",
+          "entries": [
+            {
+              "name": "Loader API",
+              "entry": "docs/api-reference/loader-api/load-file"
+            },
+            {
+              "name": "GLB loader",
+              "entry": "docs/api-reference/loaders/glb-loader"
+            },
+            {
+              "name": "KML loader",
+              "entry": "docs/api-reference/loaders/kml-loader"
+            },
+            {
+              "name": "LAS loader",
+              "entry": "docs/api-reference/loaders/las-loader"
+            },
+            {
+              "name": "OBJ loader",
+              "entry": "docs/api-reference/loaders/obj-loader"
+            },
+            {
+              "name": "PCD loader",
+              "entry": "docs/api-reference/loaders/pcd-loader"
+            },
+            {
+              "name": "PLY loader",
+              "entry": "docs/api-reference/loaders/ply-loader"
+            }
+          ]
+        },
+        {
+          "title": "Materials",
+          "entries": [
+            {
+              "name": "Loader API",
+              "entry": "docs/api-reference/material/phong-material"
+            }
+          ]
+        },
+        {
+          "title": "Multipass",
+          "entries": [
+            {
+              "name": "Canvas",
+              "entry": "docs/api-reference/multipass/canvas"
+            },
+            {
+              "name": "Clear pass",
+              "entry": "docs/api-reference/multipass/clear-pass"
+            },
+            {
+              "name": "Composite pass",
+              "entry": "docs/api-reference/multipass/composite-pass"
+            },
+            {
+              "name": "Copy pass",
+              "entry": "docs/api-reference/multipass/copy-pass"
+            },
+            {
+              "name": "Multi pass renderer",
+              "entry": "docs/api-reference/multipass/multi-pass-renderer"
+            },
+            {
+              "name": "Pass",
+              "entry": "docs/api-reference/multipass/pass"
+            },
+            {
+              "name": "Picking pass",
+              "entry": "docs/api-reference/multipass/picking-pass"
+            },
+            {
+              "name": "Render pass",
+              "entry": "docs/api-reference/multipass/render-pass"
+            },
+            {
+              "name": "Shader module pass",
+              "entry": "docs/api-reference/multipass/shader-module-pass"
             }
           ]
         },
@@ -220,8 +358,16 @@
           "title": "WebGL2 Reference",
           "entries": [
             {
+              "name": "Accessor",
+              "entry": "docs/api-reference/webgl/accessor"
+            },
+            {
               "name": "Buffer",
               "entry": "docs/api-reference/webgl/buffer"
+            },
+            {
+              "name": "FenceSync",
+              "entry": "docs/api-reference/webgl/fence-sync"
             },
             {
               "name": "Program",
@@ -230,6 +376,10 @@
             {
               "name": "Query",
               "entry": "docs/api-reference/webgl/query"
+            },
+            {
+              "name": "Readback, Copy and Blit",
+              "entry": "docs/api-reference/webgl/copy-and-blit"
             },
             {
               "name": "Renderbuffer",
@@ -280,6 +430,10 @@
               "entry": "docs/api-reference/webgl/vertex-array"
             },
             {
+              "name": "VertexArrayObject",
+              "entry": "docs/api-reference/webgl/vertex-array-object"
+            },
+            {
               "name": "createGLContext",
               "entry": "docs/api-reference/webgl/context/context"
             },
@@ -302,6 +456,10 @@
             {
               "name": "getContextLimits",
               "entry": "docs/api-reference/webgl/context/get-context-limits"
+            },
+            {
+              "name": "getGLContextInfo",
+              "entry": "docs/api-reference/webgl/context/get-gl-context-info"
             },
             {
               "name": "get|setParameter(s)",
