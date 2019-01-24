@@ -426,6 +426,32 @@ export default class MeshModel extends Node {
       vs = vs || MODULAR_SHADERS.vs;
       fs = fs || MODULAR_SHADERS.fs;
 
+      vs = `
+        attribute vec3 POSITION;
+        attribute vec3 NORMAL;
+
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+
+        varying vec3 normal;
+
+        void main(void) {
+          gl_Position = uProjection * uView * uModel * vec4(POSITION, 1.0);
+          normal = vec3(uModel * vec4(NORMAL, 0.0));
+        }
+      `;
+      fs = `
+        precision highp float;
+
+        varying vec3 normal;
+
+        void main(void) {
+          float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.25, 1.0);
+          gl_FragColor = vec4(d,d,d,1);
+        }
+      `;
+
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
       ({vs, fs} = assembleResult);
 

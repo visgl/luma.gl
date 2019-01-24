@@ -47,7 +47,9 @@ export default class Group extends Node {
       if (child instanceof Group) {
         result = child.traverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        // Note: this will overwrite the child matrix
+        // In glTF, meshes and primitives do no have their own matrix.
+        child.setMatrix(modelMatrix);
         result = visitor(child, {});
       }
       // Abort if a result was returned
@@ -69,7 +71,8 @@ export default class Group extends Node {
       if (child instanceof Group) {
         result = child.traverseReverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        // Note: see comment above
+        child.setMatrix(modelMatrix);
         result = visitor(child, {});
       }
       // Abort if a result was returned
