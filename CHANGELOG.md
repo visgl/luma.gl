@@ -1,5 +1,9 @@
 # 6.4 Pre-Release
 
+## 6.4.0-alpha.3 - Jan 24, 2019
+
+- Fix loadTexture util (#860)
+
 ## 6.4.0-alpha.2 - Jan 18, 2019
 
 - Attribute enhancements (#846)
