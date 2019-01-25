@@ -194,15 +194,11 @@ const animationLoop = new AnimationLoop({
       }),
       loadTextures(gl, {
         urls: ['moon.gif', 'crate.gif'],
-        parameters: [{
+        parameters: {
           [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-          mipmap: true
-        }, {
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-          mipmap: true
-        }]
+          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+        },
+        mipmap: true
       })
     ])
     .then(function(results) {

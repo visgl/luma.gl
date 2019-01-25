@@ -245,19 +245,13 @@ const animationLoop = new AnimationLoop({
       loadFiles({urls: ['Teapot.json']}),
       loadTextures(gl, {
         urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
-        parameters: [{
+        parameters: {
           [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
           [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
           [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-          [gl.TEXTURE_WRAP_T]: gl.REPEAT,
-          mipmap: true
-        }, {
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-          [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-          [gl.TEXTURE_WRAP_T]: gl.REPEAT,
-          mipmap: true
-        }]
+          [gl.TEXTURE_WRAP_T]: gl.REPEAT
+        },
+        mipmap: true
       })
     ])
     .then(([files, textures]) => {

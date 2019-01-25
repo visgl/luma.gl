@@ -193,10 +193,10 @@ const animationLoop = new AnimationLoop({
     return loadTextures(gl, {
       urls: ['glass.gif'],
       mipmap: true,
-      parameters: [{
+      parameters: {
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR
-      }]
+      }
     })
     .then(textures => ({
       cube: new Cube(gl, {

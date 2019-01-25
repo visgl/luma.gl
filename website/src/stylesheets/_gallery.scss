@@ -11,7 +11,9 @@
   height: 100%;
 }
 .toc {
-  width: 240px;
+  min-width: 240px;
+  max-width: 320px;
+  width: 30vw;
   height: 100%;
   background: #fff;
   overflow-y: auto;
