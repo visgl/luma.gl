@@ -37,9 +37,9 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-        [gl.TEXTURE_WRAP_T]: gl.REPEAT,
-        mipmap: true
-      }
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT
+      },
+      mipmap: true
     })
     .then(textures => ({
       texture: textures[0],
