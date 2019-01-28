@@ -104,8 +104,8 @@ export const animationLoopOptions = {
     gl.viewport(0, 0, width, height);
     clear(gl, {color: [0, 0, 0, 1], depth: true});
 
-    const uView = new Matrix4().lookAt({eye: [0, 0.8, 1], center: [0, 0, 0], up: [0, 1, 0]}).rotateXYZ([0, tick * 0.01, 0]);
-    const uProjection = new Matrix4().perspective({fov: radians(5), aspect, near: 0.01, far: 5000});
+    const uView = new Matrix4().lookAt({eye: [0, 2, 2], center: [0, 0, 0], up: [0, 1, 0]}).rotateXYZ([0, tick * 0.01, 0]);
+    const uProjection = new Matrix4().perspective({fov: radians(25), aspect, near: 0.1, far: 5000});
 
     animationLoopOptions.models.forEach(model => {
       model.draw({

@@ -1,4 +1,5 @@
 import Buffer from '../../webgl/buffer';
+import Accessor from '../../webgl/accessor';
 import Texture2D from '../../webgl/texture-2d';
 import Group from '../group';
 import Model from '../model';
@@ -115,66 +116,65 @@ export default class GLTFInstantiator {
     });
     model.setProps({attributes});
 
-    this.loadImage(0).then(img => model.setUniforms({ tex: new Texture2D(this.gl, { data: img }) }));
+    if (gltfPrimitive.material) {
+      this.configureMaterial(model, gltfPrimitive.material);
+    }
+
     return model;
+  }
+
+  configureMaterial(model, material) {
+    // TODO: process remaining tex types
+    if (material.pbrMetallicRoughness) {
+
+      if (material.pbrMetallicRoughness.baseColorTexture) {
+        this.configureTexture(material.pbrMetallicRoughness.baseColorTexture, model);
+      }
+
+    }
   }
 
   createAttributes(attributes, indices) {
     const result = {};
+
     Object.keys(attributes).forEach(attrName => {
       result[attrName] = this.createBuffer(attributes[attrName]);
     });
+
     if (indices) {
-      const opts = Object.assign({target: this.gl.ELEMENT_ARRAY_BUFFER}, this.createAccessor(indices));
-      result.indices = new Buffer(this.gl, opts);
+      // TODO: use .target for target
+      result.indices = this.createBuffer(indices, {target: this.gl.ELEMENT_ARRAY_BUFFER});
     }
 
-    log.info(4, "glTF Attributes", {attributes, generated: result})();
+    log.info(4, "glTF Attributes", {attributes, indices, generated: result})();
 
     return result;
   }
 
-  createBuffer(accessor) {
+  createBuffer(accessor, extra = {}) {
     // TODO: make sure we only create one buffer per buffer view
-    const opts = this.createAccessor(accessor);
-    return new Buffer(this.gl, opts);
+    return new Buffer(this.gl, Object.assign({data: accessor.data, accessor: this.createAccessor(accessor)}, extra));
   }
 
   createAccessor(accessor) {
-    if (accessor.bufferView.byteStride) {
-      log.warn("bufferView has byteStride, see https://github.com/uber-web/loaders.gl/issues/45")();
-    }
-
-    return {
-      type: accessor.componentType,
+    return new Accessor({
       offset: accessor.byteOffset || 0,
-      stride: accessor.byteStride || 0, // see https://github.com/uber-web/loaders.gl/issues/45
-      data: accessor.data
-    };
+      stride: accessor.bufferView.byteStride || 0,
+      type: accessor.componentType,
+    });
   }
 
-  loadImage(index) {
-    const img = this.gltf.images[index].image;
-
-    if (img.naturalWidth === 0 || img.complete === false) {
-      // Image not loaded
-      return new Promise(resolve => (img.onload = () => resolve(img)));
-    }
-
-    return Promise.resolve(img);
+  configureTexture(gltfTexture, model) {
+    const parameters = (gltfTexture.texture && gltfTexture.texture.sampler && gltfTexture.texture.sampler.parameters) || {};
+    gltfTexture.texture.source.image.then(img => {
+      const tex = new Texture2D(this.gl, {
+        id: gltfTexture.name || gltfTexture.id,
+        parameters,
+        data: img
+      });
+      model.setUniforms({ tex });
+    });
   }
-
-  // createTexture(gltfTexture) {
-  //   if (!gltfTexture._texture) {
-  //     const texture = Texture2D(this.gl, {
-  //       id: gltfTexture.name || gltfTexture.id,
-  //       // TODO - create sampler in WebGL2
-  //       parameters: gltfTexture.sampler.parameters
-  //     });
-  //     gltfTexture._texture = texture;
-  //   }
-  //   return gltfTexture._texture;
-  // }
 
   // TODO - create sampler in WebGL2
   createSampler(gltfSampler) {
