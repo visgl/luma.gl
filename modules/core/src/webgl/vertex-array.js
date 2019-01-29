@@ -308,25 +308,21 @@ export default class VertexArray {
     if (value instanceof Buffer) {
       //  Signature: {attributeName: Buffer}
       this.setBuffer(locationOrName, value);
-
     } else if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
       // Signature: {attributeName: [buffer, accessor]}
       const buffer = value[0];
       const accessor = value[1];
       this.setBuffer(locationOrName, buffer, accessor);
-
     } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
       // Signature: {attributeName: constant}, constant == short (typed) array
       const constant = value;
       this.setConstant(locationOrName, constant);
-
     } else if (value.buffer instanceof Buffer) {
       // luma.gl v7: Support accessor objects with 'buffer' field
       // for interleaved data
       // Signature: {attributeName: {...accessor, buffer}}
       const accessor = value;
       this.setBuffer(locationOrName, accessor.buffer, accessor);
-
     } else {
       throw new Error(ERR_ATTRIBUTE_TYPE);
     }
