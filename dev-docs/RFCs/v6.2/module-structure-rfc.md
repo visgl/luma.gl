@@ -2,7 +2,7 @@
 
 * **Author**: Ib Green
 * **Date**: Sep, 2018
-* **Status**: **Draft**
+* **Status**: **Partially Implemented** in v6.x
 
 Notes:
 

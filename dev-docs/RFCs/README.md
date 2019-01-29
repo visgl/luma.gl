@@ -30,6 +30,7 @@ These are early ideas not yet associated with any release
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
+| [**luma.gl Module Structure**](v6.2/module-structure-rfc.md) | @ibgreen | **Partially Implemented** |  Outlines module structure to be used in monorepo transition. Implementeation continues from v6.2. |
 | [**glTF2 support**](v7.0/gltf-support-rfc.md) | @ibgreen | **Draft** | Proposes a multi-step approach to full glTF2 support. |
 | [**Framebuffer/Texture API cleanup**](v6.2/framebuffer-texture-api-rfc.md) | @ibgreen | **Draft** | API changes to improve tree-shakeability of the big `Texture` and `Framebuffer` classes. |
 | [**Off-Thread (aka Off-Screen) Rendering**](vNext/offscreen-render-rfc.md) | @pessimistress | **Experimental** | Use the new Off-Screen API to enable WebGL to run in a separate thread. Still requires browser flag. |
@@ -39,7 +40,7 @@ These are early ideas not yet associated with any release
 
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
-| [**luma.gl Module Structure**](v6.2/module-structure-rfc.md) | @ibgreen | **Draft** | Outlines module structure to be used in monorepo transition. |
+| [**luma.gl Module Structure**](v6.2/module-structure-rfc.md) | @ibgreen | **Partially Implemented** | Outlines module structure to be used in monorepo transition. |
 | [**Floating Point Textures in Transforms**](v6.2/transform-float-textures-rfc.md) | @1chandu | **Review** | Floating Point Texture Support in `Transform` class |
 | [**WebGL1 Support for Transforms**](v6.2/transform-webgl1-support-rfc.md) | @1chandu | **Review** | Use render to texture and float packing to emulate transform feedback under WebGL1 |
 

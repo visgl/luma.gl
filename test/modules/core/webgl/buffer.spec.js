@@ -4,7 +4,7 @@ import test from 'tape-catch';
 
 import {fixture} from 'luma.gl/test/setup';
 
-test('WebGL#Buffer constructor/delete', t => {
+test('Buffer#constructor/delete', t => {
   const {gl} = fixture;
   t.ok(isWebGL(gl), 'Created gl context');
 
@@ -22,7 +22,7 @@ test('WebGL#Buffer constructor/delete', t => {
   t.end();
 });
 
-test('WebGL#Buffer bind/unbind', t => {
+test('Buffer#bind/unbind', t => {
   const {gl} = fixture;
 
   const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER})
@@ -34,7 +34,7 @@ test('WebGL#Buffer bind/unbind', t => {
   t.end();
 });
 
-test('WebGL#Buffer bind/unbind with index', t => {
+test('Buffer#bind/unbind with index', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -51,7 +51,7 @@ test('WebGL#Buffer bind/unbind with index', t => {
   t.end();
 });
 
-test('WebGL#Buffer construction', t => {
+test('Buffer#construction', t => {
   const {gl} = fixture;
 
   let buffer;
@@ -75,7 +75,7 @@ test('WebGL#Buffer construction', t => {
   t.end();
 });
 
-test('WebGL#Buffer initialize/subData', t => {
+test('Buffer#initialize/subData', t => {
   const {gl} = fixture;
 
   let buffer;
@@ -112,7 +112,7 @@ test('WebGL#Buffer initialize/subData', t => {
   t.end();
 });
 
-test('WebGL#Buffer copyData', t => {
+test('Buffer#copyData', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -147,7 +147,7 @@ test('WebGL#Buffer copyData', t => {
   t.end();
 });
 
-test('WebGL#Buffer getData', t => {
+test('Buffer#getData', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -199,7 +199,7 @@ test('WebGL#Buffer getData', t => {
   t.end();
 });
 
-test('WebGL#Buffer getElementCount', t => {
+test('Buffer#getElementCount', t => {
   const {gl} = fixture;
 
   let vertexCount;
@@ -220,7 +220,7 @@ test('WebGL#Buffer getElementCount', t => {
   t.end();
 });
 
-test('WebGL#Buffer#setByteLength', t => {
+test('Buffer#setByteLength', t => {
   const {gl} = fixture;
 
   const buffer = new Buffer(gl, {byteLength: 100});

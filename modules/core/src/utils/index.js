@@ -6,3 +6,4 @@ export {default as log} from './log';
 export {formatValue} from './format-value';
 export {default as assert} from './assert';
 export {stubRemovedMethods} from './stub-methods';
+export {checkProps} from './check-props';

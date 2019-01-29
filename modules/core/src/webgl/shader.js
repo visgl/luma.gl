@@ -119,7 +119,8 @@ export class VertexShader extends Shader {
   constructor(gl, props) {
     // DEPRECATED: Support old constructor signature: VertexShader(gl, source)
     if (typeof props === 'string') {
-      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1');
+      // DEPRECATED: v7.0 (in 6.1 but warning not properly implemented)
+      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1')();
       props = {source: props};
     }
     super(gl, Object.assign({}, props, {shaderType: GL_VERTEX_SHADER}));
@@ -135,7 +136,8 @@ export class FragmentShader extends Shader {
   constructor(gl, props) {
     // DEPRECATED: Support old constructor signature: FragmentShader(gl, source)
     if (typeof props === 'string') {
-      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1');
+      // DEPRECATED: v7.0 (in 6.1 but warning not properly implemented)
+      log.deprecated('new FragmentShader(gl, source)', 'new FragmentShader(gl, {source})', '6.1')();
       props = {source: props};
     }
 

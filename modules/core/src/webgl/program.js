@@ -137,7 +137,8 @@ export default class Program extends Resource {
 
     vertexArray.bindForDraw(vertexCount, instanceCount, () => {
       if (uniforms) {
-        log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)');
+        // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
+        log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
         this.setUniforms(uniforms, samplers);
       }
 
