@@ -1,4 +1,3 @@
-import '@luma.gl/debug';
 import {setContextDefaults} from 'luma.gl';
 setContextDefaults({webgl2: true});
 
