@@ -116,7 +116,6 @@ export default class Accessor {
     // The binding index (for binding e.g. Transform feedbacks and Uniform buffers)
     // TODO - should this be part of accessor?
     if (props.index !== undefined) {
-      debugger
       if (typeof index === 'boolean') {
         this.index = props.index ? 1 : 0;
       } else {

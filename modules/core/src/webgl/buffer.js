@@ -48,12 +48,7 @@ export default class Buffer extends Resource {
   constructor(gl, props = {}) {
     super(gl, props);
 
-    this.stubRemovedMethods('Buffer', 'v6.0', [
-      'layout',
-      'setLayout',
-      'getIndexedParameter',
-      'data'
-    ]);
+    this.stubRemovedMethods('Buffer', 'v6.0', ['layout', 'setLayout', 'getIndexedParameter']);
     this.stubRemovedMethods('Buffer', 'v7.0', ['updateAccessor']);
 
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers

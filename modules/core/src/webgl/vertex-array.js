@@ -305,35 +305,31 @@ export default class VertexArray {
   }
 
   _setAttribute(locationOrName, value) {
-    //  Signature: {attributeName: Buffer}
     if (value instanceof Buffer) {
+      //  Signature: {attributeName: Buffer}
       this.setBuffer(locationOrName, value);
-      return;
-    }
 
-    // Signature: {attributeName: [buffer, accessor]}
-    if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
+    } else if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
+      // Signature: {attributeName: [buffer, accessor]}
       const buffer = value[0];
       const accessor = value[1];
       this.setBuffer(locationOrName, buffer, accessor);
-    }
 
-    // Signature: {attributeName: constant}, constant == short (typed) array
-    if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+    } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+      // Signature: {attributeName: constant}, constant == short (typed) array
       const constant = value;
       this.setConstant(locationOrName, constant);
-      return;
-    }
 
-    // luma.gl v7: Support accessor objects with 'buffer' field
-    // for interleaved data
-    // Signature: {attributeName: {...accessor, buffer}}
-    if (value.buffer instanceof Buffer) {
+    } else if (value.buffer instanceof Buffer) {
+      // luma.gl v7: Support accessor objects with 'buffer' field
+      // for interleaved data
+      // Signature: {attributeName: {...accessor, buffer}}
       const accessor = value;
       this.setBuffer(locationOrName, accessor.buffer, accessor);
-    }
 
-    throw new Error(ERR_ATTRIBUTE_TYPE);
+    } else {
+      throw new Error(ERR_ATTRIBUTE_TYPE);
+    }
   }
 
   // Updates all constant attribute values (constants are used when vertex attributes are disabled).
