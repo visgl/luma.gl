@@ -2,15 +2,26 @@
 
 ## Version 7.0
 
+### New Submodule with GPGPU Utilities
+
+* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+
 ### Copy and Blit methods
 
 Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that perform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
 
 
-### New submodule
+### Accessor Objects can now Reference Buffers
 
-* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
+To improve support for interleaved attributes and glTF model loading, accessor objecs and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
 
+```
+const buffer = // "interleaved" vertex attributes: 3 floats for position followed by 4 bytes for RGBA
+model.setAttributes({
+  positions: {buffer, stride: 16, offset: 0, ...}}),
+  colors: {buffer, stride: 16, offset: 12, ...}})
+}
+```
 
 ## Version 6.3
 

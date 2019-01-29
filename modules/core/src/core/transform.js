@@ -188,7 +188,7 @@ export default class Transform {
 
   // Swap source and destination buffers and textures.
   swapBuffers() {
-    log.deprecated('swapBuffers()', 'swap()');
+    log.deprecated('swapBuffers()', 'swap()')();
     this.swap();
   }
 
