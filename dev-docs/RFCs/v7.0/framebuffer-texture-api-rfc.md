@@ -2,12 +2,12 @@
 
 * **Author**: Ib Green
 * **Date**: Dec, 2018
-* **Status**: **Draft**
+* **Status**: **Implemented** in v7.0
 
 
 ## Summary
 
-This RFC proposed to move a number of blit and copy related functions from the `Framebuffer` and `Texture` classes into global functions to ensure that they can be tree-shaken out of applications that don't use them.
+This RFC proposes to move a number of blit and copy related functions from the `Framebuffer` and `Texture` classes into global functions to ensure that they can be tree-shaken out of applications that don't use them.
 
 
 ## Background

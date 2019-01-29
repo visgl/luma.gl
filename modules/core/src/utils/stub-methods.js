@@ -13,7 +13,7 @@ http://uber.github.io/luma.gl/#/documentation/overview/upgrade-guide`;
     }
 
     prototype[methodName] = () => {
-      log.removed(`Calling removed method ${className}.${methodName}: `, upgradeMessage);
+      log.removed(`Calling removed method ${className}.${methodName}: `, upgradeMessage)();
       throw new Error(methodName);
     };
   });

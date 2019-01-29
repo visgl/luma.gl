@@ -15,6 +15,13 @@ with
 import "@luma.gl/debug";
 ```
 
+## Buffer
+
+| Removed Method               | Replacement | Reason for Change |
+| ---                          | ---         | ---               |
+| `Buffer.updateAccessor(...)` | `Buffer.setAccessor(new Accessor(buffer.accessor, ...)` | Decoupling accessors from `Buffer` |
+
+
 ### Copy and Blit methods
 
 Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use corresponding global methods.
