@@ -405,7 +405,7 @@ count: ${this.stats.profileFrameCount}`
         attribute = descriptor;
       } else if (descriptor instanceof Buffer) {
         attribute = attribute || new Attribute(gl,
-          Object.assign({}, descriptor, descriptor.layout, {
+          Object.assign({}, descriptor, descriptor.accessor, {
             id: attributeName
           })
         );
