@@ -86,9 +86,9 @@ Returns the number of bytes per "vertex", based on the `type` and `size` fields 
 
 ## Remarks: Auto-deduction
 
-* `type` and `size` can be automatically inferred through WebGL APIs that provide access to metadata extracted during compilation and linked shaders programs.
-* `divisor` - if attribute is named `instance...` this will be automatically set to 1.
-* `offset` and `stride` are simply assumed to be 0 which corresponds to the simple non-interleaved case.
+* `type` and `size` are automatically inferred (through WebGL APIs that provide access to metadata extracted during compilation and linking of shader programs).
+* `divisor` - if attribute name starts with `instance...` this will be automatically set to `1`.
+* `offset` and `stride` are assumed to be 0 which corresponds to the simple non-interleaved case.
 * `integer` - if type is `GL.INT` or `GL.UINT`, then integer is automatically true, as floating point shader inputs cannot be mapped to such attributes.
 
 

@@ -10,13 +10,16 @@ This is an overview of the object accessor fields that are available to applicat
 
 | Field        | Type        | Default    | Description |
 | ---          | ---         | ---        | --- |
-| `buffer`     | `Buffer`    | N/A        | `buffer` (or `value`) must be defined |
+| `buffer`     | `Buffer`    | N/A        | An accessor can optionally reference a specific buffer. Multiple accessors can point to the same buffer, providing different views or "slices" of the buffer's memory. |
 | `stride`     | `Number`    | `0`        | Distance between successive vertex data elements in interleaved buffers. |
 | `offset`     | `Number`    | `0`        | Offset into the `byteStride` |
 | `normalized` | `Boolean`   | `false`    | Whether integers are scaled into `0-1` |
 | `type`       | `GLenum`    | `GL.FLOAT` | Auto-deduced from compiled shader if left undefined |
 | `size`       | `Number`    | `1`        | Auto-deduced from compiled shader if left undefined. 1-4 (more for matrices/arrays) |
-| `divisor`    | `Number`    | `0`        | Auto-deduced from shader if left undefined, heuristic based on shader attribute name. | `integer`    | `boolean`   | `false`    | Should be auto-deducable from shader? |
+| `divisor`    | `Number`    | `0`        | Disable conversion of integer values to floats **WebGL2**. Auto-deduced from shader if left undefined, heuristic based on shader attribute name. |
+| `integer`    | `boolean`   | `false`    | Auto-deduced from shader types |
+
+For more information
 
 
 | Property    | Category    | Auto Deduce    | Default    | Comment |
@@ -29,6 +32,18 @@ This is an overview of the object accessor fields that are available to applicat
 | `normalize` | data access | N/A            | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
 | `integer`   | data access | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
 | `buffer`    |             | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
+
+
+## Combining Accessors with Buffers
+
+When setting attributes (e.g. using `Model.setProps({attributes: {attributeName: value, ...}}))`, each attribute value needs to contain both a buffer (a handle to the raw data uploaded to the GPU) and an accessor (describing how that data should be accessed).
+
+luma.gl provides three methods to specify attribute values so that both a buffer and an accessor are provided:
+* As a two-element array: `[buffer, accessor]`.
+* As an accessor, in which case the accessor object's `buffer` field should be set to the matching `Buffer`.
+* As a `Buffer`, in which case the `Buffer` objects `accessor` field should be set to the mathing `Accessor`.
+
+All three methods have their uses: the first option gives the applications full freedom to dynamically select combinations of buffers and accessors, the second option is often the natural choice when working with interleaved buffers (see below), and the last choice is often the most convenient when just setting up an ad-hoc buffer for immediate use, as the accessor can be stored directly on the buffer, avoiding the need to manage separate objects.
 
 
 ## Accessor Class vs Accessor Objects
@@ -77,7 +92,7 @@ vertexArray.setAttributes({
 For more information see the article about attributes.
 
 
-### Intentional Size Mismatches
+### Using Different Size in Buffers and Shaders
 
 It is possible to use different size memory attributes than specified by the GLSL shader code.
 
