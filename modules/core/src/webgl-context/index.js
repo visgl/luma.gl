@@ -1,6 +1,6 @@
 export {createGLContext, destroyGLContext, resizeGLContext, pollGLContext} from './context';
 
-export {withParameters, resetParameters} from './context-state';
+export {withParameters, resetParameters, setParameters} from './context-state';
 
 export {getContextInfo} from './context-limits';
 

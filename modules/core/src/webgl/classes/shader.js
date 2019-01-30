@@ -55,7 +55,7 @@ export class Shader extends Resource {
   }
 
   toString() {
-    return `${this.getTypeName(this.shaderType)}:${this.id}`;
+    return `${Shader.getTypeName(this.shaderType)}:${this.id}`;
   }
 
   getName() {
