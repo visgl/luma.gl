@@ -80,7 +80,9 @@ For more information see the article about attributes.
 
 ### Using Different Size in Buffers and Shaders
 
-It is possible to use different size memory attributes than specified by the GLSL shader code.
+It is possible to use different size memory attributes than specified by the GLSL shader code, by specifying a different size in the accessor compared to the GLSL shader variable declaration. Extra components in the Buffer memory will be ignored, missing components will be filled in from `(0.0, 0.0, 0.0, 1.0)`
+
+> Be aware that the headless gl integration does not support this feature due to limitations in headless gl.
 
 
 ### glTF Format Accessors
