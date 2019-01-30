@@ -6,32 +6,18 @@ When using `Buffer`s as input to shader programs, applications must tell WebGL h
 
 ## Accessor Object Fields
 
-This is an overview of the object accessor fields that are available to applications to define format descriptions. These objects can contain the following fields:
+This is an overview of the object accessor fields that are available to applications to define format descriptions. These objects can contain the following fields, this is an excerpt from [`Accessor`](api-reference/webgl/accessor.md).
 
-| Field        | Type        | Default    | Description |
-| ---          | ---         | ---        | --- |
-| `buffer`     | `Buffer`    | N/A        | An accessor can optionally reference a specific buffer. Multiple accessors can point to the same buffer, providing different views or "slices" of the buffer's memory. |
-| `stride`     | `Number`    | `0`        | Distance between successive vertex data elements in interleaved buffers. |
-| `offset`     | `Number`    | `0`        | Offset into the `byteStride` |
-| `normalized` | `Boolean`   | `false`    | Whether integers are scaled into `0-1` |
-| `type`       | `GLenum`    | `GL.FLOAT` | Auto-deduced from compiled shader if left undefined |
-| `size`       | `Number`    | `1`        | Auto-deduced from compiled shader if left undefined. 1-4 (more for matrices/arrays) |
-| `divisor`    | `Number`    | `0`        | Disable conversion of integer values to floats **WebGL2**. Auto-deduced from shader if left undefined, heuristic based on shader attribute name. |
-| `integer`    | `boolean`   | `false`    | Auto-deduced from shader types |
-
-For more information
-
-
-| Property    | Category    | Auto Deduce    | Default    | Comment |
-| ---         | ---         | ---            | ---        | ---     |
-| `offset`    | data layout | N/A            | `0`        | Byte offset to start of data in buffer |
-| `stride`    | data layout | N/A            | `0`        | Extra bytes between each successive data element |
-| `type`      | data type   | Vertex Shader/`Buffer.setData` | `GL.FLOAT` | Low level data type (`GL.BYTE`, `GL.SHORT`, ...) |
-| `size`      | data type   | Vertex Shader  | `1`        | Components per element (`1`-`4`) |
-| `divisor`   | instancing  | Attribute name | `0`        | Enables/disables instancing |
-| `normalize` | data access | N/A            | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
-| `integer`   | data access | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
-| `buffer`    |             | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
+| Property    | Auto Deduced | Default    | Comment |
+| ---         | ---          | ---        | ---        | ---     |
+| `buffer`    | No           | An accessor can optionally reference a specific buffer. Multiple accessors can point to the same buffer, providing different views or "slices" of the buffer's memory. |
+| `offset`    | No           | `0`        | Byte offset to start of data in buffer |
+| `stride`    | No           | `0`        | Extra bytes between each successive data element |
+| `type`      | Yes          | `GL.FLOAT` | Low level data type (`GL.BYTE`, `GL.SHORT`, ...) |
+| `size`      | Yes          | `1`        | Components per element (`1`-`4`) |
+| `divisor`   | Yes          | `0`        | Enables/disables instancing |
+| `normalize` | N/A          | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
+| `integer`   | N/A          | `false`    | Disable conversion of integer values to floats **WebGL2** |
 
 
 ## Combining Accessors with Buffers
