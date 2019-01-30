@@ -286,14 +286,8 @@ count: ${this.stats.profileFrameCount}`
       if (descriptor instanceof Attribute) {
         attribute = descriptor;
       } else if (descriptor instanceof Buffer) {
-        attribute =
-          attribute ||
-          new Attribute(
-            gl,
-            Object.assign({}, descriptor, descriptor.accessor, {
-              id: attributeName
-            })
-          );
+        const buffer = descriptor;
+        attribute = attribute || new Attribute(gl, {id: attributeName, accessor: buffer.accessor});
         attribute.update({buffer: descriptor});
       } else if (attribute) {
         attribute.update(descriptor);

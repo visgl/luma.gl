@@ -16,7 +16,8 @@ function isHeadlessGL(gl) {
   return gl.getExtension('STACKGL_resize_drawingbuffer');
 }
 
-test('WebGL#Attribute constructor/update/delete', t => {
+// eslint-disable-next-line max-statements
+test('Core#Attribute constructor/update/delete', t => {
   const {gl, gl2} = fixture;
 
   let attribute = new Attribute(gl2 || gl, {size: 4, value: value1});
@@ -28,8 +29,12 @@ test('WebGL#Attribute constructor/update/delete', t => {
     t.deepEqual(buffer.getData(), value1, 'Buffer value is set');
   }
   t.is(attribute.target, GL.ARRAY_BUFFER, 'Attribute target is inferred');
-  t.is(attribute.type, GL.FLOAT, 'Attribute type is inferred');
-  t.is(attribute.divisor, 0, 'divisor prop is set');
+
+  t.is(attribute.accessor.type, GL.FLOAT, 'Attribute.accessor.type is inferred');
+  t.is(attribute.accessor.divisor, 0, 'Attribute.accessor.divisor is set');
+
+  t.is(attribute.type, GL.FLOAT, 'Attribute type is inferred (DEPRECATED)');
+  t.is(attribute.divisor, 0, 'divisor prop is set (DEPRECATED)');
 
   attribute.delete();
   t.notOk(buffer._handle, 'Buffer resource is released');
@@ -46,20 +51,22 @@ test('WebGL#Attribute constructor/update/delete', t => {
   attribute.delete();
   t.ok(buffer._handle, 'External buffer is not deleted');
 
-  attribute = new Attribute(gl, {size: 1, isIndexed: true});
+  attribute = new Attribute(gl, {isIndexed: true, accessor: {size: 1}});
   t.is(attribute.type, GL.UNSIGNED_INT, 'type is auto inferred');
 
-  attribute = new Attribute(null, {size: 4, value: value1});
+  attribute = new Attribute(null, {value: value1, accessor: {size: 4}});
   t.ok(attribute instanceof Attribute, 'Attribute construction successful without GL context');
 
   t.end();
 });
 
-test('WebGL#Attribute update', t => {
+test('Core#Attribute update/read props (accessor)', t => {
   const {gl, gl2} = fixture;
 
-  const attribute = new Attribute(gl2 || gl, {size: 4, value: value1});
+  const attribute = new Attribute(gl2 || gl, {value: value1, accessor: {size: 4}});
   let {buffer} = attribute;
+
+  t.is(attribute.accessor.size, 4, 'attribute.accessor.size is set (DEPRECATED)');
 
   attribute.update({value: value2});
   t.is(attribute.buffer, buffer, 'Buffer is reused');
@@ -67,27 +74,46 @@ test('WebGL#Attribute update', t => {
     t.deepEqual(buffer.getData(), value2, 'Buffer value is updated');
   }
 
-  attribute.update({divisor: 1});
-  t.is(attribute.divisor, 1, 'divisor prop is updated');
+  attribute.update({accessor: {divisor: 1}});
+  t.is(attribute.accessor.divisor, 1, 'divisor prop is updated');
 
-  attribute.update({divisor: 0});
-  t.is(attribute.divisor, 0, 'divisor prop is updated');
+  attribute.update({accessor: {divisor: 0}});
+  t.is(attribute.accessor.divisor, 0, 'divisor prop is updated');
 
   // gpu aggregation use case
-  buffer = new Buffer(gl, {byteLength: 1024, accessor: {type: GL.FLOAT, divisor: 1}});
-  buffer = new Buffer(gl, {byteLength: 1024, accessor: {type: GL.FLOAT, divisor: 1}});
+  buffer = new Buffer(gl, {bytes: 1024, accessor: {type: GL.FLOAT, divisor: 1}});
   attribute.update({buffer});
-  t.is(attribute.divisor, 1, 'divisor prop is updated using buffer prop');
+  t.is(attribute.accessor.divisor, 1, 'divisor prop is updated');
 
   attribute.delete();
 
   t.end();
 });
 
-test('WebGL#Attribute getBuffer', t => {
+test('Core#Attribute update/read props (DEPRECATED)', t => {
+  const {gl, gl2} = fixture;
+  const attribute = new Attribute(gl2 || gl, {value: value1, size: 4});
+
+  t.is(attribute.size, 4, 'attribute.size is set (DEPRECATED)');
+
+  attribute.update({isInstanced: true});
+  t.is(attribute.divisor, 1, 'divisor prop is updated');
+
+  attribute.update({divisor: 0});
+  t.is(attribute.divisor, 0, 'divisor prop is updated');
+
+  // gpu aggregation use case
+  const buffer = new Buffer(gl, {byteLength: 1024, accessor: {type: GL.FLOAT, divisor: 1}});
+  attribute.update({buffer});
+  t.is(attribute.divisor, 1, 'divisor prop is updated using buffer prop');
+
+  t.end();
+});
+
+test('Core#Attribute getBuffer', t => {
   const {gl} = fixture;
 
-  const attribute = new Attribute(gl, {size: 4, value: value1});
+  const attribute = new Attribute(gl, {value: value1, accessor: {size: 4}});
   t.is(attribute.getBuffer(), attribute.buffer, 'getBuffer returns own buffer');
 
   const buffer = new Buffer(gl, {data: value1});
@@ -108,10 +134,10 @@ test('WebGL#Attribute getBuffer', t => {
   t.end();
 });
 
-test('WebGL#Attribute getValue', t => {
+test('Core#Attribute getValue', t => {
   const {gl} = fixture;
 
-  const attribute = new Attribute(gl, {size: 4, value: value1});
+  const attribute = new Attribute(gl, {value: value1, accessor: {size: 4}});
   t.is(attribute.getValue()[0], attribute.buffer, 'getValue returns own buffer');
 
   const buffer = new Buffer(gl, {data: value1});
