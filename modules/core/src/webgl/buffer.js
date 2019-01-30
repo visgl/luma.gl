@@ -7,41 +7,34 @@ import {log, assert, checkProps} from '../utils';
 
 const DEBUG_DATA_LENGTH = 10;
 
+// Shared prop checks for constructor and setProps
+const DEPRECATED_PROPS = {
+  offset: 'accessor.offset',
+  stride: 'accessor.stride',
+  type: 'accessor.type',
+  size: 'accessor.size',
+  divisor: 'accessor.divisor',
+  normalized: 'accessor.normalized',
+  integer: 'accessor.integer',
+  index: 'accessor.index',
+  instanced: 'accessor.divisor',
+  isInstanced: 'accessor.divisor'
+};
+
+// Prop checks for constructor
 const PROP_CHECKS_INITIALIZE = {
   removedProps: {},
   replacedProps: {
     bytes: 'byteLength'
   },
-  deprecatedProps: {
-    offset: 'accessor.offset',
-    stride: 'accessor.stride',
-    type: 'accessor.type',
-    size: 'accessor.size',
-    divisor: 'accessor.divisor',
-    normalized: 'accessor.normalized',
-    integer: 'accessor.integer',
-    index: 'accessor.index',
-    instanced: 'accessor.divisor',
-    isInstanced: 'accessor.divisor'
-  }
+  // new Buffer() with individual accessor props is still used in apps, emit warnings
+  deprecatedProps: DEPRECATED_PROPS
 };
 
+// Prop checks for setProps
 const PROP_CHECKS_SET_PROPS = {
-  removedProps: {
-    offset: 'accessor',
-    stride: 'accessor',
-    type: 'accessor',
-    size: 'accessor',
-    divisor: 'accessor',
-    normalized: 'accessor',
-    integer: 'accessor',
-    index: 'accessor',
-    instanced: 'accessor',
-    isInstanced: 'accessor'
-  }
-  // replacedProps: {
-  //   bytes: 'byteLength'
-  // },
+  // Buffer.setProps() with individual accessor props is rare => emit errors
+  removedProps: DEPRECATED_PROPS
 };
 
 export default class Buffer extends Resource {
