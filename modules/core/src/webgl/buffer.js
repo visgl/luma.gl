@@ -2,23 +2,55 @@ import GL from '@luma.gl/constants';
 import Resource from './resource';
 import Accessor from './accessor';
 import {assertWebGL2Context} from '../webgl-utils';
-import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
-import {log} from '../utils';
-import assert from '../utils/assert';
+import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils';
+import {log, assert, checkProps} from '../utils';
 
 const DEBUG_DATA_LENGTH = 10;
+
+// Shared prop checks for constructor and setProps
+const DEPRECATED_PROPS = {
+  offset: 'accessor.offset',
+  stride: 'accessor.stride',
+  type: 'accessor.type',
+  size: 'accessor.size',
+  divisor: 'accessor.divisor',
+  normalized: 'accessor.normalized',
+  integer: 'accessor.integer',
+  index: 'accessor.index',
+  instanced: 'accessor.divisor',
+  isInstanced: 'accessor.divisor'
+};
+
+// Prop checks for constructor
+const PROP_CHECKS_INITIALIZE = {
+  removedProps: {},
+  replacedProps: {
+    bytes: 'byteLength'
+  },
+  // new Buffer() with individual accessor props is still used in apps, emit warnings
+  deprecatedProps: DEPRECATED_PROPS
+};
+
+// Prop checks for setProps
+const PROP_CHECKS_SET_PROPS = {
+  // Buffer.setProps() with individual accessor props is rare => emit errors
+  removedProps: DEPRECATED_PROPS
+};
 
 export default class Buffer extends Resource {
   constructor(gl, props = {}) {
     super(gl, props);
+
     this.stubRemovedMethods('Buffer', 'v6.0', ['layout', 'setLayout', 'getIndexedParameter']);
+    this.stubRemovedMethods('Buffer', 'v7.0', ['updateAccessor']);
 
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
 
-    this._initialize(props);
+    this.initialize(props);
+
     Object.seal(this);
   }
 
@@ -33,21 +65,60 @@ export default class Buffer extends Resource {
   }
 
   // Creates and initializes the buffer object's data store.
-  initialize(props) {
-    return this._initialize(props);
-  }
-
-  setProps(props) {
-    if ('data' in props) {
-      this.setData(props);
+  // Signature: `new Buffer(gl, {data: new Float32Array(...)})`
+  // Signature: `new Buffer(gl, new Float32Array(...))`
+  // Signature: `new Buffer(gl, 100)`
+  initialize(props = {}) {
+    // Signature `new Buffer(gl, new Float32Array(...)`
+    if (ArrayBuffer.isView(props)) {
+      props = {data: props};
     }
+
+    // Signature: `new Buffer(gl, 100)`
+    if (Number.isFinite(props)) {
+      props = {byteLength: props};
+    }
+
+    props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
+
+    // Initialize member fields
+    this.usage = props.usage || GL.STATIC_DRAW;
+    this.debugData = null;
+
+    // Deprecated: Merge main props and accessor
+    this.setAccessor(Object.assign({}, props, props.accessor));
+
+    // Set data: (re)initializes the buffer
+    if (props.data) {
+      this._setData(props.data);
+    } else {
+      this._setByteLength(props.byteLength || 0);
+    }
+
     return this;
   }
 
-  // Stores the accessor of data with the buffer, makes it easy to e.g. set it as an attribute later
-  // {accessor,type,size = 1,offset = 0,stride = 0,normalized = false,integer = false,divisor = 0}
-  setAccessor(opts) {
-    this.accessor = opts;
+  setProps(props) {
+    props = checkProps('Buffer', props, PROP_CHECKS_SET_PROPS);
+
+    if ('accessor' in props) {
+      this.setAccessor(props.accessor);
+    }
+
+    return this;
+  }
+
+  // Optionally stores an accessor with the buffer, makes it easier to use it as an attribute later
+  // {type, size = 1, offset = 0, stride = 0, normalized = false, integer = false, divisor = 0}
+  setAccessor(accessor) {
+    // NOTE: From luma.gl v7.0, Accessors have an optional `buffer `field
+    // (mainly to support "interleaving")
+    // To avoid confusion, ensure `buffer.accessor` does not have a `buffer.accessor.buffer` field:
+    accessor = Object.assign({}, accessor);
+    delete accessor.buffer;
+
+    // This new statement ensures that an "accessor object" is re-packaged as an Accessor instance
+    this.accessor = new Accessor(accessor);
     return this;
   }
 
@@ -65,9 +136,9 @@ export default class Buffer extends Resource {
     return false;
   }
 
-  // Update with new data
-  setData(opts) {
-    return this.initialize(opts);
+  // Update with new data. Reinitializes the buffer
+  setData(props) {
+    return this.initialize(props);
   }
 
   // Updates a subset of a buffer object's data store.
@@ -83,10 +154,6 @@ export default class Buffer extends Resource {
 
     const {data, offset = 0, srcOffset = 0} = props;
     const byteLength = props.byteLength || props.length;
-
-    // if (byteLength > this.byteLength) {
-    //   byteLength = this.byteLength;
-    // }
 
     assert(data);
 
@@ -106,9 +173,7 @@ export default class Buffer extends Resource {
     // TODO - update local `data` if offsets are right
     this.debugData = null;
 
-    if (!this.accessor.type) {
-      this.setAccessor(new Accessor(this.accessor, {type: getGLTypeFromTypedArray(data)}));
-    }
+    this._inferType(data);
 
     return this;
   }
@@ -165,25 +230,19 @@ export default class Buffer extends Resource {
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
 
     // TODO - update local `data` if offsets are 0
-
     return dstData;
   }
 
   /**
    * Binds a buffer to a given binding point (target).
    *   GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER take an index, and optionally a range.
-   * @param {Glenum} target - target for the bind operation.
-   * @param {GLuint} index= - the index of the target.
    *   - GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER need an index to affect state
-   * @param {GLuint} offset=0 - the index of the target.
    *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
-   * @param {GLuint} size= - the index of the target.
    *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
-   * @returns {Buffer} - Returns itself for chaining.
    */
   bind({
-    target = this.target,
-    index = this.accessor && this.accessor.index,
+    target = this.target, // target for the bind operation
+    index = this.accessor && this.accessor.index, // index = index of target (indexed bind point)
     offset = 0,
     size
   } = {}) {
@@ -214,17 +273,6 @@ export default class Buffer extends Resource {
     return this;
   }
 
-  // DEPRECATED/REMOVED METHODS
-
-  get data() {
-    log.removed('Buffer.data', 'N/A', 'v6.0');
-  }
-
-  get bytes() {
-    log.deprecated('Buffer.bytes', 'Buffer.byteLength', 'v6.1');
-    return this.byteLength;
-  }
-
   // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 
   // Returns a short initial data array
@@ -241,35 +289,6 @@ export default class Buffer extends Resource {
   }
 
   // PRIVATE METHODS
-
-  // Signature: `new Buffer(gl, {data: new Float32Array(...)})`
-  // Signature: `new Buffer(gl, new Float32Array(...))`
-  // Signature: `new Buffer(gl, 100)`
-  _initialize(props = {}) {
-    // Signature `new Buffer(gl, new Float32Array(...)`
-    if (ArrayBuffer.isView(props)) {
-      props = {data: props};
-    }
-
-    // Signature: `new Buffer(gl, 100)`
-    if (Number.isFinite(props)) {
-      props = {byteLength: props};
-    }
-
-    if (props.bytes) {
-      log.deprecated('bytes', 'byteLength');
-    }
-
-    const byteLength = props.byteLength || props.bytes || 0;
-    // assert(props.data || byteLength);
-
-    this.usage = props.usage || GL.STATIC_DRAW;
-
-    // DEPRECATE - remove `props` from this list in next major release
-    this.setAccessor(new Accessor(props, props.accessor));
-
-    return props.data ? this._setData(props.data) : this._setByteLength(byteLength);
-  }
 
   // Allocate a new buffer and initialize to contents of typed array
   _setData(data, usage = this.usage) {
@@ -327,6 +346,14 @@ export default class Buffer extends Resource {
     return this.getElementCount() - sourceElementOffset;
   }
 
+  // Automatically infers type from typed array passed to setData
+  // Note: No longer that useful, since type is now autodeduced from the compiled shaders
+  _inferType(data) {
+    if (!this.accessor.type) {
+      this.setAccessor(new Accessor(this.accessor, {type: getGLTypeFromTypedArray(data)}));
+    }
+  }
+
   // RESOURCE METHODS
 
   _createHandle() {
@@ -344,16 +371,20 @@ export default class Buffer extends Resource {
     return value;
   }
 
-  // DEPRECATED
-
-  updateAccessor(opts) {
-    log.deprecated('updateAccessor(...)', 'setAccessor(new Accessor(buffer.accessor, ...)');
-    this.accessor = new Accessor(this.accessor, opts);
-    return this;
+  // DEPRECATIONS - v7.0
+  get type() {
+    log.deprecated('Buffer.type', 'Buffer.accessor.type')();
+    return this.accessor.type;
   }
 
+  get bytes() {
+    log.deprecated('Buffer.bytes', 'Buffer.byteLength')();
+    return this.byteLength;
+  }
+
+  // DEPRECATIONS - v6.x, but not warnings not properly implemented
   setByteLength(byteLength) {
-    log.deprecated('setByteLength', 'reallocate');
+    log.deprecated('setByteLength', 'reallocate')();
     return this.reallocate(byteLength);
   }
 }

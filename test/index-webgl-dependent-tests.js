@@ -9,5 +9,4 @@ import './modules/core/webgl-context';
 import './modules/core/webgl';
 import './modules/core/core';
 
-// GPGPU is a set of shadertool modules, no WebGL dependencies
 import './modules/gpgpu';

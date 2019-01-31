@@ -120,22 +120,8 @@ export default class VertexArray {
     this.vertexArrayObject.bind(() => {
       for (const locationOrName in attributes) {
         const value = attributes[locationOrName];
-        if (value instanceof Buffer) {
-          //  Signature: attributeName: buffer
-          this.setBuffer(locationOrName, value);
-        } else if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
-          // Signature: attributeName: [buffer, accessor]
-          const buffer = value[0];
-          const accessor = value[1];
-          this.setBuffer(locationOrName, buffer, accessor);
-        } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
-          //  Signature: attributeName: (short) (typed) array => constant
-          this.setConstant(locationOrName, value);
-        } else {
-          throw new Error(ERR_ATTRIBUTE_TYPE);
-        }
+        this._setAttribute(locationOrName, value);
       }
-
       // Make sure we don't leave any bindings
       this.gl.bindBuffer(GL.ARRAY_BUFFER, null);
     });
@@ -318,6 +304,30 @@ export default class VertexArray {
     return -1;
   }
 
+  _setAttribute(locationOrName, value) {
+    if (value instanceof Buffer) {
+      //  Signature: {attributeName: Buffer}
+      this.setBuffer(locationOrName, value);
+    } else if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
+      // Signature: {attributeName: [buffer, accessor]}
+      const buffer = value[0];
+      const accessor = value[1];
+      this.setBuffer(locationOrName, buffer, accessor);
+    } else if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+      // Signature: {attributeName: constant}, constant == short (typed) array
+      const constant = value;
+      this.setConstant(locationOrName, constant);
+    } else if (value.buffer instanceof Buffer) {
+      // luma.gl v7: Support accessor objects with 'buffer' field
+      // for interleaved data
+      // Signature: {attributeName: {...accessor, buffer}}
+      const accessor = value;
+      this.setBuffer(locationOrName, accessor.buffer, accessor);
+    } else {
+      throw new Error(ERR_ATTRIBUTE_TYPE);
+    }
+  }
+
   // Updates all constant attribute values (constants are used when vertex attributes are disabled).
   // This needs to be done repeatedly since in contrast to buffer bindings,
   // constants are stored on the WebGL context, not the VAO
@@ -423,10 +433,10 @@ export default class VertexArray {
     }
   }
 
-  // DEPRECATED
+  // DEPRECATED in v6.x - but not warnings not properly implemented
 
   setElements(elementBuffer = null, accessor = {}) {
-    log.deprecated('setElements', 'setElementBuffer');
+    log.deprecated('setElements', 'setElementBuffer')();
     return this.setElementBuffer(elementBuffer, accessor);
   }
 }

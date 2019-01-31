@@ -122,11 +122,11 @@ export default class Attribute {
     this.divisor = divisor;
 
     if (isInstanced !== undefined) {
-      log.deprecated('Attribute.isInstanced');
+      log.deprecated('Attribute.isInstanced')();
       this.divisor = isInstanced ? 1 : 0;
     }
     if (instanced !== undefined) {
-      log.deprecated('Attribute.instanced');
+      log.deprecated('Attribute.instanced')();
       this.divisor = instanced ? 1 : 0;
     }
   }

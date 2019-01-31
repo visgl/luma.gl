@@ -1,7 +1,6 @@
 import GL from '@luma.gl/constants';
-import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
-import log from '../utils/log';
-import assert from '../utils/assert';
+import {getTypedArrayFromGLType} from '../webgl-utils';
+import {log, checkProps, assert} from '../utils';
 
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,
@@ -11,6 +10,13 @@ const DEFAULT_ACCESSOR_VALUES = {
   divisor: 0,
   normalized: false,
   integer: false
+};
+
+const PROP_CHECKS = {
+  deprecatedProps: {
+    instanced: 'divisor',
+    isInstanced: 'divisor'
+  }
 };
 
 export default class Accessor {
@@ -59,11 +65,13 @@ export default class Accessor {
 
   // PRIVATE
 
-  /* eslint-disable complexity, max-statements */
+  // eslint-disable-next-line complexity, max-statements
   _assign(props = {}) {
+    props = checkProps('Accessor', props, PROP_CHECKS);
+
     // TYPE - not expected to be overridden
     if (props.type !== undefined) {
-      if (this.type !== props.type) {
+      if (props.type !== this.type) {
         log.warn('accessor type mismatch');
       }
       this.type = props.type;
@@ -82,11 +90,6 @@ export default class Accessor {
       this.size = props.size;
     }
 
-    // INSTANCE DIVISOR
-    if (props.divisor !== undefined) {
-      this.divisor = props.divisor;
-    }
-
     if (props.offset !== undefined) {
       this.offset = props.offset;
     }
@@ -100,24 +103,36 @@ export default class Accessor {
       this.integer = props.integer;
     }
 
-    // Backwards compatibility
+    // INSTANCE DIVISOR
+    if (props.divisor !== undefined) {
+      this.divisor = props.divisor;
+    }
+
+    // Buffer is optional
+    if (props.buffer !== undefined) {
+      this.buffer = props.buffer;
+    }
+
+    // The binding index (for binding e.g. Transform feedbacks and Uniform buffers)
+    // TODO - should this be part of accessor?
+    if (props.index !== undefined) {
+      if (typeof index === 'boolean') {
+        this.index = props.index ? 1 : 0;
+      } else {
+        this.index = props.index;
+      }
+    }
+
+    // DEPRECATED
     if (props.instanced !== undefined) {
-      log.deprecated('Accessor.instanced', 'Accessor.divisor');
       this.divisor = props.instanced ? 1 : 0;
     }
     if (props.isInstanced !== undefined) {
-      log.deprecated('Accessor.isInstanced', 'Accessor.divisor');
       this.divisor = props.isInstanced ? 1 : 0;
-    }
-
-    // TODO - should this be supported?
-    if (props.index !== undefined) {
-      this.index = props.index ? 1 : 0;
     }
 
     return this;
   }
-  /* eslint-enable complexity, max-statements */
 }
 
 // TEST EXPORTS
