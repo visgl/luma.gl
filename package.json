@@ -65,6 +65,7 @@
     "eslint": "4.13.1",
     "eslint-config-prettier": "3.0.1",
     "eslint-config-uber-es2015": "^3.0.0",
+    "eslint-plugin-luma-gl-custom-rules": "file:./eslint",
     "eslint-plugin-tree-shaking": "^1.7.3",
     "gl": "^4.1.1",
     "html-webpack-plugin": "^3.0.7",
@@ -74,6 +75,7 @@
     "module-alias": "^2.0.0",
     "nyc": "^13.0.0",
     "pre-commit": "^1.2.2",
+    "pre-push": "^0.1.1",
     "prettier": "1.14.3",
     "prettier-check": "2.0.0",
     "puppeteer": "^1.2.0",
@@ -88,8 +90,7 @@
     "webpack": "^4.20.2",
     "webpack-bundle-analyzer": "^2.11.1",
     "webpack-cli": "^3.1.2",
-    "webpack-dev-server": "^3.1.1",
-    "pre-push": "^0.1.1"
+    "webpack-dev-server": "^3.1.1"
   },
   "pre-commit": [
     "pre-commit"
