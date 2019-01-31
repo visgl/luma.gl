@@ -2,7 +2,7 @@ import {uid} from '../utils';
 import {Vector3, Matrix4} from 'math.gl';
 import assert from '../utils/assert';
 
-export default class Object3D {
+export default class ScenegraphNode {
   constructor({id, display = true}) {
     // whether to display the object at all
     this.id = id || uid(this.constructor.name);
@@ -37,6 +37,14 @@ export default class Object3D {
     assert(scale.length === 3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
+  }
+
+  setMatrix(matrix, copyMatrix = true) {
+    if (copyMatrix) {
+      this.matrix.copy(matrix);
+    } else {
+      this.matrix = matrix;
+    }
   }
 
   setMatrixComponents({position, rotation, scale, update = true}) {

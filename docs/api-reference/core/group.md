@@ -1,6 +1,7 @@
 # Group
 
-Holds a list of `Object3d`s. Since `Group` is a subclass of `Object3D` you can place groups inside groups and create hierarchical scene graphs.
+A `Group` is a subclass of `ScenegraphNode` that holds a list of `ScenegraphNode` children. Since . A `Group` can be a child of another `Group` and thus be used to create hierarchical scene graphs.
+
 
 ## Usage
 
@@ -18,22 +19,41 @@ group.add(moon, box);
 group.remove(moon);
 ```
 
+
+## Properties
+
+`Model` extends the `ScenegraphNode` class and inherits the transformation matrix properties from that class.
+
+
+### children : ScenegraphNode[]
+
+
 ## Methods
 
-### add
 
-Add an [Object3D](object-3d.html) object to the Group.
+### constructor(props : Object)
 
-    group.add(o[, ...]);
+Create an instance of `Group`.
 
-A variable argument list of [Object3D](object-3d.html) instances.
 
-Examples:
+### setProps(props : Object)
 
-### remove
+Updates properties.
 
-Removes an [Object3D](object-3d.html) object from the Group.
+
+### add(node : ScenegraphNode [, ...])
+
+Add one or more `ScenegraphNode` objects to the `Group`.
+
+`group.add(model);`
+
+A variable argument list of [ScenegraphNode]() instances.
+
+
+### remove(node: Node)
+
+Removes an [ScenegraphNode](object-3d.html) object from the Group.
 
     group.remove(model);
 
-* model - (*object*) The model to be removed.
+* model - (*object*) The scene graph node to be removed.

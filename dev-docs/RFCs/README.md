@@ -51,7 +51,7 @@ These are early ideas not yet associated with any release
 | RFC | Author | Status | Description |
 | --- | ---    | ---    | ---         |
 | [**Multipass Rendering**](v6.1/multipass-rendering-rfc.md) | @ibgreen | **Implemented** | Multipass rendering system for postprocessing effects and advanced rendering |
-| [**New Loaders Module**](v6.1/loader-module-rfc.md) | @ibgreen | **Implemented** | New loaders.gl submodule collecting framework-agnostic, thread-capable 3D format loaders. |
+| [**New Loaders Module**](v6.1/loader-module-rfc.md) | @ibgreen | **Implemented** | New loaders.gl submodule collecting framework-agnostic, thread-capable 3D format loaders. Note: The loaders have been moved to a separate [repository](https://github.com/uber-web/loaders.gl) |
 
 
 ## v6.0 RFCs

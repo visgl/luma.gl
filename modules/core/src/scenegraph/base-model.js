@@ -1,19 +1,17 @@
-import GL from '@luma.gl/constants';
-import {assembleShaders, MODULAR_SHADERS} from '@luma.gl/shadertools';
+// Shared code between Model and MeshModel
 
-import Attribute from './attribute';
-import Object3D from './object-3d';
-import {getDrawMode} from '../geometry/geometry';
+import GL from '@luma.gl/constants';
+import Attribute from '../core/attribute';
+import ScenegraphNode from './scenegraph-node';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
+import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
 import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
 import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
-
-const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -24,7 +22,7 @@ const LOG_DRAW_TIMEOUT = 10000;
 const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
-export default class Model extends Object3D {
+export default class BaseModel extends ScenegraphNode {
   constructor(gl, props = {}) {
     super(props);
     assert(isWebGL(gl));
@@ -81,39 +79,14 @@ export default class Model extends Object3D {
     );
 
     // Attributes and buffers
-
-    // geometry might have set drawMode and vertexCount
-    this.isInstanced = props.isInstanced || props.instanced;
-
     this.onBeforeRender = props.onBeforeRender || (() => {});
     this.onAfterRender = props.onAfterRender || (() => {});
-
-    // assert(program || program instanceof Program);
-    assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
   }
   /* eslint-enable max-statements */
 
   setProps(props) {
     Object.assign(this.props, props);
 
-    // params
-    // if ('drawMode' in props) {
-    //   this.drawMode = getDrawMode(props.drawMode);
-    // }
-    // if ('vertexCount' in props) {
-    //   this.vertexCount = props.vertexCount;
-    // }
-    if ('instanceCount' in props) {
-      this.instanceCount = props.instanceCount;
-    }
-    if ('geometry' in props) {
-      this.setGeometry(props.geometry);
-    }
-
-    // webgl settings
-    if ('attributes' in props) {
-      this.setAttributes(props.attributes);
-    }
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms, props.samplers);
     }
@@ -129,12 +102,11 @@ export default class Model extends Object3D {
         log.warn('GPU timer not supported')();
       }
     }
-    if ('_feedbackBuffers' in props) {
-      this._setFeedbackBuffers(props._feedbackBuffers);
-    }
+
     if ('_animationProps' in props) {
       this._setAnimationProps(props._animationProps);
     }
+
     if ('_animationLoop' in props) {
       this.animationLoop = props._animationLoop;
     }
@@ -161,20 +133,6 @@ export default class Model extends Object3D {
 
   // GETTERS
 
-  get vertexCount() {
-    if (Number.isFinite(this.props.vertexCount)) {
-      return this.props.vertexCount;
-    }
-    return this.geometry && this.geometry.getVertexCount();
-  }
-
-  get drawMode() {
-    if (Number.isFinite(this.props.drawMode)) {
-      return this.props.drawMode;
-    }
-    return this.geometry && this.geometry.drawMode;
-  }
-
   getNeedsRedraw({clearRedrawFlags = false} = {}) {
     let redraw = false;
     redraw = redraw || this.needsRedraw;
@@ -188,24 +146,8 @@ export default class Model extends Object3D {
     return redraw;
   }
 
-  getDrawMode() {
-    return this.drawMode;
-  }
-
-  getVertexCount() {
-    return this.vertexCount;
-  }
-
-  getInstanceCount() {
-    return this.instanceCount;
-  }
-
   getProgram() {
     return this.program;
-  }
-
-  getAttributes() {
-    return this.attributes;
   }
 
   getUniforms() {
@@ -216,48 +158,6 @@ export default class Model extends Object3D {
 
   setNeedsRedraw(redraw = true) {
     this.needsRedraw = redraw;
-    return this;
-  }
-
-  setDrawMode(drawMode) {
-    this.props.drawMode = getDrawMode(drawMode);
-    return this;
-  }
-
-  setVertexCount(vertexCount) {
-    assert(Number.isFinite(vertexCount));
-    this.props.vertexCount = vertexCount;
-    return this;
-  }
-
-  setInstanceCount(instanceCount) {
-    assert(Number.isFinite(instanceCount));
-    this.instanceCount = instanceCount;
-    return this;
-  }
-
-  // TODO - just set attributes, don't hold on to geometry
-  setGeometry(geometry) {
-    this.geometry = geometry;
-    const buffers = this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
-    this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
-    return this;
-  }
-
-  setAttributes(attributes = {}) {
-    // Avoid setting needsRedraw if no attributes
-    if (isObjectEmpty(attributes)) {
-      return this;
-    }
-
-    Object.assign(this.attributes, attributes);
-    const buffers = this._createBuffersFromAttributeDescriptors(attributes);
-
-    // Object.assign(this.attributes, buffers);
-    this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
-
     return this;
   }
 
@@ -304,7 +204,7 @@ export default class Model extends Object3D {
   }
 
   /* eslint-disable max-statements  */
-  draw(opts = {}) {
+  drawGeometry(opts = {}) {
     const {
       moduleSettings = null,
       framebuffer,
@@ -602,7 +502,7 @@ count: ${this.stats.profileFrameCount}`
           attribute ||
           new Attribute(
             gl,
-            Object.assign({}, descriptor, descriptor.layout, {
+            Object.assign({}, descriptor, descriptor.accessor, {
               id: attributeName
             })
           );

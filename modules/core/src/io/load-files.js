@@ -2,8 +2,8 @@
 import assert from '../utils/assert';
 import {loadFile, loadImage} from './browser-load';
 import {Program, Texture2D} from '../webgl';
-import {Model} from '../core';
-import {Geometry} from '../geometry';
+import Model from '../scenegraph/model';
+import {Geometry} from '../core/geometry';
 
 function noop() {}
 

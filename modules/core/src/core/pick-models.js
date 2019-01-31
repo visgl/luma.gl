@@ -1,6 +1,6 @@
 /* global window */
 import {clear, isWebGL} from '../webgl';
-import Group from './group';
+import Group from '../scenegraph/group';
 import assert from '../utils/assert';
 import {readPixelsToArray} from '../webgl/copy-and-blit';
 

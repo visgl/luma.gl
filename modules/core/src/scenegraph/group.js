@@ -1,12 +1,12 @@
-import Object3D from './object-3d';
+import Node from './scenegraph-node';
 import {Matrix4} from 'math.gl';
 import assert from '../utils/assert';
 
-export default class Group extends Object3D {
+export default class Group extends Node {
   constructor(opts = {}) {
     opts = Array.isArray(opts) ? {children: opts} : opts;
     const {children = []} = opts;
-    children.every(child => assert(child instanceof Object3D));
+    children.every(child => assert(child instanceof Node));
     super(opts);
     this.children = children;
   }
@@ -47,7 +47,9 @@ export default class Group extends Object3D {
       if (child instanceof Group) {
         result = child.traverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        // Note: this will overwrite the child matrix
+        // In glTF, meshes and primitives do no have their own matrix.
+        child.setMatrix(modelMatrix);
         result = visitor(child, {});
       }
       // Abort if a result was returned
@@ -69,7 +71,8 @@ export default class Group extends Object3D {
       if (child instanceof Group) {
         result = child.traverseReverse(visitor, {modelMatrix});
       } else {
-        // child.setUniforms({modelMatrix});
+        // Note: see comment above
+        child.setMatrix(modelMatrix);
         result = visitor(child, {});
       }
       // Abort if a result was returned
