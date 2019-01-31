@@ -42,7 +42,7 @@ export default class Group extends Node {
   traverse(visitor, {modelMatrix = new Matrix4()} = {}) {
     for (const child of this.children) {
       const {matrix} = child;
-      modelMatrix = modelMatrix.multiplyRight(matrix);
+      modelMatrix = new Matrix4(modelMatrix).multiplyRight(matrix);
       let result;
       if (child instanceof Group) {
         result = child.traverse(visitor, {modelMatrix});
@@ -66,7 +66,7 @@ export default class Group extends Node {
     for (let i = this.children.length - 1; i >= 0; --i) {
       const child = this.children[i];
       const {matrix} = child;
-      modelMatrix = modelMatrix.multiplyRight(matrix);
+      modelMatrix = modelMatrix.multiplyRight(matrix); // !!! this will change the original parameter !!!
       let result;
       if (child instanceof Group) {
         result = child.traverseReverse(visitor, {modelMatrix});

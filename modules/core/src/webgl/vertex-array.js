@@ -392,6 +392,7 @@ export default class VertexArray {
       drawParams.elementCount = this.elements.getElementCount(this.elements.accessor);
       drawParams.isIndexed = true;
       drawParams.indexType = this.elementsAccessor.type || this.elements.accessor.type;
+      drawParams.indexOffset = this.elementsAccessor.offset || 0;
     }
 
     // Post-calculation checks

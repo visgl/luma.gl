@@ -60,6 +60,7 @@ const INFO_HTML = `
 
 export const animationLoopOptions = {
   models: [],
+  eye: [0, 0, 1],
   gl: null,
   loadedModelUrl: null,
 
@@ -67,7 +68,7 @@ export const animationLoopOptions = {
     window.fetch(url).then(res => res.arrayBuffer()).then(data => {
 
       const gltfParser = new GLTFParser();
-      const gltf = gltfParser.parse(data);
+      const gltf = gltfParser.parse(data, {createImages: false});
 
       const instantiator = new GLTFInstantiator(animationLoopOptions.gl);
       const lumaScenes = instantiator.instantiate(gltf);
@@ -98,14 +99,27 @@ export const animationLoopOptions = {
       animationLoopOptions.models = [];
       animationLoopOptions.loadGLTF(GLTF_BASE_URL + modelSelector.value);
     };
+
+    // TODO: remove this when demo is over
+    document.onwheel = e => {
+      animationLoopOptions.eye[2] += e.deltaY / 10;
+      if (animationLoopOptions.eye[2] < 0.5) {
+        animationLoopOptions.eye[2] = 0.5;
+      }
+      e.preventDefault();
+    };
   },
 
-  onRender: ({gl, tick, width, height, aspect, models}) => {
+  onRender: ({gl, tick, width, height, aspect}) => {
     gl.viewport(0, 0, width, height);
     clear(gl, {color: [0, 0, 0, 1], depth: true});
 
-    const uView = new Matrix4().lookAt({eye: [0, 2, 2], center: [0, 0, 0], up: [0, 1, 0]}).rotateXYZ([0, tick * 0.01, 0]);
-    const uProjection = new Matrix4().perspective({fov: radians(25), aspect, near: 0.1, far: 5000});
+    const uView = new Matrix4().lookAt({
+      eye: animationLoopOptions.eye,
+      center: [0, 0, 0],
+      up: [0, 1, 0]
+    }).rotateXYZ([0, tick * 0.01, 0]);
+    const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
     animationLoopOptions.models.forEach(model => {
       model.draw({
