@@ -105,7 +105,6 @@ export default class GLTFInstantiator {
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
     const attributes = this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices);
-    // TODO - handle gltfPrimitive.material
 
     const model = new Model(this.gl, {
       id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}=${i}`,
@@ -116,6 +115,7 @@ export default class GLTFInstantiator {
     });
     model.setProps({attributes});
 
+    // TODO: handle case of having no material
     if (gltfPrimitive.material) {
       this.configureMaterial(model, gltfPrimitive.material);
     }
@@ -166,11 +166,11 @@ export default class GLTFInstantiator {
 
   configureTexture(gltfTexture, model) {
     const parameters = (gltfTexture.texture && gltfTexture.texture.sampler && gltfTexture.texture.sampler.parameters) || {};
-    gltfTexture.texture.source.image.then(img => {
+    gltfTexture.texture.source.image.then(image => {
       const tex = new Texture2D(this.gl, {
         id: gltfTexture.name || gltfTexture.id,
         parameters,
-        data: img
+        data: image
       });
       model.setUniforms({ tex });
     });
