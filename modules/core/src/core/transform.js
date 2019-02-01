@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import Model from './model';
+import Model from '../scenegraph/model';
 import Buffer from '../webgl/buffer';
 import Framebuffer from '../webgl/framebuffer';
 import Texture2D from '../webgl/texture-2d';
