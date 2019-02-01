@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
-import {loadImage} from '../io';
 import {assertWebGLContext} from '../webgl-utils';
 
 export default class Texture2D extends Texture {
@@ -8,21 +7,24 @@ export default class Texture2D extends Texture {
     return Texture.isSupported(gl, opts);
   }
 
-  constructor(gl, props = {}) {
+  /**
+   * @classdesc
+   * 2D WebGL Texture
+   * Note: Constructor will initialize your texture.
+   *
+   * @class
+   * @param {WebGLRenderingContext} gl - gl context
+   * @param {Image|ArrayBuffer|null} opts= - named options
+   * @param {Image|ArrayBuffer|null} opts.data= - buffer
+   * @param {GLint} width - width of texture
+   * @param {GLint} height - height of texture
+   */
+  constructor(gl, opts = {}) {
     assertWebGLContext(gl);
 
-    // Signature: new Texture2D(gl, url | Promise)
-    if (props instanceof Promise || typeof props === 'string') {
-      props = {data: props};
-    }
-    // Signature: new Texture2D(gl, {data: url})
-    if (typeof props.data === 'string') {
-      props = Object.assign({}, props, {data: loadImage(props.data)});
-    }
+    super(gl, Object.assign({}, opts, {target: gl.TEXTURE_2D}));
 
-    super(gl, Object.assign({}, props, {target: gl.TEXTURE_2D}));
-
-    this.initialize(props);
+    this.initialize(opts);
 
     Object.seal(this);
   }
