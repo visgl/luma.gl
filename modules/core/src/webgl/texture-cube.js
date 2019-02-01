@@ -76,6 +76,7 @@ export default class TextureCube extends Texture {
     const {gl} = this;
     const imageDataMap = pixels || data;
 
+    // TODO - Make this a method of Texture, and call that
     // A rare instance where a local function is the lesser evil?
     const setImageData = (face, imageData) => {
       if (this.width || this.height) {

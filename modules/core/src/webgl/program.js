@@ -16,32 +16,33 @@ import assert from '../utils/assert';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
-// const GL_INTERLEAVED_ATTRIBS = 0x8C8C;
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
+
+const V6_DEPRECATED_METHODS = [
+  'setVertexArray',
+  'setAttributes',
+  'setBuffers',
+  'unsetBuffers',
+
+  'use',
+  'getUniformCount',
+  'getUniformInfo',
+  'getUniformLocation',
+  'getUniformValue',
+
+  'getVarying',
+  'getFragDataLocation',
+  'getAttachedShaders',
+  'getAttributeCount',
+  'getAttributeLocation',
+  'getAttributeInfo'
+];
 
 export default class Program extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
 
-    this.stubRemovedMethods('Program', 'v6.0', [
-      'setVertexArray',
-      'setAttributes',
-      'setBuffers',
-      'unsetBuffers',
-
-      'use',
-      'getUniformCount',
-      'getUniformInfo',
-      'getUniformLocation',
-      'getUniformValue',
-
-      'getVarying',
-      'getFragDataLocation',
-      'getAttachedShaders',
-      'getAttributeCount',
-      'getAttributeLocation',
-      'getAttributeInfo'
-    ]);
+    this.stubRemovedMethods('Program', 'v6.0', V6_DEPRECATED_METHODS);
 
     // Experimental flag to avoid deleting Program object while it is cached
     this._isCached = false;
@@ -142,9 +143,9 @@ export default class Program extends Resource {
     }
 
     // Note: async textures set as uniforms might still be loading.
-    // If any texture in the uniforms are not yet initialized, we don't draw
-    const texturesLoaded = this._bindTextures();
-    if (!texturesLoaded) {
+    // Now that all uniforms have been updated, check if any texture
+    // in the uniforms is not yet initialized, then we don't draw
+    if (this._areTexturesLoading()) {
       return this;
     }
 
@@ -157,6 +158,8 @@ export default class Program extends Resource {
         const primitiveMode = getPrimitiveDrawMode(drawMode);
         transformFeedback.begin(primitiveMode);
       }
+
+      this._bindTextures();
 
       withParameters(this.gl, parameters, () => {
         // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
@@ -212,11 +215,34 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
+  _areTexturesLoading() {
+    let texturesLoaded = true;
+
+    for (const uniformName in this.uniforms) {
+      const uniformSetter = this._uniformSetters[uniformName];
+
+      if (uniformSetter && uniformSetter.textureIndex !== undefined) {
+        let uniform = this.uniforms[uniformName];
+
+        if (uniform instanceof Framebuffer) {
+          const framebuffer = uniform;
+          uniform = framebuffer.texture;
+        }
+
+        if (uniform instanceof Texture) {
+          const texture = uniform;
+          // Check that texture is loaded
+          texturesLoaded = texturesLoaded && texture.loaded;
+        }
+      }
+    }
+
+    return !texturesLoaded;
+  }
+
   // Binds textures (and checks that async textures have loaded)
   // This needs to be done before every draw call
   _bindTextures() {
-    let texturesLoaded = true;
-
     for (const uniformName in this.uniforms) {
       const uniformSetter = this._uniformSetters[uniformName];
 
@@ -229,8 +255,6 @@ export default class Program extends Resource {
         }
         if (uniform instanceof Texture) {
           const texture = uniform;
-          // Check that texture is loaded
-          texturesLoaded = texturesLoaded && texture.loaded;
           // Bind texture to index
           texture.bind(uniformSetter.textureIndex);
         }
@@ -240,8 +264,6 @@ export default class Program extends Resource {
         }
       }
     }
-
-    return texturesLoaded;
   }
 
   // Apply a set of uniform values to a program
