@@ -1,4 +1,5 @@
-import {requestFile} from './browser-request-file';
+/* global fetch, Image */
+import {assert} from '../utils';
 
 let pathPrefix = '';
 
@@ -9,17 +10,13 @@ export function setPathPrefix(prefix) {
   pathPrefix = prefix;
 }
 
-export function loadFile(url, opts) {
-  if (typeof url !== 'string' && !opts) {
-    // TODO - warn for deprecated mode
-    opts = url;
-    url = opts.url;
-  }
-  opts.url = pathPrefix ? pathPrefix + url : url;
-  return requestFile(opts);
+// Reads raw file data from:
+export function loadFile(url, options = {}) {
+  assert(typeof url === 'string');
+  url = pathPrefix + url;
+  const dataType = options.dataType || 'text';
+  return fetch(url, options).then(res => res[dataType]());
 }
-
-/* global Image, Blob, URL, createImageBitmap, location */
 
 /*
  * Loads images asynchronously
@@ -27,19 +24,8 @@ export function loadFile(url, opts) {
  * returns a promise tracking the load
  */
 export function loadImage(url, opts) {
-  url = pathPrefix ? pathPrefix + url : url;
-
-  if (typeof Image === 'undefined') {
-    // In a web worker
-    // XMLHttpRequest throws invalid URL error if using relative path
-    // resolve url relative to original base
-    url = new URL(url, location.pathname).href;
-    return requestFile({url, responseType: 'arraybuffer'}).then(arraybuffer => {
-      const blob = new Blob([new Uint8Array(arraybuffer)]);
-      return createImageBitmap(blob);
-    });
-  }
-
+  assert(typeof url === 'string');
+  url = pathPrefix + url;
   return new Promise((resolve, reject) => {
     try {
       const image = new Image();

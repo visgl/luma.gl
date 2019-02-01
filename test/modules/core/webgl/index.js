@@ -11,6 +11,8 @@ import './vertex-array.spec';
 import './uniforms.spec';
 
 import './texture.spec';
+import './texture-2d.spec';
+
 import './renderbuffer.spec';
 import './framebuffer.spec';
 
@@ -21,7 +23,7 @@ import './draw.spec';
 import './copy-and-blit.spec.js';
 
 // Extensions / webgl2
-// import './query.spec'; // TODO - Chrome has disabled...
+// import './query.spec'; // TODO - Chrome has re-enabled...
 
 // webgl2
 import './sampler.spec';

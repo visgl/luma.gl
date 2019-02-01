@@ -121,17 +121,7 @@ export {default as TruncatedCone} from '@luma.g/core';
 export {default as ClipSpace} from '@luma.g/core';
 
 // IO
-export {
-  setPathPrefix,
-  loadFile,
-  loadImage,
-  loadFiles,
-  loadImages,
-  loadTextures,
-  loadProgram,
-  loadModel,
-  parseModel
-} from '@luma.g/core';
+export {setPathPrefix, loadFile, loadImage} from '@luma.g/core';
 
 // lighting
 export {DirectionalLight, AmbientLight, PointLight} from '@luma.g/core';

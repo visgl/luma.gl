@@ -65,7 +65,7 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 
 ## Methods
 
-### constructor
+### constructor(gl : WebGLRenderingContext, props : Object)
 
 The texture class cannot be constructed directly. It is a base class that provides common methods the the concrete texture classes.
 * [`Texture2D`](/docs/api-reference/webgl/texture-2d.md),
@@ -79,16 +79,16 @@ The constructors for these classes should be used to create textures. They const
 * Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context/get-parameters.md).
 
 
-### generateMipmap
+### generateMipmap() : Texture2D
 
 Call to regenerate mipmaps after modifying texture(s)
 
 WebGL References [gl.generateMipmap](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/generateMipmap)
 
 
-### setImageData
+### setImageData(options : Object) : Texture2D
 
-Allocates storage
+Allocates storage and sets image data
 
 ```js
   Texture.setImageData({
@@ -108,13 +108,8 @@ Allocates storage
   });
 ```
 
-* `pixels` (*) -
- null - create empty texture of specified format
- Typed array - init from image data in typed array
- Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
- HTMLImageElement|Image - Inits with content of image. Auto width/height
- HTMLCanvasElement - Inits with contents of canvas. Auto width/height
- HTMLVideoElement - Creates video texture. Auto width/height
+* `data` (*) - Image data. Can be one of several data types see table below
+* `pixels` (*) - alternative to  `data`
 * `width` (GLint) -
 * `height` (GLint) -
 * `level` (GLint) -
@@ -127,7 +122,17 @@ Allocates storage
 * `compressed` (Boolean) -
 * `parameters` (Object) - GL parameters to be temporarily applied (most of the time, pixelStorage parameters) when updating the texture.
 
-### setSubImageData
+Valid image data types:
+
+* `null` - create empty texture of specified format
+* Typed array - initializes from image data in typed array according to `format`
+* `Buffer`|`WebGLBuffer` - (WEBGL2) initialized from image data in WebGLBuffer accoeding to `format`.
+* `HTMLImageElement`|`Image` - Initializes with content of image. Auto deduces texture width/height from image.
+* `HTMLCanvasElement` - Inits with contents of canvas. Auto width/height.
+* `HTMLVideoElement` - Creates video texture that continuously updates. Auto width/height.
+
+
+### setSubImageData(options : Object) : Texture2D
 
 Redefines an area of an existing texture
 Note: does not allocate storage
@@ -152,15 +157,27 @@ Note: does not allocate storage
   });
 ```
 
-WebGL References [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/compressedTexSubImage2D), [gl.texSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texSubImage2D), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture), [gl.bindBuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
+* `x` (`GLint`) - xOffset from where texture to be updated
+* `y` (`GLint`) - yOffset from where texture to be updated
+* `width` (`GLint`) - width of the sub image to be updated
+* `height` (`GLint`) - height of the sub image to be updated
+* `level` (`GLint`) - mip level to be updated
+* `format` (`GLenum`) - internal format of image data.
+* `typ` (`GLenum`) - format of array (autodetect from type) or (WEBGL2) format of buffer or ArrayBufferView
+* `dataFormat` (`GLenum`) - format of image data.
+* `offset` (`Number`) - (WEBGL2) offset from start of buffer
+* `border` (`GLint`) - must be 0.
+* parameters - temporary settings to be applied, can be used to supply pixel store settings.
+
+See also [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/compressedTexSubImage2D), [gl.texSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texSubImage2D), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture), [gl.bindBuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
-### getActiveUnit
+### getActiveUnit()
 
 Returns number of active textures.
 
 
-### bind
+### bind()
 
 Binds itself to given textureUnit.
 

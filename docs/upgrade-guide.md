@@ -2,6 +2,23 @@
 
 ## Upgrading from v6.x to v7.0
 
+### Loading Functions Removed
+
+A number of IO functions have been removed and now only minimal `loadFile` and `loadImage` utils are provided. Instead:
+* A new companion framework [loaders.gl]() provides a rich suite of 3D file format loaders
+* Also the `Texture2D` constructor can now accept url strings and `Promise` objects.
+
+| Removed Function | Replacement  |
+| ---              | ---          |
+| `loadTexture(url, parameters)`  | `new Texture(gl, {data: url, parameters})` |
+| `loadFiles`      | Multiple calls to `loadFile` |
+| `loadImages`     | Multiple calls to `loadImage` |
+| `loadTextures`   | As per `loadTexture` |
+| `loadProgram`    | Manually load `fs` and `vs` and call `new Program(gl, {vs, fs})` |
+| `loadModel`      | `loadFile` followed by `parseModel` code from examples/lesson/16|
+| `parseModel`      | `loadFile` followed by `parseModel` code from examples/lesson16 |
+
+
 ### Debug functionality moved to separate npm module
 
 Debug functionality is now more cleanly separated from the main library and needs to be imported from a separate npm module:
