@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, loadTextures, loadFiles, setParameters} from 'luma.gl';
+import {AnimationLoop, Model, Geometry, Texture2D, loadFile, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -241,10 +241,12 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return Promise.all([
-      loadFiles({urls: ['Teapot.json']}),
-      loadTextures(gl, {
-        urls: ['arroway.de_metal+structure+06_d100_flat.jpg', 'earth.jpg'],
+    return loadFile('Teapot.json')
+    .then(file => {
+      const teapotJson = JSON.parse(file);
+
+      const galvanizedTexture = new Texture2D(gl, {
+        data: 'arroway.de_metal+structure+06_d100_flat.jpg',
         parameters: {
           [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
           [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
@@ -252,12 +254,19 @@ const animationLoop = new AnimationLoop({
           [gl.TEXTURE_WRAP_T]: gl.REPEAT
         },
         mipmap: true
-      })
-    ])
-    .then(([files, textures]) => {
-      const galvanizedTexture = textures[0];
-      const earthTexture = textures[1];
-      const teapotJson = JSON.parse(files[0]);
+      });
+
+      const earthTexture = new Texture2D(gl, {
+        urls: 'earth.jpg',
+        parameters: {
+          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+          [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+          [gl.TEXTURE_WRAP_T]: gl.REPEAT
+        },
+        mipmap: true
+      });
+
 
       const teapot = new Model(gl, {
         id: 'teapot-model',

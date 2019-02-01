@@ -1,7 +1,7 @@
 /* global document */
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop, setParameters, loadTextures, Buffer,
+  AnimationLoop, setParameters, Texture2D, Buffer,
   Sphere, project, diffuse, picking, pickModels,
   _ShaderCache as ShaderCache
 } from 'luma.gl';
@@ -42,16 +42,17 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
-    return loadTextures(gl, {
-      urls: PLANETS.map(planet => planet.textureUrl),
-      mipmaps: true,
-      parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
-      }
-    })
-    .then(textures => PLANETS.map(
-      (planet, i) => new Sphere(gl, {
+    function createModelForPlanet(planet) {
+      const diffuseTexture = new Texture2D(gl, {
+        data: planet.textureUrl,
+        mipmaps: true,
+        parameters: {
+          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+        }
+      });
+
+      return new Sphere(gl, {
         id: planet.name,
         nlat: 32,
         nlong: 32,
@@ -63,20 +64,22 @@ const animationLoop = new AnimationLoop({
         },
         modules: [project, diffuse, picking],
         moduleSettings: {
-          diffuseTexture: textures[i],
+          diffuseTexture,
           pickingThreshold: 0
         },
         shaderCache
       })
-      .setPosition([
-        Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
-        Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
-        0
-      ])
-    ))
-    .then(planets => ({
-      planets
-    }));
+    }
+
+    return {
+      planets: PLANETS.map((planet, i) =>
+        createModelForPlanet(planet, i)
+        .setPosition([
+          Math.cos(i / PLANETS.length * Math.PI * 2) * 3,
+          Math.sin(i / PLANETS.length * Math.PI * 2) * 3,
+          0
+        ]))
+    };
   },
   onRender: ({gl, aspect, planets, framebuffer, useDevicePixels, _mousePosition}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);

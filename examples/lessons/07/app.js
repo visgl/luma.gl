@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, loadTextures, setParameters} from 'luma.gl';
+import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 export const INFO_HTML = `
@@ -200,16 +200,13 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
-    return loadTextures(gl, {
-      urls: ['crate.gif']
-    })
-    .then(textures => ({
+    return {
       cube: new Cube(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        uniforms: {uSampler: textures[0]}
+        uniforms: {uSampler: new Texture2D(gl, 'crate.gif')}
       })
-    }));
+    };
   },
 
   onRender: ({
@@ -232,9 +229,7 @@ const animationLoop = new AnimationLoop({
       .multiplyRight(cube.matrix);
 
     const {
-      lightingEnabled,
       lightDirection,
-      lightColor,
       ambientColor
     } = getHTMLControls();
 

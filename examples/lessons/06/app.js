@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, Texture2D, loadImage, setParameters} from 'luma.gl';
+import {AnimationLoop, Cube, Texture2D, setParameters, loadImage} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -60,7 +60,11 @@ const filters = ['nearest', 'linear', 'mipmap'];
 
 function cycleFilter(newFilter) {
   filter = newFilter !== undefined ? newFilter : (filter + 1) % 3;
-  document.getElementById('filter').textContent = `GL.${filters[filter].toUpperCase()}`;
+  /* global document */
+  const element = document.getElementById('filter');
+  if (element) {
+    element.textContent = `GL.${filters[filter].toUpperCase()}`;
+  }
 }
 
 const animationLoop = new AnimationLoop({
@@ -76,15 +80,15 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    const cube = new Cube(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
-
     cycleFilter(0);
 
     // load image
-    return loadImage('crate.gif')
-    .then(image => {
+    const image = loadImage('crate.gif')
 
-      const textures = {
+    return {
+      cube: new Cube(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER}),
+
+      textures: {
         nearest: new Texture2D(gl, {
           data: image,
           parameters: {
@@ -116,10 +120,8 @@ const animationLoop = new AnimationLoop({
             [GL.UNPACK_FLIP_Y_WEBGL]: true
           }
         })
-      };
-
-      return {cube, textures};
-    });
+      }
+    };
   },
   onRender: ({gl, tick, aspect, cube, textures}) => {
 

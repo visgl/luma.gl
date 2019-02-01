@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, loadTextures, setParameters, Sphere, Cube, Program} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Sphere, Cube, Program} from 'luma.gl';
 import {Vector3, Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -151,32 +151,24 @@ const animationLoop = new AnimationLoop({
       vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
     });
 
-    return loadTextures(gl, {
-      urls: ['moon.gif']
-    })
-    .then(textures => {
-      const moon = new Sphere(gl, {
-        program: fragmentLightingProgram,
-        uniforms: {
-          uSampler: textures[0]
-        },
-        nlat: 30,
-        nlong: 30,
-        radius: 1,
-      });
-      return loadTextures(gl, {
-        urls: ['crate.gif']
-      })
-      .then(textures2 => {
-        const cube = new Cube(gl, {
-          program: fragmentLightingProgram,
-          uniforms: {
-            uSampler: textures2[0]
-          }
-        });
-        return {moon, cube, vertexLightingProgram, fragmentLightingProgram};
-      });
+    const moon = new Sphere(gl, {
+      program: fragmentLightingProgram,
+      uniforms: {
+        uSampler: new Texture2D(gl, 'moon.gif')
+      },
+      nlat: 30,
+      nlong: 30,
+      radius: 1,
     });
+
+    const cube = new Cube(gl, {
+      program: fragmentLightingProgram,
+      uniforms: {
+        uSampler: new Texture2D(gl, 'crate.gif')
+      }
+    });
+
+    return {moon, cube, vertexLightingProgram, fragmentLightingProgram};
   },
 
   // eslint-disable-next-line complexity
@@ -193,10 +185,10 @@ const animationLoop = new AnimationLoop({
     const uVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    const element = null;
-    const useLighting = (element = document.getElementById("lighting")) ? element.checked : true;
-    const useTextures = (element = document.getElementById("textures")) ? element.checked : true;
-    const useFragmentLighting = (element = document.getElementById("per-fragment")) ? element.checked : true;
+    const {
+      useLighting, useTextures, useFragmentLighting,
+      ambientColor, pointLightingLocation, pointLightColor
+    } = getControlValues();
 
     if (useFragmentLighting) {
       moon.program = fragmentLightingProgram;
@@ -217,24 +209,6 @@ const animationLoop = new AnimationLoop({
     });
 
     if (useLighting) {
-      const ambientColor = new Vector3(
-        parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
-      );
-
-      const pointLightingLocation = new Vector3(
-        parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
-        parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
-        parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
-      );
-
-      const pointLightColor = new Vector3(
-        parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
-      );
-
       moon.setUniforms({
         uAmbientColor: ambientColor,
         uPointLightingLocation: pointLightingLocation,
@@ -268,7 +242,7 @@ animationLoop.getInfo = () => INFO_HTML;
 
 function animate(appState) {
   const timeNow = new Date().getTime();
-  if (appState.lastTime != 0) {
+  if (appState.lastTime !== 0) {
     const elapsed = timeNow - appState.lastTime;
     const newMatrix = new Matrix4()
     .rotateY(radians(elapsed / 20));
@@ -276,6 +250,39 @@ function animate(appState) {
     appState.cubeRotationMatrix.multiplyLeft(newMatrix);
   }
   appState.lastTime = timeNow;
+}
+
+/* global document */
+// eslint-disable-next-line complexity
+function getControlValues() {
+  let element = null;
+  if (!element) {
+    return {useLigthing: false};
+  }
+
+  const useLighting = (element = document.getElementById("lighting")) ? element.checked : true;
+  const useTextures = (element = document.getElementById("textures")) ? element.checked : true;
+  const useFragmentLighting = (element = document.getElementById("per-fragment")) ? element.checked : true;
+
+  const ambientColor = useLighting && new Vector3(
+    parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
+    parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
+    parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
+  );
+
+  const pointLightingLocation = useLighting && new Vector3(
+    parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
+    parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
+    parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
+  );
+
+  const pointLightColor = useLighting && new Vector3(
+    parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
+    parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
+    parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
+  );
+
+  return {useLighting, useTextures, useFragmentLighting, ambientColor, pointLightingLocation, pointLightColor};
 }
 
 export default animationLoop;

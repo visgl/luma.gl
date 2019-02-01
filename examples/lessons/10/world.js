@@ -28,12 +28,12 @@ void main(void) {
 `;
 
 function loadWorldGeometry(data) {
-  let lines = data.split("\n");
-  let vertexPositions = [];
-  let vertexTextureCoords = [];
-  for (let i in lines) {
-    let vals = lines[i].replace(/^\s+/, "").split(/\s+/);
-    if (vals.length == 5 && vals[0] != "//") {
+  const lines = data.split("\n");
+  const vertexPositions = [];
+  const vertexTextureCoords = [];
+  for (const i in lines) {
+    const vals = lines[i].replace(/^\s+/, "").split(/\s+/);
+    if (vals.length === 5 && vals[0] !== "//") {
       // It is a line describing a vertex; get X, Y and Z first
       vertexPositions.push(parseFloat(vals[0]));
       vertexPositions.push(parseFloat(vals[1]));
@@ -50,7 +50,7 @@ function loadWorldGeometry(data) {
     }
   });
 }
-    
+
 export class World extends Model {
   constructor(opts = {}) {
     const program = new Program(opts.gl, {

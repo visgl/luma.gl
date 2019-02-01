@@ -4,6 +4,7 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
+    "@loaders.gl/core": "^0.5.3",
     "luma.gl": "^6.2.0-beta"
   },
   "devDependencies": {

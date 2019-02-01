@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, loadTextures, loadFile, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, loadFile, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
 
@@ -46,20 +46,17 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    return loadTextures(gl, {
-      urls: ['mud.gif']
-    })
-    .then(textures => {
-      return loadFile({url: 'world.txt'})
-      .then(file => {
-        const geometry = loadWorldGeometry(file);
-        const world = new World({
-          gl,
-          texture: textures[0],
-          geometry
-        });
-        return {world};
+    const texture = new Texture2D(gl, 'mud.gif');
+
+    return loadFile('world.txt')
+    .then(file => {
+      const geometry = loadWorldGeometry(file);
+      const world = new World({
+        gl,
+        geometry,
+        texture
       });
+      return {world};
     });
   },
 

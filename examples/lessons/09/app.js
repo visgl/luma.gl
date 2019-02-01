@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, loadTextures, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 import {Star} from './star';
 
@@ -27,21 +27,19 @@ const animationLoop = new AnimationLoop({
       blend: true
     });
 
-    return loadTextures(gl, {
-      urls: ['star.gif']
-    })
-    .then(textures => {
-      const stars = [];
-      const numStars = 50;
-      for (let i = 0; i < numStars; i++) {
-        stars.push(new Star(gl, {
-          startingDistance: ((i / numStars) * 5.0),
-          rotationSpeed: (i / numStars),
-          texture: textures[0]
-        }));
-      }
-      return {stars};
-    });
+    const texture = new Texture2D(gl, 'star.gif');
+
+    const stars = [];
+    const numStars = 50;
+    for (let i = 0; i < numStars; i++) {
+      stars.push(new Star(gl, {
+        startingDistance: ((i / numStars) * 5.0),
+        rotationSpeed: (i / numStars),
+        texture
+      }));
+    }
+
+    return {stars};
   },
   onRender: ({
     gl, tick, aspect, stars
