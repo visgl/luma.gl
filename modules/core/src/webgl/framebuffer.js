@@ -172,7 +172,7 @@ export default class Framebuffer extends Resource {
     }
 
     if (width !== this.width && height !== this.height) {
-      log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`);
+      log.log(2, `Resizing framebuffer ${this.id} to ${width}x${height}`)();
     }
     for (const attachmentPoint in this.attachments) {
       this.attachments[attachmentPoint].resize({width, height});

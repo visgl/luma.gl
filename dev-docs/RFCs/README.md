@@ -32,7 +32,6 @@ These are early ideas not yet associated with any release
 | --- | ---    | ---    | ---         |
 | [**luma.gl Module Structure**](v6.2/module-structure-rfc.md) | @ibgreen | **Partially Implemented** |  Outlines module structure to be used in monorepo transition. Implementeation continues from v6.2. |
 | [**glTF2 support**](v7.0/gltf-support-rfc.md) | @ibgreen | **Draft** | Proposes a multi-step approach to full glTF2 support. |
-| [**Attribute/Accessor Class Alignment**](v7.0/attribute-accessor-alignment-rfc.md) | @ibgreen | **Draft** | Ensure we have a consistent logical API for specifying attribute and buffer accessor metadata. |
 | [**Framebuffer/Texture API cleanup**](v6.2/framebuffer-texture-api-rfc.md) | @ibgreen | **Draft** | API changes to improve tree-shakeability of the big `Texture` and `Framebuffer` classes. |
 | [**Off-Thread (aka Off-Screen) Rendering**](vNext/offscreen-render-rfc.md) | @pessimistress | **Experimental** | Use the new Off-Screen API to enable WebGL to run in a separate thread. Still requires browser flag. |
 
