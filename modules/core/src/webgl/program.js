@@ -141,6 +141,8 @@ export default class Program extends Resource {
       this.setUniforms(uniforms, samplers);
     }
 
+    // Note: async textures set as uniforms might still be loading.
+    // If any texture in the uniforms are not yet initialized, we don't draw
     const texturesLoaded = this._bindTextures();
     if (!texturesLoaded) {
       return this;
@@ -210,6 +212,7 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
+  // Binds textures (and checks that async textures have loaded)
   // This needs to be done before every draw call
   _bindTextures() {
     let texturesLoaded = true;
