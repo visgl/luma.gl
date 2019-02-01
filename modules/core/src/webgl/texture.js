@@ -45,6 +45,11 @@ export default class Texture extends Resource {
     this.hasFloatTexture = gl.getExtension('OES_texture_float');
     this.textureUnit = undefined;
 
+    // Program.draw() checks the loaded flag of all textures to avoid
+    // Textures that are still loading from promises
+    // Set to true as soon as texture has been initialized with valid data
+    this.loaded = false;
+
     this.width = undefined;
     this.height = undefined;
     this.format = undefined;
@@ -62,6 +67,18 @@ export default class Texture extends Resource {
   /* eslint-disable max-len, max-statements */
   initialize(props = {}) {
     let data = props.data;
+
+    if (data instanceof Promise) {
+      data.then(resolvedImageData =>
+        this.initialize(
+          Object.assign({}, props, {
+            pixels: resolvedImageData,
+            data: resolvedImageData
+          })
+        )
+      );
+      return this;
+    }
 
     const {
       pixels = null,
@@ -289,6 +306,8 @@ export default class Texture extends Resource {
           assert(false, 'Unknown image data type');
       }
     });
+
+    this.loaded = true;
 
     return this;
   }

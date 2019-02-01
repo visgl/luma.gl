@@ -135,15 +135,18 @@ export default class Program extends Resource {
     // TODO - move vertex array binding and transform feedback binding to withParameters?
     assert(vertexArray);
 
+    if (uniforms) {
+      // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
+      log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
+      this.setUniforms(uniforms, samplers);
+    }
+
+    const texturesLoaded = this._bindTextures();
+    if (!texturesLoaded) {
+      return this;
+    }
+
     vertexArray.bindForDraw(vertexCount, instanceCount, () => {
-      if (uniforms) {
-        // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
-        log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
-        this.setUniforms(uniforms, samplers);
-      }
-
-      this._bindTextures();
-
       if (framebuffer !== undefined) {
         parameters = Object.assign({}, parameters, {framebuffer});
       }
@@ -209,6 +212,8 @@ export default class Program extends Resource {
 
   // This needs to be done before every draw call
   _bindTextures() {
+    let texturesLoaded = true;
+
     for (const uniformName in this.uniforms) {
       const uniformSetter = this._uniformSetters[uniformName];
 
@@ -220,8 +225,11 @@ export default class Program extends Resource {
           uniform = uniform.texture;
         }
         if (uniform instanceof Texture) {
+          const texture = uniform;
+          // Check that texture is loaded
+          texturesLoaded = texturesLoaded && texture.loaded;
           // Bind texture to index
-          uniform.bind(uniformSetter.textureIndex);
+          texture.bind(uniformSetter.textureIndex);
         }
         // Bind a sampler (if supplied) to index
         if (sampler) {
@@ -229,6 +237,8 @@ export default class Program extends Resource {
         }
       }
     }
+
+    return texturesLoaded;
   }
 
   // Apply a set of uniform values to a program

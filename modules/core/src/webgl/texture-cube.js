@@ -12,22 +12,22 @@ const FACES = [
 ];
 
 export default class TextureCube extends Texture {
-  constructor(gl, opts = {}) {
-    super(gl, Object.assign({}, opts, {target: GL.TEXTURE_CUBE_MAP}));
-    this.initialize(opts);
+  constructor(gl, props = {}) {
+    super(gl, Object.assign({}, props, {target: GL.TEXTURE_CUBE_MAP}));
+    this.initialize(props);
     Object.seal(this);
   }
 
   /* eslint-disable max-len, max-statements */
-  initialize(opts = {}) {
-    const {format = GL.RGBA, mipmaps = true} = opts;
+  initialize(props = {}) {
+    const {format = GL.RGBA, mipmaps = true} = props;
 
-    let {width = 1, height = 1, type = GL.UNSIGNED_BYTE, dataFormat} = opts;
+    let {width = 1, height = 1, type = GL.UNSIGNED_BYTE, dataFormat} = props;
 
     // Deduce width and height based on one of the faces
     ({type, dataFormat} = this._deduceParameters({format, type, dataFormat}));
     ({width, height} = this._deduceImageSize({
-      data: opts[GL.TEXTURE_CUBE_MAP_POSITIVE_X],
+      data: props[GL.TEXTURE_CUBE_MAP_POSITIVE_X],
       width,
       height
     }));
@@ -36,26 +36,26 @@ export default class TextureCube extends Texture {
     assert(width === height);
 
     // Temporarily apply any pixel store paramaters and build textures
-    // withParameters(this.gl, opts, () => {
+    // withParameters(this.gl, props, () => {
     //   for (const face of CUBE_MAP_FACES) {
     //     this.setImageData({
     //       target: face,
-    //       data: opts[face],
+    //       data: props[face],
     //       width, height, format, type, dataFormat, border, mipmaps
     //     });
     //   }
     // });
 
-    this.setCubeMapImageData(opts);
+    this.setCubeMapImageData(props);
 
     // Called here so that GL.
     // TODO - should genMipmap() be called on the cubemap or on the faces?
     if (mipmaps) {
-      this.generateMipmap(opts);
+      this.generateMipmap(props);
     }
 
-    // Store opts for accessors
-    this.opts = opts;
+    // Store props for accessors
+    this.opts = props;
   }
 
   subImage({face, data, x = 0, y = 0, mipmapLevel = 0}) {
@@ -74,17 +74,65 @@ export default class TextureCube extends Texture {
     generateMipmap = false
   }) {
     const {gl} = this;
-    pixels = pixels || data;
-    this.bind();
-    if (this.width || this.height) {
-      for (const face of FACES) {
-        gl.texImage2D(face, 0, format, width, height, border, format, type, pixels[face]);
+    const imageDataMap = pixels || data;
+
+    // A rare instance where a local function is the lesser evil?
+    const setImageData = (face, imageData) => {
+      if (this.width || this.height) {
+        gl.texImage2D(face, 0, format, width, height, border, format, type, imageData);
+      } else {
+        gl.texImage2D(face, 0, format, format, type, imageData);
       }
-    } else {
-      for (const face of FACES) {
-        gl.texImage2D(face, 0, format, format, type, pixels[face]);
+    };
+
+    this.bind();
+    for (const face of FACES) {
+      const imageData = imageDataMap[face];
+
+      if (imageData instanceof Promise) {
+        imageData.then(resolvedImageData => setImageData(face, resolvedImageData));
+      } else {
+        setImageData(face, imageData);
       }
     }
+    this.unbind();
+  }
+
+  setImageDataForFace(options) {
+    const {
+      face,
+      width,
+      height,
+      pixels,
+      data,
+      border = 0,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE
+      // generateMipmap = false // TODO
+    } = options;
+
+    const {gl} = this;
+
+    const imageData = pixels || data;
+
+    this.bind();
+    if (imageData instanceof Promise) {
+      imageData.then(resolvedImageData =>
+        this.setImageDataForFace(
+          Object.assign({}, options, {
+            face,
+            data: resolvedImageData,
+            pixels: resolvedImageData
+          })
+        )
+      );
+    } else if (this.width || this.height) {
+      gl.texImage2D(face, 0, format, width, height, border, format, type, imageData);
+    } else {
+      gl.texImage2D(face, 0, format, format, type, imageData);
+    }
+
+    return this;
   }
 
   bind({index} = {}) {

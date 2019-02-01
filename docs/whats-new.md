@@ -2,6 +2,21 @@
 
 ## Version 7.0
 
+### "Asynchronous" Textures
+
+The `Texture` class now supports image data being initialized with a URL `string` or a `Promise`that resolves to any of the previously valid data types, e.g. an `Image` instance. This avoids the need to clutter your code with `promise.then()` and/or callback functions just to load textures.
+
+```
+new Texture2D(gl, 'path/to/my/image.png');
+// or
+new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a Promise
+```
+
+### loaders.gl - New Companion Framework for 3D Asset Loading
+
+[loaders.gl]() provides a rich suite of 3D file format loaders (including loaders for various popular `Mesh` and `PointCloud` formats) that parse files into objects that can be directly passed to luma.gl `Model` class.
+
+
 ### New Submodule with GPGPU Utilities
 
 * `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
@@ -22,6 +37,13 @@ model.setAttributes({
   colors: {buffer, stride: 16, offset: 12, ...}})
 }
 ```
+
+
+
+## Version 6.4
+
+Date: January 29, 2018
+
 
 ## Version 6.3
 
