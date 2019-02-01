@@ -1,4 +1,4 @@
-import Geometry from './geometry';
+import Geometry from '../core/geometry';
 import {Vector3} from 'math.gl';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
