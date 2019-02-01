@@ -1,20 +1,19 @@
 # Model
 
-The `Model` class is arguably the most useful class for typical applications. It manages the WebGL resources needed to perform draw calls and provide additional functionality as described below.
+A `Group` is a subclass of `ScenegraphNode` that holds a reference to a mesh with a transformation matrix that describes its position and orientation.
 
 A `Model` holds all the data necessary to draw an object, e.g.:
 
 * **shaders** (via a [`Program`](/docs/api-reference/webgl/program.md) instance)
 * **uniforms** these can also reference textures.
-* **vertex attributes** (e.g. a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
+* **vertex attributes** (holds a [`Mesh`] or a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
 
-In addition to exposing the functionality provided by the managed WebGL resources, `Model` also provides the following features:
+The `Model` class also provides the following features:
 
 * Shader Module integration: [see `Shader Modules`](/docs/developer-guide/shadertools/README.md)
 * Automatic creation of GPU `Buffer`s from typed array attributes
 * Detailed debug logging of draw calls
-
-Experimental Features:
+* Exposes the functionality provided by the managed WebGL resources
 * Animation of uniforms
 * Detailed stats including timing of draw calls
 
@@ -114,6 +113,61 @@ model.draw({
 });
 ```
 
+## Properties
+
+`Model` extends the `ScenegraphNode` class and inherits the transformation matrix properties from that class.
+
+
+### moduleSettings : Object
+
+any uniforms needed by shader modules.
+
+
+### uniforms : Object
+
+uniform values to be used for drawing.
+
+
+### onBeforeRender
+
+function to be called before every time this model is drawn.
+
+
+### onAfterRender
+
+function to be called after every time this model is drawn.
+
+
+### mesh
+
+`Mesh` instance.
+
+
+## Deprecated Properties in v7
+
+
+### geometry
+
+`Geometry` object, from which attributes, vertex count and drawing mode are deduced.
+
+
+### isInstanced : Boolean
+
+default value is false.
+
+
+### instanceCount : Number
+
+default value is 0.
+
+
+### vertexCount : Number
+
+when not provided will be deduced from `geometry` object.
+
+
+
+
 ## Constructor
 
 ### Model(gl: WebGLRenderingContext, props: Object)
@@ -130,16 +184,6 @@ The following props can only be specified on construction:
 * `program` - pre created program to use, when provided, vs, ps and modules are not used.
 * `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
 
-The following props can be updated after construction
-
-* `moduleSettings` - any uniforms needed by shader modules.
-* `isInstanced` - default value is false.
-* `instanceCount` - default value is 0.
-* `vertexCount` - when not provided will be deduced from `geometry` object.
-* `uniforms` - uniform values to be used for drawing.
-* `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
-* `onBeforeRender` - function to be called before every time this model is drawn.
-* `onAfterRender` - function to be called after every time this model is drawn.
 
 ### delete() : Model
 
@@ -150,14 +194,7 @@ Free WebGL resources associated with this model
 
 ### setProps(props : Object) : Model
 
-* `moduleSettings` - any uniforms needed by shader modules.
-* `isInstanced` - default value is false.
-* `instanceCount` - default value is 0.
-* `vertexCount` - when not provided will be deduced from `geometry` object.
-* `uniforms` - uniform values to be used for drawing.
-* `geometry` - geometry object, from which attributes, vertex count and drawing mode are deduced.
-* `onBeforeRender` - function to be called before every time this model is drawn.
-* `onAfterRender` - function to be called after every time this model is drawn.
+Updates properties
 
 
 ### getNeedsRedraw() : Boolean
@@ -167,31 +204,9 @@ Free WebGL resources associated with this model
 Gets the value of the redraw flag.
 
 
-### getDrawMode() : Enum
-
-Gets the WebGL drawMode
-
-
-### getVertexCount() : GLInt
-
-Gets vertex count
-
-Note: might be autocalculated from `Geometry`
-
-
-### getInstanceCount() : GLInt
-
-Defaults to 0
-
-
 ### getProgram() : Program
 
 Get model's `Program` instance
-
-
-### getAttributes() : Object
-
-Get a map of named attributes
 
 
 ### getUniforms() : Object
@@ -202,33 +217,6 @@ Returns map of currently stored uniforms
 ### setNeedsRedraw() : Model
 
 Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
-
-
-### setDrawMode() : Model
-
-Sets the WebGL `drawMode`.
-
-`GL.POINTS` etc.
-
-
-### setVertexCount() : Model
-
-Sets the number of vertices
-
-
-### setInstanceCount() : Model
-
-How many instances will be rendered
-
-
-### setGeometry() : Model
-
-Get model's `Geometry` instance
-
-
-### setAttributes(attributes : Object) : Model
-
-Sets map of attributes (Attribute instances)
 
 
 ### setUniforms(uniforms : Object) : Model
@@ -276,7 +264,7 @@ The remaining draw options are passed directly to `Program.draw()`:
 
 ### transform(options : Object) : Model
 
-Renders the model with provided uniforms, attributes and samplers. Calls `Program.draw()` with rasterization turned off.
+Renders the model with provided uniforms, and samplers. Calls `Program.draw()` with rasterization turned off.
 
 * `discard`=`true` (Boolean) - Turns off rasterization
 * `feedbackBuffers`=`null` (Object) - Optional map of feedback buffers. A `TransformFeedback` object will be created, initialized with these buffers, and passed to `Model.draw`.
@@ -288,3 +276,60 @@ model.transform({
   discard:
 });
 ```
+
+
+
+## Deprecated Methods in v7
+
+### getDrawMode() : Enum
+
+Gets the WebGL drawMode
+
+
+### getVertexCount() : GLInt
+
+Gets vertex count
+
+Note: might be autocalculated from `Geometry`
+
+
+### getInstanceCount() : GLInt
+
+Defaults to 0
+
+
+### getAttributes() : Object
+
+Get a map of named attributes
+
+
+### setDrawMode() : Model
+
+Sets the WebGL `drawMode`.
+
+`GL.POINTS` etc.
+
+
+### setVertexCount() : Model
+
+Sets the number of vertices
+
+
+### setInstanceCount() : Model
+
+How many instances will be rendered
+
+
+### setGeometry() : Model
+
+Get model's `Geometry` instance
+
+
+### setAttributes(attributes : Object) : Model
+
+Sets map of attributes (Attribute instances)
+
+
+## Remarks
+
+* The `Model` class is arguably the most useful class for typical applications. It manages the WebGL resources needed to perform draw calls and provide additional functionality as described below.
