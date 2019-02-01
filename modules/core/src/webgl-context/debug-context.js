@@ -74,7 +74,7 @@ export function getDebugContext(gl) {
   debugContext.debug = true;
   debugContext.gl = gl;
 
-  log.info('debug context actived.');
+  log.info('debug context actived.')();
 
   // Return it
   return debugContext;
@@ -123,7 +123,8 @@ function onValidateGLFunc(functionName, functionArgs) {
       if (log.throw) {
         throw new Error(`Undefined argument: ${functionString}`);
       } else {
-        log.error(`Undefined argument: ${functionString}`);
+        log.error(`Undefined argument: ${functionString}`)();
+        log.error(`Undefined argument: ${functionString}`)();
         debugger; // eslint-disable-line
       }
     }
