@@ -68,18 +68,6 @@ export default class Texture extends Resource {
   initialize(props = {}) {
     let data = props.data;
 
-    if (data instanceof Promise) {
-      data.then(resolvedImageData =>
-        this.initialize(
-          Object.assign({}, props, {
-            pixels: resolvedImageData,
-            data: resolvedImageData
-          })
-        )
-      );
-      return this;
-    }
-
     const {
       pixels = null,
       format = GL.RGBA,
