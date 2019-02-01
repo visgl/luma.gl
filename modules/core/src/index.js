@@ -126,18 +126,7 @@ export {default as TruncatedCone} from './models/truncated-cone';
 export {default as ClipSpace} from './models/clip-space';
 
 // IO
-export {
-  setPathPrefix,
-  loadFile,
-  loadImage,
-  loadTexture,
-  loadFiles,
-  loadImages,
-  loadTextures,
-  loadProgram,
-  loadModel,
-  parseModel
-} from './io';
+export {setPathPrefix, loadFile, loadImage} from './io';
 
 // lighting
 export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-source';

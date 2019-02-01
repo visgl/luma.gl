@@ -79,8 +79,6 @@ new Texture3D(gl, {
 });
 ```
 
-
-
 * Needs to supply 6 images all of same size and format.
 * Images all need to be of the same square size, i.e. `width` and `height` must be the same.
 * If not supplied, `width` and `height` will be autodeduced from `GL.TEXTURE_CUBE_MAP_POSITIVE_X`.
