@@ -5,7 +5,7 @@ import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {Buffer, Texture2D, getKey, isWebGL2, readPixelsToArray} from 'luma.gl';
 
-import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture';
+import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture-formats';
 import {
   testSamplerParameters,
   SAMPLER_PARAMETERS,
