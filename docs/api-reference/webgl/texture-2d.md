@@ -68,20 +68,32 @@ console.log(
 
 ## Methods
 
-### Texture2D constructor
+### constructor(gl : WebGLRenderingContext, props : Object | data : any)
 
 ```
-new Texture2D(gl, {
-  data=,
-  width=,
-  height=,
-  mipmaps=,
-  format=,
-  type=,
-  dataFormat=,
-  parameters=,
-  pixelStore=
-})
+import {Texture2D} from '@luma.gl/core'
+const texture1 = new Texture2D(gl, {
+  data: ...,
+  width: ...,
+  height: ...,
+  mipmaps: ...,
+  format: ...,
+  type: ...,
+  dataFormat: ...,
+  parameters: ...
+});
+```
+
+There is also a short form where the image data (or a promise resolving to the image data) can be the second argument of the constructor:
+
+```
+import {Texture2D} from '@luma.gl/core';
+import {loadImage} from '@loaders.gl/core';
+
+const texture1 = new Texture2D(gl, loadImage(url));
+// equivalent to
+const texture1 = new Texture2D(gl, {data: loadImage(url)});
+
 ```
 
 * `gl` (WebGLRenderingContext) - gl context

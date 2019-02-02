@@ -26,6 +26,30 @@ test('WebGL#Texture2D construct/delete', t => {
   t.end();
 });
 
+test('WebGL#Texture2D async constructor', t => {
+  const {gl} = fixture;
+
+  let texture = new Texture2D(gl);
+  t.ok(texture instanceof Texture2D, 'Synchronous Texture2D construction successful');
+  t.equal(texture.loaded, true, 'Sync Texture2D marked as loaded');
+  texture.delete();
+
+  let loadCompleted;
+  const loadPromise = new Promise(resolve => {
+    loadCompleted = resolve; // eslint-disable-line
+  });
+  texture = new Texture2D(gl, loadPromise);
+  t.ok(texture instanceof Texture2D, 'Asynchronous Texture2D construction successful');
+  t.equal(texture.loaded, false, 'Async Texture2D initially marked as not loaded');
+
+  loadPromise.then(() => {
+    t.equal(texture.loaded, true, 'Async Texture2D marked as loaded on promise completion');
+    t.end();
+  });
+
+  loadCompleted(null);
+});
+
 test('WebGL#Texture2D buffer update', t => {
   const {gl} = fixture;
 
