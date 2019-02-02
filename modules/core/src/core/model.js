@@ -5,11 +5,11 @@ import Attribute from './attribute';
 import Object3D from './object-3d';
 import {getDrawMode} from '../geometry/geometry';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
-import {isWebGL} from '../webgl-utils';
+import {isWebGL} from '../webgl/utils';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
+import {getDebugTableForUniforms} from '../webgl/debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../webgl/debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../webgl/debug/debug-program-configuration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 

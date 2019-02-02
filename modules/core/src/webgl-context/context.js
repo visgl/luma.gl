@@ -1,12 +1,12 @@
 /* eslint-disable quotes */
 // WebGLRenderingContext related methods
-import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl-utils';
+import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl/utils';
 import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import trackContextState from './track-context-state';
 import {glGetDebugInfo} from './context-limits';
-import queryManager from '../webgl-utils/query-manager';
+import queryManager from '../webgl/utils/query-manager';
 
 import {log, isBrowser} from '../utils';
 import {global} from '../utils/globals';

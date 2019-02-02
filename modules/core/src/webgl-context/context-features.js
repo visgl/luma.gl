@@ -4,7 +4,7 @@
 // available in an WebGL1 or WebGL2 environment.
 
 /* eslint-disable no-inline-comments, max-len */
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '../webgl/utils';
 import {isOldIE} from '../utils';
 import assert from '../utils/assert';
 

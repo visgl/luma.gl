@@ -104,16 +104,16 @@ function isArray(array) {
 // GETTERS AND SETTERS
 
 // Get the parameter value(s) from the context
-export {getParameter}; // from '../webgl-utils/set-parameters'
+export {getParameter}; // from '../webgl/utils/set-parameters'
 
 // Get the parameters from the context
-export {getParameters}; // from '../webgl-utils/set-parameters'
+export {getParameters}; // from '../webgl/utils/set-parameters'
 
 // Resets gl state to default values.
-export {setParameter}; // from '../webgl-utils/set-parameters'
+export {setParameter}; // from '../webgl/utils/set-parameters'
 
 // Resets gl state to default values.
-export {resetParameters}; // from '../webgl-utils/set-parameters'
+export {resetParameters}; // from '../webgl/utils/set-parameters'
 
 // Get a map of modified parameters
 export {getModifiedParameters};

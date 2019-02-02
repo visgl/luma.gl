@@ -4,9 +4,9 @@
 require('./init');
 
 // WebGL
-export {isWebGL, isWebGL2} from './webgl-utils/webgl-checks';
-export {cloneTextureFrom} from './webgl-utils/texture-utils';
-export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
+export {isWebGL, isWebGL2} from './webgl/utils/webgl-checks';
+export {cloneTextureFrom} from './webgl/utils/texture-utils';
+export {getKeyValue, getKey} from './webgl/utils/constants-to-keys';
 export {
   createGLContext,
   destroyGLContext,
@@ -39,15 +39,15 @@ export {
 } from './webgl-context/context-features';
 
 // WebGL1 classes
-export {default as Buffer} from './webgl/buffer';
-export {Shader, VertexShader, FragmentShader} from './webgl/shader';
-export {default as Program} from './webgl/program';
-export {default as Framebuffer} from './webgl/framebuffer';
-export {default as Renderbuffer} from './webgl/renderbuffer';
-export {default as Texture2D} from './webgl/texture-2d';
-export {default as TextureCube} from './webgl/texture-cube';
+export {default as Buffer} from './webgl/classes/buffer';
+export {Shader, VertexShader, FragmentShader} from './webgl/classes/shader';
+export {default as Program} from './webgl/classes/program';
+export {default as Framebuffer} from './webgl/classes/framebuffer';
+export {default as Renderbuffer} from './webgl/classes/renderbuffer';
+export {default as Texture2D} from './webgl/classes/texture-2d';
+export {default as TextureCube} from './webgl/classes/texture-cube';
 
-export {clear, clearBuffer} from './webgl/clear';
+export {clear, clearBuffer} from './webgl/classes/clear';
 
 // Copy and Blit
 export {
@@ -57,22 +57,22 @@ export {
   copyToImage,
   copyToTexture,
   blit
-} from './webgl/copy-and-blit';
+} from './webgl/classes/copy-and-blit';
 
 // WebGL2 classes & Extensions
-export {default as FenceSync} from './webgl/fence-sync';
-export {default as Query} from './webgl/query';
-export {default as Sampler} from './webgl/sampler';
-export {default as Texture3D} from './webgl/texture-3d';
-export {default as Texture2DArray} from './webgl/texture-2d-array';
-export {default as TransformFeedback} from './webgl/transform-feedback';
-export {default as VertexArrayObject} from './webgl/vertex-array-object';
-export {default as VertexArray} from './webgl/vertex-array';
-export {default as UniformBufferLayout} from './webgl/uniform-buffer-layout';
+export {default as FenceSync} from './webgl/classes/fence-sync';
+export {default as Query} from './webgl/classes/query';
+export {default as Sampler} from './webgl/classes/sampler';
+export {default as Texture3D} from './webgl/classes/texture-3d';
+export {default as Texture2DArray} from './webgl/classes/texture-2d-array';
+export {default as TransformFeedback} from './webgl/classes/transform-feedback';
+export {default as VertexArrayObject} from './webgl/classes/vertex-array-object';
+export {default as VertexArray} from './webgl/classes/vertex-array';
+export {default as UniformBufferLayout} from './webgl/classes/uniform-buffer-layout';
 
 // experimental WebGL exports
-export {default as _Accessor} from './webgl/accessor';
-export {clearBuffer as _clearBuffer} from './webgl/clear';
+export {default as _Accessor} from './webgl/classes/accessor';
+export {clearBuffer as _clearBuffer} from './webgl/classes/clear';
 
 // CORE
 export {default as Object3D} from './core/object-3d';
@@ -169,10 +169,6 @@ export {makeDebugContext} from './webgl-context/debug-context';
 // DEPRECATED EXPORTS IN v6.0
 
 export {default as ClipSpaceQuad} from './models/clip-space';
-
-// DEPRECATED EXPORTS IN v5.3
-
-export {glGet, glKey, glKeyType} from './webgl-utils/constants-to-keys';
 
 // UNDOCUMENTED API
 // TODO - Should these be exposed?

@@ -11,7 +11,7 @@ import {
   resetParameters,
   Framebuffer
 } from 'luma.gl';
-import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
+import {getKey} from 'luma.gl';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from 'luma.gl/webgl-context/set-parameters';
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';

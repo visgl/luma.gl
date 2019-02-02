@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments, max-len */
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '../webgl/utils';
 
 const WEBGL_LIMITS = {
   [GL.ALIASED_LINE_WIDTH_RANGE]: {gl1: new Float32Array([1, 1])},
