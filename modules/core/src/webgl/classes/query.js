@@ -1,6 +1,6 @@
 // WebGL2 Query (also handles disjoint timer extensions)
 import Resource from './resource';
-import {FEATURES, hasFeatures} from '../../webgl-context/context-features';
+import {FEATURES, hasFeatures} from '../features';
 import {isWebGL2} from '../utils';
 import queryManager from '../utils/query-manager';
 import {assert} from '../../utils';

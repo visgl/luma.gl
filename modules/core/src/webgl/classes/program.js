@@ -8,7 +8,7 @@ import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {checkUniformValues, areUniformsEqual, getUniformCopy} from './uniforms';
 
-import {withParameters} from '../../webgl-context/context-state';
+import {withParameters} from '../context';
 import {assertWebGL2Context, isWebGL2, getKey} from '../utils';
 import {getPrimitiveDrawMode} from '../utils/attribute-utils';
 import {log, uid, assert} from '../../utils';

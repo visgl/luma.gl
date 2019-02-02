@@ -1,4 +1,4 @@
-import {withParameters} from '../../webgl-context/context-state';
+import {withParameters} from '../context';
 import {assertWebGL2Context} from '../utils';
 import {assert} from '../../utils';
 

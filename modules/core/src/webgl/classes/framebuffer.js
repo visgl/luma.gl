@@ -6,7 +6,7 @@ import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
 import {copyToDataUrl} from './copy-and-blit.js';
 
-import {getFeatures} from '../../webgl-context/context-features';
+import {getFeatures} from '../features';
 
 import {isWebGL2, assertWebGL2Context, getKey} from '../utils';
 

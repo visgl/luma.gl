@@ -132,7 +132,7 @@ export function parseUniformName(name) {
   }
 
   // if array name then clean the array brackets
-  const UNIFORM_NAME_REGEXP = /([^\[]*)(\[[0-9]+\])?/;
+  const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
   const matches = name.match(UNIFORM_NAME_REGEXP);
   if (!matches || matches.length < 2) {
     throw new Error(`Failed to parse GLSL uniform name ${name}`);

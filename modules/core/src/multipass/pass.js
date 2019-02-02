@@ -5,7 +5,7 @@
 // the THREE.js EffectComposer and *Pass classes
 
 import {Framebuffer} from '../webgl';
-import {withParameters} from '../webgl-context';
+import {withParameters} from '../webgl/context';
 
 export default class Pass {
   constructor(gl, props) {
@@ -48,7 +48,7 @@ export default class Pass {
     );
 
     if (this.props.debug) {
-      renderParams.outputBuffer.log(0, this.id);
+      renderParams.outputBuffer.log(1, this.id);
     }
 
     if (this.props.swap) {
