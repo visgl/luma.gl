@@ -10,8 +10,7 @@
 import GL from '@luma.gl/constants';
 import {
   AnimationLoop, Model, Cube, Sphere, Geometry,
-  Texture2D, Program, Renderbuffer, Framebuffer, setParameters,
-  loadTextures, loadFiles, parseModel
+  Texture2D, Program, Renderbuffer, Framebuffer, setParameters, loadFile
 } from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
@@ -188,22 +187,26 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
-    return Promise.all([
-      loadFiles({
-        urls: ['macbook.json']
-      }),
-      loadTextures(gl, {
-        urls: ['moon.gif', 'crate.gif'],
-        parameters: {
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
-        },
-        mipmap: true
-      })
-    ])
-    .then(function(results) {
-      let [macbookJSON] = results[0];
-      const [tMoon, tCrate] = results[1];
+    const tMoon = new Texture2D(gl, {
+      data: 'moon.gif',
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+      },
+      mipmap: true
+    });
+
+    const tCrate = new Texture2D(gl, {
+      urls: 'crate.gif',
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+      },
+      mipmap: true
+    });
+
+    return loadFile('macbook.json')
+    .then(macbookJSON => {
       // Fix attribute name to match with Shaders
       macbookJSON = macbookJSON.replace('vertices', 'positions');
       const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
@@ -470,6 +473,36 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
       uUseTextures: true,
       uSampler: rttFramebuffer.texture
   });
+}
+
+function parseModel(gl, opts = {}) {
+  const {file, program = new Program(gl)} = opts;
+  const json = typeof file === 'string' ? parseJSON(file) : file;
+  // Remove any attributes so that we can create a geometry
+  // TODO - change format to put these in geometry sub object?
+  const attributes = {};
+  const modelOptions = {};
+  for (const key in json) {
+    const value = json[key];
+    if (Array.isArray(value)) {
+      attributes[key] = key === 'indices' ? new Uint16Array(value) : new Float32Array(value);
+    } else {
+      modelOptions[key] = value;
+    }
+  }
+
+  return new Model(
+    gl,
+    Object.assign({program, geometry: new Geometry({attributes})}, modelOptions, opts)
+  );
+}
+
+function parseJSON(file) {
+  try {
+    return JSON.parse(file);
+  } catch (error) {
+    throw new Error(`Failed to parse JSON: ${error}`);
+  }
 }
 
 export default animationLoop;

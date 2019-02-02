@@ -1,7 +1,7 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, loadTextures, setParameters} from 'luma.gl';
+import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -190,21 +190,21 @@ const animationLoop = new AnimationLoop({
       blend: true
     });
 
-    return loadTextures(gl, {
-      urls: ['glass.gif'],
+    const texture = new Texture2D(gl, {
+      data: 'glass.gif',
       mipmap: true,
       parameters: {
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR
       }
-    })
-    .then(textures => ({
+    });
+    return {
       cube: new Cube(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        uniforms: {uSampler: textures[0]}
+        uniforms: {uSampler: texture}
       })
-    }));
+    };
   },
   onRender({gl, tick, aspect, cube}) {
     xRot += xSpeed;

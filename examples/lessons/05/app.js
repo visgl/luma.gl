@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, loadTextures, Cube, setParameters} from 'luma.gl';
+import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -49,16 +49,15 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return loadTextures(gl, {
-      urls: ['nehe.gif']
-    })
-    .then(textures => ({
+    return {
       cube: new Cube(gl, {
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        uniforms: {uSampler: textures[0]}
+        uniforms: {
+          uSampler: new Texture2D(gl, 'nehe.gif')
+        }
       })
-    }));
+    };
   },
   onRender({gl, tick, aspect, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);

@@ -1,5 +1,8 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Framebuffer, Cube, setParameters, clear, CubeGeometry, Model, Program, Texture2D, VertexArray, Buffer, loadTextures, isWebGL2} from 'luma.gl';
+import {
+  AnimationLoop, Framebuffer, Cube, setParameters, clear,
+  Program, Texture2D, VertexArray, Buffer, isWebGL2
+} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 /*
@@ -316,70 +319,68 @@ export const animationLoopOptions = {
       fStop = parseFloat(this.value);
     });
 
-    return loadTextures(gl, {
-      urls: ['webgl-logo.png'],
+    const texture = new Texture2D(gl, {
+      data: 'webgl-logo.png',
       mipmaps: true,
       parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
       }
-    }).then((textures) => {
-
-      /////////////////////////////////////////////////////
-      // Create instanced model and initialize transform 
-      // matrices.
-      /////////////////////////////////////////////////////
-
-      const instancedCubes = new InstancedCube(gl, {
-        count: NUM_CUBES,
-        uniforms: {
-          uTexture: textures[0]
-        }
-      });
-
-      let cubeI = 0;
-      for (let j = 0; j < NUM_ROWS; ++j) {
-          let rowOffset = (j - Math.floor(NUM_ROWS / 2));
-          for (let i = 0; i < CUBES_PER_ROW; ++i) {
-            let scale = [0.4, 0.4, 0.4];
-            let rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
-            let translate = [-i + 2 - rowOffset, 0, -i + 2 + rowOffset];
-            instancedCubes.xforms[cubeI] = {
-              scale: scale,
-              translate: translate,
-              rotate: rotate,
-              matrix: new Matrix4().translate(translate).rotateXYZ(rotate).scale(scale)
-            };
-              
-            instancedCubes.matrices.set(instancedCubes.xforms[cubeI].matrix, cubeI * 16);
-          ++cubeI;
-          }
-      }
-
-      instancedCubes.updateMatrixBuffer();
-
-      /////////////////////////////////////////////
-      // Full-screen quad VAO for postprocessing
-      // passes.
-      /////////////////////////////////////////////
-
-      const quadVertexArray = new VertexArray(gl, {
-        program: dofProgram,
-        attributes: {
-          aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
-        }
-      });
-
-      return {
-        projMat,
-        viewMat,
-        instancedCubes,
-        sceneFramebuffer,
-        dofFramebuffer,
-        quadVertexArray,
-        dofProgram
-      };
     });
+
+    /////////////////////////////////////////////////////
+    // Create instanced model and initialize transform matrices.
+    /////////////////////////////////////////////////////
+
+    const instancedCubes = new InstancedCube(gl, {
+      count: NUM_CUBES,
+      uniforms: {
+        uTexture: texture
+      }
+    });
+
+    let cubeI = 0;
+    for (let j = 0; j < NUM_ROWS; ++j) {
+        let rowOffset = (j - Math.floor(NUM_ROWS / 2));
+        for (let i = 0; i < CUBES_PER_ROW; ++i) {
+          let scale = [0.4, 0.4, 0.4];
+          let rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
+          let translate = [-i + 2 - rowOffset, 0, -i + 2 + rowOffset];
+          instancedCubes.xforms[cubeI] = {
+            scale: scale,
+            translate: translate,
+            rotate: rotate,
+            matrix: new Matrix4().translate(translate).rotateXYZ(rotate).scale(scale)
+          };
+
+          instancedCubes.matrices.set(instancedCubes.xforms[cubeI].matrix, cubeI * 16);
+        ++cubeI;
+        }
+    }
+
+    instancedCubes.updateMatrixBuffer();
+
+    /////////////////////////////////////////////
+    // Full-screen quad VAO for postprocessing
+    // passes.
+    /////////////////////////////////////////////
+
+    const quadVertexArray = new VertexArray(gl, {
+      program: dofProgram,
+      attributes: {
+        aPosition: new Buffer(gl, new Float32Array(QUAD_VERTS))
+      }
+    });
+
+    return {
+      projMat,
+      viewMat,
+      instancedCubes,
+      sceneFramebuffer,
+      dofFramebuffer,
+      quadVertexArray,
+      dofProgram
+    };
   },
 
   onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {

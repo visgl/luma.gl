@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, loadTextures, setParameters, Sphere, Cube} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Sphere, Cube} from 'luma.gl';
 import {Vector3, Matrix4, radians} from 'math.gl';
 
 const VERTEX_SHADER = `\
@@ -78,30 +78,25 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    return loadTextures(gl, {
-      urls: ['moon.gif', 'crate.gif']
-    })
-    .then(([moonTexture, crateTexture]) => {
-      return {
-        moon: new Sphere(gl, {
-          fs: FRAGMENT_SHADER,
-          vs: VERTEX_SHADER,
-          uniforms: {
-            uSampler: moonTexture
-          },
-          nlat: 30,
-          nlong: 30,
-          radius: 2
-        }),
-        cube: new Cube(gl, {
-          vs: VERTEX_SHADER,
-          fs: FRAGMENT_SHADER,
-          uniforms: {
-            uSampler: crateTexture
-          }
-        })
-      };
-    });
+    return {
+      moon: new Sphere(gl, {
+        fs: FRAGMENT_SHADER,
+        vs: VERTEX_SHADER,
+        uniforms: {
+          uSampler: new Texture2D(gl, 'moon.gif')
+        },
+        nlat: 30,
+        nlong: 30,
+        radius: 2
+      }),
+      cube: new Cube(gl, {
+        vs: VERTEX_SHADER,
+        fs: FRAGMENT_SHADER,
+        uniforms: {
+          uSampler: new Texture2D(gl, 'crate.gif')
+        }
+      })
+    };
   },
 
   onRender({gl, tick, aspect, moon, cube}) { // eslint-disable-line complexity

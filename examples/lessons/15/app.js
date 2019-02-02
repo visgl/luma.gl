@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Sphere, loadTextures, setParameters} from 'luma.gl';
+import {AnimationLoop, Sphere, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -213,8 +213,8 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return loadTextures(gl, {
-      urls: ['earth-specular.gif', 'earth.jpg'],
+    const specularTexture = new Texture2D(gl, {
+      data: 'earth-specular.gif',
       parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
@@ -223,28 +223,37 @@ const animationLoop = new AnimationLoop({
       },
       mipmap: true
     })
-    .then(textures => {
-      const specularTexture = textures[0];
-      const colorTexture = textures[1];
 
-      const earth = new Sphere(gl, {
-        fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-        vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
-        uniforms: Object.assign(
-          {
-            uColorMapSampler: colorTexture,
-            uSpecularMapSampler: specularTexture
-          },
-          EARTH_UNIFORMS,
-          LIGHT_UNIFORMS
-        ),
-        nlat: 30,
-        nlong: 30,
-        radius: 13
-      });
-      return {earth, specularTexture, colorTexture};
+    const colorTexture = new Texture2D(gl, {
+      data: 'earth.jpg',
+       parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT
+      },
+      mipmap: true
+    })
+
+    const earth = new Sphere(gl, {
+      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
+      uniforms: Object.assign(
+        {
+          uColorMapSampler: colorTexture,
+          uSpecularMapSampler: specularTexture
+        },
+        EARTH_UNIFORMS,
+        LIGHT_UNIFORMS
+      ),
+      nlat: 30,
+      nlong: 30,
+      radius: 13
     });
+
+    return {earth, specularTexture, colorTexture};
   },
+
   onRender: ({
     gl, tick, aspect, earth
   }) => {

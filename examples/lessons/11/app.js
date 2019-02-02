@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, loadTextures, setParameters, Sphere} from 'luma.gl';
+import {AnimationLoop, setParameters, Sphere, Texture2D} from 'luma.gl';
 import {Vector3, Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -72,7 +72,7 @@ const appState = {
 
 const animationLoop = new AnimationLoop({
   onInitialize({canvas, gl}) {
-    addMouseHandler(canvas, appState);
+    addMouseHandler(canvas);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -80,60 +80,38 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    return loadTextures(gl, {
-      urls: ['moon.gif']
-    })
-    .then(textures => {
-      const moon = new Sphere(gl, {
+    return {
+      moon: new Sphere(gl, {
         fs: FRAGMENT_SHADER,
         vs: VERTEX_SHADER,
         uniforms: {
-          uSampler: textures[0]
+          uSampler: new Texture2D(gl, 'moon.gif')
         },
         nlat: 30,
         nlong: 30,
         radius: 2,
-      });
-      return {moon};
-    });
+      })
+    };
   },
+
+  // eslint-disable-next-line complexity
   onRender({gl, tick, aspect, moon}) {
     // Update Camera Position
     const eyePos = [0, 0, 6];
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    const uMMatrix = new Matrix4()
-      .multiplyRight(appState.moonRotationMatrix);
-    const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
+    const uMMatrix = new Matrix4().multiplyRight(appState.moonRotationMatrix);
+    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
 
-    let element = null;
-    /* global document */
-    const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
+    // Read controls
+    const {lighting, ambientColor, lightingDirection, directionalColor} = getControlValues();
 
     moon.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
-      const ambientColor = new Vector3(
-        parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
-      );
-
-      const lightingDirection = new Vector3(
-        parseFloat((element = document.getElementById("lightDirectionX")) ? element.value : "-1"),
-        parseFloat((element = document.getElementById("lightDirectionY")) ? element.value : "-1"),
-        parseFloat((element = document.getElementById("lightDirectionZ")) ? element.value : "-1")
-      );
       lightingDirection.normalize();
       lightingDirection.scale(-1);
-
-      const directionalColor = new Vector3(
-        parseFloat((element = document.getElementById("directionalR")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("directionalG")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("directionalB")) ? element.value : "0.8")
-      );
 
       moon.setUniforms({
         uAmbientColor: ambientColor,
@@ -152,7 +130,7 @@ const animationLoop = new AnimationLoop({
 
 animationLoop.getInfo = () => INFO_HTML;
 
-function addMouseHandler(canvas, appState) {
+function addMouseHandler(canvas) {
   addEvents(canvas, {
     onDragStart(event) {
       appState.mouseDown = true;
@@ -183,6 +161,33 @@ function addMouseHandler(canvas, appState) {
       appState.mouseDown = false;
     }
   });
+}
+
+function getControlValues() {
+  /* global document */
+  let element = null;
+
+  const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
+
+  const ambientColor = lighting && new Vector3(
+    parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
+    parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
+    parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
+  );
+
+  const lightingDirection = lighting && new Vector3(
+    parseFloat((element = document.getElementById("lightDirectionX")) ? element.value : "-1"),
+    parseFloat((element = document.getElementById("lightDirectionY")) ? element.value : "-1"),
+    parseFloat((element = document.getElementById("lightDirectionZ")) ? element.value : "-1")
+  );
+
+  const directionalColor = lighting && new Vector3(
+    parseFloat((element = document.getElementById("directionalR")) ? element.value : "0.8"),
+    parseFloat((element = document.getElementById("directionalG")) ? element.value : "0.8"),
+    parseFloat((element = document.getElementById("directionalB")) ? element.value : "0.8")
+  );
+
+  return {lighting, ambientColor, lightingDirection, directionalColor};
 }
 
 export default animationLoop;
