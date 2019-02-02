@@ -10,8 +10,6 @@
 /* eslint-disable camelcase, brace-style */
 import GL from '@luma.gl/constants';
 import {getParameterPolyfill} from './polyfill-get-parameter';
-// import polyfillVertexArrayObject from './polyfill-vertex-array-object';
-// import {WebGLRenderingContext} from './webgl-rendering-context';
 
 function assert(condition, message) {
   if (!condition) {

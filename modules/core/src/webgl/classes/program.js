@@ -1,4 +1,3 @@
-/* eslint-disable no-inline-comments */
 import GL from '@luma.gl/constants';
 
 import Resource from './resource';
@@ -39,19 +38,19 @@ const V6_DEPRECATED_METHODS = [
 ];
 
 export default class Program extends Resource {
-  constructor(gl, opts = {}) {
-    super(gl, opts);
+  constructor(gl, props = {}) {
+    super(gl, props);
 
     this.stubRemovedMethods('Program', 'v6.0', V6_DEPRECATED_METHODS);
 
     // Experimental flag to avoid deleting Program object while it is cached
     this._isCached = false;
 
-    this.initialize(opts);
+    this.initialize(props);
 
     Object.seal(this);
 
-    this._setId(opts.id);
+    this._setId(props.id);
   }
 
   initialize(props = {}) {
@@ -82,12 +81,12 @@ export default class Program extends Resource {
     return this.setProps(props);
   }
 
-  delete(opts = {}) {
+  delete(options = {}) {
     if (this._isCached) {
       // This object is cached, do not delete
       return this;
     }
-    return super.delete(opts);
+    return super.delete(options);
   }
 
   setProps(props) {
@@ -97,10 +96,10 @@ export default class Program extends Resource {
     return this;
   }
 
-  // Another thing about the WebGL API is that there are so many ways to draw things.
+  // A good thing about the WebGL API is that there are so many ways to draw things ;)
   // This function unifies those ways into a single call using common parameters with sane defaults
   draw({
-    logPriority,
+    logPriority, // Probe log priority, enables Model to do more integrated logging
 
     drawMode = GL.TRIANGLES,
     vertexCount,
@@ -131,10 +130,10 @@ export default class Program extends Resource {
       log.log(logPriority, message)();
     }
 
-    this.gl.useProgram(this.handle);
-
     // TODO - move vertex array binding and transform feedback binding to withParameters?
     assert(vertexArray);
+
+    this.gl.useProgram(this.handle);
 
     if (uniforms) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
@@ -145,7 +144,7 @@ export default class Program extends Resource {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (this._areTexturesLoading()) {
+    if (!this._areTexturesRenderable()) {
       return this;
     }
 
@@ -190,9 +189,6 @@ export default class Program extends Resource {
 
   setUniforms(uniforms = {}, samplers = {}, _onChangeCallback = () => {}) {
     // Simple change detection - if all uniforms are unchanged, do nothing
-    // TODO - Disabled since it interferes with textures
-    // we must still rebind texture units to current program's textures before drawing
-    // If modifying, test with `picking` example on website
     let somethingChanged = false;
     const changedUniforms = {};
     for (const key in uniforms) {
@@ -215,8 +211,13 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
-  _areTexturesLoading() {
-    let texturesLoaded = true;
+  // stub for shader chache, should reset uniforms to default valiues
+  reset() {}
+
+  // Checks if all texture-values uniforms are renderable (i.e. loaded)
+  // Note: This is currently done before every draw call
+  _areTexturesRenderable() {
+    let texturesRenderable = true;
 
     for (const uniformName in this.uniforms) {
       const uniformSetter = this._uniformSetters[uniformName];
@@ -232,16 +233,16 @@ export default class Program extends Resource {
         if (uniform instanceof Texture) {
           const texture = uniform;
           // Check that texture is loaded
-          texturesLoaded = texturesLoaded && texture.loaded;
+          texturesRenderable = texturesRenderable && texture.loaded;
         }
       }
     }
 
-    return !texturesLoaded;
+    return texturesRenderable;
   }
 
-  // Binds textures (and checks that async textures have loaded)
-  // This needs to be done before every draw call
+  // Binds textures
+  // Note: This is currently done before every draw call
   _bindTextures() {
     for (const uniformName in this.uniforms) {
       const uniformSetter = this._uniformSetters[uniformName];
@@ -258,7 +259,7 @@ export default class Program extends Resource {
           // Bind texture to index
           texture.bind(uniformSetter.textureIndex);
         }
-        // Bind a sampler (if supplied) to index
+        // Bind a WebGL2 sampler (if supplied) to index
         if (sampler) {
           sampler.bind(uniformSetter.textureIndex);
         }
@@ -268,7 +269,6 @@ export default class Program extends Resource {
 
   // Apply a set of uniform values to a program
   // Only uniforms actually present in the linked program will be updated.
-  /* eslint-disable max-depth */
   _setUniforms(uniforms) {
     this.gl.useProgram(this.handle);
 
@@ -281,6 +281,7 @@ export default class Program extends Resource {
           uniform = uniform.texture;
         }
         if (uniform instanceof Texture) {
+          // eslint-disable-next-line max-depth
           if (uniformSetter.textureIndex === undefined) {
             uniformSetter.textureIndex = this._textureIndexCounter++;
           }
@@ -372,6 +373,7 @@ export default class Program extends Resource {
   }
 
   // query uniform locations and build name to setter map.
+  // TODO - This overlaps with ProgramConfiguration?
   _readUniformLocationsFromLinkedProgram() {
     const {gl} = this;
     this._uniformSetters = {};
@@ -384,9 +386,6 @@ export default class Program extends Resource {
     }
     this._textureIndexCounter = 0;
   }
-
-  // stub for shader chache, should reset uniforms to default valiues
-  reset() {}
 
   // TO BE REMOVED in v7?
 

@@ -2,8 +2,10 @@
 
 import '@luma.gl/debug';
 
+// Modules that include their own tests
+import '@luma.gl/webgl2-polyfills/../test';
+
 // Cherry-pick webgl-dependent core directories
-import './modules/core/webgl1';
 import './modules/core/webgl-context';
 import './modules/core/webgl';
 import './modules/core/core';
