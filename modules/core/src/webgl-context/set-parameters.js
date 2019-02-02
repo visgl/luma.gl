@@ -2,7 +2,7 @@
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '../webgl/utils';
 import assert from '../utils/assert';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS

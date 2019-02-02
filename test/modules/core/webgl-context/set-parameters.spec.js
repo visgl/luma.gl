@@ -5,7 +5,7 @@ import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 import {GL_PARAMETER_DEFAULTS} from 'luma.gl/webgl-context/set-parameters';
 
 import GL from '@luma.gl/constants';
-import {getKey} from 'luma.gl/webgl-utils/constants-to-keys';
+import {getKey} from 'luma.gl';
 
 import {
   setParameters,

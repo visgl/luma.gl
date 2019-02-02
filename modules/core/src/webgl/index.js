@@ -19,29 +19,35 @@ export {
   WebGLShaderPrecisionFormat,
   WebGL2RenderingContext,
   webGLTypesAvailable
-} from '../webgl-utils';
+} from './utils';
 
+// Context
 export {isWebGL, isWebGL2, createGLContext, destroyGLContext} from '../webgl-context/context';
-
 export {withParameters, resetParameters} from '../webgl-context/context-state';
-
 export {getContextInfo} from '../webgl-context/context-limits';
 
-// Functions
-export {clear} from './clear';
+// WebGL Functions
+export {clear} from './classes/clear';
+export {
+  readPixelsToArray,
+  readPixelsToBuffer,
+  copyToDataUrl,
+  copyToImage,
+  copyToTexture,
+  blit
+} from './classes/copy-and-blit';
+export {parseUniformName, getUniformSetter} from './classes/uniforms';
 
-export {parseUniformName, getUniformSetter} from './uniforms';
+// WebGL1 Classes
+export {default as Buffer} from './classes/buffer';
+export {Shader, VertexShader, FragmentShader} from './classes/shader';
+export {default as Program} from './classes/program';
+export {default as Framebuffer} from './classes/framebuffer';
+export {default as Renderbuffer} from './classes/renderbuffer';
+export {default as Texture2D} from './classes/texture-2d';
+export {default as TextureCube} from './classes/texture-cube';
 
-// WebGL1 objects
-export {default as Buffer} from './buffer';
-export {Shader, VertexShader, FragmentShader} from './shader';
-export {default as Program} from './program';
-export {default as Framebuffer} from './framebuffer';
-export {default as Renderbuffer} from './renderbuffer';
-export {default as Texture2D} from './texture-2d';
-export {default as TextureCube} from './texture-cube';
-
-// WebGL2 objects
-export {default as VertexArray} from './vertex-array';
-export {default as TransformFeedback} from './transform-feedback';
-export {default as Query} from './query';
+// WebGL2 Classes
+export {default as VertexArray} from './classes/vertex-array';
+export {default as TransformFeedback} from './classes/transform-feedback';
+export {default as Query} from './classes/query';

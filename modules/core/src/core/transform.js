@@ -1,16 +1,14 @@
 import GL from '@luma.gl/constants';
-import Model from './model';
-import Buffer from '../webgl/buffer';
-import Framebuffer from '../webgl/framebuffer';
-import Texture2D from '../webgl/texture-2d';
-import TransformFeedback from '../webgl/transform-feedback';
 import {combineInjects} from '@luma.gl/shadertools';
 import {_transform as transform, getPassthroughFS, typeToChannelCount} from '@luma.gl/shadertools';
-import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl-utils';
-import assert from '../utils/assert';
-import {log, isObjectEmpty} from '../utils';
+
+import {Buffer, Framebuffer, Texture2D, TransformFeedback, readPixelsToArray} from '../webgl';
+import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl/utils';
+
+import Model from './model';
+
+import {log, isObjectEmpty, assert} from '../utils';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
-import {readPixelsToArray} from '../webgl/copy-and-blit';
 
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {

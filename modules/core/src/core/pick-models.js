@@ -2,7 +2,7 @@
 import {clear, isWebGL} from '../webgl';
 import Group from './group';
 import assert from '../utils/assert';
-import {readPixelsToArray} from '../webgl/copy-and-blit';
+import {readPixelsToArray} from '../webgl';
 
 function getDevicePixelRatio() {
   return typeof window !== 'undefined' ? window.devicePixelRatio : 1;

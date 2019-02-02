@@ -1,4 +1,4 @@
-import {headlessGL} from '../webgl-utils/webgl-types';
+import {headlessGL} from '../webgl/utils/webgl-types';
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =
   'Failed to create WebGL context in Node.js, headless gl not available';

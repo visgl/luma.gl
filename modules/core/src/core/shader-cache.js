@@ -1,6 +1,5 @@
-import {VertexShader, FragmentShader} from '../webgl/shader';
-import Program from '../webgl/program';
-import assert from '../utils/assert';
+import {VertexShader, FragmentShader, Program} from '../webgl';
+import {assert} from '../utils';
 
 export default class ShaderCache {
   /**
