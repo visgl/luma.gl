@@ -22,6 +22,7 @@ export default class VertexArray {
 
     // Extracted information
     this.elements = null;
+    this.elementsAccessor = null;
     this.values = null;
     this.accessors = null;
     this.unused = null;
@@ -66,6 +67,7 @@ export default class VertexArray {
     // this.vertexArrayObject.reset();
 
     this.elements = null;
+    this.elementsAccessor = null;
     const {MAX_ATTRIBUTES} = this.vertexArrayObject;
     this.values = new Array(MAX_ATTRIBUTES).fill(null);
     this.accessors = new Array(MAX_ATTRIBUTES).fill(null);
@@ -133,6 +135,7 @@ export default class VertexArray {
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
   setElementBuffer(elementBuffer = null, accessor = {}) {
     this.elements = elementBuffer; // Save value for debugging
+    this.elementsAccessor = accessor;
     this.clearDrawParams();
 
     // Update vertexArray immediately if we have our own array
@@ -146,7 +149,7 @@ export default class VertexArray {
   setBuffer(locationOrName, buffer, appAccessor = {}) {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-      return this.setElementBuffer(buffer);
+      return this.setElementBuffer(buffer, appAccessor);
     }
 
     const {location, accessor} = this._resolveLocationAndAccessor(
@@ -388,7 +391,7 @@ export default class VertexArray {
       // index type is saved for drawElement calls
       drawParams.elementCount = this.elements.getElementCount(this.elements.accessor);
       drawParams.isIndexed = true;
-      drawParams.indexType = this.elements.accessor.type;
+      drawParams.indexType = this.elementsAccessor.type || this.elements.accessor.type;
     }
 
     // Post-calculation checks
