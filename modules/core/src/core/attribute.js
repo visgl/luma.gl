@@ -52,9 +52,12 @@ export default class Attribute {
       this.externalBuffer = buffer;
       this.constant = false;
 
-      this.type = buffer.accessor.type;
+      this.type = opts.type || buffer.accessor.type;
       if (buffer.accessor.divisor !== undefined) {
         this.divisor = buffer.accessor.divisor;
+      }
+      if (opts.divisor !== undefined) {
+        this.divisor = opts.divisor;
       }
     } else if (value) {
       this.externalBuffer = null;
