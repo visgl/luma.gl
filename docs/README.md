@@ -7,8 +7,9 @@ luma.gl is a set of Javascript components for the WebGL2 API in modern browsers.
 
 These docs are for
 <a href="https://github.com/uber/luma.gl/blob/7.0-release/docs">
-  <img src="https://img.shields.io/badge/luma.gl-v7.0-brightgreen.svg?style=flat-square" />
+  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v7.0-brightgreen.svg?style=flat-square" />
 </a> Looking for an older version?
+
 <a href="https://github.com/uber/luma.gl/blob/6.3-release/docs">
   <img src="https://img.shields.io/badge/v-6.3-green.svg?style=flat-square" />
 </a>

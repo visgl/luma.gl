@@ -2,7 +2,8 @@
 import GL from '@luma.gl/constants';
 import Resource from './resource';
 import RENDERBUFFER_FORMATS from './renderbuffer-formats';
-import {isWebGL2, assert} from '../../utils';
+import {isWebGL2} from '../utils';
+import {assert} from '../../utils';
 
 function isFormatSupported(gl, format, formats) {
   const info = formats[format];

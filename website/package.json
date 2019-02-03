@@ -6,14 +6,16 @@
   ],
   "main": "index.js",
   "scripts": {
+    "start": "yarn develop",
     "clean": "rm -rf ./.cache ./public",
     "develop": "gatsby develop",
-    "build": "gatsby develop",
+    "build": "gatsby build",
     "serve": "gatsby serve"
   },
   "dependencies": {
     "gatsby": "2.0.85",
-    "ocular-gatsby": "1.0.0-alpha.6"
+    "ocular-gatsby": "1.0.0-alpha.7",
+    "sharp": "0.21.1"
   },
   "devDependencies": {}
 }

@@ -17,22 +17,26 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 
 export default class ExampleRunner extends Component {
   componentDidMount() {
-    const {sourceLink} = this.props;
+    const {example, canvas} = this.props;
 
     // Ensure the example can find its images
     // TODO - ideally we should extract images from example source?
     const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
-    setPathPrefix(`${RAW_GITHUB}/${sourceLink}`);
+    setPathPrefix(`${RAW_GITHUB}/${example.path}`);
 
     // Start the actual example
-    this.props.example.start({
-      canvas: this.props.canvas,
-      debug: true
+    example.example.start({
+      canvas: this.props.canvas
+      // ,
+      // debug: true
     });
   }
 
   componentWillUnmount() {
-    this.props.example.stop();
+    const {example, canvas} = this.props;
+    if (example.example) {
+      example.example.stop();
+    }
   }
 
   render() {

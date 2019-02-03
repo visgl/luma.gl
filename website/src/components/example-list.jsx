@@ -28,41 +28,8 @@ import Lesson14 from '../../../examples/lessons/14/app';
 import Lesson15 from '../../../examples/lessons/15/app';
 import Lesson16 from '../../../examples/lessons/16/app';
 
-export const examplesPath = 'https://github.com/uber/luma.gl/tree/master/examples';
+// export const examplesPath = 'https://github.com/uber/luma.gl/tree/master/examples';
 
-export default {
-  Instancing,
-  Cubemap,
-  // CustomPicking,
-  // DeferredRendering,
-  Mandelbrot,
-  Fragment,
-  // Particles,
-  // Persistence,
-  Picking,
-  Shadowmap,
-  Transform,
-  TransformFeedback,
-
-  Lesson01,
-  Lesson02,
-  Lesson03,
-  Lesson04,
-  Lesson05,
-  Lesson06,
-  Lesson07,
-  Lesson08,
-  Lesson09,
-  Lesson10,
-  Lesson11,
-  Lesson12,
-  Lesson13,
-  Lesson14,
-  Lesson15,
-  Lesson16
-};
-
-/*
 export default {
   Instancing: {example: Instancing, path: 'examples/core/instancing/'},
   Cubemap: {example: Cubemap, path: 'examples/core/cubemap/'},
@@ -94,4 +61,37 @@ export default {
   Lesson15: {example: Lesson15, path: 'examples/lessons/15/'},
   Lesson16: {example: Lesson16, path: 'examples/lessons/16/'},
 }
+
+/*
+export default {
+  Instancing,
+  Cubemap,
+  // CustomPicking,
+  // DeferredRendering,
+  Mandelbrot,
+  Fragment,
+  // Particles,
+  // Persistence,
+  Picking,
+  Shadowmap,
+  Transform,
+  TransformFeedback,
+
+  Lesson01,
+  Lesson02,
+  Lesson03,
+  Lesson04,
+  Lesson05,
+  Lesson06,
+  Lesson07,
+  Lesson08,
+  Lesson09,
+  Lesson10,
+  Lesson11,
+  Lesson12,
+  Lesson13,
+  Lesson14,
+  Lesson15,
+  Lesson16
+};
 */
