@@ -37,6 +37,7 @@ module.exports = {
   EXAMPLES: [
     {"title": "Instancing", "path": "examples/core/instancing/"},
     {"title": "Cubemap", "path": "examples/core/cubemap/"},
+    {"title": "DOF", "path": "examples/core/dof/"},
     {"title": "Mandelbrot", "path": "examples/core/mandelbrot/"},
     {"title": "Fragment", "path": "examples/core/fragment/"},
     {"title": "Picking", "path": "examples/core/picking/"},
