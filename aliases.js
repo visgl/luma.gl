@@ -21,17 +21,28 @@
 const path = require('path');
 
 const ALIASES = {
+  // DEV MODULES
+  // TODO - why is each module not listed?
+  'dev-modules': path.resolve(__dirname, './dev-modules'),
+
+  // GENERIC HELPER MODULES
+  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
+  '@luma.gl/webgl2-polyfill': path.resolve(__dirname, './modules/webgl2-polyfill/src'),
+
+  // MAJOR MODULE - POSSIBLY TO BE BROKEN OUT TO SEPARATE REPO
+  '@luma.gl/shadertools': path.resolve(__dirname, './modules/shadertools/src'),
+
+  // LUMA CORE
   'luma.gl/test': path.resolve(__dirname, './test'),
   'luma.gl/constants': path.resolve(__dirname, './modules/core/constants'),
   'luma.gl': path.resolve(__dirname, './modules/core/src'),
-  'dev-modules': path.resolve(__dirname, './dev-modules'),
-  '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
+  // TODO - Publish as `@luma.gl/core`
+
+  // LUMA ADDONS
   '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src'),
-  '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
   '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
-  '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src'),
-  '@luma.gl/io': path.resolve(__dirname, './modules/io/src'),
-  '@luma.gl/shadertools': path.resolve(__dirname, './modules/shadertools/src')
+  '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src')
+  // '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src')
 };
 
 if (module.require) {

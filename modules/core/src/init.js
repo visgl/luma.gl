@@ -3,7 +3,8 @@ import {global} from './utils/globals';
 import log from './utils/log';
 
 // TODO - when webgl2 gets ubiquitous, remove default support for webgl1 by dropping next line
-import './webgl1';
+// Can be installed by applications
+import '@luma.gl/webgl2-polyfill';
 
 // Version detection using babel plugin
 /* global __VERSION__ */

@@ -1,4 +1,4 @@
-import {getParameterPolyfill} from 'luma.gl/webgl1/polyfill-get-parameter';
+import {getParameterPolyfill} from '@luma.gl/webgl2-polyfill/polyfill-get-parameter';
 import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 
