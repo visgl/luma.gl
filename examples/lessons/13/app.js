@@ -190,7 +190,6 @@ const animationLoop = new AnimationLoop({
       ambientColor, pointLightingLocation, pointLightColor
     } = getControlValues();
 
-
     if (useFragmentLighting) {
       moon.program = fragmentLightingProgram;
       cube.program = fragmentLightingProgram;
