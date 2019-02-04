@@ -236,7 +236,7 @@ export default class BaseModel extends ScenegraphNode {
       log.warn('Found instanced attributes on non-instanced model', this.id)();
     }
 
-    const {isIndexed, indexType} = drawParams;
+    const {isIndexed, indexType, indexOffset} = drawParams;
     const {isInstanced, instanceCount} = this;
 
     this.onBeforeRender();
@@ -255,7 +255,8 @@ export default class BaseModel extends ScenegraphNode {
         isIndexed,
         indexType,
         isInstanced,
-        instanceCount
+        instanceCount,
+        offset: isIndexed ? indexOffset : 0
       })
     );
 
