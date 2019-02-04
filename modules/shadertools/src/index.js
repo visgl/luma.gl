@@ -1,4 +1,6 @@
 // shadertools exports
+import MODULAR_VS from './shaders/modular-vertex.glsl';
+import MODULAR_FS from './shaders/modular-fragment.glsl';
 
 // DOCUMENTED APIS
 
@@ -36,9 +38,6 @@ export {default as _transform} from './modules/transform/transform';
 
 // A set of base shaders that leverage the shader module system,
 // dynamically enabling features depending on which modules are included
-import MODULAR_VS from './shaders/modular-vertex.glsl';
-import MODULAR_FS from './shaders/modular-fragment.glsl';
-
 export const MODULAR_SHADERS = {
   vs: MODULAR_VS,
   fs: MODULAR_FS,

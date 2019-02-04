@@ -41,7 +41,7 @@ export default class Buffer extends Resource {
     super(gl, props);
 
     this.stubRemovedMethods('Buffer', 'v6.0', ['layout', 'setLayout', 'getIndexedParameter']);
-    this.stubRemovedMethods('Buffer', 'v7.0', ['updateAccessor']);
+    // this.stubRemovedMethods('Buffer', 'v7.0', ['updateAccessor']);
 
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
@@ -381,9 +381,17 @@ export default class Buffer extends Resource {
     return this.byteLength;
   }
 
-  // DEPRECATIONS - v6.x, but not warnings not properly implemented
+  // DEPRECATIONS - v6.0
+  // Deprecated in v6.x, but not warnings not properly implemented
   setByteLength(byteLength) {
     log.deprecated('setByteLength', 'reallocate')();
     return this.reallocate(byteLength);
+  }
+
+  // Deprecated in v6.x, but not warnings not properly implemented
+  updateAccessor(opts) {
+    log.deprecated('updateAccessor(...)', 'setAccessor(new Accessor(buffer.accessor, ...)')();
+    this.accessor = new Accessor(this.accessor, opts);
+    return this;
   }
 }

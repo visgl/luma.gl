@@ -1,4 +1,5 @@
 const DOCS = require('../docs/table-of-contents.json');
+const ALIASES = require('../aliases');
 
 module.exports = {
   logLevel: 3,
@@ -36,6 +37,7 @@ module.exports = {
   EXAMPLES: [
     {"title": "Instancing", "path": "examples/core/instancing/"},
     {"title": "Cubemap", "path": "examples/core/cubemap/"},
+    {"title": "DOF", "path": "examples/core/dof/"},
     {"title": "Mandelbrot", "path": "examples/core/mandelbrot/"},
     {"title": "Fragment", "path": "examples/core/fragment/"},
     {"title": "Picking", "path": "examples/core/picking/"},
@@ -70,11 +72,10 @@ module.exports = {
   // Ocular adds this to gatsby's webpack config
   webpack: {
     resolve: {
-      alias: {
+      alias: Object.assign({}, ALIASES, {
         // Avoid picking up local node_modules in the examples
-        'math.gl': `${__dirname}/../node_modules/math.gl`,
-        'luma.gl': `${__dirname}/../modules/core`
-      }
+        'math.gl': `${__dirname}/../node_modules/math.gl`
+      })
     }
   },
 

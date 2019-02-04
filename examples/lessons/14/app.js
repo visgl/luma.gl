@@ -108,7 +108,7 @@ function getHTMLControls() {
   // Get lighting form elements
   const useSpecular = $checked('specular');
   const useLighting = $checked('lighting');
-  const useTextures = $id('texture').value !== 'none';
+  const useTextures = $value('texture', 'none') !== 'none';
 
   const shininess = $value('shininess');
 
@@ -139,7 +139,7 @@ function getHTMLControls() {
     useTextures,
 
     shininess,
-    texture: $id('texture').value,
+    texture: $value('texture'),
 
     ambientColor,
     pointLightPosition,

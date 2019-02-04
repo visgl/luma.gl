@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 /* global self, window, global, document */
 const globals = {
   self: typeof self !== 'undefined' && self,
