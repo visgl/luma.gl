@@ -1,4 +1,4 @@
-# @luma.gl/webgl2-polyfills
+# @luma.gl/webgl2-polyfill
 
 This moduls installs a partial set of polyfills for WebGL1 contexts, making them more API compatible with WebGL2.
 
@@ -10,11 +10,11 @@ This way applications can work directly with the WebGL2 API even when using WebG
 ## Usage
 
 ```
-yarn add @luma.gl/webgl2-polyfills
+yarn add @luma.gl/webgl2-polyfill
 ```
 
 ```
-import polyfillContext from '@luma.gl/webgl2-polyfills';
+import polyfillContext from '@luma.gl/webgl2-polyfill';
 
 const gl = canvas.getContext('webgl');
 polyfillContext(gl);
