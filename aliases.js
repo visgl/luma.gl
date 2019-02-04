@@ -34,9 +34,10 @@ const ALIASES = {
 
   // LUMA CORE
   'luma.gl/test': path.resolve(__dirname, './test'),
+
+  // DEPRECATED - For backwards compatibility
   'luma.gl/constants': path.resolve(__dirname, './modules/main/constants'),
   'luma.gl': path.resolve(__dirname, './modules/main/src'),
-  // TODO - Publish as `@luma.gl/core`
 
   // LUMA ADDONS
   '@luma.gl/core': path.resolve(__dirname, './modules/core/src'),
