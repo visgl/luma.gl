@@ -60,6 +60,8 @@
     "babel-loader": "^8.0.0",
     "babel-plugin-istanbul": "^5.0.0",
     "babel-plugin-version-inline": "^1.0.0",
+    "babel-plugin-inline-webgl-constants": "^1.0.0",
+    "babel-plugin-remove-glsl-comments": "^1.0.0",
     "codecov": "^3.1.0",
     "coveralls": "^2.13.0",
     "eslint": "4.13.1",

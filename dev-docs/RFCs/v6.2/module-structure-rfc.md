@@ -91,7 +91,7 @@ luma.gl will not offer a-la-carte sub-module scripts bundle but will only export
 
 These modules should NOT bump version in lock step with core module
 
-### babel-plugin-inline-gl-constants
+### babel-plugin-inline-webgl-constants
 
 Already exists...
 
