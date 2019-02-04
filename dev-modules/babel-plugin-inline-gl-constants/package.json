@@ -11,7 +11,10 @@
   "keywords": [
     "babel-plugin",
     "webgl",
-    "gl constants"
+    "strip gl constants"
   ],
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "@luma.gl/constants": "^7.0.0-alpha.6"
+  }
 }
