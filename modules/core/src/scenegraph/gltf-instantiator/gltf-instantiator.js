@@ -27,17 +27,34 @@ const vs = `
 const fs = `
   precision highp float;
 
-  uniform sampler2D tex;
+  uniform sampler2D texture;
 
   varying vec3 normal;
   varying vec2 tc;
 
   void main(void) {
     float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.5, 1.0);
-    vec4 t = texture2D(tex, vec2(tc.x, -tc.y));
+    vec4 t = texture2D(texture, vec2(tc.x, -tc.y));
     gl_FragColor = vec4(d * t.r, d * t.g, d * t.b, 1.0);
   }
 `;
+
+const DEFAULT_ATTRIBUTES = {
+  POSITION: {constant: true, value: [0, 0, 0]},
+  NORMAL: {constant: true, value: [0, 0, 0]},
+  TEXCOORD_0: {constant: true, value: [0, 0]}
+};
+
+// TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
+const ATTRIBUTE_TYPE_TO_COMPONENTS = {
+  SCALAR: 1,
+  VEC2: 2,
+  VEC3: 3,
+  VEC4: 4,
+  MAT2: 4,
+  MAT3: 9,
+  MAT4: 16
+};
 
 const DEFAULT_OPTIONS = {};
 
@@ -68,16 +85,25 @@ export default class GLTFInstantiator {
   createNode(gltfNode) {
     const gltfMeshes = gltfNode.children || [];
     const children = gltfMeshes.map(child => this.createNode(child));
-    // TODO: Check if we can have both children nodes and meshes!
+
+    // Node can have children nodes and meshes at the same time
     if (gltfNode.mesh) {
       children.push(this.createMesh(gltfNode.mesh));
     }
+
     const node = new Group({
       id: gltfNode.name || gltfNode.id,
       children
     });
+
     if (gltfNode.matrix) {
       node.setMatrix(gltfNode.matrix);
+    } else {
+      node.setMatrixComponents({
+        position: gltfNode.translation,
+        // rotation: gltfNode.rotation, // TODO: fix quaternion problem
+        scale: gltfNode.scale
+      });
     }
     return node;
   }
@@ -101,13 +127,14 @@ export default class GLTFInstantiator {
 
   getVertexCount(attributes) {
     // TODO: implement this
+    log.warn('getVertexCount() not found')();
   }
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
     const attributes = this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices);
 
     const model = new Model(this.gl, {
-      id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}=${i}`,
+      id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
       drawMode: gltfPrimitive.mode || 4,
       vertexCount: gltfPrimitive.indices
         ? gltfPrimitive.indices.count
@@ -135,35 +162,50 @@ export default class GLTFInstantiator {
   }
 
   createAttributes(attributes, indices) {
-    const result = {};
+    const loadedAttributes = {};
 
     Object.keys(attributes).forEach(attrName => {
-      result[attrName] = this.createBuffer(attributes[attrName]);
+      loadedAttributes[attrName] = this.createAccessor(
+        attributes[attrName],
+        this.createBuffer(attributes[attrName].bufferView, this.gl.ARRAY_BUFFER)
+      );
     });
 
     if (indices) {
-      // TODO: use .target for target
-      result.indices = this.createBuffer(indices, {target: this.gl.ELEMENT_ARRAY_BUFFER});
+      loadedAttributes.indices = this.createAccessor(
+        indices,
+        this.createBuffer(indices.bufferView, this.gl.ELEMENT_ARRAY_BUFFER)
+      );
     }
 
-    log.info(4, 'glTF Attributes', {attributes, indices, generated: result})();
+    log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
 
-    return result;
+    return Object.assign({}, DEFAULT_ATTRIBUTES, loadedAttributes);
   }
 
-  createBuffer(accessor, extra = {}) {
-    // TODO: make sure we only create one buffer per buffer view
-    return new Buffer(
-      this.gl,
-      Object.assign({data: accessor.data, accessor: this.createAccessor(accessor)}, extra)
-    );
+  createBuffer(bufferView, target) {
+    if (!bufferView.lumaBuffers) {
+      bufferView.lumaBuffers = {};
+    }
+
+    if (!bufferView.lumaBuffers[target]) {
+      bufferView.lumaBuffers[target] = new Buffer(this.gl, {
+        id: `from-${bufferView.id}`,
+        data: bufferView.data,
+        target
+      });
+    }
+
+    return bufferView.lumaBuffers[target];
   }
 
-  createAccessor(accessor) {
+  createAccessor(accessor, buffer) {
     return new Accessor({
+      buffer,
       offset: accessor.byteOffset || 0,
       stride: accessor.bufferView.byteStride || 0,
-      type: accessor.componentType
+      type: accessor.componentType,
+      size: ATTRIBUTE_TYPE_TO_COMPONENTS[accessor.type]
     });
   }
 
@@ -173,14 +215,14 @@ export default class GLTFInstantiator {
         gltfTexture.texture.sampler &&
         gltfTexture.texture.sampler.parameters) ||
       {};
-    gltfTexture.texture.source.image.then(image => {
-      const tex = new Texture2D(this.gl, {
-        id: gltfTexture.name || gltfTexture.id,
-        parameters,
-        data: image
-      });
-      model.setUniforms({tex});
+
+    const texture = new Texture2D(this.gl, {
+      id: gltfTexture.name || gltfTexture.id,
+      parameters,
+      // Texture2D accepts a promise that returns an image as data (Async Textures)
+      data: gltfTexture.texture.source.getImageAsync()
     });
+    model.setUniforms({texture});
   }
 
   // TODO - create sampler in WebGL2
