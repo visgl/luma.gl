@@ -27,7 +27,7 @@ const ALIASES = {
 
   // GENERIC HELPER MODULES
   '@luma.gl/constants': path.resolve(__dirname, './modules/constants/src'),
-  '@luma.gl/webgl2-polyfills': path.resolve(__dirname, './modules/webgl2-polyfills/src'),
+  '@luma.gl/webgl2-polyfill': path.resolve(__dirname, './modules/webgl2-polyfill/src'),
 
   // MAJOR MODULE - POSSIBLY TO BE BROKEN OUT TO SEPARATE REPO
   '@luma.gl/shadertools': path.resolve(__dirname, './modules/shadertools/src'),
