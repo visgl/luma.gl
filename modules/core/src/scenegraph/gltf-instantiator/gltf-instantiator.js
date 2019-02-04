@@ -45,6 +45,7 @@ const DEFAULT_ATTRIBUTES = {
   TEXCOORD_0: {constant: true, value: [0, 0]}
 };
 
+// TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
 const ATTRIBUTE_TYPE_TO_COMPONENTS = {
   SCALAR: 1,
   VEC2: 2,

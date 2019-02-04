@@ -68,7 +68,7 @@ export const animationLoopOptions = {
     window.fetch(url).then(res => res.arrayBuffer()).then(data => {
 
       const gltfParser = new GLTFParser();
-      const gltf = gltfParser.parse(data, {createImages: false});
+      const gltf = gltfParser.parse(data);
 
       const instantiator = new GLTFInstantiator(animationLoopOptions.gl);
       const lumaScenes = instantiator.instantiate(gltf);
