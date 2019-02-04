@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 
-import {window} from 'luma.gl/utils/globals';
-import {setOverride, getOverrides} from 'luma.gl/debug/seer-integration';
+import {window} from '@luma.gl/core/utils/globals';
+import {setOverride, getOverrides} from '@luma.gl/core/debug/seer-integration';
 
 test('Seer overrides', t => {
   const uniforms = {

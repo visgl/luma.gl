@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 import test from 'tape-catch';
-import {fillArray} from 'luma.gl/utils/array-utils-flat';
+import {fillArray} from '@luma.gl/core/utils/array-utils-flat';
 
 const FILL_ARRAY_TEST_CASES = [
   {

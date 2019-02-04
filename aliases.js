@@ -34,11 +34,12 @@ const ALIASES = {
 
   // LUMA CORE
   'luma.gl/test': path.resolve(__dirname, './test'),
-  'luma.gl/constants': path.resolve(__dirname, './modules/core/constants'),
-  'luma.gl': path.resolve(__dirname, './modules/core/src'),
+  'luma.gl/constants': path.resolve(__dirname, './modules/main/constants'),
+  'luma.gl': path.resolve(__dirname, './modules/main/src'),
   // TODO - Publish as `@luma.gl/core`
 
   // LUMA ADDONS
+  '@luma.gl/core': path.resolve(__dirname, './modules/core/src'),
   '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src'),
   '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
   '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src')
