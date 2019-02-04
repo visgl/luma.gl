@@ -2,7 +2,7 @@ import test from 'tape-catch';
 import {createTestContext} from 'luma.gl/test/setup';
 
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
-import {GL_PARAMETER_DEFAULTS} from 'luma.gl/webgl-context/set-parameters';
+import {GL_PARAMETER_DEFAULTS} from '@luma.gl/core/webgl-context/set-parameters';
 
 import GL from '@luma.gl/constants';
 import {getKey} from 'luma.gl';
@@ -12,7 +12,7 @@ import {
   getParameter,
   getParameters,
   resetParameters
-} from 'luma.gl/webgl-context/set-parameters';
+} from '@luma.gl/core/webgl-context/set-parameters';
 import {Framebuffer} from 'luma.gl';
 
 // Settings test, don't reuse a context

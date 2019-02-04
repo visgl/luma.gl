@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {Program} from 'luma.gl';
-import ProgramConfiguration from 'luma.gl/webgl/classes/program-configuration';
+import ProgramConfiguration from '@luma.gl/core/webgl/classes/program-configuration';
 import {fixture} from 'luma.gl/test/setup';
 
 const vs = `

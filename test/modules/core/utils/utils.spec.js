@@ -1,4 +1,4 @@
-import {uid, isPowerOfTwo} from 'luma.gl/utils';
+import {uid, isPowerOfTwo} from '@luma.gl/core/utils';
 import test from 'tape-catch';
 
 test('Utils#uid', t => {

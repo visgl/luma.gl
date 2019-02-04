@@ -186,7 +186,7 @@ test('WebGL1#Framebuffer resize', t => {
 });
 /*
 
-import {TEXTURE_FORMATS} from 'luma.gl/webgl/texture-formats';
+import {TEXTURE_FORMATS} from '@luma.gl/core/webgl/texture-formats';
 
 const RGB_TO = {
   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],

@@ -1,11 +1,8 @@
 {
-  "name": "@luma.gl/core",
+  "name": "luma.gl",
   "version": "7.0.0-alpha.7",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
@@ -22,12 +19,13 @@
   "files": [
     "src",
     "dist",
+    "addons.js",
+    "constants.js",
+    "debug.js",
+    "headless.js",
+    "webgl1.js",
     "README.md"
   ],
-  "browser": {
-    "gl": false,
-    "gl/wrap": false
-  },
   "scripts": {
     "clean": "rm -fr dist dist-es6 && mkdir -p dist/es5 dist/esm dist/es6",
     "build": "npm run clean && npm run build-es6 && npm run build-esm && npm run build-es5",
@@ -36,24 +34,6 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "^7.0.0-alpha.6",
-    "@luma.gl/shadertools": "^7.0.0-alpha.7",
-    "math.gl": "^2.2.0",
-    "probe.gl": "^2.0.1",
-    "seer": "^0.2.4"
-  },
-  "nyc": {
-    "require": [
-      "@babel/register"
-    ],
-    "sourceMap": false,
-    "instrument": false,
-    "include": [
-      "src/**/*.js"
-    ],
-    "exclude": [
-      "test/**/*.js"
-    ]
+    "@babel/core": "^7.0.0"
   }
 }

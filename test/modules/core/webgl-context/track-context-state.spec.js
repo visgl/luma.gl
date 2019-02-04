@@ -5,7 +5,7 @@ import trackContextState, {
   pushContextState,
   popContextState,
   deepEqual // clone,
-} from 'luma.gl/webgl-context/track-context-state';
+} from '@luma.gl/core/webgl-context/track-context-state';
 
 import {
   getParameter,
@@ -13,7 +13,7 @@ import {
   resetParameters,
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
-} from 'luma.gl/webgl-context/set-parameters';
+} from '@luma.gl/core/webgl-context/set-parameters';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
 
