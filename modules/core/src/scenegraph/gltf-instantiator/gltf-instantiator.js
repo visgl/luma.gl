@@ -27,14 +27,14 @@ const vs = `
 const fs = `
   precision highp float;
 
-  uniform sampler2D tex;
+  uniform sampler2D texture;
 
   varying vec3 normal;
   varying vec2 tc;
 
   void main(void) {
     float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.5, 1.0);
-    vec4 t = texture2D(tex, vec2(tc.x, -tc.y));
+    vec4 t = texture2D(texture, vec2(tc.x, -tc.y));
     gl_FragColor = vec4(d * t.r, d * t.g, d * t.b, 1.0);
   }
 `;
@@ -161,39 +161,41 @@ export default class GLTFInstantiator {
   }
 
   createAttributes(attributes, indices) {
-    const result = {};
+    const loadedAttributes = {};
 
     Object.keys(attributes).forEach(attrName => {
-      result[attrName] = this.createAccessor(
+      loadedAttributes[attrName] = this.createAccessor(
         attributes[attrName],
         this.createBuffer(attributes[attrName].bufferView, this.gl.ARRAY_BUFFER)
       );
     });
 
     if (indices) {
-      result.indices = this.createAccessor(
+      loadedAttributes.indices = this.createAccessor(
         indices,
         this.createBuffer(indices.bufferView, this.gl.ELEMENT_ARRAY_BUFFER)
       );
     }
 
-    log.info(4, 'glTF Attributes', {attributes, indices, generated: result})();
+    log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
 
-    return Object.assign({}, DEFAULT_ATTRIBUTES, result);
+    return Object.assign({}, DEFAULT_ATTRIBUTES, loadedAttributes);
   }
 
   createBuffer(bufferView, target) {
-    const name = `_luma_buffer_${target}`;
+    if (!bufferView.lumaBuffers) {
+      bufferView.lumaBuffers = {};
+    }
 
-    if (!bufferView[name]) {
-      bufferView[name] = new Buffer(this.gl, {
+    if (!bufferView.lumaBuffers[target]) {
+      bufferView.lumaBuffers[target] = new Buffer(this.gl, {
         id: `from-${bufferView.id}`,
         data: bufferView.data,
         target
       });
     }
 
-    return bufferView[name];
+    return bufferView.lumaBuffers[target];
   }
 
   createAccessor(accessor, buffer) {
@@ -213,12 +215,13 @@ export default class GLTFInstantiator {
         gltfTexture.texture.sampler.parameters) ||
       {};
 
-    const tex = new Texture2D(this.gl, {
+    const texture = new Texture2D(this.gl, {
       id: gltfTexture.name || gltfTexture.id,
       parameters,
+      // Texture2D accepts a promise that returns an image as data (Async Textures)
       data: gltfTexture.texture.source.getImageAsync()
     });
-    model.setUniforms({tex});
+    model.setUniforms({texture});
   }
 
   // TODO - create sampler in WebGL2
