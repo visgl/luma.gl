@@ -15,7 +15,10 @@ test('luma.gl/constants (DEPRECATED)', t => {
 
 test('luma.gl#core exports', t => {
   for (const exportedKey in core) {
-	t.ok(main[exportedKey] === core[exportedKey], `${exportedKey} is reexported properly by luma.gl`);
+    t.ok(
+      main[exportedKey] === core[exportedKey],
+      `${exportedKey} is reexported properly by luma.gl`
+    );
   }
   t.end();
 });
