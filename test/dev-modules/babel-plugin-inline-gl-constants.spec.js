@@ -1,5 +1,5 @@
 import babel from '@babel/core';
-import plugin from 'dev-modules/babel-plugin-inline-gl-constants';
+import plugin from 'dev-modules/babel-plugin-inline-webgl-constants';
 import test from 'tape-catch';
 
 const ES6_ENV = {

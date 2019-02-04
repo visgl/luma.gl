@@ -1,4 +1,4 @@
-# babel-plugin-inline-gl-constants
+# babel-plugin-inline-webgl-constants
 
 Replaces `gl.<constant>` or `GL.<constant>` references with the corresponding OpenGL constant value.
 
@@ -40,7 +40,7 @@ const max = 34921;
 ## Installation
 
 ```sh
-$ npm install --save-dev babel-plugin-inline-gl-constants
+$ npm install --save-dev babel-plugin-inline-webgl-constants
 ```
 
 ## Usage
@@ -51,20 +51,20 @@ $ npm install --save-dev babel-plugin-inline-gl-constants
 
 ```json
 {
-  "plugins": ["inline-gl-constants"]
+  "plugins": ["inline-webgl-constants"]
 }
 ```
 
 ### Via CLI
 
 ```sh
-$ babel --plugins inline-gl-constants script.js
+$ babel --plugins inline-webgl-constants script.js
 ```
 
 ### Via Node API
 
 ```js
 require("babel-core").transform("code", {
-  plugins: ["inline-gl-constants"]
+  plugins: ["inline-webgl-constants"]
 });
 ```

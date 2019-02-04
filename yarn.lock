@@ -1235,6 +1235,13 @@ babel-loader@^8.0.0:
     mkdirp "^0.5.1"
     util.promisify "^1.0.0"
 
+babel-plugin-inline-webgl-constants@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-inline-webgl-constants/-/babel-plugin-inline-webgl-constants-1.0.0.tgz#206548c03df77ea800c40bf59622000fbd976753"
+  integrity sha512-50aOuF9zgvZZn8RA+cxHtjSlbQEQDeus6LJlA5DLMobq8LzIhs/RaTkZmVDRfwT3+I5h9+sSVwiOppKOY19GXA==
+  dependencies:
+    "@luma.gl/constants" "^7.0.0-alpha.6"
+
 babel-plugin-istanbul@^5.0.0:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-istanbul/-/babel-plugin-istanbul-5.0.1.tgz#2ce7bf211f0d9480ff7fd294bd05e2fa555e31ea"
@@ -1243,6 +1250,13 @@ babel-plugin-istanbul@^5.0.0:
     find-up "^3.0.0"
     istanbul-lib-instrument "^2.2.0"
     test-exclude "^5.0.0"
+
+babel-plugin-remove-glsl-comments@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-remove-glsl-comments/-/babel-plugin-remove-glsl-comments-1.0.0.tgz#62c0910707798a60504b70d09f9e2733ae10fc93"
+  integrity sha512-Z11LLl2UgZHiNTHkwHAyB8/eTaJpq9ih28aR7VtXk1ky3dwQJFGHUqOQFy8MH6ZQ6Ky9PmoWreWeoRxT1Zs68w==
+  dependencies:
+    minimatch "^3.0.0"
 
 babel-plugin-version-inline@^1.0.0:
   version "1.0.0"
@@ -5163,7 +5177,7 @@ minimalistic-crypto-utils@^1.0.0, minimalistic-crypto-utils@^1.0.1:
   resolved "https://registry.yarnpkg.com/minimalistic-crypto-utils/-/minimalistic-crypto-utils-1.0.1.tgz#f6c00c1c0b082246e5c4d99dfb8c7c083b2b582a"
   integrity sha1-9sAMHAsIIkblxNmd+4x8CDsrWCo=
 
-minimatch@^3.0.2, minimatch@^3.0.4:
+minimatch@^3.0.0, minimatch@^3.0.2, minimatch@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-3.0.4.tgz#5166e286457f03306064be5497e8dbb0c3d32083"
   integrity sha512-yJHVQEhyqPLUTgt9B83PXu6W3rx4MvvHvSUvToogpwoGDOUQ+yDrR0HRot+yOCdCO7u4hX3pWft6kWBBcqh0UA==
