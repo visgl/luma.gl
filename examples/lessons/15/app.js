@@ -2,122 +2,6 @@ import GL from '@luma.gl/constants';
 import {AnimationLoop, Sphere, Texture2D, setParameters} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 
-const INFO_HTML = `
-<p>
-  <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
-    Specular maps
-  </a>
-
-<div id="controls-elements">
-  <input type="checkbox" id="color-map" checked/> Use color map<br/>
-  <input type="checkbox" id="specular-map" checked/> Use specular map<br/>
-  <input type="checkbox" id="lighting" checked/> Use lighting<br/>
-
-  <br/>
-  <h2>Point light:</h2>
-
-  <div class="control-block">
-    <div class="control-row">
-      <div><b>Location:</b></div>
-      <div>X: <input type="text" id="lightPositionX" value="-10.0"/></div>
-      <div>Y: <input type="text" id="lightPositionY" value="4.0"/></div>
-      <div>Z: <input type="text" id="lightPositionZ" value="-20.0"/></div>
-    </div>
-    <div class="control-row">
-      <div><b>Specular colour:</b></div>
-      <div>R:
-        <input id="specularR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-      <div>G:
-        <input id="specularG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-      <div>B:
-        <input id="specularB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-    </div>
-    <div class="control-row">
-      <div><b>Diffuse colour:</b></div>
-      <div>R:
-        <input id="diffuseR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-      <div>G:
-        <input id="diffuseG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-      <div>B:
-        <input id="diffuseB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
-      </div>
-    </div>
-  </div>
-
-  <h2>Ambient light:</h2>
-  <div class="control-block">
-    <div class="control-row">
-      <div><b>Colour:</b></div>
-        <div>R:
-          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
-        </div>
-        <div>G:
-          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
-        </div>
-        <div>B:
-          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
-        </div>
-      </div>
-  </div>
-
-  <br/>
-  Earth texture courtesy of
-  <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">
-    the European Space Agency/Envisat
-  </a>.<br/>
-  <br/>
-</div>
-<p>
-  The classic WebGL Lessons in luma.gl
-`;
-
-function getControls() {
-  // Lighting form elements variables\
-  /* global document */
-  const $id = d => document.getElementById(d);
-
-  // Get lighting form elements
-  const specularMap = $id('specular-map');
-  const colorMap = $id('color-map');
-  const lighting = $id('lighting');
-
-  const point = {
-    position: {
-      x: $id('lightPositionX'),
-      y: $id('lightPositionY'),
-      z: $id('lightPositionZ')
-    },
-    specular: {
-      r: $id('specularR'),
-      g: $id('specularG'),
-      b: $id('specularB')
-    },
-    diffuse: {
-      r: $id('diffuseR'),
-      g: $id('diffuseG'),
-      b: $id('diffuseB')
-    }
-  };
-
-  const ambient = {
-    r: $id('ambientR'),
-    g: $id('ambientG'),
-    b: $id('ambientB')
-  };
-
-  return {
-    colorMap,
-    specularMap,
-    lighting,
-    point,
-    ambient
-  };
-}
 
 const EARTH_UNIFORMS = {
   uUseColorMap: true,
@@ -254,9 +138,7 @@ const animationLoop = new AnimationLoop({
     return {earth, specularTexture, colorTexture};
   },
 
-  onRender: ({
-    gl, tick, aspect, earth
-  }) => {
+  onRender: ({gl, tick, aspect, earth}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
@@ -268,15 +150,14 @@ const animationLoop = new AnimationLoop({
       .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, -1, 0]});
 
     const {
-      colorMap,
-      specularMap,
-      lighting,
-      point,
-      ambient
-    } = getControls();
-    const useLighting = lighting.checked;
-    const useSpecularMap = specularMap.checked;
-    const useColorMap = colorMap.checked;
+      useLighting,
+      useSpecularMap,
+      useColorMap,
+      ambientColor,
+      pointLightingLocation,
+      pointLightSpecularColor,
+      pointLightingDiffuseColor
+    } = getControlValues();
 
     earth.setUniforms({
       uUseSpecularMap: useSpecularMap,
@@ -285,11 +166,6 @@ const animationLoop = new AnimationLoop({
     });
 
     if (useLighting) {
-      const ambientColor = parseRGB(ambient);
-      const pointLightingLocation = parseXYZ(point.position);
-      const pointLightSpecularColor = parseRGB(point.specular);
-      const pointLightingDiffuseColor = parseRGB(point.diffuse);
-
       earth.setUniforms({
         uAmbientColor: ambientColor,
         uPointLightingLocation: pointLightingLocation,
@@ -310,19 +186,116 @@ const animationLoop = new AnimationLoop({
   }
 });
 
-animationLoop.getInfo = () => INFO_HTML;
+animationLoop.getInfo = () => `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
+    Specular maps
+  </a>
 
-function parseValue(value) {
-  const parsed = Number(value);
-  return isNaN(parsed) ? 0 : parsed;
+<div id="controls-elements">
+  <input type="checkbox" id="color-map" checked/> Use color map<br/>
+  <input type="checkbox" id="specular-map" checked/> Use specular map<br/>
+  <input type="checkbox" id="lighting" checked/> Use lighting<br/>
+
+  <br/>
+  <h2>Point light:</h2>
+
+  <div class="control-block">
+    <div class="control-row">
+      <div><b>Location:</b></div>
+      <div>X: <input type="text" id="lightPositionX" value="-10.0"/></div>
+      <div>Y: <input type="text" id="lightPositionY" value="4.0"/></div>
+      <div>Z: <input type="text" id="lightPositionZ" value="-20.0"/></div>
+    </div>
+    <div class="control-row">
+      <div><b>Specular colour:</b></div>
+      <div>R:
+        <input id="specularR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="specularG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="specularB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+    </div>
+    <div class="control-row">
+      <div><b>Diffuse colour:</b></div>
+      <div>R:
+        <input id="diffuseR" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>G:
+        <input id="diffuseG" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+      <div>B:
+        <input id="diffuseB" type="range" value="0.8" min="0.0" max="1.0" step="0.01"/>
+      </div>
+    </div>
+  </div>
+
+  <h2>Ambient light:</h2>
+  <div class="control-block">
+    <div class="control-row">
+      <div><b>Colour:</b></div>
+        <div>R:
+          <input id="ambientR" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>G:
+          <input id="ambientG" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+        <div>B:
+          <input id="ambientB" type="range" value="0.2" min="0.0" max="1.0" step="0.01"/>
+        </div>
+      </div>
+  </div>
+
+  <br/>
+  Earth texture courtesy of
+  <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">
+    the European Space Agency/Envisat
+  </a>.<br/>
+  <br/>
+</div>
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
+
+/* global document */
+const $id = id => document.getElementById(id);
+const $checked = id => $id(id) ? $id(id).checked : true;
+const $value = (id, defaultValue = 1) => {
+  const value = $id(id) ? Number($id(id).value) : defaultValue;
+  return isNaN(value) ? 0 : value;
 }
 
-function parseRGB({r, g, b}) {
-  return [parseValue(r.value), parseValue(g.value), parseValue(b.value)];
-}
+// Read Light settings HTML form
+function getControlValues() {
+  const useLighting = $checked('lighting');
+  const useSpecularMap = $checked('specular-map');
+  const useColorMap = $checked('color-map');
 
-function parseXYZ({x, y, z}) {
-  return [parseValue(x.value), parseValue(y.value), parseValue(z.value)];
+  const point = {
+    position: [$value('lightPositionX'), $value('lightPositionY'), $value('lightPositionZ')],
+    specular: [$value('specularR'), $value('specularG'), $value('specularB')],
+    diffuse: [$value('diffuseR'), $value('diffuseG'), $value('diffuseB')]
+  };
+
+  const ambientColor = [
+    $value('ambientR'),
+    $value('ambientG'),
+    $value('ambientB')
+  ];
+
+  return {
+    useLighting,
+    useSpecularMap,
+    useColorMap,
+
+    ambientColor: useLighting && ambientColor,
+    pointLightingLocation: useLighting && point.position,
+    pointLightSpecularColor: useLighting && point.specular,
+    pointLightingDiffuseColor: useLighting && point.diffuse
+  };
 }
 
 export default animationLoop;

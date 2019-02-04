@@ -84,6 +84,7 @@ export default class TextureCube extends Texture {
       } else {
         gl.texImage2D(face, 0, format, format, type, imageData);
       }
+      this.loaded = true;
     };
 
     this.bind();
