@@ -1,3 +1,4 @@
+import {Matrix4} from 'math.gl';
 import Buffer from '../../webgl/buffer';
 import Accessor from '../../webgl/accessor';
 import Texture2D from '../../webgl/texture-2d';
@@ -28,6 +29,7 @@ const fs = `
   precision highp float;
 
   uniform sampler2D texture;
+  uniform vec4 baseColorFactor;
 
   varying vec3 normal;
   varying vec2 tc;
@@ -99,12 +101,21 @@ export default class GLTFInstantiator {
     if (gltfNode.matrix) {
       node.setMatrix(gltfNode.matrix);
     } else {
-      node.setMatrixComponents({
-        position: gltfNode.translation,
-        // rotation: gltfNode.rotation, // TODO: fix quaternion problem
-        scale: gltfNode.scale
-      });
+      node.matrix.identity();
+
+      if (gltfNode.translation) {
+        node.matrix.translate(gltfNode.translation);
+      }
+
+      if (gltfNode.rotation) {
+        node.matrix.multiplyRight(new Matrix4().fromQuaternion(gltfNode.rotation));
+      }
+
+      if (gltfNode.scale) {
+        node.matrix.scale(gltfNode.scale);
+      }
     }
+
     return node;
   }
 
@@ -157,6 +168,12 @@ export default class GLTFInstantiator {
     if (material.pbrMetallicRoughness) {
       if (material.pbrMetallicRoughness.baseColorTexture) {
         this.configureTexture(material.pbrMetallicRoughness.baseColorTexture, model);
+      }
+
+      if (material.pbrMetallicRoughness.baseColorFactor) {
+        model.setUniforms({baseColorFactor: material.pbrMetallicRoughness.baseColorFactor});
+      } else {
+        model.setUniforms({baseColorFactor: [1, 1, 1, 1]});
       }
     }
   }

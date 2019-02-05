@@ -59,7 +59,7 @@ const INFO_HTML = `
 `;
 
 export const animationLoopOptions = {
-  models: [],
+  lumaScenes: [],
   eye: [0, 0, 1],
   gl: null,
   loadedModelUrl: null,
@@ -71,16 +71,13 @@ export const animationLoopOptions = {
       const gltf = gltfParser.parse(data);
 
       const instantiator = new GLTFInstantiator(animationLoopOptions.gl);
-      const lumaScenes = instantiator.instantiate(gltf);
+      animationLoopOptions.lumaScenes = instantiator.instantiate(gltf);
 
       log.info(4, "gltfParser: ", gltfParser)();
-      log.info(4, "instantiator.instantiate(): ", lumaScenes)();
+      log.info(4, "instantiator.instantiate(): ", animationLoopOptions.lumaScenes)();
 
-      animationLoopOptions.models = [];
-
-      lumaScenes[0].traverse(node => {
+      animationLoopOptions.lumaScenes[0].traverse((node, {worldMatrix}) => {
         log.info(4, "Using model: ", node)();
-        animationLoopOptions.models.push(node);
       });
     });
   },
@@ -121,15 +118,18 @@ export const animationLoopOptions = {
     }).rotateXYZ([0, tick * 0.01, 0]);
     const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
-    animationLoopOptions.models.forEach(model => {
+    if (!animationLoopOptions.lumaScenes.length) return;
+
+    animationLoopOptions.lumaScenes[0].traverse((model, {worldMatrix}) => {
+      // In glTF, meshes and primitives do no have their own matrix.
       model.draw({
         uniforms: {
-          uModel: model.matrix,
+          uModel: worldMatrix,
           uView,
           uProjection
         }
       });
-    })
+    });
   }
 };
 
