@@ -93,7 +93,6 @@ export {default as ScenegraphNode} from './scenegraph/scenegraph-node';
 export {default as Group} from './scenegraph/group';
 export {default as Camera} from './scenegraph/camera';
 export {default as Model} from './scenegraph/model';
-export {default as MeshModel} from './scenegraph/mesh-model';
 export {default as GLTFInstantiator} from './scenegraph/gltf-instantiator/gltf-instantiator';
 
 // Multipass Rendering
