@@ -108,7 +108,8 @@ export default class GLTFInstantiator {
       }
 
       if (gltfNode.rotation) {
-        node.matrix.multiplyRight(new Matrix4().fromQuaternion(gltfNode.rotation));
+        const rotationMatrix = new Matrix4().fromQuaternion(gltfNode.rotation);
+        node.matrix.multiplyRight(rotationMatrix);
       }
 
       if (gltfNode.scale) {
@@ -170,11 +171,8 @@ export default class GLTFInstantiator {
         this.configureTexture(material.pbrMetallicRoughness.baseColorTexture, model);
       }
 
-      if (material.pbrMetallicRoughness.baseColorFactor) {
-        model.setUniforms({baseColorFactor: material.pbrMetallicRoughness.baseColorFactor});
-      } else {
-        model.setUniforms({baseColorFactor: [1, 1, 1, 1]});
-      }
+      const baseColorFactor = material.pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
+      model.setUniforms({baseColorFactor});
     }
   }
 
