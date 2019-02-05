@@ -334,6 +334,7 @@ test('WebGLState#BlendEquationMinMax', t => {
 
         setParameters(context, parameters);
 
+        // eslint-disable-next-line max-depth
         for (const state in expected) {
           const value = getParameter(context, state);
           t.equal(

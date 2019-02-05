@@ -1,27 +1,12 @@
 import test from 'tape-catch';
-<<<<<<< HEAD:test/modules/core/webgl-context/set-parameters.spec.js
-import {createTestContext} from 'luma.gl/test/setup';
-
-import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
-import {GL_PARAMETER_DEFAULTS} from '@luma.gl/core/webgl-context/set-parameters';
-
-import GL from '@luma.gl/constants';
-import {getKey} from 'luma.gl';
-=======
->>>>>>> Break out webgl-state-tracker module:modules/webgl-state-tracker/test/unified-parameter-api/set-parameters.spec.js
-
 import {
   setParameters,
   getParameter,
   getParameters,
   resetParameters
-<<<<<<< HEAD:test/modules/core/webgl-context/set-parameters.spec.js
-} from '@luma.gl/core/webgl-context/set-parameters';
-=======
 } from '@luma.gl/webgl-state-tracker';
 
 import GL from '@luma.gl/constants';
->>>>>>> Break out webgl-state-tracker module:modules/webgl-state-tracker/test/unified-parameter-api/set-parameters.spec.js
 import {Framebuffer} from 'luma.gl';
 import {getKey} from 'luma.gl';
 
