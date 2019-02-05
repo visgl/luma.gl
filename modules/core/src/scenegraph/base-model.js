@@ -4,12 +4,12 @@ import GL from '@luma.gl/constants';
 import Attribute from '../core/attribute';
 import ScenegraphNode from './scenegraph-node';
 import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
-import {isWebGL} from '../webgl-utils';
+import {isWebGL} from '../webgl/utils';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
+import {getDebugTableForUniforms} from '../webgl/debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../webgl/debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../webgl/debug/debug-program-configuration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 

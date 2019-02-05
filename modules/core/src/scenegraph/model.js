@@ -9,9 +9,9 @@ import {logModel} from '../debug/seer-integration';
 import {log, isObjectEmpty} from '../utils';
 import assert from '../utils/assert';
 
-import {getDebugTableForUniforms} from '../webgl-debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '../webgl-debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '../webgl-debug/debug-program-configuration';
+import {getDebugTableForUniforms} from '../webgl/debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../webgl/debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../webgl/debug/debug-program-configuration';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
