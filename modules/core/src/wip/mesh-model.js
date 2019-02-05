@@ -93,47 +93,20 @@ export default class MeshModel extends Node {
   setProps(props) {
     Object.assign(this.props, props);
 
-    // params
-    // if ('drawMode' in props) {
-    //   this.drawMode = getDrawMode(props.drawMode);
-    // }
-    // if ('vertexCount' in props) {
-    //   this.vertexCount = props.vertexCount;
-    // }
-    if ('instanceCount' in props) {
-      this.instanceCount = props.instanceCount;
-    }
     if ('geometry' in props) {
       this.setGeometry(props.geometry);
     }
 
-    // webgl settings
+    if ('instanceCount' in props) {
+      this.instanceCount = props.instanceCount;
+    }
+
     if ('attributes' in props) {
       this.setAttributes(props.attributes);
     }
+
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms, props.samplers);
-    }
-
-    if ('pickable' in props) {
-      this.pickable = props.pickable;
-    }
-
-    // Experimental props
-    if ('timerQueryEnabled' in props) {
-      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
-      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
-        log.warn('GPU timer not supported')();
-      }
-    }
-    if ('_feedbackBuffers' in props) {
-      this._setFeedbackBuffers(props._feedbackBuffers);
-    }
-    if ('_animationProps' in props) {
-      this._setAnimationProps(props._animationProps);
-    }
-    if ('_animationLoop' in props) {
-      this.animationLoop = props._animationLoop;
     }
   }
 
