@@ -58,8 +58,8 @@ const INFO_HTML = `
 </div>
 `;
 
-export const animationLoopOptions = {
-  models: [],
+export const appState = {
+  scenes: [],
   eye: [0, 0, 1],
   gl: null,
   loadedModelUrl: null,
@@ -70,17 +70,14 @@ export const animationLoopOptions = {
       const gltfParser = new GLTFParser();
       const gltf = gltfParser.parse(data);
 
-      const instantiator = new GLTFInstantiator(animationLoopOptions.gl);
-      const lumaScenes = instantiator.instantiate(gltf);
+      const instantiator = new GLTFInstantiator(appState.gl);
+      appState.scenes = instantiator.instantiate(gltf);
 
       log.info(4, "gltfParser: ", gltfParser)();
-      log.info(4, "instantiator.instantiate(): ", lumaScenes)();
+      log.info(4, "instantiator.instantiate(): ", appState.scenes)();
 
-      animationLoopOptions.models = [];
-
-      lumaScenes[0].traverse(node => {
+      appState.scenes[0].traverse((node, {worldMatrix}) => {
         log.info(4, "Using model: ", node)();
-        animationLoopOptions.models.push(node);
       });
     });
   },
@@ -91,20 +88,20 @@ export const animationLoopOptions = {
       depthTest: true
     });
 
-    animationLoopOptions.gl = gl;
+    appState.gl = gl;
     const modelSelector = document.getElementById("modelSelector");
-    animationLoopOptions.loadGLTF(GLTF_BASE_URL + modelSelector.value);
+    appState.loadGLTF(GLTF_BASE_URL + modelSelector.value);
 
     modelSelector.onchange = event => {
-      animationLoopOptions.models = [];
-      animationLoopOptions.loadGLTF(GLTF_BASE_URL + modelSelector.value);
+      appState.models = [];
+      appState.loadGLTF(GLTF_BASE_URL + modelSelector.value);
     };
 
     // TODO: remove this when demo is over
     document.onwheel = e => {
-      animationLoopOptions.eye[2] += e.deltaY / 10;
-      if (animationLoopOptions.eye[2] < 0.5) {
-        animationLoopOptions.eye[2] = 0.5;
+      appState.eye[2] += e.deltaY / 10;
+      if (appState.eye[2] < 0.5) {
+        appState.eye[2] = 0.5;
       }
       e.preventDefault();
     };
@@ -115,25 +112,28 @@ export const animationLoopOptions = {
     clear(gl, {color: [0, 0, 0, 1], depth: true});
 
     const uView = new Matrix4().lookAt({
-      eye: animationLoopOptions.eye,
+      eye: appState.eye,
       center: [0, 0, 0],
       up: [0, 1, 0]
     }).rotateXYZ([0, tick * 0.01, 0]);
     const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
-    animationLoopOptions.models.forEach(model => {
+    if (!appState.scenes.length) return;
+
+    appState.scenes[0].traverse((model, {worldMatrix}) => {
+      // In glTF, meshes and primitives do no have their own matrix.
       model.draw({
         uniforms: {
-          uModel: model.matrix,
+          uModel: worldMatrix,
           uView,
           uProjection
         }
       });
-    })
+    });
   }
 };
 
-const animationLoop = new AnimationLoop(animationLoopOptions);
+const animationLoop = new AnimationLoop(appState);
 
 animationLoop.getInfo = () => INFO_HTML;
 
