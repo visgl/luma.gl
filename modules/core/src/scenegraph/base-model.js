@@ -1,9 +1,8 @@
 // Shared code between Model and MeshModel
 
 import GL from '@luma.gl/constants';
-import Attribute from '../core/attribute';
 import ScenegraphNode from './scenegraph-node';
-import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
+import {Query, Program, VertexArray, clear} from '../webgl';
 import {isWebGL} from '../webgl-utils';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
@@ -177,20 +176,6 @@ export default class BaseModel extends ScenegraphNode {
     });
   }
 
-  // Updates (evaluates) all function valued uniforms based on a new set of animationProps
-  // experimental
-  _setAnimationProps(animationProps) {
-    if (this.animated) {
-      assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
-      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
-      this.program.setUniforms(animatedUniforms, {}, () => {
-        // if something changed
-        this._checkForDeprecatedUniforms(animatedUniforms);
-        this.setNeedsRedraw();
-      });
-    }
-  }
-
   updateModuleSettings(opts) {
     const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
@@ -342,7 +327,6 @@ export default class BaseModel extends ScenegraphNode {
     assert(program instanceof Program, 'Model needs a program');
     return program;
   }
-  /* eslint-enable complexity */
 
   // Uniforms
 
@@ -414,28 +398,6 @@ export default class BaseModel extends ScenegraphNode {
     return staticUniforms;
   }
 
-  // Transform Feedback
-
-  _setFeedbackBuffers(feedbackBuffers = {}) {
-    // Avoid setting needsRedraw if no feedbackBuffers
-    if (isObjectEmpty(feedbackBuffers)) {
-      return this;
-    }
-
-    const {gl} = this.program;
-    this.transformFeedback =
-      this.transformFeedback ||
-      new TransformFeedback(gl, {
-        program: this.program
-      });
-
-    this.transformFeedback.setBuffers(feedbackBuffers);
-
-    this.setNeedsRedraw();
-
-    return this;
-  }
-
   // Timer Queries
 
   _timerQueryStart() {
@@ -477,53 +439,6 @@ count: ${this.stats.profileFrameCount}`
         )();
       }
     }
-  }
-
-  // Makes sure buffers are created for all attributes
-  // and that the program is updated with those buffers
-  // TODO - do we need the separation between "attributes" and "buffers"
-  // couldn't apps just create buffers directly?
-  _createBuffersFromAttributeDescriptors(attributes) {
-    const {
-      program: {gl}
-    } = this;
-
-    // const attributes = {};
-    const buffers = {};
-
-    for (const attributeName in attributes) {
-      const descriptor = attributes[attributeName];
-
-      let attribute = this._attributes[attributeName];
-
-      if (descriptor instanceof Attribute) {
-        attribute = descriptor;
-      } else if (descriptor instanceof Buffer) {
-        attribute =
-          attribute ||
-          new Attribute(
-            gl,
-            Object.assign({}, descriptor, descriptor.accessor, {
-              id: attributeName
-            })
-          );
-        attribute.update({buffer: descriptor});
-      } else if (attribute) {
-        attribute.update(descriptor);
-      } else {
-        attribute = new Attribute(
-          gl,
-          Object.assign({}, descriptor, {
-            id: attributeName
-          })
-        );
-      }
-
-      this._attributes[attributeName] = attribute;
-      buffers[attributeName] = attribute.getValue();
-    }
-
-    return buffers;
   }
 
   _logDrawCallStart(priority) {
