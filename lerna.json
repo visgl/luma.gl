@@ -11,8 +11,7 @@
       "ignore": [
         "test",
         "*.md",
-        "@luma.gl/imageprocessing",
-        "@luma.gl/io",
+        "@luma.gl/effects",
         "@luma.gl/scripts"
       ]
     },

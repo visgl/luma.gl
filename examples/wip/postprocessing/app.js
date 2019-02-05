@@ -17,7 +17,7 @@ import {
   // SSAOPass,
   OutlinePass
   // ConvolutionPass
-} from 'luma.gl-imageprocessing';
+} from '@luma.gl/effects';
 
 const INFO_HTML = `
 <p>

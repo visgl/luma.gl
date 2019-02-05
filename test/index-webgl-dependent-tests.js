@@ -9,8 +9,9 @@ import '@luma.gl/webgl2-polyfill/../test';
 import './modules/core/webgl-context';
 import './modules/core/webgl';
 import './modules/core/core';
-
 import './modules/gpgpu';
+
+import '@luma.gl/effects/../test';
 
 // The classic luma.gl module - Supported for backwards compatibility
 import 'luma.gl/../test';
