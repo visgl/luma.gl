@@ -1,7 +1,5 @@
 import {Matrix4} from 'math.gl';
-import Buffer from '../../webgl/buffer';
-import Accessor from '../../webgl/accessor';
-import Texture2D from '../../webgl/texture-2d';
+import {Buffer, Accessor, Texture2D} from '../../webgl';
 import Group from '../group';
 import Model from '../model';
 import log from '../../utils/log';

@@ -38,6 +38,8 @@ export {
 } from './classes/copy-and-blit';
 export {parseUniformName, getUniformSetter} from './classes/uniforms';
 
+export {default as Accessor} from './classes/accessor';
+
 // WebGL1 Classes
 export {default as Buffer} from './classes/buffer';
 export {Shader, VertexShader, FragmentShader} from './classes/shader';
