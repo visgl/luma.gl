@@ -136,6 +136,26 @@ export default class AnimationLoop {
     return this;
   }
 
+  // Redraw now
+  redraw() {
+    this._setupFrame();
+    this._updateCallbackData();
+
+    // call callback
+    this.onRender(this.animationProps);
+    // end callback
+
+    // clear needsRedraw flag
+    this._clearNeedsRedraw();
+
+    if (this.offScreen && this.gl.commit) {
+      // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
+      // commit returns a Promise
+      return this.gl.commit();
+    }
+    return null;
+  }
+
   // Stops a render loop if already running, finalizing
   stop() {
     // console.debug(`Stopping ${this.constructor.name}`);
@@ -205,20 +225,11 @@ export default class AnimationLoop {
       return;
     }
 
-    this._setupFrame();
-    this._updateCallbackData();
+    const promise = this.redraw();
 
-    // call callback
-    this.onRender(this.animationProps);
-    // end callback
-
-    // clear needsRedraw flag
-    this._clearNeedsRedraw();
-
-    if (this.offScreen && this.gl.commit) {
-      // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
-      // commit returns a Promise
-      this.gl.commit().then(this._renderFrame);
+    if (promise) {
+      // offscreen rendering
+      promise.then(this._renderFrame);
     } else {
       // Either on-screen or gl.commit not supported (Chrome)
       // Request another render frame now
