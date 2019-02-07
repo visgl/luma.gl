@@ -148,6 +148,15 @@ export default class AnimationLoop {
     return this;
   }
 
+  // Renders a frame outside the running animation loop and clears `needsRedraw` field
+  redraw() {
+    this._setupFrame();
+    this._updateCallbackData();
+    this.onRender(this.animationProps);
+    this._clearNeedsRedraw();
+    return this;
+  }
+
   onCreateContext(...args) {
     return this.props.onCreateContext(...args);
   }

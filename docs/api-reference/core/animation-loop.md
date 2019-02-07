@@ -84,6 +84,11 @@ Stops the animation
 
 `animationLoop.stop()`
 
+### redraw
+
+Renders a frame outside the running animation loop and clears `needsRedraw` field
+
+`animationLoop.redraw()`
 
 ### setNeedsRedraw
 
