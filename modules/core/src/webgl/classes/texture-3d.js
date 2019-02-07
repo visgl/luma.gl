@@ -1,8 +1,8 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
 import Buffer from './buffer';
+import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context} from '../utils';
-import {withParameters} from '../../webgl-context/context-state';
 
 export default class Texture3D extends Texture {
   static isSupported(gl) {

@@ -22,9 +22,20 @@ export {
 } from './utils';
 
 // Context
-export {isWebGL, isWebGL2, createGLContext, destroyGLContext} from '../webgl-context/context';
-export {withParameters, resetParameters} from '../webgl-context/context-state';
-export {getContextInfo} from '../webgl-context/context-limits';
+export {isWebGL, isWebGL2, createGLContext, destroyGLContext} from './context/context';
+export {
+  trackContextState,
+  resetParameters,
+  getParameter,
+  getParameters,
+  setParameter,
+  setParameters,
+  withParameters,
+  getModifiedParameters
+} from '@luma.gl/webgl-state-tracker';
+
+// Features
+export {getContextInfo} from './features/limits';
 
 // WebGL Functions
 export {clear} from './classes/clear';

@@ -13,9 +13,13 @@ export {
   resizeGLContext,
   pollGLContext,
   setContextDefaults
-} from './webgl-context/context';
-export {trackContextState} from './webgl-context';
+} from './webgl/context/context';
+export {getContextInfo, getGLContextInfo, getContextLimits} from './webgl/features/limits';
+export {getContextDebugInfo as glGetDebugInfo} from './webgl/debug/get-context-debug-info';
+export {FEATURES, hasFeature, hasFeatures, getFeatures} from './webgl/features/features';
+export {default as canCompileGLGSExtension} from './webgl/features/check-glsl-extension';
 export {
+  trackContextState,
   resetParameters,
   getParameter,
   getParameters,
@@ -23,20 +27,7 @@ export {
   setParameters,
   withParameters,
   getModifiedParameters
-} from './webgl-context/context-state';
-export {
-  getContextInfo,
-  getGLContextInfo,
-  getContextLimits,
-  glGetDebugInfo
-} from './webgl-context/context-limits';
-export {
-  FEATURES,
-  hasFeature,
-  hasFeatures,
-  getFeatures,
-  canCompileGLGSExtension
-} from './webgl-context/context-features';
+} from '@luma.gl/webgl-state-tracker';
 
 // WebGL1 classes
 export {default as Buffer} from './webgl/classes/buffer';
@@ -170,13 +161,6 @@ export {
   typeToChannelCount,
   convertToVec4
 } from '@luma.gl/shadertools';
-
-// TO BE REMOVED IN v7
-export {makeDebugContext} from './webgl-context/debug-context';
-
-// DEPRECATED EXPORTS IN v7.0
-
-export {default as Object3D} from './scenegraph/scenegraph-node';
 
 // DEPRECATED EXPORTS IN v6.0
 

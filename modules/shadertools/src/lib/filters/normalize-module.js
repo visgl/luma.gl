@@ -25,6 +25,8 @@ export function normalizeShaderModule(module) {
 
     // Normalize uniforms
     if (module.uniforms) {
+      // ocular linter gets confused
+      // eslint-disable-next-line
       const {propTypes} = parsePropTypes(module.uniforms);
       module.uniforms = propTypes;
     }

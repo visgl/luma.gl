@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import Buffer from './buffer';
 import Framebuffer from './framebuffer';
 import Texture from './texture';
-import {withParameters} from '../../webgl-context';
+import {withParameters} from '../context';
 import {assertWebGL2Context, flipRows, scalePixels} from '../utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../utils/format-utils';

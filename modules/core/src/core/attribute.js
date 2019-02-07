@@ -2,7 +2,7 @@
 import GL from '@luma.gl/constants';
 import {Buffer} from '../webgl';
 import {log, uid} from '../utils';
-import {hasFeature, FEATURES} from '../webgl-context/context-features';
+import {hasFeature, FEATURES} from '../webgl/features';
 
 export default class Attribute {
   constructor(gl, opts = {}) {
