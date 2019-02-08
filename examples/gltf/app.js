@@ -58,88 +58,127 @@ const INFO_HTML = `
 </div>
 `;
 
-export const appState = {
-  scenes: [],
-  eye: [0, 0, 1],
-  gl: null,
-  loadedModelUrl: null,
+class DemoApp {
+  constructor() {
+    this.scenes = [];
+    this.gl = null;
+    this.loadedModelUrl = null;
 
-  glOptions: {
-    // TODO: Make gltf work with webgl2
-    webgl2: false
-  },
+    this.glOptions = {
+      // TODO: Make gltf work with webgl2
+      webgl2: false
+    };
 
-  loadGLTF: url => {
+    this.mouse = {
+      lastX: 0,
+      lastY: 0
+    };
+
+    this.translate = 2;
+    this.rotation = [0, 0];
+    this.rotationStart = [0, 0];
+
+    this.onInitialize = this.onInitialize.bind(this);
+    this.onRender = this.onRender.bind(this);
+  }
+
+  loadGLTF(url) {
     window.fetch(url).then(res => res.arrayBuffer()).then(data => {
 
       const gltfParser = new GLTFParser();
       const gltf = gltfParser.parse(data);
 
-      const instantiator = new GLTFInstantiator(appState.gl);
-      appState.scenes = instantiator.instantiate(gltf);
+      const instantiator = new GLTFInstantiator(this.gl);
+      this.scenes = instantiator.instantiate(gltf);
 
       log.info(4, "gltfParser: ", gltfParser)();
-      log.info(4, "instantiator.instantiate(): ", appState.scenes)();
+      log.info(4, "instantiator.instantiate(): ", this.scenes)();
 
-      appState.scenes[0].traverse((node, {worldMatrix}) => {
+      this.scenes[0].traverse((node, {worldMatrix}) => {
         log.info(4, "Using model: ", node)();
       });
     });
-  },
+  }
 
-  onInitialize: ({gl}) => {
-
+  onInitialize({gl, canvas}) {
     setParameters(gl, {
       depthTest: true
     });
 
-    appState.gl = gl;
+    this.gl = gl;
     const modelSelector = document.getElementById("modelSelector");
-    appState.loadGLTF(GLTF_BASE_URL + modelSelector.value);
+    this.loadGLTF(GLTF_BASE_URL + modelSelector.value);
 
     modelSelector.onchange = event => {
-      appState.models = [];
-      appState.loadGLTF(GLTF_BASE_URL + modelSelector.value);
+      this.models = [];
+      this.loadGLTF(GLTF_BASE_URL + modelSelector.value);
     };
 
-    // TODO: remove this when demo is over
-    document.onwheel = e => {
-      appState.eye[2] += e.deltaY / 10;
-      if (appState.eye[2] < 0.5) {
-        appState.eye[2] = 0.5;
+    // Events
+    canvas.onwheel = e => {
+      this.translate += e.deltaY / 10;
+      if (this.translate < 0.5) {
+        this.translate = 0.5;
       }
       e.preventDefault();
     };
-  },
+    canvas.onpointerdown = e => {
+      this.mouse.lastX = e.clientX;
+      this.mouse.lastY = e.clientY;
 
-  onRender: ({gl, tick, width, height, aspect}) => {
+      this.rotationStart[0] = this.rotation[0];
+      this.rotationStart[1] = this.rotation[1];
+
+      canvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    };
+    canvas.onpointermove = e => {
+      if (e.buttons) {
+        const dX = e.clientX - this.mouse.lastX;
+        const dY = e.clientY - this.mouse.lastY;
+
+        this.rotation[0] = this.rotationStart[0] + dY / 100;
+        this.rotation[1] = this.rotationStart[1] + dX / 100;
+      }
+    };
+  }
+
+  onRender({gl, tick, width, height, aspect}) {
     gl.viewport(0, 0, width, height);
     clear(gl, {color: [0, 0, 0, 1], depth: true});
 
-    const uView = new Matrix4().lookAt({
-      eye: appState.eye,
-      center: [0, 0, 0],
-      up: [0, 1, 0]
-    }).rotateXYZ([0, tick * 0.01, 0]);
+    const [pitch, roll] = this.rotation;
+    const cameraPos = [
+      -this.translate * Math.sin(roll) * Math.cos(-pitch),
+      -this.translate * Math.sin(-pitch),
+      this.translate * Math.cos(roll) * Math.cos(-pitch)
+    ];
+
+    const uView = new Matrix4()
+      .translate([0, 0, -this.translate])
+      .rotateX(pitch)
+      .rotateY(roll);
+
     const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
-    if (!appState.scenes.length) return;
+    if (!this.scenes.length) return;
 
-    appState.scenes[0].traverse((model, {worldMatrix}) => {
+    this.scenes[0].traverse((model, {worldMatrix}) => {
       // In glTF, meshes and primitives do no have their own matrix.
       const u_MVPMatrix = new Matrix4(uProjection).multiplyRight(uView).multiplyRight(worldMatrix);
       model.draw({
         uniforms: {
+          u_Camera: cameraPos,
           u_MVPMatrix,
           u_ModelMatrix: worldMatrix,
-          u_NormalMatrix: worldMatrix // FIX ME!
+          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
         }
       });
     });
   }
-};
+}
 
-const animationLoop = new AnimationLoop(appState);
+const animationLoop = new AnimationLoop(new DemoApp());
 
 animationLoop.getInfo = () => INFO_HTML;
 
