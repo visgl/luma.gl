@@ -1,5 +1,5 @@
 import {pbr} from '@luma.gl/shadertools';
-import {Texture2D} from '../../webgl';
+import {Texture2D, TextureCube} from '../../webgl';
 import Model from '../model';
 import log from '../../utils/log';
 
@@ -46,13 +46,104 @@ const fs = `
   }
 `;
 
+// TODO: Move to new file
+class GLTFEnv {
+  constructor(gl) {
+    this.gl = gl;
+  }
+
+  getTexUrl(envMap, type, dir, mipLevel = 0) {
+    return `https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures/${envMap}/${type}/${type}_${dir}_${mipLevel}.jpg`;
+  }
+
+  getBrdfUrl() {
+    return 'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures/brdfLUT.png';
+  }
+
+  getImageAsync(imageUrl) {
+    /* global Image */
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.crossOrigin = 'anonymous';
+      img.src = imageUrl;
+    });
+  }
+
+  makeCube(id, func) {
+    return Promise.all([
+      func('right'),
+      func('top'),
+      func('front'),
+      func('left'),
+      func('bottom'),
+      func('back')
+    ]).then(faces => {
+      return new TextureCube(this.gl, {
+        id,
+        pixels: {
+          [this.gl.TEXTURE_CUBE_MAP_POSITIVE_X]: faces[0],
+          [this.gl.TEXTURE_CUBE_MAP_POSITIVE_Y]: faces[1],
+          [this.gl.TEXTURE_CUBE_MAP_POSITIVE_Z]: faces[2],
+          [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_X]: faces[3],
+          [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Y]: faces[4],
+          [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Z]: faces[5]
+        }
+      });
+    });
+  }
+
+  getDiffuseEnvSampler() {
+    if (!this._DiffuseEnvSampler) {
+      this._DiffuseEnvSampler = this.makeCube('DiffuseEnvSampler', dir =>
+        this.getImageAsync(this.getTexUrl('papermill', 'diffuse', dir))
+      );
+    }
+
+    return this._DiffuseEnvSampler;
+  }
+
+  getSpecularEnvSampler() {
+    if (!this._SpecularEnvSampler) {
+      this._SpecularEnvSampler = this.makeCube('SpecularEnvSampler', dir =>
+        this.getImageAsync(this.getTexUrl('papermill', 'specular', dir))
+      );
+    }
+
+    return this._SpecularEnvSampler;
+  }
+
+  getBrdfTex() {
+    if (!this._BrdfTex) {
+      this._BrdfTex = new Texture2D(this.gl, {
+        id: 'brdfLUT',
+        parameters: {
+          //
+        },
+        pixelStore: {
+          [this.gl.UNPACK_FLIP_Y_WEBGL]: false
+        },
+        // Texture2D accepts a promise that returns an image as data (Async Textures)
+        data: this.getImageAsync(this.getBrdfUrl())
+      });
+    }
+
+    return this._BrdfTex;
+  }
+}
+
 class GLTFMaterialParser {
   constructor(gl, {attributes, material}) {
     this.gl = gl;
-    this.defines = {};
+    this.env = new GLTFEnv(gl);
+
+    this.defines = {
+      USE_IBL: 1
+    };
     this.uniforms = {
       // TODO: find better values?
-      u_Camera: [0.0, 0.0, -4.0],
+      u_Camera: [0, 0, 0], // Model should override
+
       u_LightDirection: [0.0, 0.5, 0.5],
       u_LightColor: [1.0, 1.0, 1.0],
 
@@ -61,7 +152,13 @@ class GLTFMaterialParser {
       u_ScaleDiffBaseMR: [0, 0, 0, 0],
       u_ScaleFGDSpec: [0, 0, 0, 0],
 
-      u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
+      u_MetallicRoughnessValues: [1, 1], // Default is 1 and 1
+
+      // IBL
+      // u_DiffuseEnvSampler: this.env.getDiffuseEnvSampler(),
+      // u_SpecularEnvSampler: this.env.getSpecularEnvSampler(),
+      u_brdfLUT: this.env.getBrdfTex(),
+      u_ScaleIBLAmbient: [1.0, 1.0, 0.0, 0.0]
     };
 
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
@@ -160,6 +257,18 @@ export function createGLTFModel(gl, {id, drawMode, vertexCount, attributes, mate
 
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);
+
+  materialParser.env.getDiffuseEnvSampler().then(cubeTex => {
+    model.setUniforms({
+      u_DiffuseEnvSampler: cubeTex
+    });
+  });
+
+  materialParser.env.getSpecularEnvSampler().then(cubeTex => {
+    model.setUniforms({
+      u_SpecularEnvSampler: cubeTex
+    });
+  });
 
   return model;
 }
