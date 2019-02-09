@@ -64,6 +64,11 @@ export const appState = {
   gl: null,
   loadedModelUrl: null,
 
+  glOptions: {
+    // TODO: Make gltf work with webgl2
+    webgl2: false
+  },
+
   loadGLTF: url => {
     window.fetch(url).then(res => res.arrayBuffer()).then(data => {
 
@@ -122,11 +127,12 @@ export const appState = {
 
     appState.scenes[0].traverse((model, {worldMatrix}) => {
       // In glTF, meshes and primitives do no have their own matrix.
+      const u_MVPMatrix = new Matrix4(uProjection).multiplyRight(uView).multiplyRight(worldMatrix);
       model.draw({
         uniforms: {
-          uModel: worldMatrix,
-          uView,
-          uProjection
+          u_MVPMatrix,
+          u_ModelMatrix: worldMatrix,
+          u_NormalMatrix: worldMatrix // FIX ME!
         }
       });
     });

@@ -1,49 +1,9 @@
 import {Matrix4} from 'math.gl';
-import {Buffer, Accessor, Texture2D} from '../../webgl';
+import {Buffer, Accessor} from '../../webgl';
 import Group from '../group';
-import Model from '../model';
 import log from '../../utils/log';
 
-const vs = `
-  attribute vec3 POSITION;
-  attribute vec3 NORMAL;
-  attribute vec2 TEXCOORD_0;
-
-  uniform mat4 uModel;
-  uniform mat4 uView;
-  uniform mat4 uProjection;
-
-  varying vec3 normal;
-  varying vec2 tc;
-
-  void main(void) {
-    gl_Position = uProjection * uView * uModel * vec4(POSITION, 1.0);
-    normal = vec3(uModel * vec4(NORMAL, 0.0));
-    tc = TEXCOORD_0;
-  }
-`;
-
-const fs = `
-  precision highp float;
-
-  uniform sampler2D texture;
-  uniform vec4 baseColorFactor;
-
-  varying vec3 normal;
-  varying vec2 tc;
-
-  void main(void) {
-    float d = clamp(dot(normalize(normal), vec3(0,1,0)), 0.5, 1.0);
-    vec4 t = texture2D(texture, vec2(tc.x, -tc.y));
-    gl_FragColor = vec4(d * t.r, d * t.g, d * t.b, 1.0);
-  }
-`;
-
-const DEFAULT_ATTRIBUTES = {
-  POSITION: {constant: true, value: [0, 0, 0]},
-  NORMAL: {constant: true, value: [0, 0, 0]},
-  TEXCOORD_0: {constant: true, value: [0, 0]}
-};
+import {createGLTFModel} from './gltf-material';
 
 // TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
 const ATTRIBUTE_TYPE_TO_COMPONENTS = {
@@ -141,37 +101,17 @@ export default class GLTFInstantiator {
   }
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
-    const attributes = this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices);
-
-    const model = new Model(this.gl, {
+    const model = createGLTFModel(this.gl, {
       id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
       drawMode: gltfPrimitive.mode || 4,
       vertexCount: gltfPrimitive.indices
         ? gltfPrimitive.indices.count
         : this.getVertexCount(gltfPrimitive.attributes),
-      vs,
-      fs
+      attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+      material: gltfPrimitive.material
     });
-    model.setProps({attributes});
-
-    // TODO: handle case of having no material
-    if (gltfPrimitive.material) {
-      this.configureMaterial(model, gltfPrimitive.material);
-    }
 
     return model;
-  }
-
-  configureMaterial(model, material) {
-    // TODO: process remaining tex types
-    if (material.pbrMetallicRoughness) {
-      if (material.pbrMetallicRoughness.baseColorTexture) {
-        this.configureTexture(material.pbrMetallicRoughness.baseColorTexture, model);
-      }
-
-      const baseColorFactor = material.pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
-      model.setUniforms({baseColorFactor});
-    }
   }
 
   createAttributes(attributes, indices) {
@@ -193,7 +133,7 @@ export default class GLTFInstantiator {
 
     log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
 
-    return Object.assign({}, DEFAULT_ATTRIBUTES, loadedAttributes);
+    return loadedAttributes;
   }
 
   createBuffer(bufferView, target) {
@@ -220,22 +160,6 @@ export default class GLTFInstantiator {
       type: accessor.componentType,
       size: ATTRIBUTE_TYPE_TO_COMPONENTS[accessor.type]
     });
-  }
-
-  configureTexture(gltfTexture, model) {
-    const parameters =
-      (gltfTexture.texture &&
-        gltfTexture.texture.sampler &&
-        gltfTexture.texture.sampler.parameters) ||
-      {};
-
-    const texture = new Texture2D(this.gl, {
-      id: gltfTexture.name || gltfTexture.id,
-      parameters,
-      // Texture2D accepts a promise that returns an image as data (Async Textures)
-      data: gltfTexture.texture.source.getImageAsync()
-    });
-    model.setUniforms({texture});
   }
 
   // TODO - create sampler in WebGL2
