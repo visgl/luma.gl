@@ -84,6 +84,9 @@ Stops the animation
 
 `animationLoop.stop()`
 
+### redraw
+
+Immediately invokes a redraw (call `onRender` with updated animation props). Only use if the canvas must be updated synchronously.
 
 ### setNeedsRedraw
 
