@@ -148,12 +148,12 @@ export default class AnimationLoop {
     // clear needsRedraw flag
     this._clearNeedsRedraw();
 
+    // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
+    // Chrome's offscreen canvas does not require gl.commit
     if (this.offScreen && this.gl.commit) {
-      // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
-      // commit returns a Promise
-      return this.gl.commit();
+      this.gl.commit();
     }
-    return null;
+    return this;
   }
 
   // Stops a render loop if already running, finalizing
@@ -225,16 +225,10 @@ export default class AnimationLoop {
       return;
     }
 
-    const promise = this.redraw();
+    this.redraw();
 
-    if (promise) {
-      // offscreen rendering
-      promise.then(this._renderFrame);
-    } else {
-      // Either on-screen or gl.commit not supported (Chrome)
-      // Request another render frame now
-      this._animationFrameId = requestAnimationFrame(this._renderFrame);
-    }
+    // Request another render frame now
+    this._animationFrameId = requestAnimationFrame(this._renderFrame);
   }
 
   // Initialize the  object that will be passed to app callbacks
