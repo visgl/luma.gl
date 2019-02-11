@@ -23,7 +23,7 @@ export function headlessGL(...args) {
     throw new Error(ERR_HEADLESSGL_LOAD);
   }
   return headless(...args);
-};
+}
 
 if (!isBrowser) {
   try {
