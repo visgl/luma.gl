@@ -19,19 +19,12 @@
 // THE SOFTWARE.
 /* global window */
 const test = require('tape');
-const {config} = require('math.gl');
 
 test.onFinish(window.browserTestDriver_finish);
 test.onFailure(window.browserTestDriver_fail);
 
 test('Browser tests', t => {
-  window.browserTestDriver_isHeadless().then(isHeadless => {
-    if (isHeadless) {
-      t.comment('Headless mode, setting equality tolerance to 1e-11');
-      config.EPSILON = 1e-11;
-    }
-    require('./index-webgl-independent-tests');
-    require('./index-webgl-dependent-tests');
-    t.end();
-  });
+  require('./index-webgl-independent-tests');
+  require('./index-webgl-dependent-tests');
+  t.end();
 });

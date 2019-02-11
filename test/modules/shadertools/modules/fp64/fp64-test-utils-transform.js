@@ -23,7 +23,7 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 
 import {Buffer, Transform} from 'luma.gl';
-import {equals} from 'math.gl';
+import {equals, config} from 'math.gl';
 import {fp64} from '@luma.gl/shadertools';
 const {fp64ify} = fp64;
 
@@ -49,6 +49,8 @@ void main(void) {
 }
 `;
 }
+
+config.EPSILON = 1e-11;
 
 function setupFloatData({limit, op, testCases}) {
   const count = testCases.length;
