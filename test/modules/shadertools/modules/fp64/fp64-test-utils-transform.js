@@ -23,18 +23,9 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 
 import {Buffer, Transform} from 'luma.gl';
+import {equals} from 'math.gl';
 import {fp64} from '@luma.gl/shadertools';
 const {fp64ify} = fp64;
-
-export function getRelativeError64(result, reference, index) {
-  const reference64 = reference[index] + reference[index + 1];
-  const result64 = result[index] + result[index + 1];
-  // When refrence valu is < 1, dividing with it increases total value of difference.
-  if (reference64 < 1) {
-    return Math.abs(reference64 - result64);
-  }
-  return Math.abs((reference64 - result64) / reference64);
-}
 
 function getBinaryShader(operation) {
   const shader = `\
@@ -58,8 +49,6 @@ void main(void) {
 }
 `;
 }
-
-const EPSILON = 1e-14;
 
 function setupFloatData({limit, op, testCases}) {
   const count = testCases.length;
@@ -118,13 +107,16 @@ export function runTests(gl, {glslFunc, binary, op, limit = 256, testCases, t}) 
   transform.run({uniforms: {ONE: 1}});
   const gpu_result = transform.getBuffer('result').getData();
   for (let idx = 0; idx < testCases.length; idx++) {
-    const relativeError = getRelativeError64(gpu_result, expected_fp64, 2 * idx);
+    const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
+    const result64 = gpu_result[2 * idx] + gpu_result[2 * idx + 1];
+
     const args = binary
       ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
       : `(${a[idx].toPrecision(2)})`;
-    const message = `${glslFunc}${args}: error=${relativeError}, within ${EPSILON}`;
-    t.ok(relativeError < EPSILON, message);
-    if (relativeError >= EPSILON) {
+    const message = `${glslFunc}${args} error within tolerance`;
+    const isEqual = equals(reference64, result64);
+    t.ok(isEqual, message);
+    if (!isEqual) {
       t.comment(` (tested ${a_fp64.toString()}, ${b_fp64.toString()})`);
     }
   }

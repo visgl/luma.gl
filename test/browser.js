@@ -17,17 +17,21 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
-require('tap-browser-color')();
-
+/* global window */
 const test = require('tape');
+const {config} = require('math.gl');
 
-const {callExposedFunction} = require('probe.gl/test-utils');
-test.onFinish(() => callExposedFunction('testDone', {success: true}));
-test.onFailure(() => callExposedFunction('testDone', {success: false}));
+test.onFinish(window.browserTestDriver_finish);
+test.onFailure(window.browserTestDriver_fail);
 
 test('Browser tests', t => {
-  require('./index-webgl-independent-tests');
-  require('./index-webgl-dependent-tests');
-  t.end();
+  window.browserTestDriver_isHeadless().then(isHeadless => {
+    if (isHeadless) {
+      t.comment('Headless mode, setting equality tolerance to 1e-11');
+      config.EPSILON = 1e-11;
+    }
+    require('./index-webgl-independent-tests');
+    require('./index-webgl-dependent-tests');
+    t.end();
+  });
 });
