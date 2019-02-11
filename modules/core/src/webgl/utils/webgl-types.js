@@ -17,13 +17,16 @@ typical configuration for isorender applications running on the server.`;
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
-export let headlessGL = () => {
-  throw new Error(ERR_HEADLESSGL_LOAD);
-};
+export function headlessGL(...args) {
+  const headless = module.require('gl');
+  if (!headless) {
+    throw new Error(ERR_HEADLESSGL_LOAD);
+  }
+  return headless(...args);
+}
 
 if (!isBrowser) {
   try {
-    headlessGL = module.require('gl');
     headlessTypes = module.require('gl/wrap');
   } catch (error) {
     // /* global console */
