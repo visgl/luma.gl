@@ -57,9 +57,7 @@ uniform mat4 uProjection;
 varying vec3 normal;
 
 void main(void) {
-  mat4 modelViewProjection = uProjection * uModelView;
-
-  gl_Position = modelViewProjection * vec4(positions, 1.0);
+  gl_Position = uProjection * uModelView * vec4(positions, 1.0);
   normal = vec3((uModelView * vec4(normals, 0.0)));
 }
 `;
@@ -196,20 +194,21 @@ const animationLoop = new AnimationLoop({
     // Render electrons to framebuffer
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       ePos[i] = eRot[i].transformVector(ePos[i]);
-      const modelMatrix = new Matrix4()
-        .translate(ePos[i])
-        .scale([0.06125, 0.06125, 0.06125]);
+      const modelMatrix = new Matrix4().translate(ePos[i]);
 
-      sphere.draw({
-        framebuffer: mainFramebuffer,
-        uniforms: {
-          uModelView: view.clone().multiplyRight(modelMatrix),
-          uView: view,
-          uProjection: projection,
-          uColor: [0.0, 0.5, 1],
-          uLighting: 0
-        }
-      });
+      sphere.setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
+        .setScale([0.06125, 0.06125, 0.06125])
+        .updateMatrix()
+        .draw({
+          framebuffer: mainFramebuffer,
+          uniforms: {
+            uModelView: view.clone().multiplyRight(sphere.matrix),
+            uView: view,
+            uProjection: projection,
+            uColor: [0.0, 0.5, 1],
+            uLighting: 0
+          }
+        });
     }
 
     // Render core to framebuffer
@@ -219,8 +218,7 @@ const animationLoop = new AnimationLoop({
         .rotateXYZ([0, tick * 0.021, 0])
         .translate(nPos[i]);
 
-      sphere.setRotation([tick * 0.013, tick * 0.021, 0])
-        .setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
+      sphere.setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
         .setScale([0.25, 0.25, 0.25])
         .updateMatrix()
         .draw({
@@ -263,6 +261,6 @@ animationLoop.getInfo = () => INFO_HTML;
 export default animationLoop;
 
 /* global window */
-if (!window.website) {
+if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();
 }
