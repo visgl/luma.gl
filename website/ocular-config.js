@@ -44,6 +44,7 @@ module.exports = {
     {"title": "Shadowmap", "path": "examples/core/shadowmap/"},
     {"title": "Transform", "path": "examples/core/transform/"},
     {"title": "TransformFeedbackDemo", "path": "examples/core/transform-feedback/"},
+    {"title": "Persistence", "path": "examples/core/persistence/"},
 
     {"title": "GLTF", "path": "examples/gltf"},
 
