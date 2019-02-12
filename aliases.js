@@ -40,9 +40,9 @@ const ALIASES = {
   // LUMA ADDONS
   '@luma.gl/core': path.resolve(__dirname, './modules/core/src'),
   '@luma.gl/debug': path.resolve(__dirname, './modules/debug/src'),
+  '@luma.gl/effects': path.resolve(__dirname, './modules/effects/src'),
   '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
   '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
-  // '@luma.gl/imageprocessing': path.resolve(__dirname, './modules/imageprocessing/src')
 
   // DEPRECATED - For backwards compatibility
   'luma.gl/constants': path.resolve(__dirname, './modules/main/constants'),

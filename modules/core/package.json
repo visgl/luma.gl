@@ -10,6 +10,9 @@
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "webgl",
     "visualization",

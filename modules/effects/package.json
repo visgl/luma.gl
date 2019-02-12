@@ -1,6 +1,6 @@
 {
-  "name": "@luma.gl/imageprocessing",
-  "description": "image processing library",
+  "name": "@luma.gl/effects",
+  "description": "Rendering and post-processing effects library for luma.gl",
   "private": "true",
   "version": "0.0.1",
   "license": "MIT",
