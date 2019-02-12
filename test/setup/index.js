@@ -2,15 +2,14 @@
 import test_ from 'tape-catch';
 import tapePromise from 'tape-promise';
 export default tapePromise(test_);
-
 export {default as deepCopy} from './deep-copy';
 
-// Avoid generating a lot of big context divs
-import '@luma.gl/debug';
 import {setContextDefaults} from 'luma.gl';
-setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
+import {createGLContext} from 'luma.gl';
+import {makeDebugContext} from '@luma.gl/debug';
 
-import {createGLContext, makeDebugContext} from 'luma.gl';
+// Avoid generating a lot of big context divs
+setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
 
 export function createTestContext(opts = {}) {
   return makeDebugContext(createGLContext(opts));

@@ -8,6 +8,8 @@ export {
   compileFragmentShader
 } from './glsl-to-js-compiler/compile-shader';
 
+export {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
+
 // Register the Khronons WebGLDebugger module that lets us instrument WebGLContexts
 // TODO - move the instrumentation code into this module
 import {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';

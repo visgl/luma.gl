@@ -207,6 +207,7 @@ module.exports = (env = {}) => {
 
   const config = getConfig(env);
   // NOTE uncomment to display config
+  // eslint-disable-next-line
   // console.log('webpack config', JSON.stringify(config, null, 2));
 
   return config;

@@ -1,5 +1,5 @@
 /* global window, Worker */
-import {getPageLoadPromise, getCanvas} from '../webgl-context';
+import {getPageLoadPromise, getCanvas} from '../webgl/context';
 import {requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';

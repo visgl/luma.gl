@@ -4,7 +4,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 import {TEXTURE_FORMATS, isFormatSupported, isLinearFilteringSupported} from './texture-formats';
 
-import {withParameters} from '../../webgl-context/context-state';
+import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../utils';
 import {log, uid, isPowerOfTwo, assert} from '../../utils';
 

@@ -21,7 +21,7 @@ if (global.luma && global.luma.VERSION !== VERSION) {
 
 if (!global.luma) {
   if (isBrowser) {
-    log.log(0, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
+    log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }
 
   global.luma = global.luma || {

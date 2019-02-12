@@ -8,7 +8,7 @@ const MODULE_INJECTORS = {
   [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
 };
 
-const REGEX_START_OF_MAIN = /void main\s*\([^\)]*\)\s*\{\n?/; // Beginning of main
+const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
 
 // A minimal shader injection/templating system.

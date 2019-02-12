@@ -45,6 +45,8 @@ module.exports = {
     {"title": "Transform", "path": "examples/core/transform/"},
     {"title": "TransformFeedbackDemo", "path": "examples/core/transform-feedback/"},
 
+    {"title": "GLTF", "path": "examples/gltf"},
+
     {"title": "Lesson01", "path": "examples/lessons/01/"},
     {"title": "Lesson02", "path": "examples/lessons/02/"},
     {"title": "Lesson03", "path": "examples/lessons/03/"},

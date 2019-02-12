@@ -11,9 +11,11 @@ require('@luma.gl/debug');
 
 const filters = require('@luma.gl/glfx');
 
+const shadertools = require('@luma.gl/shadertools');
+
 const mathGL = require('math.gl');
 
-_global.luma = Object.assign({}, _global.luma, lumaGL, {filters});
+_global.luma = Object.assign({}, _global.luma, lumaGL, {filters}, shadertools);
 
 _global.mathgl = mathGL;
 
