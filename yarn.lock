@@ -720,11 +720,6 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
-"@luma.gl/glfx@^6.3.0-alpha.2":
-  version "6.3.0"
-  resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.3.0.tgz#08929e3488b58ddf339c6df0627282543d78c66a"
-  integrity sha512-6k3hTQefv2Fawy+yEnsdqQDm7eCT5eIQ6Q4iA+WM6agmTpNaRCQw61sNJEjpZYYl3ppxR92wjHvObYzcUbVxNQ==
-
 "@webassemblyjs/ast@1.7.8":
   version "1.7.8"
   resolved "https://registry.yarnpkg.com/@webassemblyjs/ast/-/ast-1.7.8.tgz#f31f480debeef957f01b623f27eabc695fa4fe8f"

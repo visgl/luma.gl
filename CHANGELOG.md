@@ -1,5 +1,9 @@
 # 6.4
 
+## 6.4.1 - Feb 11, 2019
+
+- Add synchronous redraw API to AnimationLoop (#896)
+
 ## 6.4.0 - Jan 29, 2019
 
 # 6.4 Pre-Release
