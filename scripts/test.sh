@@ -14,8 +14,8 @@ run_lint() {
 
 run_full_test() {
   run_lint
-  node test/start.js src
-  node test/start.js browser
+  node test/start.js fast
+  node test/start.js browser-headless
   # node test/start.js render
 }
 
@@ -68,6 +68,7 @@ case $MODE in
     node test/start.js bench
     $BASEDIR/collect-metrics-fast.sh
     npm run cover
+    node test/start.js browser-headless
     (cd $BASEDIR/../modules/core && npm run build-es6)
     break;;
 

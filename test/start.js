@@ -9,7 +9,7 @@ require('../aliases');
 const path = require('path');
 const moduleAlias = require('module-alias');
 
-const {BrowserTestDriver} = require('probe.gl/test-utils');
+const {BrowserTestDriver} = require('@probe.gl/test-utils');
 
 const mode = process.argv.length >= 3 ? process.argv[2] : 'default';
 const arg = process.argv.length >= 4 ? process.argv[3] : 'default';
@@ -57,18 +57,11 @@ switch (mode) {
     break;
 
   case 'browser':
+  case 'browser-headless':
     new BrowserTestDriver().run({
-      process: 'webpack-dev-server',
-      parameters: ['--config', 'test/webpack.config.js', '--env.testBrowser'],
-      exposeFunction: 'testDone'
-    });
-    break;
-
-  case 'render':
-    new BrowserTestDriver().run({
-      process: 'webpack-dev-server',
-      parameters: ['--env.render'],
-      exposeFunction: 'testDone'
+      command: 'webpack-dev-server',
+      arguments: ['--config', 'test/webpack.config.js', '--env.testBrowser'],
+      headless: mode === 'browser-headless'
     });
     break;
 
