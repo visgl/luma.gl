@@ -6,7 +6,7 @@ import DOF from '../../../examples/core/dof/app';
 import Mandelbrot from '../../../examples/core/mandelbrot/app';
 import Fragment from '../../../examples/core/fragment/app';
 // import Particles from '../../../examples/core/particles/app';
-// import Persistence from '../../../examples/core/persistence/app';
+import Persistence from '../../../examples/core/persistence/app';
 import Picking from '../../../examples/core/picking/app';
 import Shadowmap from '../../../examples/core/shadowmap/app';
 import Transform from '../../../examples/core/transform/app';
@@ -42,7 +42,7 @@ export default {
   Mandelbrot: {app: Mandelbrot, path: 'examples/core/mandelbrot/'},
   Fragment: {app: Fragment, path: 'examples/core/fragment/'},
   // Particles: {}
-  // Persistence: {}
+  Persistence: {app: Persistence, path: 'examples/core/persistence/'},
   Picking: {app: Picking, path: 'examples/core/picking/'},
   Shadowmap: {app: Shadowmap, path: 'examples/core/shadowmap/'},
   Transform: {app: Transform, path: 'examples/core/transform/'},
