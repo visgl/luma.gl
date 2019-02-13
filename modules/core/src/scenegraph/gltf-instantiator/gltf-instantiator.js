@@ -16,7 +16,9 @@ const ATTRIBUTE_TYPE_TO_COMPONENTS = {
   MAT4: 16
 };
 
-const DEFAULT_OPTIONS = {};
+const DEFAULT_OPTIONS = {
+  modelOptions: {}
+};
 
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
@@ -108,7 +110,8 @@ export default class GLTFInstantiator {
         ? gltfPrimitive.indices.count
         : this.getVertexCount(gltfPrimitive.attributes),
       attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-      material: gltfPrimitive.material
+      material: gltfPrimitive.material,
+      modelOptions: this.options.modelOptions
     });
 
     return model;
