@@ -725,14 +725,14 @@
   resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.3.0.tgz#08929e3488b58ddf339c6df0627282543d78c66a"
   integrity sha512-6k3hTQefv2Fawy+yEnsdqQDm7eCT5eIQ6Q4iA+WM6agmTpNaRCQw61sNJEjpZYYl3ppxR92wjHvObYzcUbVxNQ==
 
-"@probe.gl/test-utils@^3.0.0-alpha.2":
-  version "3.0.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.0.0-alpha.2.tgz#3cd2810683ed2860157dbe7477581bad8571c888"
-  integrity sha512-64A3FL4CWG2ys0tr4rX1P6FJ1r1FIP+0DU8z/EI8dFiJBETn0qaL+NNk+UtZyr9qzUXTAgfwLtdNGEMTjYLgww==
+"@probe.gl/test-utils@^3.0.0-alpha.3":
+  version "3.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.0.0-alpha.3.tgz#dc7a78097a3e017c53b72e6b633a34cdcb1ccb69"
+  integrity sha512-AsW/3tiLsJHSxOO/qFYH5W35H2ea4bJH/ulCYhstO2T14SOH9/tobddPISahwF55baeLKRgphXEgrHAGo/fO1g==
   dependencies:
     "@babel/runtime" "^7.0.0"
     pixelmatch "^4.0.2"
-    probe.gl "^3.0.0-alpha.1"
+    probe.gl "^3.0.0-alpha.3"
     puppeteer "1.8.0"
 
 "@webassemblyjs/ast@1.7.8":
@@ -6174,10 +6174,10 @@ probe.gl@^2.0.1:
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-probe.gl@^3.0.0-alpha.1:
-  version "3.0.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.0.0-alpha.1.tgz#13fa9d81b961fd537e374b247d87a44d3c55a3c7"
-  integrity sha512-TfdTAT/WCn9N5GW3qg5sQn43OtRgSyI5LrH8+4RMB3IsYOKJrLy+kWtmLvyr8U9qPT3XLDPLQFHuSLSRAJcaRw==
+probe.gl@^3.0.0-alpha.3:
+  version "3.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.0.0-alpha.3.tgz#183bbf05634906fd12d25bf702fa042705dc5d0f"
+  integrity sha512-+IDi1LQ8iC/7DeaxCK0b2Qdu1MF8Adsx/icZMFsioA8pdwJu3ut8h8CTAOyzM6ccuPj6mIum2Rfc2ZffAP0yDw==
   dependencies:
     "@babel/runtime" "^7.0.0"
 
@@ -7438,11 +7438,6 @@ table@^4.0.1:
     lodash "^4.17.4"
     slice-ansi "1.0.0"
     string-width "^2.1.1"
-
-tap-browser-color@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/tap-browser-color/-/tap-browser-color-0.1.2.tgz#16cf89083adb695b05d49372295e5e90cbbbac31"
-  integrity sha1-Fs+JCDrbaVsF1JNyKV5ekMu7rDE=
 
 tapable@^1.0.0, tapable@^1.1.0:
   version "1.1.0"
