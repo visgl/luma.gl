@@ -143,12 +143,12 @@ class GLTFMaterialParser {
   }
 }
 
-export function createGLTFModel(gl, {id, drawMode, vertexCount, attributes, material}) {
+export function createGLTFModel(gl, {id, drawMode, vertexCount, attributes, material, modelOptions}) {
   const materialParser = new GLTFMaterialParser(gl, {attributes, material});
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
-  const model = new Model(gl, {
+  const model = new Model(gl, Object.assign({
     id,
     drawMode,
     vertexCount,
@@ -156,7 +156,7 @@ export function createGLTFModel(gl, {id, drawMode, vertexCount, attributes, mate
     defines: materialParser.defines,
     vs,
     fs
-  });
+  }, modelOptions));
 
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);
