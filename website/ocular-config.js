@@ -35,18 +35,28 @@ module.exports = {
   ADDITIONAL_LINKS: [],
 
   EXAMPLES: [
-    {"title": "Instancing", "path": "examples/core/instancing/"},
-    {"title": "Cubemap", "path": "examples/core/cubemap/"},
-    {"title": "DOF", "path": "examples/core/dof/"},
-    {"title": "Mandelbrot", "path": "examples/core/mandelbrot/"},
-    {"title": "Fragment", "path": "examples/core/fragment/"},
-    {"title": "Picking", "path": "examples/core/picking/"},
-    {"title": "Shadowmap", "path": "examples/core/shadowmap/"},
-    {"title": "Transform", "path": "examples/core/transform/"},
-    {"title": "TransformFeedbackDemo", "path": "examples/core/transform-feedback/"},
-    {"title": "Persistence", "path": "examples/core/persistence/"},
+    {
+      title: 'Instancing',
+      path: 'examples/core/instancing/',
+      image: 'images/example-instancing.jpg'
+    },
+    {title: 'Cubemap', path: 'examples/core/cubemap/', image: 'images/example-cubemap.jpg'},
+    {
+      title: 'Mandelbrot',
+      path: 'examples/core/mandelbrot/',
+      image: 'images/example-mandelbrot.jpg'
+    },
+    {title: 'Fragment', path: 'examples/core/fragment/', image: 'images/example-fragment.jpg'},
+    {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
+    {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
+    {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
+    {
+      title: 'TransformFeedback',
+      path: 'examples/core/transform-feedback/app',
+      image: 'images/example-transform-feedback.jpg'
+    },
+    // {"title": "GLTF", "path": "examples/gltf"},
 
-    {"title": "GLTF", "path": "examples/gltf"},
 
     {"title": "Lesson01", "path": "examples/lessons/01/"},
     {"title": "Lesson02", "path": "examples/lessons/02/"},

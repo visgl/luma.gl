@@ -26,9 +26,10 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 
 export default class ExampleRunner extends Component {
   componentDidMount() {
-    const {example} = this.props;
-    const exampleApp = example.app;
+    // const {example} = this.props;
+    // const exampleApp = example.app;
 
+    const {sourceLink} = this.props;
     // Ensure the example can find its images
     // TODO - ideally ocular-gatsvy should extract images from example source?
     const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
