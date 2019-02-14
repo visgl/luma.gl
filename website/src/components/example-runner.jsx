@@ -18,7 +18,6 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 export default class ExampleRunner extends Component {
   componentDidMount() {
     const {sourceLink} = this.props;
-
     // Ensure the example can find its images
     // TODO - ideally we should extract images from example source?
     const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';

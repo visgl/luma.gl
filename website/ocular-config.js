@@ -55,8 +55,8 @@ module.exports = {
     {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
     {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
     {
-      title: 'TransformFeedbackDemo',
-      path: 'examples/core/transform-feedback/',
+      title: 'TransformFeedback',
+      path: 'examples/core/transform-feedback/app',
       image: 'images/example-transform-feedback.jpg'
     },
 
