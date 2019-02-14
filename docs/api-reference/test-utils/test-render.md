@@ -35,9 +35,10 @@ const {Cube} = require('@luma.gl/core');
 const TEST_CASES = [
   {
     name: 'Render A Cube',
+    // `onRender` receives animation props from the AnimationLoop
     onRender: ({gl, done}) => {
       const model = new Cube(gl);
-      model.draw();
+      model.draw(...);
       // ready for capture and diffing
       done();
     },
@@ -50,12 +51,12 @@ new TestRender({width: 800, height: 600})
   .run({
     onTestFail: window.browserTestDriver_fail
   })
-  .finally(window.browserTestDriver_finish);
+  .then(window.browserTestDriver_finish);
 ```
 
-## Method
+## Methods
 
-### constructor
+### constructor(props: Object)
 
 ```
 new TestRenderer(props)
@@ -79,7 +80,7 @@ Add one or a list of test cases. Each test case may contain the following fields
 
 Run all test cases.
 
-Parameters:
+Options:
 
 * `timeout` (Number) - time to wait for each test case to resolve (by calling the `done` callback) before aborting, in milliseconds. Default `2000`.
 * `imageDiffOptions` (Object) - image diffing options for all test cases. This will be overridden if a test case defines its own `imageDiffOptions`. See "Image Diff Options" section below.
@@ -90,7 +91,7 @@ Parameters:
 Returns: a `Promise` that resolves when all test cases are done.
 
 
-## Member
+## Members
 
 ### isHeadless
 
