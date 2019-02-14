@@ -725,10 +725,10 @@
   resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.3.0.tgz#08929e3488b58ddf339c6df0627282543d78c66a"
   integrity sha512-6k3hTQefv2Fawy+yEnsdqQDm7eCT5eIQ6Q4iA+WM6agmTpNaRCQw61sNJEjpZYYl3ppxR92wjHvObYzcUbVxNQ==
 
-"@probe.gl/test-utils@^3.0.0-alpha.3":
-  version "3.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.0.0-alpha.3.tgz#dc7a78097a3e017c53b72e6b633a34cdcb1ccb69"
-  integrity sha512-AsW/3tiLsJHSxOO/qFYH5W35H2ea4bJH/ulCYhstO2T14SOH9/tobddPISahwF55baeLKRgphXEgrHAGo/fO1g==
+"@probe.gl/test-utils@^3.0.0-alpha.4":
+  version "3.0.0-alpha.4"
+  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.0.0-alpha.4.tgz#86d80115144f0d087f2816c1dd770722a7bc8406"
+  integrity sha512-bDtVcspwLkuPuV/rNIN+yLPFhZ0e4rQNKOLFCvF530+UEYsFqjBDglxrXftajHqMbFC/6skzAKGZFHUu9ZCAdQ==
   dependencies:
     "@babel/runtime" "^7.0.0"
     pixelmatch "^4.0.2"

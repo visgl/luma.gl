@@ -44,6 +44,9 @@ const ALIASES = {
   '@luma.gl/gpgpu': path.resolve(__dirname, './modules/gpgpu/src'),
   '@luma.gl/glfx': path.resolve(__dirname, './modules/glfx/src'),
 
+  // TESTING UTILITIES
+  '@luma.gl/test-utils': path.resolve(__dirname, './modules/test-utils/src'),
+
   // DEPRECATED - For backwards compatibility
   'luma.gl/constants': path.resolve(__dirname, './modules/main/constants'),
   'luma.gl': path.resolve(__dirname, './modules/main/src')
