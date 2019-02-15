@@ -1,5 +1,9 @@
 # 6.4
 
+## 6.4.2 - Feb 15, 2019
+
+- modify blending of highlight color and object color (#912)
+
 ## 6.4.1 - Feb 11, 2019
 
 - Add synchronous redraw API to AnimationLoop (#896)
