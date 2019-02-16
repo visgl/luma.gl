@@ -30,11 +30,20 @@ test.onFailure(() => {
 
 // tap-browser-color alternative
 enableDOMLogging({
-  getStyle: message => ({background: failed ? '#F28E82' : '#8ECA6C', position: 'absolute', top: 0})
+  getStyle: message => ({
+    background: failed ? '#F28E82' : '#8ECA6C',
+    position: 'absolute',
+    top: '420px',
+    width: '100%'
+  })
 });
+
+// hack: prevent example imports from starting their own animation loop
+window.website = true;
 
 test('Browser tests', t => {
   require('./index-webgl-independent-tests');
   require('./index-webgl-dependent-tests');
+  require('./render');
   t.end();
 });
