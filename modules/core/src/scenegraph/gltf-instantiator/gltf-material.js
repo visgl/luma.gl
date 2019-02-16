@@ -1,5 +1,6 @@
 import {pbr} from '@luma.gl/shadertools';
 import {Texture2D, TextureCube} from '../../webgl';
+import {loadImage} from '../../io/browser-load';
 import Model from '../model';
 import log from '../../utils/log';
 
@@ -60,16 +61,6 @@ class GLTFEnv {
     return 'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures/brdfLUT.png';
   }
 
-  getImageAsync(imageUrl) {
-    /* global Image */
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.crossOrigin = 'anonymous';
-      img.src = imageUrl;
-    });
-  }
-
   makeCube(id, func) {
     return Promise.all([
       func('right'),
@@ -96,7 +87,7 @@ class GLTFEnv {
   getDiffuseEnvSampler() {
     if (!this._DiffuseEnvSampler) {
       this._DiffuseEnvSampler = this.makeCube('DiffuseEnvSampler', dir =>
-        this.getImageAsync(this.getTexUrl('papermill', 'diffuse', dir))
+        loadImage(this.getTexUrl('papermill', 'diffuse', dir))
       );
     }
 
@@ -106,7 +97,7 @@ class GLTFEnv {
   getSpecularEnvSampler() {
     if (!this._SpecularEnvSampler) {
       this._SpecularEnvSampler = this.makeCube('SpecularEnvSampler', dir =>
-        this.getImageAsync(this.getTexUrl('papermill', 'specular', dir))
+        loadImage(this.getTexUrl('papermill', 'specular', dir))
       );
     }
 
@@ -124,7 +115,7 @@ class GLTFEnv {
           [this.gl.UNPACK_FLIP_Y_WEBGL]: false
         },
         // Texture2D accepts a promise that returns an image as data (Async Textures)
-        data: this.getImageAsync(this.getBrdfUrl())
+        data: loadImage(this.getBrdfUrl())
       });
     }
 
@@ -240,20 +231,29 @@ class GLTFMaterialParser {
   }
 }
 
-export function createGLTFModel(gl, {id, drawMode, vertexCount, attributes, material, modelOptions}) {
+export function createGLTFModel(
+  gl,
+  {id, drawMode, vertexCount, attributes, material, modelOptions}
+) {
   const materialParser = new GLTFMaterialParser(gl, {attributes, material});
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
-  const model = new Model(gl, Object.assign({
-    id,
-    drawMode,
-    vertexCount,
-    modules: [pbr],
-    defines: materialParser.defines,
-    vs,
-    fs
-  }, modelOptions));
+  const model = new Model(
+    gl,
+    Object.assign(
+      {
+        id,
+        drawMode,
+        vertexCount,
+        modules: [pbr],
+        defines: materialParser.defines,
+        vs,
+        fs
+      },
+      modelOptions
+    )
+  );
 
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);

@@ -58,6 +58,26 @@ const INFO_HTML = `
 </div>
 `;
 
+function loadGLTF(url, gl) {
+  return window.fetch(url).then(res => res.arrayBuffer()).then(data => {
+
+    const gltfParser = new GLTFParser();
+    const gltf = gltfParser.parse(data);
+
+    const instantiator = new GLTFInstantiator(gl);
+    const scenes = instantiator.instantiate(gltf);
+
+    log.info(4, "gltfParser: ", gltfParser)();
+    log.info(4, "instantiator.instantiate(): ", scenes)();
+
+    scenes[0].traverse((node, {worldMatrix}) => {
+      log.info(4, "Using model: ", node)();
+    });
+
+    return scenes;
+  });
+}
+
 class DemoApp {
   constructor() {
     this.scenes = [];
@@ -82,39 +102,7 @@ class DemoApp {
     this.onRender = this.onRender.bind(this);
   }
 
-  loadGLTF(url) {
-    window.fetch(url).then(res => res.arrayBuffer()).then(data => {
-
-      const gltfParser = new GLTFParser();
-      const gltf = gltfParser.parse(data);
-
-      const instantiator = new GLTFInstantiator(this.gl);
-      this.scenes = instantiator.instantiate(gltf);
-
-      log.info(4, "gltfParser: ", gltfParser)();
-      log.info(4, "instantiator.instantiate(): ", this.scenes)();
-
-      this.scenes[0].traverse((node, {worldMatrix}) => {
-        log.info(4, "Using model: ", node)();
-      });
-    });
-  }
-
-  onInitialize({gl, canvas}) {
-    setParameters(gl, {
-      depthTest: true
-    });
-
-    this.gl = gl;
-    const modelSelector = document.getElementById("modelSelector");
-    this.loadGLTF(GLTF_BASE_URL + modelSelector.value);
-
-    modelSelector.onchange = event => {
-      this.models = [];
-      this.loadGLTF(GLTF_BASE_URL + modelSelector.value);
-    };
-
-    // Events
+  initalizeEventHandling(canvas) {
     canvas.onwheel = e => {
       this.translate += e.deltaY / 10;
       if (this.translate < 0.5) {
@@ -122,6 +110,7 @@ class DemoApp {
       }
       e.preventDefault();
     };
+
     canvas.onpointerdown = e => {
       this.mouse.lastX = e.clientX;
       this.mouse.lastY = e.clientY;
@@ -132,6 +121,7 @@ class DemoApp {
       canvas.setPointerCapture(e.pointerId);
       e.preventDefault();
     };
+
     canvas.onpointermove = e => {
       if (e.buttons) {
         const dX = e.clientX - this.mouse.lastX;
@@ -141,6 +131,22 @@ class DemoApp {
         this.rotation[1] = this.rotationStart[1] + dX / 100;
       }
     };
+  }
+
+  onInitialize({gl, canvas}) {
+    setParameters(gl, {
+      depthTest: true
+    });
+
+    this.gl = gl;
+    const modelSelector = document.getElementById("modelSelector");
+    loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
+
+    modelSelector.onchange = event => {
+      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
+    };
+
+    this.initalizeEventHandling(canvas);
   }
 
   onRender({gl, tick, width, height, aspect}) {
