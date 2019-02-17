@@ -137,12 +137,10 @@ class GLTFEnv {
 }
 
 class GLTFMaterialParser {
-  constructor(gl, {attributes, material, debug}) {
+  constructor(gl, {attributes, material, debug, ibl}) {
     this.gl = gl;
-    this.env = new GLTFEnv(gl);
 
     this.defines = {
-      USE_IBL: 1,
       USE_TEX_LOD: 1,
 
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
@@ -157,14 +155,16 @@ class GLTFMaterialParser {
       u_LightDirection: [0.0, 0.5, 0.5],
       u_LightColor: [1.0, 1.0, 1.0],
 
-      u_MetallicRoughnessValues: [1, 1], // Default is 1 and 1
+      u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
+    };
 
-      // IBL
+    if (ibl) {
+      this.env = new GLTFEnv(gl);
       // u_DiffuseEnvSampler: this.env.getDiffuseEnvSampler(),
       // u_SpecularEnvSampler: this.env.getSpecularEnvSampler(),
-      u_brdfLUT: this.env.getBrdfTex(),
-      u_ScaleIBLAmbient: [1, 1]
-    };
+      this.uniforms.u_brdfLUT = this.env.getBrdfTex();
+      this.uniforms.u_ScaleIBLAmbient = [1, 1];
+    }
 
     if (debug) {
       // Override final color for reference app visualization
@@ -177,6 +177,7 @@ class GLTFMaterialParser {
     this.defineIfPresent(attributes.TANGENT, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
 
+    this.defineIfPresent(ibl, 'USE_IBL');
     this.defineIfPresent(debug, 'PBR_DEBUG');
 
     if (material) {
@@ -264,9 +265,9 @@ function addVersionToShader(gl, source) {
 
 export function createGLTFModel(
   gl,
-  {id, drawMode, vertexCount, attributes, material, modelOptions, debug = false}
+  {id, drawMode, vertexCount, attributes, material, modelOptions, debug, ibl}
 ) {
-  const materialParser = new GLTFMaterialParser(gl, {attributes, material, debug});
+  const materialParser = new GLTFMaterialParser(gl, {attributes, material, debug, ibl});
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
@@ -289,17 +290,19 @@ export function createGLTFModel(
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);
 
-  materialParser.env.getDiffuseEnvSampler().then(cubeTex => {
-    model.setUniforms({
-      u_DiffuseEnvSampler: cubeTex
+  if (ibl) {
+    materialParser.env.getDiffuseEnvSampler().then(cubeTex => {
+      model.setUniforms({
+        u_DiffuseEnvSampler: cubeTex
+      });
     });
-  });
 
-  materialParser.env.getSpecularEnvSampler().then(cubeTex => {
-    model.setUniforms({
-      u_SpecularEnvSampler: cubeTex
+    materialParser.env.getSpecularEnvSampler().then(cubeTex => {
+      model.setUniforms({
+        u_SpecularEnvSampler: cubeTex
+      });
     });
-  });
+  }
 
   return model;
 }
