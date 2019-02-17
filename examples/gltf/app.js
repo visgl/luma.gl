@@ -11,9 +11,9 @@ const INFO_HTML = `
 <div>
   Model
   <select id="modelSelector">
+    <option value="DamagedHelmet/glTF-Binary/DamagedHelmet.glb">DamagedHelmet</option>
     <option value="Avocado/glTF-Binary/Avocado.glb">Avocado</option>
     <option value="AnimatedMorphCube/glTF-Binary/AnimatedMorphCube.glb">AnimatedMorphCube</option> 
-    <option value="DamagedHelmet/glTF-Binary/DamagedHelmet.glb">DamagedHelmet</option>
     <option value="TextureCoordinateTest/glTF-Binary/TextureCoordinateTest.glb">TextureCoordinateTest</option>
     <option value="VertexColorTest/glTF-Binary/VertexColorTest.glb">VertexColorTest</option>
     <option value="BoxVertexColors/glTF-Binary/BoxVertexColors.glb">BoxVertexColors</option>
@@ -56,15 +56,33 @@ const INFO_HTML = `
   </select>
   <br>
 </div>
+<div>
+  Show
+  <select id="showSelector">
+    <option value="0 0 0 0 0 0 0 0">Final Result</option>
+
+    <option value="0 1 0 0 0 0 0 0">Base Color</option>
+    <option value="0 0 1 0 0 0 0 0">Metallic</option>
+    <option value="0 0 0 1 0 0 0 0">Roughness</option>
+    <option value="1 0 0 0 0 0 0 0">Diffuse</option>
+
+    <option value="0 0 0 0 1 0 0 0">Specular Reflection</option>
+    <option value="0 0 0 0 0 1 0 0">Geometric Occlusion</option>
+    <option value="0 0 0 0 0 0 1 0">Microfacet Distribution</option>
+    <option value="0 0 0 0 0 0 0 1">Specular</option>
+  </select>
+  <br>
+</div>
 `;
 
-function loadGLTF(url, gl) {
-  return window.fetch(url).then(res => res.arrayBuffer()).then(data => {
+function loadGLTF(urlOrPromise, gl) {
+  const promise = urlOrPromise instanceof Promise ? urlOrPromise : window.fetch(urlOrPromise).then(res => res.arrayBuffer());
 
+  return promise.then(data => {
     const gltfParser = new GLTFParser();
     const gltf = gltfParser.parse(data);
 
-    const instantiator = new GLTFInstantiator(gl);
+    const instantiator = new GLTFInstantiator(gl, {pbrDebug: true});
     const scenes = instantiator.instantiate(gltf);
 
     log.info(4, "gltfParser: ", gltfParser)();
@@ -97,6 +115,9 @@ class DemoApp {
     this.translate = 2;
     this.rotation = [0, 0];
     this.rotationStart = [0, 0];
+
+    this.u_ScaleDiffBaseMR = [0, 0, 0, 0];
+    this.u_ScaleFGDSpec = [0, 0, 0, 0];
 
     this.onInitialize = this.onInitialize.bind(this);
     this.onRender = this.onRender.bind(this);
@@ -131,11 +152,28 @@ class DemoApp {
         this.rotation[1] = this.rotationStart[1] + dX / 100;
       }
     };
+
+    canvas.ondragover = e => {
+      e.dataTransfer.dropEffect = 'link';
+      e.preventDefault();
+    };
+
+    canvas.ondrop = e => {
+      e.preventDefault();
+      if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
+        loadGLTF(new Promise(resolve => {
+          const reader = new window.FileReader();
+          reader.onload = ev => resolve(ev.target.result);
+          reader.readAsArrayBuffer(e.dataTransfer.files[0]);
+        }), this.gl).then(scenes => (this.scenes = scenes));
+      }
+    };
   }
 
   onInitialize({gl, canvas}) {
     setParameters(gl, {
-      depthTest: true
+      depthTest: true,
+      blend: false,
     });
 
     this.gl = gl;
@@ -146,12 +184,19 @@ class DemoApp {
       loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
     };
 
+    const showSelector = document.getElementById("showSelector");
+    showSelector.onchange = event => {
+      const value = showSelector.value.split(" ").map(x => parseFloat(x));
+      this.u_ScaleDiffBaseMR = value.slice(0, 4);
+      this.u_ScaleFGDSpec = value.slice(4);
+    };
+
     this.initalizeEventHandling(canvas);
   }
 
   onRender({gl, tick, width, height, aspect}) {
     gl.viewport(0, 0, width, height);
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(gl, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 
     const [pitch, roll] = this.rotation;
     const cameraPos = [
@@ -177,7 +222,10 @@ class DemoApp {
           u_Camera: cameraPos,
           u_MVPMatrix,
           u_ModelMatrix: worldMatrix,
-          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
+          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
+
+          u_ScaleDiffBaseMR: this.u_ScaleDiffBaseMR,
+          u_ScaleFGDSpec: this.u_ScaleFGDSpec,
         }
       });
     });

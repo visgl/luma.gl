@@ -124,13 +124,19 @@ class GLTFEnv {
 }
 
 class GLTFMaterialParser {
-  constructor(gl, {attributes, material}) {
+  constructor(gl, {attributes, material, debug}) {
     this.gl = gl;
     this.env = new GLTFEnv(gl);
 
     this.defines = {
-      USE_IBL: 1
+      USE_IBL: 1,
+      USE_TEX_LOD: 1,
+
+      // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
+      MANUAL_SRGB: 1,
+      SRGB_FAST_APPROXIMATION: 1
     };
+
     this.uniforms = {
       // TODO: find better values?
       u_Camera: [0, 0, 0], // Model should override
@@ -138,23 +144,27 @@ class GLTFMaterialParser {
       u_LightDirection: [0.0, 0.5, 0.5],
       u_LightColor: [1.0, 1.0, 1.0],
 
-      // Override final color for reference app visualization
-      // of various parameters in the lighting equation.
-      u_ScaleDiffBaseMR: [0, 0, 0, 0],
-      u_ScaleFGDSpec: [0, 0, 0, 0],
-
       u_MetallicRoughnessValues: [1, 1], // Default is 1 and 1
 
       // IBL
       // u_DiffuseEnvSampler: this.env.getDiffuseEnvSampler(),
       // u_SpecularEnvSampler: this.env.getSpecularEnvSampler(),
       u_brdfLUT: this.env.getBrdfTex(),
-      u_ScaleIBLAmbient: [1.0, 1.0, 0.0, 0.0]
+      u_ScaleIBLAmbient: [1, 1]
     };
+
+    if (debug) {
+      // Override final color for reference app visualization
+      // of various parameters in the lighting equation.
+      this.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
+      this.uniforms.u_ScaleFGDSpec = [0, 0, 0, 0];
+    }
 
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
     this.defineIfPresent(attributes.TANGENT, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
+
+    this.defineIfPresent(debug, 'PBR_DEBUG');
 
     if (material) {
       this.parseMaterial(material);
@@ -233,9 +243,9 @@ class GLTFMaterialParser {
 
 export function createGLTFModel(
   gl,
-  {id, drawMode, vertexCount, attributes, material, modelOptions}
+  {id, drawMode, vertexCount, attributes, material, modelOptions, debug = false}
 ) {
-  const materialParser = new GLTFMaterialParser(gl, {attributes, material});
+  const materialParser = new GLTFMaterialParser(gl, {attributes, material, debug});
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 

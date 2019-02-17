@@ -17,7 +17,8 @@ const ATTRIBUTE_TYPE_TO_COMPONENTS = {
 };
 
 const DEFAULT_OPTIONS = {
-  modelOptions: {}
+  modelOptions: {},
+  pbrDebug: false
 };
 
 // GLTF instantiator for luma.gl
@@ -111,7 +112,8 @@ export default class GLTFInstantiator {
         : this.getVertexCount(gltfPrimitive.attributes),
       attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
       material: gltfPrimitive.material,
-      modelOptions: this.options.modelOptions
+      modelOptions: this.options.modelOptions,
+      debug: this.options.pbrDebug
     });
 
     return model;
