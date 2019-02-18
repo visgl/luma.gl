@@ -103,8 +103,8 @@ class DemoApp {
     this.loadedModelUrl = null;
 
     this.glOptions = {
-      // TODO: Make gltf work with webgl2
-      webgl2: false
+      // Use to test gltf with webgl 1.0 and 2.0
+      webgl2: true
     };
 
     this.mouse = {

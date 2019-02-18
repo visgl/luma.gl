@@ -17,6 +17,8 @@ void main(void) {
   gl_Position = positions;
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
+  vec4 texLod = texture2DLodEXT(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -36,6 +38,8 @@ void main(void) {
   gl_Position = positions;
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = texture(sCube, cubeCoord);
+  vec4 texLod = textureLod(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureLod(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -54,6 +58,8 @@ void main(void) {
   gl_Position = positions;
   vec4 texColor = texture2D(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
+  vec4 texLod = texture2DLodEXT(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -74,6 +80,8 @@ void f(out float a, in float b) {}
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
+  vec4 texLod = texture2DLodEXT(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
   fragmentColor = vColor;
 }
 `;
@@ -94,6 +102,8 @@ void f(out float a, in float b) {}
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = texture(sCube, cubeCoord);
+  vec4 texLod = textureLod(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureLod(sCube, cubeCoord, 1.0);
   fragmentColor = vColor;
 }
 `;
@@ -113,6 +123,8 @@ void f(out float a, in float b) {}
 void main(void) {
   vec4 texColor = texture2D(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
+  vec4 texLod = texture2DLodEXT(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
   fragmentColor = vColor;
 }
 `;

@@ -3,20 +3,27 @@ import {Texture2D, TextureCube} from '../../webgl';
 import {loadImage} from '../../io/browser-load';
 import Model from '../model';
 import log from '../../utils/log';
+import {isWebGL2} from '../../webgl';
 
 const vs = `
-  attribute vec4 POSITION;
+#if (__VERSION__ < 300)
+  #define _attr attribute
+#else
+  #define _attr in
+#endif
+
+  _attr vec4 POSITION;
 
   #ifdef HAS_NORMALS
-    attribute vec4 NORMAL;
+    _attr vec4 NORMAL;
   #endif
 
   #ifdef HAS_TANGENTS
-    attribute vec4 TANGENT;
+    _attr vec4 TANGENT;
   #endif
 
   #ifdef HAS_UV
-    attribute vec2 TEXCOORD_0;
+    _attr vec2 TEXCOORD_0;
   #endif
 
   void main(void) {
@@ -42,8 +49,14 @@ const vs = `
 `;
 
 const fs = `
+#if (__VERSION__ < 300)
+  #define fragmentColor gl_FragColor
+#else
+  out vec4 fragmentColor;
+#endif
+
   void main(void) {
-    gl_FragColor = pbr_filterColor(gl_FragColor);
+    fragmentColor = pbr_filterColor(vec4(0));
   }
 `;
 
@@ -241,6 +254,14 @@ class GLTFMaterialParser {
   }
 }
 
+function addVersionToShader(gl, source) {
+  if (isWebGL2(gl)) {
+    return `#version 300 es\n${source}`;
+  }
+
+  return source;
+}
+
 export function createGLTFModel(
   gl,
   {id, drawMode, vertexCount, attributes, material, modelOptions, debug = false}
@@ -258,8 +279,8 @@ export function createGLTFModel(
         vertexCount,
         modules: [pbr],
         defines: materialParser.defines,
-        vs,
-        fs
+        vs: addVersionToShader(gl, vs),
+        fs: addVersionToShader(gl, fs)
       },
       modelOptions
     )
