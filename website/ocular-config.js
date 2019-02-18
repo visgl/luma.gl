@@ -58,29 +58,30 @@ module.exports = {
     // {"title": "GLTF", "path": "examples/gltf"},
 
 
-    {"title": "Lesson01", "path": "examples/lessons/01/"},
-    {"title": "Lesson02", "path": "examples/lessons/02/"},
-    {"title": "Lesson03", "path": "examples/lessons/03/"},
-    {"title": "Lesson04", "path": "examples/lessons/04/"},
-    {"title": "Lesson05", "path": "examples/lessons/05/"},
-    {"title": "Lesson06", "path": "examples/lessons/06/"},
-    {"title": "Lesson07", "path": "examples/lessons/07/"},
-    {"title": "Lesson08", "path": "examples/lessons/08/"},
-    {"title": "Lesson09", "path": "examples/lessons/09/"},
-    {"title": "Lesson10", "path": "examples/lessons/10/"},
-    {"title": "Lesson11", "path": "examples/lessons/11/"},
-    {"title": "Lesson12", "path": "examples/lessons/12/"},
-    {"title": "Lesson13", "path": "examples/lessons/13/"},
-    {"title": "Lesson14", "path": "examples/lessons/14/"},
-    {"title": "Lesson15", "path": "examples/lessons/15/"},
-    {"title": "Lesson16", "path": "examples/lessons/16/"}
+    {"title": "Lesson01", "path": "examples/lessons/01/", image: 'images/lesson-1.png'},
+    { "title": "Lesson02", "path": "examples/lessons/02/", image: 'images/lesson-2.png'},
+    { "title": "Lesson03", "path": "examples/lessons/03/", image: 'images/lesson-3.png'},
+    { "title": "Lesson04", "path": "examples/lessons/04/", image: 'images/lesson-4.png'},
+    { "title": "Lesson05", "path": "examples/lessons/05/", image: 'images/lesson-5.png'},
+    { "title": "Lesson06", "path": "examples/lessons/06/", image: 'images/lesson-6.png'},
+    { "title": "Lesson07", "path": "examples/lessons/07/", image: 'images/lesson-7.png'},
+    { "title": "Lesson08", "path": "examples/lessons/08/", image: 'images/lesson-8.png'},
+    { "title": "Lesson09", "path": "examples/lessons/09/", image: 'images/lesson-9.png'},
+    { "title": "Lesson10", "path": "examples/lessons/10/", image: 'images/lesson-10.png'},
+    { "title": "Lesson11", "path": "examples/lessons/11/", image: 'images/lesson-11.png'},
+    { "title": "Lesson12", "path": "examples/lessons/12/", image: 'images/lesson-12.png'},
+    { "title": "Lesson13", "path": "examples/lessons/13/", image: 'images/lesson-13.png'},
+    { "title": "Lesson14", "path": "examples/lessons/14/", image: 'images/lesson-14.png'},
+    { "title": "Lesson15", "path": "examples/lessons/15/", image: 'images/lesson-15.png'},
+    { "title": "Lesson16", "path": "examples/lessons/16/", image: 'images/lesson-16.png'}
   ],
 
   DOCS,
 
   DOC_FOLDER: `${__dirname}/../docs/`,
   ROOT_FOLDER: `${__dirname}/../`,
-
+  DIR_NAME: __dirname,
+  
   // Avoids duplicate conflicting inputs when importing from examples folders
   // Ocular adds this to gatsby's webpack config
   webpack: {
