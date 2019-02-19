@@ -54,6 +54,15 @@
       "title": "Developer Guide",
       "chapters": [
         {
+          "title": "Overview",
+          "entries": [
+            {
+              "name": "Overview",
+              "entry": "docs/developer-guide/README.md"
+            }
+          ]
+        },
+        {
           "title": "Shadertools",
           "entries": [
             {
@@ -124,7 +133,7 @@
           "entries": [
             {
               "name": "Multi-Pass Rendering",
-              "entry": "docs/developer-guide/multipass/README"
+              "entry": "docs/developer-guide/multipass/README.md"
             }
           ]
         },
@@ -152,20 +161,21 @@
               "entry": "docs/developer-guide/programs-and-shaders.md"
             }
           ]
-        },
-        {
-          "name": "Overview",
-          "entry": "docs/developer-guide/README"
-        },
-        {
-          "name": "API Structure",
-          "entry": "docs/api-reference/README"
         }
       ]
     },
     {
       "title": "API Reference",
       "chapters": [
+        {
+          "title": "API Structure",
+          "entries": [
+            {
+              "name": "API Structure",
+              "entry": "docs/api-reference/README.md"
+            }
+          ]
+        },
         {
           "title": "Core Classes",
           "entries": [
@@ -192,10 +202,6 @@
             {
               "name": "Geometry",
               "entry": "docs/api-reference/core/geometry"
-            },
-            {
-              "name": "Object3d",
-              "entry": "docs/api-reference/core/object-3d"
             },
             {
               "name": "Group",
@@ -248,30 +254,6 @@
             {
               "name": "Loader API",
               "entry": "docs/api-reference/loader-api/load-file"
-            },
-            {
-              "name": "GLB loader",
-              "entry": "docs/api-reference/loaders/glb-loader"
-            },
-            {
-              "name": "KML loader",
-              "entry": "docs/api-reference/loaders/kml-loader"
-            },
-            {
-              "name": "LAS loader",
-              "entry": "docs/api-reference/loaders/las-loader"
-            },
-            {
-              "name": "OBJ loader",
-              "entry": "docs/api-reference/loaders/obj-loader"
-            },
-            {
-              "name": "PCD loader",
-              "entry": "docs/api-reference/loaders/pcd-loader"
-            },
-            {
-              "name": "PLY loader",
-              "entry": "docs/api-reference/loaders/ply-loader"
             }
           ]
         },
