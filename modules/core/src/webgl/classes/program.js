@@ -145,7 +145,7 @@ export default class Program extends Resource {
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
     if (!this._areTexturesRenderable()) {
-      return this;
+      return false;
     }
 
     vertexArray.bindForDraw(vertexCount, instanceCount, () => {
@@ -180,7 +180,7 @@ export default class Program extends Resource {
       }
     });
 
-    return this;
+    return true;
   }
 
   setSamplers(samplers) {

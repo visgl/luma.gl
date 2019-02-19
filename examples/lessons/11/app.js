@@ -120,7 +120,7 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    moon.render({
+    return moon.render({
       uMMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
