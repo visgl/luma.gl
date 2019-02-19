@@ -5,7 +5,7 @@ import EXAMPLE_TEST_CASES from './example-test-cases';
 
 const testCaseCount = EXAMPLE_TEST_CASES.length;
 
-test.only('RenderTest', t => {
+test('RenderTest', t => {
   // tape's default timeout is 500ms
   t.timeoutAfter(testCaseCount * 2000);
 
