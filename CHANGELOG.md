@@ -1,5 +1,16 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.12 - Feb 20, 2019
+- use "lightSources" in module parameters (#920)
+- glTF: Add PBR debug options and ability to drag-and-drop GLB files (#914)
+- [test-utils] Support async onInitialized in TestRenderer (#919)
+- Expose program readiness when using async textures (#918)
+- changes to support gatsby example homepage
+- glTF: Add CubeTexture from environment (#902)
+- Add test-utils submodule (1/2) (#910)
+- fix TextureCube binding, add example to demonstrate (#901)
+- modify blending of highlight color and object color (#912)
+
 ## v7.0.0-alpha.7 - Jan 16, 2019
 
 - add new lighting glsl API and better check for lighting_uEnabled. (#856)
