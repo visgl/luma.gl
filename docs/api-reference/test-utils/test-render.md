@@ -71,7 +71,7 @@ Add one or a list of test cases. Each test case may contain the following fields
 * `name` (String) - name of the test case.
 * `goldenImage` (String) - path to the golden image, relative to the root where the node script is executed.
 * `imageDiffOptions` (Object) - image diffing options for this test case. See "Image Diff Options" section below.
-* `onInitialize` (Function) - called once when the test case starts. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters). If this callback returns an object, its content will be passed to `onRender` and `onFinalize` later.
+* `onInitialize` (Function) - called once when the test case starts. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters). If this callback returns an object or a promise, the content that it resolves to will be passed to `onRender` and `onFinalize` later.
 * `onRender` (Function) - called every animation frame when the test case is running. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters), plus the following:
   - `done` (Function) - must be called when the test case is done rendering and ready for screen capture and comparison.
 * `onFinalize` (Function) - called once when the test case is done to finalize all resources. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters).

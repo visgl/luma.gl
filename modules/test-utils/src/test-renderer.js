@@ -164,6 +164,8 @@ export default class TestRenderer {
       this._testCaseData = null;
       // initialize test case
       withParameters(animationProps.gl, DEFAULT_RENDER_PARAMETERS, () => {
+        // aligned with the behavior of AnimationLoop.onInitialized
+        // onInitialized could return a plain object or a promise
         Promise.resolve(
           testCase.onInitialize(
             Object.assign({}, animationProps, {
