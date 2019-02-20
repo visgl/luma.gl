@@ -135,10 +135,13 @@ export default class TestRenderer {
         isDone = true;
       }
     });
-    // render frame
-    withParameters(animationProps.gl, DEFAULT_RENDER_PARAMETERS, () => {
-      testCase.onRender(testCaseAnimationProps);
-    });
+
+    if (this._testCaseData) {
+      // test case is initialized, render frame
+      withParameters(animationProps.gl, DEFAULT_RENDER_PARAMETERS, () => {
+        testCase.onRender(testCaseAnimationProps);
+      });
+    }
 
     const timeout = testCase.timeout || testOptions.timeout;
     if (timeout && testCaseAnimationProps.time > timeout) {
@@ -158,17 +161,19 @@ export default class TestRenderer {
       this.currentTestCase = testCase;
       this._currentTestCaseStartTime = animationProps.time;
       this._currentTestCaseStartTick = animationProps.tick;
+      this._testCaseData = null;
       // initialize test case
       withParameters(animationProps.gl, DEFAULT_RENDER_PARAMETERS, () => {
-        this._testCaseData =
-          testCase.onInitialize(
-            Object.assign({}, animationProps, {
-              // tick/time starts from 0 for each test case
-              startTime: animationProps.time,
-              time: 0,
-              tick: 0
-            })
-          ) || {};
+        Promise.resolve(testCase.onInitialize(
+          Object.assign({}, animationProps, {
+            // tick/time starts from 0 for each test case
+            startTime: animationProps.time,
+            time: 0,
+            tick: 0
+          })
+        )).then(userData => {
+          this._testCaseData = userData || {};
+        });
       });
       // invoke user callback
       testOptions.onTestStart(testCase);

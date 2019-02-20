@@ -340,7 +340,7 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    teapot.render({
+    return teapot.render({
       uMMatrix: new Matrix4().translate([0, -35, -68]).rotateY(phi),
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
