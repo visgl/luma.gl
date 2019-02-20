@@ -164,14 +164,16 @@ export default class TestRenderer {
       this._testCaseData = null;
       // initialize test case
       withParameters(animationProps.gl, DEFAULT_RENDER_PARAMETERS, () => {
-        Promise.resolve(testCase.onInitialize(
-          Object.assign({}, animationProps, {
-            // tick/time starts from 0 for each test case
-            startTime: animationProps.time,
-            time: 0,
-            tick: 0
-          })
-        )).then(userData => {
+        Promise.resolve(
+          testCase.onInitialize(
+            Object.assign({}, animationProps, {
+              // tick/time starts from 0 for each test case
+              startTime: animationProps.time,
+              time: 0,
+              tick: 0
+            })
+          )
+        ).then(userData => {
           this._testCaseData = userData || {};
         });
       });

@@ -5,7 +5,7 @@ import EXAMPLE_TEST_CASES from './example-test-cases';
 
 const testCaseCount = EXAMPLE_TEST_CASES.length;
 
-test.only('RenderTest', t => {
+test('RenderTest', t => {
   // tape's default timeout is 500ms
   t.timeoutAfter(testCaseCount * 2000);
 
@@ -18,8 +18,8 @@ test.only('RenderTest', t => {
 
       imageDiffOptions: {
         // uncomment to save screenshot to disk
-        saveOnFail: true,
-        saveAs: '[name].png'
+        // saveOnFail: true,
+        // saveAs: '[name].png'
       }
     })
     .then(t.end);
