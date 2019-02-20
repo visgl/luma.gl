@@ -54,12 +54,7 @@ function getMaterialUniforms(material) {
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  if (
-    !(
-      'lightSources' in opts &&
-      'material' in opts
-    )
-  ) {
+  if (!('lightSources' in opts && 'material' in opts)) {
     return {};
   }
 
