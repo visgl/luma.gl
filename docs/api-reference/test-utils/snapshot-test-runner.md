@@ -1,4 +1,4 @@
-# TestRenderer
+# SnapshotTestRunner
 
 Client-side utility for browser-based WebGL render tests.
 
@@ -29,7 +29,7 @@ new BrowserTestDriver().run({
 In your script that is run on the browser:
 
 ```js
-const {TestRenderer} = require('@luma.gl/test-utils');
+const {SnapshotTestRunner} = require('@luma.gl/test-utils');
 const {Cube} = require('@luma.gl/core');
 
 const TEST_CASES = [
@@ -59,10 +59,10 @@ new TestRender({width: 800, height: 600})
 ### constructor(props: Object)
 
 ```
-new TestRenderer(props)
+new SnapshotTestRunner(props)
 ```
 
-Create a TestRenderer instance. The `props` argument is forwarded to the [AnimationLoop](/docs/api-reference/core/animation-loop.md) constructor.
+Create a SnapshotTestRunner instance. The `props` argument is forwarded to the [AnimationLoop](/docs/api-reference/core/animation-loop.md) constructor.
 
 ### add(testCase: Array|Object)
 
