@@ -1,15 +1,15 @@
 import test from 'tape-catch';
-import {TestRenderer} from '@luma.gl/test-utils';
+import {SnapshotTestRunner} from '@luma.gl/test-utils';
 
 import EXAMPLE_TEST_CASES from './example-test-cases';
 
-const testCaseCount = EXAMPLE_TEST_CASES.length;
+const renderTestCaseCount = EXAMPLE_TEST_CASES.length;
 
 test('RenderTest', t => {
   // tape's default timeout is 500ms
-  t.timeoutAfter(testCaseCount * 2000);
+  t.timeoutAfter(renderTestCaseCount * 2000);
 
-  new TestRenderer({width: 600, height: 400})
+  new SnapshotTestRunner({width: 600, height: 400})
     .add(EXAMPLE_TEST_CASES)
     .run({
       onTestStart: testCase => t.comment(testCase.name),

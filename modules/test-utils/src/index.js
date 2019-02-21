@@ -1,1 +1,1 @@
-export {default as TestRenderer} from './test-renderer';
+export {default as SnapshotTestRunner} from './snapshot-test-runner';
