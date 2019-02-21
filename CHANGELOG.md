@@ -11,6 +11,28 @@
 - fix TextureCube binding, add example to demonstrate (#901)
 - modify blending of highlight color and object color (#912)
 
+## v7.0.0-alpha.11 - Feb 13, 2019
+- Add headless browser test (#904)
+- New @luma.gl/effects module (#892)
+
+## v7.0.0-alpha.10 - Feb 12, 2019
+- add missing deps to modules/core/package.json
+
+## v7.0.0-alpha.9 - Feb 11, 2019
+- fix issue in modules/main/package.json
+
+## v7.0.0-alpha.8 - Feb 11, 2019
+- New @luma.gl/webgl-state-tracker module (#888)
+- Integrate GLTF example in website
+- Squash+Merge glTF feature branch (#877)
+- Rename main module to @luma.gl/core. Add luma.gl module for backwards compatiblity (#889)
+- Remove unused IO submodule (in favor of loaders.gl) (#890)
+- New submodule @luma.gl/webgl2-polyfills (#883)
+- Consolidate webgl code (prep for submodule) (#884)
+- Update examples to use Async Textures (#880)
+- Async Textures (#876)
+- Create custom eslint rule to detect wrong probe.gl logger usage (#873)
+
 ## v7.0.0-alpha.7 - Jan 16, 2019
 
 - add new lighting glsl API and better check for lighting_uEnabled. (#856)
