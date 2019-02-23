@@ -73,7 +73,7 @@ export default class TestRunner {
       this.isDiffing = false;
       this._currentTestCase = null;
     }).catch(error => {
-      this.onTestFail(this._currentTestCase, {error: error.message});
+      this._fail({error: error.message});
     });
   }
 
@@ -96,8 +96,8 @@ export default class TestRunner {
   }
 
   assert(testCase) {
-    this.onTestPass(testCase);
-    this.next();
+    this._pass(testCase);
+    this._next();
   }
 
   /* Utilities */
