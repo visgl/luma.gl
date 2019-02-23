@@ -3,7 +3,7 @@ import {AnimationLoop, setParameters, clear, GLTFInstantiator, log} from 'luma.g
 import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
 
-const GLTF_BASE_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/";
+export const GLTF_BASE_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/";
 
 const INFO_HTML = `
 <p><b>glTF</b> rendering.</p>
@@ -75,14 +75,19 @@ const INFO_HTML = `
 </div>
 `;
 
-function loadGLTF(urlOrPromise, gl) {
+const DEFAULT_OPTIONS = {
+  pbrDebug: true,
+  pbrIbl: true
+};
+
+function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
   const promise = urlOrPromise instanceof Promise ? urlOrPromise : window.fetch(urlOrPromise).then(res => res.arrayBuffer());
 
   return promise.then(data => {
     const gltfParser = new GLTFParser();
     const gltf = gltfParser.parse(data);
 
-    const instantiator = new GLTFInstantiator(gl, {pbrDebug: true});
+    const instantiator = new GLTFInstantiator(gl, options);
     const scenes = instantiator.instantiate(gltf);
 
     log.info(4, "gltfParser: ", gltfParser)();
@@ -96,11 +101,11 @@ function loadGLTF(urlOrPromise, gl) {
   });
 }
 
-class DemoApp {
-  constructor() {
+export class DemoApp {
+  constructor({modelFile = null, initialZoom = 2} = {}) {
     this.scenes = [];
     this.gl = null;
-    this.loadedModelUrl = null;
+    this.modelFile = modelFile;
 
     this.glOptions = {
       // Use to test gltf with webgl 1.0 and 2.0
@@ -112,7 +117,7 @@ class DemoApp {
       lastY: 0
     };
 
-    this.translate = 2;
+    this.translate = initialZoom;
     this.rotation = [0, 0];
     this.rotationStart = [0, 0];
 
@@ -177,19 +182,30 @@ class DemoApp {
     });
 
     this.gl = gl;
-    const modelSelector = document.getElementById("modelSelector");
-    loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
-
-    modelSelector.onchange = event => {
+    if (this.modelFile) {
+      // options for unit testing
+      const options = {
+        pbrDebug: false,
+        pbrIbl: false
+      };
+      loadGLTF(this.modelFile, this.gl, options).then(scenes => (this.scenes = scenes));
+    } else {
+      const modelSelector = document.getElementById("modelSelector");
       loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
-    };
+
+      modelSelector.onchange = event => {
+        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
+      };
+    }
 
     const showSelector = document.getElementById("showSelector");
-    showSelector.onchange = event => {
-      const value = showSelector.value.split(" ").map(x => parseFloat(x));
-      this.u_ScaleDiffBaseMR = value.slice(0, 4);
-      this.u_ScaleFGDSpec = value.slice(4);
-    };
+    if (showSelector) {
+      showSelector.onchange = event => {
+        const value = showSelector.value.split(" ").map(x => parseFloat(x));
+        this.u_ScaleDiffBaseMR = value.slice(0, 4);
+        this.u_ScaleFGDSpec = value.slice(4);
+      };
+    }
 
     this.initalizeEventHandling(canvas);
   }
@@ -212,12 +228,14 @@ class DemoApp {
 
     const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
-    if (!this.scenes.length) return;
+    if (!this.scenes.length) return false;
+
+    let success = true;
 
     this.scenes[0].traverse((model, {worldMatrix}) => {
       // In glTF, meshes and primitives do no have their own matrix.
       const u_MVPMatrix = new Matrix4(uProjection).multiplyRight(uView).multiplyRight(worldMatrix);
-      model.draw({
+      success = success && model.draw({
         uniforms: {
           u_Camera: cameraPos,
           u_MVPMatrix,
@@ -229,6 +247,8 @@ class DemoApp {
         }
       });
     });
+
+    return success;
   }
 }
 

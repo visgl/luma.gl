@@ -720,6 +720,20 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
+"@loaders.gl/core@^0.6.2":
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-0.6.2.tgz#d4260e27c367e4c41ea7ba69a2d9525ee608511b"
+  integrity sha512-dG8mTy+c+xqgkYKe/We6mgLfesCy3ITlEdfWccKjWupIa6iKPBnf/CgDQE8+C4IOzKR5njDCMMKKOM0kZIdDQw==
+  dependencies:
+    text-encoding "^0.6.4"
+
+"@loaders.gl/gltf@^0.6.2":
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-0.6.2.tgz#03f4546840d0bf6c2e64cb0c08c3723af3106a6f"
+  integrity sha512-vZZV029K0ZOg/7lOJ/FF7mu5a1UZg0OTNrDMBpUFLlyX7gEheErGOpLD3WlDA+SxBdsdb4RLA7rCdpRLN5yyAQ==
+  dependencies:
+    "@loaders.gl/core" "^0.6.2"
+
 "@luma.gl/glfx@^6.3.0-alpha.2":
   version "6.3.0"
   resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.3.0.tgz#08929e3488b58ddf339c6df0627282543d78c66a"
@@ -7556,6 +7570,11 @@ test-exclude@^5.0.0:
     minimatch "^3.0.4"
     read-pkg-up "^4.0.0"
     require-main-filename "^1.0.1"
+
+text-encoding@^0.6.4:
+  version "0.6.4"
+  resolved "https://registry.yarnpkg.com/text-encoding/-/text-encoding-0.6.4.tgz#e399a982257a276dae428bb92845cb71bdc26d19"
+  integrity sha1-45mpgiV6J22uQou5KEXLcb3CbRk=
 
 text-extensions@^1.0.0:
   version "1.8.0"

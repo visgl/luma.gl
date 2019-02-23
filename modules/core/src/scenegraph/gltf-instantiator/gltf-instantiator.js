@@ -18,7 +18,8 @@ const ATTRIBUTE_TYPE_TO_COMPONENTS = {
 
 const DEFAULT_OPTIONS = {
   modelOptions: {},
-  pbrDebug: false
+  pbrDebug: false,
+  pbrIbl: null
 };
 
 // GLTF instantiator for luma.gl
@@ -113,7 +114,8 @@ export default class GLTFInstantiator {
       attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
       material: gltfPrimitive.material,
       modelOptions: this.options.modelOptions,
-      debug: this.options.pbrDebug
+      debug: this.options.pbrDebug,
+      ibl: this.options.pbrIbl
     });
 
     return model;
