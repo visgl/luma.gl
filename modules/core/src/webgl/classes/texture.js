@@ -456,22 +456,27 @@ export default class Texture extends Resource {
   // (while run-time).
 
   bind(textureUnit = this.textureUnit) {
-    if (textureUnit === undefined) {
-      throw new Error('Texture.bind: must specify texture unit');
+    const {gl} = this;
+
+    if (textureUnit !== undefined) {
+      this.textureUnit = textureUnit;
+      gl.activeTexture(gl.TEXTURE0 + textureUnit);
     }
-    this.textureUnit = textureUnit;
-    this.gl.activeTexture(GL.TEXTURE0 + textureUnit);
-    this.gl.bindTexture(this.target, this.handle);
+
+    gl.bindTexture(this.target, this.handle);
     return textureUnit;
   }
 
-  unbind() {
-    if (this.textureUnit === undefined) {
-      throw new Error('Texture.unbind: texture unit not specified');
+  unbind(textureUnit = this.textureUnit) {
+    const {gl} = this;
+
+    if (textureUnit !== undefined) {
+      this.textureUnit = textureUnit;
+      gl.activeTexture(gl.TEXTURE0 + textureUnit);
     }
-    this.gl.activeTexture(GL.TEXTURE0 + this.textureUnit);
-    this.gl.bindTexture(this.target, null);
-    return this.textureUnit;
+
+    gl.bindTexture(this.target, null);
+    return textureUnit;
   }
 
   // PRIVATE METHODS
