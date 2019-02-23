@@ -5,8 +5,10 @@
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 export default `\
+#if (__VERSION__ < 300)
 #extension GL_EXT_shader_texture_lod: enable
 #extension GL_OES_standard_derivatives : enable
+#endif
 
 precision highp float;
 

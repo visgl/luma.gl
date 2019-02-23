@@ -17,17 +17,18 @@ function convertVertexShaderTo300(source) {
     .replace(/attribute\s+/g, 'in ')
     .replace(/varying\s+/g, 'out ')
     .replace(/texture2D\(/g, 'texture(')
-    .replace(/textureCube\(+/g, 'texture(');
-
-  // Deal with fragColor
-  // .replace(/gl_fragColor/g, 'fragColor ');
+    .replace(/textureCube\(+/g, 'texture(')
+    .replace(/texture2DLodEXT\(/g, 'textureLod(')
+    .replace(/textureCubeLodEXT\(/g, 'textureLod(');
 }
 
 function convertFragmentShaderTo300(source) {
   return source
     .replace(/varying\s+/g, 'in ')
     .replace(/texture2D\(/g, 'texture(')
-    .replace(/textureCube\(/g, 'texture(');
+    .replace(/textureCube\(/g, 'texture(')
+    .replace(/texture2DLodEXT\(/g, 'textureLod(')
+    .replace(/textureCubeLodEXT\(/g, 'textureLod(');
 
   // Deal with fragColor
   // .replace(/gl_fragColor/g, 'fragColor ');
