@@ -70,6 +70,7 @@ Add one or a list of test cases. Each test case may contain the following fields
  
 * `name` (String) - name of the test case.
 * `goldenImage` (String) - path to the golden image, relative to the root where the node script is executed.
+* `timeout` (Number) - time to wait for this test case to resolve (by calling the `done` callback) before aborting, in milliseconds. If not provided, fallback to the shared option that is passed to `SnapshotTestRunner.run`.
 * `imageDiffOptions` (Object) - image diffing options for this test case. See "Image Diff Options" section below.
 * `onInitialize` (Function) - called once when the test case starts. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters). If this callback returns an object or a promise, the content that it resolves to will be passed to `onRender` and `onFinalize` later.
 * `onRender` (Function) - called every animation frame when the test case is running. Receives a single object that is the [AnimationLoop callback parameters](/docs/api-reference/core/animation-loop.md#callback-parameters), plus the following:

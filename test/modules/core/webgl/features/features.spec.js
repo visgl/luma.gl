@@ -1,6 +1,6 @@
 import {canCompileGLGSExtension, hasFeature, hasFeatures, getFeatures, FEATURES} from 'luma.gl';
 import test from 'tape-catch';
-import {makeSpy} from 'probe.gl/test-utils';
+import {makeSpy} from '@probe.gl/test-utils';
 
 import {fixture} from 'luma.gl/test/setup';
 
