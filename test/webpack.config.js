@@ -188,11 +188,11 @@ const CONFIGS = {
   perf: env =>
     Object.assign({}, TEST_CONFIG, {
       entry: {
-        'perf': resolve(__dirname, './perf/index.js')
+        perf: resolve(__dirname, './perf/index.js')
       },
 
       plugins: [new HtmlWebpackPlugin()]
-    }),
+    })
 };
 
 function getConfig(env) {

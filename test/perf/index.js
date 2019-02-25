@@ -1,5 +1,5 @@
 /* global window, console */
-
+/* eslint-disable no-console */
 // hack: prevent example imports from starting their own animation loop
 window.website = true;
 
