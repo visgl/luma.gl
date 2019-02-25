@@ -34,16 +34,3 @@ export function isObjectEmpty(obj) {
   /* eslint-enable no-unused-vars  */
   return isEmpty;
 }
-
-// returns a wrapped function which will only run once
-// note: subsequent calls to the wrapped function will return null
-export function runOnce(fn) {
-  let hasRun = false;
-  return (...args) => {
-    if (hasRun) {
-      return null;
-    }
-    hasRun = true;
-    return fn(...args);
-  };
-}
