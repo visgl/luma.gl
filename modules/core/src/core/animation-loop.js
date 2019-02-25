@@ -73,7 +73,6 @@ export default class AnimationLoop {
     // Bind methods
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
-    this._renderFrame = this._renderFrame.bind(this);
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
@@ -115,8 +114,6 @@ export default class AnimationLoop {
           return null;
         }
 
-        this._initialized = true;
-
         // Create the WebGL context
         this._createWebGLContext(opts);
         this._createFramebuffer();
@@ -131,15 +128,15 @@ export default class AnimationLoop {
         this._resizeViewport();
 
         // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this.onInitialize(this.animationProps);
+        const initializationPromise = this.onInitialize(this.animationProps);
+        this._initialized = true;
+        return initializationPromise;
       })
       .then(appContext => {
         if (this._running) {
           this._addCallbackData(appContext || {});
           if (appContext !== false) {
-            // cancel any pending renders to ensure only one loop can ever run
-            cancelAnimationFrame(this._animationFrameId);
-            this._animationFrameId = requestAnimationFrame(this._renderFrame);
+            this._startLoop();
           }
         }
       });
@@ -209,6 +206,20 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
+  _startLoop() {
+    const renderFrame = () => {
+      if (!this._running) {
+        return;
+      }
+      this.redraw();
+      this._animationFrameId = requestAnimationFrame(renderFrame);
+    };
+
+    // cancel any pending renders to ensure only one loop can ever run
+    cancelAnimationFrame(this._animationFrameId);
+    this._animationFrameId = requestAnimationFrame(renderFrame);
+  }
+
   _clearNeedsRedraw() {
     this.needsRedraw = null;
   }
@@ -223,24 +234,6 @@ export default class AnimationLoop {
       this._resizeViewport();
       this._resizeFramebuffer();
     }
-  }
-
-  /**
-   * @private
-   * Handles a render loop frame - updates context and calls the application
-   * callback
-   */
-  _renderFrame() {
-    if (!this._running) {
-      return;
-    }
-
-    this.redraw();
-
-    // Request another render frame now but cancel any pending renders
-    // to ensure only one loop can ever run
-    cancelAnimationFrame(this._animationFrameId);
-    this._animationFrameId = requestAnimationFrame(this._renderFrame);
   }
 
   // Initialize the  object that will be passed to app callbacks
