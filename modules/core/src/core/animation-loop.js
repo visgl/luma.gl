@@ -6,17 +6,13 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
-import {Stats} from 'probe.gl';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
 import {Framebuffer} from '../webgl';
 
-const GL_GPU_DISJOINT_EXT = 0x8fbb; // Whether GPU performed any disjoint operation.
 const USE_PERFORMANCE = typeof performance !== 'undefined';
 const USE_HRTIME = typeof process !== 'undefined';
-
-let count = 0;
 
 // TODO - Remove when available from probe.gl
 function getHiResTimestamp() {
