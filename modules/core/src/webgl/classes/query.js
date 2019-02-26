@@ -62,6 +62,7 @@ export default class Query extends Resource {
     const {onComplete = noop, onError = noop} = opts;
 
     this.target = null;
+    this.queryPending = false;
     this.onComplete = onComplete;
     this.onError = onError;
 
@@ -126,6 +127,7 @@ export default class Query extends Resource {
     if (this.target) {
       this.gl.endQuery(this.target);
       this.target = null;
+      this.queryPending = true;
     }
     return this;
   }
@@ -139,7 +141,15 @@ export default class Query extends Resource {
 
   // Returns true if the query result is available
   isResultAvailable() {
-    return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    const resultAvailable = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    if (resultAvailable) {
+      this.queryPending = false;
+    }
+    return resultAvailable;
+  }
+
+  isTimerDisjoint() {
+    return this.gl.getParameter(GL_GPU_DISJOINT_EXT);
   }
 
   // Returns the query result, converted to milliseconds to match JavaScript conventions.

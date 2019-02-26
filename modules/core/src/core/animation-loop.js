@@ -6,6 +6,7 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
+import {Stats} from 'probe.gl';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
@@ -14,6 +15,8 @@ import {Framebuffer} from '../webgl';
 const GL_GPU_DISJOINT_EXT = 0x8fbb; // Whether GPU performed any disjoint operation.
 const USE_PERFORMANCE = typeof performance !== 'undefined';
 const USE_HRTIME = typeof process !== 'undefined';
+
+let count = 0;
 
 // TODO - Remove when available from probe.gl
 function getHiResTimestamp() {
@@ -79,7 +82,6 @@ export default class AnimationLoop {
     this.needsRedraw = null;
 
     this.gpuTimeQuery = null;
-    this.lastGPUTimeQueryReturned = true;
     this.cpuTime = 0;
     this.gpuTime = 0;
 
@@ -425,16 +427,13 @@ export default class AnimationLoop {
   }
 
   _beginTimers() {
-    if (this.gpuTimeQuery && !this.lastGPUTimeQueryReturned) {
-      if (this.gpuTimeQuery.isResultAvailable()) {
-        if (!this.gl.getParameter(GL_GPU_DISJOINT_EXT)) {
-          this.gpuTime = this.gpuTimeQuery.getResult();
-        }
-        this.lastGPUTimeQueryReturned = true;
+    if (this.gpuTimeQuery && this.gpuTimeQuery.queryPending) {
+      if (this.gpuTimeQuery.isResultAvailable() && !this.gpuTimeQuery.isTimerDisjoint()) {
+        this.gpuTime = this.gpuTimeQuery.getResult();
       }
     }
 
-    if (this.gpuTimeQuery && this.lastGPUTimeQueryReturned) {
+    if (this.gpuTimeQuery && !this.gpuTimeQuery.queryPending) {
       this.gpuTimeQuery.beginTimeElapsedQuery();
     }
 
@@ -444,9 +443,8 @@ export default class AnimationLoop {
   _endTimers() {
     this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
 
-    if (this.gpuTimeQuery && this.lastGPUTimeQueryReturned) {
+    if (this.gpuTimeQuery && !this.gpuTimeQuery.queryPending) {
       this.gpuTimeQuery.end();
-      this.lastGPUTimeQueryReturned = false;
     }
   }
 
