@@ -7,8 +7,6 @@ const {PerformanceTestRunner} = require('@luma.gl/test-utils');
 const {_enableDOMLogging} = require('@probe.gl/test-utils');
 const PERF_TEST_CASES = require('./performance-test-cases').default;
 
-const pixelRatio = window.devicePixelRatio || 1;
-
 _enableDOMLogging({
   getStyle: message => ({
     background: '#fff',
@@ -19,8 +17,9 @@ _enableDOMLogging({
 
 // Mac full screen
 new PerformanceTestRunner({
-  width: 3600 / pixelRatio,
-  height: 2800 / pixelRatio
+  useDevicePixels: false,
+  width: 3600,
+  height: 2800
 })
   .add(PERF_TEST_CASES)
   .run({
