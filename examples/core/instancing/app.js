@@ -9,6 +9,32 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
+const TIMER_HTML = `
+<div>
+  CPU Time: <span id="cpu-time"><span>
+</div>
+<div>
+  GPU Time: <span id="gpu-time"><span>
+</div>
+`;
+
+const timerElement = document.createElement('div');
+timerElement.innerHTML = TIMER_HTML;
+timerElement.style.position = 'absolute';
+timerElement.style.top = '20px';
+timerElement.style.left = '20px';
+timerElement.style.backgroundColor = 'white';
+timerElement.style.padding = '0.5em';
+
+document.body.appendChild(timerElement);
+
+const cpuElement = document.getElementById('cpu-time');
+const gpuElement = document.getElementById('gpu-time');
+let cpuTime = 0;
+let gpuTime = 0;
+let frameCount = 0;
+const FRAMES_TO_UPDATE = 60;
+
 const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
@@ -135,6 +161,18 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
+    cpuTime += this.cpuTime;
+    gpuTime += this.gpuTime;
+    ++frameCount;
+
+    if (frameCount === FRAMES_TO_UPDATE) {
+      cpuElement.innerText = (cpuTime / frameCount).toFixed(2) + "ms";
+      gpuElement.innerText = (gpuTime / frameCount).toFixed(2) + "ms";
+      cpuTime = 0;
+      gpuTime = 0;
+      frameCount = 0;
+    }
+
     const {gl, framebuffer, useDevicePixels, _mousePosition} = animationProps;
 
     // "Pick" the cube under the mouse

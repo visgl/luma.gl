@@ -6,6 +6,7 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
+import {Stats} from 'probe.gl';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
@@ -13,6 +14,7 @@ import {Framebuffer} from '../webgl';
 
 const USE_PERFORMANCE = typeof performance !== 'undefined';
 const USE_HRTIME = typeof process !== 'undefined';
+let statIdCounter = 0;
 
 // TODO - Remove when available from probe.gl
 function getHiResTimestamp() {
@@ -50,7 +52,8 @@ export default class AnimationLoop {
 
       // view parameters
       autoResizeViewport = true,
-      autoResizeDrawingBuffer = true
+      autoResizeDrawingBuffer = true,
+      stats = new Stats({id: `animation-loop-${statIdCounter++}`})
     } = props;
 
     let {useDevicePixels = true} = props;
@@ -76,6 +79,7 @@ export default class AnimationLoop {
     // state
     this.gl = gl;
     this.needsRedraw = null;
+    this.stats = stats;
 
     this.gpuTimeQuery = null;
     this.cpuTime = 0;
@@ -426,6 +430,7 @@ export default class AnimationLoop {
     if (this.gpuTimeQuery && this.gpuTimeQuery.queryPending) {
       if (this.gpuTimeQuery.isResultAvailable() && !this.gpuTimeQuery.isTimerDisjoint()) {
         this.gpuTime = this.gpuTimeQuery.getResult();
+        this.stats.addTime("GPU Time", this.gpuTime);
       }
     }
 
@@ -438,6 +443,7 @@ export default class AnimationLoop {
 
   _endTimers() {
     this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
+    this.stats.addTime("CPU Time", this.cpuTime);
 
     if (this.gpuTimeQuery && !this.gpuTimeQuery.queryPending) {
       this.gpuTimeQuery.end();
