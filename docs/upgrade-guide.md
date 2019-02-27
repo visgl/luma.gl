@@ -139,6 +139,11 @@ This table lists parameter mapping between old and new function.
 | `opts.filter`     | `opts.filter` |
 
 
+### Default Framebuffer
+
+The default framebuffer is no longer preserved between frames. If this functionality is required, draw to an offscreen framebuffer to preserve drawing results.
+
+
 ## Upgrading from v5.3 to v6.0
 
 luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:
