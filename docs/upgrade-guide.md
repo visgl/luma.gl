@@ -141,7 +141,17 @@ This table lists parameter mapping between old and new function.
 
 ### Default Framebuffer
 
-The default framebuffer is no longer preserved between frames. If this functionality is required, draw to an offscreen framebuffer to preserve drawing results.
+The default framebuffer is no longer preserved between frames. For functionality that requires capturing the canvas, simply moving relevant code to the end of `onRender`, after all draw operations, should suffice. If not, default framebuffer contents can be preserved using the `glOptions` argument to the `AnimationLoop` constructor:
+
+```
+new AnimationLoop({
+  glOptions: {
+    preserveDrawingBuffer: true
+  }
+});
+```
+
+Please note that this may come with significant performance drops on some platforms.
 
 
 ## Upgrading from v5.3 to v6.0
