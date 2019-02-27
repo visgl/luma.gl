@@ -95,11 +95,13 @@ function getZoomedCorners(zoomFactor = 1.01) {
 }
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({gl}) => ({
-    clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER})
+  onInitialize: ({gl, _animationLoop}) => ({
+    clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
+    timerElement: new TimerElement(_animationLoop)
   }),
 
-  onRender: ({gl, canvas, tick, clipSpace}) => {
+  onRender: ({gl, canvas, tick, clipSpace, timerElement}) => {
+    timerElement.update();
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     // Feed in new extents every draw
@@ -111,6 +113,48 @@ const animationLoop = new AnimationLoop({
     });
   }
 });
+
+class TimerElement {
+  constructor(timer, framesToUpdate = 60) {
+    this.timer = timer;
+    this.timerElement = document.createElement('div');
+    this.timerElement.innerHTML = `
+    <div>
+      CPU Time: <span id="cpu-time">0<span>
+    </div>
+    <div>
+      GPU Time: <span id="gpu-time">0<span>
+    </div>
+    `;
+    this.timerElement.style.position = 'absolute';
+    this.timerElement.style.top = '20px';
+    this.timerElement.style.left = '20px';
+    this.timerElement.style.backgroundColor = 'white';
+    this.timerElement.style.padding = '0.5em';
+
+    document.body.appendChild(this.timerElement);
+    this.cpuElement = document.getElementById('cpu-time');
+    this.gpuElement = document.getElementById('gpu-time');
+    this.cpuTime = 0;
+    this.gpuTime = 0;
+    this.frameCount = 0;
+    this.framesToUpdate = framesToUpdate;
+  }
+
+  update() {
+    this.cpuTime += this.timer.cpuTime;
+    this.gpuTime += this.timer.gpuTime;
+    ++this.frameCount;
+
+    if (this.frameCount === this.framesToUpdate) {
+      this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
+      this.gpuElement.innerText = (this.gpuTime / this.frameCount).toFixed(2) + "ms";
+      this.cpuTime = 0;
+      this.gpuTime = 0;
+      this.frameCount = 0;
+    }
+  }
+}
 
 animationLoop.getInfo = () => INFO_HTML;
 
