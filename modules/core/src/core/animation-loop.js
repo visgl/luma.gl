@@ -8,10 +8,6 @@ import assert from '../utils/assert';
 // TODO - remove dependency on webgl classes
 import {Framebuffer} from '../webgl';
 
-const DEFAULT_GL_OPTIONS = {
-  preserveDrawingBuffer: true
-};
-
 export default class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -309,7 +305,7 @@ export default class AnimationLoop {
       opts.canvas instanceof OffscreenCanvas;
 
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);
+    opts = Object.assign({}, opts, this.props.glOptions);
     this.gl = this.props.gl || this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
