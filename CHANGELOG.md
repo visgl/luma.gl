@@ -1,5 +1,9 @@
 # 6.4
 
+## 6.4.3 - Feb 27, 2019
+
+- bug fixes for AnimationLoop start/stop functionality (#924)
+
 ## 6.4.2 - Feb 15, 2019
 
 - modify blending of highlight color and object color (#912)
