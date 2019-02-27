@@ -4,7 +4,7 @@ import {SnapshotTestRunner} from '@luma.gl/test-utils';
 import EXAMPLE_TEST_CASES from './example-test-cases';
 import GLTF_TEST_CASES from './gltf-test-cases';
 
-const renderTestCaseCount = EXAMPLE_TEST_CASES.length;
+const renderTestCaseCount = EXAMPLE_TEST_CASES.length + GLTF_TEST_CASES.length;
 
 test('RenderTest', t => {
   // tape's default timeout is 500ms

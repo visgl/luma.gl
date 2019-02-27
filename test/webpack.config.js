@@ -183,7 +183,16 @@ const CONFIGS = {
     const config = CONFIGS.bundle(env);
     config.plugins.push(new BundleAnalyzerPlugin());
     return config;
-  }
+  },
+
+  perf: env =>
+    Object.assign({}, TEST_CONFIG, {
+      entry: {
+        perf: resolve(__dirname, './perf/index.js')
+      },
+
+      plugins: [new HtmlWebpackPlugin()]
+    })
 };
 
 function getConfig(env) {
@@ -195,6 +204,9 @@ function getConfig(env) {
   }
   if (env.analyze) {
     return CONFIGS.analyze(env);
+  }
+  if (env.perf) {
+    return CONFIGS.perf(env);
   }
 
   return CONFIGS.bundle(env);

@@ -103,7 +103,7 @@ class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  onInitialize({gl}) {
+  onInitialize({gl, _animationLoop}) {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -113,7 +113,7 @@ class AppAnimationLoop extends AnimationLoop {
     });
 
     this.cube = new InstancedCube(gl, {
-      _animationLoop: this,
+      _animationLoop,
       uniforms: {
         uTime: ({tick}) => tick * 0.1,
         // Basic projection matrix
