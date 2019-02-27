@@ -9,32 +9,6 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
-const TIMER_HTML = `
-<div>
-  CPU Time: <span id="cpu-time"><span>
-</div>
-<div>
-  GPU Time: <span id="gpu-time"><span>
-</div>
-`;
-
-const timerElement = document.createElement('div');
-timerElement.innerHTML = TIMER_HTML;
-timerElement.style.position = 'absolute';
-timerElement.style.top = '20px';
-timerElement.style.left = '20px';
-timerElement.style.backgroundColor = 'white';
-timerElement.style.padding = '0.5em';
-
-document.body.appendChild(timerElement);
-
-const cpuElement = document.getElementById('cpu-time');
-const gpuElement = document.getElementById('gpu-time');
-let cpuTime = 0;
-let gpuTime = 0;
-let frameCount = 0;
-const FRAMES_TO_UPDATE = 60;
-
 const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
@@ -158,22 +132,17 @@ class AppAnimationLoop extends AnimationLoop {
         uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
+
+    const timerElement = new TimerElement(this);
+
+    return {timerElement};
   }
 
   onRender(animationProps) {
-    cpuTime += this.cpuTime;
-    gpuTime += this.gpuTime;
-    ++frameCount;
 
-    if (frameCount === FRAMES_TO_UPDATE) {
-      cpuElement.innerText = (cpuTime / frameCount).toFixed(2) + "ms";
-      gpuElement.innerText = (gpuTime / frameCount).toFixed(2) + "ms";
-      cpuTime = 0;
-      gpuTime = 0;
-      frameCount = 0;
-    }
+    const {gl, framebuffer, useDevicePixels, _mousePosition, timerElement} = animationProps;
 
-    const {gl, framebuffer, useDevicePixels, _mousePosition} = animationProps;
+    timerElement.update();
 
     // "Pick" the cube under the mouse
     const pickInfo = _mousePosition && pickModels(gl, {
@@ -196,6 +165,48 @@ class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl}) {
     this.cube.delete();
+  }
+}
+
+class TimerElement {
+  constructor(timer, framesToUpdate = 60) {
+    this.timer = timer;
+    this.timerElement = document.createElement('div');
+    this.timerElement.innerHTML = `
+    <div>
+      CPU Time: <span id="cpu-time">0<span>
+    </div>
+    <div>
+      GPU Time: <span id="gpu-time">0<span>
+    </div>
+    `;
+    this.timerElement.style.position = 'absolute';
+    this.timerElement.style.top = '20px';
+    this.timerElement.style.left = '20px';
+    this.timerElement.style.backgroundColor = 'white';
+    this.timerElement.style.padding = '0.5em';
+
+    document.body.appendChild(this.timerElement);
+    this.cpuElement = document.getElementById('cpu-time');
+    this.gpuElement = document.getElementById('gpu-time');
+    this.cpuTime = 0;
+    this.gpuTime = 0;
+    this.frameCount = 0;
+    this.framesToUpdate = framesToUpdate;
+  }
+
+  update() {
+    this.cpuTime += this.timer.cpuTime;
+    this.gpuTime += this.timer.gpuTime;
+    ++this.frameCount;
+
+    if (this.frameCount === this.framesToUpdate) {
+      this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
+      this.gpuElement.innerText = (this.gpuTime / this.frameCount).toFixed(2) + "ms";
+      this.cpuTime = 0;
+      this.gpuTime = 0;
+      this.frameCount = 0;
+    }
   }
 }
 
