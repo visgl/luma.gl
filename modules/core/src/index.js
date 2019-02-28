@@ -147,6 +147,7 @@ export {
   fp32,
   fp64,
   project,
+  legacyLighting,
   lighting,
   dirlight,
   picking,
