@@ -41,12 +41,15 @@ const DEFAULT_OPTIONS = {
 };
 
 function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
-  const promise = urlOrPromise instanceof Promise ? urlOrPromise : window.fetch(urlOrPromise).then(res => res.arrayBuffer());
+  const promise = urlOrPromise instanceof Promise
+   ? urlOrPromise
+   : window.fetch(urlOrPromise).then(res => urlOrPromise.endsWith('.gltf') ? res.json() : res.arrayBuffer());
+  let gltfParser;
 
   return promise.then(data => {
-    const gltfParser = new GLTFParser();
-    const gltf = gltfParser.parse(data);
-
+    gltfParser = new GLTFParser({uri: urlOrPromise});
+    return gltfParser.parseAsync(data);
+  }).then(gltf => {
     const instantiator = new GLTFInstantiator(gl, options);
     const scenes = instantiator.instantiate(gltf);
     const animator = instantiator.createAnimator();
@@ -70,8 +73,18 @@ function addModelsToDropdown(models, modelDropdown) {
   models.forEach(({name, variants}) => {
     if (variants['glTF-Binary']) {
       const option = document.createElement('option');
-      option.text = name;
+      option.text = `${name} (GLB)`;
       option.value = `${name}/glTF-Binary/${variants['glTF-Binary']}`;
+      modelDropdown.appendChild(option);
+    } else if (variants['glTF-Embedded']) {
+      const option = document.createElement('option');
+      option.text = `${name} (glTF-Embedded)`;
+      option.value = `${name}/glTF-Embedded/${variants['glTF-Embedded']}`;
+      modelDropdown.appendChild(option);
+    } else if (variants.glTF) {
+      const option = document.createElement('option');
+      option.text = `${name} (glTF)`;
+      option.value = `${name}/glTF/${variants.glTF}`;
       modelDropdown.appendChild(option);
     }
   });
