@@ -49,6 +49,7 @@ function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
 
     const instantiator = new GLTFInstantiator(gl, options);
     const scenes = instantiator.instantiate(gltf);
+    const animator = instantiator.createAnimator();
 
     log.info(4, "gltfParser: ", gltfParser)();
     log.info(4, "instantiator.instantiate(): ", scenes)();
@@ -57,7 +58,7 @@ function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
       log.info(4, "Using model: ", node)();
     });
 
-    return scenes;
+    return {scenes, animator};
   });
 }
 
@@ -79,6 +80,7 @@ function addModelsToDropdown(models, modelDropdown) {
 export class DemoApp {
   constructor({modelFile = null, initialZoom = 2} = {}) {
     this.scenes = [];
+    this.animator = null;
     this.gl = null;
     this.modelFile = modelFile;
 
@@ -145,7 +147,7 @@ export class DemoApp {
           const reader = new window.FileReader();
           reader.onload = ev => resolve(ev.target.result);
           reader.readAsArrayBuffer(e.dataTransfer.files[0]);
-        }), this.gl).then(scenes => (this.scenes = scenes));
+        }), this.gl).then(result => Object.assign(this, result));
       }
     };
   }
@@ -163,13 +165,13 @@ export class DemoApp {
         pbrDebug: false,
         pbrIbl: false
       };
-      loadGLTF(this.modelFile, this.gl, options).then(scenes => (this.scenes = scenes));
+      loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
     } else {
       const modelSelector = document.getElementById("modelSelector");
-      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
+      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result => Object.assign(this, result));
 
       modelSelector.onchange = event => {
-        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
+        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result => Object.assign(this, result));
       };
 
       loadModelList().then(models => addModelsToDropdown(models, modelSelector));
@@ -187,7 +189,7 @@ export class DemoApp {
     this.initalizeEventHandling(canvas);
   }
 
-  onRender({gl, tick, width, height, aspect}) {
+  onRender({gl, time, width, height, aspect}) {
     gl.viewport(0, 0, width, height);
     clear(gl, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 
@@ -206,6 +208,10 @@ export class DemoApp {
     const uProjection = new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
     if (!this.scenes.length) return false;
+
+    if (this.animator) {
+      this.animator.animate(time);
+    }
 
     let success = true;
 

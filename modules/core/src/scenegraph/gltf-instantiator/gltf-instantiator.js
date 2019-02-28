@@ -3,6 +3,7 @@ import {Buffer, Accessor} from '../../webgl';
 import Group from '../group';
 import log from '../../utils/log';
 
+import GLTFAnimator from './gltf-animator';
 import {createGLTFModel} from './gltf-material';
 
 // TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
@@ -36,6 +37,14 @@ export default class GLTFInstantiator {
     return scenes;
   }
 
+  createAnimator() {
+    if (Array.isArray(this.gltf.animations)) {
+      return new GLTFAnimator(this.gltf);
+    }
+
+    return null;
+  }
+
   createScene(gltfScene) {
     const gltfNodes = gltfScene.nodes || [];
     const nodes = gltfNodes.map(node => this.createNode(node));
@@ -47,39 +56,42 @@ export default class GLTFInstantiator {
   }
 
   createNode(gltfNode) {
-    const gltfMeshes = gltfNode.children || [];
-    const children = gltfMeshes.map(child => this.createNode(child));
+    if (!gltfNode._node) {
+      const gltfChildren = gltfNode.children || [];
+      const children = gltfChildren.map(child => this.createNode(child));
 
-    // Node can have children nodes and meshes at the same time
-    if (gltfNode.mesh) {
-      children.push(this.createMesh(gltfNode.mesh));
+      // Node can have children nodes and meshes at the same time
+      if (gltfNode.mesh) {
+        children.push(this.createMesh(gltfNode.mesh));
+      }
+
+      const node = new Group({
+        id: gltfNode.name || gltfNode.id,
+        children
+      });
+
+      if (gltfNode.matrix) {
+        node.setMatrix(gltfNode.matrix);
+      } else {
+        node.matrix.identity();
+
+        if (gltfNode.translation) {
+          node.matrix.translate(gltfNode.translation);
+        }
+
+        if (gltfNode.rotation) {
+          const rotationMatrix = new Matrix4().fromQuaternion(gltfNode.rotation);
+          node.matrix.multiplyRight(rotationMatrix);
+        }
+
+        if (gltfNode.scale) {
+          node.matrix.scale(gltfNode.scale);
+        }
+      }
+      gltfNode._node = node;
     }
 
-    const node = new Group({
-      id: gltfNode.name || gltfNode.id,
-      children
-    });
-
-    if (gltfNode.matrix) {
-      node.setMatrix(gltfNode.matrix);
-    } else {
-      node.matrix.identity();
-
-      if (gltfNode.translation) {
-        node.matrix.translate(gltfNode.translation);
-      }
-
-      if (gltfNode.rotation) {
-        const rotationMatrix = new Matrix4().fromQuaternion(gltfNode.rotation);
-        node.matrix.multiplyRight(rotationMatrix);
-      }
-
-      if (gltfNode.scale) {
-        node.matrix.scale(gltfNode.scale);
-      }
-    }
-
-    return node;
+    return gltfNode._node;
   }
 
   createMesh(gltfMesh) {
