@@ -4,6 +4,7 @@ import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
 
 export const GLTF_BASE_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/";
+const GLTF_MODEL_INDEX = `${GLTF_BASE_URL}model-index.json`;
 
 const INFO_HTML = `
 <p><b>glTF</b> rendering.</p>
@@ -11,48 +12,7 @@ const INFO_HTML = `
 <div>
   Model
   <select id="modelSelector">
-    <option value="DamagedHelmet/glTF-Binary/DamagedHelmet.glb">DamagedHelmet</option>
-    <option value="Avocado/glTF-Binary/Avocado.glb">Avocado</option>
-    <option value="AnimatedMorphCube/glTF-Binary/AnimatedMorphCube.glb">AnimatedMorphCube</option> 
-    <option value="TextureCoordinateTest/glTF-Binary/TextureCoordinateTest.glb">TextureCoordinateTest</option>
-    <option value="VertexColorTest/glTF-Binary/VertexColorTest.glb">VertexColorTest</option>
-    <option value="BoxVertexColors/glTF-Binary/BoxVertexColors.glb">BoxVertexColors</option>
-    <option value="Box/glTF-Binary/Box.glb">Box</option>
-    <option value="BoxTexturedNonPowerOfTwo/glTF-Binary/BoxTexturedNonPowerOfTwo.glb">BoxTexturedNonPowerOfTwo</option>
-    <option value="InterpolationTest/glTF-Binary/InterpolationTest.glb">InterpolationTest</option>
-    <option value="BoxInterleaved/glTF-Binary/BoxInterleaved.glb">BoxInterleaved</option>
-    <option value="BoomBox/glTF-Binary/BoomBox.glb">BoomBox</option>
-    <option value="Buggy/glTF-Binary/Buggy.glb">Buggy</option>
-    <option value="CesiumMan/glTF-Binary/CesiumMan.glb">CesiumMan</option>
-    <option value="AlphaBlendModeTest/glTF-Binary/AlphaBlendModeTest.glb">AlphaBlendModeTest</option>
-    <option value="Duck/glTF-Binary/Duck.glb">Duck</option>
-    <option value="MorphPrimitivesTest/glTF-Binary/MorphPrimitivesTest.glb">MorphPrimitivesTest</option>
-    <option value="MorphPrimitivesTest/glTF-Draco/MorphPrimitivesTest.glb">MorphPrimitivesTest</option>
-    <option value="2CylinderEngine/glTF-Binary/2CylinderEngine.glb">CylinderEngine</option>
-    <option value="Lantern/glTF-Binary/Lantern.glb">Lantern</option>
-    <option value="MultiUVTest/glTF-Binary/MultiUVTest.glb">MultiUVTest</option>
-    <option value="WaterBottle/glTF-Binary/WaterBottle.glb">WaterBottle</option>
-    <option value="BrainStem/glTF-Binary/BrainStem.glb">BrainStem</option>
-    <option value="BarramundiFish/glTF-Binary/BarramundiFish.glb">BarramundiFish</option>
-    <option value="NormalTangentMirrorTest/glTF-Binary/NormalTangentMirrorTest.glb">NormalTangentMirrorTest</option>
-    <option value="ReciprocatingSaw/glTF-Binary/ReciprocatingSaw.glb">ReciprocatingSaw</option>
-    <option value="UnlitTest/glTF-Binary/UnlitTest.glb">UnlitTest</option>
-    <option value="MetalRoughSpheres/glTF-Binary/MetalRoughSpheres.glb">MetalRoughSpheres</option>
-    <option value="TextureSettingsTest/glTF-Binary/TextureSettingsTest.glb">TextureSettingsTest</option>
-    <option value="BoxAnimated/glTF-Binary/BoxAnimated.glb">BoxAnimated</option>
-    <option value="VC/glTF-Binary/VC.glb">VC</option>
-    <option value="AntiqueCamera/glTF-Binary/AntiqueCamera.glb">AntiqueCamera</option>
-    <option value="OrientationTest/glTF-Binary/OrientationTest.glb">OrientationTest</option>
-    <option value="CesiumMilkTruck/glTF-Binary/CesiumMilkTruck.glb">CesiumMilkTruck</option>
-    <option value="AnimatedMorphSphere/glTF-Binary/AnimatedMorphSphere.glb">AnimatedMorphSphere</option>
-    <option value="RiggedSimple/glTF-Binary/RiggedSimple.glb">RiggedSimple</option>
-    <option value="Corset/glTF-Binary/Corset.glb">Corset</option>
-    <option value="RiggedFigure/glTF-Binary/RiggedFigure.glb">RiggedFigure</option>
-    <option value="GearboxAssy/glTF-Binary/GearboxAssy.glb">GearboxAssy</option>
-    <option value="NormalTangentTest/glTF-Binary/NormalTangentTest.glb">NormalTangentTest</option>
-    <option value="SpecGlossVsMetalRough/glTF-Binary/SpecGlossVsMetalRough.glb">SpecGlossVsMetalRough</option>
-    <option value="Monster/glTF-Binary/Monster.glb">Monster</option>
-    <option value="BoxTextured/glTF-Binary/BoxTextured.glb">BoxTextured</option>
+    <option value="DamagedHelmet/glTF-Binary/DamagedHelmet.glb">Default</option>
   </select>
   <br>
 </div>
@@ -98,6 +58,21 @@ function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
     });
 
     return scenes;
+  });
+}
+
+function loadModelList() {
+  return window.fetch(GLTF_MODEL_INDEX).then(res => res.json());
+}
+
+function addModelsToDropdown(models, modelDropdown) {
+  models.forEach(({name, variants}) => {
+    if (variants['glTF-Binary']) {
+      const option = document.createElement('option');
+      option.text = name;
+      option.value = `${name}/glTF-Binary/${variants['glTF-Binary']}`;
+      modelDropdown.appendChild(option);
+    }
   });
 }
 
@@ -196,6 +171,8 @@ export class DemoApp {
       modelSelector.onchange = event => {
         loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(scenes => (this.scenes = scenes));
       };
+
+      loadModelList().then(models => addModelsToDropdown(models, modelSelector));
     }
 
     const showSelector = document.getElementById("showSelector");
