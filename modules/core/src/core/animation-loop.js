@@ -66,6 +66,8 @@ export default class AnimationLoop {
     this.cpuTime = 0;
     this.gpuTime = 0;
 
+    this.canvasDataURLResolver = null;
+
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
@@ -173,6 +175,11 @@ export default class AnimationLoop {
       this.gl.commit();
     }
 
+    if (this.canvasDataURLResolver) {
+      this.canvasDataURLResolver(this.gl.canvas.toDataURL());
+      this.canvasDataURLResolver = null;
+    }
+
     this._endTimers();
 
     return this;
@@ -188,6 +195,13 @@ export default class AnimationLoop {
       this._running = false;
     }
     return this;
+  }
+
+  getCanvasDataURL() {
+    this.setNeedsRedraw('getCanvasDataUrl');
+    return new Promise(resolve => {
+      this.canvasDataURLResolver = resolve;
+    });
   }
 
   onCreateContext(...args) {
