@@ -1,5 +1,4 @@
 /* global OffscreenCanvas */
-/* global performance, process */
 
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl/context';
 import {getPageLoadPromise} from '../webgl/context';
@@ -409,15 +408,13 @@ export default class AnimationLoop {
   }
 
   _beginTimers() {
-
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same
     // frame they are captured.
     if (this.gpuTimeQuery && this.gpuTimeQuery.isResultAvailable()) {
-
       // A disjoint timer means the timing results are invalid.
       if (!this.gpuTimeQuery.isTimerDisjoint()) {
-        this.stats.addTime("GPU Time", this.gpuTime);
+        this.stats.addTime('GPU Time', this.gpuTime);
         this.gpuTime = this.gpuTimeQuery.getTimerMilliseconds();
       } else {
         // gpuTime === -1 indicates that previous gpu timing was invalid.
@@ -435,7 +432,7 @@ export default class AnimationLoop {
 
   _endTimers() {
     this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
-    this.stats.addTime("CPU Time", this.cpuTime);
+    this.stats.addTime('CPU Time', this.cpuTime);
 
     if (this.gpuTimeQuery) {
       // GPU time query end. Results will be available on next frame.

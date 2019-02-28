@@ -1,5 +1,8 @@
 # 7.0 Pre-releases
 
+- `AnimationLoop` properties `cpuTime` and `gpuTime` track per-frame CPU and GPU execution time.
+- `Query.getResult` now returns raw query results. `Query.getTimerMilliseconds` can be used to retrieve timer results in milliseconds.
+
 ## v7.0.0-alpha.12 - Feb 20, 2019
 - use "lightSources" in module parameters (#920)
 - glTF: Add PBR debug options and ability to drag-and-drop GLB files (#914)
