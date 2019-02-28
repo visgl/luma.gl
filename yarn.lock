@@ -740,12 +740,12 @@
   integrity sha512-6k3hTQefv2Fawy+yEnsdqQDm7eCT5eIQ6Q4iA+WM6agmTpNaRCQw61sNJEjpZYYl3ppxR92wjHvObYzcUbVxNQ==
 
 "@probe.gl/bench@^3.0.0-alpha.3":
-  version "3.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/@probe.gl/bench/-/bench-3.0.0-alpha.3.tgz#bea1dc7504bfdff117d4ef17bb0a05a110f251ab"
-  integrity sha512-6TKk7jschwe2lW7TwzMd3xviAFXp4fjWAeVUyyVncmw5nsF4fsb2zpZWR1i4on4PKFNBSc3vKVsp/wR5DPH2Ig==
+  version "3.0.0-alpha.5"
+  resolved "https://registry.yarnpkg.com/@probe.gl/bench/-/bench-3.0.0-alpha.5.tgz#e53433566d84a4226c797468126efa0bc40d11f4"
+  integrity sha512-hiw+d3cwK8dOKBYvLlDxsBF00hxfiEqMfQlp/P17vadLdhtmbKsANfQCmjhMez+yJzsctptL11soaFDh8tJ3lA==
   dependencies:
     "@babel/runtime" "^7.0.0"
-    probe.gl "^3.0.0-alpha.3"
+    probe.gl "^3.0.0-alpha.5"
 
 "@probe.gl/test-utils@^3.0.0-alpha.4":
   version "3.0.0-alpha.4"
@@ -6188,6 +6188,13 @@ private@^0.1.6:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
   integrity sha512-VvivMrbvd2nKkiG38qjULzlc+4Vx4wm/whI9pQD35YrARNnhxeiRktSOhSukRLFNlzg6Br/cJPet5J/u19r/mg==
+
+probe.gl@3.0.0-alpha.5, probe.gl@^3.0.0-alpha.5:
+  version "3.0.0-alpha.5"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.0.0-alpha.5.tgz#0e79879fa0c3977da3ced90e3276503364d42fa3"
+  integrity sha512-CH/IJWw80KQkDD4TU+YmrtmALNDsGyxaNJAu/LqkCsgZ+0JQf75XUJ1D97FN8aRKb08Nc8fkHOMYbIXbUMW49A==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
 
 probe.gl@^2.0.1:
   version "2.0.1"

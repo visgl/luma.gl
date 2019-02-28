@@ -141,6 +141,10 @@ export default class Query extends Resource {
 
   // Returns true if the query result is available
   isResultAvailable() {
+    if (!this.queryPending) {
+      return false;
+    }
+
     const resultAvailable = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
     if (resultAvailable) {
       this.queryPending = false;
@@ -152,11 +156,13 @@ export default class Query extends Resource {
     return this.gl.getParameter(GL_GPU_DISJOINT_EXT);
   }
 
-  // Returns the query result, converted to milliseconds to match JavaScript conventions.
-  // TODO - what about non-timer queries
   getResult() {
-    const result = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
-    return Number.isFinite(result) ? result / 1e6 : 0;
+    return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
+  }
+
+  // Returns the query result, converted to milliseconds to match JavaScript conventions.
+  getTimerMilliseconds() {
+    return this.getResult() / 1e6;
   }
 
   static poll(gl) {

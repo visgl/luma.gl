@@ -421,7 +421,7 @@ export default class BaseModel extends ScenegraphNode {
       // should this be incorporated into Query object?
       if (this.timeElapsedQuery.isResultAvailable()) {
         this.lastQueryReturned = true;
-        const elapsedTime = this.timeElapsedQuery.getResult();
+        const elapsedTime = this.timeElapsedQuery.getTimerMilliseconds();
 
         // Update stats (e.g. for seer)
         this.stats.lastFrameTime = elapsedTime;

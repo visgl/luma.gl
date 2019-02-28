@@ -196,9 +196,11 @@ class TimerElement {
   }
 
   update() {
-    this.cpuTime += this.timer.cpuTime;
-    this.gpuTime += this.timer.gpuTime;
-    ++this.frameCount;
+    if (this.timer.gpuTime !== -1) {
+      this.cpuTime += this.timer.cpuTime;
+      this.gpuTime += this.timer.gpuTime;
+      ++this.frameCount;
+    }
 
     if (this.frameCount === this.framesToUpdate) {
       this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
