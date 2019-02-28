@@ -110,7 +110,6 @@ Notes:
 * `autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
 * `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
-
 ## Callback Parameters
 
 The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters:
@@ -132,6 +131,8 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 | `_offScreen` | `Boolean` | (**experimental**) If the animation loop is rendering to an OffscreenCanvas. |
 | ...       | Any fields in the object that was returned by the `onInitialize` method. |
 
+### Frame timers
+* The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
 
 ## Remarks
 

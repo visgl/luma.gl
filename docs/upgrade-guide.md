@@ -153,6 +153,10 @@ new AnimationLoop({
 
 Please note that this may come with significant performance drops on some platforms.
 
+### Query Results
+
+Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
+
 
 ## Upgrading from v5.3 to v6.0
 

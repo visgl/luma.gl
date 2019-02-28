@@ -1,12 +1,17 @@
 /* global OffscreenCanvas */
+
 import {createGLContext, resizeGLContext, resetParameters} from '../webgl/context';
 import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
+import {Stats, getHiResTimestamp} from 'probe.gl';
+import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
 import {Framebuffer} from '../webgl';
+
+let statIdCounter = 0;
 
 export default class AnimationLoop {
   /*
@@ -28,7 +33,8 @@ export default class AnimationLoop {
 
       // view parameters
       autoResizeViewport = true,
-      autoResizeDrawingBuffer = true
+      autoResizeDrawingBuffer = true,
+      stats = new Stats({id: `animation-loop-${statIdCounter++}`})
     } = props;
 
     let {useDevicePixels = true} = props;
@@ -54,11 +60,17 @@ export default class AnimationLoop {
     // state
     this.gl = gl;
     this.needsRedraw = null;
+    this.stats = stats;
+
+    this.gpuTimeQuery = null;
+    this.cpuTime = 0;
+    this.gpuTime = 0;
 
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
     this._startPromise = null;
+    this._cpuStartTime = 0;
 
     this.setProps({
       autoResizeViewport,
@@ -123,6 +135,8 @@ export default class AnimationLoop {
         this._resizeCanvasDrawingBuffer();
         this._resizeViewport();
 
+        this.gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+
         // Note: onIntialize can return a promise (in case it needs to load resources)
         const initializationPromise = this.onInitialize(this.animationProps);
         this._initialized = true;
@@ -141,6 +155,8 @@ export default class AnimationLoop {
 
   // Redraw now
   redraw() {
+    this._beginTimers();
+
     this._setupFrame();
     this._updateCallbackData();
 
@@ -156,6 +172,9 @@ export default class AnimationLoop {
     if (this.offScreen && this.gl.commit) {
       this.gl.commit();
     }
+
+    this._endTimers();
+
     return this;
   }
 
@@ -385,6 +404,39 @@ export default class AnimationLoop {
         width: this.gl.drawingBufferWidth,
         height: this.gl.drawingBufferHeight
       });
+    }
+  }
+
+  _beginTimers() {
+    // Check if timer for last frame has completed.
+    // GPU timer results are never available in the same
+    // frame they are captured.
+    if (this.gpuTimeQuery && this.gpuTimeQuery.isResultAvailable()) {
+      // A disjoint timer means the timing results are invalid.
+      if (!this.gpuTimeQuery.isTimerDisjoint()) {
+        this.stats.addTime('GPU Time', this.gpuTime);
+        this.gpuTime = this.gpuTimeQuery.getTimerMilliseconds();
+      } else {
+        // gpuTime === -1 indicates that previous gpu timing was invalid.
+        this.gpuTime = -1;
+      }
+    }
+
+    if (this.gpuTimeQuery) {
+      // GPU time query start
+      this.gpuTimeQuery.beginTimeElapsedQuery();
+    }
+
+    this._cpuStartTime = getHiResTimestamp();
+  }
+
+  _endTimers() {
+    this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
+    this.stats.addTime('CPU Time', this.cpuTime);
+
+    if (this.gpuTimeQuery) {
+      // GPU time query end. Results will be available on next frame.
+      this.gpuTimeQuery.end();
     }
   }
 

@@ -62,6 +62,7 @@ export default class Query extends Resource {
     const {onComplete = noop, onError = noop} = opts;
 
     this.target = null;
+    this.queryPending = false;
     this.onComplete = onComplete;
     this.onError = onError;
 
@@ -107,6 +108,11 @@ export default class Query extends Resource {
   // outstanding queries representing disjoint `begin()`/`end()` intervals.
   // It is not possible to interleave or overlap `begin` and `end` calls.
   begin(target) {
+    // Don't start a new query if one is already active.
+    if (this.queryPending) {
+      return this;
+    }
+
     // - Triggering a new query when a Query is already tracking an
     //   unresolved query causes that query to be cancelled.
     queryManager.beginQuery(this, this.onComplete, this.onError);
@@ -122,10 +128,16 @@ export default class Query extends Resource {
 
   // ends the current query
   end() {
+    // Can't end a new query if the last one hasn't been resolved.
+    if (this.queryPending) {
+      return this;
+    }
+
     // Note: calling end does not affect the pending promise
     if (this.target) {
       this.gl.endQuery(this.target);
       this.target = null;
+      this.queryPending = true;
     }
     return this;
   }
@@ -139,14 +151,30 @@ export default class Query extends Resource {
 
   // Returns true if the query result is available
   isResultAvailable() {
-    return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    if (!this.queryPending) {
+      return false;
+    }
+
+    const resultAvailable = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    if (resultAvailable) {
+      this.queryPending = false;
+    }
+    return resultAvailable;
+  }
+
+  // Timing query is disjoint, i.e. results are invalid
+  isTimerDisjoint() {
+    return this.gl.getParameter(GL_GPU_DISJOINT_EXT);
+  }
+
+  // Returns query result.
+  getResult() {
+    return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
   }
 
   // Returns the query result, converted to milliseconds to match JavaScript conventions.
-  // TODO - what about non-timer queries
-  getResult() {
-    const result = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
-    return Number.isFinite(result) ? result / 1e6 : 0;
+  getTimerMilliseconds() {
+    return this.getResult() / 1e6;
   }
 
   static poll(gl) {
