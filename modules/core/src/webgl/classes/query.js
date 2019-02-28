@@ -162,10 +162,12 @@ export default class Query extends Resource {
     return resultAvailable;
   }
 
+  // Timing query is disjoint, i.e. results are invalid
   isTimerDisjoint() {
     return this.gl.getParameter(GL_GPU_DISJOINT_EXT);
   }
 
+  // Returns query result.
   getResult() {
     return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
   }

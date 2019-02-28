@@ -2,6 +2,7 @@
 
 - `AnimationLoop` properties `cpuTime` and `gpuTime` track per-frame CPU and GPU execution time.
 - `Query.getResult` now returns raw query results. `Query.getTimerMilliseconds` can be used to retrieve timer results in milliseconds.
+- `Query.isTimerDisjoint` method now indicates if a timing query was disjoint (i.e. results are invalid).
 
 ## v7.0.0-alpha.12 - Feb 20, 2019
 - use "lightSources" in module parameters (#920)

@@ -163,6 +163,12 @@ Shorthand for getting timer query results and converting to milliseconds to matc
 
 return {Number} - measured time or timestamp, in milliseconds
 
+### isTimerDisjoint
+
+Returns `true` if the timer query was disjoint, indicating that timing results are invalid.
+This is rare and might occur, for example, if the GPU was throttled while timing.
+
+return {Boolean} - true if timer query was disjoint
 
 ## Remarks
 

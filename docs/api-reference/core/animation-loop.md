@@ -132,7 +132,7 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 | ...       | Any fields in the object that was returned by the `onInitialize` method. |
 
 ### Frame timers
-* The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid ("disjoint") and should not be used.
+* The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
 
 ## Remarks
 
