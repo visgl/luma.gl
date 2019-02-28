@@ -108,6 +108,11 @@ export default class Query extends Resource {
   // outstanding queries representing disjoint `begin()`/`end()` intervals.
   // It is not possible to interleave or overlap `begin` and `end` calls.
   begin(target) {
+    // Don't start a new query if one is already active.
+    if (this.queryPending) {
+      return this;
+    }
+
     // - Triggering a new query when a Query is already tracking an
     //   unresolved query causes that query to be cancelled.
     queryManager.beginQuery(this, this.onComplete, this.onError);
@@ -123,6 +128,11 @@ export default class Query extends Resource {
 
   // ends the current query
   end() {
+    // Can't end a new query if the last one hasn't been resolved.
+    if (this.queryPending) {
+      return this;
+    }
+
     // Note: calling end does not affect the pending promise
     if (this.target) {
       this.gl.endQuery(this.target);

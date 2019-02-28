@@ -7,7 +7,7 @@ import {Matrix4, radians} from 'math.gl';
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
-  Origirnal algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
+  Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
 const INFO_HTML = `

@@ -152,7 +152,14 @@ return {Boolean} - true if query result is available
 
 ### getResult
 
-Returns the query result, converted to milliseconds to match JavaScript conventions.
+Returns the query result
+
+return {Number} - query result. Semantics depend on query type
+
+
+### getTimerMilliseconds
+
+Shorthand for getting timer query results and converting to milliseconds to match JavaScript conventions.
 
 return {Number} - measured time or timestamp, in milliseconds
 
