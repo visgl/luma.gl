@@ -70,7 +70,6 @@ class QueryManager {
       });
       Object.assign(query.promise, resolvers);
 
-
       // Register the callbacks
       query.promise.then(onComplete).catch(onError);
     }
