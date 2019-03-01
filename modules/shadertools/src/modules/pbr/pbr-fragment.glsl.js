@@ -12,9 +12,6 @@ export default `\
 
 precision highp float;
 
-uniform vec3 u_LightDirection;
-uniform vec3 u_LightColor;
-
 #ifdef USE_IBL
 uniform samplerCube u_DiffuseEnvSampler;
 uniform samplerCube u_SpecularEnvSampler;
@@ -85,6 +82,8 @@ struct PBRInfo
   float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])
   vec3 diffuseColor;            // color contribution from diffuse lighting
   vec3 specularColor;           // color contribution from specular lighting
+  vec3 n;                       // normal at surface point
+  vec3 v;                       // vector from surface point to camera
 };
 
 const float M_PI = 3.141592653589793;
@@ -216,6 +215,31 @@ float microfacetDistribution(PBRInfo pbrInputs)
   return roughnessSq / (M_PI * f * f);
 }
 
+void applyDirectionalLight(inout PBRInfo pbrInputs, vec3 lightDirection) {
+  vec3 n = pbrInputs.n;
+  vec3 v = pbrInputs.v;
+  vec3 l = normalize(lightDirection);             // Vector from surface point to light
+  vec3 h = normalize(l+v);                        // Half vector between both l and v
+
+  pbrInputs.NdotL = clamp(dot(n, l), 0.001, 1.0);
+  pbrInputs.NdotH = clamp(dot(n, h), 0.0, 1.0);
+  pbrInputs.LdotH = clamp(dot(l, h), 0.0, 1.0);
+  pbrInputs.VdotH = clamp(dot(v, h), 0.0, 1.0);
+}
+
+vec3 calculateFinalColor(PBRInfo pbrInputs, vec3 lightColor) {
+  // Calculate the shading terms for the microfacet specular shading model
+  vec3 F = specularReflection(pbrInputs);
+  float G = geometricOcclusion(pbrInputs);
+  float D = microfacetDistribution(pbrInputs);
+
+  // Calculation of analytical lighting contribution
+  vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
+  vec3 specContrib = F * G * D / (4.0 * pbrInputs.NdotL * pbrInputs.NdotV);
+  // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+  return pbrInputs.NdotL * lightColor * (diffuseContrib + specContrib);
+}
+
 vec4 pbr_filterColor(vec4 colorUnused)
 {
   // Metallic and Roughness material properties are packed together
@@ -265,43 +289,35 @@ vec4 pbr_filterColor(vec4 colorUnused)
   vec3 specularEnvironmentR0 = specularColor.rgb;
   vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
 
-  vec3 n = getNormal();                             // normal at surface point
-  vec3 v = normalize(u_Camera - pbr_vPosition);        // Vector from surface point to camera
-  vec3 l = normalize(u_LightDirection);             // Vector from surface point to light
-  vec3 h = normalize(l+v);                          // Half vector between both l and v
+  vec3 n = getNormal();                          // normal at surface point
+  vec3 v = normalize(u_Camera - pbr_vPosition);  // Vector from surface point to camera
+
+  float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
   vec3 reflection = -normalize(reflect(v, n));
 
-  float NdotL = clamp(dot(n, l), 0.001, 1.0);
-  float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
-  float NdotH = clamp(dot(n, h), 0.0, 1.0);
-  float LdotH = clamp(dot(l, h), 0.0, 1.0);
-  float VdotH = clamp(dot(v, h), 0.0, 1.0);
-
   PBRInfo pbrInputs = PBRInfo(
-    NdotL,
+    0.0, // NdotL
     NdotV,
-    NdotH,
-    LdotH,
-    VdotH,
+    0.0, // NdotH
+    0.0, // LdotH
+    0.0, // VdotH
     perceptualRoughness,
     metallic,
     specularEnvironmentR0,
     specularEnvironmentR90,
     alphaRoughness,
     diffuseColor,
-    specularColor
+    specularColor,
+    n,
+    v
   );
 
-  // Calculate the shading terms for the microfacet specular shading model
-  vec3 F = specularReflection(pbrInputs);
-  float G = geometricOcclusion(pbrInputs);
-  float D = microfacetDistribution(pbrInputs);
+  vec3 color = vec3(0.0, 0.0, 0.0);
 
-  // Calculation of analytical lighting contribution
-  vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
-  vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
-  // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-  vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);
+  for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
+    applyDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
+    color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
+  }
 
   // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
@@ -322,12 +338,14 @@ vec4 pbr_filterColor(vec4 colorUnused)
   // This section uses mix to override final color for reference app visualization
   // of various parameters in the lighting equation.
 #ifdef PBR_DEBUG
-  color = mix(color, F, u_ScaleFGDSpec.x);
-  color = mix(color, vec3(G), u_ScaleFGDSpec.y);
-  color = mix(color, vec3(D), u_ScaleFGDSpec.z);
-  color = mix(color, specContrib, u_ScaleFGDSpec.w);
+  // TODO: Figure out how to debug multiple lights
 
-  color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);
+  // color = mix(color, F, u_ScaleFGDSpec.x);
+  // color = mix(color, vec3(G), u_ScaleFGDSpec.y);
+  // color = mix(color, vec3(D), u_ScaleFGDSpec.z);
+  // color = mix(color, specContrib, u_ScaleFGDSpec.w);
+
+  // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);
   color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);
   color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);
   color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);
