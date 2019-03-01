@@ -257,12 +257,16 @@ export default class AnimationLoop {
         return;
       }
       this.redraw();
-      this._animationFrameId = requestAnimationFrame(renderFrame);
+      this._animationFrameId = this._requestAnimationFrame(renderFrame);
     };
 
     // cancel any pending renders to ensure only one loop can ever run
     cancelAnimationFrame(this._animationFrameId);
-    this._animationFrameId = requestAnimationFrame(renderFrame);
+    this._animationFrameId = this._requestAnimationFrame(renderFrame);
+  }
+
+  _requestAnimationFrame(callback) {
+    requestAnimationFrame(callback);
   }
 
   _clearNeedsRedraw() {
