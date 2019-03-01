@@ -5,8 +5,6 @@ import {isWebGL2} from '../utils';
 import queryManager from '../utils/query-manager';
 import {assert} from '../../utils';
 
-const noop = x => x;
-
 const ERR_GPU_DISJOINT = 'Disjoint GPU operation invalidated timer queries';
 const ERR_TIMER_QUERY_NOT_SUPPORTED = 'Timer queries require "EXT_disjoint_timer_query" extension';
 
@@ -59,7 +57,7 @@ export default class Query extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
 
-    const {onComplete = noop, onError = noop} = opts;
+    const {onComplete = null, onError = null} = opts;
 
     this.target = null;
     this.queryPending = false;
