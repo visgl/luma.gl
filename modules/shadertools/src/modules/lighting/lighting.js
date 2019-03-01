@@ -2,13 +2,16 @@ import lightingShader from './lighting.glsl';
 
 export default {
   name: 'lighting',
-  vs: lightingShader,
-  getUniforms
+  fs: lightingShader,
+  getUniforms,
+  defines: {
+    MAX_LIGHTS: 3
+  }
 };
 
 const INITIAL_MODULE_OPTIONS = {};
 
-function getLightSourceUniforms({ambientLight, pointLights, directionalLights}) {
+function getLightSourceUniforms({ambientLight, pointLights = [], directionalLights = []}) {
   const lightSourceUniforms = {};
 
   if (ambientLight) {
@@ -50,13 +53,12 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   }
 
   const {ambientLight, pointLights, directionalLights} = opts.lightSources;
-  const {material} = opts;
   const hasLights =
     ambientLight ||
     (pointLights && pointLights.length > 0) ||
     (directionalLights && directionalLights.length > 0);
 
-  if (!hasLights || !material) {
+  if (!hasLights) {
     return {lighting_uEnabled: false};
   }
 
