@@ -1,8 +1,19 @@
 # 7.0 Pre-releases
 
-- `AnimationLoop` properties `cpuTime` and `gpuTime` track per-frame CPU and GPU execution time.
-- `Query.getResult` now returns raw query results. `Query.getTimerMilliseconds` can be used to retrieve timer results in milliseconds.
-- `Query.isTimerDisjoint` method now indicates if a timing query was disjoint (i.e. results are invalid).
+## v7.0.0-alpha.13 - Mar 1, 2019
+- new default material parameters (#940)
+- Capturing canvas contents (#937)
+- Use glTF loader 0.7.2 to load Embedded and Multi-File glTF files (#938)
+- Frame timers (#934)
+- glTF: Basic Animation support (#932)
+- glTF demo app: load model index dynamically (#935)
+- Don't perserve the drawing buffer (#931)
+- [test-utils] Add performance test (#923)
+- bug fixes for AnimationLoop start/stop functionality (#924)
+- Test-utils bug fixes (#925)
+- glTF Snapshot Tests (#913)
+- glTF: Make PBR work with GLSL 3.0 (WebGL 2.0) (#916)
+- [test-utils] Refactor TestRenderer (#922)
 
 ## v7.0.0-alpha.12 - Feb 20, 2019
 - use "lightSources" in module parameters (#920)
