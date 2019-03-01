@@ -141,7 +141,15 @@ This table lists parameter mapping between old and new function.
 
 ### Default Framebuffer
 
-The default framebuffer is no longer preserved between frames. For functionality that requires capturing the canvas, simply moving relevant code to the end of `onRender`, after all draw operations, should suffice. If not, default framebuffer contents can be preserved using the `glOptions` argument to the `AnimationLoop` constructor:
+The default framebuffer is no longer preserved between frames. The most common use case for preserving the draw buffer is capturing canvas contents into an image via `toDataURL`. This can now be done via `AnimationLoop.toDataURL` which returns a `Promise` that resolves to the canvas data URL:
+
+```
+animationLoop.toDataURL().then((dataURL) => {
+  snapshotImage.src = dataURL;
+});
+```
+
+More generally, moving code that depends on canvas contents to the end of `onRender`, after all draw operations, will ensure that canvas contents are available. Finally, prior behaviour can re-enabled using the `glOptions` argument to the `AnimationLoop` constructor:
 
 ```
 new AnimationLoop({
@@ -151,7 +159,7 @@ new AnimationLoop({
 });
 ```
 
-Please note that this may come with significant performance drops on some platforms.
+This final option is discouraged as it may result in a significant performance drops on some platforms.
 
 ### Query Results
 

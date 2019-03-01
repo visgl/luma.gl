@@ -62,17 +62,20 @@ export default class AnimationLoop {
     this.needsRedraw = null;
     this.stats = stats;
 
-    this.gpuTimeQuery = null;
+    this._gpuTimeQuery = null;
     this.cpuTime = 0;
     this.gpuTime = 0;
 
-    this.canvasDataURLResolver = null;
+
 
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
     this._startPromise = null;
     this._cpuStartTime = 0;
+
+    this._canvasDataURLPromise = null;
+    this._resolveCanvasDataURL = null;
 
     this.setProps({
       autoResizeViewport,
@@ -137,7 +140,7 @@ export default class AnimationLoop {
         this._resizeCanvasDrawingBuffer();
         this._resizeViewport();
 
-        this.gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+        this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
 
         // Note: onIntialize can return a promise (in case it needs to load resources)
         const initializationPromise = this.onInitialize(this.animationProps);
@@ -175,9 +178,10 @@ export default class AnimationLoop {
       this.gl.commit();
     }
 
-    if (this.canvasDataURLResolver) {
-      this.canvasDataURLResolver(this.gl.canvas.toDataURL());
-      this.canvasDataURLResolver = null;
+    if (this._canvasDataURLPromise) {
+      this._resolveCanvasDataURL(this.gl.canvas.toDataURL());
+      this._canvasDataURLPromise = null;
+      this._resolveCanvasDataURL = null;
     }
 
     this._endTimers();
@@ -197,11 +201,17 @@ export default class AnimationLoop {
     return this;
   }
 
-  getCanvasDataURL() {
+  toDataURL() {
+    if (this._canvasDataURLPromise) {
+      return this._canvasDataURLPromise;
+    }
+
     this.setNeedsRedraw('getCanvasDataUrl');
-    return new Promise(resolve => {
-      this.canvasDataURLResolver = resolve;
+    this._canvasDataURLPromise = new Promise(resolve => {
+      this._resolveCanvasDataURL = resolve;
     });
+
+    return this._canvasDataURLPromise;
   }
 
   onCreateContext(...args) {
@@ -425,20 +435,20 @@ export default class AnimationLoop {
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same
     // frame they are captured.
-    if (this.gpuTimeQuery && this.gpuTimeQuery.isResultAvailable()) {
+    if (this._gpuTimeQuery && this._gpuTimeQuery.isResultAvailable()) {
       // A disjoint timer means the timing results are invalid.
-      if (!this.gpuTimeQuery.isTimerDisjoint()) {
+      if (!this._gpuTimeQuery.isTimerDisjoint()) {
         this.stats.addTime('GPU Time', this.gpuTime);
-        this.gpuTime = this.gpuTimeQuery.getTimerMilliseconds();
+        this.gpuTime = this._gpuTimeQuery.getTimerMilliseconds();
       } else {
         // gpuTime === -1 indicates that previous gpu timing was invalid.
         this.gpuTime = -1;
       }
     }
 
-    if (this.gpuTimeQuery) {
+    if (this._gpuTimeQuery) {
       // GPU time query start
-      this.gpuTimeQuery.beginTimeElapsedQuery();
+      this._gpuTimeQuery.beginTimeElapsedQuery();
     }
 
     this._cpuStartTime = getHiResTimestamp();
@@ -448,9 +458,9 @@ export default class AnimationLoop {
     this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
     this.stats.addTime('CPU Time', this.cpuTime);
 
-    if (this.gpuTimeQuery) {
+    if (this._gpuTimeQuery) {
       // GPU time query end. Results will be available on next frame.
-      this.gpuTimeQuery.end();
+      this._gpuTimeQuery.end();
     }
   }
 
