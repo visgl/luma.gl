@@ -66,8 +66,6 @@ export default class AnimationLoop {
     this.cpuTime = 0;
     this.gpuTime = 0;
 
-
-
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;

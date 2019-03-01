@@ -14,8 +14,6 @@
 const ERR_DELETED = 'Query was deleted before result was available';
 const ERR_CANCEL = 'Query was canceled before result was available';
 
-const noop = x => x;
-
 class QueryManager {
   constructor() {
     this.pendingQueries = new Set();
@@ -51,7 +49,7 @@ class QueryManager {
   }
 
   // Starts a query, sets up a new promise
-  beginQuery(query, onComplete = noop, onError = noop) {
+  beginQuery(query, onComplete, onError) {
     // Make sure disjoint state is cleared, so that this query starts fresh
     // Cancel other queries if needed
     this.cancelInvalidQueries(query.gl);
@@ -59,18 +57,22 @@ class QueryManager {
     // Cancel current promise - noop if already resolved or rejected
     this.cancelQuery(query);
 
-    // Create a new promise with attached resolve and reject methods
-    const resolvers = {};
-    query.promise = new Promise((resolve, reject) => {
-      resolvers.resolve = resolve;
-      resolvers.reject = reject;
-    });
-    Object.assign(query.promise, resolvers);
-
     // Add this query to the pending queries
     this.pendingQueries.add(query);
-    // Register the callbacks
-    return query.promise.then(onComplete).catch(onError);
+
+    // Create a new promise with attached resolve and reject methods
+
+    if (onComplete || onError) {
+      const resolvers = {};
+      query.promise = new Promise((resolve, reject) => {
+        resolvers.resolve = resolve;
+        resolvers.reject = reject;
+      });
+      Object.assign(query.promise, resolvers);
+
+      // Register the callbacks
+      query.promise.then(onComplete).catch(onError);
+    }
   }
 
   // Resolves a query with a result
