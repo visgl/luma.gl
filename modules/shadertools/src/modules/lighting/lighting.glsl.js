@@ -23,4 +23,10 @@ uniform int lighting_uPointLightCount;
 uniform int lighting_uDirectionalLightCount;
 
 uniform bool lighting_uEnabled;
+
+float getPointLightAttenuation(PointLight pointLight, float distance) {
+  return pointLight.attenuation.x
+       + pointLight.attenuation.y * distance
+       + pointLight.attenuation.z * distance * distance;
+}
 `;
