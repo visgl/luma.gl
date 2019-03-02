@@ -1,18 +1,18 @@
 export default `\
 struct AmbientLight {
  vec3 color;
- float intensity;
 };
 
 struct PointLight {
  vec3 color;
- float intensity;
  vec3 position;
+
+ // Constant-Linear-Exponential
+ vec3 attenuation;
 };
 
 struct DirectionalLight {
   vec3 color;
-  float intensity;
   vec3 direction;
 };
 
