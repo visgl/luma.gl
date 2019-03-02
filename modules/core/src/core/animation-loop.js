@@ -61,6 +61,8 @@ export default class AnimationLoop {
     this.gl = gl;
     this.needsRedraw = null;
     this.stats = stats;
+    this.stats.addTimer("CPU Time", (timer) => [`CPU Time: ${timer.getAverage().toFixed(2)}ms`]);
+    this.stats.addTimer("GPU Time", (timer) => [`GPU Time: ${timer.getAverage().toFixed(2)}ms`]);
 
     this._gpuTimeQuery = null;
     this.cpuTime = 0;
@@ -436,8 +438,8 @@ export default class AnimationLoop {
     if (this._gpuTimeQuery && this._gpuTimeQuery.isResultAvailable()) {
       // A disjoint timer means the timing results are invalid.
       if (!this._gpuTimeQuery.isTimerDisjoint()) {
-        this.stats.addTime('GPU Time', this.gpuTime);
         this.gpuTime = this._gpuTimeQuery.getTimerMilliseconds();
+        this.stats.getTimer('GPU Time').addTime(this.gpuTime);
       } else {
         // gpuTime === -1 indicates that previous gpu timing was invalid.
         this.gpuTime = -1;
@@ -449,12 +451,13 @@ export default class AnimationLoop {
       this._gpuTimeQuery.beginTimeElapsedQuery();
     }
 
-    this._cpuStartTime = getHiResTimestamp();
+    this.stats.getTimer('CPU Time').timeStart();
   }
 
   _endTimers() {
-    this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
-    this.stats.addTime('CPU Time', this.cpuTime);
+    this.stats.getTimer('CPU Time').timeEnd();
+    this.cpuTime = this.stats.getTimer('CPU Time').lastTiming;
+    this.stats.getTimer('CPU Time').addTime(this.cpuTime);
 
     if (this._gpuTimeQuery) {
       // GPU time query end. Results will be available on next frame.

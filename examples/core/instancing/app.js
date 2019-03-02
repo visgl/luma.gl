@@ -1,5 +1,6 @@
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 const INFO_HTML = `
 <p>
@@ -134,15 +135,17 @@ class AppAnimationLoop extends AnimationLoop {
     });
 
     const timerElement = new TimerElement(this);
+    const statsWidget = new StatsWidget(this.stats);
 
-    return {timerElement};
+    return {timerElement, statsWidget};
   }
 
   onRender(animationProps) {
 
-    const {gl, framebuffer, useDevicePixels, _mousePosition, timerElement} = animationProps;
+    const {gl, framebuffer, useDevicePixels, _mousePosition, timerElement, statsWidget} = animationProps;
 
     timerElement.update();
+    statsWidget.update();
 
     // "Pick" the cube under the mouse
     const pickInfo = _mousePosition && pickModels(gl, {
