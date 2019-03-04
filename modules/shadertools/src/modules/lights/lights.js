@@ -46,6 +46,22 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
+  // Support for array of lights. Type of light is detected by field
+  // TODO - this should work directly against the uniforms, if we phase out `opts.lightSources`
+  if ('lights' in opts) {
+    const lightSources = {pointLights: [], directionalLights: []};
+    for (const light of opts.lights || []) {
+      if (light.position) {
+        lightSources.pointLights.push(light);
+      } else if (light.direction) {
+        lightSources.directionalLights.push(light);
+      } else {
+        lightSources.ambientLight = light;
+      }
+    }
+    opts.lightSources = lightSources;
+  }
+
   if (!('lightSources' in opts)) {
     return {};
   }
