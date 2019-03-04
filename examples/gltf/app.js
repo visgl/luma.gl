@@ -39,12 +39,86 @@ const INFO_HTML = `
   Light
   <select id="lightSelector">
     <option value="default">Default</option>
-    <option value="d1">1x Directional (White)</option>
-    <option value="d3">3x Directional (RGB)</option>
+    <option value="ambient">Ambient Only</option>
+    <option value="directional1">1x Directional (Red) + Ambient</option>
+    <option value="directional3">3x Directional (RGB)</option>
+    <option value="point1far">1x Point Light Far (Red) + Ambient</option>
+    <option value="point1near">1x Point Light Near (Red) + Ambient</option>
   </select>
   <br>
 </div>
 `;
+
+const LIGHT_SOURCES = {
+  default: {
+    directionalLights: [{
+        color: [255, 255, 255],
+        direction: [0.0, 0.5, 0.5],
+        intensity: 1.0,
+      }
+    ]
+  },
+  ambient: {
+    ambientLight: {
+      color: [255, 255, 255],
+      intensity: 1.0,
+    }
+  },
+  directional1: {
+    directionalLights: [{
+        color: [255, 0, 0],
+        direction: [1.0, 0.0, 0.0],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  },
+  directional3: {
+    directionalLights: [{
+        color: [255, 0.0, 0.0],
+        direction: [1.0, 0.0, 0.0],
+        intensity: 1.0,
+      },{
+        color: [0.0, 0.0, 255],
+        direction: [0.0, 0.0, 1.0],
+        intensity: 1.0,
+      },{
+        color: [0.0, 255, 0.0],
+        direction: [0.0, 1.0, 0.0],
+        intensity: 1.0,
+      }
+    ]
+  },
+  point1far: {
+    pointLights: [{
+        color: [255, 0, 0],
+        position: [200.0, 0.0, 0.0],
+        attenuation: [0, 0, 0.01],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  },
+  point1near: {
+    pointLights: [{
+        color: [255, 0, 0],
+        position: [10.0, 0.0, 0.0],
+        attenuation: [0, 0, 0.01],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  }
+};
 
 const DEFAULT_OPTIONS = {
   pbrDebug: true,
@@ -226,49 +300,9 @@ export class DemoApp {
 
   applyLight(model) {
     // TODO: only do this when light changes
-
-    if (!this.light || this.light === 'default') {
-      model.updateModuleSettings({
-        lightSources: {
-          directionalLights: [{
-              color: [255, 255, 255],
-              direction: [0.0, 0.5, 0.5],
-              intensity: 1.0,
-            }
-          ]
-        }
-      });
-    } else if (this.light === 'd1') {
-      model.updateModuleSettings({
-        lightSources: {
-          directionalLights: [{
-              color: [255, 255, 255],
-              direction: [1.0, 0.0, 0.0],
-              intensity: 1.0,
-            }
-          ]
-        }
-      });
-    } else if (this.light === 'd3') {
-      model.updateModuleSettings({
-        lightSources: {
-          directionalLights: [{
-              color: [255, 0.0, 0.0],
-              direction: [1.0, 0.0, 0.0],
-              intensity: 1.0,
-            },{
-              color: [0.0, 0.0, 255],
-              direction: [0.0, 0.0, 1.0],
-              intensity: 1.0,
-            },{
-              color: [0.0, 255, 0.0],
-              direction: [0.0, 1.0, 0.0],
-              intensity: 1.0,
-            }
-          ]
-        }
-      });
-    }
+    model.updateModuleSettings({
+      lightSources: LIGHT_SOURCES[this.light || 'default']
+    });
   }
 
   onRender({gl, time, width, height, aspect}) {
