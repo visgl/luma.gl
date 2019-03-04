@@ -1,4 +1,6 @@
 export default `\
+#if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
+
 struct AmbientLight {
  vec3 color;
 };
@@ -29,4 +31,6 @@ float getPointLightAttenuation(PointLight pointLight, float distance) {
        + pointLight.attenuation.y * distance
        + pointLight.attenuation.z * distance * distance;
 }
+
+#endif
 `;

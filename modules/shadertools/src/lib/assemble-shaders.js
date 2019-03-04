@@ -65,6 +65,7 @@ function assembleShader(
     ? `\
 ${versionLine}
 ${getShaderName({id, source, type})}
+${getShaderType({type})}
 ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(allDefines)}
@@ -125,6 +126,12 @@ function assembleModuleMap(modules) {
     result[moduleName] = shaderModule;
   }
   return result;
+}
+
+function getShaderType({type}) {
+  return `
+#define SHADER_TYPE_${SHADER_TYPE[type].toUpperCase()}
+`;
 }
 
 // Generate "glslify-compatible" SHADER_NAME defines
