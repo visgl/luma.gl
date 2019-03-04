@@ -8,6 +8,9 @@ export default {
   name: 'pbr',
   vs,
   fs,
+  defines: {
+    LIGHTING_FRAGMENT: 1
+  },
   dependencies: [project2, lighting]
   // getUniforms
 };

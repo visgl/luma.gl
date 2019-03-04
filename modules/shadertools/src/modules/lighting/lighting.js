@@ -2,6 +2,7 @@ import lightingShader from './lighting.glsl';
 
 export default {
   name: 'lighting',
+  vs: lightingShader,
   fs: lightingShader,
   getUniforms,
   defines: {
