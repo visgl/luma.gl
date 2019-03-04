@@ -11,6 +11,7 @@ single GPU draw call using instanced vertex attributes.
 `;
 
 const SIDE = 256;
+let widgetUpdateCount = 0;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Cube {
@@ -136,6 +137,9 @@ class AppAnimationLoop extends AnimationLoop {
 
     const timerElement = new TimerElement(this);
     const statsWidget = new StatsWidget(this.stats);
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {timerElement, statsWidget};
   }
@@ -145,7 +149,13 @@ class AppAnimationLoop extends AnimationLoop {
     const {gl, framebuffer, useDevicePixels, _mousePosition, timerElement, statsWidget} = animationProps;
 
     timerElement.update();
-    statsWidget.update();
+
+    if (widgetUpdateCount++ % 60 === 0) {
+      statsWidget.update();
+      this.cpuTime.reset();
+      this.gpuTime.reset();
+      this.frameRate.reset();
+    }
 
     // "Pick" the cube under the mouse
     const pickInfo = _mousePosition && pickModels(gl, {
@@ -200,8 +210,8 @@ class TimerElement {
 
   update() {
     if (this.timer.gpuTime !== -1) {
-      this.cpuTime += this.timer.cpuTime;
-      this.gpuTime += this.timer.gpuTime;
+      this.cpuTime += this.timer.cpuTime.lastTiming;
+      this.gpuTime += this.timer.gpuTime.lastTiming;
       ++this.frameCount;
     }
 

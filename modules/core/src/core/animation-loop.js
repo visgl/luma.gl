@@ -5,7 +5,7 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
-import {Stats, getHiResTimestamp} from 'probe.gl';
+import {Stats} from 'probe.gl';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
@@ -61,12 +61,9 @@ export default class AnimationLoop {
     this.gl = gl;
     this.needsRedraw = null;
     this.stats = stats;
-    this.stats.addTimer("CPU Time", (timer) => [`CPU Time: ${timer.getAverage().toFixed(2)}ms`]);
-    this.stats.addTimer("GPU Time", (timer) => [`GPU Time: ${timer.getAverage().toFixed(2)}ms`]);
-
-    this._gpuTimeQuery = null;
-    this.cpuTime = 0;
-    this.gpuTime = 0;
+    this.cpuTime = this.stats.create('CPU Time');
+    this.gpuTime = this.stats.create('GPU Time');
+    this.frameRate = this.stats.create('Frame Rate');
 
     this._initialized = false;
     this._running = false;
@@ -432,18 +429,18 @@ export default class AnimationLoop {
   }
 
   _beginTimers() {
+    this.frameRate.timeEnd();
+    this.frameRate.timeStart();
+
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same
     // frame they are captured.
-    if (this._gpuTimeQuery && this._gpuTimeQuery.isResultAvailable()) {
-      // A disjoint timer means the timing results are invalid.
-      if (!this._gpuTimeQuery.isTimerDisjoint()) {
-        this.gpuTime = this._gpuTimeQuery.getTimerMilliseconds();
-        this.stats.getTimer('GPU Time').addTime(this.gpuTime);
-      } else {
-        // gpuTime === -1 indicates that previous gpu timing was invalid.
-        this.gpuTime = -1;
-      }
+    if (
+      this._gpuTimeQuery &&
+      this._gpuTimeQuery.isResultAvailable() &&
+      !this._gpuTimeQuery.isTimerDisjoint()
+    ) {
+      this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
     }
 
     if (this._gpuTimeQuery) {
@@ -451,13 +448,11 @@ export default class AnimationLoop {
       this._gpuTimeQuery.beginTimeElapsedQuery();
     }
 
-    this.stats.getTimer('CPU Time').timeStart();
+    this.cpuTime.timeStart();
   }
 
   _endTimers() {
-    this.stats.getTimer('CPU Time').timeEnd();
-    this.cpuTime = this.stats.getTimer('CPU Time').lastTiming;
-    this.stats.getTimer('CPU Time').addTime(this.cpuTime);
+    this.cpuTime.timeEnd();
 
     if (this._gpuTimeQuery) {
       // GPU time query end. Results will be available on next frame.
