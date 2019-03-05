@@ -1,4 +1,5 @@
 // WebGL2 Query (also handles disjoint timer extensions)
+/* global requestAnimationFrame */
 import Resource from './resource';
 import {FEATURES, hasFeatures} from '../features';
 import {isWebGL2} from '../utils';
@@ -45,7 +46,8 @@ export default class Query extends Resource {
     super(gl, opts);
 
     this.target = null;
-    this.queryPending = false;
+    this._queryPending = false;
+    this._pollingPromise = null;
 
     Object.seal(this);
   }
@@ -74,7 +76,7 @@ export default class Query extends Resource {
   // It is not possible to interleave or overlap `begin` and `end` calls.
   begin(target) {
     // Don't start a new query if one is already active.
-    if (this.queryPending) {
+    if (this._queryPending) {
       return this;
     }
 
@@ -87,27 +89,27 @@ export default class Query extends Resource {
   // ends the current query
   end() {
     // Can't end a new query if the last one hasn't been resolved.
-    if (this.queryPending) {
+    if (this._queryPending) {
       return this;
     }
 
     if (this.target) {
       this.gl.endQuery(this.target);
       this.target = null;
-      this.queryPending = true;
+      this._queryPending = true;
     }
     return this;
   }
 
   // Returns true if the query result is available
   isResultAvailable() {
-    if (!this.queryPending) {
+    if (!this._queryPending) {
       return false;
     }
 
     const resultAvailable = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
     if (resultAvailable) {
-      this.queryPending = false;
+      this._queryPending = false;
     }
     return resultAvailable;
   }
@@ -125,6 +127,31 @@ export default class Query extends Resource {
   // Returns the query result, converted to milliseconds to match JavaScript conventions.
   getTimerMilliseconds() {
     return this.getResult() / 1e6;
+  }
+
+  // Polls the query
+  createPoll(limit = Number.POSITIVE_INFINITY) {
+    if (this._pollingPromise) {
+      return this._pollingPromise;
+    }
+
+    let counter = 0;
+
+    this._pollingPromise = new Promise((resolve, reject) => {
+      const poll = () => {
+        if (this.isResultAvailable()) {
+          resolve(this.getResult());
+          this._pollingPromise = null;
+        } else if (counter++ > limit) {
+          reject('Timed out');
+          this._pollingPromise = null;
+        } else {
+          requestAnimationFrame(poll);
+        }
+      };
+
+      requestAnimationFrame(poll);
+    });
   }
 
   _createHandle() {

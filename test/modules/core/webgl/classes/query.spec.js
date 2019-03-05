@@ -1,5 +1,4 @@
 /* eslint-disable max-len, max-statements */
-/* global requestAnimationFrame */
 import test from 'tape-catch';
 import {Query} from 'luma.gl';
 import util from 'util';
@@ -7,19 +6,10 @@ import GL from '@luma.gl/constants';
 import {fixture} from 'luma.gl/test/setup';
 
 function pollQuery(query, t) {
-  let counter = 0;
-
-  return new Promise((resolve, reject) => {
-    requestAnimationFrame(function poll() {
-      if (query.isResultAvailable()) {
-        t.pass(`Timer query: ${query.getResult()}ms`);
-      } else if (counter++ > 10) {
-        t.fail(`Timer query: timed out`);
-      } else {
-        requestAnimationFrame(poll);
-      }
-    });
-  });
+  return query
+    .createPoll(10)
+    .then(result => t.pass(`Timer query: ${result}ms`))
+    .catch(error => t.fail(`Timer query: ${error}`));
 }
 
 function testQueryConstructDelete(gl, t) {
