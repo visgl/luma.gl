@@ -79,6 +79,14 @@ const WEBGL_CONTEXT_POLYFILLS = {
       assert(false);
     }
   },
+  // NOTE(Tarek): WebGL 2 version must come first!
+  // WebGL2: Adds `queryCounter` to the query API
+  [EXT_disjoint_timer_query_webgl2]: {
+    meta: {suffix: 'EXT'},
+    // install `queryCounter`
+    // `null` Allows the polyfill to come from WebGL 1 extension if the WebGL2 extension is not available
+    queryCounter: null
+  },
   [EXT_disjoint_timer_query]: {
     meta: {suffix: 'EXT'},
     // WebGL1: Polyfills the WebGL2 Query API
@@ -102,13 +110,6 @@ const WEBGL_CONTEXT_POLYFILLS = {
     // plus the additional `queryCounter` method
     queryCounter: () => {},
     getQueryObject: () => {}
-  },
-  // WebGL2: Adds `queryCounter` to the query API
-  [EXT_disjoint_timer_query_webgl2]: {
-    meta: {suffix: 'EXT'},
-    // install `queryCounter`
-    // `null` avoids overwriting WebGL1 `queryCounter` if the WebGL2 extension is not available
-    queryCounter: null
   },
   OVERRIDES: {
     // Ensure readBuffer is a no-op
@@ -248,11 +249,11 @@ export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
   initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
-    for (const extension in WEBGL_CONTEXT_POLYFILLS) {
+    Object.getOwnPropertyNames(WEBGL_CONTEXT_POLYFILLS).forEach(extension => {
       if (extension !== 'overrides') {
         polyfillExtension(gl, {extension, target: gl.luma, target2: gl});
       }
-    }
+    });
     installOverrides(gl, {target: gl.luma, target2: gl});
     gl.luma.polyfilled = true;
   }
