@@ -1,5 +1,5 @@
 import {GLTFParser} from '@loaders.gl/gltf';
-import {AnimationLoop, setParameters, clear, GLTFInstantiator, log} from 'luma.gl';
+import {AnimationLoop, setParameters, clear, createGLTFObjects, log} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
 
@@ -50,12 +50,11 @@ function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
     gltfParser = new GLTFParser({uri: urlOrPromise});
     return gltfParser.parseAsync(data);
   }).then(gltf => {
-    const instantiator = new GLTFInstantiator(gl, options);
-    const scenes = instantiator.instantiate(gltf);
-    const animator = instantiator.createAnimator();
+
+    const {scenes, animator} = createGLTFObjects(gl, gltf)
 
     log.info(4, "gltfParser: ", gltfParser)();
-    log.info(4, "instantiator.instantiate(): ", scenes)();
+    log.info(4, "scenes: ", scenes)();
 
     scenes[0].traverse((node, {worldMatrix}) => {
       log.info(4, "Using model: ", node)();

@@ -4,7 +4,7 @@ import Group from '../group';
 import log from '../../utils/log';
 
 import GLTFAnimator from './gltf-animator';
-import {createGLTFModel} from './gltf-material';
+import createGLTFModel from './create-gltf-model';
 
 // TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
 const ATTRIBUTE_TYPE_TO_COMPONENTS = {
