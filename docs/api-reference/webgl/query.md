@@ -1,6 +1,6 @@
 # Query
 
-A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries. `Query` objects expose a `promise` member that tracks the state of the query and `poll` is used to update queries.
+A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries.
 
 See also:
 
@@ -12,12 +12,16 @@ See also:
 
 Use a query to time GPU calls
 ```js
-import {pollContext, Query, GL} from 'luma.gl';
+import {Query, GL} from 'luma.gl';
 ...
-const timerQuery = new Query({
-  onComplete: timestamp => console.log(timestamp)
-  onError: error => console.warn(error)
-});
+const timerQuery = new Query(gl);
+
+
+// In animation loop
+if (timerQuery.isResultAvailable() && !timerQuery.isTimerDisjoin()) {
+  result = timerQuery.getResult();
+}
+
 
 // Option #1
 timerQuery.beginTimeElapsedQuery();
@@ -27,9 +31,6 @@ timerQuery.beginTimeElapsedQuery();
 // Issue GPU calls
 
 timerQuery.end();
-
-// Poll for resolved queries
-requestAnimationFrame(() => pollContext(gl))
 ```
 
 
@@ -58,13 +59,11 @@ Can also check whether timestamp queries are available.
 * opts= {Object}  - options
 * opts.queries=false {Object}  - If true, checks if Query objects (occlusion/transform feedback) are supported
 * opts.timers=false {Object}  - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
-* opts.timestamps=false {Object}  - If true, checks if 'TIMESTAMP_EXT' queries are supported
 * return {Boolean} - Query API is supported with specified configuration
 
 Options
 * queries = false,
 * timers = false,
-* timestamps = false
 
 
 ### constructor
@@ -73,8 +72,6 @@ Options
 
 * gl {WebGLRenderingContext | WebGL2RenderingContext} - gl context
 * opts {Object} opts - options
-* opts.onComplete {Function}  - called with a timestamp. Specifying this parameter causes a timestamp query to be initiated
-* opts.onError {Function} opts.onComplete - called with a timestamp. Specifying this parameter causes a timestamp query to be initiated
 
 
 ### delete
@@ -123,28 +120,6 @@ Note: Can be called multiple times.
 return {Query} - returns itself, to enable chaining of calls.
 
 
-### getTimestamp
-
-Generates a GPU time stamp when the GPU instruction stream reaches this instruction.
-To measure time deltas, two timestamp queries are needed.
-
-return {Query} - returns itself, to enable chaining of calls.
-
-Remarks:
-* timestamp() queries may not be available even when the timer query
-  extension is. See Query.isSupported() flags.
-* Triggering a new query when a Query is already tracking an
-  unresolved query causes that query to be cancelled.
-
-
-### cancel
-
-Cancels a pending query
-Note - Cancel's the promise and calls end on the current query if needed.
-
-return {Query} - returns itself, to enable chaining of calls.
-
-
 ### isResultAvailable
 
 return {Boolean} - true if query result is available
@@ -173,8 +148,5 @@ return {Boolean} - true if timer query was disjoint
 ## Remarks
 
 * On Chrome, go to chrome:flags and enable "WebGL Draft Extensions"
-* For full functionality, Query depends on a `pollContext()` function being called regularly. When this is done, completed queries will be automatically detected and any callbacks are called.
-* Query instance creation will always succeed, even when the required extension is not supported. Instead any issued queries will fail immediately. This allows applications to unconditionally use TimerQueries without adding logic to check whether they are supported; the difference being that the `onComplete` callback never gets called,
-  (the `onError` callback, if supplied, will be called instead).
-* Even when supported, timer queries can fail whenever a change in the GPU occurs that will make the values returned by this extension unusable for performance metrics. Power conservation might cause the GPU to go to sleep at the lower levers. Query will detect this condition and fail any outstanding queries (which calls the `onError` function, if supplied).
+* Even when supported, timer queries can fail whenever a change in the GPU occurs that will make the values returned by this extension unusable for performance metrics, for example if the GPU is throttled mid-frame. This occurance is captured in `isTimerDisjoint` method.
 * Note that from a JavaScript perspective, where callback driven APIs are the norm, the functionality of the WebGL `Query` class seems limited. Many operations that require expensive roundtrips to the GPU (such as `readPixels`) that would obviously benefit from asynchronous queries, are not covered by the `Query` class.
