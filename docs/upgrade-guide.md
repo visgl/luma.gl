@@ -166,6 +166,13 @@ This final option is discouraged as it may result in a significant performance d
 Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
 
 
+### Query Promises
+
+`Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. See `Query.createPoll` for a promise-based API.
+
+### `FenceSync` class has been removed. Syncing can be done directly through the `gl` object.
+
+
 ## Upgrading from v5.3 to v6.0
 
 luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:

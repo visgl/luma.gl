@@ -145,8 +145,18 @@ This is rare and might occur, for example, if the GPU was throttled while timing
 
 return {Boolean} - true if timer query was disjoint
 
+
+### createPoll(limit = Number.POSITIVE_INFINITY)
+
+Begins polling `Query` once per frame to check if results are available.
+
+* limit {Number}  - Maximum number of frames to poll before rejecting the `Promise`.
+
+return {Promise} - Resolves to the `Query` result if it becomes available before `limit`
+frames have elapsed, and is rejected otherwise.
+
+
 ## Remarks
 
-* On Chrome, go to chrome:flags and enable "WebGL Draft Extensions"
 * Even when supported, timer queries can fail whenever a change in the GPU occurs that will make the values returned by this extension unusable for performance metrics, for example if the GPU is throttled mid-frame. This occurance is captured in `isTimerDisjoint` method.
 * Note that from a JavaScript perspective, where callback driven APIs are the norm, the functionality of the WebGL `Query` class seems limited. Many operations that require expensive roundtrips to the GPU (such as `readPixels`) that would obviously benefit from asynchronous queries, are not covered by the `Query` class.

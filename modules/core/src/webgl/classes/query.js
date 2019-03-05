@@ -152,6 +152,8 @@ export default class Query extends Resource {
 
       requestAnimationFrame(poll);
     });
+
+    return this._pollingPromise;
   }
 
   _createHandle() {
