@@ -79,11 +79,12 @@ const WEBGL_CONTEXT_POLYFILLS = {
       assert(false);
     }
   },
+  // NOTE(Tarek): WebGL 2 version must come first!
   // WebGL2: Adds `queryCounter` to the query API
   [EXT_disjoint_timer_query_webgl2]: {
     meta: {suffix: 'EXT'},
     // install `queryCounter`
-    // `null` avoids overwriting WebGL1 `queryCounter` if the WebGL2 extension is not available
+    // `null` Allows the polyfill to come from WebGL 1 extension if the WebGL2 extension is not available
     queryCounter: null
   },
   [EXT_disjoint_timer_query]: {
