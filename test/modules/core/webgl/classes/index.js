@@ -23,9 +23,15 @@ import './draw.spec';
 import './copy-and-blit.spec.js';
 
 // Extensions / webgl2
-// import './query.spec'; // TODO - Chrome has re-enabled...
+import './query.spec'; // TODO - Chrome has re-enabled...
 
 // webgl2
 import './sampler.spec';
 import './uniform-buffer-layout.spec';
 import './transform-feedback.spec';
+
+/*
+UNUSED SPECS:
+texture-2d-array.spec
+texture-3d.spec
+*/
