@@ -79,6 +79,37 @@ const WEBGL_CONTEXT_POLYFILLS = {
       assert(false);
     }
   },
+  // WebGL2: Adds `queryCounter` to the query API
+  [EXT_disjoint_timer_query_webgl2]: {
+    meta: {suffix: 'EXT'},
+    // install `queryCounter`
+    // `null` avoids overwriting WebGL1 `queryCounter` if the WebGL2 extension is not available
+    queryCounter: null
+  },
+  [EXT_disjoint_timer_query]: {
+    meta: {suffix: 'EXT'},
+    // WebGL1: Polyfills the WebGL2 Query API
+    createQuery: () => {
+      assert(false);
+    },
+    deleteQuery: () => {
+      assert(false);
+    },
+    beginQuery: () => {
+      assert(false);
+    },
+    endQuery: () => {},
+    getQuery(handle, pname) {
+      return this.getQueryObject(handle, pname);
+    },
+    // The WebGL1 extension uses getQueryObject rather then getQueryParameter
+    getQueryParameter(handle, pname) {
+      return this.getQueryObject(handle, pname);
+    },
+    // plus the additional `queryCounter` method
+    queryCounter: () => {},
+    getQueryObject: () => {}
+  },
   OVERRIDES: {
     // Ensure readBuffer is a no-op
     readBuffer: (gl, originalFunc, attachment) => {
@@ -155,40 +186,6 @@ const WEBGL_CONTEXT_POLYFILLS = {
   }
 };
 
-const TIMER_POLYFILLS = {
-  [EXT_disjoint_timer_query]: {
-    meta: {suffix: 'EXT'},
-    // WebGL1: Polyfills the WebGL2 Query API
-    createQuery: () => {
-      assert(false);
-    },
-    deleteQuery: () => {
-      assert(false);
-    },
-    beginQuery: () => {
-      assert(false);
-    },
-    endQuery: () => {},
-    getQuery(handle, pname) {
-      return this.getQueryObject(handle, pname);
-    },
-    // The WebGL1 extension uses getQueryObject rather then getQueryParameter
-    getQueryParameter(handle, pname) {
-      return this.getQueryObject(handle, pname);
-    },
-    // plus the additional `queryCounter` method
-    queryCounter: () => {},
-    getQueryObject: () => {}
-  },
-  // WebGL2: Adds `queryCounter` to the query API
-  [EXT_disjoint_timer_query_webgl2]: {
-    meta: {suffix: 'EXT'},
-    // install `queryCounter`
-    // `null` allows WebGL extension to polyfill if the WebGL2 extension is not available
-    queryCounter: null
-  }
-};
-
 function initializeExtensions(gl) {
   gl.luma.extensions = {};
   // `getSupportedExtensions` can return null when context is lost.
@@ -200,7 +197,7 @@ function initializeExtensions(gl) {
 
 // Polyfills a single WebGL extension into the `target` object
 function polyfillExtension(gl, {extension, target, target2}) {
-  const defaults = WEBGL_CONTEXT_POLYFILLS[extension] || TIMER_POLYFILLS[extension];
+  const defaults = WEBGL_CONTEXT_POLYFILLS[extension];
   assert(defaults);
 
   const {meta = {}} = defaults;
@@ -251,18 +248,11 @@ export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
   initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
-    for (const extension in WEBGL_CONTEXT_POLYFILLS) {
+    Object.getOwnPropertyNames(WEBGL_CONTEXT_POLYFILLS).forEach(extension => {
       if (extension !== 'overrides') {
         polyfillExtension(gl, {extension, target: gl.luma, target2: gl});
       }
-    }
-
-    // Try to get WebGL 2 timer polyfills first.
-    if (isWebGL2(gl)) {
-        polyfillExtension(gl, {extension: EXT_disjoint_timer_query_webgl2, target: gl.luma, target2: gl});
-    }
-    polyfillExtension(gl, {extension: EXT_disjoint_timer_query, target: gl.luma, target2: gl});
-
+    });
     installOverrides(gl, {target: gl.luma, target2: gl});
     gl.luma.polyfilled = true;
   }
