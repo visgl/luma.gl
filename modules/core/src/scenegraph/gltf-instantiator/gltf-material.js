@@ -263,7 +263,12 @@ class GLTFMaterialParser {
       Object.assign(this.parameters, {
         blend: true,
         blendEquation: this.gl.FUNC_ADD,
-        blendFunc: [this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA, this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA]
+        blendFunc: [
+          this.gl.SRC_ALPHA,
+          this.gl.ONE_MINUS_SRC_ALPHA,
+          this.gl.ONE,
+          this.gl.ONE_MINUS_SRC_ALPHA
+        ]
       });
     }
   }

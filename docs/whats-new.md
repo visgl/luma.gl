@@ -44,6 +44,11 @@ Several member function of `Framebuffer` and `Texture` classes are now replaced 
 
 ### Accessor Objects can now Reference Buffers
 
+### Simplified Query Interface
+
+* Defaults to not using Promises. Approximately 3x improvement in query start time. Promise interfaces still available via `createPoll`
+* Remove support for GL_TIMESTAMP_EXT queries as they are [unreliable]().
+
 ## Version 7.0
 
 Target Date: Jan 30, 2019

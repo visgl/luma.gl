@@ -21,7 +21,6 @@ const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';
 const EXT_disjoint_timer_query = 'EXT_disjoint_timer_query';
-const EXT_disjoint_timer_query_webgl2 = 'EXT_disjoint_timer_query_webgl2';
 const EXT_texture_filter_anisotropic = 'EXT_texture_filter_anisotropic';
 
 const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_object extension';
@@ -79,14 +78,6 @@ const WEBGL_CONTEXT_POLYFILLS = {
       assert(false);
     }
   },
-  // NOTE(Tarek): WebGL 2 version must come first!
-  // WebGL2: Adds `queryCounter` to the query API
-  [EXT_disjoint_timer_query_webgl2]: {
-    meta: {suffix: 'EXT'},
-    // install `queryCounter`
-    // `null` Allows the polyfill to come from WebGL 1 extension if the WebGL2 extension is not available
-    queryCounter: null
-  },
   [EXT_disjoint_timer_query]: {
     meta: {suffix: 'EXT'},
     // WebGL1: Polyfills the WebGL2 Query API
@@ -107,8 +98,6 @@ const WEBGL_CONTEXT_POLYFILLS = {
     getQueryParameter(handle, pname) {
       return this.getQueryObject(handle, pname);
     },
-    // plus the additional `queryCounter` method
-    queryCounter: () => {},
     getQueryObject: () => {}
   },
   OVERRIDES: {

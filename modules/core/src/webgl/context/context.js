@@ -6,7 +6,6 @@ import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
-import queryManager from '../utils/query-manager';
 
 import {WebGLRenderingContext, WebGL2RenderingContext} from '../utils';
 import {log, isBrowser, assert} from '../../utils';
@@ -176,12 +175,6 @@ export function resizeGLContext(gl, opts = {}) {
   if (ext && `width` in opts && `height` in opts) {
     ext.resize(opts.width, opts.height);
   }
-}
-
-// POLLING FOR PENDING QUERIES
-// Calling this function checks all pending queries for completion
-export function pollGLContext(gl) {
-  queryManager.poll(gl);
 }
 
 // HELPER METHODS
