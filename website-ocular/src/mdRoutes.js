@@ -361,39 +361,6 @@ export default [
         name: 'API Reference',
         children: [
           {
-            name: 'loaders.gl Reference',
-            children: [
-              {
-                name: 'loadFile',
-                markdown: require('../../docs/api-reference/loader-api/load-file.md')
-              },
-              {
-                name: 'GLBLoader',
-                markdown: require('../../docs/api-reference/loaders/glb-loader.md')
-              },
-              {
-                name: 'PLYLoader',
-                markdown: require('../../docs/api-reference/loaders/ply-loader.md')
-              },
-              {
-                name: 'LASLoader',
-                markdown: require('../../docs/api-reference/loaders/las-loader.md')
-              },
-              {
-                name: 'PCDLoader',
-                markdown: require('../../docs/api-reference/loaders/pcd-loader.md')
-              },
-              {
-                name: 'OBJLoader',
-                markdown: require('../../docs/api-reference/loaders/obj-loader.md')
-              },
-              {
-                name: 'KMLLoader',
-                markdown: require('../../docs/api-reference/loaders/kml-loader.md')
-              }
-            ]
-          },
-          {
             name: 'Shadertools Reference',
             children: [
               {
