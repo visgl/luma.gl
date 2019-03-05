@@ -534,7 +534,6 @@ export const TEXTURE_PARAMETERS = {
 // TODO - separate install parameter definitions function from api metadata
 /*
 import Buffer from '../buffer';
-import FenceSync from '../fence-sync';
 import Framebuffer from '../framebuffer';
 import Program from '../program';
 import Renderbuffer from '../renderbuffer';

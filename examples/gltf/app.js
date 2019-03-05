@@ -99,7 +99,9 @@ export class DemoApp {
 
     this.glOptions = {
       // Use to test gltf with webgl 1.0 and 2.0
-      webgl2: true
+      webgl2: true,
+      // alpha causes issues with some glTF demos
+      alpha: false
     };
 
     this.mouse = {
@@ -240,7 +242,8 @@ export class DemoApp {
 
           u_ScaleDiffBaseMR: this.u_ScaleDiffBaseMR,
           u_ScaleFGDSpec: this.u_ScaleFGDSpec,
-        }
+        },
+        parameters: model.props.parameters
       });
     });
 

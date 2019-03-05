@@ -21,7 +21,6 @@ const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';
 const EXT_disjoint_timer_query = 'EXT_disjoint_timer_query';
-const EXT_disjoint_timer_query_webgl2 = 'EXT_disjoint_timer_query_webgl2';
 const EXT_texture_filter_anisotropic = 'EXT_texture_filter_anisotropic';
 
 const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_object extension';
@@ -99,16 +98,7 @@ const WEBGL_CONTEXT_POLYFILLS = {
     getQueryParameter(handle, pname) {
       return this.getQueryObject(handle, pname);
     },
-    // plus the additional `queryCounter` method
-    queryCounter: () => {},
     getQueryObject: () => {}
-  },
-  // WebGL2: Adds `queryCounter` to the query API
-  [EXT_disjoint_timer_query_webgl2]: {
-    meta: {suffix: 'EXT'},
-    // install `queryCounter`
-    // `null` avoids overwriting WebGL1 `queryCounter` if the WebGL2 extension is not available
-    queryCounter: null
   },
   OVERRIDES: {
     // Ensure readBuffer is a no-op
@@ -248,11 +238,11 @@ export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
   initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
-    for (const extension in WEBGL_CONTEXT_POLYFILLS) {
+    Object.getOwnPropertyNames(WEBGL_CONTEXT_POLYFILLS).forEach(extension => {
       if (extension !== 'overrides') {
         polyfillExtension(gl, {extension, target: gl.luma, target2: gl});
       }
-    }
+    });
     installOverrides(gl, {target: gl.luma, target2: gl});
     gl.luma.polyfilled = true;
   }

@@ -11,7 +11,6 @@ export {
   createGLContext,
   destroyGLContext,
   resizeGLContext,
-  pollGLContext,
   setContextDefaults
 } from './webgl/context/context';
 export {getContextInfo, getGLContextInfo, getContextLimits} from './webgl/features/limits';
@@ -51,7 +50,6 @@ export {
 } from './webgl/classes/copy-and-blit';
 
 // WebGL2 classes & Extensions
-export {default as FenceSync} from './webgl/classes/fence-sync';
 export {default as Query} from './webgl/classes/query';
 export {default as Sampler} from './webgl/classes/sampler';
 export {default as Texture3D} from './webgl/classes/texture-3d';

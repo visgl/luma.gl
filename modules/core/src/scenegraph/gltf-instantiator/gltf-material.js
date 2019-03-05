@@ -158,6 +158,8 @@ class GLTFMaterialParser {
       u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
     };
 
+    this.parameters = {};
+
     if (ibl) {
       this.env = new GLTFEnv(gl);
       // u_DiffuseEnvSampler: this.env.getDiffuseEnvSampler(),
@@ -252,6 +254,23 @@ class GLTFMaterialParser {
       this.parseTexture(material.emissiveTexture, 'u_EmissiveSampler', 'HAS_EMISSIVEMAP');
       this.uniforms.u_EmissiveFactor = material.emissiveFactor || [0, 0, 0];
     }
+    if (material.alphaMode === 'MASK') {
+      const {alphaCutoff = 0.5} = material;
+      this.defines.ALPHA_CUTOFF = 1;
+      this.uniforms.u_AlphaCutoff = alphaCutoff;
+    } else if (material.alphaMode === 'BLEND') {
+      log.warn('BLEND alphaMode might not work well because it requires mesh sorting')();
+      Object.assign(this.parameters, {
+        blend: true,
+        blendEquation: this.gl.FUNC_ADD,
+        blendFunc: [
+          this.gl.SRC_ALPHA,
+          this.gl.ONE_MINUS_SRC_ALPHA,
+          this.gl.ONE,
+          this.gl.ONE_MINUS_SRC_ALPHA
+        ]
+      });
+    }
   }
 }
 
@@ -280,6 +299,7 @@ export function createGLTFModel(
         vertexCount,
         modules: [pbr],
         defines: materialParser.defines,
+        parameters: materialParser.parameters,
         vs: addVersionToShader(gl, vs),
         fs: addVersionToShader(gl, fs)
       },

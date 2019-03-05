@@ -41,6 +41,10 @@ uniform sampler2D u_OcclusionSampler;
 uniform float u_OcclusionStrength;
 #endif
 
+#ifdef ALPHA_CUTOFF
+uniform float u_AlphaCutoff;
+#endif
+
 uniform vec2 u_MetallicRoughnessValues;
 uniform vec4 u_BaseColorFactor;
 
@@ -237,6 +241,12 @@ vec4 pbr_filterColor(vec4 colorUnused)
   vec4 baseColor = SRGBtoLINEAR(texture2D(u_BaseColorSampler, pbr_vUV)) * u_BaseColorFactor;
 #else
   vec4 baseColor = u_BaseColorFactor;
+#endif
+
+#ifdef ALPHA_CUTOFF
+  if (baseColor.a < u_AlphaCutoff) {
+    discard;
+  }
 #endif
 
   vec3 f0 = vec3(0.04);

@@ -9,12 +9,6 @@ export {
   getModifiedParameters
 } from '@luma.gl/webgl-state-tracker';
 
-export {
-  createGLContext,
-  destroyGLContext,
-  resizeGLContext,
-  pollGLContext,
-  setContextDefaults
-} from './context';
+export {createGLContext, destroyGLContext, resizeGLContext, setContextDefaults} from './context';
 
 export {getPageLoadPromise, getCanvas} from './create-canvas';
