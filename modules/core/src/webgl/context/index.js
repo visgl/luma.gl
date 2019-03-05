@@ -13,7 +13,6 @@ export {
   createGLContext,
   destroyGLContext,
   resizeGLContext,
-  pollGLContext,
   setContextDefaults
 } from './context';
 
