@@ -5,7 +5,7 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
-import {Stats, getHiResTimestamp} from 'probe.gl';
+import {Stats} from 'probe.gl';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
@@ -61,10 +61,9 @@ export default class AnimationLoop {
     this.gl = gl;
     this.needsRedraw = null;
     this.stats = stats;
-
-    this._gpuTimeQuery = null;
-    this.cpuTime = 0;
-    this.gpuTime = 0;
+    this.cpuTime = this.stats.get('CPU Time');
+    this.gpuTime = this.stats.get('GPU Time');
+    this.frameRate = this.stats.get('Frame Rate');
 
     this._initialized = false;
     this._running = false;
@@ -430,18 +429,18 @@ export default class AnimationLoop {
   }
 
   _beginTimers() {
+    this.frameRate.timeEnd();
+    this.frameRate.timeStart();
+
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same
     // frame they are captured.
-    if (this._gpuTimeQuery && this._gpuTimeQuery.isResultAvailable()) {
-      // A disjoint timer means the timing results are invalid.
-      if (!this._gpuTimeQuery.isTimerDisjoint()) {
-        this.stats.addTime('GPU Time', this.gpuTime);
-        this.gpuTime = this._gpuTimeQuery.getTimerMilliseconds();
-      } else {
-        // gpuTime === -1 indicates that previous gpu timing was invalid.
-        this.gpuTime = -1;
-      }
+    if (
+      this._gpuTimeQuery &&
+      this._gpuTimeQuery.isResultAvailable() &&
+      !this._gpuTimeQuery.isTimerDisjoint()
+    ) {
+      this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
     }
 
     if (this._gpuTimeQuery) {
@@ -449,12 +448,11 @@ export default class AnimationLoop {
       this._gpuTimeQuery.beginTimeElapsedQuery();
     }
 
-    this._cpuStartTime = getHiResTimestamp();
+    this.cpuTime.timeStart();
   }
 
   _endTimers() {
-    this.cpuTime = getHiResTimestamp() - this._cpuStartTime;
-    this.stats.addTime('CPU Time', this.cpuTime);
+    this.cpuTime.timeEnd();
 
     if (this._gpuTimeQuery) {
       // GPU time query end. Results will be available on next frame.

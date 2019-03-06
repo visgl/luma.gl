@@ -1,4 +1,5 @@
 import {AnimationLoop, ClipSpace} from 'luma.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 const INFO_HTML = `
 <p>
@@ -95,13 +96,29 @@ function getZoomedCorners(zoomFactor = 1.01) {
 }
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({gl, _animationLoop}) => ({
-    clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
-    timerElement: new TimerElement(_animationLoop)
-  }),
+  onInitialize: ({gl, _animationLoop}) => {
 
-  onRender: ({gl, canvas, tick, clipSpace, timerElement}) => {
-    timerElement.update();
+    const statsWidget = new StatsWidget(_animationLoop.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
+
+    return {
+      clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
+      statsWidget
+    };
+  },
+
+  onRender: ({gl, canvas, tick, clipSpace, statsWidget, _animationLoop}) => {
+    if (tick % 60 === 10) {
+      statsWidget.update();
+      _animationLoop.cpuTime.reset();
+      _animationLoop.gpuTime.reset();
+      _animationLoop.frameRate.reset();
+    }
+
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     // Feed in new extents every draw
@@ -113,50 +130,6 @@ const animationLoop = new AnimationLoop({
     });
   }
 });
-
-class TimerElement {
-  constructor(timer, framesToUpdate = 60) {
-    this.timer = timer;
-    this.timerElement = document.createElement('div');
-    this.timerElement.innerHTML = `
-    <div>
-      CPU Time: <span id="cpu-time">0<span>
-    </div>
-    <div>
-      GPU Time: <span id="gpu-time">0<span>
-    </div>
-    `;
-    this.timerElement.style.position = 'absolute';
-    this.timerElement.style.top = '20px';
-    this.timerElement.style.left = '20px';
-    this.timerElement.style.backgroundColor = 'white';
-    this.timerElement.style.padding = '0.5em';
-
-    document.body.appendChild(this.timerElement);
-    this.cpuElement = document.getElementById('cpu-time');
-    this.gpuElement = document.getElementById('gpu-time');
-    this.cpuTime = 0;
-    this.gpuTime = 0;
-    this.frameCount = 0;
-    this.framesToUpdate = framesToUpdate;
-  }
-
-  update() {
-    if (this.timer.gpuTime !== -1) {
-      this.cpuTime += this.timer.cpuTime;
-      this.gpuTime += this.timer.gpuTime;
-      ++this.frameCount;
-    }
-
-    if (this.frameCount === this.framesToUpdate) {
-      this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
-      this.gpuElement.innerText = (this.gpuTime / this.frameCount).toFixed(2) + "ms";
-      this.cpuTime = 0;
-      this.gpuTime = 0;
-      this.frameCount = 0;
-    }
-  }
-}
 
 animationLoop.getInfo = () => INFO_HTML;
 

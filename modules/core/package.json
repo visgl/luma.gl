@@ -43,7 +43,7 @@
     "@luma.gl/webgl-state-tracker": "^7.0.0-alpha.11",
     "@luma.gl/webgl2-polyfill": "^7.0.0-alpha.13",
     "math.gl": "^2.2.0",
-    "probe.gl": "3.0.0-alpha.5",
+    "probe.gl": "3.0.0-alpha.6",
     "seer": "^0.2.4"
   },
   "nyc": {
