@@ -1,5 +1,5 @@
 import {GLTFParser} from '@loaders.gl/gltf';
-import {AnimationLoop, setParameters, clear, GLTFInstantiator, log} from 'luma.gl';
+import {AnimationLoop, setParameters, clear, createGLTFObjects, log} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
 
@@ -40,29 +40,29 @@ const DEFAULT_OPTIONS = {
   pbrIbl: true
 };
 
-function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
-  const promise = urlOrPromise instanceof Promise
-   ? urlOrPromise
-   : window.fetch(urlOrPromise).then(res => urlOrPromise.endsWith('.gltf') ? res.json() : res.arrayBuffer());
-  let gltfParser;
+async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
+  let promise = urlOrPromise;
+  if (typeof urlOrPromise === 'string') {
+    const url = urlOrPromise;
+    /* global fetch */
+    const response = await fetch(url);
+    promise = url.endsWith('.gltf') ? response.json() : response.arrayBuffer();
+  }
 
-  return promise.then(data => {
-    gltfParser = new GLTFParser({uri: urlOrPromise});
-    return gltfParser.parseAsync(data);
-  }).then(gltf => {
-    const instantiator = new GLTFInstantiator(gl, options);
-    const scenes = instantiator.instantiate(gltf);
-    const animator = instantiator.createAnimator();
+  const data = await promise;
 
-    log.info(4, "gltfParser: ", gltfParser)();
-    log.info(4, "instantiator.instantiate(): ", scenes)();
+  const gltfParser = new GLTFParser({uri: urlOrPromise});
+  const gltf = await gltfParser.parseAsync(data);
 
-    scenes[0].traverse((node, {worldMatrix}) => {
-      log.info(4, "Using model: ", node)();
-    });
+  const {scenes, animator} = createGLTFObjects(gl, gltf, options);
 
-    return {scenes, animator};
+  log.info(4, "gltfParser: ", gltfParser)();
+  log.info(4, "scenes: ", scenes)();
+  scenes[0].traverse((node, {worldMatrix}) => {
+    log.info(4, "Using model: ", node)();
   });
+
+  return {scenes, animator};
 }
 
 function loadModelList() {

@@ -66,13 +66,10 @@ export {clearBuffer as _clearBuffer} from './webgl/classes/clear';
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as Geometry} from './core/geometry';
-export {default as Mesh} from './core/mesh';
-
 export {default as pickModels} from './core/pick-models';
 export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
-
-// Experimental core exports
 export {default as Transform} from './core/transform';
+// Experimental core exports
 export {default as _Attribute} from './core/attribute';
 export {default as _ShaderCache} from './core/shader-cache';
 export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
@@ -82,7 +79,7 @@ export {default as ScenegraphNode} from './scenegraph/scenegraph-node';
 export {default as Group} from './scenegraph/group';
 export {default as Camera} from './scenegraph/camera';
 export {default as Model} from './scenegraph/model';
-export {default as GLTFInstantiator} from './scenegraph/gltf-instantiator/gltf-instantiator';
+export {default as createGLTFObjects} from './scenegraph/gltf/create-gltf-objects';
 
 // Multipass Rendering
 export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';
@@ -121,7 +118,7 @@ export {default as TruncatedCone} from './models/truncated-cone';
 export {default as ClipSpace} from './models/clip-space';
 
 // IO
-export {setPathPrefix, loadFile, loadImage} from './io';
+export {setPathPrefix, loadFile, loadImage} from './core/load-file';
 
 // lighting
 export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-source';
