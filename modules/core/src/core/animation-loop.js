@@ -61,9 +61,9 @@ export default class AnimationLoop {
     this.gl = gl;
     this.needsRedraw = null;
     this.stats = stats;
-    this.cpuTime = this.stats.create('CPU Time');
-    this.gpuTime = this.stats.create('GPU Time');
-    this.frameRate = this.stats.create('Frame Rate');
+    this.cpuTime = this.stats.get('CPU Time');
+    this.gpuTime = this.stats.get('GPU Time');
+    this.frameRate = this.stats.get('Frame Rate');
 
     this._initialized = false;
     this._running = false;

@@ -4,6 +4,7 @@ import {
   Program, Texture2D, VertexArray, Buffer, isWebGL2
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
@@ -43,6 +44,8 @@ let focalLength = 2.0;
 let focusDistance = 3.0;
 let fStop = 2.8;
 let texelOffset = new Float32Array(2);
+
+let widgetUpdateCount = 0;
 
 class InstancedCube extends Cube {
 
@@ -375,6 +378,13 @@ export const animationLoopOptions = {
       }
     });
 
+    const statsWidget = new StatsWidget(_animationLoop.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
+
     return {
       projMat,
       viewMat,
@@ -383,17 +393,22 @@ export const animationLoopOptions = {
       dofFramebuffer,
       quadVertexArray,
       dofProgram,
-      timerElement: new TimerElement(_animationLoop)
+      statsWidget
     };
   },
 
-  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram, timerElement}) => {
+  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram, statsWidget, _animationLoop}) => {
 
     if (!isDemoSupported) {
           return;
     }
 
-    timerElement.update();
+    if (widgetUpdateCount++ % 60 === 10) {
+      statsWidget.update();
+      _animationLoop.cpuTime.reset();
+      _animationLoop.gpuTime.reset();
+      _animationLoop.frameRate.reset();
+    }
 
     sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -483,50 +498,6 @@ export const animationLoopOptions = {
     });
   }
 };
-
-class TimerElement {
-  constructor(timer, framesToUpdate = 60) {
-    this.timer = timer;
-    this.timerElement = document.createElement('div');
-    this.timerElement.innerHTML = `
-    <div>
-      CPU Time: <span id="cpu-time">0<span>
-    </div>
-    <div>
-      GPU Time: <span id="gpu-time">0<span>
-    </div>
-    `;
-    this.timerElement.style.position = 'absolute';
-    this.timerElement.style.top = '20px';
-    this.timerElement.style.left = '20px';
-    this.timerElement.style.backgroundColor = 'white';
-    this.timerElement.style.padding = '0.5em';
-
-    document.body.appendChild(this.timerElement);
-    this.cpuElement = document.getElementById('cpu-time');
-    this.gpuElement = document.getElementById('gpu-time');
-    this.cpuTime = 0;
-    this.gpuTime = 0;
-    this.frameCount = 0;
-    this.framesToUpdate = framesToUpdate;
-  }
-
-  update() {
-    if (this.timer.gpuTime !== -1) {
-      this.cpuTime += this.timer.cpuTime;
-      this.gpuTime += this.timer.gpuTime;
-      ++this.frameCount;
-    }
-
-    if (this.frameCount === this.framesToUpdate) {
-      this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
-      this.gpuElement.innerText = (this.gpuTime / this.frameCount).toFixed(2) + "ms";
-      this.cpuTime = 0;
-      this.gpuTime = 0;
-      this.frameCount = 0;
-    }
-  }
-}
 
 const animationLoop = new AnimationLoop(animationLoopOptions);
 

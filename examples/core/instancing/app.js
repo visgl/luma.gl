@@ -135,22 +135,21 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const timerElement = new TimerElement(this);
-    const statsWidget = new StatsWidget(this.stats);
+    const statsWidget = new StatsWidget(this.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
     statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}`);
     statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}`);
     statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
-    return {timerElement, statsWidget};
+    return {statsWidget};
   }
 
   onRender(animationProps) {
 
-    const {gl, framebuffer, useDevicePixels, _mousePosition, timerElement, statsWidget} = animationProps;
+    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget} = animationProps;
 
-    timerElement.update();
-
-    if (widgetUpdateCount++ % 60 === 0) {
+    if (widgetUpdateCount++ % 60 === 10) {
       statsWidget.update();
       this.cpuTime.reset();
       this.gpuTime.reset();
@@ -178,50 +177,6 @@ class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl}) {
     this.cube.delete();
-  }
-}
-
-class TimerElement {
-  constructor(timer, framesToUpdate = 60) {
-    this.timer = timer;
-    this.timerElement = document.createElement('div');
-    this.timerElement.innerHTML = `
-    <div>
-      CPU Time: <span id="cpu-time">0<span>
-    </div>
-    <div>
-      GPU Time: <span id="gpu-time">0<span>
-    </div>
-    `;
-    this.timerElement.style.position = 'absolute';
-    this.timerElement.style.top = '20px';
-    this.timerElement.style.left = '20px';
-    this.timerElement.style.backgroundColor = 'white';
-    this.timerElement.style.padding = '0.5em';
-
-    document.body.appendChild(this.timerElement);
-    this.cpuElement = document.getElementById('cpu-time');
-    this.gpuElement = document.getElementById('gpu-time');
-    this.cpuTime = 0;
-    this.gpuTime = 0;
-    this.frameCount = 0;
-    this.framesToUpdate = framesToUpdate;
-  }
-
-  update() {
-    if (this.timer.gpuTime !== -1) {
-      this.cpuTime += this.timer.cpuTime.lastTiming;
-      this.gpuTime += this.timer.gpuTime.lastTiming;
-      ++this.frameCount;
-    }
-
-    if (this.frameCount === this.framesToUpdate) {
-      this.cpuElement.innerText = (this.cpuTime / this.frameCount).toFixed(2) + "ms";
-      this.gpuElement.innerText = (this.gpuTime / this.frameCount).toFixed(2) + "ms";
-      this.cpuTime = 0;
-      this.gpuTime = 0;
-      this.frameCount = 0;
-    }
   }
 }
 
