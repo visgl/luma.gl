@@ -58,7 +58,6 @@ void main (void)
 }
 `;
 
-let widgetUpdateCount = 0;
 const ZOOM_THRESHOLD = 1e5;
 const ZOOM_CENTER_X = -0.0150086889504513;
 const ZOOM_CENTER_Y = 0.78186693904085048;
@@ -113,7 +112,7 @@ const animationLoop = new AnimationLoop({
   },
 
   onRender: ({gl, canvas, tick, clipSpace, statsWidget, _animationLoop}) => {
-    if (widgetUpdateCount++ % 60 === 10) {
+    if (tick % 60 === 10) {
       statsWidget.update();
       _animationLoop.cpuTime.reset();
       _animationLoop.gpuTime.reset();

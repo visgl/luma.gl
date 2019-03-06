@@ -45,8 +45,6 @@ let focusDistance = 3.0;
 let fStop = 2.8;
 let texelOffset = new Float32Array(2);
 
-let widgetUpdateCount = 0;
-
 class InstancedCube extends Cube {
 
   constructor(gl, props) {
@@ -403,7 +401,7 @@ export const animationLoopOptions = {
           return;
     }
 
-    if (widgetUpdateCount++ % 60 === 10) {
+    if (tick % 60 === 10) {
       statsWidget.update();
       _animationLoop.cpuTime.reset();
       _animationLoop.gpuTime.reset();

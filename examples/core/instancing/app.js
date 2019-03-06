@@ -11,7 +11,6 @@ single GPU draw call using instanced vertex attributes.
 `;
 
 const SIDE = 256;
-let widgetUpdateCount = 0;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Cube {
@@ -147,9 +146,9 @@ class AppAnimationLoop extends AnimationLoop {
 
   onRender(animationProps) {
 
-    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget} = animationProps;
+    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget, tick} = animationProps;
 
-    if (widgetUpdateCount++ % 60 === 10) {
+    if (tick % 60 === 10) {
       statsWidget.update();
       this.cpuTime.reset();
       this.gpuTime.reset();
