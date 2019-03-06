@@ -139,14 +139,14 @@ export default class GLTFInstantiator {
     Object.keys(attributes).forEach(attrName => {
       loadedAttributes[attrName] = this.createAccessor(
         attributes[attrName],
-        this.createBuffer(attributes[attrName].bufferView, this.gl.ARRAY_BUFFER)
+        this.createBuffer(attributes[attrName], this.gl.ARRAY_BUFFER)
       );
     });
 
     if (indices) {
       loadedAttributes.indices = this.createAccessor(
         indices,
-        this.createBuffer(indices.bufferView, this.gl.ELEMENT_ARRAY_BUFFER)
+        this.createBuffer(indices, this.gl.ELEMENT_ARRAY_BUFFER)
       );
     }
 
@@ -155,7 +155,13 @@ export default class GLTFInstantiator {
     return loadedAttributes;
   }
 
-  createBuffer(bufferView, target) {
+  createBuffer(attribute, target) {
+    if (!attribute.bufferView) {
+      // Draco decoded files do not have a bufferView
+      attribute.bufferView = {};
+    }
+
+    const {bufferView} = attribute;
     if (!bufferView.lumaBuffers) {
       bufferView.lumaBuffers = {};
     }
@@ -163,7 +169,8 @@ export default class GLTFInstantiator {
     if (!bufferView.lumaBuffers[target]) {
       bufferView.lumaBuffers[target] = new Buffer(this.gl, {
         id: `from-${bufferView.id}`,
-        data: bufferView.data,
+        // Draco decoded files have attribute.value
+        data: bufferView.data || attribute.value,
         target
       });
     }
