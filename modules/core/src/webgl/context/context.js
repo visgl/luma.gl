@@ -87,16 +87,20 @@ export function createGLContext(opts = {}) {
     return null;
   }
 
-  let gl;
-  if (isBrowser) {
-    // Get or create a canvas
-    const targetCanvas = getCanvas({canvas, width, height, onError});
-    // Create a WebGL context in the canvas
-    gl = createBrowserContext({canvas: targetCanvas, opts});
-  } else {
-    // Create a headless-gl context under Node.js
-    gl = createHeadlessContext({width, height, opts, onError});
+  let gl = opts.gl;
+
+  if (!gl) {
+    if (isBrowser) {
+      // Get or create a canvas
+      const targetCanvas = getCanvas({canvas, width, height, onError});
+      // Create a WebGL context in the canvas
+      gl = createBrowserContext({canvas: targetCanvas, opts});
+    } else {
+      // Create a headless-gl context under Node.js
+      gl = createHeadlessContext({width, height, opts, onError});
+    }
   }
+
   if (!gl) {
     return null;
   }

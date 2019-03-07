@@ -345,8 +345,8 @@ export default class AnimationLoop {
       opts.canvas instanceof OffscreenCanvas;
 
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, this.props.glOptions);
-    this.gl = this.props.gl || this.onCreateContext(opts);
+    opts = Object.assign({ gl: this.props.gl }, opts, this.props.glOptions);
+    this.gl = this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
