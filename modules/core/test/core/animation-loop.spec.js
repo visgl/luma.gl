@@ -72,7 +72,7 @@ test('WebGL#AnimationLoop redraw', t => {
   }).start();
 });
 
-test('WebGL#AnimationLoop two start()s should only run one loop', t => {
+test('WebGL#AnimationLoop should not call initialize more than once', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -86,16 +86,51 @@ test('WebGL#AnimationLoop two start()s should only run one loop', t => {
     gl,
     onInitialize: () => {
       initializeCalled++;
-    },
-    onRender: () => {
-      animationLoop.stop();
-      // FIXME: this is not directly test that only one loop has been started
-      t.is(initializeCalled, 1, 'onInitialize called');
-      t.end();
     }
   });
   animationLoop.start();
   animationLoop.start();
+  animationLoop.firstFrame().then(() => {
+    animationLoop.stop();
+    t.is(initializeCalled, 1, 'onInitialize called');
+    t.end();
+  });
+});
+
+test('WebGL#AnimationLoop two start()s should only run one loop', t => {
+  if (typeof document === 'undefined') {
+    t.comment('browser-only test');
+    t.end();
+    return;
+  }
+
+  const {gl} = fixture;
+  let initializeCalled = 0;
+  let renderCalled = 0;
+
+  const animationLoop = new AnimationLoop({
+    gl,
+    onInitialize: () => {
+      initializeCalled++;
+    },
+    onRender: () => {
+      renderCalled++;
+      // let a few frames run first and then check that
+      // no other loops are also running
+      if (renderCalled > 5) {
+        animationLoop.stop();
+        t.is(initializeCalled, 1, 'onInitialize called');
+        t.end();
+      }
+    }
+  });
+  animationLoop.start();
+  animationLoop.firstFrame().then(() => {
+    animationLoop.start();
+    animationLoop.firstFrame().then(() => {
+      t.fail('Should not start another loop while one is already running');
+    });
+  });
 });
 
 test('WebGL#AnimationLoop start followed immediately by stop() should stop', t => {
