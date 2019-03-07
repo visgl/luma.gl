@@ -84,6 +84,15 @@ Stops the animation
 
 `animationLoop.stop()`
 
+### firstFrame() : Promise
+
+Returns a promise which resolves on the first frame after `start()` is called.
+
+```js
+await animationLoop.firstFrame()
+// can now read pixels from webgl context
+```
+
 ### redraw() : AnimationLoop
 
 Immediately invokes a redraw (call `onRender` with updated animation props). Only use if the canvas must be updated synchronously.

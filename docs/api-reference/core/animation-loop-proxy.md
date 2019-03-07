@@ -67,9 +67,17 @@ animationLoopProxy.start(options)
 
 Stops the animation
 
-
 ```js
 animationLoopProxy.stop();
+```
+
+### firstFrame() : Promise
+
+Returns a promise which resolves on the first frame after `start()` is called.
+
+```js
+await animationLoop.firstFrame()
+// can now read pixels from webgl context
 ```
 
 ### setProps(props: Object) : AnimationLoopProxy
