@@ -73,6 +73,7 @@ export default class AnimationLoop {
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
+    this._resolveFirstFrame = null;
     this._cpuStartTime = 0;
 
     this._canvasDataURLPromise = null;
@@ -202,6 +203,12 @@ export default class AnimationLoop {
     return this;
   }
 
+  firstFrame() {
+    return new Promise(resolve => {
+      this._resolveFirstFrame = resolve;
+    });
+  }
+
   toDataURL() {
     if (this._canvasDataURLPromise) {
       return this._canvasDataURLPromise;
@@ -257,7 +264,13 @@ export default class AnimationLoop {
 
     // cancel any pending renders to ensure only one loop can ever run
     cancelAnimationFrame(this._animationFrameId);
-    this._animationFrameId = requestAnimationFrame(renderFrame);
+    this._animationFrameId = requestAnimationFrame(() => {
+      renderFrame();
+      if (this._resolveFirstFrame) {
+        this._resolveFirstFrame();
+        this._resolveFirstFrame = null;
+      }
+    });
   }
 
   _clearNeedsRedraw() {
