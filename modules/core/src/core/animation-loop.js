@@ -73,6 +73,7 @@ export default class AnimationLoop {
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
+    this._firstFramePromise = null;
     this._resolveFirstFrame = null;
     this._cpuStartTime = 0;
 
@@ -91,8 +92,6 @@ export default class AnimationLoop {
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
-
-    return this;
   }
 
   setNeedsRedraw(reason) {
@@ -197,6 +196,8 @@ export default class AnimationLoop {
     if (this._running) {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
+      this._firstFramePromise = null;
+      this._resolveFirstFrame = null;
       this._animationFrameId = null;
       this._running = false;
     }
@@ -204,9 +205,12 @@ export default class AnimationLoop {
   }
 
   firstFrame() {
-    return new Promise(resolve => {
-      this._resolveFirstFrame = resolve;
-    });
+    if (!this._firstFramePromise) {
+      this._firstFramePromise = new Promise(resolve => {
+        this._resolveFirstFrame = resolve;
+      });
+    }
+    return this._firstFramePromise;
   }
 
   toDataURL() {
@@ -267,7 +271,8 @@ export default class AnimationLoop {
     this._animationFrameId = requestAnimationFrame(() => {
       renderFrame();
       if (this._resolveFirstFrame) {
-        this._resolveFirstFrame();
+        this._resolveFirstFrame(this);
+        this._firstFramePromise = null;
         this._resolveFirstFrame = null;
       }
     });

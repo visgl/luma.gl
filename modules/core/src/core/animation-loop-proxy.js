@@ -101,6 +101,7 @@ export default class AnimationLoopProxy {
     this._running = false;
     this._animationFrameId = null;
     this._resolveFirstFrame = null;
+    this._firstFramePromise = null;
 
     // bind methods
     this._onMessage = this._onMessage.bind(this);
@@ -143,7 +144,8 @@ export default class AnimationLoopProxy {
           this._animationFrameId = requestAnimationFrame(() => {
             this._updateFrame();
             if (this._resolveFirstFrame) {
-              this._resolveFirstFrame();
+              this._resolveFirstFrame(this);
+              this._firstFramePromise = null;
               this._resolveFirstFrame = null;
             }
           });
@@ -157,6 +159,8 @@ export default class AnimationLoopProxy {
     if (this._running) {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
+      this._firstFramePromise = null;
+      this._resolveFirstFrame = null;
       this._running = false;
       this.props.onFinalize(this);
     }
@@ -165,9 +169,12 @@ export default class AnimationLoopProxy {
   }
 
   firstFrame() {
-    return new Promise(resolve => {
-      this._resolveFirstFrame = resolve;
-    });
+    if (!this._firstFramePromise) {
+      this._firstFramePromise = new Promise(resolve => {
+        this._resolveFirstFrame = resolve;
+      });
+    }
+    return this._firstFramePromise;
   }
 
   // PRIVATE METHODS
