@@ -22,6 +22,8 @@ These are early ideas not yet associated with any release
 | RFC | Author | Status | Description |
 | --- | --- | --- | --- |
 | **WIP/Draft** | | | |
+| [**Automatic Shader Module Injection**](vNext/glsl-function-replacement-rfc.md) | @ibgreen | **Draft** | Replace functions and inject attributes in shaders |
+| [**Automatic Shader Module Injection**](vNext/dynamic-shader-regeneration-rfc.md) | @ibgreen | **Draft** | Automatically recompile shader modules when "props" are updated. |
 | [**Automatic Shader Module Injection**](vNext/automatic-shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
 | [**Dist Size Reduction**](vNext/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
