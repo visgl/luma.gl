@@ -11,7 +11,7 @@ import './modules/core/webgl';
 import './modules/core/core';
 import './modules/gpgpu';
 
-import '../modules//effects/test';
+import '../modules/effects/test';
 
 // The classic luma.gl module - Supported for backwards compatibility
 import '../modules/main/test';
