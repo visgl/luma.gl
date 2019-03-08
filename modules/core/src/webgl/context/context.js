@@ -77,7 +77,7 @@ export function setContextDefaults(opts = {}) {
 /* eslint-disable complexity, max-statements */
 export function createGLContext(opts = {}) {
   opts = Object.assign({}, contextDefaults, opts);
-  const {canvas, width, height, throwOnError, manageState, debug} = opts;
+  const {canvas, width, height, throwOnError} = opts;
 
   // Error reporting function, enables exceptions to be disabled
   function onError(message) {
@@ -87,23 +87,33 @@ export function createGLContext(opts = {}) {
     return null;
   }
 
-  let gl = opts.gl;
-
-  if (!gl) {
-    if (isBrowser) {
-      // Get or create a canvas
-      const targetCanvas = getCanvas({canvas, width, height, onError});
-      // Create a WebGL context in the canvas
-      gl = createBrowserContext({canvas: targetCanvas, opts});
-    } else {
-      // Create a headless-gl context under Node.js
-      gl = createHeadlessContext({width, height, opts, onError});
-    }
+  let gl;
+  if (isBrowser) {
+    // Get or create a canvas
+    const targetCanvas = getCanvas({canvas, width, height, onError});
+    // Create a WebGL context in the canvas
+    gl = createBrowserContext({canvas: targetCanvas, opts});
+  } else {
+    // Create a headless-gl context under Node.js
+    gl = createHeadlessContext({width, height, opts, onError});
   }
 
   if (!gl) {
     return null;
   }
+
+  gl = getTooledContext(gl);
+
+  // Log some debug info about the newly created context
+  logInfo(gl);
+
+  // Add to seer integration
+  return gl;
+}
+
+export function getTooledContext(gl, opts = {}) {
+  opts = Object.assign({}, contextDefaults, opts);
+  const {manageState, debug} = opts;
 
   // Install context state tracking
   if (manageState) {
@@ -124,10 +134,6 @@ export function createGLContext(opts = {}) {
     }
   }
 
-  // Log some debug info about the newly created context
-  logInfo(gl);
-
-  // Add to seer integration
   return gl;
 }
 
