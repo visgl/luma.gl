@@ -1,5 +1,5 @@
 import {AnimationLoop} from '@luma.gl/core';
-import {DemoApp, GLTF_BASE_URL} from '../../examples/gltf/app';
+import {DemoApp, GLTF_BASE_URL} from './gtlf-demo-app';
 
 const examples = {
   damagedHelmet: {
