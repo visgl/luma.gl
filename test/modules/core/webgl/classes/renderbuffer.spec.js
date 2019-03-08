@@ -2,7 +2,7 @@ import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {Renderbuffer, getKey} from 'luma.gl';
 
-import {RENDERBUFFER_FORMATS} from '@luma.gl/core/webgl/classes/renderbuffer-formats';
+import RENDERBUFFER_FORMATS from '@luma.gl/core/webgl/classes/renderbuffer-formats';
 
 import {fixture} from 'luma.gl/test/setup';
 
