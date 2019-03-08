@@ -727,20 +727,29 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
-"@loaders.gl/core@^0.7.1":
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-0.7.1.tgz#fd122d5518864d2ed2d851fd2a21a04d2613abe7"
-  integrity sha512-xdcevhaDcp8dEtvHXdD1JhxojAZVQj2mMvDgAAGS8rV7gD7/jOVVdp0nyilKbcXJxN/tIABBrYivTOkqoTMzPQ==
+"@loaders.gl/core@^0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-0.8.0.tgz#fd5c53d816a5e3c022252f8c47e7cffbe5658727"
+  integrity sha512-KFMNoSt+yqpA/BIyn4EK9ZaVUrylSnVy6aW4bGsfPZWVMXGTfQ3STeBFYrAVdB0K4mDoNWxplrVeNO2fx4cH4Q==
   dependencies:
     "@babel/runtime" "^7.3.1"
     text-encoding "^0.6.4"
 
-"@loaders.gl/gltf@^0.7.2":
-  version "0.7.2"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-0.7.2.tgz#ace809c91efe1a47ff8f34c4305a8dff478e2053"
-  integrity sha512-Mzx3GqEQ4mTPIrn3vLkynFzTOLToE9aYPrKMcxmkqQ7UsvpGrUNSZK1ToOTQhOmQ72M33tN4mSxqlpePw/KkdQ==
+"@loaders.gl/draco@^0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/draco/-/draco-0.8.0.tgz#2721557d4147324b84659c1ec933d25c580da824"
+  integrity sha512-CAPkBVe8jLeC50ZwsfLncwVtetEjIfeQHvE69EGJerW70eLLH4xeCdgtHkSTIhVS8KNqaVctmSGTDQqLY8elAg==
   dependencies:
-    "@loaders.gl/core" "^0.7.1"
+    "@babel/runtime" "^7.3.1"
+    "@loaders.gl/core" "^0.8.0"
+    draco3d "^1.3.4"
+
+"@loaders.gl/gltf@^0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-0.8.1.tgz#a2d04bee05d531f5faf5566f7d3978ae2582353a"
+  integrity sha512-gSRUb05OdKG8fNnYaKLiBaX0NYfrFOZ2RAOBMDI/kyqZtEni1J350PDxtMVWxJkQ9d7Ry5H2FbLPRmC+kYJK1A==
+  dependencies:
+    "@loaders.gl/core" "^0.8.0"
 
 "@luma.gl/glfx@^6.3.0-alpha.2":
   version "6.3.0"
@@ -2697,6 +2706,11 @@ dot-prop@^3.0.0:
   integrity sha1-G3CK8JSknJoOfbyteQq6U52sEXc=
   dependencies:
     is-obj "^1.0.0"
+
+draco3d@^1.3.4:
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/draco3d/-/draco3d-1.3.4.tgz#b17e4fedd4b4b946c9eb8df2e1d2f470a953cdb8"
+  integrity sha512-I7kAKyiSIb++K5VdWGeIC9xXWkoQ1HZ8wSCQhaRMf41KKxYX5jYmy+rRna/o7o3CrunxvCGbZBl6d6bdWVcJXw==
 
 duplexer3@^0.1.4:
   version "0.1.4"

@@ -1,4 +1,5 @@
 import {GLTFParser} from '@loaders.gl/gltf';
+import {DracoDecoder} from '@loaders.gl/draco';
 import {AnimationLoop, setParameters, clear, createGLTFObjects, log} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
@@ -51,8 +52,12 @@ async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
 
   const data = await promise;
 
-  const gltfParser = new GLTFParser({uri: urlOrPromise});
-  const gltf = await gltfParser.parseAsync(data);
+  const gltfParser = new GLTFParser();
+  const gltf = await gltfParser.parse(data, {
+    uri: urlOrPromise,
+    decompress: true,
+    DracoDecoder
+  });
 
   const {scenes, animator} = createGLTFObjects(gl, gltf, options);
 
@@ -70,23 +75,15 @@ function loadModelList() {
 }
 
 function addModelsToDropdown(models, modelDropdown) {
+  const VARIANTS = ['glTF-Draco', 'glTF-Binary', 'glTF-Embedded', 'glTF'];
+
   models.forEach(({name, variants}) => {
-    if (variants['glTF-Binary']) {
-      const option = document.createElement('option');
-      option.text = `${name} (GLB)`;
-      option.value = `${name}/glTF-Binary/${variants['glTF-Binary']}`;
-      modelDropdown.appendChild(option);
-    } else if (variants['glTF-Embedded']) {
-      const option = document.createElement('option');
-      option.text = `${name} (glTF-Embedded)`;
-      option.value = `${name}/glTF-Embedded/${variants['glTF-Embedded']}`;
-      modelDropdown.appendChild(option);
-    } else if (variants.glTF) {
-      const option = document.createElement('option');
-      option.text = `${name} (glTF)`;
-      option.value = `${name}/glTF/${variants.glTF}`;
-      modelDropdown.appendChild(option);
-    }
+    const variant = VARIANTS.find(v => variants[v]);
+
+    const option = document.createElement('option');
+    option.text = `${name} (${variant})`;
+    option.value = `${name}/${variant}/${variants[variant]}`;
+    modelDropdown.appendChild(option);
   });
 }
 
