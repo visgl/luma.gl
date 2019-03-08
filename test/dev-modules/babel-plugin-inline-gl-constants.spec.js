@@ -54,7 +54,8 @@ test('InlineGLSLConstants Babel Plugin', t => {
   TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       presets: [['@babel/env', ES6_ENV]],
-      plugins: [[plugin]]
+      plugins: [[plugin]],
+      filename: 'test.js'
     });
     t.is(clean(code), clean(testCase.output), testCase.title);
   });
