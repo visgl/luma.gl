@@ -52,6 +52,7 @@ export default class Texture extends Resource {
 
     this.width = undefined;
     this.height = undefined;
+    this.depth = undefined;
     this.format = undefined;
     this.type = undefined;
     this.dataFormat = undefined;
@@ -103,22 +104,22 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    let {width, height, dataFormat} = props;
+    let {width, height, depth, dataFormat} = props;
 
     // Deduce width and height
-    ({width, height, dataFormat} = this._deduceParameters({
+    ({width, height, depth, dataFormat} = this._deduceParameters({
       format,
       type,
       dataFormat,
       compressed: false,
       data,
-      width,
-      height
+      width
     }));
 
     // Store opts for accessors
     this.width = width;
     this.height = height;
+    this.depth = depth || 0;
     this.format = format;
     this.type = type;
     this.dataFormat = dataFormat;
@@ -151,6 +152,7 @@ export default class Texture extends Resource {
       data,
       width,
       height,
+      depth,
       format,
       type,
       dataFormat,
@@ -248,21 +250,23 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
+    ({type, dataFormat, compressed, width, height, depth} = this._deduceParameters({
       format,
       type,
       dataFormat,
       compressed,
       data,
       width,
-      height
+      height,
+      depth,
+      is3D
     }));
 
     const {gl} = this;
     gl.bindTexture(this.target, this.handle);
 
     let dataType = null;
-    ({data, dataType} = this._getDataType({data, compressed}));
+    ({data, dataType} = this._getDataType({data, compressed, is3D}));
 
     withParameters(this.gl, parameters, () => {
       switch (dataType) {

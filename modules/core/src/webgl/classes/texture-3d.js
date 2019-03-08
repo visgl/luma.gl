@@ -11,7 +11,7 @@ export default class Texture3D extends Texture {
 
   constructor(gl, opts = {}) {
     assertWebGL2Context(gl);
-    super(gl, Object.assign({}, opts, {target: opts.target || GL.TEXTURE_3D}));
+    super(gl, Object.assign({}, opts, {target: opts.target || GL.TEXTURE_3D, is3D: true }));
 
     this.width = null;
     this.height = null;
