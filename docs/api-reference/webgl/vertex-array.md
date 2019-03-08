@@ -111,7 +111,7 @@ program.setAttributes(attributes : Object);
 
 Attributes is an object with key-value pairs: `{nameOrLocation: value, ....}`.
 
-* `nameOrLocation` - (*string|number*) The name of the attribute as declared in the shader, or the location specified by a layout qualifier in the shader.
+* `nameOrLocation` - (*string|number*) The name of the attribute as declared in the shader, or the location specified by a layout qualifier in the shader. The name can contain an offset to the actual location in the format of `name__LOCATION_0`. This is useful for setting *mat* type attributes. See the section at the bottom for more details.
 * `value` - (*Buffer|Array|typed array*) An attribute value must be a `Buffer` or a typed array.
 
 Each value can be an a `Buffer`, an `Array` starting with a `Buffer` or a typed array.
@@ -186,3 +186,14 @@ When setting `Buffer` attributes, additional data can be provided to specify how
 * The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
 * If divisor is zero, the attribute at slot index advances once per vertex.
 * If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
+
+## Notes about setting *mat* type attributes
+
+* Setting a **mat** type in the shader requires to manually add an *offset* to the location.
+* This can be done by using special name format `name__LOCATION_0`. This will add 0 to the *LOCATION* resulting in no change. `name__LOCATION_1` will add **1**.
+* For example:
+  * if we have the following declaration in the shader:
+```
+attribute mat4 matrix;
+```
+  * We should specify `matrix__LOCATION_0`, `matrix__LOCATION_1`, `matrix__LOCATION_2` **and** `matrix__LOCATION_3` as *vec4*.
