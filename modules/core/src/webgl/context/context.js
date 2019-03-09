@@ -102,7 +102,7 @@ export function createGLContext(opts = {}) {
     return null;
   }
 
-  gl = getTooledContext(gl);
+  gl = instrumentGLContext(gl);
 
   // Log some debug info about the newly created context
   logInfo(gl);
@@ -111,7 +111,7 @@ export function createGLContext(opts = {}) {
   return gl;
 }
 
-export function getTooledContext(gl, opts = {}) {
+export function instrumentGLContext(gl, opts = {}) {
   opts = Object.assign({}, contextDefaults, opts);
   const {manageState, debug} = opts;
 

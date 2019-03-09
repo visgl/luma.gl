@@ -2,7 +2,7 @@
 
 import {
   createGLContext,
-  getTooledContext,
+  instrumentGLContext,
   resizeGLContext,
   resetParameters
 } from '../webgl/context';
@@ -351,7 +351,7 @@ export default class AnimationLoop {
 
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, this.props.glOptions);
-    this.gl = this.props.gl ? getTooledContext(this.props.gl, opts) : this.onCreateContext(opts);
+    this.gl = this.props.gl ? instrumentGLContext(this.props.gl, opts) : this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
