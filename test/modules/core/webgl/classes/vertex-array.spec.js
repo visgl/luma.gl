@@ -52,3 +52,28 @@ test('WebGL#VertexArray#setAttributes(unused)', t => {
 
   t.end();
 });
+
+test('WebGL#VertexArray#_getAttributeIndex', t => {
+  const {gl} = fixture;
+
+  const vertexArray = new VertexArray(gl);
+  vertexArray.setProps({
+    configuration: {
+      getAttributeLocation: () => 1
+    }
+  });
+
+  const matrix = vertexArray._getAttributeIndex('matrix');
+  t.equal(matrix.location, 1, 'Bad location');
+  t.equal(matrix.name, 'matrix', 'Bad name');
+
+  const matrix0 = vertexArray._getAttributeIndex('matrix__LOCATION_0');
+  t.equal(matrix0.location, 1, 'Bad location');
+  t.equal(matrix0.name, 'matrix', 'Bad name');
+
+  const matrix1 = vertexArray._getAttributeIndex('matrix__LOCATION_1');
+  t.equal(matrix1.location, 2, 'Bad location');
+  t.equal(matrix1.name, 'matrix', 'Bad name');
+
+  t.end();
+});
