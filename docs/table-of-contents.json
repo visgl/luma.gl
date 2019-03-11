@@ -54,6 +54,15 @@
       "title": "Developer Guide",
       "chapters": [
         {
+          "title": "Overview",
+          "entries": [
+            {
+              "name": "Overview",
+              "entry": "docs/developer-guide/README.md"
+            }
+          ]
+        },
+        {
           "title": "Shadertools",
           "entries": [
             {
@@ -124,7 +133,7 @@
           "entries": [
             {
               "name": "Multi-Pass Rendering",
-              "entry": "docs/developer-guide/multipass/README"
+              "entry": "docs/developer-guide/multipass/README.md"
             }
           ]
         },
@@ -152,20 +161,21 @@
               "entry": "docs/developer-guide/programs-and-shaders.md"
             }
           ]
-        },
-        {
-          "name": "Overview",
-          "entry": "docs/developer-guide/README"
-        },
-        {
-          "name": "API Structure",
-          "entry": "docs/api-reference/README"
         }
       ]
     },
     {
       "title": "API Reference",
       "chapters": [
+        {
+          "title": "API Structure",
+          "entries": [
+            {
+              "name": "API Structure",
+              "entry": "docs/api-reference/README.md"
+            }
+          ]
+        },
         {
           "title": "Core Classes",
           "entries": [
