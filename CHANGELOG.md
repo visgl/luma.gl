@@ -1,5 +1,17 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.14 - Mar 11, 2019
+- Ensure that externally created contexts are polyfilled, tracked (#954)
+- Add support for mat attribute types (#959)
+- Add draco glTF compression support (#957)
+- Move wip code out of /src (#955)
+- Stats update (#953)
+- Expose glTF API as function call (#951)
+- Query cleanup (#950)
+- Fix WebGL 2 timer polyfills (#946)
+- glTF: Handle alpha mask and blend (#945)
+- Don't create no-op Promises for queries (#942)
+
 ## v7.0.0-alpha.13 - Mar 1, 2019
 - new default material parameters (#940)
 - Capturing canvas contents (#937)
