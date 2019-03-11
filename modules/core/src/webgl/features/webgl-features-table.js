@@ -31,9 +31,6 @@ export const FEATURES = {
   COLOR_ATTACHMENT_FLOAT: 'COLOR_ATTACHMENT_FLOAT',
   COLOR_ATTACHMENT_HALF_FLOAT: 'COLOR_ATTACHMENT_HALF_FLOAT',
 
-  // POST WEBGL2 EXTENSIONS
-  MULTIDRAW: 'MULTIDRAW',
-
   // GLSL extensions
   GLSL_FRAG_DATA: 'GLSL_FRAG_DATA',
   GLSL_FRAG_DEPTH: 'GLSL_FRAG_DEPTH',
@@ -72,11 +69,6 @@ export default {
   [FEATURES.COLOR_ATTACHMENT_RGBA32F]: ['WEBGL_color_buffer_float', 'EXT_color_buffer_float'],
   [FEATURES.COLOR_ATTACHMENT_FLOAT]: [false, 'EXT_color_buffer_float'],
   [FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: [false, 'EXT_color_buffer_half_float'],
-
-  // EXPERIMENTAL EXTENSIONS
-  [FEATURES.MULTIDRAW]: [
-    gl => gl.getExtension('WEBGL_multi_draw') && gl.getExtension('WEBGL_multi_draw_instanced')
-  ],
 
   // GLSL extensions
   [FEATURES.GLSL_FRAG_DATA]: ['WEBGL_draw_buffers', true],
