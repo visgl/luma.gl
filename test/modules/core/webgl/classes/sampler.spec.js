@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {Sampler} from 'luma.gl';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 import {
   testSamplerParameters,

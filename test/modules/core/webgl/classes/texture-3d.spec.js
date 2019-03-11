@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {Texture3D} from 'luma.gl';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#Texture3D construct/delete', t => {
   const {gl} = fixture;

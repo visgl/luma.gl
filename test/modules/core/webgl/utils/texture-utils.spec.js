@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {cloneTextureFrom} from '@luma.gl/core/webgl/utils/texture-utils';
 import {Texture2D} from 'luma.gl';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
 
 test('texture-utils#cloneTextureFrom', t => {

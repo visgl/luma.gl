@@ -21,7 +21,7 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-import {createTestContext} from 'luma.gl/test/setup';
+import {createTestContext} from 'test/setup';
 const fixture = {
   gl: createTestContext(),
   gl2: createTestContext({webgl2: true, webgl1: false})

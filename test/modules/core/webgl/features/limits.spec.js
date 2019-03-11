@@ -2,7 +2,7 @@ import {getKey, getContextInfo} from 'luma.gl';
 import WEBGL_LIMITS from '@luma.gl/core/webgl/features/webgl-limits-table';
 import test from 'tape-catch';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#getContextInfo', t => {
   const {gl} = fixture;

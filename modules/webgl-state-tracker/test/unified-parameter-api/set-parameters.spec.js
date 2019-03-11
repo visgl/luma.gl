@@ -10,7 +10,7 @@ import GL from '@luma.gl/constants';
 import {Framebuffer} from 'luma.gl';
 import {getKey} from 'luma.gl';
 
-import {createTestContext} from 'luma.gl/test/setup';
+import {createTestContext} from 'test/setup';
 
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl-state-tracker/unified-parameter-api/webgl-parameter-tables';
 

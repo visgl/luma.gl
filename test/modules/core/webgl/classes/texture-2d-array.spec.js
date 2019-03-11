@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import {Texture2DArray} from 'luma.gl2';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#Texture2DArray', tt => {
   if (!Texture2DArray.isSupported(fixture.gl)) {

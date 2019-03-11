@@ -2,7 +2,7 @@ import {canCompileGLGSExtension, hasFeature, hasFeatures, getFeatures, FEATURES}
 import test from 'tape-catch';
 import {makeSpy} from '@probe.gl/test-utils';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
 const WEBGL_FEATURES = {

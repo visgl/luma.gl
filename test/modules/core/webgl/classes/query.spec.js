@@ -3,7 +3,7 @@ import test from 'tape-catch';
 import {Query} from 'luma.gl';
 import util from 'util';
 import GL from '@luma.gl/constants';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 function pollQuery(query, t) {
   return query

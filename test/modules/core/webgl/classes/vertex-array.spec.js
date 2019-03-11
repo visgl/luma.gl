@@ -2,7 +2,7 @@ import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {VertexArray, VertexArrayObject, Buffer} from 'luma.gl';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
