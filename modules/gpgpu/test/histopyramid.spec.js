@@ -439,7 +439,7 @@ test('histopyramid#Minification to 1X1)', t => {
 
 const HISTOPYRAMID_TEST_CASES = [
   {
-    name: 'Squre power of two texture 2X2',
+    name: 'Square power of two texture 2X2',
     width: 2,
     height: 2,
     // // sourceData 2X2 texture
@@ -451,7 +451,7 @@ const HISTOPYRAMID_TEST_CASES = [
     expectedTopLevelData: [0, 4, 8, 12]
   },
   {
-    name: 'Squre power of two texture 4X4',
+    name: 'Square power of two texture 4X4',
     width: 4,
     height: 4,
     // // sourceData: 4X4 texture
@@ -470,7 +470,7 @@ const HISTOPYRAMID_TEST_CASES = [
     expectedTopLevelData: [40, 72, 168, 200]
   },
   {
-    name: 'Squre non power of two texture 3X3',
+    name: 'Square non power of two texture 3X3',
     width: 3,
     height: 3,
     // // sourceData: 3X3 texture
