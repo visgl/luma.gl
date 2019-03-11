@@ -35,7 +35,7 @@ Returns a function `self => {...}` that sets up the message handling inside the 
 
 ## Methods
 
-### constructor
+### constructor(worker: Worker, props : Object)
 
 ```js
 new AnimationLoopProxy(worker, {
@@ -47,24 +47,23 @@ new AnimationLoopProxy(worker, {
 ```
 
 * `worker` - a [Worker](https://developer.mozilla.org/en-US/docs/Web/API/Worker) instance using code created from `AnimationLoopProxy.createWorker`.
-* `options`
-  - `onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
-  - `onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
-  - `autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
-  - `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
-### start
+* `props.onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
+* `props.onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
+* `props.autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
+* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
-Restarts the animation
+### start([options : Object]) : AnimationLoopProxy
+
+Initializes and then (re)starts the animation
 
 ```js
 animationLoopProxy.start(options)
 ```
 
-* `options`=`{}` (object) - Options to create the canvas with.
-  + `options.canvas` (string | HTMLCanvasElement) - A *string* containing the `id` of an existing HTML element or a *DOMElement* instance. If `null` or not provided, a new canvas will be created.
+* `options.canvas` (string | HTMLCanvasElement) - A *string* containing the `id` of an existing HTML element or a *DOMElement* instance. If `null` or not provided, a new canvas will be created.
 
-### stop
+### stop() : AnimationLoopProxy
 
 Stops the animation
 
@@ -72,12 +71,21 @@ Stops the animation
 animationLoopProxy.stop();
 ```
 
-### setProps
+### waitForRender() : Promise
+
+Returns a promise which resolves in the next frame after rendering has completed.
+
+```js
+const loop = await animationLoop.waitForRender()
+// can now read pixels from webgl context
+loop.gl.readPixels(...)
+```
+
+### setProps(props: Object) : AnimationLoopProxy
 
 ```js
 animationLoopProxy.setProps({...props});
 ```
 
-* `autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
-* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
-
+* `props.autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
+* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.

@@ -22,7 +22,7 @@ import {AnimationLoop} from 'luma.gl';
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
-    // Keys in the object returned here will be available in onRenderFrame
+    // Keys in the object returned here will be available in onRender
     return {
       clipSpaceQuad: new ClipSpaceQuad({gl, fs: FRAGMENT_SHADER})
     };
@@ -43,34 +43,34 @@ animationLoop.start({canvas: 'my-canvas'});
 
 ## Methods
 
-### constructor
+### constructor(props : Object)
 
 ```js
 new AnimationLoop({
   onCreateContext,
   onInitialize,
   onFinalize,
-  onRenderFrame,
+  onRender,
 
   autoResizeViewport,
   autoResizeDrawingBuffer
 });
 ```
 
-* `onCreateContext`=`null` (callback) - function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.
-* `onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
-* `onRender`=`null` (callback) - Called on every animation frame.
-* `onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
-* `autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRenderFrame` is called. Set to false to control viewport size.
-* `autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
-* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
-* `gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
-* `glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
-* `debug`=`false` (bool) - Enable debug mode will provide more validations and error messages, but less performant.
-* `createFramebuffer`=`false` (bool) - If true, will make a `framebuffer` (FrameBuffer) parameter available to `onInitialize` and `onRender` callbacks.
+* `props.onCreateContext`=`null` (callback) - function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.
+* `props.onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
+* `props.onRender`=`null` (callback) - Called on every animation frame.
+* `props.onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
+* `props.autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRender` is called. Set to false to control viewport size.
+* `props.autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
+* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
+* `props.gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
+* `props.glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
+* `props.debug`=`false` (bool) - Enable debug mode will provide more validations and error messages, but less performant.
+* `props.createFramebuffer`=`false` (bool) - If true, will make a `framebuffer` (FrameBuffer) parameter available to `onInitialize` and `onRender` callbacks.
 
 
-### start
+### start([options : Object]) : AnimationLoop
 
 Restarts the animation
 
@@ -78,37 +78,47 @@ Restarts the animation
 
 * `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
 
-### stop
+### stop() : AnimationLoop
 
 Stops the animation
 
 `animationLoop.stop()`
 
-### redraw
+### waitForRender() : Promise
+
+Returns a promise which resolves in the next frame after rendering and the `onRender` callback have completed.
+
+```js
+const loop = await animationLoop.waitForRender()
+// can now read pixels from webgl context
+loop.gl.readPixels(...)
+```
+
+### redraw() : AnimationLoop
 
 Immediately invokes a redraw (call `onRender` with updated animation props). Only use if the canvas must be updated synchronously.
 
-### setNeedsRedraw
+### setNeedsRedraw(reason : String) : AnimationLoop
 
 `animationLoop.setNeedsRedraw(reason)`
 
 * `reason` (`String`) - A human readable string giving a hint as to why redraw was needed (e.g. "geometry changed").
 
-If set, the value will be provided as the `needsRedraw` field to the `onRenderFrame` callback.
+If set, the value will be provided as the `needsRedraw` field to the `onRender` callback.
 
 Notes:
-* `onRenderFrame` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
+* `onRender` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
 * If called multiple times, the `reason` provided in the first call will be remembered.
 * `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
 
-### setProps
+### setProps(props : Object) : AnimationLoop
 
 `animationLoop.setProps({...props})`
 
-* `autoResizeViewport` - Call `gl.viewport` before each call to `onRenderFrame()`
-* `autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
-* `useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
+* `props.autoResizeViewport` - Call `gl.viewport` before each call to `onRender()`
+* `props.autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRender()`
+* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
 ### toDataURL
 

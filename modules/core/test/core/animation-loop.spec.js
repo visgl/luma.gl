@@ -72,7 +72,7 @@ test('WebGL#AnimationLoop redraw', t => {
   }).start();
 });
 
-test('WebGL#AnimationLoop two start()s should only run one loop', t => {
+test('WebGL#AnimationLoop should not call initialize more than once', async t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -86,16 +86,40 @@ test('WebGL#AnimationLoop two start()s should only run one loop', t => {
     gl,
     onInitialize: () => {
       initializeCalled++;
-    },
-    onRender: () => {
-      animationLoop.stop();
-      // FIXME: this is not directly test that only one loop has been started
-      t.is(initializeCalled, 1, 'onInitialize called');
-      t.end();
     }
   });
   animationLoop.start();
   animationLoop.start();
+  await animationLoop.waitForRender();
+  animationLoop.stop();
+  t.is(initializeCalled, 1, 'onInitialize called');
+  t.end();
+});
+
+test('WebGL#AnimationLoop two start()s should only run one loop', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('browser-only test');
+    t.end();
+    return;
+  }
+
+  const {gl} = fixture;
+  let renderCalled = 0;
+
+  const animationLoop = new AnimationLoop({
+    gl,
+    onRender: () => {
+      renderCalled++;
+    }
+  });
+  animationLoop.start();
+  await animationLoop.waitForRender();
+  animationLoop.start();
+  await animationLoop.waitForRender();
+  await animationLoop.waitForRender();
+  animationLoop.stop();
+  t.is(renderCalled, 3, 'onRender called');
+  t.end();
 });
 
 test('WebGL#AnimationLoop start followed immediately by stop() should stop', t => {

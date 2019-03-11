@@ -73,7 +73,8 @@ export default class AnimationLoop {
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
-    this._startPromise = null;
+    this._nextFramePromise = null;
+    this._resolveNextFrame = null;
     this._cpuStartTime = 0;
 
     this._canvasDataURLPromise = null;
@@ -91,8 +92,6 @@ export default class AnimationLoop {
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
-
-    return this;
   }
 
   setNeedsRedraw(reason) {
@@ -123,7 +122,7 @@ export default class AnimationLoop {
     this._running = true;
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
-    this._startPromise = getPageLoadPromise()
+    getPageLoadPromise()
       .then(() => {
         if (!this._running || this._initialized) {
           return null;
@@ -144,10 +143,10 @@ export default class AnimationLoop {
 
         this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
 
-        // Note: onIntialize can return a promise (in case it needs to load resources)
-        const initializationPromise = this.onInitialize(this.animationProps);
         this._initialized = true;
-        return initializationPromise;
+
+        // Note: onIntialize can return a promise (in case it needs to load resources)
+        return this.onInitialize(this.animationProps);
       })
       .then(appContext => {
         if (this._running) {
@@ -197,10 +196,21 @@ export default class AnimationLoop {
     if (this._running) {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
       this._animationFrameId = null;
       this._running = false;
     }
     return this;
+  }
+
+  waitForRender() {
+    if (!this._nextFramePromise) {
+      this._nextFramePromise = new Promise(resolve => {
+        this._resolveNextFrame = resolve;
+      });
+    }
+    return this._nextFramePromise;
   }
 
   toDataURL() {
@@ -253,6 +263,11 @@ export default class AnimationLoop {
         return;
       }
       this.redraw();
+      if (this._resolveNextFrame) {
+        this._resolveNextFrame(this);
+        this._nextFramePromise = null;
+        this._resolveNextFrame = null;
+      }
       this._animationFrameId = requestAnimationFrame(renderFrame);
     };
 
