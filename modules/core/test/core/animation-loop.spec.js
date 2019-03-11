@@ -72,7 +72,7 @@ test('WebGL#AnimationLoop redraw', t => {
   }).start();
 });
 
-test('WebGL#AnimationLoop should not call initialize more than once', async (t) => {
+test('WebGL#AnimationLoop should not call initialize more than once', async t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -90,13 +90,13 @@ test('WebGL#AnimationLoop should not call initialize more than once', async (t) 
   });
   animationLoop.start();
   animationLoop.start();
-  await animationLoop.waitForRender()
+  await animationLoop.waitForRender();
   animationLoop.stop();
   t.is(initializeCalled, 1, 'onInitialize called');
   t.end();
 });
 
-test('WebGL#AnimationLoop two start()s should only run one loop', async (t) => {
+test('WebGL#AnimationLoop two start()s should only run one loop', async t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
