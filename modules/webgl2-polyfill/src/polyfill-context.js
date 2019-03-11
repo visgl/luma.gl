@@ -11,6 +11,11 @@
 import assert from './assert';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
+import {
+  WEBGL2_CONTEXT_POLYFILLS,
+  WEBGL2PLUS_CONTEXT_POLYFILLS,
+  WEBGL2_CONTEXT_OVERRIDES
+} from './polyfill-table';
 
 // Registers extensions, polyfills or mock functions for extensions in the polyfills list
 // TODO - remove use of name `luma`.
@@ -19,6 +24,7 @@ export default function polyfillContext(gl) {
   initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
     installPolyfills(gl, WEBGL2_CONTEXT_POLYFILLS);
+    installPolyfills(gl, WEBGL2PLUS_CONTEXT_POLYFILLS);
     installOverrides(gl, {target: gl.luma, target2: gl});
     gl.luma.polyfilled = true;
   }

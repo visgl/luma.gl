@@ -154,31 +154,122 @@ export default class Program extends Resource {
       }
 
       if (transformFeedback) {
-        const primitiveMode = getPrimitiveDrawMode(drawMode);
+        const primitiveMode = getPrimitiveDrawMode({
+          isIndexed,
+          isInstanced,
+          drawMode,
+          vertexCount,
+          indexType,
+          offset,
+          instanceCount
+        });
         transformFeedback.begin(primitiveMode);
       }
 
       this._bindTextures();
 
-      withParameters(this.gl, parameters, () => {
-        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-        if (isIndexed && isInstanced) {
-          this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-        } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-          this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-        } else if (isIndexed) {
-          this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-        } else if (isInstanced) {
-          this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-        } else {
-          this.gl.drawArrays(drawMode, offset, vertexCount);
-        }
-      });
+      withParameters(this.gl, parameters, () => this._draw());
 
       if (transformFeedback) {
         transformFeedback.end();
       }
     });
+
+    return true;
+  }
+
+  _draw(parameters) {
+    if (this._multiDraw(parameters)) {
+      return;
+    }
+
+    const {
+      isIndexed,
+      isInstanced,
+      drawMode,
+      vertexCount,
+      indexType,
+      offset,
+      instanceCount,
+      start,
+      end
+    } = parameters;
+
+    // Note - Uses polyfilled WebGL2RenderingContext instead of ANGLE extension
+    if (isIndexed && isInstanced) {
+      this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+    } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+      this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+    } else if (isIndexed) {
+      this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+    } else if (isInstanced) {
+      this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+    } else {
+      this.gl.drawArrays(drawMode, offset, vertexCount);
+    }
+  }
+
+  // eslint-disable-next-line complexity
+  _multiDraw(parameters) {
+    const {
+      firsts,
+      firstsOffset = 0,
+      counts,
+      countsOffset = 0,
+      offsets,
+      offsetsOffset = 0,
+      instanceCounts,
+      instanceCountOffset = 0,
+      drawCount = firsts.length
+    } = parameters;
+
+    const isMultidraw =
+      firsts || firstsOffset || counts || countsOffset || offsets || offsetsOffset || drawCount;
+
+    if (!isMultidraw) {
+      return false;
+    }
+
+    const {isIndexed, isInstanced, drawMode, indexType} = parameters;
+
+    const multiDrawExt = this.gl.getExtension('WEBGL_multi_draw');
+    const multiDrawInstancedExt = this.gl.getExtension('WEBGL_multi_draw_instanced');
+    // TODO - In WebGL2 we could fallback to drawRangeElements for non instanced rendering?
+    assert(multiDrawExt && multiDrawInstancedExt);
+
+    if (isIndexed && isInstanced) {
+      multiDrawInstancedExt.multiDrawElementsInstancedWEBGL(
+        drawMode,
+        vertexCount,
+        indexType,
+        offset,
+        instanceCounts,
+        instanceCountOffset,
+        drawCount
+      );
+    } else if (isInstanced) {
+      multiDrawInstancedExt.multiDrawArraysInstancedWEBGL(
+        drawMode,
+        firsts,
+        firstsOffset,
+        counts,
+        countsOffset,
+        instanceCounts,
+        instanceCountOffset,
+        drawCount
+      );
+    } else if (isIndexed) {
+      multiDrawExt.multiDrawElementsWEBGL(drawMode, vertexCount, indexType, offset, drawCount);
+    } else {
+      multiDrawExt.multiDrawArraysWEBGL(
+        drawMode,
+        firsts,
+        firstsOffset,
+        counts,
+        countsOffset,
+        drawCount
+      );
+    }
 
     return true;
   }

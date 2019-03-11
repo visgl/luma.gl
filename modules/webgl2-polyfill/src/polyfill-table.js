@@ -2,6 +2,15 @@ import GL from '@luma.gl/constants';
 import assert from './assert';
 
 import {getParameterPolyfill} from './polyfills/get-parameter-polyfill';
+<<<<<<< HEAD
+=======
+import {
+  multiDrawArraysPolyfill,
+  multiDrawElementsPolyfill,
+  multiDrawArraysInstancedPolyfill,
+  multiDrawElementsInstancedPolyfill
+} from './polyfills/multidraw-polyfill';
+>>>>>>> WebGL2 polyfill cleanup
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -85,6 +94,19 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
       return this.getQueryObject(handle, pname);
     },
     getQueryObject: () => {}
+  }
+};
+
+export const WEBGL2PLUS_CONTEXT_POLYFILLS = {
+  ['WEBGL_multi_draw']: {
+    meta: {suffix: 'WEBGL'},
+    multiDrawArrays: multiDrawArraysPolyfill,
+    multiDrawElements: multiDrawElementsPolyfill
+  },
+  ['WEBGL_multi_draw_instanced']: {
+    meta: {suffix: 'WEBGL'},
+    multiDrawArraysInstanced: multiDrawArraysInstancedPolyfill,
+    multiDrawElementsInstanced: multiDrawElementsInstancedPolyfill
   }
 };
 
