@@ -139,6 +139,40 @@ This table lists parameter mapping between old and new function.
 | `opts.filter`     | `opts.filter` |
 
 
+### Default Framebuffer
+
+The default framebuffer is no longer preserved between frames. The most common use case for preserving the draw buffer is capturing canvas contents into an image via `toDataURL`. This can now be done via `AnimationLoop.toDataURL` which returns a `Promise` that resolves to the canvas data URL:
+
+```
+animationLoop.toDataURL().then((dataURL) => {
+  snapshotImage.src = dataURL;
+});
+```
+
+More generally, moving code that depends on canvas contents to the end of `onRender`, after all draw operations, will ensure that canvas contents are available. Finally, prior behaviour can re-enabled using the `glOptions` argument to the `AnimationLoop` constructor:
+
+```
+new AnimationLoop({
+  glOptions: {
+    preserveDrawingBuffer: true
+  }
+});
+```
+
+This final option is discouraged as it may result in a significant performance drops on some platforms.
+
+### Query Results
+
+Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
+
+
+### Query Promises
+
+`Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. See `Query.createPoll` for a promise-based API.
+
+### `FenceSync` class has been removed. Syncing can be done directly through the `gl` object.
+
+
 ## Upgrading from v5.3 to v6.0
 
 luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:

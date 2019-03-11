@@ -62,7 +62,7 @@ const animationLoop = new AnimationLoop({
   onRender({gl, tick, aspect, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    cube.render({
+    return cube.render({
       uPMatrix: new Matrix4().perspective({aspect}),
       uMVMatrix: new Matrix4()
         .lookAt({eye: [0, 0, 0]})

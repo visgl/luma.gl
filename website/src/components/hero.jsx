@@ -36,7 +36,7 @@ export default class Hero extends Component {
         <div className="f hero">
           <ExampleRunner example={HeroExample} sourceLink={HeroExample.path} noPanel />
         </div>
-        <div className="container">
+        <div className="container" style={{background: 'transparent'}}>
           <h1>luma.gl</h1>
           <p>A WebGL2-Powered Framework for GPU-based Visualization and Computation</p>
           <Link to="/docs/get-started" className="btn">

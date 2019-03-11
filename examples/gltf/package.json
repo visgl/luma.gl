@@ -9,7 +9,8 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@loaders.gl/gltf": "^0.5.4",
+    "@loaders.gl/draco": "^0.8.0",
+    "@loaders.gl/gltf": "^0.8.1",
     "luma.gl": "^6.2.0-beta"
   },
   "devDependencies": {

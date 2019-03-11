@@ -5,8 +5,10 @@
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 export default `\
+#if (__VERSION__ < 300)
 #extension GL_EXT_shader_texture_lod: enable
 #extension GL_OES_standard_derivatives : enable
+#endif
 
 precision highp float;
 
@@ -17,6 +19,7 @@ uniform vec3 u_LightColor;
 uniform samplerCube u_DiffuseEnvSampler;
 uniform samplerCube u_SpecularEnvSampler;
 uniform sampler2D u_brdfLUT;
+uniform vec2 u_ScaleIBLAmbient;
 #endif
 
 #ifdef HAS_BASECOLORMAP
@@ -38,15 +41,20 @@ uniform sampler2D u_OcclusionSampler;
 uniform float u_OcclusionStrength;
 #endif
 
+#ifdef ALPHA_CUTOFF
+uniform float u_AlphaCutoff;
+#endif
+
 uniform vec2 u_MetallicRoughnessValues;
 uniform vec4 u_BaseColorFactor;
 
 uniform vec3 u_Camera;
 
 // debugging flags used for shader output of intermediate PBR variables
+#ifdef PBR_DEBUG
 uniform vec4 u_ScaleDiffBaseMR;
 uniform vec4 u_ScaleFGDSpec;
-uniform vec4 u_ScaleIBLAmbient;
+#endif
 
 varying vec3 pbr_vPosition;
 
@@ -84,17 +92,17 @@ const float c_MinRoughness = 0.04;
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {
-  #ifdef MANUAL_SRGB
-  #ifdef SRGB_FAST_APPROXIMATION
+#ifdef MANUAL_SRGB
+#ifdef SRGB_FAST_APPROXIMATION
   vec3 linOut = pow(srgbIn.xyz,vec3(2.2));
-  #else //SRGB_FAST_APPROXIMATION
+#else //SRGB_FAST_APPROXIMATION
   vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
   vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
-  #endif //SRGB_FAST_APPROXIMATION
+#endif //SRGB_FAST_APPROXIMATION
   return vec4(linOut,srgbIn.w);;
-  #else //MANUAL_SRGB
+#else //MANUAL_SRGB
   return srgbIn;
-  #endif //MANUAL_SRGB
+#endif //MANUAL_SRGB
 }
 
 // Find the normal for this fragment, pulling either from a predefined normal map
@@ -235,6 +243,12 @@ vec4 pbr_filterColor(vec4 colorUnused)
   vec4 baseColor = u_BaseColorFactor;
 #endif
 
+#ifdef ALPHA_CUTOFF
+  if (baseColor.a < u_AlphaCutoff) {
+    discard;
+  }
+#endif
+
   vec3 f0 = vec3(0.04);
   vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
   diffuseColor *= 1.0 - metallic;
@@ -307,6 +321,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
 
   // This section uses mix to override final color for reference app visualization
   // of various parameters in the lighting equation.
+#ifdef PBR_DEBUG
   color = mix(color, F, u_ScaleFGDSpec.x);
   color = mix(color, vec3(G), u_ScaleFGDSpec.y);
   color = mix(color, vec3(D), u_ScaleFGDSpec.z);
@@ -316,6 +331,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
   color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);
   color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);
   color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);
+#endif
 
   return vec4(pow(color,vec3(1.0/2.2)), baseColor.a);
 }

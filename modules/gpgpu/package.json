@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "7.0.0-alpha.11",
+  "version": "7.0.0-alpha.14",
   "description": "Set of gpgpu utility methods based on luma.gl",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,6 @@
   },
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.6",
-    "luma.gl": "^7.0.0-alpha.11"
+    "luma.gl": "^7.0.0-alpha.14"
   }
 }

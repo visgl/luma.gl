@@ -137,12 +137,14 @@ export default class TextureCube extends Texture {
     return this;
   }
 
-  bind({index} = {}) {
-    if (index !== undefined) {
-      this.gl.activeTexture(GL.TEXTURE0 + index);
+  bind(textureUnit = this.textureUnit) {
+    const {gl} = this;
+    if (textureUnit !== undefined) {
+      this.textureUnit = textureUnit;
+      gl.activeTexture(gl.TEXTURE0 + textureUnit);
     }
-    this.gl.bindTexture(GL.TEXTURE_CUBE_MAP, this.handle);
-    return index;
+    gl.bindTexture(this.target, this.handle);
+    return textureUnit;
   }
 
   unbind() {

@@ -151,6 +151,8 @@ Parameters for drawing a limited range (WebGL2 only)
 * `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
 * `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
 
+Returns: `true` if successful, `false` if draw call is blocked due to missing resources.
+
 Notes:
 
 * Runs the shaders in the program, on the attributes and uniforms.

@@ -11,9 +11,9 @@ export {
 
 export {
   createGLContext,
+  instrumentGLContext,
   destroyGLContext,
   resizeGLContext,
-  pollGLContext,
   setContextDefaults
 } from './context';
 

@@ -1,5 +1,6 @@
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 const INFO_HTML = `
 <p>
@@ -103,7 +104,7 @@ class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  onInitialize({gl}) {
+  onInitialize({gl, _animationLoop}) {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -113,7 +114,7 @@ class AppAnimationLoop extends AnimationLoop {
     });
 
     this.cube = new InstancedCube(gl, {
-      _animationLoop: this,
+      _animationLoop,
       uniforms: {
         uTime: ({tick}) => tick * 0.1,
         // Basic projection matrix
@@ -132,10 +133,27 @@ class AppAnimationLoop extends AnimationLoop {
         uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
+
+    const statsWidget = new StatsWidget(this.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
+
+    return {statsWidget};
   }
 
   onRender(animationProps) {
-    const {gl, framebuffer, useDevicePixels, _mousePosition} = animationProps;
+
+    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget, tick} = animationProps;
+
+    if (tick % 60 === 10) {
+      statsWidget.update();
+      this.cpuTime.reset();
+      this.gpuTime.reset();
+      this.frameRate.reset();
+    }
 
     // "Pick" the cube under the mouse
     const pickInfo = _mousePosition && pickModels(gl, {

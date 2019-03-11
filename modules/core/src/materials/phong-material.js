@@ -1,10 +1,10 @@
 import Material from './material';
 
 const defaultProps = {
-  ambient: 0.4,
+  ambient: 0.35,
   diffuse: 0.6,
   shininess: 32,
-  specularColor: [255, 255, 255]
+  specularColor: [128, 128, 128]
 };
 
 export default class PhongMaterial extends Material {

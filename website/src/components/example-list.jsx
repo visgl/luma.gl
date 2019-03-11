@@ -12,7 +12,7 @@ import Shadowmap from '../../../examples/core/shadowmap/app';
 import Transform from '../../../examples/core/transform/app';
 import TransformFeedback from '../../../examples/core/transform-feedback/app';
 
-import GLTF from '../../../examples/gltf/app';
+// import GLTF from '../../../examples/gltf/app';
 
 import Lesson01 from '../../../examples/lessons/01/app';
 import Lesson02 from '../../../examples/lessons/02/app';
@@ -48,7 +48,7 @@ export default {
   Transform: {app: Transform, path: 'examples/core/transform/'},
   TransformFeedbackDemo: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},
 
-  GLTF: {app: GLTF, path: 'examples/gltf'},
+  // GLTF: {app: GLTF, path: 'examples/gltf'},
 
   Lesson01: {app: Lesson01, path: 'examples/lessons/01/'},
   Lesson02: {app: Lesson02, path: 'examples/lessons/02/'},

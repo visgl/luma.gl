@@ -175,7 +175,7 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    earth.render({
+    return earth.render({
       uMMatrix: new Matrix4()
         .translate([0, -20, -40])
         .rotateAxis(radians(23.4), [1, 0, -1])

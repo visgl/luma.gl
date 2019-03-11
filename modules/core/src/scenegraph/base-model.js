@@ -227,7 +227,7 @@ export default class BaseModel extends ScenegraphNode {
     this.onBeforeRender();
     this._timerQueryStart();
 
-    this.program.draw(
+    const didDraw = this.program.draw(
       Object.assign({}, opts, {
         logPriority,
         uniforms: null, // Already set (may contain "function values" not understood by Program)
@@ -248,11 +248,13 @@ export default class BaseModel extends ScenegraphNode {
     this._timerQueryEnd();
     this.onAfterRender();
 
-    this.setNeedsRedraw(false);
+    if (didDraw) {
+      this.setNeedsRedraw(false);
+    }
 
     this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
 
-    return this;
+    return didDraw;
   }
   /* eslint-enable max-statements  */
 
@@ -419,7 +421,7 @@ export default class BaseModel extends ScenegraphNode {
       // should this be incorporated into Query object?
       if (this.timeElapsedQuery.isResultAvailable()) {
         this.lastQueryReturned = true;
-        const elapsedTime = this.timeElapsedQuery.getResult();
+        const elapsedTime = this.timeElapsedQuery.getTimerMilliseconds();
 
         // Update stats (e.g. for seer)
         this.stats.lastFrameTime = elapsedTime;

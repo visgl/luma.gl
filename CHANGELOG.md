@@ -1,5 +1,65 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.14 - Mar 11, 2019
+- Ensure that externally created contexts are polyfilled, tracked (#954)
+- Add support for mat attribute types (#959)
+- Add draco glTF compression support (#957)
+- Move wip code out of /src (#955)
+- Stats update (#953)
+- Expose glTF API as function call (#951)
+- Query cleanup (#950)
+- Fix WebGL 2 timer polyfills (#946)
+- glTF: Handle alpha mask and blend (#945)
+- Don't create no-op Promises for queries (#942)
+
+## v7.0.0-alpha.13 - Mar 1, 2019
+- new default material parameters (#940)
+- Capturing canvas contents (#937)
+- Use glTF loader 0.7.2 to load Embedded and Multi-File glTF files (#938)
+- Frame timers (#934)
+- glTF: Basic Animation support (#932)
+- glTF demo app: load model index dynamically (#935)
+- Don't perserve the drawing buffer (#931)
+- [test-utils] Add performance test (#923)
+- bug fixes for AnimationLoop start/stop functionality (#924)
+- Test-utils bug fixes (#925)
+- glTF Snapshot Tests (#913)
+- glTF: Make PBR work with GLSL 3.0 (WebGL 2.0) (#916)
+- [test-utils] Refactor TestRenderer (#922)
+
+## v7.0.0-alpha.12 - Feb 20, 2019
+- use "lightSources" in module parameters (#920)
+- glTF: Add PBR debug options and ability to drag-and-drop GLB files (#914)
+- [test-utils] Support async onInitialized in TestRenderer (#919)
+- Expose program readiness when using async textures (#918)
+- changes to support gatsby example homepage
+- glTF: Add CubeTexture from environment (#902)
+- Add test-utils submodule (1/2) (#910)
+- fix TextureCube binding, add example to demonstrate (#901)
+- modify blending of highlight color and object color (#912)
+
+## v7.0.0-alpha.11 - Feb 13, 2019
+- Add headless browser test (#904)
+- New @luma.gl/effects module (#892)
+
+## v7.0.0-alpha.10 - Feb 12, 2019
+- add missing deps to modules/core/package.json
+
+## v7.0.0-alpha.9 - Feb 11, 2019
+- fix issue in modules/main/package.json
+
+## v7.0.0-alpha.8 - Feb 11, 2019
+- New @luma.gl/webgl-state-tracker module (#888)
+- Integrate GLTF example in website
+- Squash+Merge glTF feature branch (#877)
+- Rename main module to @luma.gl/core. Add luma.gl module for backwards compatiblity (#889)
+- Remove unused IO submodule (in favor of loaders.gl) (#890)
+- New submodule @luma.gl/webgl2-polyfills (#883)
+- Consolidate webgl code (prep for submodule) (#884)
+- Update examples to use Async Textures (#880)
+- Async Textures (#876)
+- Create custom eslint rule to detect wrong probe.gl logger usage (#873)
+
 ## v7.0.0-alpha.7 - Jan 16, 2019
 
 - add new lighting glsl API and better check for lighting_uEnabled. (#856)

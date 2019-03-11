@@ -1,4 +1,7 @@
 {
+  "parserOptions": {
+    "ecmaVersion": 2018
+  },
   "extends": [
     "uber-es2015",
     "prettier"

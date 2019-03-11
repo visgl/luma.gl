@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 /* eslint-disable no-console, no-invalid-this */
-import {Bench} from 'probe.gl/bench';
+import {Bench} from '@probe.gl/bench';
 
 import shadersBench from './shaders.bench';
 import uniformsBench from './uniforms.bench';

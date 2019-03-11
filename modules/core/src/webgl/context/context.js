@@ -6,7 +6,6 @@ import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
-import queryManager from '../utils/query-manager';
 
 import {WebGLRenderingContext, WebGL2RenderingContext} from '../utils';
 import {log, isBrowser, assert} from '../../utils';
@@ -78,7 +77,7 @@ export function setContextDefaults(opts = {}) {
 /* eslint-disable complexity, max-statements */
 export function createGLContext(opts = {}) {
   opts = Object.assign({}, contextDefaults, opts);
-  const {canvas, width, height, throwOnError, manageState, debug} = opts;
+  const {canvas, width, height, throwOnError} = opts;
 
   // Error reporting function, enables exceptions to be disabled
   function onError(message) {
@@ -98,9 +97,23 @@ export function createGLContext(opts = {}) {
     // Create a headless-gl context under Node.js
     gl = createHeadlessContext({width, height, opts, onError});
   }
+
   if (!gl) {
     return null;
   }
+
+  gl = instrumentGLContext(gl);
+
+  // Log some debug info about the newly created context
+  logInfo(gl);
+
+  // Add to seer integration
+  return gl;
+}
+
+export function instrumentGLContext(gl, opts = {}) {
+  opts = Object.assign({}, contextDefaults, opts);
+  const {manageState, debug} = opts;
 
   // Install context state tracking
   if (manageState) {
@@ -121,10 +134,6 @@ export function createGLContext(opts = {}) {
     }
   }
 
-  // Log some debug info about the newly created context
-  logInfo(gl);
-
-  // Add to seer integration
   return gl;
 }
 
@@ -176,12 +185,6 @@ export function resizeGLContext(gl, opts = {}) {
   if (ext && `width` in opts && `height` in opts) {
     ext.resize(opts.width, opts.height);
   }
-}
-
-// POLLING FOR PENDING QUERIES
-// Calling this function checks all pending queries for completion
-export function pollGLContext(gl) {
-  queryManager.poll(gl);
 }
 
 // HELPER METHODS

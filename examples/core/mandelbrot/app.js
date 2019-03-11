@@ -1,4 +1,5 @@
 import {AnimationLoop, ClipSpace} from 'luma.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 const INFO_HTML = `
 <p>
@@ -95,11 +96,29 @@ function getZoomedCorners(zoomFactor = 1.01) {
 }
 
 const animationLoop = new AnimationLoop({
-  onInitialize: ({gl}) => ({
-    clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER})
-  }),
+  onInitialize: ({gl, _animationLoop}) => {
 
-  onRender: ({gl, canvas, tick, clipSpace}) => {
+    const statsWidget = new StatsWidget(_animationLoop.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
+
+    return {
+      clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
+      statsWidget
+    };
+  },
+
+  onRender: ({gl, canvas, tick, clipSpace, statsWidget, _animationLoop}) => {
+    if (tick % 60 === 10) {
+      statsWidget.update();
+      _animationLoop.cpuTime.reset();
+      _animationLoop.gpuTime.reset();
+      _animationLoop.frameRate.reset();
+    }
+
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     // Feed in new extents every draw

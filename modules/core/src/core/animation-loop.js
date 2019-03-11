@@ -1,16 +1,22 @@
 /* global OffscreenCanvas */
-import {createGLContext, resizeGLContext, resetParameters} from '../webgl/context';
+
+import {
+  createGLContext,
+  instrumentGLContext,
+  resizeGLContext,
+  resetParameters
+} from '../webgl/context';
 import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
+import {Stats} from 'probe.gl';
+import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
 import {Framebuffer} from '../webgl';
 
-const DEFAULT_GL_OPTIONS = {
-  preserveDrawingBuffer: true
-};
+let statIdCounter = 0;
 
 export default class AnimationLoop {
   /*
@@ -32,7 +38,8 @@ export default class AnimationLoop {
 
       // view parameters
       autoResizeViewport = true,
-      autoResizeDrawingBuffer = true
+      autoResizeDrawingBuffer = true,
+      stats = new Stats({id: `animation-loop-${statIdCounter++}`})
     } = props;
 
     let {useDevicePixels = true} = props;
@@ -58,6 +65,19 @@ export default class AnimationLoop {
     // state
     this.gl = gl;
     this.needsRedraw = null;
+    this.stats = stats;
+    this.cpuTime = this.stats.get('CPU Time');
+    this.gpuTime = this.stats.get('GPU Time');
+    this.frameRate = this.stats.get('Frame Rate');
+
+    this._initialized = false;
+    this._running = false;
+    this._animationFrameId = null;
+    this._startPromise = null;
+    this._cpuStartTime = 0;
+
+    this._canvasDataURLPromise = null;
+    this._resolveCanvasDataURL = null;
 
     this.setProps({
       autoResizeViewport,
@@ -68,7 +88,6 @@ export default class AnimationLoop {
     // Bind methods
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
-    this._renderFrame = this._renderFrame.bind(this);
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
@@ -98,46 +117,53 @@ export default class AnimationLoop {
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
   start(opts = {}) {
-    this._stopped = false;
-    // console.debug(`Starting ${this.constructor.name}`);
-    if (!this._animationFrameId) {
-      // Wait for start promise before rendering frame
-      this._startPromise = getPageLoadPromise()
-        .then(() => {
-          if (this._stopped) {
-            return null;
-          }
-
-          // Create the WebGL context
-          this._createWebGLContext(opts);
-          this._createFramebuffer();
-          this._startEventHandling();
-
-          // Initialize the callback data
-          this._initializeCallbackData();
-          this._updateCallbackData();
-
-          // Default viewport setup, in case onInitialize wants to render
-          this._resizeCanvasDrawingBuffer();
-          this._resizeViewport();
-
-          // Note: onIntialize can return a promise (in case it needs to load resources)
-          return this.onInitialize(this.animationProps);
-        })
-        .then(appContext => {
-          if (!this._stopped) {
-            this._addCallbackData(appContext || {});
-            if (appContext !== false && !this._animationFrameId) {
-              this._animationFrameId = requestAnimationFrame(this._renderFrame);
-            }
-          }
-        });
+    if (this._running) {
+      return this;
     }
+    this._running = true;
+    // console.debug(`Starting ${this.constructor.name}`);
+    // Wait for start promise before rendering frame
+    this._startPromise = getPageLoadPromise()
+      .then(() => {
+        if (!this._running || this._initialized) {
+          return null;
+        }
+
+        // Create the WebGL context
+        this._createWebGLContext(opts);
+        this._createFramebuffer();
+        this._startEventHandling();
+
+        // Initialize the callback data
+        this._initializeCallbackData();
+        this._updateCallbackData();
+
+        // Default viewport setup, in case onInitialize wants to render
+        this._resizeCanvasDrawingBuffer();
+        this._resizeViewport();
+
+        this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+
+        // Note: onIntialize can return a promise (in case it needs to load resources)
+        const initializationPromise = this.onInitialize(this.animationProps);
+        this._initialized = true;
+        return initializationPromise;
+      })
+      .then(appContext => {
+        if (this._running) {
+          this._addCallbackData(appContext || {});
+          if (appContext !== false) {
+            this._startLoop();
+          }
+        }
+      });
     return this;
   }
 
   // Redraw now
   redraw() {
+    this._beginTimers();
+
     this._setupFrame();
     this._updateCallbackData();
 
@@ -153,19 +179,41 @@ export default class AnimationLoop {
     if (this.offScreen && this.gl.commit) {
       this.gl.commit();
     }
+
+    if (this._canvasDataURLPromise) {
+      this._resolveCanvasDataURL(this.gl.canvas.toDataURL());
+      this._canvasDataURLPromise = null;
+      this._resolveCanvasDataURL = null;
+    }
+
+    this._endTimers();
+
     return this;
   }
 
   // Stops a render loop if already running, finalizing
   stop() {
     // console.debug(`Stopping ${this.constructor.name}`);
-    if (this._animationFrameId) {
+    if (this._running) {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
-      this._stopped = true;
+      this._running = false;
     }
     return this;
+  }
+
+  toDataURL() {
+    if (this._canvasDataURLPromise) {
+      return this._canvasDataURLPromise;
+    }
+
+    this.setNeedsRedraw('getCanvasDataUrl');
+    this._canvasDataURLPromise = new Promise(resolve => {
+      this._resolveCanvasDataURL = resolve;
+    });
+
+    return this._canvasDataURLPromise;
   }
 
   onCreateContext(...args) {
@@ -199,6 +247,20 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
+  _startLoop() {
+    const renderFrame = () => {
+      if (!this._running) {
+        return;
+      }
+      this.redraw();
+      this._animationFrameId = requestAnimationFrame(renderFrame);
+    };
+
+    // cancel any pending renders to ensure only one loop can ever run
+    cancelAnimationFrame(this._animationFrameId);
+    this._animationFrameId = requestAnimationFrame(renderFrame);
+  }
+
   _clearNeedsRedraw() {
     this.needsRedraw = null;
   }
@@ -213,22 +275,6 @@ export default class AnimationLoop {
       this._resizeViewport();
       this._resizeFramebuffer();
     }
-  }
-
-  /**
-   * @private
-   * Handles a render loop frame - updates context and calls the application
-   * callback
-   */
-  _renderFrame() {
-    if (this._stopped) {
-      return;
-    }
-
-    this.redraw();
-
-    // Request another render frame now
-    this._animationFrameId = requestAnimationFrame(this._renderFrame);
   }
 
   // Initialize the  object that will be passed to app callbacks
@@ -304,8 +350,8 @@ export default class AnimationLoop {
       opts.canvas instanceof OffscreenCanvas;
 
     // Create the WebGL context if necessary
-    opts = Object.assign({}, opts, DEFAULT_GL_OPTIONS, this.props.glOptions);
-    this.gl = this.props.gl || this.onCreateContext(opts);
+    opts = Object.assign({}, opts, this.props.glOptions);
+    this.gl = this.props.gl ? instrumentGLContext(this.props.gl, opts) : this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');
@@ -384,6 +430,38 @@ export default class AnimationLoop {
         width: this.gl.drawingBufferWidth,
         height: this.gl.drawingBufferHeight
       });
+    }
+  }
+
+  _beginTimers() {
+    this.frameRate.timeEnd();
+    this.frameRate.timeStart();
+
+    // Check if timer for last frame has completed.
+    // GPU timer results are never available in the same
+    // frame they are captured.
+    if (
+      this._gpuTimeQuery &&
+      this._gpuTimeQuery.isResultAvailable() &&
+      !this._gpuTimeQuery.isTimerDisjoint()
+    ) {
+      this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
+    }
+
+    if (this._gpuTimeQuery) {
+      // GPU time query start
+      this._gpuTimeQuery.beginTimeElapsedQuery();
+    }
+
+    this.cpuTime.timeStart();
+  }
+
+  _endTimers() {
+    this.cpuTime.timeEnd();
+
+    if (this._gpuTimeQuery) {
+      // GPU time query end. Results will be available on next frame.
+      this._gpuTimeQuery.end();
     }
   }
 

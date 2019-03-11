@@ -72,14 +72,15 @@ const animationLoop = new AnimationLoop({
     const uMVMatrix = new Matrix4()
       .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]});
 
+    handleKeys(cameraInfo, currentlyPressedKeys);
+    animate(cameraInfo, timeLine);
+
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    world.render({
+    return world.render({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
     });
-    handleKeys(cameraInfo, currentlyPressedKeys);
-    animate(cameraInfo, timeLine);
   }
 });
 

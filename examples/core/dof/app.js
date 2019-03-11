@@ -4,17 +4,18 @@ import {
   Program, Texture2D, VertexArray, Buffer, isWebGL2
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
+import {StatsWidget} from '@probe.gl/stats-widget'
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
-  Origirnal algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field 
+  Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
 const INFO_HTML = `
 <p>
   <b>Depth of Field</b>.
 <p>
-Several instanced luma.gl <code>Cubes</code> rendered with a Depth of Field 
+Several instanced luma.gl <code>Cubes</code> rendered with a Depth of Field
 post-processing effect.
 
 <div>
@@ -110,7 +111,7 @@ void main(void) {
       attributes: {
         // Attributes are limited to 4 components,
         // So we have to split the matrices across
-        // 4 attributes. They're reconstructed in 
+        // 4 attributes. They're reconstructed in
         // the vertex shader.
         modelMatCol1: {
           buffer: matrixBuffer,
@@ -172,7 +173,7 @@ precision highp float;
 
 #define MAX_BLUR 20.0
 
-uniform vec2  uDepthRange; 
+uniform vec2  uDepthRange;
 uniform float uFocusDistance;
 uniform float uBlurCoefficient;
 uniform float uPPM;
@@ -192,11 +193,11 @@ void main() {
     float ndc = 2.0 * texelFetch(uDepth, fragCoord, 0).r - 1.0;
     float depth = -(2.0 * uDepthRange.y * uDepthRange.x) / (ndc * (uDepthRange.y - uDepthRange.x) - uDepthRange.y - uDepthRange.x);
     float deltaDepth = abs(uFocusDistance - depth);
-    
+
     // Blur more quickly in the foreground.
     float xdd = depth < uFocusDistance ? abs(uFocusDistance - deltaDepth) : abs(uFocusDistance + deltaDepth);
     float blurRadius = min(floor(uBlurCoefficient * (deltaDepth / xdd) * uPPM), MAX_BLUR);
-    
+
     vec4 color = vec4(0.0);
     if (blurRadius > 1.0) {
         float halfBlur = blurRadius * 0.5;
@@ -225,7 +226,7 @@ void main() {
 `;
 
 export const animationLoopOptions = {
-  onInitialize: ({gl}) => {
+  onInitialize: ({gl, _animationLoop}) => {
     isDemoSupported = isWebGL2(gl);
     if (!isDemoSupported) {
       console.error(ALT_TEXT);
@@ -236,7 +237,7 @@ export const animationLoopOptions = {
       depthTest: true,
       depthFunc: GL.LEQUAL
     });
-   
+
     const projMat = new Matrix4();
     const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
 
@@ -255,7 +256,7 @@ export const animationLoopOptions = {
 
 
     //////////////////////
-    // Set up frambuffers. 
+    // Set up frambuffers.
     //////////////////////
 
     // Need to ensure both color and depth targets can be sampled.
@@ -298,26 +299,29 @@ export const animationLoopOptions = {
 
 
     /////////////////////
-    // Input handlers. 
+    // Input handlers.
     /////////////////////
 
     const focalLengthInput = document.getElementById("focal-length");
-    focalLengthInput.value = focalLength;
-    focalLengthInput.addEventListener("input", function () {
-      focalLength = parseFloat(this.value);
-    });
-
     const focusDistanceInput = document.getElementById("focus-distance");
-    focusDistanceInput.value = focusDistance;
-    focusDistanceInput.addEventListener("input", function () {
-      focusDistance = parseFloat(this.value);
-    });
-
     const fStopInput = document.getElementById("f-stop");
-    fStopInput.value = fStop;
-    fStopInput.addEventListener("input", function () {
-      fStop = parseFloat(this.value);
-    });
+
+    if (focalLengthInput) {
+      focalLengthInput.value = focalLength;
+      focalLengthInput.addEventListener("input", function () {
+        focalLength = parseFloat(this.value);
+      });
+
+      focusDistanceInput.value = focusDistance;
+      focusDistanceInput.addEventListener("input", function () {
+        focusDistance = parseFloat(this.value);
+      });
+
+      fStopInput.value = fStop;
+      fStopInput.addEventListener("input", function () {
+        fStop = parseFloat(this.value);
+      });
+    }
 
     const texture = new Texture2D(gl, {
       data: 'webgl-logo.png',
@@ -372,6 +376,13 @@ export const animationLoopOptions = {
       }
     });
 
+    const statsWidget = new StatsWidget(_animationLoop.stats, {
+      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+    });
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
+
     return {
       projMat,
       viewMat,
@@ -379,14 +390,22 @@ export const animationLoopOptions = {
       sceneFramebuffer,
       dofFramebuffer,
       quadVertexArray,
-      dofProgram
+      dofProgram,
+      statsWidget
     };
   },
 
-  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram}) => {
+  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram, statsWidget, _animationLoop}) => {
 
     if (!isDemoSupported) {
           return;
+    }
+
+    if (tick % 60 === 10) {
+      statsWidget.update();
+      _animationLoop.cpuTime.reset();
+      _animationLoop.gpuTime.reset();
+      _animationLoop.frameRate.reset();
     }
 
     sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
