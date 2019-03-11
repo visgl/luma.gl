@@ -22,7 +22,7 @@ import {AnimationLoop} from 'luma.gl';
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
-    // Keys in the object returned here will be available in onRenderFrame
+    // Keys in the object returned here will be available in onRender
     return {
       clipSpaceQuad: new ClipSpaceQuad({gl, fs: FRAGMENT_SHADER})
     };
@@ -50,7 +50,7 @@ new AnimationLoop({
   onCreateContext,
   onInitialize,
   onFinalize,
-  onRenderFrame,
+  onRender,
 
   autoResizeViewport,
   autoResizeDrawingBuffer
@@ -61,7 +61,7 @@ new AnimationLoop({
 * `props.onInitialize` (callback) - if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.
 * `props.onRender`=`null` (callback) - Called on every animation frame.
 * `props.onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
-* `props.autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRenderFrame` is called. Set to false to control viewport size.
+* `props.autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRender` is called. Set to false to control viewport size.
 * `props.autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
 * `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 * `props.gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
@@ -104,10 +104,10 @@ Immediately invokes a redraw (call `onRender` with updated animation props). Onl
 
 * `reason` (`String`) - A human readable string giving a hint as to why redraw was needed (e.g. "geometry changed").
 
-If set, the value will be provided as the `needsRedraw` field to the `onRenderFrame` callback.
+If set, the value will be provided as the `needsRedraw` field to the `onRender` callback.
 
 Notes:
-* `onRenderFrame` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
+* `onRender` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
 * If called multiple times, the `reason` provided in the first call will be remembered.
 * `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
@@ -116,8 +116,8 @@ Notes:
 
 `animationLoop.setProps({...props})`
 
-* `props.autoResizeViewport` - Call `gl.viewport` before each call to `onRenderFrame()`
-* `props.autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRenderFrame()`
+* `props.autoResizeViewport` - Call `gl.viewport` before each call to `onRender()`
+* `props.autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRender()`
 * `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
 ### toDataURL
