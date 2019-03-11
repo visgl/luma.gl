@@ -35,13 +35,12 @@ export const FEATURES = {
   GLSL_FRAG_DATA: 'GLSL_FRAG_DATA',
   GLSL_FRAG_DEPTH: 'GLSL_FRAG_DEPTH',
   GLSL_DERIVATIVES: 'GLSL_DERIVATIVES',
-  GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD',
+  GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD'
 };
-
 
 // Defines luma.gl "feature" names and semantics
 export default {
-  [FEATURES.WEBGL2]: gl => isWebGL2(gl),
+  [FEATURES.WEBGL2]: [gl => isWebGL2(gl)],
 
   // API SUPPORT
   [FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
