@@ -43,7 +43,7 @@ export const FEATURES = {
 
 // Defines luma.gl "feature" names and semantics
 export default {
-  [FEATURES.WEBGL2]: gl => isWebGL2(gl),
+  [FEATURES.WEBGL2]: [gl => isWebGL2(gl)],
 
   // WEBGL2 API SUPPORT
   [FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
