@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {UniformBufferLayout, Buffer, Program, Transform} from 'luma.gl';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const UBO_INDEX = 0;
 const FLOAT = 1.0;

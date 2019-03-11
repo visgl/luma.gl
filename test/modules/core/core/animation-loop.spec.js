@@ -1,7 +1,7 @@
 /* global document, setTimeout */
 import {AnimationLoop} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#AnimationLoop constructor', t => {
   t.ok(AnimationLoop, 'AnimationLoop imported');

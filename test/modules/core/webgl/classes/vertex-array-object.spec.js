@@ -2,7 +2,7 @@ import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {VertexArrayObject} from 'luma.gl';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#VertexArrayObject (default)#enable', t => {
   const {gl} = fixture;

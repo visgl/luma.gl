@@ -4,7 +4,7 @@ import {Renderbuffer, getKey} from 'luma.gl';
 
 import RENDERBUFFER_FORMATS from '@luma.gl/core/webgl/classes/renderbuffer-formats';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 // const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
 

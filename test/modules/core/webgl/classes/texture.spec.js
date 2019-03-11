@@ -12,7 +12,7 @@ import {
   SAMPLER_PARAMETERS_WEBGL2
 } from './sampler.utils';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#Texture2D construct/delete', t => {
   const {gl} = fixture;

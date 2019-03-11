@@ -21,7 +21,7 @@
 import {Buffer, Transform, Texture2D} from 'luma.gl';
 import GL from '@luma.gl/constants';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 import {equals} from 'math.gl';
 import {_transform as transformModule} from '@luma.gl/shadertools';
 import {

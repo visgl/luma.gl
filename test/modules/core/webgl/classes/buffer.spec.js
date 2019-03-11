@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {Buffer, isWebGL} from 'luma.gl';
 import test from 'tape-catch';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('Buffer#constructor/delete', t => {
   const {gl} = fixture;

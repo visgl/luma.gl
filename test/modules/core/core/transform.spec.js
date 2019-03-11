@@ -1,6 +1,6 @@
 import {Buffer, Transform, _Attribute as Attribute, Texture2D} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
 
 const VS = `\

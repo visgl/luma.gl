@@ -2,7 +2,7 @@ import {VertexShader, FragmentShader, Program, _ShaderCache as ShaderCache} from
 
 import test from 'tape-catch';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const VS1 = `
 attribute vec3 positions;

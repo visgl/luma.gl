@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import {Buffer, _Attribute as Attribute, Framebuffer, Model, readPixelsToArray} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const value1 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
 const value2 = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);

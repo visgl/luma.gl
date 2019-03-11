@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import luma from '@luma.gl/core/init';
 import {Buffer, _Attribute as Attribute, Model, Cube} from 'luma.gl';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const {stats} = luma;
 

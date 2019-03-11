@@ -1,7 +1,7 @@
 import test from 'tape-catch';
 import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from 'luma.gl';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 import {TEXTURE_FORMATS} from '@luma.gl/core/webgl/classes/texture-formats';
 import {readPixelsToArray, readPixelsToBuffer, copyToTexture, blit} from 'luma.gl';
 

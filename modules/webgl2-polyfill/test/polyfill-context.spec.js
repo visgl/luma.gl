@@ -2,7 +2,7 @@ import polyfillContext from '@luma.gl/webgl2-polyfill';
 import test from 'tape-catch';
 import {makeSpy} from '@probe.gl/test-utils';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 test('WebGL#polyfillContext', t => {
   const {gl, gl2} = fixture;

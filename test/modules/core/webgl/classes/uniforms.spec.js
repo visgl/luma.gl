@@ -9,7 +9,7 @@ import {
   parseUniformName
 } from '@luma.gl/core/webgl/classes/uniforms';
 
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 const MATRIX_2 = [1, 0, 0, 1];
 

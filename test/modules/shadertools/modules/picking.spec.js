@@ -21,7 +21,7 @@
 import {Buffer, Transform} from 'luma.gl';
 import {picking} from '@luma.gl/shadertools';
 import test from 'tape-catch';
-import {fixture} from 'luma.gl/test/setup';
+import {fixture} from 'test/setup';
 
 // TODO: test WebGL1 when Transform class is ready
 const gl = fixture.gl2;

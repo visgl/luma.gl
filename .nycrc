@@ -1,13 +1,7 @@
 {
-  "require": [
-    "@babel/register"
-  ],
-  "sourceMap": false,
-  "instrument": false,
+  "extends": "node_modules/ocular-dev-tools/templates/.nycrc",
   "include": [
-    "modules/**/*.js"
-  ],
-  "exclude": [
-    "test/**/*.js"
+    "dev-modules/**/*.js",
+    "modules/**/dist/es5/**/*.js"
   ]
 }
