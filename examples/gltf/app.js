@@ -42,21 +42,22 @@ const DEFAULT_OPTIONS = {
 };
 
 async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
-  let promise = urlOrPromise;
-  if (typeof urlOrPromise === 'string') {
-    const url = urlOrPromise;
-    /* global fetch */
-    const response = await fetch(url);
-    promise = url.endsWith('.gltf') ? response.json() : response.arrayBuffer();
-  }
+  const promise = urlOrPromise instanceof Promise
+   ? urlOrPromise
+   : window.fetch(urlOrPromise).then(res => urlOrPromise.endsWith('.gltf') ? res.json() : res.arrayBuffer());
+  let gltfParser;
 
   const data = await promise;
+  gltfParser = new GLTFParser({uri: urlOrPromise});
+  const gltf = await gltfParser.parseAsync(data);
 
-  const gltfParser = new GLTFParser();
-  const gltf = await gltfParser.parse(data, {
-    uri: urlOrPromise,
-    decompress: true,
-    DracoDecoder
+  const {scenes, animator} = createGLTFObjects(gl, gltf)
+
+  log.info(4, "gltfParser: ", gltfParser)();
+  log.info(4, "scenes: ", scenes)();
+
+  scenes[0].traverse((node, {worldMatrix}) => {
+    log.info(4, "Using model: ", node)();
   });
 
   const {scenes, animator} = createGLTFObjects(gl, gltf, options);

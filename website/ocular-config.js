@@ -2,7 +2,7 @@ const DOCS = require('../docs/table-of-contents.json');
 const ALIASES = require('../aliases');
 
 module.exports = {
-  logLevel: 3,
+  logLevel: 1,
 
   PROJECT_TYPE: 'github',
 
@@ -81,7 +81,7 @@ module.exports = {
   DOC_FOLDER: `${__dirname}/../docs/`,
   ROOT_FOLDER: `${__dirname}/../`,
   DIR_NAME: __dirname,
-  
+
   // Avoids duplicate conflicting inputs when importing from examples folders
   // Ocular adds this to gatsby's webpack config
   webpack: {
@@ -96,11 +96,5 @@ module.exports = {
   // TODO/ib - remnants from gatsby starter, remove and replace with ocular CAPS constants aboves
   siteUrl: "https://luma.gl", // Domain of your website without pathPrefix.
   pathPrefix: "/luma", // Prefixes all links. For cases when deployed to example.github.io/gatsby-advanced-starter/.
-  siteRss: "/rss.xml", // Path to the RSS file.
-  dateFromFormat: "YYYY-MM-DD", // Date format used in the frontmatter.
-  dateFormat: "DD/MM/YYYY", // Date format for display.
-  userName: "WebGL User", // Username to display in the author segment.
-  copyright: "Copyright © 2017 Uber. MIT Licensed", // Copyright string for the footer of the website and RSS feed.
-  themeColor: "#c62828", // Used for setting manifest and progress theme colors.
-  backgroundColor: "#e0e0e0" // Used for setting manifest background color.
+  siteRss: "/rss.xml" // Path to the RSS file.
 };

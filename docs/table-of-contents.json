@@ -182,96 +182,37 @@
               "entry": "docs/api-reference/core/attribute"
             },
             {
-              "name": "Model",
-              "entry": "docs/api-reference/core/model"
-            },
-            {
-              "name": "ShaderCache",
-              "entry": "docs/api-reference/core/shader-cache"
-            },
-            {
               "name": "Geometry",
               "entry": "docs/api-reference/core/geometry"
             },
             {
-              "name": "Object3d",
-              "entry": "docs/api-reference/core/object-3d"
-            },
-            {
-              "name": "Group",
-              "entry": "docs/api-reference/core/group"
+              "name": "loadFile",
+              "entry": "docs/api-reference/core/load-file"
             },
             {
               "name": "Transform",
               "entry": "docs/api-reference/core/transform"
-            }
-          ]
-        },
-        {
-          "title": "addons",
-          "entries": [
+            },
             {
-              "name": "Event",
-              "entry": "docs/api-reference/addons/event"
+              "name": "ShaderCache",
+              "entry": "docs/api-reference/core/shader-cache"
             }
           ]
         },
         {
-          "title": "IO",
-          "entries": [
-            {
-              "name": "IO Module",
-              "entry": "docs/api-reference/io/README"
-            }
-          ]
-        },
-        {
-          "title": "Lighting",
+          "title": "Lights",
           "entries": [
             {
               "name": "Ambient Light",
-              "entry": "docs/api-reference/lighting/ambient-light"
+              "entry": "docs/api-reference/lights/ambient-light"
             },
             {
               "name": "Directional Light",
-              "entry": "docs/api-reference/lighting/directional-light"
+              "entry": "docs/api-reference/lights/directional-light"
             },
             {
               "name": "Point Light",
-              "entry": "docs/api-reference/lighting/point-light"
-            }
-          ]
-        },
-        {
-          "title": "Loaders",
-          "entries": [
-            {
-              "name": "Loader API",
-              "entry": "docs/api-reference/loader-api/load-file"
-            },
-            {
-              "name": "GLB loader",
-              "entry": "docs/api-reference/loaders/glb-loader"
-            },
-            {
-              "name": "KML loader",
-              "entry": "docs/api-reference/loaders/kml-loader"
-            },
-            {
-              "name": "LAS loader",
-              "entry": "docs/api-reference/loaders/las-loader"
-            },
-            {
-              "name": "OBJ loader",
-              "entry": "docs/api-reference/loaders/obj-loader"
-            },
-            {
-              "name": "PCD loader",
-              "entry": "docs/api-reference/loaders/pcd-loader"
-            },
-            {
-              "name": "PLY loader",
-              "entry": "docs/api-reference/loaders/ply-loader"
+              "entry": "docs/api-reference/lights/point-light"
             }
           ]
         },
@@ -279,8 +220,12 @@
           "title": "Materials",
           "entries": [
             {
-              "name": "Loader API",
-              "entry": "docs/api-reference/material/phong-material"
+              "name": "PhongMaterial",
+              "entry": "docs/api-reference/materials/phong-material"
+            },
+            {
+              "name": "PBRMaterial",
+              "entry": "docs/api-reference/materials/pbr-material"
             }
           ]
         },
@@ -355,7 +300,24 @@
           ]
         },
         {
-          "title": "WebGL2 Reference",
+          "title": "Scenegraph",
+          "entries": [
+            {
+              "name": "Object3d",
+              "entry": "docs/api-reference/scenegraph/object-3d"
+            },
+            {
+              "name": "Model",
+              "entry": "docs/api-reference/scenegraph/model"
+            },
+            {
+              "name": "Group",
+              "entry": "docs/api-reference/scenegraph/group"
+            }
+          ]
+        },
+        {
+          "title": "WebGL2 Classes",
           "entries": [
             {
               "name": "Accessor",
@@ -494,6 +456,15 @@
             {
               "name": "picking",
               "entry": "docs/api-reference/shadertools/shader-module-picking"
+            }
+          ]
+        },
+        {
+          "title": "addons",
+          "entries": [
+            {
+              "name": "Event",
+              "entry": "docs/api-reference/addons/event"
             }
           ]
         }
