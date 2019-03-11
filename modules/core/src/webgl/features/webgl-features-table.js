@@ -4,11 +4,14 @@ import {isWebGL2} from '../utils';
 export const FEATURES = {
   WEBGL2: 'WEBGL2',
 
-  // API SUPPORT
+  // WEBGL2 API SUPPORT
   VERTEX_ARRAY_OBJECT: 'VERTEX_ARRAY_OBJECT',
   TIMER_QUERY: 'TIMER_QUERY',
   INSTANCED_RENDERING: 'INSTANCED_RENDERING',
   MULTIPLE_RENDER_TARGETS: 'MULTIPLE_RENDER_TARGETS',
+
+  // Post-WEBGL2 API SUPPORT
+  MULTIDRAW: 'MULTIDRAW',
 
   // FEATURES
   ELEMENT_INDEX_UINT32: 'ELEMENT_INDEX_UINT32',
@@ -40,13 +43,18 @@ export const FEATURES = {
 
 // Defines luma.gl "feature" names and semantics
 export default {
-  [FEATURES.WEBGL2]: [gl => isWebGL2(gl)],
+  [FEATURES.WEBGL2]: gl => isWebGL2(gl),
 
-  // API SUPPORT
+  // WEBGL2 API SUPPORT
   [FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
   [FEATURES.TIMER_QUERY]: ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
   [FEATURES.INSTANCED_RENDERING]: ['ANGLE_instanced_arrays', true],
   [FEATURES.MULTIPLE_RENDER_TARGETS]: ['WEBGL_draw_buffers', true],
+
+  // Post-WEBGL2 API SUPPORT
+  [FEATURES.MULTIDRAW]: [
+    gl => gl.getExtension('WEBGL_multi_draw') && gl.getExtension('WEBGL_multi_draw_instanced')
+  ],
 
   // FEATURES
   [FEATURES.ELEMENT_INDEX_UINT32]: ['OES_element_index_uint', true],
