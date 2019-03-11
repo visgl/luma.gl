@@ -84,13 +84,14 @@ Stops the animation
 
 `animationLoop.stop()`
 
-### firstFrame() : Promise
+### waitForRender() : Promise
 
-Returns a promise which resolves on the first frame after `start()` is called.
+Returns a promise which resolves in the next frame after rendering and the `onRender` callback have completed.
 
 ```js
-await animationLoop.firstFrame()
+const loop = await animationLoop.waitForRender()
 // can now read pixels from webgl context
+loop.gl.readPixels(...)
 ```
 
 ### redraw() : AnimationLoop

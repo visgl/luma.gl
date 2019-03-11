@@ -100,8 +100,8 @@ export default class AnimationLoopProxy {
 
     this._running = false;
     this._animationFrameId = null;
-    this._resolveFirstFrame = null;
-    this._firstFramePromise = null;
+    this._resolveNextFrame = null;
+    this._nextFramePromise = null;
 
     // bind methods
     this._onMessage = this._onMessage.bind(this);
@@ -141,14 +141,7 @@ export default class AnimationLoopProxy {
       })
       .then(() => {
         if (this._running) {
-          this._animationFrameId = requestAnimationFrame(() => {
-            this._updateFrame();
-            if (this._resolveFirstFrame) {
-              this._resolveFirstFrame(this);
-              this._firstFramePromise = null;
-              this._resolveFirstFrame = null;
-            }
-          });
+          this._animationFrameId = requestAnimationFrame(this._updateFrame);
         }
       });
     return this;
@@ -159,8 +152,8 @@ export default class AnimationLoopProxy {
     if (this._running) {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
-      this._firstFramePromise = null;
-      this._resolveFirstFrame = null;
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
       this._running = false;
       this.props.onFinalize(this);
     }
@@ -168,13 +161,13 @@ export default class AnimationLoopProxy {
     return this;
   }
 
-  firstFrame() {
-    if (!this._firstFramePromise) {
-      this._firstFramePromise = new Promise(resolve => {
-        this._resolveFirstFrame = resolve;
+  waitForRender() {
+    if (!this._nextFramePromise) {
+      this._nextFramePromise = new Promise(resolve => {
+        this._resolveNextFrame = resolve;
       });
     }
-    return this._firstFramePromise;
+    return this._nextFramePromise;
   }
 
   // PRIVATE METHODS
@@ -218,6 +211,11 @@ export default class AnimationLoopProxy {
 
   _updateFrame() {
     this._resizeCanvasDrawingBuffer();
+    if (this._resolveNextFrame) {
+      this._resolveNextFrame(this);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
+    }
     this._animationFrameId = requestAnimationFrame(this._updateFrame);
   }
 

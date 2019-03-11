@@ -71,13 +71,14 @@ Stops the animation
 animationLoopProxy.stop();
 ```
 
-### firstFrame() : Promise
+### waitForRender() : Promise
 
-Returns a promise which resolves on the first frame after `start()` is called.
+Returns a promise which resolves in the next frame after rendering has completed.
 
 ```js
-await animationLoop.firstFrame()
+const loop = await animationLoop.waitForRender()
 // can now read pixels from webgl context
+loop.gl.readPixels(...)
 ```
 
 ### setProps(props: Object) : AnimationLoopProxy

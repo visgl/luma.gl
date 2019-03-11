@@ -73,8 +73,8 @@ export default class AnimationLoop {
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
-    this._firstFramePromise = null;
-    this._resolveFirstFrame = null;
+    this._nextFramePromise = null;
+    this._resolveNextFrame = null;
     this._cpuStartTime = 0;
 
     this._canvasDataURLPromise = null;
@@ -196,21 +196,21 @@ export default class AnimationLoop {
     if (this._running) {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
-      this._firstFramePromise = null;
-      this._resolveFirstFrame = null;
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
       this._animationFrameId = null;
       this._running = false;
     }
     return this;
   }
 
-  firstFrame() {
-    if (!this._firstFramePromise) {
-      this._firstFramePromise = new Promise(resolve => {
-        this._resolveFirstFrame = resolve;
+  waitForRender() {
+    if (!this._nextFramePromise) {
+      this._nextFramePromise = new Promise(resolve => {
+        this._resolveNextFrame = resolve;
       });
     }
-    return this._firstFramePromise;
+    return this._nextFramePromise;
   }
 
   toDataURL() {
@@ -263,19 +263,17 @@ export default class AnimationLoop {
         return;
       }
       this.redraw();
+      if (this._resolveNextFrame) {
+        this._resolveNextFrame(this);
+        this._nextFramePromise = null;
+        this._resolveNextFrame = null;
+      }
       this._animationFrameId = requestAnimationFrame(renderFrame);
     };
 
     // cancel any pending renders to ensure only one loop can ever run
     cancelAnimationFrame(this._animationFrameId);
-    this._animationFrameId = requestAnimationFrame(() => {
-      renderFrame();
-      if (this._resolveFirstFrame) {
-        this._resolveFirstFrame(this);
-        this._firstFramePromise = null;
-        this._resolveFirstFrame = null;
-      }
-    });
+    this._animationFrameId = requestAnimationFrame(renderFrame);
   }
 
   _clearNeedsRedraw() {
