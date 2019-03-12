@@ -461,7 +461,7 @@ test('WebGL2#Texture2D setImageData', t => {
 
   // data: buffer
   data = new Float32Array([21, 0.82, 0, 1, 0, 255, 128, 3.333]);
-  const buffer = new Buffer(gl2, {size: 4, type: GL.FLOAT, data});
+  const buffer = new Buffer(gl2, {data, accessor: {size: 4, type: GL.FLOAT}});
   texture.setImageData({data: buffer});
   t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
 
@@ -549,7 +549,7 @@ test('WebGL2#Texture2D setSubImageData', t => {
 
   // data: buffer
   data = new Float32Array([-3, 255, 128, 3.333]);
-  const buffer = new Buffer(gl2, {size: 4, type: GL.FLOAT, data});
+  const buffer = new Buffer(gl2, {data, accessor: {size: 4, type: GL.FLOAT}});
   texture.setSubImageData({data: buffer, x: 1, y: 0, width: 1, height: 1});
   t.deepEquals(
     readPixelsToArray(texture),

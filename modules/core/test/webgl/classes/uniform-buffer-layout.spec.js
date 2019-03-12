@@ -165,8 +165,10 @@ test('WebGL#UniformBufferLayout setData', t => {
   const ubo = new Buffer(gl2, {
     target: GL.UNIFORM_BUFFER,
     data,
-    size: 1,
-    index: UBO_INDEX
+    accessor: {
+      size: 1,
+      index: UBO_INDEX
+    }
   });
 
   ubo.bind();

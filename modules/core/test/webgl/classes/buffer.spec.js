@@ -208,31 +208,31 @@ test('Buffer#getElementCount', t => {
   vertexCount = buffer1.getElementCount();
   t.equal(vertexCount, 3, 'Vertex count should match');
 
-  let buffer2 = new Buffer(gl, {data: new Int32Array([1, 2, 3, 4]), instanced: true});
+  let buffer2 = new Buffer(gl, {data: new Int32Array([1, 2, 3, 4]), acessor: {divisor: 1}});
   vertexCount = buffer2.getElementCount();
   t.equal(vertexCount, 4, 'Vertex count should match');
 
-  const {bytes, usage, type, accessor} = buffer1;
-  buffer2 = new Buffer(gl, {bytes, usage, type, accessor});
+  const {byteLength, usage, accessor} = buffer1;
+  buffer2 = new Buffer(gl, {byteLength, usage, accessor});
   vertexCount = buffer2.getElementCount();
   t.equal(vertexCount, 3, 'Vertex count should match');
 
   t.end();
 });
 
-test('Buffer#setByteLength', t => {
+test('Buffer#reallocate', t => {
   const {gl} = fixture;
 
   const buffer = new Buffer(gl, {byteLength: 100});
   t.equal(buffer.byteLength, 100, 'byteLength should match');
   t.equal(buffer.bytesUsed, 100, 'bytesUsed should match');
 
-  let didRealloc = buffer.setByteLength(90);
+  let didRealloc = buffer.reallocate(90);
   t.equal(didRealloc, false, 'Should not reallocate');
   t.equal(buffer.byteLength, 100, 'byteLength should be unchanged');
   t.equal(buffer.bytesUsed, 90, 'bytesUsed should have changed');
 
-  didRealloc = buffer.setByteLength(110);
+  didRealloc = buffer.reallocate(110);
   t.equal(didRealloc, true, 'Should reallocate');
   t.equal(buffer.byteLength, 110, 'byteLength should have changed');
   t.equal(buffer.byteLength, 110, 'bytesUsed should have changed');

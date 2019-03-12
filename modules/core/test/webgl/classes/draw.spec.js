@@ -24,8 +24,4 @@ test('WebGL#draw', t => {
   const program = new Program(gl, {vs, fs});
   t.ok(program instanceof Program, 'Program construction successful');
   t.end();
-
-  // draw(gl, {
-  // instanced: true,
-  // });
 });

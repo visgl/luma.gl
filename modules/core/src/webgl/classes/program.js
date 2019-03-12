@@ -117,9 +117,15 @@ export default class Program extends Resource {
     parameters = {},
 
     // Deprecated
-    uniforms = {},
-    samplers = {}
+    uniforms,
+    samplers
   }) {
+    if (uniforms || samplers) {
+      // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
+      log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
+      this.setUniforms(uniforms || {}, samplers || {});
+    }
+
     if (logPriority !== undefined) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
@@ -134,12 +140,6 @@ export default class Program extends Resource {
     assert(vertexArray);
 
     this.gl.useProgram(this.handle);
-
-    if (uniforms) {
-      // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
-      log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
-      this.setUniforms(uniforms, samplers);
-    }
 
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture

@@ -88,11 +88,11 @@ const animationLoop = new AnimationLoop({
       return {};
     }
     // ---- SETUP BUFFERS ---- //
-    const bytes = POSITIONS.length * FLOAT_SIZE;
+    const byteLength = POSITIONS.length * FLOAT_SIZE;
     const buffers = {
       vertex: new Buffer(gl, {data: new Float32Array(POSITIONS)}),
-      position: new Buffer(gl, {bytes, type: gl.FLOAT, usage: gl.STATIC_COPY}),
-      color: new Buffer(gl, {bytes, type: gl.FLOAT, usage: gl.STATIC_COPY})
+      position: new Buffer(gl, {byteLength, type: gl.FLOAT, usage: gl.STATIC_COPY}),
+      color: new Buffer(gl, {byteLength, type: gl.FLOAT, usage: gl.STATIC_COPY})
     };
 
     // first pass, offscreen, no rasterization, vertices processing only

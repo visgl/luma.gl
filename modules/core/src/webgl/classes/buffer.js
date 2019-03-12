@@ -15,7 +15,6 @@ const DEPRECATED_PROPS = {
   divisor: 'accessor.divisor',
   normalized: 'accessor.normalized',
   integer: 'accessor.integer',
-  index: 'accessor.index',
   instanced: 'accessor.divisor',
   isInstanced: 'accessor.divisor'
 };

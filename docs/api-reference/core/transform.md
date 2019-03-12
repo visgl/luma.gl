@@ -27,7 +27,7 @@ const sourceData = new Float32Array([10, 20, 31, 0, -57]);
 const sourceBuffer = new Buffer(gl, {data: sourceData});
 
 // Default values applied for size (1) and type (gl.FLOAT)
-const feedbackBuffer = new Buffer(gl, {bytes: sourceData.length * 4});
+const feedbackBuffer = new Buffer(gl, {byteLength: sourceData.length * 4});
 
 const transform = new Transform(gl2, {
   sourceBuffers: {

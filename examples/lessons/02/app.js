@@ -77,28 +77,30 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    program.draw({
-      vertexArray: triangleVertexArray,
-      uniforms: {
+    program
+      .setUniforms({
         uMVMatrix: view,
         uPMatrix: projection
-      },
-      drawMode: gl.TRIANGLES,
-      vertexCount: 3
-    })
+      })
+      .draw({
+        vertexArray: triangleVertexArray,
+        drawMode: gl.TRIANGLES,
+        vertexCount: 3
+      });
 
     // Draw Square
     view.translate([3, 0, 0]);
 
-    program.draw({
-      vertexArray: squareVertexArray,
-      uniforms: {
+    program
+      .setUniforms({
         uMVMatrix: view,
         uPMatrix: projection
-      },
-      drawMode: gl.TRIANGLE_STRIP,
-      vertexCount: 4
-    });
+      })
+      .draw({
+        vertexArray: squareVertexArray,
+        drawMode: gl.TRIANGLE_STRIP,
+        vertexCount: 4
+      });
   }
 });
 

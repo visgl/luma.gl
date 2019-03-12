@@ -91,12 +91,8 @@ export function readPixelsToBuffer(
     // Create new buffer with enough size
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
-    const bytes = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    target = new Buffer(gl, {
-      bytes,
-      type: sourceType,
-      size: components
-    });
+    const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
+    target = new Buffer(gl, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
   target.bind({target: GL.PIXEL_PACK_BUFFER});

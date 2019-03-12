@@ -131,12 +131,12 @@ window.onload = function() {
       aColor: new Buffer(gl).setData({
         data: new Float32Array(colors),
         size: 3,
-        instanced: 1
+        divisor: 1
       }),
       aOffset: new Buffer(gl).setData({
         data: new Float32Array([0, 0, 0]),
         size: 3,
-        instanced: 1
+        divisor: 1
       })
     },
     vertexCount: QUAD_POSITIONS.length / 3,

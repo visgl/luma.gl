@@ -54,8 +54,8 @@ test('WebGL#Program draw', t => {
 
   const vertexArray = new VertexArray(gl, {program});
   vertexArray.setAttributes({
-    positions: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3}),
-    unusedAttributeName: new Buffer(gl, {target: GL.ARRAY_BUFFER, data: BUFFER_DATA, size: 3})
+    positions: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}}),
+    unusedAttributeName: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}})
   });
   t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
 

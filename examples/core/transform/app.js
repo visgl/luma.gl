@@ -188,7 +188,7 @@ const animationLoop = new AnimationLoop({
     }
 
     const positionBuffer = new Buffer(gl, {data: trianglePositions});
-    const colorBuffer = new Buffer(gl, {data: instanceColors, instanced: 1});
+    const colorBuffer = new Buffer(gl, {data: instanceColors, divisor: 1});
     const offsetBuffer = new Buffer(gl, {data: instanceOffsets});
     const rotationBuffer = new Buffer(gl, {data: instanceRotations});
 
@@ -205,7 +205,7 @@ const animationLoop = new AnimationLoop({
         a_color: colorBuffer,
         a_offset: offsetBuffer,
         a_rotation: rotationBuffer,
-        instancePickingColors: {value: pickingColors, size: 2, instanced: 1}
+        instancePickingColors: {value: pickingColors, size: 2, divisor: 1}
       },
       modules: [picking]
     });
