@@ -77,9 +77,6 @@ export default class AnimationLoop {
     this._resolveNextFrame = null;
     this._cpuStartTime = 0;
 
-    this._canvasDataURLPromise = null;
-    this._resolveCanvasDataURL = null;
-
     this.setProps({
       autoResizeViewport,
       autoResizeDrawingBuffer,
@@ -179,10 +176,10 @@ export default class AnimationLoop {
       this.gl.commit();
     }
 
-    if (this._canvasDataURLPromise) {
-      this._resolveCanvasDataURL(this.gl.canvas.toDataURL());
-      this._canvasDataURLPromise = null;
-      this._resolveCanvasDataURL = null;
+    if (this._resolveNextFrame) {
+      this._resolveNextFrame(this);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
     }
 
     this._endTimers();
@@ -214,16 +211,7 @@ export default class AnimationLoop {
   }
 
   toDataURL() {
-    if (this._canvasDataURLPromise) {
-      return this._canvasDataURLPromise;
-    }
-
-    this.setNeedsRedraw('getCanvasDataUrl');
-    this._canvasDataURLPromise = new Promise(resolve => {
-      this._resolveCanvasDataURL = resolve;
-    });
-
-    return this._canvasDataURLPromise;
+    return this.waitForRender().then(self => self.gl.canvas.toDataURL());
   }
 
   onCreateContext(...args) {
@@ -263,11 +251,6 @@ export default class AnimationLoop {
         return;
       }
       this.redraw();
-      if (this._resolveNextFrame) {
-        this._resolveNextFrame(this);
-        this._nextFramePromise = null;
-        this._resolveNextFrame = null;
-      }
       this._animationFrameId = requestAnimationFrame(renderFrame);
     };
 
