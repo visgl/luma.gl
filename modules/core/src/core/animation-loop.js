@@ -210,8 +210,10 @@ export default class AnimationLoop {
     return this._nextFramePromise;
   }
 
-  toDataURL() {
-    return this.waitForRender().then(self => self.gl.canvas.toDataURL());
+  async toDataURL() {
+    await this.waitForRender();
+
+    return this.gl.canvas.toDataURL();
   }
 
   onCreateContext(...args) {
