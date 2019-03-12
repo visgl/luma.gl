@@ -8,7 +8,10 @@
 // const {resolve} = require('path');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
-const ALIASES = require('../aliases');
+const resolve = require('path').resolve;
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+  root: resolve(__dirname, '..')
+}).aliases;
 
 // Support for hot reloading changes to the library:
 const LOCAL_DEVELOPMENT_CONFIG = {
@@ -64,9 +67,7 @@ function addAnalyzerSettings(config) {
 
   config.resolve = config.resolve || {};
   // 'esnext' picks up luma.gl's ES6 dist for smaller bundles
-  config.resolve.mainFields = [
-    'esnext', 'browser', 'module', 'main'
-  ];
+  config.resolve.mainFields = ['esnext', 'browser', 'module', 'main'];
 
   config.plugins = config.plugins || [];
   config.plugins.push(new BundleAnalyzerPlugin());

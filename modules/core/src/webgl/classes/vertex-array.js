@@ -7,6 +7,11 @@ import {log, assert, stubRemovedMethods} from '../../utils';
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';
 
+// This is done to support mat type attributes.
+// See section "Notes about setting mat type attributes"
+// in vertex-array.md
+const MULTI_LOCATION_ATTRIBUTE_REGEXP = /^(.+)__LOCATION_([0-9]+)$/;
+
 const DEPRECATIONS_V6 = [
   'setBuffers',
   'setGeneric',
@@ -273,14 +278,14 @@ export default class VertexArray {
 
   // Resolve locations and accessors
   _resolveLocationAndAccessor(locationOrName, value, valueAccessor, appAccessor) {
-    const location = this._getAttributeIndex(locationOrName);
+    const {location, name} = this._getAttributeIndex(locationOrName);
     if (!Number.isFinite(location) || location < 0) {
       this.unused[locationOrName] = value;
       log.once(3, () => `unused value ${locationOrName} in ${this.id}`)();
       return this;
     }
 
-    const accessInfo = this._getAttributeInfo(locationOrName);
+    const accessInfo = this._getAttributeInfo(name || location);
 
     // Resolve the partial accessors into a final accessor
     const accessor = Accessor.resolve(accessInfo.accessor, valueAccessor, appAccessor);
@@ -296,14 +301,23 @@ export default class VertexArray {
   }
 
   _getAttributeIndex(locationOrName) {
-    if (this.configuration) {
-      return this.configuration.getAttributeLocation(locationOrName);
-    }
     const location = Number(locationOrName);
     if (Number.isFinite(location)) {
-      return location;
+      return {location};
     }
-    return -1;
+
+    const multiLocation = MULTI_LOCATION_ATTRIBUTE_REGEXP.exec(locationOrName);
+    const name = multiLocation ? multiLocation[1] : locationOrName;
+    const locationOffset = multiLocation ? Number(multiLocation[2]) : 0;
+
+    if (this.configuration) {
+      return {
+        location: this.configuration.getAttributeLocation(name) + locationOffset,
+        name
+      };
+    }
+
+    return {location: -1};
   }
 
   _setAttribute(locationOrName, value) {

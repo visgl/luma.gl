@@ -1,9 +1,11 @@
 import {GLTFParser} from '@loaders.gl/gltf';
+import {DracoDecoder} from '@loaders.gl/draco';
 import {AnimationLoop, setParameters, clear, createGLTFObjects, log} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import document from 'global/document';
 
-export const GLTF_BASE_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/";
+export const GLTF_BASE_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/';
 const GLTF_MODEL_INDEX = `${GLTF_BASE_URL}model-index.json`;
 
 const INFO_HTML = `
@@ -41,25 +43,28 @@ const DEFAULT_OPTIONS = {
 };
 
 async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
-  let promise = urlOrPromise;
-  if (typeof urlOrPromise === 'string') {
-    const url = urlOrPromise;
-    /* global fetch */
-    const response = await fetch(url);
-    promise = url.endsWith('.gltf') ? response.json() : response.arrayBuffer();
-  }
+  const promise =
+    urlOrPromise instanceof Promise
+      ? urlOrPromise
+      : window
+          .fetch(urlOrPromise)
+          .then(res => (urlOrPromise.endsWith('.gltf') ? res.json() : res.arrayBuffer()));
 
   const data = await promise;
-
-  const gltfParser = new GLTFParser({uri: urlOrPromise});
-  const gltf = await gltfParser.parseAsync(data);
+  const gltfParser = new GLTFParser();
+  const gltf = await gltfParser.parse(data, {
+    uri: urlOrPromise,
+    decompress: true,
+    DracoDecoder
+  });
 
   const {scenes, animator} = createGLTFObjects(gl, gltf, options);
 
-  log.info(4, "gltfParser: ", gltfParser)();
-  log.info(4, "scenes: ", scenes)();
+  log.info(4, 'gltfParser: ', gltfParser)();
+  log.info(4, 'scenes: ', scenes)();
+
   scenes[0].traverse((node, {worldMatrix}) => {
-    log.info(4, "Using model: ", node)();
+    log.info(4, 'Using model: ', node)();
   });
 
   return {scenes, animator};
@@ -70,23 +75,15 @@ function loadModelList() {
 }
 
 function addModelsToDropdown(models, modelDropdown) {
+  const VARIANTS = ['glTF-Draco', 'glTF-Binary', 'glTF-Embedded', 'glTF'];
+
   models.forEach(({name, variants}) => {
-    if (variants['glTF-Binary']) {
-      const option = document.createElement('option');
-      option.text = `${name} (GLB)`;
-      option.value = `${name}/glTF-Binary/${variants['glTF-Binary']}`;
-      modelDropdown.appendChild(option);
-    } else if (variants['glTF-Embedded']) {
-      const option = document.createElement('option');
-      option.text = `${name} (glTF-Embedded)`;
-      option.value = `${name}/glTF-Embedded/${variants['glTF-Embedded']}`;
-      modelDropdown.appendChild(option);
-    } else if (variants.glTF) {
-      const option = document.createElement('option');
-      option.text = `${name} (glTF)`;
-      option.value = `${name}/glTF/${variants.glTF}`;
-      modelDropdown.appendChild(option);
-    }
+    const variant = VARIANTS.find(v => variants[v]);
+
+    const option = document.createElement('option');
+    option.text = `${name} (${variant})`;
+    option.value = `${name}/${variant}/${variants[variant]}`;
+    modelDropdown.appendChild(option);
   });
 }
 
@@ -158,11 +155,14 @@ export class DemoApp {
     canvas.ondrop = e => {
       e.preventDefault();
       if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
-        loadGLTF(new Promise(resolve => {
-          const reader = new window.FileReader();
-          reader.onload = ev => resolve(ev.target.result);
-          reader.readAsArrayBuffer(e.dataTransfer.files[0]);
-        }), this.gl).then(result => Object.assign(this, result));
+        loadGLTF(
+          new Promise(resolve => {
+            const reader = new window.FileReader();
+            reader.onload = ev => resolve(ev.target.result);
+            reader.readAsArrayBuffer(e.dataTransfer.files[0]);
+          }),
+          this.gl
+        ).then(result => Object.assign(this, result));
       }
     };
   }
@@ -170,7 +170,7 @@ export class DemoApp {
   onInitialize({gl, canvas}) {
     setParameters(gl, {
       depthTest: true,
-      blend: false,
+      blend: false
     });
 
     this.gl = gl;
@@ -182,20 +182,24 @@ export class DemoApp {
       };
       loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
     } else {
-      const modelSelector = document.getElementById("modelSelector");
-      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result => Object.assign(this, result));
+      const modelSelector = document.getElementById('modelSelector');
+      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result =>
+        Object.assign(this, result)
+      );
 
       modelSelector.onchange = event => {
-        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result => Object.assign(this, result));
+        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result =>
+          Object.assign(this, result)
+        );
       };
 
       loadModelList().then(models => addModelsToDropdown(models, modelSelector));
     }
 
-    const showSelector = document.getElementById("showSelector");
+    const showSelector = document.getElementById('showSelector');
     if (showSelector) {
       showSelector.onchange = event => {
-        const value = showSelector.value.split(" ").map(x => parseFloat(x));
+        const value = showSelector.value.split(' ').map(x => parseFloat(x));
         this.u_ScaleDiffBaseMR = value.slice(0, 4);
         this.u_ScaleFGDSpec = value.slice(4);
       };
@@ -233,18 +237,20 @@ export class DemoApp {
     this.scenes[0].traverse((model, {worldMatrix}) => {
       // In glTF, meshes and primitives do no have their own matrix.
       const u_MVPMatrix = new Matrix4(uProjection).multiplyRight(uView).multiplyRight(worldMatrix);
-      success = success && model.draw({
-        uniforms: {
-          u_Camera: cameraPos,
-          u_MVPMatrix,
-          u_ModelMatrix: worldMatrix,
-          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
+      success =
+        success &&
+        model.draw({
+          uniforms: {
+            u_Camera: cameraPos,
+            u_MVPMatrix,
+            u_ModelMatrix: worldMatrix,
+            u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
 
-          u_ScaleDiffBaseMR: this.u_ScaleDiffBaseMR,
-          u_ScaleFGDSpec: this.u_ScaleFGDSpec,
-        },
-        parameters: model.props.parameters
-      });
+            u_ScaleDiffBaseMR: this.u_ScaleDiffBaseMR,
+            u_ScaleFGDSpec: this.u_ScaleFGDSpec
+          },
+          parameters: model.props.parameters
+        });
     });
 
     return success;

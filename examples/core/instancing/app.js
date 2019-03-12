@@ -137,8 +137,8 @@ class AppAnimationLoop extends AnimationLoop {
     const statsWidget = new StatsWidget(this.stats, {
       containerStyle: 'position: absolute;top: 20px;left: 20px;'
     });
-    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}`);
-    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}`);
+    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
+    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
     statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {statsWidget};

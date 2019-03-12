@@ -22,9 +22,9 @@ luma.gl v7 API contains classes that closely follow the objects defined in the [
 | `cameras`      | N/A | |
 | `images`       | `HTMLImage`? | |
 | `materials`    | `Material` (7.0) | |
-| `meshes`       | `Mesh` (7.0) | |
-| `nodes`        | `Group`, `Camera`, `Model` | A single `node` can generate one or more of these objects |
-| `primitives`   | `Primitive` (7.0) | |
+| `meshes`       | `Group`/`Model` | |
+| `nodes`        | `Group`, `Model` | A single `node` can generate one or more of these objects |
+| `primitives`   | `Model` (7.0) | |
 | `programs`     | `Program` | |
 | `samplers`     | `Sampler` (WebGL2) or `Texture2D` (WebGL1) | |
 | `scene`        | N/A | Selects one scene from `scenes` |

@@ -1,6 +1,11 @@
 /* global OffscreenCanvas */
 
-import {createGLContext, resizeGLContext, resetParameters} from '../webgl/context';
+import {
+  createGLContext,
+  instrumentGLContext,
+  resizeGLContext,
+  resetParameters
+} from '../webgl/context';
 import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
@@ -68,11 +73,9 @@ export default class AnimationLoop {
     this._initialized = false;
     this._running = false;
     this._animationFrameId = null;
-    this._startPromise = null;
+    this._nextFramePromise = null;
+    this._resolveNextFrame = null;
     this._cpuStartTime = 0;
-
-    this._canvasDataURLPromise = null;
-    this._resolveCanvasDataURL = null;
 
     this.setProps({
       autoResizeViewport,
@@ -86,8 +89,6 @@ export default class AnimationLoop {
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
-
-    return this;
   }
 
   setNeedsRedraw(reason) {
@@ -118,7 +119,7 @@ export default class AnimationLoop {
     this._running = true;
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
-    this._startPromise = getPageLoadPromise()
+    getPageLoadPromise()
       .then(() => {
         if (!this._running || this._initialized) {
           return null;
@@ -139,10 +140,10 @@ export default class AnimationLoop {
 
         this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
 
-        // Note: onIntialize can return a promise (in case it needs to load resources)
-        const initializationPromise = this.onInitialize(this.animationProps);
         this._initialized = true;
-        return initializationPromise;
+
+        // Note: onIntialize can return a promise (in case it needs to load resources)
+        return this.onInitialize(this.animationProps);
       })
       .then(appContext => {
         if (this._running) {
@@ -175,10 +176,10 @@ export default class AnimationLoop {
       this.gl.commit();
     }
 
-    if (this._canvasDataURLPromise) {
-      this._resolveCanvasDataURL(this.gl.canvas.toDataURL());
-      this._canvasDataURLPromise = null;
-      this._resolveCanvasDataURL = null;
+    if (this._resolveNextFrame) {
+      this._resolveNextFrame(this);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
     }
 
     this._endTimers();
@@ -192,23 +193,31 @@ export default class AnimationLoop {
     if (this._running) {
       this._finalizeCallbackData();
       cancelAnimationFrame(this._animationFrameId);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
       this._animationFrameId = null;
       this._running = false;
     }
     return this;
   }
 
-  toDataURL() {
-    if (this._canvasDataURLPromise) {
-      return this._canvasDataURLPromise;
+  waitForRender() {
+    this.setNeedsRedraw('waitForRender');
+
+    if (!this._nextFramePromise) {
+      this._nextFramePromise = new Promise(resolve => {
+        this._resolveNextFrame = resolve;
+      });
     }
+    return this._nextFramePromise;
+  }
 
-    this.setNeedsRedraw('getCanvasDataUrl');
-    this._canvasDataURLPromise = new Promise(resolve => {
-      this._resolveCanvasDataURL = resolve;
-    });
+  async toDataURL() {
+    this.setNeedsRedraw('toDataURL');
 
-    return this._canvasDataURLPromise;
+    await this.waitForRender();
+
+    return this.gl.canvas.toDataURL();
   }
 
   onCreateContext(...args) {
@@ -346,7 +355,7 @@ export default class AnimationLoop {
 
     // Create the WebGL context if necessary
     opts = Object.assign({}, opts, this.props.glOptions);
-    this.gl = this.props.gl || this.onCreateContext(opts);
+    this.gl = this.props.gl ? instrumentGLContext(this.props.gl, opts) : this.onCreateContext(opts);
 
     if (!isWebGL(this.gl)) {
       throw new Error('AnimationLoop.onCreateContext - illegal context returned');

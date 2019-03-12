@@ -106,9 +106,10 @@ The WebGL standard comes with an elaborate "extension" system allowing applicati
 
 Parameters to `hasFeatures`:
 
-| `FEATURE`                    | WebGL2  | WebGL1 | Description |
-| ---                          | ---     | ---    | ---         |
-| **General WebGL Features**   |         |        | |
+| `FEATURE`                             | WebGL2  | WebGL1 | Description |
+| ---                                   | ---     | ---    | ---         |
+| **General WebGL Features**            |         |        | |
+| `FEATURES.WEBGL2`                     | **YES** | **NO** | True for WebGL2 Context |
 | `FEATURES.INSTANCED_RENDERING`        | **YES** | *      | Instanced rendering (via instanced vertex attributes) [`ANGLE_instanced_arrays`](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays) |
 | `FEATURES.VERTEX_ARRAY_OBJECT`        | **YES** | *      | `VertexArrayObjects` can be created [`OES_vertex_array_object`](https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object) |
 | `FEATURES.ELEMENT_INDEX_UINT32`       | **YES** | *      | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s [`OES_element_index_uint`](https://developer.mozilla.org/en-US/docs/Web/API/OES_element_index_uint) |

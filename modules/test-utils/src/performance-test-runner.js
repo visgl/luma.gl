@@ -14,25 +14,24 @@ export default class PerformanceTestRunner extends TestRunner {
   initTestCase(testCase) {
     super.initTestCase(testCase);
     this._stats = new Stats({id: testCase.name});
+    this._fps = this._stats.get('fps');
   }
 
   shouldRender(animationProps) {
-    const count = this._stats.getCount('draw');
-    if (count === 0) {
-      // first time
-      this._stats.reset();
-    } else if (count > this.testOptions.maxFramesToRender) {
+    this._fps.timeEnd();
+    this._fps.timeStart();
+
+    if (this._fps.count > this.testOptions.maxFramesToRender) {
       animationProps.done();
     }
-    this._stats.bump('draw');
 
     return true;
   }
 
   assert(testCase) {
     const targetFPS = testCase.targetFPS || this.testOptions.targetFPS;
-    const count = this._stats.getCount('draw');
-    const fps = this._stats.getFPS('draw');
+    const count = this._fps.count;
+    const fps = this._fps.getHz();
 
     if (fps >= targetFPS) {
       this._pass({fps, framesRendered: count});

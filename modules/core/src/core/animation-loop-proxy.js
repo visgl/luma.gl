@@ -98,9 +98,10 @@ export default class AnimationLoopProxy {
     this.width = null;
     this.height = null;
 
-    this._stopped = true;
+    this._running = false;
     this._animationFrameId = null;
-    this._startPromise = null;
+    this._resolveNextFrame = null;
+    this._nextFramePromise = null;
 
     // bind methods
     this._onMessage = this._onMessage.bind(this);
@@ -122,36 +123,51 @@ export default class AnimationLoopProxy {
 
   // Starts a render loop if not already running
   start(opts = {}) {
-    this._stopped = false;
-    // console.debug(`Starting ${this.constructor.name}`);
-    if (!this._animationFrameId) {
-      this.worker.onmessage = this._onMessage;
-
-      // Wait for start promise before rendering frame
-      this._startPromise = getPageLoadPromise()
-        .then(() => {
-          this._createAndTransferCanvas(opts);
-          return this.props.onInitialize(this);
-        })
-        .then(() => {
-          if (!this._stopped) {
-            this._animationFrameId = requestAnimationFrame(this._updateFrame);
-          }
-        });
+    if (this._running) {
+      return this;
     }
+    this._running = true;
+    // console.debug(`Starting ${this.constructor.name}`);
+    this.worker.onmessage = this._onMessage;
+
+    // Wait for start promise before rendering frame
+    getPageLoadPromise()
+      .then(() => {
+        if (!this._running) {
+          return null;
+        }
+        this._createAndTransferCanvas(opts);
+        return this.props.onInitialize(this);
+      })
+      .then(() => {
+        if (this._running) {
+          this._animationFrameId = requestAnimationFrame(this._updateFrame);
+        }
+      });
     return this;
   }
 
   // Stops a render loop if already running, finalizing
   stop() {
-    if (this._animationFrameId) {
+    if (this._running) {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
-      this._stopped = true;
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
+      this._running = false;
       this.props.onFinalize(this);
     }
     this.worker.postMessage({command: 'stop'});
     return this;
+  }
+
+  waitForRender() {
+    if (!this._nextFramePromise) {
+      this._nextFramePromise = new Promise(resolve => {
+        this._resolveNextFrame = resolve;
+      });
+    }
+    return this._nextFramePromise;
   }
 
   // PRIVATE METHODS
@@ -195,6 +211,11 @@ export default class AnimationLoopProxy {
 
   _updateFrame() {
     this._resizeCanvasDrawingBuffer();
+    if (this._resolveNextFrame) {
+      this._resolveNextFrame(this);
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
+    }
     this._animationFrameId = requestAnimationFrame(this._updateFrame);
   }
 

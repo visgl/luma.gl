@@ -42,8 +42,8 @@ enableDOMLogging({
 window.website = true;
 
 test('Browser tests', t => {
-  require('./index-webgl-independent-tests');
-  require('./index-webgl-dependent-tests');
+  require('./webgl-independent-tests');
+  require('./webgl-dependent-tests');
   require('./render');
   t.end();
 });
