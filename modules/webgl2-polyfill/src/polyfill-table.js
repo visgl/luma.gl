@@ -2,15 +2,12 @@ import GL from '@luma.gl/constants';
 import assert from './assert';
 
 import {getParameterPolyfill} from './polyfills/get-parameter-polyfill';
-<<<<<<< HEAD
-=======
 import {
   multiDrawArraysPolyfill,
   multiDrawElementsPolyfill,
   multiDrawArraysInstancedPolyfill,
   multiDrawElementsInstancedPolyfill
 } from './polyfills/multidraw-polyfill';
->>>>>>> WebGL2 polyfill cleanup
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';

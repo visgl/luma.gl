@@ -98,37 +98,25 @@ export default class Program extends Resource {
 
   // A good thing about the WebGL API is that there are so many ways to draw things ;)
   // This function unifies those ways into a single call using common parameters with sane defaults
-  draw({
-    logPriority, // Probe log priority, enables Model to do more integrated logging
+  draw(options) {
+    const {
+      // TODO - these defaults are duplicated here and in _draw
+      drawMode = GL.TRIANGLES,
+      vertexCount,
+      offset = 0,
+      isIndexed = false,
+      indexType = GL.UNSIGNED_SHORT,
+      isInstanced = false,
+      instanceCount = 0,
 
-    drawMode = GL.TRIANGLES,
-    vertexCount,
-    offset = 0,
-    start,
-    end,
-    isIndexed = false,
-    indexType = GL.UNSIGNED_SHORT,
-    isInstanced = false,
-    instanceCount = 0,
+      vertexArray = null,
+      transformFeedback,
+      framebuffer,
 
-    vertexArray = null,
-    transformFeedback,
-    framebuffer,
-    parameters = {},
-
-    // Deprecated
-    uniforms = {},
-    samplers = {}
-  }) {
-    if (logPriority !== undefined) {
-      const fb = framebuffer ? framebuffer.id : 'default';
-      const message =
-        `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
-        `instances=${instanceCount} indexType=${getKey(this.gl, indexType)} ` +
-        `isInstanced=${isInstanced} isIndexed=${isIndexed} ` +
-        `Framebuffer=${fb}`;
-      log.log(logPriority, message)();
-    }
+      // Deprecated
+      uniforms = {},
+      samplers = {}
+    } = options;
 
     // TODO - move vertex array binding and transform feedback binding to withParameters?
     assert(vertexArray);
@@ -141,14 +129,11 @@ export default class Program extends Resource {
       this.setUniforms(uniforms, samplers);
     }
 
-    // Note: async textures set as uniforms might still be loading.
-    // Now that all uniforms have been updated, check if any texture
-    // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable()) {
-      return false;
-    }
+    let status = true;
 
     vertexArray.bindForDraw(vertexCount, instanceCount, () => {
+      let {parameters = {}} = options;
+
       if (framebuffer !== undefined) {
         parameters = Object.assign({}, parameters, {framebuffer});
       }
@@ -168,110 +153,15 @@ export default class Program extends Resource {
 
       this._bindTextures();
 
-      withParameters(this.gl, parameters, () => this._draw());
+      // Setup done, time to actually draw
+      status = withParameters(this.gl, parameters, () => this._draw(options));
 
       if (transformFeedback) {
         transformFeedback.end();
       }
     });
 
-    return true;
-  }
-
-  _draw(parameters) {
-    if (this._multiDraw(parameters)) {
-      return;
-    }
-
-    const {
-      isIndexed,
-      isInstanced,
-      drawMode,
-      vertexCount,
-      indexType,
-      offset,
-      instanceCount,
-      start,
-      end
-    } = parameters;
-
-    // Note - Uses polyfilled WebGL2RenderingContext instead of ANGLE extension
-    if (isIndexed && isInstanced) {
-      this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-    } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-      this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-    } else if (isIndexed) {
-      this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-    } else if (isInstanced) {
-      this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-    } else {
-      this.gl.drawArrays(drawMode, offset, vertexCount);
-    }
-  }
-
-  // eslint-disable-next-line complexity
-  _multiDraw(parameters) {
-    const {
-      firsts,
-      firstsOffset = 0,
-      counts,
-      countsOffset = 0,
-      offsets,
-      offsetsOffset = 0,
-      instanceCounts,
-      instanceCountOffset = 0,
-      drawCount = firsts.length
-    } = parameters;
-
-    const isMultidraw =
-      firsts || firstsOffset || counts || countsOffset || offsets || offsetsOffset || drawCount;
-
-    if (!isMultidraw) {
-      return false;
-    }
-
-    const {isIndexed, isInstanced, drawMode, indexType} = parameters;
-
-    const multiDrawExt = this.gl.getExtension('WEBGL_multi_draw');
-    const multiDrawInstancedExt = this.gl.getExtension('WEBGL_multi_draw_instanced');
-    // TODO - In WebGL2 we could fallback to drawRangeElements for non instanced rendering?
-    assert(multiDrawExt && multiDrawInstancedExt);
-
-    if (isIndexed && isInstanced) {
-      multiDrawInstancedExt.multiDrawElementsInstancedWEBGL(
-        drawMode,
-        vertexCount,
-        indexType,
-        offset,
-        instanceCounts,
-        instanceCountOffset,
-        drawCount
-      );
-    } else if (isInstanced) {
-      multiDrawInstancedExt.multiDrawArraysInstancedWEBGL(
-        drawMode,
-        firsts,
-        firstsOffset,
-        counts,
-        countsOffset,
-        instanceCounts,
-        instanceCountOffset,
-        drawCount
-      );
-    } else if (isIndexed) {
-      multiDrawExt.multiDrawElementsWEBGL(drawMode, vertexCount, indexType, offset, drawCount);
-    } else {
-      multiDrawExt.multiDrawArraysWEBGL(
-        drawMode,
-        firsts,
-        firstsOffset,
-        counts,
-        countsOffset,
-        drawCount
-      );
-    }
-
-    return true;
+    return status;
   }
 
   setSamplers(samplers) {
@@ -304,6 +194,136 @@ export default class Program extends Resource {
 
   // stub for shader chache, should reset uniforms to default valiues
   reset() {}
+
+  // eslint-disable-next-line complexity
+  _draw(options) {
+    const {
+      logPriority, // Probe log priority, enables Model to do more integrated logging
+
+      framebuffer,
+
+      drawMode = GL.TRIANGLES,
+      vertexCount,
+      offset = 0,
+      isIndexed = false,
+      indexType = GL.UNSIGNED_SHORT,
+      isInstanced = false,
+      instanceCount = 0,
+      start,
+      end
+    } = options;
+
+    if (logPriority !== undefined) {
+      const fb = framebuffer ? framebuffer.id : 'default';
+      const message =
+        `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
+        `instances=${instanceCount} indexType=${getKey(this.gl, indexType)} ` +
+        `isInstanced=${isInstanced} isIndexed=${isIndexed} ` +
+        `Framebuffer=${fb}`;
+      log.log(logPriority, message)();
+    }
+
+    // Note: async textures set as uniforms might still be loading.
+    // Now that all uniforms have been updated, check if any texture
+    // in the uniforms is not yet initialized, then we don't draw
+    if (!this._areTexturesRenderable()) {
+      return false;
+    }
+
+    if (this._multiDraw(options)) {
+      return true;
+    }
+
+    // Note - Uses polyfilled WebGL2RenderingContext instead of ANGLE extension
+    if (isIndexed && isInstanced) {
+      this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+    } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+      this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+    } else if (isIndexed) {
+      this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+    } else if (isInstanced) {
+      this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+    } else {
+      this.gl.drawArrays(drawMode, offset, vertexCount);
+    }
+
+    return true;
+  }
+
+  // eslint-disable-next-line complexity
+  _multiDraw(options) {
+    const {
+      firsts,
+      firstsOffset = 0,
+      counts,
+      countsOffset = 0,
+      offsets,
+      offsetsOffset = 0,
+      instanceCounts,
+      instanceCountOffset = 0,
+      drawCount = firsts ? firsts.length : 0
+    } = options;
+
+    const isMultidraw =
+      firsts || firstsOffset || counts || countsOffset || offsets || offsetsOffset || drawCount;
+
+    if (!isMultidraw) {
+      return false;
+    }
+
+    const {isIndexed, isInstanced, drawMode, indexType} = options;
+
+    const multiDrawExt = this.gl.getExtension('WEBGL_multi_draw');
+    const multiDrawInstancedExt = this.gl.getExtension('WEBGL_multi_draw_instanced');
+    // TODO - In WebGL2 we could fallback to drawRangeElements for non instanced rendering?
+    assert(multiDrawExt && multiDrawInstancedExt);
+
+    if (isIndexed && isInstanced) {
+      multiDrawInstancedExt.multiDrawElementsInstancedWEBGL(
+        drawMode,
+        counts,
+        countsOffset,
+        indexType,
+        offsets,
+        offsetsOffset,
+        instanceCounts,
+        instanceCountOffset,
+        drawCount
+      );
+    } else if (isInstanced) {
+      multiDrawInstancedExt.multiDrawArraysInstancedWEBGL(
+        drawMode,
+        firsts,
+        firstsOffset,
+        counts,
+        countsOffset,
+        instanceCounts,
+        instanceCountOffset,
+        drawCount
+      );
+    } else if (isIndexed) {
+      multiDrawExt.multiDrawElementsWEBGL(
+        drawMode,
+        counts,
+        countsOffset,
+        indexType,
+        offsets,
+        offsetsOffset,
+        drawCount
+      );
+    } else {
+      multiDrawExt.multiDrawArraysWEBGL(
+        drawMode,
+        firsts,
+        firstsOffset,
+        counts,
+        countsOffset,
+        drawCount
+      );
+    }
+
+    return true;
+  }
 
   // Checks if all texture-values uniforms are renderable (i.e. loaded)
   // Note: This is currently done before every draw call

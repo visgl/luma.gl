@@ -44,9 +44,13 @@ test('webgl#caps#getFeatures', t => {
 
   const info = getFeatures(gl);
 
+  // TODO - update test to handle cases that work in both webgl1 and webgl2
   for (const cap in FEATURES) {
     const value = info[cap];
-    t.ok(value === false || value === true, `${cap}: is an allowed (boolean) value`);
+    t.ok(
+      value === false || value === true || value === undefined,
+      `${cap}: is an allowed (boolean) value`
+    );
   }
 
   t.end();

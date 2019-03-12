@@ -45,7 +45,7 @@ function isFeatureSupported(gl, cap) {
 
   // Check if the value is dependent on checking one or more extensions
   if (typeof featureDefinition === 'function') {
-    isSupported = featureDefinition(gl);
+    isSupported = Boolean(featureDefinition(gl));
   } else if (Array.isArray(featureDefinition)) {
     isSupported = true;
     for (const extension of featureDefinition) {
