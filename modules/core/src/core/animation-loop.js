@@ -202,6 +202,8 @@ export default class AnimationLoop {
   }
 
   waitForRender() {
+    this.setNeedsRedraw('waitForRender');
+
     if (!this._nextFramePromise) {
       this._nextFramePromise = new Promise(resolve => {
         this._resolveNextFrame = resolve;
@@ -211,6 +213,8 @@ export default class AnimationLoop {
   }
 
   async toDataURL() {
+    this.setNeedsRedraw('toDataURL');
+
     await this.waitForRender();
 
     return this.gl.canvas.toDataURL();
