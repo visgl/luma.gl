@@ -104,22 +104,24 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    let {width, height, depth, dataFormat} = props;
+    let {width, height, dataFormat} = props;
+    const {depth = 0} = props;
 
     // Deduce width and height
-    ({width, height, depth, dataFormat} = this._deduceParameters({
+    ({width, height, dataFormat} = this._deduceParameters({
       format,
       type,
       dataFormat,
       compressed: false,
       data,
-      width
+      width,
+      height
     }));
 
     // Store opts for accessors
     this.width = width;
     this.height = height;
-    this.depth = depth || 0;
+    this.depth = depth;
     this.format = format;
     this.type = type;
     this.dataFormat = dataFormat;
@@ -226,6 +228,10 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
+    if (this.depth > 0) {
+      return this.setImage3D(options);
+    }
+
     const {
       target = this.target,
       pixels = null,
@@ -250,23 +256,21 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    ({type, dataFormat, compressed, width, height, depth} = this._deduceParameters({
+    ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format,
       type,
       dataFormat,
       compressed,
       data,
       width,
-      height,
-      depth,
-      is3D
+      height
     }));
 
     const {gl} = this;
     gl.bindTexture(this.target, this.handle);
 
     let dataType = null;
-    ({data, dataType} = this._getDataType({data, compressed, is3D}));
+    ({data, dataType} = this._getDataType({data, compressed}));
 
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
@@ -493,7 +497,7 @@ export default class Texture extends Resource {
   // Image 3D copies from Typed Array or WebGLBuffer
   setImage3D({
     level = 0,
-    internalformat = GL.RGBA,
+    dataFormat = GL.RGBA,
     width,
     height,
     depth = 1,
@@ -501,39 +505,45 @@ export default class Texture extends Resource {
     format,
     type = GL.UNSIGNED_BYTE,
     offset = 0,
-    pixels
+    data,
+    parameters = {}
   }) {
-    if (ArrayBuffer.isView(pixels)) {
-      this.gl.texImage3D(
-        this.target,
-        level,
-        internalformat,
-        width,
-        height,
-        depth,
-        border,
-        format,
-        type,
-        pixels
-      );
-      return this;
-    }
+    this.gl.bindTexture(this.target, this.handle);
 
-    if (pixels instanceof Buffer) {
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
-      this.gl.texImage3D(
-        this.target,
-        level,
-        internalformat,
-        width,
-        height,
-        depth,
-        border,
-        format,
-        type,
-        offset
-      );
-    }
+    withParameters(this.gl, parameters, () => {
+      if (ArrayBuffer.isView(data)) {
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          data
+        );
+      }
+
+      if (data instanceof Buffer) {
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          offset
+        );
+      }
+    });
+
+    this.loaded = true;
 
     return this;
   }

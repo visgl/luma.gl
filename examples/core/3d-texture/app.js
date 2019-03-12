@@ -1,6 +1,6 @@
-import {AnimationLoop, setParameters, Model, Texture3D } from 'luma.gl';
+import {AnimationLoop, setParameters, Model, Texture3D, Buffer} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget'
+import {StatsWidget} from '@probe.gl/stats-widget';
 import {default as noise3d} from 'noise3d';
 
 const INFO_HTML = `
@@ -11,7 +11,7 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
-const vs = `
+const vs = `\
 #version 300 es
 in vec3 position;
 
@@ -25,7 +25,7 @@ void main() {
   gl_PointSize = 2.0;
 }`;
 
-const fs = `
+const fs = `\
 #version 300 es
 precision highp float;
 precision lowp sampler3D;
@@ -34,10 +34,12 @@ uniform sampler3D uTexture;
 uniform float uTime;
 out vec4 fragColor;
 void main() {
-  float alpha = texture(uTexture, vUV + vec3(0.0, 0.0, uTime)).r * 0.03;
+  float alpha = texture(uTexture, vUV + vec3(0.0, 0.0, uTime)).r * 0.1;
   fragColor = vec4(fract(vUV) * alpha, alpha);
 }`;
 
+const NEAR = 0.1;
+const FAR = 10.0;
 
 class AppAnimationLoop extends AnimationLoop {
   constructor() {
@@ -57,7 +59,7 @@ class AppAnimationLoop extends AnimationLoop {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       blend: true,
-      blendFunc: [gl.ONE, gl.ONE_MINUE_SRC_ALPHA]
+      blendFunc: [gl.ONE, gl.ONE_MINUS_SRC_ALPHA]
     });
 
     // CREATE POINT CLOUD
@@ -82,15 +84,21 @@ class AppAnimationLoop extends AnimationLoop {
       x += INCREMENT;
     }
 
+    const positionBuffer = new Buffer(gl, positionData);
+
     // CREATE 3D TEXTURE
     const TEXTURE_DIMENSIONS = 16;
-    const textureData = new Uint8Array(TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS);
+    const NOISE_DIMENSIONS = TEXTURE_DIMENSIONS * 0.07;
+    const textureData = new Uint8Array(
+      TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS
+    );
     let textureIndex = 0;
     for (let i = 0; i < TEXTURE_DIMENSIONS; ++i) {
       for (let j = 0; j < TEXTURE_DIMENSIONS; ++j) {
         for (let k = 0; k < TEXTURE_DIMENSIONS; ++k) {
-          let val = perlin(i, j, k) * 255
-          textureData[textureIndex++] = val;
+          textureData[textureIndex++] =
+            (0.5 + 0.5 * perlin(i / NOISE_DIMENSIONS, j / NOISE_DIMENSIONS, k / NOISE_DIMENSIONS)) *
+            255;
         }
       }
     }
@@ -99,16 +107,21 @@ class AppAnimationLoop extends AnimationLoop {
     const viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
 
     const texture = new Texture3D(gl, {
-      width: DIMENSIONS,
-      height: DIMENSIONS,
-      depth: DIMENSIONS,
-      pixels: textureData
+      width: TEXTURE_DIMENSIONS,
+      height: TEXTURE_DIMENSIONS,
+      depth: TEXTURE_DIMENSIONS,
+      pixels: textureData,
+      format: gl.RED,
+      dataFormat: gl.R8
     });
 
     const cloud = new Model(gl, {
+      vs,
+      fs,
       drawMode: gl.POINTS,
+      vertexCount: positionData.length / 3,
       attributes: {
-        position: positionData
+        position: positionBuffer
       },
       uniforms: {
         uTexture: texture,
@@ -127,8 +140,7 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
-
-    const {gl, cloud, projMat, statsWidget, tick} = animationProps;
+    const {gl, cloud, projMat, statsWidget, tick, aspect} = animationProps;
 
     projMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
 
@@ -143,7 +155,7 @@ class AppAnimationLoop extends AnimationLoop {
     gl.clear(gl.COLOR_BUFFER_BIT);
     cloud.draw({
       uniforms: {
-        uTime: tick / 1000,
+        uTime: tick / 100,
         uProj: projMat
       }
     });

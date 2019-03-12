@@ -15,6 +15,7 @@
     "no-inline-comments": 0,
     "camelcase": 0,
     "tree-shaking/no-side-effects-in-initialization": 0,
+    "max-statements": 0,
     "luma-gl-custom-rules/check-log-call": 1
   }
 }
