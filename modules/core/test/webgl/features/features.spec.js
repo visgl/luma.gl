@@ -6,6 +6,8 @@ import {fixture} from 'test/setup';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
 const WEBGL_FEATURES = {
+  WEBGL2: true,
+
   // API SUPPORT
   VERTEX_ARRAY_OBJECT: true,
   INSTANCED_RENDERING: true,

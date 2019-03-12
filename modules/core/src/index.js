@@ -15,7 +15,8 @@ export {
 } from './webgl/context/context';
 export {getContextInfo, getGLContextInfo, getContextLimits} from './webgl/features/limits';
 export {getContextDebugInfo as glGetDebugInfo} from './webgl/debug/get-context-debug-info';
-export {FEATURES, hasFeature, hasFeatures, getFeatures} from './webgl/features/features';
+export {FEATURES} from './webgl/features/webgl-features-table';
+export {hasFeature, hasFeatures, getFeatures} from './webgl/features/features';
 export {default as canCompileGLGSExtension} from './webgl/features/check-glsl-extension';
 export {
   trackContextState,
