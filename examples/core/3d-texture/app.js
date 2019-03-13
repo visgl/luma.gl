@@ -133,26 +133,33 @@ class AppAnimationLoop extends AnimationLoop {
     });
 
     const statsWidget = new StatsWidget(this.stats, {
-      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+      title: 'Render Time',
+      css: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'CPU Time': 'averageTime',
+        'GPU Time': 'averageTime',
+        'Frame Rate': 'fps'
+      },
+      resetOnUpdate: {
+        'CPU Time': true,
+        'GPU Time': true,
+        'Frame Rate': true
+      }
     });
-    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {cloud, mvpMat, viewMat, statsWidget};
   }
 
   onRender(animationProps) {
     const {gl, cloud, mvpMat, viewMat, statsWidget, tick, aspect} = animationProps;
+    statsWidget.update();
 
     mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
-
-    if (tick % 60 === 10) {
-      statsWidget.update();
-      this.cpuTime.reset();
-      this.gpuTime.reset();
-      this.frameRate.reset();
-    }
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT);

@@ -1,5 +1,5 @@
 import {AnimationLoop, ClipSpace} from 'luma.gl';
-import {StatsWidget} from '@probe.gl/stats-widget'
+import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>
@@ -62,12 +62,7 @@ const ZOOM_THRESHOLD = 1e5;
 const ZOOM_CENTER_X = -0.0150086889504513;
 const ZOOM_CENTER_Y = 0.78186693904085048;
 
-const BASE_CORNERS = [
-  [-2.2, -1.2],
-  [0.7, -1.2],
-  [-2.2, 1.2],
-  [0.7, 1.2]
-];
+const BASE_CORNERS = [[-2.2, -1.2], [0.7, -1.2], [-2.2, 1.2], [0.7, 1.2]];
 
 let centerOffsetX = 0;
 let centerOffsetY = 0;
@@ -97,13 +92,25 @@ function getZoomedCorners(zoomFactor = 1.01) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, _animationLoop}) => {
-
     const statsWidget = new StatsWidget(_animationLoop.stats, {
-      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+      title: 'Render Time',
+      css: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'CPU Time': 'averageTime',
+        'GPU Time': 'averageTime',
+        'Frame Rate': 'fps'
+      },
+      resetOnUpdate: {
+        'CPU Time': true,
+        'GPU Time': true,
+        'Frame Rate': true
+      }
     });
-    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {
       clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
@@ -111,13 +118,8 @@ const animationLoop = new AnimationLoop({
     };
   },
 
-  onRender: ({gl, canvas, tick, clipSpace, statsWidget, _animationLoop}) => {
-    if (tick % 60 === 10) {
-      statsWidget.update();
-      _animationLoop.cpuTime.reset();
-      _animationLoop.gpuTime.reset();
-      _animationLoop.frameRate.reset();
-    }
+  onRender: ({gl, canvas, tick, clipSpace, statsWidget}) => {
+    statsWidget.update();
 
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
