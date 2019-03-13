@@ -46,7 +46,7 @@ const FAR = 10.0;
 
 class AppAnimationLoop extends AnimationLoop {
   constructor() {
-    super({debug: true});
+    super({useDevicePixels: false});
   }
 
   getInfo() {

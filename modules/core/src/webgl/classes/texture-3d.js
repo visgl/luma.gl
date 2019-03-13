@@ -9,7 +9,7 @@ export default class Texture3D extends Texture {
 
   constructor(gl, props = {}) {
     assertWebGL2Context(gl);
-    props = Object.assign({}, props, {target: GL.TEXTURE_3D, unpackFlipY: false});
+    props = Object.assign({depth: 1}, props, {target: GL.TEXTURE_3D, unpackFlipY: false});
     super(gl, props);
     this.initialize(props);
 

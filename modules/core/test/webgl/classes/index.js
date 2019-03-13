@@ -12,6 +12,7 @@ import './uniforms.spec';
 
 import './texture.spec';
 import './texture-2d.spec';
+import './texture-3d.spec';
 
 import './renderbuffer.spec';
 import './framebuffer.spec';
@@ -31,8 +32,6 @@ import './uniform-buffer-layout.spec';
 import './transform-feedback.spec';
 
 /*
-Spec runner can't create a WebGL 2 context
 UNUSED SPECS:
 texture-2d-array.spec
-texture-3d.spec
 */
