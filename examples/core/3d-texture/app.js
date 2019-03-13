@@ -113,7 +113,7 @@ class AppAnimationLoop extends AnimationLoop {
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
-      pixels: textureData,
+      data: textureData,
       format: gl.RED,
       dataFormat: gl.R8
     });

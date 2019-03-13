@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {Texture3D} from 'luma.gl';
+import {Texture3D, Buffer} from 'luma.gl';
 
 import {fixture} from 'test/setup';
 
@@ -24,19 +24,32 @@ test('WebGL#Texture3D construct/delete', t => {
     width: 4,
     height: 4,
     depth: 4,
-    pixels: new Uint8Array(4 * 4 * 4),
+    data: new Uint8Array(4 * 4 * 4),
     format: gl.RED,
     dataFormat: gl.R8
   });
 
-  t.ok(gl.getError() === gl.NO_ERROR, 'Texture3D construction produces no errors');
+  t.ok(gl.getError() === gl.NO_ERROR, 'Texture3D construction with array produces no errors');
 
   texture.delete();
   t.ok(!gl.isTexture(texture.handle), `Texture GL object was deleted`);
   t.ok(texture instanceof Texture3D, 'Texture3D delete successful');
 
+  const buffer = new Buffer(gl, new Uint8Array(4 * 4 * 4));
+
+  texture = new Texture3D(gl, {
+    width: 4,
+    height: 4,
+    depth: 4,
+    data: buffer,
+    format: gl.RED,
+    dataFormat: gl.R8
+  });
+
+  t.ok(gl.getError() === gl.NO_ERROR, 'Texture3D construction with buffer produces no errors');
+
   texture.delete();
-  t.ok(texture instanceof Texture3D, 'Texture3D repeated delete successful');
+  buffer.delete();
 
   t.end();
 });
