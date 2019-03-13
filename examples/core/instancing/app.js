@@ -1,6 +1,6 @@
 import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget'
+import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>
@@ -14,13 +14,12 @@ const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Cube {
-
   constructor(gl, props) {
     let offsets = [];
     for (let i = 0; i < SIDE; i++) {
-      const x = (-SIDE + 1) * 3 / 2 + i * 3;
+      const x = ((-SIDE + 1) * 3) / 2 + i * 3;
       for (let j = 0; j < SIDE; j++) {
-        const y = (-SIDE + 1) * 3 / 2 + j * 3;
+        const y = ((-SIDE + 1) * 3) / 2 + j * 3;
         offsets.push(x, y);
       }
     }
@@ -34,9 +33,7 @@ class InstancedCube extends Cube {
       }
     }
 
-    const colors = new Float32Array(SIDE * SIDE * 3).map(
-      () => Math.random() * 0.75 + 0.25
-    );
+    const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
     const vs = `\
 attribute float instanceSizes;
@@ -79,19 +76,22 @@ void main(void) {
 }
 `;
 
-    super(gl, Object.assign({}, props, {
-      vs,
-      fs,
-      modules: [picking, dirlight],
-      isInstanced: 1,
-      instanceCount: SIDE * SIDE,
-      attributes: {
-        instanceSizes: {value: new Float32Array([1]), instanced: 1, constant: true},
-        instanceOffsets: {value: offsets, instanced: 1},
-        instanceColors: {value: colors, instanced: 1},
-        instancePickingColors: {value: pickingColors, instanced: 1}
-      }
-    }));
+    super(
+      gl,
+      Object.assign({}, props, {
+        vs,
+        fs,
+        modules: [picking, dirlight],
+        isInstanced: 1,
+        instanceCount: SIDE * SIDE,
+        attributes: {
+          instanceSizes: {value: new Float32Array([1]), instanced: 1, constant: true},
+          instanceOffsets: {value: offsets, instanced: 1},
+          instanceColors: {value: colors, instanced: 1},
+          instancePickingColors: {value: pickingColors, instanced: 1}
+        }
+      })
+    );
   }
 }
 
@@ -105,7 +105,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl, _animationLoop}) {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -121,47 +120,57 @@ class AppAnimationLoop extends AnimationLoop {
         uProjection: ({aspect}) =>
           new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
         // Move the eye around the plane
-        uView: ({tick}) => new Matrix4().lookAt({
-          center: [0, 0, 0],
-          eye: [
-            Math.cos(tick * 0.005) * SIDE / 2,
-            Math.sin(tick * 0.006) * SIDE / 2,
-            (Math.sin(tick * 0.0035) + 1) * SIDE / 4 + 32
-          ]
-        }),
+        uView: ({tick}) =>
+          new Matrix4().lookAt({
+            center: [0, 0, 0],
+            eye: [
+              (Math.cos(tick * 0.005) * SIDE) / 2,
+              (Math.sin(tick * 0.006) * SIDE) / 2,
+              ((Math.sin(tick * 0.0035) + 1) * SIDE) / 4 + 32
+            ]
+          }),
         // Rotate all the individual cubes
         uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
 
     const statsWidget = new StatsWidget(this.stats, {
-      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+      title: 'Render Time',
+      css: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'CPU Time': 'averageTime',
+        'GPU Time': 'averageTime',
+        'Frame Rate': 'fps'
+      },
+      resetOnUpdate: {
+        'CPU Time': true,
+        'GPU Time': true,
+        'Frame Rate': true
+      }
     });
-    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {statsWidget};
   }
 
   onRender(animationProps) {
+    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget} = animationProps;
 
-    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget, tick} = animationProps;
-
-    if (tick % 60 === 10) {
-      statsWidget.update();
-      this.cpuTime.reset();
-      this.gpuTime.reset();
-      this.frameRate.reset();
-    }
+    statsWidget.update();
 
     // "Pick" the cube under the mouse
-    const pickInfo = _mousePosition && pickModels(gl, {
-      models: [this.cube],
-      position: _mousePosition,
-      useDevicePixels,
-      framebuffer
-    });
+    const pickInfo =
+      _mousePosition &&
+      pickModels(gl, {
+        models: [this.cube],
+        position: _mousePosition,
+        useDevicePixels,
+        framebuffer
+      });
 
     // Highlight it
     const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
