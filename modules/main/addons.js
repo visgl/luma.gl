@@ -1,2 +1,2 @@
 // eslint-disable-next-line
-module.exports = require('@luma.gl/core/addons');
+module.exports = require('@luma.gl/addons');
