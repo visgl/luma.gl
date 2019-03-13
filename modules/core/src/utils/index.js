@@ -1,9 +1,2 @@
-export {default as isBrowser} from './is-browser';
-export {default as isOldIE} from './is-old-ie';
-export {promisify} from './promise-utils';
-export {uid, isPowerOfTwo, isObjectEmpty} from './utils';
-export {default as log} from './log';
-export {formatValue} from './format-value';
-export {default as assert} from './assert';
-export {stubRemovedMethods} from './stub-methods';
-export {checkProps} from './check-props';
+export {assert, log, uid, isObjectEmpty} from '@luma.gl/webgl2';
+export {self, window, global, document} from '@luma.gl/webgl2';

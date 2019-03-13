@@ -34,7 +34,7 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "@luma.gl/core": "^7.0.0-alpha.17",
-    "@luma.gl/webgl-state-tracker": "^7.0.0-alpha.15"
+    "@luma.gl/webgl2-state-tracker": "^7.0.0-alpha.15"
   },
   "peerDependencies": {
     "probe.gl": "^3.0.0-alpha.7",

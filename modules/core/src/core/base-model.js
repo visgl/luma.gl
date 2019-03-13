@@ -1,15 +1,14 @@
 // Shared code between Model and MeshModel
 
 import GL from '@luma.gl/constants';
-import {Query, Program, VertexArray, clear} from '../webgl';
-import {isWebGL} from '../webgl/utils';
+import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl2';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
+import {getDebugTableForUniforms} from '@luma.gl/webgl2/debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '@luma.gl/webgl2/debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '@luma.gl/webgl2/debug/debug-program-configuration';
+
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {getDebugTableForUniforms} from '../webgl/debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '../webgl/debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '../webgl/debug/debug-program-configuration';
-import {log, isObjectEmpty} from '../utils';
-import assert from '../utils/assert';
+import {log, isObjectEmpty, assert} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;

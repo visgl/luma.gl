@@ -1,8 +1,7 @@
 /* eslint-disable complexity */
 import GL from '@luma.gl/constants';
-import {Buffer} from '../webgl';
+import {Buffer, hasFeature, FEATURES} from '@luma.gl/webgl2';
 import {log, uid} from '../utils';
-import {hasFeature, FEATURES} from '../webgl/features';
 
 export default class Attribute {
   constructor(gl, opts = {}) {

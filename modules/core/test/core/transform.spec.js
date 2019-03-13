@@ -53,9 +53,9 @@ void main()
 test('WebGL#Transform constructor/delete', t => {
   const {gl, gl2} = fixture;
 
-  t.throws(() => new Transform(), /.*Requires WebGL2.*/, 'Buffer throws on missing gl context');
+  t.throws(() => new Transform(), 'Transform throws on missing gl context');
 
-  t.throws(() => new Transform(gl), /.*Requires WebGL2.*/, 'Buffer throws on missing gl context');
+  t.throws(() => new Transform(gl), 'Transform throws on missing gl context');
 
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

@@ -1,9 +1,9 @@
 /* global document, setTimeout */
-import {AnimationLoop} from 'luma.gl';
+import {AnimationLoop} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
-test('WebGL#AnimationLoop constructor', t => {
+test('core#AnimationLoop constructor', t => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
 
   const {gl} = fixture;
@@ -12,7 +12,7 @@ test('WebGL#AnimationLoop constructor', t => {
   t.end();
 });
 
-test('WebGL#AnimationLoop start,stop', t => {
+test('core#AnimationLoop start,stop', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -46,7 +46,7 @@ test('WebGL#AnimationLoop start,stop', t => {
   }).start();
 });
 
-test('WebGL#AnimationLoop redraw', t => {
+test('core#AnimationLoop redraw', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -72,7 +72,7 @@ test('WebGL#AnimationLoop redraw', t => {
   }).start();
 });
 
-test('WebGL#AnimationLoop should not call initialize more than once', async t => {
+test('core#AnimationLoop should not call initialize more than once', async t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -96,7 +96,7 @@ test('WebGL#AnimationLoop should not call initialize more than once', async t =>
   t.end();
 });
 
-test('WebGL#AnimationLoop two start()s should only run one loop', async t => {
+test('core#AnimationLoop two start()s should only run one loop', async t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -122,7 +122,7 @@ test('WebGL#AnimationLoop two start()s should only run one loop', async t => {
   t.end();
 });
 
-test('WebGL#AnimationLoop start followed immediately by stop() should stop', t => {
+test('core#AnimationLoop start followed immediately by stop() should stop', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -146,7 +146,7 @@ test('WebGL#AnimationLoop start followed immediately by stop() should stop', t =
   }, 100);
 });
 
-test('WebGL#AnimationLoop a start/stop/start should not call initialize again', t => {
+test('core#AnimationLoop a start/stop/start should not call initialize again', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();

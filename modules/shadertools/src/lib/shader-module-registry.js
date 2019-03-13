@@ -1,5 +1,5 @@
 import ShaderModule from './shader-module';
-import assert from '../utils/assert';
+import {assert} from '../utils';
 
 export default class ShaderModuleRegistry {
   constructor() {

@@ -1,6 +1,6 @@
 const {registerReactComponent} = require('ocular-gatsby/api');
 
-const Hero = require('./src/components/hero').default ;
+const Hero = require('./src/components/hero').default;
 const ExampleRunner = require('./src/components/example-runner').default;
 const EXAMPLES = require('./src/components/examples');
 

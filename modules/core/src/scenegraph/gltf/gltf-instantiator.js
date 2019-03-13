@@ -1,5 +1,5 @@
 import {Matrix4} from 'math.gl';
-import {Buffer, Accessor} from '../../webgl';
+import {Buffer, Accessor} from '@luma.gl/webgl2';
 import {log} from '../../utils';
 import GroupNode from '../nodes/group-node';
 

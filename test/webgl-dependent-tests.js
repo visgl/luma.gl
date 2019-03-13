@@ -5,9 +5,10 @@ import '@luma.gl/debug';
 
 // Generic helper modules
 import '../modules/webgl2-polyfill/test';
-import '../modules/webgl-state-tracker/test';
+import '../modules/webgl2-state-tracker/test';
 
 // luma.gl core module: Test webgl-dependent code now
+import '../modules/webgl2/test';
 import '../modules/core/test/webgl-dependent-tests';
 
 // luma.gl sub modules

@@ -1,5 +1,5 @@
 import {pbr} from '@luma.gl/shadertools';
-import {isWebGL2} from '../../webgl';
+import {isWebGL2} from '@luma.gl/webgl2';
 import {log} from '../../utils';
 import ModelNode from '../nodes/model-node';
 import GLTFMaterialParser from './gltf-material-parser';

@@ -1,11 +1,18 @@
 import GL from '@luma.gl/constants';
 import {combineInjects} from '@luma.gl/shadertools';
 import {_transform as transform, getPassthroughFS, typeToChannelCount} from '@luma.gl/shadertools';
-import {Buffer, Framebuffer, Texture2D, TransformFeedback, readPixelsToArray} from '../webgl';
-import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl/utils';
-import Model from './model';
-
+import {
+  isWebGL2,
+  Buffer,
+  Framebuffer,
+  Texture2D,
+  TransformFeedback,
+  readPixelsToArray,
+  getShaderVersion,
+  cloneTextureFrom
+} from '@luma.gl/webgl2';
 import {log, isObjectEmpty, assert} from '../utils';
+import Model from './model';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 // Texture parameters needed so sample can precisely pick pixel for given element id.
@@ -24,7 +31,7 @@ export default class Transform {
   }
 
   constructor(gl, props = {}) {
-    assertWebGL2Context(gl);
+    assert(isWebGL2(gl));
 
     this.gl = gl;
     this.model = null;

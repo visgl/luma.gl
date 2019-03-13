@@ -1,25 +1,30 @@
-// Export core modules for luma.gl
+// CORE MODULE EXPORTS FOR LUMA.GL
 
-// Initialize any global state
-require('./init');
-
-export {lumaStats} from './init';
-
-// WebGL
-export {isWebGL, isWebGL2} from './webgl/utils/webgl-checks';
-export {cloneTextureFrom} from './webgl/utils/texture-utils';
-export {getKeyValue, getKey} from './webgl/utils/constants-to-keys';
+// WEBGL CONTEXT
 export {
+  isWebGL,
+  isWebGL2,
+  lumaStats,
   createGLContext,
   destroyGLContext,
   resizeGLContext,
-  setContextDefaults
-} from './webgl/context/context';
-export {getContextInfo, getGLContextInfo, getContextLimits} from './webgl/features/limits';
-export {getContextDebugInfo as glGetDebugInfo} from './webgl/debug/get-context-debug-info';
-export {FEATURES} from './webgl/features/webgl-features-table';
-export {hasFeature, hasFeatures, getFeatures} from './webgl/features/features';
-export {default as canCompileGLGSExtension} from './webgl/features/check-glsl-extension';
+  setGLContextDefaults,
+  getContextInfo,
+  getGLContextInfo,
+  getContextLimits,
+  FEATURES,
+  hasFeature,
+  hasFeatures,
+  getFeatures,
+  canCompileGLGSExtension,
+  cloneTextureFrom,
+  getKeyValue,
+  getKey,
+  // DEPRECATED
+  setGLContextDefaults as setContextDefaults,
+  getContextDebugInfo as glGetDebugInfo
+} from '@luma.gl/webgl2';
+
 export {
   trackContextState,
   resetParameters,
@@ -29,43 +34,47 @@ export {
   setParameters,
   withParameters,
   getModifiedParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/webgl2-state-tracker';
 
-// WebGL1 classes
-export {default as Buffer} from './webgl/classes/buffer';
-export {Shader, VertexShader, FragmentShader} from './webgl/classes/shader';
-export {default as Program} from './webgl/classes/program';
-export {default as Framebuffer} from './webgl/classes/framebuffer';
-export {default as Renderbuffer} from './webgl/classes/renderbuffer';
-export {default as Texture2D} from './webgl/classes/texture-2d';
-export {default as TextureCube} from './webgl/classes/texture-cube';
-
-export {clear, clearBuffer} from './webgl/classes/clear';
-
-// Copy and Blit
+// WEBGL1 OBJECTS/FUNCTIONS
 export {
+  Buffer,
+  Shader,
+  VertexShader,
+  FragmentShader,
+  Program,
+  Framebuffer,
+  Renderbuffer,
+  Texture2D,
+  TextureCube,
+  clear,
+  clearBuffer,
+  // Copy and Blit
   readPixelsToArray,
   readPixelsToBuffer,
   copyToDataUrl,
   copyToImage,
   copyToTexture,
   blit
-} from './webgl/classes/copy-and-blit';
+} from '@luma.gl/webgl2';
 
-// WebGL2 classes & Extensions
-export {default as Query} from './webgl/classes/query';
-export {default as Sampler} from './webgl/classes/sampler';
-export {default as Texture3D} from './webgl/classes/texture-3d';
-export {default as Texture2DArray} from './webgl/classes/texture-2d-array';
-export {default as TransformFeedback} from './webgl/classes/transform-feedback';
-export {default as VertexArrayObject} from './webgl/classes/vertex-array-object';
-export {default as VertexArray} from './webgl/classes/vertex-array';
-export {default as UniformBufferLayout} from './webgl/classes/uniform-buffer-layout';
-
-// experimental WebGL exports
-export {default as _Accessor} from './webgl/classes/accessor';
-export {clearBuffer as _clearBuffer} from './webgl/classes/clear';
-export {setPathPrefix, loadImage, loadFile} from './webgl/utils/load-file';
+export {
+  // WebGL2 classes & Extensions
+  Query,
+  Sampler,
+  Texture3D,
+  Texture2DArray,
+  TransformFeedback,
+  VertexArrayObject,
+  VertexArray,
+  UniformBufferLayout,
+  setPathPrefix,
+  loadFile,
+  loadImage,
+  // experimental WebGL exports
+  Accessor as _Accessor,
+  clearBuffer as _clearBuffer
+} from '@luma.gl/webgl2';
 
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
@@ -106,7 +115,7 @@ export {default as SphereGeometry} from './geometries/sphere-geometry';
 export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 // lighting
-export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-source';
+export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-source';
 
 // material
 export {default as Material} from './materials/material';
@@ -163,7 +172,4 @@ export {
 } from '@luma.gl/shadertools';
 
 // UTILS: undocumented API for other luma.gl modules
-export {default as log} from './utils/log';
-export {default as assert} from './utils/assert';
-export {uid} from './utils/utils';
-export {global} from './utils/globals';
+export {log, assert, uid, global} from '@luma.gl/webgl2';

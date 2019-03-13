@@ -1,4 +1,4 @@
-import {VertexShader, FragmentShader, Program} from '../webgl';
+import {VertexShader, FragmentShader, Program} from '@luma.gl/webgl2';
 import {assert} from '../utils';
 
 export default class ShaderCache {

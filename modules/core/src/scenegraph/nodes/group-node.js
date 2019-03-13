@@ -1,12 +1,12 @@
 import {Matrix4} from 'math.gl';
 import {log, assert} from '../../utils';
-import Node from './scenegraph-node';
+import ScenegraphNode from './scenegraph-node';
 
-export default class Group extends Node {
+export default class GroupNode extends ScenegraphNode {
   constructor(props = {}) {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
-    children.every(child => assert(child instanceof Node));
+    children.every(child => assert(child instanceof ScenegraphNode));
     super(props);
     this.children = children;
   }
@@ -41,7 +41,7 @@ export default class Group extends Node {
     const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
 
     for (const child of this.children) {
-      if (child instanceof Group) {
+      if (child instanceof GroupNode) {
         child.traverse(visitor, {worldMatrix: modelMatrix});
       } else {
         visitor(child, {worldMatrix: modelMatrix});

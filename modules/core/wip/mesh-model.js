@@ -1,17 +1,17 @@
 import GL from '@luma.gl/constants';
 import {assembleShaders, MODULAR_SHADERS} from '@luma.gl/shadertools';
+import {isWebGL, clear} from '@luma.gl/webgl2';
+import {Buffer, Query, Program, TransformFeedback, VertexArray} from '@luma.gl/webgl2';
+
+import {getDebugTableForUniforms} from '@luma.gl/webgl2/debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '@luma.gl/webgl2/debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '@luma.gl/webgl2/debug/debug-program-configuration';
 
 import Attribute from '../core/attribute';
 import Node from './scenegraph-node';
 import {getDrawMode} from '../core/geometry';
-import {Buffer, Query, Program, TransformFeedback, VertexArray, clear} from '../webgl';
-import {isWebGL} from '../webgl/utils';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {getDebugTableForUniforms} from '../webgl/debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '../webgl/debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '../webgl/debug/debug-program-configuration';
-import {log, isObjectEmpty} from '../utils';
-import assert from '../utils/assert';
+import {log, isObjectEmpty, assert} from '../utils';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 

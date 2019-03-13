@@ -10,11 +10,7 @@ const ALIASES = require('../aliases');
 // Seems to be a Babel bug
 // https://github.com/babel/babel-loader/issues/149#issuecomment-191991686
 const BABEL_CONFIG = {
-  presets: [
-    'es2015',
-    'react',
-    'stage-2'
-  ].map(name => require.resolve(`babel-preset-${name}`)),
+  presets: ['es2015', 'react', 'stage-2'].map(name => require.resolve(`babel-preset-${name}`)),
   plugins: [
     // website uses decorators
     require.resolve('babel-plugin-transform-decorators-legacy')
@@ -40,10 +36,12 @@ const COMMON_CONFIG = {
         options: BABEL_CONFIG,
         include: [resolve('..'), libSources],
         exclude: [/node_modules/]
-      }, {
+      },
+      {
         test: /\.scss$/,
         loaders: ['style-loader', 'css-loader', 'sass-loader']
-      }, {
+      },
+      {
         test: /\.(eot|svg|ttf|woff|woff2|gif|jpe?g|png)$/,
         loader: 'url-loader'
       }
@@ -51,13 +49,10 @@ const COMMON_CONFIG = {
   },
 
   resolve: {
-    modules: [
-      resolve(__dirname, './node_modules'),
-      resolve(__dirname, '../node_modules')
-    ],
+    modules: [resolve(__dirname, './node_modules'), resolve(__dirname, '../node_modules')],
 
     alias: Object.assign({}, ALIASES, {
-    // TODO: need better way to expose math.gl to examples instead of this line
+      // TODO: need better way to expose math.gl to examples instead of this line
       'math.gl': join(__dirname, 'node_modules/math.gl')
     })
   },
@@ -67,11 +62,9 @@ const COMMON_CONFIG = {
   },
 
   plugins: []
-
 };
 
 const addDevConfig = config => {
-
   config.module.rules.push({
     // Unfortunately, webpack doesn't import library sourcemaps on its own...
     test: /\.js$/,
@@ -80,16 +73,13 @@ const addDevConfig = config => {
   });
 
   return Object.assign(config, {
-
     devtool: 'source-maps',
 
     plugins: config.plugins.concat([
       // new webpack.HotModuleReplacementPlugin(),
       new webpack.NoEmitOnErrorsPlugin()
     ])
-
   });
-
 };
 
 const addProdConfig = config => {

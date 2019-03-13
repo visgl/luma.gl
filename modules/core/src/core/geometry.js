@@ -1,5 +1,4 @@
-import {uid} from '../utils';
-import assert from '../utils/assert';
+import {uid, assert} from '../utils';
 
 // Rendering primitives - specify how to extract primitives from vertices.
 // NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants

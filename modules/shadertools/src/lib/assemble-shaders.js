@@ -2,7 +2,7 @@ import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader from './inject-shader';
-import assert from '../utils/assert';
+import {assert} from '../utils';
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
