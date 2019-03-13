@@ -12,6 +12,7 @@ import './uniforms.spec';
 
 import './texture.spec';
 import './texture-2d.spec';
+import './texture-3d.spec';
 
 import './renderbuffer.spec';
 import './framebuffer.spec';
@@ -33,5 +34,4 @@ import './transform-feedback.spec';
 /*
 UNUSED SPECS:
 texture-2d-array.spec
-texture-3d.spec
 */
