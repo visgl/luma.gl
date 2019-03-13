@@ -15,13 +15,12 @@ const vs = `\
 #version 300 es
 in vec3 position;
 
-uniform mat4 uProj;
-uniform mat4 uView;
+uniform mat4 uMVP;
 
 out vec3 vUV;
 void main() {
   vUV = position.xyz + 0.5;
-  gl_Position = uProj * uView * vec4(position, 1.0);
+  gl_Position = uMVP * vec4(position, 1.0);
   gl_PointSize = 2.0;
 }`;
 
@@ -103,7 +102,7 @@ class AppAnimationLoop extends AnimationLoop {
       }
     }
 
-    const projMat = new Matrix4();
+    const mvpMat = new Matrix4();
     const viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
 
     const texture = new Texture3D(gl, {
@@ -114,6 +113,8 @@ class AppAnimationLoop extends AnimationLoop {
       format: gl.RED,
       dataFormat: gl.R8
     });
+
+    texture.setSubImageData({});
 
     const cloud = new Model(gl, {
       vs,
@@ -136,13 +137,13 @@ class AppAnimationLoop extends AnimationLoop {
     statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
     statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
-    return {cloud, projMat, statsWidget};
+    return {cloud, mvpMat, viewMat, statsWidget};
   }
 
   onRender(animationProps) {
-    const {gl, cloud, projMat, statsWidget, tick, aspect} = animationProps;
+    const {gl, cloud, mvpMat, viewMat, statsWidget, tick, aspect} = animationProps;
 
-    projMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
+    mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
 
     if (tick % 60 === 10) {
       statsWidget.update();
@@ -156,7 +157,7 @@ class AppAnimationLoop extends AnimationLoop {
     cloud.draw({
       uniforms: {
         uTime: tick / 100,
-        uProj: projMat
+        uMVP: mvpMat
       }
     });
   }

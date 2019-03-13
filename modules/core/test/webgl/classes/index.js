@@ -31,6 +31,7 @@ import './uniform-buffer-layout.spec';
 import './transform-feedback.spec';
 
 /*
+Spec runner can't create a WebGL 2 context
 UNUSED SPECS:
 texture-2d-array.spec
 texture-3d.spec

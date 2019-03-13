@@ -376,6 +376,8 @@ export default class Texture extends Resource {
       height
     }));
 
+    assert(this.depth === 0, 'texSubImage not supported for 3D textures');
+
     // pixels variable is  for API compatibility purpose
     if (!data) {
       data = pixels;
