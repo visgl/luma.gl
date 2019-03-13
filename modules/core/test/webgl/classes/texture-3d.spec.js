@@ -3,7 +3,7 @@ import {Texture3D} from 'luma.gl';
 
 import {fixture} from 'test/setup';
 
-test.only('WebGL#Texture3D construct/delete', t => {
+test('WebGL#Texture3D construct/delete', t => {
   const gl = fixture.gl2;
 
   if (!gl) {
