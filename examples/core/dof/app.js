@@ -13,6 +13,7 @@ import {
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
+/* eslint-disable spaced-comment */
 /* global document */
 
 /*
