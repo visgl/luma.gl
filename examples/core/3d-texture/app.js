@@ -3,6 +3,10 @@ import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {default as noise3d} from 'noise3d';
 
+/*
+  Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
+*/
+
 const INFO_HTML = `
 <p>
 Cube drawn with <b>instanced rendering</b>.
@@ -113,8 +117,6 @@ class AppAnimationLoop extends AnimationLoop {
       format: gl.RED,
       dataFormat: gl.R8
     });
-
-    texture.setSubImageData({});
 
     const cloud = new Model(gl, {
       vs,
