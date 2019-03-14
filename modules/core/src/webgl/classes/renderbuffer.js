@@ -111,6 +111,7 @@ export default class Renderbuffer extends Resource {
 
   /* eslint-disable complexity */
   _getFormatSize() {
+    // TODO(Tarek): Cover all formats?
     let size;
     switch (this.format) {
       case GL.RGBA32F:
