@@ -7,6 +7,7 @@ import {TEXTURE_FORMATS, isFormatSupported, isLinearFilteringSupported} from './
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../utils';
 import {log, uid, isPowerOfTwo, assert} from '../../utils';
+import statsManager from '../../core/stats-manager';
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
@@ -59,6 +60,8 @@ export default class Texture extends Resource {
     this.border = undefined;
     this.textureUnit = undefined;
     this.mipmaps = undefined;
+    this.byteLength = 0;
+    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
   }
 
   toString() {
@@ -228,9 +231,7 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
-    if (this.depth > 0) {
-      return this.setImage3D(options);
-    }
+    this.gpuMemoryStats.subtractCount(this.byteLength);
 
     const {
       target = this.target,
@@ -314,6 +315,14 @@ export default class Texture extends Resource {
           assert(false, 'Unknown image data type');
       }
     });
+
+    if (data && data.byteLength) {
+      this.byteLength = data.byteLength;
+    } else {
+      this.byteLength = this._getSizeHeuristic();
+    }
+
+    this.gpuMemoryStats.addCount(this.byteLength);
 
     this.loaded = true;
 
@@ -494,60 +503,6 @@ export default class Texture extends Resource {
     }
     // Assume data is a browser supported object (ImageData, Canvas, ...)
     return {data, dataType: 'browser-object'};
-  }
-
-  // Image 3D copies from Typed Array or WebGLBuffer
-  setImage3D({
-    level = 0,
-    dataFormat = GL.RGBA,
-    width,
-    height,
-    depth = 1,
-    border = 0,
-    format,
-    type = GL.UNSIGNED_BYTE,
-    offset = 0,
-    data,
-    parameters = {}
-  }) {
-    this.gl.bindTexture(this.target, this.handle);
-
-    withParameters(this.gl, parameters, () => {
-      if (ArrayBuffer.isView(data)) {
-        this.gl.texImage3D(
-          this.target,
-          level,
-          dataFormat,
-          width,
-          height,
-          depth,
-          border,
-          format,
-          type,
-          data
-        );
-      }
-
-      if (data instanceof Buffer) {
-        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
-        this.gl.texImage3D(
-          this.target,
-          level,
-          dataFormat,
-          width,
-          height,
-          depth,
-          border,
-          format,
-          type,
-          offset
-        );
-      }
-    });
-
-    this.loaded = true;
-
-    return this;
   }
 
   /* Copied from texture-2d.js
@@ -770,5 +725,50 @@ export default class Texture extends Resource {
       }
     }
     return param;
+  }
+
+  /* eslint-disable complexity */
+  _getSizeHeuristic() {
+    // TODO(Tarek): Cover all formats/types?
+    const numTexels = this.width * this.height * (this.depth || 1);
+    let channels = this.format === GL.RGBA ? 4 : 3;
+    switch (this.dataFormat) {
+      case GL.RGB:
+      case GL.RGB_INTEGER:
+        channels = 3;
+        break;
+      case GL.RG:
+      case GL.RG_INTEGER:
+        channels = 2;
+        break;
+      case GL.RED:
+      case GL.DEPTH_COMPONENT:
+      case GL.LUMINANCE:
+      case GL.ALPHA:
+      case GL.RED_INTEGER:
+        channels = 1;
+        break;
+      default:
+        // RGBA
+        channels = 4;
+    }
+
+    let bytesPerChannel;
+    switch (this.dataFormat) {
+      case GL.FLOAT:
+      case GL.UNSIGNED_INT:
+      case GL.INT:
+        bytesPerChannel = 4;
+        break;
+      case GL.UNSIGNED_SHORT:
+      case GL.SHORT:
+        bytesPerChannel = 2;
+        break;
+      default:
+        // BYTE
+        bytesPerChannel = 1;
+    }
+
+    return numTexels * channels * bytesPerChannel;
   }
 }

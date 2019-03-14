@@ -28,6 +28,7 @@ export {
   withParameters,
   getModifiedParameters
 } from '@luma.gl/webgl-state-tracker';
+export {default as statsManager} from './core/stats-manager';
 
 // WebGL1 classes
 export {default as Buffer} from './webgl/classes/buffer';
