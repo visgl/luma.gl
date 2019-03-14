@@ -1,6 +1,7 @@
 import luma from '../../init';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../utils';
 import {uid, assert, stubRemovedMethods} from '../../utils';
+import statsManager from '../../core/stats-manager';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -31,6 +32,10 @@ export default class Resource {
     if (this._handle === undefined) {
       this._handle = this._createHandle();
     }
+
+    // Only meaningful for resources that allocate GPU memory
+    this.byteLength = 0;
+    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
 
     this._addStats();
   }
@@ -283,5 +288,15 @@ export default class Resource {
     const {stats} = luma;
 
     stats.resourceMap[name].active--;
+  }
+
+  _trackAllocatedMemory(bytes) {
+    this.gpuMemoryStats.addCount(bytes);
+    this.byteLength = bytes;
+  }
+
+  _trackDeallocatedMemory() {
+    this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.byteLength = 0;
   }
 }

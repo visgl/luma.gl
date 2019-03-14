@@ -65,8 +65,6 @@ export default class Texture extends Resource {
     this.border = undefined;
     this.textureUnit = undefined;
     this.mipmaps = undefined;
-    this.byteLength = 0;
-    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
     this.textureMemoryStats = statsManager.get('Memory Usage').get('Texture Memory');
   }
 
@@ -237,8 +235,7 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.textureMemoryStats.subtractCount(this.byteLength);
+    this._trackDeallocatedMemory();
 
     const {
       target = this.target,
@@ -324,19 +321,12 @@ export default class Texture extends Resource {
     });
 
     if (data && data.byteLength) {
-      this.byteLength = data.byteLength;
+      this._trackAllocatedMemory(data.byteLength);
     } else {
-      this.byteLength = estimateMemoryUsage(
-        this.width,
-        this.height,
-        this.depth,
-        this.dataFormat,
-        this.type
+      this._trackAllocatedMemory(
+        estimateMemoryUsage(this.width, this.height, this.depth, this.dataFormat, this.type)
       );
     }
-
-    this.gpuMemoryStats.addCount(this.byteLength);
-    this.textureMemoryStats.addCount(this.byteLength);
 
     this.loaded = true;
 
@@ -653,9 +643,7 @@ export default class Texture extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTexture(this.handle);
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.textureMemoryStats.subtractCount(this.byteLength);
-    this.byteLength = 0;
+    this._trackDeallocatedMemory();
   }
 
   _getParameter(pname) {
@@ -742,5 +730,15 @@ export default class Texture extends Resource {
       }
     }
     return param;
+  }
+
+  _trackAllocatedMemory(bytes) {
+    this.textureMemoryStats.addCount(bytes);
+    super._trackAllocatedMemory(bytes);
+  }
+
+  _trackDeallocatedMemory() {
+    this.textureMemoryStats.subtractCount(this.byteLength);
+    super._trackDeallocatedMemory();
   }
 }

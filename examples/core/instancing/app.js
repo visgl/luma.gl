@@ -1,4 +1,12 @@
-import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
+import {
+  AnimationLoop,
+  setParameters,
+  pickModels,
+  Cube,
+  picking,
+  dirlight,
+  statsManager
+} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
@@ -134,7 +142,7 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const statsWidget = new StatsWidget(this.stats, {
+    const timeWidget = new StatsWidget(this.stats, {
       title: 'Render Time',
       css: {
         position: 'absolute',
@@ -154,13 +162,36 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    return {statsWidget};
+    const memWidget = new StatsWidget(statsManager.get('Memory Usage'), {
+      css: {
+        position: 'absolute',
+        top: '100px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'GPU Memory': 'memory',
+        'Buffer Memory': 'memory',
+        'Renderbuffer Memory': 'memory',
+        'Texture Memory': 'memory'
+      }
+    });
+
+    return {timeWidget, memWidget};
   }
 
   onRender(animationProps) {
-    const {gl, framebuffer, useDevicePixels, _mousePosition, statsWidget} = animationProps;
+    const {
+      gl,
+      framebuffer,
+      useDevicePixels,
+      _mousePosition,
+      timeWidget,
+      memWidget
+    } = animationProps;
 
-    statsWidget.update();
+    timeWidget.update();
+    memWidget.update();
 
     // "Pick" the cube under the mouse
     const pickInfo =

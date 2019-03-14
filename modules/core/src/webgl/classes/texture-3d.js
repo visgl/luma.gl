@@ -33,8 +33,7 @@ export default class Texture3D extends Texture {
     data,
     parameters = {}
   }) {
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.textureMemoryStats.subtractCount(this.byteLength);
+    this._trackDeallocatedMemory();
 
     this.gl.bindTexture(this.target, this.handle);
 
@@ -72,19 +71,12 @@ export default class Texture3D extends Texture {
     });
 
     if (data && data.byteLength) {
-      this.byteLength = data.byteLength;
+      this._trackAllocatedMemory(data.byteLength);
     } else {
-      this.byteLength = estimateMemoryUsage(
-        this.width,
-        this.height,
-        this.depth,
-        this.dataFormat,
-        this.type
+      this._trackAllocatedMemory(
+        estimateMemoryUsage(this.width, this.height, this.depth, this.dataFormat, this.type)
       );
     }
-
-    this.gpuMemoryStats.addCount(this.byteLength);
-    this.textureMemoryStats.addCount(this.byteLength);
 
     this.loaded = true;
 

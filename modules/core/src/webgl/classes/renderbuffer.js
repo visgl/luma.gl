@@ -30,7 +30,6 @@ export default class Renderbuffer extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
-    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
     this.renderbufferMemoryStats = statsManager.get('Memory Usage').get('Renderbuffer Memory');
     this.byteLength = 0;
 
@@ -43,8 +42,7 @@ export default class Renderbuffer extends Resource {
   initialize({format, width = 1, height = 1, samples = 0}) {
     assert(format, 'Needs format');
 
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.renderbufferMemoryStats.subtractCount(this.byteLength);
+    this._trackDeallocatedMemory();
 
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
@@ -61,10 +59,7 @@ export default class Renderbuffer extends Resource {
     this.height = height;
     this.samples = samples;
 
-    this.byteLength = width * height * (samples || 1) * this._getFormatSize();
-
-    this.gpuMemoryStats.addCount(this.byteLength);
-    this.renderbufferMemoryStats.addCount(this.byteLength);
+    this._trackAllocatedMemory(width * height * (samples || 1) * this._getFormatSize());
 
     return this;
   }
@@ -84,9 +79,7 @@ export default class Renderbuffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteRenderbuffer(this.handle);
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.renderbufferMemoryStats.subtractCount(this.byteLength);
-    this.byteLength = 0;
+    this._trackDeallocatedMemory();
   }
 
   _bindHandle(handle) {
@@ -107,6 +100,16 @@ export default class Renderbuffer extends Resource {
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
     // this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
     return value;
+  }
+
+  _trackAllocatedMemory(bytes) {
+    this.renderbufferMemoryStats.addCount(bytes);
+    super._trackAllocatedMemory(bytes);
+  }
+
+  _trackDeallocatedMemory() {
+    this.renderbufferMemoryStats.subtractCount(this.byteLength);
+    super._trackDeallocatedMemory();
   }
 
   /* eslint-disable complexity */

@@ -49,7 +49,6 @@ export default class Buffer extends Resource {
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
 
-    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
     this.bufferMemoryStats = statsManager.get('Memory Usage').get('Buffer Memory');
     this.byteLength = 0;
 
@@ -92,8 +91,7 @@ export default class Buffer extends Resource {
     // Deprecated: Merge main props and accessor
     this.setAccessor(Object.assign({}, props, props.accessor));
 
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.bufferMemoryStats.subtractCount(this.byteLength);
+    this._trackDeallocatedMemory();
 
     // Set data: (re)initializes the buffer
     if (props.data) {
@@ -102,8 +100,7 @@ export default class Buffer extends Resource {
       this._setByteLength(props.byteLength || 0);
     }
 
-    this.gpuMemoryStats.addCount(this.byteLength);
-    this.bufferMemoryStats.addCount(this.byteLength);
+    this._trackAllocatedMemory(this.byteLength);
 
     return this;
   }
@@ -372,9 +369,7 @@ export default class Buffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteBuffer(this.handle);
-    this.gpuMemoryStats.subtractCount(this.byteLength);
-    this.bufferMemoryStats.subtractCount(this.byteLength);
-    this.byteLength = 0;
+    this._trackDeallocatedMemory();
   }
 
   _getParameter(pname) {
@@ -382,6 +377,16 @@ export default class Buffer extends Resource {
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);
     return value;
+  }
+
+  _trackAllocatedMemory(bytes) {
+    this.bufferMemoryStats.addCount(bytes);
+    super._trackAllocatedMemory(bytes);
+  }
+
+  _trackDeallocatedMemory() {
+    this.bufferMemoryStats.subtractCount(this.byteLength);
+    super._trackDeallocatedMemory();
   }
 
   // DEPRECATIONS - v7.0
