@@ -52,8 +52,8 @@ function makeInstancedCube(gl) {
     isInstanced: 1,
     instanceCount: SIDE * SIDE,
     attributes: {
-      instanceOffsets: {value: offsets, size: 2, instanced: 1},
-      instanceColors: {value: colors, size: 3, instanced: 1}
+      instanceOffsets: {value: offsets, size: 2, divisor: 1},
+      instanceColors: {value: colors, size: 3, divisor: 1}
     },
     vs: `\
 attribute vec3 positions;

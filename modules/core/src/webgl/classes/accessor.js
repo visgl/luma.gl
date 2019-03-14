@@ -71,7 +71,7 @@ export default class Accessor {
 
     // TYPE - not expected to be overridden
     if (props.type !== undefined) {
-      if (props.type !== this.type) {
+      if (this.type !== undefined && props.type !== this.type) {
         log.warn('accessor type mismatch')();
       }
       this.type = props.type;
@@ -84,7 +84,7 @@ export default class Accessor {
 
     // SIZE - not expected to be overridden
     if (props.size !== undefined) {
-      if (this.size !== props.size) {
+      if (this.size !== undefined && this.size !== props.size) {
         log.warn('accessor size mismatch')();
       }
       this.size = props.size;

@@ -178,7 +178,7 @@ export default class VertexArrayObject extends Resource {
     let updateNeeded = !this.buffer;
 
     this.buffer = this.buffer || new Buffer(this.gl, byteLength);
-    updateNeeded = updateNeeded || this.buffer.setByteLength(byteLength);
+    updateNeeded = updateNeeded || this.buffer.reallocate(byteLength);
 
     // Reallocate and update contents if needed
     updateNeeded =

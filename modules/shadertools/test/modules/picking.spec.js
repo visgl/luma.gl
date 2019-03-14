@@ -98,7 +98,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
 
   const elementCount = vertexColorData.length / 3;
   const vertexColor = new Buffer(gl, vertexColorData);
-  const isPicked = new Buffer(gl, {bytes: elementCount * 4});
+  const isPicked = new Buffer(gl, {byteLength: elementCount * 4});
 
   const transform = new Transform(gl, {
     sourceBuffers: {
@@ -154,7 +154,7 @@ test('picking#picking_setPickingColor', t => {
 
   const elementCount = vertexColorData.length / 3;
   const vertexColor = new Buffer(gl, vertexColorData);
-  const rgbColorASelected = new Buffer(gl, {bytes: elementCount * 4 * 4});
+  const rgbColorASelected = new Buffer(gl, {byteLength: elementCount * 4 * 4});
 
   const transform = new Transform(gl, {
     sourceBuffers: {

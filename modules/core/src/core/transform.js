@@ -418,8 +418,8 @@ export default class Transform {
       ) {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
-        const {bytes, type, usage, accessor} = sourceBuffer;
-        const buffer = new Buffer(this.gl, {bytes, type, usage, accessor});
+        const {byteLength, usage, accessor} = sourceBuffer;
+        const buffer = new Buffer(this.gl, {byteLength, usage, accessor});
 
         if (this._createdBuffers[feedbackBufferName]) {
           this._createdBuffers[feedbackBufferName].delete();

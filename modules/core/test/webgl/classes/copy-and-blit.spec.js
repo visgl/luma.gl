@@ -139,7 +139,7 @@ function testCopyToBuffer(t, bufferCreation) {
 
   [true, false].forEach(sourceIsFramebuffer => {
     const gl = gl2;
-    const dataBytes = 6 * 4; // 6 floats
+    const byteLength = 6 * 4; // 6 floats
     const clearColor = [0.25, -0.35, 12340.25, 0.005];
     let source;
 
@@ -152,10 +152,7 @@ function testCopyToBuffer(t, bufferCreation) {
       height: 1,
       data: sourceIsFramebuffer ? null : new Float32Array(clearColor)
     });
-    const pbo = new Buffer(gl, {
-      bytes: dataBytes,
-      type: GL.FLOAT
-    });
+    const pbo = new Buffer(gl, {byteLength, accessor: {type: GL.FLOAT}});
     if (sourceIsFramebuffer) {
       const framebuffer = new Framebuffer(gl, {
         attachments: {
@@ -231,7 +228,7 @@ function createTexture(gl, opts) {
 function testCopyToTexture(t, gl) {
   [true, false].forEach(isSubCopy => {
     [true, false].forEach(sourceIsFramebuffer => {
-      // const dataBytes = 6 * 4; // 6 floats
+      // const byteLength = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
       const clearColor = [1, 0.5, 0.25, 0.125];
 
@@ -323,7 +320,7 @@ test('WebGL2#copyToTexture', t => {
 function testBlit(t, gl) {
   [true, false].forEach(destinationIsFramebuffer => {
     [true, false].forEach(sourceIsFramebuffer => {
-      // const dataBytes = 6 * 4; // 6 floats
+      // const byteLength = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
       const clearColor = [1, 0.5, 0.25, 0.125];
 

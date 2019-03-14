@@ -348,7 +348,7 @@ function begin() {
       attribute: '',
       data: indexArray,
       size: 1,
-      instanced: 1
+      divisor: 1
     })
   };
 
