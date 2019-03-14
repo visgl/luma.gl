@@ -12,6 +12,7 @@ export default class ShaderModule {
     dependencies = [],
     getUniforms = () => ({}),
     deprecations = [],
+    defines = {},
     // DEPRECATED
     vertexShader,
     fragmentShader
@@ -23,6 +24,7 @@ export default class ShaderModule {
     this.getModuleUniforms = getUniforms;
     this.dependencies = dependencies;
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
+    this.defines = defines;
   }
 
   // Extracts the source code chunk for the specified shader type from the named shader module
@@ -53,6 +55,10 @@ ${moduleSource}\
 
   getUniforms(opts, uniforms) {
     return this.getModuleUniforms(opts, uniforms);
+  }
+
+  getDefines() {
+    return this.defines;
   }
 
   // Warn about deprecated uniforms or functions

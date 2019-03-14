@@ -1,6 +1,6 @@
 # Texture2D
 
-2D textures hold basic "single image" textures (although technically they can contain multiple mimap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
+2D textures hold basic "single image" textures (although technically they can contain multiple mipmap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
 
 Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 

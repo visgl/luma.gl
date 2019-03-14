@@ -35,11 +35,94 @@ const INFO_HTML = `
   </select>
   <br>
 </div>
+<div>
+  Light
+  <select id="lightSelector">
+    <option value="default">Default</option>
+    <option value="ambient">Ambient Only</option>
+    <option value="directional1">1x Directional (Red) + Ambient</option>
+    <option value="directional3">3x Directional (RGB)</option>
+    <option value="point1far">1x Point Light Far (Red) + Ambient</option>
+    <option value="point1near">1x Point Light Near (Red) + Ambient</option>
+  </select>
+  <br>
+</div>
 `;
+
+const LIGHT_SOURCES = {
+  default: {
+    directionalLights: [{
+        color: [255, 255, 255],
+        direction: [0.0, 0.5, 0.5],
+        intensity: 1.0,
+      }
+    ]
+  },
+  ambient: {
+    ambientLight: {
+      color: [255, 255, 255],
+      intensity: 1.0,
+    }
+  },
+  directional1: {
+    directionalLights: [{
+        color: [255, 0, 0],
+        direction: [1.0, 0.0, 0.0],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  },
+  directional3: {
+    directionalLights: [{
+        color: [255, 0.0, 0.0],
+        direction: [1.0, 0.0, 0.0],
+        intensity: 1.0,
+      },{
+        color: [0.0, 0.0, 255],
+        direction: [0.0, 0.0, 1.0],
+        intensity: 1.0,
+      },{
+        color: [0.0, 255, 0.0],
+        direction: [0.0, 1.0, 0.0],
+        intensity: 1.0,
+      }
+    ]
+  },
+  point1far: {
+    pointLights: [{
+        color: [255, 0, 0],
+        position: [200.0, 0.0, 0.0],
+        attenuation: [0, 0, 0.01],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  },
+  point1near: {
+    pointLights: [{
+        color: [255, 0, 0],
+        position: [10.0, 0.0, 0.0],
+        attenuation: [0, 0, 0.01],
+        intensity: 1.0,
+      }
+    ],
+    ambientLight: {
+        color: [255, 255, 255],
+        intensity: 1.0,
+      }
+  }
+};
 
 const DEFAULT_OPTIONS = {
   pbrDebug: true,
-  pbrIbl: true
+  pbrIbl: false
 };
 
 async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
@@ -205,7 +288,21 @@ export class DemoApp {
       };
     }
 
+    const lightSelector = document.getElementById("lightSelector");
+    if (lightSelector) {
+      lightSelector.onchange = event => {
+        this.light = lightSelector.value;
+      };
+    }
+
     this.initalizeEventHandling(canvas);
+  }
+
+  applyLight(model) {
+    // TODO: only do this when light changes
+    model.updateModuleSettings({
+      lightSources: LIGHT_SOURCES[this.light || 'default']
+    });
   }
 
   onRender({gl, time, width, height, aspect}) {
@@ -237,6 +334,7 @@ export class DemoApp {
     this.scenes[0].traverse((model, {worldMatrix}) => {
       // In glTF, meshes and primitives do no have their own matrix.
       const u_MVPMatrix = new Matrix4(uProjection).multiplyRight(uView).multiplyRight(worldMatrix);
+      this.applyLight(model);
       success =
         success &&
         model.draw({

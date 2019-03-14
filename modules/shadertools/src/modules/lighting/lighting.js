@@ -1,96 +1,66 @@
-import {Vector3} from 'math.gl';
-
-import commonShader from './lighting-common.glsl';
-import vertexShader1 from './lighting-vertex.glsl';
-import fragmentShader1 from './lighting-fragment.glsl';
-
-export const vertexShader = `\
-${commonShader}
-${vertexShader1}
-`;
-
-export const fragmentShader = `\
-${commonShader}
-${fragmentShader1}
-`;
-
-export const name = 'lighting';
-
-export const config = {
-  MAX_POINT_LIGHTS: 4
-};
-
-// Setup the lighting system: ambient, directional, point lights.
-export function getUniforms({
-  lightingEnable = false,
-
-  // ambient light
-  lightingAmbientColor = [0.2, 0.2, 0.2],
-
-  // directional light
-  lightingDirection = [1, 1, 1],
-  lightingDirectionalColor = [0, 0, 0],
-
-  // point lights
-  lightingPointLights = []
-}) {
-  // Set light uniforms. Ambient, directional and point lights.
-  return Object.assign(
-    {
-      lightingEnable,
-      // Ambient
-      lightingAmbientColor
-    },
-    getDirectionalUniforms(lightingDirection),
-    getPointUniforms(lightingPointLights)
-  );
-}
-
-function getDirectionalUniforms({color, direction}) {
-  // Normalize lighting direction vector
-  const dir = new Vector3(direction.x, direction.y, direction.z).normalize().scale(-1, -1, -1);
-
-  return {
-    directionalColor: [color.r, color.g, color.b],
-    lightingDirection: [dir.x, dir.y, dir.z]
-  };
-}
-
-function getPointUniforms(points) {
-  points = points instanceof Array ? points : [points];
-  const numberPoints = points.length;
-  const pointLocations = [];
-  const pointColors = [];
-  const enableSpecular = [];
-  const pointSpecularColors = [];
-  for (const point of points) {
-    const {position, color, diffuse, specular} = point;
-    const pointColor = color || diffuse;
-
-    pointLocations.push(position.x, position.y, position.z);
-    pointColors.push(pointColor.r, pointColor.g, pointColor.b);
-
-    // Add specular color
-    enableSpecular.push(Number(Boolean(specular)));
-    if (specular) {
-      pointSpecularColors.push(specular.r, specular.g, specular.b);
-    } else {
-      pointSpecularColors.push(0, 0, 0);
-    }
-  }
-
-  return {
-    numberPoints,
-    pointLocation: pointLocations,
-    pointColor: pointColors,
-    enableSpecular,
-    pointSpecularColor: pointSpecularColors
-  };
-}
+import lightingShader from './lighting.glsl';
 
 export default {
-  name,
-  vs: vertexShader,
-  fs: fragmentShader,
-  getUniforms
+  name: 'lighting',
+  vs: lightingShader,
+  fs: lightingShader,
+  getUniforms,
+  defines: {
+    MAX_LIGHTS: 3
+  }
 };
+
+const INITIAL_MODULE_OPTIONS = {};
+
+// Take color 0-255 and intensity as input and output 0.0-1.0 range
+function convertColor({color = [0, 0, 0], intensity = 1.0} = {}) {
+  return color.map(component => (component * intensity) / 255.0);
+}
+
+function getLightSourceUniforms({ambientLight, pointLights = [], directionalLights = []}) {
+  const lightSourceUniforms = {};
+
+  if (ambientLight) {
+    lightSourceUniforms['lighting_uAmbientLight.color'] = convertColor(ambientLight);
+  } else {
+    lightSourceUniforms['lighting_uAmbientLight.color'] = [0, 0, 0];
+  }
+
+  pointLights.forEach((pointLight, index) => {
+    lightSourceUniforms[`lighting_uPointLight[${index}].color`] = convertColor(pointLight);
+    lightSourceUniforms[`lighting_uPointLight[${index}].position`] = pointLight.position;
+    lightSourceUniforms[`lighting_uPointLight[${index}].attenuation`] = pointLight.attenuation;
+  });
+  lightSourceUniforms.lighting_uPointLightCount = pointLights.length;
+
+  directionalLights.forEach((directionalLight, index) => {
+    lightSourceUniforms[`lighting_uDirectionalLight[${index}].color`] = convertColor(
+      directionalLight
+    );
+    lightSourceUniforms[`lighting_uDirectionalLight[${index}].direction`] =
+      directionalLight.direction;
+  });
+  lightSourceUniforms.lighting_uDirectionalLightCount = directionalLights.length;
+
+  return lightSourceUniforms;
+}
+
+function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
+  if (!('lightSources' in opts)) {
+    return {};
+  }
+
+  const {ambientLight, pointLights, directionalLights} = opts.lightSources;
+  const hasLights =
+    ambientLight ||
+    (pointLights && pointLights.length > 0) ||
+    (directionalLights && directionalLights.length > 0);
+
+  if (!hasLights) {
+    return {lighting_uEnabled: false};
+  }
+
+  return Object.assign({}, getLightSourceUniforms({ambientLight, pointLights, directionalLights}), {
+    lighting_uEnabled: true
+  });
+}

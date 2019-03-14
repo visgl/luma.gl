@@ -1,23 +1,5 @@
 export default `\
-#define MAX_LIGHTS 5
 
-struct AmbientLight {
- vec3 color;
- float intensity;
-};
-
-struct PointLight {
- vec3 color;
- float intensity;
- vec3 position;
-};
-
-struct DirectionalLight {
-  vec3 color;
-  float intensity;
-  vec3 direction;
-};
- 
 uniform AmbientLight lighting_uAmbientLight;
 uniform PointLight lighting_uPointLight[MAX_LIGHTS];
 uniform DirectionalLight lighting_uDirectionalLight[MAX_LIGHTS];
@@ -31,7 +13,7 @@ uniform vec3  lighting_uSpecularColor;
 
 uniform bool lighting_uEnabled;
 
-vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_direction, vec3 normal_worldspace, float intensity) {
+vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_direction, vec3 normal_worldspace, vec3 color) {
     vec3 halfway_direction = normalize(light_direction + view_direction);
     float lambertian = dot(light_direction, normal_worldspace);
     float specular = 0.0;
@@ -40,7 +22,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_d
       specular = pow(specular_angle, lighting_uShininess);
     }
     lambertian = max(lambertian, 0.0);
-    return (lambertian * lighting_uDiffuse * surfaceColor + specular * lighting_uSpecularColor) * intensity;
+    return (lambertian * lighting_uDiffuse * surfaceColor + specular * lighting_uSpecularColor) * color;
 }
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 position_worldspace, vec3 normal_worldspace) {
@@ -48,7 +30,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
 
   if (lighting_uEnabled) {
     vec3 view_direction = normalize(cameraPosition - position_worldspace);
-    lightColor = lighting_uAmbient * surfaceColor * lighting_uAmbientLight.intensity;
+    lightColor = lighting_uAmbient * surfaceColor * lighting_uAmbientLight.color;
 
     for (int i = 0; i < MAX_LIGHTS; i++) {
       if (i >= lighting_uPointLightCount) {
@@ -57,7 +39,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
       PointLight pointLight = lighting_uPointLight[i];
       vec3 light_position_worldspace = pointLight.position;
       vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
-      lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.intensity);
+      lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
     }
 
     for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -65,7 +47,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
         break;
       }
       DirectionalLight directionalLight = lighting_uDirectionalLight[i];
-      lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.intensity);
+      lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
     }
   }
   return lightColor;
@@ -85,7 +67,7 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
       PointLight pointLight = lighting_uPointLight[i];
       vec3 light_position_worldspace = pointLight.position;
       vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
-      lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.intensity);
+      lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
     }
 
     for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -93,7 +75,7 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
         break;
       }
       DirectionalLight directionalLight = lighting_uDirectionalLight[i];
-      lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.intensity);
+      lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
     }
   }
   return lightColor;

@@ -1,10 +1,20 @@
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop, Framebuffer, Cube, setParameters, clear,
-  Program, Texture2D, VertexArray, Buffer, isWebGL2
+  AnimationLoop,
+  Framebuffer,
+  Cube,
+  setParameters,
+  clear,
+  Program,
+  Texture2D,
+  VertexArray,
+  Buffer,
+  isWebGL2
 } from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget'
+import {StatsWidget} from '@probe.gl/stats-widget';
+/* eslint-disable spaced-comment */
+/* global document */
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
@@ -30,10 +40,10 @@ post-processing effect.
 
 `;
 
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
 let isDemoSupported = true;
 
-const QUAD_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
+const QUAD_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line
 const NUM_ROWS = 5;
 const CUBES_PER_ROW = 20;
 const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
@@ -43,16 +53,14 @@ const FAR = 30.0;
 let focalLength = 2.0;
 let focusDistance = 3.0;
 let fStop = 2.8;
-let texelOffset = new Float32Array(2);
+const texelOffset = new Float32Array(2);
 
 class InstancedCube extends Cube {
-
   constructor(gl, props) {
-
-    let count = props.count;
-    let xforms = new Array(count);
-    let matrices = new Float32Array(count * 16);
-    let matrixBuffer = new Buffer(gl, matrices.byteLength);
+    const count = props.count;
+    const xforms = new Array(count);
+    const matrices = new Float32Array(count * 16);
+    const matrixBuffer = new Buffer(gl, matrices.byteLength);
 
     const vs = `\
 #version 300 es
@@ -100,49 +108,52 @@ void main(void) {
 }
 `;
 
-    super(gl, Object.assign({}, props, {
-      vs,
-      fs,
-      isInstanced: 1,
-      instanceCount: count,
-      uniforms: {
-        uTexture: props.uniforms.uTexture
-      },
-      attributes: {
-        // Attributes are limited to 4 components,
-        // So we have to split the matrices across
-        // 4 attributes. They're reconstructed in
-        // the vertex shader.
-        modelMatCol1: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 0,
-          divisor: 1
+    super(
+      gl,
+      Object.assign({}, props, {
+        vs,
+        fs,
+        isInstanced: 1,
+        instanceCount: count,
+        uniforms: {
+          uTexture: props.uniforms.uTexture
         },
-        modelMatCol2: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 16,
-          divisor: 1
-        },
-        modelMatCol3: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 32,
-          divisor: 1
-        },
-        modelMatCol4: {
-          buffer: matrixBuffer,
-          size: 4,
-          stride: 64,
-          offset: 48,
-          divisor: 1
+        attributes: {
+          // Attributes are limited to 4 components,
+          // So we have to split the matrices across
+          // 4 attributes. They're reconstructed in
+          // the vertex shader.
+          modelMatCol1: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 0,
+            divisor: 1
+          },
+          modelMatCol2: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 16,
+            divisor: 1
+          },
+          modelMatCol3: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 32,
+            divisor: 1
+          },
+          modelMatCol4: {
+            buffer: matrixBuffer,
+            size: 4,
+            stride: 64,
+            offset: 48,
+            divisor: 1
+          }
         }
-      }
-    }));
+      })
+    );
 
     this.count = count;
     this.xforms = xforms;
@@ -166,7 +177,7 @@ void main() {
 }
 `;
 
-const DOF_FRAGMENT=`\
+const DOF_FRAGMENT = `\
 #version 300 es
 precision highp float;
 #define SHADER_NAME dof.fs
@@ -229,7 +240,6 @@ export const animationLoopOptions = {
   onInitialize: ({gl, _animationLoop}) => {
     isDemoSupported = isWebGL2(gl);
     if (!isDemoSupported) {
-      console.error(ALT_TEXT);
       return {isDemoSupported};
     }
 
@@ -246,14 +256,13 @@ export const animationLoopOptions = {
     ///////////////////////////////////////
 
     const dofProgram = new Program(gl, {
-      id: "DOF_PROGRAM",
+      id: 'DOF_PROGRAM',
       vs: DOF_VERTEX,
       fs: DOF_FRAGMENT,
       uniforms: {
         uDepthRange: [NEAR, FAR]
-      },
+      }
     });
-
 
     //////////////////////
     // Set up frambuffers.
@@ -292,34 +301,37 @@ export const animationLoopOptions = {
           }
         })
       }
-    })
+    });
 
     // Postprocessing FBO doesn't need a depth attachment.
-    const dofFramebuffer = new Framebuffer(gl, { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, depth: false});
-
+    const dofFramebuffer = new Framebuffer(gl, {
+      width: gl.drawingBufferWidth,
+      height: gl.drawingBufferHeight,
+      depth: false
+    });
 
     /////////////////////
     // Input handlers.
     /////////////////////
 
-    const focalLengthInput = document.getElementById("focal-length");
-    const focusDistanceInput = document.getElementById("focus-distance");
-    const fStopInput = document.getElementById("f-stop");
+    const focalLengthInput = document.getElementById('focal-length');
+    const focusDistanceInput = document.getElementById('focus-distance');
+    const fStopInput = document.getElementById('f-stop');
 
     if (focalLengthInput) {
       focalLengthInput.value = focalLength;
-      focalLengthInput.addEventListener("input", function () {
-        focalLength = parseFloat(this.value);
+      focalLengthInput.addEventListener('input', () => {
+        focalLength = parseFloat(focalLengthInput.value);
       });
 
       focusDistanceInput.value = focusDistance;
-      focusDistanceInput.addEventListener("input", function () {
-        focusDistance = parseFloat(this.value);
+      focusDistanceInput.addEventListener('input', () => {
+        focusDistance = parseFloat(focusDistanceInput.value);
       });
 
       fStopInput.value = fStop;
-      fStopInput.addEventListener("input", function () {
-        fStop = parseFloat(this.value);
+      fStopInput.addEventListener('input', () => {
+        fStop = parseFloat(fStopInput.value);
       });
     }
 
@@ -345,21 +357,24 @@ export const animationLoopOptions = {
 
     let cubeI = 0;
     for (let j = 0; j < NUM_ROWS; ++j) {
-        let rowOffset = (j - Math.floor(NUM_ROWS / 2));
-        for (let i = 0; i < CUBES_PER_ROW; ++i) {
-          let scale = [0.4, 0.4, 0.4];
-          let rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
-          let translate = [-i + 2 - rowOffset, 0, -i + 2 + rowOffset];
-          instancedCubes.xforms[cubeI] = {
-            scale: scale,
-            translate: translate,
-            rotate: rotate,
-            matrix: new Matrix4().translate(translate).rotateXYZ(rotate).scale(scale)
-          };
+      const rowOffset = j - Math.floor(NUM_ROWS / 2);
+      for (let i = 0; i < CUBES_PER_ROW; ++i) {
+        const scale = [0.4, 0.4, 0.4];
+        const rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
+        const translate = [-i + 2 - rowOffset, 0, -i + 2 + rowOffset];
+        instancedCubes.xforms[cubeI] = {
+          scale,
+          translate,
+          rotate,
+          matrix: new Matrix4()
+            .translate(translate)
+            .rotateXYZ(rotate)
+            .scale(scale)
+        };
 
-          instancedCubes.matrices.set(instancedCubes.xforms[cubeI].matrix, cubeI * 16);
+        instancedCubes.matrices.set(instancedCubes.xforms[cubeI].matrix, cubeI * 16);
         ++cubeI;
-        }
+      }
     }
 
     instancedCubes.updateMatrixBuffer();
@@ -377,11 +392,24 @@ export const animationLoopOptions = {
     });
 
     const statsWidget = new StatsWidget(_animationLoop.stats, {
-      containerStyle: 'position: absolute;top: 20px;left: 20px;'
+      title: 'Render Time',
+      css: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'CPU Time': 'averageTime',
+        'GPU Time': 'averageTime',
+        'Frame Rate': 'fps'
+      },
+      resetOnUpdate: {
+        'CPU Time': true,
+        'GPU Time': true,
+        'Frame Rate': true
+      }
     });
-    statsWidget.setFormatter('CPU Time', stat => `CPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('GPU Time', stat => `GPU Time: ${stat.getAverageTime().toFixed(2)}ms`);
-    statsWidget.setFormatter('Frame Rate', stat => `Frame Rate: ${stat.getHz().toFixed(2)}fps`);
 
     return {
       projMat,
@@ -395,25 +423,37 @@ export const animationLoopOptions = {
     };
   },
 
-  onRender: ({gl, tick, width, height, aspect, projMat, viewMat, instancedCubes, sceneFramebuffer, dofFramebuffer, quadVertexArray, dofProgram, statsWidget, _animationLoop}) => {
-
+  onRender: ({
+    gl,
+    tick,
+    width,
+    height,
+    aspect,
+    projMat,
+    viewMat,
+    instancedCubes,
+    sceneFramebuffer,
+    dofFramebuffer,
+    quadVertexArray,
+    dofProgram,
+    statsWidget
+  }) => {
     if (!isDemoSupported) {
-          return;
+      return;
     }
 
-    if (tick % 60 === 10) {
-      statsWidget.update();
-      _animationLoop.cpuTime.reset();
-      _animationLoop.gpuTime.reset();
-      _animationLoop.frameRate.reset();
-    }
+    statsWidget.update();
 
     sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
 
-    let magnification = focalLength / Math.max(0.1, Math.abs(focusDistance - focalLength));
-    let blurCoefficient = focalLength * magnification / fStop;
-    let ppm = Math.sqrt(gl.drawingBufferWidth * gl.drawingBufferWidth + gl.drawingBufferHeight * gl.drawingBufferHeight) / 35;
+    const magnification = focalLength / Math.max(0.1, Math.abs(focusDistance - focalLength));
+    const blurCoefficient = (focalLength * magnification) / fStop;
+    const ppm =
+      Math.sqrt(
+        gl.drawingBufferWidth * gl.drawingBufferWidth +
+          gl.drawingBufferHeight * gl.drawingBufferHeight
+      ) / 35;
 
     clear(gl, {color: [0, 0, 0, 1], depth: true, framebuffer: sceneFramebuffer});
 
@@ -426,10 +466,14 @@ export const animationLoopOptions = {
     ////////////////////////////////////////
 
     for (let i = 0; i < NUM_CUBES; ++i) {
-      let box = instancedCubes.xforms[i];
+      const box = instancedCubes.xforms[i];
       box.rotate[0] += 0.01;
       box.rotate[1] += 0.02;
-      box.matrix.identity().translate(box.translate).rotateXYZ(box.rotate).scale(box.scale);
+      box.matrix
+        .identity()
+        .translate(box.translate)
+        .rotateXYZ(box.rotate)
+        .scale(box.scale);
       instancedCubes.matrices.set(box.matrix, i * 16);
     }
 
@@ -459,12 +503,12 @@ export const animationLoopOptions = {
     texelOffset[1] = 0;
 
     dofProgram.setUniforms({
-        uFocusDistance: focusDistance,
-        uBlurCoefficient: blurCoefficient,
-        uPPM: ppm,
-        uTexelOffset: texelOffset,
-        uColor: sceneFramebuffer.color,
-        uDepth: sceneFramebuffer.depth
+      uFocusDistance: focusDistance,
+      uBlurCoefficient: blurCoefficient,
+      uPPM: ppm,
+      uTexelOffset: texelOffset,
+      uColor: sceneFramebuffer.color,
+      uDepth: sceneFramebuffer.depth
     });
 
     dofProgram.draw({

@@ -51,6 +51,13 @@ function assembleShader(
     coreSource = sourceLines.slice(1).join('\n');
   }
 
+  // Combine Module and Application Defines
+  const allDefines = {};
+  modules.forEach(module => {
+    Object.assign(allDefines, module.getDefines());
+  });
+  Object.assign(allDefines, defines);
+
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
   // Add precision declaration for fragment shaders
@@ -58,9 +65,10 @@ function assembleShader(
     ? `\
 ${versionLine}
 ${getShaderName({id, source, type})}
+${getShaderType({type})}
 ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
-${getApplicationDefines(defines)}
+${getApplicationDefines(allDefines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 `
     : `${versionLine}
@@ -118,6 +126,12 @@ function assembleModuleMap(modules) {
     result[moduleName] = shaderModule;
   }
   return result;
+}
+
+function getShaderType({type}) {
+  return `
+#define SHADER_TYPE_${SHADER_TYPE[type].toUpperCase()}
+`;
 }
 
 // Generate "glslify-compatible" SHADER_NAME defines

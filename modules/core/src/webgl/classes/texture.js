@@ -52,6 +52,7 @@ export default class Texture extends Resource {
 
     this.width = undefined;
     this.height = undefined;
+    this.depth = undefined;
     this.format = undefined;
     this.type = undefined;
     this.dataFormat = undefined;
@@ -104,6 +105,7 @@ export default class Texture extends Resource {
     }
 
     let {width, height, dataFormat} = props;
+    const {depth = 0} = props;
 
     // Deduce width and height
     ({width, height, dataFormat} = this._deduceParameters({
@@ -119,6 +121,7 @@ export default class Texture extends Resource {
     // Store opts for accessors
     this.width = width;
     this.height = height;
+    this.depth = depth;
     this.format = format;
     this.type = type;
     this.dataFormat = dataFormat;
@@ -151,6 +154,7 @@ export default class Texture extends Resource {
       data,
       width,
       height,
+      depth,
       format,
       type,
       dataFormat,
@@ -224,6 +228,10 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
+    if (this.depth > 0) {
+      return this.setImage3D(options);
+    }
+
     const {
       target = this.target,
       pixels = null,
@@ -368,6 +376,8 @@ export default class Texture extends Resource {
       height
     }));
 
+    assert(this.depth === 0, 'texSubImage not supported for 3D textures');
+
     // pixels variable is  for API compatibility purpose
     if (!data) {
       data = pixels;
@@ -489,7 +499,7 @@ export default class Texture extends Resource {
   // Image 3D copies from Typed Array or WebGLBuffer
   setImage3D({
     level = 0,
-    internalformat = GL.RGBA,
+    dataFormat = GL.RGBA,
     width,
     height,
     depth = 1,
@@ -497,39 +507,45 @@ export default class Texture extends Resource {
     format,
     type = GL.UNSIGNED_BYTE,
     offset = 0,
-    pixels
+    data,
+    parameters = {}
   }) {
-    if (ArrayBuffer.isView(pixels)) {
-      this.gl.texImage3D(
-        this.target,
-        level,
-        internalformat,
-        width,
-        height,
-        depth,
-        border,
-        format,
-        type,
-        pixels
-      );
-      return this;
-    }
+    this.gl.bindTexture(this.target, this.handle);
 
-    if (pixels instanceof Buffer) {
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, pixels.handle);
-      this.gl.texImage3D(
-        this.target,
-        level,
-        internalformat,
-        width,
-        height,
-        depth,
-        border,
-        format,
-        type,
-        offset
-      );
-    }
+    withParameters(this.gl, parameters, () => {
+      if (ArrayBuffer.isView(data)) {
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          data
+        );
+      }
+
+      if (data instanceof Buffer) {
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          offset
+        );
+      }
+    });
+
+    this.loaded = true;
 
     return this;
   }
