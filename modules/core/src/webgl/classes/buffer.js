@@ -50,6 +50,7 @@ export default class Buffer extends Resource {
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
 
     this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
+    this.bufferMemoryStats = statsManager.get('Memory Usage').get('Buffer Memory');
     this.byteLength = 0;
 
     this.initialize(props);
@@ -92,6 +93,7 @@ export default class Buffer extends Resource {
     this.setAccessor(Object.assign({}, props, props.accessor));
 
     this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.bufferMemoryStats.subtractCount(this.byteLength);
 
     // Set data: (re)initializes the buffer
     if (props.data) {
@@ -101,6 +103,7 @@ export default class Buffer extends Resource {
     }
 
     this.gpuMemoryStats.addCount(this.byteLength);
+    this.bufferMemoryStats.addCount(this.byteLength);
 
     return this;
   }
@@ -369,6 +372,9 @@ export default class Buffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteBuffer(this.handle);
+    this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.bufferMemoryStats.subtractCount(this.byteLength);
+    this.byteLength = 0;
   }
 
   _getParameter(pname) {

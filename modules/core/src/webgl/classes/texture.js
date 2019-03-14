@@ -2,7 +2,12 @@ import GL from '@luma.gl/constants';
 
 import Resource from './resource';
 import Buffer from './buffer';
-import {TEXTURE_FORMATS, isFormatSupported, isLinearFilteringSupported} from './texture-formats';
+import {
+  TEXTURE_FORMATS,
+  isFormatSupported,
+  isLinearFilteringSupported,
+  estimateMemoryUsage
+} from './texture-formats';
 
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../utils';
@@ -62,6 +67,7 @@ export default class Texture extends Resource {
     this.mipmaps = undefined;
     this.byteLength = 0;
     this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
+    this.textureMemoryStats = statsManager.get('Memory Usage').get('Texture Memory');
   }
 
   toString() {
@@ -232,6 +238,7 @@ export default class Texture extends Resource {
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
     this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.textureMemoryStats.subtractCount(this.byteLength);
 
     const {
       target = this.target,
@@ -319,10 +326,17 @@ export default class Texture extends Resource {
     if (data && data.byteLength) {
       this.byteLength = data.byteLength;
     } else {
-      this.byteLength = this._getSizeHeuristic();
+      this.byteLength = estimateMemoryUsage(
+        this.width,
+        this.height,
+        this.depth,
+        this.dataFormat,
+        this.type
+      );
     }
 
     this.gpuMemoryStats.addCount(this.byteLength);
+    this.textureMemoryStats.addCount(this.byteLength);
 
     this.loaded = true;
 
@@ -639,6 +653,9 @@ export default class Texture extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTexture(this.handle);
+    this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.textureMemoryStats.subtractCount(this.byteLength);
+    this.byteLength = 0;
   }
 
   _getParameter(pname) {
@@ -725,50 +742,5 @@ export default class Texture extends Resource {
       }
     }
     return param;
-  }
-
-  /* eslint-disable complexity */
-  _getSizeHeuristic() {
-    // TODO(Tarek): Cover all formats/types?
-    const numTexels = this.width * this.height * (this.depth || 1);
-    let channels = this.format === GL.RGBA ? 4 : 3;
-    switch (this.dataFormat) {
-      case GL.RGB:
-      case GL.RGB_INTEGER:
-        channels = 3;
-        break;
-      case GL.RG:
-      case GL.RG_INTEGER:
-        channels = 2;
-        break;
-      case GL.RED:
-      case GL.DEPTH_COMPONENT:
-      case GL.LUMINANCE:
-      case GL.ALPHA:
-      case GL.RED_INTEGER:
-        channels = 1;
-        break;
-      default:
-        // RGBA
-        channels = 4;
-    }
-
-    let bytesPerChannel;
-    switch (this.dataFormat) {
-      case GL.FLOAT:
-      case GL.UNSIGNED_INT:
-      case GL.INT:
-        bytesPerChannel = 4;
-        break;
-      case GL.UNSIGNED_SHORT:
-      case GL.SHORT:
-        bytesPerChannel = 2;
-        break;
-      default:
-        // BYTE
-        bytesPerChannel = 1;
-    }
-
-    return numTexels * channels * bytesPerChannel;
   }
 }

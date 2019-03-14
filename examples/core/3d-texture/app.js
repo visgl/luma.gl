@@ -160,7 +160,9 @@ class AppAnimationLoop extends AnimationLoop {
       },
       framesPerUpdate: 60,
       formatters: {
-        'GPU Memory': 'memory'
+        'GPU Memory': 'memory',
+        'Buffer Memory': 'memory',
+        'Texture Memory': 'memory'
       }
     });
 

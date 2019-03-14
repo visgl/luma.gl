@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
+import {estimateMemoryUsage} from './texture-formats';
 import Buffer from './buffer';
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context} from '../utils';
@@ -33,6 +34,7 @@ export default class Texture3D extends Texture {
     parameters = {}
   }) {
     this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.textureMemoryStats.subtractCount(this.byteLength);
 
     this.gl.bindTexture(this.target, this.handle);
 
@@ -72,10 +74,17 @@ export default class Texture3D extends Texture {
     if (data && data.byteLength) {
       this.byteLength = data.byteLength;
     } else {
-      this.byteLength = this._getSizeHeuristic();
+      this.byteLength = estimateMemoryUsage(
+        this.width,
+        this.height,
+        this.depth,
+        this.dataFormat,
+        this.type
+      );
     }
 
     this.gpuMemoryStats.addCount(this.byteLength);
+    this.textureMemoryStats.addCount(this.byteLength);
 
     this.loaded = true;
 

@@ -4,6 +4,7 @@ import Resource from './resource';
 import RENDERBUFFER_FORMATS from './renderbuffer-formats';
 import {isWebGL2} from '../utils';
 import {assert} from '../../utils';
+import statsManager from '../../core/stats-manager';
 
 function isFormatSupported(gl, format, formats) {
   const info = formats[format];
@@ -29,13 +30,22 @@ export default class Renderbuffer extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
+    this.gpuMemoryStats = statsManager.get('Memory Usage').get('GPU Memory');
+    this.renderbufferMemoryStats = statsManager.get('Memory Usage').get('Renderbuffer Memory');
+    this.byteLength = 0;
+
     this.initialize(opts);
+
     Object.seal(this);
   }
 
   // Creates and initializes a renderbuffer object's data store
   initialize({format, width = 1, height = 1, samples = 0}) {
     assert(format, 'Needs format');
+
+    this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.renderbufferMemoryStats.subtractCount(this.byteLength);
+
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
     if (samples !== 0 && isWebGL2(this.gl)) {
@@ -50,6 +60,11 @@ export default class Renderbuffer extends Resource {
     this.width = width;
     this.height = height;
     this.samples = samples;
+
+    this.byteLength = width * height * (samples || 1) * this._getFormatSize();
+
+    this.gpuMemoryStats.addCount(this.byteLength);
+    this.renderbufferMemoryStats.addCount(this.byteLength);
 
     return this;
   }
@@ -69,6 +84,9 @@ export default class Renderbuffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteRenderbuffer(this.handle);
+    this.gpuMemoryStats.subtractCount(this.byteLength);
+    this.renderbufferMemoryStats.subtractCount(this.byteLength);
+    this.byteLength = 0;
   }
 
   _bindHandle(handle) {
@@ -89,5 +107,38 @@ export default class Renderbuffer extends Resource {
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
     // this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
     return value;
+  }
+
+  /* eslint-disable complexity */
+  _getFormatSize() {
+    let size;
+    switch (this.format) {
+      case GL.RGBA32F:
+        size = 16;
+        break;
+      case GL.RG32F:
+        size = 8;
+        break;
+      case GL.DEPTH_COMPONENT32F:
+      case GL.RGBA8:
+      case GL.R32F:
+        size = 4;
+        break;
+      case GL.DEPTH_COMPONENT24:
+      case GL.RGB8:
+        size = 3;
+        break;
+      case GL.RGBA4:
+      case GL.RGB565:
+      case GL.RGB5_A1:
+      case GL.DEPTH_COMPONENT16:
+        size = 2;
+        break;
+      default:
+        size = 1;
+        break;
+    }
+
+    return size;
   }
 }

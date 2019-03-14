@@ -134,3 +134,48 @@ export function isLinearFilteringSupported(gl, format) {
       return true;
   }
 }
+
+/* eslint-disable complexity */
+export function estimateMemoryUsage(width, height, depth, dataFormat, type) {
+  // TODO(Tarek): Cover all formats/types?
+  const numTexels = width * height * (depth || 1);
+  let channels;
+  switch (dataFormat) {
+    case GL.RGB:
+    case GL.RGB_INTEGER:
+      channels = 3;
+      break;
+    case GL.RG:
+    case GL.RG_INTEGER:
+      channels = 2;
+      break;
+    case GL.RED:
+    case GL.DEPTH_COMPONENT:
+    case GL.LUMINANCE:
+    case GL.ALPHA:
+    case GL.RED_INTEGER:
+      channels = 1;
+      break;
+    default:
+      // RGBA
+      channels = 4;
+  }
+
+  let bytesPerChannel;
+  switch (dataFormat) {
+    case GL.FLOAT:
+    case GL.UNSIGNED_INT:
+    case GL.INT:
+      bytesPerChannel = 4;
+      break;
+    case GL.UNSIGNED_SHORT:
+    case GL.SHORT:
+      bytesPerChannel = 2;
+      break;
+    default:
+      // BYTE
+      bytesPerChannel = 1;
+  }
+
+  return numTexels * channels * bytesPerChannel;
+}
