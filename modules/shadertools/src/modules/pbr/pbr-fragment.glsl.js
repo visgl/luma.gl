@@ -324,9 +324,12 @@ vec4 pbr_filterColor(vec4 colorUnused)
     v
   );
 
+  vec3 color = vec3(0, 0, 0);
+
+#ifdef USE_LIGHTS
   // Apply ambient light
   PBRInfo_setAmbientLight(pbrInputs);
-  vec3 color = calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
+  color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
 
   // Apply directional light
   for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
@@ -340,6 +343,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
     color += calculateFinalColor(pbrInputs, lighting_uPointLight[i].color / attenuation);
   }
+#endif
 
   // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL

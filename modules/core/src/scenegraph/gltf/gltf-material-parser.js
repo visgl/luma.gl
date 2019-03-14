@@ -79,7 +79,7 @@ class GLTFEnv {
 }
 
 export default class GLTFMaterialParser {
-  constructor(gl, {attributes, material, debug, ibl}) {
+  constructor(gl, {attributes, material, debug, ibl, lights}) {
     this.gl = gl;
 
     this.defines = {
@@ -119,6 +119,7 @@ export default class GLTFMaterialParser {
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
 
     this.defineIfPresent(ibl, 'USE_IBL');
+    this.defineIfPresent(lights, 'USE_LIGHTS');
     this.defineIfPresent(debug, 'PBR_DEBUG');
 
     if (material) {

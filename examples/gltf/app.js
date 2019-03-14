@@ -36,7 +36,7 @@ const INFO_HTML = `
   <br>
 </div>
 <div>
-  Light
+  Regular Lights
   <select id="lightSelector">
     <option value="default">Default</option>
     <option value="ambient">Ambient Only</option>
@@ -47,85 +47,102 @@ const INFO_HTML = `
   </select>
   <br>
 </div>
+<div>
+  Image-Based Light
+  <select id="iblSelector">
+    <option value="exclusive">On (Exclusive)</option>
+    <option value="addition">On (Addition to Regular)</option>
+    <option value="off">Off (Only Regular)</option>
+  </select>
+  <br>
+</div>
 `;
 
 const LIGHT_SOURCES = {
   default: {
-    directionalLights: [{
+    directionalLights: [
+      {
         color: [255, 255, 255],
         direction: [0.0, 0.5, 0.5],
-        intensity: 1.0,
+        intensity: 1.0
       }
     ]
   },
   ambient: {
     ambientLight: {
       color: [255, 255, 255],
-      intensity: 1.0,
+      intensity: 1.0
     }
   },
   directional1: {
-    directionalLights: [{
+    directionalLights: [
+      {
         color: [255, 0, 0],
         direction: [1.0, 0.0, 0.0],
-        intensity: 1.0,
+        intensity: 1.0
       }
     ],
     ambientLight: {
-        color: [255, 255, 255],
-        intensity: 1.0,
-      }
+      color: [255, 255, 255],
+      intensity: 1.0
+    }
   },
   directional3: {
-    directionalLights: [{
+    directionalLights: [
+      {
         color: [255, 0.0, 0.0],
         direction: [1.0, 0.0, 0.0],
-        intensity: 1.0,
-      },{
+        intensity: 1.0
+      },
+      {
         color: [0.0, 0.0, 255],
         direction: [0.0, 0.0, 1.0],
-        intensity: 1.0,
-      },{
+        intensity: 1.0
+      },
+      {
         color: [0.0, 255, 0.0],
         direction: [0.0, 1.0, 0.0],
-        intensity: 1.0,
+        intensity: 1.0
       }
     ]
   },
   point1far: {
-    pointLights: [{
+    pointLights: [
+      {
         color: [255, 0, 0],
         position: [200.0, 0.0, 0.0],
         attenuation: [0, 0, 0.01],
-        intensity: 1.0,
+        intensity: 1.0
       }
     ],
     ambientLight: {
-        color: [255, 255, 255],
-        intensity: 1.0,
-      }
+      color: [255, 255, 255],
+      intensity: 1.0
+    }
   },
   point1near: {
-    pointLights: [{
+    pointLights: [
+      {
         color: [255, 0, 0],
         position: [10.0, 0.0, 0.0],
         attenuation: [0, 0, 0.01],
-        intensity: 1.0,
+        intensity: 1.0
       }
     ],
     ambientLight: {
-        color: [255, 255, 255],
-        intensity: 1.0,
-      }
+      color: [255, 255, 255],
+      intensity: 1.0
+    }
   }
 };
 
 const DEFAULT_OPTIONS = {
   pbrDebug: true,
-  pbrIbl: false
+  pbrIbl: true,
+  lights: false
 };
 
-async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
+async function loadGLTF(urlOrPromise, gl, options) {
   const promise =
     urlOrPromise instanceof Promise
       ? urlOrPromise
@@ -150,7 +167,7 @@ async function loadGLTF(urlOrPromise, gl, options = DEFAULT_OPTIONS) {
     log.info(4, 'Using model: ', node)();
   });
 
-  return {scenes, animator};
+  return {scenes, animator, gltf};
 }
 
 function loadModelList() {
@@ -244,7 +261,8 @@ export class DemoApp {
             reader.onload = ev => resolve(ev.target.result);
             reader.readAsArrayBuffer(e.dataTransfer.files[0]);
           }),
-          this.gl
+          this.gl,
+          this.loadOptions
         ).then(result => Object.assign(this, result));
       }
     };
@@ -256,22 +274,25 @@ export class DemoApp {
       blend: false
     });
 
+    this.loadOptions = Object.assign({}, DEFAULT_OPTIONS);
+
     this.gl = gl;
     if (this.modelFile) {
       // options for unit testing
       const options = {
         pbrDebug: false,
-        pbrIbl: false
+        pbrIbl: false,
+        lights: true
       };
       loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
     } else {
       const modelSelector = document.getElementById('modelSelector');
-      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result =>
+      loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl, this.loadOptions).then(result =>
         Object.assign(this, result)
       );
 
       modelSelector.onchange = event => {
-        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl).then(result =>
+        loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl, this.loadOptions).then(result =>
           Object.assign(this, result)
         );
       };
@@ -288,14 +309,59 @@ export class DemoApp {
       };
     }
 
-    const lightSelector = document.getElementById("lightSelector");
+    const lightSelector = document.getElementById('lightSelector');
     if (lightSelector) {
       lightSelector.onchange = event => {
         this.light = lightSelector.value;
       };
     }
 
+    const iblSelector = document.getElementById('iblSelector');
+    if (iblSelector) {
+      iblSelector.onchange = event => {
+        this._updateLightSettings(iblSelector.value);
+        this._reloadModel();
+      };
+    }
+
     this.initalizeEventHandling(canvas);
+  }
+
+  _updateLightSettings(value) {
+    switch (value) {
+      case 'exclusive':
+        Object.assign(this.loadOptions, {
+          pbrIbl: true,
+          lights: false
+        });
+        break;
+
+      case 'addition':
+        Object.assign(this.loadOptions, {
+          pbrIbl: true,
+          lights: true
+        });
+        break;
+
+      case 'off':
+        Object.assign(this.loadOptions, {
+          pbrIbl: false,
+          lights: true
+        });
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  _reloadModel() {
+    // Clean and regenerate model so we have new "#defines"
+    // TODO: Find better way to do this
+    (this.gltf.meshes || []).forEach(mesh => delete mesh._mesh);
+    (this.gltf.nodes || []).forEach(node => delete node._node);
+
+    Object.assign(this, createGLTFObjects(this.gl, this.gltf, this.loadOptions));
   }
 
   applyLight(model) {
