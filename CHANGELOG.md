@@ -1,5 +1,9 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.17 - Mar 15, 2019
+- remove duplicated uniforms (#989)
+- Proposal: Unified lights array (#948)
+
 ## v7.0.0-alpha.16 - Mar 15, 2019
 - Fix TextureCube using promises as data (#926)
 - glTF/PBR: Add ability to switch between IBL and Regular Lights (#985)
