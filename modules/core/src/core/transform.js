@@ -3,7 +3,7 @@ import {combineInjects} from '@luma.gl/shadertools';
 import {_transform as transform, getPassthroughFS, typeToChannelCount} from '@luma.gl/shadertools';
 import {Buffer, Framebuffer, Texture2D, TransformFeedback, readPixelsToArray} from '../webgl';
 import {isWebGL2, assertWebGL2Context, getShaderVersion, cloneTextureFrom} from '../webgl/utils';
-import Model from '../scenegraph/model';
+import Model from './model';
 
 import {log, isObjectEmpty, assert} from '../utils';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';

@@ -1,7 +1,7 @@
 // A convolution render pass
 // Based on https://webglfundamentals.org/webgl/lessons/webgl-image-processing-continued.html
 
-import {_Pass as Pass, ClipSpaceQuad} from 'luma.gl';
+import {_Pass as Pass, ClipSpace} from 'luma.gl';
 import convolution from '../modules/convolution';
 
 export default class ConvolutionPass extends Pass {
@@ -22,7 +22,7 @@ export default class ConvolutionPass extends Pass {
       )
     );
 
-    this.clipspace = new ClipSpaceQuad(gl, {
+    this.clipspace = new ClipSpace(gl, {
       id: 'convolution-pass',
       modules: [convolution],
       fs: `

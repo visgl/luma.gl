@@ -1,7 +1,7 @@
 import {
   AnimationLoop,
   setParameters,
-  pickModels,
+  // pickModels,
   Cube,
   picking,
   dirlight,
@@ -183,15 +183,19 @@ class AppAnimationLoop extends AnimationLoop {
   onRender(animationProps) {
     const {
       gl,
-      framebuffer,
-      useDevicePixels,
-      _mousePosition,
       timeWidget,
       memWidget
     } = animationProps;
 
     timeWidget.update();
     memWidget.update();
+
+    /*
+    const {
+      framebuffer,
+      useDevicePixels,
+      _mousePosition,
+    } = animationProps;
 
     // "Pick" the cube under the mouse
     const pickInfo =
@@ -208,6 +212,7 @@ class AppAnimationLoop extends AnimationLoop {
     this.cube.updateModuleSettings({
       pickingSelectedColor
     });
+    */
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

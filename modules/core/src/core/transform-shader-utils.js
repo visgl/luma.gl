@@ -114,6 +114,7 @@ export function processAttributeDefinition(line, textureMap) {
   }
   const {type, name} = attributeData;
   if (name && textureMap[name]) {
+    // eslint-disable-next-line no-useless-escape
     const updatedLine = `\// ${line} => Replaced by Transform with a sampler`;
     const {samplerName, sizeName, uniformDeclerations} = getSamplerDeclerations(name);
 

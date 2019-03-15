@@ -1,4 +1,4 @@
-import {Program, Geometry, Model} from '@luma.gl/core';
+import {Program, Geometry, ModelNode} from '@luma.gl/core';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -29,7 +29,7 @@ void main(void) {
 }
 `;
 
-export class Star extends Model {
+export class Star extends ModelNode {
   constructor(gl, opts = {}) {
     const program = new Program(gl, {
       fs: FRAGMENT_SHADER,

@@ -65,24 +65,20 @@ export {default as UniformBufferLayout} from './webgl/classes/uniform-buffer-lay
 // experimental WebGL exports
 export {default as _Accessor} from './webgl/classes/accessor';
 export {clearBuffer as _clearBuffer} from './webgl/classes/clear';
+export {setPathPrefix, loadImage, loadFile} from './webgl/utils/load-file';
 
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
 export {default as Geometry} from './core/geometry';
-export {default as pickModels} from './core/pick-models';
 export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
+export {default as Model} from './core/model';
 export {default as Transform} from './core/transform';
+export {default as ClipSpace} from './core/clip-space';
+
 // Experimental core exports
 export {default as _Attribute} from './core/attribute';
 export {default as _ShaderCache} from './core/shader-cache';
 export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
-
-// SCENEGRAPH
-export {default as ScenegraphNode} from './scenegraph/scenegraph-node';
-export {default as Group} from './scenegraph/group';
-export {default as Camera} from './scenegraph/camera';
-export {default as Model} from './scenegraph/model';
-export {default as createGLTFObjects} from './scenegraph/gltf/create-gltf-objects';
 
 // Multipass Rendering
 export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';
@@ -109,20 +105,6 @@ export {default as PlaneGeometry} from './geometries/plane-geometry';
 export {default as SphereGeometry} from './geometries/sphere-geometry';
 export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
-// Models
-export {default as Cone} from './models/cone';
-export {default as Cube} from './models/cube';
-export {default as Cylinder} from './models/cylinder';
-export {default as IcoSphere} from './models/ico-sphere';
-export {default as Plane} from './models/plane';
-export {default as Sphere} from './models/sphere';
-export {default as TruncatedCone} from './models/truncated-cone';
-
-export {default as ClipSpace} from './models/clip-space';
-
-// IO
-export {setPathPrefix, loadFile, loadImage} from './core/load-file';
-
 // lighting
 export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-source';
 
@@ -130,6 +112,26 @@ export {DirectionalLight, AmbientLight, PointLight} from './lighting/light-sourc
 export {default as Material} from './materials/material';
 export {default as PhongMaterial} from './materials/phong-material';
 export {default as PBRMaterial} from './materials/pbr-material';
+
+// SCENEGRAPH
+
+// Core nodes
+export {default as ScenegraphNode} from './scenegraph/nodes/scenegraph-node';
+export {default as GroupNode} from './scenegraph/nodes/group-node';
+export {default as ModelNode} from './scenegraph/nodes/model-node';
+export {default as CameraNode} from './scenegraph/nodes/camera-node';
+
+// Prepackaged scenegraph nodes
+export {default as Cone} from './scenegraph/geometric-nodes/cone';
+export {default as Cube} from './scenegraph/geometric-nodes/cube';
+export {default as Cylinder} from './scenegraph/geometric-nodes/cylinder';
+export {default as IcoSphere} from './scenegraph/geometric-nodes/ico-sphere';
+export {default as Plane} from './scenegraph/geometric-nodes/plane';
+export {default as Sphere} from './scenegraph/geometric-nodes/sphere';
+export {default as TruncatedCone} from './scenegraph/geometric-nodes/truncated-cone';
+
+// glTF scenegraph instantiator
+export {default as createGLTFObjects} from './scenegraph/gltf/create-gltf-objects';
 
 // TODO/CLEAN UP FOR V7
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)
@@ -160,12 +162,8 @@ export {
   convertToVec4
 } from '@luma.gl/shadertools';
 
-// DEPRECATED EXPORTS IN v6.0
-
-export {default as ClipSpaceQuad} from './models/clip-space';
-
-// UNDOCUMENTED API
-// TODO - Should these be exposed?
-
+// UTILS: undocumented API for other luma.gl modules
 export {default as log} from './utils/log';
+export {default as assert} from './utils/assert';
+export {uid} from './utils/utils';
 export {global} from './utils/globals';

@@ -1,6 +1,5 @@
-import {Texture2D, TextureCube} from '../../webgl';
-import {loadImage} from '../../core/load-file';
-import log from '../../utils/log';
+import {Texture2D, TextureCube, loadImage} from '../../webgl';
+import {log} from '../../utils';
 
 // TODO: Move to new file
 class GLTFEnv {

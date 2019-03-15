@@ -49,6 +49,7 @@ export {
 } from './classes/copy-and-blit';
 export {parseUniformName, getUniformSetter} from './classes/uniforms';
 
+export {loadImage} from './utils/load-file';
 export {default as Accessor} from './classes/accessor';
 
 // WebGL1 Classes

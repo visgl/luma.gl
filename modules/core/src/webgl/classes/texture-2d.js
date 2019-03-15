@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
 import {assertWebGLContext} from '../utils';
-import {loadImage} from '../../core/load-file';
+import {loadImage} from '../utils/load-file';
 
 export default class Texture2D extends Texture {
   static isSupported(gl, opts) {

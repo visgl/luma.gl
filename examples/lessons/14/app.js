@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop,  Geometry, Texture2D, loadFile, setParameters, Model
+  AnimationLoop,  Geometry, Texture2D, loadFile, setParameters, ModelNode
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
@@ -270,7 +270,7 @@ const animationLoop = new AnimationLoop({
       });
 
 
-      const teapot = new Model(gl, {
+      const teapot = new ModelNode(gl, {
         id: 'teapot-model',
         fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
         vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
