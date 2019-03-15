@@ -21,7 +21,7 @@ const positions = new Attribute({
 
 // and on each frame update any uniforms (typically matrices) and call render.
 model.setAttributes({positions});
-model.render();
+model.draw();
 ```
 
 ## Methods

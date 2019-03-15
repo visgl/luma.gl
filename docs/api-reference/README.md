@@ -1,10 +1,10 @@
-# API Structure
+# Module Structure
 
 luma.gl contains a lot of classes and functions that might make new users wonder where to get started. luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
 
-| Folder                           | Description |
+| Module                           | Description |
 | ---                              | --- |
-| src/webgl | A set of classes covering all **WebGL objects**. Currently luma.gl supports WebGL 2.0. These classes organize the sprawling WebGL API and makes it easy to work with in JavaScript. |
+| src/webgl | A set of classes covering all **WebGL objects**. Currently luma.gl supports WebGL 2.0. These classes organize the WebGL2 API and makes it easy to work with in JavaScript. |
 | src/core | A set of common classes across all 3D graphics applications. They are on a higher abstraction level than the WebGL API. luma.gl's signature [`Model`](/docs/api-reference/core/model.md) class is in this folder. |
 | src/geometry | This folder contains a collection of geometric primitives extending from the base `Geometry` class, including `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They can be used to create [`Models`](/docs/api-reference/core/model.md) class with common geometries|
 | src/models | Some predefined subclasses of [`Models`](/docs/api-reference/core/model.md) created from simple geometries from the `src/geometry` folder|
@@ -15,8 +15,7 @@ luma.gl contains a lot of classes and functions that might make new users wonder
 
 ## WebGL Classes
 
-The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, These classes help organize the sprawling WebGL2 API and makes it much easier to program WebGL2 in JavaScript.
-
+The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, 
 After creating a context, perhaps with luma.gl's [`createGLContext`](/docs/api-reference/webgl/context/context.md) function, you have can start instantiating luma.gl's WebGL2 classes: [`Buffer`](/docs/api-reference/webgl/buffer.md), [`FrameBuffer`](/docs/api-reference/webgl/framebuffer.md), [`RenderBuffer`](/docs/api-reference/webgl/renderbuffer.md), [`Program`](/docs/api-reference/webgl/program.md), [`Shader`](/docs/api-reference/webgl/shader.md), [`Texture2D`](/docs/api-reference/webgl/texture-2d.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), [`TextureCube`](/docs/api-reference/webgl/texture-cube.md), [`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md), [`VertexArrayObject`](/docs/api-reference/webgl/vertex-array.md)
 
 ## Core Classes

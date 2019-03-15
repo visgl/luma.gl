@@ -3,16 +3,16 @@ import Cubemap from '../../../examples/core/cubemap/app';
 // import CustomPicking from '../../../examples/core/custom-picking/app';
 // import DeferredRendering from '../../../examples/core/deferred-rendering/app';
 import DOF from '../../../examples/core/dof/app';
-import Mandelbrot from '../../../examples/core/mandelbrot/app';
+// import GLTF from '../../../examples/core/gltf/app';
 import Fragment from '../../../examples/core/fragment/app';
+import Mandelbrot from '../../../examples/core/mandelbrot/app';
 // import Particles from '../../../examples/core/particles/app';
 import Persistence from '../../../examples/core/persistence/app';
-import Picking from '../../../examples/core/picking/app';
+// import Picking from '../../../examples/core/picking/app';
+import Quasicrystals from '../../../examples/core/quasicrystals/app';
 import Shadowmap from '../../../examples/core/shadowmap/app';
 import Transform from '../../../examples/core/transform/app';
 import TransformFeedback from '../../../examples/core/transform-feedback/app';
-
-// import GLTF from '../../../examples/gltf/app';
 
 import Lesson01 from '../../../examples/lessons/01/app';
 import Lesson02 from '../../../examples/lessons/02/app';
@@ -41,9 +41,10 @@ export default {
   // DeferredRendering: {}
   Mandelbrot: {app: Mandelbrot, path: 'examples/core/mandelbrot/'},
   Fragment: {app: Fragment, path: 'examples/core/fragment/'},
-  // Particles: {}
+  // Particles: {app: Particles, path: 'examples/core/particles/'},
   Persistence: {app: Persistence, path: 'examples/core/persistence/'},
-  Picking: {app: Picking, path: 'examples/core/picking/'},
+  // Picking: {app: Picking, path: 'examples/core/picking/'},
+  Quasicrystals: {app: Quasicrystals, path: 'examples/core/quasicrystals/'},
   Shadowmap: {app: Shadowmap, path: 'examples/core/shadowmap/'},
   Transform: {app: Transform, path: 'examples/core/transform/'},
   TransformFeedbackDemo: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},

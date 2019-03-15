@@ -18,18 +18,18 @@ References:
 
 Autocreates a canvas/context
 ```js
-import {AnimationLoop} from 'luma.gl';
+import {AnimationLoop, ClipSpace} from '@luma.gl/core';
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
     // Keys in the object returned here will be available in onRender
     return {
-      clipSpaceQuad: new ClipSpaceQuad({gl, fs: FRAGMENT_SHADER})
+      clipSpaceQuad: new ClipSpace({gl, fs: FRAGMENT_SHADER})
     };
   },
   onRender({tick, clipSpaceQuad}) {
     // Tick is autoupdated by AnimationLoop
-    clipSpaceQuad.render({uTime: tick * 0.01});
+    clipSpaceQuad.setUniforms({uTime: tick * 0.01}).draw();
   }
 });
 

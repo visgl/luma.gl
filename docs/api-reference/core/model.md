@@ -34,10 +34,12 @@ const model =  new Model(gl, {
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
-model.render({
-  uPMatrix: currentProjectionMatrix,
-  uMVMatrix: current ModelViewMatrix
-});
+model
+  .setUniforms({
+    uPMatrix: currentProjectionMatrix,
+    uMVMatrix: current ModelViewMatrix
+  })
+  .draw();
 ```
 
 ### Provide attribute data using Buffer
@@ -59,10 +61,12 @@ const model =  new Model(gl, {
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
-model.render({
-  uPMatrix: currentProjectionMatrix,
-  uMVMatrix: current ModelViewMatrix
-});
+model
+  .setUniforms({
+    uPMatrix: currentProjectionMatrix,
+    uMVMatrix: current ModelViewMatrix
+  })
+  .draw();
 ```
 
 ### Provide attribute data using VertexArray object
@@ -98,7 +102,7 @@ const vertexArray2 = new VertexArray(gl, {
 model.draw({
   uniforms: {
     uPMatrix: currentProjectionMatrix,
-    uMVMatrix: current ModelViewMatrix
+    uMVMatrix: currentModelViewMatrix
   },
   vertexArray: vertexArray1
 });
@@ -107,7 +111,7 @@ model.draw({
 model.draw({
   uniforms: {
     uPMatrix: currentProjectionMatrix,
-    uMVMatrix: current ModelViewMatrix
+    uMVMatrix: currentModelViewMatrix
   },
   vertexArray: vertexArray2
 });
