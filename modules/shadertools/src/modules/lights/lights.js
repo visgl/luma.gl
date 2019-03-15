@@ -10,6 +10,17 @@ export default {
   }
 };
 
+/*
+/ These two values can be calculated on the CPU and passed into the shader
+float lightAngleScale = 1.0f / max(0.001f, cos(innerConeAngle) - cos(outerConeAngle));
+float lightAngleOffset = -cos(outerConeAngle) * lightAngleScale;
+
+// Then, in the shader:
+float cd = dot(spotlightDir, normalizedLightVector);
+float angularAttenuation = saturate(cd * lightAngleScale + lightAngleOffset);
+angularAttenuation *= angularAttenuation;
+*/
+
 const INITIAL_MODULE_OPTIONS = {};
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
@@ -45,38 +56,56 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
   return lightSourceUniforms;
 }
 
+// eslint-disable-next-line complexity
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  // Support for array of lights. Type of light is detected by field
-  // TODO - this should work directly against the uniforms, if we phase out `opts.lightSources`
+  // Specify lights separately
+  if ('lightSources' in opts) {
+    const {ambientLight, pointLights, directionalLights} = opts.lightSources || {};
+    const hasLights =
+      ambientLight ||
+      (pointLights && pointLights.length > 0) ||
+      (directionalLights && directionalLights.length > 0);
+
+    if (!hasLights) {
+      return {lighting_uEnabled: false};
+    }
+
+    return Object.assign(
+      {},
+      getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
+      {
+        lighting_uEnabled: true
+      }
+    );
+  }
+
+  // Support for array of lights. Type of light is detected by type field
   if ('lights' in opts) {
     const lightSources = {pointLights: [], directionalLights: []};
     for (const light of opts.lights || []) {
-      if (light.position) {
-        lightSources.pointLights.push(light);
-      } else if (light.direction) {
-        lightSources.directionalLights.push(light);
-      } else {
-        lightSources.ambientLight = light;
+      switch (light.type) {
+        case 'ambient':
+          // Note: Only uses last ambient light
+          // TODO - add ambient light sources on CPU?
+          lightSources.ambientLight = light;
+          break;
+        case 'directional':
+          lightSources.directionalLights.push(light);
+          break;
+        case 'point':
+        case 'spot':
+          // For now 'point' lights are our best approximation of spot lights
+          lightSources.pointLights.push(light);
+          break;
+        default:
+        // eslint-disable-next-line
+        // console.warn(light.type);
       }
     }
-    opts.lightSources = lightSources;
+
+    // Call the `opts.lightSources`` version
+    return getUniforms({lightSources});
   }
 
-  if (!('lightSources' in opts)) {
-    return {};
-  }
-
-  const {ambientLight, pointLights, directionalLights} = opts.lightSources;
-  const hasLights =
-    ambientLight ||
-    (pointLights && pointLights.length > 0) ||
-    (directionalLights && directionalLights.length > 0);
-
-  if (!hasLights) {
-    return {lighting_uEnabled: false};
-  }
-
-  return Object.assign({}, getLightSourceUniforms({ambientLight, pointLights, directionalLights}), {
-    lighting_uEnabled: true
-  });
+  return {};
 }

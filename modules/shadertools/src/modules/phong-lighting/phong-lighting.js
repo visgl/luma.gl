@@ -1,9 +1,9 @@
-import lighting from '../lighting/lighting';
+import lights from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
 export default {
   name: 'phong-lighting',
-  dependencies: [lighting],
+  dependencies: [lights],
   vs: lightingShader,
   defines: {
     LIGHTING_VERTEX: 1
