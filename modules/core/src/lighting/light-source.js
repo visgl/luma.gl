@@ -21,20 +21,6 @@ class Light {
     const {intensity = DEFAULT_LIGHT_INTENSITY} = props;
     this.intensity = intensity;
   }
-
-  // PRIVATE
-
-  // Helper: Extracts attenuation from either `props.attenuation`` or `props.intensity``
-  // Supports both sophisticated light model and the classic intensity prop
-  _getAttenuation(props) {
-    if ('attenuation' in props) {
-      return props.attenuation;
-    }
-    if ('intensity' in props) {
-      return [0, 0, props.intensity];
-    }
-    return DEFAULT_ATTENUATION;
-  }
 }
 
 export class AmbientLight extends Light {
@@ -60,5 +46,19 @@ export class PointLight extends Light {
     const {position = DEFAULT_LIGHT_POSITION} = props;
     this.position = position;
     this.attenuation = this._getAttenuation(props);
+  }
+
+  // PRIVATE
+
+  // Helper: Extracts attenuation from either `props.attenuation`` or `props.intensity``
+  // Supports both sophisticated light model and the classic intensity prop
+  _getAttenuation(props) {
+    if ('attenuation' in props) {
+      return props.attenuation;
+    }
+    if ('intensity' in props) {
+      return [0, 0, props.intensity];
+    }
+    return DEFAULT_ATTENUATION;
   }
 }
