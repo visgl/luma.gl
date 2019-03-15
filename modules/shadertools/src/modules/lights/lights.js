@@ -10,17 +10,6 @@ export default {
   }
 };
 
-/*
-/ These two values can be calculated on the CPU and passed into the shader
-float lightAngleScale = 1.0f / max(0.001f, cos(innerConeAngle) - cos(outerConeAngle));
-float lightAngleOffset = -cos(outerConeAngle) * lightAngleScale;
-
-// Then, in the shader:
-float cd = dot(spotlightDir, normalizedLightVector);
-float angularAttenuation = saturate(cd * lightAngleScale + lightAngleOffset);
-angularAttenuation *= angularAttenuation;
-*/
-
 const INITIAL_MODULE_OPTIONS = {};
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
@@ -93,8 +82,6 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
           lightSources.directionalLights.push(light);
           break;
         case 'point':
-        case 'spot':
-          // For now 'point' lights are our best approximation of spot lights
           lightSources.pointLights.push(light);
           break;
         default:

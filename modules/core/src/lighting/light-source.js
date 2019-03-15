@@ -10,14 +10,8 @@ const DEFAULT_LIGHT_DIRECTION = [0.0, 0.0, -1.0];
 
 const DEFAULT_LIGHT_POSITION = [0.0, 0.0, 1.0];
 
-const DEFAULT_INNER_CONE_ANGLE = 0;
-const DEFAULT_OUTER_CONE_ANGLE = Math.PI / 4;
-
-// Support
+// glTF lights reference:
 // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_lights_punctual
-// TODO - does not support range per
-// Recommended implementation for this attenuation with a cutoff range:
-// attenuation = max( min( 1.0 - ( current_distance / range )4, 1 ), 0 ) / current_distance2
 
 class LightSource extends ScenegraphNode {
   constructor(props) {
@@ -66,24 +60,5 @@ export class PointLight extends LightSource {
     const {position = DEFAULT_LIGHT_POSITION} = props;
     this.position = position;
     this.attenuation = this._getAttenuation(props);
-  }
-}
-
-export class SpotLight extends LightSource {
-  constructor(props) {
-    super(props);
-
-    this.type = 'spot';
-
-    const {
-      position = DEFAULT_LIGHT_POSITION,
-      innerConeAngle = DEFAULT_INNER_CONE_ANGLE,
-      outerConeAngle = DEFAULT_OUTER_CONE_ANGLE
-    } = props;
-
-    this.position = position;
-    this.attenuation = this._getAttenuation(props);
-    this.innerConeAngle = innerConeAngle;
-    this.outerConeAngle = outerConeAngle;
   }
 }
