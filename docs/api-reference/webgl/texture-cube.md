@@ -21,6 +21,21 @@ const textureCube = new TextureCube(gl, {width, height, dataFormat, pixels: {
 }});
 ```
 
+Creating a `TextureCube` using multiple level-of-detail (LODs) images.
+```js
+const textureCube = new TextureCube(gl, {width, height, dataFormat, pixels: {
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: [imagePosX_LOD_0, imagePosX_LOD_1, imagePosX_LOD_2],
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: [imagePosY_LOD_0, imagePosY_LOD_1, imagePosY_LOD_2],
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: [imagePosZ_LOD_0, imagePosZ_LOD_1, imagePosZ_LOD_2],
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: [imageNegX_LOD_0, imageNegX_LOD_1, imageNegX_LOD_2],
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: [imageNegY_LOD_0, imageNegY_LOD_1, imageNegY_LOD_2],
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: [imageNegZ_LOD_0, imageNegZ_LOD_1, imageNegZ_LOD_2]
+}});
+```
+
+This class supports _Async Textures_. You can provide promises (that resolve to images) instead of images.
+For example `[GL.TEXTURE_CUBE_MAP_POSITIVE_X]: [promisePosX_LOD_0, promisePosX_LOD_1, promisePosX_LOD_2]`.
+
 Replacing one or more faces texture data
 ```js
 textureCube.setCubeMapImageData({width, height, dataFormat, pixels: {
@@ -69,19 +84,25 @@ void main()
 
 ```js
 new Texture3D(gl, {
-  [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: imagePosX,
-  [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: imagePosY,
-  [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: imagePosZ,
-  [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: imageNegX,
-  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: imageNegY,
-  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: imageNegZ,
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: faceSpecificationPosX,
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: faceSpecificationPosY,
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: faceSpecificationPosZ,
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: faceSpecificationNegX,
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: faceSpecificationNegY,
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: faceSpecificationNegZ,
   parameters
 });
 ```
 
+_faceSpecification_ can be:
+* A single image.
+* A single promise resolving in an image.
+* An array of images (for multiple _levels of detail_).
+* An array of promises each resolving in an image (for multiple _levels of detail_).
+
+For every level of detail:
 * Needs to supply 6 images all of same size and format.
 * Images all need to be of the same square size, i.e. `width` and `height` must be the same.
-* If not supplied, `width` and `height` will be autodeduced from `GL.TEXTURE_CUBE_MAP_POSITIVE_X`.
 * The same `format`, `type` etc parameters will be applied to each cube face.
 
 

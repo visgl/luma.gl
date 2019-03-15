@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
 import {assertWebGLContext} from '../webgl-utils';
-// import {assert} from '../utils';
+import {log} from '../utils';
 
 const FACES = [
   GL.TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -25,7 +25,7 @@ export default class TextureCube extends Texture {
 
   /* eslint-disable max-len, max-statements */
   initialize(props = {}) {
-    const {/* format = GL.RGBA, */ mipmaps = true} = props;
+    const {/* format = GL.RGBA, */ mipmaps = true, parameters = {}} = props;
 
     // let {width = 1, height = 1, type = GL.UNSIGNED_BYTE, dataFormat} = props;
 
@@ -62,6 +62,8 @@ export default class TextureCube extends Texture {
       if (mipmaps) {
         this.generateMipmap(props);
       }
+
+      this.setParameters(parameters);
     });
   }
 
@@ -70,7 +72,7 @@ export default class TextureCube extends Texture {
   }
 
   /* eslint-disable max-statements, max-len */
-  setCubeMapImageData({
+  async setCubeMapImageData({
     width,
     height,
     pixels,
@@ -82,21 +84,48 @@ export default class TextureCube extends Texture {
     const {gl} = this;
     const imageDataMap = pixels || data;
 
-    return Promise.all(FACES.map(face => imageDataMap[face])).then(resolvedFaces => {
-      this.bind();
+    // pixel data (imageDataMap) is an Object from Face to Image or Promise.
+    // For example:
+    // {
+    // GL.TEXTURE_CUBE_MAP_POSITIVE_X : Image-or-Promise,
+    // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : Image-or-Promise,
+    // ... }
+    // To provide multiple level-of-details (LODs) this can be Face to Array
+    // of Image or Promise, like this
+    // {
+    // GL.TEXTURE_CUBE_MAP_POSITIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+    // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+    // ... }
 
-      FACES.forEach((face, index) => {
+    const resolvedFaces = await Promise.all(
+      FACES.map(face => {
+        const facePixels = imageDataMap[face];
+        return Promise.all(Array.isArray(facePixels) ? facePixels : [facePixels]);
+      })
+    );
+
+    this.bind();
+
+    FACES.forEach((face, index) => {
+      if (resolvedFaces[index].length > 1 && this.opts.mipmaps !== false) {
+        // If the user provides multiple LODs, then automatic mipmap
+        // generation generateMipmap() should be disabled to avoid overwritting them.
+        log.warn(`${this.id} has mipmap and multiple LODs.`)();
+      }
+      resolvedFaces[index].forEach((image, lodLevel) => {
+        // TODO: adjust width & height for LOD!
         if (width && height) {
-          gl.texImage2D(face, 0, format, width, height, border, format, type, resolvedFaces[index]);
+          gl.texImage2D(face, lodLevel, format, width, height, border, format, type, image);
         } else {
-          gl.texImage2D(face, 0, format, format, type, resolvedFaces[index]);
+          gl.texImage2D(face, lodLevel, format, format, type, image);
         }
       });
-
-      this.unbind();
     });
+
+    this.unbind();
   }
 
+  // TODO: update this method to accept LODs
   setImageDataForFace(options) {
     const {
       face,

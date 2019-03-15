@@ -1,77 +1,8 @@
-import {Texture2D, TextureCube, loadImage} from '@luma.gl/webgl';
+import {Texture2D} from '@luma.gl/webgl';
 import {log} from '../../utils';
 
-// TODO: Move to new file
-class GLTFEnv {
-  constructor(gl) {
-    this.gl = gl;
-  }
-
-  getTexUrl(envMap, type, dir, mipLevel = 0) {
-    return `https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures/${envMap}/${type}/${type}_${dir}_${mipLevel}.jpg`;
-  }
-
-  getBrdfUrl() {
-    return 'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures/brdfLUT.png';
-  }
-
-  makeCube(id, getTextureForFace) {
-    return new TextureCube(this.gl, {
-      id,
-      pixels: {
-        [this.gl.TEXTURE_CUBE_MAP_POSITIVE_X]: getTextureForFace('right'),
-        [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_X]: getTextureForFace('left'),
-
-        [this.gl.TEXTURE_CUBE_MAP_POSITIVE_Y]: getTextureForFace('top'),
-        [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Y]: getTextureForFace('bottom'),
-
-        [this.gl.TEXTURE_CUBE_MAP_POSITIVE_Z]: getTextureForFace('front'),
-        [this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Z]: getTextureForFace('back')
-      }
-    });
-  }
-
-  getDiffuseEnvSampler() {
-    if (!this._DiffuseEnvSampler) {
-      this._DiffuseEnvSampler = this.makeCube('DiffuseEnvSampler', dir =>
-        loadImage(this.getTexUrl('papermill', 'diffuse', dir))
-      );
-    }
-
-    return this._DiffuseEnvSampler;
-  }
-
-  getSpecularEnvSampler() {
-    if (!this._SpecularEnvSampler) {
-      this._SpecularEnvSampler = this.makeCube('SpecularEnvSampler', dir =>
-        loadImage(this.getTexUrl('papermill', 'specular', dir))
-      );
-    }
-
-    return this._SpecularEnvSampler;
-  }
-
-  getBrdfTex() {
-    if (!this._BrdfTex) {
-      this._BrdfTex = new Texture2D(this.gl, {
-        id: 'brdfLUT',
-        parameters: {
-          //
-        },
-        pixelStore: {
-          [this.gl.UNPACK_FLIP_Y_WEBGL]: false
-        },
-        // Texture2D accepts a promise that returns an image as data (Async Textures)
-        data: loadImage(this.getBrdfUrl())
-      });
-    }
-
-    return this._BrdfTex;
-  }
-}
-
 export default class GLTFMaterialParser {
-  constructor(gl, {attributes, material, debug, ibl, lights}) {
+  constructor(gl, {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights}) {
     this.gl = gl;
 
     this.defines = {
@@ -91,15 +22,14 @@ export default class GLTFMaterialParser {
 
     this.parameters = {};
 
-    if (ibl) {
-      this.env = new GLTFEnv(gl);
-      this.uniforms.u_DiffuseEnvSampler = this.env.getDiffuseEnvSampler();
-      this.uniforms.u_SpecularEnvSampler = this.env.getSpecularEnvSampler();
-      this.uniforms.u_brdfLUT = this.env.getBrdfTex();
+    if (imageBasedLightingEnvironment) {
+      this.uniforms.u_DiffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
+      this.uniforms.u_SpecularEnvSampler = imageBasedLightingEnvironment.getSpecularEnvSampler();
+      this.uniforms.u_brdfLUT = imageBasedLightingEnvironment.getBrdfTexture();
       this.uniforms.u_ScaleIBLAmbient = [1, 1];
     }
 
-    if (debug) {
+    if (pbrDebug) {
       // Override final color for reference app visualization
       // of various parameters in the lighting equation.
       this.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
@@ -110,9 +40,9 @@ export default class GLTFMaterialParser {
     this.defineIfPresent(attributes.TANGENT, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
 
-    this.defineIfPresent(ibl, 'USE_IBL');
+    this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
     this.defineIfPresent(lights, 'USE_LIGHTS');
-    this.defineIfPresent(debug, 'PBR_DEBUG');
+    this.defineIfPresent(pbrDebug, 'PBR_DEBUG');
 
     if (material) {
       this.parseMaterial(material);

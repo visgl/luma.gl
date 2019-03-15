@@ -67,11 +67,9 @@ function addVersionToShader(gl, source) {
   return source;
 }
 
-export default function createGLTFModel(
-  gl,
-  {id, drawMode, vertexCount, attributes, material, modelOptions, debug, ibl, lights}
-) {
-  const materialParser = new GLTFMaterialParser(gl, {attributes, material, debug, ibl, lights});
+export default function createGLTFModel(gl, options) {
+  const {id, drawMode, vertexCount, attributes, modelOptions} = options;
+  const materialParser = new GLTFMaterialParser(gl, options);
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
