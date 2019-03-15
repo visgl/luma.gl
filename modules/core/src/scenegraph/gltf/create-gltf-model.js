@@ -95,19 +95,5 @@ export default function createGLTFModel(
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);
 
-  if (ibl) {
-    materialParser.env.getDiffuseEnvSampler().then(cubeTex => {
-      model.setUniforms({
-        u_DiffuseEnvSampler: cubeTex
-      });
-    });
-
-    materialParser.env.getSpecularEnvSampler().then(cubeTex => {
-      model.setUniforms({
-        u_SpecularEnvSampler: cubeTex
-      });
-    });
-  }
-
   return model;
 }

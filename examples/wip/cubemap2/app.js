@@ -106,7 +106,7 @@ function getFaceTextures({size, text, bgColor}) {
       canvas.height = size;
       drawTexture({ctx, sign, axis: text || axis, size, bgColor});
       const data = ctx.getImageData(0, 0, size, size);
-      textures[TextureCube.FACES[face++]] = data; // Promise.resolve(data);
+      textures[TextureCube.FACES[face++]] = Promise.resolve(data);
     }
   }
   return textures;
