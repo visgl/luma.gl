@@ -4,6 +4,7 @@
 import '@luma.gl/debug';
 
 // Generic helper modules
+import '../modules/constants/test';
 import '../modules/webgl2-polyfill/test';
 import '../modules/webgl-state-tracker/test';
 import '../modules/debug/test/';
