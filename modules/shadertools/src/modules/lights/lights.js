@@ -1,7 +1,7 @@
-import lightingShader from './lighting.glsl';
+import lightingShader from './lights.glsl';
 
 export default {
-  name: 'lighting',
+  name: 'lights',
   vs: lightingShader,
   fs: lightingShader,
   getUniforms,
@@ -45,22 +45,54 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
   return lightSourceUniforms;
 }
 
+// eslint-disable-next-line complexity
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
-  if (!('lightSources' in opts)) {
-    return {};
+  // Specify lights separately
+  if ('lightSources' in opts) {
+    const {ambientLight, pointLights, directionalLights} = opts.lightSources || {};
+    const hasLights =
+      ambientLight ||
+      (pointLights && pointLights.length > 0) ||
+      (directionalLights && directionalLights.length > 0);
+
+    if (!hasLights) {
+      return {lighting_uEnabled: false};
+    }
+
+    return Object.assign(
+      {},
+      getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
+      {
+        lighting_uEnabled: true
+      }
+    );
   }
 
-  const {ambientLight, pointLights, directionalLights} = opts.lightSources;
-  const hasLights =
-    ambientLight ||
-    (pointLights && pointLights.length > 0) ||
-    (directionalLights && directionalLights.length > 0);
+  // Support for array of lights. Type of light is detected by type field
+  if ('lights' in opts) {
+    const lightSources = {pointLights: [], directionalLights: []};
+    for (const light of opts.lights || []) {
+      switch (light.type) {
+        case 'ambient':
+          // Note: Only uses last ambient light
+          // TODO - add ambient light sources on CPU?
+          lightSources.ambientLight = light;
+          break;
+        case 'directional':
+          lightSources.directionalLights.push(light);
+          break;
+        case 'point':
+          lightSources.pointLights.push(light);
+          break;
+        default:
+        // eslint-disable-next-line
+        // console.warn(light.type);
+      }
+    }
 
-  if (!hasLights) {
-    return {lighting_uEnabled: false};
+    // Call the `opts.lightSources`` version
+    return getUniforms({lightSources});
   }
 
-  return Object.assign({}, getLightSourceUniforms({ambientLight, pointLights, directionalLights}), {
-    lighting_uEnabled: true
-  });
+  return {};
 }
