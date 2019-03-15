@@ -1,5 +1,5 @@
 import {Vector3} from 'math.gl';
-import ScenegraphNode from '../scenegraph/scenegraph-node';
+import {uid} from '../utils';
 
 // default light source parameters
 const DEFAULT_LIGHT_COLOR = [255, 255, 255];
@@ -13,9 +13,9 @@ const DEFAULT_LIGHT_POSITION = [0.0, 0.0, 1.0];
 // glTF lights reference:
 // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_lights_punctual
 
-class LightSource extends ScenegraphNode {
-  constructor(props) {
-    super(props);
+class Light {
+  constructor(props = {}) {
+    this.id = props.id || uid('light');
     const {color = DEFAULT_LIGHT_COLOR} = props;
     this.color = color;
     const {intensity = DEFAULT_LIGHT_INTENSITY} = props;
@@ -37,15 +37,15 @@ class LightSource extends ScenegraphNode {
   }
 }
 
-export class AmbientLight extends LightSource {
-  constructor(props) {
+export class AmbientLight extends Light {
+  constructor(props = {}) {
     super(props);
     this.type = 'ambient';
   }
 }
 
-export class DirectionalLight extends LightSource {
-  constructor(props) {
+export class DirectionalLight extends Light {
+  constructor(props = {}) {
     super(props);
     this.type = 'directional';
     const {direction = DEFAULT_LIGHT_DIRECTION} = props;
@@ -53,8 +53,8 @@ export class DirectionalLight extends LightSource {
   }
 }
 
-export class PointLight extends LightSource {
-  constructor(props) {
+export class PointLight extends Light {
+  constructor(props = {}) {
     super(props);
     this.type = 'point';
     const {position = DEFAULT_LIGHT_POSITION} = props;
