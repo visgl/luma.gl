@@ -1,5 +1,33 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.16 - Mar 15, 2019
+- Fix TextureCube using promises as data (#926)
+- glTF/PBR: Add ability to switch between IBL and Regular Lights (#985)
+- Remove Attribute refactor related deprecation warnings in luma.gl tests and examples (#975)
+- Add new @luma.gl/addons module (#981)
+- integrate shadertools lighting with phong-lighting (#949)
+- Convert PBR to use Standard Light parameters, Part 3 (#944)
+- Convert PBR to use Standard Light parameters, Part 2 (#943)
+- Convert PBR to use Standard Light parameters, Part 1 (#939)
+- Separate out code that prepares lighting uniforms
+- New StatsWidget API for examples (#980)
+- Texture3D (#978)
+- Add needsRedraw reasons to waitForRender and toDataURL (#974)
+
+## v7.0.0-alpha.15 - Mar 12, 2019
+- Fix bug in snapshot test runner (#968)
+- Move waitForRender resolve into core render loop. Use for toDataURL (#971)
+- WebGL2 Polyfill Cleanup (#970)
+- Feature cleanup (#963)
+- Fix perf test (#966)
+- Fix bad merge in examples/gltf from PR.952 (#967)
+- fix start-local in examples (#965)
+- Add firstFrame() method to AnimationLoop (#930)
+- touch up table of contents (#917)
+- Doc reorg/partial cleanup for glTF/materials/lights (#952)
+- Move tests for each module into `modules/<submodule>/test` (#960)
+- Replace dev scripts with ocular-dev-tools (#956)
+
 ## v7.0.0-alpha.14 - Mar 11, 2019
 - Ensure that externally created contexts are polyfilled, tracked (#954)
 - Add support for mat attribute types (#959)

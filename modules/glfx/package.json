@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/glfx",
   "description": "glfx - image processing packaged as composable shader modules",
-  "version": "7.0.0-alpha.15",
+  "version": "7.0.0-alpha.16",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,6 +28,6 @@
   },
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.15",
-    "luma.gl": "^7.0.0-alpha.15"
+    "luma.gl": "^7.0.0-alpha.16"
   }
 }
