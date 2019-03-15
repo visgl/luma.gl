@@ -59,7 +59,12 @@ export default class Renderbuffer extends Resource {
     this.height = height;
     this.samples = samples;
 
-    this._trackAllocatedMemory(width * height * (samples || 1) * this._getFormatSize());
+    this._trackAllocatedMemory(
+      this.width *
+        this.height *
+        (this.samples || 1) *
+        RENDERBUFFER_FORMATS[this.format].bytesPerPixel
+    );
 
     return this;
   }
@@ -110,39 +115,5 @@ export default class Renderbuffer extends Resource {
   _trackDeallocatedMemory() {
     this.renderbufferMemoryStats.subtractCount(this.byteLength);
     super._trackDeallocatedMemory();
-  }
-
-  /* eslint-disable complexity */
-  _getFormatSize() {
-    // TODO(Tarek): Cover all formats?
-    let size;
-    switch (this.format) {
-      case GL.RGBA32F:
-        size = 16;
-        break;
-      case GL.RG32F:
-        size = 8;
-        break;
-      case GL.DEPTH_COMPONENT32F:
-      case GL.RGBA8:
-      case GL.R32F:
-        size = 4;
-        break;
-      case GL.DEPTH_COMPONENT24:
-      case GL.RGB8:
-        size = 3;
-        break;
-      case GL.RGBA4:
-      case GL.RGB565:
-      case GL.RGB5_A1:
-      case GL.DEPTH_COMPONENT16:
-        size = 2;
-        break;
-      default:
-        size = 1;
-        break;
-    }
-
-    return size;
   }
 }

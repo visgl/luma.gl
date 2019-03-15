@@ -4,9 +4,9 @@ import Resource from './resource';
 import Buffer from './buffer';
 import {
   TEXTURE_FORMATS,
+  TYPE_SIZES,
   isFormatSupported,
-  isLinearFilteringSupported,
-  estimateMemoryUsage
+  isLinearFilteringSupported
 } from './texture-formats';
 
 import {withParameters} from '../context';
@@ -323,9 +323,13 @@ export default class Texture extends Resource {
     if (data && data.byteLength) {
       this._trackAllocatedMemory(data.byteLength);
     } else {
-      this._trackAllocatedMemory(
-        estimateMemoryUsage(this.width, this.height, this.depth, this.dataFormat, this.type)
-      );
+      let bytesPerTexel = TEXTURE_FORMATS[this.format].bytesPerTexel;
+
+      if (!bytesPerTexel) {
+        bytesPerTexel = TEXTURE_FORMATS[this.format].channels * TYPE_SIZES[this.type];
+      }
+
+      this._trackAllocatedMemory(this.width * this.height * bytesPerTexel);
     }
 
     this.loaded = true;

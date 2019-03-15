@@ -123,12 +123,18 @@ function testFormatCreation(t, glContext, withData = false) {
     for (let type of formatInfo.types) {
       format = Number(format);
       type = Number(type);
+      if (
+        formatInfo.dataFormat === GL.DEPTH_COMPONENT ||
+        formatInfo.dataFormat === GL.DEPTH_STENCIL
+      ) {
+        withData = false;
+      }
       const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
       const options = Object.assign({}, formatInfo, {
         data,
         format,
         type,
-        mipmaps: format !== GL.RGB32F, // TODO: for some reason mipmap generation failing for RGB32F format
+        mipmaps: formatInfo.dataFormat === GL.RGBA, // Avoid mipmapping compressed formats
         width: 1,
         height: 1
       });

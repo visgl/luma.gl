@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
-import {estimateMemoryUsage} from './texture-formats';
+import {TEXTURE_FORMATS, TYPE_SIZES} from './texture-formats';
 import Buffer from './buffer';
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context} from '../utils';
@@ -73,9 +73,13 @@ export default class Texture3D extends Texture {
     if (data && data.byteLength) {
       this._trackAllocatedMemory(data.byteLength);
     } else {
-      this._trackAllocatedMemory(
-        estimateMemoryUsage(this.width, this.height, this.depth, this.dataFormat, this.type)
-      );
+      let bytesPerTexel = TEXTURE_FORMATS[this.format].bytesPerTexel;
+
+      if (!bytesPerTexel) {
+        bytesPerTexel = TEXTURE_FORMATS[this.format].channels * TYPE_SIZES[this.type];
+      }
+
+      this._trackAllocatedMemory(this.width * this.height * bytesPerTexel);
     }
 
     this.loaded = true;
