@@ -1,17 +1,9 @@
 export default `\
 
-uniform AmbientLight lighting_uAmbientLight;
-uniform PointLight lighting_uPointLight[MAX_LIGHTS];
-uniform DirectionalLight lighting_uDirectionalLight[MAX_LIGHTS];
-uniform int lighting_uPointLightCount;
-uniform int lighting_uDirectionalLightCount;
-
 uniform float lighting_uAmbient;
 uniform float lighting_uDiffuse;
 uniform float lighting_uShininess;
 uniform vec3  lighting_uSpecularColor;
-
-uniform bool lighting_uEnabled;
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_direction, vec3 normal_worldspace, vec3 color) {
     vec3 halfway_direction = normalize(light_direction + view_direction);
