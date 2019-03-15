@@ -91,16 +91,12 @@ export default class Buffer extends Resource {
     // Deprecated: Merge main props and accessor
     this.setAccessor(Object.assign({}, props, props.accessor));
 
-    this._trackDeallocatedMemory();
-
     // Set data: (re)initializes the buffer
     if (props.data) {
       this._setData(props.data);
     } else {
       this._setByteLength(props.byteLength || 0);
     }
-
-    this._trackAllocatedMemory(this.byteLength);
 
     return this;
   }
@@ -301,6 +297,8 @@ export default class Buffer extends Resource {
   _setData(data, usage = this.usage) {
     assert(ArrayBuffer.isView(data));
 
+    this._trackDeallocatedMemory();
+
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
     this.gl.bufferData(target, data, usage);
@@ -308,8 +306,9 @@ export default class Buffer extends Resource {
 
     this.usage = usage;
     this.debugData = data.slice(0, DEBUG_DATA_LENGTH);
-    this.byteLength = data.byteLength;
     this.bytesUsed = data.byteLength;
+
+    this._trackAllocatedMemory(data.byteLength);
 
     // infer GL type from supplied typed array
     const type = getGLTypeFromTypedArray(data);
@@ -321,6 +320,8 @@ export default class Buffer extends Resource {
   // Allocate a GPU buffer of specified size.
   _setByteLength(byteLength, usage = this.usage) {
     assert(byteLength >= 0);
+
+    this._trackDeallocatedMemory();
 
     // Workaround needed for Safari (#291):
     // gl.bufferData with size equal to 0 crashes. Instead create zero sized array.
@@ -336,8 +337,10 @@ export default class Buffer extends Resource {
 
     this.usage = usage;
     this.debugData = null;
-    this.byteLength = byteLength;
     this.bytesUsed = byteLength;
+
+    this._trackAllocatedMemory(byteLength);
+
     return this;
   }
 
