@@ -1,6 +1,6 @@
-# Group
+# GroupNode
 
-A `Group` is a subclass of `ScenegraphNode` that holds a list of `ScenegraphNode` children. Since . A `Group` can be a child of another `Group` and thus be used to create hierarchical scene graphs.
+A `GroupNode` is a subclass of `ScenegraphNode` that holds a list of `ScenegraphNode` children. Since . A `GroupNode` can be a child of another `GroupNode` and thus be used to create hierarchical scene graphs.
 
 
 ## Usage
@@ -33,7 +33,7 @@ group.remove(moon);
 
 ### constructor(props : Object)
 
-Create an instance of `Group`.
+Create an instance of `GroupNode`.
 
 
 ### setProps(props : Object)
@@ -43,7 +43,7 @@ Updates properties.
 
 ### add(node : ScenegraphNode [, ...])
 
-Add one or more `ScenegraphNode` objects to the `Group`.
+Add one or more `ScenegraphNode` objects to the `GroupNode`.
 
 `group.add(model);`
 
@@ -52,7 +52,7 @@ A variable argument list of [ScenegraphNode]() instances.
 
 ### remove(node: Node)
 
-Removes an [ScenegraphNode](object-3d.html) object from the Group.
+Removes an [ScenegraphNode](object-3d.html) object from the GroupNode.
 
     group.remove(model);
 

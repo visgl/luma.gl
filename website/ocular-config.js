@@ -1,5 +1,9 @@
+const resolve = require('path').resolve;
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+  root: resolve(__dirname, '..')
+}).aliases;
+
 const DOCS = require('../docs/table-of-contents.json');
-const ALIASES = require('../aliases');
 
 module.exports = {
   logLevel: 1,
@@ -41,13 +45,16 @@ module.exports = {
       image: 'images/example-instancing.jpg'
     },
     {title: 'Cubemap', path: 'examples/core/cubemap/', image: 'images/example-cubemap.jpg'},
+    {title: 'DOF', path: 'examples/core/dof/', image: 'images/example-dof.jpg'},
+    {title: 'Fragment', path: 'examples/core/fragment/', image: 'images/example-fragment.jpg'},
     {
       title: 'Mandelbrot',
       path: 'examples/core/mandelbrot/',
       image: 'images/example-mandelbrot.jpg'
     },
-    {title: 'Fragment', path: 'examples/core/fragment/', image: 'images/example-fragment.jpg'},
-    {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
+    {title: 'Quasicrystals', path: 'examples/core/quasicrystals/', image: 'images/example-fragment.jpg'},
+    {title: 'Persistence', path: 'examples/core/persistence/', image: 'images/example-persistence.jpg'},
+    // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
     {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
     {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
     {

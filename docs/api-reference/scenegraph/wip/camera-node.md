@@ -1,4 +1,4 @@
-# Camera
+# CameraNode
 
 Holds a projection matrix that is positioned in a scenegraph so that it can follow parent transformations.
 
