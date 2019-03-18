@@ -1,6 +1,7 @@
 import isBrowser from './utils/is-browser';
 import {global} from './utils/globals';
 import log from './utils/log';
+import {Stats} from 'probe.gl';
 
 // TODO - when webgl2 gets ubiquitous, remove default support for webgl1 by dropping next line
 // Can be installed by applications
@@ -14,6 +15,20 @@ const STARTUP_MESSAGE = 'set luma.log.priority=1 (or higher) to trace rendering'
 // Assign luma.log.priority in console to control logging: \
 // 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
 // luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
+
+class StatsManager {
+  constructor() {
+    this.stats = new Map();
+  }
+
+  get(name) {
+    if (!this.stats.has(name)) {
+      this.stats.set(name, new Stats({id: name}));
+    }
+
+    return this.stats.get(name);
+  }
+}
 
 if (global.luma && global.luma.VERSION !== VERSION) {
   throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);
@@ -31,7 +46,7 @@ if (!global.luma) {
 
     // A global stats object that various components can add information to
     // E.g. see webgl/resource.js
-    stats: {},
+    stats: new StatsManager(),
 
     // Keep some luma globals in a sub-object
     // This allows us to dynamically detect if certain modules have been

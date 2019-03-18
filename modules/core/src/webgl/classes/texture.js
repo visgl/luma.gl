@@ -13,7 +13,6 @@ import {
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../utils';
 import {log, uid, isPowerOfTwo, assert} from '../../utils';
-import statsManager from '../../core/stats-manager';
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
@@ -66,7 +65,6 @@ export default class Texture extends Resource {
     this.border = undefined;
     this.textureUnit = undefined;
     this.mipmaps = undefined;
-    this.textureMemoryStats = statsManager.get('Memory Usage').get('Texture Memory');
   }
 
   toString() {
@@ -236,7 +234,7 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
-    this._trackDeallocatedMemory();
+    this._trackDeallocatedMemory('Texture');
 
     const {
       target = this.target,
@@ -322,13 +320,13 @@ export default class Texture extends Resource {
     });
 
     if (data && data.byteLength) {
-      this._trackAllocatedMemory(data.byteLength);
+      this._trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
       // NOTE(Tarek): Default to RGBA bytes
       const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
       const channelSize = TYPE_SIZES[this.type] || 1;
 
-      this._trackAllocatedMemory(this.width * this.height * channels * channelSize);
+      this._trackAllocatedMemory(this.width * this.height * channels * channelSize, 'Texture');
     }
 
     this.loaded = true;
@@ -646,7 +644,7 @@ export default class Texture extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTexture(this.handle);
-    this._trackDeallocatedMemory();
+    this._trackDeallocatedMemory('Texture');
   }
 
   _getParameter(pname) {
@@ -733,15 +731,5 @@ export default class Texture extends Resource {
       }
     }
     return param;
-  }
-
-  _trackAllocatedMemory(bytes) {
-    this.textureMemoryStats.addCount(bytes);
-    super._trackAllocatedMemory(bytes);
-  }
-
-  _trackDeallocatedMemory() {
-    this.textureMemoryStats.subtractCount(this.byteLength);
-    super._trackDeallocatedMemory();
   }
 }

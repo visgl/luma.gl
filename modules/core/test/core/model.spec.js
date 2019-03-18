@@ -4,7 +4,7 @@ import {Buffer, _Attribute as Attribute, Model, Cube} from 'luma.gl';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
-const {stats} = luma;
+const stats = luma.stats.get('Resource Counts');
 
 test('Model#construct/destruct', t => {
   const {gl} = fixture;
@@ -30,12 +30,12 @@ test('Model#setAttribute', t => {
   const buffer1 = new Buffer(gl, {size: 2, data: new Float32Array(4).fill(1)});
   const buffer2 = new Buffer(gl, {data: new Float32Array(8)});
 
-  const {active: initialActiveBuffers = 0} = stats.resourceMap.Buffer || {};
+  const initialActiveBuffers = stats.get('Buffers Active').count;
 
   const model = new Cube(gl, {});
 
   t.is(
-    stats.resourceMap.Buffer.active - initialActiveBuffers,
+    stats.get('Buffers Active').count - initialActiveBuffers,
     4,
     'Created new buffers for attributes'
   );
@@ -46,7 +46,7 @@ test('Model#setAttribute', t => {
     instanceWeight: {size: 1, constant: true, value: new Float32Array([10])}
   });
 
-  t.is(stats.resourceMap.Buffer.active - initialActiveBuffers, 4, 'Did not create new buffers');
+  t.is(stats.get('Buffers Active').count - initialActiveBuffers, 4, 'Did not create new buffers');
 
   model.delete();
 

@@ -10,6 +10,9 @@
     "tree-shaking",
     "luma-gl-custom-rules"
   ],
+  "globals": {
+    "luma": true
+  },
   "rules": {
     "guard-for-in": 0,
     "no-inline-comments": 0,

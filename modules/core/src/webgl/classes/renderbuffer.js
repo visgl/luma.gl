@@ -4,7 +4,6 @@ import Resource from './resource';
 import RENDERBUFFER_FORMATS from './renderbuffer-formats';
 import {isWebGL2} from '../utils';
 import {assert} from '../../utils';
-import statsManager from '../../core/stats-manager';
 
 function isFormatSupported(gl, format, formats) {
   const info = formats[format];
@@ -30,8 +29,6 @@ export default class Renderbuffer extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
-    this.renderbufferMemoryStats = statsManager.get('Memory Usage').get('Renderbuffer Memory');
-    this.byteLength = 0;
 
     this.initialize(opts);
 
@@ -102,15 +99,5 @@ export default class Renderbuffer extends Resource {
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
     // this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
     return value;
-  }
-
-  _trackAllocatedMemory(bytes) {
-    this.renderbufferMemoryStats.addCount(bytes);
-    super._trackAllocatedMemory(bytes);
-  }
-
-  _trackDeallocatedMemory() {
-    this.renderbufferMemoryStats.subtractCount(this.byteLength);
-    super._trackDeallocatedMemory();
   }
 }

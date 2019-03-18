@@ -3,7 +3,6 @@ import Resource from './resource';
 import Accessor from './accessor';
 import {assertWebGL2Context, getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../utils';
 import {log, assert, checkProps} from '../../utils';
-import statsManager from '../../core/stats-manager';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -48,9 +47,6 @@ export default class Buffer extends Resource {
     // otherwise buffer type will lock to generic (non-element) buffer
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
-
-    this.bufferMemoryStats = statsManager.get('Memory Usage').get('Buffer Memory');
-    this.byteLength = 0;
 
     this.initialize(props);
 
@@ -380,16 +376,6 @@ export default class Buffer extends Resource {
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);
     return value;
-  }
-
-  _trackAllocatedMemory(bytes) {
-    this.bufferMemoryStats.addCount(bytes);
-    super._trackAllocatedMemory(bytes);
-  }
-
-  _trackDeallocatedMemory() {
-    this.bufferMemoryStats.subtractCount(this.byteLength);
-    super._trackDeallocatedMemory();
   }
 
   // DEPRECATIONS - v7.0

@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
-import {TEXTURE_FORMATS, TYPE_SIZES} from './texture-formats';
+import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
 import Buffer from './buffer';
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context} from '../utils';
@@ -33,7 +33,7 @@ export default class Texture3D extends Texture {
     data,
     parameters = {}
   }) {
-    this._trackDeallocatedMemory();
+    this._trackDeallocatedMemory('Texture');
 
     this.gl.bindTexture(this.target, this.handle);
 
@@ -71,15 +71,16 @@ export default class Texture3D extends Texture {
     });
 
     if (data && data.byteLength) {
-      this._trackAllocatedMemory(data.byteLength);
+      this._trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      let bytesPerTexel = TEXTURE_FORMATS[this.format].bytesPerTexel;
+      // NOTE(Tarek): Default to RGBA bytes
+      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
+      const channelSize = TYPE_SIZES[this.type] || 1;
 
-      if (!bytesPerTexel) {
-        bytesPerTexel = TEXTURE_FORMATS[this.format].channels * TYPE_SIZES[this.type];
-      }
-
-      this._trackAllocatedMemory(this.width * this.height * bytesPerTexel);
+      this._trackAllocatedMemory(
+        this.width * this.height * this.depth * channels * channelSize,
+        'Texture'
+      );
     }
 
     this.loaded = true;
