@@ -60,10 +60,7 @@ export default class Renderbuffer extends Resource {
     this.samples = samples;
 
     this._trackAllocatedMemory(
-      this.width *
-        this.height *
-        (this.samples || 1) *
-        RENDERBUFFER_FORMATS[this.format].bytesPerPixel
+      this.width * this.height * (this.samples || 1) * RENDERBUFFER_FORMATS[this.format].bpp
     );
 
     return this;

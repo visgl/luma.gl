@@ -11,153 +11,50 @@ import {isWebGL2} from '../utils';
 // Legal combinations for internalFormat, format and type
 export const TEXTURE_FORMATS = {
   // Unsized texture format - more performance
-  [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], channels: 3},
+  [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
   // TODO: format: GL.RGBA type: GL.FLOAT is supported in WebGL1 when 'OES_texure_float' is suported
   // we need to update this table structure to specify extensions (gl1: 'OES_texure_float', gl2: false) for each type.
   [GL.RGBA]: {
     dataFormat: GL.RGBA,
-    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1],
-    channels: 4
+    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]
   },
-  [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE], channels: 1},
-  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE], channels: 1},
-  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE], channels: 2},
+  [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
 
   // 32 bit floats
-  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true, bytesPerTexel: 4},
-  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true, bytesPerTexel: 8},
-  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true, bytesPerTexel: 12},
-  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true, bytesPerTexel: 16},
+  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
+  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
+  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
+  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
 
-  // Depth/Stencil
-  [GL.DEPTH_COMPONENT]: {
-    dataFormat: GL.DEPTH_COMPONENT,
-    types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT],
-    gl2: false,
-    gl1: 'WEBGL_depth_texture',
-    channels: 1
-  },
-  [GL.DEPTH_COMPONENT16]: {
-    dataFormat: GL.DEPTH_COMPONENT,
-    types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT],
-    gl2: true,
-    bytesPerTexel: 2
-  },
-  [GL.DEPTH_COMPONENT24]: {
-    dataFormat: GL.DEPTH_COMPONENT,
-    types: [GL.UNSIGNED_INT],
-    gl2: true,
-    bytesPerTexel: 3
-  },
-  [GL.DEPTH_COMPONENT32F]: {
-    dataFormat: GL.DEPTH_COMPONENT,
-    types: [GL.FLOAT],
-    gl2: true,
-    bytesPerTexel: 4
-  },
-  [GL.DEPTH_STENCIL]: {
-    dataFormat: GL.DEPTH_STENCIL,
-    types: [GL.UNSIGNED_INT_24_8],
-    gl2: false,
-    gl1: 'WEBGL_depth_texture',
-    bytesPerTexel: 4
-  },
-  [GL.DEPTH24_STENCIL8]: {
-    dataFormat: GL.DEPTH_STENCIL,
-    types: [GL.UNSIGNED_INT_24_8],
-    gl2: true,
-    bytesPerTexel: 4
-  },
-  [GL.DEPTH32F_STENCIL8]: {
-    dataFormat: GL.DEPTH_STENCIL,
-    types: [GL.FLOAT_32_UNSIGNED_INT_24_8_REV],
-    gl2: true,
-    bytesPerTexel: 5
-  },
+  // [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8], gl1: DEPTH},
+  // [GL.DEPTH_STENCIL]: {gl1: DEPTH},
 
-  // Sized/compressed
+  // Sized texture format - more performance
   // R
-  [GL.R8]: {
-    dataFormat: GL.RED,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 1
-  },
-  [GL.R8UI]: {
-    dataFormat: GL.RED_INTEGER,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 1
-  },
+  // [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
+  // [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  // [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RG
-  [GL.RG8]: {
-    dataFormat: GL.RG,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 2
-  },
-  [GL.RG8UI]: {
-    dataFormat: GL.RG_INTEGER,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 2
-  },
+  // [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE], gl2: true},
+  // [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  // [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGB
-  [GL.RGB8]: {
-    dataFormat: GL.RGB,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 3
-  },
-  [GL.SRGB8]: {
-    dataFormat: GL.RGB,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 3
-  },
-  [GL.RGB565]: {
-    dataFormat: GL.RGB,
-    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5],
-    gl2: true,
-    bytesPerTexel: 2
-  },
-  [GL.RGB8UI]: {
-    dataFormat: GL.RGB_INTEGER,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 3
-  },
+  // [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  // [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  // [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
+  // [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  // [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_half_float'},
+  // [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_float'},
+  // [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGBA
-  [GL.RGBA8]: {
-    dataFormat: GL.RGBA,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 4
-  },
-  [GL.SRGB8_ALPHA8]: {
-    dataFormat: GL.RGBA,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 4
-  },
-  [GL.RGB5_A1]: {
-    dataFormat: GL.RGBA,
-    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1],
-    gl2: true,
-    bytesPerTexel: 2
-  },
-  [GL.RGBA4]: {
-    dataFormat: GL.RGBA,
-    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4],
-    gl2: true,
-    bytesPerTexel: 2
-  },
-  [GL.RGBA8UI]: {
-    dataFormat: GL.RGBA_INTEGER,
-    types: [GL.UNSIGNED_BYTE],
-    gl2: true,
-    bytesPerTexel: 4
-  }
+  // [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  // [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  // [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
+  // [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
+  // [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  // [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
 
   // Compressed formats
 
@@ -211,6 +108,22 @@ export const TEXTURE_FORMATS = {
   // [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true, gl1: ETC1}
 };
 
+export const DATA_FORMAT_CHANNELS = {
+  [GL.RED]: 1,
+  [GL.RED_INTEGER]: 1,
+  [GL.RG]: 2,
+  [GL.RG_INTEGER]: 2,
+  [GL.RGB]: 3,
+  [GL.RGB_INTEGER]: 3,
+  [GL.RGBA]: 4,
+  [GL.RGBA_INTEGER]: 4,
+  [GL.DEPTH_COMPONENT]: 1,
+  [GL.DEPTH_STENCIL]: 1,
+  [GL.ALPHA]: 1,
+  [GL.LUMINANCE]: 1,
+  [GL.LUMINANCE_ALPHA]: 2
+};
+
 export const TYPE_SIZES = {
   [GL.FLOAT]: 4,
   [GL.UNSIGNED_INT]: 4,
@@ -227,15 +140,11 @@ export function isFormatSupported(gl, format) {
   if (!info) {
     return false;
   }
-  if (!info.types.length === 0) {
-    // Renderbuffer-only format
-    return false;
-  }
   if (info.gl1 === undefined && info.gl2 === undefined) {
     // No info - always supported
     return true;
   }
-  const value = isWebGL2(gl) ? info.gl2 : info.gl1;
+  const value = isWebGL2(gl) ? info.gl2 || info.gl1 : info.gl1;
   return typeof value === 'string' ? gl.getExtension(value) : value;
 }
 

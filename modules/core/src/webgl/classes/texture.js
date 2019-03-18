@@ -4,6 +4,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 import {
   TEXTURE_FORMATS,
+  DATA_FORMAT_CHANNELS,
   TYPE_SIZES,
   isFormatSupported,
   isLinearFilteringSupported
@@ -323,13 +324,11 @@ export default class Texture extends Resource {
     if (data && data.byteLength) {
       this._trackAllocatedMemory(data.byteLength);
     } else {
-      let bytesPerTexel = TEXTURE_FORMATS[this.format].bytesPerTexel;
+      // NOTE(Tarek): Default to RGBA bytes
+      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
+      const channelSize = TYPE_SIZES[this.type] || 1;
 
-      if (!bytesPerTexel) {
-        bytesPerTexel = TEXTURE_FORMATS[this.format].channels * TYPE_SIZES[this.type];
-      }
-
-      this._trackAllocatedMemory(this.width * this.height * bytesPerTexel);
+      this._trackAllocatedMemory(this.width * this.height * channels * channelSize);
     }
 
     this.loaded = true;
