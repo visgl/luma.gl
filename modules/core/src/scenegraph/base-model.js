@@ -174,6 +174,8 @@ export default class BaseModel extends ScenegraphNode {
       this._checkForDeprecatedUniforms(uniforms);
       this.setNeedsRedraw();
     });
+
+    return this;
   }
 
   updateModuleSettings(opts) {

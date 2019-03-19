@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, Texture2D, setParameters, loadImage} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, loadImage, Cube} from '@luma.gl/core';
+import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -130,13 +130,15 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    // cube.render({
-    //   uSampler: textures[filters[filter]],
-    //   uPMatrix: new Matrix4().perspective({aspect}),
-    //   uMVMatrix: new Matrix4()
-    //     .lookAt({eye: [0, 0, 0]})
-    //     .translate([0, 0, -5])
-    // });
+    // cube
+    //   .setUniforms({
+    //     uSampler: textures[filters[filter]],
+    //     uPMatrix: new Matrix4().perspective({aspect}),
+    //     uMVMatrix: new Matrix4()
+    //       .lookAt({eye: [0, 0, 0]})
+    //       .translate([0, 0, -5])
+    //   })
+    //   .draw();
 
     // draw Cube
 
@@ -151,11 +153,13 @@ const animationLoop = new AnimationLoop({
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
       .multiplyRight(cube.matrix);
 
-    cube.render({
-      uMVMatrix,
-      uPMatrix: new Matrix4().perspective({aspect}),
-      uSampler: textures[filters[filter]]
-    });
+    cube
+      .setUniforms({
+        uMVMatrix,
+        uPMatrix: new Matrix4().perspective({aspect}),
+        uSampler: textures[filters[filter]]
+      })
+      .draw();
   }
 });
 

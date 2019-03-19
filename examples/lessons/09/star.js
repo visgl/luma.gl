@@ -1,4 +1,4 @@
-import {Program, Geometry, Model} from 'luma.gl';
+import {Program, Geometry, Model} from '@luma.gl/core';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -58,7 +58,7 @@ export class Star extends Model {
       uniforms: {
         uSampler: opts.texture
       },
-      onBeforeRender() {
+      onBeforeRender: () => {
         // TODO: Fix this so user can control this with a check-box
         const isTwinkle = false; // twinkle.checked;
         const r = isTwinkle ? Math.min(1, this.r + this.twinklerR) : this.r;

@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Cube} from '@luma.gl/core';
+import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 export const INFO_HTML = `
@@ -233,14 +233,16 @@ const animationLoop = new AnimationLoop({
       ambientColor
     } = getHTMLControls();
 
-    cube.render({
-      uMVMatrix,
-      uPMatrix: new Matrix4().perspective({aspect}),
-      uAmbientColor: ambientColor,
-      uLightingDirection: lightDirection,
-      uDirectionalColor: [0.8, 0.8, 0.8],
-      uUseLighting: true
-    });
+    cube
+      .setUniforms({
+        uMVMatrix,
+        uPMatrix: new Matrix4().perspective({aspect}),
+        uAmbientColor: ambientColor,
+        uLightingDirection: lightDirection,
+        uDirectionalColor: [0.8, 0.8, 0.8],
+        uUseLighting: true
+      })
+      .draw();
   }
 });
 
