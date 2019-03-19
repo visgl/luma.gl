@@ -6,7 +6,7 @@ import {
   picking,
   dirlight,
   lumaStats
-} from 'luma.gl';
+} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 

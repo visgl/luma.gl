@@ -3,7 +3,7 @@
  */
 
 import GL from '@luma.gl/constants';
-import {_Pass as Pass, withParameters, setParameters} from 'luma.gl';
+import {_Pass as Pass, withParameters, setParameters} from '@luma.gl/core';
 
 export default class OutlinePass extends Pass {
   constructor(gl, props = {}) {

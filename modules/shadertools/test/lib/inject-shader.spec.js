@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 import {assembleShaders} from '@luma.gl/shadertools';
 import injectShader, {combineInjects} from '@luma.gl/shadertools/lib/inject-shader';
 import test from 'tape-catch';

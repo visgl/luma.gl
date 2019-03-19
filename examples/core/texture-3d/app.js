@@ -1,4 +1,4 @@
-import {AnimationLoop, setParameters, Model, Texture3D, Buffer, lumaStats} from 'luma.gl';
+import {AnimationLoop, setParameters, Model, Texture3D, Buffer, lumaStats} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {default as noise3d} from 'noise3d';
@@ -9,10 +9,9 @@ import {default as noise3d} from 'noise3d';
 
 const INFO_HTML = `
 <p>
-Cube drawn with <b>instanced rendering</b>.
+Volumetric 3D noise visualized using a <b>3D texture</b>.
 <p>
-A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-single GPU draw call using instanced vertex attributes.
+Uses the luma.gl <code>Texture3D</code> class.
 `;
 
 const vs = `\

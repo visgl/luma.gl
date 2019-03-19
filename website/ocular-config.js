@@ -3,7 +3,18 @@ const ALIASES = require('ocular-dev-tools/config/ocular.config')({
   root: resolve(__dirname, '..')
 }).aliases;
 
+const DEPENDENCIES = require('./package.json').dependencies;
+
 const DOCS = require('../docs/table-of-contents.json');
+
+// When duplicating example dependencies in website, autogenerate
+// aliases to ensure the website version is picked up
+// NOTE: luma.gl module dependencies are automatically injected
+// TODO - should this be automatically done by ocular-gatsby?
+const dependencyAliases = {};
+for (const dependency in DEPENDENCIES) {
+  dependencyAliases[dependency] = `${__dirname}/node_modules/${dependency}`
+}
 
 module.exports = {
   logLevel: 1,
@@ -56,6 +67,7 @@ module.exports = {
     {title: 'Persistence', path: 'examples/core/persistence/', image: 'images/example-persistence.jpg'},
     // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
     {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
+    {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
     {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
     {
       title: 'TransformFeedback',
@@ -95,10 +107,7 @@ module.exports = {
   // Ocular adds this to gatsby's webpack config
   webpack: {
     resolve: {
-      alias: Object.assign({}, ALIASES, {
-        // Avoid picking up local node_modules in the examples
-        'math.gl': `${__dirname}/../node_modules/math.gl`
-      })
+      alias: Object.assign({}, ALIASES, dependencyAliases)
     }
   },
 

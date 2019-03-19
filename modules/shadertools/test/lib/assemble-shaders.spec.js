@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 

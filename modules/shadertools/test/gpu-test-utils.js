@@ -1,7 +1,7 @@
 /* eslint-disable max-len, prefer-template, camelcase */
 /* global console */
 /* eslint-disable no-console */
-import {createGLContext, setParameters} from 'luma.gl';
+import {createGLContext, setParameters} from '@luma.gl/core';
 
 // Utilities functions that to be moved to a common place for future tests
 

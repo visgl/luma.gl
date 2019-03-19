@@ -145,7 +145,7 @@ Sets a constant (i.e. generic) value for a vertex attribute. All Vertex Shader i
 2. **location** (*GLuint*) - index of the attribute
 
 {% highlight js %}
-  import {VertexAttributes} from 'luma.gl';
+  import {VertexAttributes} from '@luma.gl/core';
   VertexAttributes.setGeneric(gl, 0, ...);
 {% endhighlight %}
 
@@ -166,7 +166,7 @@ See description of instancing in the overview above.
 2. **location** (*GLuint*) - index of the attribute
 
 {% highlight js %}
-  import {VertexAttributes} from 'luma.gl';
+  import {VertexAttributes} from '@luma.gl/core';
   VertexAttributes.setGeneric(gl, 0, ...);
 {% endhighlight %}
 

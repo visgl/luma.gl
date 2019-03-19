@@ -1,4 +1,4 @@
-import {Geometry} from 'luma.gl';
+import {Geometry} from '@luma.gl/core';
 
 const RESOLUTION = 128;
 

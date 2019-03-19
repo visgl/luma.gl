@@ -1,7 +1,7 @@
 /* global window, document */
 /* eslint-disable no-var, max-statements */
 
-import {createGLContext, Program, Buffer, Framebuffer, Mat4, Vec3, Fx, addons} from 'luma.gl';
+import {createGLContext, Program, Buffer, Framebuffer, Mat4, Vec3, Fx, addons} from '@luma.gl/core';
 
 const {getHTMLTemplate} = addons;
 

@@ -9,7 +9,7 @@ import {
   Mat4,
   Vec3,
   Texture2D
-} from 'luma.gl';
+} from '@luma.gl/core';
 
 const SCENE_VERTEX = `\
 precision highp float;

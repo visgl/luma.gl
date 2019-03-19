@@ -13,7 +13,7 @@ Sampler inherits from [Resource](/docs/api-reference/webgl/resource.md) and supp
 
 Create a new `Sampler`
 ```js
-import {Sampler} from 'luma.gl';
+import {Sampler} from '@luma.gl/core';
 const sampler = new Sampler(gl, {
   parameters: {
   	[GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE

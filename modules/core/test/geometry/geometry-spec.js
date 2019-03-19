@@ -6,7 +6,7 @@ import {
   IcoSphereGeometry,
   PlaneGeometry,
   SphereGeometry
-} from 'luma.gl';
+} from '@luma.gl/core';
 import test from 'tape-catch';
 
 const GEOMETRY_TESTS = [

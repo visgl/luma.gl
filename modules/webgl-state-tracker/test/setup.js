@@ -1,6 +1,6 @@
 // TEST SETUP
 
-import {setContextDefaults, createGLContext} from 'luma.gl';
+import {setContextDefaults, createGLContext} from '@luma.gl/core';
 import {makeDebugContext} from '@luma.gl/debug';
 
 // Avoid generating a lot of big context divs

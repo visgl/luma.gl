@@ -6,7 +6,7 @@ import {
   _ClearPass as ClearPass,
   _CopyPass as CopyPass,
   _TexturePass as TexturePass
-} from 'luma.gl';
+} from '@luma.gl/core';
 
 import ShaderModulePass from './shader-module-pass';
 

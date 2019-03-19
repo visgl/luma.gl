@@ -1,7 +1,7 @@
 // A convolution render pass
 // Based on https://webglfundamentals.org/webgl/lessons/webgl-image-processing-continued.html
 
-import {_Pass as Pass, ClipSpace} from 'luma.gl';
+import {_Pass as Pass, ClipSpace} from '@luma.gl/core';
 import convolution from '../modules/convolution';
 
 export default class ConvolutionPass extends Pass {

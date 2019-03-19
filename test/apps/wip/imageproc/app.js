@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpace, loadTextures, resizeGLContext} from 'luma.gl';
+import {AnimationLoop, ClipSpace, loadTextures, resizeGLContext} from '@luma.gl/core';
 
 const INFO_HTML = `
 <p>

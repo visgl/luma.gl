@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, setParameters, Texture2D, Sphere} from 'luma.gl';
+import {AnimationLoop, setParameters, Texture2D, Sphere} from '@luma.gl/core';
 import {addEvents} from '@luma.gl/addons';
 import {Vector3, Matrix4} from 'math.gl';
 

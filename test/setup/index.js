@@ -4,8 +4,7 @@ import tapePromise from 'tape-promise';
 export default tapePromise(test_);
 export {default as deepCopy} from './deep-copy';
 
-import {setContextDefaults} from 'luma.gl';
-import {createGLContext} from 'luma.gl';
+import {setContextDefaults, createGLContext} from '@luma.gl/core';
 import {makeDebugContext} from '@luma.gl/debug';
 
 // Avoid generating a lot of big context divs

@@ -8,7 +8,7 @@
  */
 
 /* eslint-disable camelcase */
-import {_Pass as Pass, Framebuffer, ClipSpace, withParameters} from 'luma.gl';
+import {_Pass as Pass, Framebuffer, ClipSpace, withParameters} from '@luma.gl/core';
 import ssao from '../modules/ssao';
 
 export default class SSAOPass extends Pass {

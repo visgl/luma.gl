@@ -24,7 +24,7 @@ For more information on the WebGL `VertexArrayObject`, see the [OpenGL Wiki](htt
 Import the `VertexArray` class so that your app can use it:
 
 ```js
-import {VertexArray} from 'luma.gl';
+import {VertexArray} from '@luma.gl/core';
 ```
 
 Create a new VertexArray
@@ -74,7 +74,7 @@ const vertexArray = new VertexArray(gl, {
 Setting a constant vertex attribute
 
 ```js
-import {VertexArray} from 'luma.gl';
+import {VertexArray} from '@luma.gl/core';
 const vao = new VertexArray(gl);
 vao.setConstant(0, [0, 0, 0]);
 ```

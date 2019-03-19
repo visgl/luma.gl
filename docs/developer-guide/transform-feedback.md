@@ -18,7 +18,7 @@ Alternatively, the more powerful `Transform` class is preferable if you don't wa
 ## Usage
 
 ```js
-import {Transform} from 'luma.gl';
+import {Transform} from '@luma.gl/core';
 ```
 
 ### Use case : Specify source and destination buffers.

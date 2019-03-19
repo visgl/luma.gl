@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import {AnimationLoop, Buffer, Model, isWebGL2} from 'luma.gl';
+import {AnimationLoop, Buffer, Model, isWebGL2} from '@luma.gl/core';
 import {Log} from 'probe.gl';
 
 const INFO_HTML = `

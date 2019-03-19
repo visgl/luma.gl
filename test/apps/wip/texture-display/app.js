@@ -2,7 +2,7 @@
   Test app to verify a texture contents, takes a texture and maps each pixel to a grid cell.
 */
 
-import {AnimationLoop, Model, Texture2D, Buffer, setParameters} from 'luma.gl';
+import {AnimationLoop, Model, Texture2D, Buffer, setParameters} from '@luma.gl/core';
 import {_getHistoPyramid as getHistoPyramid} from '@luma.gl/gpgpu';
 import GL from '@luma.gl/constants';
 

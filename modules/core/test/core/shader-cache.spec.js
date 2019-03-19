@@ -1,4 +1,4 @@
-import {VertexShader, FragmentShader, Program, _ShaderCache as ShaderCache} from 'luma.gl';
+import {VertexShader, FragmentShader, Program, _ShaderCache as ShaderCache} from '@luma.gl/core';
 
 import test from 'tape-catch';
 
