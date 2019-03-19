@@ -30,6 +30,8 @@ class StatsManager {
   }
 }
 
+const lumaStats = new StatsManager();
+
 if (global.luma && global.luma.VERSION !== VERSION) {
   throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);
 }
@@ -46,7 +48,7 @@ if (!global.luma) {
 
     // A global stats object that various components can add information to
     // E.g. see webgl/resource.js
-    stats: new StatsManager(),
+    stats: lumaStats,
 
     // Keep some luma globals in a sub-object
     // This allows us to dynamically detect if certain modules have been
@@ -61,4 +63,5 @@ if (!global.luma) {
 }
 
 export {global};
+export {lumaStats};
 export default global.luma;

@@ -1,4 +1,12 @@
-import {AnimationLoop, setParameters, pickModels, Cube, picking, dirlight} from 'luma.gl';
+import {
+  AnimationLoop,
+  setParameters,
+  pickModels,
+  Cube,
+  picking,
+  dirlight,
+  lumaStats
+} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
@@ -154,7 +162,7 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const memWidget = new StatsWidget(luma.stats.get('Memory Usage'), {
+    const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
       css: {
         position: 'absolute',
         top: '100px',
