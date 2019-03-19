@@ -2,15 +2,15 @@ import GL from '@luma.gl/constants';
 import {
   AnimationLoop,
   Framebuffer,
-  Cube,
   setParameters,
   clear,
   Program,
   Texture2D,
   VertexArray,
   Buffer,
-  isWebGL2
-} from 'luma.gl';
+  isWebGL2,
+  Cube
+} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 /* eslint-disable spaced-comment */

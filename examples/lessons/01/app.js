@@ -1,4 +1,4 @@
-import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from 'luma.gl';
+import {AnimationLoop, Program, VertexArray, Buffer, setParameters} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `

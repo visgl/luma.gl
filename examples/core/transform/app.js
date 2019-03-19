@@ -1,9 +1,8 @@
-/* eslint-disable camelcase */
 /* global window */
-import {AnimationLoop, Buffer, Model, pickModels, picking, Transform, isWebGL2} from 'luma.gl';
+import {AnimationLoop, Buffer, Model, picking, Transform, isWebGL2} from '@luma.gl/core';
 import {Log} from 'probe.gl';
 
-const RED = new Uint8Array([255, 0, 0, 255]);
+// const RED = new Uint8Array([255, 0, 0, 255]);
 
 /* eslint-disable max-len */
 const INFO_HTML = `
@@ -127,13 +126,15 @@ void main()
 const NUM_INSTANCES = 1000;
 const log = new Log({id: 'transform'}).enable();
 
-let pickPosition = [0, 0];
 let isDemoSupported = true;
+
+// TODO PIKCING TEMPORARILY DISABLED
+// let pickPosition = [0, 0];
 function mousemove(e) {
-  pickPosition = [e.offsetX, e.offsetY];
+  // pickPosition = [e.offsetX, e.offsetY];
 }
 function mouseleave(e) {
-  pickPosition = null;
+  // pickPosition = null;
 }
 
 const animationLoop = new AnimationLoop({
@@ -280,6 +281,8 @@ const animationLoop = new AnimationLoop({
     offsetBuffer.updateAccessor({divisor: 0});
     rotationBuffer.updateAccessor({divisor: 0});
 
+    /*
+    TODO - picking is temporarily disabled
     const pickInfo = pickPosition && pickModels(gl, {
       models: [renderModel],
       position: pickPosition,
@@ -293,7 +296,7 @@ const animationLoop = new AnimationLoop({
       pickingSelectedColor,
       pickingHighlightColor: RED
     });
-
+    */
   },
 
   onFinalize({renderModel, transform}) {

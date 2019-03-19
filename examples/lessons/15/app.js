@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Sphere, Texture2D, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Sphere} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 
@@ -175,14 +175,14 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    return earth.render({
+    return earth.setUniforms({
       uMMatrix: new Matrix4()
         .translate([0, -20, -40])
         .rotateAxis(radians(23.4), [1, 0, -1])
         .rotateY(phi),
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    }).draw();
   }
 });
 

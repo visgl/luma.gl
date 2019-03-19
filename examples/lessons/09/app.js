@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Texture2D, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters} from '@luma.gl/core';
+import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 import {Star} from './star';
 
@@ -56,10 +56,10 @@ const animationLoop = new AnimationLoop({
         .lookAt({eye: [0, cameraY, cameraZ]})
         .multiplyRight(stars[i].matrix);
 
-      stars[i].render({
+      stars[i].setUniforms({
         uMVMatrix,
         uPMatrix: new Matrix4().perspective({aspect})
-      });
+      }).draw();
       stars[i].animate();
     }
   }

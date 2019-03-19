@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Sphere, Cube, Program} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Program, Sphere, Cube} from '@luma.gl/core';
 import {Vector3, Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -222,17 +222,17 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    moon.render({
+    moon.setUniforms({
       uMMatrix: appState.moonRotationMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    }).draw();
 
-    cube.render({
+    cube.setUniforms({
       uMMatrix: appState.cubeRotationMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    }).draw();
 
     animate(appState);
   }

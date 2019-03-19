@@ -3,7 +3,7 @@ import Cubemap from '../../../examples/core/cubemap/app';
 // import CustomPicking from '../../../examples/core/custom-picking/app';
 // import DeferredRendering from '../../../examples/core/deferred-rendering/app';
 import DOF from '../../../examples/core/dof/app';
-// import GLTF from '../../../examples/core/gltf/app';
+import GLTF from '../../../examples/core/gltf/app';
 import Fragment from '../../../examples/core/fragment/app';
 import Mandelbrot from '../../../examples/core/mandelbrot/app';
 // import Particles from '../../../examples/core/particles/app';
@@ -49,7 +49,7 @@ export default {
   Transform: {app: Transform, path: 'examples/core/transform/'},
   TransformFeedbackDemo: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},
 
-  // GLTF: {app: GLTF, path: 'examples/gltf'},
+  GLTF: {app: GLTF, path: 'examples/core/gltf'},
 
   Lesson01: {app: Lesson01, path: 'examples/lessons/01/'},
   Lesson02: {app: Lesson02, path: 'examples/lessons/02/'},

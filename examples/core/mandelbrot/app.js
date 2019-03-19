@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpace} from 'luma.gl';
+import {AnimationLoop, ClipSpace} from '@luma.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `

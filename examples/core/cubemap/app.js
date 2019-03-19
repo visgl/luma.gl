@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, TextureCube, Cube, setParameters} from 'luma.gl';
+import {AnimationLoop, TextureCube, setParameters, Cube} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

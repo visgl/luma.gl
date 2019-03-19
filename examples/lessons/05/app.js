@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Cube} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -62,13 +62,15 @@ const animationLoop = new AnimationLoop({
   onRender({gl, tick, aspect, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    return cube.render({
-      uPMatrix: new Matrix4().perspective({aspect}),
-      uMVMatrix: new Matrix4()
-        .lookAt({eye: [0, 0, 0]})
-        .translate([0, 0, -5])
-        .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
-    });
+    return cube
+      .setUniforms({
+        uPMatrix: new Matrix4().perspective({aspect}),
+        uMVMatrix: new Matrix4()
+          .lookAt({eye: [0, 0, 0]})
+          .translate([0, 0, -5])
+          .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
+      })
+      .draw();
   }
 });
 
