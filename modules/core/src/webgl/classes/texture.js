@@ -2,7 +2,13 @@ import GL from '@luma.gl/constants';
 
 import Resource from './resource';
 import Buffer from './buffer';
-import {TEXTURE_FORMATS, isFormatSupported, isLinearFilteringSupported} from './texture-formats';
+import {
+  TEXTURE_FORMATS,
+  DATA_FORMAT_CHANNELS,
+  TYPE_SIZES,
+  isFormatSupported,
+  isLinearFilteringSupported
+} from './texture-formats';
 
 import {withParameters} from '../context';
 import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../utils';
@@ -228,9 +234,7 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
-    if (this.depth > 0) {
-      return this.setImage3D(options);
-    }
+    this._trackDeallocatedMemory('Texture');
 
     const {
       target = this.target,
@@ -314,6 +318,16 @@ export default class Texture extends Resource {
           assert(false, 'Unknown image data type');
       }
     });
+
+    if (data && data.byteLength) {
+      this._trackAllocatedMemory(data.byteLength, 'Texture');
+    } else {
+      // NOTE(Tarek): Default to RGBA bytes
+      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
+      const channelSize = TYPE_SIZES[this.type] || 1;
+
+      this._trackAllocatedMemory(this.width * this.height * channels * channelSize, 'Texture');
+    }
 
     this.loaded = true;
 
@@ -501,60 +515,6 @@ export default class Texture extends Resource {
     return {data, dataType: 'browser-object'};
   }
 
-  // Image 3D copies from Typed Array or WebGLBuffer
-  setImage3D({
-    level = 0,
-    dataFormat = GL.RGBA,
-    width,
-    height,
-    depth = 1,
-    border = 0,
-    format,
-    type = GL.UNSIGNED_BYTE,
-    offset = 0,
-    data,
-    parameters = {}
-  }) {
-    this.gl.bindTexture(this.target, this.handle);
-
-    withParameters(this.gl, parameters, () => {
-      if (ArrayBuffer.isView(data)) {
-        this.gl.texImage3D(
-          this.target,
-          level,
-          dataFormat,
-          width,
-          height,
-          depth,
-          border,
-          format,
-          type,
-          data
-        );
-      }
-
-      if (data instanceof Buffer) {
-        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
-        this.gl.texImage3D(
-          this.target,
-          level,
-          dataFormat,
-          width,
-          height,
-          depth,
-          border,
-          format,
-          type,
-          offset
-        );
-      }
-    });
-
-    this.loaded = true;
-
-    return this;
-  }
-
   /* Copied from texture-2d.js
   // WebGL2
   setPixels(opts = {}) {
@@ -689,6 +649,7 @@ export default class Texture extends Resource {
 
   _deleteHandle() {
     this.gl.deleteTexture(this.handle);
+    this._trackDeallocatedMemory('Texture');
   }
 
   _getParameter(pname) {

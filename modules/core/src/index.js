@@ -3,6 +3,8 @@
 // Initialize any global state
 require('./init');
 
+export {lumaStats} from './init';
+
 // WebGL
 export {isWebGL, isWebGL2} from './webgl/utils/webgl-checks';
 export {cloneTextureFrom} from './webgl/utils/texture-utils';

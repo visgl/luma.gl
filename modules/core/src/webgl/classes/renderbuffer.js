@@ -29,13 +29,18 @@ export default class Renderbuffer extends Resource {
 
   constructor(gl, opts = {}) {
     super(gl, opts);
+
     this.initialize(opts);
+
     Object.seal(this);
   }
 
   // Creates and initializes a renderbuffer object's data store
   initialize({format, width = 1, height = 1, samples = 0}) {
     assert(format, 'Needs format');
+
+    this._trackDeallocatedMemory();
+
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
     if (samples !== 0 && isWebGL2(this.gl)) {
@@ -50,6 +55,10 @@ export default class Renderbuffer extends Resource {
     this.width = width;
     this.height = height;
     this.samples = samples;
+
+    this._trackAllocatedMemory(
+      this.width * this.height * (this.samples || 1) * RENDERBUFFER_FORMATS[this.format].bpp
+    );
 
     return this;
   }
@@ -69,6 +78,7 @@ export default class Renderbuffer extends Resource {
 
   _deleteHandle() {
     this.gl.deleteRenderbuffer(this.handle);
+    this._trackDeallocatedMemory();
   }
 
   _bindHandle(handle) {

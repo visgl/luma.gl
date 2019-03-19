@@ -10,7 +10,7 @@ import {getPageLoadPromise} from '../webgl/context';
 import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
 import {log} from '../utils';
 import assert from '../utils/assert';
-import {Stats} from 'probe.gl';
+import {lumaStats} from '../init';
 import {Query} from '../webgl';
 
 // TODO - remove dependency on webgl classes
@@ -39,7 +39,7 @@ export default class AnimationLoop {
       // view parameters
       autoResizeViewport = true,
       autoResizeDrawingBuffer = true,
-      stats = new Stats({id: `animation-loop-${statIdCounter++}`})
+      stats = lumaStats.get(`animation-loop-${statIdCounter++}`)
     } = props;
 
     let {useDevicePixels = true} = props;

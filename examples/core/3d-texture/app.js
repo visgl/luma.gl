@@ -1,4 +1,4 @@
-import {AnimationLoop, setParameters, Model, Texture3D, Buffer} from 'luma.gl';
+import {AnimationLoop, setParameters, Model, Texture3D, Buffer, lumaStats} from 'luma.gl';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {default as noise3d} from 'noise3d';
@@ -132,7 +132,7 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const statsWidget = new StatsWidget(this.stats, {
+    const timeWidget = new StatsWidget(this.stats, {
       title: 'Render Time',
       css: {
         position: 'absolute',
@@ -152,12 +152,27 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    return {cloud, mvpMat, viewMat, statsWidget};
+    const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
+      css: {
+        position: 'absolute',
+        top: '100px',
+        left: '20px'
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'GPU Memory': 'memory',
+        'Buffer Memory': 'memory',
+        'Texture Memory': 'memory'
+      }
+    });
+
+    return {cloud, mvpMat, viewMat, timeWidget, memWidget};
   }
 
   onRender(animationProps) {
-    const {gl, cloud, mvpMat, viewMat, statsWidget, tick, aspect} = animationProps;
-    statsWidget.update();
+    const {gl, cloud, mvpMat, viewMat, timeWidget, memWidget, tick, aspect} = animationProps;
+    timeWidget.update();
+    memWidget.update();
 
     mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
 

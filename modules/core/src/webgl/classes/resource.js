@@ -1,4 +1,4 @@
-import luma from '../../init';
+import {lumaStats} from '../../init';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../utils';
 import {uid, assert, stubRemovedMethods} from '../../utils';
 
@@ -31,6 +31,9 @@ export default class Resource {
     if (this._handle === undefined) {
       this._handle = this._createHandle();
     }
+
+    // Only meaningful for resources that allocate GPU memory
+    this.byteLength = 0;
 
     this._addStats();
   }
@@ -266,22 +269,33 @@ export default class Resource {
 
   _addStats() {
     const name = this.constructor.name;
+    const stats = lumaStats.get('Resource Counts');
 
-    const {stats} = luma;
-    stats.resourceCount = stats.resourceCount || 0;
-    stats.resourceMap = stats.resourceMap || {};
-
-    // Resource creation stats
-    stats.resourceCount++;
-    stats.resourceMap[name] = stats.resourceMap[name] || {created: 0, active: 0};
-    stats.resourceMap[name].created++;
-    stats.resourceMap[name].active++;
+    stats.get('Resources Created').incrementCount();
+    stats.get(`${name}s Created`).incrementCount();
+    stats.get(`${name}s Active`).incrementCount();
   }
 
   _removeStats() {
     const name = this.constructor.name;
-    const {stats} = luma;
+    const stats = lumaStats.get('Resource Counts');
 
-    stats.resourceMap[name].active--;
+    stats.get(`${name}s Active`).decrementCount();
+  }
+
+  _trackAllocatedMemory(bytes, name = this.constructor.name) {
+    const stats = lumaStats.get('Memory Usage');
+
+    stats.get('GPU Memory').addCount(bytes);
+    stats.get(`${name} Memory`).addCount(bytes);
+    this.byteLength = bytes;
+  }
+
+  _trackDeallocatedMemory(name = this.constructor.name) {
+    const stats = lumaStats.get('Memory Usage');
+
+    stats.get('GPU Memory').subtractCount(this.byteLength);
+    stats.get(`${name} Memory`).subtractCount(this.byteLength);
+    this.byteLength = 0;
   }
 }

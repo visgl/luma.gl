@@ -108,6 +108,33 @@ export const TEXTURE_FORMATS = {
   // [GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL]: {compressed: true, gl1: ETC1}
 };
 
+export const DATA_FORMAT_CHANNELS = {
+  [GL.RED]: 1,
+  [GL.RED_INTEGER]: 1,
+  [GL.RG]: 2,
+  [GL.RG_INTEGER]: 2,
+  [GL.RGB]: 3,
+  [GL.RGB_INTEGER]: 3,
+  [GL.RGBA]: 4,
+  [GL.RGBA_INTEGER]: 4,
+  [GL.DEPTH_COMPONENT]: 1,
+  [GL.DEPTH_STENCIL]: 1,
+  [GL.ALPHA]: 1,
+  [GL.LUMINANCE]: 1,
+  [GL.LUMINANCE_ALPHA]: 2
+};
+
+export const TYPE_SIZES = {
+  [GL.FLOAT]: 4,
+  [GL.UNSIGNED_INT]: 4,
+  [GL.INT]: 4,
+  [GL.UNSIGNED_SHORT]: 2,
+  [GL.SHORT]: 2,
+  [GL.HALF_FLOAT]: 2,
+  [GL.BYTE]: 1,
+  [GL.UNSIGNED_BYTE]: 1
+};
+
 export function isFormatSupported(gl, format) {
   const info = TEXTURE_FORMATS[format];
   if (!info) {
