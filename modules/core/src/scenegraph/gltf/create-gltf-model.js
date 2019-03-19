@@ -1,7 +1,7 @@
 import {pbr} from '@luma.gl/shadertools';
-import Model from '../model';
-import log from '../../utils/log';
 import {isWebGL2} from '../../webgl';
+import {log} from '../../utils';
+import ModelNode from '../nodes/model-node';
 import GLTFMaterialParser from './gltf-material-parser';
 
 const vs = `
@@ -75,7 +75,7 @@ export default function createGLTFModel(
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
-  const model = new Model(
+  const model = new ModelNode(
     gl,
     Object.assign(
       {

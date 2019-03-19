@@ -1,6 +1,7 @@
 import GL from '@luma.gl/constants';
 import luma from '@luma.gl/core/init';
-import {Buffer, _Attribute as Attribute, Model, Cube} from 'luma.gl';
+// TODO - Model test should not depend on Cube
+import {Buffer, _Attribute as Attribute, Model, Cube} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 

@@ -8,7 +8,7 @@
  */
 
 /* eslint-disable camelcase */
-import {_Pass as Pass, Framebuffer, ClipSpaceQuad, withParameters} from 'luma.gl';
+import {_Pass as Pass, Framebuffer, ClipSpace, withParameters} from 'luma.gl';
 import ssao from '../modules/ssao';
 
 export default class SSAOPass extends Pass {
@@ -20,7 +20,7 @@ export default class SSAOPass extends Pass {
     // Depth render target, for `depth` shader module
     this.depthFramebuffer = new Framebuffer(gl, {id: 'ssao-pass-depth-map'});
 
-    this.clipspace = new ClipSpaceQuad(gl, {
+    this.clipspace = new ClipSpace(gl, {
       id: 'ssao-pass',
       modules: [ssao],
       fs: `

@@ -1,7 +1,7 @@
 import {Matrix4} from 'math.gl';
 import {Buffer, Accessor} from '../../webgl';
-import Group from '../group';
-import log from '../../utils/log';
+import {log} from '../../utils';
+import GroupNode from '../nodes/group-node';
 
 import GLTFAnimator from './gltf-animator';
 import createGLTFModel from './create-gltf-model';
@@ -49,7 +49,7 @@ export default class GLTFInstantiator {
   createScene(gltfScene) {
     const gltfNodes = gltfScene.nodes || [];
     const nodes = gltfNodes.map(node => this.createNode(node));
-    const scene = new Group({
+    const scene = new GroupNode({
       id: gltfScene.name || gltfScene.id,
       children: nodes
     });
@@ -66,7 +66,7 @@ export default class GLTFInstantiator {
         children.push(this.createMesh(gltfNode.mesh));
       }
 
-      const node = new Group({
+      const node = new GroupNode({
         id: gltfNode.name || gltfNode.id,
         children
       });
@@ -102,7 +102,7 @@ export default class GLTFInstantiator {
       const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
         this.createPrimitive(gltfPrimitive, i, gltfMesh)
       );
-      const mesh = new Group({
+      const mesh = new GroupNode({
         id: gltfMesh.name || gltfMesh.id,
         children: primitives
       });
