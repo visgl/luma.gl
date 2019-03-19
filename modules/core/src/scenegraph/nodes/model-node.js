@@ -22,6 +22,7 @@ export default class ModelNode extends ScenegraphNode {
   setProps(props) {
     super.setProps(props);
     this._setNodelNodeProps(props);
+    return this;
   }
 
   delete() {
@@ -30,8 +31,8 @@ export default class ModelNode extends ScenegraphNode {
 
   // Forward node methods
   draw(...args) {
-    this.model.draw(...args);
-    return this;
+    // Return value indicates if something was actually drawn
+    return this.model.draw(...args);
   }
 
   setUniforms(...args) {
@@ -41,6 +42,7 @@ export default class ModelNode extends ScenegraphNode {
 
   setAttributes(...args) {
     this.model.setAttributes(...args);
+    return this;
   }
 
   updateModuleSettings(...args) {
