@@ -1,10 +1,10 @@
-import {AnimationLoop, ClipSpace} from 'luma.gl';
+import {AnimationLoop, ClipSpace} from '@luma.gl/core';
 
 const INFO_HTML = `
 <p>
   Fragment shader based rendering.
 <p>
-A luma.gl <code>ClipSpaceQuad</code> rendering 3 lines of fragment shader code,
+A luma.gl <code>ClipSpace</code> rendering 3 lines of fragment shader code,
 using a single uniform <code>uTime</code>.
 `;
 

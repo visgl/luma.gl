@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, Program, setParameters} from 'luma.gl';
+import {AnimationLoop, Model, Geometry, Program, setParameters} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -60,16 +60,20 @@ const animationLoop = new AnimationLoop({
     const projection = new Matrix4().perspective({aspect});
     const view = new Matrix4().lookAt({eye: [0, 0, 0]});
 
-    pyramid.render({
-      uPMatrix: projection,
-      uMVMatrix: view.clone().translate([-1.5, 0, -8]).rotateY(tick * 0.01)
-    });
+    pyramid
+      .setUniforms({
+        uPMatrix: projection,
+        uMVMatrix: view.clone().translate([-1.5, 0, -8]).rotateY(tick * 0.01)
+      })
+      .draw();
 
     const phi = tick * 0.01;
-    cube.render({
-      uPMatrix: projection,
-      uMVMatrix: view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
-    });
+    cube
+      .setUniforms({
+        uPMatrix: projection,
+        uMVMatrix: view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
+      })
+      .draw();
   }
 });
 

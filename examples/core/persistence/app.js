@@ -1,7 +1,7 @@
 import {
-  AnimationLoop, setParameters, IcoSphere, Model, clear,
-  Framebuffer, Program, Geometry
-} from 'luma.gl';
+  AnimationLoop, setParameters, Model, clear,
+  Framebuffer, Program, Geometry, IcoSphere
+} from '@luma.gl/core';
 import { Matrix4, Vector3, radians } from 'math.gl';
 
 const INFO_HTML = `
@@ -249,9 +249,11 @@ const animationLoop = new AnimationLoop({
 
     // Render to screen
     clear(gl, {color: true, depth: true});
-    quad.render({
-      uTexture: currentFramebuffer.texture,
-      uRes: [width, height]
+    quad.draw({
+      uniforms: {
+        uTexture: currentFramebuffer.texture,
+        uRes: [width, height]
+      }
     });
   }
 });

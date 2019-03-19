@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Texture2D, loadFile, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, loadFile, setParameters} from '@luma.gl/core';
+import {addEvents} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
 
@@ -77,10 +77,12 @@ const animationLoop = new AnimationLoop({
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    return world.render({
-      uMVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    return world
+      .setUniforms({
+        uMVMatrix,
+        uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
+      })
+      .draw();
   }
 });
 

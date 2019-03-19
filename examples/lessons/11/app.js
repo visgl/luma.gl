@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, setParameters, Sphere, Texture2D} from 'luma.gl';
+import {AnimationLoop, setParameters, Texture2D, Sphere} from 'luma.gl';
+import {addEvents} from '@luma.gl/addons';
 import {Vector3, Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -120,11 +120,12 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    return moon.render({
+    return moon.setUniforms({
       uMMatrix,
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    })
+    .draw();
   }
 });
 

@@ -1,6 +1,6 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, setParameters} from 'luma.gl';
+import {AnimationLoop, Geometry, setParameters, Model} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -84,20 +84,22 @@ const animationLoop = new AnimationLoop({
       .setPosition([-1.5, 0, -7])
       .setRotation([0, tick * 0.01, 0])
       .updateMatrix()
-      .render({
+      .setUniforms({
         uMVMatrix: triangle.matrix,
         uPMatrix: projection
-      });
+      })
+      .draw();
 
     // Draw Square
     square
       .setPosition([1.5, 0, -7])
       .setRotation([tick * 0.1, 0, 0])
       .updateMatrix()
-      .render({
+      .setUniforms({
         uMVMatrix: square.matrix,
         uPMatrix: projection
-      });
+      })
+      .draw();
   }
 });
 

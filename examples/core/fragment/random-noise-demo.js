@@ -1,6 +1,6 @@
 // RANDOM NOISE
 
-import {AnimationLoop, createGLContext, ClipSpaceQuad} from 'luma.gl';
+import {AnimationLoop, createGLContext, ClipSpace} from '@luma.gl/core';
 
 const RANDOM_NOISE_FRAGMENT_SHADER = `\
 precision highp float;
@@ -27,7 +27,7 @@ void main(void) {
 export default new AnimationLoop({
   onContext: () => createGLContext({canvas: 'canvas-1'}),
   onInitialize: ({gl}) => ({
-    clipSpaceQuad: new ClipSpaceQuad({gl, fs: RANDOM_NOISE_FRAGMENT_SHADER})
+    clipSpaceQuad: new ClipSpace({gl, fs: RANDOM_NOISE_FRAGMENT_SHADER})
   }),
   onRender: ({gl, canvas, tick, clipSpaceQuad}) => {
     canvas.width = canvas.clientWidth;
@@ -35,6 +35,6 @@ export default new AnimationLoop({
     canvas.height = canvas.width;
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    clipSpaceQuad.render({uTime: tick * 0.01});
+    clipSpaceQuad.setUniforms({uTime: tick * 0.01}).draw();
   }
 });

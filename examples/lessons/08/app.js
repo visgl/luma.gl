@@ -1,7 +1,7 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {addEvents} from 'luma.gl/addons';
-import {AnimationLoop, Cube, Texture2D, setParameters} from 'luma.gl';
+import {AnimationLoop, Texture2D, setParameters, Cube} from '@luma.gl/core';
+import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -245,15 +245,17 @@ const animationLoop = new AnimationLoop({
     }
 
     // Update scene config with light info
-    cube.render({
-      uMVMatrix,
-      uPMatrix: new Matrix4().perspective({aspect}),
-      uAmbientColor: ambientColor,
-      uUseLighting: lightingEnabled,
-      uLightingDirection: lightDirection,
-      uDirectionalColor: lightColor,
-      uAlpha: Number(0.5)
-    });
+    cube
+      .setUniforms({
+        uMVMatrix,
+        uPMatrix: new Matrix4().perspective({aspect}),
+        uAmbientColor: ambientColor,
+        uUseLighting: lightingEnabled,
+        uLightingDirection: lightDirection,
+        uDirectionalColor: lightColor,
+        uAlpha: Number(0.5)
+      })
+      .draw();
   }
 });
 

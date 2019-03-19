@@ -1,5 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, Texture2D, loadFile, setParameters} from 'luma.gl';
+import {
+  AnimationLoop,  Geometry, Texture2D, loadFile, setParameters, Model
+} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -340,11 +342,11 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    return teapot.render({
+    return teapot.setUniforms({
       uMMatrix: new Matrix4().translate([0, -35, -68]).rotateY(phi),
       uVMatrix,
       uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    });
+    }).draw();
   }
 });
 

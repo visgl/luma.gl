@@ -9,9 +9,10 @@
 /* eslint-disable max-statements, indent, no-multi-spaces */
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop, Model, Cube, Sphere, Geometry,
-  Texture2D, Program, Renderbuffer, Framebuffer, setParameters, loadFile
-} from 'luma.gl';
+  AnimationLoop, Model, Geometry, Texture2D,
+  Program, Renderbuffer, Framebuffer, setParameters, loadFile,
+  Cube, Sphere
+} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -391,6 +392,7 @@ function setupFramebuffer(gl) {
   }
 }
 
+// eslint-disable-next-line max-params
 function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
   moonAngle += moonAngleDelta;
   cubeAngle += cubeAngleDelta;
@@ -408,10 +410,11 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
     tSquare
       .setPosition([0, 0, -1])
       .updateMatrix()
-      .render({
+      .setUniforms({
         uMVMatrix: tSquare.matrix,
         uPMatrix: new Matrix4().perspective({aspect})
-      });
+      })
+      .draw();
   } else {
 
   let uMVMatrix = new Matrix4()
@@ -422,12 +425,12 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
     .translate([0, 0, -5])
     .multiplyRight(moon.matrix);
 
-  moon.draw({
-    uniforms: {
+  moon
+    .setUniforms({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT, near: 0.1, far: 500})
-    }
-  });
+    })
+    .draw();
 
   uMVMatrix = new Matrix4()
     .lookAt({eye: [0, 0, 20]})
@@ -436,12 +439,12 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
     .translate([0, 0, -5])
     .multiplyRight(cube.matrix);
 
-    cube.draw({
-      uniforms: {
+    cube
+      .setUniforms({
         uMVMatrix,
         uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT})
-      }
-    });
+      })
+      .draw();
   }
 
   if (!DISABLE_FB) {
@@ -449,6 +452,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
   }
 }
 
+// eslint-disable-next-line max-params
 function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tCrate) {
   laptopAngle += laptopAngleDelta;
 
@@ -461,18 +465,22 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
     .rotateY(laptopAngle)
     .rotateX(-80.0 * Math.PI / 180.0);
 
-  macbook.render({
-    uMVMatrix,
-    uPMatrix: new Matrix4().perspective({aspect}),
-    uUseTextures: false
-  });
+  macbook
+    .setUniforms({
+      uMVMatrix,
+      uPMatrix: new Matrix4().perspective({aspect}),
+      uUseTextures: false
+    })
+    .draw();
 
-  laptopScreenModel.render({
+  laptopScreenModel
+    .setUniforms({
       uMVMatrix,
       uPMatrix: new Matrix4().perspective({aspect}),
       uUseTextures: true,
       uSampler: rttFramebuffer.texture
-  });
+    })
+    .draw();
 }
 
 function parseModel(gl, opts = {}) {
