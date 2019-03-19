@@ -1,6 +1,8 @@
 {
   "rules": {
     "max-len": 0,
-    "tree-shaking/no-side-effects-in-initialization": 0
+    "tree-shaking/no-side-effects-in-initialization": 0,
+    "import/no-unresolved": 0,
+    "import/no-extraneous-dependencies": 0
   }
 }
