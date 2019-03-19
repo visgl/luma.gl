@@ -19,9 +19,9 @@
 // THE SOFTWARE.
 
 import test from 'tape-catch';
-import {runTests} from './fp64-test-utils-transform';
-import {glGetDebugInfo} from 'luma.gl';
 import {fixture} from 'test/setup';
+import {glGetDebugInfo} from '@luma.gl/core';
+import {runTests} from './fp64-test-utils-transform';
 const gl = fixture.gl2;
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field

@@ -5,7 +5,7 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "luma.gl": "6.0.0",
+    "@luma.gl/core": "^7.0.0-alpha",
     "noise3d": "^1.0.0"
   },
   "devDependencies": {

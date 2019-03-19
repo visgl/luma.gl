@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {createGLContext, Program} from 'luma.gl';
+import {createGLContext, Program} from '@luma.gl/core';
 const gl = createGLContext();
 
 const VS = `

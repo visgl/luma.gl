@@ -1,6 +1,6 @@
 import test from 'blue-tape';
-import {Program, Texture2D, Buffer} from 'luma.gl';
-import {loadImage} from 'luma.gl';
+import {Program, Texture2D, Buffer} from '@luma.gl/core';
+import {loadImage} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 
 const DATA_URL = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAA

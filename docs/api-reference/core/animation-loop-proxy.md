@@ -9,7 +9,9 @@ Manages an [AnimationLoop](/docs/api-reference/core/animation-loop.md) that runs
 Create a worker:
 ```js
 // animation-worker.js
-import {AnimationLoop, _AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
+import {
+  AnimationLoop, _AnimationLoopProxy as AnimationLoopProxy
+} from '@luma.gl/core';
 
 const animationLoop = new AnimationLoop({...});
 AnimationLoopProxy.createWorker(animationLoop)(self);
@@ -18,7 +20,7 @@ AnimationLoopProxy.createWorker(animationLoop)(self);
 Use a bundler e.g. Webpack to transpile and bundle `animation-worker.js` into a file e.g. `animation-worker.es5.js`. You can then use it as this:
 
 ```js
-import {_AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
+import {_AnimationLoopProxy as AnimationLoopProxy} from '@luma.gl/core';
 
 new AnimationLoopProxy(new Worker('animation-worker.es5.js')).start();
 ```

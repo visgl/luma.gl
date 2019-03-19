@@ -1,6 +1,5 @@
-import {createGLContext} from 'luma.gl';
+import {setContextDefaults, createGLContext} from '@luma.gl/core';
 import {makeDebugContext} from 'luma.gl/debug';
-import {setContextDefaults} from 'luma.gl/webgl/context';
 
 import util from 'util';
 

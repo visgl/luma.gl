@@ -7,8 +7,7 @@ import {
 } from '@luma.gl/webgl-state-tracker';
 
 import GL from '@luma.gl/constants';
-import {Framebuffer} from 'luma.gl';
-import {getKey} from 'luma.gl';
+import {Framebuffer, getKey} from '@luma.gl/core';
 
 import {createTestContext} from 'test/setup';
 

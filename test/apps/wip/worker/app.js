@@ -1,4 +1,4 @@
-import {_AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
+import {_AnimationLoopProxy as AnimationLoopProxy} from '@luma.gl/core';
 import createWorker from 'webworkify-webpack';
 
 // Required by webworkify-webpack :(

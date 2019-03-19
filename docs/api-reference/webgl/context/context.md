@@ -14,13 +14,13 @@ In fact, luma.gl is explicitly designed to work with any WebGL context, and in c
 
 Create a WebGL context, autocreating a canvas
 ```js
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 const gl = createGLContext(); // Prefers WebGL2 but falls back to WebGL1
 ```
 
 Create a WebGL2 context, failing gracefully if WebGL2 is not supported.
 ```js
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 const gl = createGLContext({
   webgl1: false,
   throwOnError: false
@@ -32,7 +32,7 @@ if (!gl) {
 
 Create a WebGL context in an existing canvas, setting WebGL context attributes
 ```js
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 const gl = createGLContext({
   canvas: 'my-canvas-id',
   stencil: true,       // Default render target gets a stencil buffer of at least 8 bits.
@@ -44,7 +44,7 @@ const gl = createGLContext({
 
 Create a headless WebGL context (under Node.js). `headless-gl` must be installed (`npm install gl`).
 ```js
-import {createGLContext} from 'luma.gl';
+import {createGLContext} from '@luma.gl/core';
 const gl = createGLContext({width: 100, height: 100});
 ```
 

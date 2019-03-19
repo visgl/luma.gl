@@ -1,4 +1,4 @@
-import {log, global} from 'luma.gl';
+import {log, global} from '@luma.gl/core';
 
 export {COLOR_MODE} from './glsl-to-js-compiler/draw-model';
 export {default as _DebugContext} from './glsl-to-js-compiler/debug-context';

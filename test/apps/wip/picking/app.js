@@ -11,7 +11,7 @@ import {
   picking,
   pickModels,
   _ShaderCache as ShaderCache
-} from 'luma.gl';
+} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

@@ -1,4 +1,4 @@
-import {_AnimationLoopProxy as AnimationLoopProxy} from 'luma.gl';
+import {_AnimationLoopProxy as AnimationLoopProxy} from '@luma.gl/core';
 
 import animationLoop from '../../core/cubemap/app';
 // import animationLoop from '../../core/fragment/app';

@@ -9,6 +9,7 @@ const INFO_HTML = `
   <a href="http://learningwebgl.com/blog/?p=1008" target="_blank">
     Improving the code structure with lots of moving objects
   </a>
+  Up/Down/PageUp/PageDown to tilt and zoom.
 <p>
 The classic WebGL Lessons in luma.gl
 `;

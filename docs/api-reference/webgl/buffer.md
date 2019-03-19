@@ -8,7 +8,7 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 ## Usage
 
 ```js
-import {Buffer} from 'luma.gl';
+import {Buffer} from '@luma.gl/core';
 ```
 
 Creating a generic buffer

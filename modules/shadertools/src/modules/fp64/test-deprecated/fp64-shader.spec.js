@@ -30,7 +30,7 @@ import {
   assembleShaders,
   registerShaderModules,
   fp64
-} from 'luma.gl';
+} from '@luma.gl/core';
 
 const BUFFER_DATA = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]);
 

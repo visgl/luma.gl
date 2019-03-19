@@ -1,4 +1,4 @@
-import {Transform, Buffer, copyToTexture, cloneTextureFrom} from 'luma.gl';
+import {Transform, Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/core';
 import GL from '@luma.gl/constants';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,

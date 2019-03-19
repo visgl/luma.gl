@@ -22,9 +22,9 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
-import {Buffer, Transform} from 'luma.gl';
-import {equals, config} from 'math.gl';
+import {Buffer, Transform} from '@luma.gl/core';
 import {fp64} from '@luma.gl/shadertools';
+import {equals, config} from 'math.gl';
 const {fp64ify} = fp64;
 
 function getBinaryShader(operation) {

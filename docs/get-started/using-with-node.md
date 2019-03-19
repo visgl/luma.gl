@@ -10,7 +10,7 @@ To minimize the amount of configuration needed, luma.gl always attempts to load 
 
 ```js
 import 'luma.gl';
-import {createGLContext, Model, ...} from 'luma.gl';
+import {createGLContext, Model, ...} from '@luma.gl/core';
 const gl = createGLContext({width, height, ...});
 ```
 

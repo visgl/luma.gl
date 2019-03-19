@@ -8,7 +8,8 @@ Provides WebGL queries for max values.
 
 Check a certain limit (whether through an extension under WebGL1 or through WebGL2)
 ```js
-import {getContextLimits, GL} from 'luma.gl';
+import GL from '@luma.gl/constants';
+import {getContextLimits} from '@luma.gl/core';
 const limits = getContextLimits(gl);
 if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
    ...
@@ -17,7 +18,7 @@ if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
 
 There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
 ```js
-import {Query} from 'luma.gl';
+import {Query} from '@luma.gl/core';
 if (Query.isSupported(gl)) {
   ...
 }

@@ -1,5 +1,11 @@
 import GL from '@luma.gl/constants';
-import {Buffer, _Attribute as Attribute, Framebuffer, Model, readPixelsToArray} from 'luma.gl';
+import {
+  Buffer,
+  _Attribute as Attribute,
+  Framebuffer,
+  Model,
+  readPixelsToArray
+} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 

@@ -10,7 +10,7 @@ import {
   _ClearPass as ClearPass,
   _RenderPass as RenderPass,
   _CopyPass as CopyPass
-} from 'luma.gl';
+} from '@luma.gl/core';
 
 class AppAnimationLoop extends AnimationLoop {
 

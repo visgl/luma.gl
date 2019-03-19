@@ -6,7 +6,7 @@ A cache of compiled shaders, keyed by shader source strings. Compilation of long
 ## Usage
 
 ```js
-import {_ShaderCache as ShaderCache} from 'luma.gl';
+import {_ShaderCache as ShaderCache} from '@luma.gl/core';
 ```
 
 
