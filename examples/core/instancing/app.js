@@ -181,7 +181,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
-<<<<<<< HEAD
     const {
       gl,
       framebuffer,
@@ -193,17 +192,8 @@ class AppAnimationLoop extends AnimationLoop {
 
     timeWidget.update();
     memWidget.update();
-=======
-    const {gl, statsWidget} = animationProps;
-
-    statsWidget.update();
->>>>>>> Update API use in examples. Move unfinished examples to test/app
-
-    /* TODO - picking temporarily disabled
-    const {gl, framebuffer, useDevicePixels, _mousePosition} = animationProps;
 
     // "Pick" the cube under the mouse
-
     const pickInfo =
       _mousePosition &&
       pickModels(gl, {
@@ -218,7 +208,6 @@ class AppAnimationLoop extends AnimationLoop {
     this.cube.updateModuleSettings({
       pickingSelectedColor
     });
-    */
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
