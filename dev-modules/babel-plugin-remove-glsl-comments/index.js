@@ -1,5 +1,5 @@
-const minimatch = require("minimatch");
-const path = require('path');
+const minimatch = require('minimatch');
+const {resolve} = require('path');
 
 // inline comment is only safe to remove if it's followed by a return (i.e. end of comment)
 const INLINE_COMMENT_REGEX = /\s*\/\/.*[\n\r]/g;
@@ -10,7 +10,7 @@ module.exports = function _(opts) {
   return {
     visitor: {
       TemplateLiteral(path, state) {
-        if(filterFile(state)) {
+        if (filterFile(state)) {
           path.node.quasis.forEach(node => {
             node.value = {
               raw: handleString(node.value.raw),
@@ -20,7 +20,7 @@ module.exports = function _(opts) {
         }
       },
       StringLiteral(path, state) {
-        if(filterFile(state)) {
+        if (filterFile(state)) {
           path.node.value = handleString(path.node.value);
         }
       }
@@ -32,9 +32,9 @@ function filterFile(state) {
   const {filename} = state;
   const patterns = state.opts.patterns || DEFAULT_PATTERNS;
 
-  return patterns.some(function(p) {
+  return patterns.some(p => {
     if (p[0] === '.') {
-      p = path.resolve(p);
+      p = resolve(p);
     }
     return minimatch(filename, p);
   });

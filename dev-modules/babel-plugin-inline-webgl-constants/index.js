@@ -12,7 +12,8 @@ const DEBUG = false; // Set to true to force tracing
 module.exports = function _(opts) {
   if (DEBUG) {
     console.log(
-    `${COLOR_YELLOW}luma.gl: babel GL constant inlining plugin loaded: ${GL.LINES}${COLOR_RESET}`);
+      `${COLOR_YELLOW}luma.gl: babel GL constant inlining plugin loaded: ${GL.LINES}${COLOR_RESET}`
+    );
   }
 
   return {
@@ -29,7 +30,8 @@ module.exports = function _(opts) {
                 const filename = getFilename(state);
                 const line = local.loc.start.line;
                 console.error(
-                  `${COLOR_YELLOW}${filename}:${line} Dropping GL import${COLOR_RESET}`);
+                  `${COLOR_YELLOW}${filename}:${line} Dropping GL import${COLOR_RESET}`
+                );
               }
               path.remove();
             }
@@ -43,8 +45,7 @@ module.exports = function _(opts) {
         const value = GL[property.node.name];
 
         const isGLIdentifier =
-          object.isIdentifier({name: 'GL'}) ||
-          object.isIdentifier({name: 'gl'});
+          object.isIdentifier({name: 'GL'}) || object.isIdentifier({name: 'gl'});
 
         if (isGLIdentifier) {
           const filename = getFilename(state);
@@ -54,7 +55,8 @@ module.exports = function _(opts) {
             if (property.node.name.toUpperCase() === property.node.name) {
               const ERR_MESSAGE = 'Unknown GL constant, inlining failed';
               console.error(
-                `${COLOR_RED}${filename}: ${constant} ==> ??? ${ERR_MESSAGE} ${COLOR_RESET}`);
+                `${COLOR_RED}${filename}: ${constant} ==> ??? ${ERR_MESSAGE} ${COLOR_RESET}`
+              );
               path.buildCodeFrameError(`${constant} ${ERR_MESSAGE}`);
               throw new Error(constant);
             }
