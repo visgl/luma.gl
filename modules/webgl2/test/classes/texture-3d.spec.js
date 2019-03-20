@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {Texture3D, Buffer} from '@luma.gl/webgl2';
+import {Texture3D} from '@luma.gl/webgl2';
+// import {Buffer} from '@luma.gl/webgl2';
 
 import {fixture} from 'test/setup';
 

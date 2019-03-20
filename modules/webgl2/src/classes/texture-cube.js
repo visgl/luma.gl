@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import Texture from './texture';
 import {assertWebGLContext} from '../webgl-utils';
-import {assert} from '../utils';
+// import {assert} from '../utils';
 
 const FACES = [
   GL.TEXTURE_CUBE_MAP_POSITIVE_X,

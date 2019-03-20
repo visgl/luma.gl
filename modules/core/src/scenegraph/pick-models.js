@@ -1,6 +1,6 @@
 /* global window */
 import {isWebGL, clear, readPixelsToArray} from '@luma.gl/webgl2';
-import Group from '../scenegraph/group';
+import GroupNode from '../scenegraph/group-node';
 import {assert} from '../utils';
 
 function getDevicePixelRatio() {
@@ -38,7 +38,7 @@ export default function pickModels(gl, props) {
   //   // // We are only interested in one pixel, no need to render anything else
   //   // scissorTest: {x: deviceX, y: deviceY, w: 1, h: 1}
   // }, () => {
-  const group = new Group({children: models});
+  const group = new GroupNode({children: models});
   return group.traverseReverse(model => {
     if (model.pickable) {
       // Clear the frame buffer

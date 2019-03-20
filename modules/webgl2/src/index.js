@@ -101,12 +101,15 @@ export {setPathPrefix, loadFile, loadImage} from './utils/load-file';
 export {getShaderName} from './glsl-utils/get-shader-name';
 export {getShaderVersion} from './glsl-utils/get-shader-version';
 
-// INTERNAL
-export {parseUniformName, getUniformSetter} from './classes/uniforms';
-
 // UTILS
 export {default as log} from './utils/log';
 export {default as assert} from './utils/assert';
 export {uid, isObjectEmpty} from './utils/utils';
 export {self, window, global, document} from './utils/globals';
 export {default as isBrowser} from './utils/is-browser';
+
+// INTERNAL
+export {parseUniformName, getUniformSetter} from './classes/uniforms';
+export {getDebugTableForUniforms} from './debug/debug-uniforms';
+export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
+export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';

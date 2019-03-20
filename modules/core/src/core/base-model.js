@@ -3,10 +3,11 @@
 import GL from '@luma.gl/constants';
 import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl2';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
-import {getDebugTableForUniforms} from '@luma.gl/webgl2/debug/debug-uniforms';
-import {getDebugTableForVertexArray} from '@luma.gl/webgl2/debug/debug-vertex-array';
-import {getDebugTableForProgramConfiguration} from '@luma.gl/webgl2/debug/debug-program-configuration';
-
+import {
+  getDebugTableForUniforms,
+  getDebugTableForVertexArray,
+  getDebugTableForProgramConfiguration
+} from '@luma.gl/webgl2';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {log, isObjectEmpty, assert} from '../utils';
 

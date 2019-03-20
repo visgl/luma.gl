@@ -1,4 +1,3 @@
-import luma from '../init';
 import {lumaStats} from '../init';
 import {assertWebGLContext, isWebGL2, getKey, getKeyValue} from '../webgl-utils';
 import {uid, assert, stubRemovedMethods} from '../utils';
