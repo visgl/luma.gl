@@ -1,1 +1,1 @@
-import './utils.spec';
+// Tests are in webgl module

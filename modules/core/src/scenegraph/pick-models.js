@@ -1,6 +1,6 @@
 /* global window */
-import {isWebGL, clear, readPixelsToArray} from '@luma.gl/webgl2';
-import GroupNode from '../scenegraph/group-node';
+import {isWebGL, clear, readPixelsToArray} from '@luma.gl/webgl';
+import GroupNode from './nodes/group-node';
 import {assert} from '../utils';
 
 function getDevicePixelRatio() {

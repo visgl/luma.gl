@@ -1,4 +1,4 @@
-import {Texture2D, TextureCube, loadImage} from '@luma.gl/webgl2';
+import {Texture2D, TextureCube, loadImage} from '@luma.gl/webgl';
 import {log} from '../../utils';
 
 // TODO: Move to new file

@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Buffer, Query, TransformFeedback} from '@luma.gl/webgl2';
+import {Buffer, Query, TransformFeedback} from '@luma.gl/webgl';
 import Attribute from '../core/attribute';
 import BaseModel from './base-model';
 // import {getDrawMode} from '../core/geometry';

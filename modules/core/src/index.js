@@ -23,7 +23,7 @@ export {
   // DEPRECATED
   setGLContextDefaults as setContextDefaults,
   getContextDebugInfo as glGetDebugInfo
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 
 export {
   trackContextState,
@@ -34,7 +34,7 @@ export {
   setParameters,
   withParameters,
   getModifiedParameters
-} from '@luma.gl/webgl2-state-tracker';
+} from '@luma.gl/webgl-state-tracker';
 
 // WEBGL1 OBJECTS/FUNCTIONS
 export {
@@ -56,7 +56,7 @@ export {
   copyToImage,
   copyToTexture,
   blit
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 
 export {
   // WebGL2 classes & Extensions
@@ -74,7 +74,7 @@ export {
   // experimental WebGL exports
   Accessor as _Accessor,
   clearBuffer as _clearBuffer
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
@@ -172,4 +172,4 @@ export {
 } from '@luma.gl/shadertools';
 
 // UTILS: undocumented API for other luma.gl modules
-export {log, assert, uid, global} from '@luma.gl/webgl2';
+export {log, assert, uid, self, window, global, document} from '@luma.gl/webgl';

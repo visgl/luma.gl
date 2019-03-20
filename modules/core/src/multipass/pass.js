@@ -4,7 +4,7 @@
 // Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
-import {Framebuffer, withParameters} from '@luma.gl/webgl2';
+import {Framebuffer, withParameters} from '@luma.gl/webgl';
 
 export default class Pass {
   constructor(gl, props) {

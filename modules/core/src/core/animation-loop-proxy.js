@@ -1,6 +1,6 @@
 /* global window, Worker */
-import {getPageLoadPromise, getCanvas} from '@luma.gl/webgl2';
-import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/webgl2';
+import {getPageLoadPromise, getCanvas} from '@luma.gl/webgl';
+import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/webgl';
 import {log, assert} from '../utils';
 
 export default class AnimationLoopProxy {

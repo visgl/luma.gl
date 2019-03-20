@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 
-import {window} from '@luma.gl/core/utils/globals';
+import {window} from '@luma.gl/core';
 import {setOverride, getOverrides} from '@luma.gl/core/debug/seer-integration';
 
 test('Seer overrides', t => {

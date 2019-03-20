@@ -12,7 +12,7 @@ import {
   lumaStats,
   // TODO - remove dependency on framebuffer (bundle size impact)
   Framebuffer
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 
 import {log, assert} from '../utils';
 

@@ -10,7 +10,7 @@ import {
   readPixelsToArray,
   getShaderVersion,
   cloneTextureFrom
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 import {log, isObjectEmpty, assert} from '../utils';
 import Model from './model';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';

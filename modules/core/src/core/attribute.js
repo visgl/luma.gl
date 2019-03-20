@@ -1,6 +1,6 @@
 /* eslint-disable complexity */
 import GL from '@luma.gl/constants';
-import {Buffer, hasFeature, FEATURES} from '@luma.gl/webgl2';
+import {Buffer, hasFeature, FEATURES} from '@luma.gl/webgl';
 import {log, uid} from '../utils';
 
 export default class Attribute {

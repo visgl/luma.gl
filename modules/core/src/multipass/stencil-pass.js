@@ -4,7 +4,7 @@
 // Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
-import {withParameters, setParameters} from '@luma.gl/webgl2';
+import {withParameters, setParameters} from '@luma.gl/webgl';
 import Pass from './pass';
 
 function getMask(indices = [], bits = 8) {

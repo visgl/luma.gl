@@ -1,13 +1,13 @@
 // Shared code between Model and MeshModel
 
 import GL from '@luma.gl/constants';
-import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl2';
+import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {
   getDebugTableForUniforms,
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
-} from '@luma.gl/webgl2';
+} from '@luma.gl/webgl';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
 import {log, isObjectEmpty, assert} from '../utils';
 
