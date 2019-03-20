@@ -1,5 +1,5 @@
 import {Matrix4} from 'math.gl';
-import {log, assert} from '@luma.gl/core';
+import {log, assert} from '../../utils';
 import Node from './scenegraph-node';
 
 export default class Group extends Node {

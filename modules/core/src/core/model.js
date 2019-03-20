@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {_Attribute as Attribute} from '@luma.gl/core';
-import {Buffer, Query, TransformFeedback} from '@luma.gl/core';
+import {Buffer, Query, TransformFeedback} from '../webgl';
+import Attribute from '../core/attribute';
 import BaseModel from './base-model';
 
 // import {removeModel} from '../debug/seer-integration';

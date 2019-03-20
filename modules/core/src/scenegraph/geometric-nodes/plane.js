@@ -1,4 +1,5 @@
-import {PlaneGeometry, uid} from '@luma.gl/core';
+import {PlaneGeometry} from '../../geometries';
+import {uid} from '../../utils';
 import ModelNode from '../nodes/model-node';
 
 export default class Plane extends ModelNode {

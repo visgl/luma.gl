@@ -37,6 +37,6 @@
   },
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.15",
-    "luma.gl": "^7.0.0-alpha.17"
+    "@luma.gl/core": "^7.0.0-alpha.17"
   }
 }

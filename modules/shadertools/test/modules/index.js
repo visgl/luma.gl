@@ -1,7 +1,6 @@
 import './fp64/fp64-arithmetic-transform.spec';
-import './picking.spec';
-
-import '../../src/modules/lights/lights.spec';
+import '../../src/modules/lights/test/lights.spec';
+import '../../src/modules/picking/test/picking.spec';
 
 import {
   registerShaderModules,

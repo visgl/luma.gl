@@ -94,7 +94,7 @@ export {default as _TexturePass} from './multipass/texture-pass';
 export {default as _PickingPass} from './multipass/picking-pass';
 
 export {default as _ShaderModulePass} from './multipass/shader-module-pass';
-export {default as _Canvas} from './multipass/canvas';
+// export {default as _Canvas} from './multipass/canvas';
 
 // Geometries
 export {default as ConeGeometry} from './geometries/cone-geometry';

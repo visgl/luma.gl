@@ -1,3 +1,4 @@
+/* eslint-disable */
 function loadCubeMap(gl, envMap, type, state) {
   var texture = gl.createTexture();
   var textureNumber = -1;

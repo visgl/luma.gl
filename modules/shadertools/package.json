@@ -42,6 +42,7 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@luma.gl/constants": "^7.0.0-alpha.15"
+    "@luma.gl/constants": "^7.0.0-alpha.15",
+    "math.gl": "^2.3.0-beta.2"
   }
 }

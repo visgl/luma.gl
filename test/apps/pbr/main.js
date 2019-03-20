@@ -1,4 +1,4 @@
-/* eslint-disable camelcase, max-params, max-statements */
+/* eslint-disable */ // camelcase, max-params, max-statements
 /* global Controls, Scene, luma, mathgl, $, dat, document, glState */
 const {Matrix4} = mathgl;
 

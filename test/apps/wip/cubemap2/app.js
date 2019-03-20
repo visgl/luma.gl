@@ -1,3 +1,4 @@
+/* eslint-disable */ // no-var, max-statements
 import GL from '@luma.gl/constants';
 import {AnimationLoop, TextureCube, Cube, setParameters} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';

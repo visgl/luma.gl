@@ -1,5 +1,4 @@
 import test from 'tape-catch';
-import GL from '@luma.gl/constants';
 import {Program, Buffer, VertexArray} from 'luma.gl';
 
 import {fixture} from 'test/setup';
