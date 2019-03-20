@@ -6,7 +6,7 @@
 /* global window, global */
 const _global = typeof window === 'undefined' ? global : window;
 
-const lumaGL = require('luma.gl');
+const lumaGL = require('@luma.gl/core');
 require('@luma.gl/debug');
 
 const filters = require('@luma.gl/glfx');

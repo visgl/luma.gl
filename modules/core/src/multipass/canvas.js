@@ -1,12 +1,13 @@
+import {createGLContext, Texture2D} from '../webgl';
+import Model from '../core/model';
+
+// eslint-disable-next-line
 import {
-  createGLContext,
-  Model,
-  Texture2D,
   _MultiPassRenderer as MultiPassRenderer,
   _ClearPass as ClearPass,
   _CopyPass as CopyPass,
   _TexturePass as TexturePass
-} from '@luma.gl/core';
+} from '../multiPassRenderer';
 
 import ShaderModulePass from './shader-module-pass';
 

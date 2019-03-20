@@ -1,4 +1,4 @@
-import {Model} from '@luma.gl/core';
+import Model from '../../core/model';
 import ScenegraphNode from './scenegraph-node';
 
 export default class ModelNode extends ScenegraphNode {

@@ -1,3 +1,4 @@
+/* eslint-disable */
 /* global luma */
 const {Model, pbr} = luma;
 

@@ -3,7 +3,6 @@
 const {resolve} = require('path');
 const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer');
 const webpack = require('webpack');
-const BabiliWebpackPlugin = require('babili-webpack-plugin');
 
 module.exports = {
   entry: {

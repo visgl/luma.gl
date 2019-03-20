@@ -1,5 +1,6 @@
-/* global window, document */
+/* eslint-disable */
 /* eslint-disable no-var, max-statements */
+/* global window, document */
 
 import {createGLContext, Program, Buffer, Framebuffer, Mat4, Vec3, Fx, addons} from '@luma.gl/core';
 

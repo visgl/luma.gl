@@ -1,5 +1,5 @@
 /* global window, document, LumaGL */
-/* eslint-disable no-var, max-statements */
+/* eslint-disable */
 const {createGLContext, IcoSphere, Program, Buffer} = LumaGL;
 const {PerspectiveCamera, Framebuffer, Media} = LumaGL;
 const {Mat4, Vec3, Fx, addEvents} = LumaGL;

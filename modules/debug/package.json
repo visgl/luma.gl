@@ -37,8 +37,9 @@
   },
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.15",
+    "@luma.gl/core": "^7.0.0-alpha.17",
     "glsl-transpiler": "^1.8.5",
-    "luma.gl": "^7.0.0-alpha.17",
+    "math.gl": "^2.3.0-beta.2",
     "webgl-debug": "^2.0.1"
   }
 }

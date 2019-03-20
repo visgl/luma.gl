@@ -11,7 +11,7 @@
   "dependencies": {
     "@loaders.gl/draco": "^0.8.0",
     "@loaders.gl/gltf": "^0.8.1",
-    "luma.gl": "^7.0.0-alpha"
+    "@luma.gl/core": "^7.0.0-alpha"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

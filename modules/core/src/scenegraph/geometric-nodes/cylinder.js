@@ -1,4 +1,5 @@
-import {CylinderGeometry, uid} from '@luma.gl/core';
+import {CylinderGeometry} from '../../geometries';
+import {uid} from '../../utils';
 import ModelNode from '../nodes/model-node';
 
 export default class Cylinder extends ModelNode {

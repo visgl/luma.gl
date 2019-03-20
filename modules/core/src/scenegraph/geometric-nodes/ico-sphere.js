@@ -1,4 +1,5 @@
-import {IcoSphereGeometry, uid} from '@luma.gl/core';
+import {IcoSphereGeometry} from '../../geometries';
+import {uid} from '../../utils';
 import ModelNode from '../nodes/model-node';
 
 export default class IcoSphere extends ModelNode {

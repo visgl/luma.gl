@@ -1,3 +1,4 @@
+/* eslint-disable */
 const {GL, AnimationLoop, createGLContext, Cube, Matrix4, radians} = LumaGL;
 
 // length given a 45 fov angle, and 0.2 distance to camera

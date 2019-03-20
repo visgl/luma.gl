@@ -1,5 +1,5 @@
 import {Vector3, Matrix4} from 'math.gl';
-import {assert, uid} from '@luma.gl/core';
+import {assert, uid} from '../../utils';
 
 export default class ScenegraphNode {
   constructor(props) {

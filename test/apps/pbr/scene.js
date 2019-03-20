@@ -1,4 +1,4 @@
-/* global Mesh, document, luma, Matrix4 */
+/* global Mesh, controls, document, luma, Matrix4 */
 
 const {loadImage, Texture2D} = luma;
 
@@ -42,7 +42,7 @@ class Scene {
       -translate * Math.sin(-pitch),
       translate * Math.cos(roll) * Math.cos(-pitch)
     ];
-    this.globalState.uniforms['u_Camera'].vals = cameraPos;
+    this.globalState.uniforms.u_Camera.vals = cameraPos;
 
     // Update view matrix
     // roll, pitch and translate are all globals.

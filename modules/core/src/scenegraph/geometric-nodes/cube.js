@@ -1,4 +1,5 @@
-import {CubeGeometry, uid} from '@luma.gl/core';
+import {CubeGeometry} from '../../geometries';
+import {uid} from '../../utils';
 import ModelNode from '../nodes/model-node';
 
 export default class Cube extends ModelNode {

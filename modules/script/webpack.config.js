@@ -1,5 +1,7 @@
-const {resolve} = require('path');
+// Note: Webpack is intalled by the root workspace package.json, not the module's package.json
+// eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack');
+const {resolve} = require('path');
 
 const ALIASES = require('../../aliases');
 
