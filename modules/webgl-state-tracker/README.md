@@ -12,11 +12,11 @@ This is useful when combining code written in different WebGL frameworks or code
 ## Usage
 
 ```
-yarn add @luma.gl/webgl-state-tracking
+yarn add @luma.gl/webgl-state-tracker
 ```
 
 ```
-import trackContextState from '@luma.gl/webgl-state-tracking';
+import trackContextState from '@luma.gl/webgl-state-tracker';
 
 const gl = canvas.getContext('webgl');
 trackContextState(gl);

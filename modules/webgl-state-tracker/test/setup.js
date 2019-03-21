@@ -1,10 +1,16 @@
 // TEST SETUP
 
-import {setContextDefaults, createGLContext} from '@luma.gl/core';
+import {setGLContextDefaults, createGLContext} from '@luma.gl/core';
 import {makeDebugContext} from '@luma.gl/debug';
 
 // Avoid generating a lot of big context divs
-setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
+setGLContextDefaults({
+  width: 1,
+  height: 1,
+  debug: true,
+  throwOnFailure: false,
+  throwOnError: false
+});
 
 export function createTestContext(opts = {}) {
   return makeDebugContext(createGLContext(opts));

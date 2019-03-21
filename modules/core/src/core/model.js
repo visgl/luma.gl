@@ -1,11 +1,11 @@
 import GL from '@luma.gl/constants';
-import {Buffer, Query, TransformFeedback} from '../webgl';
+import {Buffer, Query, TransformFeedback} from '@luma.gl/webgl';
 import Attribute from '../core/attribute';
 import BaseModel from './base-model';
+// import {getDrawMode} from '../core/geometry';
 
 // import {removeModel} from '../debug/seer-integration';
-import {log, isObjectEmpty} from '../utils';
-import assert from '../utils/assert';
+import {log, isObjectEmpty, assert} from '../utils';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const LOG_DRAW_PRIORITY = 2;

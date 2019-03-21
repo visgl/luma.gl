@@ -1,20 +1,20 @@
 /* global OffscreenCanvas */
-
 import {
+  isWebGL,
   createGLContext,
   instrumentGLContext,
   resizeGLContext,
-  resetParameters
-} from '../webgl/context';
-import {getPageLoadPromise} from '../webgl/context';
-import {isWebGL, requestAnimationFrame, cancelAnimationFrame} from '../webgl/utils';
-import {log} from '../utils';
-import assert from '../utils/assert';
-import {lumaStats} from '../init';
-import {Query} from '../webgl';
+  resetParameters,
+  requestAnimationFrame,
+  cancelAnimationFrame,
+  getPageLoadPromise,
+  Query,
+  lumaStats,
+  // TODO - remove dependency on framebuffer (bundle size impact)
+  Framebuffer
+} from '@luma.gl/webgl';
 
-// TODO - remove dependency on webgl classes
-import {Framebuffer} from '../webgl';
+import {log, assert} from '../utils';
 
 let statIdCounter = 0;
 

@@ -14,6 +14,7 @@ export {assembleShaders} from './lib/assemble-shaders';
 export {combineInjects} from './lib/inject-shader';
 export {normalizeShaderModule} from './lib/filters/normalize-module';
 
+// UTILS
 export {
   getQualifierDetails,
   getPassthroughFS,

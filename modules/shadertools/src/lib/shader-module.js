@@ -1,5 +1,5 @@
 import transpileShader from './transpile-shader';
-import assert from '../utils/assert';
+import {assert} from '../utils';
 
 const VERTEX_SHADER = 'vs';
 const FRAGMENT_SHADER = 'fs';

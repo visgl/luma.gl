@@ -1,6 +1,6 @@
 import seer from 'seer';
 
-import {window} from '../utils/globals';
+import {window} from '../utils';
 
 const models = {};
 

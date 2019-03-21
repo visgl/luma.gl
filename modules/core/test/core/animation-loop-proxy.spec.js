@@ -2,7 +2,7 @@ import {_AnimationLoopProxy} from '@luma.gl/core';
 import test from 'tape-catch';
 // import {fixture} from 'test/setup';
 
-test('WebGL#AnimationLoopProxy', t => {
+test('core#AnimationLoopProxy', t => {
   // const {gl} = fixture;
   t.ok(_AnimationLoopProxy);
 

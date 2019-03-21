@@ -1,5 +1,3 @@
-// import assert from '../utils/assert';
-
 export default class Mesh {
   constructor(opts = {}) {
     opts = Array.isArray(opts) ? {primitives: opts} : opts;
