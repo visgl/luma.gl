@@ -48,12 +48,20 @@ export default class VertexArrayObject extends Resource {
       case Float32Array:
         VertexArrayObject._setConstantFloatArray(gl, location, array);
         break;
+
+      case Int16Array:
+      case Int8Array:
       case Int32Array:
         VertexArrayObject._setConstantIntArray(gl, location, array);
         break;
+
+      case Uint16Array:
+      case Uint8Array:
+      case Uint8ClampedArray:
       case Uint32Array:
         VertexArrayObject._setConstantUintArray(gl, location, array);
         break;
+
       default:
         assert(false);
     }
@@ -239,18 +247,19 @@ export default class VertexArrayObject extends Resource {
 
   static _setConstantIntArray(gl, location, array) {
     assert(isWebGL2(gl));
+    // NOTE - array needs to be converted to Int32Array and padded to length 4
     switch (array.length) {
       case 1:
-        gl.vertexAttribI1iv(location, array);
+        gl.vertexAttribI4iv(location, new Int32Array([array[0], 0, 0, 0]));
         break;
       case 2:
-        gl.vertexAttribI2iv(location, array);
+        gl.vertexAttribI4iv(location, new Int32Array([array[0], array[1], 0, 0]));
         break;
       case 3:
-        gl.vertexAttribI3iv(location, array);
+        gl.vertexAttribI4iv(location, new Int32Array([array[0], array[1], array[2], 0]));
         break;
       case 4:
-        gl.vertexAttribI4iv(location, array);
+        gl.vertexAttribI4iv(location, new Int32Array(array));
         break;
       default:
         assert(false);
@@ -259,18 +268,19 @@ export default class VertexArrayObject extends Resource {
 
   static _setConstantUintArray(gl, location, array) {
     assert(isWebGL2(gl));
+    // NOTE - array needs to be converted to Uint32Array and padded to length 4
     switch (array.length) {
       case 1:
-        gl.vertexAttribI1uiv(location, array);
+        gl.vertexAttribI4uiv(location, new Uint32Array([array[0], 0, 0, 0]));
         break;
       case 2:
-        gl.vertexAttribI2uiv(location, array);
+        gl.vertexAttribI4uiv(location, new Uint32Array([array[0], array[1], 0, 0]));
         break;
       case 3:
-        gl.vertexAttribI3uiv(location, array);
+        gl.vertexAttribI4uiv(location, new Uint32Array([array[0], array[1], array[2], 0]));
         break;
       case 4:
-        gl.vertexAttribI4uiv(location, array);
+        gl.vertexAttribI4uiv(location, new Uint32Array(array));
         break;
       default:
         assert(false);
