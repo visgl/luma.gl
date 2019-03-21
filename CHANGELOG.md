@@ -1,5 +1,13 @@
 # 7.0 Pre-releases
 
+- Add lint rules for imports (#993)
+- Update imports to @luma.gl/core (#992)
+- Break out scenegraph module (with glTF code) (#982)
+- Update website to latest ocular-gatsby (#991)
+- Update examples (#990)
+- Track GPU memory usage (#984)
+- Update Scenegraph docs (#988)
+
 ## v7.0.0-alpha.17 - Mar 15, 2019
 - remove duplicated uniforms (#989)
 - Proposal: Unified lights array (#948)
