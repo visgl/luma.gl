@@ -1,9 +1,9 @@
 module.exports = {
   rules: {
     'check-log-call': {
-      create: function(context) {
+      create: context => {
         return {
-          CallExpression(node) {
+          CallExpression: node => {
             if (
               node.callee &&
               node.callee.object &&
@@ -11,7 +11,7 @@ module.exports = {
               node.parent &&
               node.parent.type !== 'CallExpression'
             ) {
-              context.report(node, 'Use log.' + node.callee.property.name + '(...)()');
+              context.report(node, `Use log.${node.callee.property.name}(...)()`);
             }
           }
         };
