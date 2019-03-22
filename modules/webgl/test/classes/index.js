@@ -21,17 +21,11 @@ import './program.spec';
 import './program-configuration.spec';
 import './draw.spec';
 
-import './copy-and-blit.spec.js';
+import './copy-and-blit.spec';
 
 // Extensions / webgl2
-import './query.spec'; // TODO - Chrome has re-enabled...
+import './query.spec';
 
 // webgl2
-import './sampler.spec';
 import './uniform-buffer-layout.spec';
 import './transform-feedback.spec';
-
-/*
-UNUSED SPECS:
-texture-2d-array.spec
-*/

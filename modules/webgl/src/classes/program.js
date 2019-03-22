@@ -65,7 +65,6 @@ export default class Program extends Resource {
 
     // uniforms
     this.uniforms = {};
-    this.samplers = {};
 
     // Setup varyings if supplied
     if (varyings) {
@@ -91,7 +90,7 @@ export default class Program extends Resource {
 
   setProps(props) {
     if ('uniforms' in props) {
-      this.setUniforms(props.uniforms, props.samplers);
+      this.setUniforms(props.uniforms);
     }
     return this;
   }
@@ -123,7 +122,7 @@ export default class Program extends Resource {
     if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
-      this.setUniforms(uniforms || {}, samplers || {});
+      this.setUniforms(uniforms || {});
     }
 
     if (logPriority !== undefined) {
@@ -183,11 +182,7 @@ export default class Program extends Resource {
     return true;
   }
 
-  setSamplers(samplers) {
-    Object.assign(this.samplers, samplers);
-  }
-
-  setUniforms(uniforms = {}, samplers = {}, _onChangeCallback = () => {}) {
+  setUniforms(uniforms = {}, _onChangeCallback = () => {}) {
     // Simple change detection - if all uniforms are unchanged, do nothing
     let somethingChanged = false;
     const changedUniforms = {};
@@ -202,7 +197,6 @@ export default class Program extends Resource {
     if (somethingChanged) {
       _onChangeCallback();
       checkUniformValues(changedUniforms, this.id, this._uniformSetters);
-      Object.assign(this.samplers, samplers);
       this._setUniforms(changedUniforms);
     }
 
@@ -249,7 +243,6 @@ export default class Program extends Resource {
 
       if (uniformSetter && uniformSetter.textureIndex !== undefined) {
         let uniform = this.uniforms[uniformName];
-        const sampler = this.samplers[uniformName];
 
         if (uniform instanceof Framebuffer) {
           uniform = uniform.texture;
@@ -258,10 +251,6 @@ export default class Program extends Resource {
           const texture = uniform;
           // Bind texture to index
           texture.bind(uniformSetter.textureIndex);
-        }
-        // Bind a WebGL2 sampler (if supplied) to index
-        if (sampler) {
-          sampler.bind(uniformSetter.textureIndex);
         }
       }
     }

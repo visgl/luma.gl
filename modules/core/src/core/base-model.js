@@ -129,7 +129,7 @@ export default class BaseModel {
   }
 
   // TODO - should actually set the uniforms
-  setUniforms(uniforms = {}, samplers = {}) {
+  setUniforms(uniforms = {}) {
     // Let Seer override edited uniforms
     uniforms = Object.assign({}, uniforms);
     getOverrides(this.id, uniforms);
@@ -137,7 +137,7 @@ export default class BaseModel {
     // Resolve any animated uniforms so that we have an initial value
     uniforms = this._extractAnimatedUniforms(uniforms);
 
-    this.program.setUniforms(uniforms, samplers, () => {
+    this.program.setUniforms(uniforms, () => {
       // if something changed
       this._checkForDeprecatedUniforms(uniforms);
       this.setNeedsRedraw();
@@ -165,7 +165,6 @@ export default class BaseModel {
       framebuffer,
       uniforms = {},
       attributes = {},
-      samplers = {},
       transformFeedback = this.transformFeedback,
       parameters = {},
       vertexArray = this.vertexArray,
@@ -179,7 +178,7 @@ export default class BaseModel {
     // Update model with any just provided attributes, settings or uniforms
     this.setAttributes(attributes);
     this.updateModuleSettings(moduleSettings);
-    this.setUniforms(uniforms, samplers);
+    this.setUniforms(uniforms);
 
     // Animate any function valued uniforms
     this._refreshAnimationProps(animationProps);
@@ -264,7 +263,7 @@ export default class BaseModel {
     Object.assign(this.props, props);
 
     if ('uniforms' in props) {
-      this.setUniforms(props.uniforms, props.samplers);
+      this.setUniforms(props.uniforms);
     }
 
     if ('pickable' in props) {

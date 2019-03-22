@@ -61,9 +61,7 @@ export {
 export {
   // WebGL2 classes & Extensions
   Query,
-  Sampler,
   Texture3D,
-  Texture2DArray,
   TransformFeedback,
   VertexArrayObject,
   VertexArray,
@@ -100,7 +98,6 @@ export {default as _CopyPass} from './multipass/copy-pass';
 export {default as _TexturePass} from './multipass/texture-pass';
 // export {default as _MaskPass} from './multipass/mask-pass';
 // export {default as _ClearMaskPass} from './multipass/clearmask-pass';
-export {default as _PickingPass} from './multipass/picking-pass';
 
 export {default as _ShaderModulePass} from './multipass/shader-module-pass';
 // export {default as _Canvas} from './multipass/canvas';

@@ -1,3 +1,4 @@
 **/dist*/**/*.js
 workers/
 *.min.js
+wip/

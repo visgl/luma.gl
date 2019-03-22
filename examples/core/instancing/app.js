@@ -1,11 +1,11 @@
 import {
   AnimationLoop,
   setParameters,
-  // pickModels,
   Cube,
   picking,
   dirlight,
-  lumaStats
+  lumaStats,
+  readPixelsToArray
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
@@ -17,6 +17,10 @@ Cube drawn with <b>instanced rendering</b>.
 A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
+
+function getDevicePixelRatio() {
+  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+}
 
 const SIDE = 256;
 
@@ -181,38 +185,21 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
-    const {
-      gl,
-      timeWidget,
-      memWidget
-    } = animationProps;
+    const {gl, timeWidget, memWidget} = animationProps;
 
     timeWidget.update();
     memWidget.update();
 
-    /*
-    const {
-      framebuffer,
-      useDevicePixels,
-      _mousePosition,
-    } = animationProps;
+    const {framebuffer, useDevicePixels, _mousePosition} = animationProps;
 
-    // "Pick" the cube under the mouse
-    const pickInfo =
-      _mousePosition &&
-      pickModels(gl, {
-        models: [this.cube],
-        position: _mousePosition,
-        useDevicePixels,
-        framebuffer
-      });
+    if (_mousePosition) {
+      const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
 
-    // Highlight it
-    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
-    this.cube.updateModuleSettings({
-      pickingSelectedColor
-    });
-    */
+      const pickX = _mousePosition[0] * dpr;
+      const pickY = gl.canvas.height - _mousePosition[1] * dpr;
+
+      pickInstance(gl, pickX, pickY, this.cube, framebuffer);
+    }
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -221,6 +208,34 @@ class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl}) {
     this.cube.delete();
+  }
+}
+
+function pickInstance(gl, pickX, pickY, model, framebuffer) {
+  framebuffer.clear({color: true, depth: true});
+  // Render picking colors
+  /* eslint-disable camelcase */
+  model.setUniforms({picking_uActive: 1});
+  model.draw({framebuffer});
+  model.setUniforms({picking_uActive: 0});
+
+  const color = readPixelsToArray(framebuffer, {
+    sourceX: pickX,
+    sourceY: pickY,
+    sourceWidth: 1,
+    sourceHeight: 1,
+    sourceFormat: gl.RGBA,
+    sourceType: gl.UNSIGNED_BYTE
+  });
+
+  if (color[0] + color[1] + color[2] > 0) {
+    model.updateModuleSettings({
+      pickingSelectedColor: color
+    });
+  } else {
+    model.updateModuleSettings({
+      pickingSelectedColor: null
+    });
   }
 }
 
