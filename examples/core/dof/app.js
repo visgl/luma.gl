@@ -536,9 +536,6 @@ export const animationLoopOptions = {
     dofUniforms.bind();
 
     dofProgram.setUniforms({
-      uFocusDistance: focusDistance,
-      uBlurCoefficient: blurCoefficient,
-      uPPM: ppm,
       uTexelOffset: texelOffset,
       uColor: sceneFramebuffer.color,
       uDepth: sceneFramebuffer.depth
