@@ -4,7 +4,7 @@ import TextureCube from '../classes/texture-cube';
 import Texture3D from '../classes/texture-3d';
 import Framebuffer from '../classes/framebuffer';
 import GL from '@luma.gl/constants';
-import assert from 'assert';
+import {assert} from '../utils';
 
 // Clone a new texture object from a reference texture object.
 export function cloneTextureFrom(refTexture, overrides) {

@@ -1,6 +1,6 @@
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
 import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
-import assert from 'assert';
+import {assert} from '../utils';
 
 // TODO - experimental
 const MODULE_INJECTORS = {

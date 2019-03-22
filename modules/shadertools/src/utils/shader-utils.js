@@ -1,4 +1,4 @@
-import assert from 'assert';
+import {assert} from '../utils';
 const FS100 = 'void main() {}';
 const FS300 = `#version 300 es\n${FS100}`;
 
