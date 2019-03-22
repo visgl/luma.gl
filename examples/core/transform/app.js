@@ -1,8 +1,16 @@
 /* global window */
-import {AnimationLoop, Buffer, Model, picking, Transform, isWebGL2} from '@luma.gl/core';
+import {
+  AnimationLoop,
+  Buffer,
+  Model,
+  picking,
+  Transform,
+  isWebGL2,
+  readPixelsToArray
+} from '@luma.gl/core';
 import {Log} from 'probe.gl';
 
-// const RED = new Uint8Array([255, 0, 0, 255]);
+const RED = new Uint8Array([255, 0, 0, 255]);
 
 /* eslint-disable max-len */
 const INFO_HTML = `
@@ -17,7 +25,7 @@ const INFO_HTML = `
 /* eslint-enable max-len */
 
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
 
 const EMIT_VS = `\
 #version 300 es
@@ -129,12 +137,18 @@ const log = new Log({id: 'transform'}).enable();
 let isDemoSupported = true;
 
 // TODO PIKCING TEMPORARILY DISABLED
-// let pickPosition = [0, 0];
+let pickPosition = [0, 0];
+
 function mousemove(e) {
-  // pickPosition = [e.offsetX, e.offsetY];
+  pickPosition = [e.offsetX, e.offsetY];
 }
+
 function mouseleave(e) {
-  // pickPosition = null;
+  pickPosition = null;
+}
+
+function getDevicePixelRatio() {
+  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 }
 
 const animationLoop = new AnimationLoop({
@@ -157,11 +171,7 @@ const animationLoop = new AnimationLoop({
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
-    const trianglePositions = new Float32Array([
-      0.015, 0.0,
-      -0.010, 0.010,
-      -0.010, -0.010
-    ]);
+    const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);
 
     const instanceOffsets = new Float32Array(NUM_INSTANCES * 2);
     const instanceRotations = new Float32Array(NUM_INSTANCES);
@@ -185,7 +195,6 @@ const animationLoop = new AnimationLoop({
 
       pickingColors[i * 2] = Math.floor(i / 255);
       pickingColors[i * 2 + 1] = i - 255 * pickingColors[i * 2];
-
     }
 
     const positionBuffer = new Buffer(gl, {data: trianglePositions});
@@ -248,7 +257,6 @@ const animationLoop = new AnimationLoop({
     useDevicePixels,
     time
   }) {
-
     if (!isDemoSupported) {
       return;
     }
@@ -281,22 +289,12 @@ const animationLoop = new AnimationLoop({
     offsetBuffer.updateAccessor({divisor: 0});
     rotationBuffer.updateAccessor({divisor: 0});
 
-    /*
-    TODO - picking is temporarily disabled
-    const pickInfo = pickPosition && pickModels(gl, {
-      models: [renderModel],
-      position: pickPosition,
-      useDevicePixels,
-      framebuffer
-    });
+    const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
 
-    const pickingSelectedColor = (pickInfo && pickInfo.color) || null;
+    const pickX = pickPosition[0] * dpr;
+    const pickY = gl.canvas.height - pickPosition[1] * dpr;
 
-    renderModel.updateModuleSettings({
-      pickingSelectedColor,
-      pickingHighlightColor: RED
-    });
-    */
+    pickInstance(gl, pickX, pickY, renderModel, framebuffer);
   },
 
   onFinalize({renderModel, transform}) {
@@ -309,13 +307,42 @@ const animationLoop = new AnimationLoop({
   }
 });
 
+function pickInstance(gl, pickX, pickY, model, framebuffer) {
+  framebuffer.clear({color: true, depth: true});
+  // Render picking colors
+  /* eslint-disable camelcase */
+  model.setUniforms({picking_uActive: 1});
+  model.draw({framebuffer});
+  model.setUniforms({picking_uActive: 0});
+
+  const color = readPixelsToArray(framebuffer, {
+    sourceX: pickX,
+    sourceY: pickY,
+    sourceWidth: 1,
+    sourceHeight: 1,
+    sourceFormat: gl.RGBA,
+    sourceType: gl.UNSIGNED_BYTE
+  });
+
+  if (color[0] + color[1] + color[2] > 0) {
+    model.updateModuleSettings({
+      pickingSelectedColor: color,
+      pickingHighlightColor: RED
+    });
+  } else {
+    model.updateModuleSettings({
+      pickingSelectedColor: null
+    });
+  }
+}
+
 animationLoop.getInfo = () => INFO_HTML;
 animationLoop.isSupported = () => {
   return isDemoSupported;
-}
+};
 animationLoop.getAltText = () => {
   return ALT_TEXT;
-}
+};
 
 export default animationLoop;
 
