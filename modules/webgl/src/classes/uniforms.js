@@ -2,7 +2,6 @@ import GL from '@luma.gl/constants';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';
-import Sampler from './sampler';
 import {log} from '../utils';
 
 const UNIFORM_SETTERS = {
@@ -184,7 +183,7 @@ function checkUniformValue(value) {
     return true;
   } else if (value === true || value === false) {
     return true;
-  } else if (value instanceof Texture || value instanceof Sampler) {
+  } else if (value instanceof Texture) {
     return true;
   } else if (value instanceof Renderbuffer) {
     return true;

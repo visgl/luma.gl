@@ -85,13 +85,10 @@ export {
 
 // WebGL2 classes & Extensions
 export {default as Query} from './classes/query';
-export {default as Sampler} from './classes/sampler';
 export {default as Texture3D} from './classes/texture-3d';
-export {default as Texture2DArray} from './classes/texture-2d-array';
 export {default as TransformFeedback} from './classes/transform-feedback';
 export {default as VertexArrayObject} from './classes/vertex-array-object';
 export {default as VertexArray} from './classes/vertex-array';
-export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 // experimental WebGL exports
 

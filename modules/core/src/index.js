@@ -61,13 +61,10 @@ export {
 export {
   // WebGL2 classes & Extensions
   Query,
-  Sampler,
   Texture3D,
-  Texture2DArray,
   TransformFeedback,
   VertexArrayObject,
   VertexArray,
-  UniformBufferLayout,
   setPathPrefix,
   loadFile,
   loadImage,
