@@ -1,4 +1,4 @@
-// // import assert from 'assert'; // TODO
+// // import assert from '../../utils'; // TODO
 
 const TYPE_DEFINITIONS = {
   boolean: {
