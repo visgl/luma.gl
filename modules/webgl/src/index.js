@@ -89,6 +89,7 @@ export {default as Texture3D} from './classes/texture-3d';
 export {default as TransformFeedback} from './classes/transform-feedback';
 export {default as VertexArrayObject} from './classes/vertex-array-object';
 export {default as VertexArray} from './classes/vertex-array';
+export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 // experimental WebGL exports
 

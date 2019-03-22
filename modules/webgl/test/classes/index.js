@@ -21,10 +21,11 @@ import './program.spec';
 import './program-configuration.spec';
 import './draw.spec';
 
-import './copy-and-blit.spec.js';
+import './copy-and-blit.spec';
 
 // Extensions / webgl2
 import './query.spec';
 
 // webgl2
+import './uniform-buffer-layout.spec';
 import './transform-feedback.spec';
