@@ -7,6 +7,7 @@ import {
   Program,
   Texture2D,
   VertexArray,
+  UniformBufferLayout,
   Buffer,
   isWebGL2,
   Cube
@@ -184,10 +185,12 @@ precision highp float;
 
 #define MAX_BLUR 20.0
 
-uniform vec2  uDepthRange;
-uniform float uFocusDistance;
-uniform float uBlurCoefficient;
-uniform float uPPM;
+uniform DOFUniforms {
+  vec2  uDepthRange;
+  float uFocusDistance;
+  float uBlurCoefficient;
+  float uPPM;
+};
 
 uniform vec2 uTexelOffset;
 
@@ -255,14 +258,30 @@ export const animationLoopOptions = {
     // Create postprocessing pass program.
     ///////////////////////////////////////
 
+    const dofUniformsLayout = new UniformBufferLayout({
+      uDepthRange: gl.FLOAT_VEC2,
+      uFocusDistance: gl.FLOAT,
+      uBlurCoefficient: gl.FLOAT,
+      uPPM: gl.FLOAT
+    }).setUniforms({
+      uDepthRange: [NEAR, FAR]
+    });
+
+    const dofUniforms = new Buffer(gl, {
+      target: GL.UNIFORM_BUFFER,
+      data: dofUniformsLayout.getData(),
+      accessor: {
+        index: 0
+      }
+    });
+
     const dofProgram = new Program(gl, {
       id: 'DOF_PROGRAM',
       vs: DOF_VERTEX,
-      fs: DOF_FRAGMENT,
-      uniforms: {
-        uDepthRange: [NEAR, FAR]
-      }
+      fs: DOF_FRAGMENT
     });
+
+    dofProgram.uniformBlockBinding(dofProgram.getUniformBlockIndex('DOFUniforms'), 0);
 
     //////////////////////
     // Set up frambuffers.
@@ -419,6 +438,8 @@ export const animationLoopOptions = {
       dofFramebuffer,
       quadVertexArray,
       dofProgram,
+      dofUniforms,
+      dofUniformsLayout,
       statsWidget
     };
   },
@@ -436,6 +457,8 @@ export const animationLoopOptions = {
     dofFramebuffer,
     quadVertexArray,
     dofProgram,
+    dofUniforms,
+    dofUniformsLayout,
     statsWidget
   }) => {
     if (!isDemoSupported) {
@@ -502,6 +525,16 @@ export const animationLoopOptions = {
     texelOffset[0] = 1;
     texelOffset[1] = 0;
 
+    dofUniformsLayout.setUniforms({
+      uFocusDistance: focusDistance,
+      uBlurCoefficient: blurCoefficient,
+      uPPM: ppm
+    });
+
+    dofUniforms.setData(dofUniformsLayout.getData());
+
+    dofUniforms.bind();
+
     dofProgram.setUniforms({
       uFocusDistance: focusDistance,
       uBlurCoefficient: blurCoefficient,
@@ -525,9 +558,6 @@ export const animationLoopOptions = {
     texelOffset[1] = 1;
 
     dofProgram.setUniforms({
-      uFocusDistance: focusDistance,
-      uBlurCoefficient: blurCoefficient,
-      uPPM: ppm,
       uTexelOffset: texelOffset,
       uColor: sceneFramebuffer.color,
       uDepth: sceneFramebuffer.depth
@@ -538,6 +568,8 @@ export const animationLoopOptions = {
       drawMode: gl.TRIANGLE_STRIP,
       vertexCount: 4
     });
+
+    dofUniforms.unbind();
   }
 };
 

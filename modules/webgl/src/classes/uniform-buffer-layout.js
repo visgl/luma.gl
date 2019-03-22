@@ -20,6 +20,8 @@ export default class UniformBufferLayout {
       this._addUniform(key, layout[key]);
     }
 
+    this.size += (4 - (this.size % 4)) % 4;
+
     // Allocate three typed arrays pointing at same memory
     const data = new Float32Array(this.size);
     this.typedArray = {
