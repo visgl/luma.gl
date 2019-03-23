@@ -2,17 +2,18 @@ import GL from '@luma.gl/constants';
 import {Query, TransformFeedback} from '@luma.gl/webgl';
 import {getBuffersFromGeometry} from './model-utils';
 import BaseModel from './base-model';
-// import {getDrawMode} from '../core/geometry';
-
-// import {removeModel} from '../debug/seer-integration';
-import {log, isObjectEmpty, assert} from '../utils';
+import {log, isObjectEmpty, uid, assert} from '../utils';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const LOG_DRAW_PRIORITY = 2;
 
 export default class Model extends BaseModel {
-  /* eslint-disable max-statements  */
-  /* eslint-disable complexity  */
+  constructor(gl, props) {
+    // Deduce a helpful id
+    const {id = uid('model')} = props;
+    super(gl, {...props, id});
+  }
+
   initialize(props = {}) {
     super.initialize(props);
 
@@ -27,7 +28,6 @@ export default class Model extends BaseModel {
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
   }
-  /* eslint-enable max-statements */
 
   setProps(props) {
     super.setProps(props);

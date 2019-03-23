@@ -1,6 +1,8 @@
 # IcoSphere
 
-Creates a sphere model by subdividing an Icosahedron.
+Creates a sphere geometry by subdividing an Icosahedron.
+
+The generated geometry will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
 
 ## Usage
 

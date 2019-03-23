@@ -1,6 +1,8 @@
 # SphereGeometry
 
-Creates a sphere model.
+Creates a sphere geometry.
+
+The generated geometry will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
 
 ## Usage
 

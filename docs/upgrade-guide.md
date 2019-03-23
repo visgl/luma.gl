@@ -90,8 +90,18 @@ Deletions:
 Additions:
 * A new `Model.isAnimated()` method is provided, indicating that redraws are required every frame.
 
+## Geometry
 
-### Buffer
+The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metatadata describing attributes for a geometry.
+
+| Removal                      | Replacement | Reason for Change |
+| ---                          | ---         | ---               |
+| `Geometry.drawMode` no longer accepts `String` values | `Geometry.DRAW_MODE` enum | API simplification |
+| `Geometry.setNeedsRedraw()`  | N/A | Not needed for immutable geometry |
+| `Geometry.getNeedsRedraw()`  | N/A | Not needed for immutable geometry |
+
+
+## Buffer
 
 | Removed Method               | Replacement | Reason for Change |
 | ---                          | ---         | ---               |

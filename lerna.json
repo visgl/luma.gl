@@ -3,6 +3,7 @@
   "version": "7.0.0-alpha.18",
   "npmClient": "yarn",
   "useWorkspaces": true,
+  "exact": true,
   "packages": [
     "modules/*"
   ],

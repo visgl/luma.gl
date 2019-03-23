@@ -1,6 +1,6 @@
 # Cylinder
 
-Creates a cylinder model.
+Creates a cylinder geometry.
 
 The generated geometry will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
 

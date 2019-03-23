@@ -182,6 +182,7 @@ function getCubeGeometry() {
         ])
       },
 
+    },
       indices: new Uint16Array([
         0, 1, 2, 0, 2, 3,
         4, 5, 6, 4, 6, 7,
@@ -190,7 +191,6 @@ function getCubeGeometry() {
         16, 17, 18, 16, 18, 19,
         20, 21, 22, 20, 22, 23
       ])
-    }
   });
 }
 

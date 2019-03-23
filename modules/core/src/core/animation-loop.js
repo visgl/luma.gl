@@ -401,7 +401,7 @@ export default class AnimationLoop {
     let aspect = 1;
     const {clientWidth, clientHeight} = this.gl.canvas;
     if (clientWidth >= 0 && clientHeight >= 0) {
-      aspect = height > 0 ? clientWidth / clientHeight : 1;
+      aspect = clientHeight > 0 ? clientWidth / clientHeight : 1;
     } else if (width > 0 && height > 0) {
       aspect = width / height;
     }

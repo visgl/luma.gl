@@ -9,7 +9,7 @@ import {
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {log, isObjectEmpty, assert} from '../utils';
+import {log, isObjectEmpty, uid, assert} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -23,6 +23,8 @@ const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 export default class BaseModel {
   constructor(gl, props = {}) {
     assert(isWebGL(gl));
+    const {id = uid('base-model')} = props;
+    this.id = id;
     this.gl = gl;
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
@@ -100,8 +102,19 @@ export default class BaseModel {
 
   // GETTERS
 
+<<<<<<< HEAD
   isAnimated() {
     return this.animated;
+=======
+  getNeedsRedraw({clearRedrawFlags = false} = {}) {
+    let redraw = false;
+    redraw = redraw || this.needsRedraw;
+    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
+    if (this.animated) {
+      redraw = redraw || `animated model ${this.id}`;
+    }
+    return redraw;
+>>>>>>> glTF attribute names in geometries
   }
 
   getProgram() {
