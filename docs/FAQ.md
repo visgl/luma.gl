@@ -1,6 +1,11 @@
 # Frequently Asked Questions
 
 
+## Github Issues
+
+We occasionally mark github issues that contain answers to questions that pop up repeatedly with the [`FAQ` label](https://github.com/uber/luma.gl/issues?utf8=%E2%9C%93&q=label%3AFAQ+).
+
+
 ## Using luma.gl in isorender applications
 
 > Q: I am using luma.gl in an isorender application and I get an error message from luma.gl on the server
