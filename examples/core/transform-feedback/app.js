@@ -1,6 +1,5 @@
 /* eslint-disable camelcase */
-import {AnimationLoop, Buffer, Model, isWebGL2} from '@luma.gl/core';
-import {Log} from 'probe.gl';
+import {AnimationLoop, Buffer, Model, isWebGL2, log} from '@luma.gl/core';
 
 const INFO_HTML = `
 <p>
@@ -70,14 +69,12 @@ const POSITIONS = [
   -1.0, -1.0, 0.0, 1.0
 ];
 
-const log = new Log({id: 'transform'}).enable();
 let isDemoSupported = true;
 
 const animationLoop = new AnimationLoop({
   glOptions: {
     webgl2: true,
-    webgl1: true,
-    debug: true
+    webgl1: false
   },
 
   // eslint-disable-next-line
@@ -91,8 +88,8 @@ const animationLoop = new AnimationLoop({
     const byteLength = POSITIONS.length * FLOAT_SIZE;
     const buffers = {
       vertex: new Buffer(gl, {data: new Float32Array(POSITIONS)}),
-      position: new Buffer(gl, {byteLength, type: gl.FLOAT, usage: gl.STATIC_COPY}),
-      color: new Buffer(gl, {byteLength, type: gl.FLOAT, usage: gl.STATIC_COPY})
+      position: new Buffer(gl, {byteLength, usage: gl.STATIC_COPY, accessor: {type: gl.FLOAT}}),
+      color: new Buffer(gl, {byteLength, usage: gl.STATIC_COPY, accessor: {type: gl.FLOAT}})
     };
 
     // first pass, offscreen, no rasterization, vertices processing only

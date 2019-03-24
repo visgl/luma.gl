@@ -52,16 +52,16 @@ const animationLoop = new AnimationLoop({
     const triangleVertexArray = new VertexArray(gl, {
       program,
       attributes: {
-        positions: new Buffer(gl, {data: new Float32Array(TRIANGLE_VERTS)}),
-        colors: new Buffer(gl, {data: new Float32Array(TRIANGLE_COLORS)}),
+        positions: new Buffer(gl, new Float32Array(TRIANGLE_VERTS)),
+        colors: new Buffer(gl, new Float32Array(TRIANGLE_COLORS))
       }
     });
 
     const squareVertexArray = new VertexArray(gl, {
       program,
       attributes: {
-        positions: new Buffer(gl, {data: new Float32Array(SQUARE_VERTS)}),
-        colors: new Buffer(gl, {data: new Float32Array(SQUARE_COLORS)})
+        positions: new Buffer(gl, new Float32Array(SQUARE_VERTS)),
+        colors: new Buffer(gl, new Float32Array(SQUARE_COLORS))
       }
     });
 

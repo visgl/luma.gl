@@ -63,9 +63,9 @@ const transform = new Transform(gl2, {
 });
 
 ```
-### Use case : Multiple iterations using swapBuffers().
+### Use case : Multiple iterations using swap().
 
-When `feedbackMap` is specified buffers can be swapped using a single call to `swapBuffers()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
+When `feedbackMap` is specified buffers can be swapped using a single call to `swap()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
 ```js
 
@@ -79,7 +79,7 @@ let bufferWithNewValues = transform.getBuffer('outValue');
 ...
 
 //swap buffers
-transform.swapBuffers();
+transform.swap();
 transform.run();
 bufferWithNewValues = transform.getBuffer('outValue');
 ...
@@ -261,9 +261,7 @@ Updates buffer bindings with provided buffer objects for one or more source or d
 
 Swaps source and destination buffers and textures. Buffer swapping is performed when `feedbackMap` is provided and texture swapping is performed when `_swapTexture` is provided. If buffer swapping is needed, `sourceBuffers` and `feedbackBuffers` supplied to the constructor and/or the `update` method must be `Buffer` objects.
 
-NOTE: `swapBuffers()` is deprecated, instead use `swap()`.
 
-
-### _getTargetTexture() : Texture2D/null (EXPERIMENTAL)
+### \_getTargetTexture() : Texture2D/null (EXPERIMENTAL)
 
 When transform is setup to render to a texture, returns current target texture, otherwise null.

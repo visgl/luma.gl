@@ -1,59 +1,82 @@
 # What's New
 
-## Version 7.x
+## Version 7.0
+
+Target Date: April 15, 2019
+
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/render-pass.gif" />
+        <p><i>glTF Support</i></p>
+      </td>
+      <td>
+        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/transform-texture.gif" />
+        <p><i>PBR (Physically Based Rendering)</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+## 3D File Format Loaders
+
+### loaders.gl: New Companion Framework for Loading 3D Assets
+
+[loaders.gl]() is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (including loaders for various popular point cloud and mesh formats), including:
+
+* Draco
+* PLY
+* PCD
+* LAS/LAZ
+* OBJ
+
+These loaders, while technically independent of luma.gl, return parsed data in a format that can be passed directly to luma.gl classes like `Geometry` and `Model`.
+
+### glTF Support
+
+luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader](). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
+
+- **PBR Material Support**: PBR (Physically Based Rendering)
+- **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
+- **Geometry glTF Support**: The `Geometry` class and scene graph support has been overhauled to conform to glTF conventions, simplifying loading and manipulation of glTF formatted data.
+
+
+## New API Features
 
 ### "Asynchronous" Textures
 
-The `Texture` class now supports image data being initialized with a URL `string` or a `Promise`that resolves to any of the previously valid data types, e.g. an `Image` instance. This avoids the need to clutter your code with `promise.then()` and/or callback functions just to load textures.
+The image data needed by the `Texture` classes can now be supplied using URLs (`string` or `Promise`). This can removes the need for applications to use callbacks etc to load textures.
 
-```
+```js
 new Texture2D(gl, 'path/to/my/image.png');
 // or
 new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a Promise
 ```
 
-### loaders.gl - New Companion Framework for 3D Asset Loading
+### Unified functions for Framebuffers and Textures (Read/Copy/Blit)
 
-[loaders.gl]() provides a rich suite of 3D file format loaders (including loaders for various popular `Mesh` and `PointCloud` formats) that parse files into objects that can be directly passed to luma.gl `Model` class.
-
-
-### New Submodule with GPGPU Utilities
-
-* `@luma.gl/gpgpu` - an experimental module with a collection of GPU accelerated utility methods.
-
-### Copy and Blit methods
-
-Target Date: Q1, 2019
-
-### glTF 2.0 Support
-
-luma.gl can now load binary GLB files (with the help of loaders.gl). There are certain limitations.
+A set of global methods that perform copying data to and from `Framebuffer` objects. All functions that read from or write to a `Framebuffer` object now also accept a `Texture` object (no need to create and configure a `Framebuffer` just to do a simple operation on a `Texture`).
 
 
-### glTF2 Compatible Scenegraph
+### Query: Simplified Interface
 
-The scene graph support in luma.gl has been completely overhauled and designed to closely follow glTF2, simplifying loading and manipulation of glTF formatted data in luma.gl. A `Model` is now a positioned `Mesh`, and a `Mesh` can consist of multiple `Primitive` instances, each with a different geometry and material.
+* The `Query` class Defaults to not using Promises. Approximately 3x improvement in query start time. Promise interfaces still available via `createPoll`
+* Remove support for GL_TIMESTAMP_EXT queries as they are [unreliable]().
 
 
-### Unified Read/Copy/Blit functions for Framebuffers and Textures
+### Performance Instrumentation
 
-A set of global methods that perform copying data to and from `Framebuffer` objects. All functions that read from or write to a `Framebuffer` object now also accept a `Texture` object, relieving the application from the boilerplate of having to create and configure a `Framebuffer` just to do a simple operation on a `Texture`.
+More comprehensive metrics about frame times and GPU memory usage are being collected. The data is exposed as a proble.gl `Stats` object. The new probe.gl [`StatsWidget`]() can be used to present data in applications.
 
-Several member function of `Framebuffer` and `Texture` classes are now replaced by these global functions.
+
+### New Submodule with GPGPU Algorithms and Utilities
+
+A new experimental submodule `@luma.gl/gpgpu` has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
 
 
 ### Accessor Objects can now Reference Buffers
-
-### Simplified Query Interface
-
-* Defaults to not using Promises. Approximately 3x improvement in query start time. Promise interfaces still available via `createPoll`
-* Remove support for GL_TIMESTAMP_EXT queries as they are [unreliable]().
-
-## Version 7.0
-
-Target Date: Jan 30, 2019
-
-### New submodule for GPGPU functions
 
 To improve support for interleaved attributes and glTF model loading, accessor objecs and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
 

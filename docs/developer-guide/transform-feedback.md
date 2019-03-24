@@ -77,9 +77,9 @@ const transform = new Transform(gl2, {
 });
 
 ```
-### Use case : Multiple iterations using swapBuffers().
+### Use case : Multiple iterations using swap().
 
-When `feedbackMap` is specified buffers can be swapped using a single call to `swapBuffers()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
+When `feedbackMap` is specified buffers can be swapped using a single call to `swap()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
 ```js
 
@@ -93,7 +93,7 @@ let bufferWithNewValues = transform.getBuffer('outValue');
 ...
 
 //swap buffers
-transform.swapBuffers();
+transform.swap();
 transform.run();
 bufferWithNewValues = transform.getBuffer('outValue');
 ...
