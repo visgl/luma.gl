@@ -2,11 +2,19 @@
 
 ## Upgrading from v6.x to v7.0
 
-### Loading Functions Removed
+luma.gl v7.0 represents a major overhaul of the API and applications may require light porting:
 
-A number of IO functions have been removed and now only minimal `loadFile` and `loadImage` utils are provided. Instead:
-* A new companion framework [loaders.gl]() provides a rich suite of 3D file format loaders
-* Also the `Texture2D` constructor can now accept url strings and `Promise` objects.
+- A number of changes have been made to support new features, unify similar functionality and improve performance.
+- Modularization of luma.gl is also continuing and in some cases rarely used code has been removed to reduce library bloat.
+
+
+## API Removals
+
+## Loading Functions
+
+Since luma.gl's new companion framework [loaders.gl]() now provides significantly richer and more powerful loading functionality, it did not make sense to keep the legacy luma.gl loading functions. They have been removed and now only minimal `loadFile` and `loadImage` utils are provided.
+
+The following table provides guidance in case you are using one of the removed methods.
 
 | Removed Function | Replacement  |
 | ---              | ---          |
@@ -14,23 +22,69 @@ A number of IO functions have been removed and now only minimal `loadFile` and `
 | `loadFiles`      | Multiple calls to `loadFile` |
 | `loadImages`     | Multiple calls to `loadImage` |
 | `loadTextures`   | As per `loadTexture` |
-| `loadProgram`    | Manually load `fs` and `vs` and call `new Program(gl, {vs, fs})` |
-| `loadModel`      | `loadFile` followed by `parseModel` code from examples/lesson/16|
-| `parseModel`      | `loadFile` followed by `parseModel` code from examples/lesson16 |
+| `loadProgram`    | Manually load `fs` and `vs`, call `new Program(gl, {vs, fs})` |
+| `loadModel`      | call `loadFile` and copy `parseModel` code from examples/lesson/16|
+| `parseModel`     | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
 
+In case of image loading, note the new support for async textures, i.e the `Texture2D` constructor can now accept url strings and `Promise` objects directly.
+
+### Sampler
+
+The `Sampler` class has been removed as its utility was limited and it added complexity to the library. It may be added back in the future if a clear use case arises.
+
+### Texture2D
+
+The `Texture2D` class has been removed as its utility was limited and the status of support was unclear due to limited testing. It may be added back in the future if a clear use case arises.
+
+### FenceSync
+
+The `FenceSync` class has been removed as its utility was limited. If required, syncing can be done directly through the `WebGLFenceSync` object.
+
+## Framebuffer and Texture: Copy and Blit methods
+
+Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use the corresponding new global methods:
+
+| Removed method                  | Replacement |
+| ---                             | ---         |
+| `Framebuffer.readPixels`        | `readPixelsToArray` |
+| `Framebuffer.readPixelsToBuffer`| `readPixelsToBuffer` |
+| `Frambuffer.copyToDataUrl`      | `copyToDataUrl` |
+| `Frambuffer.copyToImage`        | `copyToImage` |
+| `Frambuffer.copyToTexture`      | `copyToTexture` |
+| `Frambuffer.blit`               | `blit` |
+| `Texture.copyFramebuffer`       | `copyToTexture` |
+
+Parameters have also changed in some cases, see separate section.
+
+
+## API Changes
 
 ### Debug functionality moved to separate npm module
 
-Debug functionality is now more cleanly separated from the main library and needs to be imported from a separate npm module:
+To reduce bundle size and increase separation of concerns, debug functionality is now more cleanly separated from the core library and needs to be imported from a separate npm module:
 
-To upgrade, just replace
+To upgrade, install the new module
+
+```bash
+npm install @luma.gl/debug
 ```
+
+And replace
+
+```js
 import "luma.gl/debug";
 ````
 with
-```
+```js
 import "@luma.gl/debug";
 ```
+
+## Model
+
+`Model` no longer inherits from `ScenegraphNode`, ensuring that applications that do not need scenegraph support do not need to include scenegraph related code.
+
+Instead, the new `ModelNode` class supports the use of `Model` in scenegraphs. `ModelNode` inherits from `ScenegraphNode` and holds a `Model` instance, and forwards many of the `Model` methods and can be used interchangeably in most cases.
+
 
 ## Buffer
 
@@ -39,26 +93,47 @@ import "@luma.gl/debug";
 | `Buffer.updateAccessor(...)` | `Buffer.setAccessor(new Accessor(buffer.accessor, ...)` | Decoupling accessors from `Buffer` |
 
 
-### Copy and Blit methods
+## Framebuffer
 
-Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use corresponding global methods.
+To maximize rendering performance, the default framebuffer is no longer preserved between frames.
 
-| Removed method                  | Replacement |
-| ---                             | ---         |
-| `Framebuffer.readPixels`        |  `readPixelsToArray` |
-| `Framebuffer.readPixelsToBuffer`|  `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`      |  `copyToDataUrl` |
-| `Frambuffer.copyToImage`        |  `copyToImage` |
-| `Frambuffer.copyToTexture`      |  `copyToTexture` |
-| `Frambuffer.blit`               |  `blit` |
-| `Texture.copyFramebuffer`       |  `copyToTexture` |
+The most common use case for preserving the draw buffer is capturing canvas contents into an image via `toDataURL`. This can now be done via `AnimationLoop.toDataURL` which returns a `Promise` that resolves to the canvas data URL:
 
-Names of various parameters to these methods are also changed in an effort to use same convention for all read-back, copy and blit methods, and make it less confusing.
+```js
+dataURL = await animationLoop.toDataURL();
+snapshotImage.src = dataURL;
+```
+
+More generally, moving code that depends on canvas contents to the end of `onRender`, after all draw operations, will ensure that canvas contents are available.
+
+Prior behaviour can re-enabled using the `glOptions` argument to the `createGLContext` or `AnimationLoop` constructors:
+
+```js
+new AnimationLoop({
+  glOptions: {
+    preserveDrawingBuffer: true
+  }
+});
+```
+
+Note that setting `preserveDrawingBuffers` may result in a performance drop on some platforms.
+
+
+### Query
+
+Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
+
+To improve performance and simplify the library, support for tracking `Query` instances with promises has changed: The `Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. Instead `Query.createPoll` now provides a simple, optional promise-based API.
+
+
+### Copy And Blit Parameter Unification
+
+Names of certain parameters to these methods have been unified in an effort to reduce confusion and use the same conventions across all functions implementing image read-back, copy or blit.
 
 This table lists parameter mapping between old and new function.
 
 | `Framebuffer.readPixels` | `readPixelsToArray` |
-| ------------             | ---- |
+| ---                      | --- |
 | -                        | `source` |
 | `opts.x`                 | `opts.sourceX` |
 | `opts.y`                 | `opts.sourceY` |
@@ -70,7 +145,7 @@ This table lists parameter mapping between old and new function.
 | `opts.pixelArray`        | `opts.target` |
 
 | `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer` |
-| ------------      | ---- |
+| ---               | --- |
 | -                 | `source` |
 | `opts.x`          | `opts.sourceX` |
 | `opts.y`          | `opts.sourceY` |
@@ -137,40 +212,6 @@ This table lists parameter mapping between old and new function.
 | `opts.stencil`    | `opts.stencil` |
 | `opts.mask`       | `opts.mask` |
 | `opts.filter`     | `opts.filter` |
-
-
-### Default Framebuffer
-
-The default framebuffer is no longer preserved between frames. The most common use case for preserving the draw buffer is capturing canvas contents into an image via `toDataURL`. This can now be done via `AnimationLoop.toDataURL` which returns a `Promise` that resolves to the canvas data URL:
-
-```
-animationLoop.toDataURL().then((dataURL) => {
-  snapshotImage.src = dataURL;
-});
-```
-
-More generally, moving code that depends on canvas contents to the end of `onRender`, after all draw operations, will ensure that canvas contents are available. Finally, prior behaviour can re-enabled using the `glOptions` argument to the `AnimationLoop` constructor:
-
-```
-new AnimationLoop({
-  glOptions: {
-    preserveDrawingBuffer: true
-  }
-});
-```
-
-This final option is discouraged as it may result in a significant performance drops on some platforms.
-
-### Query Results
-
-Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
-
-
-### Query Promises
-
-`Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. See `Query.createPoll` for a promise-based API.
-
-### `FenceSync` class has been removed. Syncing can be done directly through the `gl` object.
 
 
 ## Upgrading from v5.3 to v6.0

@@ -210,6 +210,35 @@
           ]
         },
         {
+          "title": "Geometry Primitives",
+          "entries": [
+            {
+              "name": "Cone",
+              "entry": "docs/api-reference/core/geometries/cone"
+            },
+            {
+              "name": "Cube",
+              "entry": "docs/api-reference/core/geometries/cube"
+            },
+            {
+              "name": "Cylinder",
+              "entry": "docs/api-reference/core/geometries/cylinder"
+            },
+            {
+              "name": "IcoSphere",
+              "entry": "docs/api-reference/core/geometries/ico-sphere"
+            },
+            {
+              "name": "Plane",
+              "entry": "docs/api-reference/core/geometries/plane"
+            },
+            {
+              "name": "Sphere",
+              "entry": "docs/api-reference/core/geometries/sphere"
+            }
+          ]
+        },
+        {
           "title": "Lights",
           "entries": [
             {
@@ -298,31 +327,31 @@
           ]
         },
         {
-          "title": "Geometry Primitives",
+          "title": "Geometry Nodes",
           "entries": [
             {
               "name": "Cone",
-              "entry": "docs/api-reference/core/scenegraph/models/cone"
+              "entry": "docs/api-reference/core/scenegraph/geometries/cone"
             },
             {
               "name": "Cube",
-              "entry": "docs/api-reference/core/scenegraph/models/cube"
+              "entry": "docs/api-reference/core/scenegraph/geometries/cube"
             },
             {
               "name": "Cylinder",
-              "entry": "docs/api-reference/core/scenegraph/models/cylinder"
+              "entry": "docs/api-reference/core/scenegraph/geometries/cylinder"
             },
             {
               "name": "IcoSphere",
-              "entry": "docs/api-reference/core/scenegraph/models/ico-sphere"
+              "entry": "docs/api-reference/core/scenegraph/geometries/ico-sphere"
             },
             {
               "name": "Plane",
-              "entry": "docs/api-reference/core/scenegraph/models/plane"
+              "entry": "docs/api-reference/core/scenegraph/geometries/plane"
             },
             {
               "name": "Sphere",
-              "entry": "docs/api-reference/core/scenegraph/models/sphere"
+              "entry": "docs/api-reference/core/scenegraph/geometries/sphere"
             }
           ]
         },

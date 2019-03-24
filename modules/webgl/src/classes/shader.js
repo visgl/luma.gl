@@ -112,7 +112,7 @@ export class Shader extends Resource {
 
 export class VertexShader extends Shader {
   constructor(gl, props) {
-    // Signature: VertexShader(gl, source)
+    // Signature: new VertexShader(gl, source)
     if (typeof props === 'string') {
       props = {source: props};
     }
@@ -127,7 +127,7 @@ export class VertexShader extends Shader {
 
 export class FragmentShader extends Shader {
   constructor(gl, props) {
-    // Signature: FragmentShader(gl, source)
+    // Signature: new FragmentShader(gl, source)
     if (typeof props === 'string') {
       props = {source: props};
     }

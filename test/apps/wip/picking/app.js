@@ -33,13 +33,39 @@ const PLANETS = [
 ];
 
 let pickedModelId = '';
+function createModelForPlanet(gl, shaderCache, planet) {
+  const diffuseTexture = new Texture2D(gl, {
+    data: planet.textureUrl,
+    mipmaps: true,
+    parameters: {
+      [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+      [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+    }
+  });
+
+  return new Sphere(gl, {
+    id: planet.name,
+    nlat: 32,
+    nlong: 32,
+    radius: 1,
+    pickable: true,
+    modules: [project, diffuse, picking],
+    moduleSettings: {
+      diffuseTexture,
+      pickingThreshold: 0
+    },
+    attributes: {
+      // Just use non zero pickingColor to identify if the model has been picked or not.
+      // TODO - remove when Scenegraph properly implements picking
+      pickingColors: {constant: true, value: new Float32Array([1.0, 1.0, 1.0])}
+    },
+    shaderCache
+  });
+}
 
 const animationLoop = new AnimationLoop({
   createFramebuffer: true,
   onInitialize: ({gl, canvas}) => {
-    // Use non zero pickingColor to identify if the model has been picked or not.
-    const pickingColorsData = new Float32Array(10000).fill(1.0);
-
     const shaderCache = new ShaderCache({gl});
 
     setParameters(gl, {
@@ -49,38 +75,9 @@ const animationLoop = new AnimationLoop({
       depthFunc: GL.LEQUAL
     });
 
-    function createModelForPlanet(planet) {
-      const diffuseTexture = new Texture2D(gl, {
-        data: planet.textureUrl,
-        mipmaps: true,
-        parameters: {
-          [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-          [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
-        }
-      });
-
-      return new Sphere(gl, {
-        id: planet.name,
-        nlat: 32,
-        nlong: 32,
-        radius: 1,
-        pickable: true,
-        attributes: {
-          colors: new Buffer(gl, {size: 4, data: new Float32Array(10000)}),
-          pickingColors: new Buffer(gl, {size: 3, data: pickingColorsData})
-        },
-        modules: [project, diffuse, picking],
-        moduleSettings: {
-          diffuseTexture,
-          pickingThreshold: 0
-        },
-        shaderCache
-      });
-    }
-
     return {
       planets: PLANETS.map((planet, i) =>
-        createModelForPlanet(planet, i).setPosition([
+        createModelForPlanet(gl, shaderCache, planet).setPosition([
           Math.cos((i / PLANETS.length) * Math.PI * 2) * 3,
           Math.sin((i / PLANETS.length) * Math.PI * 2) * 3,
           0
