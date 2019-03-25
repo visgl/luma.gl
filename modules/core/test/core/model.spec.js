@@ -25,7 +25,7 @@ test('Model#construct/destruct', t => {
   t.end();
 });
 
-test.only('Model#setAttribute', t => {
+test('Model#setAttribute', t => {
   const {gl} = fixture;
 
   const buffer1 = new Buffer(gl, {size: 2, data: new Float32Array(4).fill(1)});
