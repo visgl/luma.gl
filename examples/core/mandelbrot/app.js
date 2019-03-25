@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpace} from '@luma.gl/core';
+import {AnimationLoop, ClipSpace, Buffer} from '@luma.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
@@ -112,24 +112,28 @@ const animationLoop = new AnimationLoop({
       }
     });
 
+    const cornersBuffer = new Buffer(gl, 32);
+
     return {
-      clipSpace: new ClipSpace(gl, {fs: MANDELBROT_FRAGMENT_SHADER}),
+      clipSpace: new ClipSpace(gl, {
+        fs: MANDELBROT_FRAGMENT_SHADER,
+        attributes: {
+          aCoordinate: [cornersBuffer, {size: 2}]
+        }
+      }),
+      cornersBuffer,
       statsWidget
     };
   },
 
-  onRender: ({gl, canvas, tick, clipSpace, statsWidget}) => {
+  onRender: ({gl, canvas, tick, clipSpace, statsWidget, cornersBuffer}) => {
     statsWidget.update();
 
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
-    // Feed in new extents every draw
-    const corners = getZoomedCorners();
-    clipSpace.draw({
-      attributes: {
-        aCoordinate: {value: new Float32Array(corners), size: 2}
-      }
-    });
+    cornersBuffer.setData(new Float32Array(getZoomedCorners()));
+
+    clipSpace.draw();
   }
 });
 

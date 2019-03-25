@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import luma from '@luma.gl/webgl/init';
 // TODO - Model test should not depend on Cube
-import {Buffer, _Attribute as Attribute, Model, Cube} from '@luma.gl/core';
+import {Buffer, Model, Cube} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
@@ -25,7 +25,7 @@ test('Model#construct/destruct', t => {
   t.end();
 });
 
-test('Model#setAttribute', t => {
+test.only('Model#setAttribute', t => {
   const {gl} = fixture;
 
   const buffer1 = new Buffer(gl, {size: 2, data: new Float32Array(4).fill(1)});
@@ -42,9 +42,9 @@ test('Model#setAttribute', t => {
   );
 
   model.setAttributes({
-    instanceSizes: new Attribute(gl, {size: 1, buffer: buffer1}),
+    instanceSizes: [buffer1, {size: 1}],
     instancePositions: buffer2,
-    instanceWeight: {size: 1, constant: true, value: new Float32Array([10])}
+    instanceWeight: new Float32Array([10])
   });
 
   t.is(stats.get('Buffers Active').count - initialActiveBuffers, 4, 'Did not create new buffers');

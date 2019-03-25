@@ -12,16 +12,15 @@ export default class ModelNode extends ScenegraphNode {
     // Create new Model or used supplied Model
     if (gl instanceof Model) {
       this.model = gl;
+      this._setModelNodeProps(props);
     } else {
       this.model = new Model(gl, props);
     }
-
-    this._setNodelNodeProps(props);
   }
 
   setProps(props) {
     super.setProps(props);
-    this._setNodelNodeProps(props);
+    this._setModelNodeProps(props);
     return this;
   }
 
@@ -52,7 +51,7 @@ export default class ModelNode extends ScenegraphNode {
 
   // PRIVATE
 
-  _setNodelNodeProps(props) {
+  _setModelNodeProps(props) {
     this.model.setProps(props);
   }
 }
