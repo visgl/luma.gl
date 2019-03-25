@@ -20,7 +20,7 @@ const ATTRIBUTE_TYPE_TO_COMPONENTS = {
 const DEFAULT_OPTIONS = {
   modelOptions: {},
   pbrDebug: false,
-  pbrIbl: null,
+  imageBasedLightingEnvironment: null,
   lights: true
 };
 
@@ -118,21 +118,21 @@ export default class GLTFInstantiator {
   }
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
-    const model = createGLTFModel(this.gl, {
-      id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-      drawMode: gltfPrimitive.mode || 4,
-      vertexCount: gltfPrimitive.indices
-        ? gltfPrimitive.indices.count
-        : this.getVertexCount(gltfPrimitive.attributes),
-      attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-      material: gltfPrimitive.material,
-      modelOptions: this.options.modelOptions,
-      debug: this.options.pbrDebug,
-      ibl: this.options.pbrIbl,
-      lights: this.options.lights
-    });
-
-    return model;
+    return createGLTFModel(
+      this.gl,
+      Object.assign(
+        {
+          id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
+          drawMode: gltfPrimitive.mode || 4,
+          vertexCount: gltfPrimitive.indices
+            ? gltfPrimitive.indices.count
+            : this.getVertexCount(gltfPrimitive.attributes),
+          attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+          material: gltfPrimitive.material
+        },
+        this.options
+      )
+    );
   }
 
   createAttributes(attributes, indices) {

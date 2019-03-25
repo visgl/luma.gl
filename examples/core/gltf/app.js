@@ -1,12 +1,30 @@
+/* global document, window */
 import {GLTFParser} from '@loaders.gl/gltf';
 import {DracoDecoder} from '@loaders.gl/draco';
-import {AnimationLoop, setParameters, clear, log} from '@luma.gl/core';
-import {createGLTFObjects} from '@luma.gl/core';
+import {
+  AnimationLoop,
+  setParameters,
+  clear,
+  log,
+  createGLTFObjects,
+  _GLTFEnvironment as GLTFEnvironment
+} from '@luma.gl/core';
+import GL from '@luma.gl/constants';
 import {Matrix4, radians} from 'math.gl';
-import document from 'global/document';
+
+const CUBE_FACE_TO_DIRECTION = {
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: 'right',
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: 'left',
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: 'top',
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: 'bottom',
+  [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: 'front',
+  [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: 'back'
+};
 
 export const GLTF_BASE_URL =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/';
+const GLTF_ENV_BASE_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures';
 const GLTF_MODEL_INDEX = `${GLTF_BASE_URL}model-index.json`;
 
 const INFO_HTML = `
@@ -139,7 +157,7 @@ const LIGHT_SOURCES = {
 
 const DEFAULT_OPTIONS = {
   pbrDebug: true,
-  pbrIbl: true,
+  imageBasedLightingEnvironment: null,
   lights: false
 };
 
@@ -276,13 +294,21 @@ export class DemoApp {
     });
 
     this.loadOptions = Object.assign({}, DEFAULT_OPTIONS);
+    this.environment = new GLTFEnvironment(gl, {
+      brdfLutUrl: `${GLTF_ENV_BASE_URL}/brdfLUT.png`,
+      getTexUrl: (type, dir, mipLevel) =>
+        `${GLTF_ENV_BASE_URL}/papermill/${type}/${type}_${
+          CUBE_FACE_TO_DIRECTION[dir]
+        }_${mipLevel}.jpg`
+    });
+    this.loadOptions.imageBasedLightingEnvironment = this.environment;
 
     this.gl = gl;
     if (this.modelFile) {
       // options for unit testing
       const options = {
         pbrDebug: false,
-        pbrIbl: false,
+        imageBasedLightingEnvironment: null,
         lights: true
       };
       loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
@@ -332,21 +358,21 @@ export class DemoApp {
     switch (value) {
       case 'exclusive':
         Object.assign(this.loadOptions, {
-          pbrIbl: true,
+          imageBasedLightingEnvironment: this.environment,
           lights: false
         });
         break;
 
       case 'addition':
         Object.assign(this.loadOptions, {
-          pbrIbl: true,
+          imageBasedLightingEnvironment: this.environment,
           lights: true
         });
         break;
 
       case 'off':
         Object.assign(this.loadOptions, {
-          pbrIbl: false,
+          imageBasedLightingEnvironment: null,
           lights: true
         });
         break;
@@ -428,7 +454,6 @@ animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
 
-/* global window */
 if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();
 
