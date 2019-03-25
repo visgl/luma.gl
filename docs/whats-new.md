@@ -42,6 +42,10 @@ luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader
 - **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
 - **Geometry glTF Support**: The `Geometry` class and scene graph support has been overhauled to conform to glTF conventions, simplifying loading and manipulation of glTF formatted data.
 
+### WebVR Support (experimental)
+
+Just replace your `AnimationLoop` with `VRAnimationLoop` from `@luma.gl/addons`.
+Works with [Firefox Reality](https://mixedreality.mozilla.org/firefox-reality/).
 
 ## New API Features
 
