@@ -49,7 +49,7 @@ export default {
   Shadowmap: {app: Shadowmap, path: 'examples/core/shadowmap/'},
   Texture3D: {app: Texture3D, path: 'examples/core/texture3d/'},
   Transform: {app: Transform, path: 'examples/core/transform/'},
-  TransformFeedbackDemo: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},
+  TransformFeedback: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},
 
   GLTF: {app: GLTF, path: 'examples/core/gltf'},
 
