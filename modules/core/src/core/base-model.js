@@ -100,17 +100,9 @@ export default class BaseModel {
 
   // GETTERS
 
-  getNeedsRedraw({clearRedrawFlags = false} = {}) {
-    let redraw = false;
-    redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    if (this.geometry) {
-      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
-    }
-    if (this.animated) {
-      redraw = redraw || `animated model ${this.id}`;
-    }
-    return redraw;
+
+  isAnimated() {
+    return this.animated;
   }
 
   getProgram() {
@@ -122,11 +114,6 @@ export default class BaseModel {
   }
 
   // SETTERS
-
-  setNeedsRedraw(redraw = true) {
-    this.needsRedraw = redraw;
-    return this;
-  }
 
   // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
@@ -140,7 +127,6 @@ export default class BaseModel {
     this.program.setUniforms(uniforms, () => {
       // if something changed
       this._checkForDeprecatedUniforms(uniforms);
-      this.setNeedsRedraw();
     });
 
     return this;
@@ -221,10 +207,6 @@ export default class BaseModel {
     this._timerQueryEnd();
 
     onAfterRender();
-
-    if (didDraw) {
-      this.setNeedsRedraw(false);
-    }
 
     this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
 

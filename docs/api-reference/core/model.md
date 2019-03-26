@@ -201,11 +201,9 @@ Free WebGL resources associated with this model
 Updates properties
 
 
-### getNeedsRedraw() : Boolean
+### isAnimated() : Boolean
 
-* clearRedrawFlags - clear the redraw flag
-
-Gets the value of the redraw flag.
+Returns `true` if the model is animated (i.e. needs to be redrawn every frame).
 
 
 ### getProgram() : Program
@@ -216,12 +214,6 @@ Get model's `Program` instance
 ### getUniforms() : Object
 
 Returns map of currently stored uniforms
-
-
-### setNeedsRedraw() : Model
-
-Set the redraw flag for the model. It is recommended that the redraw flag is a string so that redraw reasons can be traced.
-
 
 ### setUniforms(uniforms : Object) : Model
 
