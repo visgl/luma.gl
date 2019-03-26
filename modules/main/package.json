@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "7.0.0-alpha.17",
+  "version": "7.0.0-alpha.18",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "repository": {
@@ -34,8 +34,8 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@luma.gl/addons": "^7.0.0-alpha.17",
-    "@luma.gl/constants": "^7.0.0-alpha.2",
-    "@luma.gl/core": "^7.0.0-alpha.17"
+    "@luma.gl/addons": "^7.0.0-alpha.18",
+    "@luma.gl/constants": "^7.0.0-alpha.18",
+    "@luma.gl/core": "^7.0.0-alpha.18"
   }
 }

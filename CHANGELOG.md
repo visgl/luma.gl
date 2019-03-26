@@ -1,5 +1,22 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.18 - Mar 15, 2019
+- WebVR VRAnimationLoop (#941)
+- Add CubeTexture LOD support (#987)
+- Doc and example fixes (#1004)
+- Remove old websites (#1002)
+- Remove unused/unfinished classes (#1000)
+- Remove imports of external assert (#999)
+- Break out @luma.gl/webgl module (#983)
+- Fixes for the new linter rules (#995)
+- Add lint rules for imports (#993)
+- Update imports to @luma.gl/core (#992)
+- Break out scenegraph module (with glTF code) (#982)
+- Update website to latest ocular-gatsby (#991)
+- Update examples (#990)
+- Track GPU memory usage (#984)
+- Update Scenegraph docs (#988)
+
 ## v7.0.0-alpha.17 - Mar 15, 2019
 - remove duplicated uniforms (#989)
 - Proposal: Unified lights array (#948)
