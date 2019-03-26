@@ -136,10 +136,6 @@ export {default as Plane} from './scenegraph/geometric-nodes/plane';
 export {default as Sphere} from './scenegraph/geometric-nodes/sphere';
 export {default as TruncatedCone} from './scenegraph/geometric-nodes/truncated-cone';
 
-// glTF scenegraph instantiator
-export {default as createGLTFObjects} from './scenegraph/gltf/create-gltf-objects';
-export {default as _GLTFEnvironment} from './scenegraph/gltf/gltf-environment';
-
 // TODO/CLEAN UP FOR V7
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)
 //  Analyze risk of breaking apps
