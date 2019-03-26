@@ -1,5 +1,5 @@
 import {Texture2D} from '@luma.gl/webgl';
-import {log} from '../../utils';
+import {log} from '@luma.gl/core';
 
 export default class GLTFMaterialParser {
   constructor(gl, {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights}) {

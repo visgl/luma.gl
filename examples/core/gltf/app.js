@@ -1,14 +1,8 @@
 /* global document, window */
 import {GLTFParser} from '@loaders.gl/gltf';
 import {DracoDecoder} from '@loaders.gl/draco';
-import {
-  setParameters,
-  clear,
-  log,
-  createGLTFObjects,
-  _GLTFEnvironment as GLTFEnvironment
-} from '@luma.gl/core';
-import {VRAnimationLoop} from '@luma.gl/addons';
+import {setParameters, clear, log} from '@luma.gl/core';
+import {createGLTFObjects, GLTFEnvironment, VRAnimationLoop} from '@luma.gl/addons';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from 'math.gl';
 
