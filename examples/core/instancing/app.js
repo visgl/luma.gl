@@ -102,7 +102,7 @@ void main(void) {
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         attributes: {
-          instanceSizes: new Float32Array([1]),
+          instanceSizes: new Float32Array([1]), // Constant attribute
           instanceOffsets: [offsetsBuffer, {divisor: 1}],
           instanceColors: [colorsBuffer, {divisor: 1}],
           instancePickingColors: [pickingColorsBuffer, {divisor: 1}]

@@ -1,6 +1,4 @@
 import {uid, assert} from '../utils';
-import GL from '@luma.gl/constants';
-import {Buffer} from '@luma.gl/webgl';
 
 // Rendering primitives - specify how to extract primitives from vertices.
 // NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants
@@ -20,21 +18,6 @@ export function getDrawMode(drawMode) {
   const mode = typeof drawMode === 'string' ? DRAW_MODE[drawMode] || DRAW_MODE.TRIANGLES : drawMode;
   assert(mode >= 0 && mode <= DRAW_MODE.TRIANGLE_FAN, 'Illegal drawMode');
   return mode;
-}
-
-export function getBuffersFromGeometry(gl, geometry) {
-  const attributes = geometry.getAttributes();
-  const buffers = {};
-
-  for (const name in attributes) {
-    const attribute = attributes[name];
-    buffers[name] = new Buffer(gl, {
-      data: attribute.value,
-      target: attribute.isIndexed ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER
-    });
-  }
-
-  return buffers;
 }
 
 export default class Geometry {

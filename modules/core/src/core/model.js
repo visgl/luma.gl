@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {Query, TransformFeedback} from '@luma.gl/webgl';
-import {getBuffersFromGeometry} from './geometry';
+import {getBuffersFromGeometry} from './model-utils';
 import BaseModel from './base-model';
 // import {getDrawMode} from '../core/geometry';
 

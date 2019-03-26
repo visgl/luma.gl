@@ -331,7 +331,7 @@ Use a `Geometry` instance to define attribute buffers
 
 ### setAttributes(attributes : Object) : Model
 
-Sets map of attributes
+Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array.md))
 
 
 ## Remarks
