@@ -100,7 +100,6 @@ export default class BaseModel {
 
   // GETTERS
 
-
   isAnimated() {
     return this.animated;
   }
