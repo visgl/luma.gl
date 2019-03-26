@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
-import {Buffer, Query, TransformFeedback} from '@luma.gl/webgl';
-import Attribute from '../core/attribute';
+import {Query, TransformFeedback} from '@luma.gl/webgl';
+import {getBuffersFromGeometry} from './model-utils';
 import BaseModel from './base-model';
 // import {getDrawMode} from '../core/geometry';
 
@@ -11,21 +11,13 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const LOG_DRAW_PRIORITY = 2;
 
 export default class Model extends BaseModel {
-  constructor(gl, props = {}) {
-    super(gl, props);
-    this._setModelProps(props);
-  }
-
   /* eslint-disable max-statements  */
   /* eslint-disable complexity  */
   initialize(props = {}) {
     super.initialize(props);
 
-    // Attributes and buffers
-
-    // Model manages auto Buffer creation from typed arrays
-    this._attributes = {}; // All attributes
-    this.attributes = {}; // User defined attributes
+    this.drawMode = props.drawMode !== undefined ? props.drawMode : GL.TRIANGLES;
+    this.vertexCount = props.vertexCount || 0;
 
     // geometry might have set drawMode and vertexCount
     this.isInstanced = props.isInstanced || props.instanced;
@@ -50,20 +42,6 @@ export default class Model extends BaseModel {
 
   // GETTERS
 
-  get vertexCount() {
-    if (Number.isFinite(this.props.vertexCount)) {
-      return this.props.vertexCount;
-    }
-    return this.geometry && this.geometry.getVertexCount();
-  }
-
-  get drawMode() {
-    if (Number.isFinite(this.props.drawMode)) {
-      return this.props.drawMode;
-    }
-    return this.geometry && this.geometry.drawMode;
-  }
-
   getDrawMode() {
     return this.drawMode;
   }
@@ -83,13 +61,13 @@ export default class Model extends BaseModel {
   // SETTERS
 
   setDrawMode(drawMode) {
-    this.props.drawMode = drawMode;
+    this.drawMode = drawMode;
     return this;
   }
 
   setVertexCount(vertexCount) {
     assert(Number.isFinite(vertexCount));
-    this.props.vertexCount = vertexCount;
+    this.vertexCount = vertexCount;
     return this;
   }
 
@@ -101,9 +79,9 @@ export default class Model extends BaseModel {
 
   // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
-    this.geometry = geometry;
-    const buffers = this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
-    this.vertexArray.setAttributes(buffers);
+    this.drawMode = geometry.drawMode;
+    this.vertexCount = geometry.getVertexCount();
+    this.vertexArray.setAttributes(getBuffersFromGeometry(this.gl, geometry));
     this.setNeedsRedraw();
     return this;
   }
@@ -114,11 +92,7 @@ export default class Model extends BaseModel {
       return this;
     }
 
-    Object.assign(this.attributes, attributes);
-    const buffers = this._createBuffersFromAttributeDescriptors(attributes);
-
-    // Object.assign(this.attributes, buffers);
-    this.vertexArray.setAttributes(buffers);
+    this.vertexArray.setAttributes(attributes);
     this.setNeedsRedraw();
 
     return this;
@@ -264,52 +238,5 @@ count: ${this.stats.profileFrameCount}`
         )();
       }
     }
-  }
-
-  // Makes sure buffers are created for all attributes
-  // and that the program is updated with those buffers
-  // TODO - do we need the separation between "attributes" and "buffers"
-  // couldn't apps just create buffers directly?
-  _createBuffersFromAttributeDescriptors(attributes) {
-    const {
-      program: {gl}
-    } = this;
-
-    // const attributes = {};
-    const buffers = {};
-
-    for (const attributeName in attributes) {
-      const descriptor = attributes[attributeName];
-
-      let attribute = this._attributes[attributeName];
-
-      if (descriptor instanceof Attribute) {
-        attribute = descriptor;
-      } else if (descriptor instanceof Buffer) {
-        attribute =
-          attribute ||
-          new Attribute(
-            gl,
-            Object.assign({}, descriptor, descriptor.accessor, {
-              id: attributeName
-            })
-          );
-        attribute.update({buffer: descriptor});
-      } else if (attribute) {
-        attribute.update(descriptor);
-      } else {
-        attribute = new Attribute(
-          gl,
-          Object.assign({}, descriptor, {
-            id: attributeName
-          })
-        );
-      }
-
-      this._attributes[attributeName] = attribute;
-      buffers[attributeName] = attribute.getValue();
-    }
-
-    return buffers;
   }
 }

@@ -54,7 +54,7 @@ const model =  new Model(gl, {
   uniforms: {uSampler: texture},
   attributes: {
     attributeName1: bufferObject,
-    attributeName2: {data: new Float32Array(...), size: 3, type: GL.FLOAT} // new buffer object will be constructed
+    attributeName2: [new Buffer(gl, new Float32Array(...)), {size: 3, type: GL.FLOAT}]
   }
   drawMode: gl.TRIANGLE_FAN,
   vertexCount: 3,
@@ -119,7 +119,7 @@ model.draw({
 
 ## Properties
 
-`Model` extends the `ScenegraphNode` class and inherits the transformation matrix properties from that class.
+`Model` extends the `BaseModel` class and inherits all properties from that class.
 
 
 ### moduleSettings : Object
@@ -326,12 +326,12 @@ How many instances will be rendered
 
 ### setGeometry() : Model
 
-Get model's `Geometry` instance
+Use a `Geometry` instance to define attribute buffers
 
 
 ### setAttributes(attributes : Object) : Model
 
-Sets map of attributes (Attribute instances)
+Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array.md))
 
 
 ## Remarks

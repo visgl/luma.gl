@@ -5,7 +5,8 @@ import {
   picking,
   dirlight,
   lumaStats,
-  readPixelsToArray
+  readPixelsToArray,
+  Buffer
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
@@ -88,6 +89,10 @@ void main(void) {
 }
 `;
 
+    const offsetsBuffer = new Buffer(gl, offsets);
+    const colorsBuffer = new Buffer(gl, colors);
+    const pickingColorsBuffer = new Buffer(gl, pickingColors);
+
     super(
       gl,
       Object.assign({}, props, {
@@ -97,10 +102,10 @@ void main(void) {
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         attributes: {
-          instanceSizes: {value: new Float32Array([1]), divisor: 1, constant: true},
-          instanceOffsets: {value: offsets, divisor: 1},
-          instanceColors: {value: colors, divisor: 1},
-          instancePickingColors: {value: pickingColors, divisor: 1}
+          instanceSizes: new Float32Array([1]), // Constant attribute
+          instanceOffsets: [offsetsBuffer, {divisor: 1}],
+          instanceColors: [colorsBuffer, {divisor: 1}],
+          instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
         }
       })
     );

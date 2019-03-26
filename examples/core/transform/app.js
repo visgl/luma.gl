@@ -197,9 +197,10 @@ const animationLoop = new AnimationLoop({
     }
 
     const positionBuffer = new Buffer(gl, trianglePositions);
-    const colorBuffer = new Buffer(gl, {data: instanceColors, accessor: {divisor: 1}});
-    const offsetBuffer = new Buffer(gl, {data: instanceOffsets, accessor: {divisor: 1}});
-    const rotationBuffer = new Buffer(gl, {data: instanceRotations, accessor: {divisor: 1}});
+    const colorBuffer = new Buffer(gl, instanceColors);
+    const offsetBuffer = new Buffer(gl, instanceOffsets);
+    const rotationBuffer = new Buffer(gl, instanceRotations);
+    const pickingColorBuffer = new Buffer(gl, pickingColors);
 
     const renderModel = new Model(gl, {
       id: 'RenderModel',
@@ -211,10 +212,10 @@ const animationLoop = new AnimationLoop({
       instanceCount: NUM_INSTANCES,
       attributes: {
         a_position: positionBuffer,
-        a_color: colorBuffer,
-        a_offset: offsetBuffer,
-        a_rotation: rotationBuffer,
-        instancePickingColors: {value: pickingColors, accessor: {divisor: 1}}
+        a_color: [colorBuffer, {divisor: 1}],
+        a_offset: [offsetBuffer, {divisor: 1}],
+        a_rotation: [rotationBuffer, {divisor: 1}],
+        instancePickingColors: [pickingColorBuffer, {divisor: 1}]
       },
       modules: [picking]
     });
@@ -288,12 +289,14 @@ const animationLoop = new AnimationLoop({
     offsetBuffer.updateAccessor({divisor: 0});
     rotationBuffer.updateAccessor({divisor: 0});
 
-    const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
+    if (pickPosition) {
+      const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
 
-    const pickX = pickPosition[0] * dpr;
-    const pickY = gl.canvas.height - pickPosition[1] * dpr;
+      const pickX = pickPosition[0] * dpr;
+      const pickY = gl.canvas.height - pickPosition[1] * dpr;
 
-    pickInstance(gl, pickX, pickY, renderModel, framebuffer);
+      pickInstance(gl, pickX, pickY, renderModel, framebuffer);
+    }
   },
 
   onFinalize({renderModel, transform}) {
