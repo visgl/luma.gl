@@ -28,4 +28,4 @@ const phongMaterial = new PhongMaterial({ambient, diffuse, shininess, specularCo
 * `ambient` - (*number*,) Ambient light reflection ratio, default value is `0.4`.
 * `diffuse` - (*number*) Diffuse light reflection ratio, default value is `0.6`.
 * `shininess` - (*number*) Parameter to control specular highlight radius, default value is `32`.
-* `specularColor` - (*array*) Color applied to specular lighting, default value is `[255, 255, 255]`.
+* `specularColor` - (*array*) Color applied to specular lighting, default value is `[30, 30, 30]`.
