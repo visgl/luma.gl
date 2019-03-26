@@ -4,7 +4,7 @@ const defaultProps = {
   ambient: 0.35,
   diffuse: 0.6,
   shininess: 32,
-  specularColor: [128, 128, 128]
+  specularColor: [30, 30, 30]
 };
 
 export default class PhongMaterial extends Material {
