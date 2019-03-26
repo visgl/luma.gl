@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import luma from '@luma.gl/webgl/init';
 // TODO - Model test should not depend on Cube
-import {Buffer, Model, Cube} from '@luma.gl/core';
+import {Buffer, Model, CubeGeometry} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
@@ -33,7 +33,7 @@ test('Model#setAttribute', t => {
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
-  const model = new Cube(gl, {});
+  const model = new Model(gl, {geometry: new CubeGeometry()});
 
   t.is(
     stats.get('Buffers Active').count - initialActiveBuffers,

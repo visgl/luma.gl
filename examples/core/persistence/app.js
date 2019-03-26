@@ -1,8 +1,15 @@
 import {
-  AnimationLoop, setParameters, Model, clear,
-  Framebuffer, Program, Geometry, IcoSphere
+  AnimationLoop,
+  setParameters,
+  Model,
+  clear,
+  Framebuffer,
+  Program,
+  Geometry,
+  IcoSphereGeometry,
+  ModelNode
 } from '@luma.gl/core';
-import { Matrix4, Vector3, radians } from 'math.gl';
+import {Matrix4, Vector3, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
@@ -94,7 +101,6 @@ let sphere;
 /* eslint-disable max-statements */
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, width, height}) => {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -111,10 +117,7 @@ const animationLoop = new AnimationLoop({
       new Framebuffer(gl, {width, height})
     ];
 
-    const QUAD_POSITIONS = [
-      -1, -1, 1, -1, 1, 1,
-      -1, -1, 1, 1, -1, 1
-    ];
+    const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
 
     const quadGeometry = new Geometry({
       attributes: {
@@ -138,9 +141,10 @@ const animationLoop = new AnimationLoop({
       geometry: quadGeometry
     });
 
-    sphere = new IcoSphere(gl, {
+    sphere = new ModelNode(gl, {
       id: 'electron',
       iterations: 4,
+      geometry: new IcoSphereGeometry(),
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
     });
 
@@ -148,11 +152,7 @@ const animationLoop = new AnimationLoop({
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       // Place electron cloud at random positions
-      const pos = new Vector3(
-        Math.random() - 0.5,
-        Math.random() - 0.5,
-        Math.random() - 0.5
-      );
+      const pos = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
 
       // Push them out a bit
       const distanceFromCenter = Math.random() + 1.0;
@@ -163,19 +163,18 @@ const animationLoop = new AnimationLoop({
 
       // Get a random vector and cross
       const q = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
-      const axis = pos.clone().cross(q).normalize();
+      const axis = pos
+        .clone()
+        .cross(q)
+        .normalize();
 
-      const theta = 4 / distanceFromCenter * dt;
+      const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
       eRot.push(rot);
     }
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
-      let pos = new Vector3(
-        Math.random() - 0.5,
-        Math.random() - 0.5,
-        Math.random() - 0.5
-      );
+      let pos = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
       pos = pos.normalize().scale(0.5);
       nPos.push(pos);
     }
@@ -196,7 +195,8 @@ const animationLoop = new AnimationLoop({
       ePos[i] = eRot[i].transformVector(ePos[i]);
       const modelMatrix = new Matrix4().translate(ePos[i]);
 
-      sphere.setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
+      sphere
+        .setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
         .setScale([0.06125, 0.06125, 0.06125])
         .updateMatrix()
         .draw({
@@ -218,7 +218,8 @@ const animationLoop = new AnimationLoop({
         .rotateXYZ([0, tick * 0.021, 0])
         .translate(nPos[i]);
 
-      sphere.setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
+      sphere
+        .setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
         .setScale([0.25, 0.25, 0.25])
         .updateMatrix()
         .draw({

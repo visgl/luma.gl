@@ -1,12 +1,13 @@
 import {
   AnimationLoop,
   setParameters,
-  Cube,
+  ModelNode,
   picking,
   dirlight,
   lumaStats,
   readPixelsToArray,
-  Buffer
+  Buffer,
+  CubeGeometry
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
@@ -26,7 +27,7 @@ function getDevicePixelRatio() {
 const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends Cube {
+class InstancedCube extends ModelNode {
   constructor(gl, props) {
     let offsets = [];
     for (let i = 0; i < SIDE; i++) {
@@ -101,6 +102,7 @@ void main(void) {
         modules: [picking, dirlight],
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
+        geometry: new CubeGeometry(),
         attributes: {
           instanceSizes: new Float32Array([1]), // Constant attribute
           instanceOffsets: [offsetsBuffer, {divisor: 1}],

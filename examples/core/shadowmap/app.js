@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Framebuffer, setParameters, clear, Cube} from '@luma.gl/core';
+import {AnimationLoop, Framebuffer, setParameters, clear, CubeGeometry, Model} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -97,7 +97,6 @@ void main(void) {
 export const animationLoopOptions = {
   // gl: createGLContext()})
   onInitialize: ({gl}) => {
-
     setParameters(gl, {
       depthTest: true,
       depthFunc: GL.LEQUAL
@@ -105,8 +104,12 @@ export const animationLoopOptions = {
 
     return {
       fbShadow: new Framebuffer(gl, {id: 'shadowmap', width: 1024, height: 1024}),
-      cube: new Cube(gl, {vs: SCENE_VERTEX, fs: SCENE_FRAGMENT}),
-      shadow: new Cube(gl, {vs: SHADOWMAP_VERTEX, fs: SHADOWMAP_FRAGMENT})
+      cube: new Model(gl, {geometry: new CubeGeometry(), vs: SCENE_VERTEX, fs: SCENE_FRAGMENT}),
+      shadow: new Model(gl, {
+        geometry: new CubeGeometry(),
+        vs: SHADOWMAP_VERTEX,
+        fs: SHADOWMAP_FRAGMENT
+      })
     };
   },
 
@@ -127,8 +130,14 @@ export const animationLoopOptions = {
 
     const lightPos = [0, 8, 0];
     const shadowView = new Matrix4().lookAt({eye: lightPos, center: [0, 0, 0], up: [0, 0, -1]});
-    const shadowProj =
-      new Matrix4().ortho({left: -4, right: 4, bottom: -4, top: 4, near: 0, far: 64});
+    const shadowProj = new Matrix4().ortho({
+      left: -4,
+      right: 4,
+      bottom: -4,
+      top: 4,
+      near: 0,
+      far: 64
+    });
 
     shadow.draw({
       framebuffer: fbShadow,
