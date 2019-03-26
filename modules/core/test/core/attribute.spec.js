@@ -170,68 +170,73 @@ test('Attribute#missing component', t => {
       drawMode: GL.POINTS,
       vertexCount: 4,
       attributes: {
-        position: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])}
+        position: [
+          new Buffer(gl, new Float32Array([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0])),
+          {size: 3}
+        ]
       }
     });
 
-  const testCases = [
-    // This doesn't work for vec2
-    // {
-    //   attributeName: 'texCoord',
-    //   type: 'vec2',
-    //   accessor: 'texCoord, 0.0, 1.0',
-    //   attributes: {
-    //     size: {
-    //       size: 1,
-    //       value: new Float32Array([0.5, 1, 0.25, 0])
-    //     }
-    //   },
-    //   output: [128, 0, 0, 255, 255, 0, 0, 255, 64, 0, 0, 255, 0, 0, 0, 255]
-    // },
-    {
-      attributeName: 'size',
-      type: 'vec3',
-      accessor: 'size, 1.0',
-      attributes: {
-        size: {
-          size: 2,
-          value: new Float32Array([0.5, 0, 1, 0.5, 0, 1, 0.5, 1])
-        }
+  function getTestCases(gl) {
+    return [
+      // This doesn't work for vec2
+      // {
+      //   attributeName: 'texCoord',
+      //   type: 'vec2',
+      //   accessor: 'texCoord, 0.0, 1.0',
+      //   attributes: {
+      //     size: {
+      //       size: 1,
+      //       value: new Float32Array([0.5, 1, 0.25, 0])
+      //     }
+      //   },
+      //   output: [128, 0, 0, 255, 255, 0, 0, 255, 64, 0, 0, 255, 0, 0, 0, 255]
+      // },
+      {
+        attributeName: 'size',
+        type: 'vec3',
+        accessor: 'size, 1.0',
+        attributes: {
+          size: [new Buffer(gl, new Float32Array([0.5, 0, 1, 0.5, 0, 1, 0.5, 1])), {size: 2}]
+        },
+        output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
       },
-      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
-    },
-    {
-      attributeName: 'size',
-      type: 'vec3',
-      accessor: 'size, 1.0',
-      attributes: {
-        size: {
-          size: 2,
-          stride: 12,
-          value: new Float32Array([0.5, 0, 1, 1, 0.5, 1, 0, 1, 1, 0.5, 1, 1])
-        }
+      {
+        attributeName: 'size',
+        type: 'vec3',
+        accessor: 'size, 1.0',
+        attributes: {
+          size: [
+            new Buffer(gl, new Float32Array([0.5, 0, 1, 1, 0.5, 1, 0, 1, 1, 0.5, 1, 1])),
+            {size: 2, stride: 12}
+          ]
+        },
+        output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
       },
-      output: [128, 0, 0, 255, 255, 128, 0, 255, 0, 255, 0, 255, 128, 255, 0, 255]
-    },
-    {
-      attributeName: 'color',
-      type: 'vec4',
-      accessor: 'color / 255.0',
-      attributes: {
-        color: {
-          size: 3,
-          value: new Uint8ClampedArray([32, 100, 40, 64, 64, 64, 128, 0, 0, 255, 18, 255])
-        }
-      },
-      output: [32, 100, 40, 1, 64, 64, 64, 1, 128, 0, 0, 1, 255, 18, 255, 1]
-    }
-  ];
+      {
+        attributeName: 'color',
+        type: 'vec4',
+        accessor: 'color / 255.0',
+        attributes: {
+          color: [
+            new Buffer(
+              gl,
+              new Uint8ClampedArray([32, 100, 40, 64, 64, 64, 128, 0, 0, 255, 18, 255])
+            ),
+            {size: 3}
+          ]
+        },
+        output: [32, 100, 40, 1, 64, 64, 64, 1, 128, 0, 0, 1, 255, 18, 255, 1]
+      }
+    ];
+  }
 
   for (const contextName in contexts) {
     const gl = contexts[contextName];
 
     if (gl) {
       t.comment(contextName);
+      const testCases = getTestCases(gl);
 
       testCases.forEach(tc => {
         const model = getModel(gl, tc);

@@ -61,13 +61,13 @@ export default class Model extends BaseModel {
   // SETTERS
 
   setDrawMode(drawMode) {
-    this.props.drawMode = drawMode;
+    this.drawMode = drawMode;
     return this;
   }
 
   setVertexCount(vertexCount) {
     assert(Number.isFinite(vertexCount));
-    this.props.vertexCount = vertexCount;
+    this.vertexCount = vertexCount;
     return this;
   }
 
