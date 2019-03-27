@@ -102,19 +102,8 @@ export default class BaseModel {
 
   // GETTERS
 
-<<<<<<< HEAD
   isAnimated() {
     return this.animated;
-=======
-  getNeedsRedraw({clearRedrawFlags = false} = {}) {
-    let redraw = false;
-    redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    if (this.animated) {
-      redraw = redraw || `animated model ${this.id}`;
-    }
-    return redraw;
->>>>>>> glTF attribute names in geometries
   }
 
   getProgram() {
@@ -122,7 +111,7 @@ export default class BaseModel {
   }
 
   getUniforms() {
-    return this.program.getUniforms;
+    return this.program.getUniforms();
   }
 
   // SETTERS
