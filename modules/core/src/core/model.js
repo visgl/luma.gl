@@ -82,7 +82,6 @@ export default class Model extends BaseModel {
     this.drawMode = geometry.drawMode;
     this.vertexCount = geometry.getVertexCount();
     this.vertexArray.setAttributes(getBuffersFromGeometry(this.gl, geometry));
-    this.setNeedsRedraw();
     return this;
   }
 
@@ -93,8 +92,6 @@ export default class Model extends BaseModel {
     }
 
     this.vertexArray.setAttributes(attributes);
-    this.setNeedsRedraw();
-
     return this;
   }
 
@@ -170,7 +167,6 @@ export default class Model extends BaseModel {
       this.program.setUniforms(animatedUniforms, () => {
         // if something changed
         this._checkForDeprecatedUniforms(animatedUniforms);
-        this.setNeedsRedraw();
       });
     }
   }
@@ -191,9 +187,6 @@ export default class Model extends BaseModel {
       });
 
     this.transformFeedback.setBuffers(feedbackBuffers);
-
-    this.setNeedsRedraw();
-
     return this;
   }
 
