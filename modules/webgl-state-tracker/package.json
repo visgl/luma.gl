@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl-state-tracker",
-  "version": "7.0.0-alpha.18",
+  "version": "7.0.0-alpha.19",
   "description": "WebGL state manager that saves and restores WebGLRenderingContext state",
   "license": "MIT",
   "repository": {
@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "^7.0.0-alpha.18"
+    "@luma.gl/constants": "^7.0.0-alpha.19"
   },
   "devDependencies": {
     "probe.gl": "^2.0.1"
