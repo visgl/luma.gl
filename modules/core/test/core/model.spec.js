@@ -16,6 +16,7 @@ test('Model#construct/destruct', t => {
   });
 
   t.ok(model, 'Model constructor does not throw errors');
+  t.ok(model.id, 'Model has an id');
   t.ok(model.program.handle, 'Created new program');
 
   model.delete();
