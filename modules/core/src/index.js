@@ -127,15 +127,6 @@ export {default as GroupNode} from './scenegraph/nodes/group-node';
 export {default as ModelNode} from './scenegraph/nodes/model-node';
 export {default as CameraNode} from './scenegraph/nodes/camera-node';
 
-// Prepackaged scenegraph nodes
-export {default as Cone} from './scenegraph/geometric-nodes/cone';
-export {default as Cube} from './scenegraph/geometric-nodes/cube';
-export {default as Cylinder} from './scenegraph/geometric-nodes/cylinder';
-export {default as IcoSphere} from './scenegraph/geometric-nodes/ico-sphere';
-export {default as Plane} from './scenegraph/geometric-nodes/plane';
-export {default as Sphere} from './scenegraph/geometric-nodes/sphere';
-export {default as TruncatedCone} from './scenegraph/geometric-nodes/truncated-cone';
-
 // TODO/CLEAN UP FOR V7
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)
 //  Analyze risk of breaking apps

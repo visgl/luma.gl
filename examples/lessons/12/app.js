@@ -1,6 +1,14 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Sphere, Cube} from '@luma.gl/core';
+import {
+  AnimationLoop,
+  Texture2D,
+  setParameters,
+  Model,
+  SphereGeometry,
+  CubeGeometry
+} from '@luma.gl/core';
 import {Vector3, Matrix4, radians} from 'math.gl';
+/* eslint-disable complexity */
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -69,9 +77,7 @@ function animateAppState() {
 }
 
 const animationLoop = new AnimationLoop({
-
   onInitialize({canvas, gl}) {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -79,17 +85,20 @@ const animationLoop = new AnimationLoop({
     });
 
     return {
-      moon: new Sphere(gl, {
+      moon: new Model(gl, {
+        geometry: new SphereGeometry({
+          nlat: 30,
+          nlong: 30,
+          radius: 2
+        }),
         fs: FRAGMENT_SHADER,
         vs: VERTEX_SHADER,
         uniforms: {
           uSampler: new Texture2D(gl, 'moon.gif')
-        },
-        nlat: 30,
-        nlong: 30,
-        radius: 2
+        }
       }),
-      cube: new Cube(gl, {
+      cube: new Model(gl, {
+        geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: {
@@ -99,39 +108,39 @@ const animationLoop = new AnimationLoop({
     };
   },
 
-  onRender({gl, tick, aspect, moon, cube}) { // eslint-disable-line complexity
+  onRender({gl, tick, aspect, moon, cube}) {
+    // eslint-disable-line complexity
     // set camera position
     const eyePos = [0, 0, 20];
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
-    const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
+    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     let element = null;
     /* global document */
-    const lighting = (element = document.getElementById("lighting")) ? element.checked : true;
+    const lighting = (element = document.getElementById('lighting')) ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});
     cube.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
       const ambientColor = new Vector3(
-        parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
-        parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
+        parseFloat((element = document.getElementById('ambientR')) ? element.value : '0.2'),
+        parseFloat((element = document.getElementById('ambientG')) ? element.value : '0.2'),
+        parseFloat((element = document.getElementById('ambientB')) ? element.value : '0.2')
       );
 
       const pointLightingLocation = new Vector3(
-        parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
-        parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
-        parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
+        parseFloat((element = document.getElementById('lightPositionX')) ? element.value : '0'),
+        parseFloat((element = document.getElementById('lightPositionY')) ? element.value : '0'),
+        parseFloat((element = document.getElementById('lightPositionZ')) ? element.value : '0')
       );
 
       const pointLightColor = new Vector3(
-        parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
-        parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
+        parseFloat((element = document.getElementById('pointR')) ? element.value : '0.8'),
+        parseFloat((element = document.getElementById('pointG')) ? element.value : '0.8'),
+        parseFloat((element = document.getElementById('pointB')) ? element.value : '0.8')
       );
 
       moon.setUniforms({
@@ -147,17 +156,31 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    moon.setUniforms({
-      uMMatrix: appState.moonRotationMatrix,
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    moon
+      .setUniforms({
+        uMMatrix: appState.moonRotationMatrix,
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
 
-    cube.setUniforms({
-      uMMatrix: appState.cubeRotationMatrix,
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    cube
+      .setUniforms({
+        uMMatrix: appState.cubeRotationMatrix,
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
 
     animateAppState();
   }

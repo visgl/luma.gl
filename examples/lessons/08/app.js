@@ -1,6 +1,6 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Cube} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters, ModelNode, CubeGeometry} from '@luma.gl/core';
 import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
@@ -87,8 +87,8 @@ const INFO_HTML = `
 function getHTMLControls() {
   /* global document */
   const $id = id => document.getElementById(id);
-  const $value = (id, defaultValue = 1) => $id(id) ? Number($id(id).value) : defaultValue;
-  const $checked = id => $id(id) ? $id(id).checked : true;
+  const $value = (id, defaultValue = 1) => ($id(id) ? Number($id(id).value) : defaultValue);
+  const $checked = id => ($id(id) ? $id(id).checked : true);
 
   const blendingEnabled = $checked('blending');
   const alpha = $value('alpha', 0.5);
@@ -100,16 +100,8 @@ function getHTMLControls() {
     $value('lightDirectionY', 0),
     $value('lightDirectionZ', 1)
   ];
-  const lightColor = [
-    $value('directionalR'),
-    $value('directionalG'),
-    $value('directionalB')
-  ];
-  const ambientColor = [
-    $value('ambientR'),
-    $value('ambientG'),
-    $value('ambientB')
-  ];
+  const lightColor = [$value('directionalR'), $value('directionalG'), $value('directionalB')];
+  const ambientColor = [$value('ambientR'), $value('ambientG'), $value('ambientB')];
 
   return {
     blendingEnabled,
@@ -199,7 +191,8 @@ const animationLoop = new AnimationLoop({
       }
     });
     return {
-      cube: new Cube(gl, {
+      cube: new ModelNode(gl, {
+        geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: {uSampler: texture}
@@ -213,9 +206,7 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // update element matrix to rotate cube on its center
-    cube
-      .setRotation([xRot, yRot, 0])
-      .updateMatrix();
+    cube.setRotation([xRot, yRot, 0]).updateMatrix();
 
     const uMVMatrix = new Matrix4()
       .lookAt({eye: [0, 0, 0]})
@@ -265,29 +256,29 @@ function addKeyboardHandler(canvas) {
   addEvents(canvas, {
     onKeyDown(e) {
       switch (e.key) {
-      case 'up':
-        xSpeed -= 0.02;
-        break;
-      case 'down':
-        xSpeed += 0.02;
-        break;
-      case 'left':
-        ySpeed -= 0.02;
-        break;
-      case 'right':
-        ySpeed += 0.02;
-        break;
-      default:
+        case 'up':
+          xSpeed -= 0.02;
+          break;
+        case 'down':
+          xSpeed += 0.02;
+          break;
+        case 'left':
+          ySpeed -= 0.02;
+          break;
+        case 'right':
+          ySpeed += 0.02;
+          break;
+        default:
       }
 
       switch (e.code) {
-      case 187: // '+'
-        cubePositionZ += 0.05;
-        break;
-      case 189: // '-'
-        cubePositionZ -= 0.05;
-        break;
-      default:
+        case 187: // '+'
+          cubePositionZ += 0.05;
+          break;
+        case 189: // '-'
+          cubePositionZ -= 0.05;
+          break;
+        default:
       }
     }
   });

@@ -10,7 +10,8 @@ import {
   UniformBufferLayout,
   Buffer,
   isWebGL2,
-  Cube
+  Model,
+  CubeGeometry
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
@@ -56,7 +57,7 @@ let focusDistance = 3.0;
 let fStop = 2.8;
 const texelOffset = new Float32Array(2);
 
-class InstancedCube extends Cube {
+class InstancedCube extends Model {
   constructor(gl, props) {
     const count = props.count;
     const xforms = new Array(count);
@@ -111,7 +112,7 @@ void main(void) {
 
     super(
       gl,
-      Object.assign({}, props, {
+      Object.assign({geometry: new CubeGeometry()}, props, {
         vs,
         fs,
         isInstanced: 1,

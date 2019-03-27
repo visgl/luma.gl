@@ -400,8 +400,8 @@ export default class AnimationLoop {
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
     const {clientWidth, clientHeight} = this.gl.canvas;
-    if (clientWidth >= 0 && clientHeight >= 0) {
-      aspect = height > 0 ? clientWidth / clientHeight : 1;
+    if (clientWidth > 0 && clientHeight > 0) {
+      aspect = clientWidth / clientHeight;
     } else if (width > 0 && height > 0) {
       aspect = width / height;
     }
