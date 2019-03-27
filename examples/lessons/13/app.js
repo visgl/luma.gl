@@ -1,5 +1,13 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Program, Sphere, Cube} from '@luma.gl/core';
+import {
+  AnimationLoop,
+  Texture2D,
+  setParameters,
+  Program,
+  Model,
+  SphereGeometry,
+  CubeGeometry
+} from '@luma.gl/core';
 import {Vector3, Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -134,7 +142,6 @@ const appState = {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -143,25 +150,28 @@ const animationLoop = new AnimationLoop({
 
     const vertexLightingProgram = new Program(gl, {
       fs: VERTEX_LIGHTING_FRAGMENT_SHADER,
-      vs: VERTEX_LIGHTING_VERTEX_SHADER,
+      vs: VERTEX_LIGHTING_VERTEX_SHADER
     });
 
     const fragmentLightingProgram = new Program(gl, {
       fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
+      vs: FRAGMENT_LIGHTING_VERTEX_SHADER
     });
 
-    const moon = new Sphere(gl, {
+    const moon = new Model(gl, {
+      geometry: new SphereGeometry({
+        nlat: 30,
+        nlong: 30,
+        radius: 2
+      }),
       program: fragmentLightingProgram,
       uniforms: {
         uSampler: new Texture2D(gl, 'moon.gif')
-      },
-      nlat: 30,
-      nlong: 30,
-      radius: 1,
+      }
     });
 
-    const cube = new Cube(gl, {
+    const cube = new Model(gl, {
+      geometry: new CubeGeometry(),
       program: fragmentLightingProgram,
       uniforms: {
         uSampler: new Texture2D(gl, 'crate.gif')
@@ -172,22 +182,21 @@ const animationLoop = new AnimationLoop({
   },
 
   // eslint-disable-next-line complexity
-  onRender: ({
-    gl, tick, aspect, moon, cube, vertexLightingProgram, fragmentLightingProgram
-  }) => {
+  onRender: ({gl, tick, aspect, moon, cube, vertexLightingProgram, fragmentLightingProgram}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4()
-    .rotateX(radians(-30))
-    .transformVector3([0, 0, 5]);
+    const eyePos = new Matrix4().rotateX(radians(-30)).transformVector3([0, 0, 5]);
 
-    const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up:[0, 1, 0]});
+    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     const {
-      useLighting, useTextures, useFragmentLighting,
-      ambientColor, pointLightingLocation, pointLightColor
+      useLighting,
+      useTextures,
+      useFragmentLighting,
+      ambientColor,
+      pointLightingLocation,
+      pointLightColor
     } = getControlValues();
 
     if (useFragmentLighting) {
@@ -222,17 +231,31 @@ const animationLoop = new AnimationLoop({
       });
     }
 
-    moon.setUniforms({
-      uMMatrix: appState.moonRotationMatrix,
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    moon
+      .setUniforms({
+        uMMatrix: appState.moonRotationMatrix,
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
 
-    cube.setUniforms({
-      uMMatrix: appState.cubeRotationMatrix,
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    cube
+      .setUniforms({
+        uMMatrix: appState.cubeRotationMatrix,
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
 
     animate(appState);
   }
@@ -240,16 +263,15 @@ const animationLoop = new AnimationLoop({
 
 animationLoop.getInfo = () => INFO_HTML;
 
-function animate(appState) {
+function animate(state) {
   const timeNow = new Date().getTime();
-  if (appState.lastTime !== 0) {
-    const elapsed = timeNow - appState.lastTime;
-    const newMatrix = new Matrix4()
-    .rotateY(radians(elapsed / 20));
-    appState.moonRotationMatrix.multiplyLeft(newMatrix);
-    appState.cubeRotationMatrix.multiplyLeft(newMatrix);
+  if (state.lastTime !== 0) {
+    const elapsed = timeNow - state.lastTime;
+    const newMatrix = new Matrix4().rotateY(radians(elapsed / 20));
+    state.moonRotationMatrix.multiplyLeft(newMatrix);
+    state.cubeRotationMatrix.multiplyLeft(newMatrix);
   }
-  appState.lastTime = timeNow;
+  state.lastTime = timeNow;
 }
 
 /* global document */
@@ -260,29 +282,44 @@ function getControlValues() {
     return {useLigthing: false};
   }
 
-  const useLighting = (element = document.getElementById("lighting")) ? element.checked : true;
-  const useTextures = (element = document.getElementById("textures")) ? element.checked : true;
-  const useFragmentLighting = (element = document.getElementById("per-fragment")) ? element.checked : true;
+  const useLighting = (element = document.getElementById('lighting')) ? element.checked : true;
+  const useTextures = (element = document.getElementById('textures')) ? element.checked : true;
+  const useFragmentLighting = (element = document.getElementById('per-fragment'))
+    ? element.checked
+    : true;
 
-  const ambientColor = useLighting && new Vector3(
-    parseFloat((element = document.getElementById("ambientR")) ? element.value : "0.2"),
-    parseFloat((element = document.getElementById("ambientG")) ? element.value : "0.2"),
-    parseFloat((element = document.getElementById("ambientB")) ? element.value : "0.2")
-  );
+  const ambientColor =
+    useLighting &&
+    new Vector3(
+      parseFloat((element = document.getElementById('ambientR')) ? element.value : '0.2'),
+      parseFloat((element = document.getElementById('ambientG')) ? element.value : '0.2'),
+      parseFloat((element = document.getElementById('ambientB')) ? element.value : '0.2')
+    );
 
-  const pointLightingLocation = useLighting && new Vector3(
-    parseFloat((element = document.getElementById("lightPositionX")) ? element.value : "0"),
-    parseFloat((element = document.getElementById("lightPositionY")) ? element.value : "0"),
-    parseFloat((element = document.getElementById("lightPositionZ")) ? element.value : "0")
-  );
+  const pointLightingLocation =
+    useLighting &&
+    new Vector3(
+      parseFloat((element = document.getElementById('lightPositionX')) ? element.value : '0'),
+      parseFloat((element = document.getElementById('lightPositionY')) ? element.value : '0'),
+      parseFloat((element = document.getElementById('lightPositionZ')) ? element.value : '0')
+    );
 
-  const pointLightColor = useLighting && new Vector3(
-    parseFloat((element = document.getElementById("pointR")) ? element.value : "0.8"),
-    parseFloat((element = document.getElementById("pointG")) ? element.value : "0.8"),
-    parseFloat((element = document.getElementById("pointB")) ? element.value : "0.8")
-  );
+  const pointLightColor =
+    useLighting &&
+    new Vector3(
+      parseFloat((element = document.getElementById('pointR')) ? element.value : '0.8'),
+      parseFloat((element = document.getElementById('pointG')) ? element.value : '0.8'),
+      parseFloat((element = document.getElementById('pointB')) ? element.value : '0.8')
+    );
 
-  return {useLighting, useTextures, useFragmentLighting, ambientColor, pointLightingLocation, pointLightColor};
+  return {
+    useLighting,
+    useTextures,
+    useFragmentLighting,
+    ambientColor,
+    pointLightingLocation,
+    pointLightColor
+  };
 }
 
 export default animationLoop;

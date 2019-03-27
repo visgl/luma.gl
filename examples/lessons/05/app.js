@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Cube} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters, Model, CubeGeometry} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -40,7 +40,6 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
   onInitialize({gl}) {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -50,7 +49,8 @@ const animationLoop = new AnimationLoop({
     });
 
     return {
-      cube: new Cube(gl, {
+      cube: new Model(gl, {
+        geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: {

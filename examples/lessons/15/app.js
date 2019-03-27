@@ -1,7 +1,6 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Sphere} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters, Model, SphereGeometry} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-
 
 const EARTH_UNIFORMS = {
   uUseColorMap: true,
@@ -89,7 +88,6 @@ void main(void) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -106,20 +104,25 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
       mipmap: true
-    })
+    });
 
     const colorTexture = new Texture2D(gl, {
       data: 'earth.jpg',
-       parameters: {
+      parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
       mipmap: true
-    })
+    });
 
-    const earth = new Sphere(gl, {
+    const earth = new Model(gl, {
+      geometry: new SphereGeometry({
+        nlat: 30,
+        nlong: 30,
+        radius: 13
+      }),
       fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
       vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
       uniforms: Object.assign(
@@ -129,10 +132,7 @@ const animationLoop = new AnimationLoop({
         },
         EARTH_UNIFORMS,
         LIGHT_UNIFORMS
-      ),
-      nlat: 30,
-      nlong: 30,
-      radius: 13
+      )
     });
 
     return {earth, specularTexture, colorTexture};
@@ -142,12 +142,9 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4()
-      .rotateX(radians(-27))
-      .transformVector3([0, 0, 5]);
+    const eyePos = new Matrix4().rotateX(radians(-27)).transformVector3([0, 0, 5]);
 
-    const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, -1, 0]});
+    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, -1, 0]});
 
     const {
       useLighting,
@@ -175,14 +172,21 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    return earth.setUniforms({
-      uMMatrix: new Matrix4()
-        .translate([0, -20, -40])
-        .rotateAxis(radians(23.4), [1, 0, -1])
-        .rotateY(phi),
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    return earth
+      .setUniforms({
+        uMMatrix: new Matrix4()
+          .translate([0, -20, -40])
+          .rotateAxis(radians(23.4), [1, 0, -1])
+          .rotateY(phi),
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
   }
 });
 
@@ -262,11 +266,11 @@ animationLoop.getInfo = () => `
 
 /* global document */
 const $id = id => document.getElementById(id);
-const $checked = id => $id(id) ? $id(id).checked : true;
+const $checked = id => ($id(id) ? $id(id).checked : true);
 const $value = (id, defaultValue = 1) => {
   const value = $id(id) ? Number($id(id).value) : defaultValue;
   return isNaN(value) ? 0 : value;
-}
+};
 
 // Read Light settings HTML form
 function getControlValues() {
@@ -280,11 +284,7 @@ function getControlValues() {
     diffuse: [$value('diffuseR'), $value('diffuseG'), $value('diffuseB')]
   };
 
-  const ambientColor = [
-    $value('ambientR'),
-    $value('ambientG'),
-    $value('ambientB')
-  ];
+  const ambientColor = [$value('ambientR'), $value('ambientG'), $value('ambientB')];
 
   return {
     useLighting,

@@ -26,6 +26,7 @@ export default class BaseModel {
     const {id = uid('base-model')} = props;
     this.id = id;
     this.gl = gl;
+    this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
     this._setBaseModelProps(props);

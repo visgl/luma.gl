@@ -1,5 +1,15 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.19 - Mar 27, 2019
+- Remove geometry scenegraph nodes (#1010)
+- Restore model id (#1011)
+- Remove redraw flag handling (#1006)
+- reduce default phong material specular color (#1008)
+- Fix transform feedback example (#1009)
+- Move glTF instantiator to modules/addons (#1007)
+- Add some test plumbing for coverage (#986)
+- Models don't create buffers (#1005)
+
 ## v7.0.0-alpha.18 - Mar 15, 2019
 - WebVR VRAnimationLoop (#941)
 - Add CubeTexture LOD support (#987)
