@@ -143,8 +143,9 @@ const animationLoop = new AnimationLoop({
 
     sphere = new ModelNode(gl, {
       id: 'electron',
-      iterations: 4,
-      geometry: new IcoSphereGeometry(),
+      geometry: new IcoSphereGeometry({
+        iterations: 4
+      }),
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
     });
 
