@@ -5,7 +5,9 @@
     "build": "webpack --env.analyze"
   },
   "dependencies": {
-    "@luma.gl/core": "^7.0.0-alpha"
+    "@luma.gl/constants": "^7.0.0-alpha.3",
+    "@luma.gl/core": "^7.0.0-alpha",
+    "math.gl": "^2.3.1"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

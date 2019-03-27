@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, TextureCube, setParameters, Cube} from '@luma.gl/core';
+import {AnimationLoop, TextureCube, setParameters, Model, CubeGeometry} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -36,7 +36,7 @@ function readHTMLControls() {
   return {uReflect, uRefract};
 }
 
-class RoomCube extends Cube {
+class RoomCube extends Model {
   constructor(gl, props) {
     const vs = `\
 attribute vec3 positions;
@@ -64,11 +64,11 @@ void main(void) {
 }
 `;
 
-    super(gl, Object.assign({}, props, {fs, vs}));
+    super(gl, Object.assign({geometry: new CubeGeometry()}, props, {fs, vs}));
   }
 }
 
-class Prism extends Cube {
+class Prism extends Model {
   constructor(gl, props) {
     const vs = `\
 attribute vec3 positions;
@@ -112,12 +112,11 @@ void main(void) {
   gl_FragColor = color * mix(reflectedColor, refractedColor, 0.5);
 }
 `;
-    super(gl, Object.assign({}, props, {vs, fs}));
+    super(gl, Object.assign({geometry: new CubeGeometry()}, props, {vs, fs}));
   }
 }
 
 class AppAnimationLoop extends AnimationLoop {
-
   onInitialize({gl, canvas}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -179,6 +178,7 @@ animationLoop.getInfo = () => INFO_HTML;
 
 // Create six textures for the cube map sides
 function getFaceTextures({size}) {
+  /* global document, OffscreenCanvas */
   const signs = ['pos', 'neg'];
   const axes = ['x', 'y', 'z'];
   const textures = {
@@ -187,7 +187,10 @@ function getFaceTextures({size}) {
   };
 
   let face = 0;
-  const canvas = typeof document === 'undefined' ? new OffscreenCanvas(size, size) : document.createElement('canvas');
+  const canvas =
+    typeof document === 'undefined'
+      ? new OffscreenCanvas(size, size)
+      : document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
   for (const sign of signs) {

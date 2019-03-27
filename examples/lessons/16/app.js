@@ -9,9 +9,18 @@
 /* eslint-disable max-statements, indent, no-multi-spaces */
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop, Model, Geometry, Texture2D,
-  Program, Renderbuffer, Framebuffer, setParameters, loadFile,
-  Cube, Sphere
+  AnimationLoop,
+  Model,
+  Geometry,
+  Texture2D,
+  Program,
+  Renderbuffer,
+  Framebuffer,
+  setParameters,
+  loadFile,
+  ModelNode,
+  CubeGeometry,
+  SphereGeometry
 } from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
@@ -64,12 +73,10 @@ void main(void) {
 const squareGeometry = new Geometry({
   drawMode: GL.TRIANGLE_STRIP,
   attributes: {
-    positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
+    positions: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
     colors: {
       size: 4,
-      value: new Float32Array([
-        1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1,  1, 1, 0, 1
-      ])
+      value: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1])
     }
   }
 });
@@ -180,7 +187,6 @@ const laptopAngleDelta = -0.002; // * Math.PI / 180.0;
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -206,8 +212,7 @@ const animationLoop = new AnimationLoop({
       mipmap: true
     });
 
-    return loadFile('macbook.json')
-    .then(macbookJSON => {
+    return loadFile('macbook.json').then(macbookJSON => {
       // Fix attribute name to match with Shaders
       macbookJSON = macbookJSON.replace('vertices', 'positions');
       const program = new Program(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});
@@ -215,19 +220,17 @@ const animationLoop = new AnimationLoop({
         id: 'macbook',
         file: macbookJSON,
         program,
-        uniforms: Object.assign(
-          {},
-          getLaptopUniforms(),
-          getLightUniforms()
-        )
+        uniforms: Object.assign({}, getLaptopUniforms(), getLightUniforms())
       });
 
-      const moon = new Sphere(gl, {
+      const moon = new ModelNode(gl, {
+        geometry: new SphereGeometry({
+          nlat: 30,
+          nlong: 30,
+          radius: 2
+        }),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        nlat: 30,
-        nlong: 30,
-        radius: 2,
         uniforms: Object.assign(
           {uUseTextures: true, uSampler: tMoon},
           getMoonCubeUniforms(),
@@ -235,7 +238,8 @@ const animationLoop = new AnimationLoop({
         )
       });
 
-      const cube = new Cube(gl, {
+      const cube = new ModelNode(gl, {
+        geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
         uniforms: Object.assign(
@@ -256,7 +260,16 @@ const animationLoop = new AnimationLoop({
   },
 
   onRender: ({
-    gl, tick, aspect, moon, macbook, cube, laptopScreenModel, canvas, tCrate, tSquare
+    gl,
+    tick,
+    aspect,
+    moon,
+    macbook,
+    cube,
+    laptopScreenModel,
+    canvas,
+    tCrate,
+    tSquare
   }) => {
     generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare);
     if (!DISABLE_FB) {
@@ -312,23 +325,34 @@ function getLightUniforms() {
 
 function generateLaptopScreenModel(gl) {
   const POSITIONS = new Float32Array([
-    0.580687, 0.659, 0.813106,
-   -0.580687, 0.659, 0.813107,
-    0.580687, 0.472, 0.113121,
-   -0.580687, 0.472, 0.113121
+    0.580687,
+    0.659,
+    0.813106,
+    -0.580687,
+    0.659,
+    0.813107,
+    0.580687,
+    0.472,
+    0.113121,
+    -0.580687,
+    0.472,
+    0.113121
   ]);
   const NORMALS = new Float32Array([
-    0.000000, -0.965926, 0.258819,
-    0.000000, -0.965926, 0.258819,
-    0.000000, -0.965926, 0.258819,
-    0.000000, -0.965926, 0.258819
+    0.0,
+    -0.965926,
+    0.258819,
+    0.0,
+    -0.965926,
+    0.258819,
+    0.0,
+    -0.965926,
+    0.258819,
+    0.0,
+    -0.965926,
+    0.258819
   ]);
-  const TEXCOORDS = new Float32Array([
-    1.0, 1.0,
-    0.0, 1.0,
-    1.0, 0.0,
-    0.0, 0.0
-  ]);
+  const TEXCOORDS = new Float32Array([1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0]);
 
   const geometry = new Geometry({
     id: 'laptopscreen-geometry',
@@ -346,11 +370,7 @@ function generateLaptopScreenModel(gl) {
     geometry,
     vs: VERTEX_SHADER,
     fs: FRAGMENT_SHADER,
-    uniforms: Object.assign(
-      {uUseTextures: true},
-      getLaptopScreenUniforms(),
-      getLightUniforms()
-    )
+    uniforms: Object.assign({uUseTextures: true}, getLaptopScreenUniforms(), getLightUniforms())
   });
 
   return model;
@@ -416,28 +436,27 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
       })
       .draw();
   } else {
+    let uMVMatrix = new Matrix4()
+      .lookAt({eye: [0, 0, 20]})
+      .translate([2, 0, 0])
+      .rotateY(moonAngle)
+      .rotateX((30 * Math.PI) / 180.0)
+      .translate([0, 0, -5])
+      .multiplyRight(moon.matrix);
 
-  let uMVMatrix = new Matrix4()
-    .lookAt({eye: [0, 0, 20]})
-    .translate([2, 0, 0])
-    .rotateY(moonAngle)
-    .rotateX(30 * Math.PI / 180.0)
-    .translate([0, 0, -5])
-    .multiplyRight(moon.matrix);
+    moon
+      .setUniforms({
+        uMVMatrix,
+        uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT, near: 0.1, far: 500})
+      })
+      .draw();
 
-  moon
-    .setUniforms({
-      uMVMatrix,
-      uPMatrix: new Matrix4().perspective({aspect: FB_WIDTH / FB_HEIGHT, near: 0.1, far: 500})
-    })
-    .draw();
-
-  uMVMatrix = new Matrix4()
-    .lookAt({eye: [0, 0, 20]})
-    .translate([1, 0, 0])
-    .rotateY(cubeAngle)
-    .translate([0, 0, -5])
-    .multiplyRight(cube.matrix);
+    uMVMatrix = new Matrix4()
+      .lookAt({eye: [0, 0, 20]})
+      .translate([1, 0, 0])
+      .rotateY(cubeAngle)
+      .translate([0, 0, -5])
+      .multiplyRight(cube.matrix);
 
     cube
       .setUniforms({
@@ -463,7 +482,7 @@ function drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tC
     .lookAt({eye: [0, 0, 0]})
     .translate([0, -0.5, -3])
     .rotateY(laptopAngle)
-    .rotateX(-80.0 * Math.PI / 180.0);
+    .rotateX((-80.0 * Math.PI) / 180.0);
 
   macbook
     .setUniforms({
