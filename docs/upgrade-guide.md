@@ -79,21 +79,26 @@ with
 import "@luma.gl/debug";
 ```
 
-## Model
+### Model
 
-`Model` no longer inherits from `ScenegraphNode`, ensuring that applications that do not need scenegraph support do not need to include scenegraph related code.
+Changes:
+* `Model` no longer extends `ScenegraphNode`. This ensures that applications that do not need scenegraph support do not need to include scenegraph related code. Use the new `ModelNode` class to inject `Models` into scenegraphs.
 
-Instead, the new `ModelNode` class supports the use of `Model` in scenegraphs. `ModelNode` inherits from `ScenegraphNode` and holds a `Model` instance, and forwards many of the `Model` methods and can be used interchangeably in most cases.
+Deletions:
+* Redraw flag handling has been removed: `Model.setNeedsRedraw()` and `Model.getNeedsRedraw()`.
+
+Additions:
+* A new `Model.isAnimated()` method is provided, indicating that redraws are required every frame.
 
 
-## Buffer
+### Buffer
 
 | Removed Method               | Replacement | Reason for Change |
 | ---                          | ---         | ---               |
 | `Buffer.updateAccessor(...)` | `Buffer.setAccessor(new Accessor(buffer.accessor, ...)` | Decoupling accessors from `Buffer` |
 
 
-## Framebuffer
+### Framebuffer
 
 To maximize rendering performance, the default framebuffer is no longer preserved between frames.
 

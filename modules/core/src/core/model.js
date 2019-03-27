@@ -104,7 +104,6 @@ export default class Model extends BaseModel {
     this.geometry = geometry;
     const buffers = this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
     return this;
   }
 
@@ -119,7 +118,6 @@ export default class Model extends BaseModel {
 
     // Object.assign(this.attributes, buffers);
     this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
 
     return this;
   }
@@ -196,7 +194,6 @@ export default class Model extends BaseModel {
       this.program.setUniforms(animatedUniforms, () => {
         // if something changed
         this._checkForDeprecatedUniforms(animatedUniforms);
-        this.setNeedsRedraw();
       });
     }
   }
@@ -217,9 +214,6 @@ export default class Model extends BaseModel {
       });
 
     this.transformFeedback.setBuffers(feedbackBuffers);
-
-    this.setNeedsRedraw();
-
     return this;
   }
 

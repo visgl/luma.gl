@@ -145,19 +145,6 @@ export default class MeshModel extends Node {
     return this.geometry && this.geometry.drawMode;
   }
 
-  getNeedsRedraw({clearRedrawFlags = false} = {}) {
-    let redraw = false;
-    redraw = redraw || this.needsRedraw;
-    this.needsRedraw = this.needsRedraw && !clearRedrawFlags;
-    if (this.geometry) {
-      redraw = redraw || this.geometry.getNeedsRedraw({clearRedrawFlags});
-    }
-    if (this.animated) {
-      redraw = redraw || `animated model ${this.id}`;
-    }
-    return redraw;
-  }
-
   getDrawMode() {
     return this.drawMode;
   }
@@ -184,11 +171,6 @@ export default class MeshModel extends Node {
 
   // SETTERS
 
-  setNeedsRedraw(redraw = true) {
-    this.needsRedraw = redraw;
-    return this;
-  }
-
   setDrawMode(drawMode) {
     this.props.drawMode = getDrawMode(drawMode);
     return this;
@@ -211,7 +193,6 @@ export default class MeshModel extends Node {
     this.geometry = geometry;
     const buffers = this._createBuffersFromAttributeDescriptors(this.geometry.getAttributes());
     this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
     return this;
   }
 
@@ -226,8 +207,6 @@ export default class MeshModel extends Node {
 
     // Object.assign(this.attributes, buffers);
     this.vertexArray.setAttributes(buffers);
-    this.setNeedsRedraw();
-
     return this;
   }
 
@@ -243,7 +222,6 @@ export default class MeshModel extends Node {
     this.program.setUniforms(uniforms, samplers, () => {
       // if something changed
       this._checkForDeprecatedUniforms(uniforms);
-      this.setNeedsRedraw();
     });
   }
 
@@ -256,7 +234,6 @@ export default class MeshModel extends Node {
       this.program.setUniforms(animatedUniforms, {}, () => {
         // if something changed
         this._checkForDeprecatedUniforms(animatedUniforms);
-        this.setNeedsRedraw();
       });
     }
   }
@@ -331,8 +308,6 @@ export default class MeshModel extends Node {
 
     this._timerQueryEnd();
     this.onAfterRender();
-
-    this.setNeedsRedraw(false);
 
     this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
 
@@ -525,9 +500,6 @@ export default class MeshModel extends Node {
       });
 
     this.transformFeedback.setBuffers(feedbackBuffers);
-
-    this.setNeedsRedraw();
-
     return this;
   }
 
