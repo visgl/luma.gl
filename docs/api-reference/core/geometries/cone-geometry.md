@@ -2,6 +2,8 @@
 
 Creates a cone geometry.
 
+The generated geometry will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
+
 ## Usage
 
 Create a `Cone` of base radius 2 and height 3.

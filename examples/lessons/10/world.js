@@ -44,6 +44,7 @@ function loadWorldGeometry(data) {
      }
   }
   return new Geometry({
+    vertexCount: vertexPositions.length / 3,
     attributes: {
       positions: new Float32Array(vertexPositions),
       texCoords: new Float32Array(vertexTextureCoords)

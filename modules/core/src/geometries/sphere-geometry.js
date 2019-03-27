@@ -1,11 +1,10 @@
-import Geometry from '../core/geometry';
+import Geometry from '../geometry/geometry';
 import {uid} from '../utils';
 
 export default class SphereGeometry extends Geometry {
-  constructor(opts = {}) {
-    const {nlat = 10, nlong = 10, radius = 1, id = uid('sphere-geometry')} = opts;
-
-    super(Object.assign({}, opts, {id, attributes: getSphereAttributes(nlat, nlong, radius)}));
+  constructor(props = {}) {
+    const {id = uid('sphere-geometry')} = props;
+    super({...props, id, ...tesselateSphere(props)});
   }
 }
 
@@ -13,7 +12,10 @@ export default class SphereGeometry extends Geometry {
 // copyright 2011 Google Inc. new BSD License
 // (http://www.opensource.org/licenses/bsd-license.php).
 /* eslint-disable max-statements, complexity */
-function getSphereAttributes(nlat, nlong, radius) {
+function tesselateSphere(props) {
+  const {nlat = 10, nlong = 10} = props;
+  let {radius = 1} = props;
+
   const startLat = 0;
   const endLat = Math.PI;
   const latRange = endLat - startLat;
@@ -84,9 +86,11 @@ function getSphereAttributes(nlat, nlong, radius) {
   }
 
   return {
-    positions,
-    indices,
-    normals,
-    texCoords
+    indices: {size: 1, value: indices},
+    attributes: {
+      POSITION: {size: 3, value: positions},
+      NORMAL: {size: 3, value: normals},
+      TEXCOORD_0: {size: 2, value: texCoords}
+    }
   };
 }

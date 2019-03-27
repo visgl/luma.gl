@@ -9,7 +9,7 @@ import {
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {log, isObjectEmpty, assert, uid} from '../utils';
+import {log, isObjectEmpty, uid, assert} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -23,6 +23,8 @@ const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 export default class BaseModel {
   constructor(gl, props = {}) {
     assert(isWebGL(gl));
+    const {id = uid('base-model')} = props;
+    this.id = id;
     this.gl = gl;
     this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
@@ -110,7 +112,7 @@ export default class BaseModel {
   }
 
   getUniforms() {
-    return this.program.getUniforms;
+    return this.program.getUniforms();
   }
 
   // SETTERS

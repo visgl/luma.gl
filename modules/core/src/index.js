@@ -74,9 +74,13 @@ export {
   clearBuffer as _clearBuffer
 } from '@luma.gl/webgl';
 
+// CORE - WEBGL INDEPENDENT
+export {default as Geometry} from './geometry/geometry';
+export {default as Material} from './materials/material';
+export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-source';
+
 // CORE
 export {default as AnimationLoop} from './core/animation-loop';
-export {default as Geometry} from './core/geometry';
 export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
 export {default as Model} from './core/model';
 export {default as Transform} from './core/transform';
@@ -111,11 +115,7 @@ export {default as PlaneGeometry} from './geometries/plane-geometry';
 export {default as SphereGeometry} from './geometries/sphere-geometry';
 export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
-// lighting
-export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-source';
-
-// material
-export {default as Material} from './materials/material';
+// Materials
 export {default as PhongMaterial} from './materials/phong-material';
 export {default as PBRMaterial} from './materials/pbr-material';
 

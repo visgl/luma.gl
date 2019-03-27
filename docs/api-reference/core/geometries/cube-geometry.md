@@ -2,6 +2,7 @@
 
 Create a cube geometry.
 
+The generated geometry will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
 
 ## Usage
 
