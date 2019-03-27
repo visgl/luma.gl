@@ -9,7 +9,7 @@ import {
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
 import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {log, isObjectEmpty, assert} from '../utils';
+import {log, isObjectEmpty, assert, uid} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -24,6 +24,7 @@ export default class BaseModel {
   constructor(gl, props = {}) {
     assert(isWebGL(gl));
     this.gl = gl;
+    this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
     this._setBaseModelProps(props);
