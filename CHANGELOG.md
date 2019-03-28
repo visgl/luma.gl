@@ -1,5 +1,9 @@
 # 7.0 Pre-releases
 
+## v7.0.0-alpha.20 - Mar 28, 2019
+- glTF geometries (#1003)
+- Clean up root (#1001)
+
 ## v7.0.0-alpha.19 - Mar 27, 2019
 - Remove geometry scenegraph nodes (#1010)
 - Restore model id (#1011)
