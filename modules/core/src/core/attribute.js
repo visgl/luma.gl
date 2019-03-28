@@ -66,11 +66,14 @@ export default class Attribute {
         // Create buffer if needed
         this.buffer =
           this.buffer ||
-          new Buffer(this.gl, {
-            id: this.id,
-            target: this.target,
-            accessor: Object.assign({}, opts, {type: this.type})
-          });
+          new Buffer(
+            this.gl,
+            Object.assign({}, opts, {
+              id: this.id,
+              target: this.target,
+              type: this.type
+            })
+          );
         this.buffer.setData({data: value});
         this.type = this.buffer.accessor.type;
       }
