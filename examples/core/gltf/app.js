@@ -1,8 +1,13 @@
 /* global document, window */
-import {GLTFParser} from '@loaders.gl/gltf';
-import {DracoDecoder} from '@loaders.gl/draco';
+import {loadFile, parseFile, registerLoaders} from '@loaders.gl/core';
 import {setParameters, clear, log} from '@luma.gl/core';
-import {createGLTFObjects, GLTFEnvironment, VRAnimationLoop} from '@luma.gl/addons';
+import {
+  createGLTFObjects,
+  GLBScenegraphLoader,
+  GLTFScenegraphLoader,
+  GLTFEnvironment,
+  VRAnimationLoop
+} from '@luma.gl/addons';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from 'math.gl';
 
@@ -156,23 +161,18 @@ const DEFAULT_OPTIONS = {
   lights: false
 };
 
+registerLoaders([GLBScenegraphLoader, GLTFScenegraphLoader]);
+
 async function loadGLTF(urlOrPromise, gl, options) {
-  const promise =
-    urlOrPromise instanceof Promise
-      ? urlOrPromise
-      : window
-          .fetch(urlOrPromise)
-          .then(res => (urlOrPromise.endsWith('.gltf') ? res.json() : res.arrayBuffer()));
+  let loadResult;
+  if (urlOrPromise instanceof Promise) {
+    const url = 'file:///.glb';
+    loadResult = await parseFile(await urlOrPromise, Object.assign({gl}, options), url);
+  } else {
+    loadResult = await loadFile(urlOrPromise, Object.assign({gl}, options));
+  }
 
-  const data = await promise;
-  const gltfParser = new GLTFParser();
-  const gltf = await gltfParser.parse(data, {
-    uri: urlOrPromise,
-    decompress: true,
-    DracoDecoder
-  });
-
-  const {scenes, animator} = createGLTFObjects(gl, gltf, options);
+  const {gltfParser, gltf, scenes, animator} = loadResult;
 
   log.info(4, 'gltfParser: ', gltfParser)();
   log.info(4, 'scenes: ', scenes)();

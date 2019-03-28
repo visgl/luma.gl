@@ -36,6 +36,9 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
+    "@loaders.gl/core": "1.0.0-alpha.2",
+    "@loaders.gl/draco": "1.0.0-alpha.2",
+    "@loaders.gl/gltf": "1.0.0-alpha.2",
     "@luma.gl/constants": "^7.0.0-alpha.19",
     "@luma.gl/core": "^7.0.0-alpha.19",
     "@luma.gl/shadertools": "^7.0.0-alpha.19",
