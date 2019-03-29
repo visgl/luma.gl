@@ -31,7 +31,7 @@ export {default as lights} from './modules/lights/lights';
 export {default as dirlight} from './modules/dirlight/dirlight';
 export {default as picking} from './modules/picking/picking';
 export {default as diffuse} from './modules/diffuse/diffuse';
-export {default as phonglighting} from './modules/phong-lighting/phong-lighting';
+export {gouraudlighting, phonglighting} from './modules/phong-lighting/phong-lighting';
 export {default as pbr} from './modules/pbr/pbr';
 
 // experimental
