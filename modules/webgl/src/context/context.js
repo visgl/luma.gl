@@ -68,21 +68,21 @@ const contextDefaults = {
  * Change default context creation parameters.
  * Main use case is regression test suite.
  */
-export function setGLContextDefaults(opts = {}) {
-  Object.assign(contextDefaults, {width: 1, height: 1}, opts);
+export function setGLContextDefaults(options = {}) {
+  Object.assign(contextDefaults, {width: 1, height: 1}, options);
 }
 
 /*
  * Creates a context giving access to the WebGL API
  */
 /* eslint-disable complexity, max-statements */
-export function createGLContext(opts = {}) {
-  opts = Object.assign({}, contextDefaults, opts);
-  const {canvas, width, height, throwOnError} = opts;
+export function createGLContext(options = {}) {
+  options = Object.assign({}, contextDefaults, options);
+  const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled
   function onError(message) {
-    if (throwOnError) {
+    if (options.throwOnError) {
       throw new Error(message);
     }
     return null;
@@ -91,19 +91,20 @@ export function createGLContext(opts = {}) {
   let gl;
   if (isBrowser) {
     // Get or create a canvas
+    const {canvas} = options;
     const targetCanvas = getCanvas({canvas, width, height, onError});
     // Create a WebGL context in the canvas
-    gl = createBrowserContext({canvas: targetCanvas, opts});
+    gl = createBrowserContext(targetCanvas, options);
   } else {
     // Create a headless-gl context under Node.js
-    gl = createHeadlessContext({width, height, opts, onError});
+    gl = createHeadlessContext({...options, width, height, onError});
   }
 
   if (!gl) {
     return null;
   }
 
-  gl = instrumentGLContext(gl);
+  gl = instrumentGLContext(gl, options);
 
   // Log some debug info about the newly created context
   logInfo(gl);
@@ -112,9 +113,9 @@ export function createGLContext(opts = {}) {
   return gl;
 }
 
-export function instrumentGLContext(gl, opts = {}) {
-  opts = Object.assign({}, contextDefaults, opts);
-  const {manageState, debug} = opts;
+export function instrumentGLContext(gl, options = {}) {
+  options = Object.assign({}, contextDefaults, options);
+  const {manageState, debug} = options;
 
   // Install context state tracking
   if (manageState) {
@@ -166,14 +167,14 @@ export function destroyGLContext(gl) {
  *
  * resizeGLContext(gl, {width, height, useDevicePixels})
  */
-export function resizeGLContext(gl, opts = {}) {
+export function resizeGLContext(gl, options = {}) {
   // Resize browser context
   if (gl.canvas) {
     /* global window */
-    const devicePixelRatio = opts.useDevicePixels ? window.devicePixelRatio || 1 : 1;
+    const devicePixelRatio = options.useDevicePixels ? window.devicePixelRatio || 1 : 1;
 
-    const width = `width` in opts ? opts.width : gl.canvas.clientWidth;
-    const height = `height` in opts ? opts.height : gl.canvas.clientHeight;
+    const width = `width` in options ? options.width : gl.canvas.clientWidth;
+    const height = `height` in options ? options.height : gl.canvas.clientHeight;
 
     gl.canvas.width = width * devicePixelRatio;
     gl.canvas.height = height * devicePixelRatio;
@@ -183,8 +184,8 @@ export function resizeGLContext(gl, opts = {}) {
 
   // Resize headless gl context
   const ext = gl.getExtension('STACKGL_resize_drawingbuffer');
-  if (ext && `width` in opts && `height` in opts) {
-    ext.resize(opts.width, opts.height);
+  if (ext && `width` in options && `height` in options) {
+    ext.resize(options.width, options.height);
   }
 }
 

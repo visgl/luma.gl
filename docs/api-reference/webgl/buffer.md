@@ -185,16 +185,16 @@ Updates part or all of a buffer's allocated memory.
 * `length` - WebGL2: Number of bytes to be copied
 
 
-### copyData(opts : Object) : Buffer (WebGL2)
+### copyData(options : Object) : Buffer (WebGL2)
 
 Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
 
 `Buffer.copyData({sourceBuffer, readOffset=, writeOffset=, size})`
 
-* `sourceBuffer` (`Buffer`) - the buffer to read data from.
-* `readOffset`=`0` (GLint) - byte offset from which to start reading from the buffer.
-* `writeOffset`=`0` (GLint) - byte offset from which to start writing to the buffer.
-* `size` (GLsizei) - byte count, specifying the size of the data to be copied.
+* `options.sourceBuffer` (`Buffer`) - the buffer to read data from.
+* `options.readOffset`=`0` (GLint) - byte offset from which to start reading from the buffer.
+* `options.writeOffset`=`0` (GLint) - byte offset from which to start writing to the buffer.
+* `options.size` (GLsizei) - byte count, specifying the size of the data to be copied.
 
 Note:
 

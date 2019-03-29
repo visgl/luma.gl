@@ -199,7 +199,7 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 * `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
 
 
-### update(opts: Object) : Framebuffer
+### update(options: Object) : Framebuffer
 
 Updates Framebuffers attachments using provided Texture and Renderbuffer objects. Optionally sets read and draw buffers when using WebGL2 context.
 
@@ -226,14 +226,14 @@ Returns itself to enable chaining
 WebGL References see `initialize`.
 
 
-### attach(attachments : Object, opts: Object) : Framebuffer
+### attach(attachments : Object, options: Object) : Framebuffer
 
 Used to attach or unattach `Texture`s and `Renderbuffer`s from the `Framebuffer`s various attachment points.
 
 `Framebuffer.attach(attachments)`
 
 * `attachments` - a map of attachments.
-* opts
+* options
   * `clearAttachments` - When set to true, will first unattach all  binding points, default value is `false`.
   * `resizeAttachments` - When set to true, all attachments will be re-sized to Framebuffers size, default value is `true`.
 
@@ -265,15 +265,14 @@ Check that the framebuffer contains a valid combination of attachments
 [`gl.checkFramebufferStatus`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/checkFramebufferStatus), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
 
-### clear(opts: Object) : Framebuffer
+### clear(options: Object) : Framebuffer
 
 Clears the contents (pixels) of the framebuffer attachments.
 
-* opts
-  * `color` (Boolean or Array) - clears all active color buffers (any selected `drawBuffer`s) with either the provided color or the default color.
-  * `depth`
-  * `stencil`
-  * `drawBuffers`=`[]` - An array of color values, with indices matching the buffers selected by `drawBuffers` argument.
+* `options.color` (Boolean or Array) - clears all active color buffers (any selected `drawBuffer`s) with either the provided color or the default color.
+* `options.depth`
+* `options.stencil`
+* `options.drawBuffers`=`[]` - An array of color values, with indices matching the buffers selected by `drawBuffers` argument.
 
 Notes:
 * The scissor box bounds the cleared region.
