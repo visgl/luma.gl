@@ -5902,10 +5902,10 @@ obuf@^1.0.0, obuf@^1.1.2:
   resolved "https://registry.yarnpkg.com/obuf/-/obuf-1.1.2.tgz#09bea3343d41859ebd446292d11c9d4db619084e"
   integrity sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==
 
-ocular-dev-tools@0.0.16:
-  version "0.0.16"
-  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-0.0.16.tgz#0905a6cd1c39e449263545847007e8349253a54d"
-  integrity sha512-m8z2qsqOHnWD+namuKDVTOvHqrbaNKh7ggtSJH7vDZTO0foYTLwa/nZKSX5Ze9unbYpZcA7NH+hvax4YD7+GiQ==
+ocular-dev-tools@0.0.18:
+  version "0.0.18"
+  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-0.0.18.tgz#cef24f308076fc765556a9bbdd79fde7a3f46d45"
+  integrity sha512-3kwimmRPbaacpXrggKPXakFOL0JjbK9py5/nsO87tQAqi0gkHAVgEr1YmYsnnwPLuhFWVKVYrI+YtAMXg4JUMA==
   dependencies:
     "@babel/cli" "^7.0.0"
     "@babel/core" "^7.0.0"
