@@ -113,6 +113,15 @@ export default class Geometry {
         vertexCount = Math.min(vertexCount, value.length / size);
       }
     }
+
+    // TODO - Magic, should this be removed?
+    if (!Number.isFinite(vertexCount)) {
+      const attribute = attributes.POSITION || attributes.positions;
+      if (attribute) {
+        vertexCount = attribute.value && attribute.value.length / (attribute.size || 3);
+      }
+    }
+
     assert(Number.isFinite(vertexCount));
     return vertexCount;
   }
