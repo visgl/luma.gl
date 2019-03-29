@@ -1,12 +1,22 @@
 import lights from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
-export default {
-  name: 'phong-lighting',
+const gouraudlighting = {
+  name: 'gouraud-lighting',
   dependencies: [lights],
   vs: lightingShader,
   defines: {
     LIGHTING_VERTEX: 1
+  },
+  getUniforms
+};
+
+const phonglighting = {
+  name: 'phong-lighting',
+  dependencies: [lights],
+  fs: lightingShader,
+  defines: {
+    LIGHTING_FRAGMENT: 1
   },
   getUniforms
 };
@@ -35,3 +45,5 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
 
   return Object.assign({}, getMaterialUniforms(material), {lighting_uEnabled: true});
 }
+
+export {gouraudlighting, phonglighting};
