@@ -190,23 +190,22 @@ const outTexture = transform._getTargetTexture();
 Constructs a `Transform` object. It then creates destination buffers if needed and binds the buffers to `Model` and `TransformFeedback` objects.
 
 * `gl` (`WebGL2RenderingContext`) gl - context
-* `opts` (`Object`={}) - options
-  * `sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-  * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer a particular offset and size.
-    * `buffer`=(Buffer) - Buffer object to be bound.
-    * `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-    * `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-  * `vs` (`String`) - vertex shader string.
-  * `modules` - shader modules to be applied.
-  * `varyings` (`Array`) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackMap`. Either `varyings` or `feedbackMap` must be provided.
-  * `feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
-  * `drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
-  * `elementCount` (`Integer`) - Number set to vertex count when rendering the model.
-  #### Experimental ####
-  * `_sourceTextures` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
-  * `_targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object, it is used as is, if `String`, it must be one of the source texture attributes name, a new texture object is cloned from corresponding texture and used as color attachment.
-  * `_targetTextureVarying` (`String`) : varying name used in vertex shader who's data should go into target texture.
-  * `_swapTexture` (`String`) : source texture attribute name, that is swapped with target texture every time `swap()` is called.
+* `props.sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
+* `props.feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer a particular offset and size.
+  * `buffer`=(Buffer) - Buffer object to be bound.
+  * `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+  * `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+* `props.vs` (`String`) - vertex shader string.
+* `props.modules` - shader modules to be applied.
+* `props.varyings` (`Array`) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackMap`. Either `varyings` or `feedbackMap` must be provided.
+* `props.feedbackMap` (`Object`, Optional) - key and value pairs, where key is a vertex shader attribute name and value is a vertex shader varying name.
+* `props.drawMode` (`GLEnum` = gl.POINTS, Optional) - Draw mode to be set on `Model` and `TransformFeedback` objects during draw/render time.
+* `props.elementCount` (`Integer`) - Number set to vertex count when rendering the model.
+#### Experimental ####
+* `props._sourceTextures` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture2D` object.
+* `props._targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object, it is used as is, if `String`, it must be one of the source texture attributes name, a new texture object is cloned from corresponding texture and used as color attachment.
+* `props._targetTextureVarying` (`String`) : varying name used in vertex shader who's data should go into target texture.
+* `props._swapTexture` (`String`) : source texture attribute name, that is swapped with target texture every time `swap()` is called.
 
 Notes:
 
@@ -227,13 +226,12 @@ Returns current destination buffer corresponding to given varying name.
 * `varyingName` (`String`) - varying name.
 
 
-### getData(opts : Object, Optional) : ArrayBufferView
+### getData([options : Object]) : ArrayBufferView
 
 Reads and returns data from current destination buffer corresponding to the given varying name. When no 'varyingName' is provided, it reads and returns data from current target texture.
 
-* `opts` (`Object`={}) - options
-  * `varyingName` (`String`, Optional) - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.
-  * `packed` (Boolean, Optional, Default: false) - applicable only when reading data from target texture, when true, data is packed to the actual size varyings. When false return array contains 4 values (R, G, B and A) for each element. Un-used element value will be 0 for R, G and B and 1 for A channel.
+* `options.varyingName` (`String`, Optional) - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.
+* `options.packed` (Boolean, Optional, Default: false) - applicable only when reading data from target texture, when true, data is packed to the actual size varyings. When false return array contains 4 values (R, G, B and A) for each element. Un-used element value will be 0 for R, G and B and 1 for A channel.
 
 
 ### getFramebuffer() : Framebuffer
