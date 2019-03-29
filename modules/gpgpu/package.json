@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "7.0.0-alpha.23",
+  "version": "7.0.0-alpha.24",
   "description": "Set of gpgpu utility methods based on luma.gl",
   "license": "MIT",
   "repository": {
@@ -36,7 +36,7 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.0.0-alpha.23",
-    "@luma.gl/core": "7.0.0-alpha.23"
+    "@luma.gl/constants": "7.0.0-alpha.24",
+    "@luma.gl/core": "7.0.0-alpha.24"
   }
 }

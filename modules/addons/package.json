@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "7.0.0-alpha.23",
+  "version": "7.0.0-alpha.24",
   "description": "Additional classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -39,10 +39,10 @@
     "@loaders.gl/core": "1.0.0-alpha.2",
     "@loaders.gl/draco": "1.0.0-alpha.2",
     "@loaders.gl/gltf": "1.0.0-alpha.2",
-    "@luma.gl/constants": "7.0.0-alpha.23",
-    "@luma.gl/core": "7.0.0-alpha.23",
-    "@luma.gl/shadertools": "7.0.0-alpha.23",
-    "@luma.gl/webgl": "7.0.0-alpha.23",
+    "@luma.gl/constants": "7.0.0-alpha.24",
+    "@luma.gl/core": "7.0.0-alpha.24",
+    "@luma.gl/shadertools": "7.0.0-alpha.24",
+    "@luma.gl/webgl": "7.0.0-alpha.24",
     "math.gl": "^2.3.1"
   }
 }
