@@ -40,7 +40,11 @@ export default class Model extends BaseModel {
     this._setModelProps(props);
   }
 
-  // delete is inherited
+  delete() {
+    super.delete();
+
+    this._deleteGeometryBuffers();
+  }
 
   destroy() {
     this.delete();
@@ -87,11 +91,7 @@ export default class Model extends BaseModel {
     this.drawMode = geometry.drawMode;
     this.vertexCount = geometry.getVertexCount();
 
-    for (const name in this.geometryBuffers) {
-      // Buffer is raw value (for indices) or first element of [buffer, accessor] pair
-      const buffer = this.geometryBuffers[name][0] || this.geometryBuffers[name];
-      buffer.delete();
-    }
+    this._deleteGeometryBuffers();
 
     this.geometryBuffers = getBuffersFromGeometry(this.gl, geometry);
     this.vertexArray.setAttributes(this.geometryBuffers);
@@ -176,6 +176,14 @@ export default class Model extends BaseModel {
     }
     if ('_feedbackBuffers' in props) {
       this._setFeedbackBuffers(props._feedbackBuffers);
+    }
+  }
+
+  _deleteGeometryBuffers() {
+    for (const name in this.geometryBuffers) {
+      // Buffer is raw value (for indices) or first element of [buffer, accessor] pair
+      const buffer = this.geometryBuffers[name][0] || this.geometryBuffers[name];
+      buffer.delete();
     }
   }
 
