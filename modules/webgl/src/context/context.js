@@ -125,7 +125,7 @@ export function instrumentGLContext(gl, options = {}) {
   }
 
   // Add debug instrumentation to the context
-  if (isBrowser && debug) {
+  if (isBrowser && false) {
     if (!global.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
