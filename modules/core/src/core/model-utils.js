@@ -22,6 +22,8 @@ export function getBuffersFromGeometry(gl, geometry, options) {
     delete attribute.value;
     const remappedName = mapAttributeName(name, options);
     buffers[remappedName] = [new Buffer(gl, typedArray), attribute];
+
+    inferAttributeAccessor(name, attribute);
   }
 
   if (geometry.indices) {

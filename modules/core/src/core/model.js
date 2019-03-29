@@ -25,6 +25,9 @@ export default class Model extends BaseModel {
 
     this._setModelProps(props);
 
+    // TODO - just to unbreak deck.gl 7.0-beta, remove as soon as updated
+    this.geometry = {};
+
     // assert(program || program instanceof Program);
     assert(this.drawMode !== undefined && Number.isFinite(this.vertexCount), ERR_MODEL_PARAMS);
   }
@@ -91,7 +94,15 @@ export default class Model extends BaseModel {
       return this;
     }
 
-    this.vertexArray.setAttributes(attributes);
+    // Loose support for deck.gl `Attribute` class by checking for presence of `getValue``
+    // TODO - remove once deck is updated
+    const normalizedAttributes = {};
+    for (const name in attributes) {
+      const attribute = attributes[name];
+      normalizedAttributes[name] = attribute.getValue ? attribute.getValue() : attribute;
+    }
+
+    this.vertexArray.setAttributes(normalizedAttributes);
     return this;
   }
 
