@@ -19,6 +19,7 @@ export default class Resource {
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
     this._bound = false;
+    this._refCount = 1;
 
     // Set the handle
     // If handle was provided, use it, otherwise create a new handle
@@ -69,6 +70,20 @@ export default class Resource {
     }
 
     return this;
+  }
+
+  addRef() {
+    assert(this._refCount > 0);
+    this._refCount++;
+    return this;
+  }
+
+  removeRef() {
+    assert(this._refCount > 0);
+    this._refCount--;
+    if (this._refCount === 0) {
+      this.delete();
+    }
   }
 
   bind(funcOrHandle = this.handle) {
