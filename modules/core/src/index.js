@@ -145,6 +145,7 @@ export {
   dirlight,
   picking,
   diffuse,
+  gouraudlighting,
   phonglighting,
   // experimental
   _transform,
