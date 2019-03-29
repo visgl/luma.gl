@@ -27,7 +27,7 @@ function checkConstants(gl, t) {
     if (Number.isFinite(value) && key.toUpperCase() === key && GL[key] !== undefined) {
       // Avoid generating too much test log
       if (GL[key] !== value) {
-      	t.equals(GL[key], value, `GL.${key} is equal to gl.${key}`);
+        t.equals(GL[key], value, `GL.${key} is equal to gl.${key}`);
       }
       count++;
     }
