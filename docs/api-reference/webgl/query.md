@@ -49,38 +49,34 @@ In addition to above queries, Query object also provides `getTimeStamp` which re
 
 ## Methods
 
-### static Query.isSupported(gl, opts)
+### static Query.isSupported(gl : WebGLRenderingContext, options : Object)
 
 Returns true if Query is supported by the WebGL implementation
 (depends on the EXT_disjoint_timer_query extension)/
 Can also check whether timestamp queries are available.
 
-* gl {WebGLRenderingContext} - gl context
-* opts= {Object}  - options
-* opts.queries=false {Object}  - If true, checks if Query objects (occlusion/transform feedback) are supported
-* opts.timers=false {Object}  - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
-* return {Boolean} - Query API is supported with specified configuration
+* options.queries=false {Object}  - If true, checks if Query objects (occlusion/transform feedback) are supported
+* options.timers=false {Object}  - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
+
+Returns: {Boolean} - Query API is supported with specified configuration
 
 Options
 * queries = false,
 * timers = false,
 
 
-### constructor
+### constructor(gl : WebGLRenderingContext, props : Object)
 
-`new Query(gl, opts)`
-
-* gl {WebGLRenderingContext | WebGL2RenderingContext} - gl context
-* opts {Object} opts - options
+`new Query(gl, {})`
 
 
-### delete
+### delete()
 
 Destroys the WebGL object. Rejects any pending query.
 * return {Query} - returns itself, to enable chaining of calls.
 
 
-### beginTimeElapsedQuery
+### beginTimeElapsedQuery()
 
 Shortcut for timer query (dependent on extension in both WebGL1 and 2)
 
@@ -90,7 +86,7 @@ Shortcut for timer query (dependent on extension in both WebGL1 and 2)
 Shortcut for occlusion query (dependent on WebGL2)
 
 
-### beginTransformFeedbackQuery
+### beginTransformFeedbackQuery()
 
 Shortcut for transform feedback query (dependent on WebGL2)
 

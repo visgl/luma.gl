@@ -9,11 +9,28 @@ test('@luma.gl/constants', t => {
 });
 
 test('@luma.gl/constants#WebGL1 context', t => {
-  for (const key in fixture.gl) {
-    const value = fixture.gl[key];
-    if (Number.isFinite(value) && key.toUpperCase() === key && GL[key] !== undefined) {
-      t.equals(GL[key], value, `GL.${key} is equal to gl.${key}`);
-    }
-  }
+  const count = checkConstants(fixture.gl, t);
+  t.comment(`Checked ${count} GL constants against platform WebGL1 context`);
   t.end();
 });
+
+test('@luma.gl/constants#WebGL2 context', t => {
+  const count = checkConstants(fixture.gl2, t);
+  t.comment(`Checked ${count} GL constants against platform WebGL2 context`);
+  t.end();
+});
+
+function checkConstants(gl, t) {
+  let count = 0;
+  for (const key in gl) {
+    const value = gl[key];
+    if (Number.isFinite(value) && key.toUpperCase() === key && GL[key] !== undefined) {
+      // Avoid generating too much test log
+      if (GL[key] !== value) {
+        t.equals(GL[key], value, `GL.${key} is equal to gl.${key}`);
+      }
+      count++;
+    }
+  }
+  return count;
+}

@@ -87,7 +87,7 @@ Deletes resources held by program. Note: Does not currently delete shaders (to e
 
 ## Methods
 
-### initialize(opts : Object) : Program
+### initialize(props : Object) : Program
 
 Relinks a program. Takes the same options as the constructor
 
