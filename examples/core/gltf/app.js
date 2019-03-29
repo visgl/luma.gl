@@ -1,6 +1,6 @@
 /* global document, window */
 import {loadFile, parseFile, registerLoaders} from '@loaders.gl/core';
-import {setParameters, clear, log} from '@luma.gl/core';
+import {setParameters, clear, log, lumaStats} from '@luma.gl/core';
 import {
   createGLTFObjects,
   GLBScenegraphLoader,
@@ -269,6 +269,7 @@ export class DemoApp {
     canvas.ondrop = e => {
       e.preventDefault();
       if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
+        this._deleteScenes();
         loadGLTF(
           new Promise(resolve => {
             const reader = new window.FileReader();
@@ -314,6 +315,7 @@ export class DemoApp {
       );
 
       modelSelector.onchange = event => {
+        this._deleteScenes();
         loadGLTF(GLTF_BASE_URL + modelSelector.value, this.gl, this.loadOptions).then(result =>
           Object.assign(this, result)
         );
@@ -383,7 +385,17 @@ export class DemoApp {
     (this.gltf.meshes || []).forEach(mesh => delete mesh._mesh);
     (this.gltf.nodes || []).forEach(node => delete node._node);
 
+    this._deleteScenes();
     Object.assign(this, createGLTFObjects(this.gl, this.gltf, this.loadOptions));
+  }
+
+  _deleteScenes() {
+    this.scenes.forEach(scene => scene.delete());
+    this.scenes = [];
+
+    lumaStats.get('Resource Counts').forEach(({name, count}) => {
+      log.info(3, `${name}: ${count}`)();
+    });
   }
 
   applyLight(model) {

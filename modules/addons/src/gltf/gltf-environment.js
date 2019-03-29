@@ -81,4 +81,21 @@ export default class GLTFEnvironment {
 
     return this._BrdfTexture;
   }
+
+  delete() {
+    if (this._DiffuseEnvSampler) {
+      this._DiffuseEnvSampler.delete();
+      this._DiffuseEnvSampler = null;
+    }
+
+    if (this._SpecularEnvSampler) {
+      this._SpecularEnvSampler.delete();
+      this._SpecularEnvSampler = null;
+    }
+
+    if (this._BrdfTexture) {
+      this._BrdfTexture.delete();
+      this._BrdfTexture = null;
+    }
+  }
 }

@@ -21,6 +21,7 @@ export default class GLTFMaterialParser {
     };
 
     this.parameters = {};
+    this.generatedTextures = [];
 
     if (imageBasedLightingEnvironment) {
       this.uniforms.u_DiffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
@@ -73,6 +74,7 @@ export default class GLTFMaterialParser {
     });
     this.uniforms[name] = texture;
     this.defineIfPresent(define, define);
+    this.generatedTextures.push(texture);
   }
 
   parsePbrMetallicRoughness(pbrMetallicRoughness) {
