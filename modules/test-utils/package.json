@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/test-utils",
-  "version": "7.0.0-alpha.20",
+  "version": "7.0.0-alpha.21",
   "description": "Automated WebGL testing utilities with Puppeteer and image diffing",
   "license": "MIT",
   "publishConfig": {
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/core": "7.0.0-alpha.20",
+    "@luma.gl/core": "7.0.0-alpha.21",
     "@luma.gl/webgl-state-tracker": "^7.0.0-alpha.19"
   },
   "peerDependencies": {
