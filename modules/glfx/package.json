@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/glfx",
   "description": "glfx - image processing packaged as composable shader modules",
-  "version": "7.0.0-alpha.22",
+  "version": "7.0.0-alpha.23",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "build-es5": "BABEL_ENV=es5 babel src --config-file ../../babel.config.js --out-dir dist/es5 --source-maps --ignore 'node_modules/'"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.0.0-alpha.22",
-    "@luma.gl/core": "7.0.0-alpha.22"
+    "@luma.gl/constants": "7.0.0-alpha.23",
+    "@luma.gl/core": "7.0.0-alpha.23"
   }
 }
