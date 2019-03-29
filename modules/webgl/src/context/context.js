@@ -78,11 +78,11 @@ export function setGLContextDefaults(options = {}) {
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
   options = Object.assign({}, contextDefaults, options);
-  const {canvas, width, height, throwOnError} = options;
+  const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled
   function onError(message) {
-    if (throwOnError) {
+    if (options.throwOnError) {
       throw new Error(message);
     }
     return null;
@@ -91,12 +91,13 @@ export function createGLContext(options = {}) {
   let gl;
   if (isBrowser) {
     // Get or create a canvas
+    const {canvas} = options;
     const targetCanvas = getCanvas({canvas, width, height, onError});
     // Create a WebGL context in the canvas
-    gl = createBrowserContext({canvas: targetCanvas, options});
+    gl = createBrowserContext(targetCanvas, options);
   } else {
     // Create a headless-gl context under Node.js
-    gl = createHeadlessContext({width, height, options, onError});
+    gl = createHeadlessContext({...options, width, height, onError});
   }
 
   if (!gl) {
@@ -125,7 +126,7 @@ export function instrumentGLContext(gl, options = {}) {
   }
 
   // Add debug instrumentation to the context
-  if (isBrowser && false) {
+  if (isBrowser && debug) {
     if (!global.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
