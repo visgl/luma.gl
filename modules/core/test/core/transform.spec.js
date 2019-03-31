@@ -1,4 +1,4 @@
-import {Buffer, Transform, _Attribute as Attribute, Texture2D} from '@luma.gl/core';
+import {Buffer, Transform, Texture2D} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
@@ -11,18 +11,6 @@ out float outValue;
 void main()
 {
   outValue = 2.0 * inValue;
-}
-`;
-
-const VS_CONSTANT_ATTRIBUTE = `\
-#version 300 es
-in float inValue;
-in float multiplier;
-out float outValue;
-
-void main()
-{
-  outValue = multiplier * inValue;
 }
 `;
 
