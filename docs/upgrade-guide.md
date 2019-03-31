@@ -2,19 +2,16 @@
 
 ## Upgrading from v6.x to v7.0
 
-luma.gl v7.0 represents a major overhaul of the API and applications may require light porting:
-
-- A number of changes have been made to support new features, unify similar functionality and improve performance.
-- Modularization of luma.gl is also continuing and in some cases rarely used code has been removed to reduce library bloat.
+luma.gl v7.0 represents a major overhaul of the API. The majority of changes are in areas that are only infrequently used by applications, and the intention is that most applications should only require very light porting.
 
 
-## API Removals
+## Core API Removals
 
-## Loading Functions
+### Loading Functions Removed
 
-Since luma.gl's new companion framework [loaders.gl]() now provides significantly richer and more powerful loading functionality, it did not make sense to keep the legacy luma.gl loading functions. They have been removed and now only minimal `loadFile` and `loadImage` utils are provided.
+Extensive loading functionality is now provided by a new companion framework [loaders.gl]() and because of this, most of the limited legacy luma.gl loading functions have been removed.
 
-The following table provides guidance in case you are using one of the removed methods.
+For the most common case (loading of images for use with textures), loading functions are no longer needed as the `data` prop in the `Texture2D` constructor now accepts url strings and `Promise` objects (this is the new Async Textures function).
 
 | Removed Function | Replacement  |
 | ---              | ---          |
@@ -26,19 +23,24 @@ The following table provides guidance in case you are using one of the removed m
 | `loadModel`      | call `loadFile` and copy `parseModel` code from examples/lesson/16|
 | `parseModel`     | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
 
-In case of image loading, note the new support for async textures, i.e the `Texture2D` constructor can now accept url strings and `Promise` objects directly.
+### Attribute Class Removed
 
-### Sampler
+This experimental class has been moved to deck.gl and is now an internal class. Attribute accessor API improvements in luma.gl v7 should cover any issue.
+
+
+## WebGL API Removals
+
+### Sampler Class Removed
 
 The `Sampler` class has been removed as its utility was limited and it added complexity to the library. It may be added back in the future if a clear use case arises.
 
-### Texture2D
+### Texture2DArray Class Removed
 
-The `Texture2D` class has been removed as its utility was limited and the status of support was unclear due to limited testing. It may be added back in the future if a clear use case arises.
+The `Texture2DArray` class has been removed as its utility was limited and the status of support was unclear due to limited testing. It may be added back in the future if a clear use case arises.
 
-### FenceSync
+### FenceSync Class Removed
 
-The `FenceSync` class has been removed as its utility was limited. If required, syncing can be done directly through the `WebGLFenceSync` object.
+The `FenceSync` class has been removed as its utility was limited. It may be added back in the future if a clear use case arises. If required, syncing can be done directly through the `WebGLFenceSync` object.
 
 ## Framebuffer and Texture: Copy and Blit methods
 
@@ -57,7 +59,7 @@ Following member function of `Framebuffer` and `Texture` classes are no longer s
 Parameters have also changed in some cases, see separate section.
 
 
-## API Changes
+## Module Structure Changes
 
 ### Debug functionality moved to separate npm module
 

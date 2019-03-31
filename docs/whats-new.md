@@ -20,11 +20,18 @@ Target Date: April 15, 2019
 </table>
 
 
-## 3D File Format Loaders
+### glTF Support
 
-### loaders.gl: New Companion Framework for Loading 3D Assets
+luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader](). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
-[loaders.gl]() is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (including loaders for various popular point cloud and mesh formats), including:
+- **PBR Material Support**: PBR (Physically Based Rendering)
+- **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
+- **Geometry glTF Support**: The `Geometry` class and scene graph support has been overhauled to conform to glTF conventions, simplifying loading and manipulation of glTF formatted data.
+
+
+### 3D File Format Loaders
+
+[loaders.gl]() is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (with an emphasizis on point cloud formats), including:
 
 * Draco
 * PLY
@@ -34,53 +41,35 @@ Target Date: April 15, 2019
 
 These loaders, while technically independent of luma.gl, return parsed data in a format that can be passed directly to luma.gl classes like `Geometry` and `Model`.
 
-### glTF Support
-
-luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader](). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
-
-- **PBR Material Support**: PBR (Physically Based Rendering)
-- **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
-- **Geometry glTF Support**: The `Geometry` class and scene graph support has been overhauled to conform to glTF conventions, simplifying loading and manipulation of glTF formatted data.
-
-### WebVR Support (experimental)
-
-Just replace your `AnimationLoop` with `VRAnimationLoop` from `@luma.gl/addons`.
-Works with [Firefox Reality](https://mixedreality.mozilla.org/firefox-reality/).
-
-## New API Features
 
 ### "Asynchronous" Textures
 
 The image data needed by the `Texture` classes can now be supplied using URLs (`string` or `Promise`). This can removes the need for applications to use callbacks etc to load textures.
 
 ```js
-new Texture2D(gl, 'path/to/my/image.png');
+new Texture2D(gl, 'path/to/my/image.png'); // Texture2D will load the image and becomses 'renderable' once it loads
 // or
 new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a Promise
 ```
 
-### Unified functions for Framebuffers and Textures (Read/Copy/Blit)
+### Lighting
 
-A set of global methods that perform copying data to and from `Framebuffer` objects. All functions that read from or write to a `Framebuffer` object now also accept a `Texture` object (no need to create and configure a `Framebuffer` just to do a simple operation on a `Texture`).
+A standardized set of light classes are now supported by multiple material models (Phong, Goraud and PBR) enabling various models to be mixed and properly lit in the same scene.
 
 
-### Query: Simplified Interface
+### Modularization Improvements
 
-* The `Query` class Defaults to not using Promises. Approximately 3x improvement in query start time. Promise interfaces still available via `createPoll`
-* Remove support for GL_TIMESTAMP_EXT queries as they are [unreliable]().
+- Modularization of luma.gl is also continuing and in some cases rarely used code has been removed to reduce library bloat.
+
+* `@luma.gl/gpgpu` (NEW) - A new experimental submodule with GPGPU Algorithms and Utilities has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
 
 
 ### Performance Instrumentation
 
-More comprehensive metrics about frame times and GPU memory usage are being collected. The data is exposed as a proble.gl `Stats` object. The new probe.gl [`StatsWidget`]() can be used to present data in applications.
+Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory usage are being collected. The data is exposed as a proble.gl `Stats` object. The new probe.gl [`StatsWidget`]() can be used to present data in applications.
 
 
-### New Submodule with GPGPU Algorithms and Utilities
-
-A new experimental submodule `@luma.gl/gpgpu` has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
-
-
-### Accessor Objects can now Reference Buffers
+### Accessor Object Improvements
 
 To improve support for interleaved attributes and glTF model loading, accessor objecs and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
 
@@ -91,6 +80,18 @@ model.setAttributes({
   colors: {buffer, stride: 16, offset: 12, ...}})
 }
 ```
+
+### Unified functions for Framebuffers and Textures (Read/Copy/Blit)
+
+A set of global methods that perform copying data to and from `Framebuffer` objects. All functions that read from or write to a `Framebuffer` object now also accept a `Texture` object (no need to create and configure a `Framebuffer` just to do a simple operation on a `Texture`).
+
+
+## Experimental Features
+
+### WebVR Support (experimental)
+
+Just replace your `AnimationLoop` with `VRAnimationLoop` from `@luma.gl/addons`. Works with [Firefox Reality](https://mixedreality.mozilla.org/firefox-reality/).
+
 
 
 ## Version 6.4
