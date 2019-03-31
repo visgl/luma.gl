@@ -189,6 +189,87 @@ test('WebGL#Transform run (no source buffer)', t => {
   t.end();
 });
 
+/*
+TODO Attribute class has been moved out
+Either remove these tests or create a dummy Attribute with getValue method.
+If deck.gl is refactoring then we should just remove.
+
+test('WebGL#Transform run (Attribute)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Attribute(gl2, {value: sourceData});
+  const feedbackBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    feedbackBuffers: {
+      outValue: feedbackBuffer
+    },
+    vs: VS,
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outData = transform.getData({varyingName: 'outValue'});
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+// TODO - enabling this test breaks histopyramid.spec.js in headless mode
+test.skip('WebGL#Transform run (constant Attribute)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const MULTIPLIER = 5;
+  const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+  const sourceBuffer = new Attribute(gl2, {value: sourceData});
+  const multiplier = new Attribute(gl2, {value: [MULTIPLIER], constant: true});
+  const feedbackBuffer = new Buffer(gl2, {data: sourceData});
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      inValue: sourceBuffer,
+      multiplier
+    },
+    feedbackBuffers: {
+      outValue: feedbackBuffer
+    },
+    vs: VS_CONSTANT_ATTRIBUTE,
+    varyings: ['outValue'],
+    elementCount: 5
+  });
+
+  transform.run();
+
+  const expectedData = sourceData.map(x => x * MULTIPLIER);
+  const outData = transform.getData({varyingName: 'outValue'});
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+*/
+
+
 test('WebGL#Transform swap', t => {
   const {gl2} = fixture;
 
