@@ -269,7 +269,6 @@ test.skip('WebGL#Transform run (constant Attribute)', t => {
 });
 */
 
-
 test('WebGL#Transform swap', t => {
   const {gl2} = fixture;
 
