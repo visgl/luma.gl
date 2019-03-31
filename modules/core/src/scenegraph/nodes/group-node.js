@@ -37,6 +37,12 @@ export default class GroupNode extends ScenegraphNode {
     return this;
   }
 
+  delete() {
+    this.children.forEach(child => child.delete());
+    this.removeAll();
+    super.delete();
+  }
+
   traverse(visitor, {worldMatrix = new Matrix4()} = {}) {
     const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
 

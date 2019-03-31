@@ -83,7 +83,8 @@ export default function createGLTFModel(gl, options) {
         defines: materialParser.defines,
         parameters: materialParser.parameters,
         vs: addVersionToShader(gl, vs),
-        fs: addVersionToShader(gl, fs)
+        fs: addVersionToShader(gl, fs),
+        generatedTextures: materialParser.generatedTextures
       },
       modelOptions
     )
