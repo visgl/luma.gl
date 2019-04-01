@@ -21,7 +21,6 @@ const STAT_STYLES = {
   color: '#fff',
   background: '#000',
   padding: '8px',
-  fontSize: '12px',
   opacity: 0.8
 };
 
@@ -71,26 +70,26 @@ export default class ExampleRunner extends Component {
       }
     });
 
-    // lumaStats.get('Memory Usage').reset();
-    // const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
-    //   container: this.refs.memStats,
-    //   css: {
-    //     header: {
-    //       fontWeight: 'bold'
-    //     }
-    //   },
-    //   framesPerUpdate: 60,
-    //   formatters: {
-    //     'GPU Memory': 'memory',
-    //     'Buffer Memory': 'memory',
-    //     'Renderbuffer Memory': 'memory',
-    //     'Texture Memory': 'memory'
-    //   }
-    // });
+    lumaStats.get('Memory Usage').reset();
+    const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
+      container: this.refs.memStats,
+      css: {
+        header: {
+          fontWeight: 'bold'
+        }
+      },
+      framesPerUpdate: 60,
+      formatters: {
+        'GPU Memory': 'memory',
+        'Buffer Memory': 'memory',
+        'Renderbuffer Memory': 'memory',
+        'Texture Memory': 'memory'
+      }
+    });
 
     const updateStats = () => {
       timeWidget.update();
-      // memWidget.update();
+      memWidget.update();
       this.animationFrame = window.requestAnimationFrame(updateStats);
     };
 
