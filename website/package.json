@@ -13,7 +13,7 @@
     "serve": "gatsby serve"
   },
   "dependencies": {
-    "@probe.gl/stats-widget": "^3.0.0-alpha.9",
+    "@probe.gl/stats-widget": "^3.0.0",
     "math.gl": "^2.3.1",
     "noise3d": "^1.0.0"
   },

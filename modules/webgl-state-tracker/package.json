@@ -37,6 +37,6 @@
     "@luma.gl/constants": "7.0.0-alpha.25"
   },
   "devDependencies": {
-    "probe.gl": "^2.0.1"
+    "probe.gl": "^3.0.0"
   }
 }

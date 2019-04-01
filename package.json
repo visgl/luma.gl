@@ -48,9 +48,9 @@
     "metrics": "ocular-metrics"
   },
   "devDependencies": {
-    "@probe.gl/bench": "^3.0.0-alpha.7",
-    "@probe.gl/stats-widget": "^3.0.0-alpha.8",
-    "@probe.gl/test-utils": "^3.0.0-alpha.7",
+    "@probe.gl/bench": "^3.0.0",
+    "@probe.gl/stats-widget": "^3.0.0",
+    "@probe.gl/test-utils": "^3.0.0",
     "babel-loader": "^8.0.0",
     "babel-plugin-inline-webgl-constants": "^1.0.0",
     "babel-plugin-remove-glsl-comments": "^1.0.0",

@@ -37,7 +37,7 @@
     "@luma.gl/webgl-state-tracker": "7.0.0-alpha.25"
   },
   "peerDependencies": {
-    "@probe.gl/test-utils": "^3.0.0-alpha.4",
-    "probe.gl": "^3.0.0-alpha.7"
+    "@probe.gl/test-utils": "^3.0.0",
+    "probe.gl": "^3.0.0"
   }
 }

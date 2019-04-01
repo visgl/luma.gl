@@ -11,7 +11,6 @@
   "dependencies": {
     "@luma.gl/constants": "^7.0.0-alpha.3",
     "@luma.gl/core": "^7.0.0-alpha",
-    "@probe.gl/stats-widget": "^3.0.0-alpha.7",
     "math.gl": "^2.3.1"
   },
   "devDependencies": {
