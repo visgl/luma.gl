@@ -1,5 +1,15 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.1 - Apr 1, 2019
+- s/onInitailize/onInitialize (#1020)
+- Delete old buffers when auto-created in Model (#1016)
+- scenegraph-node delete() (#1014)
+- Export gouraud lighting module (#1018)
+- bump
+- Ib/restore debug context (#1015)
+- Initial round of fixes (#1013)
+- Create GLTFScenegraphLoader and change example to use it (#1012)
+
 ## v7.0.0-alpha.20 - Mar 28, 2019
 - glTF geometries (#1003)
 - Clean up root (#1001)
