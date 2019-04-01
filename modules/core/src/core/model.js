@@ -20,6 +20,9 @@ export default class Model extends BaseModel {
     this.drawMode = props.drawMode !== undefined ? props.drawMode : GL.TRIANGLES;
     this.vertexCount = props.vertexCount || 0;
 
+    // Track buffers created by setGeometry
+    this.geometryBuffers = {};
+
     // geometry might have set drawMode and vertexCount
     this.isInstanced = props.isInstanced || props.instanced;
 
@@ -37,7 +40,11 @@ export default class Model extends BaseModel {
     this._setModelProps(props);
   }
 
-  // delete is inherited
+  delete() {
+    super.delete();
+
+    this._deleteGeometryBuffers();
+  }
 
   destroy() {
     this.delete();
@@ -80,11 +87,14 @@ export default class Model extends BaseModel {
     return this;
   }
 
-  // TODO - just set attributes, don't hold on to geometry
   setGeometry(geometry) {
     this.drawMode = geometry.drawMode;
     this.vertexCount = geometry.getVertexCount();
-    this.vertexArray.setAttributes(getBuffersFromGeometry(this.gl, geometry));
+
+    this._deleteGeometryBuffers();
+
+    this.geometryBuffers = getBuffersFromGeometry(this.gl, geometry);
+    this.vertexArray.setAttributes(this.geometryBuffers);
     return this;
   }
 
@@ -166,6 +176,14 @@ export default class Model extends BaseModel {
     }
     if ('_feedbackBuffers' in props) {
       this._setFeedbackBuffers(props._feedbackBuffers);
+    }
+  }
+
+  _deleteGeometryBuffers() {
+    for (const name in this.geometryBuffers) {
+      // Buffer is raw value (for indices) or first element of [buffer, accessor] pair
+      const buffer = this.geometryBuffers[name][0] || this.geometryBuffers[name];
+      buffer.delete();
     }
   }
 
