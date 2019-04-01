@@ -1,6 +1,5 @@
-import {AnimationLoop, setParameters, Model, Texture3D, Buffer, lumaStats} from '@luma.gl/core';
+import {AnimationLoop, setParameters, Model, Texture3D, Buffer} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget';
 import {default as noise3d} from 'noise3d';
 
 /*
@@ -131,47 +130,11 @@ class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const timeWidget = new StatsWidget(this.stats, {
-      title: 'Render Time',
-      css: {
-        position: 'absolute',
-        top: '20px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'CPU Time': 'averageTime',
-        'GPU Time': 'averageTime',
-        'Frame Rate': 'fps'
-      },
-      resetOnUpdate: {
-        'CPU Time': true,
-        'GPU Time': true,
-        'Frame Rate': true
-      }
-    });
-
-    const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
-      css: {
-        position: 'absolute',
-        top: '100px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'GPU Memory': 'memory',
-        'Buffer Memory': 'memory',
-        'Texture Memory': 'memory'
-      }
-    });
-
-    return {cloud, mvpMat, viewMat, timeWidget, memWidget};
+    return {cloud, mvpMat, viewMat};
   }
 
   onRender(animationProps) {
-    const {gl, cloud, mvpMat, viewMat, timeWidget, memWidget, tick, aspect} = animationProps;
-    timeWidget.update();
-    memWidget.update();
+    const {gl, cloud, mvpMat, viewMat, tick, aspect} = animationProps;
 
     mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
 

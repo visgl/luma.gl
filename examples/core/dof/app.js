@@ -14,7 +14,6 @@ import {
   CubeGeometry
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget';
 /* eslint-disable spaced-comment */
 /* global document */
 
@@ -411,26 +410,6 @@ export const animationLoopOptions = {
       }
     });
 
-    const statsWidget = new StatsWidget(_animationLoop.stats, {
-      title: 'Render Time',
-      css: {
-        position: 'absolute',
-        top: '20px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'CPU Time': 'averageTime',
-        'GPU Time': 'averageTime',
-        'Frame Rate': 'fps'
-      },
-      resetOnUpdate: {
-        'CPU Time': true,
-        'GPU Time': true,
-        'Frame Rate': true
-      }
-    });
-
     return {
       projMat,
       viewMat,
@@ -440,8 +419,7 @@ export const animationLoopOptions = {
       quadVertexArray,
       dofProgram,
       dofUniforms,
-      dofUniformsLayout,
-      statsWidget
+      dofUniformsLayout
     };
   },
 
@@ -459,14 +437,11 @@ export const animationLoopOptions = {
     quadVertexArray,
     dofProgram,
     dofUniforms,
-    dofUniformsLayout,
-    statsWidget
+    dofUniformsLayout
   }) => {
     if (!isDemoSupported) {
       return;
     }
-
-    statsWidget.update();
 
     sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
