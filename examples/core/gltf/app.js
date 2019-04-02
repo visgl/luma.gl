@@ -384,6 +384,7 @@ export class DemoApp {
     // TODO: Find better way to do this
     (this.gltf.meshes || []).forEach(mesh => delete mesh._mesh);
     (this.gltf.nodes || []).forEach(node => delete node._node);
+    (this.gltf.bufferViews || []).forEach(bufferView => delete bufferView.lumaBuffers);
 
     this._deleteScenes();
     Object.assign(this, createGLTFObjects(this.gl, this.gltf, this.loadOptions));
