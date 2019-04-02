@@ -7,6 +7,7 @@ import {loadWorldGeometry, World} from './world';
 
 /*
   Cave texture from: http://texturelib.com/texture/?path=/Textures/rock/cave/rock_cave_0019
+  "Free for personal and commercial use." http://texturelib.com/about/
 */
 
 const INFO_HTML = `
