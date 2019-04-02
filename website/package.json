@@ -18,8 +18,8 @@
     "noise3d": "^1.0.0"
   },
   "devDependencies": {
-    "gatsby": "2.1.38",
-    "ocular-gatsby": "1.0.0-alpha.12",
+    "gatsby": "^2.2.0-rc.2",
+    "ocular-gatsby": "1.0.0-alpha.14",
     "sharp": "0.21.1"
   }
 }

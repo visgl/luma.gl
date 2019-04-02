@@ -1,4 +1,3 @@
-yarn.lock -diff
 build/** -diff
 dist/** -diff
 _docs/** -diff
