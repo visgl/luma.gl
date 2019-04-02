@@ -1,10 +1,10 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Texture2D, setParameters, Model, SphereGeometry} from '@luma.gl/core';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4} from 'math.gl';
 
 const EARTH_UNIFORMS = {
   uUseColorMap: true,
-  uUseSpecularMap: false,
+  uUseSpecularMap: true,
   uShowSpecularHighlights: true,
   uUseLighting: true
 };
@@ -67,7 +67,7 @@ void main(void) {
     float specularLightWeighting = 0.0;
     float shininess = 32.0;
     if (uUseSpecularMap) {
-      shininess = texture2D(uSpecularMapSampler, vec2(vTextureCoord.s, vTextureCoord.t)).r * 255.0;
+      shininess = texture2D(uSpecularMapSampler, vTextureCoord).r * 255.0;
     }
     if (shininess < 255.0) {
        vec3 eyeDirection = normalize(-vPosition.xyz);
@@ -81,7 +81,7 @@ void main(void) {
   }
   vec4 fragmentColor;
   fragmentColor = uUseColorMap ?
-    texture2D(uColorMapSampler, vec2(vTextureCoord.s, vTextureCoord.t)) : vec4(1.0, 1.0, 1.0, 1.0);
+    texture2D(uColorMapSampler, vTextureCoord) : vec4(1.0, 1.0, 1.0, 1.0);
   gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
 `;
@@ -91,8 +91,7 @@ const animationLoop = new AnimationLoop({
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
-      depthTest: true,
-      [GL.UNPACK_FLIP_Y_WEBGL]: true
+      depthTest: true
     });
 
     const specularTexture = new Texture2D(gl, {
@@ -103,6 +102,7 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
+      unpackFlipY: false,
       mipmap: true
     });
 
@@ -114,6 +114,7 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
+      unpackFlipY: false,
       mipmap: true
     });
 
@@ -142,9 +143,7 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4().rotateX(radians(-27)).transformVector3([0, 0, 5]);
-
-    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, -1, 0]});
+    const uVMatrix = new Matrix4().lookAt({eye: [0, 0, 10], center: [0, 0, 0], up: [-0.5, 1, 0]});
 
     const {
       useLighting,
@@ -174,10 +173,7 @@ const animationLoop = new AnimationLoop({
     const phi = tick * 0.01;
     return earth
       .setUniforms({
-        uMMatrix: new Matrix4()
-          .translate([0, -20, -40])
-          .rotateAxis(radians(23.4), [1, 0, -1])
-          .rotateY(phi),
+        uMMatrix: new Matrix4().translate([0, 0, -40]).rotateY(phi),
         uVMatrix,
         uPMatrix: new Matrix4().perspective({
           fov: (45 * Math.PI) / 180,
