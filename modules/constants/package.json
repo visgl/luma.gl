@@ -24,9 +24,6 @@
     "README.md"
   ],
   "sideEffects": false,
-  "browser": {
-    "fs": false
-  },
   "scripts": {
     "clean": "echo nothing to clean",
     "build": "echo nothing to build"

@@ -1,6 +1,4 @@
-import {pbr} from '@luma.gl/shadertools';
-import {isWebGL2} from '@luma.gl/webgl';
-import {ModelNode, log} from '@luma.gl/core';
+import {isWebGL2, ModelNode, log, pbr} from '@luma.gl/core';
 import GLTFMaterialParser from './gltf-material-parser';
 
 const vs = `
