@@ -70,6 +70,13 @@ export default function createGLTFModel(gl, options) {
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
+  // Calculate managedResources
+  // TODO: Implement resource management logic that will
+  // not deallocate resources/textures/buffers that are shared
+  const managedResources = [];
+  managedResources.push(...materialParser.generatedTextures);
+  managedResources.push(...Object.values(attributes).map(attribute => attribute.buffer));
+
   const model = new ModelNode(
     gl,
     Object.assign(
@@ -82,7 +89,7 @@ export default function createGLTFModel(gl, options) {
         parameters: materialParser.parameters,
         vs: addVersionToShader(gl, vs),
         fs: addVersionToShader(gl, fs),
-        generatedTextures: materialParser.generatedTextures
+        managedResources
       },
       modelOptions
     )

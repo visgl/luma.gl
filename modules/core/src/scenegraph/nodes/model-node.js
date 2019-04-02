@@ -15,8 +15,9 @@ export default class ModelNode extends ScenegraphNode {
       this._setModelNodeProps(props);
     } else {
       this.model = new Model(gl, props);
-      this.generatedTextures = props.generatedTextures;
     }
+
+    this.managedResources = props.managedResources || [];
   }
 
   setProps(props) {
@@ -30,11 +31,9 @@ export default class ModelNode extends ScenegraphNode {
       this.model.delete();
       this.model = null;
     }
-    if (Array.isArray(this.generatedTextures)) {
-      this.generatedTextures.forEach(texture => texture.delete());
-      this.generatedTextures = null;
-    }
-    // TODO: delete buffers after making sure there are not shared!
+
+    this.managedResources.forEach(resource => resource.delete());
+    this.managedResources = [];
   }
 
   // Forward node methods
