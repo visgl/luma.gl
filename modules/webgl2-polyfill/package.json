@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl2-polyfill",
-  "version": "7.0.0-beta.1",
+  "version": "7.0.0-beta.2",
   "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
   "license": "MIT",
   "repository": {
@@ -20,10 +20,9 @@
     "dist",
     "README.md"
   ],
-  "scripts": {
-  },
+  "scripts": {},
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "7.0.0-beta.1"
+    "@luma.gl/constants": "7.0.0-beta.2"
   }
 }

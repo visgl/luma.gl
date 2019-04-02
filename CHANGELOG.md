@@ -1,5 +1,8 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.2 - Apr 2, 2019
+- move @luma.gl/core to peerDependencies (#1023)
+
 ## v7.0.0-beta.1 - Apr 1, 2019
 - s/onInitailize/onInitialize (#1020)
 - Delete old buffers when auto-created in Model (#1016)

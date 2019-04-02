@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "7.0.0-beta.1",
+  "version": "7.0.0-beta.2",
   "description": "Additional classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -25,13 +25,12 @@
     "README.md"
   ],
   "sideEffects": false,
-  "scripts": {
-  },
+  "scripts": {},
   "dependencies": {
     "@loaders.gl/core": "1.0.0-alpha.2",
     "@loaders.gl/draco": "1.0.0-alpha.2",
     "@loaders.gl/gltf": "1.0.0-alpha.2",
-    "@luma.gl/constants": "7.0.0-beta.1",
+    "@luma.gl/constants": "7.0.0-beta.2",
     "math.gl": "^2.3.0"
   },
   "peerDependencies": {
