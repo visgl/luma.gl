@@ -102,7 +102,6 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
-      unpackFlipY: false,
       mipmap: true
     });
 
@@ -114,7 +113,6 @@ const animationLoop = new AnimationLoop({
         [gl.TEXTURE_WRAP_S]: gl.REPEAT,
         [gl.TEXTURE_WRAP_T]: gl.REPEAT
       },
-      unpackFlipY: false,
       mipmap: true
     });
 

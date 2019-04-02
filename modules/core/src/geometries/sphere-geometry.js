@@ -64,9 +64,8 @@ function tesselateSphere(props) {
       normals[i3 + 1] = uy;
       normals[i3 + 2] = uz;
 
-      // TODO(Tarek): Why are UVs upside down?
       texCoords[i2 + 0] = u;
-      texCoords[i2 + 1] = v;
+      texCoords[i2 + 1] = 1 - v;
     }
   }
 
