@@ -147,6 +147,7 @@ export {
   diffuse,
   gouraudlighting,
   phonglighting,
+  pbr,
   // experimental
   _transform,
   MODULAR_SHADERS,
