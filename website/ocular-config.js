@@ -27,7 +27,7 @@ module.exports = {
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'WebGL2 Components',
 
-  PROJECTS: {},
+  PROJECTS: [],
 
   HOME_HEADING:
     'High-performance WebGL2 components for GPU-powered data visualization and computation.',
