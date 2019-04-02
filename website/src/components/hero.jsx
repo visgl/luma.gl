@@ -34,7 +34,7 @@ export default class Hero extends Component {
     return (
       <section ref="banner" className="banner">
         <div className="f hero">
-          <ExampleRunner example={HeroExample} sourceLink={HeroExample.path} noPanel />
+          <ExampleRunner example={HeroExample} sourceLink={HeroExample.path} noPanel noStats />
         </div>
         <div className="container" style={{background: 'transparent'}}>
           <h1>luma.gl</h1>
