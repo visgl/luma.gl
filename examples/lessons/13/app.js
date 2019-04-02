@@ -3,12 +3,11 @@ import {
   AnimationLoop,
   Texture2D,
   setParameters,
-  Program,
   Model,
   SphereGeometry,
   CubeGeometry
 } from '@luma.gl/core';
-import {Vector3, Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
@@ -17,61 +16,6 @@ const INFO_HTML = `
   </a>
 <p>
   The classic WebGL Lessons in luma.gl
-`;
-
-const VERTEX_LIGHTING_VERTEX_SHADER = `\
-attribute vec3 positions;
-attribute vec3 normals;
-attribute vec2 texCoords;
-
-uniform mat4 uMMatrix;
-uniform mat4 uVMatrix;
-uniform mat4 uPMatrix;
-
-uniform vec3 uAmbientColor;
-
-uniform vec3 uPointLightingLocation;
-uniform vec3 uPointLightingColor;
-
-uniform bool uUseLighting;
-
-varying vec2 vTextureCoord;
-varying vec3 vLightWeighting;
-
-void main(void) {
-  vec4 mPosition = uMMatrix * vec4(positions, 1.0);
-  gl_Position = uPMatrix * uVMatrix * mPosition;
-  vTextureCoord = texCoords;
-
-  if (!uUseLighting) {
-    vLightWeighting = vec3(1.0, 1.0, 1.0);
-  } else {
-    vec3 lightDirection = normalize(uPointLightingLocation - mPosition.xyz);
-    vec4 transformedNormal = uMMatrix * vec4(normals, 0.0);
-    float pointLightWeighting = max(dot(transformedNormal.xyz, lightDirection), 0.0);
-    vLightWeighting = uAmbientColor + uPointLightingColor * pointLightWeighting;
-  }
-}
-`;
-
-const VERTEX_LIGHTING_FRAGMENT_SHADER = `\
-precision highp float;
-
-varying vec2 vTextureCoord;
-varying vec3 vLightWeighting;
-
-uniform bool uUseTextures;
-uniform sampler2D uSampler;
-
-void main(void) {
-  vec4 fragmentColor;
-  if (uUseTextures) {
-    fragmentColor = texture2D(uSampler, vec2(1.0 - vTextureCoord.s, 1.0 - vTextureCoord.t));
-  } else {
-    fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-  }
-  gl_FragColor = vec4(fragmentColor.rgb * vLightWeighting, fragmentColor.a);
-}
 `;
 
 const FRAGMENT_LIGHTING_VERTEX_SHADER = `\
@@ -148,64 +92,48 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    const vertexLightingProgram = new Program(gl, {
-      fs: VERTEX_LIGHTING_FRAGMENT_SHADER,
-      vs: VERTEX_LIGHTING_VERTEX_SHADER
-    });
-
-    const fragmentLightingProgram = new Program(gl, {
-      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-      vs: FRAGMENT_LIGHTING_VERTEX_SHADER
-    });
+    const moonTexture = new Texture2D(gl, 'moon.gif');
+    const crateTexture = new Texture2D(gl, 'crate.gif');
 
     const moon = new Model(gl, {
+      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
       geometry: new SphereGeometry({
         nlat: 30,
         nlong: 30,
         radius: 2
       }),
-      program: fragmentLightingProgram,
       uniforms: {
-        uSampler: new Texture2D(gl, 'moon.gif')
+        uSampler: moonTexture
       }
     });
 
     const cube = new Model(gl, {
+      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
       geometry: new CubeGeometry(),
-      program: fragmentLightingProgram,
       uniforms: {
-        uSampler: new Texture2D(gl, 'crate.gif')
+        uSampler: crateTexture
       }
     });
 
-    return {moon, cube, vertexLightingProgram, fragmentLightingProgram};
+    return {moon, cube};
   },
 
   // eslint-disable-next-line complexity
-  onRender: ({gl, tick, aspect, moon, cube, vertexLightingProgram, fragmentLightingProgram}) => {
+  onRender: ({gl, tick, aspect, moon, cube}) => {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4().rotateX(radians(-30)).transformVector3([0, 0, 5]);
+    const eyePos = new Matrix4().rotateX(radians(-30)).transformVector3([0, 0, 10]);
 
     const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
-    const {
-      useLighting,
-      useTextures,
-      useFragmentLighting,
-      ambientColor,
-      pointLightingLocation,
-      pointLightColor
-    } = getControlValues();
-
-    if (useFragmentLighting) {
-      moon.program = fragmentLightingProgram;
-      cube.program = fragmentLightingProgram;
-    } else {
-      moon.program = vertexLightingProgram;
-      cube.program = vertexLightingProgram;
-    }
+    const useLighting = true;
+    const useTextures = true;
+    const ambientColor = [0.1, 0.1, 0.1];
+    const pointLightingLocation = [4, 4, 4];
+    const pointLightColor = [1.0, 0.8, 0.8];
 
     moon.setUniforms({
       uUseLighting: useLighting,
@@ -272,54 +200,6 @@ function animate(state) {
     state.cubeRotationMatrix.multiplyLeft(newMatrix);
   }
   state.lastTime = timeNow;
-}
-
-/* global document */
-// eslint-disable-next-line complexity
-function getControlValues() {
-  let element = null;
-  if (!element) {
-    return {useLigthing: false};
-  }
-
-  const useLighting = (element = document.getElementById('lighting')) ? element.checked : true;
-  const useTextures = (element = document.getElementById('textures')) ? element.checked : true;
-  const useFragmentLighting = (element = document.getElementById('per-fragment'))
-    ? element.checked
-    : true;
-
-  const ambientColor =
-    useLighting &&
-    new Vector3(
-      parseFloat((element = document.getElementById('ambientR')) ? element.value : '0.2'),
-      parseFloat((element = document.getElementById('ambientG')) ? element.value : '0.2'),
-      parseFloat((element = document.getElementById('ambientB')) ? element.value : '0.2')
-    );
-
-  const pointLightingLocation =
-    useLighting &&
-    new Vector3(
-      parseFloat((element = document.getElementById('lightPositionX')) ? element.value : '0'),
-      parseFloat((element = document.getElementById('lightPositionY')) ? element.value : '0'),
-      parseFloat((element = document.getElementById('lightPositionZ')) ? element.value : '0')
-    );
-
-  const pointLightColor =
-    useLighting &&
-    new Vector3(
-      parseFloat((element = document.getElementById('pointR')) ? element.value : '0.8'),
-      parseFloat((element = document.getElementById('pointG')) ? element.value : '0.8'),
-      parseFloat((element = document.getElementById('pointB')) ? element.value : '0.8')
-    );
-
-  return {
-    useLighting,
-    useTextures,
-    useFragmentLighting,
-    ambientColor,
-    pointLightingLocation,
-    pointLightColor
-  };
 }
 
 export default animationLoop;

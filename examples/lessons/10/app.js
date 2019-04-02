@@ -3,6 +3,12 @@ import {AnimationLoop, Texture2D, loadFile, setParameters} from '@luma.gl/core';
 import {addEvents} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
+/* eslint-disable complexity */
+
+/*
+  Cave texture from: http://texturelib.com/texture/?path=/Textures/rock/cave/rock_cave_0019
+  "Free for personal and commercial use." http://texturelib.com/about/
+*/
 
 const INFO_HTML = `
 <p>
@@ -39,6 +45,7 @@ const currentlyPressedKeys = {};
 const animationLoop = new AnimationLoop({
   onInitialize: ({canvas, gl}) => {
     addKeyboardHandler(canvas, currentlyPressedKeys);
+    addMouseHandler(canvas);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -46,10 +53,15 @@ const animationLoop = new AnimationLoop({
       depthTest: true
     });
 
-    const texture = new Texture2D(gl, 'mud.gif');
+    const texture = new Texture2D(gl, {
+      data: 'cave.jpg',
+      parameters: {
+        [gl.TEXTURE_WRAP_S]: gl.MIRRORED_REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.MIRRORED_REPEAT
+      }
+    });
 
-    return loadFile('world.txt')
-    .then(file => {
+    return loadFile('world.txt').then(file => {
       const geometry = loadWorldGeometry(file);
       const world = new World({
         gl,
@@ -69,8 +81,7 @@ const animationLoop = new AnimationLoop({
       .transformVector3(cameraInfo.direction)
       .add(eyePos);
 
-    const uMVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: centerPos, up:[0, 1, 0]});
+    const uMVMatrix = new Matrix4().lookAt({eye: eyePos, center: centerPos, up: [0, 1, 0]});
 
     handleKeys(cameraInfo, currentlyPressedKeys);
     animate(cameraInfo, timeLine);
@@ -80,7 +91,12 @@ const animationLoop = new AnimationLoop({
     return world
       .setUniforms({
         uMVMatrix,
-        uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
       })
       .draw();
   }
@@ -88,7 +104,7 @@ const animationLoop = new AnimationLoop({
 
 animationLoop.getInfo = () => INFO_HTML;
 
-function addKeyboardHandler(canvas, currentlyPressedKeys) {
+function addKeyboardHandler(canvas) {
   addEvents(canvas, {
     onKeyDown(e) {
       currentlyPressedKeys[e.code] = true;
@@ -99,31 +115,64 @@ function addKeyboardHandler(canvas, currentlyPressedKeys) {
   });
 }
 
-function handleKeys(cameraInfo, currentlyPressedKeys) {
-  if (currentlyPressedKeys[33] || currentlyPressedKeys[187]) { // Page Up
+function addMouseHandler(canvas) {
+  let mouseDown = false;
+  let currentX = 0;
+  let currentY = 0;
+  addEvents(canvas, {
+    onDragStart(e) {
+      mouseDown = true;
+      currentX = e.x;
+      currentY = e.y;
+    },
+    onDragEnd() {
+      mouseDown = false;
+    },
+    onDragMove(e) {
+      if (!mouseDown) {
+        return;
+      }
+      const dx = e.x - currentX;
+      const dy = e.y - currentY;
+      cameraInfo.yaw += dx * 0.1;
+      cameraInfo.pitch -= dy * 0.1;
+      currentX = e.x;
+      currentY = e.y;
+    }
+  });
+}
+
+function handleKeys() {
+  if (currentlyPressedKeys[33] || currentlyPressedKeys[187]) {
+    // Page Up
     cameraInfo.pitchRate = 0.1;
-  } else if (currentlyPressedKeys[34] || currentlyPressedKeys[189]) { // Page Down
+  } else if (currentlyPressedKeys[34] || currentlyPressedKeys[189]) {
+    // Page Down
     cameraInfo.pitchRate = -0.1;
   } else {
     cameraInfo.pitchRate = 0;
   }
-  if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) { // Left cursor key or A
+  if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) {
+    // Left cursor key or A
     cameraInfo.yawRate = 0.1;
-  } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) { // Right cursor key or D
+  } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) {
+    // Right cursor key or D
     cameraInfo.yawRate = -0.1;
   } else {
     cameraInfo.yawRate = 0;
   }
-  if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) { // Up cursor key or W
+  if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) {
+    // Up cursor key or W
     cameraInfo.speed = 0.003;
-  } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) { // Down cursor key
+  } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) {
+    // Down cursor key
     cameraInfo.speed = -0.003;
   } else {
     cameraInfo.speed = 0;
   }
 }
 
-function animate(cameraInfo, timeLine) {
+function animate() {
   const timeNow = new Date().getTime();
   if (timeLine.lastTime !== 0) {
     const elapsed = timeNow - timeLine.lastTime;
@@ -131,7 +180,7 @@ function animate(cameraInfo, timeLine) {
       cameraInfo.xPos -= Math.sin(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
       cameraInfo.zPos -= Math.cos(radians(cameraInfo.yaw)) * cameraInfo.speed * elapsed;
       cameraInfo.joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - feel more realistic :-)
-      cameraInfo.yPos = Math.sin(radians(cameraInfo.joggingAngle)) / 20 + 0.4
+      cameraInfo.yPos = Math.sin(radians(cameraInfo.joggingAngle)) / 20 + 0.4;
     }
     cameraInfo.yaw += cameraInfo.yawRate * elapsed;
     cameraInfo.pitch += cameraInfo.pitchRate * elapsed;

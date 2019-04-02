@@ -65,7 +65,7 @@ function tesselateSphere(props) {
       normals[i3 + 2] = uz;
 
       texCoords[i2 + 0] = u;
-      texCoords[i2 + 1] = v;
+      texCoords[i2 + 1] = 1 - v;
     }
   }
 
