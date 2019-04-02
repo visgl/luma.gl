@@ -1,5 +1,8 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.3 - Apr 2, 2019
+- Fix overly strict peer dependencies (#1026)
+
 ## v7.0.0-beta.2 - Apr 2, 2019
 - move @luma.gl/core to peerDependencies (#1023)
 
