@@ -4,13 +4,11 @@ import {
   ModelNode,
   picking,
   dirlight,
-  lumaStats,
   readPixelsToArray,
   Buffer,
   CubeGeometry
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>
@@ -152,50 +150,10 @@ class AppAnimationLoop extends AnimationLoop {
         uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
-
-    const timeWidget = new StatsWidget(this.stats, {
-      title: 'Render Time',
-      css: {
-        position: 'absolute',
-        top: '20px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'CPU Time': 'averageTime',
-        'GPU Time': 'averageTime',
-        'Frame Rate': 'fps'
-      },
-      resetOnUpdate: {
-        'CPU Time': true,
-        'GPU Time': true,
-        'Frame Rate': true
-      }
-    });
-
-    const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
-      css: {
-        position: 'absolute',
-        top: '100px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'GPU Memory': 'memory',
-        'Buffer Memory': 'memory',
-        'Renderbuffer Memory': 'memory',
-        'Texture Memory': 'memory'
-      }
-    });
-
-    return {timeWidget, memWidget};
   }
 
   onRender(animationProps) {
-    const {gl, timeWidget, memWidget} = animationProps;
-
-    timeWidget.update();
-    memWidget.update();
+    const {gl} = animationProps;
 
     const {framebuffer, useDevicePixels, _mousePosition} = animationProps;
 

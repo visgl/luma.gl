@@ -1,5 +1,4 @@
 import {AnimationLoop, ClipSpace, Buffer} from '@luma.gl/core';
-import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>
@@ -92,26 +91,6 @@ function getZoomedCorners(zoomFactor = 1.01) {
 
 const animationLoop = new AnimationLoop({
   onInitialize: ({gl, _animationLoop}) => {
-    const statsWidget = new StatsWidget(_animationLoop.stats, {
-      title: 'Render Time',
-      css: {
-        position: 'absolute',
-        top: '20px',
-        left: '20px'
-      },
-      framesPerUpdate: 60,
-      formatters: {
-        'CPU Time': 'averageTime',
-        'GPU Time': 'averageTime',
-        'Frame Rate': 'fps'
-      },
-      resetOnUpdate: {
-        'CPU Time': true,
-        'GPU Time': true,
-        'Frame Rate': true
-      }
-    });
-
     const cornersBuffer = new Buffer(gl, 32);
 
     return {
@@ -121,14 +100,11 @@ const animationLoop = new AnimationLoop({
           aCoordinate: [cornersBuffer, {size: 2}]
         }
       }),
-      cornersBuffer,
-      statsWidget
+      cornersBuffer
     };
   },
 
-  onRender: ({gl, canvas, tick, clipSpace, statsWidget, cornersBuffer}) => {
-    statsWidget.update();
-
+  onRender: ({gl, canvas, tick, clipSpace, cornersBuffer}) => {
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     cornersBuffer.setData(new Float32Array(getZoomedCorners()));
