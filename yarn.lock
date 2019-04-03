@@ -774,6 +774,11 @@
     save-pixels "^2.3.2"
     through "^2.3.8"
 
+"@luma.gl/constants@7.0.0-beta.1":
+  version "7.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.0.0-beta.1.tgz#66dc10d22e3b6811eddf87c864154c97cef8557a"
+  integrity sha512-1C2361GQZsp94/xuO0qK2e8LcdKoLkujeRivCYI1SQS1Hn8rBRSXR13cl5YP726AWn/QqF4lzFZP/mTPykWM/Q==
+
 "@luma.gl/glfx@^6.3.0-alpha.2":
   version "6.3.0"
   resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.3.0.tgz#08929e3488b58ddf339c6df0627282543d78c66a"

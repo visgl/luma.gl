@@ -173,32 +173,36 @@ function addMouseHandler(canvas) {
 
 function getControlValues() {
   /* global document */
-  let element = null;
+  function getElementValue(id, defaultValue) {
+    const element = document.getElementById(id);
+    return element ? parseFloat(element.value) : defaultValue;
+  }
 
-  const lighting = (element = document.getElementById('lighting')) ? element.checked : true;
+  const element = document.getElementById('lighting');
+  const lighting = element ? element.checked : true;
 
   const ambientColor =
     lighting &&
     new Vector3(
-      parseFloat((element = document.getElementById('ambientR')) ? element.value : '0.2'),
-      parseFloat((element = document.getElementById('ambientG')) ? element.value : '0.2'),
-      parseFloat((element = document.getElementById('ambientB')) ? element.value : '0.2')
+      getElementValue('ambientR', 0.2),
+      getElementValue('ambientG', 0.2),
+      getElementValue('ambientB', 0.2)
     );
 
   const lightingDirection =
     lighting &&
     new Vector3(
-      parseFloat((element = document.getElementById('lightDirectionX')) ? element.value : '-1'),
-      parseFloat((element = document.getElementById('lightDirectionY')) ? element.value : '-1'),
-      parseFloat((element = document.getElementById('lightDirectionZ')) ? element.value : '-1')
+      getElementValue('lightDirectionX', -1),
+      getElementValue('lightDirectionY', -1),
+      getElementValue('lightDirectionZ',  -1)
     );
 
   const directionalColor =
     lighting &&
     new Vector3(
-      parseFloat((element = document.getElementById('directionalR')) ? element.value : '0.8'),
-      parseFloat((element = document.getElementById('directionalG')) ? element.value : '0.8'),
-      parseFloat((element = document.getElementById('directionalB')) ? element.value : '0.8')
+      getElementValue('directionalR', 0.8),
+      getElementValue('directionalG', 0.8),
+      getElementValue('directionalB', 0.8)
     );
 
   return {lighting, ambientColor, lightingDirection, directionalColor};

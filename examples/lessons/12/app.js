@@ -117,30 +117,35 @@ const animationLoop = new AnimationLoop({
 
     const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
-    let element = null;
     /* global document */
-    const lighting = (element = document.getElementById('lighting')) ? element.checked : true;
+    function getElementValue(id, defaultValue) {
+      const element = document.getElementById(id);
+      return element ? element.value : defaultValue;
+    }
+
+    const element = document.getElementById('lighting');
+    const lighting = element ? element.checked : true;
 
     moon.setUniforms({uUseLighting: lighting});
     cube.setUniforms({uUseLighting: lighting});
 
     if (lighting) {
       const ambientColor = new Vector3(
-        parseFloat((element = document.getElementById('ambientR')) ? element.value : '0.2'),
-        parseFloat((element = document.getElementById('ambientG')) ? element.value : '0.2'),
-        parseFloat((element = document.getElementById('ambientB')) ? element.value : '0.2')
+        parseFloat(getElementValue('ambientR', 0.2)),
+        parseFloat(getElementValue('ambientG', 0.2)),
+        parseFloat(getElementValue('ambientB', 0.2))
       );
 
       const pointLightingLocation = new Vector3(
-        parseFloat((element = document.getElementById('lightPositionX')) ? element.value : '0'),
-        parseFloat((element = document.getElementById('lightPositionY')) ? element.value : '0'),
-        parseFloat((element = document.getElementById('lightPositionZ')) ? element.value : '0')
+        parseFloat(getElementValue('lightPositionX', 0)),
+        parseFloat(getElementValue('lightPositionY', 0)),
+        parseFloat(getElementValue('lightPositionZ', 0))
       );
 
       const pointLightColor = new Vector3(
-        parseFloat((element = document.getElementById('pointR')) ? element.value : '0.8'),
-        parseFloat((element = document.getElementById('pointG')) ? element.value : '0.8'),
-        parseFloat((element = document.getElementById('pointB')) ? element.value : '0.8')
+        parseFloat(getElementValue('pointR', 0.8)),
+        parseFloat(getElementValue('pointG', 0.8)),
+        parseFloat(getElementValue('pointB', 0.8))
       );
 
       moon.setUniforms({

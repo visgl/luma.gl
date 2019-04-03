@@ -27,7 +27,7 @@ module.exports = {
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'WebGL2 Components',
 
-  PROJECTS: {},
+  PROJECTS: [],
 
   HOME_HEADING:
     'High-performance WebGL2 components for GPU-powered data visualization and computation.',
@@ -81,7 +81,7 @@ module.exports = {
     },
     // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
     {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
-    {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
+    // {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
     {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
     {
       title: 'TransformFeedback',
