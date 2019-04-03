@@ -1,5 +1,12 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.4 - Apr 3, 2019
+- Fix attribute handling for matrices (#1033)
+- docs (#1031)
+- New golden image
+- Fix lessons (#1028)
+- Add managedResources to ModelNode (#1022)
+
 ## v7.0.0-beta.3 - Apr 2, 2019
 - Fix overly strict peer dependencies (#1026)
 
