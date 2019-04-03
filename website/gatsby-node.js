@@ -70,7 +70,6 @@ callbacks.onCreateWebpackConfig = function onCreateWebpackConfigOverride(opts) {
   const newConfig = {
     module: {
       rules: [
-        ...config.module.rules,
         // Omit the default rule where test === '\.jsx?$'
         newJSRule
       ]
