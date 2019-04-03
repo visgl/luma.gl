@@ -287,6 +287,15 @@ export default class VertexArray {
 
     const accessInfo = this._getAttributeInfo(name || location);
 
+    // Attribute location wasn't directly found.
+    // Likely due to multi-location attributes (e.g. matrix)
+    if (!accessInfo) {
+      return {
+        location: -1,
+        accessor: null
+      };
+    }
+
     // Resolve the partial accessors into a final accessor
     const accessor = Accessor.resolve(accessInfo.accessor, valueAccessor, appAccessor);
 

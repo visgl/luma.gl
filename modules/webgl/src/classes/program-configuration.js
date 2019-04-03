@@ -9,6 +9,10 @@ export default class ProgramConfiguration {
     this.id = program.id;
     this.attributeInfos = [];
     this.attributeInfosByName = {};
+
+    // Locations may not be contiguous the case of matrix attributes
+    // so keep a separate location->attribute map.
+    this.attributeInfosByLocation = [];
     this.varyingInfos = [];
     this.varyingInfosByName = {};
     Object.seal(this);
@@ -19,7 +23,7 @@ export default class ProgramConfiguration {
   getAttributeInfo(locationOrName) {
     const location = Number(locationOrName);
     if (Number.isFinite(location)) {
-      return this.attributeInfos[location];
+      return this.attributeInfosByLocation[location];
     }
     return this.attributeInfosByName[locationOrName] || null;
   }
@@ -96,6 +100,7 @@ export default class ProgramConfiguration {
 
     const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
     this.attributeInfos.push(attributeInfo);
+    this.attributeInfosByLocation[location] = attributeInfo; // For quick location based lookup
     this.attributeInfosByName[attributeInfo.name] = attributeInfo; // For quick name based lookup
   }
 
