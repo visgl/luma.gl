@@ -1,6 +1,5 @@
 export default class Display {
-  startDisplay() {
-  }
+  startDisplay() {}
 
   getViews(options) {
     const [width, height] = options;
@@ -8,7 +7,7 @@ export default class Display {
       {
         params: {
           viewport: [0, 0, width, height],
-          scissor: [0, 0, width, height],
+          scissor: [0, 0, width, height]
         },
         viewName: 'single view',
         vrProjectionMatrix: null,

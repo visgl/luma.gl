@@ -45,13 +45,13 @@ export default class VRDisplay extends Display {
           vrEye: 'left',
           vrProjectionMatrix: leftProjectionMatrix,
           vrViewMatrix: leftViewMatrix,
-          viewport: [0, 0, 0.5, 1.0], // x, y, w, h
+          viewport: [0, 0, 0.5, 1.0] // x, y, w, h
         },
         {
           vrEye: 'right',
           vrProjectionMatrix: rightProjectionMatrix,
           vrViewMatrix: rightViewMatrix,
-          viewport: [0.5, 0, 0.5, 1.0], // x, y, w, h
+          viewport: [0.5, 0, 0.5, 1.0] // x, y, w, h
         }
       ];
     }

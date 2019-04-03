@@ -2,7 +2,6 @@ import {AnimationLoop, withParameters} from '@luma.gl/core';
 
 // This code could be folded into the core animation loop
 export default class DisplayAnimationLoop extends AnimationLoop {
-
   setDisplay(display) {
     this.display = display;
   }
@@ -33,7 +32,6 @@ export default class DisplayAnimationLoop extends AnimationLoop {
     this.display.submitFrame();
     this.gl.viewport(0, 0, width, height);
   }
-
 
   _requestAnimationFrame(renderFrame) {
     if (this.display) {
