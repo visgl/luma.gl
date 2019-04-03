@@ -9,6 +9,9 @@ export default class ProgramConfiguration {
     this.id = program.id;
     this.attributeInfos = [];
     this.attributeInfosByName = {};
+
+    // Locations may not be contiguous the case of matrix attributes
+    // so keep a separate location->attribute map.
     this.attributeInfosByLocation = [];
     this.varyingInfos = [];
     this.varyingInfosByName = {};
