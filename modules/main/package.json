@@ -1,6 +1,6 @@
 {
   "name": "luma.gl",
-  "version": "7.0.0-beta.4",
+  "version": "7.0.0-beta.5",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "repository": {
@@ -28,8 +28,8 @@
   ],
   "scripts": {},
   "dependencies": {
-    "@luma.gl/addons": "7.0.0-beta.4",
-    "@luma.gl/constants": "7.0.0-beta.4",
-    "@luma.gl/core": "7.0.0-beta.4"
+    "@luma.gl/addons": "7.0.0-beta.5",
+    "@luma.gl/constants": "7.0.0-beta.5",
+    "@luma.gl/core": "7.0.0-beta.5"
   }
 }

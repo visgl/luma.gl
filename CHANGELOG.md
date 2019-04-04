@@ -1,5 +1,11 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.5 - Apr 4, 2019
+- Model handles geometry with constant attributes (#1034)
+- glTF Loader: Allow to async return after all resources are loaded (#1029)
+- Gatsby update (#1030)
+
+
 ## v7.0.0-beta.4 - Apr 3, 2019
 - Fix attribute handling for matrices (#1033)
 - docs (#1031)
