@@ -16,14 +16,20 @@ export function getBuffersFromGeometry(gl, geometry, options) {
   const buffers = {};
 
   for (const name in geometry.attributes) {
-    const typedArray = geometry.attributes[name].value;
-    // Create accessor by copying the attribute and removing `value``
-    const attribute = {...geometry.attributes[name]};
-    delete attribute.value;
+    const attribute = geometry.attributes[name];
     const remappedName = mapAttributeName(name, options);
-    buffers[remappedName] = [new Buffer(gl, typedArray), attribute];
 
-    inferAttributeAccessor(name, attribute);
+    if (attribute.constant) {
+      buffers[remappedName] = attribute.value;
+    } else {
+      const typedArray = attribute.value;
+      // Create accessor by copying the attribute and removing `value``
+      const accessor = {...attribute};
+      delete accessor.value;
+      buffers[remappedName] = [new Buffer(gl, typedArray), accessor];
+
+      inferAttributeAccessor(name, accessor);
+    }
   }
 
   if (geometry.indices) {

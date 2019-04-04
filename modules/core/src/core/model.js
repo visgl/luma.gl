@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Query, TransformFeedback} from '@luma.gl/webgl';
+import {Query, TransformFeedback, Buffer} from '@luma.gl/webgl';
 import {getBuffersFromGeometry} from './model-utils';
 import BaseModel from './base-model';
 import {log, isObjectEmpty, uid, assert} from '../utils';
@@ -183,7 +183,9 @@ export default class Model extends BaseModel {
     for (const name in this.geometryBuffers) {
       // Buffer is raw value (for indices) or first element of [buffer, accessor] pair
       const buffer = this.geometryBuffers[name][0] || this.geometryBuffers[name];
-      buffer.delete();
+      if (buffer instanceof Buffer) {
+        buffer.delete();
+      }
     }
   }
 
