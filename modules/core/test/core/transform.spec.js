@@ -225,7 +225,7 @@ test('WebGL#Transform run (Attribute)', t => {
 });
 
 // TODO - enabling this test breaks histopyramid.spec.js in headless mode
-test.skip('WebGL#Transform run (constant Attribute)', t => {
+test('WebGL#Transform run (constant Attribute)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {

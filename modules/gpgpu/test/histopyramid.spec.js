@@ -46,7 +46,8 @@ test('histopyramid#histoPyramid_getTexCoord', t => {
   const VS = `\
   uniform vec2 size;
   uniform vec2 scale;
-  attribute vec2 offset;
+  attribute float unusedAttribute;
+  uniform vec2 offset;
   varying vec2 texcoord;
 
   void main()
@@ -55,15 +56,31 @@ test('histopyramid#histoPyramid_getTexCoord', t => {
   }
   `;
 
-  const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
-  const expectedTexcoord = [0.25, 0.25, 0.75, 0.25, 0.25, 0.75, 0.75, 0.75];
+  const TEST_CASES = [
+    {
+      offset: [0, 0],
+      expected: [0.25, 0.25]
+    },
+    {
+      offset: [1, 0],
+      expected: [0.75, 0.25]
+    },
+    {
+      offset: [0, 1],
+      expected: [0.25, 0.75]
+    },
+    {
+      offset: [1, 1],
+      expected: [0.75, 0.75]
+    }
+  ];
 
-  const texcoord = new Buffer(gl, 8 * 4); // 8 floats
-  const elementCount = 4;
+  const texcoord = new Buffer(gl, 2 * 4); // 2 floats
 
   const transform = new Transform(gl, {
-    sourceBuffers: {
-      offset
+    _sourceTextures: {
+      // dummy attribute to enable texture functionality
+      inTexture: new Texture2D(gl)
     },
     feedbackBuffers: {
       texcoord
@@ -71,7 +88,7 @@ test('histopyramid#histoPyramid_getTexCoord', t => {
     vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${VS}`,
     varyings: ['texcoord'],
     modules: [transformModule],
-    elementCount
+    elementCount: 1
   });
 
   transform.run({
@@ -81,8 +98,21 @@ test('histopyramid#histoPyramid_getTexCoord', t => {
     }
   });
 
-  const outData = transform.getBuffer('texcoord').getData();
-  t.ok(equals(expectedTexcoord, outData), 'texcoordinates should match');
+  TEST_CASES.forEach(testCase => {
+    const {offset, expected} = testCase;
+    transform.run({
+      uniforms: {
+        offset
+      }
+    });
+
+    const outData = transform
+      .getBuffer('texcoord')
+      .getData()
+      .slice(0, expected.length);
+    t.ok(equals(expected, outData), 'texcoord should match');
+  });
+
   t.end();
 });
 
@@ -94,15 +124,13 @@ test('histopyramid#histoPyramid_getPixelIndices', t => {
   }
 
   const VS = `\
-  attribute float dummyAttribute;
+  attribute float unusedAttribute;
   varying vec2 pixelIndices;
   uniform vec2 size;
 
   void main()
   {
     pixelIndices = histoPyramid_getPixelIndices(size);
-    // pixelIndices.x = float(transform_elementID);
-    // pixelIndices.y = size.x;
   }
   `;
   function getExpected(size) {
