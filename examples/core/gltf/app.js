@@ -6,7 +6,8 @@ import {
   GLBScenegraphLoader,
   GLTFScenegraphLoader,
   GLTFEnvironment,
-  VRAnimationLoop
+  DisplayAnimationLoop,
+  VRDisplay
 } from '@luma.gl/addons';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from 'math.gl';
@@ -458,8 +459,9 @@ export class DemoApp {
   }
 }
 
-const animationLoop = new VRAnimationLoop(new DemoApp());
+const animationLoop = new DisplayAnimationLoop(new DemoApp());
 
+animationLoop.setDisplay(new VRDisplay());
 animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;

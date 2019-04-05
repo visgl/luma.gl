@@ -1,5 +1,11 @@
 export default class Display {
-  startDisplay() {}
+  attachDisplay(gl) {
+    this.gl = gl;
+  }
+
+  detachDisplay() {
+    this.gl = null;
+  }
 
   getViews(options) {
     const [width, height] = options;

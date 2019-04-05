@@ -10,19 +10,22 @@ export default class VRDisplay extends Display {
 
   constructor(props) {
     super(props);
-    this.vrFrameData = new window.VRFrameData();
-    this.vrPresenting = false;
-    this.vrFrame = false;
-    window.addEventListener('vrdisplaypresentchange', this._vrDisplayPresentChange.bind(this));
+
+    if (VRDisplay.isSupported()) {
+      this.vrFrameData = new window.VRFrameData();
+      this.vrPresenting = false;
+      this.vrFrame = false;
+      window.addEventListener('vrdisplaypresentchange', this._vrDisplayPresentChange.bind(this));
+    }
   }
 
-  async attachDisplay(gl) {
-    this.gl = gl;
-    await this._addVRButton();
+  attachDisplay(gl) {
+    super.attachDisplay(gl);
+    this._addVRButton();
   }
 
-  detachDisplay(gl) {
-    this.gl = null;
+  detachDisplay() {
+    super.detachDisplay();
     this._removeVRButton();
   }
 
@@ -60,8 +63,12 @@ export default class VRDisplay extends Display {
   }
 
   submitFrame() {
-    this.vrDisplay.submitFrame();
-    return true;
+    if (this.vrPresenting) {
+      this.vrDisplay.submitFrame();
+      return true;
+    }
+
+    return false;
   }
 
   requestAnimationFrame(renderFrame) {
@@ -71,8 +78,11 @@ export default class VRDisplay extends Display {
         renderFrame();
         this.vrFrame = false;
       });
+
+      return true;
     }
-    return true;
+
+    return false;
   }
 
   // PRIVATE
@@ -89,7 +99,7 @@ export default class VRDisplay extends Display {
         canvas: this.gl.canvas,
         title: `Enter VR (${this.vrDisplay.displayName})`
       });
-      this.vrButton.onclick = () => this.enterWebVR();
+      this.vrButton.onclick = () => this._startDisplay();
     }
   }
 
