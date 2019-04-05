@@ -43,7 +43,7 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
     return {lighting_uEnabled: false};
   }
 
-  return Object.assign({}, getMaterialUniforms(material), {lighting_uEnabled: true});
+  return getMaterialUniforms(material);
 }
 
 export {gouraudlighting, phonglighting};
