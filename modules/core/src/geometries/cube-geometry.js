@@ -50,6 +50,12 @@ const CUBE_TEX_COORDS = new Float32Array([
   0,  0,  1,  0,  1,  1,  0,  1
 ]);
 
+const ATTRIBUTES = {
+  POSITION: {size: 3, value: new Float32Array(CUBE_POSITIONS)},
+  NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
+  TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
+};
+
 export default class CubeGeometry extends Geometry {
   constructor(props = {}) {
     const {id = uid('cube-geometry')} = props;
@@ -57,11 +63,7 @@ export default class CubeGeometry extends Geometry {
       ...props,
       id,
       indices: {size: 1, value: new Uint16Array(CUBE_INDICES)},
-      attributes: {
-        POSITION: {size: 3, value: new Float32Array(CUBE_POSITIONS)},
-        NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
-        TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
-      }
+      attributes: {...ATTRIBUTES, ...props.attributes}
     });
   }
 }
