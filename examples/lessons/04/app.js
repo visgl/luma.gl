@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, CubeGeometry, Program, setParameters} from '@luma.gl/core';
+import {AnimationLoop, Model, Geometry, CubeGeometry, setParameters} from '@luma.gl/core';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -124,12 +124,9 @@ class ColoredCubeGeometry extends CubeGeometry {
   }
 }
 
-
-
 const animationLoop = new AnimationLoop({
   // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
   onInitialize({gl}) {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -138,8 +135,16 @@ const animationLoop = new AnimationLoop({
     });
 
     return {
-      pyramid: new Model(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER, geometry: new ColoredPyramidGeometry()}),
-      cube: new Model(gl, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER, geometry: new ColoredCubeGeometry()})
+      pyramid: new Model(gl, {
+        vs: VERTEX_SHADER,
+        fs: FRAGMENT_SHADER,
+        geometry: new ColoredPyramidGeometry()
+      }),
+      cube: new Model(gl, {
+        vs: VERTEX_SHADER,
+        fs: FRAGMENT_SHADER,
+        geometry: new ColoredCubeGeometry()
+      })
     };
   },
   onRender({gl, tick, aspect, pyramid, cube}) {
@@ -151,7 +156,10 @@ const animationLoop = new AnimationLoop({
     pyramid
       .setUniforms({
         uPMatrix: projection,
-        uMVMatrix: view.clone().translate([-1.5, 0, -8]).rotateY(tick * 0.01)
+        uMVMatrix: view
+          .clone()
+          .translate([-1.5, 0, -8])
+          .rotateY(tick * 0.01)
       })
       .draw();
 
@@ -159,7 +167,10 @@ const animationLoop = new AnimationLoop({
     cube
       .setUniforms({
         uPMatrix: projection,
-        uMVMatrix: view.clone().translate([1.5, 0, -8]).rotateXYZ([phi, phi, phi])
+        uMVMatrix: view
+          .clone()
+          .translate([1.5, 0, -8])
+          .rotateXYZ([phi, phi, phi])
       })
       .draw();
   }

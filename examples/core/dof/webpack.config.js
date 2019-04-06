@@ -1,5 +1,6 @@
-const {resolve} = require('path');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const {resolve} = require('path');
 
 const CONFIG = {
   mode: 'development',

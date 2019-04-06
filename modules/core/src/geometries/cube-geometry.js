@@ -60,7 +60,8 @@ export default class CubeGeometry extends Geometry {
       attributes: {
         POSITION: {size: 3, value: new Float32Array(CUBE_POSITIONS)},
         NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
-        TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
+        TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)},
+        ...props.attributes
       }
     });
   }

@@ -99,11 +99,7 @@ export class Star extends ModelNode {
       this.randomiseColors();
     }
 
-    this.position.set(
-      Math.cos(this.angle) * this.dist,
-      Math.sin(this.angle) * this.dist,
-      0
-    );
+    this.position.set(Math.cos(this.angle) * this.dist, Math.sin(this.angle) * this.dist, 0);
     this.setRotation([0, 0, this.spin]);
     this.spin += 0.1;
     this.updateMatrix();
