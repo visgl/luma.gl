@@ -11,7 +11,7 @@ export default class PlaneGeometry extends Geometry {
       ...props,
       id,
       indices,
-      attributes
+      attributes: {...attributes, ...props.attributes}
     });
   }
 }

@@ -4,7 +4,13 @@ import {uid} from '../utils';
 export default class SphereGeometry extends Geometry {
   constructor(props = {}) {
     const {id = uid('sphere-geometry')} = props;
-    super({...props, id, ...tesselateSphere(props)});
+    const {indices, attributes} = tesselateSphere(props);
+    super({
+      ...props,
+      id,
+      indices,
+      attributes: {...attributes, ...props.attributes}
+    });
   }
 }
 
