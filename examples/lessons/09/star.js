@@ -40,12 +40,14 @@ export class Star extends ModelNode {
       program,
       geometry: new Geometry({
         attributes: {
+          // prettier-ignore
           positions: new Float32Array([
             -1.0, -1.0, 0.0,
             1.0, -1.0, 0.0,
             -1.0, 1.0, 0.0,
             1.0, 1.0, 0.0
           ]),
+          // prettier-ignore
           texCoords: new Float32Array([
             0.0, 0.0,
             1.0, 0.0,
