@@ -41,30 +41,44 @@ function loadImage(src) {
 
 function showDialog() {
   $('#fade').fadeIn();
-  $('#dialog').show().css({
-    top: -$('#dialog').outerHeight()
-  }).animate({
-    top: 0
-  });
+  $('#dialog')
+    .show()
+    .css({
+      top: -$('#dialog').outerHeight()
+    })
+    .animate({
+      top: 0
+    });
 }
 
 function hideDialog() {
   $('#fade').fadeOut();
-  $('#dialog').animate({
-    top: -$('#dialog').outerHeight()
-  }, function() {
-    $('#dialog').hide();
-  });
+  $('#dialog').animate(
+    {
+      top: -$('#dialog').outerHeight()
+    },
+    function() {
+      $('#dialog').hide();
+    }
+  );
 }
 
 function contractItem(item) {
-  $(item).removeClass('active').animate({ paddingTop: 0 });
-  $(item).children('.contents').slideUp();
+  $(item)
+    .removeClass('active')
+    .animate({paddingTop: 0});
+  $(item)
+    .children('.contents')
+    .slideUp();
 }
 
 function expandItem(item) {
-  $(item).addClass('active').animate({ paddingTop: 10 });
-  $(item).children('.contents').slideDown();
+  $(item)
+    .addClass('active')
+    .animate({paddingTop: 10});
+  $(item)
+    .children('.contents')
+    .slideDown();
 }
 
 function setSelectedFilter(filter) {
@@ -101,20 +115,24 @@ function setSelectedFilter(filter) {
       var x = nub.x * canvas.width;
       var y = nub.y * canvas.height;
       $('<div class="nub" id="nub' + i + '"></div>').appendTo('#nubs');
-      var ondrag = (function(nub) { return function(event, ui) {
-        var offset = $(event.target.parentNode).offset();
-        var height = event.target.parentNode.clientHeight;
-        filter.values[nub.name] = [
-          ui.offset.left - offset.left,
-          height - (ui.offset.top - offset.top)
-        ];
-        filter.update();
-      }; })(nub);
-      $('#nub' + i).draggable({
-        drag: ondrag,
-        containment: 'parent',
-        scroll: false
-      }).css({ left: x, top: y });
+      var ondrag = (function(nub) {
+        return function(event, ui) {
+          var offset = $(event.target.parentNode).offset();
+          var height = event.target.parentNode.clientHeight;
+          filter.values[nub.name] = [
+            ui.offset.left - offset.left,
+            height - (ui.offset.top - offset.top)
+          ];
+          filter.update();
+        };
+      })(nub);
+      $('#nub' + i)
+        .draggable({
+          drag: ondrag,
+          containment: 'parent',
+          scroll: false
+        })
+        .css({left: x, top: y});
 
       filter.values[nub.name] = [x, y];
     }
@@ -182,18 +200,35 @@ $(window).load(function() {
       var filter = filters[category][i];
 
       // Generate the HTML for the controls
-      var html = '<div class="item"><div class="title">' + filter.name + '</div><div class="contents"><table>';
+      var html =
+        '<div class="item"><div class="title">' +
+        filter.name +
+        '</div><div class="contents"><table>';
       for (var j = 0; j < filter.sliders.length; j++) {
         var slider = filter.sliders[j];
         slider.id = 'control' + nextID++;
-        html += '<tr><td>' + slider.label + ':</td><td><div class="slider" id="' + slider.id + '"></div></td></tr>';
+        html +=
+          '<tr><td>' +
+          slider.label +
+          ':</td><td><div class="slider" id="' +
+          slider.id +
+          '"></div></td></tr>';
       }
       for (var j = 0; j < filter.segmented.length; j++) {
         var segmented = filter.segmented[j];
         segmented.id = 'control' + nextID++;
         html += '<tr><td>' + segmented.label + ':</td><td><div class="segmented">';
         for (var k = 0; k < segmented.labels.length; k++) {
-          html += '<div class="segment' + (k == segmented.initial ? ' selected' : '') + '" id="' + segmented.id + '-' + k + '">' + segmented.labels[k] + '</div>';
+          html +=
+            '<div class="segment' +
+            (k == segmented.initial ? ' selected' : '') +
+            '" id="' +
+            segmented.id +
+            '-' +
+            k +
+            '">' +
+            segmented.labels[k] +
+            '</div>';
         }
         html += '</div></td></tr>';
       }
@@ -209,9 +244,11 @@ $(window).load(function() {
 
       // Add reset button
       (function(filter) {
-        $(item).find('.reset').click(function() {
-          setSelectedFilter(filter);
-        });
+        $(item)
+          .find('.reset')
+          .click(function() {
+            setSelectedFilter(filter);
+          });
       })(filter);
 
       // Make segmented controls
@@ -219,13 +256,19 @@ $(window).load(function() {
         var segmented = filter.segmented[j];
         filter[segmented.name] = segmented.initial;
         for (var k = 0; k < segmented.labels.length; k++) {
-          $('#' + segmented.id + '-' + k).mousedown((function(filter, segmented, index) { return function() {
-            filter[segmented.name] = index;
-            for (var k = 0; k < segmented.labels.length; k++) {
-              $('#' + segmented.id + '-' + k)[index == k ? 'addClass' : 'removeClass']('selected');
-            }
-            filter.update();
-          }; })(filter, segmented, k));
+          $('#' + segmented.id + '-' + k).mousedown(
+            (function(filter, segmented, index) {
+              return function() {
+                filter[segmented.name] = index;
+                for (var k = 0; k < segmented.labels.length; k++) {
+                  $('#' + segmented.id + '-' + k)[index == k ? 'addClass' : 'removeClass'](
+                    'selected'
+                  );
+                }
+                filter.update();
+              };
+            })(filter, segmented, k)
+          );
         }
       }
 
@@ -243,8 +286,8 @@ $(window).load(function() {
         (function(curves, filter) {
           var canvas = $('#' + curves.id)[0];
           var c = canvas.getContext('2d');
-          var w = canvas.width = $(canvas).width();
-          var h = canvas.height = $(canvas).height();
+          var w = (canvas.width = $(canvas).width());
+          var h = (canvas.height = $(canvas).height());
           var start = 0;
           var end = 1;
 
@@ -267,7 +310,7 @@ $(window).load(function() {
             }
             if (!foundStart) points.push([0, start]);
             if (!foundEnd) points.push([1, end]);
-          };
+          }
 
           // Render the curves to the canvas
           curves.draw = function() {
@@ -277,7 +320,7 @@ $(window).load(function() {
             c.strokeStyle = '#4B4947';
             c.beginPath();
             for (let i = 0; i < map.length; i++) {
-              c.lineTo(i / map.length * w, (1 - map[i] / 255) * h);
+              c.lineTo((i / map.length) * w, (1 - map[i] / 255) * h);
             }
             c.stroke();
             c.fillStyle = 'white';
@@ -344,10 +387,12 @@ $(window).load(function() {
       for (var j = 0; j < filter.sliders.length; j++) {
         var slider = filter.sliders[j];
         filter.values[slider.name] = slider.value;
-        var onchange = (function(filter, slider) { return function(event, ui) {
-          filter.values[slider.name] = ui.value;
-          if (selectedFilter == filter) filter.update();
-        }; })(filter, slider);
+        var onchange = (function(filter, slider) {
+          return function(event, ui) {
+            filter.values[slider.name] = ui.value;
+            if (selectedFilter == filter) filter.update();
+          };
+        })(filter, slider);
         $('#' + slider.id).slider({
           slide: onchange,
           change: onchange,
@@ -385,27 +430,29 @@ $(window).load(function() {
 
   // Hook up toolbar buttons
   $('#load').click(function() {
-    $('#dialog').html('<div class="contents">Pick one of the sample images below or upload an image of your own:<div class="images">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/smoke.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/face.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/cat.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/greyhound.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/sunset.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/leaf.jpg" height="100">' +
-      '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/perspective.jpg" height="100">' +
-      '</div><div class="credits">Flickr image credits in order: ' +
-      '<a href="http://www.flickr.com/photos/matthigh/2125630879/">matthigh</a>, ' +
-      '<a href="http://www.flickr.com/photos/delosj/5816379127/">delosj</a>, ' +
-      '<a href="http://www.flickr.com/photos/stuckincustoms/219537913/">stuckincustoms</a>, ' +
-      '<a href="http://www.flickr.com/photos/pasma/580401331/">pasma</a>, ' +
-      '<a href="http://www.flickr.com/photos/delosj/5546225759/">delosj</a>, ' +
-      '<a href="http://www.flickr.com/photos/seriousbri/3736154699/">seriousbri</a>, ' +
-      '<a href="http://www.flickr.com/photos/melisande-origami/157818928/">melisande-origami</a>, and ' +
-      '<a href="http://www.flickr.com/photos/stuckincustoms/4669163231/">stuckincustoms</a>' +
-      '</div></div>' +
-      '<div class="button"><input type="file" class="upload">Upload File...</div>' +
-      '<div class="button closedialog">Cancel</div>');
+    $('#dialog').html(
+      '<div class="contents">Pick one of the sample images below or upload an image of your own:<div class="images">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/smoke.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/face.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/cat.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/greyhound.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/sunset.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/leaf.jpg" height="100">' +
+        '<img class="loader" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/perspective.jpg" height="100">' +
+        '</div><div class="credits">Flickr image credits in order: ' +
+        '<a href="http://www.flickr.com/photos/matthigh/2125630879/">matthigh</a>, ' +
+        '<a href="http://www.flickr.com/photos/delosj/5816379127/">delosj</a>, ' +
+        '<a href="http://www.flickr.com/photos/stuckincustoms/219537913/">stuckincustoms</a>, ' +
+        '<a href="http://www.flickr.com/photos/pasma/580401331/">pasma</a>, ' +
+        '<a href="http://www.flickr.com/photos/delosj/5546225759/">delosj</a>, ' +
+        '<a href="http://www.flickr.com/photos/seriousbri/3736154699/">seriousbri</a>, ' +
+        '<a href="http://www.flickr.com/photos/melisande-origami/157818928/">melisande-origami</a>, and ' +
+        '<a href="http://www.flickr.com/photos/stuckincustoms/4669163231/">stuckincustoms</a>' +
+        '</div></div>' +
+        '<div class="button"><input type="file" class="upload">Upload File...</div>' +
+        '<div class="button closedialog">Cancel</div>'
+    );
     showDialog();
   });
   $('#dialog input.upload').live('change', function(e) {
@@ -422,11 +469,13 @@ $(window).load(function() {
     window.open(canvas.toDataURL('image/png'));
   });
   $('#about').click(function() {
-    $('#dialog').html('<div class="contents">Copyright 2011 <a href="http://madebyevan.com">Evan Wallace</a>' +
-    '<br><br>This application is powered by <a href="http://evanw.github.com/glfx.js/">glfx.js</a>, an ' +
-    'open-source image effect library that uses WebGL.&nbsp; The source code for this application is ' +
-    'also <a href="http://github.com/evanw/webgl-filter/">available on GitHub</a>.</div><div class="button ' +
-    'closedialog">Close</div>');
+    $('#dialog').html(
+      '<div class="contents">Copyright 2011 <a href="http://madebyevan.com">Evan Wallace</a>' +
+        '<br><br>This application is powered by <a href="http://evanw.github.com/glfx.js/">glfx.js</a>, an ' +
+        'open-source image effect library that uses WebGL.&nbsp; The source code for this application is ' +
+        'also <a href="http://github.com/evanw/webgl-filter/">available on GitHub</a>.</div><div class="button ' +
+        'closedialog">Close</div>'
+    );
     showDialog();
   });
   $('.closedialog').live('click', function() {
@@ -434,7 +483,9 @@ $(window).load(function() {
   });
 
   // Start loading the first image
-  loadImage('https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg');
+  loadImage(
+    'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg'
+  );
 });
 
 // Filter object
@@ -464,21 +515,21 @@ class Filter {
   }
 
   addSlider(name, label, min, max, value, step) {
-    this.sliders.push({ name: name, label: label, min: min, max: max, value: value, step: step });
+    this.sliders.push({name: name, label: label, min: min, max: max, value: value, step: step});
     this.values[name] = value;
   }
 
   addNub(name, value) {
-    this.nubs.push({ name: name, x: value[0], y: value[1] });
+    this.nubs.push({name: name, x: value[0], y: value[1]});
     this.values[name] = value;
   }
 
   addCurves(name) {
-    this.curves.push({ name: name });
+    this.curves.push({name: name});
   }
 
   addSegmented(name, label, labels, initial) {
-    this.segmented.push({ name: name, label: label, labels: labels, initial: initial });
+    this.segmented.push({name: name, label: label, labels: labels, initial: initial});
   }
 
   _initShaderModule(module) {
@@ -488,32 +539,32 @@ class Filter {
 
         if (!uniform.private) {
           switch (uniform.type) {
-          case 'number':
-            const min = uniform.softMin || uniform.min || 0;
-            const max = uniform.softMax || uniform.max || 1;
-            const step = (max - min) / 100;
-            this.addSlider(uniformName, uniformName, min, max, uniform.value, step);
-            break;
-          default:
-            if (Array.isArray(uniform.value)) {
-              // Assume texCoords
-              this.addNub(uniformName, uniform.value);
-            } else {
-              console.log(uniform);
-            }
+            case 'number':
+              const min = uniform.softMin || uniform.min || 0;
+              const max = uniform.softMax || uniform.max || 1;
+              const step = (max - min) / 100;
+              this.addSlider(uniformName, uniformName, min, max, uniform.value, step);
+              break;
+            default:
+              if (Array.isArray(uniform.value)) {
+                // Assume texCoords
+                this.addNub(uniformName, uniform.value);
+              } else {
+                console.log(uniform);
+              }
           }
         }
       }
     }
 
     this._update = values => {
-      canvas.filter(module, values)
-    }
+      canvas.filter(module, values);
+    };
   }
 }
 
 const filters = {
-  'Adjust': [
+  Adjust: [
     new Filter('Brightness / Contrast', filterModules.brightnessContrast),
     new Filter('Hue / Saturation', filterModules.hueSaturation),
     new Filter('Sepia', filterModules.sepia),
@@ -526,7 +577,9 @@ const filters = {
     //   this.addSlider('strength', 'Strength', 0, 5, 2, 0.01);
     new Filter('Vibrance', filterModules.vibrance),
     new Filter('Vignette', filterModules.vignette),
-    new Filter('Curves', filterModules.curves,
+    new Filter(
+      'Curves',
+      filterModules.curves,
       filter => {
         filter.addCurves('points');
       },
@@ -540,9 +593,9 @@ const filters = {
       })
     )
   ],
-  'Blur': [
+  Blur: [
     new Filter('Triangle Blur', filterModules.triangleBlur),
-    new Filter('Zoom Blur', filterModules.zoomBlur),
+    new Filter('Zoom Blur', filterModules.zoomBlur)
     // new Filter('Lens Blur', filterModules.lensBlur),
     // this.addSlider('radius', 'Radius', 0, 50, 10, 1);
     // this.addSlider('brightness', 'Brightness', -1, 1, 0.75, 0.01);
@@ -556,16 +609,16 @@ const filters = {
     //   canvas.filter('tiltShift', this.values)
     // })
   ],
-  'Fun': [
+  Fun: [
     new Filter('Ink', filterModules.ink),
     new Filter('Edge Work', filterModules.edgeWork),
     new Filter('Hexagonal Pixelate', filterModules.hexagonalPixelate),
     new Filter('Dot Screen', filterModules.dotScreen),
-    new Filter('Color Halftone', filterModules.colorHalftone),
+    new Filter('Color Halftone', filterModules.colorHalftone)
   ],
-  'Warp': [
+  Warp: [
     new Filter('Swirl', filterModules.swirl),
-    new Filter('Bulge / Pinch', filterModules.bulgePinch),
+    new Filter('Bulge / Pinch', filterModules.bulgePinch)
     /*
     new Filter('Perspective', function() {
       this.addSegmented('showAfter', 'Edit point set', ['Before', 'After'], 1);

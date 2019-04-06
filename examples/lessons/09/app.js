@@ -33,20 +33,20 @@ const animationLoop = new AnimationLoop({
     const stars = [];
     const numStars = 50;
     for (let i = 0; i < numStars; i++) {
-      stars.push(new Star(gl, {
-        startingDistance: ((i / numStars) * 5.0),
-        rotationSpeed: (i / numStars),
-        texture
-      }));
+      stars.push(
+        new Star(gl, {
+          startingDistance: (i / numStars) * 5.0,
+          rotationSpeed: i / numStars,
+          texture
+        })
+      );
     }
 
     return {stars};
   },
-  onRender: ({
-    gl, tick, aspect, stars
-  }) => {
+  onRender: ({gl, tick, aspect, stars}) => {
     // Update Camera Position
-    const radTilt = tilt / 180 * Math.PI;
+    const radTilt = (tilt / 180) * Math.PI;
     const cameraY = Math.cos(radTilt) * zoom;
     const cameraZ = Math.sin(radTilt) * zoom;
 
@@ -57,10 +57,12 @@ const animationLoop = new AnimationLoop({
         .lookAt({eye: [0, cameraY, cameraZ]})
         .multiplyRight(stars[i].matrix);
 
-      stars[i].setUniforms({
-        uMVMatrix,
-        uPMatrix: new Matrix4().perspective({aspect})
-      }).draw();
+      stars[i]
+        .setUniforms({
+          uMVMatrix,
+          uPMatrix: new Matrix4().perspective({aspect})
+        })
+        .draw();
       stars[i].animate();
     }
   }
@@ -69,23 +71,22 @@ const animationLoop = new AnimationLoop({
 animationLoop.getInfo = () => INFO_HTML;
 
 function addKeyboardHandler(canvas) {
-
   addEvents(canvas, {
     onKeyDown(e) {
       switch (e.key) {
-      case 'up':
-        tilt -= 1.5;
-        break;
-      case 'down':
-        tilt += 1.5;
-        break;
-      // handle page up/down
-      default:
-        if (e.code === 33) {
-          zoom -= 0.1;
-        } else if (e.code === 34) {
-          zoom += 0.1;
-        }
+        case 'up':
+          tilt -= 1.5;
+          break;
+        case 'down':
+          tilt += 1.5;
+          break;
+        // handle page up/down
+        default:
+          if (e.code === 33) {
+            zoom -= 0.1;
+          } else if (e.code === 34) {
+            zoom += 0.1;
+          }
       }
     }
   });
