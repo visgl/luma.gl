@@ -4,7 +4,7 @@
 // Attribution: This class and the multipass system were inspired by
 // the THREE.js EffectComposer and *Pass classes
 
-import ClipSpace from '../core/clip-space';
+import ClipSpace from '../lib/clip-space';
 import Pass from './pass';
 
 const fs = `\

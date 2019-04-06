@@ -1,4 +1,4 @@
-import Model from '../../core/model';
+import Model from '../../lib/model';
 import ScenegraphNode from './scenegraph-node';
 
 export default class ModelNode extends ScenegraphNode {
