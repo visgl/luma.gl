@@ -163,9 +163,7 @@ export default class AnimationLoop {
     this._setupFrame();
     this._updateCallbackData();
 
-    // call callback
-    this.onFrame(this.animationProps);
-    // end callback
+    this._renderFrame(this.animationProps);
 
     // clear needsRedraw flag
     this._clearNeedsRedraw();
@@ -230,8 +228,10 @@ export default class AnimationLoop {
 
   // Called on each frame, can be overridden to call onRender multiple times
   // to support e.g. stereoscopic rendering
-  onFrame(...args) {
+  _renderFrame(...args) {
+    // call callback
     this.onRender(...args);
+    // end callback
   }
 
   onRender(...args) {

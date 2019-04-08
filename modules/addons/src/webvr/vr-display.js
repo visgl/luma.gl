@@ -19,17 +19,13 @@ export default class VRDisplay extends Display {
     }
   }
 
-  attachDisplay(gl) {
-    super.attachDisplay(gl);
-    this._addVRButton();
-  }
-
-  detachDisplay() {
-    super.detachDisplay();
+  finalize() {
     this._removeVRButton();
   }
 
   getViews(options) {
+    this._addVRButton();
+
     // Need both vrPresenting and vrFrame
     // to avoid race conditions when we exit VR
     // after we schedule an animation frame
@@ -90,27 +86,42 @@ export default class VRDisplay extends Display {
   // TODO: Consider resizing canvas to match vrDisplay.getEyeParameters()
   // TODO: Maybe allow to select display?
   async _addVRButton() {
+    if (this.vrButton) {
+      return;
+    }
+
+    const canvas = this._getCanvas();
+    if (!canvas) {
+      return;
+    }
+
     const displays = await navigator.getVRDisplays();
     if (displays && displays.length) {
       log.info(2, 'Found VR Displays', displays)();
 
       this.vrDisplay = displays[0];
       this.vrButton = createEnterVRButton({
-        canvas: this.gl.canvas,
+        canvas,
         title: `Enter VR (${this.vrDisplay.displayName})`
       });
       this.vrButton.onclick = () => this._startDisplay();
     }
   }
 
+  _getCanvas() {
+    return this.animationLoop.canvas || (this.animationLoop.gl || this.animationLoop.gl.canvas);
+  }
+
   _removeVRButton() {
-    // TODO
+    if (this.vrButton) {
+      // TODO
+    }
   }
 
   _startDisplay() {
     this.vrDisplay.requestPresent([
       {
-        source: this.gl.canvas
+        source: this.getCanvas()
       }
     ]);
   }
