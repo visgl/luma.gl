@@ -407,7 +407,7 @@ export class DemoApp {
     });
   }
 
-  onRender({gl, time, aspect, vrViewMatrix, vrProjectionMatrix}) {
+  onRender({gl, time, aspect, viewMatrix, projectionMatrix}) {
     clear(gl, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 
     const [pitch, roll] = this.rotation;
@@ -418,13 +418,13 @@ export class DemoApp {
     ];
 
     // TODO: find how to avoid using Array.from() to convert TypedArray to regular array
-    const uView = new Matrix4(vrViewMatrix ? Array.from(vrViewMatrix) : null)
+    const uView = new Matrix4(viewMatrix ? Array.from(viewMatrix) : null)
       .translate([0, 0, -this.translate])
       .rotateX(pitch)
       .rotateY(roll);
 
-    const uProjection = vrProjectionMatrix
-      ? new Matrix4(Array.from(vrProjectionMatrix))
+    const uProjection = projectionMatrix
+      ? new Matrix4(Array.from(projectionMatrix))
       : new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
     if (!this.scenes.length) return false;
@@ -461,7 +461,7 @@ export class DemoApp {
 
 const animationLoop = new DisplayAnimationLoop(new DemoApp());
 
-animationLoop.setDisplay(new VRDisplay());
+animationLoop._setDisplay(new VRDisplay());
 animationLoop.getInfo = () => INFO_HTML;
 
 export default animationLoop;
