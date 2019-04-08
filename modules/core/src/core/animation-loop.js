@@ -164,7 +164,7 @@ export default class AnimationLoop {
     this._updateCallbackData();
 
     // call callback
-    this.onRender(this.animationProps);
+    this.onFrame(this.animationProps);
     // end callback
 
     // clear needsRedraw flag
@@ -226,6 +226,12 @@ export default class AnimationLoop {
 
   onInitialize(...args) {
     return this.props.onInitialize(...args);
+  }
+
+  // Called on each frame, can be overridden to call onRender multiple times
+  // to support e.g. stereoscopic rendering
+  onFrame(...args) {
+    this.onRender(...args);
   }
 
   onRender(...args) {
