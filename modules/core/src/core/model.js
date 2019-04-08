@@ -104,11 +104,11 @@ export default class Model extends BaseModel {
       return this;
     }
 
-    // Loose support for deck.gl `Attribute` class by checking for presence of `getValue``
-    // TODO - remove once deck is updated
     const normalizedAttributes = {};
     for (const name in attributes) {
       const attribute = attributes[name];
+      // The `getValue` call provides support for deck.gl `Attribute` class
+      // TODO - remove once deck refactoring completes
       normalizedAttributes[name] = attribute.getValue ? attribute.getValue() : attribute;
     }
 

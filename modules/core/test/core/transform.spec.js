@@ -1,4 +1,4 @@
-import {Buffer, Transform, _Attribute as Attribute, Texture2D} from '@luma.gl/core';
+import {Buffer, Transform, Texture2D} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
@@ -11,18 +11,6 @@ out float outValue;
 void main()
 {
   outValue = 2.0 * inValue;
-}
-`;
-
-const VS_CONSTANT_ATTRIBUTE = `\
-#version 300 es
-in float inValue;
-in float multiplier;
-out float outValue;
-
-void main()
-{
-  outValue = multiplier * inValue;
 }
 `;
 
@@ -189,6 +177,11 @@ test('WebGL#Transform run (no source buffer)', t => {
   t.end();
 });
 
+/*
+TODO Attribute class has been moved out
+Either remove these tests or create a dummy Attribute with getValue method.
+If deck.gl is refactoring then we should just remove.
+
 test('WebGL#Transform run (Attribute)', t => {
   const {gl2} = fixture;
 
@@ -262,6 +255,7 @@ test('WebGL#Transform run (constant Attribute)', t => {
 
   t.end();
 });
+*/
 
 test('WebGL#Transform swap', t => {
   const {gl2} = fixture;
