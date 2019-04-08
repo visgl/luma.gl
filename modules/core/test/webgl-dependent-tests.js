@@ -1,2 +1,2 @@
-import './core';
+import './lib';
 import './debug/seer-integration';

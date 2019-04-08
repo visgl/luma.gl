@@ -79,16 +79,16 @@ export {default as Geometry} from './geometry/geometry';
 export {default as Material} from './materials/material';
 export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-source';
 
-// CORE
-export {default as AnimationLoop} from './core/animation-loop';
-export {encodePickingColor, decodePickingColor, getNullPickingColor} from './core/picking-colors';
-export {default as Model} from './core/model';
-export {default as Transform} from './core/transform';
-export {default as ClipSpace} from './core/clip-space';
+// LIB
+export {default as AnimationLoop} from './lib/animation-loop';
+export {encodePickingColor, decodePickingColor, getNullPickingColor} from './lib/picking-colors';
+export {default as Model} from './lib/model';
+export {default as Transform} from './lib/transform';
+export {default as ClipSpace} from './lib/clip-space';
 
 // Experimental core exports
-export {default as _ShaderCache} from './core/shader-cache';
-export {default as _AnimationLoopProxy} from './core/animation-loop-proxy';
+export {default as _ShaderCache} from './lib/shader-cache';
+export {default as _AnimationLoopProxy} from './lib/animation-loop-proxy';
 
 // Multipass Rendering
 export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';

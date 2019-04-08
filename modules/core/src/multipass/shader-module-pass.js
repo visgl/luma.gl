@@ -4,7 +4,7 @@
 
 import Pass from './pass';
 import CompositePass from './composite-pass';
-import ClipSpace from '../core/clip-space';
+import ClipSpace from '../lib/clip-space';
 
 import {normalizeShaderModule} from '@luma.gl/shadertools';
 
