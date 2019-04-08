@@ -5,7 +5,7 @@ import {createEnterVRButton} from './vr-button';
 
 export default class VRDisplay extends Display {
   static isSupported() {
-    return 'getVRDisplays' in navigator && typeof window !== 'undefined' && window.VRFrameData;
+    return 'getVRDisplays' in navigator && 'VRFrameData' in window;
   }
 
   constructor(props) {
@@ -39,27 +39,37 @@ export default class VRDisplay extends Display {
         rightViewMatrix
       } = this.vrFrameData;
 
+      const {width, height} = options;
+
       return [
         {
-          vrEye: 'left',
-          vrProjectionMatrix: leftProjectionMatrix,
-          vrViewMatrix: leftViewMatrix,
-          viewport: [0, 0, 0.5, 1.0] // x, y, w, h
+          displayEye: 'left',
+          projectionMatrix: leftProjectionMatrix,
+          viewMatrix: leftViewMatrix,
+          params: {
+            viewport: [0, 0, width * 0.5, height],
+            scissor: [0, 0, width * 0.5, height],
+            scissorTest: true
+          }
         },
         {
-          vrEye: 'right',
-          vrProjectionMatrix: rightProjectionMatrix,
-          vrViewMatrix: rightViewMatrix,
-          viewport: [0.5, 0, 0.5, 1.0] // x, y, w, h
+          displayEye: 'right',
+          projectionMatrix: rightProjectionMatrix,
+          viewMatrix: rightViewMatrix,
+          params: {
+            viewport: [width * 0.5, 0, width * 0.5, height],
+            scissor: [width * 0.5, 0, width * 0.5, height],
+            scissorTest: true
+          }
         }
       ];
     }
 
-    return null;
+    return super.getViews(options);
   }
 
   submitFrame() {
-    if (this.vrPresenting) {
+    if (this.vrPresenting && this.vrFrame) {
       this.vrDisplay.submitFrame();
       return true;
     }
@@ -109,7 +119,7 @@ export default class VRDisplay extends Display {
   }
 
   _getCanvas() {
-    return this.animationLoop.canvas || (this.animationLoop.gl || this.animationLoop.gl.canvas);
+    return this.animationLoop.canvas || (this.animationLoop.gl && this.animationLoop.gl.canvas);
   }
 
   _removeVRButton() {
@@ -121,7 +131,7 @@ export default class VRDisplay extends Display {
   _startDisplay() {
     this.vrDisplay.requestPresent([
       {
-        source: this.getCanvas()
+        source: this._getCanvas()
       }
     ]);
   }

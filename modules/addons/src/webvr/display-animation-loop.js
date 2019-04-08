@@ -7,14 +7,14 @@ export default class DisplayAnimationLoop extends AnimationLoop {
   }
 
   _setDisplay(display) {
-    // store anumation loop on the display
-    if (display) {
-      display.animationLoop = this;
-    }
-
-    if (!display && this.display) {
+    if (this.display) {
       this.display.finalize();
       this.display.animationLoop = null;
+    }
+
+    // store animation loop on the display
+    if (display) {
+      display.animationLoop = this;
     }
 
     this.display = display;
@@ -22,9 +22,9 @@ export default class DisplayAnimationLoop extends AnimationLoop {
 
   _renderFrame(...args) {
     if (this.display) {
-      return this.display._renderFrame();
+      return this.display._renderFrame(...args);
     }
-    return super.onFrame(...args);
+    return super._renderFrame(...args);
   }
 
   _requestAnimationFrame(renderFrame) {
