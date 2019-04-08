@@ -194,7 +194,7 @@ function getControlValues() {
     new Vector3(
       getElementValue('lightDirectionX', -1),
       getElementValue('lightDirectionY', -1),
-      getElementValue('lightDirectionZ',  -1)
+      getElementValue('lightDirectionZ', -1)
     );
 
   const directionalColor =

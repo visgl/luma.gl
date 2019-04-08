@@ -1,6 +1,11 @@
 import GL from '@luma.gl/constants';
 import {
-  AnimationLoop,  Geometry, Texture2D, loadFile, setParameters, ModelNode
+  AnimationLoop,
+  Geometry,
+  Texture2D,
+  loadFile,
+  setParameters,
+  ModelNode
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
@@ -99,8 +104,8 @@ const INFO_HTML = `
 function getHTMLControls() {
   /* global document */
   const $id = id => document.getElementById(id);
-  const $value = (id, defaultValue = 1) => $id(id) ? Number($id(id).value) : defaultValue;
-  const $checked = id => $id(id) ? $id(id).checked : true;
+  const $value = (id, defaultValue = 1) => ($id(id) ? Number($id(id).value) : defaultValue);
+  const $checked = id => ($id(id) ? $id(id).checked : true);
 
   // Get lighting form elements
   // const useLighting = lighting.checked;
@@ -129,11 +134,7 @@ function getHTMLControls() {
     $value('diffuseG', 0.8),
     $value('diffuseB', 0.8)
   ];
-  const ambientColor = [
-    $value('ambientR', 0.2),
-    $value('ambientG', 0.2),
-    $value('ambientB', 0.2)
-  ];
+  const ambientColor = [$value('ambientR', 0.2), $value('ambientG', 0.2), $value('ambientB', 0.2)];
 
   return {
     useLighting,
@@ -235,7 +236,6 @@ const LIGHT_UNIFORMS = {
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {
-
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -243,8 +243,7 @@ const animationLoop = new AnimationLoop({
       [GL.UNPACK_FLIP_Y_WEBGL]: true
     });
 
-    return loadFile('Teapot.json')
-    .then(file => {
+    return loadFile('Teapot.json').then(file => {
       const teapotJson = JSON.parse(file);
 
       const galvanizedTexture = new Texture2D(gl, {
@@ -269,7 +268,6 @@ const animationLoop = new AnimationLoop({
         mipmap: true
       });
 
-
       const teapot = new ModelNode(gl, {
         id: 'teapot-model',
         fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
@@ -284,11 +282,7 @@ const animationLoop = new AnimationLoop({
           },
           drawMode: GL.TRIANGLES
         }),
-        uniforms: Object.assign(
-          {uSampler: galvanizedTexture},
-          TEAPOT_UNIFORMS,
-          LIGHT_UNIFORMS
-        )
+        uniforms: Object.assign({uSampler: galvanizedTexture}, TEAPOT_UNIFORMS, LIGHT_UNIFORMS)
       });
       return {teapot, earthTexture, galvanizedTexture};
     });
@@ -298,12 +292,9 @@ const animationLoop = new AnimationLoop({
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4()
-      .rotateX(radians(-30))
-      .transformVector3([0, 0, 5]);
+    const eyePos = new Matrix4().rotateX(radians(-30)).transformVector3([0, 0, 5]);
 
-    const uVMatrix = new Matrix4()
-      .lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
+    const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
     const {
       useLighting,
@@ -315,7 +306,6 @@ const animationLoop = new AnimationLoop({
       pointLightPosition,
       pointLightSpecularColor,
       pointLightDiffuseColor
-
     } = getHTMLControls();
 
     teapot.setUniforms({
@@ -342,11 +332,18 @@ const animationLoop = new AnimationLoop({
     }
 
     const phi = tick * 0.01;
-    return teapot.setUniforms({
-      uMMatrix: new Matrix4().translate([0, -35, -68]).rotateY(phi),
-      uVMatrix,
-      uPMatrix: new Matrix4().perspective({fov: 45 * Math.PI / 180, aspect, near: 0.1, far: 100})
-    }).draw();
+    return teapot
+      .setUniforms({
+        uMMatrix: new Matrix4().translate([0, -35, -68]).rotateY(phi),
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
   }
 });
 

@@ -2,6 +2,7 @@
 
 // const webpack = require('webpack');
 const path = require('path');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const env = require('yargs').argv.env; // use --env with webpack 2
 
 const libraryName = 'fx';

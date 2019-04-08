@@ -37,11 +37,10 @@ void main(void) {
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl, aspect, canvas}) {
-
-    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0];
+    const TRIANGLE_VERTS = [0, 1, 0, -1, -1, 0, 1, -1, 0];
     const TRIANGLE_COLORS = [1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1];
 
-    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0];
+    const SQUARE_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0];
     const SQUARE_COLORS = [0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1];
 
     const program = new Program(gl, {

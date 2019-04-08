@@ -15,7 +15,7 @@ export default class IcoSphereGeometry extends Geometry {
       ...props,
       id,
       indices,
-      attributes
+      attributes: {...attributes, ...props.attributes}
     });
   }
 }

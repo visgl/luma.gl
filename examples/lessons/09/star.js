@@ -40,12 +40,14 @@ export class Star extends ModelNode {
       program,
       geometry: new Geometry({
         attributes: {
+          // prettier-ignore
           positions: new Float32Array([
             -1.0, -1.0, 0.0,
             1.0, -1.0, 0.0,
             -1.0, 1.0, 0.0,
             1.0, 1.0, 0.0
           ]),
+          // prettier-ignore
           texCoords: new Float32Array([
             0.0, 0.0,
             1.0, 0.0,
@@ -97,11 +99,7 @@ export class Star extends ModelNode {
       this.randomiseColors();
     }
 
-    this.position.set(
-      Math.cos(this.angle) * this.dist,
-      Math.sin(this.angle) * this.dist,
-      0
-    );
+    this.position.set(Math.cos(this.angle) * this.dist, Math.sin(this.angle) * this.dist, 0);
     this.setRotation([0, 0, this.spin]);
     this.spin += 0.1;
     this.updateMatrix();

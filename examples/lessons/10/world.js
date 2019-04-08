@@ -28,12 +28,12 @@ void main(void) {
 `;
 
 function loadWorldGeometry(data) {
-  const lines = data.split("\n");
+  const lines = data.split('\n');
   const vertexPositions = [];
   const vertexTextureCoords = [];
   for (const i in lines) {
-    const vals = lines[i].replace(/^\s+/, "").split(/\s+/);
-    if (vals.length === 5 && vals[0] !== "//") {
+    const vals = lines[i].replace(/^\s+/, '').split(/\s+/);
+    if (vals.length === 5 && vals[0] !== '//') {
       // It is a line describing a vertex; get X, Y and Z first
       vertexPositions.push(parseFloat(vals[0]));
       vertexPositions.push(parseFloat(vals[1]));
@@ -41,7 +41,7 @@ function loadWorldGeometry(data) {
       // And then the texture coords
       vertexTextureCoords.push(parseFloat(vals[3]));
       vertexTextureCoords.push(parseFloat(vals[4]));
-     }
+    }
   }
   return new Geometry({
     vertexCount: vertexPositions.length / 3,
@@ -64,7 +64,7 @@ export class World extends ModelNode {
       geometry: opts.geometry,
       uniforms: {
         uSampler: opts.texture
-      },
+      }
     });
   }
 }

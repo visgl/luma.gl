@@ -39,26 +39,23 @@ void main(void) {
 
 const triangleGeometry = new Geometry({
   attributes: {
-    positions: {size: 3, value: new Float32Array([0, 1, 0,  -1, -1, 0,  1, -1, 0])},
-    colors: {size: 4, value: new Float32Array([1, 0, 0, 1,  0, 1, 0, 1,  0, 0, 1, 1])}
+    positions: {size: 3, value: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])},
+    colors: {size: 4, value: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1])}
   }
 });
 
 const squareGeometry = new Geometry({
   drawMode: GL.TRIANGLE_STRIP,
   attributes: {
-    positions: new Float32Array([1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]),
+    positions: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]),
     colors: {
       size: 4,
-      value: new Float32Array([
-        0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1,  0.5, 0.5, 1, 1
-      ])
+      value: new Float32Array([0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1, 1])
     }
   }
 });
 
 const animationLoop = new AnimationLoop({
-
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -68,7 +65,11 @@ const animationLoop = new AnimationLoop({
     });
 
     return {
-      triangle: new ModelNode(gl, {geometry: triangleGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER}),
+      triangle: new ModelNode(gl, {
+        geometry: triangleGeometry,
+        vs: VERTEX_SHADER,
+        fs: FRAGMENT_SHADER
+      }),
       square: new ModelNode(gl, {geometry: squareGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER})
     };
   },

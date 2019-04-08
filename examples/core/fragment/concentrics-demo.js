@@ -23,7 +23,6 @@ void main(void) {
 `;
 
 const animationLoop = new AnimationLoop({
-
   onInitialize: ({gl}) => {
     return {
       clipSpace: new ClipSpace(gl, {
@@ -38,7 +37,6 @@ const animationLoop = new AnimationLoop({
   onRender: animationProps => {
     animationProps.clipSpace.draw({animationProps});
   }
-
 });
 
 animationLoop.getInfo = () => INFO_HTML;

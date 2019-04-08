@@ -1,6 +1,6 @@
 import {AnimationLoop, setParameters, Model, Texture3D, Buffer} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-import {default as noise3d} from 'noise3d';
+// import {default as noise3d} from 'noise3d';
 
 /*
   Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
@@ -52,10 +52,11 @@ class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
-    const perlin = noise3d.createPerlin({
-      interpolation: noise3d.interpolation.linear,
-      permutation: noise3d.array.shuffle(noise3d.array.range(0, 255), Math.random)
-    });
+    const perlin = {};
+    // noise3d.createPerlin({
+    //   interpolation: noise3d.interpolation.linear,
+    //   permutation: noise3d.array.shuffle(noise3d.array.range(0, 255), Math.random)
+    // });
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],

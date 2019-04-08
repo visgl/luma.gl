@@ -7,7 +7,7 @@ Gradient calculated on the GPU using <code>Transform Feedback</code>.
 </p>
 `;
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN\'T SUPPORT IT';
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
 
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
@@ -60,6 +60,7 @@ void main() {
 
 const VERTEX_COUNT = 6;
 
+// prettier-ignore
 const POSITIONS = [
   -1.0, -1.0, 0.0, 1.0,
   1.0, -1.0, 0.0, 1.0,
@@ -140,10 +141,10 @@ const animationLoop = new AnimationLoop({
 animationLoop.getInfo = () => INFO_HTML;
 animationLoop.isSupported = () => {
   return isDemoSupported;
-}
+};
 animationLoop.getAltText = () => {
   return ALT_TEXT;
-}
+};
 
 export default animationLoop;
 

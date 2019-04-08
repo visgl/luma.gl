@@ -32,9 +32,8 @@ void main(void) {
 const animationLoop = new AnimationLoop({
   debug: true,
   onInitialize({gl, canvas, aspect}) {
-
-    const TRIANGLE_VERTS = [0, 1, 0,  -1, -1, 0,  1, -1, 0]; // eslint-disable-line
-    const SQUARE_VERTS = [1, 1, 0,  -1, 1, 0,  1, -1, 0,  -1, -1, 0]; // eslint-disable-line
+    const TRIANGLE_VERTS = [0, 1, 0, -1, -1, 0, 1, -1, 0]; // eslint-disable-line
+    const SQUARE_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line
 
     const program = new Program(gl, {
       vs: VERTEX_SHADER,
