@@ -11,7 +11,8 @@ export default class VRDisplay extends Display {
   constructor(props) {
     super(props);
 
-    if (VRDisplay.isSupported()) {
+    this._vrSupported = VRDisplay.isSupported();
+    if (this._vrSupported) {
       this.vrFrameData = new window.VRFrameData();
       this.vrPresenting = false;
       this.vrFrame = false;
@@ -24,7 +25,9 @@ export default class VRDisplay extends Display {
   }
 
   getViews(options) {
-    this._addVRButton();
+    if (this._vrSupported) {
+      this._addVRButton();
+    }
 
     // Need both vrPresenting and vrFrame
     // to avoid race conditions when we exit VR

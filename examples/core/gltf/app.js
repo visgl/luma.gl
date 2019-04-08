@@ -1,12 +1,11 @@
 /* global document, window */
 import {loadFile, parseFile, registerLoaders} from '@loaders.gl/core';
-import {setParameters, clear, log, lumaStats} from '@luma.gl/core';
+import {AnimationLoop, setParameters, clear, log, lumaStats} from '@luma.gl/core';
 import {
   createGLTFObjects,
   GLBScenegraphLoader,
   GLTFScenegraphLoader,
   GLTFEnvironment,
-  DisplayAnimationLoop,
   VRDisplay
 } from '@luma.gl/addons';
 import GL from '@luma.gl/constants';
@@ -459,7 +458,7 @@ export class DemoApp {
   }
 }
 
-const animationLoop = new DisplayAnimationLoop(new DemoApp());
+const animationLoop = new AnimationLoop(new DemoApp());
 
 animationLoop._setDisplay(new VRDisplay());
 animationLoop.getInfo = () => INFO_HTML;

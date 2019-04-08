@@ -1,5 +1,4 @@
 // VR
-export {default as DisplayAnimationLoop} from './webvr/display-animation-loop';
 export {default as Display} from './webvr/display';
 export {default as VRDisplay} from './webvr/vr-display';
 
