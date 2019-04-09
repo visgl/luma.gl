@@ -97,7 +97,7 @@ module.exports = {
       path: 'examples/core/shadowmap/',
       image: 'images/example-shadowmap.jpg'
     },
-    // {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
+    {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
     {
       title: 'Transform',
       path: 'examples/core/transform/',

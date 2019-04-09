@@ -11,7 +11,7 @@ import Persistence from '../../../examples/core/persistence/app';
 // import Picking from '../../../examples/core/picking/app';
 import Quasicrystals from '../../../examples/core/quasicrystals/app';
 import Shadowmap from '../../../examples/core/shadowmap/app';
-// import Texture3D from '../../../examples/core/texture-3d/app';
+import Texture3D from '../../../examples/core/texture-3d/app';
 import Transform from '../../../examples/core/transform/app';
 import TransformFeedback from '../../../examples/core/transform-feedback/app';
 
@@ -47,7 +47,7 @@ export default {
   // Picking: {app: Picking, path: 'examples/core/picking/'},
   Quasicrystals: {app: Quasicrystals, path: 'examples/core/quasicrystals/'},
   Shadowmap: {app: Shadowmap, path: 'examples/core/shadowmap/'},
-  // Texture3D: {app: Texture3D, path: 'examples/core/texture3d/'},
+  Texture3D: {app: Texture3D, path: 'examples/core/texture3d/'},
   Transform: {app: Transform, path: 'examples/core/transform/'},
   TransformFeedback: {app: TransformFeedback, path: 'examples/core/transform-feedback/'},
 
@@ -83,6 +83,7 @@ export default {
   // Persistence,
   Picking,
   Shadowmap,
+  Texture3D,
   Transform,
   TransformFeedback,
 
