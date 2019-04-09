@@ -20,7 +20,8 @@ export default class VRDisplay extends Display {
     }
   }
 
-  finalize() {
+  delete() {
+    super.delete();
     this._removeVRButton();
   }
 
