@@ -67,7 +67,7 @@ module.exports = {
       image: 'images/example-cubemap.jpg'
     },
     {
-      title: 'Depth of Field',
+      title: 'DOF',
       path: 'examples/core/dof/',
       image: 'images/example-dof.jpg'
     },
