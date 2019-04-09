@@ -1,30 +1,19 @@
-import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
+// import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
 import {assert} from '../utils';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
-const GL_ARRAY_BUFFER = 0x8892;
-const GL_TEXTURE_BINDING_3D = 0x806a;
+// const GL_ARRAY_BUFFER = 0x8892;
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
-export function isWebGL(glAlias) {
-  return Boolean(
-    glAlias &&
-      (glAlias instanceof WebGLRenderingContext ||
-        // `glAlias` name prevents gl constant inliner from making this always true
-        glAlias.ARRAY_BUFFER === GL_ARRAY_BUFFER)
-  );
+export function isWebGL(gl) {
+  return Boolean(gl && Number.isFinite(gl._version));
 }
 
-export function isWebGL2(glAlias) {
-  return Boolean(
-    glAlias &&
-      (glAlias instanceof WebGL2RenderingContext ||
-        // `glAlias` name prevents gl constant inliner from making this always true
-        glAlias.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
-  );
+export function isWebGL2(gl) {
+  return Boolean(gl && gl._version === 2);
 }
 
 export function assertWebGLContext(gl) {

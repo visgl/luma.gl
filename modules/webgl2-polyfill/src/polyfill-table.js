@@ -13,7 +13,7 @@ const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_o
 
 // Return true if WebGL2 context
 function isWebGL2(gl) {
-  return gl && gl.TEXTURE_BINDING_3D === GL.TEXTURE_BINDING_3D;
+  return Boolean(gl && gl._version === 2);
 }
 
 // Return object with webgl2 flag and an extension

@@ -106,8 +106,7 @@ const WEBGL_PARAMETERS = {
 
 // Return true if WebGL2 context
 function isWebGL2(gl) {
-  const GL_TEXTURE_BINDING_3D = 0x806a;
-  return gl && gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D;
+  return Boolean(gl && gl._version === 2);
 }
 
 // A "replacement" gl.getParameter that accepts "enums" from extensions and WebGL2
