@@ -188,10 +188,6 @@
               "entry": "docs/api-reference/core/animation-loop-proxy"
             },
             {
-              "name": "Attribute",
-              "entry": "docs/api-reference/core/attribute"
-            },
-            {
               "name": "Geometry",
               "entry": "docs/api-reference/core/geometry"
             },
@@ -214,27 +210,27 @@
           "entries": [
             {
               "name": "Cone",
-              "entry": "docs/api-reference/core/geometries/cone"
+              "entry": "docs/api-reference/core/geometries/cone-geometry"
             },
             {
               "name": "Cube",
-              "entry": "docs/api-reference/core/geometries/cube"
+              "entry": "docs/api-reference/core/geometries/cube-geometry"
             },
             {
               "name": "Cylinder",
-              "entry": "docs/api-reference/core/geometries/cylinder"
+              "entry": "docs/api-reference/core/geometries/cylinder-geometry"
             },
             {
               "name": "IcoSphere",
-              "entry": "docs/api-reference/core/geometries/ico-sphere"
+              "entry": "docs/api-reference/core/geometries/ico-sphere-geometry"
             },
             {
               "name": "Plane",
-              "entry": "docs/api-reference/core/geometries/plane"
+              "entry": "docs/api-reference/core/geometries/plane-geometry"
             },
             {
               "name": "Sphere",
-              "entry": "docs/api-reference/core/geometries/sphere"
+              "entry": "docs/api-reference/core/geometries/sphere-geometry"
             }
           ]
         },
@@ -243,15 +239,15 @@
           "entries": [
             {
               "name": "Ambient Light",
-              "entry": "docs/api-reference/lights/ambient-light"
+              "entry": "docs/api-reference/core/lights/ambient-light"
             },
             {
               "name": "Directional Light",
-              "entry": "docs/api-reference/lights/directional-light"
+              "entry": "docs/api-reference/core/lights/directional-light"
             },
             {
               "name": "Point Light",
-              "entry": "docs/api-reference/lights/point-light"
+              "entry": "docs/api-reference/core/lights/point-light"
             }
           ]
         },
@@ -260,11 +256,11 @@
           "entries": [
             {
               "name": "PhongMaterial",
-              "entry": "docs/api-reference/materials/phong-material"
+              "entry": "docs/api-reference/core/materials/phong-material"
             },
             {
               "name": "PBRMaterial",
-              "entry": "docs/api-reference/materials/pbr-material"
+              "entry": "docs/api-reference/core/materials/pbr-material"
             }
           ]
         },
@@ -273,39 +269,35 @@
           "entries": [
             {
               "name": "Canvas",
-              "entry": "docs/api-reference/multipass/canvas"
+              "entry": "docs/api-reference/core/multipass/canvas"
             },
             {
               "name": "Clear pass",
-              "entry": "docs/api-reference/multipass/clear-pass"
+              "entry": "docs/api-reference/core/multipass/clear-pass"
             },
             {
               "name": "Composite pass",
-              "entry": "docs/api-reference/multipass/composite-pass"
+              "entry": "docs/api-reference/core/multipass/composite-pass"
             },
             {
               "name": "Copy pass",
-              "entry": "docs/api-reference/multipass/copy-pass"
+              "entry": "docs/api-reference/core/multipass/copy-pass"
             },
             {
               "name": "Multi pass renderer",
-              "entry": "docs/api-reference/multipass/multi-pass-renderer"
+              "entry": "docs/api-reference/core/multipass/multi-pass-renderer"
             },
             {
               "name": "Pass",
-              "entry": "docs/api-reference/multipass/pass"
-            },
-            {
-              "name": "Picking pass",
-              "entry": "docs/api-reference/multipass/picking-pass"
+              "entry": "docs/api-reference/core/multipass/pass"
             },
             {
               "name": "Render pass",
-              "entry": "docs/api-reference/multipass/render-pass"
+              "entry": "docs/api-reference/core/multipass/render-pass"
             },
             {
               "name": "Shader module pass",
-              "entry": "docs/api-reference/multipass/shader-module-pass"
+              "entry": "docs/api-reference/core/multipass/shader-module-pass"
             }
           ]
         },
@@ -367,10 +359,6 @@
               "entry": "docs/api-reference/webgl/buffer"
             },
             {
-              "name": "FenceSync",
-              "entry": "docs/api-reference/webgl/fence-sync"
-            },
-            {
               "name": "Program",
               "entry": "docs/api-reference/webgl/program"
             },
@@ -391,10 +379,6 @@
               "entry": "docs/api-reference/webgl/resource"
             },
             {
-              "name": "Sampler",
-              "entry": "docs/api-reference/webgl/sampler"
-            },
-            {
               "name": "Shader",
               "entry": "docs/api-reference/webgl/shader"
             },
@@ -405,10 +389,6 @@
             {
               "name": "Texture2D",
               "entry": "docs/api-reference/webgl/texture-2d"
-            },
-            {
-              "name": "Texture2DArray",
-              "entry": "docs/api-reference/webgl/texture-2d-array"
             },
             {
               "name": "Texture3D",
@@ -499,7 +479,7 @@
           ]
         },
         {
-          "title": "addons",
+          "title": "Addons",
           "entries": [
             {
               "name": "Event",
