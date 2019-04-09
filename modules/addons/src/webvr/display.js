@@ -23,6 +23,8 @@ export default class Display {
     return false;
   }
 
+  delete() {}
+
   // AnimationLoop calls this API
   _renderFrame(options) {
     const views = this.getViews(options);

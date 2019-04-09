@@ -91,6 +91,11 @@ export default class AnimationLoop {
     this._onMouseleave = this._onMouseleave.bind(this);
   }
 
+  delete() {
+    this.stop();
+    this._setDisplay(null);
+  }
+
   setNeedsRedraw(reason) {
     assert(typeof reason === 'string');
     this.needsRedraw = this.needsRedraw || reason;
@@ -226,14 +231,6 @@ export default class AnimationLoop {
     return this.props.onInitialize(...args);
   }
 
-  // Called on each frame, can be overridden to call onRender multiple times
-  // to support e.g. stereoscopic rendering
-  _renderFrame(...args) {
-    // call callback
-    this.onRender(...args);
-    // end callback
-  }
-
   onRender(...args) {
     return this.props.onRender(...args);
   }
@@ -271,8 +268,43 @@ export default class AnimationLoop {
     this._animationFrameId = this._requestAnimationFrame(renderFrame);
   }
 
-  _requestAnimationFrame(callback) {
-    requestAnimationFrame(callback);
+  // PRIVATE METHODS
+
+  _setDisplay(display) {
+    if (this.display) {
+      this.display.delete();
+      this.display.animationLoop = null;
+    }
+
+    // store animation loop on the display
+    if (display) {
+      display.animationLoop = this;
+    }
+
+    this.display = display;
+  }
+
+  _requestAnimationFrame(renderFrameCallback) {
+    // E.g. VR display has a separate animation frame to sync with headset
+    if (this.display && this.display.requestAnimationFrame(renderFrameCallback)) {
+      return;
+    }
+
+    requestAnimationFrame(renderFrameCallback);
+  }
+
+  // Called on each frame, can be overridden to call onRender multiple times
+  // to support e.g. stereoscopic rendering
+  _renderFrame(...args) {
+    // Allow e.g. VR display to render multiple frames.
+    if (this.display) {
+      this.display._renderFrame(...args);
+      return;
+    }
+
+    // call callback
+    this.onRender(...args);
+    // end callback
   }
 
   _clearNeedsRedraw() {
