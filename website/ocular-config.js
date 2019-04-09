@@ -61,9 +61,21 @@ module.exports = {
       path: 'examples/core/instancing/',
       image: 'images/example-instancing.jpg'
     },
-    {title: 'Cubemap', path: 'examples/core/cubemap/', image: 'images/example-cubemap.jpg'},
-    {title: 'DOF', path: 'examples/core/dof/', image: 'images/example-dof.jpg'},
-    {title: 'Fragment', path: 'examples/core/fragment/', image: 'images/example-fragment.jpg'},
+    {
+      title: 'Cubemap',
+      path: 'examples/core/cubemap/',
+      image: 'images/example-cubemap.jpg'
+    },
+    {
+      title: 'Depth of Field',
+      path: 'examples/core/dof/',
+      image: 'images/example-dof.jpg'
+    },
+    {
+      title: 'Fragment',
+      path: 'examples/core/fragment/',
+      image: 'images/example-fragment.jpg'
+    },
     {
       title: 'Mandelbrot',
       path: 'examples/core/mandelbrot/',
@@ -80,15 +92,27 @@ module.exports = {
       image: 'images/example-persistence.jpg'
     },
     // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
-    {title: 'Shadowmap', path: 'examples/core/shadowmap/', image: 'images/example-shadowmap.jpg'},
+    {
+      title: 'Shadowmap',
+      path: 'examples/core/shadowmap/',
+      image: 'images/example-shadowmap.jpg'
+    },
     // {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
-    {title: 'Transform', path: 'examples/core/transform/', image: 'images/example-transform.png'},
+    {
+      title: 'Transform',
+      path: 'examples/core/transform/',
+      image: 'images/example-transform.png'
+    },
     {
       title: 'TransformFeedback',
       path: 'examples/core/transform-feedback/app',
       image: 'images/example-transform-feedback.jpg'
     },
-    {title: 'GLTF', path: 'examples/gltf'},
+    {
+      title: 'GLTF',
+      path: 'examples/gltf',
+      image: 'images/example-gltf.jpg'
+    },
     {title: 'Lesson01', path: 'examples/lessons/01/', image: 'images/lesson-1.png'},
     {title: 'Lesson02', path: 'examples/lessons/02/', image: 'images/lesson-2.png'},
     {title: 'Lesson03', path: 'examples/lessons/03/', image: 'images/lesson-3.png'},
