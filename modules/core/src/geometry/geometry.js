@@ -108,8 +108,8 @@ export default class Geometry {
     let vertexCount = Infinity;
     for (const attributeName in attributes) {
       const attribute = attributes[attributeName];
-      const {value, size} = attribute;
-      if (value && size >= 1) {
+      const {value, size, constant} = attribute;
+      if (!constant && value && size >= 1) {
         vertexCount = Math.min(vertexCount, value.length / size);
       }
     }
