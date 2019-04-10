@@ -1,10 +1,28 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.7
+- Get rid of accessor warnings that are always triggered. (#1051)
+- Vertex count for constant attribute geos with no indices (#1052)
+- Update doc table of contents to fix and remove links to missing/changed docs. (#1049)
+- Fix texture3d example (#1050)
+- Add missing thumbnail images for website examples - dof, gltf, persistence. (#1047)
+- Add Display to AnimationLoop (#1043)
+- Fix vr-display (#1045)
+- WIP: Make DisplayAnimationLoop smaller (#1041)
+- Rename `core/src/core` to `core/src/lib` (#1040)
+- Geometries allow attributes to added/overridden (#1038)
+- Add `examples` folder to lint/prettier target, run prettier, fix issues (#1039)
+- Remove attribute (#1019)
+- Implementation: VR Display (#1032)
+- Fix Histopyramid Unit tests, eanble Transform Unit test. (#1037)
+
+## v7.0.0-beta.6
+- don't need enable lighting flag with only material (#1035)
+
 ## v7.0.0-beta.5 - Apr 4, 2019
 - Model handles geometry with constant attributes (#1034)
 - glTF Loader: Allow to async return after all resources are loaded (#1029)
 - Gatsby update (#1030)
-
 
 ## v7.0.0-beta.4 - Apr 3, 2019
 - Fix attribute handling for matrices (#1033)
