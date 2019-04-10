@@ -70,7 +70,7 @@ export function inferAttributeAccessor(attributeName, attribute) {
     default:
   }
 
-  // Check for categorys
+  // Check for categories
   switch (category) {
     case 'vectors':
       attribute.size = attribute.size || 3;
@@ -87,6 +87,12 @@ export function inferAttributeAccessor(attributeName, attribute) {
       );
       break;
     default:
+  }
+
+  // loaders.gl draco loader produces these
+  if (attribute.componentType !== undefined) {
+    attribute.type = attribute.componentType;
+    delete attribute.componentType;
   }
 
   assert(Number.isFinite(attribute.size), `attribute ${attributeName} needs size`);
