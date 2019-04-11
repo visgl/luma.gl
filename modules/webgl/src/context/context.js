@@ -7,7 +7,7 @@ import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
 
-import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl-utils';
+import {WebGL2RenderingContext} from '../webgl-utils';
 
 import {log, isBrowser, assert} from '../utils';
 import {global} from '../utils/globals';
@@ -197,10 +197,9 @@ function logInfo(gl) {
 
 function getVersion(gl) {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    // WebGL2 context.
     return 2;
   }
-  if (typeof WebGLRenderingContext !== 'undefined' && gl instanceof WebGLRenderingContext) {
-    return 1;
-  }
-  return null; // Not a WebGL context
+  // Must be a WebGL1 context.
+  return 1;
 }
