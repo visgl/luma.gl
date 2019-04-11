@@ -13,7 +13,6 @@
     "serve": "gatsby serve"
   },
   "dependencies": {
-    "@luma.gl/addons": "^7.0.0-beta",
     "@loaders.gl/core": "^0.8.0",
     "@loaders.gl/draco": "^0.8.0",
     "@loaders.gl/gltf": "^0.8.1",
@@ -23,7 +22,7 @@
   "devDependencies": {
     "gatsby": "2.2.0-rc.2",
     "gatsby-plugin-styletron": "^3.0.5",
-    "ocular-gatsby": "1.0.0-alpha.16",
+    "ocular-gatsby": "1.0.0-alpha.17",
     "sharp": "0.21.1"
   }
 }
