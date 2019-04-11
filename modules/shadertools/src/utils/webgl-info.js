@@ -4,11 +4,8 @@
 // available in an WebGL1 or WebGL2 environment.
 
 /* eslint-disable no-inline-comments, max-len */
-/* global WebGL2RenderingContext */
 import isOldIE from './is-old-ie';
 import assert from './assert';
-
-const GL_TEXTURE_BINDING_3D = 0x806a;
 
 const GL_VENDOR = 0x1f00;
 const GL_RENDERER = 0x1f01;
@@ -33,11 +30,7 @@ Object.keys(WEBGL_FEATURES).forEach(key => {
 export {FEATURES};
 
 function isWebGL2(gl) {
-  return Boolean(
-    gl &&
-      ((typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) ||
-        gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
-  );
+  return Boolean(gl && gl._version === 2);
 }
 
 export function getContextInfo(gl) {

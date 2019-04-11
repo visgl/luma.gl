@@ -7,34 +7,21 @@ import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
 
-import {WebGLRenderingContext, WebGL2RenderingContext} from '../webgl-utils';
+import {WebGL2RenderingContext} from '../webgl-utils';
 
 import {log, isBrowser, assert} from '../utils';
 import {global} from '../utils/globals';
-
-// Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
-const GL_ARRAY_BUFFER = 0x8892;
-const GL_TEXTURE_BINDING_3D = 0x806a;
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
-// HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
-export function isWebGL(glContext) {
-  return Boolean(
-    glContext &&
-      (glContext instanceof WebGLRenderingContext || glContext.ARRAY_BUFFER === GL_ARRAY_BUFFER)
-  );
+export function isWebGL(gl) {
+  return Boolean(gl && Number.isFinite(gl._version));
 }
 
-// HACK: avoid use of `gl` parameter name to defeat GL constant inliner, which invalidates check
-export function isWebGL2(glContext) {
-  return Boolean(
-    glContext &&
-      (glContext instanceof WebGL2RenderingContext ||
-        glContext.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D)
-  );
+export function isWebGL2(gl) {
+  return Boolean(gl && gl._version === 2);
 }
 
 export function assertWebGLContext(gl) {
@@ -114,6 +101,13 @@ export function createGLContext(options = {}) {
 }
 
 export function instrumentGLContext(gl, options = {}) {
+  // Avoid multiple instrumentations
+  if (gl._instrumented) {
+    return gl;
+  }
+
+  gl._version = gl._version || getVersion(gl);
+
   options = Object.assign({}, contextDefaults, options);
   const {manageState, debug} = options;
 
@@ -135,6 +129,8 @@ export function instrumentGLContext(gl, options = {}) {
       log.priority = Math.max(log.priority, 1);
     }
   }
+
+  gl._instrumented = true;
 
   return gl;
 }
@@ -197,4 +193,13 @@ function logInfo(gl) {
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
   const debug = gl.debug ? ' debug' : '';
   log.once(1, `${webGL}${debug} context ${driver}`)();
+}
+
+function getVersion(gl) {
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    // WebGL2 context.
+    return 2;
+  }
+  // Must be a WebGL1 context.
+  return 1;
 }

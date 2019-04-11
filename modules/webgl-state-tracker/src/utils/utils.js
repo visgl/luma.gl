@@ -8,6 +8,5 @@ export function isObjectEmpty(object) {
 
 // Returns true if WebGL2 context (Heuristic)
 export function isWebGL2(gl) {
-  const GL_TEXTURE_BINDING_3D = 0x806a;
-  return gl && gl.TEXTURE_BINDING_3D === GL_TEXTURE_BINDING_3D;
+  return Boolean(gl && gl._version === 2);
 }
