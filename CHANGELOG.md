@@ -1,5 +1,8 @@
 # 7.0 Pre-releases
 
+## v7.0.0-beta.8
+- Fix isWebGL2 methods. (#1053)
+
 ## v7.0.0-beta.7
 - Get rid of accessor warnings that are always triggered. (#1051)
 - Vertex count for constant attribute geos with no indices (#1052)
