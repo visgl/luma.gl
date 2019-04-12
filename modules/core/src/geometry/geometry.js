@@ -92,7 +92,6 @@ export default class Geometry {
       if (attributeName === 'indices') {
         assert(!this.indices);
         delete attribute.isIndexed;
-        delete attributes[attributeName];
         this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;
