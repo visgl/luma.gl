@@ -91,8 +91,11 @@ export default class Geometry {
       // Move indices to separate field
       if (attributeName === 'indices') {
         assert(!this.indices);
-        delete attribute.isIndexed;
         this.indices = attribute;
+        if (this.indices.isIndexed !== undefined) {
+          this.indices = Object.assign({}, this.indices);
+          delete this.indices.isIndexed;
+        }
       } else {
         this.attributes[attributeName] = attribute;
       }
