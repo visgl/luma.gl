@@ -1,0 +1,28 @@
+{
+  "description": "A website built with ocular",
+  "license": "MIT",
+  "keywords": [
+    "ocular"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "start": "yarn develop",
+    "clean": "rm -rf ./.cache ./public",
+    "develop": "gatsby develop",
+    "build": "gatsby build",
+    "serve": "gatsby serve"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "^0.8.0",
+    "@loaders.gl/draco": "^0.8.0",
+    "@loaders.gl/gltf": "^0.8.1",
+    "@probe.gl/stats-widget": "^3.0.1",
+    "math.gl": "^2.3.1"
+  },
+  "devDependencies": {
+    "gatsby": "2.2.0-rc.2",
+    "gatsby-plugin-styletron": "^3.0.5",
+    "ocular-gatsby": "1.0.0-alpha.17",
+    "sharp": "0.21.1"
+  }
+}
