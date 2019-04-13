@@ -8,13 +8,15 @@ export {default as CubemapDemo} from '../../examples/core/cubemap/app.js';
 export {default as MandelbrotDemo} from '../../examples/core/mandelbrot/app.js';
 export {default as FragmentDemo} from '../../examples/core/fragment/app.js';
 // export {default as ParticlesDemo} from '../../examples/core/particles/app.js';
-// export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
-export {default as PickingDemo} from '../../examples/core/picking/app.js';
+export {default as PersistenceDemo} from '../../examples/core/persistence/app.js';
+// export {default as PickingDemo} from '../../examples/core/picking/app.js';
 export {default as ShadowmapDemo} from '../../examples/core/shadowmap/app.js';
 export {default as TransformFeedbackDemo} from '../../examples/core/transform-feedback/app.js';
 export {default as DOFDemo} from '../../examples/core/dof/app.js';
-export {default as TransformDemo} from
-  '../../examples/core/transform/app.js';
+export {default as TransformDemo} from '../../examples/core/transform/app.js';
+export {default as GLTFDemo} from '../../examples/core/gltf/app';
+export {default as QuasicrystalsDemo} from '../../examples/core/quasicrystals/app';
+export {default as Texture3DDemo} from '../../examples/core/texture-3d/app';
 
 export {default as Lesson01} from '../../examples/lessons/01/app.js';
 export {default as Lesson02} from '../../examples/lessons/02/app.js';

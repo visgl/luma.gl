@@ -15,7 +15,7 @@ export function generatePaths(tree, {docUrls = false, parentPath = ''} = {}) {
   }
   if (tree.name) {
     tree.path = tree.name.match(
-      /(3D|API|WebGL|GLB|PLY|LAS|PCD|OBJ|KML|([A-Z]|^)[a-z]+|\d+)/g).join('-'
+      /(3D|API|WebGL|GLB|PLY|LAS|PCD|OBJ|KML|GLTF|([A-Z]|^)[a-z]+|\d+)/g).join('-'
     ).toLowerCase();
   }
   if (tree.children) {

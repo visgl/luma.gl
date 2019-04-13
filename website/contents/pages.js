@@ -16,13 +16,6 @@ export const EXAMPLE_PAGES = [
           code: `${GITHUB_TREE}/examples/core/cubemap`
         }
       },
-      // {
-      //   name: 'Custom Picking',
-      //   content: {
-      //     demo: 'CustomPickingDemo',
-      //     path: `${GITHUB_TREE}/examples/core/custom-picking/`
-      //   }
-      // },
       {
         name: 'Fragment',
         content: {
@@ -52,24 +45,13 @@ export const EXAMPLE_PAGES = [
           path: `${RAW_GITHUB}/examples/core/picking/`
         }
       },
-      // {
-      //   name: 'DeferredRendering',
-      //   content: {
-      //     demo: 'DeferredRenderingDemo'
-      //   }
-      // },
-      // {
-      //   name: 'Particles',
-      //   content: {
-      //     demo: 'ParticlesDemo'
-      //   }
-      // },
-      // {
-      //   name: 'Persistence',
-      //   content: {
-      //     demo: 'PersistenceDemo'
-      //   }
-      // },
+      {
+        name: 'Persistence',
+        content: {
+          demo: 'PersistenceDemo',
+          code: `${GITHUB_TREE}/examples/core/persistence`
+        }
+      },
       {
         name: 'Shadowmap',
         content: {
@@ -97,6 +79,27 @@ export const EXAMPLE_PAGES = [
           demo: 'DOFDemo',
           code: `${GITHUB_TREE}/examples/core/dof`,
           path: `${RAW_GITHUB}/examples/core/dof/`
+        }
+      },
+      {
+        name: 'GLTF',
+        content: {
+          demo: 'GLTFDemo',
+          code: `${GITHUB_TREE}/examples/core/gltf`
+        }
+      },
+      {
+        name: 'Quasicrystals',
+        content: {
+          demo: 'QuasicrystalsDemo',
+          code: `${GITHUB_TREE}/examples/core/quasicrystals`
+        }
+      },
+      {
+        name: 'Texture3D',
+        content: {
+          demo: 'Texture3DDemo',
+          code: `${GITHUB_TREE}/examples/core/texture-3d`
         }
       }
     ]
@@ -280,29 +283,33 @@ export const DOC_PAGES = [
       {
         name: 'Using with Node.js',
         content: 'get-started/using-with-node.md'
+      },
+      {
+        name: 'Using with other Frameworks',
+        content: 'get-started/using-with-other-frameworks.md'
       }
-      // {
-      //   name: 'Using with other Frameworks',
-      //   content: 'get-started/using-with-other-frameworks.md'
-      // }
     ]
   },
   {
     name: 'Developer Guide',
     children: [
       {
-        name: 'loaders.gl',
-        children: [
-          {
-            name: 'Overview',
-            content: 'developer-guide/loaders.gl/README.md'
-          },
-          {
-            name: 'Understanding Loaders',
-            content: 'developer-guide/loaders.gl/about-loaders.md'
-          }
-        ]
+        name: 'Overview',
+        content: 'developer-guide/README.md'
       },
+      // {
+      //   name: 'loaders.gl',
+      //   children: [
+      //     {
+      //       name: 'Overview',
+      //       content: 'developer-guide/loaders.gl/README.md'
+      //     },
+      //     {
+      //       name: 'Understanding Loaders',
+      //       content: 'developer-guide/loaders.gl/about-loaders.md'
+      //     }
+      //   ]
+      // },
       {
         name: 'Shadertools',
         children: [
@@ -329,282 +336,404 @@ export const DOC_PAGES = [
           {
             name: 'Writing GLSL Code',
             content: 'developer-guide/shadertools/writing-glsl-shaders.md'
+          },
+          {
+            name: 'Using GLSL 3.00 ES',
+            entry: 'developer-guide/using-glsl-300-es.md'
           }
         ]
       },
       {
-        name: 'Welcome',
-        content: 'developer-guide/README.md'
+        name: 'Using WebGL',
+        children: [
+          {
+            name: 'Drawing',
+            content: 'developer-guide/drawing.md'
+          },
+          {
+            name: 'Buffers',
+            content: 'developer-guide/buffers.md'
+          },
+          {
+            name: 'Stencil Buffers',
+            content: 'developer-guide/stencil-buffers.md'
+          },
+          {
+            name: 'Attributes',
+            content: 'developer-guide/attributes.md'
+          },
+          {
+            name: 'Accessors',
+            content: 'developer-guide/accessors.md'
+          },
+          {
+            name: 'Extensions',
+            content: 'developer-guide/extensions.md'
+          },
+          {
+            name: 'Transform Feedback',
+            content: 'developer-guide/transform-feedback.md'
+          }
+        ]
       },
       {
-        name: 'API Overview',
-        content: 'api-reference/README.md'
+        name: 'Higher Level APIs',
+        children: [
+          {
+            name: 'Multi-Pass Rendering',
+            content: 'developer-guide/multipass/README.md'
+          }
+        ]
       },
       {
-        name: 'Drawing',
-        content: 'developer-guide/drawing.md'
-      },
-      // {
-      //   name: 'Geometry',
-      //   content: 'developer-guide/geometry.md'
-      // },
-      {
-        name: 'Buffers',
-        content: 'developer-guide/buffers.md'
-      },
-      {
-        name: 'Accessors',
-        content: 'developer-guide/accessors.md'
-      },
-      {
-        name: 'Attributes',
-        content: 'developer-guide/attributes.md'
-      },
-      {
-        name: 'Portability',
-        content: 'developer-guide/portability.md'
-      },
-      {
-        name: 'Multi-Pass Rendering',
-        content: 'developer-guide/multipass/README.md'
-      },
-      {
-        name: 'Building Apps',
-        content: 'developer-guide/building-apps.md'
-      },
-      {
-        name: 'Debugging',
-        content: 'developer-guide/debugging.md'
+        name: 'Tools and Tips',
+        children: [
+          {
+            name: 'Building Apps',
+            content: 'developer-guide/building-apps.md'
+          },
+          {
+            name: 'Configuring',
+            content: 'docs/developer-guide/configuring.md'
+          },
+          {
+            name: 'Debugging',
+            content: 'developer-guide/debugging.md'
+          },
+          {
+            name: 'Portability',
+            content: 'developer-guide/portability.md'
+          },
+          {
+            name: 'Programs and shaders',
+            content: 'docs/developer-guide/programs-and-shaders.md'
+          }
+        ]
       }
-      // {
-      //   name: 'Extensions',
-      //   content: 'user-guide/extensions.md'
-      // },
-      // {
-      //   name: 'WebGL2',
-      //   content: 'user-guide/webgl2.md'
-      // },
-      // {
-      //   name: 'GPGPU Programming',
-      //   content: 'user-guide/gpgpu.md'
-      // }
     ]
   },
   {
     name: 'API Reference',
     children: [
       {
-        name: 'AnimationLoop',
-        content: 'api-reference/core/animation-loop.md'
+        name: 'API Overview',
+        children: [
+          {
+            name: 'API Structure',
+            content: 'api-reference/README.md'
+          }
+        ]
       },
       {
-        name: 'AnimationLoopProxy (Experimental)',
-        content: 'api-reference/core/animation-loop-proxy.md'
+        name: 'Core Classes',
+        children: [
+          {
+            name: 'AnimationLoop',
+            content: 'api-reference/core/animation-loop.md'
+          },
+          {
+            name: 'AnimationLoopProxy (Experimental)',
+            content: 'api-reference/core/animation-loop-proxy.md'
+          },
+          {
+            name: 'Geometry',
+            content: 'api-reference/core/geometry.md'
+          },
+          {
+            name: 'loadFile',
+            content: 'api-reference/core/load-file'
+          },
+          {
+            name: 'Transform',
+            content: 'api-reference/core/transform.md'
+          },
+          {
+            name: 'ShaderCache',
+            content: 'api-reference/core/shader-cache.md'
+          }
+        ]
       },
       {
-        name: 'Attribute',
-        content: 'api-reference/core/attribute.md'
+        name: 'Geometry Primitives',
+        children: [
+          {
+            name: 'Cone',
+            content: 'api-reference/core/geometries/cone-geometry.md'
+          },
+          {
+            name: 'Cube',
+            content: 'api-reference/core/geometries/cube-geometry.md'
+          },
+          {
+            name: 'Cylinder',
+            content: 'api-reference/core/geometries/cylinder-geometry.md'
+          },
+          {
+            name: 'IcoSphere',
+            content: 'api-reference/core/geometries/ico-sphere-geometry.md'
+          },
+          {
+            name: 'Plane',
+            content: 'api-reference/core/geometries/plane-geometry.md'
+          },
+          {
+            name: 'Sphere',
+            content: 'api-reference/core/geometries/sphere-geometry.md'
+          }
+        ]
       },
       {
-        name: 'Buffer',
-        content: 'api-reference/webgl/buffer.md'
+        name: 'Lights',
+        children: [
+          {
+            name: 'Ambient Light',
+            content: 'api-reference/core/lights/ambient-light.md'
+          },
+          {
+            name: 'Directional Light',
+            content: 'api-reference/core/lights/directional-light.md'
+          },
+          {
+            name: 'Point Light',
+            content: 'api-reference/core/lights/point-light.md'
+          }
+        ]
       },
       {
-        name: 'Copy and Blit',
-        content: 'api-reference/webgl/copy-and-blit.md'
+        name: 'Materials',
+        children: [
+          {
+            name: 'PhongMaterial',
+            content: 'api-reference/core/materials/phong-material.md'
+          },
+          {
+            name: 'PBRMaterial',
+            content: 'api-reference/core/materials/pbr-material.md'
+          }
+        ]
       },
       {
-        name: 'Framebuffer',
-        content: 'api-reference/webgl/framebuffer.md'
+        name: 'Multipass',
+        children: [
+          {
+            name: 'Canvas',
+            content: 'api-reference/core/multipass/canvas.md'
+          },
+          {
+            name: 'Clear pass',
+            content: 'api-reference/core/multipass/clear-pass.md'
+          },
+          {
+            name: 'Composite pass',
+            content: 'api-reference/core/multipass/composite-pass.md'
+          },
+          {
+            name: 'Copy pass',
+            content: 'api-reference/core/multipass/copy-pass.md'
+          },
+          {
+            name: 'Multi pass renderer',
+            content: 'api-reference/core/multipass/multi-pass-renderer.md'
+          },
+          {
+            name: 'Pass',
+            content: 'api-reference/core/multipass/pass.md'
+          },
+          {
+            name: 'Render pass',
+            content: 'api-reference/core/multipass/render-pass.md'
+          },
+          {
+            name: 'Shader module pass',
+            content: 'api-reference/core/multipass/shader-module-pass.md'
+          }
+        ]
       },
       {
-        name: 'Geometry',
-        content: 'api-reference/core/geometry.md'
-      },
-      // {
-      //   name: 'Group',
-      //   content: 'api-reference/core/group.md'
-      // },
-      {
-        name: 'Model',
-        content: 'api-reference/core/model.md'
-      },
-      {
-        name: 'Model:Cone',
-        content: 'api-reference/models/cone.md'
-      },
-      {
-        name: 'Model:Cube',
-        content: 'api-reference/models/cube.md'
+        name: 'Scenegraph',
+        children: [
+          {
+            name: 'ScenegraphNode',
+            content: 'api-reference/core/scenegraph/scenegraph-node.md'
+          },
+          {
+            name: 'ModelNode',
+            content: 'api-reference/core/scenegraph/model-node.md'
+          },
+          {
+            name: 'GroupNode',
+            content: 'api-reference/core/scenegraph/group-node.md'
+          }
+        ]
       },
       {
-        name: 'Model:Cylinder',
-        content: 'api-reference/models/cylinder.md'
+        name: 'Geometry Nodes',
+        children: [
+          {
+            name: 'Cone',
+            content: 'api-reference/core/scenegraph/geometries/cone.md'
+          },
+          {
+            name: 'Cube',
+            content: 'api-reference/core/scenegraph/geometries/cube.md'
+          },
+          {
+            name: 'Cylinder',
+            content: 'api-reference/core/scenegraph/geometries/cylinder.md'
+          },
+          {
+            name: 'IcoSphere',
+            content: 'api-reference/core/scenegraph/geometries/ico-sphere.md'
+          },
+          {
+            name: 'Plane',
+            content: 'api-reference/core/scenegraph/geometries/plane.md'
+          },
+          {
+            name: 'Sphere',
+            content: 'api-reference/core/scenegraph/geometries/sphere.md'
+          }
+        ]
       },
       {
-        name: 'Model:IcoSphere',
-        content: 'api-reference/models/ico-sphere.md'
+        name: 'WebGL2 Classes',
+        children: [
+          {
+            name: 'Accessor',
+            content: 'api-reference/webgl/accessor.md'
+          },
+          {
+            name: 'Buffer',
+            content: 'api-reference/webgl/buffer.md'
+          },
+          {
+            name: 'Program',
+            content: 'api-reference/webgl/program.md'
+          },
+          {
+            name: 'Query',
+            content: 'api-reference/webgl/query.md'
+          },
+          {
+            name: 'Readback, Copy and Blit',
+            content: 'api-reference/webgl/copy-and-blit.md'
+          },
+          {
+            name: 'Renderbuffer',
+            content: 'api-reference/webgl/renderbuffer.md'
+          },
+          {
+            name: 'Resource',
+            content: 'api-reference/webgl/resource.md'
+          },
+          {
+            name: 'Shader',
+            content: 'api-reference/webgl/shader.md'
+          },
+          {
+            name: 'Texture',
+            content: 'api-reference/webgl/texture.md'
+          },
+          {
+            name: 'Texture2D',
+            content: 'api-reference/webgl/texture-2d.md'
+          },
+          {
+            name: 'Texture3D',
+            content: 'api-reference/webgl/texture-3d.md'
+          },
+          {
+            name: 'TextureCube',
+            content: 'api-reference/webgl/texture-cube.md'
+          },
+          {
+            name: 'TransformFeedback',
+            content: 'api-reference/webgl/transform-feedback.md'
+          },
+          {
+            name: 'UniformBufferLayout',
+            content: 'api-reference/webgl/uniform-buffer-layout.md'
+          },
+          {
+            name: 'VertexArray',
+            content: 'api-reference/webgl/vertex-array.md'
+          },
+          {
+            name: 'VertexArrayObject',
+            content: 'api-reference/webgl/vertex-array-object.md'
+          },
+          {
+            name: 'createGLContext',
+            content: 'api-reference/webgl/context/context.md'
+          },
+          {
+            name: 'isWebGL2',
+            content: 'api-reference/webgl/context/is-webGL2.md'
+          },
+          {
+            name: 'hasFeature(s)',
+            content: 'api-reference/webgl/context/has-features.md'
+          },
+          {
+            name: 'getFeatures',
+            content: 'api-reference/webgl/context/get-features.md'
+          },
+          {
+            name: 'getContextInfo',
+            content: 'api-reference/webgl/context/get-context-info.md'
+          },
+          {
+            name: 'getContextLimits',
+            content: 'api-reference/webgl/context/get-context-limits.md'
+          },
+          {
+            name: 'getGLContextInfo',
+            content: 'api-reference/webgl/context/get-gl-context-info.md'
+          },
+          {
+            name: 'get|setParameter(s)',
+            content: 'api-reference/webgl/context/get-parameters.md'
+          },
+          {
+            name: 'resetParameters',
+            content: 'api-reference/webgl/context/reset-parameters.md'
+          },
+          {
+            name: 'withParameters',
+            content: 'api-reference/webgl/context/with-parameters.md'
+          }
+        ]
       },
       {
-        name: 'Model:Plane',
-        content: 'api-reference/models/plane.md'
+        name: 'Shadertools',
+        children: [
+          {
+            name: 'Shadertools:assembleShaders',
+            content: 'api-reference/shadertools/assemble-shaders.md'
+          },
+          {
+            name: 'GLSL Reference',
+            content: 'api-reference/shadertools/glsl-reference.md'
+          }
+        ]
       },
       {
-        name: 'Model:Sphere',
-        content: 'api-reference/models/sphere.md'
-      },
-      // {
-      //   name: 'Object3d',
-      //   content: 'api-reference/core/object-3d.md'
-      // },
-      // {
-      //   name: 'Picking',
-      //   content: 'api-reference/picking/picking.md'
-      // },
-      {
-        name: 'Program',
-        content: 'api-reference/webgl/program.md'
+        name: 'Shader Modules',
+        children: [
+          {
+            name: 'picking',
+            content: 'api-reference/shadertools/shader-module-picking.md'
+          }
+        ]
       },
       {
-        name: 'Query',
-        content: 'api-reference/webgl/query.md'
-      },
-      {
-        name: 'Renderbuffer',
-        content: 'api-reference/webgl/renderbuffer.md'
-      },
-      {
-        name: 'Resource',
-        content: 'api-reference/webgl/resource.md'
-      },
-      {
-        name: 'Sampler',
-        content: 'api-reference/webgl/sampler.md'
-      },
-      {
-        name: 'Shader',
-        content: 'api-reference/webgl/shader.md'
-      },
-      {
-        name: 'ShaderCache',
-        content: 'api-reference/core/shader-cache.md'
-      },
-      {
-        name: 'Texture',
-        content: 'api-reference/webgl/texture.md'
-      },
-      {
-        name: 'Texture2D',
-        content: 'api-reference/webgl/texture-2d.md'
-      },
-      {
-        name: 'Texture2DArray',
-        content: 'api-reference/webgl/texture-2d-array.md'
-      },
-      {
-        name: 'Texture3D',
-        content: 'api-reference/webgl/texture-3d.md'
-      },
-      {
-        name: 'TextureCube',
-        content: 'api-reference/webgl/texture-cube.md'
-      },
-      {
-        name: 'Transform (WebGL2)',
-        content: 'api-reference/core/transform.md'
-      },
-      {
-        name: 'TransformFeedback (WebGL2)',
-        content: 'api-reference/webgl/transform-feedback.md'
-      },
-      {
-        name: 'UniformBufferLayout',
-        content: 'api-reference/webgl/uniform-buffer-layout.md'
-      },
-      {
-        name: 'VertexArray',
-        content: 'api-reference/webgl/vertex-array.md'
-      },
-      {
-        name: 'createGLContext',
-        content: 'api-reference/webgl/context/context.md'
-      },
-      {
-        name: 'isWebGL2',
-        content: 'api-reference/webgl/context/is-webGL2.md'
-      },
-      {
-        name: 'hasFeature(s)',
-        content: 'api-reference/webgl/context/has-features.md'
-      },
-      {
-        name: 'getFeatures',
-        content: 'api-reference/webgl/context/get-features.md'
-      },
-      {
-        name: 'getContextInfo',
-        content: 'api-reference/webgl/context/get-context-info.md'
-      },
-      {
-        name: 'getContextLimits',
-        content: 'api-reference/webgl/context/get-context-limits.md'
-      },
-      {
-        name: 'get|setParameter(s)',
-        content: 'api-reference/webgl/context/get-parameters.md'
-      },
-      {
-        name: 'resetParameters',
-        content: 'api-reference/webgl/context/reset-parameters.md'
-      },
-      {
-        name: 'withParameters',
-        content: 'api-reference/webgl/context/with-parameters.md'
-      },
-      {
-        name: 'Shadertools:assembleShaders',
-        content: 'api-reference/shadertools/assemble-shaders.md'
-      },
-      {
-        name: 'Shader Module:picking',
-        content: 'api-reference/shadertools/shader-module-picking.md'
-      },
-      {
-        name: 'GLSL Reference',
-        content: 'api-reference/shadertools/glsl-reference.md'
-      }
-    ]
-  },
-  {
-    name: 'loaders.gl Reference',
-    children: [
-      {
-        name: 'loadFile',
-        content: 'api-reference/loader-api/load-file.md'
-      },
-      {
-        name: 'GLB Loader',
-        content: 'api-reference/loaders/glb-loader.md'
-      },
-      {
-        name: 'PLY Loader',
-        content: 'api-reference/loaders/ply-loader.md'
-      },
-      {
-        name: 'LAS Loader',
-        content: 'api-reference/loaders/las-loader.md'
-      },
-      {
-        name: 'PCD Loader',
-        content: 'api-reference/loaders/pcd-loader.md'
-      },
-      {
-        name: 'OBJ Loader',
-        content: 'api-reference/loaders/obj-loader.md'
-      },
-      {
-        name: 'KML Loader',
-        content: 'api-reference/loaders/kml-loader.md'
+        name: 'Addons',
+        children: [
+          {
+            name: 'Event',
+            content: 'api-reference/addons/event.md'
+          }
+        ]
       }
     ]
   }

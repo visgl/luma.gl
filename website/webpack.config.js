@@ -4,7 +4,9 @@ const webpack = require('webpack');
 const rootDir = join(__dirname, '..');
 const libSources = join(rootDir, 'src');
 
-const ALIASES = require('../aliases');
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+  root: resolve(__dirname, '..')
+}).aliases;
 
 // Otherwise modules imported from outside this directory does not compile
 // Seems to be a Babel bug

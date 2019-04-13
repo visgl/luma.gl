@@ -22,20 +22,8 @@ These docs are for
 <a href="https://github.com/uber/luma.gl/blob/6.0-release/docs">
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/blob/5.3-release/docs">
-  <img src="https://img.shields.io/badge/v-5.3-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/5.2-release/docs">
-  <img src="https://img.shields.io/badge/v-5.2-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/5.1-release/docs">
-  <img src="https://img.shields.io/badge/v-5.1-green.svg?style=flat-square" />
-</a>
 <a href="https://github.com/uber/luma.gl/blob/5.0-release/docs">
   <img src="https://img.shields.io/badge/v-5.0-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/4.1-release/docs">
-  <img src="https://img.shields.io/badge/v-4.1-green.svg?style=flat-square" />
 </a>
 <a href="https://github.com/uber/luma.gl/blob/4.0-release/docs">
   <img src="https://img.shields.io/badge/v-4.0-green.svg?style=flat-square" />
