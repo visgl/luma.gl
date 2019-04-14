@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
 /* global document, window */
 import {load} from '@loaders.gl/core';
+// eslint-disable-next-line import/no-unresolved
 import {DracoLoader} from '@loaders.gl/draco';
 import GL from '@luma.gl/constants';
 import {AnimationLoop, setParameters, clear, log, lumaStats} from '@luma.gl/core';
