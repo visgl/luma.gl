@@ -1,7 +1,41 @@
 /* global window */
-import {GLTFParser} from '@loaders.gl/gltf';
-import {DracoDecoder} from '@loaders.gl/draco';
+import {assert} from '@luma.gl/core';
+import {GLTFLoader} from '@loaders.gl/gltf';
 import createGLTFObjects from './create-gltf-objects';
+
+async function parse(data, options, uri, loader) {
+  assert(options.gl);
+
+  const gltf = await GLTFLoader.parse(data, {
+    ...options,
+    uri,
+    decompress: true
+  });
+
+  const gltfObjects = createGLTFObjects(options.gl, gltf, options);
+
+  if (options.waitForFullLoad) {
+    await waitForGLTFAssets(gltfObjects);
+  }
+
+  return Object.assign({gltf}, gltfObjects);
+}
+
+async function waitForGLTFAssets(gltfObjects) {
+  const remaining = [];
+
+  gltfObjects.scenes.forEach(scene => {
+    scene.traverse(model => {
+      Object.values(model.model.program.uniforms).forEach(uniform => {
+        if (uniform.loaded === false) {
+          remaining.push(uniform);
+        }
+      });
+    });
+  });
+
+  return await waitWhileCondition(() => remaining.some(uniform => !uniform.loaded));
+}
 
 async function waitWhileCondition(condition) {
   while (condition()) {
@@ -9,43 +43,8 @@ async function waitWhileCondition(condition) {
   }
 }
 
-async function parse(data, options, uri, loader) {
-  const gltfParser = new GLTFParser();
-  const gltf = await gltfParser.parse(data, {
-    uri,
-    decompress: true,
-    DracoDecoder
-  });
-
-  const gltfObjects = createGLTFObjects(options.gl, gltf, options);
-
-  if (options.waitForFullLoad) {
-    const remaining = [];
-
-    gltfObjects.scenes.forEach(scene => {
-      scene.traverse(model => {
-        Object.values(model.model.program.uniforms).forEach(uniform => {
-          if (uniform.loaded === false) {
-            remaining.push(uniform);
-          }
-        });
-      });
-    });
-
-    await waitWhileCondition(() => remaining.some(uniform => !uniform.loaded));
-  }
-
-  return Object.assign({gltfParser, gltf}, gltfObjects);
-}
-
-export const GLBScenegraphLoader = {
-  name: 'GLTF Binary Scenegraph Loader',
-  extension: 'glb',
-  parse
-};
-
-export const GLTFScenegraphLoader = {
+export default {
   name: 'GLTF Scenegraph Loader',
-  extension: 'gltf',
+  extensions: ['gltf, glb'],
   parse
 };

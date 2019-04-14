@@ -11,9 +11,8 @@ const CONFIG = {
 
   plugins: [new HtmlWebpackPlugin({title: 'glTF'})],
 
-  // TODO - fix in loaders.gl
   node: {
-    fs: false
+    fs: 'empty'
   }
 };
 
