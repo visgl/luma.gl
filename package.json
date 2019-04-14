@@ -35,7 +35,7 @@
     "bootstrap": "yarn && ocular-bootstrap",
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "ocular-clean",
-    "build": "ocular-clean && ocular-build",
+    "build": "ocular-clean && lerna run pre-build && ocular-build",
     "cover": "ocular-test cover",
     "lint": "ocular-lint",
     "publish": "ocular-publish",
@@ -46,7 +46,7 @@
     "perf": "ocular-test perf-browser",
     "bench": "ocular-test bench",
     "bench-browser": "ocular-test bench-browser",
-    "metrics": "ocular-metrics"
+    "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
     "@probe.gl/bench": "^3.0.1",
