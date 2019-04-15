@@ -30,13 +30,6 @@
     </div>
   </div>
   <div class="thumb">
-    <div class="bg-black" data-title="Picking">
-      <a href="#/examples/core-examples/picking">
-        <img src="images/example-picking.jpg" />
-      </a>
-    </div>
-  </div>
-  <div class="thumb">
     <div class="bg-black" data-title="Persistence">
       <a href="#/examples/core-examples/persistence">
         <img src="images/example-persistence.jpg" />
