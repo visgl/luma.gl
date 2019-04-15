@@ -30,9 +30,9 @@
     </div>
   </div>
   <div class="thumb">
-    <div class="bg-black" data-title="Picking">
-      <a href="#/examples/core-examples/picking">
-        <img src="images/example-picking.jpg" />
+    <div class="bg-black" data-title="Persistence">
+      <a href="#/examples/core-examples/persistence">
+        <img src="images/example-persistence.jpg" />
       </a>
     </div>
   </div>
@@ -51,9 +51,37 @@
     </div>
   </div>
   <div class="thumb">
+    <div class="bg-black" data-title="Transform">
+      <a href="#/examples/core-examples/transform">
+        <img src="images/example-transform.png" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
     <div class="bg-black" data-title="Depth of Field">
       <a href="#/examples/core-examples/depth-field-webgl-2">
         <img src="images/example-dof.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="GLTF">
+      <a href="#/examples/core-examples/gltf">
+        <img src="images/example-gltf.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Quasicrystals">
+      <a href="#/examples/core-examples/quasicrystals">
+        <img src="images/example-quasicrystals.jpg" />
+      </a>
+    </div>
+  </div>
+  <div class="thumb">
+    <div class="bg-black" data-title="Texture3D">
+      <a href="#/examples/core-examples/texture-3d">
+        <img src="images/example-texture3d.png" />
       </a>
     </div>
   </div>

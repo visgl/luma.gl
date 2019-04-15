@@ -38,14 +38,6 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
-        name: 'Picking',
-        content: {
-          demo: 'PickingDemo',
-          code: `${GITHUB_TREE}/examples/core/picking`,
-          path: `${RAW_GITHUB}/examples/core/picking/`
-        }
-      },
-      {
         name: 'Persistence',
         content: {
           demo: 'PersistenceDemo',
