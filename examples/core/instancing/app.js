@@ -173,6 +173,7 @@ class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl}) {
     this.cube.delete();
+    super.onFinalize();
   }
 }
 

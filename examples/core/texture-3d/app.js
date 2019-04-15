@@ -150,6 +150,7 @@ class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl, cloud}) {
     cloud.delete();
+    super.onFinalize();
   }
 }
 

@@ -236,6 +236,7 @@ export default class AnimationLoop {
   }
 
   onFinalize(...args) {
+    this._initialized = false;
     return this.props.onFinalize(...args);
   }
 

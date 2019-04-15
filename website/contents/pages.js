@@ -37,14 +37,14 @@ export const EXAMPLE_PAGES = [
           code: `${GITHUB_TREE}/examples/core/mandelbrot`
         }
       },
-      {
-        name: 'Picking',
-        content: {
-          demo: 'PickingDemo',
-          code: `${GITHUB_TREE}/examples/core/picking`,
-          path: `${RAW_GITHUB}/examples/core/picking/`
-        }
-      },
+      // {
+      //   name: 'Picking',
+      //   content: {
+      //     demo: 'PickingDemo',
+      //     code: `${GITHUB_TREE}/examples/core/picking`,
+      //     path: `${RAW_GITHUB}/examples/core/picking/`
+      //   }
+      // },
       {
         name: 'Persistence',
         content: {
@@ -244,7 +244,7 @@ export const DOC_PAGES = [
         content: 'README.md'
       },
       {
-        name: 'What\'s New',
+        name: "What's New",
         content: 'whats-new.md'
       },
       {

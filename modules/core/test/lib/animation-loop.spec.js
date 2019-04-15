@@ -146,7 +146,7 @@ test('core#AnimationLoop start followed immediately by stop() should stop', t =>
   }, 100);
 });
 
-test('core#AnimationLoop a start/stop/start should not call initialize again', t => {
+test('core#AnimationLoop a start/stop/start should call initialize again', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -166,7 +166,7 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
   setTimeout(() => animationLoop.stop(), 50);
   setTimeout(() => animationLoop.start(), 100);
   setTimeout(() => {
-    t.is(initializeCalled, 1, 'onInitialize called');
+    t.is(initializeCalled, 2, 'onInitialize called');
     t.end();
   }, 150);
 });
