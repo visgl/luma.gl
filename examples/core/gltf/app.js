@@ -18,9 +18,9 @@ const CUBE_FACE_TO_DIRECTION = {
 };
 
 export const GLTF_BASE_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/';
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/77f1a295e65c3a59c7131e6a15552c69817c9449/2.0/';
 const GLTF_ENV_BASE_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures';
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Viewer/1d5ffc81e0106d595602b371b7718e3601757453/textures/';
 const GLTF_MODEL_INDEX = `${GLTF_BASE_URL}model-index.json`;
 
 const GLTF_DEFAULT_MODEL = 'DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
