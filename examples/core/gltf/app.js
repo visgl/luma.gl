@@ -17,24 +17,16 @@ const CUBE_FACE_TO_DIRECTION = {
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: 'back'
 };
 
-export const GLTF_BASE_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/';
-const GLTF_ENV_BASE_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-WebGL-PBR/master/textures';
-const GLTF_MODEL_INDEX = `${GLTF_BASE_URL}model-index.json`;
+// Damaged helmet model used under creative commons: https://github.com/KhronosGroup/glTF-Sample-Models/tree/1ba47770292486e66ca1e1161857a6e5695c2631/2.0/DamagedHelmet
+// Papermill textures used under Apache 2.0: https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/e2d487693fa2e6148bd29d05bc82586f5a002a45/LICENSE.md
 
-const GLTF_DEFAULT_MODEL = 'DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
+const GLTF_BASE_URL =
+  'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf/';
+const GLTF_DEFAULT_MODEL = 'DamagedHelmet.glb';
 
 const INFO_HTML = `
 <p><b>glTF Loader</b>.</p>
 <p>Rendered using luma.gl.</p>
-<div>
-  Model
-  <select id="modelSelector">
-    <option value="${GLTF_DEFAULT_MODEL}">Default</option>
-  </select>
-  <br>
-</div>
 <div>
   Show
   <select id="showSelector">
@@ -171,27 +163,6 @@ async function loadGLTF(urlOrPromise, gl, options) {
   return {scenes, animator, gltf};
 }
 
-function loadModelList() {
-  return window.fetch(GLTF_MODEL_INDEX).then(res => res.json());
-}
-
-function addModelsToDropdown(models, modelDropdown) {
-  if (!modelDropdown) {
-    return;
-  }
-
-  const VARIANTS = ['glTF-Draco', 'glTF-Binary', 'glTF-Embedded', 'glTF'];
-
-  models.forEach(({name, variants}) => {
-    const variant = VARIANTS.find(v => variants[v]);
-
-    const option = document.createElement('option');
-    option.text = `${name} (${variant})`;
-    option.value = `${name}/${variant}/${variants[variant]}`;
-    modelDropdown.appendChild(option);
-  });
-}
-
 export class DemoApp {
   constructor({modelFile = null, initialZoom = 2} = {}) {
     this.scenes = [];
@@ -282,11 +253,9 @@ export class DemoApp {
 
     this.loadOptions = Object.assign({}, DEFAULT_OPTIONS);
     this.environment = new GLTFEnvironment(gl, {
-      brdfLutUrl: `${GLTF_ENV_BASE_URL}/brdfLUT.png`,
+      brdfLutUrl: `${GLTF_BASE_URL}/brdfLUT.png`,
       getTexUrl: (type, dir, mipLevel) =>
-        `${GLTF_ENV_BASE_URL}/papermill/${type}/${type}_${
-          CUBE_FACE_TO_DIRECTION[dir]
-        }_${mipLevel}.jpg`
+        `${GLTF_BASE_URL}/papermill/${type}/${type}_${CUBE_FACE_TO_DIRECTION[dir]}_${mipLevel}.jpg`
     });
     this.loadOptions.imageBasedLightingEnvironment = this.environment;
 
@@ -300,23 +269,10 @@ export class DemoApp {
       };
       loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
     } else {
-      const modelSelector = document.getElementById('modelSelector');
-      const modelUrl = (modelSelector && modelSelector.value) || GLTF_DEFAULT_MODEL;
+      const modelUrl = GLTF_DEFAULT_MODEL;
       loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result =>
         Object.assign(this, result)
       );
-
-      if (modelSelector) {
-        modelSelector.onchange = event => {
-          this._deleteScenes();
-          const modelUrl2 = (modelSelector && modelSelector.value) || GLTF_DEFAULT_MODEL;
-          loadGLTF(GLTF_BASE_URL + modelUrl2, this.gl, this.loadOptions).then(result =>
-            Object.assign(this, result)
-          );
-        };
-      }
-
-      loadModelList().then(models => addModelsToDropdown(models, modelSelector));
     }
 
     const showSelector = document.getElementById('showSelector');

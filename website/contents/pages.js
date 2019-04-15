@@ -77,7 +77,8 @@ export const EXAMPLE_PAGES = [
         name: 'GLTF',
         content: {
           demo: 'GLTFDemo',
-          code: `${GITHUB_TREE}/examples/core/gltf`
+          code: `${GITHUB_TREE}/examples/core/gltf`,
+          path: `${RAW_GITHUB}/examples/core/gltf/`
         }
       },
       {
@@ -236,7 +237,7 @@ export const DOC_PAGES = [
         content: 'README.md'
       },
       {
-        name: 'What\'s New',
+        name: "What's New",
         content: 'whats-new.md'
       },
       {

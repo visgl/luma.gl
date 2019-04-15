@@ -60,7 +60,7 @@ varying vec3 vPosition;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  gl_FragColor = textureCube(uTextureCube, normalize(vPosition));
+  gl_FragColor = textureCube(uTextureCube, normalize(vPosition) * vec3(-1.0, 1.0, 1.0));
 }
 `;
 
@@ -193,8 +193,8 @@ function getFaceTextures({size}) {
       : document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
-  for (const sign of signs) {
-    for (const axis of axes) {
+  for (const axis of axes) {
+    for (const sign of signs) {
       // reset canvas
       canvas.width = size;
       canvas.height = size;
@@ -207,10 +207,6 @@ function getFaceTextures({size}) {
 
 // Use canvas API to generate a texture for each side
 function drawTexture({ctx, sign, axis, size}) {
-  if (axis === 'x' || axis === 'z') {
-    ctx.translate(size, size);
-    ctx.rotate(Math.PI);
-  }
   const color = 'rgb(0,64,128)';
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, size, size);
