@@ -239,8 +239,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       colorBuffer,
       offsetBuffer,
       renderModel,
-      transform,
-      isDemoSupported
+      transform
     };
   }
   /* eslint-enable max-statements */
