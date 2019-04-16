@@ -1,5 +1,8 @@
 # 7.0 Pre-releases
 
+## v7.0.0-rc.2
+- Fix gltf loader (#1066)
+
 ## v7.0.0-beta.8
 - Fix isWebGL2 methods. (#1053)
 
