@@ -22,7 +22,7 @@ void main(void) {
 }
 `;
 
-export class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   onInitialize({gl}) {
     return {
       clipSpace: new ClipSpace(gl, {
@@ -42,5 +42,3 @@ export class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 }
-
-export const animationLoop = new AppAnimationLoop();

@@ -204,9 +204,8 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
   }
 }
 
-const animationLoop = new AppAnimationLoop();
-
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

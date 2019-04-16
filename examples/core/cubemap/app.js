@@ -176,8 +176,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-const animationLoop = new AppAnimationLoop();
-
 // Create six textures for the cube map sides
 function getFaceTextures({size}) {
   /* global document, OffscreenCanvas */
@@ -225,5 +223,6 @@ function drawTexture({ctx, sign, axis, size}) {
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

@@ -296,9 +296,8 @@ function getControlValues() {
   };
 }
 
-const animationLoop = new AppAnimationLoop();
-
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

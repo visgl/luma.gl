@@ -163,7 +163,7 @@ async function loadGLTF(urlOrPromise, gl, options) {
   return {scenes, animator, gltf};
 }
 
-class DemoApp extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -415,10 +415,8 @@ class DemoApp extends AnimationLoop {
   }
 }
 
-const animationLoop = new DemoApp();
-export default DemoApp;
-
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 
   const infoDiv = document.createElement('div');
