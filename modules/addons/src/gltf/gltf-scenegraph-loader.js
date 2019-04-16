@@ -45,6 +45,6 @@ async function waitWhileCondition(condition) {
 
 export default {
   name: 'GLTF Scenegraph Loader',
-  extensions: ['gltf, glb'],
+  extensions: ['gltf', 'glb'],
   parse
 };
