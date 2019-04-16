@@ -17,7 +17,7 @@ The classic WebGL Lessons in luma.gl
 let zoom = -15;
 let tilt = 90;
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -95,7 +95,6 @@ function addKeyboardHandler(canvas) {
 }
 
 const animationLoop = new AppAnimationLoop();
-export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

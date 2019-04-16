@@ -55,7 +55,7 @@ const squareGeometry = new Geometry({
   }
 });
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -107,7 +107,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-export default AppAnimationLoop;
 const animationLoop = new AppAnimationLoop();
 
 /* global window */

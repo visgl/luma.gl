@@ -84,7 +84,7 @@ const appState = {
   lastTime: 0
 };
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -205,7 +205,6 @@ function animate(state) {
 }
 
 const animationLoop = new AppAnimationLoop();
-export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

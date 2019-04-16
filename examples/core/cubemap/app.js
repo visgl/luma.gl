@@ -116,7 +116,7 @@ void main(void) {
   }
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -222,8 +222,6 @@ function drawTexture({ctx, sign, axis, size}) {
   ctx.strokeStyle = color;
   ctx.strokeRect(0, 0, size, size);
 }
-
-export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

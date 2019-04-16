@@ -89,7 +89,7 @@ function getZoomedCorners(zoomFactor = 1.01) {
   return corners;
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -118,9 +118,6 @@ class AppAnimationLoop extends AnimationLoop {
 }
 
 const animationLoop = new AppAnimationLoop();
-
-animationLoop.getInfo = () => INFO_HTML;
-export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

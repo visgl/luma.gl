@@ -99,7 +99,7 @@ let persistenceQuad;
 let sphere;
 
 /* eslint-disable max-statements */
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -265,7 +265,6 @@ class AppAnimationLoop extends AnimationLoop {
 }
 
 const animationLoop = new AppAnimationLoop();
-export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

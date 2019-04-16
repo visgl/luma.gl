@@ -185,7 +185,7 @@ const moonAngleDelta = 0.01; // * Math.PI / 180.0;
 const cubeAngleDelta = 0.01; // * Math.PI / 180.0;
 const laptopAngleDelta = -0.002; // * Math.PI / 180.0;
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -524,7 +524,6 @@ function parseJSON(file) {
 }
 
 const animationLoop = new AppAnimationLoop();
-export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

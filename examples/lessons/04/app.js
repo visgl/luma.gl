@@ -124,7 +124,7 @@ class ColoredCubeGeometry extends CubeGeometry {
   }
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
   static getInfo() {
     return INFO_HTML;
@@ -179,7 +179,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-export default AppAnimationLoop;
 const animationLoop = new AppAnimationLoop();
 
 /* global window */

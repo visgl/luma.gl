@@ -151,7 +151,7 @@ function getDevicePixelRatio() {
   return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
@@ -347,7 +347,6 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 }
 
 const animationLoop = new AppAnimationLoop();
-export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
