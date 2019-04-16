@@ -163,8 +163,13 @@ async function loadGLTF(urlOrPromise, gl, options) {
   return {scenes, animator, gltf};
 }
 
-export class DemoApp {
-  constructor({modelFile = null, initialZoom = 2} = {}) {
+class DemoApp extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+  constructor(opts = {}) {
+    super(opts);
+    const {modelFile = null, initialZoom = 2} = opts;
     this.scenes = [];
     this.animator = null;
     this.gl = null;
@@ -191,6 +196,7 @@ export class DemoApp {
 
     this.onInitialize = this.onInitialize.bind(this);
     this.onRender = this.onRender.bind(this);
+    this._setDisplay(new VRDisplay());
   }
 
   initalizeEventHandling(canvas) {
@@ -409,12 +415,8 @@ export class DemoApp {
   }
 }
 
-const animationLoop = new AnimationLoop(new DemoApp());
-
-animationLoop._setDisplay(new VRDisplay());
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+const animationLoop = new DemoApp();
+export default DemoApp;
 
 if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();

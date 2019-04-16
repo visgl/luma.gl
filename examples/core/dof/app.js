@@ -239,8 +239,12 @@ void main() {
 }
 `;
 
-export const animationLoopOptions = {
-  onInitialize: ({gl, _animationLoop}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({gl, _animationLoop}) {
     isDemoSupported = isWebGL2(gl);
     if (!isDemoSupported) {
       return {isDemoSupported};
@@ -421,9 +425,9 @@ export const animationLoopOptions = {
       dofUniforms,
       dofUniformsLayout
     };
-  },
+  }
 
-  onRender: ({
+  onRender({
     gl,
     tick,
     width,
@@ -438,7 +442,7 @@ export const animationLoopOptions = {
     dofProgram,
     dofUniforms,
     dofUniformsLayout
-  }) => {
+  }) {
     if (!isDemoSupported) {
       return;
     }
@@ -544,19 +548,18 @@ export const animationLoopOptions = {
 
     dofUniforms.unbind();
   }
-};
 
-const animationLoop = new AnimationLoop(animationLoopOptions);
+  isSupported() {
+    return isDemoSupported;
+  }
 
-animationLoop.getInfo = () => INFO_HTML;
-animationLoop.isSupported = () => {
-  return isDemoSupported;
-};
-animationLoop.getAltText = () => {
-  return ALT_TEXT;
-};
+  getAltText() {
+    return ALT_TEXT;
+  }
+}
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

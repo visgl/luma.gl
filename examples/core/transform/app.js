@@ -151,14 +151,14 @@ function getDevicePixelRatio() {
   return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 }
 
-const animationLoop = new AnimationLoop({
-  glOptions: {
-    webgl2: true,
-    webgl1: false
-  },
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
 
-  createFramebuffer: true,
-
+  constructor(props = {}) {
+    super(Object.assign(props, {createFramebuffer: true}));
+  }
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
     isDemoSupported = isWebGL2(gl);
@@ -242,7 +242,7 @@ const animationLoop = new AnimationLoop({
       transform,
       isDemoSupported
     };
-  },
+  }
   /* eslint-enable max-statements */
 
   onRender({
@@ -297,7 +297,7 @@ const animationLoop = new AnimationLoop({
 
       pickInstance(gl, pickX, pickY, renderModel, framebuffer);
     }
-  },
+  }
 
   onFinalize({renderModel, transform}) {
     if (renderModel) {
@@ -307,7 +307,15 @@ const animationLoop = new AnimationLoop({
       transform.delete();
     }
   }
-});
+
+  isSupported() {
+    return isDemoSupported;
+  }
+
+  getAltText() {
+    return ALT_TEXT;
+  }
+}
 
 function pickInstance(gl, pickX, pickY, model, framebuffer) {
   framebuffer.clear({color: true, depth: true});
@@ -338,15 +346,8 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
   }
 }
 
-animationLoop.getInfo = () => INFO_HTML;
-animationLoop.isSupported = () => {
-  return isDemoSupported;
-};
-animationLoop.getAltText = () => {
-  return ALT_TEXT;
-};
-
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

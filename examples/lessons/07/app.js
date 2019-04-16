@@ -181,8 +181,12 @@ let yRot = 0;
 let ySpeed = 0.0;
 let z = -5.0;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas);
 
     setParameters(gl, {
@@ -200,9 +204,9 @@ const animationLoop = new AnimationLoop({
         uniforms: {uSampler: new Texture2D(gl, 'crate.gif')}
       })
     };
-  },
+  }
 
-  onRender: ({gl, tick, aspect, cube}) => {
+  onRender({gl, tick, aspect, cube}) {
     xRot += xSpeed;
     yRot += ySpeed;
 
@@ -230,9 +234,7 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -266,7 +268,8 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

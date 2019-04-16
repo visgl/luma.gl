@@ -71,7 +71,11 @@ const appState = {
   moonRotationMatrix: new Matrix4()
 };
 
-const animationLoop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({canvas, gl}) {
     addMouseHandler(canvas);
 
@@ -95,7 +99,7 @@ const animationLoop = new AnimationLoop({
         }
       })
     };
-  },
+  }
 
   // eslint-disable-next-line complexity
   onRender({gl, tick, aspect, moon}) {
@@ -136,9 +140,7 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addMouseHandler(canvas) {
   addEvents(canvas, {
@@ -208,7 +210,8 @@ function getControlValues() {
   return {lighting, ambientColor, lightingDirection, directionalColor};
 }
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

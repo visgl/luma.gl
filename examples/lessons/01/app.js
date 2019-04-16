@@ -29,8 +29,15 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
-  debug: true,
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  constructor(props = {}) {
+    super(Object.assign(props, {debug: true}));
+  }
+
   onInitialize({gl, canvas, aspect}) {
     const TRIANGLE_VERTS = [0, 1, 0, -1, -1, 0, 1, -1, 0]; // eslint-disable-line
     const SQUARE_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line
@@ -91,11 +98,10 @@ const animationLoop = new AnimationLoop({
         vertexCount: 4
       });
   }
-});
+}
 
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+export default AppAnimationLoop;
+const animationLoop = new AppAnimationLoop();
 
 /* global window */
 if (!window.website) {

@@ -124,8 +124,11 @@ class ColoredCubeGeometry extends CubeGeometry {
   }
 }
 
-const animationLoop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
   // .context(() => createGLContext({canvas: 'lesson04-canvas'}))
+  static getInfo() {
+    return INFO_HTML;
+  }
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -146,7 +149,7 @@ const animationLoop = new AnimationLoop({
         geometry: new ColoredCubeGeometry()
       })
     };
-  },
+  }
   onRender({gl, tick, aspect, pyramid, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -174,11 +177,10 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
+}
 
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+export default AppAnimationLoop;
+const animationLoop = new AppAnimationLoop();
 
 /* global window */
 if (!window.website) {

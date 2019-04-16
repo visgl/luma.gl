@@ -59,6 +59,15 @@ void main(void) {
 }
 `;
 
+const INFO_HTML = `
+<p>
+  <a href="http://learningwebgl.com/blog/?p=1359" target="_blank">
+  Point lighting
+  </a>
+<p>
+  The classic WebGL Lessons in luma.gl
+`;
+
 const appState = {
   moonRotationMatrix: new Matrix4().rotateY(radians(180)).translate([5, 0, 0]),
   cubeRotationMatrix: new Matrix4().translate([5, 0, 0]),
@@ -76,7 +85,11 @@ function animateAppState() {
   appState.lastTime = timeNow;
 }
 
-const animationLoop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({canvas, gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -106,7 +119,7 @@ const animationLoop = new AnimationLoop({
         }
       })
     };
-  },
+  }
 
   onRender({gl, tick, aspect, moon, cube}) {
     // eslint-disable-line complexity
@@ -189,20 +202,10 @@ const animationLoop = new AnimationLoop({
 
     animateAppState();
   }
-});
+}
 
-animationLoop.getInfo = () => {
-  return `
-  <p>
-    <a href="http://learningwebgl.com/blog/?p=1359" target="_blank">
-    Point lighting
-    </a>
-  <p>
-    The classic WebGL Lessons in luma.gl
-    `;
-};
-
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

@@ -35,7 +35,10 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
   onInitialize({gl, aspect, canvas}) {
     const TRIANGLE_VERTS = [0, 1, 0, -1, -1, 0, 1, -1, 0];
     const TRIANGLE_COLORS = [1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1];
@@ -101,11 +104,10 @@ const animationLoop = new AnimationLoop({
         vertexCount: 4
       });
   }
-});
+}
 
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+export default AppAnimationLoop;
+const animationLoop = new AppAnimationLoop();
 
 /* global window */
 if (!window.website) {

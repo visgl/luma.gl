@@ -74,9 +74,12 @@ function cycleFilter(newFilter) {
   }
 }
 
-const animationLoop = new AnimationLoop({
-  // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
-  onInitialize: ({canvas, gl}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas);
 
     setParameters(gl, {
@@ -133,8 +136,8 @@ const animationLoop = new AnimationLoop({
         })
       }
     };
-  },
-  onRender: ({gl, tick, aspect, cube, textures}) => {
+  }
+  onRender({gl, tick, aspect, cube, textures}) {
     xRot += xSpeed;
     yRot += ySpeed;
 
@@ -169,9 +172,7 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -208,8 +209,8 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-export default animationLoop;
-
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 /* global window */
 if (!window.website) {
   animationLoop.start();

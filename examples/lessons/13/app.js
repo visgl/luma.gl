@@ -84,8 +84,12 @@ const appState = {
   lastTime: 0
 };
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -118,10 +122,10 @@ const animationLoop = new AnimationLoop({
     });
 
     return {moon, cube};
-  },
+  }
 
   // eslint-disable-next-line complexity
-  onRender: ({gl, tick, aspect, moon, cube}) => {
+  onRender({gl, tick, aspect, moon, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
@@ -187,9 +191,7 @@ const animationLoop = new AnimationLoop({
 
     animate(appState);
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function animate(state) {
   const timeNow = new Date().getTime();
@@ -202,7 +204,8 @@ function animate(state) {
   state.lastTime = timeNow;
 }
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

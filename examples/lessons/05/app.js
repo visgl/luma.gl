@@ -37,8 +37,11 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
-  // .context(() => createGLContext({canvas: 'lesson05-canvas'}))
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -58,7 +61,7 @@ const animationLoop = new AnimationLoop({
         }
       })
     };
-  },
+  }
   onRender({gl, tick, aspect, cube}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -72,11 +75,10 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
+}
 
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

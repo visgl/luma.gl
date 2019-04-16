@@ -89,8 +89,12 @@ function getZoomedCorners(zoomFactor = 1.01) {
   return corners;
 }
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({gl, _animationLoop}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({gl, _animationLoop}) {
     const cornersBuffer = new Buffer(gl, 32);
 
     return {
@@ -102,20 +106,21 @@ const animationLoop = new AnimationLoop({
       }),
       cornersBuffer
     };
-  },
+  }
 
-  onRender: ({gl, canvas, tick, clipSpace, cornersBuffer}) => {
+  onRender({gl, canvas, tick, clipSpace, cornersBuffer}) {
     gl.viewport(0, 0, Math.max(canvas.width, canvas.height), Math.max(canvas.width, canvas.height));
 
     cornersBuffer.setData(new Float32Array(getZoomedCorners()));
 
     clipSpace.draw();
   }
-});
+}
+
+const animationLoop = new AppAnimationLoop();
 
 animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

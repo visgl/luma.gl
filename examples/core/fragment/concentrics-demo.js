@@ -22,8 +22,8 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({gl}) => {
+export class AppAnimationLoop extends AnimationLoop {
+  onInitialize({gl}) {
     return {
       clipSpace: new ClipSpace(gl, {
         fs: CONCENTRICS_FRAGMENT_SHADER,
@@ -32,13 +32,15 @@ const animationLoop = new AnimationLoop({
         }
       })
     };
-  },
+  }
 
-  onRender: animationProps => {
+  onRender(animationProps) {
     animationProps.clipSpace.draw({animationProps});
   }
-});
 
-animationLoop.getInfo = () => INFO_HTML;
+  static getInfo() {
+    return INFO_HTML;
+  }
+}
 
-export default animationLoop;
+export const animationLoop = new AppAnimationLoop();

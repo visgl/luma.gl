@@ -42,8 +42,12 @@ const timeLine = {
 
 const currentlyPressedKeys = {};
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas, currentlyPressedKeys);
     addMouseHandler(canvas);
 
@@ -70,9 +74,9 @@ const animationLoop = new AnimationLoop({
       });
       return {world};
     });
-  },
+  }
 
-  onRender: ({gl, tick, aspect, world}) => {
+  onRender({gl, tick, aspect, world}) {
     // Update Camera Position
     const eyePos = [cameraInfo.xPos, cameraInfo.yPos, cameraInfo.zPos];
     const centerPos = new Matrix4()
@@ -100,9 +104,7 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -188,7 +190,8 @@ function animate() {
   timeLine.lastTime = timeNow;
 }
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {

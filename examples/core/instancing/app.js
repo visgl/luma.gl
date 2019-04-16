@@ -117,7 +117,7 @@ class AppAnimationLoop extends AnimationLoop {
     super({createFramebuffer: true, debug: true});
   }
 
-  getInfo() {
+  static getInfo() {
     return INFO_HTML;
   }
 
@@ -205,8 +205,7 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 }
 
 const animationLoop = new AppAnimationLoop();
-
-export default animationLoop;
+export default AppAnimationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {

@@ -86,105 +86,7 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true
-    });
-
-    const specularTexture = new Texture2D(gl, {
-      data: 'earth-specular.gif',
-      parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-        [gl.TEXTURE_WRAP_T]: gl.REPEAT
-      },
-      mipmap: true
-    });
-
-    const colorTexture = new Texture2D(gl, {
-      data: 'earth.jpg',
-      parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
-        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
-        [gl.TEXTURE_WRAP_T]: gl.REPEAT
-      },
-      mipmap: true
-    });
-
-    const earth = new Model(gl, {
-      geometry: new SphereGeometry({
-        nlat: 30,
-        nlong: 30,
-        radius: 13
-      }),
-      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
-      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
-      uniforms: Object.assign(
-        {
-          uColorMapSampler: colorTexture,
-          uSpecularMapSampler: specularTexture
-        },
-        EARTH_UNIFORMS,
-        LIGHT_UNIFORMS
-      )
-    });
-
-    return {earth, specularTexture, colorTexture};
-  },
-
-  onRender: ({gl, tick, aspect, earth}) => {
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
-
-    // set camera position
-    const uVMatrix = new Matrix4().lookAt({eye: [0, 0, 10], center: [0, 0, 0], up: [-0.5, 1, 0]});
-
-    const {
-      useLighting,
-      useSpecularMap,
-      useColorMap,
-      ambientColor,
-      pointLightingLocation,
-      pointLightSpecularColor,
-      pointLightingDiffuseColor
-    } = getControlValues();
-
-    earth.setUniforms({
-      uUseSpecularMap: useSpecularMap,
-      uUseColorMap: useColorMap,
-      uUseLighting: useLighting
-    });
-
-    if (useLighting) {
-      earth.setUniforms({
-        uAmbientColor: ambientColor,
-        uPointLightingLocation: pointLightingLocation,
-        uPointLightingSpecularColor: pointLightSpecularColor,
-        uPointLightingDiffuseColor: pointLightingDiffuseColor
-      });
-    }
-
-    const phi = tick * 0.01;
-    return earth
-      .setUniforms({
-        uMMatrix: new Matrix4().translate([0, 0, -40]).rotateY(phi),
-        uVMatrix,
-        uPMatrix: new Matrix4().perspective({
-          fov: (45 * Math.PI) / 180,
-          aspect,
-          near: 0.1,
-          far: 100
-        })
-      })
-      .draw();
-  }
-});
-
-animationLoop.getInfo = () => `
+const INFO_HTML = `
 <p>
   <a href="http://learningwebgl.com/blog/?p=1778" target="_blank">
     Specular maps
@@ -258,6 +160,108 @@ animationLoop.getInfo = () => `
   The classic WebGL Lessons in luma.gl
 `;
 
+class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
+    setParameters(gl, {
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      depthTest: true
+    });
+
+    const specularTexture = new Texture2D(gl, {
+      data: 'earth-specular.gif',
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT
+      },
+      mipmap: true
+    });
+
+    const colorTexture = new Texture2D(gl, {
+      data: 'earth.jpg',
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST,
+        [gl.TEXTURE_WRAP_S]: gl.REPEAT,
+        [gl.TEXTURE_WRAP_T]: gl.REPEAT
+      },
+      mipmap: true
+    });
+
+    const earth = new Model(gl, {
+      geometry: new SphereGeometry({
+        nlat: 30,
+        nlong: 30,
+        radius: 13
+      }),
+      fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
+      vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
+      uniforms: Object.assign(
+        {
+          uColorMapSampler: colorTexture,
+          uSpecularMapSampler: specularTexture
+        },
+        EARTH_UNIFORMS,
+        LIGHT_UNIFORMS
+      )
+    });
+
+    return {earth, specularTexture, colorTexture};
+  }
+
+  onRender({gl, tick, aspect, earth}) {
+    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+
+    // set camera position
+    const uVMatrix = new Matrix4().lookAt({eye: [0, 0, 10], center: [0, 0, 0], up: [-0.5, 1, 0]});
+
+    const {
+      useLighting,
+      useSpecularMap,
+      useColorMap,
+      ambientColor,
+      pointLightingLocation,
+      pointLightSpecularColor,
+      pointLightingDiffuseColor
+    } = getControlValues();
+
+    earth.setUniforms({
+      uUseSpecularMap: useSpecularMap,
+      uUseColorMap: useColorMap,
+      uUseLighting: useLighting
+    });
+
+    if (useLighting) {
+      earth.setUniforms({
+        uAmbientColor: ambientColor,
+        uPointLightingLocation: pointLightingLocation,
+        uPointLightingSpecularColor: pointLightSpecularColor,
+        uPointLightingDiffuseColor: pointLightingDiffuseColor
+      });
+    }
+
+    const phi = tick * 0.01;
+    return earth
+      .setUniforms({
+        uMMatrix: new Matrix4().translate([0, 0, -40]).rotateY(phi),
+        uVMatrix,
+        uPMatrix: new Matrix4().perspective({
+          fov: (45 * Math.PI) / 180,
+          aspect,
+          near: 0.1,
+          far: 100
+        })
+      })
+      .draw();
+  }
+}
+
 /* global document */
 const $id = id => document.getElementById(id);
 const $checked = id => ($id(id) ? $id(id).checked : true);
@@ -292,7 +296,8 @@ function getControlValues() {
   };
 }
 
-export default animationLoop;
+const animationLoop = new AppAnimationLoop();
+export default AppAnimationLoop;
 
 /* global window */
 if (!window.website) {
