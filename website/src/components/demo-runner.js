@@ -21,17 +21,15 @@ const defaultProps = {
 const DEFAULT_ALT_TEXT = 'THIS DEMO IS NOT SUPPORTED';
 
 class DemoRunner extends Component {
-
   componentDidMount() {
     const Demo = Demos[this.props.demo];
-    const demo = new Demo();
-    if (demo) {
-      demo.start({
+    currentDemo = new Demo();
+    if (currentDemo) {
+      currentDemo.start({
         canvas: this.props.canvas
         // debug: true
       });
     }
-    currentDemo = demo;
   }
 
   componentWillReceiveProps(nextProps) {
@@ -40,11 +38,10 @@ class DemoRunner extends Component {
         currentDemo.stop();
       }
       const Demo = Demos[nextProps.demo];
-      const demo = new Demo();
-      if (demo) {
-        demo.start({canvas: this.props.canvas});
+      currentDemo = new Demo();
+      if (currentDemo) {
+        currentDemo.start({canvas: this.props.canvas});
       }
-      currentDemo = demo;
     }
   }
 
