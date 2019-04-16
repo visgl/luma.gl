@@ -116,7 +116,11 @@ void main(void) {
   }
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({gl, canvas}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -172,10 +176,6 @@ class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-const animationLoop = new AppAnimationLoop();
-
-animationLoop.getInfo = () => INFO_HTML;
-
 // Create six textures for the cube map sides
 function getFaceTextures({size}) {
   /* global document, OffscreenCanvas */
@@ -221,9 +221,8 @@ function drawTexture({ctx, sign, axis, size}) {
   ctx.strokeRect(0, 0, size, size);
 }
 
-export default animationLoop;
-
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

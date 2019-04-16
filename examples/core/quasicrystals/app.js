@@ -8,10 +8,11 @@ const INFO_HTML = `
   Rendered by a custom fragment shader in a luma.gl <code>ClipSpace</code> model.
   A luma.gl port (of the PhiloGL port) of the work of
   <a href="http://www.jasondavies.com/animated-quasicrystals/">Jason Davies</a>
-  <form action="#">
-    <label for="wavefronts">Wavefronts </label>
-    <input id="wavefronts" type="range" value="7.0" min="1" max="10" step="0.1"/>
-  </form>
+</p>
+<div>
+  Wavefronts
+  <input id="wavefronts" type="range" value="7.0" min="1" max="10" step="0.1">
+</div>
 `;
 
 const FRAGMENT_SHADER = `\
@@ -49,30 +50,39 @@ void main(void) {
 }
 `;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({gl}) => {
-    return {clipSpace: new ClipSpace(gl, {fs: FRAGMENT_SHADER})};
-  },
+function readHTMLControls() {
+  /* global document */
+  if (typeof document === 'undefined') {
+    return {uRatio: 7.0};
+  }
+  const wavefronts = document.getElementById('wavefronts');
 
-  onRender: ({gl, canvas, time, clipSpace}) => {
+  const uRatio = wavefronts ? parseFloat(wavefronts.value) : 7.0;
+  return {uRatio};
+}
+
+export default class AppAnimationLoop extends AnimationLoop {
+  onInitialize({gl}) {
+    return {clipSpace: new ClipSpace(gl, {fs: FRAGMENT_SHADER})};
+  }
+
+  onRender({gl, canvas, time, clipSpace}) {
+    const {uRatio} = readHTMLControls();
     clipSpace.draw({
       uniforms: {
         uTime: (time / 600) % (Math.PI * 2),
-        uRatio: animationLoop.getHTMLControlValue('wavefronts', 7)
+        uRatio
       }
     });
   }
 
-  // onAddHTML() {
-  //   return INFO_HTML;
-  // }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+  static getInfo() {
+    return INFO_HTML;
+  }
+}
 
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

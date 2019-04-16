@@ -112,12 +112,12 @@ void main(void) {
   }
 }
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   constructor() {
     super({createFramebuffer: true, debug: true});
   }
 
-  getInfo() {
+  static getInfo() {
     return INFO_HTML;
   }
 
@@ -204,11 +204,8 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
   }
 }
 
-const animationLoop = new AppAnimationLoop();
-
-export default animationLoop;
-
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

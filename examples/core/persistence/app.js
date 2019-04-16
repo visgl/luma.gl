@@ -99,8 +99,12 @@ let persistenceQuad;
 let sphere;
 
 /* eslint-disable max-statements */
-const animationLoop = new AnimationLoop({
-  onInitialize: ({gl, width, height}) => {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({gl, width, height}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -179,9 +183,9 @@ const animationLoop = new AnimationLoop({
       pos = pos.normalize().scale(0.5);
       nPos.push(pos);
     }
-  },
+  }
 
-  onRender: ({gl, tick, width, height, aspect}) => {
+  onRender({gl, tick, width, height, aspect}) {
     mainFramebuffer.resize({width, height});
     pingpongFramebuffers[0].resize({width, height});
     pingpongFramebuffers[1].resize({width, height});
@@ -258,13 +262,10 @@ const animationLoop = new AnimationLoop({
       }
     });
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+}
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

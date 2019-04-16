@@ -1,4 +1,4 @@
-import {AnimationLoop, setParameters, Model, Texture3D, Buffer} from '@luma.gl/core';
+import {AnimationLoop, setParameters, Model, Texture3D, Buffer, isWebGL2} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -41,17 +41,23 @@ void main() {
 
 const NEAR = 0.1;
 const FAR = 10.0;
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
+let isDemoSupported = true;
 
-class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   constructor() {
     super({useDevicePixels: false});
   }
 
-  getInfo() {
-    return INFO_HTML;
-  }
-
   onInitialize({gl}) {
+    isDemoSupported = isWebGL2(gl);
+    if (!isDemoSupported) {
+      return {isDemoSupported};
+    }
     const noise = perlin({
       interpolation: lerp,
       permutation: shuffle(range(0, 255), Math.random)
@@ -135,6 +141,9 @@ class AppAnimationLoop extends AnimationLoop {
 
   onRender(animationProps) {
     const {gl, cloud, mvpMat, viewMat, tick, aspect} = animationProps;
+    if (!isDemoSupported) {
+      return;
+    }
 
     mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
 
@@ -151,13 +160,18 @@ class AppAnimationLoop extends AnimationLoop {
   onFinalize({gl, cloud}) {
     cloud.delete();
   }
+
+  isSupported() {
+    return isDemoSupported;
+  }
+
+  getAltText() {
+    return ALT_TEXT;
+  }
 }
-
-const animationLoop = new AppAnimationLoop();
-
-export default animationLoop;
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

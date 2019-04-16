@@ -55,7 +55,10 @@ const squareGeometry = new Geometry({
   }
 });
 
-const animationLoop = new AnimationLoop({
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -72,7 +75,7 @@ const animationLoop = new AnimationLoop({
       }),
       square: new ModelNode(gl, {geometry: squareGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER})
     };
-  },
+  }
 
   onRender(context) {
     const {gl, tick, aspect, triangle, square} = context;
@@ -102,13 +105,10 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+}
 
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

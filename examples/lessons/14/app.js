@@ -234,7 +234,11 @@ const LIGHT_UNIFORMS = {
   uPointLightingDiffuseColor: [0.8, 0.8, 0.8]
 };
 
-const animationLoop = new AnimationLoop({
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -286,7 +290,7 @@ const animationLoop = new AnimationLoop({
       });
       return {teapot, earthTexture, galvanizedTexture};
     });
-  },
+  }
 
   onRender({gl, tick, aspect, teapot, earthTexture, galvanizedTexture}) {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
@@ -345,13 +349,10 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+}
 
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

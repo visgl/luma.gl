@@ -94,9 +94,13 @@ void main(void) {
 //   })
 // };
 
-export const animationLoopOptions = {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   // gl: createGLContext()})
-  onInitialize: ({gl}) => {
+  onInitialize({gl}) {
     setParameters(gl, {
       depthTest: true,
       depthFunc: GL.LEQUAL
@@ -111,9 +115,9 @@ export const animationLoopOptions = {
         fs: SHADOWMAP_FRAGMENT
       })
     };
-  },
+  }
 
-  onRender: ({gl, tick, width, height, aspect, cube, shadow, fbShadow}) => {
+  onRender({gl, tick, width, height, aspect, cube, shadow, fbShadow}) {
     const model = new Matrix4()
       .translate([0, 6, 0])
       .rotateXYZ([tick * 0.01, 0, 0])
@@ -180,15 +184,10 @@ export const animationLoopOptions = {
       }
     });
   }
-};
-
-const animationLoop = new AnimationLoop(animationLoopOptions);
-
-animationLoop.getInfo = () => INFO_HTML;
-
-export default animationLoop;
+}
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

@@ -171,7 +171,11 @@ let yRot = 0;
 let ySpeed = 0.0;
 let cubePositionZ = -5.0;
 
-const animationLoop = new AnimationLoop({
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
   onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas);
 
@@ -198,7 +202,7 @@ const animationLoop = new AnimationLoop({
         uniforms: {uSampler: texture}
       })
     };
-  },
+  }
   onRender({gl, tick, aspect, cube}) {
     xRot += xSpeed;
     yRot += ySpeed;
@@ -248,9 +252,7 @@ const animationLoop = new AnimationLoop({
       })
       .draw();
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -284,9 +286,8 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-export default animationLoop;
-
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

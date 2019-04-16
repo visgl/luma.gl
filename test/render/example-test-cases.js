@@ -22,7 +22,8 @@ const examples = {
 };
 
 export default Object.keys(examples).map(name => {
-  const animationLoop = examples[name];
+  const AppAnimationLoop = examples[name];
+  const animationLoop = new AppAnimationLoop();
   return {
     name,
     onInitialize: params => {

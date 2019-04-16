@@ -185,8 +185,12 @@ const moonAngleDelta = 0.01; // * Math.PI / 180.0;
 const cubeAngleDelta = 0.01; // * Math.PI / 180.0;
 const laptopAngleDelta = -0.002; // * Math.PI / 180.0;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -257,28 +261,15 @@ const animationLoop = new AnimationLoop({
 
       return {moon, macbook, cube, laptopScreenModel, tCrate, tSquare};
     });
-  },
+  }
 
-  onRender: ({
-    gl,
-    tick,
-    aspect,
-    moon,
-    macbook,
-    cube,
-    laptopScreenModel,
-    canvas,
-    tCrate,
-    tSquare
-  }) => {
+  onRender({gl, tick, aspect, moon, macbook, cube, laptopScreenModel, canvas, tCrate, tSquare}) {
     generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare);
     if (!DISABLE_FB) {
       drawOuterScene(gl, tick, aspect, macbook, laptopScreenModel, canvas, tCrate);
     }
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function getLaptopUniforms() {
   return {
@@ -532,9 +523,8 @@ function parseJSON(file) {
   }
 }
 
-export default animationLoop;
-
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

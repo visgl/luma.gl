@@ -72,11 +72,10 @@ const POSITIONS = [
 
 let isDemoSupported = true;
 
-const animationLoop = new AnimationLoop({
-  glOptions: {
-    webgl2: true,
-    webgl1: false
-  },
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
 
   // eslint-disable-next-line
   onInitialize({canvas, gl}) {
@@ -124,7 +123,7 @@ const animationLoop = new AnimationLoop({
       transformModel,
       renderModel
     };
-  },
+  }
 
   onRender({gl, time, renderModel, transformModel}) {
     if (!isDemoSupported) {
@@ -136,19 +135,18 @@ const animationLoop = new AnimationLoop({
     renderModel.clear({color: [0.0, 0.0, 0.0, 1.0]});
     renderModel.draw();
   }
-});
 
-animationLoop.getInfo = () => INFO_HTML;
-animationLoop.isSupported = () => {
-  return isDemoSupported;
-};
-animationLoop.getAltText = () => {
-  return ALT_TEXT;
-};
+  isSupported() {
+    return isDemoSupported;
+  }
 
-export default animationLoop;
+  getAltText() {
+    return ALT_TEXT;
+  }
+}
 
 /* global window */
 if (typeof window !== 'undefined' && !window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

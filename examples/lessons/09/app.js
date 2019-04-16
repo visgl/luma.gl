@@ -17,8 +17,12 @@ The classic WebGL Lessons in luma.gl
 let zoom = -15;
 let tilt = 90;
 
-const animationLoop = new AnimationLoop({
-  onInitialize: ({canvas, gl}) => {
+export default class AppAnimationLoop extends AnimationLoop {
+  static getInfo() {
+    return INFO_HTML;
+  }
+
+  onInitialize({canvas, gl}) {
     addKeyboardHandler(canvas);
 
     setParameters(gl, {
@@ -43,8 +47,8 @@ const animationLoop = new AnimationLoop({
     }
 
     return {stars};
-  },
-  onRender: ({gl, tick, aspect, stars}) => {
+  }
+  onRender({gl, tick, aspect, stars}) {
     // Update Camera Position
     const radTilt = (tilt / 180) * Math.PI;
     const cameraY = Math.cos(radTilt) * zoom;
@@ -66,9 +70,7 @@ const animationLoop = new AnimationLoop({
       stars[i].animate();
     }
   }
-});
-
-animationLoop.getInfo = () => INFO_HTML;
+}
 
 function addKeyboardHandler(canvas) {
   addEvents(canvas, {
@@ -92,9 +94,8 @@ function addKeyboardHandler(canvas) {
   });
 }
 
-export default animationLoop;
-
 /* global window */
 if (!window.website) {
+  const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }
