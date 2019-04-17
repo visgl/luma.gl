@@ -158,7 +158,9 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onFinalize({gl, cloud}) {
-    cloud.delete();
+    if (cloud) {
+      cloud.delete();
+    }
   }
 
   isSupported() {

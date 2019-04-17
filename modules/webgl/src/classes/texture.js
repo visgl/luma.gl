@@ -147,7 +147,7 @@ export default class Texture extends Resource {
     };
     const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
 
-    if (this._isNPOT() && mipmaps) {
+    if (mipmaps && this._isNPOT()) {
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
 
@@ -696,7 +696,15 @@ export default class Texture extends Resource {
   }
 
   _isNPOT() {
-    return !isWebGL2(this.gl) && (!isPowerOfTwo(this.width) || !isPowerOfTwo(this.height));
+    if (isWebGL2(this.gl)) {
+      // NPOT restriction is only for WebGL1
+      return false;
+    }
+    // Width and height not available, consider it is not NPOT texture
+    if (!this.width || !this.height) {
+      return false;
+    }
+    return !isPowerOfTwo(this.width) || !isPowerOfTwo(this.height);
   }
 
   // Update default settings which are not supported by NPOT textures.
