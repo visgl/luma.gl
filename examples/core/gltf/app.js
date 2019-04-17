@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /* global document, window */
-import {load} from '@loaders.gl/core';
+import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {DracoLoader} from '@loaders.gl/draco';
 import GL from '@luma.gl/constants';
@@ -153,12 +153,13 @@ const DEFAULT_OPTIONS = {
 };
 
 async function loadGLTF(urlOrPromise, gl, options) {
-  const loadResult = await load(urlOrPromise, GLTFScenegraphLoader, {
+  const data = typeof urlOrPromise === 'string' ? window.fetch(urlOrPromise) : urlOrPromise;
+  const {gltf, scenes, animator} = await parse(data, GLTFScenegraphLoader, {
     ...options,
     gl,
     DracoLoader
   });
-  const {gltf, scenes, animator} = loadResult;
+
   scenes[0].traverse((node, {worldMatrix}) => log.info(4, 'Using model: ', node)());
   return {scenes, animator, gltf};
 }
