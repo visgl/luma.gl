@@ -258,28 +258,12 @@ export const DOC_PAGES = [
     name: 'Getting Started',
     children: [
       {
-        name: 'Overview',
-        content: 'get-started/README.md'
-      },
-      {
         name: 'Installation',
-        content: 'get-started/installation.md'
+        content: 'get-started/README.md'
       },
       {
         name: 'Examples',
         content: 'get-started/examples.md'
-      },
-      {
-        name: 'Using with deck.gl',
-        content: 'get-started/using-with-deckgl.md'
-      },
-      {
-        name: 'Using with Node.js',
-        content: 'get-started/using-with-node.md'
-      },
-      {
-        name: 'Using with other Frameworks',
-        content: 'get-started/using-with-other-frameworks.md'
       }
     ]
   },
