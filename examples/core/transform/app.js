@@ -25,7 +25,7 @@ const INFO_HTML = `
 /* eslint-enable max-len */
 
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const EMIT_VS = `\
 #version 300 es

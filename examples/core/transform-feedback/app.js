@@ -7,7 +7,7 @@ Gradient calculated on the GPU using <code>Transform Feedback</code>.
 </p>
 `;
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const FLOAT_SIZE = Float32Array.BYTES_PER_ELEMENT;
 
