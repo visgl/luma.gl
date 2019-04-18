@@ -2,7 +2,7 @@
 
 ## Version 7.0
 
-Target Date: April 15, 2019
+Date: April 19, 2019
 
 <table style="border: 0;" align="center">
   <tbody>
