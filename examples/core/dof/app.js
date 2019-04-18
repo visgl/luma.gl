@@ -41,7 +41,7 @@ post-processing effect.
 
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 let isDemoSupported = true;
 
 const QUAD_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line

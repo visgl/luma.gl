@@ -41,7 +41,7 @@ void main() {
 
 const NEAR = 0.1;
 const FAR = 10.0;
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BRWOSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 let isDemoSupported = true;
 
 export default class AppAnimationLoop extends AnimationLoop {
