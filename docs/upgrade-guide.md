@@ -381,7 +381,7 @@ v5.3 deprecates a number of symbols. It is recommended that you replace their us
 
 ### Running under Node.js
 
-[Using with Node](/docs/get-started/using-with-node.md): `"import luma.gl/headless"` is no longer required for luma.gl to load headless gl and the usage has been deprecated. You can now simply remove any such import statements from your code.
+[Using with Node](/docs/get-started/README.md): `"import luma.gl/headless"` is no longer required for luma.gl to load headless gl and the usage has been deprecated. You can now simply remove any such import statements from your code.
 
 
 ### Using Debug Contexts

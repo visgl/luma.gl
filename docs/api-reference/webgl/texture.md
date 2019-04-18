@@ -5,7 +5,6 @@ A `Texture` is a WebGL object that contains one or more images that all have the
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
 * [`Texture2D`](/docs/api-reference/webgl/texture-2d.md) - Contains a "normal" image texture
 * [`TextureCube`](/docs/api-reference/webgl/texture-cube.md) - Holds 6 textures representing sides of a cube.
-* [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md) (WebGL2) - Holds an array of textures
 * [`Texture3D`](/docs/api-reference/webgl/texture-3d.md) (WebGL2) - Holds a "stack" of textures which enables 3D interpolation.
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
@@ -69,13 +68,11 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 
 The texture class cannot be constructed directly. It is a base class that provides common methods the the concrete texture classes.
 * [`Texture2D`](/docs/api-reference/webgl/texture-2d.md),
-* [`TextureCube`](/docs/api-reference/webgl/texture-cube.md),
-* [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md) and
+* [`TextureCube`](/docs/api-reference/webgl/texture-cube.md) and
 * [`Texture3D`](/docs/api-reference/webgl/texture-3d.md).
 
 The constructors for these classes should be used to create textures. They constructors all take common parameters, many of which are specified in this document.
 
-* Sampling parameters are described in [`Sampler`](/docs/api-reference/webgl/sampler.md).
 * Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context/get-parameters.md).
 
 

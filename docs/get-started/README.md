@@ -31,10 +31,9 @@ The key to luma.gl's interoperability is careful state management. luma.gl will 
 
 luma.gl is designed to support isorender application, i.e. the library can be loaded without problems under Node.js, as long as the application doesn't actually try to use WebGL (i.e. create WebGL contexts). However when luma.gl discovers that headless gl is not available it tries to give a helpful message explaining the situation. This can safely be ignored.
 
-Remember that you **can** actually create WebGL contexts under Node.js, as long as the headless `gl` is installed in your `node_modules` directory. More information on [using luma.gl with Node.js](/docs/get-started/using-with-node.md).
+Remember that you **can** actually create WebGL contexts under Node.js, as long as the headless `gl` is installed in your `node_modules` directory. More information on [using luma.gl with Node.js](/docs/get-started/README.md).
 
 
 ## FAQ
 
 We occasionally mark github issues that contain answers to questions that pop up repeatedly with the [`FAQ` label](https://github.com/uber/luma.gl/issues?utf8=%E2%9C%93&q=label%3AFAQ+).
-
