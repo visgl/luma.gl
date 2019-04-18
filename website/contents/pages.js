@@ -388,11 +388,7 @@ export const DOC_PAGES = [
           },
           {
             name: 'loadFile',
-            content: 'api-reference/core/load-file.md'
-          },
-          {
-            name: 'Model',
-            content: 'api-reference/core/model.md'
+            content: 'api-reference/core/load-file'
           },
           {
             name: 'Transform',
@@ -558,10 +554,6 @@ export const DOC_PAGES = [
             content: 'api-reference/webgl/buffer.md'
           },
           {
-            name: 'Framebuffer',
-            content: 'api-reference/webgl/framebuffer.md'
-          },
-          {
             name: 'Program',
             content: 'api-reference/webgl/program.md'
           },
@@ -580,10 +572,6 @@ export const DOC_PAGES = [
           {
             name: 'Resource',
             content: 'api-reference/webgl/resource.md'
-          },
-          {
-            name: 'Sampler',
-            content: 'api-reference/webgl/shader.md'
           },
           {
             name: 'Shader',
@@ -702,7 +690,7 @@ export const DOC_PAGES = [
       {
         name: 'Development Environment',
         content: 'developer-guide/README.md'
-      }
+      },
     ]
   }
 ];
