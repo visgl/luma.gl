@@ -10,6 +10,15 @@ export default `\
 #extension GL_OES_standard_derivatives : enable
 #endif
 
+// WebGL 1.0 does not support non-constant in for loops
+// This provides an easy way to handle these cases
+// and still take advantage of WebGL 2.0
+#if (__VERSION__ < 300)
+  #define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL1COND; INCR)
+#else
+  #define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL2COND; INCR)
+#endif
+
 precision highp float;
 
 #ifdef USE_IBL
@@ -332,16 +341,20 @@ vec4 pbr_filterColor(vec4 colorUnused)
   color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
 
   // Apply directional light
-  for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
-    PBRInfo_setDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
-    color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
+  SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uDirectionalLightCount, i++) {
+    if (i < lighting_uDirectionalLightCount) {
+      PBRInfo_setDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
+      color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
+    }
   }
 
   // Apply point light
-  for(int i = 0; i < lighting_uPointLightCount; i++) {
-    PBRInfo_setPointLight(pbrInputs, lighting_uPointLight[i]);
-    float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
-    color += calculateFinalColor(pbrInputs, lighting_uPointLight[i].color / attenuation);
+  SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uPointLightCount, i++) {
+    if (i < lighting_uPointLightCount) {
+      PBRInfo_setPointLight(pbrInputs, lighting_uPointLight[i]);
+      float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
+      color += calculateFinalColor(pbrInputs, lighting_uPointLight[i].color / attenuation);
+    }
   }
 #endif
 

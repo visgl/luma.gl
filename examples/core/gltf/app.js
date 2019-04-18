@@ -169,19 +169,22 @@ export default class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
   constructor(opts = {}) {
-    super(opts);
+    super({
+      ...opts,
+      glOptions: {
+        // Use to test gltf with webgl 1.0 and 2.0
+        webgl1: true,
+        webgl2: true,
+        // alpha causes issues with some glTF demos
+        alpha: false
+      }
+    });
+
     const {modelFile = null, initialZoom = 2} = opts;
     this.scenes = [];
     this.animator = null;
     this.gl = null;
     this.modelFile = modelFile;
-
-    this.glOptions = {
-      // Use to test gltf with webgl 1.0 and 2.0
-      webgl2: true,
-      // alpha causes issues with some glTF demos
-      alpha: false
-    };
 
     this.mouse = {
       lastX: 0,
