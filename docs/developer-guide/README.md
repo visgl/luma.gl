@@ -1,10 +1,10 @@
-# Developer Guide
+# Development Environment
 
 To get started developing luma.gl, first make sure to install all dependancies from the repository root:
 
 `yarn bootstrap`
 
-luma.gl's source code is in the `modules/` directory. Development is mostly easily done by running the examples in development mode, e.g.:
+luma.gl's source code is in the `modules/` directory. Development is most easily done by running the examples in development mode, e.g.:
 
 ```
 cd examples/core/instancing

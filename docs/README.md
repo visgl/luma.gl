@@ -36,10 +36,10 @@ These docs are for
 
 ## Philosophy
 
-luma.gl's core philosophy is to expose the WebGL 2 API to developers, while providing fallbacks to WebGL 1 when necessary. The core use case for luma.gl is visualization of geospatial datasets, but its design is generic enough for more general usage. Key aspects of that philosphy are:
+luma.gl's core philosophy is to expose the WebGL 2 API to developers, while providing fallbacks to WebGL 1 when necessary. The core use case for luma.gl is visualization of large datasets, but its design is generic enough for more general usage. Key aspects of that philosphy are:
 
 - **A WebGL2-first API** - luma.gl enables applications to code using the latest WebGL2 APIs and write their shaders in the latest GLSL 3.00 ES syntax, and (as far as possible) transparently keeps your application backwards compatible with WebGL1 (using WebGL extensions, shader transpilation and other techniques).
-- **Expose WebGL2 to Programmers** - while many WebGL frameworks make efforts to hide and wrap the WebGL2 API, luma.gl intentionally exposes it, providing JavaScript classes corresponding to key WebGL objects defined in the [WebGL2 Specification](https://www.khronos.org/registry/webgl/specs/latest/2.0/).
+- **Expose WebGL2 to Programmers** - while many WebGL frameworks make efforts to hide and wrap the WebGL2 API, luma.gl intentionally exposes it, providing JavaScript classes corresponding to WebGL objects defined in the [WebGL2 Specification](https://www.khronos.org/registry/webgl/specs/latest/2.0/).
 - **Simplify use of the WebGL2 API** - Using the raw WebGL API is notoriously verbose and fiddly. luma.gl's classes provide the standard WebGL2 objects and methods, but take care of all the tedious default parameters and object bindings behind the scenes.
 - **Shader Programming** - luma.gl's shadertools is a GLSL module system that provides extensive facilities for developing, modularizing, debugging and profiling GLSL shaders.
 - **Performance First** - luma.gl has strong focus on performance, which includes a preference for providing APIs on lower abstraction levels than some popular WebGL frameworks, and an emphasis of using features such as *instanced rendering* for large data sets.
@@ -50,25 +50,28 @@ luma.gl's core philosophy is to expose the WebGL 2 API to developers, while prov
 
 luma.gl was originally created in late 2015 as a fork of [PhiloGL](https://github.com/philogb/philogl) to provide high performance WebGL rendering capability for [deck.gl](https://github.com/uber/deck.gl) - a 3D visualization framework for large scale data. As deck.gl became increasingly popluar, luma.gl saw heavier usage.
 
-WebGL 2 introduced several powerful features related to general purpose GPU usage (GPGPU) and reducing driver overhead for drawing massive numbers of objects, both of significant interest in the domain of geospatial visualization. luma.gl is build to expose these new features, while providing polyfills wherever possible when falling back to WebGL 1.
+WebGL 2 introduced several powerful features related to general purpose GPU usage (GPGPU) and reducing driver overhead for drawing massive numbers of objects, both of significant interest in the domain of geospatial visualization. luma.gl is built to expose these new features, while providing polyfills wherever possible when falling back to WebGL 1.
 
-Today, luma.gl is the core 3D rendering library in the vis.gl framework suite, but is designed so that it can be used on its own.
+Today, luma.gl is the core 3D rendering library in the [vis.gl](http://vis.gl/) framework suite.
 
 
 ## Comparison with other WebGL frameworks
 
-luma.gl is the natural choice if you are working with any of the WebGL-based frameworks in the vis.gl suite (deck.gl, kepler.gl etc).
-
-Otherwise, luma.gl is a strong choice for the following requirements:
+luma.gl is a strong choice if the following are priorities:
  * Low-level access to WebGL 2 constructs: programs, shaders, buffers, etc.
- * To program against the WebGL 2 API, with seamless fallbacks to WebGL 1 for functionality that can be polyfilled via, for example, extensions to the WebGL 1 API.
+ * Access to the WebGL 2 API, with seamless fallbacks to WebGL 1 for functionality that can be polyfilled via, for example, WebGL 1 extensions.
  * A focus on drawing large number of objects with minimal overhead.
 
-Note, however that luma.gl is not a game engine or a scenegraph library, and as such, does not provide higher-level abstractions like a transform hierarchy, materials, animation systems.
+Note, however that luma.gl is not a complete game engine or scenegraph library, as its priority is to provide low-level access to the GPU. There is some support for higher-level abstractions like a `Model` class and a scenegraph, but these are relatively thin layers over core WebGL constructs.
 
 For some powerful examples of what can be achieved with luma.gl, take a look at [deck.gl](http://deck.gl/#/), [kepler.gl](https://kepler.gl/) and [avs.auto](https://avs.auto/#/).
 
 
 ## Future
 
-The current development direction for luma.gl can be found in the roadmap page on our website.
+We share information about the direction of luma.gl in the following ways:
+
+* **[RFCs](https://github.com/uber/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
+* **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
+* **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
+* **[Github Issues](https://github.com/uber/luma.gl/issues)** - The traditional way to start or join a discussion.
