@@ -2,17 +2,17 @@
 
 ## Version 7.0
 
-Target Date: April 15, 2019
+Date: April 19, 2019
 
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/render-pass.gif" />
+        <img height=200 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/gltf-city.gif" />
         <p><i>glTF Support</i></p>
       </td>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/transform-texture.gif" />
+        <img height=200 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/gltf-pbr.gif" />
         <p><i>PBR (Physically Based Rendering)</i></p>
       </td>
     </tr>
@@ -22,7 +22,9 @@ Target Date: April 15, 2019
 
 ### glTF Support
 
-luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader](). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
+<img height=100 src="https://raw.github.com/uber-common/deck.gl-data/master/images/gltf.png" />
+
+luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/uber-web/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
 - **PBR Material Support**: PBR (Physically Based Rendering)
 - **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
@@ -31,7 +33,7 @@ luma.gl can now load glTF 2.0 files (with the help of the loaders.gl [GLTFLoader
 
 ### 3D File Format Loaders
 
-[loaders.gl]() is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (with an emphasizis on point cloud formats), including:
+[loaders.gl](https://uber-web.github.io/loaders.gl/) is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (with an emphasizis on point cloud formats), including:
 
 * Draco
 * PLY
@@ -61,7 +63,7 @@ A standardized set of light classes are now supported by multiple material model
 
 - Modularization of luma.gl is also continuing and in some cases rarely used code has been removed to reduce library bloat.
 
-* `@luma.gl/gpgpu` (NEW) - A new experimental submodule with GPGPU Algorithms and Utilities has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
+* ` @luma.gl/gpgpu` **<sup>New</sup>** - A new experimental submodule with GPGPU Algorithms and Utilities has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
 
 
 ### Performance Instrumentation
@@ -90,7 +92,7 @@ A set of global methods that perform copying data to and from `Framebuffer` obje
 
 ### WebVR Support (experimental)
 
-Just replace your `AnimationLoop` with `VRAnimationLoop` from `@luma.gl/addons`. Works with [Firefox Reality](https://mixedreality.mozilla.org/firefox-reality/).
+Just replace your `AnimationLoop` with `VRAnimationLoop` from ` @luma.gl/addons`. Works with [Firefox Reality](https://mixedreality.mozilla.org/firefox-reality/).
 
 
 
