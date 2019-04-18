@@ -421,6 +421,6 @@ if (typeof window !== 'undefined' && !window.website) {
   animationLoop.start();
 
   const infoDiv = document.createElement('div');
-  infoDiv.innerHTML = animationLoop.getInfo();
+  infoDiv.innerHTML = AppAnimationLoop.getInfo();
   document.body.appendChild(infoDiv);
 }
