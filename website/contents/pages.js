@@ -239,47 +239,6 @@ export const DOC_PAGES = [
       {
         name: "What's New",
         content: 'whats-new.md'
-      },
-      {
-        name: 'Roadmap',
-        content: 'roadmap.md'
-      },
-      {
-        name: 'Frequently Asked Questions',
-        content: 'FAQ.md'
-      },
-      {
-        name: 'Upgrade Guide',
-        content: 'upgrade-guide.md'
-      }
-    ]
-  },
-  {
-    name: 'Getting Started',
-    children: [
-      {
-        name: 'Overview',
-        content: 'get-started/README.md'
-      },
-      {
-        name: 'Installation',
-        content: 'get-started/installation.md'
-      },
-      {
-        name: 'Examples',
-        content: 'get-started/examples.md'
-      },
-      {
-        name: 'Using with deck.gl',
-        content: 'get-started/using-with-deckgl.md'
-      },
-      {
-        name: 'Using with Node.js',
-        content: 'get-started/using-with-node.md'
-      },
-      {
-        name: 'Using with other Frameworks',
-        content: 'get-started/using-with-other-frameworks.md'
       }
     ]
   },
@@ -287,22 +246,17 @@ export const DOC_PAGES = [
     name: 'Developer Guide',
     children: [
       {
-        name: 'Overview',
-        content: 'developer-guide/README.md'
+        name: 'Getting Started',
+        content: 'get-started/README.md'
       },
-      // {
-      //   name: 'loaders.gl',
-      //   children: [
-      //     {
-      //       name: 'Overview',
-      //       content: 'developer-guide/loaders.gl/README.md'
-      //     },
-      //     {
-      //       name: 'Understanding Loaders',
-      //       content: 'developer-guide/loaders.gl/about-loaders.md'
-      //     }
-      //   ]
-      // },
+      {
+        name: 'Examples',
+        content: 'get-started/examples.md'
+      },
+      {
+        name: 'Upgrade Guide',
+        content: 'upgrade-guide.md'
+      },
       {
         name: 'Shadertools',
         children: [
@@ -728,6 +682,15 @@ export const DOC_PAGES = [
           }
         ]
       }
+    ]
+  },
+  {
+    name: 'Contributor Guide',
+    children: [
+      {
+        name: 'Development Environment',
+        content: 'developer-guide/README.md'
+      },
     ]
   }
 ];
