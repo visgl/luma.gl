@@ -313,7 +313,7 @@ The impact of importing luma.gl on production application bundle sizes has been 
 
 ## Running luma.gl in Node.js
 
-Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/docs/get-started/using-with-node.md) and the Upgrade Guide.
+Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/docs/get-started/README.md) and the Upgrade Guide.
 
 
 ## Debug Mode Changes
@@ -405,7 +405,7 @@ A major release that brings full WebGL2 support to luma.gl, as well as adding su
 
 luma.gl now exposes the complete WebGL2 APIs:
 
-* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
+* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
 * Other existing WebGL classes with new functionalites under WebGL2 have been updated.
 * Add new WebGL2 texture formats and types support, including floating point textures, and multiple render targets.
 

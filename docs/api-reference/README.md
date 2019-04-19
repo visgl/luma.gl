@@ -15,8 +15,8 @@ luma.gl contains a lot of classes and functions that might make new users wonder
 
 ## WebGL Classes
 
-The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4, 
-After creating a context, perhaps with luma.gl's [`createGLContext`](/docs/api-reference/webgl/context/context.md) function, you have can start instantiating luma.gl's WebGL2 classes: [`Buffer`](/docs/api-reference/webgl/buffer.md), [`FrameBuffer`](/docs/api-reference/webgl/framebuffer.md), [`RenderBuffer`](/docs/api-reference/webgl/renderbuffer.md), [`Program`](/docs/api-reference/webgl/program.md), [`Shader`](/docs/api-reference/webgl/shader.md), [`Texture2D`](/docs/api-reference/webgl/texture-2d.md), [`Texture2DArray`](/docs/api-reference/webgl/texture-2d-array.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), [`TextureCube`](/docs/api-reference/webgl/texture-cube.md), [`Query`](/docs/api-reference/webgl/query.md), [`Sampler`](/docs/api-reference/webgl/sampler.md), [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md), [`VertexArrayObject`](/docs/api-reference/webgl/vertex-array.md)
+The heart of luma.gl is the `webgl` module, a set of JavaScript class wrappers covering all WebGL objects. From luma.gl v4,
+After creating a context, perhaps with luma.gl's [`createGLContext`](/docs/api-reference/webgl/context/context.md) function, you have can start instantiating luma.gl's WebGL2 classes: [`Buffer`](/docs/api-reference/webgl/buffer.md), [`FrameBuffer`](/docs/api-reference/webgl/framebuffer.md), [`RenderBuffer`](/docs/api-reference/webgl/renderbuffer.md), [`Program`](/docs/api-reference/webgl/program.md), [`Shader`](/docs/api-reference/webgl/shader.md), [`Texture2D`](/docs/api-reference/webgl/texture-2d.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), [`TextureCube`](/docs/api-reference/webgl/texture-cube.md), [`Query`](/docs/api-reference/webgl/query.md), [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md), [`VertexArrayObject`](/docs/api-reference/webgl/vertex-array.md)
 
 ## Core Classes
 
@@ -37,7 +37,7 @@ A `Geometry` object holds a set of attributes (native JavaScript arrays) (vertic
 
 There are several basic geometry classes predefined in luma.gl: `Geometry`, `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They are all subclasses of the `Geometry` class.
 
-Corresponding to those geometry objects, luma.gl also provides commonly used [`Model`](/docs/api-reference/core/model.md) classes that consist of basic geometries. These include [`Cone`](/docs/api-reference/core/model.md), [`Cube`](/docs/api-reference/models/cube.md), [`Cylinder`](/docs/api-reference/models/cylinder.md), [`IcoSphere`](/docs/api-reference/models/ico-sphere.md), [`Plane`](/docs/api-reference/models/plane.md) and [`Sphere`](/docs/api-reference/models/sphere.md), etc...
+Corresponding to those geometry objects, luma.gl also provides commonly used [`Model`](/docs/api-reference/core/model.md) classes that consist of basic geometries. These include [`Cone`](/docs/api-reference/core/scenegraph/geometries/cone.md), [`Cube`](/docs/api-reference/core/scenegraph/geometries/cube.md), [`Cylinder`](/docs/api-reference/core/scenegraph/geometries/cylinder.md), [`IcoSphere`](/docs/api-reference/core/scenegraph/geometries/ico-sphere.md), [`Plane`](/docs/api-reference/core/scenegraph/geometries/plane.md) and [`Sphere`](/docs/api-reference/core/scenegraph/geometries/sphere.md), etc...
 
 
 Users are encouraged to write their own geometries and models and luma.gl could include them in its future releases.
