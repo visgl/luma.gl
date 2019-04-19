@@ -1,5 +1,5 @@
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/master';
-const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.0-release';
+const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/7.0-release';
 
 export const EXAMPLE_PAGES = [
   {

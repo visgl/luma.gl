@@ -12,7 +12,7 @@ const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of mai
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
 
 // A minimal shader injection/templating system.
-// RFC: https://github.com/uber/luma.gl/blob/master/dev-docs/RFCs/v6.0/shader-injection-rfc.md
+// RFC: https://github.com/uber/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-injection-rfc.md
 /* eslint-disable complexity */
 export default function injectShader(source, type, inject, injectStandardStubs) {
   const isVertex = type === VERTEX_SHADER;
