@@ -46,6 +46,15 @@ const COMMON_CONFIG = {
       {
         test: /\.(eot|svg|ttf|woff|woff2|gif|jpe?g|png)$/,
         loader: 'url-loader'
+      },
+      {
+        // Compile ES2015 using babel
+        // draco3d contains untrasnspiled ES6, which
+        // causes the website to break in IE
+        test: /draco3d.js$/,
+        loader: 'babel-loader',
+        options: BABEL_CONFIG,
+        include: [resolve('..'), libSources],
       }
     ]
   },
