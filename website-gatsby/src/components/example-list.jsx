@@ -32,7 +32,7 @@ import Lesson14 from '../../../examples/lessons/14/app';
 import Lesson15 from '../../../examples/lessons/15/app';
 import Lesson16 from '../../../examples/lessons/16/app';
 
-// export const examplesPath = 'https://github.com/uber/luma.gl/tree/master/examples';
+// export const examplesPath = 'https://github.com/uber/luma.gl/tree/7.0-release/examples';
 
 export default {
   Instancing: {app: Instancing, path: 'examples/core/instancing/'},
