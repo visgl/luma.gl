@@ -26,12 +26,12 @@ Date: April 19, 2019
 
 luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/uber-web/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
-- **PBR Material Support**: PBR (Physically Based Rendering)
-- **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects
+- **Physically-based Material Support**: Ensures that PBR models display as intended.
+- **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects.
 - **Geometry glTF Support**: The `Geometry` class and scene graph support has been overhauled to conform to glTF conventions, simplifying loading and manipulation of glTF formatted data.
 
 
-### 3D File Format Loaders
+### loaders.gl Integration
 
 [loaders.gl](https://uber-web.github.io/loaders.gl/) is a major new companion framework to luma.gl that provides a suite of 3D file format loaders (with an emphasizis on point cloud formats), including:
 
@@ -41,17 +41,17 @@ luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://
 * LAS/LAZ
 * OBJ
 
-These loaders, while technically independent of luma.gl, return parsed data in a format that can be passed directly to luma.gl classes like `Geometry` and `Model`.
+loaders.gl output can now be passed directly into luma.gl classes like `Geometry` and `Model` making it straightforward to use luma.gl with a wide variety of file formats.
 
 
-### "Asynchronous" Textures
+### Asynchronous Textures
 
-The image data needed by the `Texture` classes can now be supplied using URLs (`string` or `Promise`). This can removes the need for applications to use callbacks etc to load textures.
+Image data for `Texture` classes can now be supplied using URLs or `Promise`s, making it unnecessary for applications to handle image loading themselves.
 
 ```js
-new Texture2D(gl, 'path/to/my/image.png'); // Texture2D will load the image and becomses 'renderable' once it loads
+new Texture2D(gl, 'path/to/my/image.png'); // Texture2D will load the image and becomes 'renderable' once it loads
 // or
-new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a Promise
+new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a promise
 ```
 
 ### Lighting
@@ -61,17 +61,17 @@ A standardized set of light classes are now supported by multiple material model
 
 ### Modularization Improvements
 
-- Modularization of luma.gl is also continuing and in some cases rarely used code has been removed to reduce library bloat.
+- luma.gl has been restructured to make it easier for applications to select and import only parts of the library that they use.
 
 * ` @luma.gl/gpgpu` **<sup>New</sup>** - A new experimental submodule with GPGPU Algorithms and Utilities has been added, containing a growing collection of GPU accelerated algorithms and utility methods.
 
 
 ### Performance Instrumentation
 
-Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory usage are being collected. The data is exposed as a proble.gl `Stats` object. The new probe.gl [`StatsWidget`]() can be used to present data in applications.
+Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory usage are being collected. The data is exposed as a [probe.gl](https://uber-web.github.io/probe.gl/#/) [`Stats`](https://uber-web.github.io/probe.gl/#/documentation/api-reference-logging/stats) object. The new probe.gl [StatsWidget](https://uber-web.github.io/probe.gl/#/documentation/api-reference-widgets/statswidget) can be used to present data in applications.
 
 
-### Accessor Object Improvements
+### Interleaved Attributes
 
 To improve support for interleaved attributes and glTF model loading, accessor objecs and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
 
