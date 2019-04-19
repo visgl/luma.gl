@@ -70,17 +70,21 @@ const POSITIONS = [
   -1.0, -1.0, 0.0, 1.0
 ];
 
-let isDemoSupported = true;
-
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
 
+  constructor(props = {}) {
+    super(props);
+    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
+    this.isDemoSupported = true;
+  }
+
   // eslint-disable-next-line
   onInitialize({canvas, gl}) {
-    isDemoSupported = isWebGL2(gl);
-    if (!isDemoSupported) {
+    this.isDemoSupported = isWebGL2(gl);
+    if (!this.isDemoSupported) {
       log.error(ALT_TEXT)();
       return {};
     }
@@ -126,7 +130,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender({gl, time, renderModel, transformModel}) {
-    if (!isDemoSupported) {
+    if (!this.isDemoSupported) {
       return;
     }
     transformModel.transform({unbindModels: [renderModel]});
@@ -137,7 +141,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   isSupported() {
-    return isDemoSupported;
+    return this.isDemoSupported;
   }
 
   getAltText() {

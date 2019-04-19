@@ -89,7 +89,7 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
-        name: 'Texture3D',
+        name: 'Texture3D  (WebGL2)',
         content: {
           demo: 'Texture3DDemo',
           code: `${GITHUB_TREE}/examples/core/texture-3d`
