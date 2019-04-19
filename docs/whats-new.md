@@ -46,16 +46,12 @@ loaders.gl output can now be passed directly into luma.gl classes like `Geometry
 
 ### Asynchronous Textures
 
-Image data for `Texture` classes can now be supplied using URLs or `Promise`s, making unnecessary for applications to handle loading themselves.
+Image data for `Texture` classes can now be supplied using URLs or `Promise`s, making it unnecessary for applications to handle image loading themselves.
 
 ```js
 new Texture2D(gl, 'path/to/my/image.png'); // Texture2D will load the image and becomes 'renderable' once it loads
 // or
-new Texture2D(gl, new Promise((resolve) => { // Equivalent to above
-  const img = new Image();
-  img.onload = () => resolve(img);
-  img.src = 'path/to/my/image.png';
-}));
+new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a promise
 ```
 
 ### Lighting
@@ -72,7 +68,7 @@ A standardized set of light classes are now supported by multiple material model
 
 ### Performance Instrumentation
 
-Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory usage are being collected. The data is exposed as a [probe.gl](https://uber-web.github.io/probe.gl/#/) `Stats` object. The new probe.gl StatsWidget can be used to present data in applications.
+Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory usage are being collected. The data is exposed as a [probe.gl](https://uber-web.github.io/probe.gl/#/) [`Stats`](https://uber-web.github.io/probe.gl/#/documentation/api-reference-logging/stats) object. The new probe.gl [StatsWidget](https://uber-web.github.io/probe.gl/#/documentation/api-reference-widgets/statswidget) can be used to present data in applications.
 
 
 ### Interleaved Attributes
