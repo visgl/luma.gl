@@ -42,21 +42,22 @@ void main() {
 const NEAR = 0.1;
 const FAR = 10.0;
 const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
-let isDemoSupported = true;
 
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
 
-  constructor() {
-    super({useDevicePixels: false});
+  constructor(props = {}) {
+    super(Object.assign(props, {useDevicePixels: true}));
+    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
+    this.isDemoSupported = true;
   }
 
   onInitialize({gl}) {
-    isDemoSupported = isWebGL2(gl);
-    if (!isDemoSupported) {
-      return {isDemoSupported};
+    this.isDemoSupported = isWebGL2(gl);
+    if (!this.isDemoSupported) {
+      return {};
     }
     const noise = perlin({
       interpolation: lerp,
@@ -141,7 +142,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   onRender(animationProps) {
     const {gl, cloud, mvpMat, viewMat, tick, aspect} = animationProps;
-    if (!isDemoSupported) {
+    if (!this.isDemoSupported) {
       return;
     }
 
@@ -164,7 +165,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   isSupported() {
-    return isDemoSupported;
+    return this.isDemoSupported;
   }
 
   getAltText() {

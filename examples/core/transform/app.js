@@ -134,8 +134,6 @@ void main()
 const NUM_INSTANCES = 1000;
 const log = new Log({id: 'transform'}).enable();
 
-let isDemoSupported = true;
-
 // TODO PIKCING TEMPORARILY DISABLED
 let pickPosition = [0, 0];
 
@@ -158,13 +156,15 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   constructor(props = {}) {
     super(Object.assign(props, {createFramebuffer: true}));
+    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
+    this.isDemoSupported = true;
   }
   /* eslint-disable max-statements */
   onInitialize({canvas, gl}) {
-    isDemoSupported = isWebGL2(gl);
-    if (!isDemoSupported) {
+    this.isDemoSupported = isWebGL2(gl);
+    if (!this.isDemoSupported) {
       log.error(ALT_TEXT)();
-      return {isDemoSupported};
+      return {};
     }
     gl.canvas.addEventListener('mousemove', mousemove);
     gl.canvas.addEventListener('mouseleave', mouseleave);
@@ -256,7 +256,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     useDevicePixels,
     time
   }) {
-    if (!isDemoSupported) {
+    if (!this.isDemoSupported) {
       return;
     }
     transform.run({
@@ -308,7 +308,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   isSupported() {
-    return isDemoSupported;
+    return this.isDemoSupported;
   }
 
   getAltText() {
