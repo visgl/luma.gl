@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/shadertools",
-  "version": "7.0.0-rc.3",
+  "version": "7.0.0",
   "description": "Shader module system for luma.gl",
   "license": "MIT",
   "repository": {
