@@ -2,3 +2,5 @@
 workers/
 *.min.js
 wip/
+encoding.js
+encoding-indexes.js
