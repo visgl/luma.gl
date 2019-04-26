@@ -167,7 +167,6 @@ export default class AnimationLoop {
   // Redraw now
   redraw() {
     this._beginTimers();
-    this.timeline.update(Date.now() - this.animationProps.startTime);
 
     this._setupFrame();
     this._updateCallbackData();
@@ -373,8 +372,10 @@ export default class AnimationLoop {
 
     this.animationProps.needsRedraw = this.needsRedraw;
 
-    // Increment tick
+    // Update time properties
     this.animationProps.engineTime = Date.now() - this.animationProps.startTime;
+
+    this.timeline.update(this.animationProps.engineTime);
     this.animationProps.tick = Math.floor((this.animationProps.time / 1000) * 60);
     this.animationProps.tock++;
 
