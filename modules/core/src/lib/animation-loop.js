@@ -13,6 +13,7 @@ import {
   // TODO - remove dependency on framebuffer (bundle size impact)
   Framebuffer
 } from '@luma.gl/webgl';
+import {Timeline} from './timeline';
 
 import {log, assert} from '../utils';
 
@@ -65,6 +66,7 @@ export default class AnimationLoop {
     // state
     this.gl = gl;
     this.needsRedraw = null;
+    this.timeline = new Timeline();
     this.stats = stats;
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
@@ -136,6 +138,7 @@ export default class AnimationLoop {
         this._startEventHandling();
 
         // Initialize the callback data
+        this.timeline.play();
         this._initializeCallbackData();
         this._updateCallbackData();
 
@@ -338,12 +341,15 @@ export default class AnimationLoop {
 
       // Animation props
       startTime: Date.now(),
-      time: 0,
+      engineTime: 0,
       tick: 0,
       tock: 0,
-      // canvas
+
+      // Timeline time for back compatibility
+      time: 0,
 
       // Experimental
+      _timeline: this.timeline,
       _loop: this,
       _animationLoop: this,
       _mousePosition: null // Event props
@@ -366,10 +372,15 @@ export default class AnimationLoop {
 
     this.animationProps.needsRedraw = this.needsRedraw;
 
-    // Increment tick
-    this.animationProps.time = Date.now() - this.animationProps.startTime;
+    // Update time properties
+    this.animationProps.engineTime = Date.now() - this.animationProps.startTime;
+
+    this.timeline.update(this.animationProps.engineTime);
     this.animationProps.tick = Math.floor((this.animationProps.time / 1000) * 60);
     this.animationProps.tock++;
+
+    // For back compatibility
+    this.animationProps.time = this.timeline.getTime();
 
     // experimental
     this.animationProps._offScreen = this.offScreen;

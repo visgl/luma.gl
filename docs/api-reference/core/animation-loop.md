@@ -146,10 +146,14 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 | `framebuffer` | `FrameBuffer` | Availabel if `createFrameBuffer: true` was passed to the constructor. |
 | `_mousePosition` | `[x, y]` or `null` | (**experimental**) Current mouse position over the canvas. |
 | `_offScreen` | `Boolean` | (**experimental**) If the animation loop is rendering to an OffscreenCanvas. |
+| `_timeline` | `Trimeline` | (**experimental**) `Timeline` object tracking the animation timeline and channels. |
 | ...       | Any fields in the object that was returned by the `onInitialize` method. |
 
 ### Frame timers
 * The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
+
+### Timeline
+* Animations should update base on the timeline time tracking in the member property `timeline` (rather than using `tick` or `Data.now`). The `timeline` time can be played, paused and rewound and supports multiple time channels elapsing at different rates. See `Timeline` class documentation for details.
 
 ## Remarks
 

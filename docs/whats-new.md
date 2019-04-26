@@ -1,5 +1,36 @@
 # What's New
 
+## Version 7.1
+
+### Animation Timeline Management
+
+The new `Timeline` class supports easily managing multiple timelines elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. These can be accessed via the new `AnimationLoop.timeline` property.
+
+```js
+const timeline = animationLoop.timeline;
+const channel1 = timeline.addChannel({
+  rate: 0.5,        // Runs at 1/2 base time
+  duration: 4000,
+  wrapMode: "loop"  // Loop every 4s
+});
+const channel2 = timeline.addChannel({
+  rate: 2,          // Runs at twice base time
+  duration: 1000,
+  wrapMode: "clamp" // Stop playing at 1s
+});
+
+timeline.play();        // Play with the render loop
+timeline.pause();       // Don't play with the render loop
+timeline.setTime(1500); // Set to specific time
+
+model.setUniforms({
+  uValue1: timeline.getTime();                 // Use base timeline time
+  uValue2: timeline.getChannelTime(channel1);  // Use times from channels
+  uValue3: timeline.getChannelTime(channel2);
+});
+```
+
+
 ## Version 7.0
 
 Date: April 19, 2019

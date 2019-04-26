@@ -170,3 +170,64 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
     t.end();
   }, 150);
 });
+
+test('core#AnimationLoop timeline', t => {
+  if (typeof document === 'undefined') {
+    t.comment('browser-only test');
+    t.end();
+    return;
+  }
+
+  const {gl} = fixture;
+
+  const animationLoop = new AnimationLoop({
+    gl
+  });
+  const timeline = animationLoop.timeline;
+  timeline.pause();
+  timeline.reset();
+  t.is(timeline.getTime(), 0, 'Timeline was reset');
+  const channel1 = timeline.addChannel({
+    rate: 2,
+    duration: 4,
+    wrapMode: 'loop'
+  });
+  const channel2 = timeline.addChannel({
+    rate: 3,
+    duration: 4,
+    wrapMode: 'clamp'
+  });
+  t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 initialized');
+  t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 initialized');
+
+  timeline.setTime(2);
+  t.is(timeline.getTime(), 2, 'Timeline was set');
+  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 was set');
+  t.is(timeline.getChannelTime(channel2), 6, 'Channel 2 was set');
+
+  timeline.setTime(6);
+  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 looped');
+  t.is(timeline.getChannelTime(channel2), 12, 'Channel 2 clamped');
+
+  timeline.reset();
+  t.is(timeline.getTime(), 0, 'Timeline was reset');
+  timeline.play();
+  timeline.update(4);
+  timeline.update(6);
+  t.is(timeline.getTime(), 2, 'Timeline was set on update while playing');
+  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 was set on update while playing');
+  t.is(timeline.getChannelTime(channel2), 6, 'Channel 2 was set on update while playing');
+
+  timeline.reset();
+  t.is(timeline.getTime(), 0, 'Timeline was reset');
+  timeline.pause();
+  timeline.update(4);
+  timeline.update(6);
+  t.is(timeline.getTime(), 0, 'Timeline was not set on update while paused');
+  t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 was not set on update while paused');
+  t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 was not set on update while paused');
+
+  timeline.removeChannel(channel1);
+  t.is(timeline.getChannelTime(channel1), -1, 'Channel 1 was deleted');
+  t.end();
+});
