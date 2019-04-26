@@ -1,3 +1,5 @@
+/* global document */
+
 import {
   AnimationLoop,
   setParameters,
@@ -17,6 +19,33 @@ Cube drawn with <b>instanced rendering</b>.
 A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
+
+const controls = document.createElement('div');
+controls.innerHTML = `
+  <button id="play">Play</button>
+  <button id="pause">Pause</button>
+  <button id="reset">Reset</button><BR>
+  Time: <input type="range" id="time" min="0" max="10000" step="1"><BR>
+  Transform rate: <input type="range" id="xformRate" min="0" max="0.1" step="0.005" value="0"><BR>
+  Eye X rate: <input type="range" id="eyeXRate" min="0" max="0.005" step="0.00001" value="0"><BR>
+  Eye Y rate: <input type="range" id="eyeYRate" min="0" max="0.005" step="0.00001" value="0"><BR>
+  Eye Z rate: <input type="range" id="eyeZRate" min="0" max="0.005" step="0.00001" value="0"><BR>
+`;
+controls.style.position = 'absolute';
+controls.style.top = '10px';
+controls.style.left = '10px';
+controls.style.background = 'white';
+controls.style.padding = '0.5em';
+document.body.appendChild(controls);
+
+const playButton = document.getElementById('play');
+const pauseButton = document.getElementById('pause');
+const resetButton = document.getElementById('reset');
+const timeSlider = document.getElementById('time');
+const xformSlider = document.getElementById('xformRate');
+const eyeXSlider = document.getElementById('eyeXRate');
+const eyeYSlider = document.getElementById('eyeYRate');
+const eyeZSlider = document.getElementById('eyeZRate');
 
 function getDevicePixelRatio() {
   return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
@@ -129,20 +158,70 @@ export default class AppAnimationLoop extends AnimationLoop {
       depthFunc: gl.LEQUAL
     });
 
+    const timeRate = 0.01;
+    const eyeXRate = 0.0003;
+    const eyeYRate = 0.0004;
+    const eyeZRate = 0.0002;
+
     const timeChannel = this.timeline.addChannel({
-      rate: 0.01
+      rate: timeRate
     });
 
     const eyeXChannel = this.timeline.addChannel({
-      rate: 0.0003
+      rate: eyeXRate
     });
 
     const eyeYChannel = this.timeline.addChannel({
-      rate: 0.0004
+      rate: eyeYRate
     });
 
     const eyeZChannel = this.timeline.addChannel({
-      rate: 0.0002
+      rate: eyeZRate
+    });
+
+    playButton.addEventListener('click', () => {
+      this.timeline.play();
+    });
+
+    pauseButton.addEventListener('click', () => {
+      this.timeline.pause();
+    });
+
+    resetButton.addEventListener('click', () => {
+      this.timeline.reset();
+    });
+
+    timeSlider.addEventListener('input', event => {
+      this.timeline.setTime(parseFloat(event.target.value));
+    });
+
+    xformSlider.value = timeRate;
+    eyeXSlider.value = eyeXRate;
+    eyeYSlider.value = eyeYRate;
+    eyeZSlider.value = eyeZRate;
+
+    xformSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(timeChannel, {
+        rate: parseFloat(event.target.value)
+      });
+    });
+
+    eyeXSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(eyeXChannel, {
+        rate: parseFloat(event.target.value)
+      });
+    });
+
+    eyeYSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(eyeYChannel, {
+        rate: parseFloat(event.target.value)
+      });
+    });
+
+    eyeZSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(eyeZChannel, {
+        rate: parseFloat(event.target.value)
+      });
     });
 
     this.cube = new InstancedCube(gl, {
@@ -170,6 +249,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   onRender(animationProps) {
     const {gl} = animationProps;
+    timeSlider.value = this.timeline.getTime();
 
     const {framebuffer, useDevicePixels, _mousePosition} = animationProps;
 
