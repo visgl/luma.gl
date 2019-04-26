@@ -70,7 +70,7 @@ export class Timeline {
   }
 
   reset() {
-    this.time = 0;
+    this.setTime(0);
   }
 
   update(engineTime) {
