@@ -226,4 +226,5 @@ test('core#AnimationLoop timeline', t => {
   t.is(timeline.getTime(), 0, 'Timeline was not set on update while paused');
   t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 was not set on update while paused');
   t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 was not set on update while paused');
+  t.end();
 });
