@@ -171,7 +171,7 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
   }, 150);
 });
 
-test.only('core#AnimationLoop timeline', t => {
+test('core#AnimationLoop timeline', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
