@@ -5,12 +5,14 @@ const WRAP_MAP = {
   clamp: WRAP_CLAMP
 };
 
+let ids = 0;
+
 export class Timeline {
   constructor() {
     this.time = 0;
     this.duration = Number.POSITIVE_INFINITY;
     this.wrapMode = WRAP_LOOP;
-    this.channels = [];
+    this.channels = new Map();
     this.rate = 1;
     this.playing = false;
     this.lastEngineTime = -1;
@@ -19,7 +21,7 @@ export class Timeline {
   addChannel(props) {
     const {duration = Number.POSITIVE_INFINITY, wrapMode = 'loop', rate = 1} = props;
 
-    const handle = this.channels.length;
+    const handle = ids++;
     const channel = {
       time: 0,
       duration: duration * rate,
@@ -27,9 +29,13 @@ export class Timeline {
       rate
     };
     this._setChannelTime(channel, this.time);
-    this.channels.push(channel);
+    this.channels.set(handle, channel);
 
     return handle;
+  }
+
+  removeChannel(handle) {
+    this.channels.delete(handle);
   }
 
   getTime() {
@@ -37,18 +43,29 @@ export class Timeline {
   }
 
   getChannelTime(handle) {
-    return this.channels[handle].time;
+    const channel = this.channels.get(handle);
+
+    if (channel === undefined) {
+      return -1;
+    }
+
+    return channel.time;
   }
 
   setTime(time) {
     this._setChannelTime(this, time);
-    for (let i = 0, len = this.channels.length; i < len; ++i) {
-      this._setChannelTime(this.channels[i], this.time);
+    const channels = this.channels.values();
+    for (const channel of channels) {
+      this._setChannelTime(channel, this.time);
     }
   }
 
   setChannelProps(handle, props = {}) {
-    const channel = this.channels[handle];
+    const channel = this.channels.get(handle);
+
+    if (channel === undefined) {
+      return;
+    }
 
     const {duration = channel.duration, rate = channel.rate} = props;
 

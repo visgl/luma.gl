@@ -171,7 +171,7 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
   }, 150);
 });
 
-test('core#AnimationLoop timeline', t => {
+test.only('core#AnimationLoop timeline', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
     t.end();
@@ -226,5 +226,8 @@ test('core#AnimationLoop timeline', t => {
   t.is(timeline.getTime(), 0, 'Timeline was not set on update while paused');
   t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 was not set on update while paused');
   t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 was not set on update while paused');
+
+  timeline.removeChannel(channel1);
+  t.is(timeline.getChannelTime(channel1), -1, 'Channel 1 was deleted');
   t.end();
 });
