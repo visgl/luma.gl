@@ -27,6 +27,10 @@ controls.innerHTML = `
   <button id="reset">Reset</button><BR>
   Time: <input type="range" id="time" min="0" max="10000" step="1"><BR>
   Transform rate: <input type="range" id="xformRate" min="0" max="0.1" step="0.005" value="0"><BR>
+  Transform start: <input type="range" id="xformStart" min="0" max="3000" step="1" value="0"><BR>
+  Transform end: <input type="range" id="xformEnd" min="5000" max="20000" step="1" value="20000"><BR>
+  Transform clamp start: <input type="checkbox" id="xform-clamp-start"><BR>
+  Transform clamp end: <input type="checkbox" id="xform-clamp-end"><BR>
   Eye X rate: <input type="range" id="eyeXRate" min="0" max="0.005" step="0.00001" value="0"><BR>
   Eye Y rate: <input type="range" id="eyeYRate" min="0" max="0.005" step="0.00001" value="0"><BR>
   Eye Z rate: <input type="range" id="eyeZRate" min="0" max="0.005" step="0.00001" value="0"><BR>
@@ -43,6 +47,10 @@ const pauseButton = document.getElementById('pause');
 const resetButton = document.getElementById('reset');
 const timeSlider = document.getElementById('time');
 const xformSlider = document.getElementById('xformRate');
+const xformStartSlider = document.getElementById('xformStart');
+const xformEndSlider = document.getElementById('xformEnd');
+const xformClampStart = document.getElementById('xform-clamp-start');
+const xformClampEnd = document.getElementById('xform-clamp-end');
 const eyeXSlider = document.getElementById('eyeXRate');
 const eyeYSlider = document.getElementById('eyeYRate');
 const eyeZSlider = document.getElementById('eyeZRate');
@@ -203,6 +211,30 @@ export default class AppAnimationLoop extends AnimationLoop {
     xformSlider.addEventListener('input', event => {
       this.timeline.setChannelProps(timeChannel, {
         rate: parseFloat(event.target.value)
+      });
+    });
+
+    xformStartSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(timeChannel, {
+        start: parseFloat(event.target.value)
+      });
+    });
+
+    xformEndSlider.addEventListener('input', event => {
+      this.timeline.setChannelProps(timeChannel, {
+        end: parseFloat(event.target.value)
+      });
+    });
+
+    xformClampStart.addEventListener('click', event => {
+      this.timeline.setChannelProps(timeChannel, {
+        wrapStart: event.target.checked ? 'clamp' : 'loop'
+      });
+    });
+
+    xformClampEnd.addEventListener('click', event => {
+      this.timeline.setChannelProps(timeChannel, {
+        wrapEnd: event.target.checked ? 'clamp' : 'loop'
       });
     });
 

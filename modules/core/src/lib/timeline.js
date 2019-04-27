@@ -10,8 +10,10 @@ let ids = 0;
 export class Timeline {
   constructor() {
     this.time = 0;
-    this.duration = Number.POSITIVE_INFINITY;
-    this.wrapMode = WRAP_LOOP;
+    this.start = 0;
+    this.end = Number.POSITIVE_INFINITY;
+    this.wrapStart = WRAP_LOOP;
+    this.wrapEnd = WRAP_LOOP;
     this.channels = new Map();
     this.rate = 1;
     this.playing = false;
@@ -19,13 +21,21 @@ export class Timeline {
   }
 
   addChannel(props) {
-    const {duration = Number.POSITIVE_INFINITY, wrapMode = 'loop', rate = 1} = props;
+    const {
+      start = 0,
+      end = Number.POSITIVE_INFINITY,
+      wrapStart = 'loop',
+      wrapEnd = 'loop',
+      rate = 1
+    } = props;
 
     const handle = ids++;
     const channel = {
       time: 0,
-      duration: duration * rate,
-      wrapMode: WRAP_MAP[wrapMode],
+      start,
+      end,
+      wrapStart: WRAP_MAP[wrapStart] || WRAP_LOOP,
+      wrapEnd: WRAP_MAP[wrapEnd] || WRAP_LOOP,
       rate
     };
     this._setChannelTime(channel, this.time);
@@ -67,13 +77,18 @@ export class Timeline {
       return;
     }
 
-    const {duration = channel.duration, rate = channel.rate} = props;
+    const {start = channel.start, end = channel.end, rate = channel.rate} = props;
 
-    channel.duration = duration;
+    channel.start = start;
+    channel.end = end;
     channel.rate = rate;
 
-    if (props.wrapMode) {
-      channel.wrapMode = WRAP_MAP[props.wrapMode];
+    if (props.wrapStart) {
+      channel.wrapStart = WRAP_MAP[props.wrapStart] || WRAP_LOOP;
+    }
+
+    if (props.wrapEnd) {
+      channel.wrapEnd = WRAP_MAP[props.wrapEnd] || WRAP_LOOP;
     }
   }
 
@@ -101,11 +116,26 @@ export class Timeline {
   }
 
   _setChannelTime(channel, time) {
-    channel.time = time * channel.rate;
-    if (channel.wrapMode === WRAP_LOOP) {
-      channel.time %= channel.duration;
-    } else {
-      channel.time = Math.max(0, Math.min(channel.time, channel.duration));
+    const channelStart = channel.start * channel.rate;
+    const channelDuration = channel.end * channel.rate - channelStart;
+    channel.time = time * channel.rate - channelStart;
+    if (channel.time < 0) {
+      if (channel.wrapStart === WRAP_LOOP) {
+        if (channel.time < 0) {
+          channel.time += Math.ceil(-channel.time / channelDuration) * channelDuration;
+        }
+        channel.time %= channelDuration;
+      } else {
+        channel.time = Math.max(0, channel.time);
+      }
+    }
+
+    if (channel.time > channelDuration) {
+      if (channel.wrapEnd === WRAP_LOOP) {
+        channel.time %= channelDuration;
+      } else {
+        channel.time = Math.min(channel.time, channelDuration);
+      }
     }
   }
 }

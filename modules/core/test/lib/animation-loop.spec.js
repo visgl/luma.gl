@@ -171,6 +171,9 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
   }, 150);
 });
 
+// NOTE(Tarek): This is for the x * CHANNEL1_RATE
+// lines, which are important for clarity.
+/* eslint-disable no-implicit-coercion */
 test('core#AnimationLoop timeline', t => {
   if (typeof document === 'undefined') {
     t.comment('browser-only test');
@@ -187,45 +190,71 @@ test('core#AnimationLoop timeline', t => {
   timeline.pause();
   timeline.reset();
   t.is(timeline.getTime(), 0, 'Timeline was reset');
+  const CHANNEL1_RATE = 2;
+  const CHANNEL2_RATE = 3;
   const channel1 = timeline.addChannel({
-    rate: 2,
-    duration: 4,
-    wrapMode: 'loop'
+    rate: CHANNEL1_RATE,
+    start: 2,
+    end: 6,
+    wrapStart: 'clamp',
+    wrapEnd: 'loop'
   });
   const channel2 = timeline.addChannel({
-    rate: 3,
-    duration: 4,
-    wrapMode: 'clamp'
+    rate: CHANNEL2_RATE,
+    start: 3,
+    end: 6,
+    wrapStart: 'loop',
+    wrapEnd: 'clamp'
   });
-  t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 initialized');
-  t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 initialized');
+  t.is(timeline.getChannelTime(channel1), 0 * CHANNEL1_RATE, 'Channel 1 initialized');
+  t.is(timeline.getChannelTime(channel2), 0 * CHANNEL2_RATE, 'Channel 2 initialized');
 
-  timeline.setTime(2);
-  t.is(timeline.getTime(), 2, 'Timeline was set');
-  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 was set');
-  t.is(timeline.getChannelTime(channel2), 6, 'Channel 2 was set');
+  timeline.setTime(1);
+  t.is(timeline.getTime(), 1, 'Timeline was set');
+  t.is(timeline.getChannelTime(channel1), 0 * CHANNEL1_RATE, 'Channel 1 was clamped to start');
+  t.is(timeline.getChannelTime(channel2), 1 * CHANNEL2_RATE, 'Channel 2 looped before start');
 
-  timeline.setTime(6);
-  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 looped');
-  t.is(timeline.getChannelTime(channel2), 12, 'Channel 2 clamped');
+  timeline.setTime(4);
+  t.is(timeline.getChannelTime(channel1), 2 * CHANNEL1_RATE, 'Channel 1 set');
+  t.is(timeline.getChannelTime(channel2), 1 * CHANNEL2_RATE, 'Channel 2 set');
+
+  timeline.setTime(7);
+  t.is(timeline.getChannelTime(channel1), 1 * CHANNEL1_RATE, 'Channel 1 looped after end');
+  t.is(timeline.getChannelTime(channel2), 3 * CHANNEL2_RATE, 'Channel 2 clamped to end');
 
   timeline.reset();
   t.is(timeline.getTime(), 0, 'Timeline was reset');
   timeline.play();
   timeline.update(4);
-  timeline.update(6);
-  t.is(timeline.getTime(), 2, 'Timeline was set on update while playing');
-  t.is(timeline.getChannelTime(channel1), 4, 'Channel 1 was set on update while playing');
-  t.is(timeline.getChannelTime(channel2), 6, 'Channel 2 was set on update while playing');
+  timeline.update(8);
+  t.is(timeline.getTime(), 4, 'Timeline was set on update while playing');
+  t.is(
+    timeline.getChannelTime(channel1),
+    2 * CHANNEL1_RATE,
+    'Channel 1 was set on update while playing'
+  );
+  t.is(
+    timeline.getChannelTime(channel2),
+    1 * CHANNEL2_RATE,
+    'Channel 2 was set on update while playing'
+  );
 
   timeline.reset();
   t.is(timeline.getTime(), 0, 'Timeline was reset');
   timeline.pause();
   timeline.update(4);
-  timeline.update(6);
+  timeline.update(8);
   t.is(timeline.getTime(), 0, 'Timeline was not set on update while paused');
-  t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 was not set on update while paused');
-  t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 was not set on update while paused');
+  t.is(
+    timeline.getChannelTime(channel1),
+    0 * CHANNEL1_RATE,
+    'Channel 1 was not set on update while paused'
+  );
+  t.is(
+    timeline.getChannelTime(channel2),
+    0 * CHANNEL2_RATE,
+    'Channel 2 was not set on update while paused'
+  );
 
   timeline.removeChannel(channel1);
   t.is(timeline.getChannelTime(channel1), -1, 'Channel 1 was deleted');

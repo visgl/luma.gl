@@ -10,18 +10,22 @@ The new `Timeline` class supports easily managing multiple timelines elapsing at
 const timeline = animationLoop.timeline;
 const channel1 = timeline.addChannel({
   rate: 0.5,        // Runs at 1/2 base time
-  duration: 4000,
-  wrapMode: "loop"  // Loop every 4s
+  start: 1000,      // Channel time start when base time is at 1s
+  end: 4000,        // Channel time ends when base time is at 4s
+  wrapStart: "loop" // Loop time if base time is outside start and end
+  wrapEnd: "loop"
 });
 const channel2 = timeline.addChannel({
-  rate: 2,          // Runs at twice base time
-  duration: 1000,
-  wrapMode: "clamp" // Stop playing at 1s
+  rate: 2,            // Runs at twice base time
+  start: 2000,
+  end: 6000,
+  wrapStart: "clamp" // Clamp time to the range (start, end) if base time is outside start and end
+  wrapEnd: "clamp"
 });
 
-timeline.play();        // Play with the render loop
+timeline.play();        // Base time moves with the render loop
 timeline.pause();       // Don't play with the render loop
-timeline.setTime(1500); // Set to specific time
+timeline.setTime(1500); // Set base time to specific time
 
 model.setUniforms({
   uValue1: timeline.getTime();                 // Use base timeline time

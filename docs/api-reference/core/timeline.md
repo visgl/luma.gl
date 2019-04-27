@@ -16,13 +16,17 @@ Automatic update usage (assume `update` method is being called once per frame):
 const timeline = animationLoop.timeline;
 const channel1 = timeline.addChannel({
   rate: 0.5,
-  duration: 4000,
-  wrapMode: "loop"
+  start: 1000,
+  end: 4000,
+  wrapStart: "loop"
+  wrapEnd: "loop"
 });
 const channel2 = timeline.addChannel({
   rate: 2,
-  duration: 1000,
-  wrapMode: "clamp"
+  start: 2000,
+  end: 6000,
+  wrapStart: "clamp"
+  wrapEnd: "clamp"
 });
 
 timeline.pause();
@@ -39,13 +43,17 @@ Manual usage:
 const timeline = new Timeline();
 const channel1 = timeline.addChannel({
   rate: 0.5,
-  duration: 4000,
-  wrapMode: "loop"
+  start: 1000,
+  end: 4000,
+  wrapStart: "loop"
+  wrapEnd: "loop"
 });
 const channel2 = timeline.addChannel({
   rate: 2,
-  duration: 1000,
-  wrapMode: "clamp"
+  start: 2000,
+  end: 6000,
+  wrapStart: "clamp"
+  wrapEnd: "clamp"
 });
 timeline.setTime(500);
 
@@ -82,9 +90,10 @@ Set the timeline time to the given value.
 
 Update channel indicated by `handle` with the properties given in `props`. Valid propeties are:
 * `rate` the speed of the channel's time relative to timeline time.
-* `duration` the length of the channel time frame.
-* `wrapMode` what to do when the timeline time moves outside the channels duration. "loop" repeat the channels timeframe, "clamp"
-  will clamp the channel's time to the range (0, duration).
+* `start` when the channel time begins in timeline time.
+* `end` when the channel time end in timeline time.
+* `wrapStart` what to do when the timeline time is less than `start` time. "loop" repeat the channels timeframe, "clamp" will clamp the channel's time the channel's `start` time.
+* `wrapStart` what to do when the timeline time is greater than `end` time. "loop" repeat the channels timeframe, "clamp" will clamp the channel's time to the channel's `end` time.
 
 ### play
 
