@@ -10,17 +10,12 @@ let ids = 0;
 export class Timeline {
   constructor() {
     this.time = 0;
-    this.start = 0;
-    this.end = Number.POSITIVE_INFINITY;
-    this.wrapStart = WRAP_LOOP;
-    this.wrapEnd = WRAP_LOOP;
     this.channels = new Map();
-    this.rate = 1;
     this.playing = false;
     this.lastEngineTime = -1;
   }
 
-  addChannel(props) {
+  addChannel(props, parent) {
     const {
       start = 0,
       end = Number.POSITIVE_INFINITY,
@@ -63,7 +58,7 @@ export class Timeline {
   }
 
   setTime(time) {
-    this._setChannelTime(this, time);
+    this.time = time;
     const channels = this.channels.values();
     for (const channel of channels) {
       this._setChannelTime(channel, this.time);
