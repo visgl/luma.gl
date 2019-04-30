@@ -66,12 +66,12 @@ module.exports = {
   ADDITIONAL_LINKS: [],
 
   EXAMPLES: [
-    {
-      title: 'Instancing',
-      componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
-      path: 'examples/core/instancing/',
-      image: 'images/example-instancing.jpg'
-    },
+    // {
+    //   title: 'Instancing',
+    //   componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
+    //   path: 'examples/core/instancing/',
+    //   image: 'images/example-instancing.jpg'
+    // },
     {
       title: 'Cubemap',
       componentUrl: resolve(__dirname, './templates/core/example-cubemap.jsx'),
