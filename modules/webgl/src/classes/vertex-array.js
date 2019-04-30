@@ -182,7 +182,9 @@ export default class VertexArray {
     const {location, accessor} = this._resolveLocationAndAccessor(
       locationOrName,
       arrayValue,
-      appAccessor
+      // Ensure that size isn't taken from program for multi-column
+      // attributes
+      Object.assign({size: arrayValue.length}, appAccessor)
     );
 
     if (location >= 0) {
