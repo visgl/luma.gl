@@ -7,7 +7,7 @@
 
 ## Summary
 
-This RFC specifies a timeline management system to facilate more complex animations.
+This RFC specifies a timeline management system to facilate more complex animations that can be easily controlled by the application.
 
 
 ## Background
@@ -17,7 +17,7 @@ Currently, the only support for animation provided by luma.gl is the passing of 
 
 ## Customers
 
-The Elevate team has requested the ability to controls transitions in deck.gl, specifically, the ability to pause, play and scrub through an animation.
+The Elevate team has requested the ability to control transitions in deck.gl, specifically, the ability to pause, play and scrub through a transition.
 
 
 ## Overview
@@ -33,7 +33,7 @@ A timeline manager that can provide `time` values to be used in animations are i
   * `duration`: how long `channelTime` runs for
   * `wrapMode`: what to do when `duration` elapses. Options are `clamp` (stop elapsing) or `loop` (go back to 0)
 
-The `channels` provide a mechanism for orchestrating complex animatons elapse differently but all relative to the same base timeline.
+The `channels` provide a mechanism for orchestrating complex animatons that elapse differently but all relative to the same base timeline.
 
 ## Example
 
@@ -68,5 +68,8 @@ Channel 2:                 0----10
 - `setTime(time): set `time` to a specific value
 - `getTime`: get current `time`
 - `addChannel(props)`: create a new channel with given properties and return a handle to it
-- `getChannelTime(handle)`: get the current `channelTime`
-- `removeChannel(handle)`:
+- `getChannelTime(handle)`: get the current `channelTime` from the `channel` indicated by `handle`
+- `removeChannel(handle)`: remove a channel from the timeline`
+
+The `time` property provided in `animationProps` will be the value returns by `animationLoop.timeline.getTime()`. This will ensure that all animations based on it will follow timeline controls rather than wall time. `animationLoop.timelin` will also be passed in `animatonProps` so that applications can easily manipulate it.
+
