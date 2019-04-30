@@ -1,14 +1,16 @@
 /* eslint-disable camelcase */
 // import '@luma.gl/debug';
 import GL from '@luma.gl/constants';
-import {AnimationLoop, setParameters, Model, CubeGeometry, picking, dirlight} from '@luma.gl/core';
+import {
+  AnimationLoop, Buffer, setParameters, Model, CubeGeometry, picking, dirlight
+} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 import {
   _MultiPassRenderer as MultiPassRenderer,
   _ClearPass as ClearPass,
   // _RenderPass as RenderPass,
-  _PickingPass as PickingPass,
+  // _PickingPass as PickingPass,
   _CopyPass as CopyPass
 } from '@luma.gl/core';
 
@@ -108,10 +110,10 @@ void main(void) {
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),
         attributes: {
-          instanceSizes: {value: new Float32Array([1]), size: 1, divisor: 1, constant: true},
-          instanceOffsets: {value: offsets, size: 2, divisor: 1},
-          instanceColors: {value: colors, size: 3, divisor: 1},
-          instancePickingColors: {value: pickingColors, size: 2, divisor: 1}
+          instanceSizes: new Float32Array([1]), // Constant attribute
+          instanceOffsets: [new Buffer(gl, offsets), {size: 2, divisor: 1}],
+          instanceColors: [new Buffer(gl, colors), {size: 3, divisor: 1}],
+          instancePickingColors: [new Buffer(gl, pickingColors), {size: 2, divisor: 1}]
         }
       })
     );

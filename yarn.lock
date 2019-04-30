@@ -678,12 +678,22 @@
     save-pixels "^2.3.2"
     through "^2.3.8"
 
-"@luma.gl/constants@7.0.0-beta.1":
-  version "7.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.0.0-beta.1.tgz#66dc10d22e3b6811eddf87c864154c97cef8557a"
-  integrity sha512-1C2361GQZsp94/xuO0qK2e8LcdKoLkujeRivCYI1SQS1Hn8rBRSXR13cl5YP726AWn/QqF4lzFZP/mTPykWM/Q==
+"@luma.gl/constants@7.0.1", "@luma.gl/constants@^7.0.0-alpha.6":
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.0.1.tgz#3adb5f23a31a02838587a6ffb6d617bfcd1eeedf"
+  integrity sha512-v8Dk3wawtltckngCOJVcsBgCA+GzlKKj6FzG+yMLITIe48mw1pwz2PlES8twklfjqKQMJS6gPWY1fI8MXiX5bA==
 
-"@luma.gl/glfx@^6.3.0-alpha.2":
+"@luma.gl/debug@^7.0.0-beta":
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/@luma.gl/debug/-/debug-7.0.1.tgz#20cddf44b4c01e6332a7cc59e9907b07e0119e56"
+  integrity sha512-gJ7qyPYpTuytrYXeh/cD1/OzR0QKPTphKdn56xoEkaqmaPE8rpcnfK1ZdIKgfIFp1fJXn+xckidiM+eVFD/SLA==
+  dependencies:
+    "@luma.gl/constants" "7.0.1"
+    glsl-transpiler "^1.8.5"
+    math.gl "^2.3.0"
+    webgl-debug "^2.0.1"
+
+"@luma.gl/glfx@^6.3.0-alpha.0":
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-6.4.0.tgz#6c94a47b2556f39b70f61f49f372ca0365d8b61f"
   integrity sha512-OYg0ZprktxpiYMQk2Sej2Sko95nPQL5jLnL/QQRgzL1ZvQN0AfOeCzp5AcZQwT+6d/TfYRLansH9RurSo1n+bw==
