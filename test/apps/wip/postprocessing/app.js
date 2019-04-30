@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 // import '@luma.gl/debug';
 import GL from '@luma.gl/constants';
-import {AnimationLoop, setParameters, Cube, picking, dirlight} from '@luma.gl/core';
+import {AnimationLoop, setParameters, Model, CubeGeometry, picking, dirlight} from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
 import {
@@ -30,7 +30,7 @@ single GPU draw call using instanced vertex attributes.
 const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends Cube {
+class InstancedCube extends Model {
   constructor(gl, props) {
     let offsets = [];
     for (let i = 0; i < SIDE; i++) {
@@ -106,8 +106,9 @@ void main(void) {
         modules: [picking, dirlight, depth],
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
+        geometry: new CubeGeometry(),
         attributes: {
-          instanceSizes: {value: new Float32Array([1]), size: 1, divisor: 1, isGeneric: true},
+          instanceSizes: {value: new Float32Array([1]), size: 1, divisor: 1, constant: true},
           instanceOffsets: {value: offsets, size: 2, divisor: 1},
           instanceColors: {value: colors, size: 3, divisor: 1},
           instancePickingColors: {value: pickingColors, size: 2, divisor: 1}
@@ -165,9 +166,9 @@ class AppAnimationLoop extends AnimationLoop {
 
     this.multiPassRenderer = new MultiPassRenderer(gl, [
       // picking pass updates selectedPickingColor uniform, call before rendering
-      new PickingPass(gl, {
-        models: [this.cube]
-      }),
+      // new PickingPass(gl, {
+      //   models: [this.cube]
+      // }),
 
       new ClearPass(gl),
 

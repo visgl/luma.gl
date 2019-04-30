@@ -8,7 +8,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [new HtmlWebpackPlugin({title: 'Instancing'})]
+  plugins: [new HtmlWebpackPlugin({title: 'Postprocessing'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module
