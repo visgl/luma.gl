@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 import GL from '@luma.gl/constants';
-import {VertexArray, VertexArrayObject, Buffer} from '@luma.gl/webgl';
+import {VertexArray, VertexArrayObject, Buffer, Program} from '@luma.gl/webgl';
 
 import {fixture} from 'test/setup';
 
@@ -78,6 +78,46 @@ test('WebGL#VertexArray#_getAttributeIndex', t => {
   const matrix1 = vertexArray._getAttributeIndex('matrix__LOCATION_1');
   t.equal(matrix1.location, 2, 'Bad location');
   t.equal(matrix1.name, 'matrix', 'Bad name');
+
+  t.end();
+});
+
+test.only('WebGL#VertexArray#constant multi-column attribute', t => {
+  const {gl} = fixture;
+
+  const vs = `
+  attribute mat4 matrix;
+
+  void main() {
+    gl_Position = matrix[0];
+  }
+  `;
+
+  const fs = `
+  void main() {
+    gl_FragColor = vec4(1.0);
+  }
+  `;
+
+  const program = new Program(gl, {vs, fs});
+
+  const vertexArray = new VertexArray(gl, {
+    program
+  });
+
+  vertexArray.setAttributes({
+    matrix__LOCATION_0: new Float32Array([1, 0, 0, 0]),
+    matrix__LOCATION_1: new Float32Array([0, 1, 0, 0]),
+    matrix__LOCATION_2: new Float32Array([0, 0, 1, 0]),
+    matrix__LOCATION_3: new Float32Array([0, 0, 0, 1])
+  });
+
+  const location = vertexArray.configuration.getAttributeLocation('matrix');
+
+  t.equal(vertexArray.accessors[location].size, 4, 'Column 0 of correct size');
+  t.equal(vertexArray.accessors[location + 1].size, 4, 'Column 1 of correct size');
+  t.equal(vertexArray.accessors[location + 2].size, 4, 'Column 2 of correct size');
+  t.equal(vertexArray.accessors[location + 3].size, 4, 'Column 3 of correct size');
 
   t.end();
 });
