@@ -58,8 +58,10 @@ export default class Resource {
   delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
     const children = this._handle && this._deleteHandle(this._handle);
+    if (this._handle) {
+      this._removeStats();
+    }
     this._handle = null;
-    this._removeStats();
 
     // Optionally, recursively delete the children
     if (children && deleteChildren) {
