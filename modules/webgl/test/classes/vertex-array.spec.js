@@ -82,7 +82,7 @@ test('WebGL#VertexArray#_getAttributeIndex', t => {
   t.end();
 });
 
-test.only('WebGL#VertexArray#constant multi-column attribute', t => {
+test('WebGL#VertexArray#constant multi-column attribute', t => {
   const {gl} = fixture;
 
   const vs = `
