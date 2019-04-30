@@ -1,3 +1,7 @@
+## v7.0.1
+- Fix accessor size for constant multi-column attributes (#1090)
+- do not remove stats if resource is deleted multiple times (#1087)
+
 # 7.0 Pre-releases
 
 ## v7.0.0-rc.2
