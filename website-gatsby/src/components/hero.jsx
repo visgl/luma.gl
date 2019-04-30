@@ -2,11 +2,6 @@ import React, {Component} from 'react';
 import {Link} from 'gatsby';
 import Stats from 'stats.js';
 
-import ExampleRunner from './example-runner';
-import examples from './examples';
-
-const HeroExample = examples.Instancing;
-
 export default class Hero extends Component {
 
   componentDidMount() {
@@ -34,7 +29,7 @@ export default class Hero extends Component {
     return (
       <section ref="banner" className="banner">
         <div className="f hero">
-          <ExampleRunner example={HeroExample} sourceLink={HeroExample.path} noPanel noStats />
+          <div example={HeroExample} sourceLink={HeroExample.path} noPanel noStats />
         </div>
         <div className="container" style={{background: 'transparent'}}>
           <h1>luma.gl</h1>
