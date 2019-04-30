@@ -41,12 +41,12 @@ A timeline with two channels:
 - Channel 1:
   - rate: 0.5
   - startTime: 1
-  - duration: 2
+  - duration: 4
   - wrapMode: loop
 - Channel 2:
   - rate: 2
   - startTime: 5
-  - duration: 10
+  - duration: 5
   - wrapMode: clamp
 
 ```
