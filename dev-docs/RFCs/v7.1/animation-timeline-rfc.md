@@ -22,7 +22,7 @@ The Elevate team has requested the ability to control transitions in deck.gl, sp
 
 ## Overview
 
-A timeline manager that can provide `time` values to be used in animations are independent of wall time. The timeline manager should support the following features:
+A timeline manager that can provide `time` values to be used in animations that are independent of wall time. The timeline manager should support the following features:
 
 - play: provide a `time` value that elapses at the same rate as wall time
 - pause: `time` remains constant at the current value
@@ -53,9 +53,9 @@ A timeline with two channels:
                    pause  play
                      |     |
 Wall time:      0----5----10----15----20
-`time`          0----5     5----10----15
-Channel 1:       0---2     2---2---2---2
-Channel 2:                 0----10
+time:           0----5     5----10----15
+channelTime 1:   0---2     2---2---2---2
+channelTime 2:             0----10
 ```
 
 ## Implentation
@@ -65,11 +65,11 @@ Channel 2:                 0----10
 - `play`: elapse `time` automatically with wall time
 - `pause`: stop elapsing `time` automatically with wall time
 - `reset`: set `time` to 0
-- `setTime(time): set `time` to a specific value
+- `setTime(time)`: set `time` to a specific value
 - `getTime`: get current `time`
 - `addChannel(props)`: create a new channel with given properties and return a handle to it
 - `getChannelTime(handle)`: get the current `channelTime` from the `channel` indicated by `handle`
-- `removeChannel(handle)`: remove a channel from the timeline`
+- `removeChannel(handle)`: remove a channel from the timeline
 
-The `time` property provided in `animationProps` will be the value returns by `animationLoop.timeline.getTime()`. This will ensure that all animations based on it will follow timeline controls rather than wall time. `animationLoop.timelin` will also be passed in `animatonProps` so that applications can easily manipulate it.
+The `time` property provided in `animationProps` will be the value returned by `animationLoop.timeline.getTime()`. This will ensure that all animations tracking `animationProps.time` will follow timeline controls rather than wall time. `animationLoop.timeline` will also be passed in `animatonProps` so that applications can easily manipulate it.
 
