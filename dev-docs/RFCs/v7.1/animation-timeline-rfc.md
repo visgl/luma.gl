@@ -27,11 +27,11 @@ A timeline manager that can provide `time` values to be used in animations that 
 - play: provide a `time` value that elapses at the same rate as wall time
 - pause: `time` remains constant at the current value
 - set: set `time` to a specific value
-- multiple `channels` that provide `channelTime` values, related to `time`, but with the following additional properties:
-  * `rate`: a scaling factor that indicates how quickly `channelTime` elapses relative to `time`
-  * `startTime`: an offset into `time` at which `channelTime` begins elapsing
-  * `duration`: how long `channelTime` runs for
-  * `wrapMode`: what to do when `duration` elapses. Options are `clamp` (stop elapsing) or `loop` (go back to 0)
+- multiple `channels` that provide `channelTime` values, related to `time`, but with the following additional properties (all optional):
+  * `rate`: (default `1`) a scaling factor that indicates how quickly `channelTime` elapses relative to `time`
+  * `delay`: (default `0`) an offset into `time` at which `channelTime` begins elapsing
+  * `duration`: (default `Infinity`) how long `channelTime` runs for
+  * `repeat`: (default `1`) Number of times to repeat `channelTime` (only meaningful if `duration` has been set)
 
 The `channels` provide a mechanism for orchestrating complex animatons that elapse differently but all relative to the same base timeline.
 
@@ -40,21 +40,21 @@ The `channels` provide a mechanism for orchestrating complex animatons that elap
 A timeline with two channels:
 - Channel 1:
   - rate: 0.5
-  - startTime: 1
+  - delay: 1
   - duration: 4
-  - wrapMode: loop
+  - repeat: 3
 - Channel 2:
   - rate: 2
-  - startTime: 5
+  - delay: 5
   - duration: 5
-  - wrapMode: clamp
+  - repeat: 1
 
 ```
                    pause  play
                      |     |
 Wall time:      0----5----10----15----20
 time:           0----5     5----10----15
-channelTime 1:   0---2     2---2---2---2
+channelTime 1:   0---2     2---2---2
 channelTime 2:             0----10
 ```
 
