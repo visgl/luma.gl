@@ -29,8 +29,8 @@ A timeline manager that can provide `time` values to be used in animations that 
 - set: set `time` to a specific value
 - multiple `channels` that provide `channelTime` values, related to `time`, but with the following additional properties (all optional):
   * `rate`: (default `1`) a scaling factor that indicates how quickly `channelTime` elapses relative to `time`
-  * `delay`: (default `0`) an offset into `time` at which `channelTime` begins elapsing
-  * `duration`: (default `Infinity`) how long `channelTime` runs for
+  * `delay`: (default `0`) an offset into `time` at which `channelTime` begins elapsing (in units of `time`)
+  * `duration`: (default `Infinity`) how long `channelTime` runs for (in units of `time`)
   * `repeat`: (default `1`) Number of times to repeat `channelTime` (only meaningful if `duration` has been set)
 
 The `channels` provide a mechanism for orchestrating complex animatons that elapse differently but all relative to the same base timeline.
