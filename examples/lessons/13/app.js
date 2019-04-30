@@ -205,7 +205,7 @@ function animate(state) {
 }
 
 /* global window */
-if (!window.website) {
+if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();
 }

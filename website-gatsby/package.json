@@ -1,28 +1,37 @@
 {
-  "description": "A website built with ocular",
+  "name": "ocular-website-gatsby",
+  "version": "0.0.0",
+  "description": "A website for Ocular, built with Ocular (Gatsby version)",
   "license": "MIT",
   "keywords": [
     "ocular"
   ],
   "main": "index.js",
   "scripts": {
-    "start": "yarn develop",
+    "start": "yarn copy-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",
-    "develop": "gatsby develop",
-    "build": "gatsby build",
-    "serve": "gatsby serve"
+    "develop": "gatsby develop --port=8001",
+    "build": "yarn copy-examples && gatsby build --prefix-paths",
+    "serve": "gatsby serve --prefix-paths",
+    "publish-docs": "yarn build && mkdir -p ../../docs && rm -rf ../../docs/*  && mv public/* ../../docs",
+    "copy-examples": "rm -rf examples ; find ../examples -name node_modules -exec rm -r {} \\; ; cp -r ../examples . "
   },
   "dependencies": {
-    "@loaders.gl/core": "^0.8.0",
-    "@loaders.gl/draco": "^0.8.0",
-    "@loaders.gl/gltf": "^0.8.1",
+    "@deck.gl/core": "^7.0.2",
+    "@deck.gl/layers": "^7.0.2",
+    "@deck.gl/react": "^7.0.2",
+    "@luma.gl/addons": "^7.0.0",
+    "@luma.gl/constants": "^7.0.0",
+    "@luma.gl/core": "^7.0.0",
+    "@luma.gl/webgl": "^7.0.0",
     "@probe.gl/stats-widget": "^3.0.1",
-    "math.gl": "^2.3.1"
+    "react": "^16.6.0",
+    "react-dom": "^16.6.0"
   },
   "devDependencies": {
-    "gatsby": "2.2.0-rc.2",
+    "gatsby": "^2.3.0",
     "gatsby-plugin-styletron": "^3.0.5",
-    "ocular-gatsby": "1.0.0-alpha.17",
-    "sharp": "0.21.1"
+    "ocular-gatsby": "1.0.0-alpha.21",
+    "sharp": "0.22"
   }
 }

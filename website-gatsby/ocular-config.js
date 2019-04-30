@@ -4,12 +4,12 @@ const DOCS = require('../docs/table-of-contents.json');
 const DEPENDENCIES = require('./package.json').dependencies;
 // eslint-disable-next-line import/no-extraneous-dependencies
 const ALIASES = require('ocular-dev-tools/config/ocular.config')({
-  root: resolve(__dirname, '..')
+  root: resolve(__dirname, '../..')
 }).aliases;
 
 // When duplicating example dependencies in website, autogenerate
 // aliases to ensure the website version is picked up
-// NOTE: luma.gl module dependencies are automatically injected
+// NOTE: module dependencies are automatically injected
 // TODO - should this be automatically done by ocular-gatsby?
 const dependencyAliases = {};
 for (const dependency in DEPENDENCIES) {
@@ -17,8 +17,15 @@ for (const dependency in DEPENDENCIES) {
 }
 
 module.exports = {
-  logLevel: 1,
+  logLevel: 3, // Adjusts amount of debug information from ocular-gatsby
 
+  DOC_FOLDER: `${__dirname}/../docs/`,
+  ROOT_FOLDER: `${__dirname}/../`,
+  DIR_NAME: `${__dirname}`,
+
+  DOCS,
+
+  // TODO/ib - from ocular, deduplicate with above settings
   PROJECT_TYPE: 'github',
 
   PROJECT_NAME: 'luma.gl',
@@ -26,128 +33,224 @@ module.exports = {
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'WebGL2 Components',
 
-  PROJECTS: [],
+  PATH_PREFIX: '/',
 
-  HOME_HEADING:
-    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+  FOOTER_LOGO: '',
+
+  GA_TRACKING: null,
+
+  // For showing star counts and contributors.
+  // Should be like btoa('YourUsername:YourKey') and should be readonly.
+  GITHUB_KEY: null,
+
+  HOME_PATH: '/',
+
+  HOME_HEADING: 'Framework agnostic loaders for visualization assets',
 
   HOME_RIGHT: null,
 
   HOME_BULLETS: [
     {
-      text: 'Advanced GPU Usage',
-      desc: 'Simplifies advanced GPU techniques, e.g. Instanced Rendering and Transform Feedback',
-      img: 'icons/icon-react.svg'
+      text: 'Designed for Interoperability',
+      desc: 'Seamless integration.',
+      img: 'images/icon-react.svg'
     },
     {
-      text: 'Shader Programming Power',
-      desc:
-        'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling of GLSL shaders.',
-      img: 'icons/icon-layers.svg'
-    },
-    {
-      text: 'Performance Focus',
-      desc: 'Enables visualization and GPU processing of very large data sets.',
-      img: 'icons/icon-high-precision.svg'
+      text: 'Totally ready for production',
+      img: 'images/icon-layers.svg'
     }
   ],
+
+  PROJECTS: [],
 
   ADDITIONAL_LINKS: [],
 
   EXAMPLES: [
-    {
-      title: 'Instancing',
-      path: 'examples/core/instancing/',
-      image: 'images/example-instancing.jpg'
-    },
+    // {
+    //   title: 'Instancing',
+    //   componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
+    //   path: 'examples/core/instancing/',
+    //   image: 'images/example-instancing.jpg'
+    // },
     {
       title: 'Cubemap',
+      componentUrl: resolve(__dirname, './templates/core/example-cubemap.jsx'),
       path: 'examples/core/cubemap/',
       image: 'images/example-cubemap.jpg'
     },
     {
       title: 'DOF',
+      componentUrl: resolve(__dirname, './templates/core/example-dof.jsx'),
       path: 'examples/core/dof/',
       image: 'images/example-dof.jpg'
     },
     {
       title: 'Fragment',
+      componentUrl: resolve(__dirname, './templates/core/example-fragment.jsx'),
       path: 'examples/core/fragment/',
       image: 'images/example-fragment.jpg'
     },
     {
       title: 'Mandelbrot',
+      componentUrl: resolve(__dirname, './templates/core/example-mandelbrot.jsx'),
       path: 'examples/core/mandelbrot/',
       image: 'images/example-mandelbrot.jpg'
     },
     {
       title: 'Quasicrystals',
+      componentUrl: resolve(__dirname, './templates/core/example-quasicrystals.jsx'),
       path: 'examples/core/quasicrystals/',
       image: 'images/example-fragment.jpg'
     },
     {
       title: 'Persistence',
+      componentUrl: resolve(__dirname, './templates/core/example-persistence.jsx'),
       path: 'examples/core/persistence/',
       image: 'images/example-persistence.jpg'
     },
     // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
     {
       title: 'Shadowmap',
+      componentUrl: resolve(__dirname, './templates/core/example-shadowmap.jsx'),
       path: 'examples/core/shadowmap/',
       image: 'images/example-shadowmap.jpg'
     },
-    {title: 'Texture3D', path: 'examples/core/texture3d/', image: 'images/example-texture3d.png'},
+    {
+      title: 'Texture3D',
+      componentUrl: resolve(__dirname, './templates/core/example-texture-3d.jsx'),
+      path: 'examples/core/texture3d/',
+      image: 'images/example-texture3d.png'
+    },
     {
       title: 'Transform',
+      componentUrl: resolve(__dirname, './templates/core/example-transform.jsx'),
       path: 'examples/core/transform/',
       image: 'images/example-transform.png'
     },
-    {
+   {
       title: 'TransformFeedback',
+      componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
       path: 'examples/core/transform-feedback/app',
       image: 'images/example-transform-feedback.jpg'
     },
+    // {
+    //   title: 'GLTF',
+    //   componentUrl: resolve(__dirname, './templates/core/example-gltf.jsx'),
+    //   path: 'examples/gltf',
+    //   image: 'images/example-gltf.jpg'
+    // },
     {
-      title: 'GLTF',
-      path: 'examples/gltf',
-      image: 'images/example-gltf.jpg'
+      title: 'Lesson01',
+      componentUrl: resolve(__dirname, './templates/lessons/example-01.jsx'),
+      path: 'examples/lessons/01/',
+      image: 'images/lesson-1.png'
     },
-    {title: 'Lesson01', path: 'examples/lessons/01/', image: 'images/lesson-1.png'},
-    {title: 'Lesson02', path: 'examples/lessons/02/', image: 'images/lesson-2.png'},
-    {title: 'Lesson03', path: 'examples/lessons/03/', image: 'images/lesson-3.png'},
-    {title: 'Lesson04', path: 'examples/lessons/04/', image: 'images/lesson-4.png'},
-    {title: 'Lesson05', path: 'examples/lessons/05/', image: 'images/lesson-5.png'},
-    {title: 'Lesson06', path: 'examples/lessons/06/', image: 'images/lesson-6.png'},
-    {title: 'Lesson07', path: 'examples/lessons/07/', image: 'images/lesson-7.png'},
-    {title: 'Lesson08', path: 'examples/lessons/08/', image: 'images/lesson-8.png'},
-    {title: 'Lesson09', path: 'examples/lessons/09/', image: 'images/lesson-9.png'},
-    {title: 'Lesson10', path: 'examples/lessons/10/', image: 'images/lesson-10.png'},
-    {title: 'Lesson11', path: 'examples/lessons/11/', image: 'images/lesson-11.png'},
-    {title: 'Lesson12', path: 'examples/lessons/12/', image: 'images/lesson-12.png'},
-    {title: 'Lesson13', path: 'examples/lessons/13/', image: 'images/lesson-13.png'},
-    {title: 'Lesson14', path: 'examples/lessons/14/', image: 'images/lesson-14.png'},
-    {title: 'Lesson15', path: 'examples/lessons/15/', image: 'images/lesson-15.png'},
-    {title: 'Lesson16', path: 'examples/lessons/16/', image: 'images/lesson-16.png'}
+    {
+      title: 'Lesson02',
+      componentUrl: resolve(__dirname, './templates/lessons/example-02.jsx'),
+      path: 'examples/lessons/02/',
+      image: 'images/lesson-2.png'
+    },
+    {
+      title: 'Lesson03',
+      componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
+      path: 'examples/lessons/03/',
+      image: 'images/lesson-3.png'
+    },
+    {
+      title: 'Lesson04',
+      componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
+      path: 'examples/lessons/04/',
+      image: 'images/lesson-4.png'
+    },
+    {
+      title: 'Lesson05',
+      componentUrl: resolve(__dirname, './templates/lessons/example-05.jsx'),
+      path: 'examples/lessons/05/',
+      image: 'images/lesson-5.png'
+    },
+    {
+      title: 'Lesson06',
+      componentUrl: resolve(__dirname, './templates/lessons/example-06.jsx'),
+      path: 'examples/lessons/06/',
+      image: 'images/lesson-6.png'
+    },
+    {
+      title: 'Lesson07',
+      componentUrl: resolve(__dirname, './templates/lessons/example-07.jsx'),
+      path: 'examples/lessons/07/',
+      image: 'images/lesson-7.png'
+    },
+    {
+      title: 'Lesson08',
+      componentUrl: resolve(__dirname, './templates/lessons/example-08.jsx'),
+      path: 'examples/lessons/08/',
+      image: 'images/lesson-8.png'
+    },
+    {
+      title: 'Lesson09',
+      componentUrl: resolve(__dirname, './templates/lessons/example-09.jsx'),
+      path: 'examples/lessons/09/',
+      image: 'images/lesson-9.png'
+    },
+    {
+      title: 'Lesson10',
+      componentUrl: resolve(__dirname, './templates/lessons/example-10.jsx'),
+      path: 'examples/lessons/10/',
+      image: 'images/lesson-10.png'
+    },
+    {
+      title: 'Lesson11',
+      componentUrl: resolve(__dirname, './templates/lessons/example-11.jsx'),
+      path: 'examples/lessons/11/',
+      image: 'images/lesson-11.png'
+    },
+    {
+      title: 'Lesson12',
+      componentUrl: resolve(__dirname, './templates/lessons/example-12.jsx'),
+      path: 'examples/lessons/12/',
+      image: 'images/lesson-12.png'
+    },
+    {
+      title: 'Lesson13',
+      componentUrl: resolve(__dirname, './templates/lessons/example-13.jsx'),
+      path: 'examples/lessons/13/',
+      image: 'images/lesson-13.png'
+    },
+    {
+      title: 'Lesson14',
+      componentUrl: resolve(__dirname, './templates/lessons/example-14.jsx'),
+      path: 'examples/lessons/14/',
+      image: 'images/lesson-14.png'
+    },
+    {
+      title: 'Lesson15',
+      componentUrl: resolve(__dirname, './templates/lessons/example-15.jsx'),
+      path: 'examples/lessons/15/',
+      image: 'images/lesson-15.png'
+    },
+    {
+      title: 'Lesson16',
+      componentUrl: resolve(__dirname, './templates/lessons/example-16.jsx'),
+      path: 'examples/lessons/16/',
+      image: 'images/lesson-16.png'
+    }
   ],
-
-  THEME_OVERRIDES: [{key: true, value: true}],
-
-  DOCS,
-
-  DOC_FOLDER: `${__dirname}/../docs/`,
-  ROOT_FOLDER: `${__dirname}/../`,
-  DIR_NAME: __dirname,
 
   // Avoids duplicate conflicting inputs when importing from examples folders
   // Ocular adds this to gatsby's webpack config
   webpack: {
     resolve: {
-      alias: Object.assign({}, ALIASES, dependencyAliases)
+      // modules: [resolve(__dirname, './node_modules')],
+      alias: Object.assign({}, ALIASES, dependencyAliases, {
+        //   '@luma.gl/addons': `${__dirname}/node_modules/@luma.gl/addons/src`,
+        //   '@luma.gl/core': `${__dirname}/node_modules/@luma.gl/core/src`,
+        //   '@luma.gl/constants': `${__dirname}/node_modules/@luma.gl/constants/src`,
+        //   '@luma.gl/webgl': `${__dirname}/node_modules/@luma.gl/webgl/src`,
+        //   '@deck.gl/core': `${__dirname}/node_modules/@deck.gl/core/src`,
+        //   '@deck.gl/layers': `${__dirname}/node_modules/@deck.gl/layers/src`,
+        //   '@deck.gl/react': `${__dirname}/node_modules/@deck.gl/react/src`
+      })
     }
-  },
-
-  // TODO/ib - remnants from gatsby starter, remove and replace with ocular CAPS constants aboves
-  siteUrl: 'https://luma.gl', // Domain of your website without pathPrefix.
-  pathPrefix: '/luma', // Prefixes all links. For cases when deployed to example.github.io/gatsby-advanced-starter/.
-  siteRss: '/rss.xml' // Path to the RSS file.
+  }
 };
