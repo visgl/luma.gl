@@ -76,5 +76,7 @@ The `time` property provided in `animationProps` will be the value returned by `
 
 ## Integration with GLTFAnimaton
 
-Integration with `GLTFAnimation`should amount to simply passing the timeline object, and optionally a channel handle to the constructor.
+Integration with `GLTFAnimation`should amount to simply passing the timeline object, and optionally a channel handle to the constructor. Then the [animate method](https://github.com/uber/luma.gl/blob/7.0-release/modules/addons/src/gltf/gltf-animator.js) would simply use `timeline.getTime()` to update rather than receiving the `timeMs` argument.
+
+A significant advantage to this approach over the current one is that it becomes straightforward to orchestrate multiple glTF animations of arbitrary duration into customizable application-defined animations.
 
