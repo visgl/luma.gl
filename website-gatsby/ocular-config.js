@@ -31,7 +31,7 @@ module.exports = {
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'uber',
   PROJECT_URL: `https://luma.gl`,
-  PROJECT_DESC: 'WebGL2 Components',
+  PROJECT_DESC: 'High-performance WebGL2 components for GPU-powered data visualization and computation.',
 
   PATH_PREFIX: '/',
 
@@ -45,19 +45,25 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING: 'Framework agnostic loaders for visualization assets',
+  HOME_HEADING: 'High-performance WebGL2 components for GPU-powered data visualization and computation.',
 
   HOME_RIGHT: null,
 
   HOME_BULLETS: [
     {
-      text: 'Designed for Interoperability',
-      desc: 'Seamless integration.',
-      img: 'images/icon-react.svg'
+      text: 'Advanced GPU Usage',
+      desc: 'luma.gl facilitates use of advanced GPU techniques, such as Instanced Rendering, Transform Feedback and WebGL2 features.',
+      img: 'images/icon-high-precision.svg'
     },
     {
-      text: 'Totally ready for production',
-      img: 'images/icon-layers.svg'
+      text: 'Shader Programming Power',
+      desc: 'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling GLSL shaders.',
+      img: 'images/icon-high-precision.svg'
+    },
+    {
+      text: 'Performance Focus',
+      desc: 'Strong focus on performance enables visualization and GPU processing of very large data sets.',
+      img: 'images/icon-high-precision.svg'
     }
   ],
 
