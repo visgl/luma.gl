@@ -12,8 +12,9 @@ This RFC specifies a timeline management system to facilate more complex animati
 
 ## Background
 
-Currently, the only support for animation provided by luma.gl is the passing of elapsed wall time and frame counts as `animationProps`. This pushes all orchestration of animation to the application, which can end up being quite complex. Since systems like deck.gl's transitions and luma.gl's uniform animations track `animationProps` time, there is no way to control them independantly of wall time.
+Currently, the only support for animation provided by luma.gl is the passing of elapsed wall time and frame counts as `animationProps`. This pushes all orchestration of animation to the application, which can end up being quite complex. Since systems like deck.gl's transitions and luma.gl's uniform animations track `animationProps` time, there is no way to control them independently of wall time.
 
+Further, the introduction of [GLTF Animations](https://github.com/uber/luma.gl/blob/7.0-release/modules/addons/src/gltf/gltf-animator.js) means animations defined in assets will start being used in the system. A key problems with importing animations is that their timings and durations might differ from the timings and durations desired by the application. What is required is a hierarchical mechanism for manipulating "child animations" relative to a "parent animation" defined by the application.
 
 ## Customers
 
@@ -33,7 +34,7 @@ A timeline manager that can provide `time` values to be used in animations that 
   * `duration`: (default `Infinity`) how long `channelTime` runs for (in units of `time`)
   * `repeat`: (default `1`) Number of times to repeat `channelTime` (only meaningful if `duration` has been set)
 
-The `channels` provide a mechanism for orchestrating complex animatons that elapse differently but all relative to the same base timeline.
+The `channels` provide a mechanism for orchestrating complex animations that elapse differently but all relative to the same base timeline.
 
 ## Example
 
@@ -66,10 +67,14 @@ channelTime 2:             0----10
 - `pause`: stop elapsing `time` automatically with wall time
 - `reset`: set `time` to 0
 - `setTime(time)`: set `time` to a specific value
-- `getTime`: get current `time`
+- `getTime(handle)`: get the current `channelTime` from the `channel` indicated by `handle`. If no handle provided, get current `time`
 - `addChannel(props)`: create a new channel with given properties and return a handle to it
-- `getChannelTime(handle)`: get the current `channelTime` from the `channel` indicated by `handle`
 - `removeChannel(handle)`: remove a channel from the timeline
 
 The `time` property provided in `animationProps` will be the value returned by `animationLoop.timeline.getTime()`. This will ensure that all animations tracking `animationProps.time` will follow timeline controls rather than wall time. `animationLoop.timeline` will also be passed in `animatonProps` so that applications can easily manipulate it.
+
+
+## Integration with GLTFAnimaton
+
+Integration with `GLTFAnimation`should amount to simply passing the timeline object, and optionally a channel handle to the constructor.
 
