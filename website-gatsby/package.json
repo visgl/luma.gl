@@ -11,9 +11,9 @@
     "start": "yarn copy-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",
     "develop": "gatsby develop --port=8001",
-    "build": "yarn copy-examples && gatsby build --prefix-paths",
-    "serve": "gatsby serve --prefix-paths",
-    "publish-docs": "yarn build && mkdir -p ../../docs && rm -rf ../../docs/*  && mv public/* ../../docs",
+    "build": "yarn copy-examples && gatsby build",
+    "serve": "gatsby serve",
+    "deploy": "gh-pages -d public",
     "copy-examples": "rm -rf examples ; find ../examples -name node_modules -exec rm -r {} \\; ; cp -r ../examples . "
   },
   "dependencies": {
