@@ -14,8 +14,8 @@ export class Timeline {
     const handle = ids++;
     const channel = {
       time: 0,
-      delay: delay * rate,
-      duration: duration * rate,
+      delay,
+      duration,
       rate,
       repeat
     };
@@ -76,11 +76,16 @@ export class Timeline {
   }
 
   _setChannelTime(channel, time) {
-    const channelDuration = channel.duration * channel.rate;
-    channel.time =
-      Math.min(
-        Math.max(0, (time - channel.delay) * channel.rate),
-        channelDuration * channel.repeat
-      ) % channelDuration;
+    const offsetTime = time - channel.delay;
+    const totalDuration = channel.duration * channel.repeat;
+    // Note(Tarek): Don't loop on final repeat.
+    if (offsetTime >= totalDuration) {
+      channel.time = channel.duration * channel.rate;
+    } else {
+      const channelDuration = channel.duration * channel.rate;
+      channel.time =
+        Math.min(Math.max(0, offsetTime * channel.rate), totalDuration * channel.rate) %
+        channelDuration;
+    }
   }
 }
