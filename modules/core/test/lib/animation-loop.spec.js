@@ -190,12 +190,12 @@ test('core#AnimationLoop timeline', t => {
   const channel1 = timeline.addChannel({
     rate: 2,
     duration: 4,
-    wrapMode: 'loop'
+    repeat: 2
   });
   const channel2 = timeline.addChannel({
     rate: 3,
     duration: 4,
-    wrapMode: 'clamp'
+    repeat: 1
   });
   t.is(timeline.getChannelTime(channel1), 0, 'Channel 1 initialized');
   t.is(timeline.getChannelTime(channel2), 0, 'Channel 2 initialized');
