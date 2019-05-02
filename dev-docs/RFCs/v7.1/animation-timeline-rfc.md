@@ -7,18 +7,24 @@
 
 ## Summary
 
-This RFC specifies a timeline management system to facilate more complex animations that can be easily controlled by the application.
+This RFC specifies a timeline management system to facilitate coordination of disparate animation systems in a way that is easily controlled by the application.
 
 
 ## Background
 
-Currently, the only support for animation provided by luma.gl is the passing of elapsed wall time and frame counts as `animationProps`. This pushes all orchestration of animation to the application, which can end up being quite complex. Since systems like deck.gl's transitions and luma.gl's uniform animations track `animationProps` time, there is no way to control them independently of wall time.
+luma.gl and deck.gl currently support a variety of animation types such as deck.gl attribute transitions and glTF asset animations. Currently, these animations are all driven by the luma.gl `AnimationLoop`'s `time` animation property, which essentially maps to wall time. The problem with this architecture is twofold:
+1. Applications have no control over animations.
+2. There is no way to coordinate multiple animations from these various systems. Application control would further exacerbate this, as all animations would have to independently track the current "animation time".
 
-Further, the introduction of [GLTF Animations](https://github.com/uber/luma.gl/blob/7.0-release/modules/addons/src/gltf/gltf-animator.js) means animations defined in assets will start being used in the system. A key problems with importing animations is that their timings and durations might differ from the timings and durations desired by the application. What is required is a hierarchical mechanism for manipulating "child animations" relative to a "parent animation" defined by the application.
+Animation systems generally consist of the of the following components, either implicitly or explicitly:
+1. A `time` value that is used as input to the system.
+2. A `target` value that is updated based on `time`, such as a uniform value or transform parameter. The update can be a simple simulation based directly on `time` or a more complex system involving interpolation between key frames using a function such as linear or bezier interpolation.
+
+The timeline management system proposed in this RFC addresses the problem of coordinating animations solely by manipulating the first component, input `time`. A simple system that introduces application control of this value and allows it to be remapped using simple offset and scaling operations would allow for significantly richer animations to be used in deck.gl and luma.gl.
 
 ## Customers
 
-The Elevate team has requested the ability to control transitions in deck.gl, specifically, the ability to pause, play and scrub through a transition.
+The Elevate team has requested the ability to control transitions in deck.gl, specifically the ability to pause, play and scrub through an attribute transition.
 
 
 ## Overview
@@ -71,12 +77,16 @@ channelTime 2:             0----10
 - `addChannel(props)`: create a new channel with given properties and return a handle to it
 - `removeChannel(handle)`: remove a channel from the timeline
 
-The `time` property provided in `animationProps` will be the value returned by `animationLoop.timeline.getTime()`. This will ensure that all animations tracking `animationProps.time` will follow timeline controls rather than wall time. `animationLoop.timeline` will also be passed in `animatonProps` so that applications can easily manipulate it.
+The `AnimationLoop` will update `timeline` each frame with the current `engineTime` (time since startup), which the `timeline` can use to update `time` if it is playing.
+
+The `time` property provided in `animationProps` will be the value returned by `AnimationLoop.timeline.getTime()`. This will ensure that all animations tracking `animationProps.time` will follow timeline controls rather than wall time.
+
+`AnimationLoop.timeline` will also be passed in `animatonProps` so that applications can easily manipulate it.
 
 
 ## Integration with GLTFAnimaton
 
 Integration with `GLTFAnimation`should amount to simply passing the timeline object, and optionally a channel handle to the constructor. Then the [animate method](https://github.com/uber/luma.gl/blob/7.0-release/modules/addons/src/gltf/gltf-animator.js) would simply use `timeline.getTime()` to update rather than receiving the `timeMs` argument.
 
-A significant advantage to this approach over the current one is that it becomes straightforward to orchestrate multiple glTF animations of arbitrary duration into customizable application-defined animations.
+Significant advantages of this approach over the current one are that animation become controlable by the application and it becomes straightforward to orchestrate multiple glTF animations of arbitrary duration into customizable application-defined animation sequences.
 
