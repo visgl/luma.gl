@@ -1,6 +1,5 @@
 // NOTE: `headless.js` must **NOT** be included in this file
-import {createGLContext, Program} from '@luma.gl/webgl';
-import {webGLTypesAvailable} from '@luma.gl/webgl/webgl-utils';
+import {createGLContext, Program, isBrowser} from '@luma.gl/webgl';
 
 import test from 'tape-catch';
 
@@ -10,13 +9,13 @@ test('LumaGL#imports are defined', t => {
   t.end();
 });
 
-if (!webGLTypesAvailable) {
-  test('LumaGL#createGLContext throws without headless', t => {
+test('LumaGL#createGLContext throws without headless', t => {
+  if (!isBrowser) {
     t.throws(
-      () => createGLContext(),
-      /WebGL API is missing/,
+      () => createGLContext({createNodeContext: null, throwOnError: true}),
+      // /WebGL API is missing/,
       'createGLContext throws when headless is not included'
     );
-    t.end();
-  });
-}
+  }
+  t.end();
+});

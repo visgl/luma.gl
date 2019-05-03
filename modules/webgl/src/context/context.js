@@ -1,13 +1,11 @@
 /* eslint-disable quotes */
-// WebGLRenderingContext related methods
+/* global WebGL2RenderingContext */
 import {trackContextState} from '@luma.gl/webgl-state-tracker';
 
 import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
-
-import {WebGL2RenderingContext} from '../webgl-utils';
 
 import {log, isBrowser, assert} from '../utils';
 import {global} from '../utils/globals';
@@ -39,15 +37,17 @@ const contextDefaults = {
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  throwOnFailure: true,
+  throwOnError: true,
   manageState: true,
   // BROWSER CONTEXT PARAMETERS
   canvas: null, // A canvas element or a canvas string id
   debug: false, // Instrument context (at the expense of performance)
   // HEADLESS CONTEXT PARAMETERS
   width: 800, // width are height are only used by headless gl
-  height: 600
+  height: 600,
   // WEBGL/HEADLESS CONTEXT PARAMETERS
+  createNodeContext: null,
+  webglTypes: null
   // Remaining options are passed through to context creator
 };
 
@@ -65,6 +65,10 @@ export function setGLContextDefaults(options = {}) {
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
   options = Object.assign({}, contextDefaults, options);
+  // Support non-documented setting
+  if ('throwOnFailure' in options) {
+    options.throwOnError = options.throwOnFailure;
+  }
   const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled

@@ -10,15 +10,31 @@ Note: While we'll use `yarn` for these instructions, as it's the tool we use for
 
 ## Using with Node.js
 
-luma.gl is built to run using [headless-gl](https://www.npmjs.com/package/gl) under Node.js, which can be extremely useful for unit testing. It is important to note that `headless-gl` only supports WebGL 1 and few extensions, so not all of luma.gl's features will be available.
+luma.gl allows a context creation function to specified when running under Node.js. This feature is built to support using [headless-gl](https://www.npmjs.com/package/gl) under Node.js, which can be used e.g. for unit testing.
 
-Use `yarn install gl` to install `headless-gl`. luma.gl will automatically use it when running under Node.js. You can then create a context using the `createGLContext` context function.
+Use `yarn install gl` to install `headless-gl`. You can then create a context using the `createGLContext` context function, passing in headless gl through the `createNodeContext` parameter.
 
 ```js
-import 'luma.gl';
-import {createGLContext, Model, ...} from '@luma.gl/core';
+import createNodeContext from 'gl';
+import {createGLContext} from '@luma.gl/core';
+const gl = createGLContext({width, height, createNodeContext, ...});
+```
+
+More convenientely you can also register the `createNodeContext` function as part of the context defaults. This allows you to later create contexts in your program without supplying any extra parameters to `createGLContext`.
+
+```js
+import createNodeContext from 'gl';
+import {setContextDefaults, createGLContext} from '@luma.gl/core';
+setContextDefaults({createNodeContext})
+
+// ...
+
 const gl = createGLContext({width, height, ...});
 ```
+
+Notes:
+* It is important to note that `headless-gl` only supports WebGL 1 and few extensions, so not all of luma.gl's features will be available under Node.js.
+* Headless contexts need to have width and height specified.
 
 ## Interoperation with Other WebGL Applications
 

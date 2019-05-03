@@ -1,8 +1,4 @@
-// import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
 import {assert} from '../utils';
-
-// Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
-// const GL_ARRAY_BUFFER = 0x8892;
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;

@@ -1,5 +1,24 @@
 # Upgrade Guide
 
+## Upgrading from v7.0 to v7.1
+
+### headless-gl support changes
+
+Headless gl is no longer automatically used if installed. It needs to be explictly imported by the application:
+
+```bash
+yarn install gl
+```
+
+```js
+import headlessGL from 'gl';
+import {createGLContext} from '@luma.gl/core';
+const gl = createGLContext({width, height, createNodeContext: headlessGL, ...});
+```
+
+This is technically a breaking change however it only affects operation under Node.js. The reason this change was made in a minor realease is that it is getting hard to prevent bundlers like Webpack from bundling headless-gl when bundling for the browser, causing issues for applications.
+
+
 ## Upgrading from v6.x to v7.0
 
 luma.gl v7.0 represents a major overhaul of the API. The majority of changes are in areas that are only infrequently used by applications, and the intention is that most applications should only require very light porting.
