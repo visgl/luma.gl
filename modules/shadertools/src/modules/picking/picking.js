@@ -114,8 +114,17 @@ vec4 picking_filterColor(vec4 color) {
 
 `;
 
+const injections = {
+  PICK_COLOR: {
+    arguments: ['COLOR'],
+    snippet: 'picking_setPickingColor(COLOR)'
+  },
+  FRAGMENT_COLOR: 'gl_FragColor = picking_filterColor(gl_FragColor)'
+};
+
 export default {
   name: 'picking',
+  injections,
   vs,
   fs,
   getUniforms

@@ -33,10 +33,15 @@ vec4 dirlight_filterColor(vec4 color) {
 }
 `;
 
+const injections = {
+  FRAGMENT_COLOR: 'gl_FragColor = dirlight_filterColor(gl_FragColor)'
+};
+
 export default {
   name: 'dirlight',
   vs,
   fs,
+  injections,
   getUniforms,
   dependencies: [project]
 };

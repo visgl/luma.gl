@@ -76,6 +76,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
+  const moduleInjections = {};
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -87,6 +88,12 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         const moduleSource = module.getModuleSource(type, glslVersion);
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
+
+        const injections = module.getInjections();
+        for (const key in injections) {
+          moduleInjections[key] = moduleInjections[key] || [];
+          moduleInjections[key].push(injections[key]);
+        }
     }
   }
 
@@ -94,7 +101,13 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, type, inject, injectStandardStubs);
+  assembledSource = injectShader(
+    assembledSource,
+    type,
+    inject,
+    moduleInjections,
+    injectStandardStubs
+  );
 
   return assembledSource;
 }

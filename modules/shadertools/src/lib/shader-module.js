@@ -9,6 +9,7 @@ export default class ShaderModule {
     name,
     vs,
     fs,
+    injections = {},
     dependencies = [],
     getUniforms = () => ({}),
     deprecations = [],
@@ -23,6 +24,7 @@ export default class ShaderModule {
     this.fs = fs || fragmentShader;
     this.getModuleUniforms = getUniforms;
     this.dependencies = dependencies;
+    this.injections = injections;
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
     this.defines = defines;
   }
@@ -59,6 +61,10 @@ ${moduleSource}\
 
   getDefines() {
     return this.defines;
+  }
+
+  getInjections() {
+    return this.injections;
   }
 
   // Warn about deprecated uniforms or functions

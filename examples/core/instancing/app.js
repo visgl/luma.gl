@@ -68,7 +68,8 @@ void main(void) {
   // Set up data for modules
   color = instanceColors;
   project_setNormal(normal);
-  picking_setPickingColor(vec3(0., instancePickingColors));
+  vec3 pickColor = vec3(0., instancePickingColors);
+  ##PICK_COLOR(pickColor)
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -83,8 +84,7 @@ varying vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);
-  gl_FragColor = dirlight_filterColor(gl_FragColor);
-  gl_FragColor = picking_filterColor(gl_FragColor);
+  ##FRAGMENT_COLOR
 }
 `;
 
@@ -97,7 +97,7 @@ void main(void) {
       Object.assign({}, props, {
         vs,
         fs,
-        modules: [picking, dirlight],
+        modules: [dirlight, picking],
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),

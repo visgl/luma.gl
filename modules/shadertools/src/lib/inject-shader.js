@@ -10,11 +10,15 @@ const MODULE_INJECTORS = {
 
 const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
+const MODULE_REGEXES = {
+  PICK_COLOR: /\n\s*##PICK_COLOR\(([\w ]+)\)\s*\n/,
+  FRAGMENT_COLOR: /\n\s*##FRAGMENT_COLOR\s*\n/
+};
 
 // A minimal shader injection/templating system.
 // RFC: https://github.com/uber/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-injection-rfc.md
 /* eslint-disable complexity */
-export default function injectShader(source, type, inject, injectStandardStubs) {
+export default function injectShader(source, type, inject, moduleInjections, injectStandardStubs) {
   const isVertex = type === VERTEX_SHADER;
 
   for (const key in inject) {
@@ -52,9 +56,24 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
           source = source.replace(REGEX_END_OF_MAIN, match => fragment + match);
         }
         break;
+
       default:
         // inject code after key, leaving key in place
         source = source.replace(key, match => match + fragment);
+    }
+  }
+
+  for (const key in moduleInjections) {
+    const injections = moduleInjections[key];
+    if (MODULE_REGEXES[key]) {
+      source = source.replace(MODULE_REGEXES[key], (match, args) => {
+        let result = '';
+        for (const injection of injections) {
+          result += `${parseInjection(injection, args || '')};\n`;
+        }
+
+        return result;
+      });
     }
   }
 
@@ -65,6 +84,34 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
 
   return source;
 }
+
+function parseInjection(injection, args) {
+  if (typeof injection === 'string') {
+    return injection;
+  }
+
+  const numInjectionArgs = injection.arguments ? injection.arguments.length : 0;
+  args = args.replace(/\s+/g, '');
+  if (args.length === 0) {
+    assert(numInjectionArgs === 0, `Module injection argument mismatch ${injection.snippet}`);
+    return injection.snippet;
+  }
+
+  args = args.split(',');
+
+  assert(
+    args.length === numInjectionArgs,
+    `Module injection argument mismatch ${injection.snippet}`
+  );
+
+  let snippet = injection.snippet;
+  for (let i = 0; i < numInjectionArgs; ++i) {
+    snippet = snippet.replace(new RegExp(`\\b${injection.arguments[i]}\\b`, 'g'), args[i]);
+  }
+
+  return snippet;
+}
+
 /* eslint-enable complexity */
 
 // Takes an array of inject objects and combines them into one
