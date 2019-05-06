@@ -65,7 +65,7 @@ channelTime 1:   0---2     2---2---2
 channelTime 2:             0----10
 ```
 
-## Implentation
+## Implementation
 
 `AnimatonLoop` will have a new `timeline` property which is an instance of the class `Timeline`. The `Timeline` class will provide the following methods:
 
