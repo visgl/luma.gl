@@ -37,7 +37,7 @@ It is important to note that these directives shouldn't be considered module-spe
 
 ## Example
 
-Setting the picking color of a fragment simply involves filtering the fragment color based on the provided picking color. Currently, this is done by including the picking module and directly calling the `picking_filterColor` function it provides. This could be done automatically by defining a directive `##FRAGMENT_COLOR` to indicate that the fragment color has been finalized. In the fragment shader `main` function, this would appear as follows:
+Setting the picking color of a fragment simply involves replacing the calculated fragment color with a provided picking color, if picking is enabled. Currently, this is done by including the picking module and directly calling the `picking_filterColor` function it provides. This could be done automatically by defining a directive `##FRAGMENT_COLOR` to indicate that the fragment color has been finalized. In the fragment shader `main` function, this would appear as follows:
 ```js
 void main() {
   //...
