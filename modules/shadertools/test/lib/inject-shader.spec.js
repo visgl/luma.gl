@@ -117,8 +117,16 @@ test('injectShader#assembleShaders', t => {
     inject: INJECT,
     prologue: false
   });
-  t.equal(assembleResult.vs, VS_GLSL_RESOLVED, 'correctly injected');
-  t.equal(assembleResult.fs, FS_GLSL_RESOLVED, 'correctly injected');
+  t.equal(
+    assembleResult.vs.replace(/.*LUMAGL_[^}]*}\n/g, ''),
+    VS_GLSL_RESOLVED,
+    'correctly injected'
+  );
+  t.equal(
+    assembleResult.fs.replace(/.*LUMAGL_[^}]*}\n/g, ''),
+    FS_GLSL_RESOLVED,
+    'correctly injected'
+  );
 
   t.end();
 });

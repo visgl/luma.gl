@@ -186,19 +186,16 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-/* eslint-disable no-continue */
 function getHookFunctions(shaderType, moduleInjections) {
   let result = '';
   const hookFunctions = HOOK_FUNCTIONS[shaderType];
   for (const hookName in hookFunctions) {
-    if (!moduleInjections[hookName]) {
-      continue;
-    }
-
     result += `void ${hookFunctions[hookName]} {\n`;
     const injections = moduleInjections[hookName];
-    for (const injection of injections) {
-      result += `  ${injection};\n`;
+    if (injections) {
+      for (const injection of injections) {
+        result += `  ${injection};\n`;
+      }
     }
     result += '}\n';
   }
