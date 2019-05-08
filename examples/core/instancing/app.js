@@ -68,8 +68,8 @@ void main(void) {
   // Set up data for modules
   color = instanceColors;
   project_setNormal(normal);
-  vec3 pickColor = vec3(0., instancePickingColors);
-  ##PICK_COLOR(pickColor)
+  vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  LUMAGL_pickColor(pickColor);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -84,7 +84,7 @@ varying vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);
-  ##FRAGMENT_COLOR
+  LUMAGL_fragmentColor(gl_FragColor);
 }
 `;
 

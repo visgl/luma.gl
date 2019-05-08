@@ -34,7 +34,7 @@ vec4 dirlight_filterColor(vec4 color) {
 `;
 
 const injections = {
-  FRAGMENT_COLOR: 'gl_FragColor = dirlight_filterColor(gl_FragColor)'
+  LUMAGL_fragmentColor: 'color = dirlight_filterColor(color)'
 };
 
 export default {

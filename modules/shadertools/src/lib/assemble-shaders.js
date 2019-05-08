@@ -9,6 +9,15 @@ const SHADER_TYPE = {
   [FRAGMENT_SHADER]: 'fragment'
 };
 
+const HOOK_FUNCTIONS = {
+  [VERTEX_SHADER]: {
+    LUMAGL_pickColor: 'LUMAGL_pickColor(inout vec4 color)'
+  },
+  [FRAGMENT_SHADER]: {
+    LUMAGL_fragmentColor: 'LUMAGL_fragmentColor(inout vec4 color)'
+  }
+};
+
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
 const FRAGMENT_SHADER_PROLOGUE = `\
@@ -97,17 +106,13 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
     }
   }
 
+  assembledSource += getHookFunctions(type, moduleInjections);
+
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(
-    assembledSource,
-    type,
-    inject,
-    moduleInjections,
-    injectStandardStubs
-  );
+  assembledSource = injectShader(assembledSource, type, inject, injectStandardStubs);
 
   return assembledSource;
 }
@@ -179,4 +184,24 @@ function getApplicationDefines(defines = {}) {
     sourceText += '\n';
   }
   return sourceText;
+}
+
+/* eslint-disable no-continue */
+function getHookFunctions(shaderType, moduleInjections) {
+  let result = '';
+  const hookFunctions = HOOK_FUNCTIONS[shaderType];
+  for (const hookName in hookFunctions) {
+    if (!moduleInjections[hookName]) {
+      continue;
+    }
+
+    result += `void ${hookFunctions[hookName]} {\n`;
+    const injections = moduleInjections[hookName];
+    for (const injection of injections) {
+      result += `  ${injection};\n`;
+    }
+    result += '}\n';
+  }
+
+  return result;
 }
