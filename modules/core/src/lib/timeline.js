@@ -82,11 +82,7 @@ export class Timeline {
     if (offsetTime >= totalDuration) {
       channel.time = channel.duration * channel.rate;
     } else {
-      // Clamp
-      channel.time = Math.max(0, Math.min(offsetTime, totalDuration));
-      // Loop
-      channel.time %= channel.duration;
-      // Rate
+      channel.time = Math.max(0, offsetTime) % channel.duration;
       channel.time *= channel.rate;
     }
   }
