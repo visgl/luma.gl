@@ -17,20 +17,21 @@ const timeline = animationLoop.timeline;
 const channel1 = timeline.addChannel({
   rate: 0.5,
   duration: 4000,
-  wrapMode: "loop"
+  repeat: Number.POSITIVE_INFINITY
 });
 const channel2 = timeline.addChannel({
   rate: 2,
+  delay: 500,
   duration: 1000,
-  wrapMode: "clamp"
+  repeat: 3
 });
 
 timeline.pause();
 timeline.play();
 
 model.setUniforms({
-  uValue1: timeline.getChannelTime(channel1);
-  uValue2: timeline.getChannelTime(channel2);
+  uValue1: timeline.getTime(channel1);
+  uValue2: timeline.getTime(channel2);
 });
 ```
 
@@ -40,18 +41,19 @@ const timeline = new Timeline();
 const channel1 = timeline.addChannel({
   rate: 0.5,
   duration: 4000,
-  wrapMode: "loop"
+  repeat: Number.POSITIVE_INFINITY
 });
 const channel2 = timeline.addChannel({
   rate: 2,
+  delay: 500,
   duration: 1000,
-  wrapMode: "clamp"
+  repeat: 3
 });
 timeline.setTime(500);
 
 model.setUniforms({
-  uValue1: timeline.getChannelTime(channel1);
-  uValue2: timeline.getChannelTime(channel2);
+  uValue1: timeline.getTime(channel1);
+  uValue2: timeline.getTime(channel2);
 });
 ```
 
@@ -62,29 +64,18 @@ model.setUniforms({
 
 Add a new channel to the timeline. Returns a handle to the channel that can be use for subsequent interactions. Valid propeties are:
 * `rate` the speed of the channel's time relative to timeline time.
-* `duration` the length of the channel time frame.
-* `wrapMode` what to do when the timeline time moves outside the channels duration. "loop" repeat the channels timeframe, "clamp"
-  will clamp the channel's time to the range (0, duration).
+* `delay` offset into timeline time at which channel time starts elapsing, in timeline time units.
+* `duration` the length of the channel time frame, in timeline time units.
+* `repeat` how many time to repeat channel time's timeline. Only meaningful if `duration` is finite.
 
-### getTime: Number
 
-Return the current timeline time.
+### getTime(handle : Number [Optional]) : Number
 
-### getChannelTime(handle : Number) : Number
-
-Return the current time of the channel indicated by `handle`.
+Return the current time of the channel indicated by `handle`. If no handle is provided, return timeline time.
 
 ### setTime(time : Number)
 
 Set the timeline time to the given value.
-
-### setChannelProps(handle : Number, [props: Object])
-
-Update channel indicated by `handle` with the properties given in `props`. Valid propeties are:
-* `rate` the speed of the channel's time relative to timeline time.
-* `duration` the length of the channel time frame.
-* `wrapMode` what to do when the timeline time moves outside the channels duration. "loop" repeat the channels timeframe, "clamp"
-  will clamp the channel's time to the range (0, duration).
 
 ### play
 
