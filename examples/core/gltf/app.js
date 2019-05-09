@@ -262,7 +262,11 @@ export default class AppAnimationLoop extends AnimationLoop {
       blend: false
     });
 
-    this.loadOptions = Object.assign({}, DEFAULT_OPTIONS);
+    const channel = this.timeline.addChannel({
+      rate: 0.5
+    });
+
+    this.loadOptions = Object.assign({timeline: this.timeline, channel}, DEFAULT_OPTIONS);
     this.environment = new GLTFEnvironment(gl, {
       brdfLutUrl: `${GLTF_BASE_URL}/brdfLUT.png`,
       getTexUrl: (type, dir, mipLevel) =>
@@ -391,7 +395,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (!this.scenes.length) return false;
 
     if (this.animator) {
-      this.animator.animate(time);
+      this.animator.animate();
     }
 
     let success = true;

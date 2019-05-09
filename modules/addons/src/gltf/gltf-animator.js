@@ -187,7 +187,7 @@ class GLTFAnimation {
 }
 
 export default class GLTFAnimator {
-  constructor(gltf) {
+  constructor(gltf, timeline, channel) {
     this.animations = gltf.animations.map((animation, index) => {
       const name = animation.name || `Animation-${index}`;
       const samplers = animation.samplers.map(({input, interpolation = 'LINEAR', output}) => ({
@@ -202,10 +202,16 @@ export default class GLTFAnimator {
       }));
       return new GLTFAnimation({name, channels});
     });
+
+    this.timeline = timeline || null;
+    this.channel = channel;
   }
 
-  animate(timeMs) {
-    this.animations.forEach(animation => animation.animate(timeMs));
+  animate(time) {
+    if (time === undefined && this.timeline) {
+      time = this.timeline.getTime(this.channel);
+    }
+    this.animations.forEach(animation => animation.animate(time));
   }
 
   getAnimations() {
