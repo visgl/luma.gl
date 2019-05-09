@@ -38,7 +38,7 @@ export default class GLTFInstantiator {
 
   createAnimator() {
     if (Array.isArray(this.gltf.animations)) {
-      return new GLTFAnimator(this.gltf);
+      return new GLTFAnimator(this.gltf, this.options.timeline, this.options.channel);
     }
 
     return null;

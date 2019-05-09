@@ -148,7 +148,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.cube = new InstancedCube(gl, {
       _animationLoop,
       uniforms: {
-        uTime: ({_timeline}) => _timeline.getChannelTime(timeChannel),
+        uTime: ({_timeline}) => _timeline.getTime(timeChannel),
         // Basic projection matrix
         uProjection: ({aspect}) =>
           new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
@@ -157,9 +157,9 @@ export default class AppAnimationLoop extends AnimationLoop {
           new Matrix4().lookAt({
             center: [0, 0, 0],
             eye: [
-              (Math.cos(_timeline.getChannelTime(eyeXChannel)) * SIDE) / 2,
-              (Math.sin(_timeline.getChannelTime(eyeYChannel)) * SIDE) / 2,
-              ((Math.sin(_timeline.getChannelTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
+              (Math.cos(_timeline.getTime(eyeXChannel)) * SIDE) / 2,
+              (Math.sin(_timeline.getTime(eyeYChannel)) * SIDE) / 2,
+              ((Math.sin(_timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
             ]
           }),
         // Rotate all the individual cubes

@@ -1,32 +1,23 @@
-const WRAP_LOOP = 0;
-const WRAP_CLAMP = 1;
-const WRAP_MAP = {
-  loop: WRAP_LOOP,
-  clamp: WRAP_CLAMP
-};
-
 let ids = 0;
 
 export class Timeline {
   constructor() {
     this.time = 0;
-    this.duration = Number.POSITIVE_INFINITY;
-    this.wrapMode = WRAP_LOOP;
     this.channels = new Map();
-    this.rate = 1;
     this.playing = false;
     this.lastEngineTime = -1;
   }
 
   addChannel(props) {
-    const {duration = Number.POSITIVE_INFINITY, wrapMode = 'loop', rate = 1} = props;
+    const {delay = 0, duration = Number.POSITIVE_INFINITY, rate = 1, repeat = 1} = props;
 
     const handle = ids++;
     const channel = {
       time: 0,
-      duration: duration * rate,
-      wrapMode: WRAP_MAP[wrapMode],
-      rate
+      delay,
+      duration,
+      rate,
+      repeat
     };
     this._setChannelTime(channel, this.time);
     this.channels.set(handle, channel);
@@ -38,11 +29,11 @@ export class Timeline {
     this.channels.delete(handle);
   }
 
-  getTime() {
-    return this.time;
-  }
+  getTime(handle) {
+    if (handle === undefined) {
+      return this.time;
+    }
 
-  getChannelTime(handle) {
     const channel = this.channels.get(handle);
 
     if (channel === undefined) {
@@ -53,27 +44,11 @@ export class Timeline {
   }
 
   setTime(time) {
-    this._setChannelTime(this, time);
+    this.time = Math.max(0, time);
+
     const channels = this.channels.values();
     for (const channel of channels) {
       this._setChannelTime(channel, this.time);
-    }
-  }
-
-  setChannelProps(handle, props = {}) {
-    const channel = this.channels.get(handle);
-
-    if (channel === undefined) {
-      return;
-    }
-
-    const {duration = channel.duration, rate = channel.rate} = props;
-
-    channel.duration = duration;
-    channel.rate = rate;
-
-    if (props.wrapMode) {
-      channel.wrapMode = WRAP_MAP[props.wrapMode];
     }
   }
 
@@ -101,11 +76,14 @@ export class Timeline {
   }
 
   _setChannelTime(channel, time) {
-    channel.time = time * channel.rate;
-    if (channel.wrapMode === WRAP_LOOP) {
-      channel.time %= channel.duration;
+    const offsetTime = time - channel.delay;
+    const totalDuration = channel.duration * channel.repeat;
+    // Note(Tarek): Don't loop on final repeat.
+    if (offsetTime >= totalDuration) {
+      channel.time = channel.duration * channel.rate;
     } else {
-      channel.time = Math.max(0, Math.min(channel.time, channel.duration));
+      channel.time = Math.max(0, offsetTime) % channel.duration;
+      channel.time *= channel.rate;
     }
   }
 }
