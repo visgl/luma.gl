@@ -1,3 +1,8 @@
+
+## v7.1.0-alpha.1
+- Implementation of Timeline RFC (#1093)
+- Check for navigator before accessing (#1095)
+
 # 7.0 Pre-releases
 
 ## v7.0.0-rc.2

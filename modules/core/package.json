@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "7.1.0-alpha.0",
+  "version": "7.1.0-alpha.1",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "publishConfig": {
@@ -30,11 +30,11 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "7.1.0-alpha.0",
-    "@luma.gl/shadertools": "7.1.0-alpha.0",
-    "@luma.gl/webgl": "7.1.0-alpha.0",
-    "@luma.gl/webgl-state-tracker": "7.1.0-alpha.0",
-    "@luma.gl/webgl2-polyfill": "7.1.0-alpha.0",
+    "@luma.gl/constants": "7.1.0-alpha.1",
+    "@luma.gl/shadertools": "7.1.0-alpha.1",
+    "@luma.gl/webgl": "7.1.0-alpha.1",
+    "@luma.gl/webgl-state-tracker": "7.1.0-alpha.1",
+    "@luma.gl/webgl2-polyfill": "7.1.0-alpha.1",
     "math.gl": "^2.3.0",
     "probe.gl": "^3.0.1",
     "seer": "^0.2.4"
