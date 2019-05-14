@@ -41,7 +41,7 @@ The key frame is also being designed independently the the timeline manager to a
 ## Implementation
 
 A `KeyFrames` class that is constructed with a `Timeline` object and optional `channel` handle. It will provide the following methods:
-- setKeyFrames(): Takes an array of numbers that indicate the key frame times
+- setKeyFrames(): Takes an array of [time, data] pairs that represent the key frame times and application data associated with them
 - getStartIndex(): Returns the current start key frame index (i.e. the index of the key frame being interpolated from)
 - getEndIndex(): Returns the current end key frame index (i.e. the index of the key frame being interpolated to)
 - getStartData(): Returns the data at the current start key frame index (i.e. the data being interpolated from)
