@@ -62,7 +62,7 @@ effects/src
 </pre>
 
 * Objects under experimental folder will be exported as `_ObjectName`
-* `@luma.gl/glfx` will re-export necessary objects from @luma.gl/effects to backward compatibility
+* `@luma.gl/glfx` will re-export necessary objects from @luma.gl/effects for backward compatibility
 * `@luma.gl/glfx` will be removed in 8.0 release
 
 ## Future Ideas
