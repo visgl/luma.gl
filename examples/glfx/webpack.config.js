@@ -1,5 +1,6 @@
 /* global __dirname, require, module */
 const {resolve} = require('path');
+// eslint-disable-next-line import/no-extraneous-dependencies
 const ALIASES = require('ocular-dev-tools/config/ocular.config')({
   root: resolve(__dirname, '../..')
 }).aliases;
