@@ -141,10 +141,10 @@ export default class Framebuffer extends Resource {
     // Multiple render target support, set read buffer and draw buffers
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
     if (readBuffer) {
-      this._setReadBuffer(readBuffer);
+      this._setReadBuffer(gl, readBuffer);
     }
     if (drawBuffers) {
-      this._setDrawBuffers(drawBuffers);
+      this._setDrawBuffers(gl, drawBuffers);
     }
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
