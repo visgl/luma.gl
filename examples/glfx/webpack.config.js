@@ -1,4 +1,8 @@
 /* global __dirname, require, module */
+const {resolve} = require('path');
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+  root: resolve(__dirname, '../..')
+}).aliases;
 
 // const webpack = require('webpack');
 const path = require('path');
@@ -42,7 +46,7 @@ module.exports = {
   resolve: {
     mainFields: ['esnext', 'browser', 'module', 'main'],
     extensions: ['.json', '.js'],
-    alias: require('../../aliases')
+    alias: ALIASES
   },
   plugins
 };

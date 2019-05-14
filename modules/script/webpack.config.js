@@ -3,7 +3,10 @@
 const webpack = require('webpack');
 const {resolve} = require('path');
 
-const ALIASES = require('../../aliases');
+// eslint-disable-next-line import/no-extraneous-dependencies
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+  root: resolve(__dirname, '../..')
+}).aliases;
 
 const PACKAGE_ROOT = resolve(__dirname, '.');
 const ROOT = resolve(PACKAGE_ROOT, '../..');
