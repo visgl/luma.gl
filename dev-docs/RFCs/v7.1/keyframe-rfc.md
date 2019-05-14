@@ -15,8 +15,10 @@ This RFC specifies a simple key frame management system.
 luma.gl currently supports basic animations through the `AnimationLoop`'s [timeline object](animation-timeline-rfc.md). It allows for some flexibility in manipulating animations where the
 only input is a `time` value. While this is all that is required for simple generative animations, more complex animations are often authored with [key frames](https://en.wikipedia.org/wiki/Key_frame),
 where the input `time` value resolves to a pair of frames in the animation and an interpolation factor between them. Managing this resolution at the application level is complex,
-and luma.gl could provide a simple mechanism to simplify setting up key frames and resolving them based on an input `time`. This system can be built upon `AnimationLoop.timeline` allowing key frames to take
-advantage of the flexibility provided by that system.
+and luma.gl could provide a simple mechanism to simplify setting up key frames and resolving them based on an input `time`.
+
+At the most basic level, such a system would simply allow the application to define the key frame time points and associate arbitrary data with them. It would then provide a simple API to query the currently active key frame pair
+based on input `time`, the data associated with those key frames, and the current interpolation factor between them. The input `time` itself can be queried from `AnimationLoop.timeline` allowing key frames to take advantage of the flexibility provided by that system.
 
 
 ## Customers
@@ -27,33 +29,45 @@ to what kind of support could be provided in luma.gl or deck.gl.
 
 ## Overview
 
-A key frame manager that provides an API to set key frame times, and query the current key frame index and interpolation factor based on the current time provided by a `Timeline` object.
+The proposed key frame manager will allow the application to define key frames as a simple pair: a time value in milliseconds and some arbitrary data associated with that time point. The semantics of the data will be left
+completely up to the application. The key frame manager will not attempt to actually interpolate the data as that would require knowledge of the data being used by the application and add unnecessary complexity to the proposed API. Instead, the key frame manager will provide the application with all data needed to perform the correct interpolation:
+- Index and application data of the start key frame
+- Index and application data of the end key frame
+- The factor to use to interpolate between the start and end key frames
+
+The key frame is also being designed independently the the timeline manager to avoid adding complexity to that API. Applications that use key frame animations will use it, while those that don't can ignore it completely.
 
 
 ## Implementation
 
 A `KeyFrames` class that is constructed with a `Timeline` object and optional `channel` handle. It will provide the following methods:
 - setKeyFrames(): Takes an array of numbers that indicate the key frame times
-- getIndex(): Returns the current key frame index (i.e. the index of the lower-bound time of the current key frame pair)
-- getFactor(): Returns a value between 0 and 1 representing the interpolation factor between the current key frame pair
-
+- getStartIndex(): Returns the current start key frame index (i.e. the index of the key frame being interpolated from)
+- getEndIndex(): Returns the current end key frame index (i.e. the index of the key frame being interpolated to)
+- getStartData(): Returns the data at the current start key frame index (i.e. the data being interpolated from)
+- getEndData(): Returns the data at the current end key frame index (i.e. the data being interpolated to)
+- getFactor(): Returns a value between 0 and 1 representing the interpolation factor between the start and end key frames pair
 
 ## Example
 
 ```js
 
-const kf = new KeyFrames(timeline);
+const kf = new KeyFrames(timeline, channel);  // Assume channel has a rate of 1
 
+// Each key frame is pair, [time point, arbitrary data]
 kf.setKeyFrames([
-  0,
-  500,   // In milliseconds
-  800,
-  1200,
-  1500
+  [0, { val1: [1, 0, 1], val2: 0} ],
+  [500, { val1: [1, 1, 1], val2: 2} ],
+  [800, { val1: [0, 0, 1], val2: 1} ],
+  [1200, { val1: [0, 1, 0], val2: 4} ],
+  [1500, { val1: [1, 0, 1], val2: 5} ]
 ]);
 
 timeline.setTime(1000);
 
-kf.getIndex();   // => 2    (i.e. between 800 and 1200)
-kf.getFactor();  // => 0.5  (i.e. halfway between 800 and 1200)
+kf.getStartIndex(); // => 2                            (i.e. key frame at time=800)
+kf.getEndIndex();   // => 3                            (i.e. key frame at time=1200)
+kf.getStartData()   // => { val1: [0, 0, 1], val2: 1}  (i.e. data at index 2)
+kf.getEndData()     // => { val1: [0, 1, 0], val2: 4}  (i.e. data at index 3)
+kf.getFactor();     // => 0.5                          (i.e. halfway between 800 and 1200)
 ```
