@@ -27,24 +27,24 @@ A lot of shader modules focusing on effect rendering are created, better to have
 * Source code structure for effects in current `@luma.gl/effects`
     <pre>
 	 effects/src
+		    |
+		    modules
 		        |
-		        modules
+		        convolution.js
 		        |
-			convolution.js
-				|
-				depth.js
-				|
-				pack.js
-				|
-				ssao.js
+		        depth.js
 		        |
-			passes
-				|
-				convolution-pass.js
-				|
-				outline-pass.js
-				|
-				ssao-pass.js
+		        pack.js
+		        |
+		        ssao.js
+		    |
+		    passes
+		        |
+		        convolution-pass.js
+		        |
+		        outline-pass.js
+		        |
+		        ssao-pass.js
     </pre>
 			
 ## Proposal
