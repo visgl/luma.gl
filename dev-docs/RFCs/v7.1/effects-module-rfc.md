@@ -62,8 +62,10 @@ effects/src
 </pre>
 
 * Objects under experimental folder will be exported as `_ObjectName`
-* `@luma.gl/glfx` will re-export necessary objects from @luma.gl/effects for backward compatibility
-* `@luma.gl/glfx` will be removed in 8.0 release
+* `@luma.gl/glfx` will be dropped in 7.1 release
+
+## Test Plan
+Increase render test coverage to cover all the effects
 
 ## Future Ideas
  Currently we focus on pure screen space filtering effects, which only has shader module while the rendering passes can be created on the fly. In the next step, we may create rendering passes in `@luma.gl/effects` for more complicated effects like bloom, SSAO, shadow etc. If this is the case, there will be a `passes` folder under `@luma.gl/effects/src`
