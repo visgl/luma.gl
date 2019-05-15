@@ -36,7 +36,7 @@ completely up to the application. The key frame manager will not attempt to actu
 - The factor to use to interpolate between the start and end key frames
 
 
-The `Timeline` class will be minimally extended to support attaching what will be referred to as "animations", defined as any object with a `setTime` method. When a timelime's time value is updated, it will cascade that value down to any objects attached in this way.
+The `Timeline` class will be minimally extended to support attaching "animations", defined as any object with a `setTime` method. When a timelime's time value is updated, it will cascade that update down to any objects attached in this way.
 
 ## Implementation
 
