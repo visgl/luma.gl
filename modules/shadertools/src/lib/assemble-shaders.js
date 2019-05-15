@@ -10,12 +10,8 @@ const SHADER_TYPE = {
 };
 
 const HOOK_FUNCTIONS = {
-  [VERTEX_SHADER]: {
-    LUMAGL_pickColor: 'LUMAGL_pickColor(inout vec4 color)'
-  },
-  [FRAGMENT_SHADER]: {
-    LUMAGL_fragmentColor: 'LUMAGL_fragmentColor(inout vec4 color)'
-  }
+  vs: {},
+  fs: {}
 };
 
 // Precision prologue to inject before functions are injected in shader
@@ -24,6 +20,11 @@ const FRAGMENT_SHADER_PROLOGUE = `\
 precision highp float;
 
 `;
+
+export function setShaderHook(type, opts) {
+  const name = opts.signature.trim().replace(/\(.+/, '');
+  HOOK_FUNCTIONS[type][name] = opts;
+}
 
 // Inject a list of modules
 export function assembleShaders(gl, opts = {}) {
@@ -85,7 +86,6 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
-  const moduleInjections = {};
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -97,16 +97,10 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         const moduleSource = module.getModuleSource(type, glslVersion);
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
-
-        const injections = module.getInjections();
-        for (const key in injections) {
-          moduleInjections[key] = moduleInjections[key] || [];
-          moduleInjections[key].push(injections[key]);
-        }
     }
   }
 
-  assembledSource += getHookFunctions(type, moduleInjections);
+  assembledSource += getHookFunctions(type, inject);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
@@ -186,16 +180,20 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderType, moduleInjections) {
+function getHookFunctions(shaderType, inject) {
   let result = '';
   const hookFunctions = HOOK_FUNCTIONS[shaderType];
   for (const hookName in hookFunctions) {
-    result += `void ${hookFunctions[hookName]} {\n`;
-    const injections = moduleInjections[hookName];
-    if (injections) {
-      for (const injection of injections) {
-        result += `  ${injection};\n`;
-      }
+    const hookFunction = hookFunctions[hookName];
+    result += `void ${hookFunction.signature} {\n`;
+    if (hookFunction.header) {
+      result += `  ${hookFunction.header}`;
+    }
+    if (inject[hookName]) {
+      result += `  ${inject[hookName]};\n`;
+    }
+    if (hookFunction.footer) {
+      result += `  ${hookFunction.footer}`;
     }
     result += '}\n';
   }

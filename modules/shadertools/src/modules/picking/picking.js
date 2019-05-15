@@ -114,14 +114,8 @@ vec4 picking_filterColor(vec4 color) {
 
 `;
 
-const injections = {
-  LUMAGL_pickColor: 'picking_setPickingColor(color.rgb)',
-  LUMAGL_fragmentColor: 'color = picking_filterColor(color)'
-};
-
 export default {
   name: 'picking',
-  injections,
   vs,
   fs,
   getUniforms

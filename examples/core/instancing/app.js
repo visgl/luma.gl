@@ -6,7 +6,8 @@ import {
   dirlight,
   readPixelsToArray,
   Buffer,
-  CubeGeometry
+  CubeGeometry,
+  setShaderHook
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
@@ -98,6 +99,15 @@ void main(void) {
         vs,
         fs,
         modules: [dirlight, picking],
+        inject: {
+          LUMAGL_pickColor: `
+            picking_setPickingColor(color.rgb);
+          `,
+          LUMAGL_fragmentColor: `
+            color = dirlight_filterColor(color);
+            color = picking_filterColor(color);
+          `
+        },
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),
@@ -127,6 +137,14 @@ export default class AppAnimationLoop extends AnimationLoop {
       clearDepth: 1,
       depthTest: true,
       depthFunc: gl.LEQUAL
+    });
+
+    setShaderHook('vs', {
+      signature: 'LUMAGL_pickColor(inout vec4 color)'
+    });
+
+    setShaderHook('fs', {
+      signature: 'LUMAGL_fragmentColor(inout vec4 color)'
     });
 
     const timeChannel = this.timeline.addChannel({

@@ -33,15 +33,10 @@ vec4 dirlight_filterColor(vec4 color) {
 }
 `;
 
-const injections = {
-  LUMAGL_fragmentColor: 'color = dirlight_filterColor(color)'
-};
-
 export default {
   name: 'dirlight',
   vs,
   fs,
-  injections,
   getUniforms,
   dependencies: [project]
 };

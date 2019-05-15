@@ -133,6 +133,7 @@ export {
   registerShaderModules,
   setDefaultShaderModules,
   assembleShaders,
+  setShaderHook,
   // HELPERS
   combineInjects,
   normalizeShaderModule,

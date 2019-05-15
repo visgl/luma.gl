@@ -54,8 +54,8 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
         break;
 
       default:
-        // inject code after key, leaving key in place
-        source = source.replace(key, match => match + fragment);
+      // inject code after key, leaving key in place
+      // source = source.replace(key, match => match + fragment);
     }
   }
 
