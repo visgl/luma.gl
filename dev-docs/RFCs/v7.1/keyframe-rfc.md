@@ -35,33 +35,38 @@ completely up to the application. The key frame manager will not attempt to actu
 - Index and application data of the end key frame
 - The factor to use to interpolate between the start and end key frames
 
-The key frame is also being designed independently the the timeline manager to avoid adding complexity to that API. Applications that use key frame animations will use it, while those that don't can ignore it completely.
 
+The `Timeline` class will be minimally extended to support attaching what will be referred to as "animations", defined as any object with a `setTime` method. When a timelime's time value is updated, it will cascade that value down to any objects attached in this way.
 
 ## Implementation
 
-A `KeyFrames` class that is constructed with a `Timeline` object and optional `channel` handle. It will provide the following methods:
-- setKeyFrames(): Takes an array of [time, data] pairs that represent the key frame times and application data associated with them
+A `KeyFrames` class that is constructed from an array of [time, data] pairs that represent the key frame times and application data associated with them. It will provide the following methods:
+- setKeyFrames(): Replaces the current set of key frames with a new one. Takes the same argument as the constructor
 - getStartIndex(): Returns the current start key frame index (i.e. the index of the key frame being interpolated from)
 - getEndIndex(): Returns the current end key frame index (i.e. the index of the key frame being interpolated to)
 - getStartData(): Returns the data at the current start key frame index (i.e. the data being interpolated from)
 - getEndData(): Returns the data at the current end key frame index (i.e. the data being interpolated to)
 - getFactor(): Returns a value between 0 and 1 representing the interpolation factor between the start and end key frames pair
+- setTime(): Set the current time of the key frames
+
+The `Timeline` class will be extended with two methods:
+- `attachAnimation`: takes an animation object (i.e. any object with a `setTime` method) and optionally a channel handle, and will update that object's time whenever `Timeline.setTime()` is called. Returns a handle to that animations attachment point.
+- `detachAnimation`: takes an animation attachment handle and detaches the associated animation from the timeline.
+
 
 ## Example
 
 ```js
 
-const kf = new KeyFrames(timeline, channel);  // Assume channel has a rate of 1
-
-// Each key frame is pair, [time point, arbitrary data]
-kf.setKeyFrames([
+const kf = new KeyFrames([
   [0, { val1: [1, 0, 1], val2: 0} ],
   [500, { val1: [1, 1, 1], val2: 2} ],
   [800, { val1: [0, 0, 1], val2: 1} ],
   [1200, { val1: [0, 1, 0], val2: 4} ],
   [1500, { val1: [1, 0, 1], val2: 5} ]
 ]);
+
+const handle = timeline.attachAnimation(kf, channel);
 
 timeline.setTime(1000);
 
@@ -70,4 +75,6 @@ kf.getEndIndex();   // => 3                            (i.e. key frame at time=1
 kf.getStartData()   // => { val1: [0, 0, 1], val2: 1}  (i.e. data at index 2)
 kf.getEndData()     // => { val1: [0, 1, 0], val2: 4}  (i.e. data at index 3)
 kf.getFactor();     // => 0.5                          (i.e. halfway between 800 and 1200)
+
+timeline.detachAnimation(handle);
 ```
