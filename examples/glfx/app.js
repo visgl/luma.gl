@@ -178,7 +178,7 @@ $(window).load(function() {
   }
 
   try {
-    canvas = new luma._Canvas().replace($('#placeholder')[0]);
+    canvas = new Canvas().replace($('#placeholder')[0]);
   } catch (error) {
     const message = `\
 <div class="sadface">:(</div>Sorry, but this browser doesn\'t support WebGL.<br>Please see
