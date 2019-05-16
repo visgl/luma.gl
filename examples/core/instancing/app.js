@@ -7,7 +7,8 @@ import {
   readPixelsToArray,
   Buffer,
   CubeGeometry,
-  setShaderHook
+  setShaderHook,
+  setModuleInjection
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 
@@ -99,15 +100,6 @@ void main(void) {
         vs,
         fs,
         modules: [dirlight, picking],
-        inject: {
-          LUMAGL_pickColor: `
-            picking_setPickingColor(color.rgb);
-          `,
-          LUMAGL_fragmentColor: `
-            color = dirlight_filterColor(color);
-            color = picking_filterColor(color);
-          `
-        },
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),
@@ -145,6 +137,22 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     setShaderHook('fs', {
       signature: 'LUMAGL_fragmentColor(inout vec4 color)'
+    });
+
+    setModuleInjection('vs', 'picking', {
+      shaderHook: 'LUMAGL_pickColor',
+      injection: 'picking_setPickingColor(color.rgb)'
+    });
+
+    setModuleInjection('fs', 'dirlight', {
+      shaderHook: 'LUMAGL_fragmentColor',
+      injection: 'color = dirlight_filterColor(color)'
+    });
+
+    setModuleInjection('fs', 'picking', {
+      shaderHook: 'LUMAGL_fragmentColor',
+      injection: 'color = picking_filterColor(color)',
+      priority: Number.POSITIVE_INFINITY
     });
 
     const timeChannel = this.timeline.addChannel({

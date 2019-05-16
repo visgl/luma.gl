@@ -134,6 +134,7 @@ export {
   setDefaultShaderModules,
   assembleShaders,
   setShaderHook,
+  setModuleInjection,
   // HELPERS
   combineInjects,
   normalizeShaderModule,

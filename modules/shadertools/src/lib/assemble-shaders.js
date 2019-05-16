@@ -10,8 +10,13 @@ const SHADER_TYPE = {
 };
 
 const HOOK_FUNCTIONS = {
-  vs: {},
-  fs: {}
+  [VERTEX_SHADER]: {},
+  [FRAGMENT_SHADER]: {}
+};
+
+const MODULE_INJECTIONS = {
+  [VERTEX_SHADER]: {},
+  [FRAGMENT_SHADER]: {}
 };
 
 // Precision prologue to inject before functions are injected in shader
@@ -24,6 +29,15 @@ precision highp float;
 export function setShaderHook(type, opts) {
   const name = opts.signature.trim().replace(/\(.+/, '');
   HOOK_FUNCTIONS[type][name] = opts;
+}
+
+export function setModuleInjection(type, moduleName, opts) {
+  const {shaderHook, injection, priority = 0} = opts;
+  MODULE_INJECTIONS[type][moduleName] = MODULE_INJECTIONS[type][moduleName] || {};
+  MODULE_INJECTIONS[type][moduleName][shaderHook] = {
+    injection,
+    priority
+  };
 }
 
 // Inject a list of modules
@@ -86,6 +100,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
+  const moduleInjections = {};
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -97,10 +112,16 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         const moduleSource = module.getModuleSource(type, glslVersion);
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
+
+        const injections = MODULE_INJECTIONS[type][module.name];
+        for (const key in injections) {
+          moduleInjections[key] = moduleInjections[key] || [];
+          moduleInjections[key].push(injections[key]);
+        }
     }
   }
 
-  assembledSource += getHookFunctions(type, inject);
+  assembledSource += getHookFunctions(type, moduleInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
@@ -180,7 +201,7 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderType, inject) {
+function getHookFunctions(shaderType, moduleInjections) {
   let result = '';
   const hookFunctions = HOOK_FUNCTIONS[shaderType];
   for (const hookName in hookFunctions) {
@@ -189,8 +210,12 @@ function getHookFunctions(shaderType, inject) {
     if (hookFunction.header) {
       result += `  ${hookFunction.header}`;
     }
-    if (inject[hookName]) {
-      result += `  ${inject[hookName]};\n`;
+    if (moduleInjections[hookName]) {
+      const injections = moduleInjections[hookName];
+      injections.sort((a, b) => a.priority - b.priority);
+      for (const injection of injections) {
+        result += `  ${injection.injection};\n`;
+      }
     }
     if (hookFunction.footer) {
       result += `  ${hookFunction.footer}`;
