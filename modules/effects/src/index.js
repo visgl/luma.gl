@@ -6,11 +6,8 @@ export {default as denoise} from './modules/adjust-filters/denoise';
 export {default as hueSaturation} from './modules/adjust-filters/huesaturation';
 export {default as noise} from './modules/adjust-filters/noise';
 export {default as sepia} from './modules/adjust-filters/sepia';
-export {default as unsharpMask} from './modules/adjust-filters/unsharpmask';
 export {default as vibrance} from './modules/adjust-filters/vibrance';
 export {default as vignette} from './modules/adjust-filters/vignette';
-
-export {default as curves} from './modules/curve-filters/curves';
 
 // glfx BLUR shader modules
 export {default as lensBlur} from './modules/blur-filters/lensblur';
