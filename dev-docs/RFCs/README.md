@@ -28,6 +28,13 @@ These are early ideas not yet associated with any release
 | [**Dist Size Reduction**](vNext/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
 
+## v7.1 RFCs
+| RFC | Author | Status | Description |
+| --- | ---    | ---    | ---         |
+|[**Hiearchical Animation Timeline**](v7.1/animation-timeline-rfc.md) | @tsherif | **Implemented** |  Timeline management system for animations |
+|[**Animation Key Frame Management**](v7.1/keyframe-rfc.md) | @tsherif | **Approved** |  Key frame management system for animations |
+|[**Shader Module Code Injection**](v7.1/shader-module-injection-rfc.md) | @tsherif | **Approved** |  Structure code injection mechanism for shader modules |
+
 ## v7.0 RFCs
 
 | RFC | Author | Status | Description |

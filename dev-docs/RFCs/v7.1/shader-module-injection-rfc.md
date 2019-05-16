@@ -2,7 +2,7 @@
 
 * **Author**: Tarek Sherif
 * **Date**: May, 2019
-* **Status**: **Draft**
+* **Status**: **Approved**
 
 
 ## Summary
@@ -88,6 +88,6 @@ setModuleInjection('fs', 'picking', {
 If the picking module were included, the function `MYHOOK_fragmentColor` would be updated to modify the input color. Without the picking module, the function would remain a no-op.
 
 I've created a proof-of-concept of the proposed mechanism in this branch: https://github.com/uber/luma.gl/tree/module-injections
-Sample usage can be seen in a modified version of the instancing example (in which both picking and lighting are handled via injections): https://github.com/uber/luma.gl/blob/7f59fea27e5be1144a211c93ee4e3c768f9c4f09/examples/core/instancing/app.js
+Sample usage can be seen in a modified version of the instancing example (in which both picking and lighting are handled via injections): https://github.com/uber/luma.gl/blob/ec879f143ebfeec2fe55c1a2c17b60f55cf06c9b/examples/core/instancing/app.js#L134-L156
 
 
