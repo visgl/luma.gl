@@ -1,7 +1,7 @@
 // Shader modules
-export {default as depth} from './modules/depth';
 
-// Image processing / render passes
-export {default as ConvolutionPass} from './passes/convolution-pass';
-export {default as OutlinePass} from './passes/outline-pass';
-export {default as SSAOPass} from './passes/ssao-pass';
+// experimental shader modules and passes
+export {default as _depth} from './experimental/modules/depth';
+export {default as _ConvolutionPass} from './experimental/passes/convolution-pass';
+export {default as _OutlinePass} from './experimental/passes/outline-pass';
+export {default as _SSAOPass} from './experimental/passes/ssao-pass';
