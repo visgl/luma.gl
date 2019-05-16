@@ -476,8 +476,8 @@ const filters = {
   ],
   Blur: [
     new Filter('Triangle Blur', filterModules.triangleBlur),
-    new Filter('Zoom Blur', filterModules.zoomBlur)
-    // new Filter('Lens Blur', filterModules.lensBlur),
+    new Filter('Zoom Blur', filterModules.zoomBlur),
+    new Filter('tilt Shift', filterModules.tiltShift)
     // this.addSlider('radius', 'Radius', 0, 50, 10, 1);
     // this.addSlider('brightness', 'Brightness', -1, 1, 0.75, 0.01);
     // this.addSlider('angle', 'Angle', 0, Math.PI, 0, 0.01);

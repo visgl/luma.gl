@@ -10,7 +10,6 @@ export {default as vibrance} from './modules/adjust-filters/vibrance';
 export {default as vignette} from './modules/adjust-filters/vignette';
 
 // glfx BLUR shader modules
-export {default as lensBlur} from './modules/blur-filters/lensblur';
 export {default as tiltShift} from './modules/blur-filters/tiltshift';
 export {default as triangleBlur} from './modules/blur-filters/triangleblur';
 export {default as zoomBlur} from './modules/blur-filters/zoomblur';
