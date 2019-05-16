@@ -62,7 +62,8 @@ effects/src
 </pre>
 
 * Objects under experimental folder will be exported as `_ObjectName`
-* `@luma.gl/glfx` will be dropped in 7.1 release
+* `@luma.gl/glfx` will re-export necessary objects from @luma.gl/effects for backward compatibility
+* `@luma.gl/glfx` will be removed in 8.0 release
 
 ## Test Plan
 Increase render test coverage to cover all the effects
