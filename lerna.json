@@ -12,7 +12,6 @@
       "ignore": [
         "test",
         "*.md",
-        "@luma.gl/effects",
         "@luma.gl/scripts"
       ]
     },
