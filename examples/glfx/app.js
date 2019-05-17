@@ -280,109 +280,6 @@ $(window).load(function() {
         filter.values[nub.name] = [x, y];
       }
 
-      // Set up curves
-      for (var j = 0; j < filter.curves.length; j++) {
-        var curves = filter.curves[j];
-        (function(curves, filter) {
-          var canvas = $('#' + curves.id)[0];
-          var c = canvas.getContext('2d');
-          var w = (canvas.width = $(canvas).width());
-          var h = (canvas.height = $(canvas).height());
-          var start = 0;
-          var end = 1;
-
-          // Make sure there's always a start and end node
-          function fixCurves() {
-            if (point[0] == 0) start = point[1];
-            if (point[0] == 1) end = point[1];
-            var points = filter.values[curves.name];
-            var foundStart = false;
-            var foundEnd = false;
-            for (let i = 0; i < points.length; i++) {
-              var p = points[i];
-              if (p[0] == 0) {
-                foundStart = true;
-                if (point[0] == 0 && p != point) points.splice(i--, 1);
-              } else if (p[0] == 1) {
-                foundEnd = true;
-                if (point[0] == 1 && p != point) points.splice(i--, 1);
-              }
-            }
-            if (!foundStart) points.push([0, start]);
-            if (!foundEnd) points.push([1, end]);
-          }
-
-          // Render the curves to the canvas
-          curves.draw = function() {
-            var points = filter.values[curves.name];
-            var map = luma.filters.splineInterpolate(points);
-            c.clearRect(0, 0, w, h);
-            c.strokeStyle = '#4B4947';
-            c.beginPath();
-            for (let i = 0; i < map.length; i++) {
-              c.lineTo((i / map.length) * w, (1 - map[i] / 255) * h);
-            }
-            c.stroke();
-            c.fillStyle = 'white';
-            for (let i = 0; i < points.length; i++) {
-              var p = points[i];
-              c.beginPath();
-              c.arc(p[0] * w, (1 - p[1]) * h, 3, 0, Math.PI * 2, false);
-              c.fill();
-            }
-          };
-
-          // Allow the curves to be manipulated using the mouse
-          var dragging = false;
-          var point;
-          function getMouse(e) {
-            var offset = $(canvas).offset();
-            var x = Math.max(0, Math.min(1, (e.pageX - offset.left) / w));
-            var y = Math.max(0, Math.min(1, 1 - (e.pageY - offset.top) / h));
-            return [x, y];
-          }
-
-          $(canvas).mousedown(function(e) {
-            var points = filter.values[curves.name];
-            point = getMouse(e);
-            for (let i = 0; i < points.length; i++) {
-              var p = points[i];
-              var x = (p[0] - point[0]) * w;
-              var y = (p[1] - point[1]) * h;
-              if (x * x + y * y < 5 * 5) {
-                point = p;
-                break;
-              }
-            }
-            if (i == points.length) {
-              points.push(point);
-            }
-            dragging = true;
-            fixCurves();
-            curves.draw();
-            filter.update();
-          });
-
-          $(document).mousemove(function(e) {
-            if (dragging) {
-              var p = getMouse(e);
-              point[0] = p[0];
-              point[1] = p[1];
-              fixCurves();
-              curves.draw();
-              filter.update();
-            }
-          });
-          $(document).mouseup(function() {
-            dragging = false;
-          });
-
-          // Set the initial curves
-          filter.values[curves.name] = [[0, 0], [1, 1]];
-          curves.draw();
-        })(curves, filter);
-      }
-
       // Make jQuery UI sliders
       for (var j = 0; j < filter.sliders.length; j++) {
         var slider = filter.sliders[j];
@@ -572,31 +469,15 @@ const filters = {
     // this.addSlider('strength', 'Strength', 0, 1, 0.5, 0.01);
     // strength: 3 + 200 * Math.pow(1 - this.strength, 4)
     new Filter('Noise', filterModules.noise),
-    new Filter('Unsharp Mask', filterModules.unsharpMask),
     //   this.addSlider('radius', 'Radius', 0, 200, 20, 1);
     //   this.addSlider('strength', 'Strength', 0, 5, 2, 0.01);
     new Filter('Vibrance', filterModules.vibrance),
-    new Filter('Vignette', filterModules.vignette),
-    new Filter(
-      'Curves',
-      filterModules.curves,
-      filter => {
-        filter.addCurves('points');
-      },
-      values => ({
-        map: new Texture2D(gl, {
-          width: 256,
-          height: 1,
-          format: gl.RGBA,
-          type: gl.UNSIGNED_BYTE
-        })
-      })
-    )
+    new Filter('Vignette', filterModules.vignette)
   ],
   Blur: [
     new Filter('Triangle Blur', filterModules.triangleBlur),
-    new Filter('Zoom Blur', filterModules.zoomBlur)
-    // new Filter('Lens Blur', filterModules.lensBlur),
+    new Filter('Zoom Blur', filterModules.zoomBlur),
+    new Filter('tilt Shift', filterModules.tiltShift)
     // this.addSlider('radius', 'Radius', 0, 50, 10, 1);
     // this.addSlider('brightness', 'Brightness', -1, 1, 0.75, 0.01);
     // this.addSlider('angle', 'Angle', 0, Math.PI, 0, 0.01);
