@@ -141,10 +141,10 @@ export default class Framebuffer extends Resource {
     // Multiple render target support, set read buffer and draw buffers
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
     if (readBuffer) {
-      this._setReadBuffer(gl, readBuffer);
+      this._setReadBuffer(readBuffer);
     }
     if (drawBuffers) {
-      this._setDrawBuffers(gl, drawBuffers);
+      this._setDrawBuffers(drawBuffers);
     }
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
@@ -536,7 +536,8 @@ export default class Framebuffer extends Resource {
   }
 
   // Expects framebuffer to be bound
-  _setReadBuffer(gl, readBuffer) {
+  _setReadBuffer(readBuffer) {
+    const {gl} = this;
     if (isWebGL2(gl)) {
       gl.readBuffer(readBuffer);
     } else {
@@ -550,7 +551,8 @@ export default class Framebuffer extends Resource {
   }
 
   // Expects framebuffer to be bound
-  _setDrawBuffers(gl, drawBuffers) {
+  _setDrawBuffers(drawBuffers) {
+    const {gl} = this;
     if (isWebGL2(gl)) {
       gl.drawBuffers(drawBuffers);
     } else {
