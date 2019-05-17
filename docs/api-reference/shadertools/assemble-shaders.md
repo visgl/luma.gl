@@ -44,7 +44,7 @@ will also be used as the name of the shader hook
 
 ### `setModuleInjection(shaderType, moduleName, opts)`
 
-Define a code injection for a particular hook function (defined by `setShaderHook`) and module. The injection will be inserted into the hook function whenever the module is included.
+Define a code injection for a particular hook function (defined by `setShaderHook`) and shader module. The injection code will be inserted into the hook function whenever the shader module is included.
 
 - `shaderType`: `vs` or `fs`, the type of shader
 - `moduleName`: the name of the module for which the injection is being defined
@@ -76,7 +76,7 @@ Shader module code injections involve three steps:
 - Calling the hook function in a shader
 - Defining hook code injections for particular modules
 
-For example, if the application wanted to automatically enable picking color filtering when the `picking` is included in a program, first the shader hook would be defined:
+For example, if the application wanted to automatically enable picking color filtering when the `picking` module is included in a program, first the shader hook would be defined:
 
 ```js
 setShaderHook('fs', {
@@ -102,7 +102,8 @@ setModuleInjection('fs', 'picking', {
 });
 ```
 
-If the picking module were included, the function `MYHOOK_fragmentColor` would be updated to modify the input color. Without the picking module, the function would remain a no-op.
+If the picking module were included, the function `MYHOOK_fragmentColor` would be updated to modify the input color. Without the picking module, the function would remain a no-op. The `priority` ensures the injection always
+appears last in the hook function, which is necessary for picking color filtering to work correctly.
 
 
 ### Injection Map
