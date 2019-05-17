@@ -61,34 +61,36 @@ const KERNEL = {
 const fs = `
 precision highp float;
 
-uniform vec2 uTextureSize;
-uniform float uKernel[9];
-uniform float uKernelWeight;
+uniform float kernel[9];
+uniform float kernelWeight;
 
-vec4 convolution_getColor(sampler2D tDiffuse, vec2 uv) {
-  vec2 onePixel = vec2(1.0, 1.0) / uTextureSize;
+vec4 convolution_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoords) {
+  vec2 onePixel = vec2(1.0, 1.0) / texSize;
   vec4 colorSum =
-    texture2D(tDiffuse, uv + onePixel * vec2(-1, -1)) * uKernel[0] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 0, -1)) * uKernel[1] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 1, -1)) * uKernel[2] +
-    texture2D(tDiffuse, uv + onePixel * vec2(-1,  0)) * uKernel[3] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 0,  0)) * uKernel[4] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 1,  0)) * uKernel[5] +
-    texture2D(tDiffuse, uv + onePixel * vec2(-1,  1)) * uKernel[6] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 0,  1)) * uKernel[7] +
-    texture2D(tDiffuse, uv + onePixel * vec2( 1,  1)) * uKernel[8] ;
+    texture2D(texture, texCoords + onePixel * vec2(-1, -1)) * kernel[0] +
+    texture2D(texture, texCoords + onePixel * vec2( 0, -1)) * kernel[1] +
+    texture2D(texture, texCoords + onePixel * vec2( 1, -1)) * kernel[2] +
+    texture2D(texture, texCoords + onePixel * vec2(-1,  0)) * kernel[3] +
+    texture2D(texture, texCoords + onePixel * vec2( 0,  0)) * kernel[4] +
+    texture2D(texture, texCoords + onePixel * vec2( 1,  0)) * kernel[5] +
+    texture2D(texture, texCoords + onePixel * vec2(-1,  1)) * kernel[6] +
+    texture2D(texture, texCoords + onePixel * vec2( 0,  1)) * kernel[7] +
+    texture2D(texture, texCoords + onePixel * vec2( 1,  1)) * kernel[8] ;
 
   // Divide the sum by the weight but just use rgb, set alpha to 1.0
-  return vec4((colorSum / uKernelWeight).rgb, 1.0);
+  return vec4((colorSum / kernelWeight).rgb, colorSum.a);
 }
 `;
 
-const DEFAULT_PROPS = {};
+const uniforms = {
+  kernel: KERNEL.NORMAL,
+  kernelWeight: KERNEL.NORMAL.reduce((sum, x) => sum + x, 0)
+};
 
 export default {
   name: 'convolution',
+  uniforms,
   fs,
-  DEFAULT_PROPS,
-  getUniforms: props => props,
-  KERNEL
+  KERNEL,
+  passes: [{sampler: true}]
 };
