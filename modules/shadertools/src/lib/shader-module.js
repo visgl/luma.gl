@@ -9,7 +9,6 @@ export default class ShaderModule {
     name,
     vs,
     fs,
-    injections = {},
     dependencies = [],
     getUniforms = () => ({}),
     deprecations = [],
