@@ -154,7 +154,7 @@ export default class ScenegraphNode {
 
     // Matrix overwrites other props
     if ('matrix' in props) {
-      this.setPosition(props.matrix);
+      this.setMatrix(props.matrix);
     }
 
     Object.assign(this.props, props);
