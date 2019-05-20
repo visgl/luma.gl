@@ -1,7 +1,7 @@
 import {KeyFrames} from '@luma.gl/core';
 import test from 'tape-catch';
 
-test.only('Animation#KeyFrames', t => {
+test('Animation#KeyFrames', t => {
   const keyFrames = new KeyFrames([
     [0, {val1: [1, 0, 1], val2: 0}],
     [500, {val1: [1, 1, 1], val2: 2}],
