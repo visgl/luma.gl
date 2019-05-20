@@ -9,7 +9,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [new HtmlWebpackPlugin({title: 'Timelines'})]
+  plugins: [new HtmlWebpackPlugin({title: 'Animation'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module
