@@ -86,6 +86,10 @@ export {default as Model} from './lib/model';
 export {default as Transform} from './lib/transform';
 export {default as ClipSpace} from './lib/clip-space';
 
+// Animation
+export {Timeline} from './animation/timeline';
+export {KeyFrames} from './animation/key-frames';
+
 // Experimental core exports
 export {default as _ShaderCache} from './lib/shader-cache';
 export {default as _AnimationLoopProxy} from './lib/animation-loop-proxy';
