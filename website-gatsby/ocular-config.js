@@ -4,7 +4,7 @@ const DOCS = require('../docs/table-of-contents.json');
 const DEPENDENCIES = require('./package.json').dependencies;
 // eslint-disable-next-line import/no-extraneous-dependencies
 const ALIASES = require('ocular-dev-tools/config/ocular.config')({
-  root: resolve(__dirname, '../..')
+  root: resolve(__dirname, '..')
 }).aliases;
 
 // When duplicating example dependencies in website, autogenerate
@@ -67,7 +67,24 @@ module.exports = {
     }
   ],
 
-  PROJECTS: [],
+  PROJECTS: [
+    {
+      name: 'deck.gl',
+      url: 'https://deck.gl'
+    },
+    {
+      name: 'luma.gl',
+      url: 'https://luma.gl'
+    },
+    {
+      name: 'react-map-gl',
+      url: 'https://uber.github.io/react-map-gl'
+    },
+    {
+      name: 'react-vis',
+      url: 'https://uber.github.io/react-vis'
+    }
+  ],
 
   ADDITIONAL_LINKS: [],
 
@@ -247,15 +264,14 @@ module.exports = {
   // Ocular adds this to gatsby's webpack config
   webpack: {
     resolve: {
-      // modules: [resolve(__dirname, './node_modules')],
       alias: Object.assign({}, ALIASES, dependencyAliases, {
-        //   '@luma.gl/addons': `${__dirname}/node_modules/@luma.gl/addons/src`,
-        //   '@luma.gl/core': `${__dirname}/node_modules/@luma.gl/core/src`,
-        //   '@luma.gl/constants': `${__dirname}/node_modules/@luma.gl/constants/src`,
-        //   '@luma.gl/webgl': `${__dirname}/node_modules/@luma.gl/webgl/src`,
-        //   '@deck.gl/core': `${__dirname}/node_modules/@deck.gl/core/src`,
-        //   '@deck.gl/layers': `${__dirname}/node_modules/@deck.gl/layers/src`,
-        //   '@deck.gl/react': `${__dirname}/node_modules/@deck.gl/react/src`
+        // '@luma.gl/addons': `${__dirname}/node_modules/@luma.gl/addons/src`,
+        // '@luma.gl/core': `${__dirname}/node_modules/@luma.gl/core/src`,
+        // '@luma.gl/constants': `${__dirname}/node_modules/@luma.gl/constants/src`,
+        // '@luma.gl/webgl': `${__dirname}/node_modules/@luma.gl/webgl/src`,
+        // '@deck.gl/core': `${__dirname}/node_modules/@deck.gl/core/src`,
+        // '@deck.gl/layers': `${__dirname}/node_modules/@deck.gl/layers/src`,
+        // '@deck.gl/react': `${__dirname}/node_modules/@deck.gl/react/src`
       })
     }
   }
