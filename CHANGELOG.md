@@ -1,3 +1,6 @@
+## v7.0.2
+- Fix for chromium GLSL compiler issue (#1114)
+
 ## v7.0.1
 - Fix accessor size for constant multi-column attributes (#1090)
 - do not remove stats if resource is deleted multiple times (#1087)
