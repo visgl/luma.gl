@@ -1,13 +1,7 @@
 /* global document */
 
-import {
-  AnimationLoop,
-  setParameters,
-  ModelNode,
-  dirlight,
-  CubeGeometry,
-  KeyFrames
-} from '@luma.gl/core';
+import {AnimationLoop, setParameters, ModelNode, dirlight, CubeGeometry} from '@luma.gl/core';
+import {Timeline, KeyFrames} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -102,6 +96,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     ];
 
     const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];
+
+    this.attachTimeline(new Timeline());
+    this.timeline.play();
 
     const channels = [
       this.timeline.addChannel({
