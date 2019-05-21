@@ -8,6 +8,7 @@ import {
   Buffer,
   CubeGeometry
 } from '@luma.gl/core';
+import {Timeline} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -129,6 +130,9 @@ export default class AppAnimationLoop extends AnimationLoop {
       depthFunc: gl.LEQUAL
     });
 
+    this.attachTimeline(new Timeline());
+    this.timeline.play();
+
     const timeChannel = this.timeline.addChannel({
       rate: 0.01
     });
@@ -148,18 +152,18 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.cube = new InstancedCube(gl, {
       _animationLoop,
       uniforms: {
-        uTime: ({_timeline}) => _timeline.getTime(timeChannel),
+        uTime: () => this.timeline.getTime(timeChannel),
         // Basic projection matrix
         uProjection: ({aspect}) =>
           new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
         // Move the eye around the plane
-        uView: ({_timeline}) =>
+        uView: () =>
           new Matrix4().lookAt({
             center: [0, 0, 0],
             eye: [
-              (Math.cos(_timeline.getTime(eyeXChannel)) * SIDE) / 2,
-              (Math.sin(_timeline.getTime(eyeYChannel)) * SIDE) / 2,
-              ((Math.sin(_timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
+              (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
+              (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
+              ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
             ]
           }),
         // Rotate all the individual cubes

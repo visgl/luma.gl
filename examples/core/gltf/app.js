@@ -25,6 +25,9 @@ const GLTF_BASE_URL =
   'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf/';
 const GLTF_DEFAULT_MODEL = 'DamagedHelmet.glb';
 
+// URL for animated model
+// 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/InterpolationTest/glTF-Binary/InterpolationTest.glb';
+
 const INFO_HTML = `
 <p><b>glTF Loader</b>.</p>
 <p>Rendered using luma.gl.</p>
@@ -199,6 +202,11 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.u_ScaleDiffBaseMR = [0, 0, 0, 0];
     this.u_ScaleFGDSpec = [0, 0, 0, 0];
 
+    this.timelineChannel = this.timeline.addChannel({
+      rate: 0.5
+    });
+    this.animationHandle = null;
+
     this.onInitialize = this.onInitialize.bind(this);
     this.onRender = this.onRender.bind(this);
     this._setDisplay(new VRDisplay());
@@ -249,9 +257,16 @@ export default class AppAnimationLoop extends AnimationLoop {
           reader.readAsArrayBuffer(e.dataTransfer.files[0]);
         });
 
-        loadGLTF(readPromise, this.gl, this.loadOptions).then(result =>
-          Object.assign(this, result)
-        );
+        loadGLTF(readPromise, this.gl, this.loadOptions).then(result => {
+          if (this.animationHandle !== null) {
+            this.timeline.detachAnimation(this.animationHandle);
+            this.animationHandle = null;
+          }
+          Object.assign(this, result);
+          if (this.animator) {
+            this.timeline.attachAnimation(this.animator, this.timelineChannel);
+          }
+        });
       }
     };
   }
@@ -262,11 +277,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       blend: false
     });
 
-    const channel = this.timeline.addChannel({
-      rate: 0.5
-    });
-
-    this.loadOptions = Object.assign({timeline: this.timeline, channel}, DEFAULT_OPTIONS);
+    this.loadOptions = DEFAULT_OPTIONS;
     this.environment = new GLTFEnvironment(gl, {
       brdfLutUrl: `${GLTF_BASE_URL}/brdfLUT.png`,
       getTexUrl: (type, dir, mipLevel) =>
@@ -282,12 +293,28 @@ export default class AppAnimationLoop extends AnimationLoop {
         imageBasedLightingEnvironment: null,
         lights: true
       };
-      loadGLTF(this.modelFile, this.gl, options).then(result => Object.assign(this, result));
+      loadGLTF(this.modelFile, this.gl, options).then(result => {
+        if (this.animationHandle !== null) {
+          this.timeline.detachAnimation(this.animationHandle);
+          this.animationHandle = null;
+        }
+        Object.assign(this, result);
+        if (this.animator) {
+          this.timeline.attachAnimation(this.animator, this.timelineChannel);
+        }
+      });
     } else {
       const modelUrl = GLTF_DEFAULT_MODEL;
-      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result =>
-        Object.assign(this, result)
-      );
+      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result => {
+        if (this.animationHandle !== null) {
+          this.timeline.detachAnimation(this.animationHandle);
+          this.animationHandle = null;
+        }
+        Object.assign(this, result);
+        if (this.animator) {
+          this.timeline.attachAnimation(this.animator, this.timelineChannel);
+        }
+      });
     }
 
     const showSelector = document.getElementById('showSelector');

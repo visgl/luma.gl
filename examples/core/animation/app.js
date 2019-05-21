@@ -1,6 +1,7 @@
 /* global document */
 
 import {AnimationLoop, setParameters, ModelNode, dirlight, CubeGeometry} from '@luma.gl/core';
+import {Timeline, KeyFrames} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -96,40 +97,60 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];
 
+    this.attachTimeline(new Timeline());
+    this.timeline.play();
+
     const channels = [
       this.timeline.addChannel({
         delay: 2000,
-        rate: 0.125,
+        rate: 0.5,
         duration: 8000,
         repeat: 2
       }),
       this.timeline.addChannel({
         delay: 10000,
         rate: 0.2,
-        duration: 5000,
+        duration: 20000,
         repeat: 1
       }),
       this.timeline.addChannel({
         delay: 7000,
         rate: 1,
-        duration: 1000,
+        duration: 4000,
         repeat: 8
       }),
       this.timeline.addChannel({
         delay: 0,
-        rate: 0.5,
-        duration: 2000,
+        rate: 0.8,
+        duration: 5000,
         repeat: Number.POSITIVE_INFINITY
       })
+    ];
+
+    const keyFrameData = [
+      [0, 0],
+      [1000, 2 * Math.PI],
+      [2000, Math.PI],
+      [3000, 2 * Math.PI],
+      [4000, 0]
+    ];
+
+    const keyFrames = [
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData)
     ];
 
     this.cubes = new Array(4);
 
     for (let i = 0; i < 4; ++i) {
+      this.timeline.attachAnimation(keyFrames[i], channels[i]);
+
       this.cubes[i] = {
         translation: translations[i],
         rotation: rotations[i],
-        channel: channels[i],
+        keyFrames: keyFrames[i],
         model: new ModelNode(gl, {
           vs,
           fs,
@@ -159,7 +180,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     for (let i = 0; i < 4; ++i) {
       const cube = this.cubes[i];
-      const rotation = (this.timeline.getTime(cube.channel) * (Math.PI * 2)) / 1000;
+      const startRotation = cube.keyFrames.getStartData();
+      const endRotation = cube.keyFrames.getEndData();
+      const rotation = startRotation + cube.keyFrames.factor * (endRotation - startRotation);
       const rotationX = cube.rotation[0] + rotation;
       const rotationY = cube.rotation[1] + rotation;
       const rotationZ = cube.rotation[2];

@@ -1,9 +1,11 @@
-let ids = 0;
+let channelHandles = 0;
+let animationHandles = 0;
 
 export class Timeline {
   constructor() {
     this.time = 0;
     this.channels = new Map();
+    this.animations = new Map();
     this.playing = false;
     this.lastEngineTime = -1;
   }
@@ -11,7 +13,7 @@ export class Timeline {
   addChannel(props) {
     const {delay = 0, duration = Number.POSITIVE_INFINITY, rate = 1, repeat = 1} = props;
 
-    const handle = ids++;
+    const handle = channelHandles++;
     const channel = {
       time: 0,
       delay,
@@ -27,6 +29,12 @@ export class Timeline {
 
   removeChannel(handle) {
     this.channels.delete(handle);
+
+    for (const [animationHandle, animation] of this.animations) {
+      if (animation.channel === handle) {
+        this.detachAnimation(animationHandle);
+      }
+    }
   }
 
   getTime(handle) {
@@ -50,6 +58,12 @@ export class Timeline {
     for (const channel of channels) {
       this._setChannelTime(channel, this.time);
     }
+
+    const animations = this.animations.values();
+    for (const animationData of animations) {
+      const {animation, channel} = animationData;
+      animation.setTime(this.getTime(channel));
+    }
   }
 
   play() {
@@ -63,6 +77,23 @@ export class Timeline {
 
   reset() {
     this.setTime(0);
+  }
+
+  attachAnimation(animation, channelHandle) {
+    const animationHandle = animationHandles++;
+
+    this.animations.set(animationHandle, {
+      animation,
+      channel: channelHandle
+    });
+
+    animation.setTime(this.getTime(channelHandle));
+
+    return animationHandle;
+  }
+
+  detachAnimation(handle) {
+    this.animations.delete(handle);
   }
 
   update(engineTime) {
