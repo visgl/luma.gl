@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/debug",
-  "version": "7.1.0-alpha.1",
+  "version": "7.1.0-alpha.2",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.1.0-alpha.1",
+    "@luma.gl/constants": "7.1.0-alpha.2",
     "glsl-transpiler": "^1.8.5",
     "math.gl": "^2.3.0",
     "webgl-debug": "^2.0.1"
