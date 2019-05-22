@@ -42,15 +42,15 @@ will also be used as the name of the shader hook
 - `opts.header` (optional): code always included at the beginning of a hook function
 - `opts.footer` (optional): code always included at the end of a hook function
 
-### `setModuleInjection(shaderType, moduleName, opts)`
+### `setModuleInjection(moduleName, opts)`
 
 Define a code injection for a particular hook function (defined by `setShaderHook`) and shader module. The injection code will be inserted into the hook function whenever the shader module is included.
 
-- `shaderType`: `vs` or `fs`, the type of shader
 - `moduleName`: the name of the module for which the injection is being defined
+- `opts.shaderStage`: `vs` or `fs`, the shader stage the injection is defined for
 - `opts.shaderHook`: the shader hook to inject into
 - `opts.injection`: the injection code
-- `opts.priority` (optional): the priority with which to inject code into the shader hook. Lower priority numbers will
+- `opts.order` (optional): the priority with which to inject code into the shader hook. Lower priority numbers will
 be injected first
 
 
