@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/glfx",
   "description": "glfx - image processing packaged as composable shader modules",
-  "version": "7.1.0-alpha.3",
+  "version": "7.1.0-alpha.4",
   "license": "MIT",
   "repository": {
     "type": "git",
