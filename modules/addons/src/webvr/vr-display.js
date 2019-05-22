@@ -5,7 +5,9 @@ import {createEnterVRButton} from './vr-button';
 
 export default class VRDisplay extends Display {
   static isSupported() {
-    return 'getVRDisplays' in navigator && 'VRFrameData' in window;
+    return (
+      typeof navigator !== 'undefined' && 'getVRDisplays' in navigator && 'VRFrameData' in window
+    );
   }
 
   constructor(props) {

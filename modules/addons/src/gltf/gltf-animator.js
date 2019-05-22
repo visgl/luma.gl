@@ -204,8 +204,13 @@ export default class GLTFAnimator {
     });
   }
 
-  animate(timeMs) {
-    this.animations.forEach(animation => animation.animate(timeMs));
+  // TODO(Tarek): This should be removed?
+  animate(time) {
+    this.setTime(time);
+  }
+
+  setTime(time) {
+    this.animations.forEach(animation => animation.animate(time));
   }
 
   getAnimations() {

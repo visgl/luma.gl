@@ -536,7 +536,8 @@ export default class Framebuffer extends Resource {
   }
 
   // Expects framebuffer to be bound
-  _setReadBuffer(gl, readBuffer) {
+  _setReadBuffer(readBuffer) {
+    const {gl} = this;
     if (isWebGL2(gl)) {
       gl.readBuffer(readBuffer);
     } else {
@@ -550,7 +551,8 @@ export default class Framebuffer extends Resource {
   }
 
   // Expects framebuffer to be bound
-  _setDrawBuffers(gl, drawBuffers) {
+  _setDrawBuffers(drawBuffers) {
+    const {gl} = this;
     if (isWebGL2(gl)) {
       gl.drawBuffers(drawBuffers);
     } else {

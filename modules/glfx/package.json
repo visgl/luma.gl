@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/glfx",
   "description": "glfx - image processing packaged as composable shader modules",
-  "version": "7.1.0-alpha.0",
+  "version": "7.1.0-alpha.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^7.1.0-alpha.0"
+    "@luma.gl/core": "^7.1.0-alpha.1",
+    "@luma.gl/effects": "^7.1.0-alpha.1"
   }
 }

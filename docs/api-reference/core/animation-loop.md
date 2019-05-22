@@ -120,6 +120,16 @@ Notes:
 * `props.autoResizeDrawingBuffer` - Update the drawing buffer size to match the canvas size before each call to `onRender()`
 * `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
 
+### attachTimeline(timeline: Timeline)
+
+Attach an `Timeline` object to the animation loop. Allows time produced for animations to be paused, played, etc. See `Timeline` documentation for more info.
+
+
+### detachTimeline()
+
+Detach the currently attached timeline from the animation loop.
+
+
 ### toDataURL
 
 Returns returns a `Promise` that resolves to the data URL of the canvas once drawing operations are complete for the current frame. The data URL can be used as the `src` for an HTML image element.
@@ -152,8 +162,6 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 ### Frame timers
 * The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
 
-### Timeline
-* Animations should update base on the timeline time tracking in the member property `timeline` (rather than using `tick` or `Data.now`). The `timeline` time can be played, paused and rewound and supports multiple time channels elapsing at different rates. See `Timeline` class documentation for details.
 
 ## Remarks
 

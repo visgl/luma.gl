@@ -13,9 +13,7 @@
    document: typeof document !== 'undefined' && document
  };
 
- const global = globals.global || globals.self || globals.window;
-
-(function() {
+(function(global) {
   'use strict';
 
   // If we're in node require encoding-indexes and attach it to the global.
@@ -3318,4 +3316,4 @@
     };
   }
 
-}());
+}(globals.global || globals.self || globals.window));

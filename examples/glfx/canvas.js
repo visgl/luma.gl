@@ -1,17 +1,14 @@
-import {createGLContext, Texture2D} from '../webgl';
-import Model from '../core/model';
-
-// eslint-disable-next-line
-import {
-  _MultiPassRenderer as MultiPassRenderer,
-  _ClearPass as ClearPass,
-  _CopyPass as CopyPass,
-  _TexturePass as TexturePass
-} from '../multiPassRenderer';
-
-import ShaderModulePass from './shader-module-pass';
-
-/* global document */
+/* global document, luma */
+const {
+  createGLContext,
+  Texture2D,
+  Model,
+  _MultiPassRenderer: MultiPassRenderer,
+  _ClearPass: ClearPass,
+  _CopyPass: CopyPass,
+  _TexturePass: TexturePass,
+  _ShaderModulePass: ShaderModulePass
+} = luma;
 
 const DEFAULT_VS = `\
 attribute vec2 vertex;
@@ -23,7 +20,8 @@ void main() {
 }
 `;
 
-export default class Canvas {
+// eslint-disable-next-line
+class Canvas {
   constructor() {
     this.canvas = document.createElement('canvas');
     this.width = this.canvas.clientWidth;

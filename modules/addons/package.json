@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "7.1.0-alpha.0",
+  "version": "7.1.0-alpha.3",
   "description": "Additional classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@loaders.gl/gltf": "^1.0.3",
-    "@luma.gl/constants": "7.1.0-alpha.0",
+    "@luma.gl/constants": "7.1.0-alpha.3",
     "math.gl": "^2.3.0"
   },
   "peerDependencies": {

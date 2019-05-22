@@ -1,35 +1,18 @@
 /* global document */
 
-import {
-  AnimationLoop,
-  setParameters,
-  ModelNode,
-  picking,
-  dirlight,
-  readPixelsToArray,
-  Buffer,
-  CubeGeometry
-} from '@luma.gl/core';
+import {AnimationLoop, setParameters, ModelNode, dirlight, CubeGeometry} from '@luma.gl/core';
+import {Timeline, KeyFrames} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
-<p>
-Cube drawn with <b>instanced rendering</b>.
-<p>
-A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-single GPU draw call using instanced vertex attributes.
+Animations based on multiple hierarchical timelines.
 `;
 
 const controls = document.createElement('div');
 controls.innerHTML = `
   <button id="play">Play</button>
-  <button id="pause">Pause</button>
-  <button id="reset">Reset</button><BR>
-  Time: <input type="range" id="time" min="0" max="10000" step="1"><BR>
-  Transform rate: <input type="range" id="xformRate" min="0" max="0.1" step="0.005" value="0"><BR>
-  Eye X rate: <input type="range" id="eyeXRate" min="0" max="0.005" step="0.00001" value="0"><BR>
-  Eye Y rate: <input type="range" id="eyeYRate" min="0" max="0.005" step="0.00001" value="0"><BR>
-  Eye Z rate: <input type="range" id="eyeZRate" min="0" max="0.005" step="0.00001" value="0"><BR>
+  <button id="pause">Pause</button><BR>
+  Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
 `;
 controls.style.position = 'absolute';
 controls.style.top = '10px';
@@ -40,72 +23,30 @@ document.body.appendChild(controls);
 
 const playButton = document.getElementById('play');
 const pauseButton = document.getElementById('pause');
-const resetButton = document.getElementById('reset');
 const timeSlider = document.getElementById('time');
-const xformSlider = document.getElementById('xformRate');
-const eyeXSlider = document.getElementById('eyeXRate');
-const eyeYSlider = document.getElementById('eyeYRate');
-const eyeZSlider = document.getElementById('eyeZRate');
 
-function getDevicePixelRatio() {
-  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
-}
-
-const SIDE = 256;
-
-// Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends ModelNode {
-  constructor(gl, props) {
-    let offsets = [];
-    for (let i = 0; i < SIDE; i++) {
-      const x = ((-SIDE + 1) * 3) / 2 + i * 3;
-      for (let j = 0; j < SIDE; j++) {
-        const y = ((-SIDE + 1) * 3) / 2 + j * 3;
-        offsets.push(x, y);
-      }
-    }
-    offsets = new Float32Array(offsets);
-
-    const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
-    for (let i = 0; i < SIDE; i++) {
-      for (let j = 0; j < SIDE; j++) {
-        pickingColors[(i * SIDE + j) * 2 + 0] = i;
-        pickingColors[(i * SIDE + j) * 2 + 1] = j;
-      }
-    }
-
-    const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
-
-    const vs = `\
-attribute float instanceSizes;
+const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;
-attribute vec2 instanceOffsets;
-attribute vec3 instanceColors;
-attribute vec2 instancePickingColors;
 
+uniform vec3 uColor;
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
-uniform float uTime;
 
 varying vec3 color;
 
 void main(void) {
-  vec3 normal = vec3(uModel * vec4(normals, 1.0));
+  vec3 normal = vec3(uModel * vec4(normals, 0.0));
 
   // Set up data for modules
-  color = instanceColors;
+  color = uColor;
   project_setNormal(normal);
-  picking_setPickingColor(vec3(0., instancePickingColors));
-
-  // Vertex position (z coordinate undulates with time), and model rotates around center
-  float delta = length(instanceOffsets);
-  vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
-  gl_Position = uProjection * uView * (uModel * vec4(positions * instanceSizes, 1.0) + offset);
+  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
 }
 `;
-    const fs = `\
+
+const fs = `\
 precision highp float;
 
 varying vec3 color;
@@ -113,70 +54,24 @@ varying vec3 color;
 void main(void) {
   gl_FragColor = vec4(color, 1.);
   gl_FragColor = dirlight_filterColor(gl_FragColor);
-  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 `;
 
-    const offsetsBuffer = new Buffer(gl, offsets);
-    const colorsBuffer = new Buffer(gl, colors);
-    const pickingColorsBuffer = new Buffer(gl, pickingColors);
-
-    super(
-      gl,
-      Object.assign({}, props, {
-        vs,
-        fs,
-        modules: [picking, dirlight],
-        isInstanced: 1,
-        instanceCount: SIDE * SIDE,
-        geometry: new CubeGeometry(),
-        attributes: {
-          instanceSizes: new Float32Array([1]), // Constant attribute
-          instanceOffsets: [offsetsBuffer, {divisor: 1}],
-          instanceColors: [colorsBuffer, {divisor: 1}],
-          instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
-        }
-      })
-    );
-  }
-}
-
 export default class AppAnimationLoop extends AnimationLoop {
   constructor() {
-    super({createFramebuffer: true, debug: true});
+    super({debug: true});
   }
 
   static getInfo() {
     return INFO_HTML;
   }
 
-  onInitialize({gl, _animationLoop}) {
+  onInitialize({gl, _animationLoop, aspect}) {
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
       depthTest: true,
       depthFunc: gl.LEQUAL
-    });
-
-    const timeRate = 0.01;
-    const eyeXRate = 0.0003;
-    const eyeYRate = 0.0004;
-    const eyeZRate = 0.0002;
-
-    const timeChannel = this.timeline.addChannel({
-      rate: timeRate
-    });
-
-    const eyeXChannel = this.timeline.addChannel({
-      rate: eyeXRate
-    });
-
-    const eyeYChannel = this.timeline.addChannel({
-      rate: eyeYRate
-    });
-
-    const eyeZChannel = this.timeline.addChannel({
-      rate: eyeZRate
     });
 
     playButton.addEventListener('click', () => {
@@ -187,116 +82,126 @@ export default class AppAnimationLoop extends AnimationLoop {
       this.timeline.pause();
     });
 
-    resetButton.addEventListener('click', () => {
-      this.timeline.reset();
-    });
-
     timeSlider.addEventListener('input', event => {
       this.timeline.setTime(parseFloat(event.target.value));
     });
 
-    xformSlider.value = timeRate;
-    eyeXSlider.value = eyeXRate;
-    eyeYSlider.value = eyeYRate;
-    eyeZSlider.value = eyeZRate;
+    const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
 
-    xformSlider.addEventListener('input', event => {
-      this.timeline.setChannelProps(timeChannel, {
-        rate: parseFloat(event.target.value)
-      });
-    });
+    const rotations = [
+      [Math.random(), Math.random(), Math.random()],
+      [Math.random(), Math.random(), Math.random()],
+      [Math.random(), Math.random(), Math.random()],
+      [Math.random(), Math.random(), Math.random()]
+    ];
 
-    eyeXSlider.addEventListener('input', event => {
-      this.timeline.setChannelProps(eyeXChannel, {
-        rate: parseFloat(event.target.value)
-      });
-    });
+    const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];
 
-    eyeYSlider.addEventListener('input', event => {
-      this.timeline.setChannelProps(eyeYChannel, {
-        rate: parseFloat(event.target.value)
-      });
-    });
+    this.attachTimeline(new Timeline());
+    this.timeline.play();
 
-    eyeZSlider.addEventListener('input', event => {
-      this.timeline.setChannelProps(eyeZChannel, {
-        rate: parseFloat(event.target.value)
-      });
-    });
+    const channels = [
+      this.timeline.addChannel({
+        delay: 2000,
+        rate: 0.5,
+        duration: 8000,
+        repeat: 2
+      }),
+      this.timeline.addChannel({
+        delay: 10000,
+        rate: 0.2,
+        duration: 20000,
+        repeat: 1
+      }),
+      this.timeline.addChannel({
+        delay: 7000,
+        rate: 1,
+        duration: 4000,
+        repeat: 8
+      }),
+      this.timeline.addChannel({
+        delay: 0,
+        rate: 0.8,
+        duration: 5000,
+        repeat: Number.POSITIVE_INFINITY
+      })
+    ];
 
-    this.cube = new InstancedCube(gl, {
-      _animationLoop,
-      uniforms: {
-        uTime: ({_timeline}) => _timeline.getChannelTime(timeChannel),
-        // Basic projection matrix
-        uProjection: ({aspect}) =>
-          new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-        // Move the eye around the plane
-        uView: ({_timeline}) =>
-          new Matrix4().lookAt({
-            center: [0, 0, 0],
-            eye: [
-              (Math.cos(_timeline.getChannelTime(eyeXChannel)) * SIDE) / 2,
-              (Math.sin(_timeline.getChannelTime(eyeYChannel)) * SIDE) / 2,
-              ((Math.sin(_timeline.getChannelTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
-            ]
-          }),
-        // Rotate all the individual cubes
-        uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-      }
-    });
+    const keyFrameData = [
+      [0, 0],
+      [1000, 2 * Math.PI],
+      [2000, Math.PI],
+      [3000, 2 * Math.PI],
+      [4000, 0]
+    ];
+
+    const keyFrames = [
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData),
+      new KeyFrames(keyFrameData)
+    ];
+
+    this.cubes = new Array(4);
+
+    for (let i = 0; i < 4; ++i) {
+      this.timeline.attachAnimation(keyFrames[i], channels[i]);
+
+      this.cubes[i] = {
+        translation: translations[i],
+        rotation: rotations[i],
+        keyFrames: keyFrames[i],
+        model: new ModelNode(gl, {
+          vs,
+          fs,
+          modules: [dirlight],
+          geometry: new CubeGeometry(),
+          uniforms: {
+            uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
+            uView: new Matrix4().lookAt({
+              center: [0, 0, 0],
+              eye: [0, 0, -8]
+            }),
+            uColor: colors[i]
+          }
+        })
+      };
+    }
   }
 
   onRender(animationProps) {
     const {gl} = animationProps;
     timeSlider.value = this.timeline.getTime();
 
-    const {framebuffer, useDevicePixels, _mousePosition} = animationProps;
-
-    if (_mousePosition) {
-      const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
-
-      const pickX = _mousePosition[0] * dpr;
-      const pickY = gl.canvas.height - _mousePosition[1] * dpr;
-
-      pickInstance(gl, pickX, pickY, this.cube, framebuffer);
-    }
+    const modelMatrix = new Matrix4();
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    this.cube.draw();
+
+    for (let i = 0; i < 4; ++i) {
+      const cube = this.cubes[i];
+      const startRotation = cube.keyFrames.getStartData();
+      const endRotation = cube.keyFrames.getEndData();
+      const rotation = startRotation + cube.keyFrames.factor * (endRotation - startRotation);
+      const rotationX = cube.rotation[0] + rotation;
+      const rotationY = cube.rotation[1] + rotation;
+      const rotationZ = cube.rotation[2];
+      modelMatrix
+        .identity()
+        .translate(cube.translation)
+        .rotateXYZ([rotationX, rotationY, rotationZ]);
+      cube.model
+        .setUniforms({
+          uModel: modelMatrix
+        })
+        .draw();
+    }
   }
 
   onFinalize({gl}) {
-    this.cube.delete();
-  }
-}
-
-function pickInstance(gl, pickX, pickY, model, framebuffer) {
-  framebuffer.clear({color: true, depth: true});
-  // Render picking colors
-  /* eslint-disable camelcase */
-  model.setUniforms({picking_uActive: 1});
-  model.draw({framebuffer});
-  model.setUniforms({picking_uActive: 0});
-
-  const color = readPixelsToArray(framebuffer, {
-    sourceX: pickX,
-    sourceY: pickY,
-    sourceWidth: 1,
-    sourceHeight: 1,
-    sourceFormat: gl.RGBA,
-    sourceType: gl.UNSIGNED_BYTE
-  });
-
-  if (color[0] + color[1] + color[2] > 0) {
-    model.updateModuleSettings({
-      pickingSelectedColor: color
-    });
-  } else {
-    model.updateModuleSettings({
-      pickingSelectedColor: null
-    });
+    for (let i = 0; i < 4; ++i) {
+      this.cube[i].model.delete();
+    }
   }
 }
 

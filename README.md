@@ -2,14 +2,14 @@
   <a href="https://npmjs.org/package/luma.gl">
     <img src="https://img.shields.io/npm/v/luma.gl.svg?style=flat-square" alt="version" />
   </a>
-  <a href="https://travis-ci.org/uber/luma.gl">
-    <img src="https://img.shields.io/travis/uber/luma.gl/master.svg?style=flat-square" alt="build" />
+  <a href="https://travis-ci.com/uber/luma.gl">
+    <img src="https://api.travis-ci.com/uber/luma.gl.svg?branch=master" alt="build" />
   </a>
   <a href="https://npmjs.org/package/luma.gl">
     <img src="https://img.shields.io/npm/dm/luma.gl.svg?style=flat-square" alt="downloads" />
   </a>
-  <a href="http://starveller.sigsev.io/uber/luma.gl">
-    <img src="http://starveller.sigsev.io/api/repos/uber/luma.gl/badge" alt="stars" />
+  <a href='https://coveralls.io/github/uber/luma.gl?branch=master'>
+    <img src='https://img.shields.io/coveralls/uber/luma.gl.svg?style=flat-square' alt='Coverage Status' />
   </a>
 </p>
 
