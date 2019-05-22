@@ -36,7 +36,7 @@
     "@luma.gl/webgl-state-tracker": "7.0.2",
     "@luma.gl/webgl2-polyfill": "7.0.2",
     "math.gl": "^2.3.0",
-    "probe.gl": "^3.0.1",
+    "probe.gl": "^3.0.2",
     "seer": "^0.2.4"
   }
 }

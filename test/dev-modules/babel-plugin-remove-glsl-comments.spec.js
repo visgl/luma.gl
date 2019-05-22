@@ -116,6 +116,7 @@ test('RemoveGLSLComments Babel Plugin', t => {
   TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       comments: true,
+      envName: 'es5',
       presets: [['@babel/env', testCase.env]],
       plugins: [[plugin, {patterns: testCase.patterns}]],
       filename: testCase.filename || 'test.js'
