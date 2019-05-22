@@ -3,11 +3,19 @@ import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader from './inject-shader';
 import {assert} from '../utils';
+/* eslint-disable max-depth */
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
   [FRAGMENT_SHADER]: 'fragment'
 };
+
+const HOOK_FUNCTIONS = {
+  [VERTEX_SHADER]: {},
+  [FRAGMENT_SHADER]: {}
+};
+
+const MODULE_INJECTIONS = {};
 
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
@@ -15,6 +23,25 @@ const FRAGMENT_SHADER_PROLOGUE = `\
 precision highp float;
 
 `;
+
+export function setShaderHook(type, opts) {
+  const name = opts.signature.trim().replace(/\(.+/, '');
+  HOOK_FUNCTIONS[type][name] = opts;
+}
+
+export function setModuleInjection(moduleName, opts) {
+  const {shaderStage, shaderHook, injection, order = 0} = opts;
+
+  MODULE_INJECTIONS[moduleName] = MODULE_INJECTIONS[moduleName] || {};
+  MODULE_INJECTIONS[moduleName][shaderStage] = MODULE_INJECTIONS[moduleName][shaderStage] || {};
+
+  assert(!MODULE_INJECTIONS[moduleName][shaderStage][shaderHook], 'Module injection already set');
+
+  MODULE_INJECTIONS[moduleName][shaderStage][shaderHook] = {
+    injection,
+    order
+  };
+}
 
 // Inject a list of modules
 export function assembleShaders(gl, opts = {}) {
@@ -76,6 +103,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
+  const moduleInjections = {};
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -87,8 +115,18 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         const moduleSource = module.getModuleSource(type, glslVersion);
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
+
+        if (MODULE_INJECTIONS[module.name]) {
+          const injections = MODULE_INJECTIONS[module.name][type];
+          for (const key in injections) {
+            moduleInjections[key] = moduleInjections[key] || [];
+            moduleInjections[key].push(injections[key]);
+          }
+        }
     }
   }
+
+  assembledSource += getHookFunctions(type, moduleInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
@@ -166,4 +204,29 @@ function getApplicationDefines(defines = {}) {
     sourceText += '\n';
   }
   return sourceText;
+}
+
+function getHookFunctions(shaderType, moduleInjections) {
+  let result = '';
+  const hookFunctions = HOOK_FUNCTIONS[shaderType];
+  for (const hookName in hookFunctions) {
+    const hookFunction = hookFunctions[hookName];
+    result += `void ${hookFunction.signature} {\n`;
+    if (hookFunction.header) {
+      result += `  ${hookFunction.header}`;
+    }
+    if (moduleInjections[hookName]) {
+      const injections = moduleInjections[hookName];
+      injections.sort((a, b) => a.order - b.order);
+      for (const injection of injections) {
+        result += `  ${injection.injection};\n`;
+      }
+    }
+    if (hookFunction.footer) {
+      result += `  ${hookFunction.footer}`;
+    }
+    result += '}\n';
+  }
+
+  return result;
 }

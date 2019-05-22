@@ -8,7 +8,7 @@ import MODULAR_FS from './shaders/modular-fragment.glsl';
 
 // DOCUMENTED APIS
 export {registerShaderModules, setDefaultShaderModules} from './lib/resolve-modules';
-export {assembleShaders} from './lib/assemble-shaders';
+export {assembleShaders, setShaderHook, setModuleInjection} from './lib/assemble-shaders';
 
 // HELPERS
 export {combineInjects} from './lib/inject-shader';

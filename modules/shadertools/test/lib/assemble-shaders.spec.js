@@ -1,6 +1,12 @@
 /* eslint-disable camelcase */
 import {createGLContext} from '@luma.gl/core';
-import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
+import {
+  assembleShaders,
+  setShaderHook,
+  setModuleInjection,
+  picking,
+  fp64
+} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {
@@ -113,5 +119,74 @@ test('assembleShaders#getUniforms', t => {
 
   // getUniformsSpy.restore();
 
+  t.end();
+});
+
+test('assembleShaders#shaderhooks', t => {
+  setShaderHook('vs', {
+    signature: 'LUMAGL_pickColor(inout vec4 color)'
+  });
+
+  setShaderHook('fs', {
+    signature: 'LUMAGL_fragmentColor(inout vec4 color)'
+  });
+
+  setModuleInjection('picking', {
+    shaderStage: 'vs',
+    shaderHook: 'LUMAGL_pickColor',
+    injection: 'picking_setPickingColor(color.rgb)'
+  });
+
+  setModuleInjection('picking', {
+    shaderStage: 'fs',
+    shaderHook: 'LUMAGL_fragmentColor',
+    injection: 'color = picking_filterColor(color)',
+    order: Number.POSITIVE_INFINITY
+  });
+
+  let assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300
+  });
+  // Verify version directive remains as first line.
+  t.ok(
+    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
+    'hook function injected into vertex shader'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
+    'hook function injected into fragment shader shader'
+  );
+  t.ok(
+    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1,
+    'injection code not included in vertex shader without module'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1,
+    'injection code not included in fragment shader without module'
+  );
+
+  assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    modules: [picking]
+  });
+  // Verify version directive remains as first line.
+  t.ok(
+    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
+    'hook function injected into vertex shader'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
+    'hook function injected into fragment shader shader'
+  );
+  t.ok(
+    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1,
+    'injection code included in vertex shader with module'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
+    'injection code included in fragment shader with module'
+  );
   t.end();
 });

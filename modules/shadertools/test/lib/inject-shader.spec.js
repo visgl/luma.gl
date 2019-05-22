@@ -22,16 +22,9 @@ void main(void) {
 }
 `;
 
-const VS_GLSL_RESOLVED = `\
-#version 300 es
+const VS_GLSL_RESOLVED_DECL = 'uniform float uNewUniform';
 
-in vec4 positions;
-out vec4 vColor;
-
-void f(out float a, in float b) {}
-
-uniform float uNewUniform;
-
+const VS_GLSL_RESOLVED_MAIN = `\
 void main(void) {
   gl_Position = positions;
   vColor = vec4(1., 0., 0., 1.);
@@ -53,18 +46,9 @@ void main(void) {
 }
 `;
 
-const FS_GLSL_RESOLVED = `\
-#version 300 es
+const FS_GLSL_RESOLVED_DECL = 'uniform bool uDiscard';
 
-precision highp float;
-
-out vec4 fragmentColor;
-in vec4 vColor;
-
-void f(out float a, in float b) {}
-
-uniform bool uDiscard;
-
+const FS_GLSL_RESOLVED_MAIN = `\
 void main(void) {
   if (uDiscard} { discard } else {
   fragmentColor = vColor;
@@ -102,10 +86,24 @@ test('injectShader#injectShader', t => {
   let injectResult;
 
   injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', INJECT);
-  t.equal(injectResult, VS_GLSL_RESOLVED, 'correctly injected');
+  t.ok(
+    injectResult.indexOf(VS_GLSL_RESOLVED_DECL) > -1,
+    'declarations correctly injected in vertex shader'
+  );
+  t.ok(
+    injectResult.indexOf(VS_GLSL_RESOLVED_MAIN) > -1,
+    'main correctly injected in vertex shader'
+  );
 
   injectResult = injectShader(FS_GLSL_TEMPLATE, 'fs', INJECT);
-  t.equal(injectResult, FS_GLSL_RESOLVED, 'correctly injected');
+  t.ok(
+    injectResult.indexOf(FS_GLSL_RESOLVED_DECL) > -1,
+    'declarations correctly injected in vertex shader'
+  );
+  t.ok(
+    injectResult.indexOf(FS_GLSL_RESOLVED_MAIN) > -1,
+    'main correctly injected in vertex shader'
+  );
 
   t.end();
 });
@@ -117,8 +115,23 @@ test('injectShader#assembleShaders', t => {
     inject: INJECT,
     prologue: false
   });
-  t.equal(assembleResult.vs, VS_GLSL_RESOLVED, 'correctly injected');
-  t.equal(assembleResult.fs, FS_GLSL_RESOLVED, 'correctly injected');
+  t.ok(
+    assembleResult.vs.indexOf(VS_GLSL_RESOLVED_DECL) > -1,
+    'declarations correctly assembled in vertex shader'
+  );
+  t.ok(
+    assembleResult.vs.indexOf(VS_GLSL_RESOLVED_MAIN) > -1,
+    'main correctly assembled in vertex shader'
+  );
+
+  t.ok(
+    assembleResult.fs.indexOf(FS_GLSL_RESOLVED_DECL) > -1,
+    'declarations correctly assembled in vertex shader'
+  );
+  t.ok(
+    assembleResult.fs.indexOf(FS_GLSL_RESOLVED_MAIN) > -1,
+    'main correctly assembled in vertex shader'
+  );
 
   t.end();
 });

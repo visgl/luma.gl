@@ -52,6 +52,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
           source = source.replace(REGEX_END_OF_MAIN, match => fragment + match);
         }
         break;
+
       default:
         // inject code after key, leaving key in place
         source = source.replace(key, match => match + fragment);
@@ -65,6 +66,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
 
   return source;
 }
+
 /* eslint-enable complexity */
 
 // Takes an array of inject objects and combines them into one

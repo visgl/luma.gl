@@ -6,7 +6,9 @@ import {
   dirlight,
   readPixelsToArray,
   Buffer,
-  CubeGeometry
+  CubeGeometry,
+  setShaderHook,
+  setModuleInjection
 } from '@luma.gl/core';
 import {Timeline} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
@@ -69,7 +71,8 @@ void main(void) {
   // Set up data for modules
   color = instanceColors;
   project_setNormal(normal);
-  picking_setPickingColor(vec3(0., instancePickingColors));
+  vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  MY_SHADER_HOOK_pickColor(pickColor);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -84,8 +87,7 @@ varying vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);
-  gl_FragColor = dirlight_filterColor(gl_FragColor);
-  gl_FragColor = picking_filterColor(gl_FragColor);
+  MY_SHADER_HOOK_fragmentColor(gl_FragColor);
 }
 `;
 
@@ -98,7 +100,7 @@ void main(void) {
       Object.assign({}, props, {
         vs,
         fs,
-        modules: [picking, dirlight],
+        modules: [dirlight, picking],
         isInstanced: 1,
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),
@@ -128,6 +130,33 @@ export default class AppAnimationLoop extends AnimationLoop {
       clearDepth: 1,
       depthTest: true,
       depthFunc: gl.LEQUAL
+    });
+
+    setShaderHook('vs', {
+      signature: 'MY_SHADER_HOOK_pickColor(inout vec4 color)'
+    });
+
+    setShaderHook('fs', {
+      signature: 'MY_SHADER_HOOK_fragmentColor(inout vec4 color)'
+    });
+
+    setModuleInjection('picking', {
+      shaderStage: 'vs',
+      shaderHook: 'MY_SHADER_HOOK_pickColor',
+      injection: 'picking_setPickingColor(color.rgb)'
+    });
+
+    setModuleInjection('dirlight', {
+      shaderStage: 'fs',
+      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
+      injection: 'color = dirlight_filterColor(color)'
+    });
+
+    setModuleInjection('picking', {
+      shaderStage: 'fs',
+      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
+      injection: 'color = picking_filterColor(color)',
+      order: Number.POSITIVE_INFINITY
     });
 
     this.attachTimeline(new Timeline());

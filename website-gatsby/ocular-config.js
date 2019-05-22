@@ -31,7 +31,8 @@ module.exports = {
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'uber',
   PROJECT_URL: `https://luma.gl`,
-  PROJECT_DESC: 'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+  PROJECT_DESC:
+    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
 
   PATH_PREFIX: '/',
 
@@ -45,24 +46,28 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING: 'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+  HOME_HEADING:
+    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
 
   HOME_RIGHT: null,
 
   HOME_BULLETS: [
     {
       text: 'Advanced GPU Usage',
-      desc: 'luma.gl facilitates use of advanced GPU techniques, such as Instanced Rendering, Transform Feedback and WebGL2 features.',
+      desc:
+        'luma.gl facilitates use of advanced GPU techniques, such as Instanced Rendering, Transform Feedback and WebGL2 features.',
       img: 'images/icon-high-precision.svg'
     },
     {
       text: 'Shader Programming Power',
-      desc: 'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling GLSL shaders.',
+      desc:
+        'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling GLSL shaders.',
       img: 'images/icon-high-precision.svg'
     },
     {
       text: 'Performance Focus',
-      desc: 'Strong focus on performance enables visualization and GPU processing of very large data sets.',
+      desc:
+        'Strong focus on performance enables visualization and GPU processing of very large data sets.',
       img: 'images/icon-high-precision.svg'
     }
   ],
@@ -150,7 +155,7 @@ module.exports = {
       path: 'examples/core/transform/',
       image: 'images/example-transform.png'
     },
-   {
+    {
       title: 'TransformFeedback',
       componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
       path: 'examples/core/transform-feedback/app',
