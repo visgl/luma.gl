@@ -71,7 +71,7 @@ void main(void) {
   color = instanceColors;
   project_setNormal(normal);
   vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  LUMAGL_pickColor(pickColor);
+  MY_SHADER_HOOK_pickColor(pickColor);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -86,7 +86,7 @@ varying vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);
-  LUMAGL_fragmentColor(gl_FragColor);
+  MY_SHADER_HOOK_fragmentColor(gl_FragColor);
 }
 `;
 
@@ -132,27 +132,30 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     setShaderHook('vs', {
-      signature: 'LUMAGL_pickColor(inout vec4 color)'
+      signature: 'MY_SHADER_HOOK_pickColor(inout vec4 color)'
     });
 
     setShaderHook('fs', {
-      signature: 'LUMAGL_fragmentColor(inout vec4 color)'
+      signature: 'MY_SHADER_HOOK_fragmentColor(inout vec4 color)'
     });
 
-    setModuleInjection('vs', 'picking', {
-      shaderHook: 'LUMAGL_pickColor',
+    setModuleInjection('picking', {
+      shaderStage: 'vs',
+      shaderHook: 'MY_SHADER_HOOK_pickColor',
       injection: 'picking_setPickingColor(color.rgb)'
     });
 
-    setModuleInjection('fs', 'dirlight', {
-      shaderHook: 'LUMAGL_fragmentColor',
+    setModuleInjection('dirlight', {
+      shaderStage: 'fs',
+      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
       injection: 'color = dirlight_filterColor(color)'
     });
 
-    setModuleInjection('fs', 'picking', {
-      shaderHook: 'LUMAGL_fragmentColor',
+    setModuleInjection('picking', {
+      shaderStage: 'fs',
+      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
       injection: 'color = picking_filterColor(color)',
-      priority: Number.POSITIVE_INFINITY
+      order: Number.POSITIVE_INFINITY
     });
 
     const timeChannel = this.timeline.addChannel({

@@ -3,6 +3,7 @@ import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader from './inject-shader';
 import {assert} from '../utils';
+/* eslint-disable max-depth */
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
@@ -14,10 +15,7 @@ const HOOK_FUNCTIONS = {
   [FRAGMENT_SHADER]: {}
 };
 
-const MODULE_INJECTIONS = {
-  [VERTEX_SHADER]: {},
-  [FRAGMENT_SHADER]: {}
-};
+const MODULE_INJECTIONS = {};
 
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
@@ -31,12 +29,17 @@ export function setShaderHook(type, opts) {
   HOOK_FUNCTIONS[type][name] = opts;
 }
 
-export function setModuleInjection(type, moduleName, opts) {
-  const {shaderHook, injection, priority = 0} = opts;
-  MODULE_INJECTIONS[type][moduleName] = MODULE_INJECTIONS[type][moduleName] || {};
-  MODULE_INJECTIONS[type][moduleName][shaderHook] = {
+export function setModuleInjection(moduleName, opts) {
+  const {shaderStage, shaderHook, injection, order = 0} = opts;
+
+  MODULE_INJECTIONS[moduleName] = MODULE_INJECTIONS[moduleName] || {};
+  MODULE_INJECTIONS[moduleName][shaderStage] = MODULE_INJECTIONS[moduleName][shaderStage] || {};
+
+  assert(!MODULE_INJECTIONS[moduleName][shaderStage][shaderHook], 'Module injection already set');
+
+  MODULE_INJECTIONS[moduleName][shaderStage][shaderHook] = {
     injection,
-    priority
+    order
   };
 }
 
@@ -113,10 +116,12 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
 
-        const injections = MODULE_INJECTIONS[type][module.name];
-        for (const key in injections) {
-          moduleInjections[key] = moduleInjections[key] || [];
-          moduleInjections[key].push(injections[key]);
+        if (MODULE_INJECTIONS[module.name]) {
+          const injections = MODULE_INJECTIONS[module.name][type];
+          for (const key in injections) {
+            moduleInjections[key] = moduleInjections[key] || [];
+            moduleInjections[key].push(injections[key]);
+          }
         }
     }
   }
@@ -212,7 +217,7 @@ function getHookFunctions(shaderType, moduleInjections) {
     }
     if (moduleInjections[hookName]) {
       const injections = moduleInjections[hookName];
-      injections.sort((a, b) => a.priority - b.priority);
+      injections.sort((a, b) => a.order - b.order);
       for (const injection of injections) {
         result += `  ${injection.injection};\n`;
       }

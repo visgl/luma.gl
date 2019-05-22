@@ -131,15 +131,17 @@ test('assembleShaders#shaderhooks', t => {
     signature: 'LUMAGL_fragmentColor(inout vec4 color)'
   });
 
-  setModuleInjection('vs', 'picking', {
+  setModuleInjection('picking', {
+    shaderStage: 'vs',
     shaderHook: 'LUMAGL_pickColor',
     injection: 'picking_setPickingColor(color.rgb)'
   });
 
-  setModuleInjection('fs', 'picking', {
+  setModuleInjection('picking', {
+    shaderStage: 'fs',
     shaderHook: 'LUMAGL_fragmentColor',
     injection: 'color = picking_filterColor(color)',
-    priority: Number.POSITIVE_INFINITY
+    order: Number.POSITIVE_INFINITY
   });
 
   let assembleResult = assembleShaders(fixture.gl, {
