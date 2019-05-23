@@ -4,50 +4,16 @@
     {
       "title": "Overview",
       "entries": [
-        {
-          "entry": "docs/README"
-        },
-        {
-          "entry": "docs/whats-new"
-        },
-        {
-          "entry": "docs/roadmap"
-        },
-        {
-          "entry": "docs/FAQ"
-        },
-        {
-          "entry": "docs/upgrade-guide"
-        }
+        { "entry": "docs/README" },
+        { "entry": "docs/whats-new" },
+        { "entry": "docs/upgrade-guide" }
       ]
     },
     {
       "title": "Getting Started",
       "entries": [
-        {
-          "name": "Overview",
-          "entry": "docs/get-started/README"
-        },
-        {
-          "name": "Installation",
-          "entry": "docs/get-started/installation"
-        },
-        {
-          "name": "Examples",
-          "entry": "docs/get-started/examples"
-        },
-        {
-          "name": "Using with deck.gl",
-          "entry": "docs/get-started/using-with-deckgl"
-        },
-        {
-          "name": "Using with Node.js",
-          "entry": "docs/get-started/using-with-node"
-        },
-        {
-          "name": "Using with other Frameworks",
-          "entry": "docs/get-started/using-with-other-frameworks"
-        }
+        { "entry": "docs/get-started/README" },
+        { "entry": "docs/get-started/examples" }
       ]
     },
     {
@@ -56,110 +22,47 @@
         {
           "title": "Overview",
           "entries": [
-            {
-              "name": "Overview",
-              "entry": "docs/developer-guide/README.md"
-            }
+            { "entry": "docs/developer-guide/README.md" }
           ]
         },
         {
           "title": "Shadertools",
           "entries": [
-            {
-              "name": "Overview",
-              "entry": "docs/developer-guide/shadertools/README"
-            },
-            {
-              "name": "Shader Assembly",
-              "entry": "docs/developer-guide/shadertools/shader-assembly"
-            },
-            {
-              "name": "Using Shader Modules",
-              "entry": "docs/developer-guide/shadertools/using-shader-modules"
-            },
-            {
-              "name": "Model Integration",
-              "entry": "docs/developer-guide/shadertools/model-integration"
-            },
-            {
-              "name": "Creating Shader Modules",
-              "entry": "docs/developer-guide/shadertools/writing-shader-modules"
-            },
-            {
-              "name": "Writing GLSL Code",
-              "entry": "docs/developer-guide/shadertools/writing-glsl-shaders"
-            },
-            {
-              "name": "Using GLSL 3.00 ES",
-              "entry": "docs/developer-guide/using-glsl-300-es.md"
-            }
+            { "entry": "docs/developer-guide/shadertools/README" },
+            { "entry": "docs/developer-guide/shadertools/shader-assembly" },
+            { "entry": "docs/developer-guide/shadertools/using-shader-modules" },
+            { "entry": "docs/developer-guide/shadertools/model-integration" },
+            { "entry": "docs/developer-guide/shadertools/writing-shader-modules" },
+            { "entry": "docs/developer-guide/shadertools/writing-glsl-shaders" },
+            { "entry": "docs/developer-guide/using-glsl-300-es.md" }
           ]
         },
         {
           "title": "Using WebGL",
           "entries": [
-            {
-              "name": "Drawing",
-              "entry": "docs/developer-guide/drawing"
-            },
-            {
-              "name": "Buffers",
-              "entry": "docs/developer-guide/buffers"
-            },
-            {
-              "name": "Stencil Buffers",
-              "entry": "docs/developer-guide/stencil-buffers"
-            },
-            {
-              "name": "Attributes",
-              "entry": "docs/developer-guide/attributes"
-            },
-            {
-              "name": "Accessors",
-              "entry": "docs/developer-guide/accessors"
-            },
-            {
-              "name": "Extensions",
-              "entry": "docs/developer-guide/extensions"
-            },
-            {
-              "name": "Transform Feedback",
-              "entry": "docs/developer-guide/transform-feedback"
-            }
+            { "entry": "docs/developer-guide/drawing" },
+            { "entry": "docs/developer-guide/buffers" },
+            { "entry": "docs/developer-guide/stencil-buffers" },
+            { "entry": "docs/developer-guide/attributes" },
+            { "entry": "docs/developer-guide/accessors" },
+            { "entry": "docs/developer-guide/extensions" },
+            { "entry": "docs/developer-guide/transform-feedback" }
           ]
         },
         {
           "title": "Higher Level APIs",
           "entries": [
-            {
-              "name": "Multi-Pass Rendering",
-              "entry": "docs/developer-guide/multipass/README.md"
-            }
+            { "entry": "docs/developer-guide/multipass/README.md" }
           ]
         },
         {
           "title": "Tools and Tips",
           "entries": [
-            {
-              "name": "Building Apps",
-              "entry": "docs/developer-guide/building-apps"
-            },
-            {
-              "name": "Configuring",
-              "entry": "docs/developer-guide/configuring"
-            },
-            {
-              "name": "Debugging",
-              "entry": "docs/developer-guide/debugging"
-            },
-            {
-              "name": "Portability",
-              "entry": "docs/developer-guide/portability"
-            },
-            {
-              "name": "Programs and shaders",
-              "entry": "docs/developer-guide/programs-and-shaders.md"
-            }
+            { "entry": "docs/developer-guide/building-apps" },
+            { "entry": "docs/developer-guide/configuring" },
+            { "entry": "docs/developer-guide/debugging" },
+            { "entry": "docs/developer-guide/portability" },
+            { "entry": "docs/developer-guide/programs-and-shaders.md" }
           ]
         }
       ]
@@ -170,321 +73,126 @@
         {
           "title": "API Structure",
           "entries": [
-            {
-              "name": "API Structure",
-              "entry": "docs/api-reference/README.md"
-            }
+            { "entry": "docs/api-reference/README.md" }
           ]
         },
         {
           "title": "Core Classes",
           "entries": [
-            {
-              "name": "AnimationLoop",
-              "entry": "docs/api-reference/core/animation-loop"
-            },
-            {
-              "name": "AnimationLoopProxy (Experimental)",
-              "entry": "docs/api-reference/core/animation-loop-proxy"
-            },
-            {
-              "name": "Geometry",
-              "entry": "docs/api-reference/core/geometry"
-            },
-            {
-              "name": "loadFile",
-              "entry": "docs/api-reference/core/load-file"
-            },
-            {
-              "name": "Transform",
-              "entry": "docs/api-reference/core/transform"
-            },
-            {
-              "name": "ShaderCache",
-              "entry": "docs/api-reference/core/shader-cache"
-            }
+            { "entry": "docs/api-reference/core/animation-loop" },
+            { "entry": "docs/api-reference/core/animation-loop-proxy" },
+            { "entry": "docs/api-reference/core/geometry" },
+            { "entry": "docs/api-reference/core/load-file" },
+            { "entry": "docs/api-reference/core/transform" },
+            { "entry": "docs/api-reference/core/shader-cache" }
           ]
         },
         {
           "title": "Geometry Primitives",
           "entries": [
-            {
-              "name": "Cone",
-              "entry": "docs/api-reference/core/geometries/cone-geometry"
-            },
-            {
-              "name": "Cube",
-              "entry": "docs/api-reference/core/geometries/cube-geometry"
-            },
-            {
-              "name": "Cylinder",
-              "entry": "docs/api-reference/core/geometries/cylinder-geometry"
-            },
-            {
-              "name": "IcoSphere",
-              "entry": "docs/api-reference/core/geometries/ico-sphere-geometry"
-            },
-            {
-              "name": "Plane",
-              "entry": "docs/api-reference/core/geometries/plane-geometry"
-            },
-            {
-              "name": "Sphere",
-              "entry": "docs/api-reference/core/geometries/sphere-geometry"
-            }
+            { "entry": "docs/api-reference/core/geometries/cone-geometry" },
+            { "entry": "docs/api-reference/core/geometries/cube-geometry" },
+            { "entry": "docs/api-reference/core/geometries/cylinder-geometry" },
+            { "entry": "docs/api-reference/core/geometries/ico-sphere-geometry" },
+            { "entry": "docs/api-reference/core/geometries/plane-geometry" },
+            { "entry": "docs/api-reference/core/geometries/sphere-geometry" }
           ]
         },
         {
           "title": "Lights",
           "entries": [
-            {
-              "name": "Ambient Light",
-              "entry": "docs/api-reference/core/lights/ambient-light"
-            },
-            {
-              "name": "Directional Light",
-              "entry": "docs/api-reference/core/lights/directional-light"
-            },
-            {
-              "name": "Point Light",
-              "entry": "docs/api-reference/core/lights/point-light"
-            }
+            { "entry": "docs/api-reference/core/lights/ambient-light" },
+            { "entry": "docs/api-reference/core/lights/directional-light" },
+            { "entry": "docs/api-reference/core/lights/point-light" }
           ]
         },
         {
           "title": "Materials",
           "entries": [
-            {
-              "name": "PhongMaterial",
-              "entry": "docs/api-reference/core/materials/phong-material"
-            },
-            {
-              "name": "PBRMaterial",
-              "entry": "docs/api-reference/core/materials/pbr-material"
-            }
+            { "entry": "docs/api-reference/core/materials/phong-material" },
+            { "entry": "docs/api-reference/core/materials/pbr-material" }
           ]
         },
         {
           "title": "Multipass",
           "entries": [
-            {
-              "name": "Canvas",
-              "entry": "docs/api-reference/core/multipass/canvas"
-            },
-            {
-              "name": "Clear pass",
-              "entry": "docs/api-reference/core/multipass/clear-pass"
-            },
-            {
-              "name": "Composite pass",
-              "entry": "docs/api-reference/core/multipass/composite-pass"
-            },
-            {
-              "name": "Copy pass",
-              "entry": "docs/api-reference/core/multipass/copy-pass"
-            },
-            {
-              "name": "Multi pass renderer",
-              "entry": "docs/api-reference/core/multipass/multi-pass-renderer"
-            },
-            {
-              "name": "Pass",
-              "entry": "docs/api-reference/core/multipass/pass"
-            },
-            {
-              "name": "Render pass",
-              "entry": "docs/api-reference/core/multipass/render-pass"
-            },
-            {
-              "name": "Shader module pass",
-              "entry": "docs/api-reference/core/multipass/shader-module-pass"
-            }
+            { "entry": "docs/api-reference/core/multipass/canvas" },
+            { "entry": "docs/api-reference/core/multipass/clear-pass" },
+            { "entry": "docs/api-reference/core/multipass/composite-pass" },
+            { "entry": "docs/api-reference/core/multipass/copy-pass" },
+            { "entry": "docs/api-reference/core/multipass/multi-pass-renderer" },
+            { "entry": "docs/api-reference/core/multipass/pass" },
+            { "entry": "docs/api-reference/core/multipass/render-pass" },
+            { "entry": "docs/api-reference/core/multipass/shader-module-pass" }
           ]
         },
         {
           "title": "Scenegraph",
           "entries": [
-            {
-              "name": "ScenegraphNode",
-              "entry": "docs/api-reference/core/scenegraph/scenegraph-node"
-            },
-            {
-              "name": "ModelNode",
-              "entry": "docs/api-reference/core/scenegraph/model-node"
-            },
-            {
-              "name": "GroupNode",
-              "entry": "docs/api-reference/core/scenegraph/group-node"
-            }
+            { "entry": "docs/api-reference/core/scenegraph/scenegraph-node" },
+            { "entry": "docs/api-reference/core/scenegraph/model-node" },
+            { "entry": "docs/api-reference/core/scenegraph/group-node" }
           ]
         },
         {
           "title": "Geometry Nodes",
           "entries": [
-            {
-              "name": "Cone",
-              "entry": "docs/api-reference/core/scenegraph/geometries/cone"
-            },
-            {
-              "name": "Cube",
-              "entry": "docs/api-reference/core/scenegraph/geometries/cube"
-            },
-            {
-              "name": "Cylinder",
-              "entry": "docs/api-reference/core/scenegraph/geometries/cylinder"
-            },
-            {
-              "name": "IcoSphere",
-              "entry": "docs/api-reference/core/scenegraph/geometries/ico-sphere"
-            },
-            {
-              "name": "Plane",
-              "entry": "docs/api-reference/core/scenegraph/geometries/plane"
-            },
-            {
-              "name": "Sphere",
-              "entry": "docs/api-reference/core/scenegraph/geometries/sphere"
-            }
+            { "entry": "docs/api-reference/core/scenegraph/geometries/cone" },
+            { "entry": "docs/api-reference/core/scenegraph/geometries/cube" },
+            { "entry": "docs/api-reference/core/scenegraph/geometries/cylinder" },
+            { "entry": "docs/api-reference/core/scenegraph/geometries/ico-sphere" },
+            { "entry": "docs/api-reference/core/scenegraph/geometries/plane" },
+            { "entry": "docs/api-reference/core/scenegraph/geometries/sphere" }
           ]
         },
         {
           "title": "WebGL2 Classes",
           "entries": [
-            {
-              "name": "Accessor",
-              "entry": "docs/api-reference/webgl/accessor"
-            },
-            {
-              "name": "Buffer",
-              "entry": "docs/api-reference/webgl/buffer"
-            },
-            {
-              "name": "Program",
-              "entry": "docs/api-reference/webgl/program"
-            },
-            {
-              "name": "Query",
-              "entry": "docs/api-reference/webgl/query"
-            },
-            {
-              "name": "Readback, Copy and Blit",
-              "entry": "docs/api-reference/webgl/copy-and-blit"
-            },
-            {
-              "name": "Renderbuffer",
-              "entry": "docs/api-reference/webgl/renderbuffer"
-            },
-            {
-              "name": "Resource",
-              "entry": "docs/api-reference/webgl/resource"
-            },
-            {
-              "name": "Shader",
-              "entry": "docs/api-reference/webgl/shader"
-            },
-            {
-              "name": "Texture",
-              "entry": "docs/api-reference/webgl/texture"
-            },
-            {
-              "name": "Texture2D",
-              "entry": "docs/api-reference/webgl/texture-2d"
-            },
-            {
-              "name": "Texture3D",
-              "entry": "docs/api-reference/webgl/texture-3d"
-            },
-            {
-              "name": "TextureCube",
-              "entry": "docs/api-reference/webgl/texture-cube"
-            },
-            {
-              "name": "TransformFeedback",
-              "entry": "docs/api-reference/webgl/transform-feedback"
-            },
-            {
-              "name": "UniformBufferLayout",
-              "entry": "docs/api-reference/webgl/uniform-buffer-layout"
-            },
-            {
-              "name": "VertexArray",
-              "entry": "docs/api-reference/webgl/vertex-array"
-            },
-            {
-              "name": "VertexArrayObject",
-              "entry": "docs/api-reference/webgl/vertex-array-object"
-            },
-            {
-              "name": "createGLContext",
-              "entry": "docs/api-reference/webgl/context/context"
-            },
-            {
-              "name": "isWebGL2",
-              "entry": "docs/api-reference/webgl/context/is-webGL2"
-            },
-            {
-              "name": "hasFeature(s)",
-              "entry": "docs/api-reference/webgl/context/has-features"
-            },
-            {
-              "name": "getFeatures",
-              "entry": "docs/api-reference/webgl/context/get-features"
-            },
-            {
-              "name": "getContextInfo",
-              "entry": "docs/api-reference/webgl/context/get-context-info"
-            },
-            {
-              "name": "getContextLimits",
-              "entry": "docs/api-reference/webgl/context/get-context-limits"
-            },
-            {
-              "name": "getGLContextInfo",
-              "entry": "docs/api-reference/webgl/context/get-gl-context-info"
-            },
-            {
-              "name": "get|setParameter(s)",
-              "entry": "docs/api-reference/webgl/context/get-parameters"
-            },
-            {
-              "name": "resetParameters",
-              "entry": "docs/api-reference/webgl/context/reset-parameters"
-            },
-            {
-              "name": "withParameters",
-              "entry": "docs/api-reference/webgl/context/with-parameters"
-            }
+            { "entry": "docs/api-reference/webgl/accessor" },
+            { "entry": "docs/api-reference/webgl/buffer" },
+            { "entry": "docs/api-reference/webgl/program" },
+            { "entry": "docs/api-reference/webgl/query" },
+            { "entry": "docs/api-reference/webgl/copy-and-blit" },
+            { "entry": "docs/api-reference/webgl/renderbuffer" },
+            { "entry": "docs/api-reference/webgl/resource" },
+            { "entry": "docs/api-reference/webgl/shader" },
+            { "entry": "docs/api-reference/webgl/texture" },
+            { "entry": "docs/api-reference/webgl/texture-2d" },
+            { "entry": "docs/api-reference/webgl/texture-3d" },
+            { "entry": "docs/api-reference/webgl/texture-cube" },
+            { "entry": "docs/api-reference/webgl/transform-feedback" },
+            { "entry": "docs/api-reference/webgl/uniform-buffer-layout" },
+            { "entry": "docs/api-reference/webgl/vertex-array" },
+            { "entry": "docs/api-reference/webgl/vertex-array-object" },
+            { "entry": "docs/api-reference/webgl/context/context" },
+            { "entry": "docs/api-reference/webgl/context/is-webGL2" },
+            { "entry": "docs/api-reference/webgl/context/has-features" },
+            { "entry": "docs/api-reference/webgl/context/get-features" },
+            { "entry": "docs/api-reference/webgl/context/get-context-info" },
+            { "entry": "docs/api-reference/webgl/context/get-context-limits" },
+            { "entry": "docs/api-reference/webgl/context/get-gl-context-info" },
+            { "entry": "docs/api-reference/webgl/context/get-parameters" },
+            { "entry": "docs/api-reference/webgl/context/reset-parameters" },
+            { "entry": "docs/api-reference/webgl/context/with-parameters" }
           ]
         },
         {
           "title": "Shadertools",
           "entries": [
-            {
-              "name": "Shadertools:assembleShaders",
-              "entry": "docs/api-reference/shadertools/assemble-shaders"
-            },
-            {
-              "name": "GLSL Reference",
-              "entry": "docs/api-reference/shadertools/glsl-reference"
-            }
+            { "entry": "docs/api-reference/shadertools/assemble-shaders" },
+            { "entry": "docs/api-reference/shadertools/glsl-reference" }
           ]
         },
         {
           "title": "Shader Modules",
           "entries": [
-            {
-              "name": "picking",
-              "entry": "docs/api-reference/shadertools/shader-module-picking"
-            }
+            { "entry": "docs/api-reference/shadertools/shader-module-picking" }
           ]
         },
         {
           "title": "Addons",
           "entries": [
-            {
-              "name": "Event",
-              "entry": "docs/api-reference/addons/event"
-            }
+            { "entry": "docs/api-reference/addons/event" }
           ]
         }
       ]
