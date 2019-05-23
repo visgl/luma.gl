@@ -9,7 +9,7 @@
 
 /* eslint-disable camelcase */
 import {_Pass as Pass, Framebuffer, ClipSpace, withParameters} from '@luma.gl/core';
-import ssao from '../modules/ssao';
+import ssao from '../shader-modules/ssao';
 
 export default class SSAOPass extends Pass {
   constructor(gl, props) {

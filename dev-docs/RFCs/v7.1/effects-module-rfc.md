@@ -4,7 +4,7 @@
 
 * **Date**: May. 2019
 
-* **Status**: For Review
+* **Status**: Approved
 
 ## Abstract
 A lot of shader modules focusing on effect rendering are created, better to have a sub-module for them instead of scattered all over the place.
@@ -52,7 +52,7 @@ New source code structure in `@luma.gl/effects`
 <pre>
 effects/src
 	|
-	modules
+	shader-modules
 	    |
 	    filter folders from `@luma.gl/gflx`
 	|
