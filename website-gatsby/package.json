@@ -11,7 +11,7 @@
     "start": "yarn clean-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",
     "develop": "gatsby develop --port=8001",
-    "build": "yarn clean-examples && gatsby build",
+    "build": "yarn clean-examples && yarn clean && gatsby build",
     "serve": "gatsby serve",
     "deploy": "gh-pages -d public",
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
