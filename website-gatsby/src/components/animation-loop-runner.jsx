@@ -55,8 +55,6 @@ export default class AnimationLoopRunner extends Component {
   componentDidMount() {
     const {showStats} = this.props;
 
-    console.log(this.props);
-
     this.animationLoop._setDisplay(new VRDisplay());
 
     // Ensure the example can find its images

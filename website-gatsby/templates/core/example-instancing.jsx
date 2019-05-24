@@ -5,7 +5,7 @@ import AnimationLoop from '../../../examples/core/instancing/app';
 export default class Example extends React.Component {
   render() {
     return (
-      <AnimationLoopRunner AnimationLoop={AnimationLoop} />
+      <AnimationLoopRunner AnimationLoop={AnimationLoop} path={this.props.pageContext.exampleConfig.path} />
     );
   }
 }
