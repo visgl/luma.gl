@@ -1,19 +1,26 @@
 import React, {Component, PropTypes} from 'react';
 import {Link} from 'react-router';
 
-export default class TableOfContents extends Component {
+const ITEM_HEIGHT = 40;
 
+const getContentHeight = page =>
+  page.children
+    ? page.children.reduce((height, child) => height + getContentHeight(child), ITEM_HEIGHT)
+    : ITEM_HEIGHT;
+
+export default class TableOfContents extends Component {
   _renderPage(parentRoute, page, i) {
     const {children, name} = page;
     const path = `${parentRoute}/${page.path}`;
 
     if (children) {
+      const maxHeight = getContentHeight(page);
       return (
         <div key={`page-${i}`}>
           <Link className="list-header" activeClassName="active" key={`group-header${i}`} to={path}>
             {name}
           </Link>
-          <ul key={`group-list${i}`} style={{maxHeight: `${40 * children.length}px`}}>
+          <ul key={`group-list${i}`} style={{maxHeight: `${maxHeight}px`}}>
             {children.map(this._renderPage.bind(this, path))}
           </ul>
         </div>
@@ -22,7 +29,9 @@ export default class TableOfContents extends Component {
 
     return (
       <li key={`page-${i}`}>
-        <Link className="link" to={path} activeClassName="active">{page.name}</Link>
+        <Link className="link" to={path} activeClassName="active">
+          {page.name}
+        </Link>
       </li>
     );
   }
@@ -32,9 +41,7 @@ export default class TableOfContents extends Component {
 
     return (
       <div className={`toc ${isOpen ? 'open' : ''}`}>
-        <div>
-          {pages.map(this._renderPage.bind(this, parentRoute))}
-        </div>
+        <div>{pages.map(this._renderPage.bind(this, parentRoute))}</div>
       </div>
     );
   }
