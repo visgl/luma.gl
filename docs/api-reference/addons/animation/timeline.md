@@ -13,6 +13,7 @@ The key concept at work in the `Timeline` is running multiple time frames in par
 
 Automatic update usage (assume `update` method is being called once per frame):
 ```js
+animationLoop.attachTimeline(new Timeline());
 const timeline = animationLoop.timeline;
 const channel1 = timeline.addChannel({
   rate: 0.5,

@@ -19,7 +19,8 @@ const DEFAULT_OPTIONS = {
   modelOptions: {},
   pbrDebug: false,
   imageBasedLightingEnvironment: null,
-  lights: true
+  lights: true,
+  useTangents: false
 };
 
 // GLTF instantiator for luma.gl
