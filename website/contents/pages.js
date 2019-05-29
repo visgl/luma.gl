@@ -464,6 +464,15 @@ export const DOC_PAGES = [
         ]
       },
       {
+        name: 'Effects',
+        children: [
+          {
+            name: 'glfx Filters',
+            content: 'api-reference/effects/glfx-filters.md'
+          }
+        ]
+      },
+      {
         name: 'Multipass',
         children: [
           {
