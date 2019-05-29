@@ -61,6 +61,8 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
         break;
 
       default:
+        // TODO(Tarek): I think this usage should be deprecated.
+
         // inject code after key, leaving key in place
         source = source.replace(key, match => match + fragmentString);
     }

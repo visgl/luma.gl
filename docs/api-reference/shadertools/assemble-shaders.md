@@ -48,7 +48,7 @@ Define a code injection for a particular hook function (defined by `setShaderHoo
 
 - `moduleName`: the name of the module for which the injection is being defined
 - `opts.shaderStage`: `vs` or `fs`, the shader stage the injection is defined for
-- `opts.shaderHook`: the shader hook to inject into
+- `opts.shaderHook`: the shader hook to inject into. This can be a hook function defined by `setShaderHook` or a predefined injection key (see below)
 - `opts.injection`: the injection code
 - `opts.order` (optional): the priority with which to inject code into the shader hook. Lower priority numbers will
 be injected first
@@ -56,7 +56,7 @@ be injected first
 
 ## Constants and Values
 
-### Predefined Injection Keys
+### Predefined Injection Hooks
 
 | Key              | Shader   | Description      |
 | ---              | ---      | ---              |
@@ -105,53 +105,52 @@ setModuleInjection('fs', 'picking', {
 If the picking module were included, the function `MYHOOK_fragmentColor` would be updated to modify the input color. Without the picking module, the function would remain a no-op. The `priority` ensures the injection always
 appears last in the hook function, which is necessary for picking color filtering to work correctly.
 
+Injecting to a predefined hook would be done as follows:
+
+```js
+setModuleInjection('fs', 'picking', {
+  shaderHook: 'fs:#main-end',
+  injection: 'color = picking_filterColor(color)',
+  priority: Number.POSITIVE_INFINITY
+});
+```
+
 
 ### Injection Map
 
 `assembleShaders` (and `Model` constructor) will take a new `inject` argument that contains a map of:
 
-* keys representing "patterns"
-* values representing code to be injected.
+* keys indicating hooks (predefined or functions)
+* values representing code to be injected. This can be either a simple string or an object containing the `injection` string and an `order` indicating its priority.
+
+Examples:
 
 ```
   inject: {
-    'COLOR_FILTERS': '  gl_FragColor = picking_filterColor(gl_FragColor)'
+    'fs:#main-end': '  gl_FragColor = picking_filterColor(gl_FragColor)'
   }
 ```
 
-Shaders can leave hints in comments representing injection points, that can be used as keys for injection. It does mean that main shaders need to be modified.
-
 ```js
+setShaderHook('fs', {
+  signature: 'MYHOOK_fragmentColor(inout vec4 color)'
+});
+
 new Model(gl, {
   vs,
   fs: `void main() {
     gl_FragColor = vec4(1., 0., 0., 1.);
-    // COLOR_FILTERS_HINT
+    MYHOOK_fragmentColor(gl_FragColor);
   }`,
   modules: ['picking']
   inject: {
-    'COLOR_FILTERS_HINT': '  gl_FragColor = picking_filterColor(gl_FragColor)'
+    'MYHOOK_fragmentColor': '  color = picking_filterColor(color)'
   }
 });
 ```
 
-### Pattern Based Injection
 
-To avoid the need for adding hints to existing shaders, one could also do pattern matching against the existing code. It is recommended that the injections would always happen on the next line.
 
-```js
-new Model(gl, {
-  vs,
-  fs: `void main() {
-    gl_FragColor = vec4(1., 0., 0., 1.);
-    // COLOR_FILTERS
-  }`,
-  modules: ['picking']
-  inject: {
-    'gl_FragColor =': '  gl_FragColor = picking_filterColor(gl_FragColor)'
-  }
-});
-```
 
 
 ### Remarks
