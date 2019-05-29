@@ -204,7 +204,7 @@ export default class GLTFAnimator {
     });
   }
 
-  // TODO(Tarek): This should be removed?
+  // TODO(Tarek): This should be removed? (deck.gl is using this)
   animate(time) {
     this.setTime(time);
   }

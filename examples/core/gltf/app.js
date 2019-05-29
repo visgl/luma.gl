@@ -6,7 +6,13 @@ import {parse} from '@loaders.gl/core';
 import {DracoLoader} from '@loaders.gl/draco';
 import GL from '@luma.gl/constants';
 import {AnimationLoop, setParameters, clear, log, lumaStats} from '@luma.gl/core';
-import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/addons';
+import {
+  GLTFScenegraphLoader,
+  createGLTFObjects,
+  GLTFEnvironment,
+  Timeline,
+  VRDisplay
+} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const CUBE_FACE_TO_DIRECTION = {
@@ -202,6 +208,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.u_ScaleDiffBaseMR = [0, 0, 0, 0];
     this.u_ScaleFGDSpec = [0, 0, 0, 0];
 
+    this.attachTimeline(new Timeline());
+    this.timeline.play();
     this.timelineChannel = this.timeline.addChannel({
       rate: 0.5
     });
@@ -257,18 +265,22 @@ export default class AppAnimationLoop extends AnimationLoop {
           reader.readAsArrayBuffer(e.dataTransfer.files[0]);
         });
 
-        loadGLTF(readPromise, this.gl, this.loadOptions).then(result => {
-          if (this.animationHandle !== null) {
-            this.timeline.detachAnimation(this.animationHandle);
-            this.animationHandle = null;
-          }
-          Object.assign(this, result);
-          if (this.animator) {
-            this.timeline.attachAnimation(this.animator, this.timelineChannel);
-          }
-        });
+        loadGLTF(readPromise, this.gl, this.loadOptions).then(result => this._fileLoaded(result));
       }
     };
+  }
+
+  _fileLoaded(loadResult) {
+    if (this.animationHandle !== null) {
+      this.timeline.detachAnimation(this.animationHandle);
+      this.animationHandle = null;
+    }
+    this.animator = null;
+
+    Object.assign(this, loadResult);
+    if (this.animator) {
+      this.animationHandle = this.timeline.attachAnimation(this.animator, this.timelineChannel);
+    }
   }
 
   onInitialize({gl, canvas}) {
@@ -293,28 +305,12 @@ export default class AppAnimationLoop extends AnimationLoop {
         imageBasedLightingEnvironment: null,
         lights: true
       };
-      loadGLTF(this.modelFile, this.gl, options).then(result => {
-        if (this.animationHandle !== null) {
-          this.timeline.detachAnimation(this.animationHandle);
-          this.animationHandle = null;
-        }
-        Object.assign(this, result);
-        if (this.animator) {
-          this.timeline.attachAnimation(this.animator, this.timelineChannel);
-        }
-      });
+      loadGLTF(this.modelFile, this.gl, options).then(result => this._fileLoaded(result));
     } else {
       const modelUrl = GLTF_DEFAULT_MODEL;
-      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result => {
-        if (this.animationHandle !== null) {
-          this.timeline.detachAnimation(this.animationHandle);
-          this.animationHandle = null;
-        }
-        Object.assign(this, result);
-        if (this.animator) {
-          this.timeline.attachAnimation(this.animator, this.timelineChannel);
-        }
-      });
+      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result =>
+        this._fileLoaded(result)
+      );
     }
 
     const showSelector = document.getElementById('showSelector');
@@ -420,10 +416,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       : new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
 
     if (!this.scenes.length) return false;
-
-    if (this.animator) {
-      this.animator.animate();
-    }
 
     let success = true;
 

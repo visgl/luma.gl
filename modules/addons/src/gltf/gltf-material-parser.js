@@ -1,7 +1,10 @@
 import {Texture2D, log} from '@luma.gl/core';
 
 export default class GLTFMaterialParser {
-  constructor(gl, {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights}) {
+  constructor(
+    gl,
+    {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents}
+  ) {
     this.gl = gl;
 
     this.defines = {
@@ -37,7 +40,7 @@ export default class GLTFMaterialParser {
     }
 
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
-    this.defineIfPresent(attributes.TANGENT, 'HAS_TANGENTS');
+    this.defineIfPresent(attributes.TANGENT && useTangents, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
 
     this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
