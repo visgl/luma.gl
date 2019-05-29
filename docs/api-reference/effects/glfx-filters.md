@@ -1,7 +1,7 @@
 # glfx Filters
 
 
-Image effects packaged as reusable shader modules based on the [glfx library](http://evanw.github.io/glfx.js/).
+Image effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
 
 
 ## Attribution / License
@@ -10,6 +10,13 @@ This is mostly a repackaging of shader code from [Evan Wallace](https://github.c
 
 The code and documentation is included here under MIT license.
 
+## Usage
+
+Import brightnessContrast shader module
+
+```js
+    import brightnessContrast from @luma.gl/effects;
+```
 
 ## Filters
 
@@ -59,7 +66,7 @@ Saturation is implemented by scaling all color channel values either toward or a
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/brightness.jpg" />
+        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hue.jpg" />
         <p><i>Hue / Saturation Effect</i></p>
       </td>
     </tr>
