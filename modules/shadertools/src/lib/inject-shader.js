@@ -10,6 +10,7 @@ const MODULE_INJECTORS = {
 
 const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
+const fragments = [];
 
 // A minimal shader injection/templating system.
 // RFC: https://github.com/uber/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-injection-rfc.md
@@ -18,44 +19,50 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
   const isVertex = type === VERTEX_SHADER;
 
   for (const key in inject) {
-    const fragment = inject[key];
+    const fragmentData = inject[key];
+    fragmentData.sort((a, b) => a.order - b.order);
+    fragments.length = fragmentData.length;
+    for (let i = 0, len = fragmentData.length; i < len; ++i) {
+      fragments[i] = fragmentData[i].injection;
+    }
+    const fragmentString = `${fragments.join('\n')}\n`;
     switch (key) {
       // declarations are injected before the main function
       case 'vs:#decl':
         if (isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => `${fragment}\n${match}`);
+          source = source.replace(REGEX_START_OF_MAIN, match => `${fragmentString}\n${match}`);
         }
         break;
       // main code is injected at the end of main function
       case 'vs:#main-start':
         if (isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => match + fragment);
+          source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
         }
         break;
       case 'vs:#main-end':
         if (isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, match => fragment + match);
+          source = source.replace(REGEX_END_OF_MAIN, match => fragmentString + match);
         }
         break;
       case 'fs:#decl':
         if (!isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => `${fragment}\n${match}`);
+          source = source.replace(REGEX_START_OF_MAIN, match => `${fragmentString}\n${match}`);
         }
         break;
       case 'fs:#main-start':
         if (!isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => match + fragment);
+          source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
         }
         break;
       case 'fs:#main-end':
         if (!isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, match => fragment + match);
+          source = source.replace(REGEX_END_OF_MAIN, match => fragmentString + match);
         }
         break;
 
       default:
         // inject code after key, leaving key in place
-        source = source.replace(key, match => match + fragment);
+        source = source.replace(key, match => match + fragmentString);
     }
   }
 

@@ -143,19 +143,19 @@ export default class AppAnimationLoop extends AnimationLoop {
     setModuleInjection('picking', {
       shaderStage: 'vs',
       shaderHook: 'MY_SHADER_HOOK_pickColor',
-      injection: 'picking_setPickingColor(color.rgb)'
+      injection: 'picking_setPickingColor(color.rgb);'
     });
 
     setModuleInjection('dirlight', {
       shaderStage: 'fs',
       shaderHook: 'MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = dirlight_filterColor(color)'
+      injection: 'color = dirlight_filterColor(color);'
     });
 
     setModuleInjection('picking', {
       shaderStage: 'fs',
       shaderHook: 'MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = picking_filterColor(color)',
+      injection: 'color = picking_filterColor(color);',
       order: Number.POSITIVE_INFINITY
     });
 
@@ -180,6 +180,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     this.cube = new InstancedCube(gl, {
       _animationLoop,
+      // inject: {
+      //   'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor)'
+      // },
       uniforms: {
         uTime: () => this.timeline.getTime(timeChannel),
         // Basic projection matrix

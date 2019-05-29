@@ -3,7 +3,7 @@ import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader from './inject-shader';
 import {assert} from '../utils';
-/* eslint-disable max-depth */
+/* eslint-disable max-depth, complexity */
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
@@ -14,6 +14,8 @@ const HOOK_FUNCTIONS = {
   [VERTEX_SHADER]: {},
   [FRAGMENT_SHADER]: {}
 };
+
+const INJECTION_PREFIX_REGEX = /^(vs:|fs:)/;
 
 const MODULE_INJECTIONS = {};
 
@@ -103,7 +105,19 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
-  const moduleInjections = {};
+  const hookInjections = {};
+  const mainInjections = {};
+
+  for (const key in inject) {
+    const injection =
+      typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
+    if (key.match(INJECTION_PREFIX_REGEX)) {
+      mainInjections[key] = [injection];
+    } else {
+      hookInjections[key] = [injection];
+    }
+  }
+
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -119,20 +133,25 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         if (MODULE_INJECTIONS[module.name]) {
           const injections = MODULE_INJECTIONS[module.name][type];
           for (const key in injections) {
-            moduleInjections[key] = moduleInjections[key] || [];
-            moduleInjections[key].push(injections[key]);
+            if (key.match(INJECTION_PREFIX_REGEX)) {
+              mainInjections[key] = mainInjections[key] || [];
+              mainInjections[key].push(injections[key]);
+            } else {
+              hookInjections[key] = hookInjections[key] || [];
+              hookInjections[key].push(injections[key]);
+            }
           }
         }
     }
   }
 
-  assembledSource += getHookFunctions(type, moduleInjections);
+  assembledSource += getHookFunctions(type, hookInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, type, inject, injectStandardStubs);
+  assembledSource = injectShader(assembledSource, type, mainInjections, injectStandardStubs);
 
   return assembledSource;
 }
@@ -206,7 +225,7 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderType, moduleInjections) {
+function getHookFunctions(shaderType, hookInjections) {
   let result = '';
   const hookFunctions = HOOK_FUNCTIONS[shaderType];
   for (const hookName in hookFunctions) {
@@ -215,11 +234,11 @@ function getHookFunctions(shaderType, moduleInjections) {
     if (hookFunction.header) {
       result += `  ${hookFunction.header}`;
     }
-    if (moduleInjections[hookName]) {
-      const injections = moduleInjections[hookName];
+    if (hookInjections[hookName]) {
+      const injections = hookInjections[hookName];
       injections.sort((a, b) => a.order - b.order);
       for (const injection of injections) {
-        result += `  ${injection.injection};\n`;
+        result += `  ${injection.injection}\n`;
       }
     }
     if (hookFunction.footer) {

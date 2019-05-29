@@ -134,13 +134,13 @@ test('assembleShaders#shaderhooks', t => {
   setModuleInjection('picking', {
     shaderStage: 'vs',
     shaderHook: 'LUMAGL_pickColor',
-    injection: 'picking_setPickingColor(color.rgb)'
+    injection: 'picking_setPickingColor(color.rgb);'
   });
 
   setModuleInjection('picking', {
     shaderStage: 'fs',
     shaderHook: 'LUMAGL_fragmentColor',
-    injection: 'color = picking_filterColor(color)',
+    injection: 'color = picking_filterColor(color);',
     order: Number.POSITIVE_INFINITY
   });
 
