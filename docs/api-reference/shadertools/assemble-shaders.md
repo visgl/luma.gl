@@ -97,7 +97,7 @@ And the injection for the picking module would be defined as follows:
 ```js
 setModuleInjection('fs', 'picking', {
   shaderHook: 'MYHOOK_fragmentColor',
-  injection: 'color = picking_filterColor(color)',
+  injection: 'color = picking_filterColor(color);',
   priority: Number.POSITIVE_INFINITY
 });
 ```
@@ -110,7 +110,7 @@ Injecting to a predefined hook would be done as follows:
 ```js
 setModuleInjection('fs', 'picking', {
   shaderHook: 'fs:#main-end',
-  injection: 'color = picking_filterColor(color)',
+  injection: 'color = picking_filterColor(color);',
   priority: Number.POSITIVE_INFINITY
 });
 ```
@@ -139,18 +139,17 @@ setShaderHook('fs', {
 new Model(gl, {
   vs,
   fs: `void main() {
-    gl_FragColor = vec4(1., 0., 0., 1.);
     MYHOOK_fragmentColor(gl_FragColor);
   }`,
   modules: ['picking']
   inject: {
-    'MYHOOK_fragmentColor': '  color = picking_filterColor(color)'
+    'fs:#main-start': 'gl_FragColor = vec4(1., 0., 0., 1.);';
+    'MYHOOK_fragmentColor': {
+      injection: '  color = picking_filterColor(color);',
+      order: 9999
   }
 });
 ```
-
-
-
 
 
 ### Remarks
