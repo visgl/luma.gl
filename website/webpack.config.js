@@ -12,11 +12,10 @@ const ALIASES = require('ocular-dev-tools/config/ocular.config')({
 // Seems to be a Babel bug
 // https://github.com/babel/babel-loader/issues/149#issuecomment-191991686
 const BABEL_CONFIG = {
-  presets: ['es2015', 'react', 'stage-2'].map(name => require.resolve(`babel-preset-${name}`)),
+  presets: ['@babel/preset-env', '@babel/preset-react'],
   plugins: [
-    // website uses decorators
-    require.resolve('babel-plugin-transform-decorators-legacy')
-    // resolve(__dirname, '../modules/babel-plugin-inline-gl-constants')
+    ['@babel/plugin-proposal-decorators', {legacy: true}],
+    ['@babel/plugin-proposal-class-properties', {loose: true}]
   ]
 };
 
@@ -54,7 +53,7 @@ const COMMON_CONFIG = {
         test: /draco3d.js$/,
         loader: 'babel-loader',
         options: BABEL_CONFIG,
-        include: [resolve('..'), libSources],
+        include: [resolve('..'), libSources]
       }
     ]
   },
