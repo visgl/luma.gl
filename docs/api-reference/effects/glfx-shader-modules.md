@@ -1,4 +1,4 @@
-# glfx Filters
+# glfx Shader Modules
 
 
 Image effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
@@ -6,7 +6,7 @@ Image effects packaged as reusable shader modules in `@luma.gl/effects` based on
 
 ## Attribution / License
 
-This is mostly a repackaging of shader code from [Evan Wallace](https://github.com/evanw/glfx.js)'s wonderful glfx library.
+This is a repackaging of shader code from [Evan Wallace](https://github.com/evanw/glfx.js)'s glfx library.
 
 The code and documentation is included here under MIT license.
 
@@ -15,7 +15,7 @@ The code and documentation is included here under MIT license.
 Import brightnessContrast shader module
 
 ```js
-    import brightnessContrast from @luma.gl/effects;
+    import {brightnessContrast} from @luma.gl/effects;
 ```
 
 ## Filters

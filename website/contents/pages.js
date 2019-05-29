@@ -467,8 +467,12 @@ export const DOC_PAGES = [
         name: 'Effects',
         children: [
           {
-            name: 'glfx Filters',
-            content: 'api-reference/effects/glfx-filters.md'
+            name: 'Overview',
+            content: 'api-reference/effects/overview.md'
+          },
+          {
+            name: 'glfx Shader Modules',
+            content: 'api-reference/effects/glfx-shader-modules.md'
           }
         ]
       },
