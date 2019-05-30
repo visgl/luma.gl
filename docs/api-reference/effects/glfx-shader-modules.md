@@ -152,8 +152,8 @@ Adds a simulated lens edge darkening effect.
 
 Simulates the shallow depth of field normally encountered in close-up photography, which makes the scene seem much smaller than it actually is. This filter assumes the scene is relatively planar, in which case the part of the scene that is completely in focus can be described by a line (the intersection of the focal plane and the scene). An example of a planar scene might be looking at a road from above at a downward angle. The image is then blurred with a blur radius that starts at zero on the line and increases further from the line.
 
- * `start`          [x, y] coordinate of the start of the line segment. Default value is `[0, 0]` which is the bottom left corner of image.
- * `end`            [x, y] coordinate of the end of the line segment. Default value is `[1, 1]` which is the up right corner of image.
+ * `start`          [x, y] coordinate of the start of the line segment. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0, 0]`.
+ * `end`            [x, y] coordinate of the end of the line segment. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[1, 1]`.
  * `blurRadius`     The maximum radius of the pyramid blur in pixels. Default value is `15`.
  * `gradientRadius` The distance in pixels from the line at which the maximum blur radius is reached. Default value is `200`.
 
@@ -191,7 +191,7 @@ This is the most basic blur filter, which convolves the image with a pyramid fil
 
 Blurs the image away from a certain point, which looks like radial motion blur.
 
-* `center`  [x, y] coordinate of the blur origin. Default value is `[0.5, 0.5]` which is the center of image.
+* `center`  [x, y] coordinate of the blur origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `strength` The strength of the blur. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 creates a highly blurred image. Default value is `0.3`.
 
 <table style="border: 0;" align="center">
@@ -210,7 +210,7 @@ Blurs the image away from a certain point, which looks like radial motion blur.
 
  Simulates a CMYK halftone rendering of the image by multiplying pixel values with a four rotated 2D sine wave patterns, one each for cyan, magenta, yellow, and black.
 
-* `center` [x, y] coordinate of the pattern origin. Default value is `[0.5, 0.5]` which is the center of image.
+* `center` [x, y] coordinate of the pattern origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `angle`  The rotation of the pattern in radians. Default value is `1.1`.
 * `size`   The diameter of a dot in pixels. Default value is `4`.
 
@@ -230,7 +230,7 @@ Blurs the image away from a certain point, which looks like radial motion blur.
 
 Simulates a black and white halftone rendering of the image by multiplying pixel values with a rotated 2D sine wave pattern.
 
-* `center`  [x, y] coordinate of the pattern origin. Default value is `[0.5, 0.5]` which is the center of image.
+* `center`  [x, y] coordinate of the pattern origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `angle`   The rotation of the pattern in radians. Default value is `1.1`.
 * `size`    The diameter of a dot in pixels. Default value is `3`.
 
@@ -268,7 +268,7 @@ Picks out different frequencies in the image by subtracting two copies of the im
 
 Renders the image using a pattern of hexagonal tiles. Tile colors are nearest-neighbor sampled from the centers of the tiles.
 
-* `center` [x, y] coordinate of the pattern center. Default value is `[0.5, 0.5]` which is the center of image.
+* `center` [x, y] coordinate of the pattern center. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `scale`  The width of an individual tile in pixels. Default value is `10`.
 
 <table style="border: 0;" align="center">
@@ -305,7 +305,7 @@ Simulates outlining the image in ink by darkening edges stronger than a certain 
 
 Bulges or pinches the image in a circle.
 
-* `center`  [x, y] coordinate of the center of the circle of effect. Default value is `[0.5, 0.5]` which is the center of image.
+* `center`  [x, y] coordinate of the center of the circle of effect. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `radius`  The radius of the circle of effect in pixels. Default value is `200`.
 * `strength` -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge). Default value is `0.5`.
 
@@ -325,7 +325,7 @@ Bulges or pinches the image in a circle.
 
 Warps a circular region of the image in a swirl.
 
-* `center` [x, y] coordinate of the center of the circular region. Default value is `[0.5, 0.5]` which is the center of image.
+* `center` [x, y] coordinate of the center of the circular region. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 * `radius` The radius of the circular region in pixels. Default value is `200`.
 * `angle`  The angle in radians that the pixels in the center of the circular region will be rotated by. Default value is `3`.
 
