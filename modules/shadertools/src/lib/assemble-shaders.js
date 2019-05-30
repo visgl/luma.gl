@@ -15,8 +15,6 @@ const HOOK_FUNCTIONS = {
   [FRAGMENT_SHADER]: {}
 };
 
-const INJECTION_PREFIX_REGEX = /^(vs:|fs:)/;
-
 const MODULE_INJECTIONS = {};
 
 // Precision prologue to inject before functions are injected in shader
@@ -26,20 +24,23 @@ precision highp float;
 
 `;
 
-export function setShaderHook(type, opts) {
-  const name = opts.signature.trim().replace(/\(.+/, '');
-  HOOK_FUNCTIONS[type][name] = opts;
+export function createShaderHook(hook, opts = {}) {
+  hook = hook.trim();
+  const [stage, signature] = hook.split(':');
+  const name = hook.replace(/\(.+/, '');
+  HOOK_FUNCTIONS[stage][name] = Object.assign(opts, {signature});
 }
 
-export function setModuleInjection(moduleName, opts) {
-  const {shaderStage, shaderHook, injection, order = 0} = opts;
+export function createModuleInjection(moduleName, opts) {
+  const {hook, injection, order = 0} = opts;
+  const shaderStage = hook.slice(0, 2);
 
   MODULE_INJECTIONS[moduleName] = MODULE_INJECTIONS[moduleName] || {};
   MODULE_INJECTIONS[moduleName][shaderStage] = MODULE_INJECTIONS[moduleName][shaderStage] || {};
 
-  assert(!MODULE_INJECTIONS[moduleName][shaderStage][shaderHook], 'Module injection already set');
+  assert(!MODULE_INJECTIONS[moduleName][shaderStage][hook], 'Module injection already created');
 
-  MODULE_INJECTIONS[moduleName][shaderStage][shaderHook] = {
+  MODULE_INJECTIONS[moduleName][shaderStage][hook] = {
     injection,
     order
   };
@@ -111,7 +112,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   for (const key in inject) {
     const injection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
-    if (key.match(INJECTION_PREFIX_REGEX)) {
+    if (key.match(/^(v|f)s:#/)) {
       mainInjections[key] = [injection];
     } else {
       hookInjections[key] = [injection];
@@ -133,7 +134,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         if (MODULE_INJECTIONS[module.name]) {
           const injections = MODULE_INJECTIONS[module.name][type];
           for (const key in injections) {
-            if (key.match(INJECTION_PREFIX_REGEX)) {
+            if (key.match(/^(v|f)s:#/)) {
               mainInjections[key] = mainInjections[key] || [];
               mainInjections[key].push(injections[key]);
             } else {
@@ -225,9 +226,9 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderType, hookInjections) {
+function getHookFunctions(shaderStage, hookInjections) {
   let result = '';
-  const hookFunctions = HOOK_FUNCTIONS[shaderType];
+  const hookFunctions = HOOK_FUNCTIONS[shaderStage];
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
     result += `void ${hookFunction.signature} {\n`;

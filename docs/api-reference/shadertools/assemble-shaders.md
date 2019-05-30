@@ -32,23 +32,23 @@ Returns:
 * `getUniforms` - a combined `getUniforms` function covering all modules.
 * `moduleMap` - a map with all resolved modules, keyed by name
 
-### `setShaderHook(shaderType, opts)`
+### `createShaderHook(hook, [opts])`
 
 Creates a shader hook function that shader modules can injection code into. Shaders can call these functions, which will be no-ops by default. If a shader module injects code it will be executed upon the hook function call. This mechanism allows the application to create shaders that can be automatically extended by included shader modules.
 
-- `shaderType`: `vs` or `fs`, the type of shader
-- `opts.signature`: name and arguments of the function, e.g. `MYHOOK_func(inout vec4 value)`. Name of the function
+- `shaderStage`: `vs` or `fs`, the type of shader
+- `hook`: `vs:` or `fs:` followed by the name and arguments of the function, e.g. `vs:MYHOOK_func(inout vec4 value)`. Hook name without arguments
 will also be used as the name of the shader hook
 - `opts.header` (optional): code always included at the beginning of a hook function
 - `opts.footer` (optional): code always included at the end of a hook function
 
-### `setModuleInjection(moduleName, opts)`
+### `createModuleInjection(moduleName, opts)`
 
-Define a code injection for a particular hook function (defined by `setShaderHook`) and shader module. The injection code will be inserted into the hook function whenever the shader module is included.
+Define a code injection for a particular hook function (defined by `createShaderHook`) and shader module. The injection code will be inserted into the hook function whenever the shader module is included.
 
 - `moduleName`: the name of the module for which the injection is being defined
-- `opts.shaderStage`: `vs` or `fs`, the shader stage the injection is defined for
-- `opts.shaderHook`: the shader hook to inject into. This can be a hook function defined by `setShaderHook` or a predefined injection key (see below)
+- `opts.hook`: the shader hook to inject into. This can be a hook function defined by `createShaderHook` or a predefined injection key (see below),
+prefixed by `vs:` for the vertex shader or `fs:` for the fragment shader.
 - `opts.injection`: the injection code
 - `opts.order` (optional): the priority with which to inject code into the shader hook. Lower priority numbers will
 be injected first
@@ -72,14 +72,14 @@ be injected first
 ### Shader Module Code Injection
 
 Shader module code injections involve three steps:
-- Defining a shader hook function using `setShaderHook`
+- Defining a shader hook function using `createShaderHook`
 - Calling the hook function in a shader
 - Defining hook code injections for particular modules
 
 For example, if the application wanted to automatically enable picking color filtering when the `picking` module is included in a program, first the shader hook would be defined:
 
 ```js
-setShaderHook('fs', {
+createShaderHook('fs', {
   signature: 'MYHOOK_fragmentColor(inout vec4 color)'
 });
 ```
@@ -95,8 +95,8 @@ void main() {
 And the injection for the picking module would be defined as follows:
 
 ```js
-setModuleInjection('fs', 'picking', {
-  shaderHook: 'MYHOOK_fragmentColor',
+createModuleInjection('picking', {
+  hook: 'fs:MYHOOK_fragmentColor',
   injection: 'color = picking_filterColor(color);',
   priority: Number.POSITIVE_INFINITY
 });
@@ -108,8 +108,8 @@ appears last in the hook function, which is necessary for picking color filterin
 Injecting to a predefined hook would be done as follows:
 
 ```js
-setModuleInjection('fs', 'picking', {
-  shaderHook: 'fs:#main-end',
+createModuleInjection('picking', {
+  hook: 'fs:#main-end',
   injection: 'color = picking_filterColor(color);',
   priority: Number.POSITIVE_INFINITY
 });
@@ -132,9 +132,7 @@ Examples:
 ```
 
 ```js
-setShaderHook('fs', {
-  signature: 'MYHOOK_fragmentColor(inout vec4 color)'
-});
+createShaderHook('fs:MYHOOK_fragmentColor(inout vec4 color)');
 
 new Model(gl, {
   vs,
@@ -144,7 +142,7 @@ new Model(gl, {
   modules: ['picking']
   inject: {
     'fs:#main-start': 'gl_FragColor = vec4(1., 0., 0., 1.);';
-    'MYHOOK_fragmentColor': {
+    'fs:MYHOOK_fragmentColor': {
       injection: '  color = picking_filterColor(color);',
       order: 9999
   }

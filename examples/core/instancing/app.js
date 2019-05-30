@@ -7,8 +7,8 @@ import {
   readPixelsToArray,
   Buffer,
   CubeGeometry,
-  setShaderHook,
-  setModuleInjection
+  createShaderHook,
+  createModuleInjection
 } from '@luma.gl/core';
 import {Timeline} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
@@ -132,29 +132,22 @@ export default class AppAnimationLoop extends AnimationLoop {
       depthFunc: gl.LEQUAL
     });
 
-    setShaderHook('vs', {
-      signature: 'MY_SHADER_HOOK_pickColor(inout vec4 color)'
-    });
+    createShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
 
-    setShaderHook('fs', {
-      signature: 'MY_SHADER_HOOK_fragmentColor(inout vec4 color)'
-    });
+    createShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
 
-    setModuleInjection('picking', {
-      shaderStage: 'vs',
-      shaderHook: 'MY_SHADER_HOOK_pickColor',
+    createModuleInjection('picking', {
+      hook: 'vs:MY_SHADER_HOOK_pickColor',
       injection: 'picking_setPickingColor(color.rgb);'
     });
 
-    setModuleInjection('dirlight', {
-      shaderStage: 'fs',
-      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
+    createModuleInjection('dirlight', {
+      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
       injection: 'color = dirlight_filterColor(color);'
     });
 
-    setModuleInjection('picking', {
-      shaderStage: 'fs',
-      shaderHook: 'MY_SHADER_HOOK_fragmentColor',
+    createModuleInjection('picking', {
+      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
       injection: 'color = picking_filterColor(color);',
       order: Number.POSITIVE_INFINITY
     });

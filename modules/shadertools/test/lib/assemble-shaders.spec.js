@@ -2,8 +2,8 @@
 import {createGLContext} from '@luma.gl/core';
 import {
   assembleShaders,
-  setShaderHook,
-  setModuleInjection,
+  createShaderHook,
+  createModuleInjection,
   picking,
   fp64
 } from '@luma.gl/shadertools';
@@ -123,23 +123,16 @@ test('assembleShaders#getUniforms', t => {
 });
 
 test('assembleShaders#shaderhooks', t => {
-  setShaderHook('vs', {
-    signature: 'LUMAGL_pickColor(inout vec4 color)'
-  });
+  createShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
+  createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
 
-  setShaderHook('fs', {
-    signature: 'LUMAGL_fragmentColor(inout vec4 color)'
-  });
-
-  setModuleInjection('picking', {
-    shaderStage: 'vs',
-    shaderHook: 'LUMAGL_pickColor',
+  createModuleInjection('picking', {
+    hook: 'vs:LUMAGL_pickColor',
     injection: 'picking_setPickingColor(color.rgb);'
   });
 
-  setModuleInjection('picking', {
-    shaderStage: 'fs',
-    shaderHook: 'LUMAGL_fragmentColor',
+  createModuleInjection('picking', {
+    hook: 'fs:LUMAGL_fragmentColor',
     injection: 'color = picking_filterColor(color);',
     order: Number.POSITIVE_INFINITY
   });
@@ -188,5 +181,6 @@ test('assembleShaders#shaderhooks', t => {
     assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
     'injection code included in fragment shader with module'
   );
+
   t.end();
 });
