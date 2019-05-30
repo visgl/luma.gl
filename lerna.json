@@ -1,6 +1,6 @@
 {
   "lerna": "2.0.0",
-  "version": "7.1.0-alpha.4",
+  "version": "7.1.0-alpha.5",
   "npmClient": "yarn",
   "useWorkspaces": true,
   "exact": true,
@@ -9,7 +9,7 @@
   ],
   "command": {
     "publish": {
-      "ignore": [
+      "ignoreChanges": [
         "test",
         "*.md",
         "@luma.gl/scripts"

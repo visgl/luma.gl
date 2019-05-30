@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "7.1.0-alpha.4",
+  "version": "7.1.0-alpha.5",
   "description": "Set of gpgpu utility methods based on luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.1.0-alpha.4"
+    "@luma.gl/constants": "7.1.0-alpha.5"
   },
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0-alpha.1"
