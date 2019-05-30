@@ -31,7 +31,7 @@ vec4 dotScreen_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0.5, 0.5],
+  center: [0, 0],
   angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
   size: {value: 3, min: 1, softMin: 3, softMax: 20}
 };

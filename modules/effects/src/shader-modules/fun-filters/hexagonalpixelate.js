@@ -50,7 +50,7 @@ vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoor
 `;
 
 const uniforms = {
-  center: {value: [0.5, 0.5], hint: 'screenspace'},
+  center: {value: [0, 0], hint: 'screenspace'},
   scale: {value: 10, min: 1, softMin: 5, softMax: 50}
 };
 

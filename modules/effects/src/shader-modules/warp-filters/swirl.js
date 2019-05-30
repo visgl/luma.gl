@@ -40,7 +40,7 @@ vec4 swirl_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0.5, 0.5],
+  center: [0, 0],
   radius: {value: 200, min: 1, softMax: 600},
   angle: {value: 3, softMin: -25, softMax: 25}
 };

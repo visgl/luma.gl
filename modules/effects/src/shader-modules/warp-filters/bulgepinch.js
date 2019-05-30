@@ -37,7 +37,7 @@ vec4 bulgePinch_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0.5, 0.5],
+  center: [0, 0],
   radius: {value: 200, min: 1, softMax: 600},
   strength: {value: 0.5, min: -1, max: 1}
 };

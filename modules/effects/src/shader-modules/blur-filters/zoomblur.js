@@ -42,7 +42,7 @@ vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0.5, 0.5],
+  center: [0, 0],
   strength: {value: 0.3, min: 0, softMax: 1}
 };
 
