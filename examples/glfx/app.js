@@ -445,7 +445,11 @@ class Filter {
             default:
               if (Array.isArray(uniform.value)) {
                 // Assume texCoords
-                this.addNub(uniformName, uniform.value);
+                if (uniformName === `center`) {
+                  this.addNub(uniformName, [0.5, 0.5]);
+                } else {
+                  this.addNub(uniformName, uniform.value);
+                }
               } else {
                 console.log(uniform);
               }
