@@ -98,7 +98,7 @@ And the injection for the picking module would be defined as follows:
 createModuleInjection('picking', {
   hook: 'fs:MYHOOK_fragmentColor',
   injection: 'color = picking_filterColor(color);',
-  priority: Number.POSITIVE_INFINITY
+  order: Number.POSITIVE_INFINITY
 });
 ```
 
@@ -111,7 +111,7 @@ Injecting to a predefined hook would be done as follows:
 createModuleInjection('picking', {
   hook: 'fs:#main-end',
   injection: 'color = picking_filterColor(color);',
-  priority: Number.POSITIVE_INFINITY
+  order: Number.POSITIVE_INFINITY
 });
 ```
 
