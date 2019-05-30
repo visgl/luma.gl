@@ -137,6 +137,12 @@ test('assembleShaders#shaderhooks', t => {
     order: Number.POSITIVE_INFINITY
   });
 
+  createModuleInjection('picking', {
+    hook: 'fs:#main-end',
+    injection: 'gl_FragColor = picking_filterColor(gl_FragColor);',
+    order: Number.POSITIVE_INFINITY
+  });
+
   let assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300
@@ -157,6 +163,11 @@ test('assembleShaders#shaderhooks', t => {
   t.ok(
     assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1,
     'injection code not included in fragment shader without module'
+  );
+
+  t.ok(
+    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') === -1,
+    'regex injection code not included in fragment shader without module'
   );
 
   assembleResult = assembleShaders(fixture.gl, {
@@ -180,6 +191,28 @@ test('assembleShaders#shaderhooks', t => {
   t.ok(
     assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
     'injection code included in fragment shader with module'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') > -1,
+    'regex injection code included in fragment shader with module'
+  );
+
+  assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    inject: {
+      'vs:LUMAGL_pickColor': 'color *= 0.1;',
+      'fs:LUMAGL_fragmentColor': 'color += 0.1;'
+    }
+  });
+
+  t.ok(
+    assembleResult.vs.indexOf('color *= 0.1') > -1,
+    'argument injection code included in shader hook'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('color += 0.1') > -1,
+    'argument injection code included in shader hook'
   );
 
   t.end();
