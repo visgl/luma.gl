@@ -29,7 +29,7 @@ test('Model#construct/destruct', t => {
 test('Model#setAttribute', t => {
   const {gl} = fixture;
 
-  const buffer1 = new Buffer(gl, {size: 2, data: new Float32Array(4).fill(1)});
+  const buffer1 = new Buffer(gl, {accessor: {size: 2}, data: new Float32Array(4).fill(1)});
   const buffer2 = new Buffer(gl, {data: new Float32Array(8)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;

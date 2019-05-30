@@ -585,7 +585,7 @@ export default class Transform {
       array[index] = index;
     });
     if (!this.elementIDBuffer) {
-      this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, size: 1});
+      this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, accessor: {size: 1}});
     } else {
       this.elementIDBuffer.setData({data: elementIds});
     }
