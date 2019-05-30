@@ -2,7 +2,7 @@
   "name": "@luma.gl/effects",
   "description": "Rendering and post-processing effects library for luma.gl",
   "private": "true",
-  "version": "0.0.1",
+  "version": "7.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
