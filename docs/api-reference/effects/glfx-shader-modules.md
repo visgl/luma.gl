@@ -1,7 +1,7 @@
 # glfx Shader Modules
 
 
-Image effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
+Screen space effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
 
 
 ## Attribution / License
@@ -15,7 +15,7 @@ The code and documentation is included here under MIT license.
 Import brightnessContrast shader module
 
 ```js
-    import {brightnessContrast} from @luma.gl/effects;
+    import {brightnessContrast} from '@luma.gl/effects';
 ```
 
 ## Shader Modules
