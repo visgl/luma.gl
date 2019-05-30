@@ -19,7 +19,7 @@ float scale = 3.1514 / size;
 
 float pattern(float angle, vec2 texSize, vec2 texCoord) {
   float s = sin(angle), c = cos(angle);
-  vec2 tex = texCoord * texSize - center;
+  vec2 tex = texCoord * texSize - center * texSize;
   vec2 point = vec2(
 	c * tex.x - s * tex.y,
 	s * tex.x + c * tex.y
@@ -46,7 +46,7 @@ vec4 colorHalftone_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0, 0],
+  center: [0.5, 0.5],
   angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
   size: {value: 4, min: 1, softMin: 3, softMax: 20}
 };

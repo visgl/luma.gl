@@ -38,7 +38,7 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 
   vec2 normal = normalize(vec2(start.y - end.y, end.x - start.x));
   float radius = smoothstep(0.0, 1.0,
-    abs(dot(texCoord * texSize - start, normal)) / gradientRadius) * blurRadius;
+    abs(dot(texCoord * texSize - start * texSize, normal)) / gradientRadius) * blurRadius;
 
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;

@@ -15,7 +15,7 @@ uniform float strength;
 vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec4 color = vec4(0.0);
   float total = 0.0;
-  vec2 toCenter = center - texCoord * texSize;
+  vec2 toCenter = center * texSize - texCoord * texSize;
 
   /* randomize the lookup values to hide the fixed number of samples */
   float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
@@ -42,7 +42,7 @@ vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 `;
 
 const uniforms = {
-  center: [0, 0],
+  center: [0.5, 0.5],
   strength: {value: 0.3, min: 0, softMax: 1}
 };
 

@@ -134,7 +134,7 @@ function setSelectedFilter(filter) {
         })
         .css({left: x, top: y});
 
-      filter.values[nub.name] = [x, y];
+      filter.values[nub.name] = [x / canvas.width, y / canvas.height];
     }
 
     if (filter.reset) {
@@ -445,11 +445,7 @@ class Filter {
             default:
               if (Array.isArray(uniform.value)) {
                 // Assume texCoords
-                if (uniformName === `center`) {
-                  this.addNub(uniformName, [0.5, 0.5]);
-                } else {
-                  this.addNub(uniformName, uniform.value);
-                }
+                this.addNub(uniformName, uniform.value);
               } else {
                 console.log(uniform);
               }

@@ -11,7 +11,7 @@ uniform vec2 center;
 uniform float scale;
 
 vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
-  vec2 tex = (texCoord * texSize - center) / scale;
+  vec2 tex = (texCoord * texSize - center * texSize) / scale;
   tex.y /= 0.866025404;
   tex.x -= tex.y * 0.5;
 
@@ -45,12 +45,12 @@ vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoor
   choice.y *= 0.866025404;
   choice *= scale / texSize;
 
-  return texture2D(texture, choice + center / texSize);
+  return texture2D(texture, choice + center);
 }
 `;
 
 const uniforms = {
-  center: {value: [0, 0], hint: 'screenspace'},
+  center: {value: [0.5, 0.5], hint: 'screenspace'},
   scale: {value: 10, min: 1, softMin: 5, softMax: 50}
 };
 
