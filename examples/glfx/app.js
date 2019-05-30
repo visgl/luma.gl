@@ -134,7 +134,7 @@ function setSelectedFilter(filter) {
         })
         .css({left: x, top: y});
 
-      filter.values[nub.name] = [x, y];
+      filter.values[nub.name] = [x / canvas.width, y / canvas.height];
     }
 
     if (filter.reset) {

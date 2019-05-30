@@ -19,7 +19,7 @@ float scale = 3.1514 / size;
 
 float pattern(float angle, vec2 texSize, vec2 texCoord) {
   float s = sin(angle), c = cos(angle);
-  vec2 tex = texCoord * texSize - center;
+  vec2 tex = texCoord * texSize - center * texSize;
   vec2 point = vec2(
 	c * tex.x - s * tex.y,
 	s * tex.x + c * tex.y

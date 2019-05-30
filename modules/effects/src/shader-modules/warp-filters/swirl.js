@@ -14,8 +14,8 @@ uniform float radius;
 uniform float angle;
 uniform vec2 center;
 
-vec2 swirl_warp(vec2 coord) {
-  coord -= center;
+vec2 swirl_warp(vec2 coord, vec2 texCenter) {
+  coord -= texCenter;
   float distance = length(coord);
   if (distance < radius) {
     float percent = (radius - distance) / radius;
@@ -27,13 +27,13 @@ vec2 swirl_warp(vec2 coord) {
       coord.x * s + coord.y * c
     );
   }
-  coord += center;
+  coord += texCenter;
   return coord;
 }
 
 vec4 swirl_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
-  coord = swirl_warp(coord);
+  coord = swirl_warp(coord, center * texSize);
 
   return warp_sampleColor(texture, texSize, coord);
 }

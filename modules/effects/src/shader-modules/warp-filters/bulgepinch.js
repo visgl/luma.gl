@@ -13,8 +13,8 @@ uniform float radius;
 uniform float strength;
 uniform vec2 center;
 
-vec2 bulgePinch_warp(vec2 coord) {
-  coord -= center;
+vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
+  coord -= texCenter;
   float distance = length(coord);
   if (distance < radius) {
     float percent = distance / radius;
@@ -24,13 +24,13 @@ vec2 bulgePinch_warp(vec2 coord) {
       coord *= mix(1.0, pow(percent, 1.0 + strength * 0.75) * radius / distance, 1.0 - percent);
     }
   }
-  coord += center;
+  coord += texCenter;
   return coord;
 }
 
 vec4 bulgePinch_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
-  coord = bulgePinch_warp(coord);
+  coord = bulgePinch_warp(coord, center * texSize);
 
   return warp_sampleColor(texture, texSize, coord);
 }

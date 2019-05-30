@@ -464,6 +464,19 @@ export const DOC_PAGES = [
         ]
       },
       {
+        name: 'Effects',
+        children: [
+          {
+            name: 'Overview',
+            content: 'api-reference/effects/overview.md'
+          },
+          {
+            name: 'glfx Shader Modules',
+            content: 'api-reference/effects/glfx-shader-modules.md'
+          }
+        ]
+      },
+      {
         name: 'Multipass',
         children: [
           {
