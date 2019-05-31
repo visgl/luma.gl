@@ -78,9 +78,7 @@ Shader module code injections involve three steps:
 For example, if the application wanted to automatically enable picking color filtering when the `picking` module is included in a program, first the shader hook would be defined:
 
 ```js
-createShaderHook('fs', {
-  signature: 'MYHOOK_fragmentColor(inout vec4 color)'
-});
+createShaderHook('fs:MYHOOK_fragmentColor(inout vec4 color)');
 ```
 
 In the fragment shader `main` function, the new hook function would called as follows:
@@ -109,7 +107,7 @@ Injecting to a predefined hook would be done as follows:
 ```js
 createModuleInjection('picking', {
   hook: 'fs:#main-end',
-  injection: 'color = picking_filterColor(color);',
+  injection: 'gl_FragColor = picking_filterColor(gl_FragColor);',
   order: Number.POSITIVE_INFINITY
 });
 ```
@@ -138,7 +136,7 @@ new Model(gl, {
   fs: `void main() {
     MYHOOK_fragmentColor(gl_FragColor);
   }`,
-  modules: ['picking']
+  modules: [picking]
   inject: {
     'fs:#main-start': 'gl_FragColor = vec4(1., 0., 0., 1.);';
     'fs:MYHOOK_fragmentColor': {

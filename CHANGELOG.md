@@ -1,3 +1,39 @@
+## v7.1.0-alpha.6
+- Consolidate injection APIs (#1130)
+- Fix deprecated Buffer API usage (#1131)
+
+## v7.1.0-alpha.5
+- glfx API audit and documentation (#1128)
+- Update ocular version
+- Fix table contents height styling (#1125)
+- Fix gltf-animator in example, fix timeline doc, add option to disable tangents (#1126)
+- Fix yarn build command in gatsby website. (#1120)
+- Remove out of date entries and cleanup table of contents config for ocular-gatsby site. (#1119)
+- rename modules folder to shader-modules (#1118)
+
+## v7.1.0-alpha.4
+- Implementation of shader module code injection (#1110)
+- Fix dependency versions (#1116)
+- Upgrade browser testing setup (#1117)
+- Bump ocular-gatsby (#1115)
+
+## v7.1.0-alpha.2
+- Keyframes implementation (#1113)
+- Fix for chromium GLSL compiler issue (#1114)
+- Fix setMatrix in scenegraph node (#1111)
+- refactor convolution pass to shader module (#1109)
+- move shader modules from glfx to effects (#1107)
+- Framebuffer set buffers fix (#1102)
+- effects module RFC (#1103)
+- Update RFC status
+- Update RFC docs
+- Shader Module Injection RFC (#1096)
+- change current shader modules and passes to be experimental (#1106)
+- Final key frame RFC fixes
+- Key frame management rfc (#1100)
+- Fix glfx example (#1104)
+- Migrate build badge from travis-ci.org to travis-ci.com. (#1098)
+- Fix dependencies
 
 ## v7.1.0-alpha.1
 - Implementation of Timeline RFC (#1093)

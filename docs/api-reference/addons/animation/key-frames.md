@@ -20,7 +20,7 @@ keyFrames.startIndex;      // => 2                            (i.e. key frame at
 keyFrames.endIndex;        // => 3                            (i.e. key frame at time=1200)
 keyFrames.factor;          // => 0.5                          (i.e. halfway between 800 and 1200)
 keyFrames.getStartTime();  // => 800                          (i.e. time at index 2)
-keyFrames.getStartTime();  // => 1200                         (i.e. time at index 3)
+keyFrames.getEndTime();    // => 1200                         (i.e. time at index 3)
 keyFrames.getStartData();  // => { val1: [0, 0, 1], val2: 1}  (i.e. data at index 2)
 keyFrames.getEndData();    // => { val1: [0, 1, 0], val2: 4}  (i.e. data at index 3)
 
