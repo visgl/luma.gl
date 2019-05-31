@@ -122,7 +122,7 @@ test('assembleShaders#getUniforms', t => {
   t.end();
 });
 
-test.only('assembleShaders#shaderhooks', t => {
+test('assembleShaders#shaderhooks', t => {
   createShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
 
