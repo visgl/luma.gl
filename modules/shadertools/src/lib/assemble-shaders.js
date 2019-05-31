@@ -3,7 +3,7 @@ import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader from './inject-shader';
 import {assert} from '../utils';
-/* eslint-disable max-depth */
+/* eslint-disable max-depth, complexity */
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
@@ -24,20 +24,23 @@ precision highp float;
 
 `;
 
-export function setShaderHook(type, opts) {
-  const name = opts.signature.trim().replace(/\(.+/, '');
-  HOOK_FUNCTIONS[type][name] = opts;
+export function createShaderHook(hook, opts = {}) {
+  hook = hook.trim();
+  const [stage, signature] = hook.split(':');
+  const name = hook.replace(/\(.+/, '');
+  HOOK_FUNCTIONS[stage][name] = Object.assign(opts, {signature});
 }
 
-export function setModuleInjection(moduleName, opts) {
-  const {shaderStage, shaderHook, injection, order = 0} = opts;
+export function createModuleInjection(moduleName, opts) {
+  const {hook, injection, order = 0} = opts;
+  const shaderStage = hook.slice(0, 2);
 
   MODULE_INJECTIONS[moduleName] = MODULE_INJECTIONS[moduleName] || {};
   MODULE_INJECTIONS[moduleName][shaderStage] = MODULE_INJECTIONS[moduleName][shaderStage] || {};
 
-  assert(!MODULE_INJECTIONS[moduleName][shaderStage][shaderHook], 'Module injection already set');
+  assert(!MODULE_INJECTIONS[moduleName][shaderStage][hook], 'Module injection already created');
 
-  MODULE_INJECTIONS[moduleName][shaderStage][shaderHook] = {
+  MODULE_INJECTIONS[moduleName][shaderStage][hook] = {
     injection,
     order
   };
@@ -103,7 +106,24 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Add source of dependent modules in resolved order
   let injectStandardStubs = false;
-  const moduleInjections = {};
+  const hookInjections = {};
+  const mainInjections = {};
+
+  for (const key in inject) {
+    const injection =
+      typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
+    if (key.match(/^(v|f)s:/)) {
+      if (key[3] === '#') {
+        mainInjections[key] = [injection];
+      } else {
+        hookInjections[key] = [injection];
+      }
+    } else {
+      // Regex injection
+      mainInjections[key] = [injection];
+    }
+  }
+
   for (const module of modules) {
     switch (module.name) {
       case 'inject':
@@ -119,20 +139,25 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         if (MODULE_INJECTIONS[module.name]) {
           const injections = MODULE_INJECTIONS[module.name][type];
           for (const key in injections) {
-            moduleInjections[key] = moduleInjections[key] || [];
-            moduleInjections[key].push(injections[key]);
+            if (key.match(/^(v|f)s:#/)) {
+              mainInjections[key] = mainInjections[key] || [];
+              mainInjections[key].push(injections[key]);
+            } else {
+              hookInjections[key] = hookInjections[key] || [];
+              hookInjections[key].push(injections[key]);
+            }
           }
         }
     }
   }
 
-  assembledSource += getHookFunctions(type, moduleInjections);
+  assembledSource += getHookFunctions(type, hookInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, type, inject, injectStandardStubs);
+  assembledSource = injectShader(assembledSource, type, mainInjections, injectStandardStubs);
 
   return assembledSource;
 }
@@ -206,20 +231,20 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderType, moduleInjections) {
+function getHookFunctions(shaderStage, hookInjections) {
   let result = '';
-  const hookFunctions = HOOK_FUNCTIONS[shaderType];
+  const hookFunctions = HOOK_FUNCTIONS[shaderStage];
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
     result += `void ${hookFunction.signature} {\n`;
     if (hookFunction.header) {
       result += `  ${hookFunction.header}`;
     }
-    if (moduleInjections[hookName]) {
-      const injections = moduleInjections[hookName];
+    if (hookInjections[hookName]) {
+      const injections = hookInjections[hookName];
       injections.sort((a, b) => a.order - b.order);
       for (const injection of injections) {
-        result += `  ${injection.injection};\n`;
+        result += `  ${injection.injection}\n`;
       }
     }
     if (hookFunction.footer) {
