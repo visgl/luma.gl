@@ -36,7 +36,6 @@ Returns:
 
 Creates a shader hook function that shader modules can injection code into. Shaders can call these functions, which will be no-ops by default. If a shader module injects code it will be executed upon the hook function call. This mechanism allows the application to create shaders that can be automatically extended by included shader modules.
 
-- `shaderStage`: `vs` or `fs`, the type of shader
 - `hook`: `vs:` or `fs:` followed by the name and arguments of the function, e.g. `vs:MYHOOK_func(inout vec4 value)`. Hook name without arguments
 will also be used as the name of the shader hook
 - `opts.header` (optional): code always included at the beginning of a hook function
