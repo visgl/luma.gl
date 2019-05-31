@@ -122,7 +122,7 @@ test('assembleShaders#getUniforms', t => {
   t.end();
 });
 
-test('assembleShaders#shaderhooks', t => {
+test.only('assembleShaders#shaderhooks', t => {
   createShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
 
@@ -213,6 +213,19 @@ test('assembleShaders#shaderhooks', t => {
   t.ok(
     assembleResult.fs.indexOf('color += 0.1') > -1,
     'argument injection code included in shader hook'
+  );
+
+  assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    inject: {
+      'fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);': 'fragmentColor -= 0.1;'
+    }
+  });
+
+  t.ok(
+    assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
+    'regex injection code included in shader hook'
   );
 
   t.end();

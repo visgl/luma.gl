@@ -112,10 +112,15 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   for (const key in inject) {
     const injection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
-    if (key.match(/^(v|f)s:#/)) {
-      mainInjections[key] = [injection];
+    if (key.match(/^(v|f)s:/)) {
+      if (key[3] === '#') {
+        mainInjections[key] = [injection];
+      } else {
+        hookInjections[key] = [injection];
+      }
     } else {
-      hookInjections[key] = [injection];
+      // Regex injection
+      mainInjections[key] = [injection];
     }
   }
 
