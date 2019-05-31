@@ -207,6 +207,8 @@ export default class AnimationLoop {
 
   attachTimeline(timeline) {
     this.timeline = timeline;
+
+    return this.timeline;
   }
 
   detachTimeline() {
