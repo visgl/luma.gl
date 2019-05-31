@@ -55,15 +55,13 @@ export default class AnimationLoopRunner extends Component {
   componentDidMount() {
     const {showStats} = this.props;
 
-    console.log(this.props);
-
     this.animationLoop._setDisplay(new VRDisplay());
 
     // Ensure the example can find its images
     // TODO - ideally ocular-gatsby should extract images from example source?
     const {path} = this.props;
     if (path) {
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/loaders.gl/master';
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
       setPathPrefix(`${RAW_GITHUB}/${path}`);
     }
 
