@@ -2,7 +2,7 @@
   "name": "@luma.gl/scripts",
   "description": "Scripting with luma.gl",
   "license": "MIT",
-  "version": "7.1.0-alpha.5",
+  "version": "7.1.0-beta.1",
   "private": "true",
   "publishConfig": {
     "access": "public"
