@@ -1,4 +1,4 @@
-import {setContextDefaults} from 'luma.gl';
+import {setContextDefaults} from '@luma.gl/core';
 setContextDefaults({webgl2: true});
 
 export {default as InstancingDemo} from '../../examples/core/instancing/app.js';
@@ -13,6 +13,7 @@ export {default as TransformDemo} from '../../examples/core/transform/app.js';
 export {default as GLTFDemo} from '../../examples/core/gltf/app';
 export {default as QuasicrystalsDemo} from '../../examples/core/quasicrystals/app';
 export {default as Texture3DDemo} from '../../examples/core/texture-3d/app';
+export {default as AnimationDemo} from '../../examples/core/animation/app';
 
 export {default as Lesson01} from '../../examples/lessons/01/app.js';
 export {default as Lesson02} from '../../examples/lessons/02/app.js';

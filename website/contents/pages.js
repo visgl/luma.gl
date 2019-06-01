@@ -52,6 +52,13 @@ export const EXAMPLE_PAGES = [
         }
       },
       {
+        name: 'Animation',
+        content: {
+          demo: 'AnimationDemo',
+          code: `${GITHUB_TREE}/examples/core/animation`
+        }
+      },
+      {
         name: 'Transform Feedback (WebGL2)',
         content: {
           demo: 'TransformFeedbackDemo',

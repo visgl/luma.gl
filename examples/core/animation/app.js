@@ -5,25 +5,11 @@ import {Timeline, KeyFrames} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
-Animations based on multiple hierarchical timelines.
+Key frame animation based on multiple hierarchical timelines.
+<button id="play">Play</button>
+<button id="pause">Pause</button><BR>
+Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
 `;
-
-const controls = document.createElement('div');
-controls.innerHTML = `
-  <button id="play">Play</button>
-  <button id="pause">Pause</button><BR>
-  Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
-`;
-controls.style.position = 'absolute';
-controls.style.top = '10px';
-controls.style.left = '10px';
-controls.style.background = 'white';
-controls.style.padding = '0.5em';
-document.body.appendChild(controls);
-
-const playButton = document.getElementById('play');
-const pauseButton = document.getElementById('pause');
-const timeSlider = document.getElementById('time');
 
 const vs = `\
 attribute vec3 positions;
@@ -74,17 +60,23 @@ export default class AppAnimationLoop extends AnimationLoop {
       depthFunc: gl.LEQUAL
     });
 
-    playButton.addEventListener('click', () => {
-      this.timeline.play();
-    });
+    const playButton = document.getElementById('play');
+    const pauseButton = document.getElementById('pause');
+    const timeSlider = document.getElementById('time');
 
-    pauseButton.addEventListener('click', () => {
-      this.timeline.pause();
-    });
+    if (playButton) {
+      playButton.addEventListener('click', () => {
+        this.timeline.play();
+      });
 
-    timeSlider.addEventListener('input', event => {
-      this.timeline.setTime(parseFloat(event.target.value));
-    });
+      pauseButton.addEventListener('click', () => {
+        this.timeline.pause();
+      });
+
+      timeSlider.addEventListener('input', event => {
+        this.timeline.setTime(parseFloat(event.target.value));
+      });
+    }
 
     const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
 
@@ -167,11 +159,16 @@ export default class AppAnimationLoop extends AnimationLoop {
         })
       };
     }
+
+    return {timeSlider};
   }
 
   onRender(animationProps) {
-    const {gl} = animationProps;
-    timeSlider.value = this.timeline.getTime();
+    const {gl, timeSlider} = animationProps;
+
+    if (timeSlider) {
+      timeSlider.value = this.timeline.getTime();
+    }
 
     const modelMatrix = new Matrix4();
 
@@ -200,7 +197,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({gl}) {
     for (let i = 0; i < 4; ++i) {
-      this.cube[i].model.delete();
+      this.cubes[i].model.delete();
     }
   }
 }
