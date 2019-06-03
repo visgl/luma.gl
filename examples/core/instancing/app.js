@@ -27,6 +27,26 @@ function getDevicePixelRatio() {
 
 const SIDE = 256;
 
+createShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
+
+createShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
+
+createModuleInjection('picking', {
+  hook: 'vs:MY_SHADER_HOOK_pickColor',
+  injection: 'picking_setPickingColor(color.rgb);'
+});
+
+createModuleInjection('dirlight', {
+  hook: 'fs:MY_SHADER_HOOK_fragmentColor',
+  injection: 'color = dirlight_filterColor(color);'
+});
+
+createModuleInjection('picking', {
+  hook: 'fs:MY_SHADER_HOOK_fragmentColor',
+  injection: 'color = picking_filterColor(color);',
+  order: Number.POSITIVE_INFINITY
+});
+
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends ModelNode {
   constructor(gl, props) {
@@ -130,26 +150,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       clearDepth: 1,
       depthTest: true,
       depthFunc: gl.LEQUAL
-    });
-
-    createShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
-
-    createShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
-
-    createModuleInjection('picking', {
-      hook: 'vs:MY_SHADER_HOOK_pickColor',
-      injection: 'picking_setPickingColor(color.rgb);'
-    });
-
-    createModuleInjection('dirlight', {
-      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = dirlight_filterColor(color);'
-    });
-
-    createModuleInjection('picking', {
-      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = picking_filterColor(color);',
-      order: Number.POSITIVE_INFINITY
     });
 
     this.attachTimeline(new Timeline());
