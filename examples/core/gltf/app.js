@@ -221,41 +221,74 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   initalizeEventHandling(canvas) {
-    canvas.onwheel = e => {
+    let pointerIsDown = false;
+
+    const pointerDown = (x, y) => {
+      this.mouse.lastX = x;
+      this.mouse.lastY = y;
+
+      this.rotationStart[0] = this.rotation[0];
+      this.rotationStart[1] = this.rotation[1];
+
+      pointerIsDown = true;
+    };
+
+    const pointerMove = (x, y) => {
+      if (!pointerIsDown) {
+        return;
+      }
+
+      const dX = x - this.mouse.lastX;
+      const dY = y - this.mouse.lastY;
+
+      this.rotation[0] = this.rotationStart[0] + dY / 100;
+      this.rotation[1] = this.rotationStart[1] + dX / 100;
+    };
+
+    canvas.addEventListener('wheel', e => {
       this.translate += e.deltaY / 10;
       if (this.translate < 0.5) {
         this.translate = 0.5;
       }
       e.preventDefault();
-    };
+    });
 
-    canvas.onpointerdown = e => {
-      this.mouse.lastX = e.clientX;
-      this.mouse.lastY = e.clientY;
+    canvas.addEventListener('mousedown', e => {
+      pointerDown(e.clientX, e.clientY);
 
-      this.rotationStart[0] = this.rotation[0];
-      this.rotationStart[1] = this.rotation[1];
-
-      canvas.setPointerCapture(e.pointerId);
       e.preventDefault();
-    };
+    });
 
-    canvas.onpointermove = e => {
-      if (e.buttons) {
-        const dX = e.clientX - this.mouse.lastX;
-        const dY = e.clientY - this.mouse.lastY;
+    canvas.addEventListener('mouseup', e => {
+      pointerIsDown = false;
+    });
 
-        this.rotation[0] = this.rotationStart[0] + dY / 100;
-        this.rotation[1] = this.rotationStart[1] + dX / 100;
+    canvas.addEventListener('mousemove', e => {
+      pointerMove(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('touchstart', e => {
+      pointerDown(e.touches[0].clientX, e.touches[0].clientY);
+
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('touchmove', e => {
+      pointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    });
+
+    canvas.addEventListener('touchend', e => {
+      if (e.touches.length === 0) {
+        pointerIsDown = false;
       }
-    };
+    });
 
-    canvas.ondragover = e => {
+    canvas.addEventListener('dragover', e => {
       e.dataTransfer.dropEffect = 'link';
       e.preventDefault();
-    };
+    });
 
-    canvas.ondrop = e => {
+    canvas.addEventListener('drop', e => {
       e.preventDefault();
       if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
         this._deleteScenes();
@@ -267,7 +300,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
         loadGLTF(readPromise, this.gl, this.loadOptions).then(result => this._fileLoaded(result));
       }
-    };
+    });
   }
 
   _fileLoaded(loadResult) {
