@@ -41,7 +41,7 @@ const propTypes = {
 };
 
 const defaultProps = {
-  canvas: "example-canvas"
+  canvas: 'example-canvas'
 };
 
 const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
