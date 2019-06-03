@@ -35,7 +35,8 @@ const STAT_STYLES = {
 };
 
 const propTypes = {
-  example: PropTypes.object,
+  AnimationLoop: PropTypes.func.isRequired,
+  exampleConfig: PropTypes.object.isRequired,
   canvas: PropTypes.string
 };
 
@@ -45,7 +46,7 @@ const defaultProps = {
 
 const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 
-export default class AnimationLoopRunner extends Component {
+export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
     const {AnimationLoop} = this.props;
@@ -59,10 +60,10 @@ export default class AnimationLoopRunner extends Component {
 
     // Ensure the example can find its images
     // TODO - ideally ocular-gatsby should extract images from example source?
-    const {path} = this.props;
-    if (path) {
+    const {exampleConfig} = this.props;
+    if (exampleConfig && exampleConfig.path) {
       const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
-      setPathPrefix(`${RAW_GITHUB}/${path}`);
+      setPathPrefix(`${RAW_GITHUB}/${exampleConfig.path}`);
     }
 
     // Start the actual example
@@ -171,6 +172,6 @@ export default class AnimationLoopRunner extends Component {
   }
 }
 
-AnimationLoopRunner.propTypes = propTypes;
-AnimationLoopRunner.defaultProps = defaultProps;
-AnimationLoopRunner.displayName = 'AnimationLoop';
+AnimationLoopExamplePage.propTypes = propTypes;
+AnimationLoopExamplePage.defaultProps = defaultProps;
+AnimationLoopExamplePage.displayName = 'AnimationLoop';

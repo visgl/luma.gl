@@ -1,11 +1,11 @@
 import React from 'react';
-import AnimationLoopRunner from '../../src/components/animation-loop-runner';
+import AnimationLoopExamplePage from '../../src/components/animation-loop-example-page';
 import AnimationLoop from '../../../examples/core/quasicrystals/app';
 
 export default class Example extends React.Component {
   render() {
     return (
-      <AnimationLoopRunner AnimationLoop={AnimationLoop} path={this.props.pageContext.exampleConfig.path} />
+      <AnimationLoopExamplePage AnimationLoop={AnimationLoop} exampleConfig={this.props.pageContext.exampleConfig} />
     );
   }
 }

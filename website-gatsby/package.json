@@ -23,8 +23,7 @@
   },
   "devDependencies": {
     "gatsby": "^2.3.0",
-    "gatsby-plugin-styletron": "^3.0.5",
-    "ocular-gatsby": "1.0.0-alpha.32",
+    "ocular-gatsby": "1.0.0-alpha.35",
     "sharp": "^0.22"
   }
 }
