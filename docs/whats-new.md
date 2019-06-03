@@ -4,7 +4,7 @@
 
 ### Enhanced Shader Injection System
 
-luma.gl now supports a much more robust system for injecting code into shaders. In addition to the pre-defined shader shooks such as `vs:#main-start`,
+luma.gl now supports a much more robust system for injecting code into shaders. In addition to the pre-defined shader hooks such as `vs:#main-start`,
 the shader injection system now supports:
 - Definition of arbitrary shader hook functions that can be called anywhere in a shader
 - Injection of arbitrary code into shader hook functions to modify their behavior
