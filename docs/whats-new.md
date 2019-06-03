@@ -4,122 +4,22 @@
 
 ### Enhanced Shader Injection System
 
-luma.gl now supports a much more robust system for injecting code into shaders. Arbitrary shader hook functions can be defined by the application:
+luma.gl now supports a much more robust system for injecting code into shaders. In addition to the pre-defined shader shooks such as `vs:#main-start`,
+the shader injection system now supports:
+- Definition of arbitrary shader hook functions that can be called anywhere in a shader
+- Injection of arbitrary code into shader hook functions to modify their behavior
+- Automatic injection by shader modules into hook functions or pre-defined shader hooks
 
-```js
-createShaderHook('fs:MYHOOK_fragmentColor(inout vec4 color)');
-```
-
-Models can now inject code into these hook functions (in addition to previously-available prebuilt hooks) to modify their behavior:
-
-```js
-new Model(gl, {
-  vs,
-  fs: `void main() {
-    MYHOOK_fragmentColor(gl_FragColor);
-  }`,
-  modules: [picking]
-  inject: {
-    'fs:#main-start': 'gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);';
-    'fs:MYHOOK_fragmentColor': {
-      injection: '  color = picking_filterColor(color);',
-  }
-});
-```
-
-Additionally, luma.gl now support defining hook injections for shader modules, for both hook functions and pre-built hooks:
-
-```js
-createModuleInjection('dirlight', {
-  hook: 'fs:MYHOOK_fragmentColor',
-  injection: 'color = dirlight_filterColor(color);'
-});
-
-createModuleInjection('picking', {
-  hook: 'fs:#main-end',
-  injection: 'gl_FragColor = picking_filterColor(gl_FragColor);'
-});
-
-new Model(gl, {
-  vs,
-  fs,
-  modules: [picking, dirlight] // Injections done automatically
-});
-```
+The combination of these features allows the behavior of same shader code to be modified depending on included shader modules or other
+requirements of the application. See [assembleShaders](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/shadertools/assemble-shaders.md) documentation for more details.
 
 ### Animation Support
 
-The new `Timeline` class supports easily managing multiple timelines elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be
-attached to an `AnimationLoop` and then queried for time values. Objects with a `setTime` method can be attached to the timeline and will automatically update when the timeline updates.
+More robust animations are now supported via the `Timeline` and `KeyFrames` classes.
 
-```js
+The  `Timeline` class supports easily managing a timeline with multiple channels elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be attached to an `AnimationLoop` and then queried for time values, which can be used in animations. See [Timeline](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/addons/animation/timeline.md) documentation for more details.
 
-const timeline = animationLoop.attachTimeline(new Timeline());
-const channel1 = timeline.addChannel({
-  rate: 0.5,        // Runs at 1/2 base time
-  duration: 4000,
-  wrapMode: "loop"  // Loop every 4s
-});
-const channel2 = timeline.addChannel({
-  rate: 2,          // Runs at twice base time
-  duration: 1000,
-  wrapMode: "clamp" // Stop playing at 1s
-});
-
-timeline.play();        // Play with the render loop
-timeline.pause();       // Don't play with the render loop
-timeline.setTime(1500); // Set to specific time
-
-model.setUniforms({
-  uValue1: timeline.getTime();          // Use base timeline time
-  uValue2: timeline.getTime(channel1);  // Use times from channels
-  uValue3: timeline.getTime(channel2);
-});
-
-const animation = {
-  setTime(t) {
-    model.setUniforms({uValue4: t})
-  }
-};
-
-timeline.attachAnimation(animation, channel2);
-
-timeline.setTime(2000); // uValue4 will be updated based on channel 2's time value
-```
-
-Key frame animations are also supported via a new `KeyFrames` class, which allows arbitrary data to be associated
-with time points. The time value of the key frames can be set via `setTime` and the current key frames and interpolation
-factor can be queried.
-
-```js
-const keyFrames = new KeyFrames([
-  [0, { val1: [1, 0, 1], val2: 0} ],
-  [500, { val1: [1, 1, 1], val2: 2} ],
-  [800, { val1: [0, 0, 1], val2: 1} ],
-  [1200, { val1: [0, 1, 0], val2: 4} ],
-  [1500, { val1: [1, 0, 1], val2: 5} ]
-]);
-
-keyFrames.setTime(1000);
-
-keyFrames.startIndex;      // => 2                            (i.e. key frame at time=800)
-keyFrames.endIndex;        // => 3                            (i.e. key frame at time=1200)
-keyFrames.factor;          // => 0.5                          (i.e. halfway between 800 and 1200)
-keyFrames.getStartTime();  // => 800                          (i.e. time at index 2)
-keyFrames.getEndTime();    // => 1200                         (i.e. time at index 3)
-keyFrames.getStartData();  // => { val1: [0, 0, 1], val2: 1}  (i.e. data at index 2)
-keyFrames.getEndData();    // => { val1: [0, 1, 0], val2: 4}  (i.e. data at index 3)
-
-```
-
-The `KeyFrames` class can be used on its own, but implementation of the `setTime` method
-means it can also be attached to a timeline:
-
-```js
-timeline.attachAnimation(keyFrames);
-
-timeline.setTime(1300); // Between frames 3 and 4
-```
+The `KeyFrames` class allows arbitrary data to be associated with time points. The time value of the key frames can be set and the current key frames and interpolation factor can be queried and used in calculating animated values. See [KeyFrames](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/addons/animation/key-frames.md) documentation for more details.
 
 ## Version 7.0
 
