@@ -270,8 +270,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     const offsetBuffer = transform.getBuffer('v_offset');
     const rotationBuffer = transform.getBuffer('v_rotation');
 
-    offsetBuffer.updateAccessor({divisor: 1});
-    rotationBuffer.updateAccessor({divisor: 1});
+    offsetBuffer.setAccessor({divisor: 1});
+    rotationBuffer.setAccessor({divisor: 1});
 
     renderModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
     renderModel.draw({
@@ -285,8 +285,8 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    offsetBuffer.updateAccessor({divisor: 0});
-    rotationBuffer.updateAccessor({divisor: 0});
+    offsetBuffer.setAccessor({divisor: 0});
+    rotationBuffer.setAccessor({divisor: 0});
 
     if (pickPosition) {
       const dpr = useDevicePixels ? getDevicePixelRatio() : 1;

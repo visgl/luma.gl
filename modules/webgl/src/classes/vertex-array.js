@@ -219,7 +219,7 @@ export default class VertexArray {
       // so we need to offer and unbind facility
       // WebGL offers disabling, but no clear way to set a VertexArray buffer to `null`
       // So we just bind all the attributes to the dummy "attribute zero" buffer
-      this.buffer = this.buffer || new Buffer(this.gl, {size: 4});
+      this.buffer = this.buffer || new Buffer(this.gl, {accessor: {size: 4}});
 
       for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
         if (this.values[location] instanceof Buffer) {
