@@ -293,7 +293,7 @@ export const DOC_PAGES = [
           },
           {
             name: 'Using GLSL 3.00 ES',
-            entry: 'developer-guide/using-glsl-300-es.md'
+            content: 'developer-guide/using-glsl-300-es.md'
           }
         ]
       },
@@ -348,7 +348,7 @@ export const DOC_PAGES = [
           },
           {
             name: 'Configuring',
-            content: 'docs/developer-guide/configuring.md'
+            content: 'developer-guide/configuring.md'
           },
           {
             name: 'Debugging',
@@ -360,7 +360,7 @@ export const DOC_PAGES = [
           },
           {
             name: 'Programs and shaders',
-            content: 'docs/developer-guide/programs-and-shaders.md'
+            content: 'developer-guide/programs-and-shaders.md'
           }
         ]
       }
