@@ -6,7 +6,7 @@ WebGL capabilities can vary quite dramatically between browsers (from minimal We
 
 To simplify detecting and working with conditionally available capabilities (or "features") luma.gl provides:
 
-* A set of functions (e.g. [`isWebGL2`](/docs/api-reference/webgl/context/is-webGL2.md), [`getFeatures`](/docs/api-reference/webgl/features/get-features.md) and [`hasFeatures`](/docs/api-reference/webgl/features/has-features.md), described in this document) that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL2 or a WebGL1 extension).
+* A set of functions (e.g. [`isWebGL2`](/docs/api-reference/webgl/context/is-webGL2.md), [`getFeatures`](/docs/api-reference/webgl/context/get-features.md) and [`hasFeatures`](/docs/api-reference/webgl/context/has-features.md), described in this document) that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL2 or a WebGL1 extension).
 
 In addition, luma.gl's WebGL classes transparently use WebGL extensions or WebGL2 APIs as appropriate, meaning that the amount of conditional logic in application code can be kept to a minimum. Once you have established that a capability exists, luma.gl offers you one unified way to use it.
 
