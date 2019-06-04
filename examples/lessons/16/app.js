@@ -208,7 +208,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     const tCrate = new Texture2D(gl, {
-      urls: 'crate.gif',
+      data: 'crate.gif',
       parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
@@ -243,6 +243,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       });
 
       const cube = new ModelNode(gl, {
+        id: 'cube-model',
         geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
