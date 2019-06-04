@@ -2,6 +2,8 @@
 
 ## Version 7.1
 
+Date: June 4, 2019
+
 ### Enhanced Shader Injection System
 
 luma.gl now supports a much more robust system for injecting code into shaders. In addition to the pre-defined shader hooks such as `vs:#main-start`,
@@ -10,16 +12,16 @@ the shader injection system now supports:
 - Injection of arbitrary code into shader hook functions to modify their behavior
 - Automatic injection by shader modules into hook functions or pre-defined shader hooks
 
-The combination of these features allows the behavior of same shader code to be modified depending on included shader modules or other
-requirements of the application. See [assembleShaders](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/shadertools/assemble-shaders.md) documentation for more details.
+The combination of these features allows the behavior of the same shader code to be modified depending on included shader modules or other
+requirements of the application. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md) documentation for more details.
 
 ### Animation Support
 
 More robust animations are now supported via the `Timeline` and `KeyFrames` classes.
 
-The  `Timeline` class supports easily managing a timeline with multiple channels elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be attached to an `AnimationLoop` and then queried for time values, which can be used in animations. See [Timeline](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/addons/animation/timeline.md) documentation for more details.
+The  `Timeline` class supports easily managing a timeline with multiple channels elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be attached to an `AnimationLoop` and then queried for time values, which can be used in animations. See [Timeline](/docs/api-reference/addons/animation/timeline.md) documentation for more details.
 
-The `KeyFrames` class allows arbitrary data to be associated with time points. The time value of the key frames can be set and the current key frames and interpolation factor can be queried and used in calculating animated values. See [KeyFrames](https://github.com/uber/luma.gl/blob/7.1-release/docs/api-reference/addons/animation/key-frames.md) documentation for more details.
+The `KeyFrames` class allows arbitrary data to be associated with time points. The time value of the key frames can be set and the current key frames and interpolation factor can be queried and used in calculating animated values. See [KeyFrames](/docs/api-reference/addons/animation/key-frames.md) documentation for more details.
 
 ## Version 7.0
 
