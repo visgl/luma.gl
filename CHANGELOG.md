@@ -1,3 +1,15 @@
+## v7.1.0
+- Fix deprecation and texture in lesson 16 (#1141)
+- Fix mouse controls for gltf example on safari (#1138)
+- What's new fixes (#1142)
+- fix website issues (#1140)
+- Pare down what's new (#1139)
+- Update dependencies, doc links for 7.1 (#1137)
+- Add animation example to website (#1133)
+- Fix dependencies
+- Documentation for v7.1 (#1132)
+- Fix image loading paths in gatsby website examples (#1122)
+
 ## v7.1.0-alpha.6
 - Consolidate injection APIs (#1130)
 - Fix deprecated Buffer API usage (#1131)
