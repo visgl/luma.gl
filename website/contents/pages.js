@@ -709,6 +709,19 @@ export const DOC_PAGES = [
         name: 'Addons',
         children: [
           {
+            name: 'Animation',
+            children: [
+              {
+                name: 'Timeline',
+                content: 'api-reference/addons/animation/timeline.md'
+              },
+              {
+                name: 'KeyFrames',
+                content: 'api-reference/addons/animation/key-frames.md'
+              }
+            ]
+          },
+          {
             name: 'Event',
             content: 'api-reference/addons/event.md'
           }
