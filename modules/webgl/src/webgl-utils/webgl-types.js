@@ -15,10 +15,15 @@ luma.gl: loaded under Node.js without headless gl installed, meaning that WebGL 
 contexts can not be created. This may not be an error. For example, this is a \
 typical configuration for isorender applications running on the server.`;
 
+// TODO(Tarek): OOGLY HACK to avoid webpack requiring headless
+//   browser bundles. Will be removed in 8.0 when we
+//   remove automatic headless context creation
+const m = module;
+
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
 export function headlessGL(...args) {
-  const headless = module.require('gl');
+  const headless = m.require('gl');
   if (!headless) {
     throw new Error(ERR_HEADLESSGL_LOAD);
   }
@@ -27,7 +32,7 @@ export function headlessGL(...args) {
 
 if (!isBrowser) {
   try {
-    headlessTypes = module.require('gl/wrap');
+    headlessTypes = m.require('gl/wrap');
   } catch (error) {
     // /* global console */
     // console.info(ERR_HEADLESSGL_LOAD);
