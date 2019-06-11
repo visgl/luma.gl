@@ -2,6 +2,6 @@
   "extends": "node_modules/ocular-dev-tools/templates/.nycrc",
   "include": [
     "dev-modules/**/*.js",
-    "modules/**/dist/es5/**/*.js"
+    "modules/**/src/**/*.js"
   ]
 }
