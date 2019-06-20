@@ -195,7 +195,7 @@ export default class Texture extends Resource {
         type: this.type,
         dataFormat: this.dataFormat,
         border: this.border,
-        mipmaps: false
+        mipmaps: this.mipmaps
       });
     }
     return this;
@@ -203,6 +203,15 @@ export default class Texture extends Resource {
 
   // Call to regenerate mipmaps after modifying texture(s)
   generateMipmap(params = {}) {
+    if (!this.mipmaps) {
+      if (this._isNPOT()) {
+        log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
+      } else {
+        log.warn('mipmaps is not enabled.');
+      }
+      return this;
+    }
+
     this.gl.bindTexture(this.target, this.handle);
     withParameters(this.gl, params, () => {
       this.gl.generateMipmap(this.target);

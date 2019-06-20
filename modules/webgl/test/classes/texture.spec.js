@@ -258,11 +258,11 @@ test('WebGL#Texture2D NPOT Workaround: texture creation', t => {
 
   // Default parameters should be changed to supported NPOT parameters.
   let minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.LINEAR, 'NPOT textuer min filter is set to LINEAR');
+  t.equals(minFilter, GL.LINEAR, 'NPOT texture min filter is set to LINEAR');
   let wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
   let wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
 
   const parameters = {
     [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -281,11 +281,11 @@ test('WebGL#Texture2D NPOT Workaround: texture creation', t => {
 
   // Above parameters should be changed to supported NPOT parameters.
   minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.NEAREST, 'NPOT textuer min filter is set to NEAREST');
+  t.equals(minFilter, GL.NEAREST, 'NPOT texture min filter is set to NEAREST');
   wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
   wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
 
   t.end();
 });
@@ -306,11 +306,11 @@ test('WebGL#Texture2D NPOT Workaround: setParameters', t => {
 
   // Above parameters should be changed to supported NPOT parameters.
   const minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.LINEAR, 'NPOT textuer min filter is set to LINEAR');
+  t.equals(minFilter, GL.LINEAR, 'NPOT texture min filter is set to LINEAR');
   const wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_s is set to CLAMP_TO_EDGE');
+  t.equals(wrapS, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
   const wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT textuer wrap_t is set to CLAMP_TO_EDGE');
+  t.equals(wrapT, GL.CLAMP_TO_EDGE, 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
 
   t.end();
 });
@@ -333,12 +333,12 @@ test('WebGL2#Texture2D NPOT Workaround: texture creation', t => {
   t.equals(
     minFilter,
     GL.NEAREST_MIPMAP_LINEAR,
-    'NPOT textuer min filter is set to NEAREST_MIPMAP_LINEAR'
+    'NPOT texture min filter is set to NEAREST_MIPMAP_LINEAR'
   );
   let wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.REPEAT, 'NPOT textuer wrap_s is set to REPEAT');
+  t.equals(wrapS, GL.REPEAT, 'NPOT texture wrap_s is set to REPEAT');
   let wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.REPEAT, 'NPOT textuer wrap_t is set to REPEAT');
+  t.equals(wrapT, GL.REPEAT, 'NPOT texture wrap_t is set to REPEAT');
 
   const parameters = {
     [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -356,11 +356,11 @@ test('WebGL2#Texture2D NPOT Workaround: texture creation', t => {
   t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
 
   minFilter = texture.getParameter(GL.TEXTURE_MIN_FILTER);
-  t.equals(minFilter, GL.NEAREST, 'NPOT textuer min filter is set to NEAREST');
+  t.equals(minFilter, GL.NEAREST, 'NPOT texture min filter is set to NEAREST');
   wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.REPEAT, 'NPOT textuer wrap_s is set to REPEAT');
+  t.equals(wrapS, GL.REPEAT, 'NPOT texture wrap_s is set to REPEAT');
   wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.MIRRORED_REPEAT, 'NPOT textuer wrap_t is set to MIRRORED_REPEAT');
+  t.equals(wrapT, GL.MIRRORED_REPEAT, 'NPOT texture wrap_t is set to MIRRORED_REPEAT');
 
   t.end();
 });
@@ -389,12 +389,12 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
   t.equals(
     minFilter,
     GL.LINEAR_MIPMAP_NEAREST,
-    'NPOT textuer min filter is set to LINEAR_MIPMAP_NEAREST'
+    'NPOT texture min filter is set to LINEAR_MIPMAP_NEAREST'
   );
   const wrapS = texture.getParameter(GL.TEXTURE_WRAP_S);
-  t.equals(wrapS, GL.MIRRORED_REPEAT, 'NPOT textuer wrap_s is set to MIRRORED_REPEAT');
+  t.equals(wrapS, GL.MIRRORED_REPEAT, 'NPOT texture wrap_s is set to MIRRORED_REPEAT');
   const wrapT = texture.getParameter(GL.TEXTURE_WRAP_T);
-  t.equals(wrapT, GL.REPEAT, 'NPOT textuer wrap_t is set to REPEAT');
+  t.equals(wrapT, GL.REPEAT, 'NPOT texture wrap_t is set to REPEAT');
 
   t.end();
 });
@@ -572,5 +572,46 @@ test('WebGL2#Texture2D setSubImageData', t => {
     );
   }
 
+  t.end();
+});
+
+test('WebGL2#Texture2D resize', t => {
+  const {gl} = fixture;
+  let texture = new Texture2D(gl, {
+    data: null,
+    width: 2,
+    height: 2,
+    mipmaps: true
+  });
+
+  texture.resize({
+    width: 4,
+    height: 4
+  });
+
+  t.ok(texture.mipmaps, 'mipmaps should be the same as before resizing for POT texture.');
+
+  texture = new Texture2D(gl, {
+    data: null,
+    width: 2,
+    height: 2,
+    mipmaps: false
+  });
+
+  texture.resize({
+    width: 4,
+    height: 4
+  });
+
+  t.notOk(texture.mipmaps, 'mipmaps should be the same as before resizing for POT texture.');
+
+  texture.resize({
+    width: 1,
+    height: 1
+  });
+
+  t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing for NPOT texture.');
+
+  // data: typed array
   t.end();
 });
