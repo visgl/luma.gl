@@ -589,7 +589,14 @@ test('WebGL2#Texture2D resize', t => {
     height: 4
   });
 
-  t.ok(texture.mipmaps, 'mipmaps should be the same as before resizing for POT texture.');
+  t.ok(texture.mipmaps, 'mipmaps:true should be the same as before resizing to POT.');
+
+  texture.resize({
+    width: 3,
+    height: 3
+  });
+
+  t.notOk(texture.mipmaps, 'mipmaps:true should set to false when resizing tp NPOT.');
 
   texture = new Texture2D(gl, {
     data: null,
@@ -603,14 +610,14 @@ test('WebGL2#Texture2D resize', t => {
     height: 4
   });
 
-  t.notOk(texture.mipmaps, 'mipmaps should be the same as before resizing for POT texture.');
+  t.notOk(texture.mipmaps, 'mipmaps:false should be the same as before resizing to POT.');
 
   texture.resize({
-    width: 1,
-    height: 1
+    width: 3,
+    height: 3
   });
 
-  t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing for NPOT texture.');
+  t.notOk(texture.mipmaps, 'mipmaps:false should set to false when resizing to NPOT.');
 
   // data: typed array
   t.end();

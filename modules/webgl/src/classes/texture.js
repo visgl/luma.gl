@@ -204,11 +204,7 @@ export default class Texture extends Resource {
   // Call to regenerate mipmaps after modifying texture(s)
   generateMipmap(params = {}) {
     if (!this.mipmaps) {
-      if (this._isNPOT()) {
-        log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
-      } else {
-        log.warn('mipmaps is not enabled.');
-      }
+      log.warn('mipmaps is not enabled.');
       return this;
     }
 
