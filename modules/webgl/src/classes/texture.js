@@ -203,10 +203,12 @@ export default class Texture extends Resource {
 
   // Call to regenerate mipmaps after modifying texture(s)
   generateMipmap(params = {}) {
-    if (!this.mipmaps) {
-      log.warn('mipmaps is not enabled.');
+    if (this._isNPOT()) {
+      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       return this;
     }
+
+    this.mipmaps = true;
 
     this.gl.bindTexture(this.target, this.handle);
     withParameters(this.gl, params, () => {
