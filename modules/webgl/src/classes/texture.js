@@ -186,7 +186,7 @@ export default class Texture extends Resource {
 
   // If size has changed, reinitializes with current format
   // note clears image and mipmaps
-  resize({width, height}) {
+  resize({height, width, mipmaps = false}) {
     if (width !== this.width || height !== this.height) {
       return this.initialize({
         width,
@@ -195,7 +195,7 @@ export default class Texture extends Resource {
         type: this.type,
         dataFormat: this.dataFormat,
         border: this.border,
-        mipmaps: this.mipmaps
+        mipmaps
       });
     }
     return this;

@@ -75,6 +75,13 @@ The constructors for these classes should be used to create textures. They const
 
 * Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context/get-parameters.md).
 
+### resize(options : Object) : Texture2D
+
+Call to resize a texture. If size has changed, reinitializes texture with current format. Note: calling `resize` clears image and mipmaps.
+
+* `width` (GLint) - width to resize to.
+* `height` (GLint) - height to resize to.
+* `mipmaps` (bool) - turn on/off mipmapping. default `false`.
 
 ### generateMipmap() : Texture2D
 
