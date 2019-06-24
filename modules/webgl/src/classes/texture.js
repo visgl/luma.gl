@@ -186,7 +186,7 @@ export default class Texture extends Resource {
 
   // If size has changed, reinitializes with current format
   // note clears image and mipmaps
-  resize({width, height}) {
+  resize({height, width, mipmaps = false}) {
     if (width !== this.width || height !== this.height) {
       return this.initialize({
         width,
@@ -195,7 +195,7 @@ export default class Texture extends Resource {
         type: this.type,
         dataFormat: this.dataFormat,
         border: this.border,
-        mipmaps: false
+        mipmaps
       });
     }
     return this;
@@ -203,6 +203,13 @@ export default class Texture extends Resource {
 
   // Call to regenerate mipmaps after modifying texture(s)
   generateMipmap(params = {}) {
+    if (this._isNPOT()) {
+      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
+      return this;
+    }
+
+    this.mipmaps = true;
+
     this.gl.bindTexture(this.target, this.handle);
     withParameters(this.gl, params, () => {
       this.gl.generateMipmap(this.target);
