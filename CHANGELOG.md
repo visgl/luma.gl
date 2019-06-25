@@ -1,3 +1,8 @@
+## v7.2.0-alpha.1
+- Fix mipmap generation (#1148)
+- Upgrade ocular-dev-tools (#1145)
+- Ugly hack to fix headless.gl depency issue without breakages (#1143)
+
 ## v7.1.0
 - Fix deprecation and texture in lesson 16 (#1141)
 - Fix mouse controls for gltf example on safari (#1138)
