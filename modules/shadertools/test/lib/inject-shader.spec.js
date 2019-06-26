@@ -11,6 +11,8 @@ const fixture = {
 const VS_GLSL_TEMPLATE = `\
 #version 300 es
 
+__LUMA_INJECT_DECLARATIONS__
+
 in vec4 positions;
 out vec4 vColor;
 
@@ -35,6 +37,8 @@ const FS_GLSL_TEMPLATE = `\
 #version 300 es
 
 precision highp float;
+
+__LUMA_INJECT_DECLARATIONS__
 
 out vec4 fragmentColor;
 in vec4 vColor;

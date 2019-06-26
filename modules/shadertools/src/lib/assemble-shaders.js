@@ -151,6 +151,9 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
     }
   }
 
+  // For injectShader
+  assembledSource += '\n\n__LUMA_INJECT_DECLARATIONS__\n\n';
+
   assembledSource += getHookFunctions(type, hookInjections);
 
   // Add the version directive and actual source of this shader
