@@ -616,7 +616,7 @@ export default class Texture extends Resource {
     return {dataFormat, type, compressed, width, height, format, data};
   }
 
-  /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement */
+  /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement, ImageBitmap */
   // eslint-disable-next-line complexity
   _deduceImageSize(data, width, height) {
     let size;
@@ -626,6 +626,8 @@ export default class Texture extends Resource {
     } else if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
       size = {width: data.naturalWidth, height: data.naturalHeight};
     } else if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
+      size = {width: data.width, height: data.height};
+    } else if (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) {
       size = {width: data.width, height: data.height};
     } else if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       size = {width: data.videoWidth, height: data.videoHeight};
