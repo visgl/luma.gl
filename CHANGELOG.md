@@ -1,3 +1,7 @@
+## v7.2.0-alpha.2
+- Support ImageBitmap in Texture (#1153)
+- Fix injected declarations (#1152)
+
 ## v7.2.0-alpha.1
 - Fix mipmap generation (#1148)
 - Upgrade ocular-dev-tools (#1145)
