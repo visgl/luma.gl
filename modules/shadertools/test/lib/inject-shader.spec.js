@@ -1,7 +1,10 @@
 /* eslint-disable camelcase, no-console, no-undef */
 import {createGLContext} from '@luma.gl/core';
 import {assembleShaders} from '@luma.gl/shadertools';
-import injectShader, {combineInjects} from '@luma.gl/shadertools/lib/inject-shader';
+import injectShader, {
+  combineInjects,
+  DECLARATION_INJECT_MARKER
+} from '@luma.gl/shadertools/lib/inject-shader';
 import test from 'tape-catch';
 
 const fixture = {
@@ -10,6 +13,8 @@ const fixture = {
 
 const VS_GLSL_TEMPLATE = `\
 #version 300 es
+
+${DECLARATION_INJECT_MARKER}
 
 in vec4 positions;
 out vec4 vColor;
@@ -35,6 +40,8 @@ const FS_GLSL_TEMPLATE = `\
 #version 300 es
 
 precision highp float;
+
+${DECLARATION_INJECT_MARKER}
 
 out vec4 fragmentColor;
 in vec4 vColor;
