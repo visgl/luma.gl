@@ -1,9 +1,11 @@
 import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules, getShaderModule} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
-import injectShader from './inject-shader';
+import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import {assert} from '../utils';
 /* eslint-disable max-depth, complexity */
+
+const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
   [VERTEX_SHADER]: 'vertex',
@@ -152,7 +154,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   }
 
   // For injectShader
-  assembledSource += '\n\n__LUMA_INJECT_DECLARATIONS__\n\n';
+  assembledSource += INJECT_SHADER_DECLARATIONS;
 
   assembledSource += getHookFunctions(type, hookInjections);
 

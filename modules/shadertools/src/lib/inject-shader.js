@@ -8,7 +8,8 @@ const MODULE_INJECTORS = {
   [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
 };
 
-const DECL_MARKER = '__LUMA_INJECT_DECLARATIONS__'; // Uniform/attribute declarations
+export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__'; // Uniform/attribute declarations
+
 const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
 const fragments = [];
@@ -31,7 +32,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
       // declarations are injected before the main function
       case 'vs:#decl':
         if (isVertex) {
-          source = source.replace(DECL_MARKER, fragmentString);
+          source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
       // main code is injected at the end of main function
@@ -47,7 +48,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
         break;
       case 'fs:#decl':
         if (!isVertex) {
-          source = source.replace(DECL_MARKER, fragmentString);
+          source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
       case 'fs:#main-start':
@@ -70,7 +71,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
   }
 
   // Remove if it hasn't already been replaced
-  source = source.replace(DECL_MARKER, '');
+  source = source.replace(DECLARATION_INJECT_MARKER, '');
 
   // Finally, if requested, insert an automatic module injector chunk
   if (injectStandardStubs) {
