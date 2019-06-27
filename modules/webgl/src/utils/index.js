@@ -6,3 +6,9 @@ export {uid, isPowerOfTwo, isObjectEmpty} from './utils';
 export {formatValue} from './format-value';
 export {stubRemovedMethods} from './stub-methods';
 export {checkProps} from './check-props';
+export {
+  getDevicePixelRatio,
+  mapToDevicePositionX,
+  mapToDevicePositionY,
+  mapToDevicePosition
+} from './device-pixels';

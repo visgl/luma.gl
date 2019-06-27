@@ -9,7 +9,7 @@ import {getContextDebugInfo} from '../debug/get-context-debug-info';
 
 import {WebGL2RenderingContext} from '../webgl-utils';
 
-import {log, isBrowser, assert} from '../utils';
+import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
 import {global} from '../utils/globals';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
@@ -167,13 +167,10 @@ export function resizeGLContext(gl, options = {}) {
   // Resize browser context
   if (gl.canvas) {
     /* global window */
-    const devicePixelRatio = options.useDevicePixels ? window.devicePixelRatio || 1 : 1;
-
-    const width = `width` in options ? options.width : gl.canvas.clientWidth;
-    const height = `height` in options ? options.height : gl.canvas.clientHeight;
-
-    gl.canvas.width = width * devicePixelRatio;
-    gl.canvas.height = height * devicePixelRatio;
+    const devicePixelRatio = getDevicePixelRatio(options.useDevicePixels, window.devicePixelRatio);
+    // console.log(`Context: devicePixelRatio: ${devicePixelRatio}`);
+    gl.canvas.width = Math.ceil(gl.canvas.clientWidth * devicePixelRatio);
+    gl.canvas.height = Math.ceil(gl.canvas.clientHeight * devicePixelRatio);
 
     return;
   }

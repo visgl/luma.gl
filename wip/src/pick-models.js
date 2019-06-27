@@ -1,11 +1,7 @@
 /* global window */
-import {isWebGL, clear, readPixelsToArray} from '@luma.gl/webgl';
+import {isWebGL, clear, readPixelsToArray, mapToDevicePosition} from '@luma.gl/webgl';
 import GroupNode from './nodes/group-node';
 import {assert} from '../utils';
-
-function getDevicePixelRatio() {
-  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
-}
 
 export default function pickModels(gl, props) {
   const {
@@ -28,10 +24,8 @@ export default function pickModels(gl, props) {
 
   // Compensate for devicePixelRatio
   // Note: this assumes the canvas framebuffer has been matched
-  const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
-  // Reverse the y coordinate
-  const deviceX = x * dpr;
-  const deviceY = gl.canvas.height - y * dpr;
+  const devicePosition = mapToDevicePosition(position, gl);
+
 
   // return withParameters(gl, {
   //   // framebuffer,
@@ -52,8 +46,8 @@ export default function pickModels(gl, props) {
 
       // Sample Read color in the central pixel, to be mapped as a picking color
       const color = readPixelsToArray(framebuffer, {
-        sourceX: deviceX,
-        sourceY: deviceY,
+        sourceX: devicePosition[0],
+        sourceY: devicePosition[1],
         sourceWidth: 1,
         sourceHeight: 1,
         sourceFormat: gl.RGBA,
@@ -69,8 +63,8 @@ export default function pickModels(gl, props) {
           color,
           x,
           y,
-          deviceX,
-          deviceY
+          deviceX: devicePosition[0],
+          deviceY: devicePosition[1]
         };
       }
     }

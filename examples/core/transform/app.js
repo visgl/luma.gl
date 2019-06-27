@@ -8,6 +8,7 @@ import {
   isWebGL2,
   readPixelsToArray
 } from '@luma.gl/core';
+import {mapToDevicePosition} from '@luma.gl/webgl';
 import {Log} from 'probe.gl';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
@@ -25,7 +26,7 @@ const INFO_HTML = `
 /* eslint-enable max-len */
 
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const EMIT_VS = `\
 #version 300 es
@@ -143,10 +144,6 @@ function mousemove(e) {
 
 function mouseleave(e) {
   pickPosition = null;
-}
-
-function getDevicePixelRatio() {
-  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 }
 
 export default class AppAnimationLoop extends AnimationLoop {
@@ -289,12 +286,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     rotationBuffer.setAccessor({divisor: 0});
 
     if (pickPosition) {
-      const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
-
-      const pickX = pickPosition[0] * dpr;
-      const pickY = gl.canvas.height - pickPosition[1] * dpr;
-
-      pickInstance(gl, pickX, pickY, renderModel, framebuffer);
+      const devicePosition = mapToDevicePosition(pickPosition, gl);
+      pickInstance(gl, devicePosition[0], devicePosition[1], renderModel, framebuffer);
     }
   }
 
