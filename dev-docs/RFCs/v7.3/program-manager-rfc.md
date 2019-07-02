@@ -23,7 +23,7 @@ The proposed program manager would provide the following functionality:
 - Registering vertex and fragment shader sources.
 - Registering shader modules and their shader hook injections.
 - Registering shader hook functions.
-- Building programs, caching and re-using them based on their source code, deleting them when they are no longer used.
+- Building programs from registered components, caching and re-using them based on their source code, deleting them when they are no longer used.
 
 The `Model` class would be updated to support attaching a program manager, so that it could support re-using programs.
 
