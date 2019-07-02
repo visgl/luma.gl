@@ -36,7 +36,7 @@ A `ProgramManager` that supports the following methods:
 - `addModule(id, module, injections)`: register a module, along with optional shader hook injections.
 - `addShaderHook(type, {signature, header, footer})`: register a shader hook function.
 - `get(vsId, fsId, {defines, modules})`: return a program. Compile and cache it on first call, return cached version subsequently (and increment usage count).
-- `put(program)`: indicate that program is no longer being used (decrement usage count, delete if it reaches 0).
+- `release(program)`: indicate that program is no longer being used (decrement usage count, delete if it reaches 0).
 
 
 ## Example
@@ -93,10 +93,10 @@ const program5 = pm.get('myVs', 'myFs', {  // Cached, same as program 4, use cou
   modules: ['picking']
 });
 
-pm.put(program1); // Cached program still available, use count 1
-pm.put(program2); // Cached program deleted
-pm.put(program3); // Cached program deleted
-pm.put(program4); // Cached program still available, use count 1
-pm.put(program5); // Cached program deleted
+pm.release(program1); // Cached program still available, use count 1
+pm.release(program2); // Cached program deleted
+pm.release(program3); // Cached program deleted
+pm.release(program4); // Cached program still available, use count 1
+pm.release(program5); // Cached program deleted
 
 ```
