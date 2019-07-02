@@ -42,7 +42,7 @@ A `ProgramManager` that supports the following methods:
 ## Example
 
 ```js
-const pm = new ProgramManager();
+const pm = new ProgramManager(gl);
 
 pm.addVertexShader('myVs', `
 attribute vec4 position;
