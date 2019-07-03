@@ -12,7 +12,7 @@ This RFC specifies subsystem for managing data in luma.gl and creating gl resour
 
 ## Background
 
-It is currently difficult in luma.gl to know when buffers and textures can be re-used, since there is no mechanism for tracking the data they contain. This can lead to increased memory pressure and bandwidth usage due to resources being allocated to store redundant data. In a system like deck.gl, for example, this redundant resource creation could be due to multiple layers being created from the same data (where each layer would allocate its own gl resources) or multiple instances of the same layer each creating their own layer-specific geometry buffers or texture data. The deck.gl `TileLayer` uses a `TileCache` to avoid redundantly creating textures, and a similar mechanism could be applied more generally to avoid allocating textures and buffers if like resources with the same data have already been created.
+It is currently difficult in luma.gl to know when buffers and textures can be re-used, since there is no mechanism for tracking the data they contain. This can lead to increased memory pressure and bandwidth usage due to resources being allocated to store redundant data. In deck.gl, for example, this redundant resource creation could be due to multiple layers being created from the same data (where each layer would allocate its own gl resources) or multiple instances of the same layer each creating their own layer-specific geometry buffers or texture data. The deck.gl `TileLayer` uses a `TileCache` to avoid redundantly creating textures, and a similar mechanism could be applied more generally to avoid allocating textures and buffers if like resources with the same data have already been created anywhere in the application.
 
 
 ## Overview
