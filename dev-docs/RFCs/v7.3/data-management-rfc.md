@@ -25,8 +25,8 @@ registered data, returning cached versions if they are available.
 
 A `DataManager` class that supports the following methods:
 - `addData(id, data, accessors)`: add a data set to the manager, optionally with accessors to create particular views.
-- `getBuffer(dataId, viewId)`: create a buffer from a data set view. On first call, create the buffer and cache it, subsequently return cached version and increment usage count.
-- `getTexture(dataId, viewId)`: create a texture from a data set view. On first call, create the texture and cache it, subsequently return cached version and increment usage count.
+- `getBuffer(dataId, viewId)`: create a buffer from a data set view. On first call, create the buffer and cache it, subsequently return cached version and increment usage count. If `viewId` is omitted, the entire data set is used.
+- `getTexture(dataId, viewId)`: create a texture from a data set view. On first call, create the texture and cache it, subsequently return cached version and increment usage count. If `viewId` is omitted, the entire data set is used.
 - `release(Buffer|Texture)`: indicate that a resource is no longer used. Decrements the usage count for the resource and deletes it if the usage count reaches 0.
 
 
