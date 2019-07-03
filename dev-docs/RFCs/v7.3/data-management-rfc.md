@@ -81,7 +81,7 @@ const colorBuffer = dm.getBuffer('myTable', 'colors');
 const texture1 = dm.getTexture('myImage', 'image1');
 const texture2 = dm.getTexture('myImage', 'image2');
 const texture3 = dm.getTexture('myImage', 'image2'); // Gets cached version of same texture
-const texture4 = dm.getTexture('anotherImage');      // Omit view ID to use entire data set.
+const texture4 = dm.getTexture('anotherImage');      // Omit view ID to use entire data set
 
 dm.release(positionBuffer);  // Still in memory, usage count decremented to 1
 dm.release(positionBuffer2); // Delete buffer
