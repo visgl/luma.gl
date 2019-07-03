@@ -22,11 +22,10 @@ Issues with the current system include:
 - These systems are currently only consolidated around the `BaseModel` class, which treats programs as immutable. This means that modifying programs and taking advantage of these system involves re-constructing the entire `BaseModel`. This complicates interaction with programs as they and parameters that modify their source must generally be treated as immutable and separated out from mutable properties (e.g. the [data filter layer extension](https://github.com/uber/deck.gl/blob/6113d2c8984c406e9df59c16f19630a18f36c42d/modules/extensions/src/data-filter/data-filter.js#L42) in deck.gl has to handle `filterSize`  and `softMargin` separately from other props because they modify the shader code).
 - Shader hooks and module injections are global state meaning that an application that imports luma.gl must use the same definitions globally (a case where one might not want this is when rendering to separate canvases on the same page).
 - Caching being limited per-model presents serious performance concerns as program compilation is expensive, and program switching is among the more expensive GL state changes (this would be a concern, for example, in deck.gl when rendering multiple instances of the same layer).
+- With out a centralized system for managing programs, it will be difficult to take advantage of optimizations that require batching program operations, such `KHR_parallel_shader_compile`.
 
 
 ## Overview
-
-
 
 The proposed program manager would take the caching mechanisms provide by `ShaderCache` and extend it in the following ways:
 - Remove the per-model scoping.
