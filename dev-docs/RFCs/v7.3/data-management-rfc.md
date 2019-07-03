@@ -1,4 +1,4 @@
-# RFC: Data Management in luma.gl
+# RFC: Data Management
 
 * **Author**: Tarek Sherif
 * **Date**: July, 2019
