@@ -82,7 +82,7 @@ pm.addShaderHook('fs:MY_SHADER_HOOK(inout vec4 color)');
 pm.addModule(picking, [
   {
     hook: 'fs:#MY_SHADER_HOOK',
-    injection: 'gl_FragColor = picking_filterColor(gl_FragColor);',
+    injection: 'color = picking_filterColor(color);',
     order: Number.POSITIVE_INFINITY
   }
 ]);
