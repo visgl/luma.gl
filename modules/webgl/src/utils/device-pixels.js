@@ -14,24 +14,19 @@ export function getDevicePixelRatio(useDevicePixels) {
   return useDevicePixels ? windowRatio : 1;
 }
 
-// Converts window pixel x position to device pixel x position
-export function mapToDevicePositionX(x, gl) {
-  const dpr = gl.drawingBufferWidth / gl.canvas.clientWidth;
-  // since we are rounding to nearest, when dpr < 1, edge pixels may point to out of bounds value, clamp to the limit
-  return Math.min(Math.round(x * dpr), gl.drawingBufferWidth - 1);
-}
-
-// Converts window y position to device y position
-export function mapToDevicePositionY(y, gl, yInvert = true) {
-  const dpr = gl.drawingBufferHeight / gl.canvas.clientHeight;
-  let deviceY = Math.round(y * dpr);
-  if (yInvert) {
-    deviceY = Math.max(0, gl.drawingBufferHeight - Math.ceil(dpr) - Math.round(y * dpr));
-  }
-  return Math.min(deviceY, gl.drawingBufferHeight - 1);
-}
 
 // Maps window postion to device position
 export function mapToDevicePosition(position, gl, yInvert = true) {
-  return [mapToDevicePositionX(position[0], gl), mapToDevicePositionY(position[1], gl, yInvert)];
+  const dpr = gl.drawingBufferWidth / gl.canvas.clientWidth;
+
+  // since we are rounding to nearest, when dpr > 1, edge pixels may point to out of bounds value, clamp to the limit
+  const x = Math.min(Math.round(position[0] * dpr), gl.drawingBufferWidth - 1);
+
+  let y = Math.round(position[1] * dpr);
+  if (yInvert) {
+    y = Math.max(0, gl.drawingBufferHeight - Math.ceil(dpr) - Math.round(y * dpr));
+  }
+  y = Math.min(y, gl.drawingBufferHeight - 1);
+
+  return [x, y];
 }

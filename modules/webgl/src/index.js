@@ -106,8 +106,6 @@ export {self, window, global, document} from './utils/globals';
 export {default as isBrowser} from './utils/is-browser';
 export {
   getDevicePixelRatio,
-  mapToDevicePositionX,
-  mapToDevicePositionY,
   mapToDevicePosition
 } from './utils/device-pixels';
 

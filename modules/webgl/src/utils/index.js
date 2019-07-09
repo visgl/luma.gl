@@ -8,7 +8,5 @@ export {stubRemovedMethods} from './stub-methods';
 export {checkProps} from './check-props';
 export {
   getDevicePixelRatio,
-  mapToDevicePositionX,
-  mapToDevicePositionY,
   mapToDevicePosition
 } from './device-pixels';
