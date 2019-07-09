@@ -166,12 +166,23 @@ export function destroyGLContext(gl) {
 export function resizeGLContext(gl, options = {}) {
   // Resize browser context
   if (gl.canvas) {
-    /* global window */
-    const devicePixelRatio = getDevicePixelRatio(options.useDevicePixels, window.devicePixelRatio);
-    // console.log(`Context: devicePixelRatio: ${devicePixelRatio}`);
-    gl.canvas.width = Math.ceil(gl.canvas.clientWidth * devicePixelRatio);
-    gl.canvas.height = Math.ceil(gl.canvas.clientHeight * devicePixelRatio);
+    let devicePixelRatio = getDevicePixelRatio(options.useDevicePixels);
+    let devicePixelRatioClamped = false;
+    let aspectRatioValid = false;
+    // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
+    // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
+    // for those cases, reduce devicePixelRatio.
+    do {
+      gl.canvas.width = Math.ceil(gl.canvas.clientWidth * devicePixelRatio);
+      gl.canvas.height = Math.ceil(gl.canvas.clientHeight * devicePixelRatio);
+      aspectRatioValid = gl.drawingBufferWidth / gl.canvas.clientWidth === gl.drawingBufferHeight / gl.canvas.clientHeight;
+      devicePixelRatio = Math.max(devicePixelRatio/2, 1);
+      devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
+    } while(!aspectRatioValid);
 
+    if (devicePixelRatioClamped) {
+      log.warn(`System limit is hit, clamped down device pixel ration from ${getDevicePixelRatio(options.useDevicePixels)} to  ${devicePixelRatio * 2}`)();
+    }
     return;
   }
 
@@ -189,7 +200,7 @@ function logInfo(gl) {
   const info = getContextDebugInfo(gl);
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
   const debug = gl.debug ? ' debug' : '';
-  log.once(1, `${webGL}${debug} context ${driver}`)();
+  log.once(0, `${webGL}${debug} context ${driver}`)();
 }
 
 function getVersion(gl) {
