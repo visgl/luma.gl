@@ -1,53 +1,46 @@
+/* global window */
 import {getDevicePixelRatio, mapToDevicePosition} from '@luma.gl/webgl';
 import test from 'tape-catch';
 
-test('webgl#getDevicePixelRatio', t => {
+test.only('webgl#getDevicePixelRatio', t => {
+  console.log(`typeof window === 'undefined': ${typeof window === 'undefined'}`);
+  const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
-      name: 'Undefined windowPixelRatio, should use 1',
+      name: 'useDevicePixels: true: should use window.devicePixelRatio or 1',
       useDevicePixels: true,
-      expected: 1
+      expected: windowPixelRatio
     },
     {
-      name: 'Use windowPixelRatio, should use it',
-      useDevicePixels: true,
-      windowPixelRatio: 2,
-      expected: 2
-    },
-    {
-      name: 'Use default pixel ratio, should use 1',
+      name: 'Use default pixel ratio: should use 1',
       useDevicePixels: false,
-      windowPixelRatio: 2,
       expected: 1
     },
     {
-      name: 'Non Finite useDevicePixels, should use 1',
+      name: 'Non Finite useDevicePixels: should use window.devicePixelRatio or 1',
       useDevicePixels: null,
-      windowPixelRatio: 2,
-      expected: 1
+      expected: windowPixelRatio
     },
     {
-      name: 'Non valid useDevicePixels, should use 1',
+      name: 'Non valid useDevicePixels: should use window.devicePixelRatio or 1',
       useDevicePixels: 0,
-      windowPixelRatio: 2,
-      expected: 1
+      expected: windowPixelRatio
     },
     {
-      name: 'Non valid useDevicePixels, should use 1',
+      name: 'Non valid useDevicePixels: should use window.devicePixelRatio or 1',
       useDevicePixels: -3.2,
-      windowPixelRatio: 2,
-      expected: 1
+      expected: windowPixelRatio
     },
     {
       name: 'Valid useDevicePixels, should use it',
-      useDevicePixels: 4.5,
-      windowPixelRatio: 2,
-      expected: 4.5
+      useDevicePixels: 1.5,
+      expected: 1.5
     }
   ];
 
   TEST_CAES.forEach(tc => {
-    t.equal(tc.expected, getDevicePixelRatio(tc.useDevicePixels, tc.windowPixelRatio), tc.name);
+    console.log(`tc.expected: ${tc.expected}`);
+    t.equal(tc.expected, getDevicePixelRatio(tc.useDevicePixels), tc.name);
   });
   t.end();
 });

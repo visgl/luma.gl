@@ -1,14 +1,15 @@
+/* global window */
+
 /**
  * Calulates device pixel ratio
  *
- * @param {boolean or Number} useDevicePixels - gl context
- * @param {Number} windowPixelRatio - device supported pixel ratio
+ * @param {boolean or Number} useDevicePixels - boolean or a Number
  * @return {Number} - device pixel ratio
  */
-export function getDevicePixelRatio(useDevicePixels, windowPixelRatio) {
-  const windowRatio = windowPixelRatio || 1;
+export function getDevicePixelRatio(useDevicePixels) {
+  const windowRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   if (Number.isFinite(useDevicePixels)) {
-    return useDevicePixels <= 0 ? 1 : useDevicePixels;
+    return useDevicePixels <= 0 ? windowRatio : useDevicePixels;
   }
   return useDevicePixels ? windowRatio : 1;
 }
