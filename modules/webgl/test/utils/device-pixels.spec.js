@@ -2,8 +2,7 @@
 import {getDevicePixelRatio, mapToDevicePosition} from '@luma.gl/webgl';
 import test from 'tape-catch';
 
-test.only('webgl#getDevicePixelRatio', t => {
-  console.log(`typeof window === 'undefined': ${typeof window === 'undefined'}`);
+test('webgl#getDevicePixelRatio', t => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -39,7 +38,6 @@ test.only('webgl#getDevicePixelRatio', t => {
   ];
 
   TEST_CAES.forEach(tc => {
-    console.log(`tc.expected: ${tc.expected}`);
     t.equal(tc.expected, getDevicePixelRatio(tc.useDevicePixels), tc.name);
   });
   t.end();
@@ -101,14 +99,14 @@ test('webgl#mapToDevicePosition', t => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
-        mapToDevicePosition(tc.windowPositions[i], tc.gl),
+        mapToDevicePosition(tc.gl, tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
         `${tc.name}(yInvert=true): device pixel should be ${
           tc.devicePositionsInverted[i]
         } for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
-        mapToDevicePosition(tc.windowPositions[i], tc.gl, false),
+        mapToDevicePosition(tc.gl, tc.windowPositions[i], false),
         tc.devicePositions[i],
         `${tc.name}(yInvert=false): device pixel should match`
       );
