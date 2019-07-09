@@ -8,5 +8,6 @@ export {stubRemovedMethods} from './stub-methods';
 export {checkProps} from './check-props';
 export {
   getDevicePixelRatio,
-  cssToDevicePixels
+  cssToDevicePixels,
+  deviceToCssPixels
 } from './device-pixels';

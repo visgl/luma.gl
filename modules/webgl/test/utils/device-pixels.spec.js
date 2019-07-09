@@ -1,6 +1,60 @@
 /* global window */
-import {getDevicePixelRatio, cssToDevicePixels} from '@luma.gl/webgl';
+import {getDevicePixelRatio, cssToDevicePixels, deviceToCssPixels} from '@luma.gl/webgl';
 import test from 'tape-catch';
+const LOW_DPR = 0.5;
+const HIGH_DPR = 4;
+const MAP_TEST_CASES = [
+  {
+    name: 'device pixel ratio 1',
+    gl: {
+      drawingBufferWidth: 10,
+      drawingBufferHeight: 10,
+      canvas: {
+        clientWidth: 10,
+        clientHeight: 10
+      }
+    },
+    ratio: 1,
+    windowPositions: [[0, 0], [2, 2], [9, 9]],
+    devicePositionsInverted: [[0, 9], [2, 7], [9, 0]],
+    devicePositions: [[0, 0], [2, 2], [9, 9]]
+  },
+  {
+    name: 'device pixel ratio > 1',
+    gl: {
+      drawingBufferWidth: 10 * HIGH_DPR,
+      drawingBufferHeight: 10 * HIGH_DPR,
+      canvas: {
+        clientWidth: 10,
+        clientHeight: 10
+      }
+    },
+    ratio: HIGH_DPR,
+    yInvert: true,
+    windowPositions: [[0, 0], [2, 2], [9, 9]],
+    devicePositionsInverted: [[0, 36], [8, 28], [36, 0]],
+    devicePositions: [[0, 0], [8, 8], [36, 36]]
+  },
+  {
+    name: 'device pixel ratio < 1',
+    gl: {
+      drawingBufferWidth: 10 * LOW_DPR,
+      drawingBufferHeight: 10 * LOW_DPR,
+      canvas: {
+        clientWidth: 10,
+        clientHeight: 10
+      }
+    },
+    ratio: LOW_DPR,
+    yInvert: true,
+    // css to device 0 - 8/9 => 0 - 4
+    // device to css 0 - 4  => 0 - 8
+    // Inverted device to css 0 - 4  => 8 - 0
+    windowPositions: [[0, 0], [2, 2], [8, 8]],
+    devicePositionsInverted: [[0, 4], [1, 3], [4, 0]],
+    devicePositions: [[0, 0], [1, 1], [4, 4]]
+  }
+];
 
 test('webgl#getDevicePixelRatio', t => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
@@ -44,58 +98,7 @@ test('webgl#getDevicePixelRatio', t => {
 });
 
 test('webgl#cssToDevicePixels', t => {
-  const LOW_DPR = 0.5;
-  const HIGH_DPR = 4;
-  const TEST_CASES = [
-    {
-      name: 'device pixel ratio 1',
-      gl: {
-        drawingBufferWidth: 10,
-        drawingBufferHeight: 10,
-        canvas: {
-          clientWidth: 10,
-          clientHeight: 10
-        }
-      },
-      ratio: 1,
-      windowPositions: [[0, 0], [2, 2], [9, 9]],
-      devicePositionsInverted: [[0, 9], [2, 7], [9, 0]],
-      devicePositions: [[0, 0], [2, 2], [9, 9]]
-    },
-    {
-      name: 'device pixel ratio > 1',
-      gl: {
-        drawingBufferWidth: 10 * HIGH_DPR,
-        drawingBufferHeight: 10 * HIGH_DPR,
-        canvas: {
-          clientWidth: 10,
-          clientHeight: 10
-        }
-      },
-      ratio: HIGH_DPR,
-      yInvert: true,
-      windowPositions: [[0, 0], [2, 2], [9, 9]],
-      devicePositionsInverted: [[0, 36], [8, 28], [36, 0]],
-      devicePositions: [[0, 0], [8, 8], [36, 36]]
-    },
-    {
-      name: 'device pixel ratio < 1',
-      gl: {
-        drawingBufferWidth: 10 * LOW_DPR,
-        drawingBufferHeight: 10 * LOW_DPR,
-        canvas: {
-          clientWidth: 10,
-          clientHeight: 10
-        }
-      },
-      ratio: LOW_DPR,
-      yInvert: true,
-      windowPositions: [[0, 0], [2, 2], [9, 9]],
-      devicePositionsInverted: [[0, 4], [1, 3], [4, 0]],
-      devicePositions: [[0, 0], [1, 1], [4, 4]]
-    }
-  ];
-  TEST_CASES.forEach(tc => {
+  MAP_TEST_CASES.forEach(tc => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
@@ -108,6 +111,27 @@ test('webgl#cssToDevicePixels', t => {
       t.deepEqual(
         cssToDevicePixels(tc.gl, tc.windowPositions[i], false),
         tc.devicePositions[i],
+        `${tc.name}(yInvert=false): device pixel should match`
+      );
+    });
+  });
+  t.end();
+});
+
+test('webgl#deviceToCssPixels', t => {
+  MAP_TEST_CASES.forEach(tc => {
+    tc.devicePositionsInverted.forEach((dPos, i) => {
+      // by default yInvert is true
+      t.deepEqual(
+        deviceToCssPixels(tc.gl, dPos),
+        tc.windowPositions[i],
+        `${tc.name}(yInvert=true): device pixel should be ${
+          tc.windowPositions[i]
+        } for device position ${dPos}`
+      );
+      t.deepEqual(
+        deviceToCssPixels(tc.gl, tc.devicePositions[i], false),
+        tc.windowPositions[i],
         `${tc.name}(yInvert=false): device pixel should match`
       );
     });
