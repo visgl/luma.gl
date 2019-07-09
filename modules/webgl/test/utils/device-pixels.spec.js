@@ -1,5 +1,5 @@
 /* global window */
-import {getDevicePixelRatio, mapToDevicePosition} from '@luma.gl/webgl';
+import {getDevicePixelRatio, cssToDevicePixels} from '@luma.gl/webgl';
 import test from 'tape-catch';
 
 test('webgl#getDevicePixelRatio', t => {
@@ -43,7 +43,7 @@ test('webgl#getDevicePixelRatio', t => {
   t.end();
 });
 
-test('webgl#mapToDevicePosition', t => {
+test('webgl#cssToDevicePixels', t => {
   const LOW_DPR = 0.5;
   const HIGH_DPR = 4;
   const TEST_CASES = [
@@ -99,14 +99,14 @@ test('webgl#mapToDevicePosition', t => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
-        mapToDevicePosition(tc.gl, tc.windowPositions[i]),
+        cssToDevicePixels(tc.gl, tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
         `${tc.name}(yInvert=true): device pixel should be ${
           tc.devicePositionsInverted[i]
         } for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
-        mapToDevicePosition(tc.gl, tc.windowPositions[i], false),
+        cssToDevicePixels(tc.gl, tc.windowPositions[i], false),
         tc.devicePositions[i],
         `${tc.name}(yInvert=false): device pixel should match`
       );

@@ -1,5 +1,5 @@
 /* global window */
-import {isWebGL, clear, readPixelsToArray, mapToDevicePosition} from '@luma.gl/webgl';
+import {isWebGL, clear, readPixelsToArray, cssToDevicePixels} from '@luma.gl/webgl';
 import GroupNode from './nodes/group-node';
 import {assert} from '../utils';
 
@@ -24,7 +24,7 @@ export default function pickModels(gl, props) {
 
   // Compensate for devicePixelRatio
   // Note: this assumes the canvas framebuffer has been matched
-  const devicePosition = mapToDevicePosition(gl, position);
+  const devicePosition = cssToDevicePixels(gl, position);
 
 
   // return withParameters(gl, {

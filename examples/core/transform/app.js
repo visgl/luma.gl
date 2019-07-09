@@ -8,7 +8,7 @@ import {
   isWebGL2,
   readPixelsToArray
 } from '@luma.gl/core';
-import {mapToDevicePosition} from '@luma.gl/webgl';
+import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Log} from 'probe.gl';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
@@ -286,7 +286,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     rotationBuffer.setAccessor({divisor: 0});
 
     if (pickPosition) {
-      const devicePosition = mapToDevicePosition(gl, pickPosition);
+      const devicePosition = cssToDevicePixels(gl, pickPosition);
       pickInstance(gl, devicePosition[0], devicePosition[1], renderModel, framebuffer);
     }
   }

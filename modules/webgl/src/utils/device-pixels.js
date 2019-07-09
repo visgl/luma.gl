@@ -16,7 +16,7 @@ export function getDevicePixelRatio(useDevicePixels) {
 
 
 // Maps window postion to device position
-export function mapToDevicePosition(gl, position, yInvert = true) {
+export function cssToDevicePixels(gl, position, yInvert = true) {
   const dpr = gl.drawingBufferWidth / gl.canvas.clientWidth;
 
   // since we are rounding to nearest, when dpr > 1, edge pixels may point to out of bounds value, clamp to the limit
