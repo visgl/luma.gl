@@ -90,7 +90,6 @@ export default class Texture extends Resource {
     const {
       pixels = null,
       format = GL.RGBA,
-      type = GL.UNSIGNED_BYTE,
       border = 0,
       recreate = false,
       parameters = {},
@@ -110,11 +109,11 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    let {width, height, dataFormat} = props;
+    let {width, height, dataFormat, type} = props;
     const {depth = 0} = props;
 
     // Deduce width and height
-    ({width, height, dataFormat} = this._deduceParameters({
+    ({width, height, dataFormat, type} = this._deduceParameters({
       format,
       type,
       dataFormat,
