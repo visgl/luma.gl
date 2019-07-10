@@ -285,7 +285,7 @@ Describes the layout of each color component in memory.
 ### Texture Format Combinations
 
 This a simplified table illustrating what combinations of internal formats
-work with what formats and types. Note that luma.gl deduces `format` and `type` from `internalFormat` by taking the first value from the format and type entries in this table.
+work with what data formats and types. Note that luma.gl deduces `dataFormat` and `type` from `format` by taking the first value from the data format and data type entries in this table.
 
 For more details, see tables in:
 * [WebGL2 spec](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
