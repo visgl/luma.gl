@@ -290,56 +290,6 @@ This function makes calls to the following WebGL APIs:
 
 [`gl.invalidateFramebuffer`](WebGL2RenderingContext.invalidateFramebuffer()), [`gl.invalidateSubFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/invalidateSubFramebuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
-
-### clearBuffers (WebGL2)
-
-Use to clear specific buffers
-
-* `GL.COLOR` - Color buffer
-* `GL.DEPTH` - Depth buffer
-* `GL.STENCIL` - Stencil buffer
-* `GL.DEPTH_STENCIL` - clears depth and stencil buffers (used with `clearBufferfi`)
-
-[`gl.clearBufferfv`](), [`gl.clearBufferiv`](), [`gl.clearBufferuiv`](), [`gl.clearBufferf`](), [`gl.bindFramebuffer`]()
-
-| `GL.COLOR_ATTACHMENT`{0-15}   | Attaches the texture to one of the framebuffer's color buffers |
-
-
-### configure (WebGL2)
-
-* `readBuffer`= (GLenum) - If supplied, sets the target color buffer for reading.
-* `drawBuffers`= (GLEnum[]) - If supplied, sets the first draw buffer indices to the color attachments in the supplied array.
-
-* Read buffers are `gl.COLOR_ATTACHMENT{0-15}` - Reads from one of 16 color attachment buffers.
-* `readBuffer` selects a color buffer as the source for pixels for subsequent calls to `Framebuffer.readPixels`, `Framebuffer.copyToTexture`, `Framebuffer.blit`.
-
-Parameters: src
-* `gl.BACK` - Reads from the back color buffer.
-* `gl.NONE` - Reads from no color buffer.
-
-
-
-### drawBuffers (WebGL2 or WebGL_draw_buffers)
-
-glDrawBuffers defines an array of buffers into which outputs from the fragment shader data will be written. If a fragment shader writes a value to one or more user defined output variables, then the value of each variable will be written into the buffer specified at a location within bufs corresponding to the location assigned to that user defined output. The draw buffer used for user defined outputs assigned to locations greater than or equal to n is implicitly set to GL_NONE and any data written to such an output is discarded.
-
-Parameters
-* `buffers` (Array) - Array of GLenum specifying the buffers into which fragment colors will be written.
-
-| Value     | Fragment shader output is: |
-| ---       | --- |
-| `GL.NONE` | not written into any color buffer. |
-| `GL.BACK` | written into the back color buffer. |
-| `GL.COLOR_ATTACHMENT{0-15}` |: written in the nth color attachment of the current framebuffer. |
-
-* Except for `GL_NONE`, a constants may not appear more than once.
-* The maximum number of draw buffers.
-
-This function makes calls to the following WebGL APIs:
-
-[`gl.drawBuffers`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawBuffers), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
-
 ## Limits
 
 * `GL.MAX_COLOR_ATTACHMENTS` - The maximum number of color attachments supported. Can be `0` in WebGL1.
