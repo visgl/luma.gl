@@ -100,7 +100,7 @@ For blitting between framebuffers (WebGL2), check [`blit`](/docs/api-reference/w
 Specify which framebuffer attachments the fragment shader will be writing to when assigning to `gl_FragData[]`
 
 ```js
-framebuffer.configure({
+framebuffer.update({
   drawBuffers: [
     GL.COLOR_ATTACHMENT0, // gl_FragData[0]
     GL.COLOR_ATTACHMENT1, // gl_FragData[1]
