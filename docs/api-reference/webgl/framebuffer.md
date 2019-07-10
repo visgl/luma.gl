@@ -30,11 +30,11 @@ Attaching textures and renderbuffers
 ```js
 framebuffer.attach({
   [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {...}),
-  [GL.COLOR_ATTACHMENT_0]: new Texture(gl, {...}),
-  [GL.COLOR_ATTACHMENT_1]: [new TextureCube(gl, {...}), GL.TEXTURE_CUBE_MAP_POSITIVE_X],
-  [GL.COLOR_ATTACHMENT_2]: [new TextureArray2D(gl, {...}), 0],
-  [GL.COLOR_ATTACHMENT_3]: [new TextureArray2D(gl, {...}), 1],
-  [GL.COLOR_ATTACHMENT_4]: [new Texture3D(gl, {..., depth: 8}), 2]
+  [GL.COLOR_ATTACHMENT0]: new Texture(gl, {...}),
+  [GL.COLOR_ATTACHMENT1]: [new TextureCube(gl, {...}), GL.TEXTURE_CUBE_MAP_POSITIVE_X],
+  [GL.COLOR_ATTACHMENT2]: [new TextureArray2D(gl, {...}), 0],
+  [GL.COLOR_ATTACHMENT3]: [new TextureArray2D(gl, {...}), 1],
+  [GL.COLOR_ATTACHMENT4]: [new Texture3D(gl, {..., depth: 8}), 2]
 });
 framebuffer.checkStatus(); // optional
 ```
