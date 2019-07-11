@@ -48,7 +48,6 @@ export default class Texture extends Resource {
     super(gl, {id, handle});
 
     this.target = target;
-    this.hasFloatTexture = gl.getExtension('OES_texture_float');
     this.textureUnit = undefined;
 
     // Program.draw() checks the loaded flag of all textures to avoid
