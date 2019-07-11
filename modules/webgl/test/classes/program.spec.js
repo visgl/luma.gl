@@ -5,12 +5,12 @@ import {fixture} from 'test/setup';
 
 const vs = `
 attribute vec3 positions;
-uniform mat4 uMVMatrix;
+uniform mat4 uMVMatrix[2];
 uniform mat4 uPMatrix;
 varying vec3 vPosition;
 
 void main(void) {
-  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  gl_Position = uPMatrix * uMVMatrix[0] * vec4(positions, 1.0);
   vPosition = positions;
 }
 `;
@@ -80,5 +80,18 @@ test('WebGL#Program caching', t => {
   program.delete();
   t.ok(!program._handle, 'Program should be deleted');
 
+  t.end();
+});
+
+test('WebGL#Program uniform array', t => {
+  const {gl} = fixture;
+
+  const program = new Program(gl, {vs, fs});
+
+  t.ok(program._uniformSetters.uMVMatrix, 'uniform array is ok');
+  t.ok(program._uniformSetters[`uMVMatrix[0]`], 'uniform array is ok');
+  t.ok(program._uniformSetters[`uMVMatrix[1]`], 'uniform array is ok');
+
+  program.delete();
   t.end();
 });
