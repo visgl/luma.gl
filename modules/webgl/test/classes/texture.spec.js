@@ -148,6 +148,38 @@ function testFormatCreation(t, glContext, withData = false) {
   }
 }
 
+function testFormatDeduction(t, glContext) {
+  for (const format in TEXTURE_FORMATS) {
+    const formatInfo = TEXTURE_FORMATS[format];
+    const expectedType = formatInfo.types[0];
+    const expectedDataFormat = formatInfo.dataFormat;
+    const options = {
+      format,
+      height: 1,
+      width: 1
+    };
+    if (Texture2D.isSupported(glContext, {format})) {
+      const texture = new Texture2D(glContext, options);
+      const msg = `Texture2D({format: ${getKey(GL, format)}}) created`;
+      t.equals(texture.format, format, msg);
+      t.equals(texture.type, expectedType, msg);
+      t.equals(texture.dataFormat, expectedDataFormat, msg);
+      texture.delete();
+    }
+  }
+}
+
+test('WebGL#Texture2D format deduction', t => {
+  const {gl, gl2} = fixture;
+  testFormatDeduction(t, gl);
+  if (gl2) {
+    testFormatDeduction(t, gl2);
+  } else {
+    t.comment('WebGL2 not available, skipping tests');
+  }
+  t.end();
+});
+
 test('WebGL#Texture2D format creation', t => {
   const {gl, gl2} = fixture;
   testFormatCreation(t, gl);
