@@ -193,7 +193,6 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 * `width`=`1` - (*number*) The width of the framebuffer.
 * `height`=`1` - (*number*) The height of the framebuffer.
 * `attachments`={} - (*Object*, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
-* `texture` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
 * `color` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
 * `depth` - shortcut to the attachment in `GL.DEPTH_ATTACHMENT`
 * `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
