@@ -370,8 +370,14 @@ export default class Program extends Resource {
     for (let i = 0; i < this._uniformCount; i++) {
       const info = this.gl.getActiveUniform(this.handle, i);
       const {name, isArray} = parseUniformName(info.name);
-      const location = gl.getUniformLocation(this.handle, name);
+      let location = gl.getUniformLocation(this.handle, name);
       this._uniformSetters[name] = getUniformSetter(gl, location, info, isArray);
+      if (info.size > 1) {
+        for (let l = 0; l < info.size; l++) {
+          location = gl.getUniformLocation(this.handle, `${name}[${l}]`);
+          this._uniformSetters[`${name}[${l}]`] = getUniformSetter(gl, location, info, isArray);
+        }
+      }
     }
     this._textureIndexCounter = 0;
   }
