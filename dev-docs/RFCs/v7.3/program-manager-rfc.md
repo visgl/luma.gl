@@ -2,7 +2,7 @@
 
 * **Author**: Tarek Sherif
 * **Date**: July, 2019
-* **Status**: **Draft**
+* **Status**: **Approved**
 
 
 ## Summary
