@@ -31,11 +31,9 @@ The `Model` class would be updated to support attaching a program manager, so th
 ## Implementation
 
 A `ProgramManager` that supports the following methods:
-- `addVertexShader(id, source)`: register vertex shader source code.
-- `addFragmentShader(id, source)`: register fragment shader source code.
-- `addModule(id, module, injections)`: register a module, along with optional shader hook injections.
-- `addShaderHook(type, {signature, header, footer})`: register a shader hook function.
-- `get(vsId, fsId, {defines, modules})`: return a program. Compile and cache it on first call, return cached version subsequently (and increment usage count).
+- `addModule(module, injections)`: register a module, along with optional shader hook injections.
+- `addShaderHook(signature, {header, footer})`: register a shader hook function.
+- `get(vsSource, fsSource, {defines, modules})`: return a program. Compile and cache it on first call, return cached version subsequently (and increment usage count).
 - `release(program)`: indicate that program is no longer being used (decrement usage count, delete if it reaches 0).
 
 
@@ -44,7 +42,7 @@ A `ProgramManager` that supports the following methods:
 ```js
 const pm = new ProgramManager(gl);
 
-pm.addVertexShader('myVs', `
+const vs = `
 attribute vec4 position;
 
 void main() {
@@ -54,14 +52,14 @@ void main() {
   gl_Position = position.wzyx;
 #endif
 }
-`);
+`;
 
-pm.addFragmentShader('myFs', `
+const fs = `
 void main() {
   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
   MY_SHADER_HOOK(gl_FragColor);
 }
-`);
+`;
 
 pm.addShaderHook('fs:MY_SHADER_HOOK(inout vec4 color)');
 
@@ -73,24 +71,24 @@ pm.addModule(picking, [
   }
 ]);
 
-const program1 = pm.get('myVs', 'myFs');   // Basic, no modules or defines
-const program2 = pm.get('myVs', 'myFs');   // Cached, same as program 1, use count 2
-const program3 = pm.get('myVs', 'myFs', {  // New program, with different source based on define
+const program1 = pm.get(vs, fs);   // Basic, no modules or defines
+const program2 = pm.get(vs, fs);   // Cached, same as program 1, use count 2
+const program3 = pm.get(vs, fs, {  // New program, with different source based on define
   defines: {
     MY_DEFINE: true
   }
 });
-const program4 = pm.get('myVs', 'myFs', {  // New program, with different source based on module and its injection
+const program4 = pm.get(vs, fs, {  // New program, with different source based on module and its injection
   defines: {
     MY_DEFINE: true
   },
-  modules: ['picking']
+  modules: [picking]
 });
-const program5 = pm.get('myVs', 'myFs', {  // Cached, same as program 4, use count 2
+const program5 = pm.get(vs, fs, {  // Cached, same as program 4, use count 2
   defines: {
     MY_DEFINE: true
   },
-  modules: ['picking']
+  modules: [picking]
 });
 
 pm.release(program1); // Cached program still available, use count 1
