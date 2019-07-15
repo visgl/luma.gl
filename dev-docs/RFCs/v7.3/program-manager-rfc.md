@@ -48,7 +48,7 @@ A `ProgramManager` that supports the following methods:
 `BaseModel` would be modified to:
 - Take a `ProgramManager` instance as construction parameter, from which it can get programs.
 - Update its `Program`s uniforms on every draw. This will allow program sharing and program switching.
-- Add a method `updateProgram(vsId, fdId, {defines, modules})` that would allow it to switch programs (via its `ProgramManger`) without having to be rebuilt. 
+- Add a method `updateProgram(vsId, fdId, {defines, modules})` that would allow it to switch programs (via its `ProgramManger`) without having to be rebuilt.
 
 
 ## Example
@@ -111,10 +111,10 @@ pm.release(program3); // Cached program deleted
 pm.release(program4); // Cached program still available, use count 1
 pm.release(program5); // Cached program deleted
 
-const m1 = new Model({programManger: pm, vsId: 'myVs', fsId: 'myFs'}); // Create and cache program
-const m2 = new Model({programManger: pm, vsId: 'myVs', fsId: 'myFs'}); // Re-use same program as m1
-m1.updateProgram('myVs', 'myFs');   // No change, using cached program
-m1.updateProgram('myVs', 'myFs', {  // New program, with different source based on define
+const m1 = new Model({programManger: pm, vs, fs}); // Create and cache program
+const m2 = new Model({programManger: pm, vs, fs}); // Re-use same program as m1
+m1.updateProgram(vs, fs);   // No change, using cached program
+m1.updateProgram(vs, fs, {  // New program, with different source based on define
   defines: {
     MY_DEFINE: true
   }
