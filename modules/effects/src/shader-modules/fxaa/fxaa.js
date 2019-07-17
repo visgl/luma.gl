@@ -85,7 +85,7 @@ const fs = `
 //  _ = the lowest digit is directly related to performance
 // _  = the highest digit is directly related to style
 //
-#define FXAA_QUALITY_PRESET 12
+#define FXAA_QUALITY_PRESET 23
 
 
 #if (FXAA_QUALITY_PRESET == 10)
@@ -276,7 +276,7 @@ const fs = `
 #define FxaaTexTop(t, p) texture2D(t, p)
 #define FxaaTexOff(t, p, o, r) texture2D(t, p + (o * r))
 
-FxaaFloat FxaaLuma_(FxaaFloat4 rgba) { return rgba.y; }
+FxaaFloat FxaaLuma_(FxaaFloat4 rgba) { return dot(rgba.rgb, vec3(0.2126, 0.7152, 0.0722)); }
 
 FxaaFloat4 FxaaPixelShader_(
     //
