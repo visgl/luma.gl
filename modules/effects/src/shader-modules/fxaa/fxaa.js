@@ -31,7 +31,7 @@ const fs = `
 // NVIDIA GameWorks Graphics Samples GitHub link: https://github.com/NVIDIAGameWorks/GraphicsSamples
 // Original FXAA 3.11 shader link: https://github.com/NVIDIAGameWorks/GraphicsSamples/blob/master/samples/es3-kepler/FXAA/FXAA3_11.h
 //
-// WebGL version used from cesium.js, used under Apached 2.0 License
+// WebGL version from cesium.js, used under Apached 2.0 License
 // https://github.com/AnalyticalGraphicsInc/cesium/blob/master/LICENSE.md
 // with modifications to API to incorporate into luma.gl
 //
