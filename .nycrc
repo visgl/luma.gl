@@ -3,5 +3,9 @@
   "include": [
     "dev-modules/**/*.js",
     "modules/**/src/**/*.js"
+  ],
+  "exclude": [
+    "modules/script/",
+    "modules/test-utils/"
   ]
 }

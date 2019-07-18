@@ -46,7 +46,7 @@ const config = {
   mode: 'production',
 
   entry: {
-    main: resolve('./src/bundle')
+    main: resolve('./bundle')
   },
 
   output: {
