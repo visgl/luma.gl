@@ -12,6 +12,10 @@ export function setDefaultShaderModules(modules) {
   shaderModuleRegistry.setDefaultShaderModules(modules);
 }
 
+export function getDefaultShaderModules() {
+  return shaderModuleRegistry.getDefaultShaderModules();
+}
+
 /**
  * Registers an array of shader modules
  * @param {Object[]} shaderModuleList - Array of shader modules
