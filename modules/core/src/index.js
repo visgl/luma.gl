@@ -132,6 +132,7 @@ export {default as CameraNode} from './scenegraph/nodes/camera-node';
 export {
   registerShaderModules,
   setDefaultShaderModules,
+  getDefaultShaderModules,
   assembleShaders,
   createShaderHook,
   createModuleInjection,
