@@ -11,6 +11,10 @@ export default class ShaderModuleRegistry {
     this.defaultShaderModules = this.resolveModules(modules);
   }
 
+  getDefaultShaderModules() {
+    return this.defaultShaderModules;
+  }
+
   registerShaderModules(shaderModuleList, {ignoreMultipleRegistrations = false} = {}) {
     for (const shaderModule of shaderModuleList) {
       this._registerShaderModule(shaderModule, ignoreMultipleRegistrations);
