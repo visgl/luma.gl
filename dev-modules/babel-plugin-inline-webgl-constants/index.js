@@ -7,15 +7,7 @@ const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 const COLOR_RED = '\x1b[31m';
 
-const DEBUG = false; // Set to true to force tracing
-
 module.exports = function _(opts) {
-  if (DEBUG) {
-    console.log(
-      `${COLOR_YELLOW}luma.gl: babel GL constant inlining plugin loaded: ${GL.LINES}${COLOR_RESET}`
-    );
-  }
-
   return {
     visitor: {
       ImportDeclaration(path, state) {
@@ -26,7 +18,7 @@ module.exports = function _(opts) {
           if (specifier.type === 'ImportDefaultSpecifier') {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {
-              if (DEBUG || state.opts.verbose || state.opts.debug) {
+              if (state.opts.debug) {
                 const filename = getFilename(state);
                 const line = local.loc.start.line;
                 console.error(
@@ -63,7 +55,7 @@ module.exports = function _(opts) {
             return;
           }
 
-          if (DEBUG || state.opts.verbose || state.opts.debug) {
+          if (state.opts.debug) {
             console.error(`${COLOR_YELLOW}${filename}: ${constant} ==> ${value}${COLOR_RESET}`);
           }
           path.replaceWith(opts.types.numericLiteral(value));

@@ -14,6 +14,11 @@ const TEST_CASES = [
     output: 'const x = 5126;'
   },
   {
+    title: 'undefined constant',
+    input: 'const x = gl.FLOAT32;',
+    error: true
+  },
+  {
     title: 'complex',
     input: `
       const TEXTURE_FORMATS = {
@@ -52,12 +57,19 @@ function clean(code) {
 /* eslint-disable */
 test('InlineGLSLConstants Babel Plugin', t => {
   TEST_CASES.forEach(testCase => {
-    const {code} = babel.transform(testCase.input, {
-      presets: [['@babel/env', ES6_ENV]],
-      plugins: [[plugin]],
-      filename: 'test.js'
-    });
-    t.is(clean(code), clean(testCase.output), testCase.title);
+    const transform = () =>
+      babel.transform(testCase.input, {
+        presets: [['@babel/env', ES6_ENV]],
+        plugins: [[plugin, {debug: true}]],
+        filename: 'test.js',
+        configFile: false
+      });
+    if (testCase.error) {
+      t.throws(transform, testCase.title);
+    } else {
+      const {code} = transform();
+      t.is(clean(code), clean(testCase.output), testCase.title);
+    }
   });
 
   t.end();
