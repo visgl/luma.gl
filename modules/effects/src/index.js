@@ -25,6 +25,9 @@ export {default as ink} from './shader-modules/fun-filters/ink';
 export {default as bulgePinch} from './shader-modules/warp-filters/bulgepinch';
 export {default as swirl} from './shader-modules/warp-filters/swirl';
 
+// Postprocessing
+export {default as fxaa} from './shader-modules/fxaa/fxaa';
+
 // experimental shader modules and passes
 export {default as _depth} from './experimental/shader-modules/depth';
 export {default as _convolution} from './experimental/shader-modules/convolution';

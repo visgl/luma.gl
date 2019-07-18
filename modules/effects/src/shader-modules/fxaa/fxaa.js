@@ -1,5 +1,5 @@
-const fs = `
 /**
+ * ORIGINAL LICENCE
  * @license
  * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
  *
@@ -28,12 +28,17 @@ const fs = `
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// NVIDIA GameWorks Graphics Samples GitHub link: https://github.com/NVIDIAGameWorks/GraphicsSamples
-// Original FXAA 3.11 shader link: https://github.com/NVIDIAGameWorks/GraphicsSamples/blob/master/samples/es3-kepler/FXAA/FXAA3_11.h
-//
+// LUMA.GL
 // WebGL version from cesium.js, used under Apached 2.0 License
 // https://github.com/AnalyticalGraphicsInc/cesium/blob/master/LICENSE.md
-// with modifications to API to incorporate into luma.gl
+// with the following modifications:
+// - fxaa_sampleColor to integrate with luma.gl
+// - Return color value with alpha to avoid another tap
+// - Calculate luminance in FxaaLuma
+
+// COMMENTS FROM CESIUM VERSION
+// NVIDIA GameWorks Graphics Samples GitHub link: https://github.com/NVIDIAGameWorks/GraphicsSamples
+// Original FXAA 3.11 shader link: https://github.com/NVIDIAGameWorks/GraphicsSamples/blob/master/samples/es3-kepler/FXAA/FXAA3_11.h
 //
 // Steps used to integrate into Cesium:
 // * The following defines are set:
@@ -85,8 +90,9 @@ const fs = `
 //  _ = the lowest digit is directly related to performance
 // _  = the highest digit is directly related to style
 //
-#define FXAA_QUALITY_PRESET 23
 
+const fs = `
+#define FXAA_QUALITY_PRESET 29
 
 #if (FXAA_QUALITY_PRESET == 10)
     #define FXAA_QUALITY_PS 3
@@ -648,22 +654,22 @@ FxaaFloat4 FxaaPixelShader_(
     FxaaFloat pixelOffsetSubpix = max(pixelOffsetGood, subpixH);
     if(!horzSpan) posM.x += pixelOffsetSubpix * lengthSign;
     if( horzSpan) posM.y += pixelOffsetSubpix * lengthSign;
-    return FxaaFloat4(FxaaTexTop(tex, posM).xyz, lumaM);
+    return FxaaTexTop(tex, posM);
 }
 
 vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
     const float fxaa_QualitySubpix = 0.5;
     const float fxaa_QualityEdgeThreshold = 0.125;
     const float fxaa_QualityEdgeThresholdMin = 0.0833;
-    vec4 c = FxaaPixelShader_(
+
+    return FxaaPixelShader_(
         texCoord,
         texture,
         vec2(1.0) / texSize,
         fxaa_QualitySubpix,
         fxaa_QualityEdgeThreshold,
-        fxaa_QualityEdgeThresholdMin);
-    float alpha = texture2D(texture, texCoord).a;
-    return vec4(c.rgb, alpha);
+        fxaa_QualityEdgeThresholdMin
+    );
 }
 `;
 

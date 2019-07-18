@@ -433,10 +433,11 @@ export default class Framebuffer extends Resource {
         // behavior we always disable mipmaps.
         mipmaps: false,
         // Set MIN and MAG filtering parameters so mipmaps are not used in sampling.
+        // Use LINEAR so subpixel algos like fxaa work.
         // Set WRAP modes that support NPOT textures too.
         parameters: {
-          [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-          [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+          [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
+          [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
           [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
           [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
         }
