@@ -6,6 +6,7 @@
   ],
   "exclude": [
     "modules/script/",
-    "modules/test-utils/"
+    "modules/test-utils/",
+    "**/test/"
   ]
 }
