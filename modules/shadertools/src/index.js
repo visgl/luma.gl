@@ -7,7 +7,11 @@ import MODULAR_VS from './shaders/modular-vertex.glsl';
 import MODULAR_FS from './shaders/modular-fragment.glsl';
 
 // DOCUMENTED APIS
-export {registerShaderModules, setDefaultShaderModules} from './lib/resolve-modules';
+export {
+  registerShaderModules,
+  setDefaultShaderModules,
+  getDefaultShaderModules
+} from './lib/resolve-modules';
 export {assembleShaders, createShaderHook, createModuleInjection} from './lib/assemble-shaders';
 
 // HELPERS
