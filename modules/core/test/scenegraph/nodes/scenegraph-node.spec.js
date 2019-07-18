@@ -83,7 +83,7 @@ test('ScenegraphNode#setMatrixComponents', t => {
   const rotation = new Vector3(2, 2, 2);
   const scale = new Vector3(3, 3, 3);
 
-  sgNode.setMatrixComponents({position, rotation, scale, update: false});
+  sgNode.setMatrixComponents({update: false});
   t.deepEqual(sgNode.matrix, new Matrix4(), 'should not update the matrix');
 
   sgNode.setMatrixComponents({position, rotation, scale});
@@ -104,6 +104,9 @@ test('ScenegraphNode#update', t => {
   const position = new Vector3(1, 1, 1);
   const rotation = new Vector3(2, 2, 2);
   const scale = new Vector3(3, 3, 3);
+
+  sgNode.update();
+  t.deepEqual(sgNode.matrix, new Matrix4(), 'should update the matrix');
 
   sgNode.update({position, rotation, scale});
   t.deepEqual(

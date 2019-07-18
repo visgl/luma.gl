@@ -24,8 +24,11 @@ import {Matrix4} from 'math.gl';
 
 test('CameraNode#constructor', t => {
   const projectionMatrix = new Matrix4().scale(2);
-  const cNode = new CameraNode({projectionMatrix});
+  let cNode = new CameraNode();
+  t.ok(cNode instanceof CameraNode, 'construction with no props successful');
 
+  cNode = null;
+  cNode = new CameraNode({projectionMatrix});
   t.ok(cNode instanceof CameraNode, 'construction successful');
   t.equal(cNode.projectionMatrix, projectionMatrix, 'constructor should set projectionMatrix');
 
