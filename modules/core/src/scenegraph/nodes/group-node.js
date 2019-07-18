@@ -1,12 +1,15 @@
 import {Matrix4} from 'math.gl';
-import {log, assert} from '../../utils';
+import {log} from '../../utils';
 import ScenegraphNode from './scenegraph-node';
 
 export default class GroupNode extends ScenegraphNode {
   constructor(props = {}) {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
-    children.every(child => assert(child instanceof ScenegraphNode));
+    log.assert(
+      children.every(child => child instanceof ScenegraphNode),
+      'every child must an instance of ScenegraphNode'
+    );
     super(props);
     this.children = children;
   }

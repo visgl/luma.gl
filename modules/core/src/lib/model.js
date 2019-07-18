@@ -8,7 +8,7 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const LOG_DRAW_PRIORITY = 2;
 
 export default class Model extends BaseModel {
-  constructor(gl, props) {
+  constructor(gl, props = {}) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
     super(gl, {...props, id});

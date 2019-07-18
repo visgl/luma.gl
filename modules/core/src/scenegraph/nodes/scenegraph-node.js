@@ -2,7 +2,7 @@ import {Vector3, Matrix4} from 'math.gl';
 import {assert, uid} from '../../utils';
 
 export default class ScenegraphNode {
-  constructor(props) {
+  constructor(props = {}) {
     const {id} = props;
 
     this.id = id || uid(this.constructor.name);
@@ -117,6 +117,7 @@ export default class ScenegraphNode {
   }
 
   // TODO - copied code, not yet vetted
+  /*
   transform() {
     if (!this.parent) {
       this.endPosition.set(this.position);
@@ -136,6 +137,7 @@ export default class ScenegraphNode {
 
     return this;
   }
+  */
 
   _setScenegraphNodeProps(props) {
     if ('display' in props) {
@@ -146,7 +148,7 @@ export default class ScenegraphNode {
       this.setPosition(props.position);
     }
     if ('rotation' in props) {
-      this.setPosition(props.rotation);
+      this.setRotation(props.rotation);
     }
     if ('scale' in props) {
       this.setScale(props.scale);
