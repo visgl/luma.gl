@@ -6,7 +6,7 @@ export default class GroupNode extends ScenegraphNode {
   constructor(props = {}) {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
-    children.every(child => assert(child instanceof ScenegraphNode));
+    assert(children.every(child => child instanceof ScenegraphNode));
     super(props);
     this.children = children;
   }
