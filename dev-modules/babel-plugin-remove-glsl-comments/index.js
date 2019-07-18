@@ -1,5 +1,4 @@
 const minimatch = require('minimatch');
-const {resolve} = require('path');
 
 // inline comment is only safe to remove if it's followed by a return (i.e. end of comment)
 const INLINE_COMMENT_REGEX = /\s*\/\/.*[\n\r]/g;
@@ -33,9 +32,6 @@ function filterFile(state) {
   const patterns = state.opts.patterns || DEFAULT_PATTERNS;
 
   return patterns.some(p => {
-    if (p[0] === '.') {
-      p = resolve(p);
-    }
     return minimatch(filename, p);
   });
 }

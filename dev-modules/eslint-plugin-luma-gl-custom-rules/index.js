@@ -1,21 +1,5 @@
 module.exports = {
   rules: {
-    'check-log-call': {
-      create: context => {
-        return {
-          CallExpression: node => {
-            if (
-              node.callee &&
-              node.callee.object &&
-              node.callee.object.name === 'log' &&
-              node.parent &&
-              node.parent.type !== 'CallExpression'
-            ) {
-              context.report(node, `Use log.${node.callee.property.name}(...)()`);
-            }
-          }
-        };
-      }
-    }
+    'check-log-call': require('./check-log-call')
   }
 };
