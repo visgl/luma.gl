@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import ShaderModule from '@luma.gl/shadertools/lib/shader-module';
+import ShaderModule, {normalizeShaderModule} from '@luma.gl/shadertools/lib/shader-module';
 
 test('ShaderModule', t => {
   let shaderModule = new ShaderModule({name: 'empty-shader-module'});
@@ -65,6 +65,49 @@ void main() {
     'log.deprecated called'
   );
   t.deepEqual(log.removedCalled[0], ['viewMatrix', 'uViewMatrix'], 'log.removed called');
+
+  t.end();
+});
+
+test('normalizeShaderModule', t => {
+  const module = {
+    name: 'test-shader-module',
+    uniforms: {
+      center: [0.5, 0.5],
+      strength: {type: 'number', value: 0.3, min: 0, max: 1},
+      enabled: false,
+      sampler: null,
+      range: {value: new Float32Array([0, 1]), private: true}
+    }
+  };
+  normalizeShaderModule(module);
+
+  t.deepEqual(module.getUniforms(), {
+    center: [0.5, 0.5],
+    strength: 0.3,
+    enabled: false,
+    sampler: null,
+    range: [0, 1]
+  });
+
+  t.deepEqual(
+    module.getUniforms({
+      center: new Float32Array([0, 0]),
+      sampler: {},
+      range: [0, 2]
+    }),
+    {
+      center: [0, 0],
+      strength: 0.3,
+      enabled: false,
+      sampler: {},
+      range: [0, 1]
+    }
+  );
+
+  t.throws(() => module.getUniforms({strength: -1}), 'invalid uniform');
+  t.throws(() => module.getUniforms({strength: 2}), 'invalid uniform');
+  t.throws(() => module.getUniforms({center: 0.5}), 'invalid uniform');
 
   t.end();
 });
