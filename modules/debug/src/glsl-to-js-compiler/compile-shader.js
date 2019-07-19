@@ -71,7 +71,6 @@ export function compileFragmentShader(shaderName, source) {
 
   const compileFS = Compiler({
     uniform: name => `uniforms.${name}`,
-    attribute: name => `attributes.${name}`,
     varying: name => `varyings.${name}`,
     version: getVersion(source)
   });

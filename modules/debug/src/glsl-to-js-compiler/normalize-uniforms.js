@@ -18,22 +18,24 @@ const LENGTH_BY_TYPE = {
  * e.g. a vec2[16] uniform can be set with a Float32Array[32] in WebGL
  * but it has to be converted to Array[16] for the transpiled shader code
  */
-export function normalizeUniform(value, dimensions) {
-  const len = dimensions[1];
-  const dim = dimensions[0];
+const normalizeUniform = `
+  function normalizeUniform(value, dimensions) {
+    const len = dimensions[1];
+    const dim = dimensions[0];
 
-  if (value.length !== dim) {
-    const newValue = [];
-    for (let i = 0; i < dim; i++) {
-      newValue[i] = [];
-      for (let j = 0; j < len; j++) {
-        newValue[i][j] = value[i * len + j];
+    if (value.length !== dim) {
+      const newValue = [];
+      for (let i = 0; i < dim; i++) {
+        newValue[i] = [];
+        for (let j = 0; j < len; j++) {
+          newValue[i][j] = value[i * len + j];
+        }
       }
+      return newValue;
     }
-    return newValue;
+    return value;
   }
-  return value;
-}
+`;
 
 /**
  * Given a list of uniform definitions, return source code for normalization
@@ -50,7 +52,7 @@ export function getUniformNormalizer(uniforms) {
   }
 
   if (result) {
-    result = `${normalizeUniform.toString()}\n${result}`;
+    result = `${normalizeUniform}\n${result}`;
   }
 
   return result;

@@ -66,7 +66,8 @@ const gl = createGLContext(options);
 | ---                     | ---     | ---    | ---         |
 | `webgl2`                | `true`  | N/A    | If `true`, will attempt to create a WebGL2 context. Will silently fall back to WebGL1 contexts unless `webgl1` is set to `false`. |
 | `webgl1`                | `true`  | `true` | If `true`, will attempt to create a WebGL1 context. The `webgl2` flag has higher priority. |
-| `throwOnError`          | `true`  | `true` | Normally `createGLContext` will throw an error on failure. If `false`, it will return `null` instead. |
+| `throwOnError`          | `true`  | `true` | Normally the context will throw an error on failure. If `false`, it will log to console instead. |
+| `break`          | `[]`  | N/A | Insert a break point (`debugger`) if one of the listed gl functions is called. |
 | `manageState`           | `true`  | `true` | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to. |
 | *Browser-only*            |         |        | |
 | `debug`                 | `false` | N/A    | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. Note the enabling debug mode has a signficant performance impact. |

@@ -124,7 +124,7 @@ export function instrumentGLContext(gl, options = {}) {
     if (!global.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
-      gl = global.makeDebugContext(gl, {debug});
+      gl = global.makeDebugContext(gl, options);
       // Debug forces log level to at least 1
       log.priority = Math.max(log.priority, 1);
     }
