@@ -22,14 +22,13 @@ export default class Geometry {
     const {
       id = uid('geometry'),
       drawMode = DRAW_MODE.TRIANGLES,
-      mode,
       attributes = {},
       indices = null,
       vertexCount = null
     } = props;
 
     this.id = id;
-    this.drawMode = drawMode | 0 || mode | 0;
+    this.drawMode = drawMode | 0;
     this.attributes = {};
     this.userData = {};
 
@@ -88,18 +87,24 @@ export default class Geometry {
         `${this._print(attributeName)}: must be typed array or object with value as typed array`
       );
 
+      if ((attributeName === 'POSITION' || attributeName === 'positions') && !attribute.size) {
+        attribute.size = 3;
+      }
+
       // Move indices to separate field
       if (attributeName === 'indices') {
         assert(!this.indices);
         this.indices = attribute;
-        if (this.indices.isIndexed !== undefined) {
-          this.indices = Object.assign({}, this.indices);
-          delete this.indices.isIndexed;
-        }
       } else {
         this.attributes[attributeName] = attribute;
       }
     }
+
+    if (this.indices && this.indices.isIndexed !== undefined) {
+      this.indices = Object.assign({}, this.indices);
+      delete this.indices.isIndexed;
+    }
+
     return this;
   }
 
@@ -113,14 +118,6 @@ export default class Geometry {
       const {value, size, constant} = attribute;
       if (!constant && value && size >= 1) {
         vertexCount = Math.min(vertexCount, value.length / size);
-      }
-    }
-
-    // TODO - Magic, should this be removed?
-    if (!Number.isFinite(vertexCount)) {
-      const attribute = attributes.POSITION || attributes.positions;
-      if (attribute) {
-        vertexCount = attribute.value && attribute.value.length / (attribute.size || 3);
       }
     }
 
