@@ -1,33 +1,53 @@
 import './fp64/fp64-arithmetic-transform.spec';
-import '../../src/modules/lights/test/lights.spec';
-import '../../src/modules/picking/test/picking.spec';
+import './lights/lights.spec';
+import './picking/picking.spec';
 import './phong-lighting/phong-lighting.spec';
 
-import {
-  registerShaderModules,
-  setDefaultShaderModules,
-  fp32,
-  fp64,
-  project,
-  // lighting,
-  dirlight,
-  picking,
-  diffuse
-} from '@luma.gl/shadertools';
+import {registerShaderModules, setDefaultShaderModules} from '@luma.gl/shadertools';
+import shaderModules from '@luma.gl/shadertools/modules';
 
 import test from 'tape-catch';
+
+function getUniformType(value) {
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value === 'boolean') {
+    return 'bool';
+  }
+  if (Number.isFinite(value)) {
+    return 'number';
+  }
+  if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+    return 'array';
+  }
+  return 'unknown';
+}
+
+function verifyShaderModule(t, module) {
+  t.ok(module, `${module.name} imported`);
+
+  if (module.getUniforms) {
+    const uniforms = module.getUniforms();
+    let isUniformsVaid = true;
+    for (const key in uniforms) {
+      if (getUniformType(uniforms[key]) === 'unknown') {
+        isUniformsVaid = false;
+        // console.log(uniforms);
+        break;
+      }
+    }
+    t.ok(isUniformsVaid, `${module.name} getUniforms returns valid default values`);
+  }
+}
 
 test('shadertools#module imports are defined', t => {
   t.ok(registerShaderModules, 'registerShaderModules is defined');
   t.ok(setDefaultShaderModules, 'setDefaultShaderModules is defined');
-  t.ok(fp32, 'fp32 is defined');
-  t.ok(fp64, 'fp64 is defined');
-  t.ok(project, 'project is defined');
-  // TODO: looks like lighting is not correctly imported and we should be using
-  // deck.gl lighting module, disabling this failing test.
-  // t.ok(lighting, 'lighting is defined');
-  t.ok(dirlight, 'dirlight is defined');
-  t.ok(picking, 'picking is defined');
-  t.ok(diffuse, 'diffuse is defined');
+
+  for (const name in shaderModules) {
+    verifyShaderModule(t, shaderModules[name]);
+  }
+
   t.end();
 });
