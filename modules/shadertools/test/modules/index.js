@@ -5,6 +5,7 @@ import './phong-lighting/phong-lighting.spec';
 
 import {registerShaderModules, setDefaultShaderModules} from '@luma.gl/shadertools';
 import shaderModules from '@luma.gl/shadertools/modules';
+import ShaderModule from '@luma.gl/shadertools/lib/shader-module';
 
 import test from 'tape-catch';
 
@@ -25,20 +26,19 @@ function getUniformType(value) {
 }
 
 function verifyShaderModule(t, module) {
+  module = new ShaderModule(module);
   t.ok(module, `${module.name} imported`);
 
-  if (module.getUniforms) {
-    const uniforms = module.getUniforms();
-    let isUniformsVaid = true;
-    for (const key in uniforms) {
-      if (getUniformType(uniforms[key]) === 'unknown') {
-        isUniformsVaid = false;
-        // console.log(uniforms);
-        break;
-      }
+  const uniforms = module.getUniforms();
+  let isUniformsVaid = true;
+  for (const key in uniforms) {
+    if (getUniformType(uniforms[key]) === 'unknown') {
+      isUniformsVaid = false;
+      // console.log(uniforms);
+      break;
     }
-    t.ok(isUniformsVaid, `${module.name} getUniforms returns valid default values`);
   }
+  t.ok(isUniformsVaid, `${module.name} getUniforms returns valid default values`);
 }
 
 test('shadertools#module imports are defined', t => {

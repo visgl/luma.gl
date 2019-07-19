@@ -122,9 +122,25 @@ test('assembleShaders#getUniforms', t => {
   t.end();
 });
 
+test('assembleShaders#defines', t => {
+  const assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    defines: {IS_TEST: true}
+  });
+
+  t.ok(assembleResult.vs.indexOf('#define IS_TEST true') > 0, 'has application defines');
+  t.ok(assembleResult.fs.indexOf('#define IS_TEST true') > 0, 'has application defines');
+
+  t.end();
+});
+
 test('assembleShaders#shaderhooks', t => {
   createShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
-  createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
+  createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
+    header: 'if (color.a == 0.0) discard;\n',
+    footer: 'color.a *= 1.2;\n'
+  });
 
   createModuleInjection('picking', {
     hook: 'vs:LUMAGL_pickColor',
@@ -154,7 +170,11 @@ test('assembleShaders#shaderhooks', t => {
   );
   t.ok(
     assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
-    'hook function injected into fragment shader shader'
+    'hook function injected into fragment shader'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('if (color.a == 0.0) discard;') > -1,
+    'hook header injected into fragment shader'
   );
   t.ok(
     assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1,
@@ -182,7 +202,7 @@ test('assembleShaders#shaderhooks', t => {
   );
   t.ok(
     assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
-    'hook function injected into fragment shader shader'
+    'hook function injected into fragment shader'
   );
   t.ok(
     assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1,
@@ -191,6 +211,11 @@ test('assembleShaders#shaderhooks', t => {
   t.ok(
     assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
     'injection code included in fragment shader with module'
+  );
+  t.ok(
+    assembleResult.fs.indexOf('color.a *= 1.2;') >
+      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
+    'hook footer injected after injection code'
   );
   t.ok(
     assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') > -1,

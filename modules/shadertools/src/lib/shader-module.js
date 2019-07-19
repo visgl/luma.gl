@@ -41,10 +41,6 @@ export default class ShaderModule {
         assert(false);
     }
 
-    if (typeof moduleSource !== 'string') {
-      return '';
-    }
-
     return `\
 #define MODULE_${this.name.toUpperCase()}
 ${moduleSource}\
@@ -65,16 +61,16 @@ ${moduleSource}\
   checkDeprecations(shaderSource, log) {
     this.deprecations.forEach(def => {
       if (def.regex.test(shaderSource)) {
-        if (def.deprecated && log) {
+        if (def.deprecated) {
           log.deprecated(def.old, def.new)();
-        } else if (log) {
+        } else {
           log.removed(def.old, def.new)();
         }
       }
     });
   }
 
-  _parseDeprecationDefinitions(deprecations = []) {
+  _parseDeprecationDefinitions(deprecations) {
     deprecations.forEach(def => {
       switch (def.type) {
         case 'function':

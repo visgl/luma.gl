@@ -31,8 +31,10 @@ const VS_GLSL_RESOLVED_DECL = 'uniform float uNewUniform';
 
 const VS_GLSL_RESOLVED_MAIN = `\
 void main(void) {
+  vNew = uNewUniform;
   gl_Position = positions;
   vColor = vec4(1., 0., 0., 1.);
+  picking_setPickColor(color);
 }
 `;
 
@@ -65,6 +67,15 @@ void main(void) {
 
 const INJECT = {
   'vs:#decl': 'uniform float uNewUniform;\n',
+  'vs:#main-start': 'vNew = uNewUniform;\n',
+  'vs:#main-end': 'picking_setPickColor(color);\n',
+  'fs:#decl': 'uniform bool uDiscard;\n',
+  'fs:#main-start': '  if (uDiscard} { discard } else {\n',
+  'fs:#main-end': '  }\n'
+};
+
+const INJECT1 = {
+  'vs:#decl': 'uniform float uNewUniform;\n',
   'fs:#decl': 'uniform bool uDiscard;\n',
   'fs:#main-start': '  if (uDiscard} { discard } else {\n',
   'fs:#main-end': '  }\n'
@@ -92,7 +103,7 @@ test('injectShader#import', t => {
 test('injectShader#injectShader', t => {
   let injectResult;
 
-  injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', injectionData(INJECT));
+  injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', injectionData(INJECT), true);
   t.ok(
     fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL),
     'declarations correctly injected in vertex shader'
@@ -101,8 +112,9 @@ test('injectShader#injectShader', t => {
     fuzzySubstring(injectResult, VS_GLSL_RESOLVED_MAIN),
     'main correctly injected in vertex shader'
   );
+  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
 
-  injectResult = injectShader(FS_GLSL_TEMPLATE, 'fs', injectionData(INJECT));
+  injectResult = injectShader(FS_GLSL_TEMPLATE, 'fs', injectionData(INJECT), true);
   t.ok(
     fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL),
     'declarations correctly injected in vertex shader'
@@ -111,6 +123,7 @@ test('injectShader#injectShader', t => {
     fuzzySubstring(injectResult, FS_GLSL_RESOLVED_MAIN),
     'main correctly injected in vertex shader'
   );
+  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
 
   t.end();
 });
@@ -144,7 +157,7 @@ test('injectShader#assembleShaders', t => {
 });
 
 test('injectShader#combineInjects', t => {
-  t.deepEqual(combineInjects([INJECT, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
+  t.deepEqual(combineInjects([INJECT1, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
   t.end();
 });
 
