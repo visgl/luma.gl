@@ -1,7 +1,5 @@
-export const name = 'fog';
-
 /* eslint-disable camelcase */
-export function getUniforms({
+function getUniforms({
   fogEnable = false,
   fogColor = [0.5, 0.5, 0.5],
   fogNear = 1,
@@ -15,9 +13,7 @@ export function getUniforms({
   };
 }
 
-export const vs = '';
-
-export const fs = `\
+const fs = `\
 // fog configuration
 uniform bool fog_uEnable;
 uniform vec3 fog_uColor;
@@ -42,3 +38,10 @@ vec4 fog_filterColor(vec4 color) {
 // Other fog shaders, exponential etc, see
 // http://in2gpu.com/2014/07/22/create-fog-shader/
 `;
+
+export default {
+  name: 'fog',
+  getUniforms,
+  vs: '',
+  fs
+};

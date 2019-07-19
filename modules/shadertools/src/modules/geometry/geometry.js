@@ -1,13 +1,5 @@
 // Cheap lighting - single directional light, single dot product, one uniform
 
-/* eslint-disable camelcase */
-const DEFAULT_MODULE_OPTIONS = {};
-
-function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
-  const uniforms = {};
-  return uniforms;
-}
-
 // TODO - reuse normal from geometry module
 const vs = `\
 varying vec4 geometry_vPosition;
@@ -42,6 +34,5 @@ vec3 geometry_getNormal() {
 export default {
   name: 'geometry',
   vs,
-  fs,
-  getUniforms
+  fs
 };
