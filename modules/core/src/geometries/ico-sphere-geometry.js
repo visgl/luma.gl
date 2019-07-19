@@ -20,7 +20,7 @@ export default class IcoSphereGeometry extends Geometry {
   }
 }
 
-function tesselateIcosaHedron(props = {}) {
+function tesselateIcosaHedron(props) {
   const {iterations = 0} = props;
 
   const PI = Math.PI;
@@ -80,8 +80,8 @@ function tesselateIcosaHedron(props = {}) {
   }
 
   // Calculate texCoords and normals
-  const normals = new Array(indices.length * 3);
-  const texCoords = new Array(indices.length * 2);
+  const normals = new Array(positions.length);
+  const texCoords = new Array((positions.length / 3) * 2);
 
   const l = indices.length;
   for (let i = l - 3; i >= 0; i -= 3) {

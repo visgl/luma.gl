@@ -26,8 +26,8 @@ function tesselatePlane(props) {
 
   const coords = type.split(',');
   // width, height
-  let c1len = props[`${coords[0]}len`];
-  const c2len = props[`${coords[1]}len`];
+  let c1len = props[`${coords[0]}len`] || 1;
+  const c2len = props[`${coords[1]}len`] || 1;
   // subdivisionsWidth, subdivisionsDepth
   const subdivisions1 = props[`n${coords[0]}`] || 1;
   const subdivisions2 = props[`n${coords[1]}`] || 1;
@@ -82,7 +82,7 @@ function tesselatePlane(props) {
           break;
 
         default:
-          break;
+          throw new Error('PlaneGeometry: unknown type');
       }
 
       i2 += 2;
