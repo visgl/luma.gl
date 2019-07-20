@@ -6,9 +6,17 @@ test('shadertools#phonglighting', t => {
   t.deepEqual(uniforms, {}, `Default phong lighting uniforms ok`);
 
   uniforms = phonglighting.getUniforms({
-    material: {ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: 0.0}
+    material: {ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]}
   });
-  t.equal(uniforms.lighting_uEnabled, undefined, `Not enable lighting flag with only material`);
+  t.equal(
+    uniforms.lighting_uEnabled,
+    undefined,
+    `Does not enable lighting flag with only material`
+  );
+  t.is(uniforms.lighting_uAmbient, 0, `lighting_uAmbient`);
+  t.is(uniforms.lighting_uDiffuse, 0, `lighting_uDiffuse`);
+  t.is(uniforms.lighting_uShininess, 0, `lighting_uShininess`);
+  t.deepEqual(uniforms.lighting_uSpecularColor, [1, 0, 0], `lighting_uSpecularColor`);
 
   uniforms = phonglighting.getUniforms({
     material: null
