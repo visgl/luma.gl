@@ -13,7 +13,8 @@ export default class ClearPass extends Pass {
 
   // TODO - add support for colors, align with model.clear and framebuffer.clear
   // TODO - integrate with luma.gl clear, make sure right buffer is cleared
-  _renderPass({gl}) {
+  _renderPass() {
+    const {gl} = this;
     const {clearBits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT} = this.props;
     gl.clear(clearBits);
   }
