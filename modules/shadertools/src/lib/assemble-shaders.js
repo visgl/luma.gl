@@ -49,7 +49,7 @@ export function createModuleInjection(moduleName, opts) {
 }
 
 // Inject a list of modules
-export function assembleShaders(gl, opts = {}) {
+export function assembleShaders(gl, opts) {
   const {vs, fs} = opts;
   const modules = resolveModules(opts.modules || []);
   return {
@@ -65,7 +65,7 @@ export function assembleShaders(gl, opts = {}) {
 // adding prologues, requested module chunks, and any final injections.
 function assembleShader(
   gl,
-  {id, source, type, modules = [], defines = {}, inject = {}, prologue = true, log}
+  {id, source, type, modules, defines = {}, inject = {}, prologue = true, log}
 ) {
   assert(typeof source === 'string', 'shader source must be a string');
 
@@ -133,7 +133,9 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         break;
 
       default:
-        module.checkDeprecations(coreSource, log);
+        if (log) {
+          module.checkDeprecations(coreSource, log);
+        }
         const moduleSource = module.getModuleSource(type, glslVersion);
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;

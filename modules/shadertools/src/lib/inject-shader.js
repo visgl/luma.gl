@@ -75,7 +75,7 @@ export default function injectShader(source, type, inject, injectStandardStubs) 
 
   // Finally, if requested, insert an automatic module injector chunk
   if (injectStandardStubs) {
-    source = source.replace('}s*$', match => match + MODULE_INJECTORS[type]);
+    source = source.replace(/\}\s*$/, match => match + MODULE_INJECTORS[type]);
   }
 
   return source;

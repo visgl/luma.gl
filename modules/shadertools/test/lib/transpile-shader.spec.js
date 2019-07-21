@@ -275,5 +275,8 @@ test('transpileShader#versions', t => {
 
   assembleResult = transpileShader(FS_GLSL_300, 300, false);
   t.equal(assembleResult, FS_GLSL_300_transpiled, 'correctly transpiled');
+
+  t.throws(() => transpileShader(VS_GLSL_300, 400, true), /version/, 'unknown glsl version');
+
   t.end();
 });
