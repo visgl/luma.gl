@@ -28,7 +28,7 @@ test('Pass#constructor#customProps', t => {
   t.end();
 });
 
-test('Pass#constructor#setProps', t => {
+test('Pass#setProps', t => {
   const {gl} = fixture;
   const pass = new Pass(gl);
   pass.setProps(CUSTOM_PROPS);
@@ -38,7 +38,7 @@ test('Pass#constructor#setProps', t => {
   t.end();
 });
 
-test('Pass#constructor#render (disabled)', t => {
+test('Pass#render (disabled)', t => {
   const {gl} = fixture;
   const pass = new Pass(gl);
   const renderPassSpy = makeSpy(pass, '_renderPass');
@@ -49,7 +49,7 @@ test('Pass#constructor#render (disabled)', t => {
   t.end();
 });
 
-test('Pass#constructor#render (screen)', t => {
+test('Pass#render (screen)', t => {
   const {gl} = fixture;
   const pass = new Pass(gl);
   const renderPassSpy = makeSpy(pass, '_renderPass');
@@ -69,7 +69,7 @@ test('Pass#constructor#render (screen)', t => {
   t.end();
 });
 
-test('Pass#constructor#render (swap)', t => {
+test('Pass#render (swap)', t => {
   const {gl} = fixture;
   const pass = new Pass(gl);
   const renderPassSpy = makeSpy(pass, '_renderPass');

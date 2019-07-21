@@ -21,7 +21,7 @@ test('StencilPass#constructor', t => {
 test('StencilPass#_renderPass', t => {
   const {gl} = fixture;
 
-  const rp = new StencilPass(gl, {models: [new Model(gl)]});
+  const rp = new StencilPass(gl, {models: [new Model(gl)], stencils: [0], clearStencil: true});
 
   t.doesNotThrow(() => rp._renderPass({}), 'render should work');
   t.end();
