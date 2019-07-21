@@ -16,7 +16,7 @@ export {assembleShaders, createShaderHook, createModuleInjection} from './lib/as
 
 // HELPERS
 export {combineInjects} from './lib/inject-shader';
-export {normalizeShaderModule} from './lib/filters/normalize-module';
+export {normalizeShaderModule} from './lib/shader-module';
 
 // UTILS
 export {
@@ -33,5 +33,5 @@ export * from './modules';
 export const MODULAR_SHADERS = {
   vs: MODULAR_VS,
   fs: MODULAR_FS,
-  defaultUniforms: {}
+  uniforms: {}
 };
