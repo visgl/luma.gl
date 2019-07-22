@@ -28,7 +28,7 @@ function getMaterialUniforms(material) {
   materialUniforms.lighting_uAmbient = material.ambient;
   materialUniforms.lighting_uDiffuse = material.diffuse;
   materialUniforms.lighting_uShininess = material.shininess;
-  materialUniforms.lighting_uSpecularColor = material.specularColor;
+  materialUniforms.lighting_uSpecularColor = material.specularColor.map(x => x / 255);
   return materialUniforms;
 }
 
