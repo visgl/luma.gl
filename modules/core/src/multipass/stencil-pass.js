@@ -23,7 +23,8 @@ export default class StencilPass extends Pass {
     this.setProps(props);
   }
 
-  _renderPass({gl, inputBuffer, outputBuffer, animationPropst}) {
+  _renderPass({inputBuffer, outputBuffer, animationPropst}) {
+    const {gl} = this;
     const stencilReadMask = getMask(this.props.stencils);
     const stencilWriteMask = getMask(this.props.updateStencil);
 

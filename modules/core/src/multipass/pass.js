@@ -7,7 +7,7 @@
 import {Framebuffer, withParameters} from '@luma.gl/webgl';
 
 export default class Pass {
-  constructor(gl, props) {
+  constructor(gl, props = {}) {
     const {id = 'pass'} = props;
     this.id = id; // id of this pass
     this.gl = gl;
@@ -34,6 +34,8 @@ export default class Pass {
       swapBuffers: () => renderState._swapFramebuffers()
     };
 
+    // TODO: Calirfy/Fix : is `screen` or `swap` must be true at this point
+    // if so comment. We can also remove `enabled` from props and deduce that based on these two flags
     if (this.props.screen) {
       renderParams.inputBuffer = renderParams.outputBuffer;
       renderParams.outputBuffer = Framebuffer.getDefaultFramebuffer(gl);

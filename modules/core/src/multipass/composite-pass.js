@@ -7,7 +7,7 @@
 import Pass from './pass';
 
 export default class CompositePass extends Pass {
-  constructor(gl, props) {
+  constructor(gl, props = {}) {
     props = Array.isArray(props) ? {passes: props} : props;
     super(gl, Object.assign({id: 'composite-pass'}, props));
   }

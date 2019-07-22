@@ -41,16 +41,17 @@ export default class ShaderModulePass extends CompositePass {
 
   _renderPass({inputBuffer, swapBuffers}) {
     let first = true;
-    for (const pass of this.module.passes) {
+    for (const pass of this.props.passes) {
       if (!first) {
         swapBuffers();
       }
       first = false;
-      if (pass.uniforms) {
-        pass.model.setUniforms(pass.uniforms);
+      const {uniforms, model} = pass.props;
+      if (uniforms) {
+        model.setUniforms(uniforms);
       }
       // swapBuffers();
-      pass.model.draw({
+      model.draw({
         uniforms: {
           texture: inputBuffer,
           texSize: [inputBuffer.width, inputBuffer.height]

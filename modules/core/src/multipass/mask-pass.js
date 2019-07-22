@@ -7,7 +7,7 @@
 import Pass from './pass';
 
 export default class MaskPass extends Pass {
-  constructor(gl, props) {
+  constructor(gl, props = {}) {
     super(gl, Object.assign({id: 'mask-pass'}, props));
     this.inverse = false;
     this.clearStencil = true;

@@ -10,7 +10,7 @@ const fs = `\
 uniform float radius;
 uniform vec2 delta;
 
-vec4 edgeWork_sampleColor1(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 relativeDelta = radius * delta / texSize;
 
   vec2 color = vec2(0.0);
@@ -22,8 +22,8 @@ vec4 edgeWork_sampleColor1(sampler2D texture, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec3 sample = texture2D(texture, texCoord + relativeDelta * percent).rgb;
-    float average = (sample.r + sample.g + sample.b) / 3.0;
+    vec3 sampleColor = texture2D(source, texCoord + relativeDelta * percent).rgb;
+    float average = (sampleColor.r + sampleColor.g + sampleColor.b) / 3.0;
     color.x += average * weight;
     total.x += weight;
     if (abs(t) < 15.0) {
@@ -35,7 +35,7 @@ vec4 edgeWork_sampleColor1(sampler2D texture, vec2 texSize, vec2 texCoord) {
   return vec4(color / total, 0.0, 1.0);
 }
 
-vec4 edgeWork_sampleColor2(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 relativeDelta = radius * delta / texSize;
 
   vec2 color = vec2(0.0);
@@ -47,12 +47,12 @@ vec4 edgeWork_sampleColor2(sampler2D texture, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec2 sample = texture2D(texture, texCoord + relativeDelta * percent).xy;
-    color.x += sample.x * weight;
+    vec2 sampleColor = texture2D(source, texCoord + relativeDelta * percent).xy;
+    color.x += sampleColor.x * weight;
     total.x += weight;
     if (abs(t) < 15.0) {
       weight = weight * 2.0 - 1.0;
-      color.y += sample.y * weight;
+      color.y += sampleColor.y * weight;
       total.y += weight;
     }
   }
