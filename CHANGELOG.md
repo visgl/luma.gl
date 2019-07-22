@@ -1,3 +1,23 @@
+## v7.2.0-alpha.4
+
+- fix lighting module color format (#1174)
+- Core: Add unit tests (transfromutils and multipass)
+- Improve shadertools test coverage (#1172)
+- Geometry bug fixes & tests (#1171)
+- Clean up shader module tests (#1170)
+- Debug module tests & bug fixes (#1169)
+
+## v7.2.0-alpha.3
+
+- New getDefaultShaderModules API (#1168)
+- Fxaa (#1164)
+- Add unit tests for all Scenegraph classes (#1166)
+- add tests for dev-modules (#1167)
+- Update coverage configs (#1165)
+- support uniform texture and matrix array (#1162)
+- fix texture2D type/dataFormat inference (#1159)
+- remove Texture class's hasFloatTexture property (#1161)
+
 ## v7.2.0-alpha.2
 - Support ImageBitmap in Texture (#1153)
 - Fix injected declarations (#1152)
