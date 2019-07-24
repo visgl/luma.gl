@@ -1,8 +1,8 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Texture2D, loadFile, setParameters} from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
+import {EventManager} from 'mjolnir.js';
 /* eslint-disable complexity */
 
 /*
@@ -48,8 +48,9 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addKeyboardHandler(canvas, currentlyPressedKeys);
-    addMouseHandler(canvas);
+    const eventManager = new EventManager(canvas);
+    addKeyboardHandler(eventManager);
+    addMouseHandler(eventManager);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -106,68 +107,63 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-function addKeyboardHandler(canvas) {
-  addEvents(canvas, {
-    onKeyDown(e) {
-      currentlyPressedKeys[e.code] = true;
+function addKeyboardHandler(eventManager) {
+  eventManager.on({
+    keydown(e) {
+      currentlyPressedKeys[e.srcEvent.code] = true;
     },
-    onKeyUp(e) {
-      currentlyPressedKeys[e.code] = false;
+    keyup(e) {
+      currentlyPressedKeys[e.srcEvent.code] = false;
     }
   });
 }
 
-function addMouseHandler(canvas) {
+function addMouseHandler(eventManager) {
   let mouseDown = false;
   let currentX = 0;
   let currentY = 0;
-  addEvents(canvas, {
-    onDragStart(e) {
+
+  eventManager.on({
+    panstart(e) {
       mouseDown = true;
-      currentX = e.x;
-      currentY = e.y;
+      currentX = e.offsetCenter.x;
+      currentY = e.offsetCenter.y;
     },
-    onDragEnd() {
+    panend() {
       mouseDown = false;
     },
-    onDragMove(e) {
+    panmove(e) {
       if (!mouseDown) {
         return;
       }
-      const dx = e.x - currentX;
-      const dy = e.y - currentY;
+      const dx = e.offsetCenter.x - currentX;
+      const dy = e.offsetCenter.y - currentY;
       cameraInfo.yaw += dx * 0.1;
-      cameraInfo.pitch -= dy * 0.1;
-      currentX = e.x;
-      currentY = e.y;
+      cameraInfo.pitch += dy * 0.1;
+      currentX = e.offsetCenter.x;
+      currentY = e.offsetCenter.y;
     }
   });
 }
 
 function handleKeys() {
-  if (currentlyPressedKeys[33] || currentlyPressedKeys[187]) {
-    // Page Up
+  if (currentlyPressedKeys.PageUp || currentlyPressedKeys.Equal) {
     cameraInfo.pitchRate = 0.1;
-  } else if (currentlyPressedKeys[34] || currentlyPressedKeys[189]) {
-    // Page Down
+  } else if (currentlyPressedKeys.PageDown || currentlyPressedKeys.Minus) {
     cameraInfo.pitchRate = -0.1;
   } else {
     cameraInfo.pitchRate = 0;
   }
-  if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) {
-    // Left cursor key or A
+  if (currentlyPressedKeys.ArrowLeft || currentlyPressedKeys.KeyA) {
     cameraInfo.yawRate = 0.1;
-  } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) {
-    // Right cursor key or D
+  } else if (currentlyPressedKeys.ArrowRight || currentlyPressedKeys.KeyD) {
     cameraInfo.yawRate = -0.1;
   } else {
     cameraInfo.yawRate = 0;
   }
-  if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) {
-    // Up cursor key or W
+  if (currentlyPressedKeys.ArrowUp || currentlyPressedKeys.KeyW) {
     cameraInfo.speed = 0.003;
-  } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) {
-    // Down cursor key
+  } else if (currentlyPressedKeys.ArrowDown || currentlyPressedKeys.KeyS) {
     cameraInfo.speed = -0.003;
   } else {
     cameraInfo.speed = 0;

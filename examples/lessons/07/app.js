@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Texture2D, setParameters, ModelNode, CubeGeometry} from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 export const INFO_HTML = `
@@ -237,33 +236,27 @@ export default class AppAnimationLoop extends AnimationLoop {
 }
 
 function addKeyboardHandler(canvas) {
-  addEvents(canvas, {
-    onKeyDown(e) {
-      switch (e.key) {
-        case 'up':
-          xSpeed -= 0.02;
-          break;
-        case 'down':
-          xSpeed += 0.02;
-          break;
-        case 'left':
-          ySpeed -= 0.02;
-          break;
-        case 'right':
-          ySpeed += 0.02;
-          break;
-        default:
-      }
-
-      switch (e.code) {
-        case 187: // '+'
-          z += 0.05;
-          break;
-        case 189: // '-'
-          z -= 0.05;
-          break;
-        default:
-      }
+  document.addEventListener('keydown', e => {
+    switch (e.code) {
+      case 'ArrowUp':
+        xSpeed -= 0.02;
+        break;
+      case 'ArrowDown':
+        xSpeed += 0.02;
+        break;
+      case 'ArrowLeft':
+        ySpeed -= 0.02;
+        break;
+      case 'ArrowRight':
+        ySpeed += 0.02;
+        break;
+      case 'Equal': // '+'
+        z += 0.05;
+        break;
+      case 'Minus': // '-'
+        z -= 0.05;
+        break;
+      default:
     }
   });
 }

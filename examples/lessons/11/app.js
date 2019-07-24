@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, setParameters, Texture2D, Model, SphereGeometry} from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Vector3, Matrix4} from 'math.gl';
+import {EventManager} from 'mjolnir.js';
 /* eslint-disable complexity */
 
 const INFO_HTML = `
@@ -77,7 +77,8 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addMouseHandler(canvas);
+    const eventManager = new EventManager(canvas);
+    addMouseHandler(eventManager);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -142,32 +143,32 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-function addMouseHandler(canvas) {
-  addEvents(canvas, {
-    onDragStart(event) {
+function addMouseHandler(eventManager) {
+  eventManager.on({
+    panstart(event) {
       appState.mouseDown = true;
-      appState.lastMouseX = event.clientX;
-      appState.lastMouseY = event.clientY;
+      appState.lastMouseX = event.offsetCenter.x;
+      appState.lastMouseY = event.offsetCenter.y;
     },
-    onDragMove(event) {
+    panmove(event) {
       if (!appState.mouseDown) {
         return;
       }
 
       if (appState.lastMouseX !== undefined) {
-        const radiansX = (event.x - appState.lastMouseX) / 300;
-        const radiansY = -(event.y - appState.lastMouseY) / 300;
+        const radiansX = (event.offsetCenter.x - appState.lastMouseX) / 300;
+        const radiansY = (event.offsetCenter.y - appState.lastMouseY) / 300;
 
         const newMatrix = new Matrix4().rotateX(radiansY).rotateY(radiansX);
 
         appState.moonRotationMatrix.multiplyLeft(newMatrix);
       }
 
-      appState.lastMouseX = event.x;
-      appState.lastMouseY = event.y;
+      appState.lastMouseX = event.offsetCenter.x;
+      appState.lastMouseY = event.offsetCenter.y;
     },
 
-    onDragEnd(e) {
+    panend(e) {
       appState.mouseDown = false;
     }
   });

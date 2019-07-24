@@ -7,7 +7,6 @@ import {
   ModelNode,
   CubeGeometry
 } from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -175,36 +174,30 @@ export default class AppAnimationLoop extends AnimationLoop {
 }
 
 function addKeyboardHandler(canvas) {
-  addEvents(canvas, {
-    onKeyDown(e) {
-      switch (e.key) {
-        case 'f':
-          cycleFilter();
-          break;
-        case 'up':
-          xSpeed -= 0.01;
-          break;
-        case 'down':
-          xSpeed += 0.01;
-          break;
-        case 'left':
-          ySpeed -= 0.01;
-          break;
-        case 'right':
-          ySpeed += 0.01;
-          break;
-        default:
-      }
-
-      switch (e.code) {
-        case 187: // '+'
-          z += 0.05;
-          break;
-        case 189: // '-'
-          z -= 0.05;
-          break;
-        default:
-      }
+  document.addEventListener('keydown', e => {
+    switch (e.code) {
+      case 'KeyF':
+        cycleFilter();
+        break;
+      case 'ArrowUp':
+        xSpeed -= 0.01;
+        break;
+      case 'ArrowDown':
+        xSpeed += 0.01;
+        break;
+      case 'ArrowLeft':
+        ySpeed -= 0.01;
+        break;
+      case 'ArrowRight':
+        ySpeed += 0.01;
+        break;
+      case 'Equal': // '+'
+        z += 0.05;
+        break;
+      case 'Minus': // '-'
+        z -= 0.05;
+        break;
+      default:
     }
   });
 }
