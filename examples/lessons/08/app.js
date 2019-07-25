@@ -1,7 +1,6 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Texture2D, setParameters, ModelNode, CubeGeometry} from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -177,7 +176,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addKeyboardHandler(canvas);
+    document.addEventListener('keydown', keyboardEventHandler);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -252,38 +251,34 @@ export default class AppAnimationLoop extends AnimationLoop {
       })
       .draw();
   }
+
+  onFinalize() {
+    document.removeEventListener('keydown', keyboardEventHandler);
+  }
 }
 
-function addKeyboardHandler(canvas) {
-  addEvents(canvas, {
-    onKeyDown(e) {
-      switch (e.key) {
-        case 'up':
-          xSpeed -= 0.02;
-          break;
-        case 'down':
-          xSpeed += 0.02;
-          break;
-        case 'left':
-          ySpeed -= 0.02;
-          break;
-        case 'right':
-          ySpeed += 0.02;
-          break;
-        default:
-      }
-
-      switch (e.code) {
-        case 187: // '+'
-          cubePositionZ += 0.05;
-          break;
-        case 189: // '-'
-          cubePositionZ -= 0.05;
-          break;
-        default:
-      }
-    }
-  });
+function keyboardEventHandler(e) {
+  switch (e.code) {
+    case 'ArrowUp':
+      xSpeed -= 0.02;
+      break;
+    case 'ArrowDown':
+      xSpeed += 0.02;
+      break;
+    case 'ArrowLeft':
+      ySpeed -= 0.02;
+      break;
+    case 'ArrowRight':
+      ySpeed += 0.02;
+      break;
+    case 'Equal': // '+'
+      cubePositionZ += 0.05;
+      break;
+    case 'Minus': // '-'
+      cubePositionZ -= 0.05;
+      break;
+    default:
+  }
 }
 
 /* global window */

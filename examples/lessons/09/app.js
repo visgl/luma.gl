@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Texture2D, setParameters} from '@luma.gl/core';
-import {addEvents} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 import {Star} from './star';
 
@@ -23,7 +22,8 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addKeyboardHandler(canvas);
+    /* global document */
+    document.addEventListener('keydown', keyboardEventHandler);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -48,6 +48,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     return {stars};
   }
+
   onRender({gl, tick, aspect, stars}) {
     // Update Camera Position
     const radTilt = (tilt / 180) * Math.PI;
@@ -70,28 +71,28 @@ export default class AppAnimationLoop extends AnimationLoop {
       stars[i].animate();
     }
   }
+
+  onFinalize() {
+    document.removeEventListener('keydown', keyboardEventHandler);
+  }
 }
 
-function addKeyboardHandler(canvas) {
-  addEvents(canvas, {
-    onKeyDown(e) {
-      switch (e.key) {
-        case 'up':
-          tilt -= 1.5;
-          break;
-        case 'down':
-          tilt += 1.5;
-          break;
-        // handle page up/down
-        default:
-          if (e.code === 33) {
-            zoom -= 0.1;
-          } else if (e.code === 34) {
-            zoom += 0.1;
-          }
-      }
-    }
-  });
+function keyboardEventHandler(e) {
+  switch (e.code) {
+    case 'ArrowUp':
+      tilt -= 1.5;
+      break;
+    case 'ArrowDown':
+      tilt += 1.5;
+      break;
+    case 'PageUp':
+      zoom -= 0.1;
+      break;
+    case 'PageDown':
+      zoom += 0.1;
+      break;
+    default:
+  }
 }
 
 /* global window */

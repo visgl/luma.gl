@@ -61,6 +61,7 @@
     "eslint-plugin-tree-shaking": "^1.7.3",
     "gl": "^4.2.2",
     "mkdirp": "^0.5.1",
+    "mjolnir.js": "^2.1.2",
     "ocular-dev-tools": "0.0.27",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1",
