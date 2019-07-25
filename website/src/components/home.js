@@ -76,7 +76,7 @@ class Home extends Component {
             <p>
               A WebGL2-Powered Framework for GPU-based Visualization and Computation
             </p>
-            <a href="#/documentation/getting-started/overview" className="btn"
+            <a href="#/documentation/overview/introduction" className="btn"
               style={{pointerEvents: 'auto'}}>
               Get started
             </a>
