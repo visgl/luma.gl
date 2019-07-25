@@ -599,7 +599,7 @@ export default class Transform {
     const combinedInject = combineInjects([props.inject || {}, inject]);
     this.targetTextureType = targetTextureType;
     const fs =
-      props.fs ||
+      props._fs ||
       getPassthroughFS({
         version: getShaderVersion(vs),
         input: this.targetTextureVarying,

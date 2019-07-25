@@ -206,6 +206,7 @@ Constructs a `Transform` object. It then creates destination buffers if needed a
 * `props._targetTexture` (`Texture2D` or `String`) - Defines texture object that is used as color attachment for rendering. If `Texture2D` object, it is used as is, if `String`, it must be one of the source texture attributes name, a new texture object is cloned from corresponding texture and used as color attachment.
 * `props._targetTextureVarying` (`String`) : varying name used in vertex shader who's data should go into target texture.
 * `props._swapTexture` (`String`) : source texture attribute name, that is swapped with target texture every time `swap()` is called.
+* `props._fs` (`String`, Optional) - fragment shader string, when rendering to a texture, fragments can be processed using this custom shader, when not specified, pass through fragment shader will be used.
 
 Notes:
 

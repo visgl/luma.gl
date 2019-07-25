@@ -1151,7 +1151,7 @@ void main()
     _targetTextureVarying: 'outTexture',
     _swapTexture: 'inTexture',
     vs,
-    fs,
+    _fs: fs,
     elementCount: sourceData.length
   });
 
