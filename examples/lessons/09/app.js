@@ -22,7 +22,8 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addKeyboardHandler(canvas);
+    /* global document */
+    document.addEventListener('keydown', keyboardEventHandler);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -47,6 +48,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     return {stars};
   }
+
   onRender({gl, tick, aspect, stars}) {
     // Update Camera Position
     const radTilt = (tilt / 180) * Math.PI;
@@ -69,27 +71,28 @@ export default class AppAnimationLoop extends AnimationLoop {
       stars[i].animate();
     }
   }
+
+  onFinalize() {
+    document.removeEventListener('keydown', keyboardEventHandler);
+  }
 }
 
-function addKeyboardHandler(canvas) {
-  /* global document */
-  document.addEventListener('keydown', e => {
-    switch (e.code) {
-      case 'ArrowUp':
-        tilt -= 1.5;
-        break;
-      case 'ArrowDown':
-        tilt += 1.5;
-        break;
-      case 'PageUp':
-        zoom -= 0.1;
-        break;
-      case 'PageDown':
-        zoom += 0.1;
-        break;
-      default:
-    }
-  });
+function keyboardEventHandler(e) {
+  switch (e.code) {
+    case 'ArrowUp':
+      tilt -= 1.5;
+      break;
+    case 'ArrowDown':
+      tilt += 1.5;
+      break;
+    case 'PageUp':
+      zoom -= 0.1;
+      break;
+    case 'PageDown':
+      zoom += 0.1;
+      break;
+    default:
+  }
 }
 
 /* global window */

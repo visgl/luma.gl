@@ -176,7 +176,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    addKeyboardHandler(canvas);
+    document.addEventListener('keydown', keyboardEventHandler);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -251,32 +251,34 @@ export default class AppAnimationLoop extends AnimationLoop {
       })
       .draw();
   }
+
+  onFinalize() {
+    document.removeEventListener('keydown', keyboardEventHandler);
+  }
 }
 
-function addKeyboardHandler(canvas) {
-  document.addEventListener('keydown', e => {
-    switch (e.code) {
-      case 'ArrowUp':
-        xSpeed -= 0.02;
-        break;
-      case 'ArrowDown':
-        xSpeed += 0.02;
-        break;
-      case 'ArrowLeft':
-        ySpeed -= 0.02;
-        break;
-      case 'ArrowRight':
-        ySpeed += 0.02;
-        break;
-      case 'Equal': // '+'
-        cubePositionZ += 0.05;
-        break;
-      case 'Minus': // '-'
-        cubePositionZ -= 0.05;
-        break;
-      default:
-    }
-  });
+function keyboardEventHandler(e) {
+  switch (e.code) {
+    case 'ArrowUp':
+      xSpeed -= 0.02;
+      break;
+    case 'ArrowDown':
+      xSpeed += 0.02;
+      break;
+    case 'ArrowLeft':
+      ySpeed -= 0.02;
+      break;
+    case 'ArrowRight':
+      ySpeed += 0.02;
+      break;
+    case 'Equal': // '+'
+      cubePositionZ += 0.05;
+      break;
+    case 'Minus': // '-'
+      cubePositionZ -= 0.05;
+      break;
+    default:
+  }
 }
 
 /* global window */

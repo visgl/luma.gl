@@ -77,8 +77,10 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({canvas, gl}) {
-    const eventManager = new EventManager(canvas);
-    addMouseHandler(eventManager);
+    // Use mjolnir.js (hammer.js)'s EventManager to handle gestures on both
+    // desktop and mobile
+    this.eventManager = new EventManager(canvas);
+    addMouseHandler(this.eventManager);
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -140,6 +142,10 @@ export default class AppAnimationLoop extends AnimationLoop {
         })
       })
       .draw();
+  }
+
+  onFinalize() {
+    this.eventManager.destroy();
   }
 }
 
