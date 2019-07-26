@@ -129,11 +129,11 @@ test('getBuffersFromGeometry', t => {
   t.is(buffers.positions[1].size, 3, 'positions mapped');
   t.ok(buffers.uvs[0] instanceof Buffer, 'uvs mapped');
   t.is(buffers.uvs[1].size, 2, 'uvs mapped');
-  t.ok(buffers.indices instanceof Buffer, 'indices mapped');
+  t.ok(buffers.indices[0] instanceof Buffer, 'indices mapped');
 
   buffers.positions[0].delete();
   buffers.uvs[0].delete();
-  buffers.indices.delete();
+  buffers.indices[0].delete();
 
   // Inferring attribute size
   buffers = getBuffersFromGeometry(gl, {
@@ -143,9 +143,11 @@ test('getBuffersFromGeometry', t => {
       texCoords: {value: new Float32Array(8)}
     }
   });
+  t.is(buffers.indices[1].size, 1, 'texCoords size');
   t.is(buffers.normals[1].size, 3, 'normals size');
   t.is(buffers.texCoords[1].size, 2, 'texCoords size');
 
+  buffers.indices[0].delete();
   buffers.normals[0].delete();
   buffers.texCoords[0].delete();
 

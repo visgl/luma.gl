@@ -36,15 +36,22 @@ export function getBuffersFromGeometry(gl, geometry, options) {
   }
 
   if (indices) {
-    indices = indices.value || indices;
+    const data = indices.value || indices;
     assert(
-      indices instanceof Uint16Array || indices instanceof Uint32Array,
+      data instanceof Uint16Array || data instanceof Uint32Array,
       'attribute array for "indices" must be of integer type'
     );
-    buffers.indices = new Buffer(gl, {
-      data: indices,
-      target: GL.ELEMENT_ARRAY_BUFFER
-    });
+    const accessor = {
+      size: 1,
+      isIndexed: indices.isIndexed === undefined ? true : indices.isIndexed
+    };
+    buffers.indices = [
+      new Buffer(gl, {
+        data,
+        target: GL.ELEMENT_ARRAY_BUFFER
+      }),
+      accessor
+    ];
   }
 
   return buffers;
