@@ -461,9 +461,10 @@ export default class AnimationLoop {
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const {clientWidth, clientHeight} = this.gl.canvas;
-    if (clientWidth > 0 && clientHeight > 0) {
-      aspect = clientWidth / clientHeight;
+    const {canvas} = this.gl;
+
+    if (canvas && canvas.clientHeight) {
+      aspect = canvas.clientWidth / canvas.clientHeight;
     } else if (width > 0 && height > 0) {
       aspect = width / height;
     }
@@ -538,8 +539,11 @@ export default class AnimationLoop {
   // Event handling
 
   _startEventHandling() {
-    this.gl.canvas.addEventListener('mousemove', this._onMousemove);
-    this.gl.canvas.addEventListener('mouseleave', this._onMouseleave);
+    const {canvas} = this.gl;
+    if (canvas) {
+      canvas.addEventListener('mousemove', this._onMousemove);
+      canvas.addEventListener('mouseleave', this._onMouseleave);
+    }
   }
 
   _onMousemove(e) {

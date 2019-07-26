@@ -1,4 +1,4 @@
-/* global document, setTimeout */
+/* global setTimeout */
 import {AnimationLoop} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
@@ -13,12 +13,6 @@ test('core#AnimationLoop constructor', t => {
 });
 
 test('core#AnimationLoop start,stop', t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let initializeCalled = 0;
   let renderCalled = 0;
@@ -47,12 +41,6 @@ test('core#AnimationLoop start,stop', t => {
 });
 
 test('core#AnimationLoop redraw', t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -73,12 +61,6 @@ test('core#AnimationLoop redraw', t => {
 });
 
 test('core#AnimationLoop should not call initialize more than once', async t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -97,12 +79,6 @@ test('core#AnimationLoop should not call initialize more than once', async t => 
 });
 
 test('core#AnimationLoop two start()s should only run one loop', async t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -123,12 +99,6 @@ test('core#AnimationLoop two start()s should only run one loop', async t => {
 });
 
 test('core#AnimationLoop start followed immediately by stop() should stop', t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -147,12 +117,6 @@ test('core#AnimationLoop start followed immediately by stop() should stop', t =>
 });
 
 test('core#AnimationLoop a start/stop/start should not call initialize again', t => {
-  if (typeof document === 'undefined') {
-    t.comment('browser-only test');
-    t.end();
-    return;
-  }
-
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -167,6 +131,7 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', t
   setTimeout(() => animationLoop.start(), 100);
   setTimeout(() => {
     t.is(initializeCalled, 1, 'onInitialize called');
+    animationLoop.stop();
     t.end();
   }, 150);
 });
