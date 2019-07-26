@@ -3,6 +3,33 @@ import {getPageLoadPromise, getCanvas} from '@luma.gl/webgl';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/webgl';
 import {log, assert} from '../utils';
 
+function initializeCanvas(_self, canvas) {
+  const eventHandlers = new Map();
+
+  canvas.addEventListener = (type, handler) => {
+    _self.postMessage({command: 'addEventListener', type});
+    if (!eventHandlers.has(type)) {
+      eventHandlers.set(type, []);
+    }
+    eventHandlers.get(type).push(handler);
+  };
+  canvas.removeEventListener = (type, handler) => {
+    _self.postMessage({command: 'removeEventListener', type});
+    const handlers = eventHandlers.get(type);
+    if (handlers) {
+      handlers.splice(handlers.indexOf(handler), 1);
+    }
+  };
+  canvas.dispatchEvent = (type, event) => {
+    const handlers = eventHandlers.get(type);
+    if (handlers) {
+      handlers.forEach(handler => handler(event));
+    }
+  };
+
+  _self.canvas = canvas;
+}
+
 export default class AnimationLoopProxy {
   // Create the script for the rendering worker.
   // @param opts {object} - options to construct an AnimationLoop instance
@@ -15,39 +42,12 @@ export default class AnimationLoopProxy {
       });
 
       self.canvas = null;
-
-      function initializeCanvas(canvas) {
-        const eventHandlers = new Map();
-
-        canvas.addEventListener = (type, handler) => {
-          self.postMessage({command: 'addEventListener', type});
-          if (!eventHandlers.has(type)) {
-            eventHandlers.set(type, []);
-          }
-          eventHandlers.get(type).push(handler);
-        };
-        canvas.removeEventListener = (type, handler) => {
-          self.postMessage({command: 'removeEventListener', type});
-          const handlers = eventHandlers.get(type);
-          if (handlers) {
-            handlers.splice(handlers.indexOf(handler), 1);
-          }
-        };
-        canvas.dispatchEvent = (type, event) => {
-          const handlers = eventHandlers.get(type);
-          if (handlers) {
-            handlers.forEach(handler => handler(event));
-          }
-        };
-
-        self.canvas = canvas;
-      }
-
-      self.addEventListener('message', evt => {
-        switch (evt.data.command) {
+      self.onmessage = evt => {
+        const message = evt.data;
+        switch (message.command) {
           case 'start':
-            initializeCanvas(evt.data.opts.canvas);
-            animationLoop.start(evt.data.opts);
+            initializeCanvas(self, message.opts.canvas);
+            animationLoop.start(message.opts);
             break;
 
           case 'stop':
@@ -55,17 +55,17 @@ export default class AnimationLoopProxy {
             break;
 
           case 'resize':
-            self.canvas.width = evt.data.width;
-            self.canvas.height = evt.data.height;
+            self.canvas.width = message.width;
+            self.canvas.height = message.height;
             break;
 
           case 'event':
-            self.canvas.dispatchEvent(evt.data.type, evt.data.event);
+            self.canvas.dispatchEvent(message.type, message.event);
             break;
 
           default:
         }
-      });
+      };
     };
   }
 
@@ -99,8 +99,6 @@ export default class AnimationLoopProxy {
 
     this._running = false;
     this._animationFrameId = null;
-    this._resolveNextFrame = null;
-    this._nextFramePromise = null;
 
     // bind methods
     this._onMessage = this._onMessage.bind(this);
@@ -151,22 +149,11 @@ export default class AnimationLoopProxy {
     if (this._running) {
       cancelAnimationFrame(this._animationFrameId);
       this._animationFrameId = null;
-      this._nextFramePromise = null;
-      this._resolveNextFrame = null;
       this._running = false;
       this.props.onFinalize(this);
     }
     this.worker.postMessage({command: 'stop'});
     return this;
-  }
-
-  waitForRender() {
-    if (!this._nextFramePromise) {
-      this._nextFramePromise = new Promise(resolve => {
-        this._resolveNextFrame = resolve;
-      });
-    }
-    return this._nextFramePromise;
   }
 
   // PRIVATE METHODS
@@ -210,11 +197,6 @@ export default class AnimationLoopProxy {
 
   _updateFrame() {
     this._resizeCanvasDrawingBuffer();
-    if (this._resolveNextFrame) {
-      this._resolveNextFrame(this);
-      this._nextFramePromise = null;
-      this._resolveNextFrame = null;
-    }
     this._animationFrameId = requestAnimationFrame(this._updateFrame);
   }
 
@@ -224,7 +206,7 @@ export default class AnimationLoopProxy {
 
     // Create an offscreen canvas controlling the main canvas
     if (!screenCanvas.transferControlToOffscreen) {
-      log.error('OffscreenCanvas is not available in your browser.')(); // eslint-disable-line
+      log.error('OffscreenCanvas is not available in your browser.')();
     }
     const offscreenCanvas = screenCanvas.transferControlToOffscreen();
 

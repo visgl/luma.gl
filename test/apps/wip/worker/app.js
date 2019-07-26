@@ -1,14 +1,7 @@
 import {_AnimationLoopProxy as AnimationLoopProxy} from '@luma.gl/core';
-import createWorker from 'webworkify-webpack';
 
-// Required by webworkify-webpack :(
-const worker = createWorker(require.resolve('./worker'));
+const worker = new Worker('./worker.js');
 
 const animationLoop = new AnimationLoopProxy(worker);
 
-export default animationLoop;
-
-/* global window */
-if (!window.website) {
-  animationLoop.start();
-}
+animationLoop.start();
