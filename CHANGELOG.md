@@ -1,3 +1,9 @@
+## v7.2.0-alpha.5
+
+- Transform : Texture API Changes (custom FS and fix clear) (#1182)
+- Fixed Broken Link (#1177)
+- Remove addEvents from examples (#1179)
+
 ## v7.2.0-alpha.4
 
 - fix lighting module color format (#1174)
