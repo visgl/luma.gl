@@ -1,11 +1,10 @@
 import GL from '@luma.gl/constants';
-import {Query, TransformFeedback, Buffer} from '@luma.gl/webgl';
+import {TransformFeedback, Buffer} from '@luma.gl/webgl';
 import {getBuffersFromGeometry} from './model-utils';
 import BaseModel from './base-model';
 import {log, isObjectEmpty, uid, assert} from '../utils';
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
-const LOG_DRAW_PRIORITY = 2;
 
 export default class Model extends BaseModel {
   constructor(gl, props = {}) {
@@ -14,7 +13,7 @@ export default class Model extends BaseModel {
     super(gl, {...props, id});
   }
 
-  initialize(props = {}) {
+  initialize(props) {
     super.initialize(props);
 
     this.drawMode = props.drawMode !== undefined ? props.drawMode : GL.TRIANGLES;
@@ -44,10 +43,6 @@ export default class Model extends BaseModel {
     super.delete();
 
     this._deleteGeometryBuffers();
-  }
-
-  destroy() {
-    this.delete();
   }
 
   // GETTERS
@@ -123,10 +118,10 @@ export default class Model extends BaseModel {
   }
 
   // Draw call for transform feedback
-  transform(options = {}) {
-    const {discard = true, feedbackBuffers, unbindModels = []} = options;
+  transform(opts = {}) {
+    const {discard = true, feedbackBuffers, unbindModels = []} = opts;
 
-    let {parameters} = options;
+    let {parameters} = opts;
 
     if (feedbackBuffers) {
       this._setFeedbackBuffers(feedbackBuffers);
@@ -138,7 +133,7 @@ export default class Model extends BaseModel {
 
     unbindModels.forEach(model => model.vertexArray.unbindBuffers());
     try {
-      this.draw(Object.assign({}, options, {parameters}));
+      this.draw(Object.assign({}, opts, {parameters}));
     } finally {
       unbindModels.forEach(model => model.vertexArray.bindBuffers());
     }
@@ -195,10 +190,7 @@ export default class Model extends BaseModel {
     if (this.animated) {
       assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
       const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
-      this.program.setUniforms(animatedUniforms, () => {
-        // if something changed
-        this._checkForDeprecatedUniforms(animatedUniforms);
-      });
+      this.program.setUniforms(animatedUniforms);
     }
   }
 
@@ -219,48 +211,5 @@ export default class Model extends BaseModel {
 
     this.transformFeedback.setBuffers(feedbackBuffers);
     return this;
-  }
-
-  // Timer Queries
-
-  _timerQueryStart() {
-    if (this.timerQueryEnabled === true) {
-      if (!this.timeElapsedQuery) {
-        this.timeElapsedQuery = new Query(this.gl);
-      }
-      if (this.lastQueryReturned) {
-        this.lastQueryReturned = false;
-        this.timeElapsedQuery.beginTimeElapsedQuery();
-      }
-    }
-  }
-
-  _timerQueryEnd() {
-    if (this.timerQueryEnabled === true) {
-      this.timeElapsedQuery.end();
-      // TODO: Skip results if 'gl.getParameter(this.ext.GPU_DISJOINT_EXT)' returns false
-      // should this be incorporated into Query object?
-      if (this.timeElapsedQuery.isResultAvailable()) {
-        this.lastQueryReturned = true;
-        const elapsedTime = this.timeElapsedQuery.getTimerMilliseconds();
-
-        // Update stats (e.g. for seer)
-        this.stats.lastFrameTime = elapsedTime;
-        this.stats.accumulatedFrameTime += elapsedTime;
-        this.stats.profileFrameCount++;
-        this.stats.averageFrameTime =
-          this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
-
-        // Log stats
-        log.log(
-          LOG_DRAW_PRIORITY,
-          `\
-GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
-average ${this.stats.averageFrameTime}ms \
-accumulated: ${this.stats.accumulatedFrameTime}ms \
-count: ${this.stats.profileFrameCount}`
-        )();
-      }
-    }
   }
 }

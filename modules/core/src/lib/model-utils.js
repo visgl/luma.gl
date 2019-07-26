@@ -14,12 +14,15 @@ const GLTF_TO_LUMA_ATTRIBUTE_MAP = {
 
 export function getBuffersFromGeometry(gl, geometry, options) {
   const buffers = {};
+  let indices = geometry.indices;
 
   for (const name in geometry.attributes) {
     const attribute = geometry.attributes[name];
     const remappedName = mapAttributeName(name, options);
 
-    if (attribute.constant) {
+    if (name === 'indices') {
+      indices = attribute;
+    } else if (attribute.constant) {
       buffers[remappedName] = attribute.value;
     } else {
       const typedArray = attribute.value;
@@ -32,9 +35,14 @@ export function getBuffersFromGeometry(gl, geometry, options) {
     }
   }
 
-  if (geometry.indices) {
+  if (indices) {
+    indices = indices.value || indices;
+    assert(
+      indices instanceof Uint16Array || indices instanceof Uint32Array,
+      'attribute array for "indices" must be of integer type'
+    );
     buffers.indices = new Buffer(gl, {
-      data: geometry.indices.value || geometry.indices,
+      data: indices,
       target: GL.ELEMENT_ARRAY_BUFFER
     });
   }
@@ -52,9 +60,6 @@ function mapAttributeName(name, options) {
 export function inferAttributeAccessor(attributeName, attribute) {
   let category;
   switch (attributeName) {
-    case 'indices':
-      category = category || 'indices';
-      break;
     case 'texCoords':
     case 'texCoord1':
     case 'texCoord2':
@@ -77,14 +82,6 @@ export function inferAttributeAccessor(attributeName, attribute) {
       break;
     case 'uvs':
       attribute.size = attribute.size || 2;
-      break;
-    case 'indices':
-      attribute.size = attribute.size || 1;
-      attribute.isIndexed = attribute.isIndexed === undefined ? true : attribute.isIndexed;
-      assert(
-        attribute.value instanceof Uint16Array || attribute.value instanceof Uint32Array,
-        'attribute array for "indices" must be of integer type'
-      );
       break;
     default:
   }
