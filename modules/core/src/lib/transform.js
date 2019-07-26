@@ -174,7 +174,7 @@ export default class Transform {
       assert(framebuffer);
       parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
       if (clearRenderTarget) {
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        framebuffer.clear({color: true});
       }
     }
     this.model.setAttributes(attributes);
@@ -598,12 +598,14 @@ export default class Transform {
     );
     const combinedInject = combineInjects([props.inject || {}, inject]);
     this.targetTextureType = targetTextureType;
-    const fs = getPassthroughFS({
-      version: getShaderVersion(vs),
-      input: this.targetTextureVarying,
-      inputType: targetTextureType,
-      output: FS_OUTPUT_VARIABLE
-    });
+    const fs =
+      props._fs ||
+      getPassthroughFS({
+        version: getShaderVersion(vs),
+        input: this.targetTextureVarying,
+        inputType: targetTextureType,
+        output: FS_OUTPUT_VARIABLE
+      });
     const modules =
       this.hasSourceTextures || this.targetTextureVarying
         ? [transform].concat(props.modules || [])

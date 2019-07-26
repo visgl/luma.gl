@@ -2,7 +2,7 @@
   Test app to verify a texture contents, takes a texture and maps each pixel to a grid cell.
 */
 
-import {AnimationLoop, Model, Texture2D, Buffer, setParameters} from '@luma.gl/core';
+import {AnimationLoop, Model, Texture2D, Buffer, setParameters, Transform} from '@luma.gl/core';
 import {_getHistoPyramid as getHistoPyramid} from '@luma.gl/gpgpu';
 import GL from '@luma.gl/constants';
 
@@ -77,22 +77,30 @@ function getTextureToDisplay(gl) {
   //   0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
   // ]).map(x => x / 10);
 
-  const texWidth = 32;
-  const texHeight = 32;
+  const texWidth = 60;
+  const texHeight = 60;
   const pixelCount = texWidth * texHeight;
   const textureData = new Float32Array(pixelCount * 4);
-  for (let i = 0; i < pixelCount; i++) {
-    // textureData[i * 4] = Math.random() / 50;
+  // for (let i = 0; i < pixelCount; i++) {
+  //   // textureData[i * 4] = Math.random() / 50;
+  //
+  //   const channel = Math.random() * 3.0;
+  //   if (channel > 2) {
+  //     textureData[i * 4] = Math.random() / 20;
+  //   } else if (channel > 1) {
+  //     textureData[i * 4 + 1] = Math.random() / 20;
+  //   } else {
+  //     textureData[i * 4 + 2] = Math.random() / 20;
+  //   }
+  // }
+  const midPixel = (texWidth * (texHeight / 2) + (texWidth / 2))* 4;
 
-    const channel = Math.random() * 3.0;
-    if (channel > 2) {
-      textureData[i * 4] = Math.random() / 20;
-    } else if (channel > 1) {
-      textureData[i * 4 + 1] = Math.random() / 20;
-    } else {
-      textureData[i * 4 + 2] = Math.random() / 20;
-    }
-  }
+  const offset =  (texWidth / 4) * 4 - 32;
+  const leftPixel = midPixel - offset;
+  const rightPixel = midPixel + offset;
+  textureData[leftPixel] = 1;
+  textureData[rightPixel + 1] = 1;
+
 
   const texture = new Texture2D(gl, {
     data: textureData,
@@ -112,10 +120,80 @@ function getTextureToDisplay(gl) {
     height: texHeight
   });
 
-  const hpResults = getHistoPyramid(gl, {texture});
-  // return hpResults.pyramidTextures[2];
-  return hpResults.flatPyramidTexture;
+  // const hpResults = getHistoPyramid(gl, {texture});
+  // return hpResults.flatPyramidTexture;
+
   // return texture;
+  return runKDE(gl, {texture});
+}
+
+function runKDE(gl, {texture}) {
+  const vs = `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+outTexture = inTexture;
+gl_PointSize = 29.;
+}
+`;
+  const fs_1 = `\
+#version 300 es
+in vec4 outTexture;
+out vec4 transform_output;
+void main()
+{
+  if (outTexture.r + outTexture.g + outTexture.b == 0.) {
+    discard;
+  }
+  // transform_output.rg = (1.0 - gl_PointCoord) * (1.0 - gl_PointCoord) * 40.;
+  //transform_output.rg = gl_PointCoord;
+  transform_output.r = length(gl_PointCoord - vec2(0.5, 0.5));
+  transform_output.ba = vec2(0., 1.);
+}
+`;
+
+const fs = `\
+#version 300 es
+in vec4 outTexture;
+out vec4 transform_output;
+void main()
+{
+if (outTexture.r + outTexture.g + outTexture.b == 0.) {
+  discard;
+}
+float dist = length(gl_PointCoord - vec2(0.5, 0.5));
+if (dist > 0.5) {
+  discard;
+}
+transform_output.rgb = outTexture.rgb * (0.5 - dist);
+transform_output.a = 1.0;
+}
+`;
+
+const {width, height} = texture;
+const transform = new Transform(gl, {
+  _sourceTextures: {
+    inTexture: texture
+  },
+  _targetTexture: 'inTexture',
+  _targetTextureVarying: 'outTexture',
+  vs,
+  fs,
+  elementCount: width * height,
+});
+
+transform.run({
+  parameters: {
+    blend: true,
+    depthTest: false,
+    blendFunc: [GL.ONE, GL.ONE],
+    blendEquation: GL.FUNC_ADD
+  }
+});
+return transform._getTargetTexture();
 }
 
 const animationLoop = new AnimationLoop({
