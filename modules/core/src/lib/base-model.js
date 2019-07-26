@@ -1,7 +1,7 @@
 // Shared code between Model and MeshModel
 
 import GL from '@luma.gl/constants';
-import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
+import {isWebGL, Query, Program, VertexArray} from '@luma.gl/webgl';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {
   getDebugTableForUniforms,
@@ -13,11 +13,6 @@ import {log, isObjectEmpty, uid, assert} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
-
-// These old picking uniforms should be avoided and we should use picking module
-// and set uniforms using Model class 'updateModuleSettings()'
-// TODO - move to shader modules
-const DEPRECATED_PICKING_UNIFORMS = ['renderPickingBuffer', 'pickingEnabled'];
 
 // Model abstract O3D Class
 export default class BaseModel {
@@ -32,7 +27,7 @@ export default class BaseModel {
     this._setBaseModelProps(props);
   }
 
-  initialize(props = {}) {
+  initialize(props) {
     this.props = {};
     this.program = this._createProgram(props);
 
@@ -97,10 +92,6 @@ export default class BaseModel {
     removeModel(this.id);
   }
 
-  destroy() {
-    this.delete();
-  }
-
   // GETTERS
 
   isAnimated() {
@@ -112,7 +103,7 @@ export default class BaseModel {
   }
 
   getUniforms() {
-    return this.program.getUniforms();
+    return this.program.uniforms;
   }
 
   // SETTERS
@@ -126,10 +117,7 @@ export default class BaseModel {
     // Resolve any animated uniforms so that we have an initial value
     uniforms = this._extractAnimatedUniforms(uniforms);
 
-    this.program.setUniforms(uniforms, () => {
-      // if something changed
-      this._checkForDeprecatedUniforms(uniforms);
-    });
+    this.program.setUniforms(uniforms);
 
     return this;
   }
@@ -140,11 +128,6 @@ export default class BaseModel {
   }
 
   // DRAW CALLS
-
-  clear(opts) {
-    clear(this.program.gl, opts);
-    return this;
-  }
 
   /* eslint-disable max-statements  */
   drawGeometry(opts = {}) {
@@ -216,30 +199,6 @@ export default class BaseModel {
   }
   /* eslint-enable max-statements  */
 
-  // Draw call for transform feedback
-  transform(opts = {}) {
-    const {discard = true, feedbackBuffers, unbindModels = []} = opts;
-
-    let {parameters} = opts;
-
-    if (feedbackBuffers) {
-      this._setFeedbackBuffers(feedbackBuffers);
-    }
-
-    if (discard) {
-      parameters = Object.assign({}, parameters, {[GL.RASTERIZER_DISCARD]: discard});
-    }
-
-    unbindModels.forEach(model => model.vertexArray.unbindBuffers());
-    try {
-      this.draw(Object.assign({}, opts, {parameters}));
-    } finally {
-      unbindModels.forEach(model => model.vertexArray.bindBuffers());
-    }
-
-    return this;
-  }
-
   // PRIVATE METHODS
 
   // eslint-disable-next-line max-statements, complexity
@@ -310,20 +269,6 @@ export default class BaseModel {
 
     assert(program instanceof Program, 'Model needs a program');
     return program;
-  }
-
-  // Uniforms
-
-  _checkForDeprecatedUniforms(uniforms) {
-    // deprecated picking uniforms
-    DEPRECATED_PICKING_UNIFORMS.forEach(uniform => {
-      if (uniform in uniforms) {
-        log.deprecated(
-          uniform,
-          'use picking shader module and Model class updateModuleSettings()'
-        )();
-      }
-    });
   }
 
   // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered
