@@ -4,25 +4,7 @@
 import GL_STATE_SETTERS from './webgl-function-to-parameters-table';
 import {GL_PARAMETER_DEFAULTS} from '../unified-parameter-api/webgl-parameter-tables';
 import {setParameters, getParameters} from '../unified-parameter-api/unified-parameter-api';
-import {assert} from '../utils';
-
-export const clone = x => {
-  return Array.isArray(x) || ArrayBuffer.isView(x) ? x.slice() : x;
-};
-
-export const deepEqual = (x, y) => {
-  const isArrayX = Array.isArray(x) || ArrayBuffer.isView(x);
-  const isArrayY = Array.isArray(y) || ArrayBuffer.isView(y);
-  if (isArrayX && isArrayY && x.length === y.length) {
-    for (let i = 0; i < x.length; ++i) {
-      if (x[i] !== y[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return x === y;
-};
+import {assert, deepArrayEqual} from '../utils';
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
@@ -136,7 +118,7 @@ class GLState {
     for (const key in values) {
       assert(key !== undefined);
       // Check that value hasn't already been shadowed
-      if (!deepEqual(values[key], this.cache[key])) {
+      if (!deepArrayEqual(values[key], this.cache[key])) {
         valueChanged = true;
         oldValue = this.cache[key];
 

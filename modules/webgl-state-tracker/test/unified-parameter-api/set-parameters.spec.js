@@ -1,5 +1,6 @@
 import test from 'tape-catch';
 import {
+  setParameter,
   setParameters,
   getParameter,
   getParameters,
@@ -28,16 +29,23 @@ function stringifyTypedArray(v) {
 
 test('WebGL#set and get', t => {
   const {gl} = fixture;
-  const values = {
-    [GL.CULL_FACE]: true
-  };
   resetParameters(gl);
 
   let value = getParameter(gl, GL.CULL_FACE);
   t.deepEqual(value, false, `got expected value ${stringifyTypedArray(value)}`);
-  setParameters(gl, values, {});
+
+  setParameter(gl, GL.CULL_FACE, true);
   value = getParameter(gl, GL.CULL_FACE);
   t.deepEqual(value, true, `got expected value ${stringifyTypedArray(value)}`);
+
+  value = getParameter(gl, GL.DEPTH_CLEAR_VALUE);
+  t.is(value, 1, `got expected value ${stringifyTypedArray(value)}`);
+
+  setParameter(gl, GL.DEPTH_CLEAR_VALUE, -1);
+  value = getParameter(gl, GL.DEPTH_CLEAR_VALUE);
+  t.is(value, -1, `got expected value ${stringifyTypedArray(value)}`);
+
+  t.throws(() => setParameter(gl, GL.NON_EXIST, 0), 'throws on bad constant');
 
   t.end();
 });
