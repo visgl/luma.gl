@@ -58,7 +58,9 @@ export default class Transform {
 
     // Each array element is a Framebuffer object.
     this.framebuffers = new Array(2);
-    this._createdBuffers = {};
+
+    this.resources = {}; // resources to be deleted
+
     this.elementIDBuffer = null;
 
     // reference source texture name for target texture
@@ -70,8 +72,8 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    for (const name in this._createdBuffers) {
-      this._createdBuffers[name].delete();
+    for (const name in this.resources) {
+      this.resources[name].delete();
     }
     this.model.delete();
   }
@@ -261,7 +263,7 @@ export default class Transform {
 
   // sets target texture for rendering by updating framebuffer
   _updateTargetTexture(texture, index) {
-    const targetTexture = this._buildTargetTexture(texture);
+    const targetTexture = this._buildTargetTexture(texture, index);
     if (targetTexture) {
       this.targetTextures[index] = targetTexture;
       if (this.framebuffers[index]) {
@@ -377,7 +379,7 @@ export default class Transform {
     this.hasSourceTextures = Object.keys(this.sourceTextures[0]).length > 0;
 
     if (this.targetTextureVarying) {
-      const texture = this._buildTargetTexture(_targetTexture);
+      const texture = this._buildTargetTexture(_targetTexture, 0);
       // Either a texture or refAttribute must be provided
       assert(texture);
       this.targetTextures[0] = texture;
@@ -386,7 +388,7 @@ export default class Transform {
   }
 
   // Builds target texture using source reference or provided texture object.
-  _buildTargetTexture(textureOrAttribute) {
+  _buildTargetTexture(textureOrAttribute, index) {
     if (textureOrAttribute instanceof Texture2D) {
       return textureOrAttribute;
     }
@@ -397,7 +399,7 @@ export default class Transform {
     // save reference texture name, when corresponding source texture is updated
     // we also update target texture.
     this._targetRefTexName = textureOrAttribute;
-    return cloneTextureFrom(refTexture, {
+    const texture = cloneTextureFrom(refTexture, {
       parameters: {
         [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
         [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
@@ -408,6 +410,16 @@ export default class Transform {
         [GL.UNPACK_FLIP_Y_WEBGL]: false
       }
     });
+
+    // track the new texture created above
+    // there can only be two target textures, index 0 and index 1
+    const resourceName = `target-texture-${index}`;
+    if (this.resources[resourceName]) {
+      this.resources[resourceName].delete();
+    }
+    this.resources[resourceName] = texture;
+
+    return texture;
   }
 
   // auto create any feedback buffers
@@ -426,12 +438,7 @@ export default class Transform {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = this.sourceBuffers[current][sourceBufferName];
         const {byteLength, usage, accessor} = sourceBuffer;
-        const buffer = new Buffer(this.gl, {byteLength, usage, accessor});
-
-        if (this._createdBuffers[feedbackBufferName]) {
-          this._createdBuffers[feedbackBufferName].delete();
-        }
-        this._createdBuffers[feedbackBufferName] = buffer;
+        const buffer = this._createNewBuffer(feedbackBufferName, {byteLength, usage, accessor});
         this.feedbackBuffers[current][feedbackBufferName] = buffer;
       }
     }
@@ -440,10 +447,10 @@ export default class Transform {
   // Create a buffer and add to list of buffers to be deleted.
   _createNewBuffer(name, opts) {
     const buffer = new Buffer(this.gl, opts);
-    if (this._createdBuffers[name]) {
-      this._createdBuffers[name].delete();
-      this._createdBuffers[name] = buffer;
+    if (this.resources[name]) {
+      this.resources[name].delete();
     }
+    this.resources[name] = buffer;
     return buffer;
   }
 
@@ -585,7 +592,10 @@ export default class Transform {
       array[index] = index;
     });
     if (!this.elementIDBuffer) {
-      this.elementIDBuffer = new Buffer(this.gl, {data: elementIds, accessor: {size: 1}});
+      this.elementIDBuffer = this._createNewBuffer('elementIDBuffer', {
+        data: elementIds,
+        accessor: {size: 1}
+      });
     } else {
       this.elementIDBuffer.setData({data: elementIds});
     }

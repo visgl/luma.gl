@@ -38,6 +38,22 @@ void main()
 }
 `;
 
+function getResourceCounts() {
+  /* global luma */
+  const resourceStats = luma.stats.get('Resource Counts');
+  return {
+    Texture2D: resourceStats.get('Texture2Ds Active').count,
+    Buffer: resourceStats.get('Buffers Active').count
+  };
+}
+
+function validateResourceCounts(t, startCounts, endCounts) {
+  for (const resourceName in endCounts) {
+    const leakCount = endCounts[resourceName] - startCounts[resourceName];
+    t.ok(leakCount === 0, `should delete all ${resourceName}, remaining ${leakCount}`);
+  }
+}
+
 test('WebGL#Transform constructor/delete', t => {
   const {gl, gl2} = fixture;
 
@@ -825,6 +841,8 @@ test('WebGL#Transform run (source&destination texture update)', t => {
   }
 
   TEXTURE_TEST_CASES.forEach(testCase => {
+    const startCounts = getResourceCounts();
+
     const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
     // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
     const sourceTexture = new Texture2D(gl2, {
@@ -877,6 +895,11 @@ test('WebGL#Transform run (source&destination texture update)', t => {
       expectedData,
       `${name} Transform should write correct data into Texture`
     );
+    sourceTexture.delete();
+    updateTexture.delete();
+    transform.delete();
+    const endCounts = getResourceCounts();
+    validateResourceCounts(t, startCounts, endCounts);
   });
 
   t.end();
@@ -1038,6 +1061,8 @@ test('WebGL#Transform run (source&destination with custom FS)', t => {
     return;
   }
 
+  const startCounts = getResourceCounts();
+
   const name = 'RGBA-FLOAT';
   const sourceData = new Float32Array([
     0,
@@ -1171,5 +1196,9 @@ void main()
 
   t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
 
+  sourceTexture.delete();
+  transform.delete();
+  const endCounts = getResourceCounts();
+  validateResourceCounts(t, startCounts, endCounts);
   t.end();
 });
