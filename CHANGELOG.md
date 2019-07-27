@@ -1,3 +1,11 @@
+## v7.2.0-alpha.6
+
+- Transform: fix resource leak (#1188)
+- Clean up model classes (#1185)
+- AnimationLoopProxy tests (#1184)
+- Allow animation loop to run with headless gl (#1183)
+- remove addEvents from addons (#1180
+
 ## v7.2.0-alpha.5
 
 - Transform : Texture API Changes (custom FS and fix clear) (#1182)
