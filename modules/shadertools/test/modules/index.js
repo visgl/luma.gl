@@ -1,4 +1,5 @@
 import './fp64/fp64-arithmetic-transform.spec';
+import './fp64/fp64-utils.spec';
 import './lights/lights.spec';
 import './picking/picking.spec';
 import './phong-lighting/phong-lighting.spec';

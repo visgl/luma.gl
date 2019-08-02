@@ -6,7 +6,8 @@ import trackContextState, {
   popContextState,
   getParameter,
   setParameters,
-  resetParameters
+  resetParameters,
+  getModifiedParameters
 } from '@luma.gl/webgl-state-tracker';
 
 import {
@@ -159,6 +160,77 @@ test('WebGLState#gl API', t => {
       `got expected value ${stringifyTypedArray(value)}`
     );
   }
+
+  t.end();
+});
+
+test('WebGLState#intercept gl calls', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+
+  pushContextState(gl);
+
+  gl.blendEquation(gl.FUNC_SUBTRACT, gl.FUNC_SUBTRACT);
+  t.is(getParameter(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
+
+  gl.blendFunc(gl.ONE, gl.ONE);
+  t.is(getParameter(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
+
+  gl.stencilMask(8);
+  t.is(getParameter(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
+
+  gl.stencilFunc(gl.NEVER, 0, 1);
+  t.is(getParameter(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
+
+  gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
+  t.is(getParameter(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
+
+  popContextState(gl);
+
+  // Verify default values.
+  for (const key in GL_PARAMETER_DEFAULTS) {
+    const value = getParameter(gl, key);
+    t.deepEqual(
+      value,
+      GL_PARAMETER_DEFAULTS[key],
+      `got expected value ${stringifyTypedArray(value)}`
+    );
+  }
+
+  t.end();
+});
+
+test('WebGLState#getModifiedParameters', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+
+  let modifiedParameters = getModifiedParameters(gl);
+
+  t.deepEqual(modifiedParameters, {}, 'Nothing is changed');
+
+  pushContextState(gl);
+
+  // Set custom values and verify
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
+  modifiedParameters = getModifiedParameters(gl);
+
+  for (const key in ENUM_STYLE_SETTINGS_SET1) {
+    t.deepEqual(
+      modifiedParameters[key],
+      ENUM_STYLE_SETTINGS_SET1[key],
+      `got expected value ${stringifyTypedArray(modifiedParameters[key])} for key: ${key}`
+    );
+  }
+
+  for (const key in modifiedParameters) {
+    if (!(key in ENUM_STYLE_SETTINGS_SET1)) {
+      t.fail('should not contain keys that are not changed');
+    }
+  }
+
+  popContextState(gl);
 
   t.end();
 });

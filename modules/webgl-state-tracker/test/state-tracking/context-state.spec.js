@@ -129,17 +129,24 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
 test('WebGLState#withParameters', t => {
   const {gl} = fixture;
 
+  const checkParameters = expected => {
+    for (const key in expected) {
+      const value = getParameter(gl, key);
+      t.deepEqual(value, expected[key], `got expected value ${stringifyTypedArray(value)}`);
+    }
+  };
+
   resetParameters(gl);
 
+  // Initialize parameters
   setParameters(gl, {
     clearColor: [0, 0, 0, 0],
     [GL.BLEND]: false
   });
-
-  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  let blendState = getParameter(gl, GL.BLEND);
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
+  checkParameters({
+    [GL.COLOR_CLEAR_VALUE]: [0, 0, 0, 0],
+    [GL.BLEND]: false
+  });
 
   withParameters(
     gl,
@@ -148,21 +155,46 @@ test('WebGLState#withParameters', t => {
       [GL.BLEND]: true
     },
     () => {
-      clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-      blendState = getParameter(gl, GL.BLEND);
-      t.deepEqual(
-        clearColor,
-        [0, 1, 0, 1],
-        `got expected value ${stringifyTypedArray(clearColor)}`
-      );
-      t.deepEqual(blendState, true, `got expected value ${stringifyTypedArray(blendState)}`);
+      // Parameters should be updated
+      checkParameters({
+        [GL.COLOR_CLEAR_VALUE]: [0, 1, 0, 1],
+        [GL.BLEND]: true
+      });
     }
   );
 
-  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  blendState = getParameter(gl, GL.BLEND);
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
+  // Parameters should be restored
+  checkParameters({
+    [GL.COLOR_CLEAR_VALUE]: [0, 0, 0, 0],
+    [GL.BLEND]: false
+  });
+
+  t.throws(
+    () =>
+      withParameters(
+        gl,
+        {
+          clearColor: [0, 1, 0, 1],
+          [GL.BLEND]: true,
+          nocatch: false
+        },
+        () => {
+          // Parameters should be updated
+          checkParameters({
+            [GL.COLOR_CLEAR_VALUE]: [0, 1, 0, 1],
+            [GL.BLEND]: true
+          });
+          throw new Error();
+        }
+      ),
+    'Operation throws error'
+  );
+
+  // Parameters should be restored
+  checkParameters({
+    [GL.COLOR_CLEAR_VALUE]: [0, 0, 0, 0],
+    [GL.BLEND]: false
+  });
 
   t.end();
 });

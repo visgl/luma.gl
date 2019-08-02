@@ -115,7 +115,7 @@ export function resetParameters(gl) {
 
 // Get all parameters that have been modified from a pure context state
 export function getModifiedParameters(gl) {
-  const values = getParameters(GL_PARAMETER_DEFAULTS);
+  const values = getParameters(gl, Object.keys(GL_PARAMETER_DEFAULTS));
   const modified = {};
   for (const key in GL_PARAMETER_DEFAULTS) {
     if (!deepArrayEqual(values[key], GL_PARAMETER_DEFAULTS[key])) {
