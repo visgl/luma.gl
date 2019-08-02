@@ -5,7 +5,6 @@
 // Higher level abstractions can be built on these classes
 
 // Initialize any global state
-import './init';
 export {lumaStats} from './init';
 
 // TODO - should we reexport these?
