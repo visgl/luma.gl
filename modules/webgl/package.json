@@ -24,6 +24,7 @@
     "dist",
     "README.md"
   ],
+  "sideEffects": false,
   "browser": {
     "gl": false,
     "gl/wrap": false
