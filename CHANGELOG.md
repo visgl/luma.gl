@@ -1,3 +1,7 @@
+## v7.2.0-beta.1
+- webgl-state-tracker tests (#1187)
+- Remove diffImagePixels from gpgpu (#1186)
+
 ## v7.2.0-alpha.6
 
 - Transform: fix resource leak (#1188)

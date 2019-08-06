@@ -1,5 +1,18 @@
 # What's New
 
+## Version 7.2
+
+Date: July 9, 2019
+
+### FXAA Shader Module
+
+luma.gl now supports FXAA (Fast Approximate Antialiasing) as a post processing effect. This allows for antialiasing on offscreen framebuffers.
+
+### ImageBitmap Textures
+
+The `Texture` class now supports `ImageBitmap` input data.
+
+
 ## Version 7.1
 
 Date: June 4, 2019
