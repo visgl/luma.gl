@@ -4,8 +4,10 @@ import AnimationLoop from '../../../examples/core/instancing/app';
 
 export default class Example extends React.Component {
   render() {
+    const { pageContext } = this.props;
+    const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <AnimationLoopExamplePage AnimationLoop={AnimationLoop} exampleConfig={this.props.pageContext.exampleConfig} />
+      <AnimationLoopExamplePage AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
     );
   }
 }
