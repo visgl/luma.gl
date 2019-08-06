@@ -22,8 +22,8 @@
     "react-dom": "^16.6.0"
   },
   "devDependencies": {
-    "gatsby": "^2.3.0",
-    "ocular-gatsby": "1.0.0-alpha.35",
-    "sharp": "^0.22"
+    "gatsby": "^2.13.0",
+    "ocular-gatsby": "1.0.0-alpha.46",
+    "sharp": "^0.23.0"
   }
 }
