@@ -1,7 +1,7 @@
 // Shared code between Model and MeshModel
 
 import GL from '@luma.gl/constants';
-import {isWebGL, Query, Program, VertexArray} from '@luma.gl/webgl';
+import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
 import {
   getDebugTableForUniforms,
@@ -128,6 +128,11 @@ export default class BaseModel {
   }
 
   // DRAW CALLS
+
+  clear(opts) {
+    clear(this.program.gl, opts);
+    return this;
+  }
 
   /* eslint-disable max-statements  */
   drawGeometry(opts = {}) {
