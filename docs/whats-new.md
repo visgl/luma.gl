@@ -161,7 +161,7 @@ Uniforms are now cached at `Program` object, which improves performance by elimi
 
 ### Offscreen Rendering (Experimental)
 
-A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/uber/luma.gl/tree/7.1-release/examples/wip/worker).
+A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/uber/luma.gl/tree/7.2-release/test/apps/wip/worker).
 
 
 ## Version 6.2
