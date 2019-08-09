@@ -18,7 +18,7 @@ This will start a local development server and open the page in your browser. Th
 
 Note that luma.gl's `master` branch is its development branch and is often in flux. To ensure you're working with stable code, simply check out one of the release branches, e.g.
 
-`git checkout 7.1-release`
+`git checkout 7.2-release`
 
 To see all available release branches:
 
