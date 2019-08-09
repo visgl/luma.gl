@@ -1319,31 +1319,31 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@loaders.gl/core@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.1.1.tgz#4a1ccb8b1db0bb9aab41b49e6f73131ac183041c"
-  integrity sha512-n48UBuodfBuTHnnqeCE6Yb5z2edJMn1E78Y6MSR2BfyISOpiG3gzNcyGfVcWT60fkzpJUQbETbPiWBHlN2/q5w==
+"@loaders.gl/core@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.2.0.tgz#64f30a900cadac5d91f4708f7d7487130d55b448"
+  integrity sha512-L8f3TtZSQvR6ynD1iyWhbHTj/wjiKZYE1xLnh9kCP/hXiy7w/eyHSDSKs8xKo8WV8w+jGWgrxrj4OPjO+l+UvA==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@loaders.gl/gltf@^1.0.3":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-1.1.1.tgz#25c320de9fa3913bdbabd56ab4e2be70c3fae25a"
-  integrity sha512-HJ1e6LEf8AIh8fzlnA/bKShDuAWndG/GPt+Pvv5wtcKfp6Q5KJILCaUMrbYq9JuzoMG7aoLLezCxb4z3QsYqNA==
+"@loaders.gl/gltf@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-1.2.0.tgz#c4dcc43a815e4ee416278f8adca66f01d6c04583"
+  integrity sha512-YxrGGwtdyKaH2tRnoVmuRUePY7YJPZWf4NJqVDf6SFZjSh3hMEjEPoW4F3Dus3GTz8XyQOVfDMBEdhhHBzyiWQ==
   dependencies:
-    "@loaders.gl/core" "1.1.1"
-    "@loaders.gl/images" "1.1.1"
-    "@loaders.gl/loader-utils" "1.1.1"
+    "@loaders.gl/core" "1.2.0"
+    "@loaders.gl/images" "1.2.0"
+    "@loaders.gl/loader-utils" "1.2.0"
 
-"@loaders.gl/images@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.1.1.tgz#631e5e7f39c24a4a6371c8b0be697b02a6d9e32f"
-  integrity sha512-BVzsZWO3A/3CA6Em7/ypumtwQdxrdRqO5XEdqVq5wzNRw/Dby3y3dnpMmJ7e/mbTdM41MpYkwhyzyORSyMWzEA==
+"@loaders.gl/images@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.2.0.tgz#d4e66771d097f02220071c58fa545064c110e61d"
+  integrity sha512-XTomGXsucrFNQj4lLTZ3rXZmOgtjUnNYWBTBkq0Dznpz8IwWSbc3deSfbNqhULyqWO3ZUfH/xMQvGfHD3HYySg==
 
-"@loaders.gl/loader-utils@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-1.1.1.tgz#9830d5706f98ce30572f41fba4c05e5306a84ac3"
-  integrity sha512-CGQaoxHZg3v04kOXHH94aD/K2BgQYKwx6Kh2LInPUrm3rx6gsya9t0vc7g3M1SNihPkVH/jMmqBUq1MuxtAIdA==
+"@loaders.gl/loader-utils@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-1.2.0.tgz#27bcf5eb59239adb2fc5429e1a84cac071047918"
+  integrity sha512-8Dbo35NFqsSPf4EGvOkiua6zQYeF/4zVAR8A4N7OmVy76P8weUi/X9dT4gX7t5sCE66ex+vtDWPUQ4ASL9mPPQ==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
