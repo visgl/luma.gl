@@ -2,7 +2,7 @@
 
 ## Version 7.2
 
-Date: July 9, 2019
+Date: Aug 9, 2019
 
 ### FXAA Shader Module
 

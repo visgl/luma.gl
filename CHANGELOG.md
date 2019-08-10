@@ -1,3 +1,13 @@
+## v7.2.0
+
+- Bump loaders.gl to 1.2.0 (#1198)
+- Doc: update urls to point to 7.2-release branch (#1197)
+- Docs: update release badges (#1196)
+- Bump luma version in examples (#1195)
+- BaseModel: add back clear method (#1194)
+- Fix gatsby website home page (#1192)
+- Bump ocular-gatsby@1.0.0-alpha.46 (#1191)
+
 ## v7.2.0-beta.1
 - webgl-state-tracker tests (#1187)
 - Remove diffImagePixels from gpgpu (#1186)
