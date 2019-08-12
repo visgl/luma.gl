@@ -20,7 +20,8 @@ export default class ProgramManager {
     this._useCounts = {};
   }
 
-  addModuleInjection(moduleName, opts) {
+  addModuleInjection(module, opts) {
+    const moduleName = module.name;
     const {hook, injection, order = 0} = opts;
     const shaderStage = hook.slice(0, 2);
 
