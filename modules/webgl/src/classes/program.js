@@ -54,7 +54,10 @@ export default class Program extends Resource {
   }
 
   initialize(props = {}) {
-    const {vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
+    const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
+
+    this.hash = hash || null; // Used by ProgramManager
+
     // Create shaders if needed
     this.vs =
       typeof vs === 'string' ? new VertexShader(this.gl, {id: `${props.id}-vs`, source: vs}) : vs;
@@ -67,7 +70,7 @@ export default class Program extends Resource {
     this.uniforms = {};
 
     // Setup varyings if supplied
-    if (varyings) {
+    if (varyings && varyings.length > 0) {
       assertWebGL2Context(this.gl);
       this.varyings = varyings;
       this.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);

@@ -1,0 +1,109 @@
+import {assembleShaders} from '@luma.gl/shadertools';
+import {Program} from '@luma.gl/webgl';
+
+export default class ProgramManager {
+  constructor(gl) {
+    this.gl = gl;
+
+    this._programCache = {};
+    this._moduleInjections = {
+      vs: {},
+      fs: {}
+    };
+    this._hookFunctions = {
+      vs: {},
+      fs: {}
+    };
+
+    this._hashes = {};
+    this._hashCounter = 0;
+    this._useCounts = {};
+  }
+
+  addModuleInjection(moduleName, opts) {
+    const {hook, injection, order = 0} = opts;
+    const shaderStage = hook.slice(0, 2);
+
+    const moduleInjections = this._moduleInjections[shaderStage];
+    moduleInjections[moduleName] = moduleInjections[moduleName] || {};
+
+    moduleInjections[moduleName][hook] = {
+      injection,
+      order
+    };
+  }
+
+  addShaderHook(hook, opts = {}) {
+    hook = hook.trim();
+    const [stage, signature] = hook.split(':');
+    const name = hook.replace(/\(.+/, '');
+    this._hookFunctions[stage][name] = Object.assign(opts, {signature});
+  }
+
+  get(vs, fs, opts = {}) {
+    const {defines = {}, modules = [], inject = {}, varyings = [], bufferMode = 0x8c8d} = opts; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+
+    const vsHash = this._getHash(vs);
+    const fsHash = this._getHash(fs);
+    const moduleHashes = modules.map(m => this._getHash(m.name));
+    const varyingHashes = varyings.map(v => this._getHash(v));
+    const defineHashes = [];
+    const injectHashes = [];
+
+    for (const key in defines) {
+      defineHashes.push(this._getHash(key));
+      defineHashes.push(this._getHash(defines[key]));
+    }
+
+    for (const key in inject) {
+      defineHashes.push(this._getHash(key));
+      defineHashes.push(this._getHash(inject[key]));
+    }
+
+    const hash = `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
+      '/'
+    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}B${bufferMode}`;
+
+    if (!this._programCache[hash]) {
+      const assembled = assembleShaders(this.gl, {
+        vs,
+        fs,
+        modules,
+        inject,
+        defines,
+        hookFunctions: this._hookFunctions,
+        moduleInjections: this._moduleInjections
+      });
+      this._programCache[hash] = new Program(this.gl, {
+        hash,
+        vs: assembled.vs,
+        fs: assembled.fs,
+        varyings,
+        bufferMode
+      });
+      this._useCounts[hash] = 0;
+    }
+
+    this._useCounts[hash]++;
+    return this._programCache[hash];
+  }
+
+  release(program) {
+    const hash = program.hash;
+    this._useCounts[hash]--;
+
+    if (this._useCounts[hash] === 0) {
+      this._programCache[hash].delete();
+      delete this._programCache[hash];
+      delete this._useCounts[hash];
+    }
+  }
+
+  _getHash(key) {
+    if (this._hashes[key] === undefined) {
+      this._hashes[key] = this._hashCounter++;
+    }
+
+    return this._hashes[key];
+  }
+}

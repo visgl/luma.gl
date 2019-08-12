@@ -86,6 +86,9 @@ export {default as Model} from './lib/model';
 export {default as Transform} from './lib/transform';
 export {default as ClipSpace} from './lib/clip-space';
 
+// Resource Management
+export {default as ProgramManager} from './resource-management/program-manager';
+
 // Experimental core exports
 export {default as _ShaderCache} from './lib/shader-cache';
 export {default as _AnimationLoopProxy} from './lib/animation-loop-proxy';
