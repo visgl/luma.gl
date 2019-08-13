@@ -118,8 +118,10 @@ test('Model#program management', t => {
   const pm = new ProgramManager(gl);
 
   const vs = `
+    uniform float x;
+
     void main() {
-      gl_Position = vec4(0.0);
+      gl_Position = vec4(x);
     }
   `;
 
@@ -132,16 +134,41 @@ test('Model#program management', t => {
   const model1 = new Model(gl, {
     programManager: pm,
     vs,
-    fs
+    fs,
+    uniforms: {
+      x: 0.5
+    }
   });
 
   const model2 = new Model(gl, {
     programManager: pm,
     vs,
-    fs
+    fs,
+    uniforms: {
+      x: -0.5
+    }
   });
 
   t.ok(model1.program === model2.program, 'Programs are shared.');
+
+  model1.draw();
+  t.deepEqual(model1.getUniforms(), model1.program.uniforms, 'Program uniforms set');
+
+  model2.draw();
+  t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
+
+  model2.setProgram({
+    vs,
+    fs,
+    defines: {
+      MY_DEFINE: true
+    }
+  });
+
+  t.ok(model1.program !== model2.program, 'Program was updated.');
+
+  model2.draw();
+  t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
 
   t.end();
 });
