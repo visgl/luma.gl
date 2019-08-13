@@ -190,7 +190,7 @@ export default class Model extends BaseModel {
     if (this.animated) {
       assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
       const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
-      this.program.setUniforms(animatedUniforms);
+      Object.assign(this.uniforms, animatedUniforms);
     }
   }
 

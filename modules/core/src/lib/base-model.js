@@ -46,6 +46,7 @@ export default class BaseModel {
     this.attributes = {}; // User defined attributes
 
     // Model manages uniform animation
+    this.uniforms = {};
     this.animatedUniforms = {};
     this.animated = false;
     this.animationLoop = null; // if set, used as source for animationProps
@@ -130,7 +131,7 @@ export default class BaseModel {
   }
 
   getUniforms() {
-    return this.program.uniforms;
+    return this.uniforms;
   }
 
   // SETTERS
@@ -144,7 +145,7 @@ export default class BaseModel {
     // Resolve any animated uniforms so that we have an initial value
     uniforms = this._extractAnimatedUniforms(uniforms);
 
-    this.program.setUniforms(uniforms);
+    Object.assign(this.uniforms, uniforms);
 
     return this;
   }
@@ -202,6 +203,8 @@ export default class BaseModel {
     onBeforeRender();
 
     this._timerQueryStart();
+
+    this.program.setUniforms(this.uniforms);
 
     const didDraw = this.program.draw(
       Object.assign({}, opts, {
