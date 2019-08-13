@@ -6,6 +6,7 @@ export default class ProgramManager {
     this.gl = gl;
 
     this._programCache = {};
+    this._getUniforms = {};
     this._moduleInjections = {
       vs: {},
       fs: {}
@@ -82,11 +83,16 @@ export default class ProgramManager {
         varyings,
         bufferMode
       });
+      this._getUniforms[hash] = assembled.getUniforms || (x => {});
       this._useCounts[hash] = 0;
     }
 
     this._useCounts[hash]++;
     return this._programCache[hash];
+  }
+
+  getUniforms(program) {
+    return this._getUniforms[program.hash] || null;
   }
 
   release(program) {
@@ -96,6 +102,7 @@ export default class ProgramManager {
     if (this._useCounts[hash] === 0) {
       this._programCache[hash].delete();
       delete this._programCache[hash];
+      delete this._getUniforms[hash];
       delete this._useCounts[hash];
     }
   }

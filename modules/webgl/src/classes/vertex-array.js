@@ -42,6 +42,8 @@ export default class VertexArray {
     this.drawParams = null;
     this.buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
 
+    this.attributes = {};
+
     this.vertexArrayObject = VertexArrayObject.isSupported(gl)
       ? new VertexArrayObject(gl)
       : VertexArrayObject.getDefaultArray(gl);
@@ -99,6 +101,9 @@ export default class VertexArray {
     if ('bindOnUse' in props) {
       props = props.bindOnUse;
     }
+    if ('copyFrom' in props) {
+      this.setAttributes(props.copyFrom.attributes);
+    }
     return this;
   }
 
@@ -123,6 +128,7 @@ export default class VertexArray {
   //     {attributeName: [buffer, accessor]}
   //     {attributeName: (typed) array} => constant
   setAttributes(attributes) {
+    Object.assign(this.attributes, attributes);
     this.vertexArrayObject.bind(() => {
       for (const locationOrName in attributes) {
         const value = attributes[locationOrName];

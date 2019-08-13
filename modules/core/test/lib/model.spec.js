@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import luma from '@luma.gl/webgl/init';
 // TODO - Model test should not depend on Cube
-import {Buffer, Model, CubeGeometry} from '@luma.gl/core';
+import {Buffer, Model, CubeGeometry, ProgramManager} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
@@ -108,6 +108,40 @@ test('Model#draw', t => {
     isPickingActive: 1
   });
   t.deepEqual(model.getUniforms(), {isPickingActive: 1}, 'uniforms are set');
+
+  t.end();
+});
+
+test('Model#program management', t => {
+  const {gl} = fixture;
+
+  const pm = new ProgramManager(gl);
+
+  const vs = `
+    void main() {
+      gl_Position = vec4(0.0);
+    }
+  `;
+
+  const fs = `
+    void main() {
+      gl_FragColor = vec4(1.0);
+    }
+  `;
+
+  const model1 = new Model(gl, {
+    programManager: pm,
+    vs,
+    fs
+  });
+
+  const model2 = new Model(gl, {
+    programManager: pm,
+    vs,
+    fs
+  });
+
+  t.ok(model1.program === model2.program, 'Programs are shared.');
 
   t.end();
 });

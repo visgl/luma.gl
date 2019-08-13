@@ -29,6 +29,8 @@ export default class BaseModel {
 
   initialize(props) {
     this.props = {};
+
+    this.programManager = props.programManager || null;
     this.program = this._createProgram(props);
 
     // Create a vertex array configured after this program
@@ -86,7 +88,12 @@ export default class BaseModel {
       }
     }
 
-    this.program.delete();
+    if (this.programManager) {
+      this.programManager.release(this.program);
+    } else {
+      this.program.delete();
+    }
+
     this.vertexArray.delete();
 
     removeModel(this.id);
@@ -100,6 +107,26 @@ export default class BaseModel {
 
   getProgram() {
     return this.program;
+  }
+
+  setProgram(props) {
+    const newProgram = this._createProgram(props);
+
+    if (this.program === newProgram) {
+      return;
+    }
+
+    if (this.programManager) {
+      this.programManager.release(this.program);
+    } else {
+      this.program.delete();
+    }
+
+    this.program = newProgram;
+
+    const oldVertexArray = this.vertexArray;
+    this.vertexArray = new VertexArray(this.gl, {program: this.program, copyFrom: oldVertexArray});
+    oldVertexArray.delete();
   }
 
   getUniforms() {
@@ -242,7 +269,7 @@ export default class BaseModel {
     vs = null,
     fs = null,
     // 1: Modular shaders
-    modules = null,
+    modules = [],
     defines = {},
     inject = {},
     shaderCache = null,
@@ -256,20 +283,25 @@ export default class BaseModel {
     const id = this.id;
 
     if (!program) {
-      // Assign default shaders if none are provided
-      vs = vs || MODULAR_SHADERS.vs;
-      fs = fs || MODULAR_SHADERS.fs;
-
-      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
-      ({vs, fs} = assembleResult);
-
-      if (shaderCache) {
-        program = shaderCache.getProgram(this.gl, {id, vs, fs});
+      if (this.programManager) {
+        program = this.programManager.get(vs, fs, {modules, inject, defines});
+        this.getModuleUniforms = this.programManager.getUniforms(program);
       } else {
-        program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
-      }
+        // Assign default shaders if none are provided
+        vs = vs || MODULAR_SHADERS.vs;
+        fs = fs || MODULAR_SHADERS.fs;
 
-      this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+        const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
+        ({vs, fs} = assembleResult);
+
+        if (shaderCache) {
+          program = shaderCache.getProgram(this.gl, {id, vs, fs});
+        } else {
+          program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
+        }
+
+        this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+      }
     }
 
     assert(program instanceof Program, 'Model needs a program');
