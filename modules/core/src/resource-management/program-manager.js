@@ -49,15 +49,18 @@ export default class ProgramManager {
     const fsHash = this._getHash(fs);
     const moduleHashes = modules.map(m => this._getHash(m.name));
     const varyingHashes = varyings.map(v => this._getHash(v));
+
+    const defineKeys = Object.keys(defines).sort();
+    const injectKeys = Object.keys(inject).sort();
     const defineHashes = [];
     const injectHashes = [];
 
-    for (const key in defines) {
+    for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));
       defineHashes.push(this._getHash(defines[key]));
     }
 
-    for (const key in inject) {
+    for (const key of injectKeys) {
       defineHashes.push(this._getHash(key));
       defineHashes.push(this._getHash(inject[key]));
     }
