@@ -110,7 +110,18 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps) {
-    const {gl} = animationProps;
+    const {gl, tick} = animationProps;
+
+    if (tick % 120) {
+      const even = Number(tick % 240 < 120);
+      for (let i = 0; i < 4; ++i) {
+        this.cubes[i].model.model.setProgram({
+          vs,
+          fs,
+          modules: i % 2 === even ? [dirlight] : []
+        });
+      }
+    }
 
     const modelMatrix = new Matrix4();
 
