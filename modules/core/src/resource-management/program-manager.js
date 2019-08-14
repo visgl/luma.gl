@@ -47,7 +47,7 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    const moduleHashes = modules.map(m => this._getHash(m.name));
+    const moduleHashes = modules.map(m => this._getHash(m.name)).sort();
     const varyingHashes = varyings.map(v => this._getHash(v));
 
     const defineKeys = Object.keys(defines).sort();
