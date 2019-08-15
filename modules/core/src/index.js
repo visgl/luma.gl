@@ -83,7 +83,7 @@ export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-sourc
 export {default as AnimationLoop} from './lib/animation-loop';
 export {encodePickingColor, decodePickingColor, getNullPickingColor} from './lib/picking-colors';
 export {default as Model} from './lib/model';
-export {default as Transform} from './lib/transform';
+export {default as Transform} from './lib/transform-new/transform';
 export {default as ClipSpace} from './lib/clip-space';
 
 // Resource Management
@@ -165,3 +165,7 @@ export {
 
 // UTILS: undocumented API for other luma.gl modules
 export {log, assert, uid, self, window, global, document} from '@luma.gl/webgl';
+
+// Transform new
+// import {default as TransformNew} from './lib/transform-new/transform';
+// export {TransformNew};

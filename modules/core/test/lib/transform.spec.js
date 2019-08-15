@@ -1,4 +1,6 @@
-import {Buffer, Transform, Texture2D} from '@luma.gl/core';
+import {Buffer, Texture2D} from '@luma.gl/core';
+// import {Transform} from '@luma.gl/core';
+import Transform from '@luma.gl/core/lib/transform-new/transform';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
@@ -456,7 +458,7 @@ test('WebGL#Transform update', t => {
       inValue: sourceBuffer
     }
   });
-  t.is(transform.elementCount, 5, 'Transform has correct element count');
+  t.is(transform.model.vertexCount, 5, 'Transform has correct element count');
   transform.run();
 
   expectedData = sourceData.map(x => x * 2);
@@ -476,7 +478,7 @@ test('WebGL#Transform update', t => {
     },
     elementCount: 6
   });
-  t.is(transform.elementCount, 6, 'Element count is updated');
+  t.is(transform.model.vertexCount, 6, 'Element count is updated');
   transform.run();
 
   expectedData = sourceData.map(x => x * 2);
@@ -654,6 +656,7 @@ test('WebGL#Transform run (source&destination texture + feedback buffer)', t => 
 
   t.end();
 });
+
 
 const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
