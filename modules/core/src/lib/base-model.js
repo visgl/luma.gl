@@ -287,7 +287,7 @@ export default class BaseModel {
 
     if (!program) {
       if (this.programManager) {
-        program = this.programManager.get(vs, fs, {modules, inject, defines});
+        program = this.programManager.get({vs, fs, modules, inject, defines});
         this.getModuleUniforms = this.programManager.getUniforms(program);
       } else {
         // Assign default shaders if none are provided

@@ -42,8 +42,16 @@ export default class ProgramManager {
     this._hookFunctions[stage][name] = Object.assign(opts, {signature});
   }
 
-  get(vs, fs, opts = {}) {
-    const {defines = {}, modules = [], inject = {}, varyings = [], bufferMode = 0x8c8d} = opts; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+  get(props = {}) {
+    const {
+      vs = '',
+      fs = '',
+      defines = {},
+      modules = [],
+      inject = {},
+      varyings = [],
+      bufferMode = 0x8c8d
+    } = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);

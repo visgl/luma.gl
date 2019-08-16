@@ -28,15 +28,17 @@ test('ProgramManager#basic', t => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
-  const program1 = pm.get(vs, fs);
+  const program1 = pm.get({vs, fs});
 
   t.ok(program1, 'Got a program');
 
-  const program2 = pm.get(vs, fs);
+  const program2 = pm.get({vs, fs});
 
   t.ok(program1 === program2, 'Got cached program');
 
-  const defineProgram1 = pm.get(vs, fs, {
+  const defineProgram1 = pm.get({
+    vs,
+    fs,
     defines: {
       MY_DEFINE: true
     }
@@ -44,7 +46,9 @@ test('ProgramManager#basic', t => {
 
   t.ok(program1 !== defineProgram1, 'Define triggers new program');
 
-  const defineProgram2 = pm.get(vs, fs, {
+  const defineProgram2 = pm.get({
+    vs,
+    fs,
     defines: {
       MY_DEFINE: true
     }
@@ -52,20 +56,26 @@ test('ProgramManager#basic', t => {
 
   t.ok(defineProgram1 === defineProgram2, 'Got cached program with defines');
 
-  const moduleProgram1 = pm.get(vs, fs, {
+  const moduleProgram1 = pm.get({
+    vs,
+    fs,
     modules: [picking]
   });
 
   t.ok(program1 !== moduleProgram1, 'Module triggers new program');
   t.ok(defineProgram1 !== moduleProgram1, 'Module triggers new program');
 
-  const moduleProgram2 = pm.get(vs, fs, {
+  const moduleProgram2 = pm.get({
+    vs,
+    fs,
     modules: [picking]
   });
 
   t.ok(moduleProgram1 === moduleProgram2, 'Got cached program with modules');
 
-  const defineModuleProgram1 = pm.get(vs, fs, {
+  const defineModuleProgram1 = pm.get({
+    vs,
+    fs,
     modules: [picking],
     defines: {
       MY_DEFINE: true
@@ -76,7 +86,9 @@ test('ProgramManager#basic', t => {
   t.ok(defineProgram1 !== defineModuleProgram1, 'Module and define triggers new program');
   t.ok(moduleProgram1 !== defineModuleProgram1, 'Module and define triggers new program');
 
-  const defineModuleProgram2 = pm.get(vs, fs, {
+  const defineModuleProgram2 = pm.get({
+    vs,
+    fs,
     modules: [picking],
     defines: {
       MY_DEFINE: true
@@ -110,7 +122,7 @@ test('ProgramManager#hooks', t => {
     order: Number.POSITIVE_INFINITY
   });
 
-  const moModuleProgram = pm.get(vs, fs);
+  const moModuleProgram = pm.get({vs, fs});
   const moModuleVs = moModuleProgram.vs.source;
   const moModuleFs = moModuleProgram.fs.source;
 
@@ -129,7 +141,9 @@ test('ProgramManager#hooks', t => {
     'injection code not included in fragment shader without module'
   );
 
-  const modulesProgram = pm.get(vs, fs, {
+  const modulesProgram = pm.get({
+    vs,
+    fs,
     modules: [picking]
   });
   const modulesVs = modulesProgram.vs.source;
@@ -158,7 +172,9 @@ test('ProgramManager#hooks', t => {
     'hook footer injected after injection code'
   );
 
-  const injectProgram = pm.get(vs, fs, {
+  const injectProgram = pm.get({
+    vs,
+    fs,
     inject: {
       'vs:LUMAGL_pickColor': 'color *= 0.1;',
       'fs:LUMAGL_fragmentColor': 'color += 0.1;'
@@ -177,8 +193,8 @@ test('ProgramManager#release', t => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
-  const program1 = pm.get(vs, fs);
-  const program2 = pm.get(vs, fs);
+  const program1 = pm.get({vs, fs});
+  const program2 = pm.get({vs, fs});
 
   pm.release(program1);
 
