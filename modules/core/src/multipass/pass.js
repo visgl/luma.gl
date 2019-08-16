@@ -57,6 +57,10 @@ export default class Pass {
     }
   }
 
+  delete() {
+    // Delete any resources crated
+  }
+
   /**
    * Renders the effect.
    * This is an abstract method that should be overridden.

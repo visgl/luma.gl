@@ -32,6 +32,11 @@ export default class TexturePass extends Pass {
     });
   }
 
+  delete() {
+    this.clipspace.delete();
+    super.delete();
+  }
+
   _renderPass() {
     this.clipspace.draw({
       parameters: {

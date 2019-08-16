@@ -23,4 +23,9 @@ export default class MultiPassRenderer extends CompositePass {
     }
     return this;
   }
+
+  delete() {
+    this.renderState.delete();
+    super.delete();
+  }
 }

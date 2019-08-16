@@ -19,4 +19,8 @@ export default class CompositePass extends Pass {
       pass.render(...args);
     }
   }
+
+  delete() {
+    // Delete any resources crated
+  }
 }
