@@ -63,7 +63,7 @@ export default class Framebuffer extends Resource {
     this.attachments = {};
     this.readBuffer = GL.COLOR_ATTACHMENT0;
     this.drawBuffers = [GL.COLOR_ATTACHMENT0];
-    this.resources = [];
+    this.ownResources = [];
     this.initialize(opts);
 
     Object.seal(this);
@@ -130,7 +130,7 @@ export default class Framebuffer extends Resource {
   }
 
   delete() {
-    for (const resource of this.resources) {
+    for (const resource of this.ownResources) {
       resource.delete();
     }
     super.delete();
@@ -450,7 +450,7 @@ export default class Framebuffer extends Resource {
         }
       });
       // track to delete later
-      this.resources.push(defaultAttachments[GL.COLOR_ATTACHMENT0]);
+      this.ownResources.push(defaultAttachments[GL.COLOR_ATTACHMENT0]);
     }
 
     if (depth && stencil) {
@@ -463,7 +463,7 @@ export default class Framebuffer extends Resource {
         height: 111
       });
       // track to delete later
-      this.resources.push(defaultAttachments[GL.DEPTH_STENCIL_ATTACHMENT]);
+      this.ownResources.push(defaultAttachments[GL.DEPTH_STENCIL_ATTACHMENT]);
       // TODO - optional texture
       // new Texture2D(this.gl, {
       //   id: `${this.id}-depth-stencil`,
@@ -484,7 +484,7 @@ export default class Framebuffer extends Resource {
         height
       });
       // track to delete later
-      this.resources.push(defaultAttachments[GL.DEPTH_ATTACHMENT]);
+      this.ownResources.push(defaultAttachments[GL.DEPTH_ATTACHMENT]);
     } else if (stencil) {
       // TODO - handle separate stencil
       assert(false);

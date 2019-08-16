@@ -29,6 +29,7 @@ export default class CopyPass extends Pass {
     super.delete();
     this.clipspace.delete();
   }
+
   _renderPass({inputBuffer}) {
     const {opacity = 1.0} = this.props;
 
