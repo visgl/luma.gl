@@ -73,6 +73,10 @@ Add a new channel to the timeline. Returns a handle to the channel that can be u
 
 Remove a channel from the timeline. `handle` should be a value that was returned by `addChannel`.
 
+### isFinished(handle : Number) : Boolean
+
+Returns whether the channel's time has completely elapsed.
+
 ### getTime([handle : Number]) : Number
 
 Return the current time of the channel indicated by `handle`. If no handle is provided, return timeline time.

@@ -64,7 +64,9 @@ test('Animation#Timeline', t => {
 
   timeline.setTime(4);
   t.equals(timeline.getTime(channel1), 2 * CHANNEL1_RATE, 'Channel 1 set');
+  t.ok(!timeline.isFinished(channel1), 'Channel 1 is not finished');
   t.equals(timeline.getTime(channel2), 1 * CHANNEL2_RATE, 'Channel 2 set');
+  t.ok(!timeline.isFinished(channel2), 'Channel 2 is not finished');
   t.equals(animationBase.time, timeline.getTime(), 'Animation updated for base timeline');
   t.equals(
     animationChannel1.time,
@@ -74,7 +76,9 @@ test('Animation#Timeline', t => {
 
   timeline.setTime(7);
   t.equals(timeline.getTime(channel1), 4 * CHANNEL1_RATE, 'Channel 1 does not loop');
+  t.ok(timeline.isFinished(channel1), 'Channel 1 is finished');
   t.equals(timeline.getTime(channel2), 1 * CHANNEL2_RATE, 'Channel 2 looped once');
+  t.ok(!timeline.isFinished(channel2), 'Channel 2 is not finished');
   t.equals(animationBase.time, timeline.getTime(), 'Animation updated for base timeline');
   t.equals(
     animationChannel1.time,
@@ -84,7 +88,9 @@ test('Animation#Timeline', t => {
 
   timeline.setTime(10);
   t.equals(timeline.getTime(channel1), 4 * CHANNEL1_RATE, 'Channel 1 does not loop');
+  t.ok(timeline.isFinished(channel1), 'Channel 1 is finished');
   t.equals(timeline.getTime(channel2), 3 * CHANNEL2_RATE, 'Channel 2 only looped once');
+  t.ok(timeline.isFinished(channel2), 'Channel 2 is finished');
   t.equals(animationBase.time, timeline.getTime(), 'Animation updated for base timeline');
   t.equals(
     animationChannel1.time,

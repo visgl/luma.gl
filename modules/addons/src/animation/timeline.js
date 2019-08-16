@@ -37,6 +37,15 @@ export class Timeline {
     }
   }
 
+  isFinished(handle) {
+    const channel = this.channels.get(handle);
+    if (channel === undefined) {
+      return false;
+    }
+
+    return this.time >= channel.delay + channel.duration * channel.repeat;
+  }
+
   getTime(handle) {
     if (handle === undefined) {
       return this.time;
