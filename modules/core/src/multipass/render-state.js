@@ -26,6 +26,11 @@ export default class RenderState {
     this.maskActive = false;
   }
 
+  delete() {
+    this.framebuffer1.delete();
+    this.framebuffer2.delete();
+  }
+
   _swapFramebuffers() {
     const tmp = this.readBuffer;
     this.readBuffer = this.writeBuffer;

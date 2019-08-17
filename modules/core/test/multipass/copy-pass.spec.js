@@ -1,6 +1,6 @@
 import {_CopyPass as CopyPass, Framebuffer} from '@luma.gl/core';
 import test from 'tape-catch';
-import {fixture} from 'test/setup';
+import {fixture, getResourceCounts, getLeakedResources} from 'test/setup';
 
 test('CopyPass#constructor', t => {
   const {gl} = fixture;
@@ -17,5 +17,19 @@ test('CopyPass#_renderPass', t => {
   const {gl} = fixture;
   const cp = new CopyPass(gl);
   t.doesNotThrow(() => cp._renderPass({inputBuffer: new Framebuffer(gl)}), 'render should work');
+  t.end();
+});
+
+test('CopyPass#delete', t => {
+  const {gl} = fixture;
+  const startCounts = getResourceCounts();
+  const cp = new CopyPass(gl);
+  cp.delete();
+  const endCounts = getResourceCounts();
+  const leakedResources = getLeakedResources(startCounts, endCounts);
+  t.ok(
+    !leakedResources,
+    `should delete all resources, ${!leakedResources ? '' : leakedResources.info}`
+  );
   t.end();
 });
