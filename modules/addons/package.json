@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "7.2.0-beta.1",
+  "version": "7.3.0-alpha.1",
   "description": "Additional classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -32,14 +32,14 @@
   "dependencies": {
     "@loaders.gl/gltf": "^1.2.0",
     "@loaders.gl/images": "^1.2.0",
-    "@luma.gl/constants": "7.2.0-beta.1",
+    "@luma.gl/constants": "7.3.0-alpha.1",
     "math.gl": "^2.3.0"
   },
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0"
   },
   "devDependencies": {
-    "@loaders.gl/polyfills": "^1.2.0",
-    "@loaders.gl/core": "^1.2.0"
+    "@loaders.gl/core": "^1.2.0",
+    "@loaders.gl/polyfills": "^1.2.0"
   }
 }

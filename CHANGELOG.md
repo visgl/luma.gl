@@ -1,3 +1,9 @@
+## v7.3.0-alpha.1
+ - Add Timeline.isFinished method (#1200)
+ - Fix resource leaks in Framebuffer and multipass classes (#1202)
+ - Gltf tests (#1204)
+ - add DOUBLE to gl constants (#1207)
+
 ## v7.2.0-beta.1
 - webgl-state-tracker tests (#1187)
 - Remove diffImagePixels from gpgpu (#1186)
