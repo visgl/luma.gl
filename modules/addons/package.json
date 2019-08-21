@@ -30,7 +30,6 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@loaders.gl/core": "^1.2.0",
     "@loaders.gl/gltf": "^1.2.0",
     "@loaders.gl/images": "^1.2.0",
     "@luma.gl/constants": "7.2.0-beta.1",
@@ -40,6 +39,7 @@
     "@luma.gl/core": "^7.1.0"
   },
   "devDependencies": {
-    "@loaders.gl/polyfills": "^1.2.0"
+    "@loaders.gl/polyfills": "^1.2.0",
+    "@loaders.gl/core": "^1.2.0"
   }
 }
