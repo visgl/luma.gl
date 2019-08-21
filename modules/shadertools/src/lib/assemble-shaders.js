@@ -81,6 +81,8 @@ function assembleShader(
     glslVersion = 300; // TODO - regexp that matches atual version number
     versionLine = sourceLines[0];
     coreSource = sourceLines.slice(1).join('\n');
+  } else {
+    versionLine = `#version ${glslVersion}`;
   }
 
   // Combine Module and Application Defines
