@@ -35,20 +35,28 @@ pm.addModuleInjection(picking, {
   order: Number.POSITIVE_INFINITY
 });
 
-const program1 = pm.get(vs, fs);   // Basic, no modules or defines
-const program2 = pm.get(vs, fs);   // Cached, same as program 1, use count 2
-const program3 = pm.get(vs, fs, {  // New program, with different source based on define
+const program1 = pm.get({vs, fs});   // Basic, no modules or defines
+const program2 = pm.get({vs, fs});   // Cached, same as program 1, use count 2
+const program3 = pm.get({  // New program, with different source based on define
+  vs,
+  fs,
   defines: {
     MY_DEFINE: true
   }
 });
-const program4 = pm.get(vs, fs, {  // New program, with different source based on module and its injection
+
+const program4 = pm.get({  // New program, with different source based on module and its injection
+  vs,
+  fs,
   defines: {
     MY_DEFINE: true
   },
   modules: [picking]
 });
-const program5 = pm.get(vs, fs, {  // Cached, same as program 4, use count 2
+
+const program5 = pm.get({  // Cached, same as program 4, use count 2
+  vs,
+  fs,
   defines: {
     MY_DEFINE: true
   },
@@ -65,10 +73,12 @@ pm.release(program5); // Cached program deleted
 
 ## Methods
 
-### get(vs : String, fs : String, [opts : Object]) : Program
+### get(opts : Object) : Program
 
 Get a program that fits the parameters provided. If one is already cached, return it, otherwise create and cache a new one.
 `opts` can include the following (see `assembleShaders` for details):
+* `vs`: Base vertex shader source.
+* `fs`: Base fragment shader source.
 * `defines`: Object indicating `#define` constants to include in the shaders.
 * `modules`: Array of module objects to include in the shaders.
 * `inject`: Object of hook injections to include in the shaders.
