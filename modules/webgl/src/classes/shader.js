@@ -76,7 +76,11 @@ export class Shader extends Resource {
   }
 
   // PRIVATE METHODS
-  _compile() {
+  _compile(source = this.source) {
+    if (!source.startsWith('#version ')) {
+      source = `#version 100\n${source}`;
+    }
+    this.source = source;
     this.gl.shaderSource(this.handle, this.source);
     this.gl.compileShader(this.handle);
 
