@@ -196,6 +196,7 @@ module.exports = {
   INT: 0x1404,
   UNSIGNED_INT: 0x1405,
   FLOAT: 0x1406,
+  DOUBLE: 0x140a,
 
   // Pixel formats
 
