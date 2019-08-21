@@ -25,31 +25,7 @@ export default class TextureCube extends Texture {
 
   /* eslint-disable max-len, max-statements */
   initialize(props = {}) {
-    const {/* format = GL.RGBA, */ mipmaps = true, parameters = {}} = props;
-
-    // let {width = 1, height = 1, type = GL.UNSIGNED_BYTE, dataFormat} = props;
-
-    // Deduce width and height based on one of the faces
-    // ({type, dataFormat} = this._deduceParameters({format, type, dataFormat}));
-    // ({width, height} = this._deduceImageSize({
-    //   data: props[GL.TEXTURE_CUBE_MAP_POSITIVE_X],
-    //   width,
-    //   height
-    // }));
-
-    // Enforce cube
-    // assert(width === height);
-
-    // Temporarily apply any pixel store paramaters and build textures
-    // withParameters(this.gl, props, () => {
-    //   for (const face of CUBE_MAP_FACES) {
-    //     this.setImageData({
-    //       target: face,
-    //       data: props[face],
-    //       width, height, format, type, dataFormat, border, mipmaps
-    //     });
-    //   }
-    // });
+    const {mipmaps = true, parameters = {}} = props;
 
     // Store props for accessors
     this.opts = props;
