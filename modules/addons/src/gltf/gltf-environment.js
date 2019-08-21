@@ -1,11 +1,13 @@
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube, loadImage} from '@luma.gl/core';
+import {Texture2D, TextureCube} from '@luma.gl/core';
+import {loadImage} from '@loaders.gl/images';
 
 export default class GLTFEnvironment {
-  constructor(gl, {brdfLutUrl, getTexUrl}) {
+  constructor(gl, {brdfLutUrl, getTexUrl, specularMipLevels = 10}) {
     this.gl = gl;
     this.brdfLutUrl = brdfLutUrl;
     this.getTexUrl = getTexUrl;
+    this.specularMipLevels = specularMipLevels;
   }
 
   makeCube({id, getTextureForFace, parameters}) {
@@ -44,7 +46,7 @@ export default class GLTFEnvironment {
         id: 'SpecularEnvSampler',
         getTextureForFace: dir => {
           const imageArray = [];
-          for (let lod = 0; lod <= 9; lod++) {
+          for (let lod = 0; lod <= this.specularMipLevels - 1; lod++) {
             imageArray.push(loadImage(this.getTexUrl('specular', dir, lod)));
           }
           return imageArray;
