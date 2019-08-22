@@ -29,7 +29,6 @@ const WEBGL_FEATURES = {
   TEXTURE_HALF_FLOAT: true,
 
   COLOR_ATTACHMENT_FLOAT: false,
-  COLOR_ATTACHMENT_HALF_FLOAT: false,
 
   // GLSL extensions
   GLSL_FRAG_DATA: true,
@@ -42,6 +41,24 @@ test('webgl#caps#imports', t => {
   t.ok(typeof hasFeature === 'function', 'hasFeature defined');
   t.ok(typeof hasFeatures === 'function', 'hasFeatures defined');
   t.ok(typeof getFeatures === 'function', 'getFeatures defined');
+  t.end();
+});
+
+test('webgl#caps#hasFeatures (WebGL1)', t => {
+  const {gl} = fixture;
+  const UNSUPPORTED_WEBGL1_FEATURES = [FEATURES.WEBGL2, FEATURES.COLOR_ATTACHMENT_FLOAT];
+
+  t.notOk(hasFeatures(gl, UNSUPPORTED_WEBGL1_FEATURES), 'hasFeatures should return false');
+  t.end();
+});
+
+test('webgl#caps#hasFeatures (WebGL2)', t => {
+  const {gl2} = fixture;
+  const SUPPORTED_WEBGL2_FEATURES = [FEATURES.VERTEX_ARRAY_OBJECT, FEATURES.INSTANCED_RENDERING];
+
+  if (gl2) {
+    t.ok(hasFeatures(gl2, SUPPORTED_WEBGL2_FEATURES), 'hasFeatures should return true');
+  }
   t.end();
 });
 
@@ -58,7 +75,7 @@ test('webgl#caps#getFeatures', t => {
   t.end();
 });
 
-test('webgl#caps#hasFeatures(WebGL1)', t => {
+test('webgl#caps#hasFeature(WebGL1)', t => {
   const {gl} = fixture;
   t.ok(typeof hasFeatures === 'function', 'hasFeatures defined');
 
@@ -71,7 +88,7 @@ test('webgl#caps#hasFeatures(WebGL1)', t => {
   t.end();
 });
 
-test('webgl#caps#hasFeatures(WebGL2)', t => {
+test('webgl#caps#hasFeature(WebGL2)', t => {
   const {gl2} = fixture;
 
   if (gl2) {

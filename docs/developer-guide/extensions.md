@@ -51,7 +51,9 @@ Note that many of these extensions are no longer available in WebGL2 as the func
 | `OES_texture_float_linear`  | Enables linear filter for float textures | |
 | `OES_fbo_render_mipmap`     | Render to specific texture mipmap level | |
 | `EXT_sRGB`                  | sRGB encoded rendering | |
+| `WEBGL_color_buffer_float` | framebuffer render to 32 bit float color buffer | |
 | `EXT_color_buffer_half_float` | framebuffer render to half float color buffer | |
+| `EXT_float_blend` | blending with 32-bit floating point color buffers | |
 
 
 ## WebGL2 Extensions
@@ -61,7 +63,6 @@ These extensions expose various OpenGL ES 3.1 and 3.2 features that are often av
 | Extension | Enables | luma.gl support |
 | ---       | ---     | ---             |
 | EXT_color_buffer_float | framebuffer render to float color buffer | |
-| WEBGL_color_buffer_float | frame buffer render of various floating point format | |
 
 
 ## Proposed Extensions
@@ -71,7 +72,6 @@ Khronos lists a couple of proposed extensions. They will be considered by luma.g
 | Extension                         | Enables | luma.gl support |
 | ---                               | ---     | ---             |
 | `EXT_clip_cull_distance` (WebGL2) | hardware clip/cull planes (ES3.2) | N/A |
-| `EXT_float_blend`                 | 32 bit color blending | N/A |
 | `EXT_texture_storage`             | texture storage effiency | N/A |
 | `WEBGL_debug`                     | Debug events | N/A |
 | `WEBGL_dynamic_texture`           | frequently changin textures | N/A |
@@ -84,7 +84,7 @@ Used to query if the GPU supports specific proprietary compressed texture format
 
 The primary advantage of compressed texture formats is that in contrast to JPGs or PNGs, they do not have to be decompressed to be used by the GPU. As a non-scientific guideline, compressed texture formats might achieve about 4x compression, compared to say 16x compression for JPEG. So while they are usually slower to load, but they could allow 4x more textures to be stored in the same amount of GPU memory.
 
-The main issue of compressed texture formats is that they tend to be highly propietary (patent-encumbered) and there tends to be royalty requirements when using them. 
+The main issue of compressed texture formats is that they tend to be highly propietary (patent-encumbered) and there tends to be royalty requirements when using them.
 Note that (presumably due to patent issues), finding a compressed texture format which is supported across a range of target devices can be challenging.
 
 To side-step patent issues when using these formats an application would typically:
