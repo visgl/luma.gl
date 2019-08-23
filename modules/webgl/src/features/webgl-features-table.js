@@ -1,5 +1,3 @@
-import {isWebGL2} from '../webgl-utils';
-
 // TODO - this should be the default export, test cases need updating
 export const FEATURES = {
   WEBGL2: 'WEBGL2',
@@ -12,7 +10,10 @@ export const FEATURES = {
 
   // FEATURES
   ELEMENT_INDEX_UINT32: 'ELEMENT_INDEX_UINT32',
+
+  // BLENDING
   BLEND_EQUATION_MINMAX: 'BLEND_EQUATION_MINMAX',
+  FLOAT_BLEND: 'FLOAT_BLEND',
 
   // TEXTURES: '// TEXTURES', RENDERBUFFERS
   COLOR_ENCODING_SRGB: 'COLOR_ENCODING_SRGB',
@@ -39,8 +40,9 @@ export const FEATURES = {
 };
 
 // Defines luma.gl "feature" names and semantics
+// Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
 export default {
-  [FEATURES.WEBGL2]: [gl => isWebGL2(gl)],
+  [FEATURES.WEBGL2]: [false, true],
 
   // API SUPPORT
   [FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
@@ -50,7 +52,10 @@ export default {
 
   // FEATURES
   [FEATURES.ELEMENT_INDEX_UINT32]: ['OES_element_index_uint', true],
+
+  // BLENDING
   [FEATURES.BLEND_EQUATION_MINMAX]: ['EXT_blend_minmax', true],
+  [FEATURES.FLOAT_BLEND]: ['EXT_float_blend'],
 
   // TEXTURES, RENDERBUFFERS
   [FEATURES.COLOR_ENCODING_SRGB]: ['EXT_sRGB', true],
@@ -67,7 +72,7 @@ export default {
   // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
   [FEATURES.COLOR_ATTACHMENT_RGBA32F]: ['WEBGL_color_buffer_float', 'EXT_color_buffer_float'],
   [FEATURES.COLOR_ATTACHMENT_FLOAT]: [false, 'EXT_color_buffer_float'],
-  [FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: [false, 'EXT_color_buffer_half_float'],
+  [FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: ['EXT_color_buffer_half_float'],
 
   // GLSL extensions
   [FEATURES.GLSL_FRAG_DATA]: ['WEBGL_draw_buffers', true],
