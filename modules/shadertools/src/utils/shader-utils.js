@@ -1,9 +1,5 @@
 import {assert} from '../utils';
-const FS100 = `\
-#version 100
-void main() {
-  gl_FragColor = vec4(0);
-}`;
+const FS100 = `void main() {gl_FragColor = vec4(0);}`;
 const FS_GLES = `\
 out vec4 transform_output;
 void main() {
@@ -51,7 +47,6 @@ void main() {
   }
   // WebGL 1.0
   return `\
-#version 100
 varying ${inputType} ${input};
 void main() {
   gl_FragColor = ${outputValue};
