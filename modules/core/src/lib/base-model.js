@@ -31,10 +31,27 @@ export default class BaseModel {
     this.props = {};
 
     this.programManager = props.programManager || null;
-    this.program = this._createProgram(props);
+    const {
+      vs = null,
+      fs = null,
+      modules = [],
+      defines = {},
+      inject = {},
+      varyings = null,
+      bufferMode = GL.SEPARATE_ATTRIBS
+    } = props;
+    this.programProps = {vs, fs, modules, defines, inject, varyings, bufferMode};
+    this.program = props.program || null;
+    this._programDirty = !this.program;
+    this._vertexArrayDirty = Boolean(this.program);
+    this.getModuleUniforms = x => {};
 
-    // Create a vertex array configured after this program
-    this.vertexArray = new VertexArray(this.gl, {program: this.program});
+    if (props.shaderCache && this._programDirty) {
+      this._createProgramFromShaderCache(props.shaderCache);
+    }
+
+    this._checkProgram();
+    this._checkVertexArray();
 
     // Initialize state
     this.userData = {};
@@ -111,23 +128,8 @@ export default class BaseModel {
   }
 
   setProgram(props) {
-    const newProgram = this._createProgram(props);
-
-    if (this.program === newProgram) {
-      return;
-    }
-
-    if (this.programManager) {
-      this.programManager.release(this.program);
-    } else {
-      this.program.delete();
-    }
-
-    this.program = newProgram;
-
-    const oldVertexArray = this.vertexArray;
-    this.vertexArray = new VertexArray(this.gl, {program: this.program, copyFrom: oldVertexArray});
-    oldVertexArray.delete();
+    this.programProps = Object.assign({}, props);
+    this._programDirty = true;
   }
 
   getUniforms() {
@@ -175,7 +177,9 @@ export default class BaseModel {
       animationProps
     } = opts;
 
-    // Update module settings
+    // Lazy update program and vertex array
+    this._checkProgram();
+    this._checkVertexArray();
 
     addModel(this);
 
@@ -268,47 +272,84 @@ export default class BaseModel {
     }
   }
 
-  _createProgram({
-    vs = null,
-    fs = null,
-    // 1: Modular shaders
-    modules = [],
-    defines = {},
-    inject = {},
-    shaderCache = null,
-    // TransformFeedback
-    varyings = null,
-    bufferMode = GL.SEPARATE_ATTRIBS,
-    program = null
-  }) {
-    this.getModuleUniforms = x => {};
+  _checkProgram() {
+    if (!this._programDirty) {
+      return;
+    }
 
     const id = this.id;
+    let {vs, fs} = this.programProps;
+    const {modules, inject, defines, varyings, bufferMode} = this.programProps;
 
-    if (!program) {
-      if (this.programManager) {
-        program = this.programManager.get({vs, fs, modules, inject, defines});
-        this.getModuleUniforms = this.programManager.getUniforms(program);
-      } else {
-        // Assign default shaders if none are provided
-        vs = vs || MODULAR_SHADERS.vs;
-        fs = fs || MODULAR_SHADERS.fs;
+    let program;
 
-        const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
-        ({vs, fs} = assembleResult);
+    if (this.programManager) {
+      program = this.programManager.get({vs, fs, modules, inject, defines});
+      this.getModuleUniforms = this.programManager.getUniforms(program);
+    } else {
+      // Assign default shaders if none are provided
+      vs = vs || MODULAR_SHADERS.vs;
+      fs = fs || MODULAR_SHADERS.fs;
 
-        if (shaderCache) {
-          program = shaderCache.getProgram(this.gl, {id, vs, fs});
-        } else {
-          program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
-        }
+      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
+      ({vs, fs} = assembleResult);
 
-        this.getModuleUniforms = assembleResult.getUniforms || (x => {});
-      }
+      program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
+
+      this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+      this._programDirty = false;
     }
 
     assert(program instanceof Program, 'Model needs a program');
-    return program;
+
+    if (program === this.program) {
+      return;
+    }
+
+    if (this.program) {
+      if (this.programManager) {
+        this.programManager.release(this.program);
+      } else {
+        this.program.delete();
+      }
+    }
+
+    this.program = program;
+
+    this._vertexArrayDirty = true;
+  }
+
+  _checkVertexArray() {
+    if (!this._vertexArrayDirty) {
+      return;
+    }
+
+    if (this.vertexArray) {
+      this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
+    } else {
+      this.vertexArray = new VertexArray(this.gl, {program: this.program});
+    }
+
+    this._vertexArrayDirty = false;
+  }
+
+  _createProgramFromShaderCache(shaderCache) {
+    const id = this.id;
+    let {vs, fs} = this.programProps;
+    const {modules, inject, defines} = this.programProps;
+    vs = vs || MODULAR_SHADERS.vs;
+    fs = fs || MODULAR_SHADERS.fs;
+
+    const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
+    ({vs, fs} = assembleResult);
+
+    this.program = shaderCache.getProgram(this.gl, {id, vs, fs});
+    this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+    assert(this.program instanceof Program, 'Model needs a program');
+    this._programDirty = false;
+
+    // Create a vertex array configured after this program
+    this.vertexArray.setProps({program: this.program});
   }
 
   // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered

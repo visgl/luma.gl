@@ -165,9 +165,10 @@ test('Model#program management', t => {
     }
   });
 
-  t.ok(model1.program !== model2.program, 'Program was updated.');
+  t.ok(model1.program === model2.program, 'Program not updated before draw.');
 
   model2.draw();
+  t.ok(model1.program !== model2.program, 'Program updated after draw.');
   t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
 
   t.end();
