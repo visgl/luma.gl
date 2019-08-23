@@ -5,7 +5,9 @@
 
 import WEBGL_FEATURES from './webgl-features-table';
 import {isWebGL2} from '../webgl-utils';
-import {assert} from '../utils';
+import {assert, log} from '../utils';
+
+const LOG_UNSUPPORTED_FEATURE = 2;
 
 // Check one feature
 export function hasFeature(gl, feature) {
@@ -57,6 +59,10 @@ function isFeatureSupported(gl, cap) {
     isSupported = featureDefinition;
   } else {
     assert(false);
+  }
+
+  if (!isSupported) {
+    log.log(LOG_UNSUPPORTED_FEATURE, `Feature: ${cap} not supported`)();
   }
 
   return isSupported;
