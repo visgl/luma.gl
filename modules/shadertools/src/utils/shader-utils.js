@@ -34,10 +34,9 @@ export function getPassthroughFS({version = 100, input, inputType, output} = {})
     } else if (version > 300) {
       // Use the supplied version for OpenGL/ES 3.2+
       return `#version ${version}\n${FS_GLES}`;
-    } else {
-      // Fast-path for WebGL 1.0
-      return FS100;
     }
+    // Fast-path for WebGL 1.0
+    return FS100;
   }
   const outputValue = convertToVec4(input, inputType);
   if (version >= 300) {
