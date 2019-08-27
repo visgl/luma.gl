@@ -1,7 +1,7 @@
 import {
   AnimationLoop,
   setParameters,
-  ModelNode,
+  Model,
   dirlight,
   CubeGeometry,
   ProgramManager
@@ -90,7 +90,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       this.cubes[i] = {
         translation: translations[i],
         rotation: rotations[i],
-        model: new ModelNode(gl, {
+        model: new Model(gl, {
           programManager,
           vs,
           fs,
@@ -112,13 +112,13 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(animationProps) {
     const {gl, tick} = animationProps;
 
-    if (tick % 120) {
-      const even = Number(tick % 240 < 120);
+    if (tick % 120 === 0) {
+      const even = tick % 240 === 0;
       for (let i = 0; i < 4; ++i) {
-        this.cubes[i].model.model.setProgram({
+        this.cubes[i].model.setProgram({
           vs,
           fs,
-          modules: i % 2 === even ? [dirlight] : []
+          modules: i % 2 === Number(even) ? [dirlight] : []
         });
       }
     }
@@ -130,13 +130,16 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     for (let i = 0; i < 4; ++i) {
       const cube = this.cubes[i];
+
       cube.rotation[0] += 0.01;
       cube.rotation[1] += 0.01;
       cube.rotation[2] += 0.01;
+
       modelMatrix
         .identity()
         .translate(cube.translation)
         .rotateXYZ(cube.rotation);
+
       cube.model
         .setUniforms({
           uModel: modelMatrix

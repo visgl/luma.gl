@@ -1,5 +1,5 @@
+/* eslint-disable complexity */
 // Shared code between Model and MeshModel
-
 import GL from '@luma.gl/constants';
 import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
@@ -24,7 +24,6 @@ export default class BaseModel {
     this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
-    this._setBaseModelProps(props);
   }
 
   initialize(props) {
@@ -32,26 +31,20 @@ export default class BaseModel {
 
     this.programManager = props.programManager || null;
     const {
-      vs = null,
-      fs = null,
+      program = null,
+      vs = '',
+      fs = '',
       modules = [],
       defines = {},
       inject = {},
-      varyings = null,
+      varyings = [],
       bufferMode = GL.SEPARATE_ATTRIBS
     } = props;
-    this.programProps = {vs, fs, modules, defines, inject, varyings, bufferMode};
-    this.program = props.program || null;
-    this._programDirty = !this.program;
-    this._vertexArrayDirty = Boolean(this.program);
-    this.getModuleUniforms = x => {};
 
-    if (props.shaderCache && this._programDirty) {
-      this._createProgramFromShaderCache(props.shaderCache);
-    }
-
-    this._checkProgram();
-    this._checkVertexArray();
+    this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
+    this.program = null;
+    this.vertexArray = null;
+    this._programDirty = true;
 
     // Initialize state
     this.userData = {};
@@ -81,13 +74,13 @@ export default class BaseModel {
     // picking options
     this.pickable = true;
 
+    this._checkProgram(props.shaderCache);
+
     this._setBaseModelProps(props);
 
-    // Make sure we have some reasonable default uniforms in place
     this.setUniforms(
       Object.assign(
         {},
-        this.getModuleUniforms(), // Get all default uniforms
         this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
       )
     );
@@ -128,7 +121,7 @@ export default class BaseModel {
   }
 
   setProgram(props) {
-    this.programProps = Object.assign({}, props);
+    this.programProps = Object.assign({}, props, {});
     this._programDirty = true;
   }
 
@@ -166,6 +159,9 @@ export default class BaseModel {
 
   /* eslint-disable max-statements  */
   drawGeometry(opts = {}) {
+    // Lazy update program and vertex array
+    this._checkProgram();
+
     const {
       moduleSettings = null,
       framebuffer,
@@ -176,10 +172,6 @@ export default class BaseModel {
       vertexArray = this.vertexArray,
       animationProps
     } = opts;
-
-    // Lazy update program and vertex array
-    this._checkProgram();
-    this._checkVertexArray();
 
     addModel(this);
 
@@ -272,29 +264,37 @@ export default class BaseModel {
     }
   }
 
-  _checkProgram() {
+  _checkProgram(shaderCache = null) {
     if (!this._programDirty) {
       return;
     }
 
-    const id = this.id;
-    let {vs, fs} = this.programProps;
+    let {program, vs, fs} = this.programProps;
     const {modules, inject, defines, varyings, bufferMode} = this.programProps;
 
-    let program;
-
-    if (this.programManager) {
+    if (program) {
+      this.getModuleUniforms = () => {};
+      this._programDirty = false;
+    } else if (this.programManager) {
       program = this.programManager.get({vs, fs, modules, inject, defines});
       this.getModuleUniforms = this.programManager.getUniforms(program);
+      // Program always dirty if there's a program manager
     } else {
       // Assign default shaders if none are provided
+      const id = this.id;
+
       vs = vs || MODULAR_SHADERS.vs;
       fs = fs || MODULAR_SHADERS.fs;
 
       const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
       ({vs, fs} = assembleResult);
 
-      program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
+      if (shaderCache) {
+        log.warn('ShaderCache support will be deprecated in a future luma.gl version')();
+        program = shaderCache.getProgram(this.gl, {id, vs, fs});
+      } else {
+        program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
+      }
 
       this.getModuleUniforms = assembleResult.getUniforms || (x => {});
       this._programDirty = false;
@@ -316,40 +316,19 @@ export default class BaseModel {
 
     this.program = program;
 
-    this._vertexArrayDirty = true;
-  }
-
-  _checkVertexArray() {
-    if (!this._vertexArrayDirty) {
-      return;
-    }
-
     if (this.vertexArray) {
       this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
     } else {
       this.vertexArray = new VertexArray(this.gl, {program: this.program});
     }
 
-    this._vertexArrayDirty = false;
-  }
-
-  _createProgramFromShaderCache(shaderCache) {
-    const id = this.id;
-    let {vs, fs} = this.programProps;
-    const {modules, inject, defines} = this.programProps;
-    vs = vs || MODULAR_SHADERS.vs;
-    fs = fs || MODULAR_SHADERS.fs;
-
-    const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
-    ({vs, fs} = assembleResult);
-
-    this.program = shaderCache.getProgram(this.gl, {id, vs, fs});
-    this.getModuleUniforms = assembleResult.getUniforms || (x => {});
-    assert(this.program instanceof Program, 'Model needs a program');
-    this._programDirty = false;
-
-    // Create a vertex array configured after this program
-    this.vertexArray.setProps({program: this.program});
+    // Make sure we have some reasonable default uniforms in place
+    this.setUniforms(
+      Object.assign(
+        {},
+        this.getModuleUniforms() // Get all default uniforms,
+      )
+    );
   }
 
   // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered
