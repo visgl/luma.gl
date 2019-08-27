@@ -35,7 +35,9 @@ pm.addModuleInjection(picking, {
   order: Number.POSITIVE_INFINITY
 });
 
-const program1 = pm.get({vs, fs});   // Basic, no modules or defines
+pm.addDefaultModule(dirlight); // Will be included in all following programs
+
+const program1 = pm.get({vs, fs});   // Basic, no defines, only default module
 const program2 = pm.get({vs, fs});   // Cached, same as program 1, use count 2
 const program3 = pm.get({  // New program, with different source based on define
   vs,
@@ -82,6 +84,14 @@ Get a program that fits the parameters provided. If one is already cached, retur
 * `defines`: Object indicating `#define` constants to include in the shaders.
 * `modules`: Array of module objects to include in the shaders.
 * `inject`: Object of hook injections to include in the shaders.
+
+### `addDefaultModule(module: Object)`
+
+Add a module that will automatically be added to any programs created by the program manager.
+
+### `removeDefaultModule(module: Object)`
+
+Remove a module that is automatically being added to programs created by the program manager.
 
 ### `addShaderHook(hook : String, [opts : Object])`
 

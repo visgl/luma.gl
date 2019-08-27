@@ -101,9 +101,6 @@ export default class VertexArray {
     if ('bindOnUse' in props) {
       props = props.bindOnUse;
     }
-    if ('copyFrom' in props) {
-      this.setAttributes(props.copyFrom.attributes);
-    }
     return this;
   }
 
