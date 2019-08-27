@@ -1,3 +1,5 @@
+## v7.3.0-alpha.2
+
 ## v7.3.0-alpha.1
  - Add Timeline.isFinished method (#1200)
  - Fix resource leaks in Framebuffer and multipass classes (#1202)
