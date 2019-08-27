@@ -1,6 +1,6 @@
 # ProgramManager
 
-The `ProgramManger` manages the creation and caching of programs. It allows the application to request a program based on a vertex shader, fragment shader and set of defines, modules and code injections. The `ProgramManager` will return the requested program, creating it the first time, and re-using a cached version if it is requested more than once. It also allows for the definition of hook functions and module code injections to be inserted into shaders.
+The `ProgramManager` manages the creation and caching of programs. It allows the application to request a program based on a vertex shader, fragment shader and set of defines, modules and code injections. The `ProgramManager` will return the requested program, creating it the first time, and re-using a cached version if it is requested more than once. It also allows for the definition of hook functions and module code injections to be inserted into shaders.
 
 
 ## Usage
