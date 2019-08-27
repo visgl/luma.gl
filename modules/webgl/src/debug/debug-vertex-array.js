@@ -42,8 +42,14 @@ export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'}
 
 /* eslint-disable max-statements */
 function getDebugTableRow(vertexArray, attribute, accessor, header) {
-  // const round = xnum => Math.round(num * 10) / 10;
   const {gl} = vertexArray;
+
+  if (!attribute) {
+    return {
+      [header]: 'null',
+      'Format ': 'N/A'
+    };
+  }
 
   let type = 'NOT PROVIDED';
   let size = 'N/A';
@@ -110,8 +116,5 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
 function getGLSLDeclaration(name, accessor) {
   const {type, size} = accessor;
   const typeAndName = getCompositeGLType(type, size);
-  if (typeAndName) {
-    return `${name} (${typeAndName.name})`;
-  }
-  return name;
+  return typeAndName ? `${name} (${typeAndName.name})` : name;
 }
