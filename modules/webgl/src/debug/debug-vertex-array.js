@@ -65,6 +65,13 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
     isInteger = type.indexOf('nt') !== -1;
   }
 
+  if (!attribute) {
+    return {
+      [header]: 'null',
+      'Format ': 'N/A'
+    };
+  }
+
   if (attribute instanceof Buffer) {
     const buffer = attribute;
 
