@@ -15,10 +15,22 @@ export default class ProgramManager {
       vs: {},
       fs: {}
     };
+    this._defaultModules = [];
 
     this._hashes = {};
     this._hashCounter = 0;
     this._useCounts = {};
+  }
+
+  addDefaultModule(module) {
+    if (!this._defaultModules.find(m => m.name === module.name)) {
+      this._defaultModules.push(module);
+    }
+  }
+
+  removeDefaultModule(module) {
+    const moduleName = typeof module === 'string' ? module : module.name;
+    this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
   }
 
   addModuleInjection(module, opts) {
@@ -55,7 +67,7 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    const moduleHashes = modules.map(m => this._getHash(m.name)).sort();
+    const moduleHashes = this._getModuleNameList(modules);
     const varyingHashes = varyings.map(v => this._getHash(v));
 
     const defineKeys = Object.keys(defines).sort();
@@ -87,6 +99,7 @@ export default class ProgramManager {
         hookFunctions: this._hookFunctions,
         moduleInjections: this._moduleInjections
       });
+
       this._programCache[hash] = new Program(this.gl, {
         hash,
         vs: assembled.vs,
@@ -94,6 +107,7 @@ export default class ProgramManager {
         varyings,
         bufferMode
       });
+
       this._getUniforms[hash] = assembled.getUniforms || (x => {});
       this._useCounts[hash] = 0;
     }
@@ -124,5 +138,30 @@ export default class ProgramManager {
     }
 
     return this._hashes[key];
+  }
+
+  // Dedup and combine with default modules
+  _getModuleNameList(modules) {
+    const moduleNames = new Array(this._defaultModules.length + modules.length);
+    const seen = {};
+    let count = 0;
+
+    for (let i = 0, len = this._defaultModules.length; i < len; ++i) {
+      const name = this._defaultModules[i].name;
+      moduleNames[count++] = name;
+      seen[name] = true;
+    }
+
+    for (let i = 0, len = modules.length; i < len; ++i) {
+      const name = modules[i].name;
+      if (!seen[name]) {
+        moduleNames[count++] = name;
+        seen[name] = true;
+      }
+    }
+
+    moduleNames.length = count;
+
+    return moduleNames.sort();
   }
 }

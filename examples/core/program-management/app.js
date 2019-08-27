@@ -94,7 +94,7 @@ export default class AppAnimationLoop extends AnimationLoop {
           programManager,
           vs,
           fs,
-          modules: i % 2 === 0 ? [dirlight] : [],
+          modules: i % 2 === 0 ? [] : [dirlight],
           geometry: new CubeGeometry(),
           uniforms: {
             uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
@@ -107,10 +107,20 @@ export default class AppAnimationLoop extends AnimationLoop {
         })
       };
     }
+
+    return {programManager};
   }
 
   onRender(animationProps) {
-    const {gl, tick} = animationProps;
+    const {gl, tick, programManager} = animationProps;
+
+    if (tick % 240 === 0) {
+      if (tick % 480 === 0) {
+        programManager.removeDefaultModule(dirlight);
+      } else {
+        programManager.addDefaultModule(dirlight);
+      }
+    }
 
     if (tick % 120 === 0) {
       const even = tick % 240 === 0;
@@ -118,7 +128,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         this.cubes[i].model.setProgram({
           vs,
           fs,
-          modules: i % 2 === Number(even) ? [dirlight] : []
+          modules: i % 2 === Number(even) ? [] : [dirlight]
         });
       }
     }

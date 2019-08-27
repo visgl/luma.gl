@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import {ProgramManager} from '@luma.gl/core';
-import {picking} from '@luma.gl/shadertools';
+import {dirlight, picking} from '@luma.gl/shadertools';
 import {fixture} from 'test/setup';
 import test from 'tape-catch';
 
@@ -185,6 +185,38 @@ test('ProgramManager#hooks', t => {
 
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
+
+  t.end();
+});
+
+test('ProgramManager#defaultModules', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
+
+  const program = pm.get({vs, fs});
+
+  const moduleProgram = pm.get({
+    vs,
+    fs,
+    modules: [dirlight]
+  });
+
+  pm.addDefaultModule(dirlight);
+
+  const defaultModuleProgram = pm.get({vs, fs});
+
+  t.ok(program !== defaultModuleProgram, 'Program with new default module properly cached');
+  t.ok(
+    moduleProgram === defaultModuleProgram,
+    'Program with new default module matches regular module'
+  );
+
+  pm.removeDefaultModule(dirlight);
+
+  const noDefaultModuleProgram = pm.get({vs, fs});
+
+  t.ok(program === noDefaultModuleProgram, 'Default module was removed');
+  t.ok(moduleProgram !== noDefaultModuleProgram, 'Default module was removed');
 
   t.end();
 });
