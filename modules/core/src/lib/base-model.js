@@ -1,5 +1,5 @@
+/* eslint-disable complexity */
 // Shared code between Model and MeshModel
-
 import GL from '@luma.gl/constants';
 import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
 import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
@@ -24,15 +24,27 @@ export default class BaseModel {
     this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
-    this._setBaseModelProps(props);
   }
 
   initialize(props) {
     this.props = {};
-    this.program = this._createProgram(props);
 
-    // Create a vertex array configured after this program
-    this.vertexArray = new VertexArray(this.gl, {program: this.program});
+    this.programManager = props.programManager || null;
+    const {
+      program = null,
+      vs = '',
+      fs = '',
+      modules = [],
+      defines = {},
+      inject = {},
+      varyings = [],
+      bufferMode = GL.SEPARATE_ATTRIBS
+    } = props;
+
+    this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
+    this.program = null;
+    this.vertexArray = null;
+    this._programDirty = true;
 
     // Initialize state
     this.userData = {};
@@ -44,6 +56,7 @@ export default class BaseModel {
     this.attributes = {}; // User defined attributes
 
     // Model manages uniform animation
+    this.uniforms = {};
     this.animatedUniforms = {};
     this.animated = false;
     this.animationLoop = null; // if set, used as source for animationProps
@@ -61,13 +74,13 @@ export default class BaseModel {
     // picking options
     this.pickable = true;
 
+    this._checkProgram(props.shaderCache);
+
     this._setBaseModelProps(props);
 
-    // Make sure we have some reasonable default uniforms in place
     this.setUniforms(
       Object.assign(
         {},
-        this.getModuleUniforms(), // Get all default uniforms
         this.getModuleUniforms(props.moduleSettings) // Get unforms for supplied parameters
       )
     );
@@ -86,7 +99,12 @@ export default class BaseModel {
       }
     }
 
-    this.program.delete();
+    if (this.programManager) {
+      this.programManager.release(this.program);
+    } else {
+      this.program.delete();
+    }
+
     this.vertexArray.delete();
 
     removeModel(this.id);
@@ -102,8 +120,13 @@ export default class BaseModel {
     return this.program;
   }
 
+  setProgram(props) {
+    this.programProps = Object.assign({}, props, {});
+    this._programDirty = true;
+  }
+
   getUniforms() {
-    return this.program.uniforms;
+    return this.uniforms;
   }
 
   // SETTERS
@@ -117,7 +140,7 @@ export default class BaseModel {
     // Resolve any animated uniforms so that we have an initial value
     uniforms = this._extractAnimatedUniforms(uniforms);
 
-    this.program.setUniforms(uniforms);
+    Object.assign(this.uniforms, uniforms);
 
     return this;
   }
@@ -136,6 +159,9 @@ export default class BaseModel {
 
   /* eslint-disable max-statements  */
   drawGeometry(opts = {}) {
+    // Lazy update program and vertex array
+    this._checkProgram();
+
     const {
       moduleSettings = null,
       framebuffer,
@@ -146,8 +172,6 @@ export default class BaseModel {
       vertexArray = this.vertexArray,
       animationProps
     } = opts;
-
-    // Update module settings
 
     addModel(this);
 
@@ -175,6 +199,8 @@ export default class BaseModel {
     onBeforeRender();
 
     this._timerQueryStart();
+
+    this.program.setUniforms(this.uniforms);
 
     const didDraw = this.program.draw(
       Object.assign({}, opts, {
@@ -238,25 +264,25 @@ export default class BaseModel {
     }
   }
 
-  _createProgram({
-    vs = null,
-    fs = null,
-    // 1: Modular shaders
-    modules = null,
-    defines = {},
-    inject = {},
-    shaderCache = null,
-    // TransformFeedback
-    varyings = null,
-    bufferMode = GL.SEPARATE_ATTRIBS,
-    program = null
-  }) {
-    this.getModuleUniforms = x => {};
+  _checkProgram(shaderCache = null) {
+    if (!this._programDirty) {
+      return;
+    }
 
-    const id = this.id;
+    let {program, vs, fs} = this.programProps;
+    const {modules, inject, defines, varyings, bufferMode} = this.programProps;
 
-    if (!program) {
+    if (program) {
+      this.getModuleUniforms = () => {};
+      this._programDirty = false;
+    } else if (this.programManager) {
+      program = this.programManager.get({vs, fs, modules, inject, defines});
+      this.getModuleUniforms = this.programManager.getUniforms(program);
+      // Program always dirty if there's a program manager
+    } else {
       // Assign default shaders if none are provided
+      const id = this.id;
+
       vs = vs || MODULAR_SHADERS.vs;
       fs = fs || MODULAR_SHADERS.fs;
 
@@ -264,16 +290,45 @@ export default class BaseModel {
       ({vs, fs} = assembleResult);
 
       if (shaderCache) {
+        log.warn('ShaderCache support will be deprecated in a future luma.gl version')();
         program = shaderCache.getProgram(this.gl, {id, vs, fs});
       } else {
         program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
       }
 
       this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+      this._programDirty = false;
     }
 
     assert(program instanceof Program, 'Model needs a program');
-    return program;
+
+    if (program === this.program) {
+      return;
+    }
+
+    if (this.program) {
+      if (this.programManager) {
+        this.programManager.release(this.program);
+      } else {
+        this.program.delete();
+      }
+    }
+
+    this.program = program;
+
+    if (this.vertexArray) {
+      this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
+    } else {
+      this.vertexArray = new VertexArray(this.gl, {program: this.program});
+    }
+
+    // Make sure we have some reasonable default uniforms in place
+    this.setUniforms(
+      Object.assign(
+        {},
+        this.getModuleUniforms() // Get all default uniforms,
+      )
+    );
   }
 
   // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered

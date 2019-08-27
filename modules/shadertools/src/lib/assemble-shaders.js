@@ -17,7 +17,10 @@ const HOOK_FUNCTIONS = {
   [FRAGMENT_SHADER]: {}
 };
 
-const MODULE_INJECTIONS = {};
+const MODULE_INJECTIONS = {
+  [VERTEX_SHADER]: {},
+  [FRAGMENT_SHADER]: {}
+};
 
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
@@ -37,12 +40,12 @@ export function createModuleInjection(moduleName, opts) {
   const {hook, injection, order = 0} = opts;
   const shaderStage = hook.slice(0, 2);
 
-  MODULE_INJECTIONS[moduleName] = MODULE_INJECTIONS[moduleName] || {};
-  MODULE_INJECTIONS[moduleName][shaderStage] = MODULE_INJECTIONS[moduleName][shaderStage] || {};
+  const moduleInjections = MODULE_INJECTIONS[shaderStage];
+  moduleInjections[moduleName] = moduleInjections[moduleName] || {};
 
-  assert(!MODULE_INJECTIONS[moduleName][shaderStage][hook], 'Module injection already created');
+  assert(!moduleInjections[moduleName][hook], 'Module injection already created');
 
-  MODULE_INJECTIONS[moduleName][shaderStage][hook] = {
+  moduleInjections[moduleName][hook] = {
     injection,
     order
   };
@@ -65,7 +68,18 @@ export function assembleShaders(gl, opts) {
 // adding prologues, requested module chunks, and any final injections.
 function assembleShader(
   gl,
-  {id, source, type, modules, defines = {}, inject = {}, prologue = true, log}
+  {
+    id,
+    source,
+    type,
+    modules,
+    defines = {},
+    hookFunctions = HOOK_FUNCTIONS,
+    moduleInjections = MODULE_INJECTIONS,
+    inject = {},
+    prologue = true,
+    log
+  }
 ) {
   assert(typeof source === 'string', 'shader source must be a string');
 
@@ -140,8 +154,8 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
         // Add the module source, and a #define that declares it presence
         assembledSource += moduleSource;
 
-        if (MODULE_INJECTIONS[module.name]) {
-          const injections = MODULE_INJECTIONS[module.name][type];
+        if (moduleInjections[type][module.name]) {
+          const injections = moduleInjections[type][module.name];
           for (const key in injections) {
             if (key.match(/^(v|f)s:#/)) {
               mainInjections[key] = mainInjections[key] || [];
@@ -158,7 +172,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
-  assembledSource += getHookFunctions(type, hookInjections);
+  assembledSource += getHookFunctions(hookFunctions[type], hookInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
@@ -238,9 +252,8 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(shaderStage, hookInjections) {
+function getHookFunctions(hookFunctions, hookInjections) {
   let result = '';
-  const hookFunctions = HOOK_FUNCTIONS[shaderStage];
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
     result += `void ${hookFunction.signature} {\n`;
