@@ -39,7 +39,7 @@ const vertexSource = `
     attribute vec2 positions;
     uniform mat4 uPMatrix;
     void main() {
-        gl_Position = uPMatrix * vec4(positions, 0.000001, 1.0);
+        gl_Position = uPMatrix * vec4(positions, 0, 1.0);
     }
 `;
 
