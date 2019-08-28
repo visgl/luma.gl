@@ -1,3 +1,6 @@
+## v7.3.0-alpha.4
+- Program manager fixes (#1222)
+
 ## v7.3.0-alpha.3
 - Fix program manager default module insertion (#1220)
 - Ensure timeline handles are always truthy. (#1217)
