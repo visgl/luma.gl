@@ -410,7 +410,7 @@ test('WebGL#Transform swap without varyings', t => {
 });
 
 /* eslint-disable max-statements */
-test.only('WebGL#Transform update', t => {
+test('WebGL#Transform update', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -426,8 +426,7 @@ test.only('WebGL#Transform update', t => {
 
   const transform = new Transform(gl2, {
     vs: VS,
-    varyings: ['outValue'],
-    elementCount: 5
+    varyings: ['outValue']
   });
 
   t.ok(transform, 'should construct without buffers');
@@ -438,7 +437,8 @@ test.only('WebGL#Transform update', t => {
     },
     feedbackMap: {
       inValue: 'outValue'
-    }
+    },
+    elementCount: 5
   });
 
   transform.run();
