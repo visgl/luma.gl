@@ -19,6 +19,7 @@ export default class ProgramManager {
 
     this._hashes = {};
     this._hashCounter = 0;
+    this._hookStateCounter = 0; // Used change hashing if hooks are modified
     this._useCounts = {};
   }
 
@@ -45,6 +46,8 @@ export default class ProgramManager {
       injection,
       order
     };
+
+    this._hookStateCounter++;
   }
 
   addShaderHook(hook, opts = {}) {
@@ -52,6 +55,8 @@ export default class ProgramManager {
     const [stage, signature] = hook.split(':');
     const name = hook.replace(/\(.+/, '');
     this._hookFunctions[stage][name] = Object.assign(opts, {signature});
+
+    this._hookStateCounter++;
   }
 
   get(props = {}) {
@@ -87,7 +92,9 @@ export default class ProgramManager {
 
     const hash = `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
       '/'
-    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}B${bufferMode}`;
+    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${
+      this._hookStateCounter
+    }B${bufferMode}`;
 
     if (!this._programCache[hash]) {
       const assembled = assembleShaders(this.gl, {
