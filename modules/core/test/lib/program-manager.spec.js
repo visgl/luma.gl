@@ -215,6 +215,8 @@ test('ProgramManager#defaultModules', t => {
     modules: [dirlight]
   });
 
+  const moduleSource = moduleProgram.fs.source;
+
   pm.addDefaultModule(dirlight);
 
   const defaultModuleProgram = pm.get({vs, fs});
@@ -231,6 +233,19 @@ test('ProgramManager#defaultModules', t => {
 
   t.ok(program === noDefaultModuleProgram, 'Default module was removed');
   t.ok(moduleProgram !== noDefaultModuleProgram, 'Default module was removed');
+
+  // Reset program manager
+  pm.release(program);
+  pm.release(moduleProgram);
+  pm.release(defaultModuleProgram);
+  pm.release(noDefaultModuleProgram);
+
+  pm.addDefaultModule(dirlight);
+  const uncachedProgram = pm.get({vs, fs});
+  const defaultModuleSource = uncachedProgram.fs.source;
+
+  t.ok(defaultModuleProgram !== uncachedProgram, 'Program is not cached');
+  t.ok(moduleSource === defaultModuleSource, 'Default modules create correct source');
 
   t.end();
 });

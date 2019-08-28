@@ -60,19 +60,13 @@ export default class ProgramManager {
   }
 
   get(props = {}) {
-    const {
-      vs = '',
-      fs = '',
-      defines = {},
-      modules = [],
-      inject = {},
-      varyings = [],
-      bufferMode = 0x8c8d
-    } = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+    const {vs = '', fs = '', defines = {}, inject = {}, varyings = [], bufferMode = 0x8c8d} = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+
+    const modules = this._getModuleList(props.modules); // Combine with default modules
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    const moduleHashes = this._getModuleNameList(modules);
+    const moduleHashes = modules.map(m => this._getHash(m)).sort();
     const varyingHashes = varyings.map(v => this._getHash(v));
 
     const defineKeys = Object.keys(defines).sort();
@@ -148,27 +142,28 @@ export default class ProgramManager {
   }
 
   // Dedup and combine with default modules
-  _getModuleNameList(modules) {
-    const moduleNames = new Array(this._defaultModules.length + modules.length);
+  _getModuleList(appModules = []) {
+    const modules = new Array(this._defaultModules.length + appModules.length);
     const seen = {};
     let count = 0;
 
     for (let i = 0, len = this._defaultModules.length; i < len; ++i) {
-      const name = this._defaultModules[i].name;
-      moduleNames[count++] = name;
-      seen[name] = true;
+      const module = this._defaultModules[i];
+      modules[count++] = module;
+      seen[module.name] = true;
     }
 
-    for (let i = 0, len = modules.length; i < len; ++i) {
-      const name = modules[i].name;
+    for (let i = 0, len = appModules.length; i < len; ++i) {
+      const module = appModules[i];
+      const name = module.name;
       if (!seen[name]) {
-        moduleNames[count++] = name;
+        modules[count++] = module;
         seen[name] = true;
       }
     }
 
-    moduleNames.length = count;
+    modules.length = count;
 
-    return moduleNames.sort();
+    return modules;
   }
 }
