@@ -121,7 +121,7 @@ export default class BaseModel {
   }
 
   setProgram(props) {
-    this.programProps = Object.assign({}, props, {});
+    this.programProps = Object.assign({}, props);
     this._programDirty = true;
   }
 
@@ -276,7 +276,7 @@ export default class BaseModel {
       this.getModuleUniforms = () => {};
       this._programDirty = false;
     } else if (this.programManager) {
-      program = this.programManager.get({vs, fs, modules, inject, defines});
+      program = this.programManager.get({vs, fs, modules, inject, defines, program: this.program});
       this.getModuleUniforms = this.programManager.getUniforms(program);
       // Program always dirty if there's a program manager
     } else {

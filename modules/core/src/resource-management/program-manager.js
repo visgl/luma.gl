@@ -60,8 +60,17 @@ export default class ProgramManager {
   }
 
   get(props = {}) {
-    const {vs = '', fs = '', defines = {}, inject = {}, varyings = [], bufferMode = 0x8c8d} = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+    const {
+      vs = '',
+      fs = '',
+      defines = {},
+      inject = {},
+      varyings = [],
+      bufferMode = 0x8c8d,
+      program = null
+    } = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
 
+    const oldProgramHash = program ? program.hash : '';
     const modules = this._getModuleList(props.modules); // Combine with default modules
 
     const vsHash = this._getHash(vs);
@@ -90,6 +99,10 @@ export default class ProgramManager {
       this._hookStateCounter
     }B${bufferMode}`;
 
+    if (oldProgramHash === hash) {
+      return program;
+    }
+
     if (!this._programCache[hash]) {
       const assembled = assembleShaders(this.gl, {
         vs,
@@ -114,6 +127,11 @@ export default class ProgramManager {
     }
 
     this._useCounts[hash]++;
+
+    if (program) {
+      this.release(program);
+    }
+
     return this._programCache[hash];
   }
 

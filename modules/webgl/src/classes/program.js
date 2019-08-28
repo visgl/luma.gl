@@ -56,7 +56,7 @@ export default class Program extends Resource {
   initialize(props = {}) {
     const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
 
-    this.hash = hash || null; // Used by ProgramManager
+    this.hash = hash || ''; // Used by ProgramManager
 
     // Create shaders if needed
     this.vs =

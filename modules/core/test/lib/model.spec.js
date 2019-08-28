@@ -171,6 +171,35 @@ test('Model#program management', t => {
   t.ok(model1.program !== model2.program, 'Program updated after draw.');
   t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
 
+  // This part is checking that the use counts
+  // don't get bloated by multiple checks.
+  const model3 = new Model(gl, {
+    programManager: pm,
+    vs,
+    fs,
+    defines: {
+      MODEL3_DEFINE1: true
+    }
+  });
+
+  const oldProgram = model3.program;
+
+  // Check for program updates a few times
+  model3.draw();
+  model3.draw();
+
+  model3.setProgram({
+    vs,
+    fs,
+    defines: {
+      MODEL3_DEFINE2: true
+    }
+  });
+
+  model3.draw();
+  t.ok(model3.program !== oldProgram, 'Program updated after draw.');
+  t.ok(oldProgram.handle === null, 'Old program released after update');
+
   t.end();
 });
 
