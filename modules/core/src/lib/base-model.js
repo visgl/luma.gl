@@ -306,10 +306,8 @@ export default class BaseModel {
       return;
     }
 
-    if (this.program) {
-      if (!this.programManager) {
-        this.program.delete();
-      }
+    if (this.program && !this.programManager) {
+      this.program.delete();
     }
 
     this.program = program;
