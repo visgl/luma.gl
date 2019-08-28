@@ -307,9 +307,7 @@ export default class BaseModel {
     }
 
     if (this.program) {
-      if (this.programManager) {
-        this.programManager.release(this.program);
-      } else {
+      if (!this.programManager) {
         this.program.delete();
       }
     }
