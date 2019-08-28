@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import {ProgramManager} from '@luma.gl/core';
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking, registerShaderModules} from '@luma.gl/shadertools';
 import {fixture} from 'test/setup';
 import test from 'tape-catch';
 
@@ -199,6 +199,29 @@ test('ProgramManager#hooks', t => {
 
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
+
+  t.end();
+});
+
+test('ProgramManager#moduleRegistration', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
+
+  registerShaderModules([picking], {ignoreMultipleRegistrations: true});
+
+  const moduleProgram = pm.get({
+    vs,
+    fs,
+    modules: [picking]
+  });
+
+  const moduleStringProgram = pm.get({
+    vs,
+    fs,
+    modules: ['picking']
+  });
+
+  t.ok(moduleProgram === moduleStringProgram, 'Strings accepted for registered modules');
 
   t.end();
 });
