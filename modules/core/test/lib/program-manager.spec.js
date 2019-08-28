@@ -107,11 +107,18 @@ test('ProgramManager#hooks', t => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
+  const preHookProgram = pm.get({vs, fs});
+
   pm.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   pm.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
     header: 'if (color.a == 0.0) discard;\n',
     footer: 'color.a *= 1.2;\n'
   });
+
+  const postHookProgram = pm.get({vs, fs});
+
+  t.ok(preHookProgram !== postHookProgram, 'Adding hooks changes hash');
+
   pm.addModuleInjection(picking, {
     hook: 'vs:LUMAGL_pickColor',
     injection: 'picking_setPickingColor(color.rgb);'
@@ -122,22 +129,29 @@ test('ProgramManager#hooks', t => {
     order: Number.POSITIVE_INFINITY
   });
 
-  const moModuleProgram = pm.get({vs, fs});
-  const moModuleVs = moModuleProgram.vs.source;
-  const moModuleFs = moModuleProgram.fs.source;
+  const postInjectionProgram = pm.get({vs, fs});
+  t.ok(preHookProgram !== postInjectionProgram, 'Adding hooks and injections changes hash');
+  t.ok(postHookProgram !== postInjectionProgram, 'Adding injections changes hash');
 
-  t.ok(moModuleVs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader');
+  const noModuleProgram = pm.get({vs, fs});
+
+  t.ok(preHookProgram !== noModuleProgram, 'Adding hooks changes hash');
+
+  const noModuleVs = noModuleProgram.vs.source;
+  const noModuleFs = noModuleProgram.fs.source;
+
+  t.ok(noModuleVs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader');
   t.ok(
-    moModuleFs.indexOf('LUMAGL_fragmentColor') > -1,
+    noModuleFs.indexOf('LUMAGL_fragmentColor') > -1,
     'hook function injected into fragment shader'
   );
 
   t.ok(
-    moModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1,
+    noModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1,
     'injection code not included in vertex shader without module'
   );
   t.ok(
-    moModuleFs.indexOf('color = picking_filterColor(color)') === -1,
+    noModuleFs.indexOf('color = picking_filterColor(color)') === -1,
     'injection code not included in fragment shader without module'
   );
 
