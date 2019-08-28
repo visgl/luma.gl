@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import BufferTransform from '@luma.gl/core/lib/transform-new/buffer-transform';
+import BufferTransform from '@luma.gl/core/lib/transform/buffer-transform';
 import {Buffer, Model, TransformFeedback} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 
@@ -20,7 +20,6 @@ void main(void) {
 `;
 
 test('WebGL#BufferTransform construct', t => {
-
   const gl = fixture.gl;
 
   const bt = new BufferTransform(gl, {
@@ -35,16 +34,20 @@ test('WebGL#BufferTransform construct', t => {
 
 test('WebGL#BufferTransform construct with feedbackBuffer', t => {
   let gl = fixture.gl;
-  let source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])})
-  let feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])})
-  t.throws(() => new BufferTransform(gl, {
-    sourceBuffers: {
-      source
-    },
-    feedbackBuffers: {
-      feedback
-    }
-  }), 'should throw under WebGL1');
+  let source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  let feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
+  t.throws(
+    () =>
+      new BufferTransform(gl, {
+        sourceBuffers: {
+          source
+        },
+        feedbackBuffers: {
+          feedback
+        }
+      }),
+    'should throw under WebGL1'
+  );
 
   gl = fixture.gl2;
   if (!gl) {
@@ -72,9 +75,7 @@ test('WebGL#BufferTransform construct with feedbackBuffer', t => {
   t.end();
 });
 
-
 test('WebGL#BufferTransform feedbackBuffer with referece', t => {
-
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -98,7 +99,6 @@ test('WebGL#BufferTransform feedbackBuffer with referece', t => {
 });
 
 test('WebGL#BufferTransform getModelProps', t => {
-
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -133,15 +133,17 @@ test('WebGL#BufferTransform getModelProps', t => {
   });
 
   ({varyings} = bt.getModelProps({}));
-  t.deepEqual(varyings, ['feedback'], 'should build varyings from feedbackBuffers when not provided');
+  t.deepEqual(
+    varyings,
+    ['feedback'],
+    'should build varyings from feedbackBuffers when not provided'
+  );
 
   bt.delete();
   t.end();
 });
 
-
 test('WebGL#BufferTransform setupResources', t => {
-
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -169,9 +171,7 @@ test('WebGL#BufferTransform setupResources', t => {
   t.end();
 });
 
-
 test('WebGL#BufferTransform swap', t => {
-
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');

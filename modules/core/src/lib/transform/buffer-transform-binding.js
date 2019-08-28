@@ -1,15 +1,10 @@
-
 import {isObjectEmpty} from '../../utils';
 
-import {
-  TransformFeedback
-} from '@luma.gl/webgl';
+import {TransformFeedback} from '@luma.gl/webgl';
 
 // swapping of two instances, instead of maintaing two arra
 export default class BufferTransformBinding {
-
   constructor(gl, props = {}) {
-
     this.gl = gl;
 
     // shader attribute name to Buffer mapping

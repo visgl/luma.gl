@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import BinBufferTransformBinding from '@luma.gl/core/lib/transform-new/buffer-transform-binding';
+import BinBufferTransformBinding from '@luma.gl/core/lib/transform/buffer-transform-binding';
 import {Buffer, Model, TransformFeedback} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 
@@ -29,7 +29,10 @@ test('WebGL#BufferTransformBinding construct', t => {
     feedbackBuffers: {feedback}
   });
 
-  t.ok(btb instanceof BinBufferTransformBinding, 'should create a BinBufferTransformBinding instance');
+  t.ok(
+    btb instanceof BinBufferTransformBinding,
+    'should create a BinBufferTransformBinding instance'
+  );
   t.equal(btb.sourceBuffers.source.id, 'source', 'should set sourceBuffers');
   t.equal(btb.feedbackBuffers.feedback.id, 'feedback', 'should set feedbackBuffers');
 
@@ -37,7 +40,6 @@ test('WebGL#BufferTransformBinding construct', t => {
 });
 
 test('WebGL#BufferTransformBinding setupTransformFeedback', t => {
-
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -54,6 +56,6 @@ test('WebGL#BufferTransformBinding setupTransformFeedback', t => {
   });
   btb.setupTransformFeedback({model});
 
-  t.ok(btb.transformFeedback instanceof TransformFeedback, 'should setup TransformFeedback object')
+  t.ok(btb.transformFeedback instanceof TransformFeedback, 'should setup TransformFeedback object');
   t.end();
 });

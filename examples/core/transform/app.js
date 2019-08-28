@@ -4,12 +4,11 @@ import {
   Buffer,
   Model,
   picking,
-  // Transform,
+  Transform,
   isWebGL2,
   readPixelsToArray
 } from '@luma.gl/core';
 import {Log} from 'probe.gl';
-import Transform from '@luma.gl/core/lib/transform-new/transform';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 

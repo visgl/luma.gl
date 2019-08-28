@@ -1,12 +1,8 @@
 import GL from '@luma.gl/constants';
-import {
-  Framebuffer
-} from '@luma.gl/webgl';
+import {Framebuffer} from '@luma.gl/webgl';
 
 export default class TextureTransformBinding {
-
   constructor(gl, props = {}) {
-
     this.gl = gl;
 
     // shader attribute name to Texture mapping

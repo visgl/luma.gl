@@ -1,6 +1,4 @@
-import {Buffer, Texture2D} from '@luma.gl/core';
-// import {Transform} from '@luma.gl/core';
-import Transform from '@luma.gl/core/lib/transform-new/transform';
+import {Buffer, Transform, Texture2D} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
@@ -656,7 +654,6 @@ test('WebGL#Transform run (source&destination texture + feedback buffer)', t => 
 
   t.end();
 });
-
 
 const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height

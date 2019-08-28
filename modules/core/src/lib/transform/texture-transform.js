@@ -13,7 +13,7 @@ import {
   combineInjects
 } from '@luma.gl/shadertools';
 import TextureTransformBinding from './texture-transform-binding';
-import {updateForTextures, getSizeUniforms} from './../transform-shader-utils';
+import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 // TODO: move these constants to transform-shader-utils
 // Texture parameters needed so sample can precisely pick pixel for given element id.
