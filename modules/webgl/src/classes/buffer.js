@@ -280,7 +280,7 @@ export default class Buffer extends Resource {
   // Returns a short initial data array
   getDebugData() {
     if (!this.debugData) {
-      this.debugData = this.getData({length: DEBUG_DATA_LENGTH});
+      this.debugData = this.getData({length: Math.min(DEBUG_DATA_LENGTH, this.byteLength)});
       return {data: this.debugData, changed: true};
     }
     return {data: this.debugData, changed: false};
