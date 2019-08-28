@@ -2,7 +2,7 @@
   "name": "@luma.gl/scripts",
   "description": "Scripting with luma.gl",
   "license": "MIT",
-  "version": "7.3.0-alpha.2",
+  "version": "7.3.0-alpha.3",
   "private": "true",
   "publishConfig": {
     "access": "public"
@@ -24,11 +24,11 @@
     "build": "npm run build-prod"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.3.0-alpha.2",
-    "@luma.gl/core": "7.3.0-alpha.2",
-    "@luma.gl/debug": "7.3.0-alpha.2",
-    "@luma.gl/glfx": "7.3.0-alpha.2",
-    "@luma.gl/shadertools": "7.3.0-alpha.2",
+    "@luma.gl/constants": "7.3.0-alpha.3",
+    "@luma.gl/core": "7.3.0-alpha.3",
+    "@luma.gl/debug": "7.3.0-alpha.3",
+    "@luma.gl/glfx": "7.3.0-alpha.3",
+    "@luma.gl/shadertools": "7.3.0-alpha.3",
     "math.gl": "^2.3.0"
   }
 }

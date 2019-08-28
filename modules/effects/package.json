@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/effects",
   "description": "Rendering and post-processing effects library for luma.gl",
-  "version": "7.3.0-alpha.2",
+  "version": "7.3.0-alpha.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "7.3.0-alpha.2"
+    "@luma.gl/constants": "7.3.0-alpha.3"
   },
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0"

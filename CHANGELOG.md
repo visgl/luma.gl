@@ -1,4 +1,15 @@
+## v7.3.0-alpha.3
+- Fix program manager default module insertion (#1220)
+- Ensure timeline handles are always truthy. (#1217)
+- Program manager hooks (#1216)
+- Avoid crashes in debug log on very small buffers (#1214)
+- webgl: Avoid crashing debug log if attribute is null (#1213)
+
 ## v7.3.0-alpha.2
+- Implement program manager (#1199)
+- Add log to detect un-supported features (#1212)
+- Add EXT_float_blend to feature table (#1210)
+- babel-plugin-inline-webgl-constants@1.01
 
 ## v7.3.0-alpha.1
  - Add Timeline.isFinished method (#1200)

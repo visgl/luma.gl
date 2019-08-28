@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "7.3.0-alpha.2",
+  "version": "7.3.0-alpha.3",
   "description": "WebGL2 Classes",
   "license": "MIT",
   "publishConfig": {
@@ -35,9 +35,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "7.3.0-alpha.2",
-    "@luma.gl/webgl-state-tracker": "7.3.0-alpha.2",
-    "@luma.gl/webgl2-polyfill": "7.3.0-alpha.2",
+    "@luma.gl/constants": "7.3.0-alpha.3",
+    "@luma.gl/webgl-state-tracker": "7.3.0-alpha.3",
+    "@luma.gl/webgl2-polyfill": "7.3.0-alpha.3",
     "probe.gl": "^3.0.2"
   }
 }
