@@ -70,10 +70,6 @@ export default class BufferTransform {
     return null;
   }
 
-  getFramebuffer() {
-    return null;
-  }
-
   // Delete owned resources.
   delete() {
     for (const name in this.resources) {

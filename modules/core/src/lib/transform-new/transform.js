@@ -3,27 +3,23 @@ import {getPassthroughFS} from '@luma.gl/shadertools';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
 
-import {
-  isWebGL2,
-  getShaderVersion
-} from '@luma.gl/webgl';
+import {isWebGL2, getShaderVersion} from '@luma.gl/webgl';
 import {assert, isObjectEmpty} from '../../utils';
 import Model from '../model';
 
-
 // takes source and target buffers/textures and setsup the pipeline
 export default class Transform {
-
   static isSupported(gl) {
-    // TODO : differentiate writting to buffer vs not.
+    // TODO : differentiate writting to buffer vs not
     return isWebGL2(gl);
   }
-  constructor(gl, props = {}) {
 
+  constructor(gl, props = {}) {
     this.gl = gl;
     this.model = null;
     this.elementCount = 0;
-    this.resourceTransforms = [];
+    this.bufferTransform = null;
+    this.textureTransform = null;
     this.elementIDBuffer = null;
     this.initialize(props);
     Object.seal(this);
@@ -32,9 +28,10 @@ export default class Transform {
   // Delete owned resources.
   delete() {
     this.model.delete();
-    for (const resourceTransform of this.resourceTransforms) {
-      resourceTransform.delete();
-    }
+    /* eslint-disable no-unused-expressions */
+    this.bufferTransform && this.bufferTransform.delete();
+    this.textureTransform && this.textureTransform.delete();
+    /* eslint-enable no-unused-expressions */
   }
 
   // Run one transform loop.
@@ -53,7 +50,8 @@ export default class Transform {
   // swap resources if a map is provided
   swap() {
     let swapped = false;
-    for (const resourceTransform of this.resourceTransforms) {
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    for (const resourceTransform of resourceTransforms) {
       swapped = swapped || resourceTransform.swap();
     }
     assert(swapped, 'Nothing to swap');
@@ -61,19 +59,14 @@ export default class Transform {
 
   // Return Buffer object for given varying name.
   getBuffer(varyingName = null) {
-    for (const resourceTransform of this.resourceTransforms) {
-      const buffer  = resourceTransform.getBuffer && resourceTransform.getBuffer(varyingName);
-      if (buffer) {
-        return buffer;
-      }
-    }
-    return null;
+    return this.bufferTransform && this.bufferTransform.getBuffer(varyingName);
   }
 
   // Return data either from Buffer or from Texture
   getData(opts = {}) {
-    for (const resourceTransform of this.resourceTransforms) {
-      const data  = resourceTransform.getData(opts);
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    for (const resourceTransform of resourceTransforms) {
+      const data = resourceTransform.getData(opts);
       if (data) {
         return data;
       }
@@ -83,13 +76,7 @@ export default class Transform {
 
   // Return framebuffer object if rendering to textures
   getFramebuffer() {
-    for (const resourceTransform of this.resourceTransforms) {
-      const fb  = resourceTransform.getFramebuffer();
-      if (fb) {
-        return fb;
-      }
-    }
-    return null;
+    return this.textureTransform && this.textureTransform.getFramebuffer();
   }
 
   // Update some or all buffer/texture bindings.
@@ -97,21 +84,21 @@ export default class Transform {
     if (opts.elementCount) {
       this.model.setVertexCount(opts.elementCount);
     }
-    for (const resourceTransform of this.resourceTransforms) {
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    for (const resourceTransform of resourceTransforms) {
       resourceTransform.update(opts);
     }
   }
-
 
   // Private
 
   initialize(props = {}) {
     const {gl} = this;
-    this.resourceTransforms = this.buildResourceTransforms(gl, props);
-    assert(this.resourceTransforms.length > 0, 'must provide source/feedback buffers or source/target textures');
+    this.buildResourceTransforms(gl, props);
 
     props = this.getModelProps(props);
-    this.model = new Model(gl,
+    this.model = new Model(
+      gl,
       Object.assign({}, props, {
         fs: props.fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
         id: props.id || 'transform-model',
@@ -120,28 +107,31 @@ export default class Transform {
       })
     );
 
-    for (const resourceTransform of this.resourceTransforms) {
-      resourceTransform.setupResources({model: this.model});
-    }
+    /* eslint-disable no-unused-expressions */
+    this.bufferTransform && this.bufferTransform.setupResources({model: this.model});
+    /* eslint-enable no-unused-expressions */
   }
 
   getModelProps(props) {
     let updatedProps = Object.assign({}, props);
-    for (const resourceTransform of this.resourceTransforms) {
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    for (const resourceTransform of resourceTransforms) {
       updatedProps = resourceTransform.getModelProps(updatedProps);
     }
     return updatedProps;
   }
 
   buildResourceTransforms(gl, props) {
-    const transforms = [];
     if (this.canCreateBufferTransform(props)) {
-      transforms.push(new BufferTransform(gl, props));
+      this.bufferTransform = new BufferTransform(gl, props);
     }
     if (this.canCreateTextureTransform(props)) {
-      transforms.push(new TextureTransform(gl, props));
+      this.textureTransform = new TextureTransform(gl, props);
     }
-    return transforms;
+    assert(
+      this.bufferTransform || this.textureTransform,
+      'must provide source/feedback buffers or source/target textures'
+    );
   }
 
   canCreateBufferTransform(props) {
@@ -166,14 +156,11 @@ export default class Transform {
   }
 
   updateDrawOptions(opts) {
-
     let updatedOpts = Object.assign({}, opts);
-    for (const resourceTransform of this.resourceTransforms) {
-      updatedOpts  = Object.assign(updatedOpts, resourceTransform.getDrawOptions(updatedOpts));
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    for (const resourceTransform of resourceTransforms) {
+      updatedOpts = Object.assign(updatedOpts, resourceTransform.getDrawOptions(updatedOpts));
     }
-
     return updatedOpts;
   }
-
-
 }

@@ -1,6 +1,17 @@
 import GL from '@luma.gl/constants';
-import {cloneTextureFrom, Texture2D, readPixelsToArray, Buffer, getShaderVersion} from '@luma.gl/webgl';
-import {_transform as transformModule, getPassthroughFS, typeToChannelCount, combineInjects} from '@luma.gl/shadertools';
+import {
+  cloneTextureFrom,
+  Texture2D,
+  readPixelsToArray,
+  Buffer,
+  getShaderVersion
+} from '@luma.gl/webgl';
+import {
+  _transform as transformModule,
+  getPassthroughFS,
+  typeToChannelCount,
+  combineInjects
+} from '@luma.gl/shadertools';
 import TextureTransformBinding from './texture-transform-binding';
 import {updateForTextures, getSizeUniforms} from './../transform-shader-utils';
 
@@ -15,9 +26,7 @@ const SRC_TEX_PARAMETER_OVERRIDES = {
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
 export default class TextureTransform {
-
   constructor(gl, props = {}) {
-
     this.gl = gl;
     this.currentIndex = 0;
     this._swapTexture = null;
@@ -30,12 +39,6 @@ export default class TextureTransform {
 
     this.initialize(props);
     Object.seal(this);
-
-  }
-
-  setupResources(opts) {
-    // Nothing to do here.
-    return;
   }
 
   getModelProps(props = {}) {
@@ -44,7 +47,9 @@ export default class TextureTransform {
   }
 
   getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture} = this.bindings[this.currentIndex].getResources();
+    const {sourceTextures, framebuffer, targetTexture} = this.bindings[
+      this.currentIndex
+    ].getResources();
 
     const attributes = Object.assign({}, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
@@ -74,11 +79,10 @@ export default class TextureTransform {
     }
 
     return Object.assign(opts, {attributes, framebuffer, uniforms, discard, parameters});
-
   }
 
   swap() {
-    if(this._swapTexture) {
+    if (this._swapTexture) {
       this.currentIndex = (this.currentIndex + 1) % 2;
       return true;
     }
@@ -151,7 +155,10 @@ export default class TextureTransform {
     const {_sourceTextures, _targetTexture, _targetTextureVarying, _swapTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
-    const targetTexture = this.createTargetTexture({sourceTextures: _sourceTextures, textureOrReference: _targetTexture});
+    const targetTexture = this.createTargetTexture({
+      sourceTextures: _sourceTextures,
+      textureOrReference: _targetTexture
+    });
     this.hasSourceTextures = _sourceTextures && Object.keys(_sourceTextures).length > 0;
     this.hasTargetTexture = _targetTextureVarying;
     this.updateElementIDBuffer(props.elementCount);
@@ -201,14 +208,19 @@ export default class TextureTransform {
   updateBindings(opts) {
     this.bindings[this.currentIndex] = this.updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
-      const {sourceTextures, targetTexture} = this.swapTextures(this.bindings[this.currentIndex].getResources());
+      const {sourceTextures, targetTexture} = this.swapTextures(
+        this.bindings[this.currentIndex].getResources()
+      );
       const nextIndex = this.getNextIndex();
-      this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {sourceTextures, targetTexture});
+      this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {
+        sourceTextures,
+        targetTexture
+      });
     }
   }
 
   updateBinding(binding, opts) {
-    if(!binding) {
+    if (!binding) {
       return new TextureTransformBinding(this.gl, opts);
     }
     binding.setProps(opts);
@@ -233,13 +245,11 @@ export default class TextureTransform {
 
     const targetTexture = opts.sourceTextures[this._swapTexture];
 
-
     return {sourceTextures, targetTexture};
   }
 
   // Create a buffer and add to list of buffers to be deleted.
   createNewTexture(refTexture) {
-
     const texture = cloneTextureFrom(refTexture, {
       parameters: {
         [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -262,9 +272,8 @@ export default class TextureTransform {
   }
 
   getNextIndex() {
-    return (this.currentIndex + 1) % 2
+    return (this.currentIndex + 1) % 2;
   }
-
 
   // build and return shader releated parameters
   processVertexShader(props = {}) {
