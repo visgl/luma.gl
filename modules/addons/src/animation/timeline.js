@@ -1,5 +1,5 @@
-let channelHandles = 0;
-let animationHandles = 0;
+let channelHandles = 1;
+let animationHandles = 1;
 
 export class Timeline {
   constructor() {
