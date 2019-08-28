@@ -410,7 +410,7 @@ test('WebGL#Transform swap without varyings', t => {
 });
 
 /* eslint-disable max-statements */
-test('WebGL#Transform update', t => {
+test.only('WebGL#Transform update', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -425,18 +425,27 @@ test('WebGL#Transform update', t => {
   let outData;
 
   const transform = new Transform(gl2, {
-    sourceBuffers: {
-      inValue: sourceBuffer
-    },
     vs: VS,
-    feedbackMap: {
-      inValue: 'outValue'
-    },
     varyings: ['outValue'],
     elementCount: 5
   });
 
+  t.ok(transform, 'should construct without buffers');
+
+  transform.update({
+    sourceBuffers: {
+      inValue: sourceBuffer
+    },
+    feedbackMap: {
+      inValue: 'outValue'
+    }
+  });
+
   transform.run();
+
+  expectedData = sourceData.map(x => x * 2);
+  outData = transform.getData({varyingName: 'outValue'});
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   sourceData = new Float32Array([1, 2, 3, 0, -5]);
   sourceBuffer.delete();
