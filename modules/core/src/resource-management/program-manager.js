@@ -124,10 +124,6 @@ export default class ProgramManager {
   }
 
   release(program) {
-    if (!program) {
-      return;
-    }
-
     const hash = program.hash;
     this._useCounts[hash]--;
 
