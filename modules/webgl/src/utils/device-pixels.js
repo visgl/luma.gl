@@ -9,7 +9,7 @@
 export function getDevicePixelRatio(useDevicePixels) {
   const windowRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   if (Number.isFinite(useDevicePixels)) {
-    return useDevicePixels <= 0 ? windowRatio : useDevicePixels;
+    return useDevicePixels <= 0 ? 1 : useDevicePixels;
   }
   return useDevicePixels ? windowRatio : 1;
 }

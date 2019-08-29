@@ -4,7 +4,11 @@ Most of the modern computers support retina or HD displays, which support either
 
 ## useDevicePixels
 
-`luma.gl` provides control over this behavior using `AnimationLoop`'s `useDevicePixels` prop. When `useDevicePixels` is set to true (default), it will use device's full retina/HD resolution for rendering, when `useDevicePixels` is false, it will use the same resolution as the screen window (CSS window).
+`luma.gl` provides control over this behavior using `AnimationLoop`'s [`useDevicePixels`](/docs/api-reference/core/animation-loop.md) prop. When `useDevicePixels` is set to true (default), it will use device's full retina/HD resolution for rendering, when `useDevicePixels` is false, it will use the same resolution as the screen window (CSS window).
+
+As an experimental API, a custom ratio (Number) can be set to `useDevicePixels` prop, to use smaller or bigger ratio than actual device pixel ratio. This is for more advanced use cases, using the default value (`true`) is recommended for this prop. For any advanced use cases, when a value higher than actual device pixel ratio is used, `luma.gl` will first try to allocate internal resources to match this ratio, if it fails, it will reduce this ratio by half, until resources are successfully created.
+
+When a custom ratio is used, `window.devicePixel` ratio can't be used for converting between CSS and Device locations, instead following helper methods should be used.
 
 ## Methods
 
@@ -15,7 +19,10 @@ Most of the modern computers support retina or HD displays, which support either
 
 Depending on `useDevicePixels` value, returns current device pixel ratio or 1.
 
-* `useDevicePixels` (Boolean) - whether to use device resolution or not.
+* `useDevicePixels` (Boolean | Number) - whether to use device resolution or not.
+  - `false` : returns `1`
+  - `true` : returns device pixel ratio, `1` if ratio not available
+  - `Number` : returns same number if > 0, else `1`.
 
 Returns ratio of Device pixels to CSS pixels.
 

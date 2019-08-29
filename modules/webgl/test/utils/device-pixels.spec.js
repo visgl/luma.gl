@@ -56,7 +56,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('webgl#getDevicePixelRatio', t => {
+test.only('webgl#getDevicePixelRatio', t => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -65,24 +65,24 @@ test('webgl#getDevicePixelRatio', t => {
       expected: windowPixelRatio
     },
     {
-      name: 'Use default pixel ratio: should use 1',
+      name: 'useDevicePixels: false: should use 1',
       useDevicePixels: false,
       expected: 1
     },
     {
-      name: 'Non Finite useDevicePixels: should use window.devicePixelRatio or 1',
+      name: 'Non Finite useDevicePixels: should use 1',
       useDevicePixels: null,
-      expected: windowPixelRatio
+      expected: 1
     },
     {
-      name: 'Non valid useDevicePixels: should use window.devicePixelRatio or 1',
+      name: 'Non valid useDevicePixels: should use 1',
       useDevicePixels: 0,
-      expected: windowPixelRatio
+      expected: 1
     },
     {
-      name: 'Non valid useDevicePixels: should use window.devicePixelRatio or 1',
+      name: 'Non valid useDevicePixels: should use 1',
       useDevicePixels: -3.2,
-      expected: windowPixelRatio
+      expected: 1
     },
     {
       name: 'Valid useDevicePixels, should use it',
