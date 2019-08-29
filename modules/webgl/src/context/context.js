@@ -175,13 +175,19 @@ export function resizeGLContext(gl, options = {}) {
     do {
       gl.canvas.width = Math.ceil(gl.canvas.clientWidth * devicePixelRatio);
       gl.canvas.height = Math.ceil(gl.canvas.clientHeight * devicePixelRatio);
-      aspectRatioValid = gl.drawingBufferWidth / gl.canvas.clientWidth === gl.drawingBufferHeight / gl.canvas.clientHeight;
-      devicePixelRatio = Math.max(devicePixelRatio/2, 1);
+      aspectRatioValid =
+        gl.drawingBufferWidth / gl.canvas.clientWidth ===
+        gl.drawingBufferHeight / gl.canvas.clientHeight;
+      devicePixelRatio = Math.max(devicePixelRatio / 2, 1);
       devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
-    } while(!aspectRatioValid);
+    } while (!aspectRatioValid);
 
     if (devicePixelRatioClamped) {
-      log.warn(`System limit is hit, clamped down device pixel ration from ${getDevicePixelRatio(options.useDevicePixels)} to  ${devicePixelRatio * 2}`)();
+      log.warn(
+        `System limit is hit, clamped down device pixel ration from ${getDevicePixelRatio(
+          options.useDevicePixels
+        )} to  ${devicePixelRatio * 2}`
+      )();
     }
     return;
   }
