@@ -29,9 +29,15 @@ By separating `Buffer` and `Texture` transform, `Texture` transform functionalit
 
 `Transform` class can be subdivided into following classes :
 
+- `Transform`, `BufferTransform`, `TextureTransform`, `BufferTransformBinding` and `TextureTransformBinding`
+
+Based on the props to the constructor `Transform` would internally create `BufferTransform` and/or `TextureTransform` instances and owns them. Each of these instances (`BufferTransform` and `TextureTransform`) can create either one or two (two, if swapping is requested) binding objects (`BufferTransformBinding` or `TextureTransformBinding`). When swap is performed these binding objects are swapped.
+
+- NOTE: for Phase-1 of changes, all classes except `Transform` are private to `Transform` class, for Phase-2, we can make these classes public, more details below.
+
 ### BufferTransformBinding
 
-- Contains all `Buffer` and `TransformFeedback` bindings for a single run.
+- Contains all `Buffer` and `TransformFeedback` bindings for a single run. It represents what buffers are bound at any moment.
 
 ### BufferTransform
 
@@ -42,7 +48,7 @@ By separating `Buffer` and `Texture` transform, `Texture` transform functionalit
 
 ### TextureTransformBinding
 
-- Contains all `Texture` and `Framebuffer` bindings for a single run.
+- Contains all `Texture` and `Framebuffer` bindings for a single run. It represents what texture are bound at any moment.
 
 ### TextureTransform
 
