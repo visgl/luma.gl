@@ -11,7 +11,7 @@ import {
   createModuleInjection
 } from '@luma.gl/core';
 import {Timeline} from '@luma.gl/addons';
-import {mapToDevicePosition} from '@luma.gl/webgl';
+import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

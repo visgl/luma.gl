@@ -163,6 +163,10 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 * The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
 
 
+## Experimental API
+
+`useDevicePixels` can accept a custom ratio, instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged in console, specifying the clamped down ratio.
+
 ## Remarks
 
 * You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.

@@ -14,7 +14,6 @@ export function getDevicePixelRatio(useDevicePixels) {
   return useDevicePixels ? windowRatio : 1;
 }
 
-
 // Maps CSS pixel position to device pixel position
 export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
   const ratio = gl.drawingBufferWidth / gl.canvas.clientWidth;
@@ -24,11 +23,11 @@ export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
 }
 
 // Maps Device pixel position to CSS pixel position
-export function deviceToCssPixels(gl, cssPixel, yInvert = true) {
+export function deviceToCssPixels(gl, devicePixel, yInvert = true) {
   const ratio = gl.canvas.clientWidth / gl.drawingBufferWidth;
   const width = gl.canvas.clientWidth;
   const height = gl.canvas.clientHeight;
-  return scalePixels(cssPixel, ratio, width, height, yInvert);
+  return scalePixels(devicePixel, ratio, width, height, yInvert);
 }
 
 // PRIVATE

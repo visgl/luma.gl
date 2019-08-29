@@ -684,6 +684,10 @@ export const DOC_PAGES = [
           {
             name: 'withParameters',
             content: getDocUrl('api-reference/webgl/context/with-parameters.md')
+          },
+          {
+            name: 'Device Pixels',
+            content: getDocUrl('api-reference/webgl/device-pixels.md')
           }
         ]
       },
