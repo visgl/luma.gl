@@ -84,7 +84,6 @@ Get a program that fits the parameters provided. If one is already cached, retur
 * `defines`: Object indicating `#define` constants to include in the shaders.
 * `modules`: Array of module objects to include in the shaders.
 * `inject`: Object of hook injections to include in the shaders.
-* `program`: A `Program` object to compare the new one two. If they're the same, use count won't be modified. If not, `program` will be released.
 
 ### `addDefaultModule(module: Object)`
 

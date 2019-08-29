@@ -302,6 +302,12 @@ export default class BaseModel {
 
     assert(program instanceof Program, 'Model needs a program');
 
+    if (this.programManager) {
+      // Even if the program didn't change, we 'got'
+      // a program, so release the old one
+      this.programManager.release(this.program);
+    }
+
     if (program === this.program) {
       return;
     }
