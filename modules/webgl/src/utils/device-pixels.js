@@ -14,17 +14,27 @@ export function getDevicePixelRatio(useDevicePixels) {
   return useDevicePixels ? windowRatio : 1;
 }
 
+// multiplier need to convert CSS size to Device size
+export function cssToDeviceRatio(gl) {
+  return gl.drawingBufferWidth / gl.canvas.clientWidth;
+}
+
 // Maps CSS pixel position to device pixel position
 export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
-  const ratio = gl.drawingBufferWidth / gl.canvas.clientWidth;
+  const ratio = cssToDeviceRatio(gl);
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
   return scalePixels(cssPixel, ratio, width, height, yInvert);
 }
 
+// multiplier need to convert Device size to CSS size
+export function deviceToCssRatio(gl) {
+  return gl.canvas.clientWidth / gl.drawingBufferWidth;
+}
+
 // Maps Device pixel position to CSS pixel position
 export function deviceToCssPixels(gl, devicePixel, yInvert = true) {
-  const ratio = gl.canvas.clientWidth / gl.drawingBufferWidth;
+  const ratio = deviceToCssRatio(gl);
   const width = gl.canvas.clientWidth;
   const height = gl.canvas.clientHeight;
   return scalePixels(devicePixel, ratio, width, height, yInvert);

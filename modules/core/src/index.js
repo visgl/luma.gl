@@ -20,6 +20,10 @@ export {
   cloneTextureFrom,
   getKeyValue,
   getKey,
+  cssToDeviceRatio,
+  cssToDevicePixels,
+  deviceToCssRatio,
+  deviceToCssPixels,
   // DEPRECATED
   setGLContextDefaults as setContextDefaults,
   getContextDebugInfo as glGetDebugInfo

@@ -1,5 +1,11 @@
 /* global window */
-import {getDevicePixelRatio, cssToDevicePixels, deviceToCssPixels} from '@luma.gl/webgl';
+import {
+  getDevicePixelRatio,
+  cssToDevicePixels,
+  deviceToCssPixels,
+  cssToDeviceRatio,
+  deviceToCssRatio
+} from '@luma.gl/webgl';
 import test from 'tape-catch';
 const LOW_DPR = 0.5;
 const HIGH_DPR = 4;
@@ -19,6 +25,22 @@ const MAP_TEST_CASES = [
     devicePositionsInverted: [[0, 9], [2, 7], [9, 0]],
     devicePositions: [[0, 0], [2, 2], [9, 9]]
   },
+  {
+    name: 'device pixel ratio 1, 1X1 window',
+    gl: {
+      drawingBufferWidth: 1,
+      drawingBufferHeight: 1,
+      canvas: {
+        clientWidth: 1,
+        clientHeight: 1
+      }
+    },
+    ratio: 1,
+    windowPositions: [[0, 0]],
+    devicePositionsInverted: [[0, 0]],
+    devicePositions: [[0, 0]]
+  },
+
   {
     name: 'device pixel ratio > 1',
     gl: {
@@ -56,7 +78,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test.only('webgl#getDevicePixelRatio', t => {
+test('webgl#getDevicePixelRatio', t => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -97,7 +119,7 @@ test.only('webgl#getDevicePixelRatio', t => {
   t.end();
 });
 
-test('webgl#cssToDevicePixels', t => {
+test.only('webgl#cssToDevicePixels', t => {
   MAP_TEST_CASES.forEach(tc => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
@@ -135,6 +157,20 @@ test('webgl#deviceToCssPixels', t => {
         `${tc.name}(yInvert=false): device pixel should match`
       );
     });
+  });
+  t.end();
+});
+
+test('webgl#deviceToCssRatio', t => {
+  MAP_TEST_CASES.forEach(tc => {
+    t.equal(deviceToCssRatio(tc.gl), 1 / tc.ratio, 'deviceToCssRatio should return correct value');
+  });
+  t.end();
+});
+
+test('webgl#cssToDeviceRatio', t => {
+  MAP_TEST_CASES.forEach(tc => {
+    t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');
   });
   t.end();
 });
