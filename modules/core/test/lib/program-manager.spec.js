@@ -232,19 +232,32 @@ test('ProgramManager#defaultModules', t => {
 
   const program = pm.get({vs, fs});
 
+  const preDefaultModuleProgram = pm.get({
+    vs,
+    fs,
+    modules: [dirlight]
+  });
+
+  const preDefaultModuleSource = preDefaultModuleProgram.fs.source;
+
+  pm.addDefaultModule(dirlight);
+
+  const defaultModuleProgram = pm.get({vs, fs});
   const moduleProgram = pm.get({
     vs,
     fs,
     modules: [dirlight]
   });
 
-  const moduleSource = moduleProgram.fs.source;
-
-  pm.addDefaultModule(dirlight);
-
-  const defaultModuleProgram = pm.get({vs, fs});
-
   t.ok(program !== defaultModuleProgram, 'Program with new default module properly cached');
+  t.ok(
+    preDefaultModuleProgram !== defaultModuleProgram,
+    'Adding a default module changes the program hash'
+  );
+  t.ok(
+    preDefaultModuleProgram.fs.source === defaultModuleProgram.fs.source,
+    'Default module injected correctly'
+  );
   t.ok(
     moduleProgram === defaultModuleProgram,
     'Program with new default module matches regular module'
@@ -254,8 +267,8 @@ test('ProgramManager#defaultModules', t => {
 
   const noDefaultModuleProgram = pm.get({vs, fs});
 
-  t.ok(program === noDefaultModuleProgram, 'Default module was removed');
-  t.ok(moduleProgram !== noDefaultModuleProgram, 'Default module was removed');
+  t.ok(program.fs.source === noDefaultModuleProgram.fs.source, 'Default module was removed');
+  t.ok(moduleProgram.fs.source !== noDefaultModuleProgram.fs.source, 'Default module was removed');
 
   // Reset program manager
   pm.release(program);
@@ -268,7 +281,7 @@ test('ProgramManager#defaultModules', t => {
   const defaultModuleSource = uncachedProgram.fs.source;
 
   t.ok(defaultModuleProgram !== uncachedProgram, 'Program is not cached');
-  t.ok(moduleSource === defaultModuleSource, 'Default modules create correct source');
+  t.ok(preDefaultModuleSource === defaultModuleSource, 'Default modules create correct source');
 
   t.end();
 });

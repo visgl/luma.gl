@@ -30,6 +30,7 @@ export default class BaseModel {
     this.props = {};
 
     this.programManager = props.programManager || null;
+    this._programManagerState = -1;
     const {
       program = null,
       vs = '',
@@ -265,7 +266,11 @@ export default class BaseModel {
   }
 
   _checkProgram(shaderCache = null) {
-    if (!this._programDirty) {
+    const needsUpdate =
+      this._programDirty ||
+      (this.programManager && this.programManager.stateHash !== this._programManagerState);
+
+    if (!needsUpdate) {
       return;
     }
 
@@ -274,14 +279,13 @@ export default class BaseModel {
 
     if (program) {
       this.getModuleUniforms = () => {};
-      this._programDirty = false;
     } else if (this.programManager) {
       program = this.programManager.get({vs, fs, modules, inject, defines, program: this.program});
       this.getModuleUniforms = this.programManager.getUniforms(program);
       if (this.program) {
         this.programManager.release(this.program);
       }
-      // Program always dirty if there's a program manager
+      this._programManagerState = this.programManager.stateHash;
     } else {
       // Assign default shaders if none are provided
       const id = this.id;
@@ -300,10 +304,11 @@ export default class BaseModel {
       }
 
       this.getModuleUniforms = assembleResult.getUniforms || (x => {});
-      this._programDirty = false;
     }
 
     assert(program instanceof Program, 'Model needs a program');
+
+    this._programDirty = false;
 
     if (program === this.program) {
       return;
