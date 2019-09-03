@@ -1,8 +1,8 @@
 /* eslint-disable complexity */
 // Shared code between Model and MeshModel
-import GL from '@luma.gl/constants';
+import ProgramManager from '../resource-management/program-manager';
 import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
-import {MODULAR_SHADERS, assembleShaders} from '@luma.gl/shadertools';
+import {MODULAR_SHADERS} from '@luma.gl/shadertools';
 import {
   getDebugTableForUniforms,
   getDebugTableForVertexArray,
@@ -29,18 +29,15 @@ export default class BaseModel {
   initialize(props) {
     this.props = {};
 
-    this.programManager = props.programManager || null;
+    if (props.shaderCache) {
+      log.warn('ShaderCache property is deprecated')();
+    }
+
+    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.gl);
     this._programManagerState = -1;
-    const {
-      program = null,
-      vs = '',
-      fs = '',
-      modules = [],
-      defines = {},
-      inject = {},
-      varyings = [],
-      bufferMode = GL.SEPARATE_ATTRIBS
-    } = props;
+    this._managedProgram = false;
+
+    const {program = null, vs, fs, modules, defines, inject, varyings, bufferMode} = props;
 
     this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
     this.program = null;
@@ -75,7 +72,7 @@ export default class BaseModel {
     // picking options
     this.pickable = true;
 
-    this._checkProgram(props.shaderCache);
+    this._checkProgram();
 
     this._setBaseModelProps(props);
 
@@ -100,10 +97,8 @@ export default class BaseModel {
       }
     }
 
-    if (this.programManager) {
+    if (this._managedProgram) {
       this.programManager.release(this.program);
-    } else {
-      this.program.delete();
     }
 
     this.vertexArray.delete();
@@ -267,43 +262,35 @@ export default class BaseModel {
 
   _checkProgram(shaderCache = null) {
     const needsUpdate =
-      this._programDirty ||
-      (this.programManager && this.programManager.stateHash !== this._programManagerState);
+      this._programDirty || this.programManager.stateHash !== this._programManagerState;
 
     if (!needsUpdate) {
       return;
     }
 
-    let {program, vs, fs} = this.programProps;
-    const {modules, inject, defines, varyings, bufferMode} = this.programProps;
+    let {program} = this.programProps;
 
     if (program) {
       this.getModuleUniforms = () => {};
-    } else if (this.programManager) {
-      program = this.programManager.get({vs, fs, modules, inject, defines, program: this.program});
+      this._managedProgram = false;
+    } else {
+      const {
+        // TODO(Tarek): Are these actually used anywhere?
+        vs = MODULAR_SHADERS.vs,
+        fs = MODULAR_SHADERS.fs,
+        modules,
+        inject,
+        defines,
+        varyings,
+        bufferMode
+      } = this.programProps;
+      program = this.programManager.get({vs, fs, modules, inject, defines, varyings, bufferMode});
       this.getModuleUniforms = this.programManager.getUniforms(program);
-      if (this.program) {
+      if (this.program && this._managedProgram) {
         this.programManager.release(this.program);
       }
       this._programManagerState = this.programManager.stateHash;
-    } else {
-      // Assign default shaders if none are provided
-      const id = this.id;
-
-      vs = vs || MODULAR_SHADERS.vs;
-      fs = fs || MODULAR_SHADERS.fs;
-
-      const assembleResult = assembleShaders(this.gl, {vs, fs, modules, inject, defines, log});
-      ({vs, fs} = assembleResult);
-
-      if (shaderCache) {
-        log.warn('ShaderCache support will be deprecated in a future luma.gl version')();
-        program = shaderCache.getProgram(this.gl, {id, vs, fs});
-      } else {
-        program = new Program(this.gl, {id, vs, fs, varyings, bufferMode});
-      }
-
-      this.getModuleUniforms = assembleResult.getUniforms || (x => {});
+      this._managedProgram = true;
     }
 
     assert(program instanceof Program, 'Model needs a program');
@@ -312,10 +299,6 @@ export default class BaseModel {
 
     if (program === this.program) {
       return;
-    }
-
-    if (this.program && !this.programManager) {
-      this.program.delete();
     }
 
     this.program = program;

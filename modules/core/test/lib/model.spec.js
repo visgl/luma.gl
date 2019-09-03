@@ -12,9 +12,15 @@ const stats = luma.stats.get('Resource Counts');
 test('Model#construct/destruct', t => {
   const {gl} = fixture;
 
+  // Avoid re-using program from ProgramManager
+  const vs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_Position = vec4(0.0);}';
+  const fs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_FragColor = vec4(0.0);}';
+
   const model = new Model(gl, {
     drawMode: GL.POINTS,
-    vertexCount: 0
+    vertexCount: 0,
+    vs,
+    fs
   });
 
   t.ok(model, 'Model constructor does not throw errors');

@@ -4,6 +4,7 @@ import {
   assembleShaders,
   createShaderHook,
   createModuleInjection,
+  resetGlobalShaderHooks,
   picking,
   fp64
 } from '@luma.gl/shadertools';
@@ -253,5 +254,6 @@ test('assembleShaders#shaderhooks', t => {
     'regex injection code included in shader hook'
   );
 
+  resetGlobalShaderHooks();
   t.end();
 });
