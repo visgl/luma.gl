@@ -24,6 +24,18 @@ test('ProgramManager#import', t => {
   t.end();
 });
 
+test('ProgramManager#getDefaultProgramManager', t => {
+  const {gl} = fixture;
+
+  const pm1 = ProgramManager.getDefaultProgramManager(gl);
+  const pm2 = ProgramManager.getDefaultProgramManager(gl);
+
+  t.ok(pm1 instanceof ProgramManager, 'Default program manager created');
+  t.ok(pm1 === pm2, 'Default program manager cached');
+
+  t.end();
+});
+
 test('ProgramManager#basic', t => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);

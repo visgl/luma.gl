@@ -2,6 +2,13 @@ import {assembleShaders} from '@luma.gl/shadertools';
 import {Program} from '@luma.gl/webgl';
 
 export default class ProgramManager {
+  static getDefaultProgramManager(gl) {
+    gl.luma = gl.luma || {};
+    gl.luma.defaultProgramManager = gl.luma.defaultProgramManager || new ProgramManager(gl);
+
+    return gl.luma.defaultProgramManager;
+  }
+
   constructor(gl) {
     this.gl = gl;
 
