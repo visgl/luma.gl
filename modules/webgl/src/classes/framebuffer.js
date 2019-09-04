@@ -23,12 +23,29 @@ export default class Framebuffer extends Resource {
     } = {}
   ) {
     let supported = true;
-    supported =
-      colorBufferFloat &&
-      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'WEBGL.color_buffer_float');
-    supported =
-      colorBufferHalfFloat &&
-      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'EXT_color_buffer_half_float');
+
+    if (colorBufferFloat) {
+      supported = Boolean(
+        // WebGL 2
+        gl.getExtension('EXT_color_buffer_float') ||
+          // WebGL 1, not exposed on all platforms
+          gl.getExtension('WEBGL_color_buffer_float') ||
+          // WebGL 1, implicitly enables float render targets https://www.khronos.org/registry/webgl/extensions/OES_texture_float/
+          gl.getExtension('OES_texture_float')
+      );
+    }
+
+    if (colorBufferHalfFloat) {
+      supported =
+        supported &&
+        Boolean(
+          // WebGL 2
+          gl.getExtension('EXT_color_buffer_float') ||
+            // WebGL 1
+            gl.getExtension('EXT_color_buffer_half_float')
+        );
+    }
+
     return supported;
   }
 
