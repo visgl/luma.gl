@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "gatsby": "^2.13.0",
-    "ocular-gatsby": "1.0.0-alpha.46",
+    "ocular-gatsby": "1.0.0",
     "sharp": "^0.23.0"
   }
 }
