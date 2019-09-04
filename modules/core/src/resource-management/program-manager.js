@@ -2,6 +2,13 @@ import {assembleShaders} from '@luma.gl/shadertools';
 import {Program} from '@luma.gl/webgl';
 
 export default class ProgramManager {
+  static getDefaultProgramManager(gl) {
+    gl.luma = gl.luma || {};
+    gl.luma.defaultProgramManager = gl.luma.defaultProgramManager || new ProgramManager(gl);
+
+    return gl.luma.defaultProgramManager;
+  }
+
   constructor(gl) {
     this.gl = gl;
 
@@ -20,7 +27,7 @@ export default class ProgramManager {
 
     this._hashes = {};
     this._hashCounter = 0;
-    this._hookStateCounter = 0; // Used change hashing if hooks are modified
+    this.stateHash = 0; // Used change hashing if hooks are modified
     this._useCounts = {};
   }
 
@@ -28,11 +35,14 @@ export default class ProgramManager {
     if (!this._defaultModules.find(m => m.name === module.name)) {
       this._defaultModules.push(module);
     }
+
+    this.stateHash++;
   }
 
   removeDefaultModule(module) {
     const moduleName = typeof module === 'string' ? module : module.name;
     this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
+    this.stateHash++;
   }
 
   addModuleInjection(module, opts) {
@@ -48,7 +58,7 @@ export default class ProgramManager {
       order
     };
 
-    this._hookStateCounter++;
+    this.stateHash++;
   }
 
   addShaderHook(hook, opts = {}) {
@@ -57,7 +67,7 @@ export default class ProgramManager {
     const name = hook.replace(/\(.+/, '');
     this._hookFunctions[stage][name] = Object.assign(opts, {signature});
 
-    this._hookStateCounter++;
+    this.stateHash++;
   }
 
   get(props = {}) {
@@ -87,9 +97,7 @@ export default class ProgramManager {
 
     const hash = `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
       '/'
-    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${
-      this._hookStateCounter
-    }B${bufferMode}`;
+    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${this.stateHash}B${bufferMode}`;
 
     if (!this._programCache[hash]) {
       const assembled = assembleShaders(this.gl, {

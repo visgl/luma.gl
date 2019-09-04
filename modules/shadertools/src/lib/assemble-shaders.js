@@ -51,6 +51,15 @@ export function createModuleInjection(moduleName, opts) {
   };
 }
 
+// Helpful for tests
+export function resetGlobalShaderHooks() {
+  HOOK_FUNCTIONS[VERTEX_SHADER] = {};
+  HOOK_FUNCTIONS[FRAGMENT_SHADER] = {};
+
+  MODULE_INJECTIONS[VERTEX_SHADER] = {};
+  MODULE_INJECTIONS[FRAGMENT_SHADER] = {};
+}
+
 // Inject a list of modules
 export function assembleShaders(gl, opts) {
   const {vs, fs} = opts;
@@ -82,6 +91,37 @@ function assembleShader(
   }
 ) {
   assert(typeof source === 'string', 'shader source must be a string');
+
+  // TODO(Tarek): Supporting global hooks, remove when they're removed.
+  if (hookFunctions !== HOOK_FUNCTIONS) {
+    hookFunctions = {
+      [VERTEX_SHADER]: Object.assign(
+        {},
+        HOOK_FUNCTIONS[VERTEX_SHADER],
+        hookFunctions[VERTEX_SHADER]
+      ),
+      [FRAGMENT_SHADER]: Object.assign(
+        {},
+        HOOK_FUNCTIONS[FRAGMENT_SHADER],
+        hookFunctions[FRAGMENT_SHADER]
+      )
+    };
+  }
+
+  if (moduleInjections !== MODULE_INJECTIONS) {
+    moduleInjections = {
+      [VERTEX_SHADER]: Object.assign(
+        {},
+        MODULE_INJECTIONS[VERTEX_SHADER],
+        moduleInjections[VERTEX_SHADER]
+      ),
+      [FRAGMENT_SHADER]: Object.assign(
+        {},
+        MODULE_INJECTIONS[FRAGMENT_SHADER],
+        moduleInjections[FRAGMENT_SHADER]
+      )
+    };
+  }
 
   const isVertex = type === VERTEX_SHADER;
 

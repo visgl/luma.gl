@@ -12,7 +12,12 @@ export {
   setDefaultShaderModules,
   getDefaultShaderModules
 } from './lib/resolve-modules';
-export {assembleShaders, createShaderHook, createModuleInjection} from './lib/assemble-shaders';
+export {
+  assembleShaders,
+  createShaderHook,
+  createModuleInjection,
+  resetGlobalShaderHooks
+} from './lib/assemble-shaders';
 
 // HELPERS
 export {combineInjects} from './lib/inject-shader';
