@@ -1,3 +1,10 @@
+## v7.3.0-alpha.5
+- Program manager updates (#1226)
+- RFC: Transform Refactor (#1219)
+- Remove program diffing from program manager (#1225)
+- v7.3.0-alpha.5
+- Fix double program release in base model (#1223)
+
 ## v7.3.0-alpha.4
 - Program manager fixes (#1222)
 
