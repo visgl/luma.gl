@@ -23,12 +23,24 @@ export default class Framebuffer extends Resource {
     } = {}
   ) {
     let supported = true;
-    supported =
-      colorBufferFloat &&
-      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'WEBGL.color_buffer_float');
-    supported =
-      colorBufferHalfFloat &&
-      gl.getExtension(isWebGL2(gl) ? 'EXT_color_buffer_float' : 'EXT_color_buffer_half_float');
+
+    if (colorBufferFloat) {
+      supported = Boolean(
+        gl.getExtension('EXT_color_buffer_float') ||
+          gl.getExtension('WEBGL_color_buffer_float') ||
+          gl.getExtension('OES_texture_float')
+      );
+    }
+
+    if (colorBufferHalfFloat) {
+      supported =
+        supported &&
+        Boolean(
+          gl.getExtension('EXT_color_buffer_float') ||
+            gl.getExtension('EXT_color_buffer_half_float')
+        );
+    }
+
     return supported;
   }
 
