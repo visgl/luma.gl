@@ -1,5 +1,5 @@
-/* global Worker */
-import {getPageLoadPromise, getCanvas, getDevicePixelRatio} from '@luma.gl/webgl';
+/* global window, Worker */
+import {getPageLoadPromise, getCanvas} from '@luma.gl/webgl';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/webgl';
 import {log, assert} from '../utils';
 
@@ -174,17 +174,14 @@ export default class AnimationLoopProxy {
 
   _onEvent(evt) {
     // TODO: get access to gl context and use 'cssToDevicePixels'
-    const devicePixelRatio = getDevicePixelRatio(this.useDevicePixels);
+    const devicePixelRatio = this.useDevicePixels ? window.devicePixelRatio || 1 : 1;
     const type = evt.type;
 
     const safeEvent = {};
     for (const key in evt) {
       let value = evt[key];
       const valueType = typeof value;
-      if (key === 'offsetX') {
-        value *= devicePixelRatio;
-      }
-      if (key === 'offsetY') {
+      if (key === 'offsetX' || key === 'offsetY') {
         value *= devicePixelRatio;
       }
       if (valueType === 'number' || valueType === 'boolean' || valueType === 'string') {
@@ -230,7 +227,7 @@ export default class AnimationLoopProxy {
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
       // TODO: get access to gl context and use 'cssToDevicePixels'
-      const devicePixelRatio = getDevicePixelRatio(this.useDevicePixels);
+      const devicePixelRatio = this.useDevicePixels ? window.devicePixelRatio || 1 : 1;
       const width = Math.ceil(this.canvas.clientWidth * devicePixelRatio);
       const height = Math.ceil(this.canvas.clientHeight * devicePixelRatio);
 

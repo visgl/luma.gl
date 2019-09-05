@@ -12,19 +12,17 @@ When a custom ratio is used, `window.devicePixel` ratio can't be used for conver
 
 ## Methods
 
-`luma.gl` offers following helper methods for converting between CSS and Device pixels.
+`luma.gl` offers following helper methods for converting from CSS to Device pixels.
 
 
-### getDevicePixelRatio (useDevicePixels) : Number
+### cssToDeviceRatio(gl): Number
 
-Depending on `useDevicePixels` value, returns current device pixel ratio or 1.
+Returns a Number, which is the ratio of Device buffer resolution size to CSS buffer resolution.
 
-* `useDevicePixels` (Boolean | Number) - whether to use device resolution or not.
-  - `false` : returns `1`
-  - `true` : returns device pixel ratio, `1` if ratio not available
-  - `Number` : returns same number if > 0, else `1`.
+* `gl` (WebGLContext) - WebGL context.
 
-Returns ratio of Device pixels to CSS pixels.
+Returns ratio (Number).
+
 
 ### cssToDevicePixels(gl, cssPixel, yInvert) : Array
 
@@ -35,13 +33,3 @@ Converts CSS pixel location to Device pixel location.
 * `yInvert` (Boolean, optional, default: true) - when true it will perform y-inversion when converting to Device pixels.
 
 Returns Device pixel location, [x, y].
-
-### deviceToCssPixels(gl, devicePixel, yInvert) : Array
-
-Converts Device pixel location to CSS pixel location.
-
-* `gl` (WebGLContext) - WebGL context.
-* `devicePixel` (Array) - Array in [x, y] form, where x and y are location in Device window.
-* `yInvert` (Boolean, optional, default: true) - when true it will perform y-inversion when converting to Device pixels.
-
-Returns CSS pixel location, [x, y].
