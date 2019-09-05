@@ -425,18 +425,27 @@ test('WebGL#Transform update', t => {
   let outData;
 
   const transform = new Transform(gl2, {
+    vs: VS,
+    varyings: ['outValue']
+  });
+
+  t.ok(transform, 'should construct without buffers');
+
+  transform.update({
     sourceBuffers: {
       inValue: sourceBuffer
     },
-    vs: VS,
     feedbackMap: {
       inValue: 'outValue'
     },
-    varyings: ['outValue'],
     elementCount: 5
   });
 
   transform.run();
+
+  expectedData = sourceData.map(x => x * 2);
+  outData = transform.getData({varyingName: 'outValue'});
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
   sourceData = new Float32Array([1, 2, 3, 0, -5]);
   sourceBuffer.delete();
