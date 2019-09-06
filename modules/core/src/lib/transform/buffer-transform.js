@@ -1,6 +1,5 @@
-import {isWebGL2, Buffer} from '@luma.gl/webgl';
+import {isWebGL2, Buffer, TransformFeedback} from '@luma.gl/webgl';
 import {assert} from '../../utils';
-import BufferTransformBinding from './buffer-transform-binding';
 
 export default class BufferTransform {
   constructor(gl, props = {}) {
@@ -8,7 +7,7 @@ export default class BufferTransform {
     this.currentIndex = 0;
     this.feedbackMap = {};
     this.varyings = null; // varyings array
-    this.bindings = [];
+    this.bindings = []; // each element is an object : {sourceBuffers, feedbackBuffers, transformFeedback}
 
     this.resources = {}; // resources to be deleted
 
@@ -18,7 +17,7 @@ export default class BufferTransform {
 
   setupResources(opts) {
     for (const binding of this.bindings) {
-      binding.setupTransformFeedback(opts);
+      this.setupTransformFeedback(binding, opts);
     }
   }
 
@@ -77,8 +76,7 @@ export default class BufferTransform {
 
   initialize(props = {}) {
     this._setupBuffers(props);
-    const currentBuffers = this.bindings[this.currentIndex].getBuffers();
-    this.varyings = props.varyings || Object.keys(currentBuffers.feedbackBuffers);
+    this.varyings = props.varyings || Object.keys(this.bindings[this.currentIndex].feedbackBuffers);
     if (this.varyings.length > 0) {
       // if writting to buffers make sure it is WebGL2
       assert(isWebGL2(this.gl));
@@ -101,8 +99,7 @@ export default class BufferTransform {
     if (this.bindings[this.currentIndex]) {
       // this gurantees a partial feedback buffer set doesn't update
       // previously set buffers during auto creation mode.
-      const currentBuffers = this.bindings[this.currentIndex].getBuffers();
-      Object.assign(feedbackBuffers, currentBuffers.feedbackBuffers);
+      Object.assign(feedbackBuffers, this.bindings[this.currentIndex].feedbackBuffers);
     }
     if (this.feedbackMap) {
       // feedbackMap is defined as sourceBuffer as key and feedbackBuffer name as object
@@ -129,12 +126,18 @@ export default class BufferTransform {
     return feedbackBuffers;
   }
 
+  setupTransformFeedback(binding, {model}) {
+    const {program} = model;
+    binding.transformFeedback = new TransformFeedback(this.gl, {
+      program,
+      buffers: binding.feedbackBuffers
+    });
+  }
+
   updateBindings(opts) {
     this.bindings[this.currentIndex] = this.updateBinding(this.bindings[this.currentIndex], opts);
     if (this.feedbackMap) {
-      const {sourceBuffers, feedbackBuffers} = this.swapBuffers(
-        this.bindings[this.currentIndex].getBuffers()
-      );
+      const {sourceBuffers, feedbackBuffers} = this.swapBuffers(this.bindings[this.currentIndex]);
       const nextIndex = this.getNextIndex();
       this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {
         sourceBuffers,
@@ -145,9 +148,16 @@ export default class BufferTransform {
 
   updateBinding(binding, opts) {
     if (!binding) {
-      return new BufferTransformBinding(this.gl, opts);
+      return {
+        sourceBuffers: Object.assign({}, opts.sourceBuffers),
+        feedbackBuffers: Object.assign({}, opts.feedbackBuffers)
+      };
     }
-    binding.setProps(opts);
+    Object.assign(binding.sourceBuffers, opts.sourceBuffers);
+    Object.assign(binding.feedbackBuffers, opts.feedbackBuffers);
+    if (binding.transformFeedback) {
+      binding.transformFeedback.setBuffers(binding.feedbackBuffers);
+    }
     return binding;
   }
 
