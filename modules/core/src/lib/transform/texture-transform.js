@@ -1,10 +1,11 @@
 import GL from '@luma.gl/constants';
 import {
   cloneTextureFrom,
-  Texture2D,
   readPixelsToArray,
+  getShaderVersion,
   Buffer,
-  getShaderVersion
+  Texture2D,
+  Framebuffer
 } from '@luma.gl/webgl';
 import {
   _transform as transformModule,
@@ -12,7 +13,6 @@ import {
   typeToChannelCount,
   combineInjects
 } from '@luma.gl/shadertools';
-import TextureTransformBinding from './texture-transform-binding';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 // TODO: move these constants to transform-shader-utils
@@ -33,7 +33,7 @@ export default class TextureTransform {
     this.targetTextureVarying = null;
     this.targetTextureType = null;
     this.samplerTextureMap = null;
-    this.bindings = [];
+    this.bindings = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
 
     this.resources = {}; // resources to be deleted
 
@@ -47,9 +47,7 @@ export default class TextureTransform {
   }
 
   getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture} = this.bindings[
-      this.currentIndex
-    ].getResources();
+    const {sourceTextures, framebuffer, targetTexture} = this.bindings[this.currentIndex];
 
     const attributes = Object.assign({}, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
@@ -91,17 +89,6 @@ export default class TextureTransform {
 
   // update source and/or feedbackBuffers
   update(opts = {}) {
-    // const {_sourceTextures = null, _targetTexture} = opts;
-    // if (_sourceTextures || _targetTexture) {
-    //   const targetTexture = this.createTargetTexture({
-    //     sourceTextures: _sourceTextures,
-    //     // if targetTexture created using source texture, and that sourceTextuer
-    //     // is updated we should update targetTexture
-    //     textureOrReference: _targetTexture || this._targetRefTexName
-    //   });
-    //   this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
-    // }
-    // this.updateElementIDBuffer(opts.elementCount);
     this._setupTextures(opts);
   }
 
@@ -121,13 +108,13 @@ export default class TextureTransform {
 
   // returns current target texture
   getTargetTexture() {
-    const {targetTexture} = this.bindings[this.currentIndex].getResources();
+    const {targetTexture} = this.bindings[this.currentIndex];
     return targetTexture;
   }
 
   getData({varyingName = null, packed = false} = {}) {
     if (!varyingName || varyingName === this.targetTextureVarying) {
-      const {framebuffer} = this.bindings[this.currentIndex].getResources();
+      const {framebuffer} = this.bindings[this.currentIndex];
       const pixels = readPixelsToArray(framebuffer);
 
       if (!packed) {
@@ -152,7 +139,7 @@ export default class TextureTransform {
 
   // returns current framebuffer object that is being used.
   getFramebuffer() {
-    const currentResources = this.bindings[this.currentIndex].getResources();
+    const currentResources = this.bindings[this.currentIndex];
     return currentResources.framebuffer;
   }
 
@@ -216,9 +203,7 @@ export default class TextureTransform {
   updateBindings(opts) {
     this.bindings[this.currentIndex] = this.updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
-      const {sourceTextures, targetTexture} = this.swapTextures(
-        this.bindings[this.currentIndex].getResources()
-      );
+      const {sourceTextures, targetTexture} = this.swapTextures(this.bindings[this.currentIndex]);
       const nextIndex = this.getNextIndex();
       this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {
         sourceTextures,
@@ -228,17 +213,45 @@ export default class TextureTransform {
   }
 
   updateBinding(binding, opts) {
+    const {sourceTextures, targetTexture} = opts;
     if (!binding) {
-      return new TextureTransformBinding(this.gl, opts);
+      binding = {
+        sourceTextures: {},
+        targetTexture: null
+      };
     }
-    binding.setProps(opts);
+    Object.assign(binding.sourceTextures, sourceTextures);
+    if (targetTexture) {
+      binding.targetTexture = targetTexture;
+
+      const {width, height} = targetTexture;
+      const {framebuffer} = binding;
+      if (framebuffer) {
+        // First update texture without re-sizing attachments
+        framebuffer.update({
+          attachments: {[GL.COLOR_ATTACHMENT0]: targetTexture},
+          resizeAttachments: false
+        });
+        // Resize to new taget texture size
+        framebuffer.resize({width, height});
+      } else {
+        binding.framebuffer = new Framebuffer(this.gl, {
+          id: `${this.id || 'transform'}-framebuffer`,
+          width,
+          height,
+          attachments: {
+            [GL.COLOR_ATTACHMENT0]: targetTexture
+          }
+        });
+      }
+    }
     return binding;
   }
 
   // set texture filtering parameters on source textures.
   setSourceTextureParameters() {
     const index = this.currentIndex;
-    const {sourceTextures} = this.bindings[index].getResources();
+    const {sourceTextures} = this.bindings[index];
     for (const name in sourceTextures) {
       sourceTextures[name].setParameters(SRC_TEX_PARAMETER_OVERRIDES);
     }
@@ -285,7 +298,7 @@ export default class TextureTransform {
 
   // build and return shader releated parameters
   processVertexShader(props = {}) {
-    const {sourceTextures, targetTexture} = this.bindings[this.currentIndex].getResources();
+    const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
       vs: props.vs,
       sourceTextureMap: sourceTextures,
