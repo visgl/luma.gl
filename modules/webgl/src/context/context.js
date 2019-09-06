@@ -201,18 +201,23 @@ function getVersion(gl) {
 function setDevicePixelRatio(gl, devicePixelRatio) {
   let devicePixelRatioClamped = false;
   let aspectRatioValid = false;
+  let clientSizeValid = false;
+
   // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
   // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
   // for those cases, reduce devicePixelRatio.
   do {
-    gl.canvas.width = Math.ceil(gl.canvas.clientWidth * devicePixelRatio);
-    gl.canvas.height = Math.ceil(gl.canvas.clientHeight * devicePixelRatio);
+    const {clientWidth, clientHeight} = gl.canvas;
+    gl.canvas.width = Math.ceil(clientWidth * devicePixelRatio);
+    gl.canvas.height = Math.ceil(clientHeight * devicePixelRatio);
     aspectRatioValid =
-      gl.drawingBufferWidth / gl.canvas.clientWidth ===
-      gl.drawingBufferHeight / gl.canvas.clientHeight;
+      gl.drawingBufferWidth / clientWidth === gl.drawingBufferHeight / clientHeight;
     devicePixelRatio = Math.max(devicePixelRatio / 2, 1);
     devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
-  } while (!aspectRatioValid);
+
+    // matches old behavior when clientWidth or clientHeight is 0.
+    clientSizeValid = clientWidth > 0 && clientHeight > 0;
+  } while (!aspectRatioValid && clientSizeValid);
 
   if (devicePixelRatioClamped) {
     log.warn(`Device pixel ratio clamped`)();
