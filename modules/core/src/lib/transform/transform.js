@@ -21,7 +21,7 @@ export default class Transform {
     this.bufferTransform = null;
     this.textureTransform = null;
     this.elementIDBuffer = null;
-    this.initialize(props);
+    this._initialize(props);
     Object.seal(this);
   }
 
@@ -38,7 +38,7 @@ export default class Transform {
   run(opts = {}) {
     const {clearRenderTarget = true} = opts;
 
-    const updatedOpts = this.updateDrawOptions(opts);
+    const updatedOpts = this._updateDrawOptions(opts);
 
     if (clearRenderTarget && updatedOpts.framebuffer) {
       updatedOpts.framebuffer.clear({color: true});
@@ -92,11 +92,11 @@ export default class Transform {
 
   // Private
 
-  initialize(props = {}) {
+  _initialize(props = {}) {
     const {gl} = this;
-    this.buildResourceTransforms(gl, props);
+    this._buildResourceTransforms(gl, props);
 
-    props = this.getModelProps(props);
+    props = this._getModelProps(props);
     this.model = new Model(
       gl,
       Object.assign({}, props, {
@@ -112,7 +112,7 @@ export default class Transform {
     /* eslint-enable no-unused-expressions */
   }
 
-  getModelProps(props) {
+  _getModelProps(props) {
     let updatedProps = Object.assign({}, props);
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
@@ -121,11 +121,11 @@ export default class Transform {
     return updatedProps;
   }
 
-  buildResourceTransforms(gl, props) {
-    if (this.canCreateBufferTransform(props)) {
+  _buildResourceTransforms(gl, props) {
+    if (canCreateBufferTransform(props)) {
       this.bufferTransform = new BufferTransform(gl, props);
     }
-    if (this.canCreateTextureTransform(props)) {
+    if (canCreateTextureTransform(props)) {
       this.textureTransform = new TextureTransform(gl, props);
     }
     assert(
@@ -134,29 +134,7 @@ export default class Transform {
     );
   }
 
-  canCreateBufferTransform(props) {
-    if (
-      !isObjectEmpty(props.sourceBuffers) ||
-      !isObjectEmpty(props.feedbackBuffers) ||
-      (props.varyings && props.varyings.length > 0)
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  canCreateTextureTransform(props) {
-    if (!isObjectEmpty(props._sourceTextures)) {
-      return true;
-    }
-    if (props._targetTexture || props._targetTextureVarying) {
-      return true;
-    }
-
-    return false;
-  }
-
-  updateDrawOptions(opts) {
+  _updateDrawOptions(opts) {
     let updatedOpts = Object.assign({}, opts);
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
@@ -164,4 +142,29 @@ export default class Transform {
     }
     return updatedOpts;
   }
+}
+
+// Helper Methods
+
+function canCreateBufferTransform(props) {
+  if (
+    !isObjectEmpty(props.sourceBuffers) ||
+    !isObjectEmpty(props.feedbackBuffers) ||
+    (props.varyings && props.varyings.length > 0)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function canCreateTextureTransform(props) {
+  if (
+    !isObjectEmpty(props._sourceTextures) ||
+    props._targetTexture ||
+    props._targetTextureVarying
+  ) {
+    return true;
+  }
+
+  return false;
 }

@@ -37,12 +37,12 @@ export default class TextureTransform {
 
     this.resources = {}; // resources to be deleted
 
-    this.initialize(props);
+    this._initialize(props);
     Object.seal(this);
   }
 
   getModelProps(props = {}) {
-    const updatedModelProps = this.processVertexShader(props);
+    const updatedModelProps = this._processVertexShader(props);
     return Object.assign({}, props, updatedModelProps);
   }
 
@@ -61,7 +61,7 @@ export default class TextureTransform {
         const textureName = this.samplerTextureMap[sampler];
         uniforms[sampler] = sourceTextures[textureName];
       }
-      this.setSourceTextureParameters();
+      this._setSourceTextureParameters();
       // get texture size uniforms
       const sizeUniforms = getSizeUniforms({
         sourceTextureMap: sourceTextures,
@@ -81,7 +81,7 @@ export default class TextureTransform {
 
   swap() {
     if (this._swapTexture) {
-      this.currentIndex = (this.currentIndex + 1) % 2;
+      this.currentIndex = this._getNextIndex();
       return true;
     }
     return false;
@@ -90,20 +90,6 @@ export default class TextureTransform {
   // update source and/or feedbackBuffers
   update(opts = {}) {
     this._setupTextures(opts);
-  }
-
-  _setupTextures(props = {}) {
-    const {_sourceTextures = {}, _targetTexture} = props;
-    const targetTexture = this.createTargetTexture({
-      sourceTextures: _sourceTextures,
-      textureOrReference: _targetTexture
-    });
-    this.hasSourceTextures =
-      this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
-    this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
-    if ('elementCount' in props) {
-      this.updateElementIDBuffer(props.elementCount);
-    }
   }
 
   // returns current target texture
@@ -153,7 +139,7 @@ export default class TextureTransform {
 
   // Private
 
-  initialize(props = {}) {
+  _initialize(props = {}) {
     const {_targetTextureVarying, _swapTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
@@ -162,7 +148,7 @@ export default class TextureTransform {
   }
 
   // auto create target texture if requested
-  createTargetTexture(props) {
+  _createTargetTexture(props) {
     const {sourceTextures, textureOrReference} = props;
     if (textureOrReference instanceof Texture2D) {
       return textureOrReference;
@@ -177,10 +163,24 @@ export default class TextureTransform {
     // we also update target texture.
     this._targetRefTexName = textureOrReference;
 
-    return this.createNewTexture(refTexture);
+    return this._createNewTexture(refTexture);
   }
 
-  updateElementIDBuffer(elementCount) {
+  _setupTextures(props = {}) {
+    const {_sourceTextures = {}, _targetTexture} = props;
+    const targetTexture = this._createTargetTexture({
+      sourceTextures: _sourceTextures,
+      textureOrReference: _targetTexture
+    });
+    this.hasSourceTextures =
+      this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
+    this._updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    if ('elementCount' in props) {
+      this._updateElementIDBuffer(props.elementCount);
+    }
+  }
+
+  _updateElementIDBuffer(elementCount) {
     if (typeof elementCount !== 'number' || this.elementCount >= elementCount) {
       return;
     }
@@ -200,19 +200,19 @@ export default class TextureTransform {
     this.elementCount = elementCount;
   }
 
-  updateBindings(opts) {
-    this.bindings[this.currentIndex] = this.updateBinding(this.bindings[this.currentIndex], opts);
+  _updateBindings(opts) {
+    this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
-      const {sourceTextures, targetTexture} = this.swapTextures(this.bindings[this.currentIndex]);
-      const nextIndex = this.getNextIndex();
-      this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {
+      const {sourceTextures, targetTexture} = this._swapTextures(this.bindings[this.currentIndex]);
+      const nextIndex = this._getNextIndex();
+      this.bindings[nextIndex] = this._updateBinding(this.bindings[nextIndex], {
         sourceTextures,
         targetTexture
       });
     }
   }
 
-  updateBinding(binding, opts) {
+  _updateBinding(binding, opts) {
     const {sourceTextures, targetTexture} = opts;
     if (!binding) {
       binding = {
@@ -249,7 +249,7 @@ export default class TextureTransform {
   }
 
   // set texture filtering parameters on source textures.
-  setSourceTextureParameters() {
+  _setSourceTextureParameters() {
     const index = this.currentIndex;
     const {sourceTextures} = this.bindings[index];
     for (const name in sourceTextures) {
@@ -257,7 +257,7 @@ export default class TextureTransform {
     }
   }
 
-  swapTextures(opts) {
+  _swapTextures(opts) {
     if (!this._swapTexture) {
       return null;
     }
@@ -270,7 +270,7 @@ export default class TextureTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  createNewTexture(refTexture) {
+  _createNewTexture(refTexture) {
     const texture = cloneTextureFrom(refTexture, {
       parameters: {
         [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -292,12 +292,12 @@ export default class TextureTransform {
     return texture;
   }
 
-  getNextIndex() {
+  _getNextIndex() {
     return (this.currentIndex + 1) % 2;
   }
 
   // build and return shader releated parameters
-  processVertexShader(props = {}) {
+  _processVertexShader(props = {}) {
     const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
       vs: props.vs,

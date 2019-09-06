@@ -11,13 +11,13 @@ export default class BufferTransform {
 
     this.resources = {}; // resources to be deleted
 
-    this.initialize(props);
+    this._initialize(props);
     Object.seal(this);
   }
 
   setupResources(opts) {
     for (const binding of this.bindings) {
-      this.setupTransformFeedback(binding, opts);
+      this._setupTransformFeedback(binding, opts);
     }
   }
 
@@ -36,7 +36,7 @@ export default class BufferTransform {
 
   swap() {
     if (this.feedbackMap) {
-      this.currentIndex = (this.currentIndex + 1) % 2;
+      this.currentIndex = this._getNextIndex();
       return true;
     }
     return false;
@@ -74,7 +74,7 @@ export default class BufferTransform {
 
   // Private
 
-  initialize(props = {}) {
+  _initialize(props = {}) {
     this._setupBuffers(props);
     this.varyings = props.varyings || Object.keys(this.bindings[this.currentIndex].feedbackBuffers);
     if (this.varyings.length > 0) {
@@ -83,17 +83,8 @@ export default class BufferTransform {
     }
   }
 
-  _setupBuffers(props = {}) {
-    const {sourceBuffers = null} = props;
-    Object.assign(this.feedbackMap, props.feedbackMap);
-    // if (sourceBuffers || props.feedbackBuffers) {
-    const feedbackBuffers = this.getFeedbackBuffers(props);
-    this.updateBindings({sourceBuffers, feedbackBuffers});
-    // }
-  }
-
   // auto create feedback buffers if requested
-  getFeedbackBuffers(props) {
+  _getFeedbackBuffers(props) {
     const {sourceBuffers} = props;
     const feedbackBuffers = {};
     if (this.bindings[this.currentIndex]) {
@@ -115,7 +106,7 @@ export default class BufferTransform {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = sourceBuffers[bufferOrRef];
         const {byteLength, usage, accessor} = sourceBuffer;
-        feedbackBuffers[bufferName] = this.createNewBuffer(bufferName, {
+        feedbackBuffers[bufferName] = this._createNewBuffer(bufferName, {
           byteLength,
           usage,
           accessor
@@ -126,7 +117,14 @@ export default class BufferTransform {
     return feedbackBuffers;
   }
 
-  setupTransformFeedback(binding, {model}) {
+  _setupBuffers(props = {}) {
+    const {sourceBuffers = null} = props;
+    Object.assign(this.feedbackMap, props.feedbackMap);
+    const feedbackBuffers = this._getFeedbackBuffers(props);
+    this._updateBindings({sourceBuffers, feedbackBuffers});
+  }
+
+  _setupTransformFeedback(binding, {model}) {
     const {program} = model;
     binding.transformFeedback = new TransformFeedback(this.gl, {
       program,
@@ -134,19 +132,19 @@ export default class BufferTransform {
     });
   }
 
-  updateBindings(opts) {
-    this.bindings[this.currentIndex] = this.updateBinding(this.bindings[this.currentIndex], opts);
+  _updateBindings(opts) {
+    this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this.feedbackMap) {
-      const {sourceBuffers, feedbackBuffers} = this.swapBuffers(this.bindings[this.currentIndex]);
-      const nextIndex = this.getNextIndex();
-      this.bindings[nextIndex] = this.updateBinding(this.bindings[nextIndex], {
+      const {sourceBuffers, feedbackBuffers} = this._swapBuffers(this.bindings[this.currentIndex]);
+      const nextIndex = this._getNextIndex();
+      this.bindings[nextIndex] = this._updateBinding(this.bindings[nextIndex], {
         sourceBuffers,
         feedbackBuffers
       });
     }
   }
 
-  updateBinding(binding, opts) {
+  _updateBinding(binding, opts) {
     if (!binding) {
       return {
         sourceBuffers: Object.assign({}, opts.sourceBuffers),
@@ -161,7 +159,7 @@ export default class BufferTransform {
     return binding;
   }
 
-  swapBuffers(opts) {
+  _swapBuffers(opts) {
     if (!this.feedbackMap) {
       return null;
     }
@@ -179,7 +177,7 @@ export default class BufferTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  createNewBuffer(name, opts) {
+  _createNewBuffer(name, opts) {
     const buffer = new Buffer(this.gl, opts);
     if (this.resources[name]) {
       this.resources[name].delete();
@@ -188,7 +186,7 @@ export default class BufferTransform {
     return buffer;
   }
 
-  getNextIndex() {
+  _getNextIndex() {
     return (this.currentIndex + 1) % 2;
   }
 }
