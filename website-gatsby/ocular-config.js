@@ -96,23 +96,11 @@ module.exports = {
   INDEX_PAGE_URL: resolve(__dirname, './templates/index.jsx'),
 
   EXAMPLES: [
-    // {
-    //   title: 'Instancing',
-    //   componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
-    //   path: 'examples/core/instancing/',
-    //   image: 'images/example-instancing.jpg'
-    // },
     {
       title: 'Cubemap',
       componentUrl: resolve(__dirname, './templates/core/example-cubemap.jsx'),
       path: 'examples/core/cubemap/',
       image: 'images/example-cubemap.jpg'
-    },
-    {
-      title: 'DOF',
-      componentUrl: resolve(__dirname, './templates/core/example-dof.jsx'),
-      path: 'examples/core/dof/',
-      image: 'images/example-dof.jpg'
     },
     {
       title: 'Fragment',
@@ -121,16 +109,16 @@ module.exports = {
       image: 'images/example-fragment.jpg'
     },
     {
+      title: 'Instancing',
+      componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
+      path: 'examples/core/instancing/',
+      image: 'images/example-instancing.jpg'
+    },
+    {
       title: 'Mandelbrot',
       componentUrl: resolve(__dirname, './templates/core/example-mandelbrot.jsx'),
       path: 'examples/core/mandelbrot/',
       image: 'images/example-mandelbrot.jpg'
-    },
-    {
-      title: 'Quasicrystals',
-      componentUrl: resolve(__dirname, './templates/core/example-quasicrystals.jsx'),
-      path: 'examples/core/quasicrystals/',
-      image: 'images/example-fragment.jpg'
     },
     {
       title: 'Persistence',
@@ -138,7 +126,6 @@ module.exports = {
       path: 'examples/core/persistence/',
       image: 'images/example-persistence.jpg'
     },
-    // {title: 'Picking', path: 'examples/core/picking/', image: 'images/example-picking.jpg'},
     {
       title: 'Shadowmap',
       componentUrl: resolve(__dirname, './templates/core/example-shadowmap.jsx'),
@@ -146,10 +133,16 @@ module.exports = {
       image: 'images/example-shadowmap.jpg'
     },
     {
-      title: 'Texture3D',
-      componentUrl: resolve(__dirname, './templates/core/example-texture-3d.jsx'),
-      path: 'examples/core/texture3d/',
-      image: 'images/example-texture3d.png'
+      title: 'Animation',
+      componentUrl: resolve(__dirname, './templates/core/example-animation.jsx'),
+      path: 'examples/core/animation/',
+      image: 'images/example-animation.png'
+    },
+    {
+      title: 'TransformFeedback',
+      componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
+      path: 'examples/core/transform-feedback/app',
+      image: 'images/example-transform-feedback.jpg'
     },
     {
       title: 'Transform',
@@ -158,17 +151,29 @@ module.exports = {
       image: 'images/example-transform.png'
     },
     {
-      title: 'TransformFeedback',
-      componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
-      path: 'examples/core/transform-feedback/app',
-      image: 'images/example-transform-feedback.jpg'
+      title: 'DOF',
+      componentUrl: resolve(__dirname, './templates/core/example-dof.jsx'),
+      path: 'examples/core/dof/',
+      image: 'images/example-dof.jpg'
     },
-    // {
-    //   title: 'GLTF',
-    //   componentUrl: resolve(__dirname, './templates/core/example-gltf.jsx'),
-    //   path: 'examples/gltf',
-    //   image: 'images/example-gltf.jpg'
-    // },
+    {
+      title: 'GLTF',
+      componentUrl: resolve(__dirname, './templates/core/example-gltf.jsx'),
+      path: 'examples/core/gltf',
+      image: 'images/example-gltf.jpg'
+    },
+    {
+      title: 'Quasicrystals',
+      componentUrl: resolve(__dirname, './templates/core/example-quasicrystals.jsx'),
+      path: 'examples/core/quasicrystals/',
+      image: 'images/example-quasicrystals.jpg'
+    },
+    {
+      title: 'Texture3D',
+      componentUrl: resolve(__dirname, './templates/core/example-texture-3d.jsx'),
+      path: 'examples/core/texture3d/',
+      image: 'images/example-texture3d.png'
+    },
     {
       title: 'Lesson01',
       componentUrl: resolve(__dirname, './templates/lessons/example-01.jsx'),

@@ -11,6 +11,7 @@
   "dependencies": {
     "@loaders.gl/core": "^1.2.0",
     "@loaders.gl/draco": "^1.2.0",
+    "@loaders.gl/polyfills": "^1.2.0",
     "@luma.gl/addons": "^7.2.0-beta",
     "@luma.gl/constants": "^7.2.0-beta",
     "@luma.gl/core": "^7.2.0-beta",
