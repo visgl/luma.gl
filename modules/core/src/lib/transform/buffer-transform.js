@@ -1,12 +1,12 @@
 import {isWebGL2, Buffer} from '@luma.gl/webgl';
-import {isObjectEmpty, assert} from '../../utils';
+import {assert} from '../../utils';
 import BufferTransformBinding from './buffer-transform-binding';
 
 export default class BufferTransform {
   constructor(gl, props = {}) {
     this.gl = gl;
     this.currentIndex = 0;
-    this.feedbackMap = null;
+    this.feedbackMap = {};
     this.varyings = null; // varyings array
     this.bindings = [];
 
@@ -45,11 +45,7 @@ export default class BufferTransform {
 
   // update source and/or feedbackBuffers
   update(opts = {}) {
-    const {sourceBuffers = null} = opts;
-    if (sourceBuffers || opts.feedbackBuffers) {
-      const feedbackBuffers = this.getFeedbackBuffers(opts);
-      this.updateBindings({sourceBuffers, feedbackBuffers});
-    }
+    this._setupBuffers(opts);
   }
 
   // returns current feedbackBuffer of given name
@@ -80,22 +76,34 @@ export default class BufferTransform {
   // Private
 
   initialize(props = {}) {
-    const {sourceBuffers, feedbackMap} = props;
-    this.feedbackMap = feedbackMap;
-    const feedbackBuffers = this.getFeedbackBuffers(props);
-    if (!isObjectEmpty(props.feedbackBuffers)) {
+    this._setupBuffers(props);
+    const currentBuffers = this.bindings[this.currentIndex].getBuffers();
+    this.varyings = props.varyings || Object.keys(currentBuffers.feedbackBuffers);
+    if (this.varyings.length > 0) {
       // if writting to buffers make sure it is WebGL2
       assert(isWebGL2(this.gl));
     }
-    this.varyings = props.varyings || Object.keys(feedbackBuffers);
+  }
+
+  _setupBuffers(props = {}) {
+    const {sourceBuffers = null} = props;
+    Object.assign(this.feedbackMap, props.feedbackMap);
+    // if (sourceBuffers || props.feedbackBuffers) {
+    const feedbackBuffers = this.getFeedbackBuffers(props);
     this.updateBindings({sourceBuffers, feedbackBuffers});
-    // TODO: setup this.varyings
+    // }
   }
 
   // auto create feedback buffers if requested
   getFeedbackBuffers(props) {
     const {sourceBuffers} = props;
     const feedbackBuffers = {};
+    if (this.bindings[this.currentIndex]) {
+      // this gurantees a partial feedback buffer set doesn't update
+      // previously set buffers during auto creation mode.
+      const currentBuffers = this.bindings[this.currentIndex].getBuffers();
+      Object.assign(feedbackBuffers, currentBuffers.feedbackBuffers);
+    }
     if (this.feedbackMap) {
       // feedbackMap is defined as sourceBuffer as key and feedbackBuffer name as object
       for (const sourceName in this.feedbackMap) {

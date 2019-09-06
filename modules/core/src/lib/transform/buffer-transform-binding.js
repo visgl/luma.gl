@@ -1,5 +1,3 @@
-import {isObjectEmpty} from '../../utils';
-
 import {TransformFeedback} from '@luma.gl/webgl';
 
 // swapping of two instances, instead of maintaing two arra
@@ -30,9 +28,6 @@ export default class BufferTransformBinding {
   // setup TransformFeedback objects to capture the results
   setupTransformFeedback({model}) {
     const {program} = model;
-    if (isObjectEmpty(this.feedbackBuffers)) {
-      return;
-    }
     this.transformFeedback = new TransformFeedback(this.gl, {
       program,
       buffers: this.feedbackBuffers

@@ -135,10 +135,11 @@ export default class Transform {
   }
 
   canCreateBufferTransform(props) {
-    if (!isObjectEmpty(props.sourceBuffers)) {
-      return true;
-    }
-    if (!isObjectEmpty(props.feedbackBuffers)) {
+    if (
+      !isObjectEmpty(props.sourceBuffers) ||
+      !isObjectEmpty(props.feedbackBuffers) ||
+      (props.varyings && props.varyings.length > 0)
+    ) {
       return true;
     }
     return false;
@@ -148,7 +149,7 @@ export default class Transform {
     if (!isObjectEmpty(props._sourceTextures)) {
       return true;
     }
-    if (props._targetTexture) {
+    if (props._targetTexture || props._targetTextureVarying) {
       return true;
     }
 

@@ -91,17 +91,32 @@ export default class TextureTransform {
 
   // update source and/or feedbackBuffers
   update(opts = {}) {
-    const {_sourceTextures = null, _targetTexture} = opts;
-    if (_sourceTextures || _targetTexture) {
-      const targetTexture = this.createTargetTexture({
-        sourceTextures: _sourceTextures,
-        // if targetTexture created using source texture, and that sourceTextuer
-        // is updated we should update targetTexture
-        textureOrReference: _targetTexture || this._targetRefTexName
-      });
-      this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    // const {_sourceTextures = null, _targetTexture} = opts;
+    // if (_sourceTextures || _targetTexture) {
+    //   const targetTexture = this.createTargetTexture({
+    //     sourceTextures: _sourceTextures,
+    //     // if targetTexture created using source texture, and that sourceTextuer
+    //     // is updated we should update targetTexture
+    //     textureOrReference: _targetTexture || this._targetRefTexName
+    //   });
+    //   this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    // }
+    // this.updateElementIDBuffer(opts.elementCount);
+    this._setupTextures(opts);
+  }
+
+  _setupTextures(props = {}) {
+    const {_sourceTextures = {}, _targetTexture} = props;
+    const targetTexture = this.createTargetTexture({
+      sourceTextures: _sourceTextures,
+      textureOrReference: _targetTexture
+    });
+    this.hasSourceTextures =
+      this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
+    this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    if ('elementCount' in props) {
+      this.updateElementIDBuffer(props.elementCount);
     }
-    this.updateElementIDBuffer(opts.elementCount);
   }
 
   // returns current target texture
@@ -152,18 +167,11 @@ export default class TextureTransform {
   // Private
 
   initialize(props = {}) {
-    const {_sourceTextures, _targetTexture, _targetTextureVarying, _swapTexture} = props;
+    const {_targetTextureVarying, _swapTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
-    const targetTexture = this.createTargetTexture({
-      sourceTextures: _sourceTextures,
-      textureOrReference: _targetTexture
-    });
-    this.hasSourceTextures = _sourceTextures && Object.keys(_sourceTextures).length > 0;
     this.hasTargetTexture = _targetTextureVarying;
-    this.updateElementIDBuffer(props.elementCount);
-    this.updateBindings({sourceTextures: _sourceTextures, targetTexture});
-    // TODO: setup this.varyings
+    this._setupTextures(props);
   }
 
   // auto create target texture if requested
