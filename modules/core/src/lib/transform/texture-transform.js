@@ -41,7 +41,7 @@ export default class TextureTransform {
     Object.seal(this);
   }
 
-  getModelProps(props = {}) {
+  updateModelProps(props = {}) {
     const updatedModelProps = this._processVertexShader(props);
     return Object.assign({}, props, updatedModelProps);
   }
@@ -68,7 +68,7 @@ export default class TextureTransform {
         targetTextureVarying: this.targetTextureVarying,
         targetTexture
       });
-      Object.assign(uniforms, sizeUniforms, discard);
+      Object.assign(uniforms, sizeUniforms);
     }
 
     if (this.hasTargetTexture) {
@@ -76,7 +76,7 @@ export default class TextureTransform {
       parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
     }
 
-    return Object.assign(opts, {attributes, framebuffer, uniforms, discard, parameters});
+    return {attributes, framebuffer, uniforms, discard, parameters};
   }
 
   swap() {
@@ -98,29 +98,25 @@ export default class TextureTransform {
     return targetTexture;
   }
 
-  getData({varyingName = null, packed = false} = {}) {
-    if (!varyingName || varyingName === this.targetTextureVarying) {
-      const {framebuffer} = this.bindings[this.currentIndex];
-      const pixels = readPixelsToArray(framebuffer);
+  getData({packed = false} = {}) {
+    const {framebuffer} = this.bindings[this.currentIndex];
+    const pixels = readPixelsToArray(framebuffer);
 
-      if (!packed) {
-        return pixels;
-      }
-
-      // readPixels returns 4 elements for each pixel, pack the elements when requested
-      const ArrayType = pixels.constructor;
-      const channelCount = typeToChannelCount(this.targetTextureType);
-      const packedPixels = new ArrayType((pixels.length * channelCount) / 4);
-      let packCount = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        for (let j = 0; j < channelCount; j++) {
-          packedPixels[packCount++] = pixels[i + j];
-        }
-      }
-      return packedPixels;
+    if (!packed) {
+      return pixels;
     }
 
-    return null;
+    // readPixels returns 4 elements for each pixel, pack the elements when requested
+    const ArrayType = pixels.constructor;
+    const channelCount = typeToChannelCount(this.targetTextureType);
+    const packedPixels = new ArrayType((pixels.length * channelCount) / 4);
+    let packCount = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      for (let j = 0; j < channelCount; j++) {
+        packedPixels[packCount++] = pixels[i + j];
+      }
+    }
+    return packedPixels;
   }
 
   // returns current framebuffer object that is being used.
@@ -320,6 +316,6 @@ export default class TextureTransform {
       this.hasSourceTextures || this.targetTextureVarying
         ? [transformModule].concat(props.modules || [])
         : props.modules;
-    return {vs, fs, modules, uniforms, inject: combinedInject, samplerTextureMap};
+    return {vs, fs, modules, uniforms, inject: combinedInject};
   }
 }

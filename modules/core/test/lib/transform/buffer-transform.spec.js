@@ -98,7 +98,7 @@ test('WebGL#BufferTransform feedbackBuffer with referece', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform getModelProps', t => {
+test('WebGL#BufferTransform updateModelProps', t => {
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -119,7 +119,7 @@ test('WebGL#BufferTransform getModelProps', t => {
     },
     varyings: cutomVaryings
   });
-  let {varyings} = bt.getModelProps();
+  let {varyings} = bt.updateModelProps();
   t.deepEqual(varyings, cutomVaryings, 'should use custom varyings when provided');
 
   bt.delete();
@@ -132,7 +132,7 @@ test('WebGL#BufferTransform getModelProps', t => {
     }
   });
 
-  ({varyings} = bt.getModelProps({}));
+  ({varyings} = bt.updateModelProps({}));
   t.deepEqual(
     varyings,
     ['feedback'],

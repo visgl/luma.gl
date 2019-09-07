@@ -21,9 +21,12 @@ export default class BufferTransform {
     }
   }
 
-  getModelProps(props = {}) {
+  updateModelProps(props = {}) {
     const {varyings} = this;
-    return Object.assign({}, props, {varyings});
+    if (varyings.length > 0) {
+      props = Object.assign({}, props, {varyings});
+    }
+    return props;
   }
 
   getDrawOptions(opts = {}) {
@@ -48,7 +51,7 @@ export default class BufferTransform {
   }
 
   // returns current feedbackBuffer of given name
-  getBuffer(varyingName = null) {
+  getBuffer(varyingName) {
     const {feedbackBuffers} = this.bindings[this.currentIndex];
     const bufferOrParams = varyingName ? feedbackBuffers[varyingName] : null;
     if (!bufferOrParams) {
@@ -57,7 +60,7 @@ export default class BufferTransform {
     return bufferOrParams instanceof Buffer ? bufferOrParams : bufferOrParams.buffer;
   }
 
-  getData({varyingName = null} = {}) {
+  getData({varyingName} = {}) {
     const buffer = this.getBuffer(varyingName);
     if (buffer) {
       return buffer.getData();

@@ -96,7 +96,7 @@ export default class Transform {
     const {gl} = this;
     this._buildResourceTransforms(gl, props);
 
-    props = this._getModelProps(props);
+    props = this._updateModelProps(props);
     this.model = new Model(
       gl,
       Object.assign({}, props, {
@@ -112,11 +112,11 @@ export default class Transform {
     /* eslint-enable no-unused-expressions */
   }
 
-  _getModelProps(props) {
+  _updateModelProps(props) {
     let updatedProps = Object.assign({}, props);
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      updatedProps = resourceTransform.getModelProps(updatedProps);
+      updatedProps = resourceTransform.updateModelProps(updatedProps);
     }
     return updatedProps;
   }
