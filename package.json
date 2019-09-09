@@ -62,7 +62,7 @@
     "gl": "^4.2.2",
     "mkdirp": "^0.5.1",
     "mjolnir.js": "^2.1.2",
-    "ocular-dev-tools": "0.0.27",
+    "ocular-dev-tools": "0.0.29",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1",
     "raw-loader": "^0.5.1",
