@@ -286,8 +286,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     rotationBuffer.setAccessor({divisor: 0});
 
     if (pickPosition) {
-      const devicePosition = cssToDevicePixels(gl, pickPosition);
-      pickInstance(gl, devicePosition[0], devicePosition[1], renderModel, framebuffer);
+      const devicePixels = cssToDevicePixels(gl, pickPosition);
+      const deviceX = Math.round((devicePixels.low[0] + devicePixels.high[0]) / 2);
+      const deviceY = Math.round((devicePixels.low[1] + devicePixels.high[1]) / 2);
+      pickInstance(gl, deviceX, deviceY, renderModel, framebuffer);
     }
   }
 
