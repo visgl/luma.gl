@@ -24,7 +24,8 @@ export default function pickModels(gl, props) {
 
   // Compensate for devicePixelRatio
   // Note: this assumes the canvas framebuffer has been matched
-  const devicePosition = cssToDevicePixels(gl, position);
+  // use the center pixel location in device pixel range
+  const devicePosition = [devicePixels.x + Math.floor(devicePixels.width / 2), devicePixels.y + Math.floor(devicePixels.height / 2)];
 
 
   // return withParameters(gl, {

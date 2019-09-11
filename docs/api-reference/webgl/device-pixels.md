@@ -1,6 +1,6 @@
 # Device Pixels
 
-Most of the modern computers support retina or HD displays, which support either 2X of 4X number of pixels to the size of screen. By rendering to this bigger size window (Device) and then down sampling it to smaller window (CSS), produces sharp images, but at the cost of performance penalty by rendering more pixels.
+Most of the modern computers support retina or HD displays, which support either 2X or 4X number of pixels to the size of screen. By rendering to this bigger size window (Device) and then down sampling it to smaller window (CSS), produces sharp images, but at the cost of performance penalty by rendering more pixels.
 
 ## useDevicePixels
 
@@ -37,4 +37,4 @@ Returns an Object, `{x, y, width, height}` that represents entire range of devic
  * `y` (Number): lower y-coordinate
  * `width` (Number): width in pixels
  * `height` (Number): height in pixels
- When `devicePixelRatio` is <=1, `width` and `height` are be always be equal one, otherwise `width` and `height` are greater than one.
+ When `devicePixelRatio` is <=1, `width` and `height` are equal to `one`, otherwise `width` and `height` are greater than one.

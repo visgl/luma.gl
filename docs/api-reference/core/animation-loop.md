@@ -165,7 +165,7 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 
 ## Experimental API (`useDevicePixels`)
 
-`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged in console, specifying the clamped down ratio. For additional details check device pixels [`document`]((/docs/api-reference/webgl/device-pixels.md)).
+`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`]((/docs/api-reference/webgl/device-pixels.md)).
 
 ## Remarks
 
