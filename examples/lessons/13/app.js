@@ -129,7 +129,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // set camera position
-    const eyePos = new Matrix4().rotateX(radians(-30)).transformVector3([0, 0, 10]);
+    const eyePos = new Matrix4().rotateX(radians(-30)).transform([0, 0, 10]);
 
     const uVMatrix = new Matrix4().lookAt({eye: eyePos, center: [0, 0, 0], up: [0, 1, 0]});
 
