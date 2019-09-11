@@ -3,5 +3,3 @@ node_modules/
 worker/
 *.min.js
 wip/
-encoding.js
-encoding-indexes.js
