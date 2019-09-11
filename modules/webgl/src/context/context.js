@@ -167,7 +167,7 @@ export function resizeGLContext(gl, options = {}) {
   // Resize browser context
   if (gl.canvas) {
     const devicePixelRatio = getDevicePixelRatio(options.useDevicePixels);
-    setDevicePixelRatio(gl, devicePixelRatio);
+    setDevicePixelRatio(gl, devicePixelRatio, options);
     return;
   }
 
@@ -198,26 +198,30 @@ function getVersion(gl) {
 }
 
 // use devicePixelRatio to set canvas width and height
-function setDevicePixelRatio(gl, devicePixelRatio) {
+function setDevicePixelRatio(gl, devicePixelRatio, options) {
   let devicePixelRatioClamped = false;
   let aspectRatioValid = false;
-  let clientSizeValid = false;
+
+  // NOTE: if options.width and options.height not used remove in v8
+  let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width;
+  let clientHeight =
+    'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height;
+
+  // Fallback to sane values
+  clientWidth = clientWidth >= 1 ? clientWidth : 1;
+  clientHeight = clientHeight >= 1 ? clientHeight : 1;
 
   // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
   // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
   // for those cases, reduce devicePixelRatio.
   do {
-    const {clientWidth, clientHeight} = gl.canvas;
     gl.canvas.width = Math.ceil(clientWidth * devicePixelRatio);
     gl.canvas.height = Math.ceil(clientHeight * devicePixelRatio);
     aspectRatioValid =
       gl.drawingBufferWidth / clientWidth === gl.drawingBufferHeight / clientHeight;
     devicePixelRatio = Math.max(devicePixelRatio / 2, 1);
     devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
-
-    // matches old behavior when clientWidth or clientHeight is 0.
-    clientSizeValid = clientWidth > 0 && clientHeight > 0;
-  } while (!aspectRatioValid && clientSizeValid);
+  } while (!aspectRatioValid);
 
   if (devicePixelRatioClamped) {
     log.warn(`Device pixel ratio clamped`)();

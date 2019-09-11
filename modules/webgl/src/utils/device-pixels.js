@@ -32,9 +32,8 @@ export function getDevicePixelRatio(useDevicePixels) {
 // PRIVATE
 
 function scalePixels(pixel, ratio, width, height, yInvert) {
-  // since we are rounding to nearest, when dpr > 1, edge pixels may point to out of bounds value, clamp to the limit
-  const xLow = scaleX(pixel[0], ratio, width);
-  const yLow = scaleY(pixel[1], ratio, height, yInvert);
+  const x = scaleX(pixel[0], ratio, width);
+  let y = scaleY(pixel[1], ratio, height, yInvert);
 
   // Find boundaries of next pixel to provide valid range of device pixel locaitons
 
@@ -43,23 +42,35 @@ function scalePixels(pixel, ratio, width, height, yInvert) {
   const xHigh = t === width - 1 ? t : t - 1;
 
   t = scaleY(pixel[1] + 1, ratio, height, yInvert);
-  // Handle boundary and detla for y-inversion
-  const yBoundary = yInvert ? 0 : height - 1;
-  const yDelta = yInvert ? -1 : 1;
-  // If next pixel's position is clamped to boundary, use it as is, otherwise subtract delta for current pixel boundary
-  const yHigh = t === yBoundary ? t : t - yDelta;
-
+  let yHigh;
+  if (yInvert) {
+    // If next pixel's position is clamped to boundary, use it as is, otherwise clamp it to valid range
+    t = t === 0 ? t : t + 1;
+    // swap y and yHigh
+    yHigh = y;
+    y = t;
+  } else {
+    // If next pixel's position is clamped to boundary, use it as is, otherwise clamp it to valid range
+    yHigh = t === height - 1 ? t : t - 1;
+    // y remains same
+  }
   return {
-    low: [xLow, yLow],
-    high: [xHigh, yHigh]
+    x,
+    y,
+    // when ratio < 1, current css pixel and next css pixel may point to same device pixel, set width/height to 1 in those cases.
+    width: Math.max(xHigh - x + 1, 1),
+    height: Math.max(yHigh - y + 1, 1)
   };
 }
 
 function scaleX(x, ratio, width) {
-  return Math.min(Math.round(x * ratio), width - 1);
+  // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
+  const r = Math.min(Math.round(x * ratio), width - 1);
+  return r;
 }
 
 function scaleY(y, ratio, height, yInvert) {
+  // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
   return yInvert
     ? Math.max(0, height - 1 - Math.round(y * ratio))
     : Math.min(Math.round(y * ratio), height - 1);

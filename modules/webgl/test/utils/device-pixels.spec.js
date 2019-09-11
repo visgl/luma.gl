@@ -19,30 +19,42 @@ const MAP_TEST_CASES = [
     windowPositions: [[0, 0], [2, 2], [9, 9]],
     devicePositionsInverted: [
       {
-        low: [0, 9],
-        high: [0, 9]
+        x: 0,
+        y: 9,
+        width: 1,
+        height: 1
       },
       {
-        low: [2, 7],
-        high: [2, 7]
+        x: 2,
+        y: 7,
+        width: 1,
+        height: 1
       },
       {
-        low: [9, 0],
-        high: [9, 0]
+        x: 9,
+        y: 0,
+        width: 1,
+        height: 1
       }
     ],
     devicePositions: [
       {
-        low: [0, 0],
-        high: [0, 0]
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1
       },
       {
-        low: [2, 2],
-        high: [2, 2]
+        x: 2,
+        y: 2,
+        width: 1,
+        height: 1
       },
       {
-        low: [9, 9],
-        high: [9, 9]
+        x: 9,
+        y: 9,
+        width: 1,
+        height: 1
       }
     ]
   },
@@ -60,14 +72,18 @@ const MAP_TEST_CASES = [
     windowPositions: [[0, 0]],
     devicePositionsInverted: [
       {
-        low: [0, 0],
-        high: [0, 0]
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1
       }
     ],
     devicePositions: [
       {
-        low: [0, 0],
-        high: [0, 0]
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1
       }
     ]
   },
@@ -88,30 +104,42 @@ const MAP_TEST_CASES = [
     // 0 1 2 3  4  5  6  7  8  9
     devicePositionsInverted: [
       {
-        low: [0, 39],
-        high: [3, 36]
+        x: 0,
+        y: 36,
+        width: 4,
+        height: 4
       },
       {
-        low: [8, 31],
-        high: [11, 28]
+        x: 8,
+        y: 28,
+        width: 4,
+        height: 4
       },
       {
-        low: [36, 3],
-        high: [39, 0]
+        x: 36,
+        y: 0,
+        width: 4,
+        height: 4
       }
     ],
     devicePositions: [
       {
-        low: [0, 0],
-        high: [3, 3]
+        x: 0,
+        y: 0,
+        width: 4,
+        height: 4
       },
       {
-        low: [8, 8],
-        high: [11, 11]
+        x: 8,
+        y: 8,
+        width: 4,
+        height: 4
       },
       {
-        low: [36, 36],
-        high: [39, 39]
+        x: 36,
+        y: 36,
+        width: 4,
+        height: 4
       }
     ]
   },
@@ -136,30 +164,42 @@ const MAP_TEST_CASES = [
     // Device Ynvert: 24 21   19  16  14  11   9  6   4  1   -1
     devicePositionsInverted: [
       {
-        low: [0, 24],
-        high: [2, 22]
+        x: 0,
+        y: 22,
+        width: 3,
+        height: 3
       },
       {
-        low: [5, 19],
-        high: [7, 17]
+        x: 5,
+        y: 17,
+        width: 3,
+        height: 3
       },
       {
-        low: [23, 1],
-        high: [24, 0]
+        x: 23,
+        y: 0,
+        width: 2,
+        height: 2
       }
     ],
     devicePositions: [
       {
-        low: [0, 0],
-        high: [2, 2]
+        x: 0,
+        y: 0,
+        width: 3,
+        height: 3
       },
       {
-        low: [5, 5],
-        high: [7, 7]
+        x: 5,
+        y: 5,
+        width: 3,
+        height: 3
       },
       {
-        low: [23, 23],
-        high: [24, 24]
+        x: 23,
+        y: 23,
+        width: 2,
+        height: 2
       }
     ]
   },
@@ -175,33 +215,58 @@ const MAP_TEST_CASES = [
     },
     ratio: LOW_DPR,
     yInvert: true,
-    windowPositions: [[0, 0], [2, 2], [8, 8]],
+    windowPositions: [[0, 0], [1, 1], [2, 2], [8, 8]],
     devicePositionsInverted: [
       {
-        low: [0, 4],
-        high: [0, 4]
+        x: 0,
+        y: 4,
+        width: 1,
+        height: 1
       },
       {
-        low: [1, 3],
-        high: [1, 3]
+        x: 1,
+        y: 4,
+        width: 1,
+        height: 1
       },
       {
-        low: [4, 0],
-        high: [4, 0]
+        x: 1,
+        y: 3,
+        width: 1,
+        height: 1
+      },
+      {
+        x: 4,
+        y: 0,
+        width: 1,
+        height: 1
       }
     ],
     devicePositions: [
       {
-        low: [0, 0],
-        high: [0, 0]
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1
+      },
+      // [1, 1] and [2, 2] point to the same pixel
+      {
+        x: 1,
+        y: 1,
+        width: 1,
+        height: 1
       },
       {
-        low: [1, 1],
-        high: [1, 1]
+        x: 1,
+        y: 1,
+        width: 1,
+        height: 1
       },
       {
-        low: [4, 4],
-        high: [4, 4]
+        x: 4,
+        y: 4,
+        width: 1,
+        height: 1
       }
     ]
   }

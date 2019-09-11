@@ -201,8 +201,8 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     if (_mousePosition) {
       const devicePixels = cssToDevicePixels(gl, _mousePosition);
-      const deviceX = Math.round((devicePixels.low[0] + devicePixels.high[0]) / 2);
-      const deviceY = Math.round((devicePixels.low[1] + devicePixels.high[1]) / 2);
+      const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
+      const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
       pickInstance(gl, deviceX, deviceY, this.cube, framebuffer);
     }

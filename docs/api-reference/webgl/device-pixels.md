@@ -24,12 +24,17 @@ Returns a Number, which is the ratio of Device buffer resolution size to CSS buf
 Returns ratio (Number).
 
 
-### cssToDevicePixels(gl, cssPixel, yInvert) : Array
+### cssToDevicePixels(gl, cssPixel, yInvert) : Object
 
-Converts CSS pixel location to Device pixel location.
+Converts CSS pixel location to Device pixel range.
 
 * `gl` (WebGLContext) - WebGL context.
 * `cssPixels` (Array) - Array in [x, y] form, where x and y are location in CSS window.
 * `yInvert` (Boolean, optional, default: true) - when true it will perform y-inversion when converting to Device pixels.
 
-Returns Device pixel location, [x, y].
+Returns an Object, `{x, y, width, height}` that represents entire range of device pixels that correspond to given cssPixel location. Following fields define the rectangle.
+ * `x` (Number): lower x-coordinate
+ * `y` (Number): lower y-coordinate
+ * `width` (Number): width in pixels
+ * `height` (Number): height in pixels
+ When `devicePixelRatio` is <=1, `width` and `height` are be always be equal one, otherwise `width` and `height` are greater than one.
