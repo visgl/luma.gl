@@ -203,13 +203,10 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
   let aspectRatioValid = false;
 
   // NOTE: if options.width and options.height not used remove in v8
-  let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width;
-  let clientHeight =
-    'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height;
-
-  // Fallback to sane values
-  clientWidth = clientWidth >= 1 ? clientWidth : 1;
-  clientHeight = clientHeight >= 1 ? clientHeight : 1;
+  const clientWidth =
+    'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width || 1;
+  const clientHeight =
+    'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height || 1;
 
   // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
   // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
