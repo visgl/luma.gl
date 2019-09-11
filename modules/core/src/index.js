@@ -83,7 +83,7 @@ export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-sourc
 export {default as AnimationLoop} from './lib/animation-loop';
 export {encodePickingColor, decodePickingColor, getNullPickingColor} from './lib/picking-colors';
 export {default as Model} from './lib/model';
-export {default as Transform} from './lib/transform';
+export {default as Transform} from './lib/transform/transform';
 export {default as ClipSpace} from './lib/clip-space';
 
 // Resource Management

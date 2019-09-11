@@ -1,6 +1,10 @@
 const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.2-release';
 const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/7.2-release';
 
+function getDocUrl(filename) {
+  return `${RAW_GITHUB}/docs/${filename}`;
+}
+
 export const EXAMPLE_PAGES = [
   {
     name: 'Overview',
@@ -241,11 +245,11 @@ export const DOC_PAGES = [
     children: [
       {
         name: 'Introduction',
-        content: 'README.md'
+        content: getDocUrl('README.md')
       },
       {
         name: "What's New",
-        content: 'whats-new.md'
+        content: getDocUrl('whats-new.md')
       }
     ]
   },
@@ -254,46 +258,46 @@ export const DOC_PAGES = [
     children: [
       {
         name: 'Getting Started',
-        content: 'get-started/README.md'
+        content: getDocUrl('get-started/README.md')
       },
       {
         name: 'Examples',
-        content: 'get-started/examples.md'
+        content: getDocUrl('get-started/examples.md')
       },
       {
         name: 'Upgrade Guide',
-        content: 'upgrade-guide.md'
+        content: getDocUrl('upgrade-guide.md')
       },
       {
         name: 'Shadertools',
         children: [
           {
             name: 'Shadertools',
-            content: 'developer-guide/shadertools/README.md'
+            content: getDocUrl('developer-guide/shadertools/README.md')
           },
           {
             name: 'Shader Assembly',
-            content: 'developer-guide/shadertools/shader-assembly.md'
+            content: getDocUrl('developer-guide/shadertools/shader-assembly.md')
           },
           {
             name: 'Using Shader Modules',
-            content: 'developer-guide/shadertools/using-shader-modules.md'
+            content: getDocUrl('developer-guide/shadertools/using-shader-modules.md')
           },
           {
             name: 'Model Integration',
-            content: 'developer-guide/shadertools/model-integration.md'
+            content: getDocUrl('developer-guide/shadertools/model-integration.md')
           },
           {
             name: 'Creating Shader Modules',
-            content: 'developer-guide/shadertools/writing-shader-modules.md'
+            content: getDocUrl('developer-guide/shadertools/writing-shader-modules.md')
           },
           {
             name: 'Writing GLSL Code',
-            content: 'developer-guide/shadertools/writing-glsl-shaders.md'
+            content: getDocUrl('developer-guide/shadertools/writing-glsl-shaders.md')
           },
           {
             name: 'Using GLSL 3.00 ES',
-            content: 'developer-guide/using-glsl-300-es.md'
+            content: getDocUrl('developer-guide/using-glsl-300-es.md')
           }
         ]
       },
@@ -302,31 +306,31 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Drawing',
-            content: 'developer-guide/drawing.md'
+            content: getDocUrl('developer-guide/drawing.md')
           },
           {
             name: 'Buffers',
-            content: 'developer-guide/buffers.md'
+            content: getDocUrl('developer-guide/buffers.md')
           },
           {
             name: 'Stencil Buffers',
-            content: 'developer-guide/stencil-buffers.md'
+            content: getDocUrl('developer-guide/stencil-buffers.md')
           },
           {
             name: 'Attributes',
-            content: 'developer-guide/attributes.md'
+            content: getDocUrl('developer-guide/attributes.md')
           },
           {
             name: 'Accessors',
-            content: 'developer-guide/accessors.md'
+            content: getDocUrl('developer-guide/accessors.md')
           },
           {
             name: 'Extensions',
-            content: 'developer-guide/extensions.md'
+            content: getDocUrl('developer-guide/extensions.md')
           },
           {
             name: 'Transform Feedback',
-            content: 'developer-guide/transform-feedback.md'
+            content: getDocUrl('developer-guide/transform-feedback.md')
           }
         ]
       },
@@ -335,7 +339,7 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Multi-Pass Rendering',
-            content: 'developer-guide/multipass/README.md'
+            content: getDocUrl('developer-guide/multipass/README.md')
           }
         ]
       },
@@ -344,23 +348,23 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Building Apps',
-            content: 'developer-guide/building-apps.md'
+            content: getDocUrl('developer-guide/building-apps.md')
           },
           {
             name: 'Configuring',
-            content: 'developer-guide/configuring.md'
+            content: getDocUrl('developer-guide/configuring.md')
           },
           {
             name: 'Debugging',
-            content: 'developer-guide/debugging.md'
+            content: getDocUrl('developer-guide/debugging.md')
           },
           {
             name: 'Portability',
-            content: 'developer-guide/portability.md'
+            content: getDocUrl('developer-guide/portability.md')
           },
           {
             name: 'Programs and shaders',
-            content: 'developer-guide/programs-and-shaders.md'
+            content: getDocUrl('developer-guide/programs-and-shaders.md')
           }
         ]
       }
@@ -374,7 +378,7 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'API Structure',
-            content: 'api-reference/README.md'
+            content: getDocUrl('api-reference/README.md')
           }
         ]
       },
@@ -383,31 +387,31 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'AnimationLoop',
-            content: 'api-reference/core/animation-loop.md'
+            content: getDocUrl('api-reference/core/animation-loop.md')
           },
           {
             name: 'AnimationLoopProxy (Experimental)',
-            content: 'api-reference/core/animation-loop-proxy.md'
+            content: getDocUrl('api-reference/core/animation-loop-proxy.md')
           },
           {
             name: 'Geometry',
-            content: 'api-reference/core/geometry.md'
+            content: getDocUrl('api-reference/core/geometry.md')
           },
           {
             name: 'loadFile',
-            content: 'api-reference/core/load-file.md'
+            content: getDocUrl('api-reference/core/load-file.md')
           },
           {
             name: 'Model',
-            content: 'api-reference/core/model.md'
+            content: getDocUrl('api-reference/core/model.md')
           },
           {
             name: 'Transform',
-            content: 'api-reference/core/transform.md'
+            content: getDocUrl('api-reference/core/transform.md')
           },
           {
             name: 'ShaderCache',
-            content: 'api-reference/core/shader-cache.md'
+            content: getDocUrl('api-reference/core/shader-cache.md')
           }
         ]
       },
@@ -416,27 +420,27 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Cone',
-            content: 'api-reference/core/geometries/cone-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/cone-geometry.md')
           },
           {
             name: 'Cube',
-            content: 'api-reference/core/geometries/cube-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/cube-geometry.md')
           },
           {
             name: 'Cylinder',
-            content: 'api-reference/core/geometries/cylinder-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/cylinder-geometry.md')
           },
           {
             name: 'IcoSphere',
-            content: 'api-reference/core/geometries/ico-sphere-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/ico-sphere-geometry.md')
           },
           {
             name: 'Plane',
-            content: 'api-reference/core/geometries/plane-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/plane-geometry.md')
           },
           {
             name: 'Sphere',
-            content: 'api-reference/core/geometries/sphere-geometry.md'
+            content: getDocUrl('api-reference/core/geometries/sphere-geometry.md')
           }
         ]
       },
@@ -445,15 +449,15 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Ambient Light',
-            content: 'api-reference/core/lights/ambient-light.md'
+            content: getDocUrl('api-reference/core/lights/ambient-light.md')
           },
           {
             name: 'Directional Light',
-            content: 'api-reference/core/lights/directional-light.md'
+            content: getDocUrl('api-reference/core/lights/directional-light.md')
           },
           {
             name: 'Point Light',
-            content: 'api-reference/core/lights/point-light.md'
+            content: getDocUrl('api-reference/core/lights/point-light.md')
           }
         ]
       },
@@ -462,11 +466,11 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'PhongMaterial',
-            content: 'api-reference/core/materials/phong-material.md'
+            content: getDocUrl('api-reference/core/materials/phong-material.md')
           },
           {
             name: 'PBRMaterial',
-            content: 'api-reference/core/materials/pbr-material.md'
+            content: getDocUrl('api-reference/core/materials/pbr-material.md')
           }
         ]
       },
@@ -475,11 +479,11 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Overview',
-            content: 'api-reference/effects/overview.md'
+            content: getDocUrl('api-reference/effects/overview.md')
           },
           {
             name: 'glfx Shader Modules',
-            content: 'api-reference/effects/glfx-shader-modules.md'
+            content: getDocUrl('api-reference/effects/glfx-shader-modules.md')
           }
         ]
       },
@@ -488,35 +492,35 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Canvas',
-            content: 'api-reference/core/multipass/canvas.md'
+            content: getDocUrl('api-reference/core/multipass/canvas.md')
           },
           {
             name: 'Clear pass',
-            content: 'api-reference/core/multipass/clear-pass.md'
+            content: getDocUrl('api-reference/core/multipass/clear-pass.md')
           },
           {
             name: 'Composite pass',
-            content: 'api-reference/core/multipass/composite-pass.md'
+            content: getDocUrl('api-reference/core/multipass/composite-pass.md')
           },
           {
             name: 'Copy pass',
-            content: 'api-reference/core/multipass/copy-pass.md'
+            content: getDocUrl('api-reference/core/multipass/copy-pass.md')
           },
           {
             name: 'Multi pass renderer',
-            content: 'api-reference/core/multipass/multi-pass-renderer.md'
+            content: getDocUrl('api-reference/core/multipass/multi-pass-renderer.md')
           },
           {
             name: 'Pass',
-            content: 'api-reference/core/multipass/pass.md'
+            content: getDocUrl('api-reference/core/multipass/pass.md')
           },
           {
             name: 'Render pass',
-            content: 'api-reference/core/multipass/render-pass.md'
+            content: getDocUrl('api-reference/core/multipass/render-pass.md')
           },
           {
             name: 'Shader module pass',
-            content: 'api-reference/core/multipass/shader-module-pass.md'
+            content: getDocUrl('api-reference/core/multipass/shader-module-pass.md')
           }
         ]
       },
@@ -525,15 +529,15 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'ScenegraphNode',
-            content: 'api-reference/core/scenegraph/scenegraph-node.md'
+            content: getDocUrl('api-reference/core/scenegraph/scenegraph-node.md')
           },
           {
             name: 'ModelNode',
-            content: 'api-reference/core/scenegraph/model-node.md'
+            content: getDocUrl('api-reference/core/scenegraph/model-node.md')
           },
           {
             name: 'GroupNode',
-            content: 'api-reference/core/scenegraph/group-node.md'
+            content: getDocUrl('api-reference/core/scenegraph/group-node.md')
           }
         ]
       },
@@ -542,27 +546,27 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Cone',
-            content: 'api-reference/core/scenegraph/geometries/cone.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/cone.md')
           },
           {
             name: 'Cube',
-            content: 'api-reference/core/scenegraph/geometries/cube.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/cube.md')
           },
           {
             name: 'Cylinder',
-            content: 'api-reference/core/scenegraph/geometries/cylinder.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/cylinder.md')
           },
           {
             name: 'IcoSphere',
-            content: 'api-reference/core/scenegraph/geometries/ico-sphere.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/ico-sphere.md')
           },
           {
             name: 'Plane',
-            content: 'api-reference/core/scenegraph/geometries/plane.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/plane.md')
           },
           {
             name: 'Sphere',
-            content: 'api-reference/core/scenegraph/geometries/sphere.md'
+            content: getDocUrl('api-reference/core/scenegraph/geometries/sphere.md')
           }
         ]
       },
@@ -571,115 +575,115 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Accessor',
-            content: 'api-reference/webgl/accessor.md'
+            content: getDocUrl('api-reference/webgl/accessor.md')
           },
           {
             name: 'Buffer',
-            content: 'api-reference/webgl/buffer.md'
+            content: getDocUrl('api-reference/webgl/buffer.md')
           },
           {
             name: 'Framebuffer',
-            content: 'api-reference/webgl/framebuffer.md'
+            content: getDocUrl('api-reference/webgl/framebuffer.md')
           },
           {
             name: 'Program',
-            content: 'api-reference/webgl/program.md'
+            content: getDocUrl('api-reference/webgl/program.md')
           },
           {
             name: 'Query',
-            content: 'api-reference/webgl/query.md'
+            content: getDocUrl('api-reference/webgl/query.md')
           },
           {
             name: 'Readback, Copy and Blit',
-            content: 'api-reference/webgl/copy-and-blit.md'
+            content: getDocUrl('api-reference/webgl/copy-and-blit.md')
           },
           {
             name: 'Renderbuffer',
-            content: 'api-reference/webgl/renderbuffer.md'
+            content: getDocUrl('api-reference/webgl/renderbuffer.md')
           },
           {
             name: 'Resource',
-            content: 'api-reference/webgl/resource.md'
+            content: getDocUrl('api-reference/webgl/resource.md')
           },
           {
             name: 'Sampler',
-            content: 'api-reference/webgl/shader.md'
+            content: getDocUrl('api-reference/webgl/shader.md')
           },
           {
             name: 'Shader',
-            content: 'api-reference/webgl/shader.md'
+            content: getDocUrl('api-reference/webgl/shader.md')
           },
           {
             name: 'Texture',
-            content: 'api-reference/webgl/texture.md'
+            content: getDocUrl('api-reference/webgl/texture.md')
           },
           {
             name: 'Texture2D',
-            content: 'api-reference/webgl/texture-2d.md'
+            content: getDocUrl('api-reference/webgl/texture-2d.md')
           },
           {
             name: 'Texture3D',
-            content: 'api-reference/webgl/texture-3d.md'
+            content: getDocUrl('api-reference/webgl/texture-3d.md')
           },
           {
             name: 'TextureCube',
-            content: 'api-reference/webgl/texture-cube.md'
+            content: getDocUrl('api-reference/webgl/texture-cube.md')
           },
           {
             name: 'TransformFeedback',
-            content: 'api-reference/webgl/transform-feedback.md'
+            content: getDocUrl('api-reference/webgl/transform-feedback.md')
           },
           {
             name: 'UniformBufferLayout',
-            content: 'api-reference/webgl/uniform-buffer-layout.md'
+            content: getDocUrl('api-reference/webgl/uniform-buffer-layout.md')
           },
           {
             name: 'VertexArray',
-            content: 'api-reference/webgl/vertex-array.md'
+            content: getDocUrl('api-reference/webgl/vertex-array.md')
           },
           {
             name: 'VertexArrayObject',
-            content: 'api-reference/webgl/vertex-array-object.md'
+            content: getDocUrl('api-reference/webgl/vertex-array-object.md')
           },
           {
             name: 'createGLContext',
-            content: 'api-reference/webgl/context/context.md'
+            content: getDocUrl('api-reference/webgl/context/context.md')
           },
           {
             name: 'isWebGL2',
-            content: 'api-reference/webgl/context/is-webGL2.md'
+            content: getDocUrl('api-reference/webgl/context/is-webGL2.md')
           },
           {
             name: 'hasFeature(s)',
-            content: 'api-reference/webgl/context/has-features.md'
+            content: getDocUrl('api-reference/webgl/context/has-features.md')
           },
           {
             name: 'getFeatures',
-            content: 'api-reference/webgl/context/get-features.md'
+            content: getDocUrl('api-reference/webgl/context/get-features.md')
           },
           {
             name: 'getContextInfo',
-            content: 'api-reference/webgl/context/get-context-info.md'
+            content: getDocUrl('api-reference/webgl/context/get-context-info.md')
           },
           {
             name: 'getContextLimits',
-            content: 'api-reference/webgl/context/get-context-limits.md'
+            content: getDocUrl('api-reference/webgl/context/get-context-limits.md')
           },
           {
             name: 'getGLContextInfo',
-            content: 'api-reference/webgl/context/get-gl-context-info.md'
+            content: getDocUrl('api-reference/webgl/context/get-gl-context-info.md')
           },
           {
             name: 'get|setParameter(s)',
-            content: 'api-reference/webgl/context/get-parameters.md'
+            content: getDocUrl('api-reference/webgl/context/get-parameters.md')
           },
           {
             name: 'resetParameters',
-            content: 'api-reference/webgl/context/reset-parameters.md'
+            content: getDocUrl('api-reference/webgl/context/reset-parameters.md')
           },
           {
             name: 'withParameters',
-            content: 'api-reference/webgl/context/with-parameters.md'
+            content: getDocUrl('api-reference/webgl/context/with-parameters.md')
           }
         ]
       },
@@ -688,11 +692,11 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Shadertools:assembleShaders',
-            content: 'api-reference/shadertools/assemble-shaders.md'
+            content: getDocUrl('api-reference/shadertools/assemble-shaders.md')
           },
           {
             name: 'GLSL Reference',
-            content: 'api-reference/shadertools/glsl-reference.md'
+            content: getDocUrl('api-reference/shadertools/glsl-reference.md')
           }
         ]
       },
@@ -701,7 +705,7 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'picking',
-            content: 'api-reference/shadertools/shader-module-picking.md'
+            content: getDocUrl('api-reference/shadertools/shader-module-picking.md')
           }
         ]
       },
@@ -710,15 +714,15 @@ export const DOC_PAGES = [
         children: [
           {
             name: 'Timeline',
-            content: 'api-reference/addons/animation/timeline.md'
+            content: getDocUrl('api-reference/addons/animation/timeline.md')
           },
           {
             name: 'KeyFrames',
-            content: 'api-reference/addons/animation/key-frames.md'
+            content: getDocUrl('api-reference/addons/animation/key-frames.md')
           },
           {
             name: 'Event',
-            content: 'api-reference/addons/event.md'
+            content: getDocUrl('api-reference/addons/event.md')
           }
         ]
       }
@@ -729,7 +733,7 @@ export const DOC_PAGES = [
     children: [
       {
         name: 'Development Environment',
-        content: 'developer-guide/README.md'
+        content: getDocUrl('developer-guide/README.md')
       }
     ]
   }

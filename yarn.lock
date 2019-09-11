@@ -1319,50 +1319,38 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@loaders.gl/core@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.2.0.tgz#64f30a900cadac5d91f4708f7d7487130d55b448"
-  integrity sha512-L8f3TtZSQvR6ynD1iyWhbHTj/wjiKZYE1xLnh9kCP/hXiy7w/eyHSDSKs8xKo8WV8w+jGWgrxrj4OPjO+l+UvA==
+"@loaders.gl/core@1.3.0-beta.1", "@loaders.gl/core@^1.3.0-beta.1":
+  version "1.3.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.3.0-beta.1.tgz#7a047dc1934fa444858a33dc1667c15a5aa18c53"
+  integrity sha512-XGlc8QaUH9QS7X3QPvA9eABriZJRu9oIXNTJ+ld9KXKkbK4S3VQ0puFugN6iLvzc1Gs+qpZO+MC8Ta2nyOt4Qg==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@loaders.gl/core@^1.2.0":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.2.1.tgz#77c2ac33d935429dc37419754ab3ec1fd0c45fda"
-  integrity sha512-D+KdCQSKMhnReC3gNSdjNs2sQrm7SviEbu68mD93k4VqCyNg9/5AHY9FAK6P6SQkau0GAJ0zXIJ/GIxxuOLNoQ==
+"@loaders.gl/gltf@^1.3.0-beta.1":
+  version "1.3.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-1.3.0-beta.1.tgz#78d9283e4cd07355759decd363d7f7dade567565"
+  integrity sha512-U++DYT4RWPlANuzVQlHkpfM8/XXZ5kSQf6iqU4207FPIaw5Mi+NmGWul5hwmAdPAqGzmy4zIbjeVzf+V0mdEMA==
+  dependencies:
+    "@loaders.gl/core" "1.3.0-beta.1"
+    "@loaders.gl/images" "1.3.0-beta.1"
+    "@loaders.gl/loader-utils" "1.3.0-beta.1"
+
+"@loaders.gl/images@1.3.0-beta.1", "@loaders.gl/images@^1.3.0-beta.1":
+  version "1.3.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.3.0-beta.1.tgz#c8ad656f74f6df4df1b5a785799535eb8b1669b4"
+  integrity sha512-0X3svz6JEmw0e9GG05NjmfYkKzYYsjNFJGYryProI4bdJw2BN10bbAZtfwtov6ibd/TouJtrkF5ncs2mBHZM1Q==
+
+"@loaders.gl/loader-utils@1.3.0-beta.1":
+  version "1.3.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-1.3.0-beta.1.tgz#bad5f8ae9ae9ca23f15c7279d8aa731a73b9c195"
+  integrity sha512-aBYdJPuGuMdAkkkDX8x6KpeKP6rmxqGAF0f+K2XoqjkvmngSt6R9dTFXc6XGU56edxOr9sLB+upqrGEXnO1V+g==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@loaders.gl/gltf@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-1.2.0.tgz#c4dcc43a815e4ee416278f8adca66f01d6c04583"
-  integrity sha512-YxrGGwtdyKaH2tRnoVmuRUePY7YJPZWf4NJqVDf6SFZjSh3hMEjEPoW4F3Dus3GTz8XyQOVfDMBEdhhHBzyiWQ==
-  dependencies:
-    "@loaders.gl/core" "1.2.0"
-    "@loaders.gl/images" "1.2.0"
-    "@loaders.gl/loader-utils" "1.2.0"
-
-"@loaders.gl/images@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.2.0.tgz#d4e66771d097f02220071c58fa545064c110e61d"
-  integrity sha512-XTomGXsucrFNQj4lLTZ3rXZmOgtjUnNYWBTBkq0Dznpz8IwWSbc3deSfbNqhULyqWO3ZUfH/xMQvGfHD3HYySg==
-
-"@loaders.gl/images@^1.2.0":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.2.1.tgz#558b45fdeb55f783acf4d34b3df5fc974d8efa6d"
-  integrity sha512-Ec/UAqfsQifdQjUdW2yvLf0KyHAwv6Ej4xEKyIC6JWD6KE2Z1hfAKrwdhIsiLBPHIonvxy41jSuVEJeoVYonEA==
-
-"@loaders.gl/loader-utils@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-1.2.0.tgz#27bcf5eb59239adb2fc5429e1a84cac071047918"
-  integrity sha512-8Dbo35NFqsSPf4EGvOkiua6zQYeF/4zVAR8A4N7OmVy76P8weUi/X9dT4gX7t5sCE66ex+vtDWPUQ4ASL9mPPQ==
-  dependencies:
-    "@babel/runtime" "^7.3.1"
-
-"@loaders.gl/polyfills@^1.2.0":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-1.2.1.tgz#a1dd75f608a36a2c585d1e6d334b251dee58183f"
-  integrity sha512-672JaQ2oHYv6pHKTRJxyGoeS8va87hkGo+Wj+NP4Na5W6XExz2txok0yngJLHJtX0pzDknf7m+iVRsljH0t5hQ==
+"@loaders.gl/polyfills@^1.3.0-beta.1":
+  version "1.3.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-1.3.0-beta.1.tgz#56e3a4a7916940e712ffad5883e378cfed278203"
+  integrity sha512-nVp2jec+cvNH3ngC0PMnPjqT8xba4gheFMHr725e0a5fyA4yKca1bwoqm1SheJH3QAbT+IIYafZXAKh2ziJngg==
   dependencies:
     get-pixels "^3.3.2"
     ndarray "^1.0.18"
@@ -1443,29 +1431,30 @@
     universal-user-agent "^2.0.0"
     url-template "^2.0.8"
 
-"@probe.gl/bench@^3.0.2":
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@probe.gl/bench/-/bench-3.0.3.tgz#ae2a2769dc1e25a5318367c482e5dc8d8c0635d2"
-  integrity sha512-Nl9ynW4ZkAjIaN0BpkT+MaehckhNBkSQRc4J9MpkeUXokzb6s0XHTO7YaGAadhDrvSfEdwXMfrT5YhHG0S1uZg==
+"@probe.gl/bench@^3.1.0-beta.3":
+  version "3.1.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/bench/-/bench-3.1.0-beta.3.tgz#27ff3cd84754e05341472370bd0574bc113a9459"
+  integrity sha512-Z8lIkcKRGuU1i3oInIEwfgCUmhux7vTxp+q2Wrw8cv0ayRv1P3QNKfOG+gO4c581uSi9VHlnRwlFAjS/Z53ZqA==
   dependencies:
     "@babel/runtime" "^7.0.0"
-    probe.gl "3.0.3"
+    probe.gl "3.1.0-beta.3"
 
-"@probe.gl/stats-widget@^3.0.2":
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@probe.gl/stats-widget/-/stats-widget-3.0.3.tgz#37329e4999516a8a7d0cf5c6c52e29e3545e0b67"
-  integrity sha512-WgTpkX9EuAMolO9waA36+6PQ7w9lDBEekCOOrYm/Wfr2PgAizcU9cNbPd+pG1hz5jtQvQ/Ytq43EgHHJY/HmPg==
+"@probe.gl/stats-widget@^3.1.0-beta.3":
+  version "3.1.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/stats-widget/-/stats-widget-3.1.0-beta.3.tgz#2b9a2718c5a801007a74bbe5c03606f1e5054fde"
+  integrity sha512-nazNbLYuPEUFCCuH03GtYIYch7/QVsu9Y+o54uuI92RNd+knhYQJav4qbsbgnxtghj+xAYF3Np6h0agf7kWdyw==
   dependencies:
     "@babel/runtime" "^7.0.0"
+    probe.gl "3.1.0-beta.3"
 
-"@probe.gl/test-utils@^3.0.2":
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.0.3.tgz#92354d1dfd45343ca556d41f4228a0bc08a77506"
-  integrity sha512-AaQ9ACrYEG2RwUmAQNnzdqTlsoGXHfi3Hyt9h6H1dWsDZHSAmpqvClPcNi3wcrMNqBvGztEe/bVXoFPsw3v3ZA==
+"@probe.gl/test-utils@^3.1.0-beta.3":
+  version "3.1.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.1.0-beta.3.tgz#5c21e363c0619572bd1807412972be59d1d04b7e"
+  integrity sha512-5Z9WHFWCEH4AsaEqLKy3Xc7pCEe1C9b5I3qwSavspmJ729DmBlqCjuw5F6xk5lMt44FAwoe4fg7V6MuYPrStxQ==
   dependencies:
     "@babel/runtime" "^7.0.0"
     pixelmatch "^4.0.2"
-    probe.gl "3.0.3"
+    probe.gl "3.1.0-beta.3"
     puppeteer "^1.16.0"
 
 "@types/events@*":
@@ -5682,7 +5671,7 @@ locate-path@^3.0.0:
     p-locate "^3.0.0"
     path-exists "^3.0.0"
 
-lodash._reinterpolate@~3.0.0:
+lodash._reinterpolate@^3.0.0, lodash._reinterpolate@~3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/lodash._reinterpolate/-/lodash._reinterpolate-3.0.0.tgz#0ccf2d89166af03b3663c796538b75ac6e114d9d"
   integrity sha1-DM8tiRZq8Ds2Y8eWU4t1rG4RTZ0=
@@ -5725,6 +5714,14 @@ lodash.template@^4.0.2:
     lodash._reinterpolate "~3.0.0"
     lodash.templatesettings "^4.0.0"
 
+lodash.template@^4.5.0:
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/lodash.template/-/lodash.template-4.5.0.tgz#f976195cf3f347d0d5f52483569fe8031ccce8ab"
+  integrity sha512-84vYFxIkmidUiFxidA/KjjH9pAycqW+h980j7Fuz5qxRtO9pgB7MDFTdys1N7A5mcucRiDyEq4fusljItR1T/A==
+  dependencies:
+    lodash._reinterpolate "^3.0.0"
+    lodash.templatesettings "^4.0.0"
+
 lodash.templatesettings@^4.0.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/lodash.templatesettings/-/lodash.templatesettings-4.1.0.tgz#2b4d4e95ba440d915ff08bc899e4553666713316"
@@ -5741,6 +5738,11 @@ lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.3, lodash@^4.17.4, lodash@^4.17.5
   version "4.17.11"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.11.tgz#b39ea6229ef607ecd89e2c8df12536891cac9b8d"
   integrity sha512-cQKh8igo5QUhZ7lg38DYWAxMvjSAKG0A8wGSVimP07SIUEK2UO+arSRKbRZWtelMtN5V0Hkwh5ryOto/SshYIg==
+
+lodash@^4.17.13:
+  version "4.17.15"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.15.tgz#b447f6670a0455bbfeedd11392eff330ea097548"
+  integrity sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==
 
 log-driver@^1.2.7:
   version "1.2.7"
@@ -6596,10 +6598,10 @@ octokit-pagination-methods@^1.1.0:
   resolved "https://registry.yarnpkg.com/octokit-pagination-methods/-/octokit-pagination-methods-1.1.0.tgz#cf472edc9d551055f9ef73f6e42b4dbb4c80bea4"
   integrity sha512-fZ4qZdQ2nxJvtcasX7Ghl+WlWS/d9IgnBIwFZXVNNZUmzpno91SX5bc5vuxiuKoCtK78XxGGNuSCrDC7xYB3OQ==
 
-ocular-dev-tools@0.0.27:
-  version "0.0.27"
-  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-0.0.27.tgz#6d66ab938c404ba37ff910c3f80817d099a72782"
-  integrity sha512-OrKiIfiku6a1PmzZS9ahBVXPK3i1v9zDeKoSXwar4esglyUrU7nOpV9hd2qZ+c00AcDlyH28y0i9pIWqpZQZJA==
+ocular-dev-tools@0.0.29:
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-0.0.29.tgz#7492858c6582ae1772a82725ade6d3918e8cb1ce"
+  integrity sha512-fis0mt4nL/6xUdEbAkihw0yNN2lONgcxM0W3mE+a79xAy+syEW/adZqeagdCtXfACspb3CX5F5R5ULbJituzWA==
   dependencies:
     "@babel/cli" "^7.0.0"
     "@babel/core" "^7.0.0"
@@ -6611,8 +6613,11 @@ ocular-dev-tools@0.0.27:
     eslint "^4.13.1"
     eslint-config-prettier "^2.9.0"
     eslint-config-uber-es2015 "^3.0.0"
+    handlebars "^4.1.2"
     html-webpack-plugin "^3.2.0"
     lerna "^3.14.1"
+    lodash "^4.17.13"
+    lodash.template "^4.5.0"
     module-alias "^2.0.0"
     nyc "^13.3.0"
     prettier "1.14.3"
@@ -7254,10 +7259,10 @@ private@^0.1.6:
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
   integrity sha512-VvivMrbvd2nKkiG38qjULzlc+4Vx4wm/whI9pQD35YrARNnhxeiRktSOhSukRLFNlzg6Br/cJPet5J/u19r/mg==
 
-probe.gl@3.0.3, probe.gl@^3.0.2:
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.0.3.tgz#e4d13bbd38c5895b54b4740e72468e65d66ae584"
-  integrity sha512-nkE+rh4m2JRQqorW327X7rVogknVmNvgrtcDG4F3OxckAIHSi4l/PUPy6GVaI6PIUJC7CYx4WYwcdgh4RUJe7A==
+probe.gl@3.1.0-beta.3, probe.gl@^3.1.0-beta.3:
+  version "3.1.0-beta.3"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.1.0-beta.3.tgz#41e2713dab8d8885b58cac0bbb7fc237b524788b"
+  integrity sha512-l0FTMNeuIGG3fngOGRj6q5gyiO9KO/N6wneJhFyRTHKxiCYuUy+vPtFdzCa8tDLOhguwGp4W9Lef9QWRHeuAIw==
   dependencies:
     "@babel/runtime" "^7.0.0"
 
