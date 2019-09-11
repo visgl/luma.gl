@@ -85,8 +85,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     const centerPos = new Matrix4()
       .rotateX(radians(cameraInfo.pitch))
       .rotateY(radians(cameraInfo.yaw))
-      .transformVector3(cameraInfo.direction)
-      .add(eyePos);
+      .transform(cameraInfo.direction)
+      .map((val, i) => val + eyePos[i]);
 
     const uMVMatrix = new Matrix4().lookAt({eye: eyePos, center: centerPos, up: [0, 1, 0]});
 
