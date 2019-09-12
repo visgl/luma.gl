@@ -51,7 +51,7 @@ export default class TextureTransform {
 
     const attributes = Object.assign({}, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
-    const parameters = Object.assign({}, opts.paramters);
+    const parameters = Object.assign({}, opts.parameters);
     let discard = opts.discard;
 
     if (this.hasSourceTextures || this.hasTargetTexture) {
@@ -127,9 +127,11 @@ export default class TextureTransform {
 
   // Delete owned resources.
   delete() {
-    const ownResources = [this.ownTexture, this.elementIDBuffer];
-    for (const name in ownResources) {
-      ownResources[name].delete();
+    if (this.ownTexture) {
+      this.ownTexture.delete();
+    }
+    if (this.elementIDBuffer) {
+      this.elementIDBuffer.delete();
     }
   }
 

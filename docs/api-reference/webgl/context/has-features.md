@@ -75,7 +75,7 @@ Note that luma has a few WebGL2 classes that **can** be instantiated under WebGL
 A list of luma classes that can only be instantiated under WebGL2:
 * `Texture3D` - e.g for volumetric rendering
 * `Texture2DArray` - an array of textures, e.g. a texture atlas
-* `Sampler` - holds a separate set of texture sampler paramters
+* `Sampler` - holds a separate set of texture sampler parameters
 * `TransformFeedback` - holds a list of output buffers for shaders to write to.
 * `Sync` -
 

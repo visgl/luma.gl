@@ -27,11 +27,16 @@ export default class Transform {
 
   // Delete owned resources.
   delete() {
-    this.model.delete();
-    /* eslint-disable no-unused-expressions */
-    this.bufferTransform && this.bufferTransform.delete();
-    this.textureTransform && this.textureTransform.delete();
-    /* eslint-enable no-unused-expressions */
+    const {model, bufferTransform, textureTransform} = this;
+    if (model) {
+      model.delete();
+    }
+    if (bufferTransform) {
+      bufferTransform.delete();
+    }
+    if (textureTransform) {
+      textureTransform.delete();
+    }
   }
 
   // Run one transform loop.

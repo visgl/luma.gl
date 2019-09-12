@@ -2,6 +2,7 @@ import {Buffer, Transform, Texture2D} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
+import {setParameters, getParameter} from '@luma.gl/webgl-state-tracker';
 
 const VS = `\
 #version 300 es
@@ -1060,6 +1061,8 @@ test('WebGL#Transform run (offline rendering)', t => {
       return item === expected;
     });
     t.ok(testPassed, `${name} Transform should write correct data into Texture`);
+
+    transform.delete();
   });
 
   t.end();
@@ -1270,5 +1273,56 @@ void main()
   transform.delete();
   const endCounts = getResourceCounts();
   validateResourceCounts(t, startCounts, endCounts);
+  t.end();
+});
+
+test('WebGL#Transform run (custom parameters)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const {sourceData, format, dataFormat, type, width, height, name, vs} = TEXTURE_TEST_CASES[0];
+  const sourceTexture = new Texture2D(gl2, {
+    data: sourceData,
+    format,
+    dataFormat,
+    type,
+    mipmaps: false,
+    width,
+    height,
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    }
+  });
+
+  // enable blending
+  setParameters(gl2, {blend: true, blendEquation: GL.MIN});
+
+  const transform = new Transform(gl2, {
+    _sourceTextures: {
+      inTexture: sourceTexture
+    },
+    _targetTexture: 'inTexture',
+    _targetTextureVarying: 'outTexture',
+    _swapTexture: 'inTexture',
+    vs,
+    elementCount: sourceData.length
+  });
+
+  // disable blending through parameters
+  transform.run({parameters: {blend: false}});
+
+  const expectedData = sourceData.map(x => x * 2);
+  const outTexData = transform.getData({packed: true});
+  t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
+
+  t.ok(getParameter(gl2, GL.BLEND) === true, 'Parameters are properly set');
+
+  setParameters(gl2, {blend: false});
+
   t.end();
 });
