@@ -141,6 +141,18 @@ export default class BaseModel {
     return this;
   }
 
+  getModuleUniforms() {
+    this._checkProgram();
+
+    const getUniforms = this.programManager.getUniforms(this.program);
+
+    if (getUniforms) {
+      return getUniforms();
+    }
+
+    return {};
+  }
+
   updateModuleSettings(opts) {
     const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
@@ -271,7 +283,6 @@ export default class BaseModel {
     let {program} = this.programProps;
 
     if (program) {
-      this.getModuleUniforms = () => {};
       this._managedProgram = false;
     } else {
       const {
@@ -285,7 +296,6 @@ export default class BaseModel {
         bufferMode
       } = this.programProps;
       program = this.programManager.get({vs, fs, modules, inject, defines, varyings, bufferMode});
-      this.getModuleUniforms = this.programManager.getUniforms(program);
       if (this.program && this._managedProgram) {
         this.programManager.release(this.program);
       }
