@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "7.3.0-alpha.7",
+  "version": "7.3.0-alpha.8",
   "description": "Additional classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,16 +30,16 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@loaders.gl/gltf": "^1.3.0-beta.1",
-    "@loaders.gl/images": "^1.3.0-beta.1",
-    "@luma.gl/constants": "7.3.0-alpha.7",
+    "@loaders.gl/gltf": "^1.3.0-beta.2",
+    "@loaders.gl/images": "^1.3.0-beta.2",
+    "@luma.gl/constants": "7.3.0-alpha.8",
     "math.gl": "^3.0.0-beta.3"
   },
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0"
   },
   "devDependencies": {
-    "@loaders.gl/core": "^1.3.0-beta.1",
-    "@loaders.gl/polyfills": "^1.3.0-beta.1"
+    "@loaders.gl/core": "^1.3.0-beta.2",
+    "@loaders.gl/polyfills": "^1.3.0-beta.2"
   }
 }
