@@ -141,13 +141,13 @@ export default class BaseModel {
     return this;
   }
 
-  getModuleUniforms() {
+  getModuleUniforms(opts) {
     this._checkProgram();
 
     const getUniforms = this.programManager.getUniforms(this.program);
 
     if (getUniforms) {
-      return getUniforms();
+      return getUniforms(opts);
     }
 
     return {};
