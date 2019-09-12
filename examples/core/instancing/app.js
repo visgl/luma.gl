@@ -11,6 +11,7 @@ import {
   createModuleInjection
 } from '@luma.gl/core';
 import {Timeline} from '@luma.gl/addons';
+import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -20,10 +21,6 @@ Cube drawn with <b>instanced rendering</b>.
 A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
-
-function getDevicePixelRatio() {
-  return typeof window !== 'undefined' ? window.devicePixelRatio : 1;
-}
 
 const SIDE = 256;
 
@@ -200,15 +197,15 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(animationProps) {
     const {gl} = animationProps;
 
-    const {framebuffer, useDevicePixels, _mousePosition} = animationProps;
+    const {framebuffer, _mousePosition} = animationProps;
 
     if (_mousePosition) {
-      const dpr = useDevicePixels ? getDevicePixelRatio() : 1;
+      // use the center pixel location in device pixel range
+      const devicePixels = cssToDevicePixels(gl, _mousePosition);
+      const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
+      const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
-      const pickX = _mousePosition[0] * dpr;
-      const pickY = gl.canvas.height - _mousePosition[1] * dpr;
-
-      pickInstance(gl, pickX, pickY, this.cube, framebuffer);
+      pickInstance(gl, deviceX, deviceY, this.cube, framebuffer);
     }
 
     // Draw the cubes

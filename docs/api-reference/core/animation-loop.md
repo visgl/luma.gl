@@ -63,7 +63,7 @@ new AnimationLoop({
 * `props.onFinalize`=`null` (callback) - Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.
 * `props.autoResizeViewport`=`true` - If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRender` is called. Set to false to control viewport size.
 * `props.autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
-* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc.
+* `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc. Refer to `Experimental API` section below for more use cases of this prop.
 * `props.gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
 * `props.glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/webgl/context/context.md).
 * `props.debug`=`false` (bool) - Enable debug mode will provide more validations and error messages, but less performant.
@@ -162,6 +162,10 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 ### Frame timers
 * The animation loop tracks GPU and CPU render time of each frame the in member properties `cpuTime` and `gpuTime`. If `gpuTime` is set to `-1`, then the timing for the last frame was invalid and should not be used (this rare and might occur, for example, if the GPU was throttled mid-frame).
 
+
+## Experimental API (`useDevicePixels`)
+
+`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`]((/docs/api-reference/webgl/device-pixels.md)).
 
 ## Remarks
 

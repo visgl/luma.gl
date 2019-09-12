@@ -9,7 +9,7 @@ import {getContextDebugInfo} from '../debug/get-context-debug-info';
 
 import {WebGL2RenderingContext} from '../webgl-utils';
 
-import {log, isBrowser, assert} from '../utils';
+import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
 import {global} from '../utils/globals';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
@@ -166,15 +166,8 @@ export function destroyGLContext(gl) {
 export function resizeGLContext(gl, options = {}) {
   // Resize browser context
   if (gl.canvas) {
-    /* global window */
-    const devicePixelRatio = options.useDevicePixels ? window.devicePixelRatio || 1 : 1;
-
-    const width = `width` in options ? options.width : gl.canvas.clientWidth;
-    const height = `height` in options ? options.height : gl.canvas.clientHeight;
-
-    gl.canvas.width = width * devicePixelRatio;
-    gl.canvas.height = height * devicePixelRatio;
-
+    const devicePixelRatio = getDevicePixelRatio(options.useDevicePixels);
+    setDevicePixelRatio(gl, devicePixelRatio, options);
     return;
   }
 
@@ -192,7 +185,7 @@ function logInfo(gl) {
   const info = getContextDebugInfo(gl);
   const driver = info ? `(${info.vendor},${info.renderer})` : '';
   const debug = gl.debug ? ' debug' : '';
-  log.once(1, `${webGL}${debug} context ${driver}`)();
+  log.info(1, `${webGL}${debug} context ${driver}`)();
 }
 
 function getVersion(gl) {
@@ -202,4 +195,32 @@ function getVersion(gl) {
   }
   // Must be a WebGL1 context.
   return 1;
+}
+
+// use devicePixelRatio to set canvas width and height
+function setDevicePixelRatio(gl, devicePixelRatio, options) {
+  let devicePixelRatioClamped = false;
+  let aspectRatioValid = false;
+
+  // NOTE: if options.width and options.height not used remove in v8
+  const clientWidth =
+    'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width || 1;
+  const clientHeight =
+    'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height || 1;
+
+  // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
+  // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
+  // for those cases, reduce devicePixelRatio.
+  do {
+    gl.canvas.width = Math.ceil(clientWidth * devicePixelRatio);
+    gl.canvas.height = Math.ceil(clientHeight * devicePixelRatio);
+    aspectRatioValid =
+      gl.drawingBufferWidth / clientWidth === gl.drawingBufferHeight / clientHeight;
+    devicePixelRatio = Math.max(devicePixelRatio / 2, 1);
+    devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
+  } while (!aspectRatioValid);
+
+  if (devicePixelRatioClamped) {
+    log.warn(`Device pixel ratio clamped`)();
+  }
 }

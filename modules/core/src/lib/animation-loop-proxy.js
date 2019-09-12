@@ -173,6 +173,7 @@ export default class AnimationLoopProxy {
   }
 
   _onEvent(evt) {
+    // TODO: get access to gl context and use 'cssToDevicePixels'
     const devicePixelRatio = this.useDevicePixels ? window.devicePixelRatio || 1 : 1;
     const type = evt.type;
 
@@ -225,9 +226,10 @@ export default class AnimationLoopProxy {
 
   _resizeCanvasDrawingBuffer() {
     if (this.autoResizeDrawingBuffer) {
+      // TODO: get access to gl context and use 'cssToDevicePixels'
       const devicePixelRatio = this.useDevicePixels ? window.devicePixelRatio || 1 : 1;
-      const width = this.canvas.clientWidth * devicePixelRatio;
-      const height = this.canvas.clientHeight * devicePixelRatio;
+      const width = Math.ceil(this.canvas.clientWidth * devicePixelRatio);
+      const height = Math.ceil(this.canvas.clientHeight * devicePixelRatio);
 
       if (this.width !== width || this.height !== height) {
         this.width = width;

@@ -104,6 +104,7 @@ export {default as assert} from './utils/assert';
 export {uid, isObjectEmpty} from './utils/utils';
 export {self, window, global, document} from './utils/globals';
 export {default as isBrowser} from './utils/is-browser';
+export {cssToDeviceRatio, cssToDevicePixels} from './utils/device-pixels';
 
 // INTERNAL
 export {parseUniformName, getUniformSetter} from './classes/uniforms';
