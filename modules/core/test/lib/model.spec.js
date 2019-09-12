@@ -2,6 +2,7 @@ import GL from '@luma.gl/constants';
 import luma from '@luma.gl/webgl/init';
 // TODO - Model test should not depend on Cube
 import {Buffer, Model, CubeGeometry, ProgramManager} from '@luma.gl/core';
+import {picking} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
@@ -205,6 +206,37 @@ test('Model#program management', t => {
   model3.draw();
   t.ok(model3.program !== oldProgram, 'Program updated after draw.');
   t.ok(oldProgram.handle === null, 'Old program released after update');
+
+  t.end();
+});
+
+test('Model#program management - getModuleUniforms', t => {
+  const {gl} = fixture;
+
+  const pm = new ProgramManager(gl);
+
+  const vs = 'void main() {}';
+  const fs = 'void main() {}';
+
+  const model = new Model(gl, {
+    programManager: pm,
+    vs,
+    fs
+  });
+
+  t.deepEqual(model.getModuleUniforms(), {}, 'Module uniforms empty with no modules');
+
+  model.setProgram({
+    vs,
+    fs,
+    modules: [picking]
+  });
+
+  t.deepEqual(
+    model.getModuleUniforms(),
+    picking.getUniforms(),
+    'Module uniforms correct after update'
+  );
 
   t.end();
 });
