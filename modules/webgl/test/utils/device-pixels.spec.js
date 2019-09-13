@@ -338,5 +338,12 @@ test('webgl#cssToDeviceRatio', t => {
   MAP_TEST_CASES.forEach(tc => {
     t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');
   });
+
+  const glWithNoCanvas = {};
+  t.equal(
+    cssToDeviceRatio(glWithNoCanvas),
+    1,
+    'cssToDeviceRatio should return 1 when there is no canvas'
+  );
   t.end();
 });
