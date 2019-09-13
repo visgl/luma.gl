@@ -7259,17 +7259,10 @@ private@^0.1.6:
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
   integrity sha512-VvivMrbvd2nKkiG38qjULzlc+4Vx4wm/whI9pQD35YrARNnhxeiRktSOhSukRLFNlzg6Br/cJPet5J/u19r/mg==
 
-probe.gl@3.1.0:
+probe.gl@3.1.0, probe.gl@^3.1.0-beta.3:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.1.0.tgz#6aaeeb2d5bff85458fb7e8f7a72a57a53757c745"
   integrity sha512-Bqk+hMklRtHJ29UcDvhjh0ha0JLoZI5wpPBZdzAOwciBGhPXNy1C/TD1ihKBdOlCzTw78EKVLm0eKLj5Xek5+w==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-
-probe.gl@^3.1.0-beta.3:
-  version "3.1.0-beta.3"
-  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.1.0-beta.3.tgz#41e2713dab8d8885b58cac0bbb7fc237b524788b"
-  integrity sha512-l0FTMNeuIGG3fngOGRj6q5gyiO9KO/N6wneJhFyRTHKxiCYuUy+vPtFdzCa8tDLOhguwGp4W9Lef9QWRHeuAIw==
   dependencies:
     "@babel/runtime" "^7.0.0"
 
