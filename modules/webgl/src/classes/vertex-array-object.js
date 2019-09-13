@@ -27,7 +27,7 @@ export default class VertexArrayObject extends Resource {
   static getDefaultArray(gl) {
     gl.luma = gl.luma || {};
     if (!gl.luma.defaultVertexArray) {
-      gl.luma.defaultVertexArray = new VertexArrayObject(gl, {handle: null});
+      gl.luma.defaultVertexArray = new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
     }
     return gl.luma.defaultVertexArray;
   }
@@ -68,6 +68,7 @@ export default class VertexArrayObject extends Resource {
     this.hasVertexArrays = VertexArrayObject.isSupported(gl);
     this.buffer = null;
     this.bufferValue = null;
+    this.isDefaultArray = opts.isDefaultArray !== undefined ? opts.isDefaultArray : false;
 
     this.initialize(opts);
 
