@@ -1,8 +1,35 @@
+## v7.3.0-alpha.9
+- Bump math.gl, loaders.gl and probe.gl versions (#1240)
+- Updated examples link in npm start command (#1237)
+- ensure assembleShader always sets the GLSL version (#1206)
+- Handle cases when canvas is not defined (#1236)
+- Make sure getModuleUniforms is updated on program change. (#1235)
+
+## v7.3.0-alpha.8
+- Tranform Refactor: fix regressions (#1234)
+- Add support for specifying custom device pixel ratio. (#1155)
+- bump math.gl version (#1233)
+- Upgrade ocular gatsby to 1.0.0 and fix glTF example (#1231)
+- Transform refactor (#1221)
+- dev-tools: Bump to 0.0.29 (#1232)
+
+##  v7.3.0-alpha.7
+- Transform: Fix update of Buffers and elementCount. (#1224)
+- point docs to release branch (#1229)
+- update website fonts (#1227)
+- Fix Framebuffer isSupported test (#1228)
+
+## v7.3.0-alpha.6
+- Program manager updates (#1226)
+- RFC: Transform Refactor (#1219)
+- Remove program diffing from program manager (#1225)
+
 ## v7.3.0-alpha.5
 - Program manager updates (#1226)
 - RFC: Transform Refactor (#1219)
 - Remove program diffing from program manager (#1225)
-- v7.3.0-alpha.5
+
+## v7.3.0-alpha.5
 - Fix double program release in base model (#1223)
 
 ## v7.3.0-alpha.4
