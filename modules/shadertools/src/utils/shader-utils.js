@@ -1,11 +1,11 @@
 import {assert} from '../utils';
-const FS100 = 'void main() {gl_FragColor = vec4(0);}';
-const FS300 = `\
-#version 300 es
+const FS100 = `void main() {gl_FragColor = vec4(0);}`;
+const FS_GLES = `\
 out vec4 transform_output;
 void main() {
   transform_output = vec4(0);
 }`;
+const FS300 = `#version 300 es\n${FS_GLES}`;
 
 // Prase given glsl line and return qualifier details or null
 export function getQualifierDetails(line, qualifiers) {
@@ -24,19 +24,28 @@ export function getQualifierDetails(line, qualifiers) {
 // builds and return a pass through fragment shader.
 export function getPassthroughFS({version = 100, input, inputType, output} = {}) {
   if (!input) {
-    return version === 300 ? FS300 : FS100;
+    if (version === 300) {
+      // Fast-path for WebGL 2.0
+      return FS300;
+    } else if (version > 300) {
+      // Use the supplied version for OpenGL/ES 3.2+
+      return `#version ${version}\n${FS_GLES}`;
+    }
+    // Fast-path for WebGL 1.0
+    return FS100;
   }
   const outputValue = convertToVec4(input, inputType);
-  if (version === 300) {
+  if (version >= 300) {
+    // If version is 300, assume WebGL 2.0
     return `\
-#version 300 es
+#version ${version} ${version === 300 ? 'es' : ''}
 in ${inputType} ${input};
 out vec4 ${output};
 void main() {
   ${output} = ${outputValue};
 }`;
   }
-  // version 100
+  // WebGL 1.0
   return `\
 varying ${inputType} ${input};
 void main() {
