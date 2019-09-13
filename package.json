@@ -33,7 +33,7 @@
   },
   "scripts": {
     "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn && ocular-bootstrap",
-    "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
+    "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/#/documentation/developer-guide/examples",
     "clean": "ocular-clean",
     "build": "ocular-clean && lerna run pre-build && ocular-build",
     "cover": "ocular-test cover",
