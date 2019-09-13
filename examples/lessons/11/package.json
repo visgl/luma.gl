@@ -10,7 +10,7 @@
   "dependencies": {
     "@luma.gl/constants": "^7.2.0-beta",
     "@luma.gl/core": "^7.2.0-beta",
-    "math.gl": "^3.0.0-beta.3",
+    "math.gl": "^3.0.0",
     "mjolnir.js": "^2.1.2"
   },
   "devDependencies": {

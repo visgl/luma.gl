@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@luma.gl/core": "^7.2.0-beta",
-    "math.gl": "^3.0.0-beta.3"
+    "math.gl": "^3.0.0"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

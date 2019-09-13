@@ -5860,10 +5860,10 @@ map-visit@^1.0.0:
   dependencies:
     object-visit "^1.0.0"
 
-math.gl@^3.0.0-beta.3:
-  version "3.0.0-beta.3"
-  resolved "https://registry.yarnpkg.com/math.gl/-/math.gl-3.0.0-beta.3.tgz#1a853a343f2ae94ed78e6bcdbe9ca49409d6fbf2"
-  integrity sha512-nFq3A/V3wS8XfVHoGEmW4HXRhVcMS3sbndPu4rUuMWFPWtbZw3NYe8WILPGU999V+bZ1U0/21LeBjaPF8sf0nA==
+math.gl@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/math.gl/-/math.gl-3.0.0.tgz#fe7ee98bd9439a29942246b3fe7a36f27fba06b2"
+  integrity sha512-HIH2zXZmkCLudLUQjZe8ppnM5bMBeo8prblFSVQ0jy9AxPa3HZqYONDX6vPOf3En7nwkJzw451JHSYAxe70nPA==
   dependencies:
     "@babel/runtime" "^7.0.0"
     gl-matrix "^3.0.0"
