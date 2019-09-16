@@ -215,7 +215,12 @@ export default class VertexArray {
   unbindBuffers() {
     this.vertexArrayObject.bind(() => {
       if (this.elements) {
-        this.setElementBuffer(null);
+        this.clearDrawParams();
+
+        // Update vertexArray immediately if we have our own array
+        if (!this.vertexArrayObject.isDefaultArray) {
+          this.vertexArrayObject.setElementBuffer(null);
+        }
       }
 
       // Chrome does not like buffers that are bound to several binding points,
