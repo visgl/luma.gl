@@ -40,6 +40,8 @@ module.exports = {
 
   GA_TRACKING: null,
 
+  LINK_TO_GET_STARTED: '/docs',
+
   // For showing star counts and contributors.
   // Should be like btoa('YourUsername:YourKey') and should be readonly.
   GITHUB_KEY: null,
