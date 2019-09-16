@@ -9,7 +9,7 @@ luma.gl v7.0 represents a major overhaul of the API. The majority of changes are
 
 ### Loading Functions Removed
 
-Extensive loading functionality is now provided by a new companion framework [loaders.gl]() and because of this, most of the limited legacy luma.gl loading functions have been removed.
+Extensive loading functionality is now provided by a new companion framework [loaders.gl](https://loaders.gl/) and because of this, most of the limited legacy luma.gl loading functions have been removed.
 
 For the most common case (loading of images for use with textures), loading functions are no longer needed as the `data` prop in the `Texture2D` constructor now accepts url strings and `Promise` objects (this is the new Async Textures function).
 
