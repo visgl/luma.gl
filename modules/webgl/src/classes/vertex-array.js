@@ -399,7 +399,7 @@ export default class VertexArray {
     VertexArrayObject.setConstant(this.gl, location, constant);
 
     // If we are using the global VertexArrayObject, we need to disable the attribute now
-    if (this.vertexArrayObject.isDefault) {
+    if (this.vertexArrayObject.isDefaultArray) {
       this.vertexArrayObject.enable(location, false);
     }
   }
