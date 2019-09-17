@@ -1,5 +1,10 @@
 # Upgrade Guide
 
+## Upgrading from v7.2 to v7.3
+
+`ProgramManager` has replaced `ShaderCache` in the `Model` class as a more robust resource manager. Use of the `ShaderCache` with `Model` will not affect functionality in any way, but it is now a no-op.
+
+
 ## Upgrading from v6.x to v7.0
 
 luma.gl v7.0 represents a major overhaul of the API. The majority of changes are in areas that are only infrequently used by applications, and the intention is that most applications should only require very light porting.

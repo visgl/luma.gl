@@ -1,5 +1,23 @@
 # What's New
 
+## Version 7.3
+
+Date: September 19, 2019
+
+### Program Management
+
+luma.gl introduces the [ProgramManager](/docs/api-reference/core/resource-management/program-manager.md) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
+- Redundant shader compilation and linking is avoided.
+- Redundant program switching (among the [most expensive](https://computergraphics.stackexchange.com/a/46) GPU state changes) while rendering is avoided.
+
+The `Model` class has been updated to take advantage of these new capabilities, automatically caching and re-using `Program`s where possible.
+
+
+### Custom Device Pixels (Experimental)
+
+luma.gl now provides experimental support for specifying the pixel ratio mapping between canvas size and the GL drawing buffer. luma.gl has always provided support for matching the native device pixel ratio on high-resolution screens, but custom ratios allow applications to, for example, use SSAO for improved fidelity or reduced drawing resolution to improve performance.
+
+
 ## Version 7.2
 
 Date: July 9, 2019
