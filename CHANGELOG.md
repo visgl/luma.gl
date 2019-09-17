@@ -1,3 +1,7 @@
+## v7.3.0-beta.2
+- Bump probe.gl version (#1245)
+- Don't set VertexArrayObject.isDefaultArray (#1247)
+
 ## v7.3.0-beta.1
 - Cleanup VAO fix and test (#1243)
 - Fix loaders.gl link in docs (#1242)
