@@ -215,8 +215,6 @@ export default class VertexArray {
   unbindBuffers() {
     this.vertexArrayObject.bind(() => {
       if (this.elements) {
-        this.clearDrawParams();
-
         // Update vertexArray immediately if we have our own array
         if (!this.vertexArrayObject.isDefaultArray) {
           this.vertexArrayObject.setElementBuffer(null);
