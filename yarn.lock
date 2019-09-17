@@ -7259,7 +7259,7 @@ private@^0.1.6:
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.8.tgz#2381edb3689f7a53d653190060fcf822d2f368ff"
   integrity sha512-VvivMrbvd2nKkiG38qjULzlc+4Vx4wm/whI9pQD35YrARNnhxeiRktSOhSukRLFNlzg6Br/cJPet5J/u19r/mg==
 
-probe.gl@3.1.0, probe.gl@^3.1.0-beta.3:
+probe.gl@3.1.0, probe.gl@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.1.0.tgz#6aaeeb2d5bff85458fb7e8f7a72a57a53757c745"
   integrity sha512-Bqk+hMklRtHJ29UcDvhjh0ha0JLoZI5wpPBZdzAOwciBGhPXNy1C/TD1ihKBdOlCzTw78EKVLm0eKLj5Xek5+w==
