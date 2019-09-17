@@ -1326,3 +1326,80 @@ test('WebGL#Transform run (custom parameters)', t => {
 
   t.end();
 });
+
+test('WebGL#Transform (Buffer to Texture)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const vs = `\
+#define EPSILON 0.00001
+attribute vec4 aCur;
+attribute vec4 aNext;
+varying float equal;
+
+void main()
+{
+equal = length(aCur - aNext) > EPSILON ? 0. : 1.;
+gl_Position = vec4(0, 0, 0, 1.);
+}
+`;
+
+  const fs = `\
+varying float equal;
+void main()
+{
+  if (equal == 1.) {
+    discard;
+  }
+gl_FragColor = vec4(1.);
+}
+`;
+
+  const data1 = new Float32Array([10, 20, 31, 0, -57, 28, 100, 53]);
+  const data2 = new Float32Array([10, 20, 31, 0, 7, 10, -10, 43]);
+  const aCur = new Buffer(gl2, {data: data1});
+  const aNext = new Buffer(gl2, {data: data2}); // buffers contain different data
+  const texture = new Texture2D(gl2, {
+    format: GL.RGBA,
+    dataFormat: GL.RGBA,
+    type: GL.UNSIGNED_BYTE,
+    mipmaps: false
+  });
+
+  const transform = new Transform(gl2, {
+    sourceBuffers: {
+      aCur,
+      aNext
+    },
+    vs,
+    _fs: fs,
+    _targetTexture: texture,
+    _targetTextureVarying: 'outTexture', // dummy varying to enable FB creation
+    elementCount: 2
+  });
+
+  transform.run({clearRenderTarget: true});
+
+  let expectedData = [255, 255, 255, 255];
+  let outData = transform.getData({varyingName: 'outTexture'});
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  // update aNext to contain same data as aCur
+  aNext.subData(data1);
+
+  // re-run the tranform
+  transform.run({clearRenderTarget: true});
+
+  expectedData = [0, 0, 0, 0];
+  outData = transform.getData({varyingName: 'outTexture'});
+
+  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
