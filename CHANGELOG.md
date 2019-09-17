@@ -1,3 +1,9 @@
+## v7.3.0-beta.1
+- Cleanup VAO fix and test (#1243)
+- Fix loaders.gl link in docs (#1242)
+- Do to clear the VertexArray elements buffer when unbind… (#1238)
+- Fix getting started button on gatsby site (#1241)
+
 ## v7.3.0-alpha.9
 - Bump math.gl, loaders.gl and probe.gl versions (#1240)
 - Updated examples link in npm start command (#1237)
