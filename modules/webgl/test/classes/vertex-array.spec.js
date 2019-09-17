@@ -142,7 +142,10 @@ test('WebGL#VertexArray#default VAO unbinding', t => {
       })
     }
   });
-  t.ok(vertexArray.vertexArrayObject.isDefaultArray, 'Using default VertexArrayObject');
+  t.ok(
+    vertexArray.vertexArrayObject === VertexArrayObject.getDefaultArray(gl),
+    'Using default VertexArrayObject'
+  );
   t.ok(vertexArray.elements, 'VertexArray has elements');
 
   vertexArray.bindBuffers();
