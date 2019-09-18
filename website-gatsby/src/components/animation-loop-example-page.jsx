@@ -6,6 +6,8 @@ import StatsWidget from '@probe.gl/stats-widget';
 
 import InfoPanel from './info-panel';
 
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.2-release';
+
 // WORKAROUND FOR luma.gl VRDisplay
 if (typeof global !== 'undefined' && !global.navigator) {
   global.navigator = {};
@@ -136,7 +138,7 @@ export default class AnimationLoopExamplePage extends Component {
   }
 
   render() {
-    const {name, panel = true, stats, sourceLink} = this.props;
+    const { exampleConfig: { title , path } = {}, panel = true, stats } = this.props;
 
     const notSupported = this.animationLoop.isSupported && !this.animationLoop.isSupported();
 
@@ -166,7 +168,7 @@ export default class AnimationLoopExamplePage extends Component {
           id={this.props.canvas}
           style={{width: '100%', height: '100%', padding: 0, border: 0}}
         />
-        {panel ? <InfoPanel name={name} controls={controls} sourceLink={sourceLink} /> : null}
+        {panel ? <InfoPanel name={title} controls={controls} sourceLink={`${GITHUB_TREE}/${path}`} /> : null}
       </div>
     );
   }

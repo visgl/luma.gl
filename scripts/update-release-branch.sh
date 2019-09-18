@@ -7,6 +7,7 @@ set -e
 BRANCH=`echo "$1-release"`
 VERSION=`echo "$1.0"`
 WEBSITE_PAGES=website/contents/pages.js
+WEBSITE_GATSBY_EXAMPLES=website-gatsby/src/components/animation-loop-example-page.jsx
 
 echo "Updating branch to ${BRANCH}..."
 
@@ -17,6 +18,7 @@ find docs -iname "*.md" -type f -exec sed -i '' -E "s/luma.gl\/(tree|blob)\/mast
 # Replace source links in website
 sed -i '' -E "s/luma.gl\/(master|[1-9]*.[0-9]-release)/luma.gl\/${BRANCH}/g" "${WEBSITE_PAGES}"
 sed -i '' -E "s/luma.gl\/tree\/(master|[1-9]*.[0-9]-release)/luma.gl\/tree\/${BRANCH}/g" "${WEBSITE_PAGES}"
+sed -i '' -E "s/luma.gl\/tree\/(master|[1-9]*.[0-9]-release)/luma.gl\/tree\/${BRANCH}/g" "${WEBSITE_GATSBY_EXAMPLES}"
 
 # Bump dependencies in examples
 update_dep() {
