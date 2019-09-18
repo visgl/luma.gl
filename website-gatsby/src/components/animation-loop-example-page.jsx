@@ -138,7 +138,7 @@ export default class AnimationLoopExamplePage extends Component {
   }
 
   render() {
-    const { exampleConfig: { title , path } = {}, panel = true, stats } = this.props;
+    const {exampleConfig: {title, path} = {}, panel = true, stats} = this.props;
 
     const notSupported = this.animationLoop.isSupported && !this.animationLoop.isSupported();
 
