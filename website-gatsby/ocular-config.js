@@ -141,6 +141,12 @@ module.exports = {
       image: 'images/example-animation.png'
     },
     {
+      title: 'Program Management',
+      componentUrl: resolve(__dirname, './templates/core/example-program-management.jsx'),
+      path: 'examples/core/program-management/',
+      image: 'images/example-program-management.png'
+    },
+    {
       title: 'TransformFeedback',
       componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
       path: 'examples/core/transform-feedback/app',
