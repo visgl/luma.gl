@@ -83,6 +83,7 @@
             { "entry": "docs/api-reference/core/animation-loop-proxy" },
             { "entry": "docs/api-reference/core/geometry" },
             { "entry": "docs/api-reference/core/load-file" },
+            { "entry": "docs/api-reference/core/model" },
             { "entry": "docs/api-reference/core/transform" },
             { "entry": "docs/api-reference/core/shader-cache" }
           ]
@@ -111,6 +112,13 @@
           "entries": [
             { "entry": "docs/api-reference/core/materials/phong-material" },
             { "entry": "docs/api-reference/core/materials/pbr-material" }
+          ]
+        },
+        {
+          "title": "Effects",
+          "entries": [
+            { "entry": "docs/api-reference/effects/overview" },
+            { "entry": "docs/api-reference/effects/glfx-shader-modules" }
           ]
         },
         {
@@ -150,6 +158,7 @@
           "entries": [
             { "entry": "docs/api-reference/webgl/accessor" },
             { "entry": "docs/api-reference/webgl/buffer" },
+            { "entry": "docs/api-reference/webgl/framebuffer" },
             { "entry": "docs/api-reference/webgl/program" },
             { "entry": "docs/api-reference/webgl/query" },
             { "entry": "docs/api-reference/webgl/copy-and-blit" },
@@ -173,7 +182,8 @@
             { "entry": "docs/api-reference/webgl/context/get-gl-context-info" },
             { "entry": "docs/api-reference/webgl/context/get-parameters" },
             { "entry": "docs/api-reference/webgl/context/reset-parameters" },
-            { "entry": "docs/api-reference/webgl/context/with-parameters" }
+            { "entry": "docs/api-reference/webgl/context/with-parameters" },
+            { "entry": "docs/api-reference/webgl/device-pixels" }
           ]
         },
         {
@@ -192,6 +202,8 @@
         {
           "title": "Addons",
           "entries": [
+            { "entry": "docs/api-reference/addons/animation/timeline" },
+            { "entry": "docs/api-reference/addons/animation/key-frames" },
             { "entry": "docs/api-reference/addons/event" }
           ]
         }
