@@ -91,8 +91,8 @@ export default class ProgramManager {
     }
 
     for (const key of injectKeys) {
-      defineHashes.push(this._getHash(key));
-      defineHashes.push(this._getHash(inject[key]));
+      injectHashes.push(this._getHash(key));
+      injectHashes.push(this._getHash(inject[key]));
     }
 
     const hash = `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
