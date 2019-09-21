@@ -12,6 +12,19 @@ luma.gl introduces the [ProgramManager](/docs/api-reference/core/resource-manage
 
 The `Model` class has been updated to take advantage of these new capabilities, automatically caching and re-using `Program`s where possible.
 
+The table below shows the effect of program sharing in deck.gl. The test renders 1000 [ScatterplotLayers](https://deck.gl/#/examples/core-layers/scatterplot-layer), each of which draws 100 intanced geometries, for a total of 1000 draw calls and 100,000 instances. Timings are milliseconds spent on the CPU and GPU to render a single frame on the following two machines:
+
+- Macbook Pro 2018, OSX, 2.6 GHz Intel Core i7, Radeon Pro 560X 4 GB
+- Razer Blade, Windows 10, Intel i7-8750H 6 Core, Intel UHD Graphics 630
+
+||  No Program Sharing |Program Sharing | Improvement |
+| --- | --- | --- | --- |
+| Macbook Pro CPU | 113ms | 93ms | 17% |
+| Macbook Pro GPU | 43ms   | 34ms  | 20% |
+| Razer Blade CPU | 145ms | 125ms | 13% |
+| Razer Blade GPU | 137ms | 115ms | 16% |
+
+
 
 ### Custom Device Pixels (Experimental)
 
