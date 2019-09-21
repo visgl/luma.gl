@@ -28,7 +28,7 @@ The table below shows the effect of program sharing in deck.gl. The test renders
 
 ### Custom Device Pixels (Experimental)
 
-luma.gl now provides experimental support for specifying the pixel ratio mapping between canvas size and the GL drawing buffer. luma.gl has always provided support for matching the native device pixel ratio on high-resolution screens, but custom ratios allow applications to, for example, use SSAO for improved fidelity or reduced drawing resolution to improve performance.
+luma.gl now provides experimental support for specifying the pixel ratio mapping between canvas size and the GL drawing buffer. luma.gl has always provided support for matching the native device pixel ratio on high-resolution screens, but custom ratios allow applications to, for example, use SSAA for improved fidelity or reduced drawing resolution to improve performance.
 
 
 ## Version 7.2
