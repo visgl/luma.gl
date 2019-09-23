@@ -259,13 +259,19 @@ export default class Framebuffer extends Resource {
 
   checkStatus() {
     const {gl} = this;
-    const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
-    const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-    gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+    const status = this.getStatus();
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error(_getFrameBufferStatus(status));
     }
     return this;
+  }
+
+  getStatus() {
+    const {gl} = this;
+    const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
+    const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+    return status;
   }
 
   clear({color, depth, stencil, drawBuffers = []} = {}) {

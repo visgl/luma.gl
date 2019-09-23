@@ -1,3 +1,6 @@
+import Framebuffer from '../classes/framebuffer';
+import Texture2D from '../classes/texture-2d';
+import {isWebGL2} from '../webgl-utils';
 // TODO - this should be the default export, test cases need updating
 export const FEATURES = {
   WEBGL2: 'WEBGL2',
@@ -39,6 +42,26 @@ export const FEATURES = {
   GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD'
 };
 
+// function to test if Float 32 bit format texture can be bound as color attachment
+function checkFloat32ColorAttachment(gl) {
+  const testTexture = new Texture2D(gl, {
+    format: isWebGL2(gl) ? gl.RGBA32F : gl.RGBA,
+    type: gl.FLOAT,
+    dataFormat: gl.RGBA
+  });
+  const testFb = new Framebuffer(gl, {
+    id: `test-framebuffer`,
+    check: false,
+    attachments: {
+      [gl.COLOR_ATTACHMENT0]: testTexture
+    }
+  });
+  if (testFb.getStatus() !== gl.FRAMEBUFFER_COMPLETE) {
+    return false;
+  }
+  return true;
+}
+
 // Defines luma.gl "feature" names and semantics
 // Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
 export default {
@@ -70,7 +93,7 @@ export default {
   [FEATURES.TEXTURE_FILTER_ANISOTROPIC]: ['EXT_texture_filter_anisotropic'],
 
   // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-  [FEATURES.COLOR_ATTACHMENT_RGBA32F]: ['WEBGL_color_buffer_float', 'EXT_color_buffer_float'],
+  [FEATURES.COLOR_ATTACHMENT_RGBA32F]: [checkFloat32ColorAttachment, 'EXT_color_buffer_float'],
   [FEATURES.COLOR_ATTACHMENT_FLOAT]: [false, 'EXT_color_buffer_float'],
   [FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: ['EXT_color_buffer_half_float'],
 
