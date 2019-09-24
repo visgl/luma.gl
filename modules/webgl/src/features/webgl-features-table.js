@@ -65,10 +65,7 @@ function checkFloat32ColorAttachment(gl) {
   const status = testFb.getStatus();
   testTexture.delete();
   testFb.delete();
-  if (status !== gl.FRAMEBUFFER_COMPLETE) {
-    float32ColorAttachmentSupport = false;
-  }
-  float32ColorAttachmentSupport = true;
+  float32ColorAttachmentSupport = status === gl.FRAMEBUFFER_COMPLETE;
   return float32ColorAttachmentSupport;
 }
 
