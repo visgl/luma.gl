@@ -41,8 +41,15 @@ export const FEATURES = {
   GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD'
 };
 
+// TODO: remove this global (https://github.com/uber/luma.gl/issues/1258)
+let float32ColorAttachmentSupport = null;
+
 // function to test if Float 32 bit format texture can be bound as color attachment
 function checkFloat32ColorAttachment(gl) {
+  // if previously queried, return the cache value.
+  if (float32ColorAttachmentSupport !== null) {
+    return float32ColorAttachmentSupport;
+  }
   const testTexture = new Texture2D(gl, {
     format: gl.RGBA,
     type: gl.FLOAT,
@@ -59,9 +66,10 @@ function checkFloat32ColorAttachment(gl) {
   testTexture.delete();
   testFb.delete();
   if (status !== gl.FRAMEBUFFER_COMPLETE) {
-    return false;
+    float32ColorAttachmentSupport = false;
   }
-  return true;
+  float32ColorAttachmentSupport = true;
+  return float32ColorAttachmentSupport;
 }
 
 // Defines luma.gl "feature" names and semantics
