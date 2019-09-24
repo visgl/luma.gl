@@ -1,3 +1,11 @@
+## v7.3.0-beta.3
+- Update checking support for rendering to float textures (#1257)
+- What's new typo
+- Fix hashing of injects (#1253)
+- ProgramManager example (#1254)
+- Program sharing perf in what's new (#1255)
+- Add new Transform test case (#1246)
+
 ## v7.3.0-beta.2
 - Bump probe.gl version (#1245)
 - Don't set VertexArrayObject.isDefaultArray (#1247)
