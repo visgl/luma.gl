@@ -1,6 +1,5 @@
 import Framebuffer from '../classes/framebuffer';
 import Texture2D from '../classes/texture-2d';
-import {isWebGL2} from '../webgl-utils';
 // TODO - this should be the default export, test cases need updating
 export const FEATURES = {
   WEBGL2: 'WEBGL2',
@@ -45,7 +44,7 @@ export const FEATURES = {
 // function to test if Float 32 bit format texture can be bound as color attachment
 function checkFloat32ColorAttachment(gl) {
   const testTexture = new Texture2D(gl, {
-    format: isWebGL2(gl) ? gl.RGBA32F : gl.RGBA,
+    format: gl.RGBA,
     type: gl.FLOAT,
     dataFormat: gl.RGBA
   });
@@ -56,7 +55,10 @@ function checkFloat32ColorAttachment(gl) {
       [gl.COLOR_ATTACHMENT0]: testTexture
     }
   });
-  if (testFb.getStatus() !== gl.FRAMEBUFFER_COMPLETE) {
+  const status = testFb.getStatus();
+  testTexture.delete();
+  testFb.delete();
+  if (status !== gl.FRAMEBUFFER_COMPLETE) {
     return false;
   }
   return true;

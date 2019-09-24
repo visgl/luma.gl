@@ -268,9 +268,9 @@ export default class Framebuffer extends Resource {
 
   getStatus() {
     const {gl} = this;
-    const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
     const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-    gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     return status;
   }
 
