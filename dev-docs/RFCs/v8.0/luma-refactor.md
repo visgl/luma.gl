@@ -53,7 +53,7 @@ I propose reducing the number of modules to five, around the following themes:
 
 #### Constants
 
-The `constant` module would remain as it is now.
+The `constants` module would remain as it is now.
 
 #### Low-level
 
