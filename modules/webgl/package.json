@@ -38,6 +38,6 @@
     "@luma.gl/constants": "7.3.0-beta.3",
     "@luma.gl/webgl-state-tracker": "7.3.0-beta.3",
     "@luma.gl/webgl2-polyfill": "7.3.0-beta.3",
-    "probe.gl": "^3.1.0"
+    "probe.gl": "^3.1.1"
   }
 }
