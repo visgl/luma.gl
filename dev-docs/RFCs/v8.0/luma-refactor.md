@@ -17,7 +17,7 @@ luma.gl is currently a very large library relative to the functionality it provi
 - 201 exported classes and functions, again without a clear sense of their relationships
 - A large code base. ~733kB of source files (compare to, e.g. three.js, a full 3D engine, at ~1.2MB)
 - Several unfinished or unused APIs that make it hard to tell what's reliable
-- Documentation is sprawling and not focused on the API. Examples demonstrate random scenes rather than API features.
+- Documentation is sprawling and not focused on the API. Examples demonstrate random scenes rather than API features
 
 Clearly defining luma.gl's goals as a framework, and structuring the codebase and documentation around those goals, would benefit it in the following ways:
 - Reduce its complexity and associated maintenance costs
@@ -45,7 +45,7 @@ The usage of the following should be verified:
 - gpgpu module
 - main module
 
-We could also potentially move the core/geometry into math.gl
+We could also potentially move core/geometry into math.gl
 
 ### Structure Modules Around Meaningful Themes
 
