@@ -16,12 +16,12 @@ luma.gl is currently a very large library relative to the functionality it provi
 - 14 separate modules with no clear sense of how they're meant to interoperate
 - 201 exported classes and functions, again without a clear sense of their relationships
 - A large code base. ~733kB of source files (compare to, e.g. three.js, a full 3D engine, at ~1.2MB)
-- Several unfinished or unused parts of the API that make it hard to tell which parts are reliable
+- Several unfinished or unused APIs that make it hard to tell what's reliable
 - Documentation is sprawling and not focused on the API. Examples demonstrate random scenes rather than API features.
 
 Clearly defining luma.gl's goals as a framework, and structuring the codebase and documentation around those goals, would benefit it in the following ways:
 - Reduce its complexity and associated maintenance costs
-- Reduce the weight it imposes on applications that use
+- Reduce the weight it imposes on applications that use it
 - Make the value proposition it's making clear to potential users
 - Simplify adoption
 
@@ -29,9 +29,9 @@ Clearly defining luma.gl's goals as a framework, and structuring the codebase an
 
 A refactor of luma.gl could occur in three phases:
 
-1. Clean out unused code.
+### Clean Out Unused Code
 
-The following are areas of the code that are overly complex and/or haven't found a use case:
+The following are systems I consider overly complex and/or that haven't found a use case:
 - SceneGraphNode, BaseModel, Model
 - CameraNode
 - Uniform animations
@@ -47,33 +47,36 @@ The usage of the following should be verified:
 
 We could also potentially move the core/geometry into math.gl
 
-2. Structure modules around meaningful themes. I propose reducing the number of modules to five, around the following themes:
+### Structure Modules Around Meaningful Themes
 
-### Constants
+I propose reducing the number of modules to five, around the following themes:
+
+#### Constants
 
 The `constant` module would remain as it is now.
 
-### Low-level
+#### Low-level
 
 luma.gl would would contain two low-level modules:
 - `shader-tools`: Current ShaderTools and shader debugging tools from current debug module
 - `context-tools`: Current webgl-polyfill and webgl-state-tracker, and context debugging tools from current debug module
 
-### Mid-level
+#### Mid-level
 
 The `webgl` module would remain as it is now
 
-### High-level
+#### High-level
 
-A new `engine` module would contain the higher-level constructs in luma.gl including objects, resource management, rendering, GPGPU, etc.
+A new `engine` module would contain the higher-level constructs in luma.gl including models, resource management, rendering, GPGPU, etc.
 
-3. Rewrite documentation and examples around the new themes and focus on luma.gl's strengths:
+### Rewrite Documentation and Examples
+
+Documentation would be rewritten to focus on the API itself and structured around the new themes. Users will be assumed to intermediate to advanced WebGL users, so presentation of basic WebGL concepts would be removed. Examples would present API features, with a few showcase pieces. Focus would be on luma.gl's strengths, including the following:
 - Polyfilling and ease of debugging
 - Shader composition system
 - Interoperability with other systems
+- Flexible, composable tools
 - Testability
-
-Assume users are intermediate to advanced WebGL users. Don't present basic WebGL concepts. Instead focus on API features and how to use the different parts together. Examples should present API features, with a few showcase pieces.
 
 
 
