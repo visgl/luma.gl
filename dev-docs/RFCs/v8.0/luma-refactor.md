@@ -39,15 +39,15 @@ The actual refactor of luma.gl would occur in three phases:
 ### Clean Out Unused Code
 
 This will warrant some discussion. The following are systems I believe should be considered for removal or consolidation:
-- `SceneGraphNode`, `BaseModel`, `Model` - functionality could be supported with just the `Model` and `Group` classes
-- `CameraNode` - Appears unused
-- Uniform animations - Complex and unused
-- `ShaderCache` - Superseded by `ProgramManager`
-- core/lighting, core/materials - currently empty or simple data classes
-- core/multipass - Appears unused
-- seer integration - Complex and will interfere with other parts of the system if enabled (e.g. GPU timing). Is anyone using it?
-- debug/parameter-definitions - Appears unused
-- main module - Appears unused
+- [ModelNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/model-node.js), [BaseModel](), `Model` - functionality could be supported with just the `Model` and `Group` classes
+- [CameraNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/camera-node.js) - Appears unused
+- [Uniform animations](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L280-L333) - Complex and unused
+- [ShaderCache](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/shader-cache.js) - Superseded by `ProgramManager`
+- [core/lighting](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lighting/light-source.js), [core/materials](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/materials) - currently empty or simple data classes
+- [core/multipass](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/multipass) - Appears unused (has it been superseded by deck effects?)
+- [seer integration](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/debug/seer-integration.js) - Complex and will interfere with other parts of the system if enabled (e.g. [GPU timing](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L337-L376)). Is anyone using it?
+- [debug/parameter-definitions](https://github.com/uber/luma.gl/blob/7.2-release/modules/debug/src/webgl-api-tracing/parameter-definitions.js) - Appears unused
+- [main module](https://github.com/uber/luma.gl/tree/7.2-release/modules/main) - Appears unused
 - core/geometry - Perhaps better suited to math.gl?
 
 ### Structure Modules Around Meaningful Themes
