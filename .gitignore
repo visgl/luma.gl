@@ -8,8 +8,6 @@ package-lock.json
 lerna-debug.log
 modules/
 dev-modules/
-/examples/
 test/
 website/
 website-gatsby/
-/docs/
