@@ -22,30 +22,33 @@ luma.gl is currently a very large library relative to the functionality it provi
 Clearly defining luma.gl's goals as a framework, and structuring the codebase and documentation around those goals, would benefit it in the following ways:
 - Reduce its complexity and associated maintenance costs
 - Reduce the weight it imposes on applications that use it
-- Make the value proposition it's making clear to potential users
+- Make its value proposition clear to potential users
 - Simplify adoption
 
 ## Overview
 
-A refactor of luma.gl could occur in three phases:
+The first step towards simplifying luma.gl is to be explicit about what its goals are. I propose that changes be made around the following key principles:
+- Targeting intermediate to advanced WebGL users
+- All systems implemented should solve explicitly identified problems. Experiments are encouraged, but those that fail to find a use case should be removed
+- Structured around levels of abstraction, primarily helper tools for low-level WebGL work, WebGL wrapper classes, and higher-level engine features
+- Increased focus on architectural fundamentals, simplicity, building systems that are easy to reason about. Less focus on using the latest APIs or frameworks
+
+
+The actual refactor of luma.gl would occur in three phases:
 
 ### Clean Out Unused Code
 
-The following are systems I consider overly complex and/or that haven't found a use case:
-- SceneGraphNode, BaseModel, Model
-- CameraNode
-- Uniform animations
-- ShaderCache
-- core/lighting, core/materials (currently empty or simple data classes)
-
-The usage of the following should be verified:
-- core/multipass
-- seer integration
-- debug/parameter-definitions
-- gpgpu module
-- main module
-
-We could also potentially move core/geometry into math.gl
+This will warrant some discussion. The following are systems I believe should be considered for removal or consolidation:
+- `SceneGraphNode`, `BaseModel`, `Model` - functionality could be supported with just the `Model` and `Group` classes
+- `CameraNode` - Appears unused
+- Uniform animations - Complex and unused
+- `ShaderCache` - Superseded by `ProgramManager`
+- core/lighting, core/materials - currently empty or simple data classes
+- core/multipass - Appears unused
+- seer integration - Complex and will interfere with other parts of the system if enabled (e.g. GPU timing). Is anyone using it?
+- debug/parameter-definitions - Appears unused
+- main module - Appears unused
+- core/geometry - Perhaps better suited to math.gl?
 
 ### Structure Modules Around Meaningful Themes
 
@@ -71,13 +74,10 @@ A new `engine` module would contain the higher-level constructs in luma.gl inclu
 
 ### Rewrite Documentation and Examples
 
-Documentation would be rewritten to focus on the API itself and structured around the new themes. Users will be assumed to intermediate to advanced WebGL users, so presentation of basic WebGL concepts would be removed. Examples would present API features, with a few showcase pieces. Focus would be on luma.gl's strengths, including the following:
+Documentation would be rewritten to focus on the API itself and structured around the new themes (e.g. with tutorials working from low to high-level usage). Users will be assumed to intermediate to advanced WebGL users, so presentation of basic WebGL concepts would be removed. Examples would present API features, with a few showcase pieces. Focus would be on luma.gl's strengths, including the following:
 - Polyfilling and ease of debugging
 - Shader composition system
 - Interoperability with other systems
 - Flexible, composable tools
 - Testability
-
-
-
 
