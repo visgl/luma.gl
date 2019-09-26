@@ -6,7 +6,7 @@ import StatsWidget from '@probe.gl/stats-widget';
 
 import InfoPanel from './info-panel';
 
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.2-release';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.3-release';
 
 // WORKAROUND FOR luma.gl VRDisplay
 if (typeof global !== 'undefined' && !global.navigator) {

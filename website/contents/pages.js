@@ -1,5 +1,5 @@
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.2-release';
-const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/7.2-release';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/7.3-release';
+const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/7.3-release';
 
 function getDocUrl(filename) {
   return `${RAW_GITHUB}/docs/${filename}`;
