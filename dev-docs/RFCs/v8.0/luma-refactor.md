@@ -39,7 +39,7 @@ The actual refactor of luma.gl would occur in three phases:
 ### Clean Out Unused Code
 
 This will warrant some discussion. The following are systems I believe should be considered for removal or consolidation:
-- [ModelNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/model-node.js), [BaseModel](), `Model` - functionality could be supported with just the `Model` and `Group` classes
+- [ModelNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/model-node.js), [BaseModel](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js), [Model](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/model.js) - functionality could be supported with just the `Model` and `Group` classes
 - [CameraNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/camera-node.js) - Appears unused
 - [Uniform animations](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L280-L333) - Complex and unused
 - [ShaderCache](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/shader-cache.js) - Superseded by `ProgramManager`
@@ -48,7 +48,7 @@ This will warrant some discussion. The following are systems I believe should be
 - [seer integration](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/debug/seer-integration.js) - Complex and will interfere with other parts of the system if enabled (e.g. [GPU timing](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L337-L376)). Is anyone using it?
 - [debug/parameter-definitions](https://github.com/uber/luma.gl/blob/7.2-release/modules/debug/src/webgl-api-tracing/parameter-definitions.js) - Appears unused
 - [main module](https://github.com/uber/luma.gl/tree/7.2-release/modules/main) - Appears unused
-- core/geometry - Perhaps better suited to math.gl?
+- [core/geometry](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/geometries) - Perhaps better suited to math.gl?
 
 ### Structure Modules Around Meaningful Themes
 
