@@ -8,8 +8,8 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/constants": "^7.3.0-alpha",
-    "@luma.gl/core": "^7.3.0-alpha",
+    "@luma.gl/constants": "^7.3.0",
+    "@luma.gl/core": "^7.3.0",
     "math.gl": "^3.0.0",
     "mjolnir.js": "^2.1.2"
   },
