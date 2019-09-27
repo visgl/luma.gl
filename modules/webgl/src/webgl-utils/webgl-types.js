@@ -21,7 +21,7 @@ typical configuration for isorender applications running on the server.`;
 let m;
 try {
   m = module;
-} catch(e) {
+} catch (e) {
   m = null;
 }
 
