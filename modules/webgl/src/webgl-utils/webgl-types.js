@@ -18,7 +18,12 @@ typical configuration for isorender applications running on the server.`;
 // TODO(Tarek): OOGLY HACK to avoid webpack requiring headless
 //   browser bundles. Will be removed in 8.0 when we
 //   remove automatic headless context creation
-const m = module;
+let m;
+try {
+  m = module;
+} catch(e) {
+  m = null;
+}
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
