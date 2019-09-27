@@ -136,5 +136,11 @@ export default class GLTFMaterialParser {
         ]
       });
     }
+
+    // TODO - placeholder for handling the unlit extension
+    // KHR_materials_unlit extension (postprocessed by GLTFLoader)
+    if (material.unlit) {
+      this.uniforms.u_LightingEnabled = false;
+    }
   }
 }
