@@ -1,6 +1,7 @@
 import GL from '@luma.gl/constants';
 import {Texture2D, TextureCube} from '@luma.gl/core';
-import {loadImage} from '@loaders.gl/images';
+import {ImageLoader} from '@loaders.gl/images';
+import {load} from '@loaders.gl/core';
 
 export default class GLTFEnvironment {
   constructor(gl, {brdfLutUrl, getTexUrl, specularMipLevels = 10}) {
@@ -27,7 +28,7 @@ export default class GLTFEnvironment {
     if (!this._DiffuseEnvSampler) {
       this._DiffuseEnvSampler = this.makeCube({
         id: 'DiffuseEnvSampler',
-        getTextureForFace: dir => loadImage(this.getTexUrl('diffuse', dir, 0)),
+        getTextureForFace: dir => load(this.getTexUrl('diffuse', dir, 0), ImageLoader),
         parameters: {
           [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
           [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE,
@@ -47,7 +48,7 @@ export default class GLTFEnvironment {
         getTextureForFace: dir => {
           const imageArray = [];
           for (let lod = 0; lod <= this.specularMipLevels - 1; lod++) {
-            imageArray.push(loadImage(this.getTexUrl('specular', dir, lod)));
+            imageArray.push(load(this.getTexUrl('specular', dir, lod), ImageLoader));
           }
           return imageArray;
         },
@@ -77,7 +78,7 @@ export default class GLTFEnvironment {
           [this.gl.UNPACK_FLIP_Y_WEBGL]: false
         },
         // Texture2D accepts a promise that returns an image as data (Async Textures)
-        data: loadImage(this.brdfLutUrl)
+        data: load(this.brdfLutUrl, ImageLoader)
       });
     }
 

@@ -1319,49 +1319,44 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@loaders.gl/core@1.3.0", "@loaders.gl/core@^1.3.0":
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-1.3.0.tgz#192c81d9e0b2cbc46af93e7e0e09ea7538afda93"
-  integrity sha512-kEbOJLCGNrvHIcRhTsMX/OJSNdITvNuzT5vlje/xPZ54VBqfSddBAyBj7QNtF1xFf9ykI+XgKSW52g7Eo6OgFQ==
+"@loaders.gl/core@2.0.0-alpha.1", "@loaders.gl/core@^2.0.0-alpha":
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-2.0.0-alpha.1.tgz#ff1318ecbbcbe2b15110bb89fb70120afcb61e2c"
+  integrity sha512-KVSgkTVX3kd6Rdk2FgJ/9frsO0InBKHQTqqOlCZYqO6J+ccdGKz+YABlkhvH6QYVOHWRnosyj2bQYIJfn38+Kg==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@loaders.gl/gltf@^1.3.0":
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-1.3.0.tgz#abf2f9241295f68851b2ed68104ecc3a65452e77"
-  integrity sha512-XG/2JIl1RSSLFFmpri2zpZFPRiCMjkRonfioSC/a9gAvR86zngomGGELWUU9MMwnN0+8D5vxd5MI6OR11ug07w==
+"@loaders.gl/gltf@^2.0.0-alpha":
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-2.0.0-alpha.1.tgz#ee08f9f09a2705dfe8e7a13e6eb3adcee5af54d0"
+  integrity sha512-2oieR62ARmfYEpgZK6zemgR40nXqmvTo5StZRK+p2MR3+TBZQ4kDsEGyjbESn42L1IT+OD8rkjVa7HE9iWYf4A==
   dependencies:
-    "@loaders.gl/core" "1.3.0"
-    "@loaders.gl/images" "1.3.0"
-    "@loaders.gl/loader-utils" "1.3.0"
+    "@loaders.gl/core" "2.0.0-alpha.1"
+    "@loaders.gl/images" "2.0.0-alpha.1"
+    "@loaders.gl/loader-utils" "2.0.0-alpha.1"
 
-"@loaders.gl/images@1.3.0", "@loaders.gl/images@^1.3.0":
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-1.3.0.tgz#68ded62210c3fef11ddf5b59fe9a66dd4fa1bf1b"
-  integrity sha512-08aD9Q3i3pYgcrZxXgNdkKpUzY33qmrhfuRrzhi+BpHjzkEl27FoYz1wE3UTUPwqKP9ivB8cjyPrgcjrIHV+Yg==
+"@loaders.gl/images@2.0.0-alpha.1", "@loaders.gl/images@^2.0.0-alpha":
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-2.0.0-alpha.1.tgz#032d04fefbcb02b5c288d9c2cc4926cd3fb8b9bf"
+  integrity sha512-54GCCI21f5DOjMPGuwz0jszQ6AeEejw2TfOt7SdtasvjmQZWUIdG+FqWwsd5GyFpTxSmQNsU1jIGzJerWwm2iA==
 
-"@loaders.gl/loader-utils@1.3.0":
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-1.3.0.tgz#3d2d637813d275f89d3646c4e65414d8c82dfb09"
-  integrity sha512-N2zR/yeEUHuXMYMPuw/rW+kc+b/9ml7Q5yWzXFTQ0OzeJwmKO9ppXwnlbn/FuxI3NqTCVUtk4w4nsXoPd08ESw==
+"@loaders.gl/loader-utils@2.0.0-alpha.1":
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-2.0.0-alpha.1.tgz#7af6d64d897f60135a8bbedf105dfa5121832e10"
+  integrity sha512-0yFslyklR0G0/BlaGKMcruQklNaZQgmuYN0oSCNMOndRJKzwYSDAB9olXVqmhl9K8Ui1nHrwJe4toucedSYr5w==
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@loaders.gl/polyfills@^1.3.0":
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-1.3.0.tgz#002ef8466a94edf123ebb7603fe415368e40e2e8"
-  integrity sha512-y32PpswIOkaq5Yl/5RiyGeox6rRxZypjdCrCzHuraSmJhw2GhAYuaceubxQpAzsWmXpnGERlRqu4JZlW5BJEEA==
+"@loaders.gl/polyfills@^2.0.0-alpha":
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-2.0.0-alpha.1.tgz#bbdf06ea6843c03f29675a318c6f34c1afbc8916"
+  integrity sha512-VS2plKv8QMbMnp+/i0N0RtCexpmTYrBJmievric1tDpns45Yr8/lmBFiuzqUw1w0N5YLRHmI+i7uJHHz7wgM8w==
   dependencies:
     get-pixels "^3.3.2"
     ndarray "^1.0.18"
     save-pixels "^2.3.2"
     stream-to-async-iterator "^0.2.0"
     through "^2.3.8"
-
-"@luma.gl/constants@^7.0.0-alpha.6":
-  version "7.1.1"
-  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.1.1.tgz#f966fad9069722974e1b7bcae2fcd7a2444090dc"
-  integrity sha512-F+lkZzMJNPvGeTCkOezyHafAb48ottMx10PYx3j1rsKFBM2v1LgBHnV1I37xjkrx8PMhdb/2zMg80nRrniudGw==
 
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
