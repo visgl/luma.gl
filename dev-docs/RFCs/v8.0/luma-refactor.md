@@ -15,7 +15,9 @@ This RFC proposes steps to simplify luma.gl's API and ease its adoption among us
 luma.gl is currently a very large library relative to the functionality it provides and is difficult to approach for new users. This is due to several factors, among them the following:
 - 14 separate modules with no clear sense of how they're meant to interoperate
 - 201 exported classes and functions, again without a clear sense of their relationships
-- A large code base. ~733kB of source files - compare to e.g. a full 3D engine like three.js at ~1.2MB (1.6x), a low-level library like PicoGL at ~183kB (0.25x)
+- The minified dist files (dist.min.js) total 981kB with the webgl re-exports from core removed.
+
+
 - Several unfinished or unused APIs that make it hard to tell what's reliable
 - Documentation is sprawling and not focused on the API. Examples demonstrate random scenes rather than API features
 
