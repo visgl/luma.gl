@@ -29,7 +29,7 @@ luma.gl is currently a very large library relative to the functionality it provi
 |gpgpu|25kB|
 |webgl2-polyfill|21kB|
 |constants|16kB|
-|total|981kB|
+|**total**|**981kB**|
 
 - Several unfinished or unused APIs that make it hard to tell what's reliable
 - Documentation is sprawling and not focused on the API. Examples demonstrate random scenes rather than API features
