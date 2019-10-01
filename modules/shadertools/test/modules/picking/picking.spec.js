@@ -69,12 +69,7 @@ const TEST_CASES = [
   },
   {
     pickingSelectedColor: [255, 100, 150],
-    isPicked: [0, 1, 0, 0, 0, 1, 0, 0, 1]
-  },
-  {
-    pickingSelectedColor: [255, 100, 150],
-    pickingThreshold: 5,
-    isPicked: [0, 1, 0, 1, 0, 1, 0, 0, 1]
+    isPicked: [0, 1, 0, 0, 0, 0, 0, 0, 0]
   }
 ];
 
@@ -115,8 +110,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
 
   TEST_CASES.forEach(testCase => {
     const uniforms = picking.getUniforms({
-      pickingSelectedColor: testCase.pickingSelectedColor,
-      pickingThreshold: testCase.pickingThreshold
+      pickingSelectedColor: testCase.pickingSelectedColor
     });
 
     transform.run({uniforms});
@@ -139,22 +133,20 @@ test('picking#picking_setPickingColor', t => {
   }
   const VS = `\
   attribute vec3 vertexColor;
-  varying vec4 rgbColorASelected;
+  varying float rgbColorASelected;
 
   void main()
   {
     picking_setPickingColor(vertexColor);
-    rgbColorASelected = picking_vRGBcolor_Aselected;
+    rgbColorASelected = picking_vRGBcolor_Avalid.a;
   }
   `;
 
-  const COLOR_SCALE = 1 / 255;
-  const EPSILON = 0.00001;
   const vertexColorData = TEST_DATA.vertexColorData;
 
   const elementCount = vertexColorData.length / 3;
   const vertexColor = new Buffer(gl, vertexColorData);
-  const rgbColorASelected = new Buffer(gl, {byteLength: elementCount * 4 * 4});
+  const rgbColorASelected = new Buffer(gl, {byteLength: elementCount * 4});
 
   const transform = new Transform(gl, {
     sourceBuffers: {
@@ -177,20 +169,9 @@ test('picking#picking_setPickingColor', t => {
 
     transform.run({uniforms});
 
-    const expectedData = testCase.isPicked.reduce((result, element, index) => {
-      const pickingColor = TEST_DATA.vertexColorData
-        .slice(index * 3, index * 3 + 3)
-        .map(e => e * COLOR_SCALE);
-      result.push(pickingColor[0], pickingColor[1], pickingColor[2], element);
-      return result;
-    }, []);
     const outData = transform.getBuffer('rgbColorASelected').getData();
 
-    outData.forEach((out, index) => {
-      if (Math.abs(out - expectedData[index]) > EPSILON) {
-        t.ok(false, 'Vertex should correctly get picked');
-      }
-    });
+    t.deepEqual(outData, testCase.isPicked, 'Vertex should correctly get picked');
   });
   t.ok(true, 'picking_setPickingColor successful');
 
