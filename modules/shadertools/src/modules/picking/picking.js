@@ -30,60 +30,63 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 }
 
 const vs = `\
+uniform bool picking_uActive;
 uniform bool picking_uAttribute;
 uniform vec3 picking_uSelectedColor;
 uniform bool picking_uSelectedColorValid;
 
-out vec4 picking_vRGBcolor_Aselected;
+out vec4 picking_vRGBcolor_Avalid;
 
 const float COLOR_SCALE = 1. / 255.;
+
+bool picking_isColorValid(vec3 color) {
+  return dot(color, vec3(1.0)) > 0.001;
+}
 
 bool isVertexPicked(vec3 vertexColor) {
   return
     picking_uSelectedColorValid &&
-    abs(vertexColor.r - picking_uSelectedColor.r) < 0.001 &&
-    abs(vertexColor.g - picking_uSelectedColor.g) < 0.001 &&
-    abs(vertexColor.b - picking_uSelectedColor.b) < 0.001;
+    !picking_isColorValid(abs(vertexColor - picking_uSelectedColor));
 }
 
 void picking_setPickingColor(vec3 pickingColor) {
-  if (picking_uAttribute) {
+  if (picking_uActive) {
     // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
-    picking_vRGBcolor_Aselected.a = step(0.001, dot(pickingColor, vec3(1.0)));
+    picking_vRGBcolor_Avalid.a = float(picking_isColorValid(pickingColor));
+
+    if (!picking_uAttribute) {
+      // Stores the picking color so that the fragment shader can render it during picking
+      picking_vRGBcolor_Avalid.rgb = pickingColor * COLOR_SCALE;
+    }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
-    picking_vRGBcolor_Aselected.a =
-      float(isVertexPicked(pickingColor));
-
-    // Stores the picking color so that the fragment shader can render it during picking
-    picking_vRGBcolor_Aselected.rgb = pickingColor * COLOR_SCALE;
+    picking_vRGBcolor_Avalid.a = float(isVertexPicked(pickingColor));
   }
 }
 
 void picking_setPickingAttribute(float value) {
   if (picking_uAttribute) {
-    picking_vRGBcolor_Aselected.r = value;
+    picking_vRGBcolor_Avalid.r = value;
   }
 }
 void picking_setPickingAttribute(vec2 value) {
   if (picking_uAttribute) {
-    picking_vRGBcolor_Aselected.rg = value;
+    picking_vRGBcolor_Avalid.rg = value;
   }
 }
 void picking_setPickingAttribute(vec3 value) {
   if (picking_uAttribute) {
-    picking_vRGBcolor_Aselected.rgb = value;
+    picking_vRGBcolor_Avalid.rgb = value;
   }
 }
 `;
 
 const fs = `\
-uniform bool picking_uActive; // true during rendering to offscreen picking buffer
-uniform bool picking_uAttribute;
+uniform bool picking_uActive;
 uniform vec3 picking_uSelectedColor;
 uniform vec4 picking_uHighlightColor;
 
-in vec4 picking_vRGBcolor_Aselected;
+in vec4 picking_vRGBcolor_Avalid;
 
 /*
  * Returns highlight color if this item is selected.
@@ -92,7 +95,7 @@ vec4 picking_filterHighlightColor(vec4 color) {
   if (picking_uActive) {
     return color;
   }
-  bool selected = bool(picking_vRGBcolor_Aselected.a);
+  bool selected = bool(picking_vRGBcolor_Avalid.a);
 
   if (selected) {
     float highLightAlpha = picking_uHighlightColor.a;
@@ -110,18 +113,11 @@ vec4 picking_filterHighlightColor(vec4 color) {
  * Returns picking color if picking enabled else unmodified argument.
  */
 vec4 picking_filterPickingColor(vec4 color) {
-  if (picking_uAttribute) {
-    if (picking_vRGBcolor_Aselected.a == 0.0) {
-      discard;
-    }
-    return picking_vRGBcolor_Aselected;
-  }
   if (picking_uActive) {
-    vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
-    if (dot(pickingColor, vec3(1.0)) < 0.001) {
+    if (picking_vRGBcolor_Avalid.a == 0.0) {
       discard;
     }
-    return vec4(pickingColor, 1.0);
+    return picking_vRGBcolor_Avalid;
   }
   return color;
 }
