@@ -69,12 +69,7 @@ const TEST_CASES = [
   },
   {
     pickingSelectedColor: [255, 100, 150],
-    isPicked: [0, 1, 0, 0, 0, 1, 0, 0, 1]
-  },
-  {
-    pickingSelectedColor: [255, 100, 150],
-    pickingThreshold: 5,
-    isPicked: [0, 1, 0, 1, 0, 1, 0, 0, 1]
+    isPicked: [0, 1, 0, 0, 0, 0, 0, 0, 0]
   }
 ];
 
@@ -115,8 +110,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
 
   TEST_CASES.forEach(testCase => {
     const uniforms = picking.getUniforms({
-      pickingSelectedColor: testCase.pickingSelectedColor,
-      pickingThreshold: testCase.pickingThreshold
+      pickingSelectedColor: testCase.pickingSelectedColor
     });
 
     transform.run({uniforms});
