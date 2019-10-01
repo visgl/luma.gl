@@ -1,3 +1,6 @@
+## v7.4.0-alpha.1
+- Add attribute picking to the picking module (#1268)
+
 ## v7.3.0
 - Update links
 - Fix inlined version in published package (#1262)
