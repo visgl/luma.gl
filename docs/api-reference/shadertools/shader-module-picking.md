@@ -61,7 +61,9 @@ Sets the color that will be returned by the fragment shader if color based picki
 
 Sets the attribute value that needs to be picked.
 
-`void picking_setPickingAttribute(vec3 pickingColor, float value)`
+`void picking_setPickingAttribute(float value)`
+`void picking_setPickingAttribute(vec2 value)`
+`void picking_setPickingAttribute(vec3 value)`
 
 ## Fragment Shader Functions
 

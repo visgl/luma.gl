@@ -30,15 +30,13 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 }
 
 const vs = `\
+uniform bool picking_uAttribute;
 uniform vec3 picking_uSelectedColor;
 uniform bool picking_uSelectedColorValid;
 
 out vec4 picking_vRGBcolor_Aselected;
 
 const float COLOR_SCALE = 1. / 255.;
-const vec3 PACK_SHIFT = vec3(65536.0, 256.0, 1.0);
-const float PACK_UPSCALE = 256.0 / 255.0;
-const float PACK_SHIFT_RIGHT = 1. / 256.;
 
 bool isVertexPicked(vec3 vertexColor) {
   return
@@ -49,21 +47,33 @@ bool isVertexPicked(vec3 vertexColor) {
 }
 
 void picking_setPickingColor(vec3 pickingColor) {
-  // Do the comparison with selected item color in vertex shader as it should mean fewer compares
-  picking_vRGBcolor_Aselected.a =
-    float(isVertexPicked(pickingColor));
+  if (picking_uAttribute) {
+    // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
+    picking_vRGBcolor_Aselected.a = step(0.001, length(pickingColor));
+  } else {
+    // Do the comparison with selected item color in vertex shader as it should mean fewer compares
+    picking_vRGBcolor_Aselected.a =
+      float(isVertexPicked(pickingColor));
 
-  // Stores the picking color so that the fragment shader can render it during picking
-  picking_vRGBcolor_Aselected.rgb = pickingColor * COLOR_SCALE;
+    // Stores the picking color so that the fragment shader can render it during picking
+    picking_vRGBcolor_Aselected.rgb = pickingColor * COLOR_SCALE;
+  }
 }
 
-void picking_setPickingAttribute(vec3 pickingColor, float value) {
-  // Encode attribute value into 3x8 bits
-  vec3 packedValue = fract(value * PACK_SHIFT);
-  packedValue.gb -= packedValue.rg * PACK_SHIFT_RIGHT;
-  picking_vRGBcolor_Aselected.rgb = packedValue * PACK_UPSCALE;
-  // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
-  picking_vRGBcolor_Aselected.a = step(0.5, length(pickingColor));
+void picking_setPickingAttribute(float value) {
+  if (picking_uAttribute) {
+    picking_vRGBcolor_Aselected.r = value;
+  }
+}
+void picking_setPickingAttribute(vec2 value) {
+  if (picking_uAttribute) {
+    picking_vRGBcolor_Aselected.rg = value;
+  }
+}
+void picking_setPickingAttribute(vec3 value) {
+  if (picking_uAttribute) {
+    picking_vRGBcolor_Aselected.rgb = value;
+  }
 }
 `;
 
