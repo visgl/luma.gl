@@ -31,9 +31,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 
 const vs = `\
 uniform vec3 picking_uSelectedColor;
-uniform float picking_uThreshold;
 uniform bool picking_uSelectedColorValid;
-uniform bool picking_uAttribute;
 
 out vec4 picking_vRGBcolor_Aselected;
 
