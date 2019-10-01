@@ -49,7 +49,7 @@ bool isVertexPicked(vec3 vertexColor) {
 void picking_setPickingColor(vec3 pickingColor) {
   if (picking_uAttribute) {
     // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
-    picking_vRGBcolor_Aselected.a = step(0.001, length(pickingColor));
+    picking_vRGBcolor_Aselected.a = step(0.001, dot(pickingColor, vec3(1.0)));
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
     picking_vRGBcolor_Aselected.a =
@@ -118,7 +118,7 @@ vec4 picking_filterPickingColor(vec4 color) {
   }
   if (picking_uActive) {
     vec3 pickingColor = picking_vRGBcolor_Aselected.rgb;
-    if (length(pickingColor) < 0.001) {
+    if (dot(pickingColor, vec3(1.0)) < 0.001) {
       discard;
     }
     return vec4(pickingColor, 1.0);
