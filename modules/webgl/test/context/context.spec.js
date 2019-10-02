@@ -49,7 +49,7 @@ test('WebGL#resizeGLContext', t => {
     _canvasSizeInfo: {}
   };
 
-  // update drawing buffer size to emmuldate gl context
+  // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = glContext.canvas.width;
   glContext.drawingBufferHeight = glContext.canvas.height;
   resizeGLContext(glContext);
@@ -60,7 +60,7 @@ test('WebGL#resizeGLContext', t => {
     'Canvas size info should be cached'
   );
 
-  // update drawing buffer size to emmuldate gl context
+  // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.width * 12.5);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.height * 12.5);
   resizeGLContext(glContext, {useDevicePixels: 12.5});
