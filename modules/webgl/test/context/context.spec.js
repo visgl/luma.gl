@@ -1,5 +1,5 @@
 const test = require('tape-catch');
-const {createGLContext, glGetDebugInfo, isWebGL, isWebGL2} = require('luma.gl');
+const {createGLContext, glGetDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('luma.gl');
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts({webgl2: false});
 test('WebGL#headless context creation', t => {
   t.ok(isWebGL(gl), 'Context creation ok');
@@ -39,6 +39,37 @@ test('WebGL#isWebGL2', t => {
   }
   t.ok(isWebGL2(gl2), 'isWebGL2 should return true WebGL2 context');
   t.ok(isWebGL2(gl2Debug), 'isWebGL2 should return true on WebGL2 debug context');
+
+  t.end();
+});
+
+test('WebGL#resizeGLContext', t => {
+  const glContext = {
+    canvas: {width: 10, height: 20},
+    _canvasSizeInfo: {}
+  };
+
+  // update drawing buffer size to emmuldate gl context
+  glContext.drawingBufferWidth = glContext.canvas.width;
+  glContext.drawingBufferHeight = glContext.canvas.height;
+  resizeGLContext(glContext);
+
+  t.deepEqual(
+    glContext._canvasSizeInfo,
+    {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
+    'Canvas size info should be cached'
+  );
+
+  // update drawing buffer size to emmuldate gl context
+  glContext.drawingBufferWidth = Math.floor(glContext.canvas.width * 12.5);
+  glContext.drawingBufferHeight = Math.floor(glContext.canvas.height * 12.5);
+  resizeGLContext(glContext, {useDevicePixels: 12.5});
+
+  t.deepEqual(
+    glContext._canvasSizeInfo,
+    {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
+    'Canvas size info should be updated'
+  );
 
   t.end();
 });
