@@ -222,8 +222,8 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
     // for those cases, reduce devicePixelRatio.
     let clampedPixelRatio = devicePixelRatio;
     do {
-      const canvasWidth = Math.ceil(clientWidth * clampedPixelRatio);
-      const canvasHeight = Math.ceil(clientHeight * clampedPixelRatio);
+      const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
+      const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
       gl.canvas.width = canvasWidth;
       gl.canvas.height = canvasHeight;
       devicePixelRatioClamped = gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight;
