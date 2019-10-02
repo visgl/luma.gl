@@ -203,6 +203,7 @@ function getVersion(gl) {
 // use devicePixelRatio to set canvas width and height
 function setDevicePixelRatio(gl, devicePixelRatio, options) {
   let devicePixelRatioClamped = false;
+  let logWarning = false;
 
   // NOTE: if options.width and options.height not used remove in v8
   const clientWidth =
@@ -229,8 +230,9 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
       devicePixelRatioClamped =
         gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight;
       clampedPixelRatio = Math.max(clampedPixelRatio / 2, 1);
+      logWarning = logWarning || devicePixelRatioClamped;
     } while (devicePixelRatioClamped);
-    if (devicePixelRatioClamped) {
+    if (logWarning) {
       log.warn(`Device pixel ratio clamped`)();
     }
     Object.assign(gl._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});
