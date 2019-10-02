@@ -202,9 +202,7 @@ function getVersion(gl) {
 
 // use devicePixelRatio to set canvas width and height
 function setDevicePixelRatio(gl, devicePixelRatio, options) {
-  let clampedPixelRatio;
   let devicePixelRatioClamped = false;
-  let aspectRatioValid = false;
 
   // NOTE: if options.width and options.height not used remove in v8
   const clientWidth =
@@ -213,35 +211,27 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
     'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height || 1;
 
   const cachedSize = gl._canvasSizeInfo;
+  // Check if canvas needs to be resized
   if (
-    cachedSize.clientWidth === clientWidth &&
-    cachedSize.clientHeight === clientHeight &&
-    cachedSize.devicePixelRatio === devicePixelRatio
+    cachedSize.clientWidth !== clientWidth ||
+    cachedSize.clientHeight !== clientHeight ||
+    cachedSize.devicePixelRatio !== devicePixelRatio
   ) {
-    // if a cache exists use it avoid expensive loop
-    clampedPixelRatio = cachedSize.clampedPixelRatio;
-    gl.canvas.width = Math.ceil(clientWidth * clampedPixelRatio);
-    gl.canvas.height = Math.ceil(clientHeight * clampedPixelRatio);
-  } else {
     // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
     // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
     // for those cases, reduce devicePixelRatio.
-    clampedPixelRatio = devicePixelRatio;
+    let clampedPixelRatio = devicePixelRatio;
     do {
       const canvasWidth = Math.ceil(clientWidth * clampedPixelRatio);
       const canvasHeight = Math.ceil(clientHeight * clampedPixelRatio);
       gl.canvas.width = canvasWidth;
       gl.canvas.height = canvasHeight;
-      if (gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight) {
-        clampedPixelRatio = Math.max(clampedPixelRatio / 2, 1);
-        devicePixelRatioClamped = devicePixelRatioClamped || !aspectRatioValid;
-      } else {
-        aspectRatioValid = true;
-      }
-    } while (!aspectRatioValid);
+      devicePixelRatioClamped = gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight;
+      clampedPixelRatio = Math.max(clampedPixelRatio / 2, 1);
+    } while (devicePixelRatioClamped);
     if (devicePixelRatioClamped) {
       log.warn(`Device pixel ratio clamped`)();
     }
-    Object.assign(gl._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio, clampedPixelRatio});
+    Object.assign(gl._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});
   }
 }
