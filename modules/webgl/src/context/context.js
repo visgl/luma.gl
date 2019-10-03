@@ -211,7 +211,7 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
 
   gl.luma = gl.luma || {};
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
-  const cachedSize = gl.luma.canvasSizeInfo || {};
+  const cachedSize = gl.luma.canvasSizeInfo;
   // Check if canvas needs to be resized
   if (
     cachedSize.clientWidth !== clientWidth ||

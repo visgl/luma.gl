@@ -45,8 +45,7 @@ test('WebGL#isWebGL2', t => {
 
 test('WebGL#resizeGLContext', t => {
   const glContext = {
-    canvas: {width: 10, height: 20},
-    _canvasSizeInfo: {}
+    canvas: {width: 10, height: 20}
   };
 
   // update drawing buffer size to simulate gl context
