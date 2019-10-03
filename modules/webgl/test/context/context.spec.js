@@ -55,7 +55,7 @@ test('WebGL#resizeGLContext', t => {
   resizeGLContext(glContext);
 
   t.deepEqual(
-    glContext._canvasSizeInfo,
+    glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
     'Canvas size info should be cached'
   );
@@ -66,7 +66,7 @@ test('WebGL#resizeGLContext', t => {
   resizeGLContext(glContext, {useDevicePixels: 12.5});
 
   t.deepEqual(
-    glContext._canvasSizeInfo,
+    glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
     'Canvas size info should be updated'
   );

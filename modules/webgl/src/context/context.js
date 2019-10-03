@@ -109,7 +109,8 @@ export function instrumentGLContext(gl, options = {}) {
   gl._version = gl._version || getVersion(gl);
 
   // Cache canvas size information to avoid setting it on every frame.
-  gl._canvasSizeInfo = {};
+  gl.luma = gl.luma || {};
+  gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
   options = Object.assign({}, contextDefaults, options);
   const {manageState, debug} = options;
@@ -202,39 +203,42 @@ function getVersion(gl) {
 
 // use devicePixelRatio to set canvas width and height
 function setDevicePixelRatio(gl, devicePixelRatio, options) {
-  let devicePixelRatioClamped = false;
-  let logWarning = false;
-
   // NOTE: if options.width and options.height not used remove in v8
   const clientWidth =
     'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width || 1;
   const clientHeight =
     'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height || 1;
 
-  const cachedSize = gl._canvasSizeInfo;
+  gl.luma = gl.luma || {};
+  gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
+  const cachedSize = gl.luma.canvasSizeInfo || {};
   // Check if canvas needs to be resized
   if (
     cachedSize.clientWidth !== clientWidth ||
     cachedSize.clientHeight !== clientHeight ||
     cachedSize.devicePixelRatio !== devicePixelRatio
   ) {
+    let clampedPixelRatio = devicePixelRatio;
+
+    const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
+    const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
+    gl.canvas.width = canvasWidth;
+    gl.canvas.height = canvasHeight;
+
     // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
     // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
     // for those cases, reduce devicePixelRatio.
-    let clampedPixelRatio = devicePixelRatio;
-    do {
-      const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
-      const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
-      gl.canvas.width = canvasWidth;
-      gl.canvas.height = canvasHeight;
-      devicePixelRatioClamped =
-        gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight;
-      clampedPixelRatio = Math.max(clampedPixelRatio / 2, 1);
-      logWarning = logWarning || devicePixelRatioClamped;
-    } while (devicePixelRatioClamped);
-    if (logWarning) {
+    if (gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight) {
       log.warn(`Device pixel ratio clamped`)();
+      clampedPixelRatio = Math.min(
+        gl.drawingBufferWidth / clientWidth,
+        gl.drawingBufferHeight / clientHeight
+      );
+
+      gl.canvas.width = Math.floor(clientWidth * clampedPixelRatio);
+      gl.canvas.height = Math.floor(clientHeight * clampedPixelRatio);
     }
-    Object.assign(gl._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});
+
+    Object.assign(gl.luma.canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});
   }
 }
