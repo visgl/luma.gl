@@ -1,3 +1,6 @@
+## v7.3.1
+- DevicePixelRatio: Cache canvas size to avoid expensive setting on each frame (#1269)
+
 ## v7.3.0
 - Update links
 - Fix inlined version in published package (#1262)
