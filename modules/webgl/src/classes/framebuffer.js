@@ -617,18 +617,18 @@ export default class Framebuffer extends Resource {
 
     switch (pname) {
       case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
-        return !caps.webgl2 ? 0 : null;
+        return !caps.WEBGL2 ? 0 : null;
       case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
-        return !caps.webgl2 ? 8 : null;
+        return !caps.WEBGL2 ? 8 : null;
       case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
-        return !caps.webgl2 ? GL.UNSIGNED_INT : null;
+        return !caps.WEBGL2 ? GL.UNSIGNED_INT : null;
       case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-        return !caps.webgl2 && !caps.EXT_sRGB ? GL.LINEAR : null;
+        return !caps.WEBGL2 && !caps.EXT_sRGB ? GL.LINEAR : null;
       default:
         return null;
     }
