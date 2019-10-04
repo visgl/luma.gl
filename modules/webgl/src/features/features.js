@@ -25,10 +25,9 @@ export function hasFeatures(gl, features) {
 // Return a list of supported features
 export function getFeatures(gl) {
   gl.luma = gl.luma || {};
-  if (!gl.luma.caps) {
-    gl.luma.caps = {};
-    gl.luma.caps.webgl2 = isWebGL2(gl);
-    for (const cap in WEBGL_FEATURES) {
+  gl.luma.caps = gl.luma.caps || {};
+  for (const cap in WEBGL_FEATURES) {
+    if (gl.luma.caps[cap] === undefined) {
       gl.luma.caps[cap] = isFeatureSupported(gl, cap);
     }
   }
@@ -37,13 +36,28 @@ export function getFeatures(gl) {
 
 // TODO - cache the value
 function isFeatureSupported(gl, cap) {
+  gl.luma = gl.luma || {};
+  gl.luma.caps = gl.luma.caps || {};
+
+  if (gl.luma.caps[cap] === undefined) {
+    gl.luma.caps[cap] = queryFeature(gl, cap);
+  }
+
+  if (!gl.luma.caps[cap]) {
+    log.log(LOG_UNSUPPORTED_FEATURE, `Feature: ${cap} not supported`)();
+  }
+
+  return gl.luma.caps[cap];
+}
+
+function queryFeature(gl, cap) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
+  let isSupported;
+
   // Get extension name from table
   const featureDefinition = isWebGL2(gl) ? feature[1] || feature[0] : feature[0];
-
-  let isSupported;
 
   // Check if the value is dependent on checking one or more extensions
   if (typeof featureDefinition === 'function') {
@@ -59,10 +73,6 @@ function isFeatureSupported(gl, cap) {
     isSupported = featureDefinition;
   } else {
     assert(false);
-  }
-
-  if (!isSupported) {
-    log.log(LOG_UNSUPPORTED_FEATURE, `Feature: ${cap} not supported`)();
   }
 
   return isSupported;
