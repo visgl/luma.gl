@@ -1,3 +1,7 @@
+## v7.4.0-alpha.2
+- DevicePixelRatio: Cache canvas size to avoid expensive setting on each frame (#1269)
+- WebGL Features: add caching (#1270)
+
 ## v7.4.0-alpha.1
 - Add attribute picking to the picking module (#1268)
 
