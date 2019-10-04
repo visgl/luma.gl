@@ -1,8 +1,8 @@
 {
-  "name": "luma.gl-examples-dof",
-  "description": "An es6 Depth of Field example for luma.gl.",
+  "name": "luma.gl-examples-stress-test",
+  "description": "A stress test for luma.gl.",
   "contributors": [
-    "Tarek Sherif <tareksherif@pm.me>"
+    "Tarek Sherif <tsherif@uber.com>"
   ],
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",

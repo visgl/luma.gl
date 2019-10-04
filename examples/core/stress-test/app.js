@@ -19,21 +19,8 @@ import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
 <p>
-  <b>Depth of Field</b>.
+  <b>Stress Test</b>.
 <p>
-Several instanced luma.gl <code>Cubes</code> rendered with a Depth of Field
-post-processing effect.
-
-<div>
-  Focal Length: <input type="range" id="focal-length" min="0.1" max="10.0" step="0.1">
-</div>
-<div>
-  Focus Distance: <input type="range" id="focus-distance" min="0.1" max="10.0" step="0.1">
-</div>
-<div>
-  F-Stop: <input type="range" id="f-stop" min="0.1" max="10.0" step="0.1">
-</div>
-
 `;
 
 const NUM_LAYERS = 250;
