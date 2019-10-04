@@ -39,27 +39,20 @@ function isFeatureSupported(gl, cap) {
   gl.luma = gl.luma || {};
   gl.luma.caps = gl.luma.caps || {};
 
-  let isSupported;
-
-  if (gl.luma.caps[cap] !== undefined) {
-    isSupported = gl.luma.caps[cap];
-  } else {
-    isSupported = queryFeature(gl, cap);
-    gl.luma.caps[cap] = isSupported;
+  if (gl.luma.caps[cap] === undefined) {
+    gl.luma.caps[cap] = queryFeature(gl, cap);
   }
 
-  if (!isSupported) {
+  if (!gl.luma.caps[cap]) {
     log.log(LOG_UNSUPPORTED_FEATURE, `Feature: ${cap} not supported`)();
   }
 
-  return isSupported;
+  return gl.luma.caps[cap];
 }
 
 function queryFeature(gl, cap) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
-  // Shouldn't be calling if it is already queried
-  assert(gl.luma.caps[cap] === undefined);
 
   let isSupported;
 
