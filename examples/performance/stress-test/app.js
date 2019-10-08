@@ -12,6 +12,7 @@ import {
   dirlight
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
+import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>
@@ -23,8 +24,8 @@ const NUM_LAYERS = 250;
 const LAYER_DIM = 4;
 const LAYER_AREA = LAYER_DIM * LAYER_DIM;
 const NUM_DRAWS = NUM_LAYERS * LAYER_AREA;
-const NUM_ROWS = 10;
-const CUBES_PER_ROW = 10;
+const NUM_ROWS = 30;
+const CUBES_PER_ROW = 30;
 const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
 const NEAR = 500;
 const FAR = 3000.0;
@@ -104,21 +105,6 @@ void main() {
     fragColor = texture(color, vUV);
 }
 `;
-
-const stats = document.createElement('div');
-stats.innerHTML = `Drawing ${NUM_CUBES * NUM_DRAWS} cubes in ${NUM_DRAWS} draw calls`;
-stats.style.position = 'absolute';
-stats.style.top = '10px';
-stats.style.left = '10px';
-stats.style.color = 'white';
-
-const cpuStats = document.createElement('div');
-const gpuStats = document.createElement('div');
-stats.appendChild(cpuStats);
-stats.appendChild(gpuStats);
-document.body.appendChild(stats);
-document.body.style.margin = 0;
-document.body.style.overflow = 'hidden';
 
 class InstancedCube extends Model {
   constructor(gl, props) {
@@ -269,11 +255,27 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
 
+    const statsWidget = new StatsWidget(this.stats, {
+      title: `Drawing ${NUM_CUBES * NUM_DRAWS} cubes in ${NUM_DRAWS} draw calls`,
+      css: {
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        fontSize: '14px'
+      },
+      formatters: {
+        'CPU Time': 'averageTime',
+        'GPU Time': 'averageTime',
+        'Frame Rate': 'fps'
+      }
+    });
+
     return {
       projectionMatrix,
       viewMatrix,
       instancedCubes,
       blitModel,
+      statsWidget,
       angle: 0
     };
   }
@@ -289,17 +291,11 @@ export default class AppAnimationLoop extends AnimationLoop {
       instancedCubes,
       angle,
       framebuffer,
-      blitModel
+      blitModel,
+      statsWidget
     } = props;
 
-    cpuStats.innerHTML = `CPU Time: ${this.stats
-      .get('CPU Time')
-      .getAverageTime()
-      .toFixed(2)}ms`;
-    gpuStats.innerHTML = `GPU Time: ${this.stats
-      .get('GPU Time')
-      .getAverageTime()
-      .toFixed(2)}ms`;
+    statsWidget.update();
 
     const camZ = Math.cos(angle);
     const camY = Math.sin(angle);
@@ -312,7 +308,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       up: [0, Math.sign(camZ), 0]
     });
 
-    withParameters(gl, {depthTest: true, depthFunc: GL.LEQUAL, cullFace: true, framebuffer}, () => {
+    withParameters(gl, {depthTest: true, depthFunc: GL.LEQUAL, cull: true, framebuffer}, () => {
       clear(gl, {color: [0, 0, 0, 1], depth: true});
       for (let k = 0; k < NUM_DRAWS; ++k) {
         instancedCubes[k].draw({
@@ -324,13 +320,14 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    withParameters(gl, {depthTest: false, cullFace: false}, () => {
+    withParameters(gl, {depthTest: false, cull: false}, () => {
       blitModel.draw();
     });
   }
 }
 
 if (typeof window !== 'undefined' && !window.website) {
+  document.body.style.overflow = 'hidden';
   document.body.style.margin = '0';
   const animationLoop = new AppAnimationLoop();
   animationLoop.start({width: window.innerWidth, height: window.innerHeight});
