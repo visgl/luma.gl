@@ -1,12 +1,13 @@
 import GL from '@luma.gl/constants';
 import {
   AnimationLoop,
-  setParameters,
+  withParameters,
   clear,
   Texture2D,
   Buffer,
   Model,
-  CubeGeometry
+  CubeGeometry,
+  dirlight
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
 /* eslint-disable spaced-comment, max-depth */
@@ -30,8 +31,8 @@ const NUM_DRAWS = NUM_LAYERS * LAYER_AREA;
 const NUM_ROWS = 10;
 const CUBES_PER_ROW = 10;
 const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
-const NEAR = 100;
-const FAR = 1000.0;
+const NEAR = 500;
+const FAR = 3000.0;
 
 const stats = document.createElement('div');
 stats.innerHTML = `Drawing ${NUM_CUBES * NUM_DRAWS} cubes in ${NUM_DRAWS} draw calls`;
@@ -45,6 +46,8 @@ const gpuStats = document.createElement('div');
 stats.appendChild(cpuStats);
 stats.appendChild(gpuStats);
 document.body.appendChild(stats);
+document.body.style.margin = 0;
+document.body.style.overflow = 'hidden';
 
 class InstancedCube extends Model {
   constructor(gl, props) {
@@ -60,6 +63,7 @@ class InstancedCube extends Model {
 in vec3 positions;
 in vec3 normals;
 in vec2 texCoords;
+in vec4 pickColor;
 in vec4 modelMatCol1;
 in vec4 modelMatCol2;
 in vec4 modelMatCol3;
@@ -67,7 +71,6 @@ in vec4 modelMatCol4;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
-out vec3 vNormal;
 out vec2 vUV;
 
 void main(void) {
@@ -78,7 +81,7 @@ void main(void) {
     modelMatCol4
   );
   gl_Position = uProjection * uView * modelMat * vec4(positions, 1.0);
-  vNormal = vec3(modelMat * vec4(normals, 0.0));
+  project_setNormal(vec3(modelMat * vec4(normals, 0.0)));
   vUV = texCoords;
 }
 `;
@@ -87,15 +90,14 @@ void main(void) {
 precision highp float;
 #define SHADER_NAME scene.fs
 
-in vec3 vNormal;
 in vec2 vUV;
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
 void main(void) {
-  float d = clamp(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 0.2))), 0.0, 1.0);
-  fragColor.rgb = texture(uTexture, vUV).rgb * (d + 0.1);
+  fragColor.rgb = texture(uTexture, vUV).rgb;
   fragColor.a = 1.0;
+  fragColor = dirlight_filterColor(fragColor);
 }
 `;
 
@@ -104,6 +106,7 @@ void main(void) {
       Object.assign({geometry: new CubeGeometry()}, props, {
         vs,
         fs,
+        modules: [dirlight],
         isInstanced: 1,
         instanceCount: count,
         uniforms: {
@@ -157,23 +160,49 @@ void main(void) {
   }
 }
 
+const QUAD_VERTS = [1, 1, -1, 1, 1, -1, -1, -1]; // eslint-disable-line
+
+const BLIT_VERTEX = `\
+#version 300 es
+#define SHADER_NAME quad.vs
+
+layout(location=0) in vec4 position;
+
+out vec2 vUV;
+
+void main() {
+    gl_Position = position;
+    vUV = position.xy * 0.5 + 0.5;
+}
+`;
+
+const BLIT_FRAGMENT = `\
+#version 300 es
+#define SHADER_NAME quad.fs
+
+uniform sampler2D color;
+
+in vec2 vUV;
+
+out vec4 fragColor;
+
+void main() {
+    fragColor = texture(color, vUV);
+}
+`;
+
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
 
-  constructor(props = {}) {
-    super(props);
+  constructor() {
+    super({createFramebuffer: true});
     // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
     this.isDemoSupported = true;
   }
 
-  onInitialize({gl, _animationLoop}) {
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: GL.LEQUAL
-    });
-
+  onInitialize({gl, framebuffer}) {
     const projMat = new Matrix4();
     const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
 
@@ -196,6 +225,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     let ci = 0;
     for (let y = 0; y < NUM_LAYERS; ++y) {
+      const yOffset = -NUM_LAYERS * 0.5;
       for (let k = 0; k < LAYER_AREA; ++k) {
         instancedCubes[ci] = new InstancedCube(gl, {
           count: NUM_CUBES,
@@ -215,7 +245,11 @@ export default class AppAnimationLoop extends AnimationLoop {
           for (let i = 0; i < CUBES_PER_ROW; ++i) {
             const scale = [1, 1, 1];
             const rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
-            const translate = [(i - CUBES_PER_ROW / 2 + xOffset) * 4, y, (rowOffset + zOffset) * 4];
+            const translate = [
+              (i - CUBES_PER_ROW / 2 + xOffset) * 4,
+              (y + yOffset) * 4,
+              (rowOffset + zOffset) * 4
+            ];
             instancedCubes[ci].xforms[cubeI] = {
               scale,
               translate,
@@ -236,22 +270,32 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     }
 
+    const blitModel = new Model(gl, {
+      vs: BLIT_VERTEX,
+      fs: BLIT_FRAGMENT,
+      drawMode: gl.TRIANGLE_STRIP,
+      vertexCount: 4,
+      attributes: {
+        position: [new Buffer(gl, new Float32Array(QUAD_VERTS)), {size: 2}]
+      },
+      uniforms: {
+        color: framebuffer.color
+      }
+    });
+
     return {
       projMat,
       viewMat,
       instancedCubes,
+      blitModel,
       angle: 0
     };
   }
 
   onRender(props) {
-    if (!this.isDemoSupported) {
-      return;
-    }
-
     props.angle += 0.01;
 
-    const {gl, aspect, projMat, viewMat, instancedCubes, angle} = props;
+    const {gl, aspect, projMat, viewMat, instancedCubes, angle, framebuffer, blitModel} = props;
 
     cpuStats.innerHTML = `CPU Time: ${this.stats
       .get('CPU Time')
@@ -262,26 +306,36 @@ export default class AppAnimationLoop extends AnimationLoop {
       .getAverageTime()
       .toFixed(2)}ms`;
 
-    const upX = Math.cos(angle);
-    const upZ = Math.sin(angle);
+    const camZ = Math.cos(angle);
+    const camY = Math.sin(angle);
+    const camRadius = 1100;
 
     projMat.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
-    viewMat.lookAt({eye: [0, 450, 0], center: [0, 0, 0], up: [upX, 0, upZ]});
-    clear(gl, {color: [0, 0, 0, 1]});
-
+    viewMat.lookAt({
+      eye: [0, camY * camRadius, camZ * camRadius],
+      center: [0, 0, 0],
+      up: [0, Math.sign(camZ), 0]
+    });
     ////////////////////////////////////////
     // Update model matrix data and then
     // update the attribute buffer.
     ////////////////////////////////////////
 
-    for (let k = 0; k < NUM_DRAWS; ++k) {
-      instancedCubes[k].draw({
-        uniforms: {
-          uProjection: projMat,
-          uView: viewMat
-        }
-      });
-    }
+    withParameters(gl, {depthTest: true, depthFunc: GL.LEQUAL, cullFace: true, framebuffer}, () => {
+      clear(gl, {color: [0, 0, 0, 1], depth: true});
+      for (let k = 0; k < NUM_DRAWS; ++k) {
+        instancedCubes[k].draw({
+          uniforms: {
+            uProjection: projMat,
+            uView: viewMat
+          }
+        });
+      }
+    });
+
+    withParameters(gl, {depthTest: false, cullFace: false}, () => {
+      blitModel.draw();
+    });
   }
 }
 
