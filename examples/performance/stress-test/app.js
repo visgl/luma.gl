@@ -281,7 +281,16 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(props) {
     props.angle += 0.01;
 
-    const {gl, aspect, projectionMatrix, viewMatrix, instancedCubes, angle, framebuffer, blitModel} = props;
+    const {
+      gl,
+      aspect,
+      projectionMatrix,
+      viewMatrix,
+      instancedCubes,
+      angle,
+      framebuffer,
+      blitModel
+    } = props;
 
     cpuStats.innerHTML = `CPU Time: ${this.stats
       .get('CPU Time')
