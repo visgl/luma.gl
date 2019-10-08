@@ -1,3 +1,5 @@
+/* global document, window */
+/* eslint-disable max-depth */
 import GL from '@luma.gl/constants';
 import {
   AnimationLoop,
@@ -10,13 +12,6 @@ import {
   dirlight
 } from '@luma.gl/core';
 import {Matrix4, radians} from 'math.gl';
-/* eslint-disable spaced-comment, max-depth */
-/* global document, window */
-
-/*
-  Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
-  Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
-*/
 
 const INFO_HTML = `
 <p>
@@ -34,29 +29,7 @@ const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
 const NEAR = 500;
 const FAR = 3000.0;
 
-const stats = document.createElement('div');
-stats.innerHTML = `Drawing ${NUM_CUBES * NUM_DRAWS} cubes in ${NUM_DRAWS} draw calls`;
-stats.style.position = 'absolute';
-stats.style.top = '10px';
-stats.style.left = '10px';
-stats.style.color = 'white';
-
-const cpuStats = document.createElement('div');
-const gpuStats = document.createElement('div');
-stats.appendChild(cpuStats);
-stats.appendChild(gpuStats);
-document.body.appendChild(stats);
-document.body.style.margin = 0;
-document.body.style.overflow = 'hidden';
-
-class InstancedCube extends Model {
-  constructor(gl, props) {
-    const count = props.count;
-    const xforms = new Array(count);
-    const matrices = new Float32Array(count * 16);
-    const matrixBuffer = new Buffer(gl, matrices.byteLength);
-
-    const vs = `\
+const CUBE_VERTEX = `\
 #version 300 es
 #define SHADER_NAME scene.vs
 
@@ -85,7 +58,7 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-    const fs = `\
+const CUBE_FRAGMENT = `\
 #version 300 es
 precision highp float;
 #define SHADER_NAME scene.fs
@@ -101,11 +74,64 @@ void main(void) {
 }
 `;
 
+const QUAD_VERTS = [1, 1, -1, 1, 1, -1, -1, -1]; // eslint-disable-line
+
+const BLIT_VERTEX = `\
+#version 300 es
+#define SHADER_NAME quad.vs
+
+layout(location=0) in vec4 position;
+
+out vec2 vUV;
+
+void main() {
+    gl_Position = position;
+    vUV = position.xy * 0.5 + 0.5;
+}
+`;
+
+const BLIT_FRAGMENT = `\
+#version 300 es
+#define SHADER_NAME quad.fs
+
+uniform sampler2D color;
+
+in vec2 vUV;
+
+out vec4 fragColor;
+
+void main() {
+    fragColor = texture(color, vUV);
+}
+`;
+
+const stats = document.createElement('div');
+stats.innerHTML = `Drawing ${NUM_CUBES * NUM_DRAWS} cubes in ${NUM_DRAWS} draw calls`;
+stats.style.position = 'absolute';
+stats.style.top = '10px';
+stats.style.left = '10px';
+stats.style.color = 'white';
+
+const cpuStats = document.createElement('div');
+const gpuStats = document.createElement('div');
+stats.appendChild(cpuStats);
+stats.appendChild(gpuStats);
+document.body.appendChild(stats);
+document.body.style.margin = 0;
+document.body.style.overflow = 'hidden';
+
+class InstancedCube extends Model {
+  constructor(gl, props) {
+    const count = props.count;
+    const xforms = new Array(count);
+    const matrices = new Float32Array(count * 16);
+    const matrixBuffer = new Buffer(gl, matrices.byteLength);
+
     super(
       gl,
       Object.assign({geometry: new CubeGeometry()}, props, {
-        vs,
-        fs,
+        vs: CUBE_VERTEX,
+        fs: CUBE_FRAGMENT,
         modules: [dirlight],
         isInstanced: 1,
         instanceCount: count,
@@ -113,10 +139,6 @@ void main(void) {
           uTexture: props.uniforms.uTexture
         },
         attributes: {
-          // Attributes are limited to 4 components,
-          // So we have to split the matrices across
-          // 4 attributes. They're reconstructed in
-          // the vertex shader.
           modelMatCol1: {
             buffer: matrixBuffer,
             size: 4,
@@ -160,37 +182,6 @@ void main(void) {
   }
 }
 
-const QUAD_VERTS = [1, 1, -1, 1, 1, -1, -1, -1]; // eslint-disable-line
-
-const BLIT_VERTEX = `\
-#version 300 es
-#define SHADER_NAME quad.vs
-
-layout(location=0) in vec4 position;
-
-out vec2 vUV;
-
-void main() {
-    gl_Position = position;
-    vUV = position.xy * 0.5 + 0.5;
-}
-`;
-
-const BLIT_FRAGMENT = `\
-#version 300 es
-#define SHADER_NAME quad.fs
-
-uniform sampler2D color;
-
-in vec2 vUV;
-
-out vec4 fragColor;
-
-void main() {
-    fragColor = texture(color, vUV);
-}
-`;
-
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
@@ -198,13 +189,12 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   constructor() {
     super({createFramebuffer: true});
-    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
     this.isDemoSupported = true;
   }
 
   onInitialize({gl, framebuffer}) {
-    const projMat = new Matrix4();
-    const viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
+    const projectionMatrix = new Matrix4();
+    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
     const texture = new Texture2D(gl, {
       data: 'webgl-logo.png',
@@ -214,10 +204,6 @@ export default class AppAnimationLoop extends AnimationLoop {
         [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
       }
     });
-
-    /////////////////////////////////////////////////////
-    // Create instanced model and initialize transform matrices.
-    /////////////////////////////////////////////////////
 
     const instancedCubes = new Array(4);
 
@@ -284,8 +270,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     return {
-      projMat,
-      viewMat,
+      projectionMatrix,
+      viewMatrix,
       instancedCubes,
       blitModel,
       angle: 0
@@ -295,7 +281,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(props) {
     props.angle += 0.01;
 
-    const {gl, aspect, projMat, viewMat, instancedCubes, angle, framebuffer, blitModel} = props;
+    const {gl, aspect, projectionMatrix, viewMatrix, instancedCubes, angle, framebuffer, blitModel} = props;
 
     cpuStats.innerHTML = `CPU Time: ${this.stats
       .get('CPU Time')
@@ -310,24 +296,20 @@ export default class AppAnimationLoop extends AnimationLoop {
     const camY = Math.sin(angle);
     const camRadius = 1100;
 
-    projMat.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
-    viewMat.lookAt({
+    projectionMatrix.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
+    viewMatrix.lookAt({
       eye: [0, camY * camRadius, camZ * camRadius],
       center: [0, 0, 0],
       up: [0, Math.sign(camZ), 0]
     });
-    ////////////////////////////////////////
-    // Update model matrix data and then
-    // update the attribute buffer.
-    ////////////////////////////////////////
 
     withParameters(gl, {depthTest: true, depthFunc: GL.LEQUAL, cullFace: true, framebuffer}, () => {
       clear(gl, {color: [0, 0, 0, 1], depth: true});
       for (let k = 0; k < NUM_DRAWS; ++k) {
         instancedCubes[k].draw({
           uniforms: {
-            uProjection: projMat,
-            uView: viewMat
+            uProjection: projectionMatrix,
+            uView: viewMatrix
           }
         });
       }
@@ -339,7 +321,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-/* global window */
 if (typeof window !== 'undefined' && !window.website) {
   document.body.style.margin = '0';
   const animationLoop = new AppAnimationLoop();
