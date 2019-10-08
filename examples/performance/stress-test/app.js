@@ -20,15 +20,15 @@ const INFO_HTML = `
 <p>
 `;
 
-const NUM_LAYERS = 250;
-const LAYER_DIM = 4;
+const NUM_LAYERS = 100;
+const LAYER_DIM = 8;
 const LAYER_AREA = LAYER_DIM * LAYER_DIM;
 const NUM_DRAWS = NUM_LAYERS * LAYER_AREA;
-const NUM_ROWS = 30;
-const CUBES_PER_ROW = 30;
+const NUM_ROWS = 10;
+const CUBES_PER_ROW = 10;
 const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
-const NEAR = 500;
-const FAR = 3000.0;
+const NEAR = 100;
+const FAR = 1000.0;
 
 const CUBE_VERTEX = `\
 #version 300 es
@@ -37,25 +37,15 @@ const CUBE_VERTEX = `\
 in vec3 positions;
 in vec3 normals;
 in vec2 texCoords;
-in vec4 pickColor;
-in vec4 modelMatCol1;
-in vec4 modelMatCol2;
-in vec4 modelMatCol3;
-in vec4 modelMatCol4;
+in vec3 offset;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
 out vec2 vUV;
 
 void main(void) {
-  mat4 modelMat = mat4(
-    modelMatCol1,
-    modelMatCol2,
-    modelMatCol3,
-    modelMatCol4
-  );
-  gl_Position = uProjection * uView * modelMat * vec4(positions, 1.0);
-  project_setNormal(vec3(modelMat * vec4(normals, 0.0)));
+  gl_Position = uProjection * uView * vec4(positions + offset, 1.0);
+  project_setNormal(normals);
   vUV = texCoords;
 }
 `;
@@ -109,9 +99,7 @@ void main() {
 class InstancedCube extends Model {
   constructor(gl, props) {
     const count = props.count;
-    const xforms = new Array(count);
-    const matrices = new Float32Array(count * 16);
-    const matrixBuffer = new Buffer(gl, matrices.byteLength);
+    const offsetBuffer = new Buffer(gl, props.offsets);
 
     super(
       gl,
@@ -125,32 +113,9 @@ class InstancedCube extends Model {
           uTexture: props.uniforms.uTexture
         },
         attributes: {
-          modelMatCol1: {
-            buffer: matrixBuffer,
-            size: 4,
-            stride: 64,
-            offset: 0,
-            divisor: 1
-          },
-          modelMatCol2: {
-            buffer: matrixBuffer,
-            size: 4,
-            stride: 64,
-            offset: 16,
-            divisor: 1
-          },
-          modelMatCol3: {
-            buffer: matrixBuffer,
-            size: 4,
-            stride: 64,
-            offset: 32,
-            divisor: 1
-          },
-          modelMatCol4: {
-            buffer: matrixBuffer,
-            size: 4,
-            stride: 64,
-            offset: 48,
+          offset: {
+            buffer: offsetBuffer,
+            size: 3,
             divisor: 1
           }
         }
@@ -158,13 +123,6 @@ class InstancedCube extends Model {
     );
 
     this.count = count;
-    this.xforms = xforms;
-    this.matrices = matrices;
-    this.matrixBuffer = matrixBuffer;
-  }
-
-  updateMatrixBuffer() {
-    this.matrixBuffer.setData(this.matrices);
   }
 }
 
@@ -194,18 +152,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     const instancedCubes = new Array(4);
 
     const OFFSET_SCALE = 10;
+    const offsets = new Float32Array(NUM_CUBES * 3);
 
     let ci = 0;
     for (let y = 0; y < NUM_LAYERS; ++y) {
       const yOffset = -NUM_LAYERS * 0.5;
       for (let k = 0; k < LAYER_AREA; ++k) {
-        instancedCubes[ci] = new InstancedCube(gl, {
-          count: NUM_CUBES,
-          uniforms: {
-            uTexture: texture
-          }
-        });
-
         const adjust = (LAYER_DIM - 1) * 0.5;
 
         const xOffset = ((k % LAYER_DIM) - adjust) * OFFSET_SCALE;
@@ -215,29 +167,21 @@ export default class AppAnimationLoop extends AnimationLoop {
         for (let j = 0; j < NUM_ROWS; ++j) {
           const rowOffset = j - Math.floor(NUM_ROWS / 2);
           for (let i = 0; i < CUBES_PER_ROW; ++i) {
-            const scale = [1, 1, 1];
-            const rotate = [-Math.random() * Math.PI, 0, Math.random() * Math.PI];
-            const translate = [
-              (i - CUBES_PER_ROW / 2 + xOffset) * 4,
-              (y + yOffset) * 4,
-              (rowOffset + zOffset) * 4
-            ];
-            instancedCubes[ci].xforms[cubeI] = {
-              scale,
-              translate,
-              rotate,
-              matrix: new Matrix4()
-                .translate(translate)
-                .rotateXYZ(rotate)
-                .scale(scale)
-            };
-
-            instancedCubes[ci].matrices.set(instancedCubes[ci].xforms[cubeI].matrix, cubeI * 16);
+            offsets.set(
+              [(i - CUBES_PER_ROW / 2 + xOffset) * 4, (y + yOffset) * 4, (rowOffset + zOffset) * 4],
+              cubeI * 3
+            );
             ++cubeI;
           }
         }
 
-        instancedCubes[ci].updateMatrixBuffer();
+        instancedCubes[ci] = new InstancedCube(gl, {
+          count: NUM_CUBES,
+          offsets,
+          uniforms: {
+            uTexture: texture
+          }
+        });
         ci++;
       }
     }
@@ -299,7 +243,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const camZ = Math.cos(angle);
     const camY = Math.sin(angle);
-    const camRadius = 1100;
+    const camRadius = 500;
 
     projectionMatrix.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
     viewMatrix.lookAt({
