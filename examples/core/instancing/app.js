@@ -152,21 +152,23 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.attachTimeline(new Timeline());
     this.timeline.play();
 
-    const timeChannel = this.timeline.addChannel({
-      rate: 0.01
-    });
+    const timelineChannels = {
+      timeChannel: this.timeline.addChannel({
+        rate: 0.01
+      }),
 
-    const eyeXChannel = this.timeline.addChannel({
-      rate: 0.0003
-    });
+      eyeXChannel: this.timeline.addChannel({
+        rate: 0.0003
+      }),
 
-    const eyeYChannel = this.timeline.addChannel({
-      rate: 0.0004
-    });
+      eyeYChannel: this.timeline.addChannel({
+        rate: 0.0004
+      }),
 
-    const eyeZChannel = this.timeline.addChannel({
-      rate: 0.0002
-    });
+      eyeZChannel: this.timeline.addChannel({
+        rate: 0.0002
+      })
+    }
 
     this.cube = new InstancedCube(gl, {
       _animationLoop,
@@ -174,30 +176,17 @@ export default class AppAnimationLoop extends AnimationLoop {
       //   'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor)'
       // },
       uniforms: {
-        uTime: () => this.timeline.getTime(timeChannel),
-        // Basic projection matrix
-        uProjection: ({aspect}) =>
-          new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-        // Move the eye around the plane
-        uView: () =>
-          new Matrix4().lookAt({
-            center: [0, 0, 0],
-            eye: [
-              (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
-              (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
-              ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
-            ]
-          }),
-        // Rotate all the individual cubes
-        uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+
       }
     });
+
+    return {timelineChannels};
   }
 
   onRender(animationProps) {
-    const {gl} = animationProps;
-
+    const {gl, aspect, tick, timelineChannels} = animationProps;
     const {framebuffer, _mousePosition} = animationProps;
+    const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
 
     if (_mousePosition) {
       // use the center pixel location in device pixel range
@@ -210,6 +199,22 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    this.cube.setUniforms({
+      uTime: this.timeline.getTime(timeChannel),
+      // Basic projection matrix
+      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      // Move the eye around the plane
+      uView: new Matrix4().lookAt({
+        center: [0, 0, 0],
+        eye: [
+          (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
+          (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
+          ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
+        ]
+      }),
+      // Rotate all the individual cubes
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    });
     this.cube.draw();
   }
 
