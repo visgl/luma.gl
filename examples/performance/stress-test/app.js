@@ -122,10 +122,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         const y = (Math.random() - 0.5) * SCENE_DIM;
         const z = (Math.random() - 0.5) * SCENE_DIM;
 
-        offsets.set(
-          [x, y, z],
-          j * 3
-        );
+        offsets.set([x, y, z], j * 3);
       }
       instancedCubes[i] = new InstancedCube(gl, {
         count: CUBES_PER_DRAWCALL,
@@ -163,15 +160,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(props) {
     props.angle += 0.01;
 
-    const {
-      gl,
-      aspect,
-      projectionMatrix,
-      viewMatrix,
-      instancedCubes,
-      angle,
-      statsWidget
-    } = props;
+    const {gl, aspect, projectionMatrix, viewMatrix, instancedCubes, angle, statsWidget} = props;
 
     statsWidget.update();
 
