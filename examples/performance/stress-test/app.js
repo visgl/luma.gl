@@ -22,6 +22,8 @@ const INFO_HTML = `
 const NUM_DRAWCALLS = 5000;
 const CUBES_PER_DRAWCALL = 200;
 const SCENE_DIM = 500;
+const OPAQUE_DRAWCALLS = Math.floor(NUM_DRAWCALLS / 2);
+const TRANSPARENT_DRAWCALLS = NUM_DRAWCALLS - OPAQUE_DRAWCALLS;
 const NEAR = 200;
 const FAR = 2000.0;
 
@@ -39,7 +41,7 @@ uniform mat4 uProjection;
 out vec2 vUV;
 
 void main(void) {
-  gl_Position = uProjection * uView * vec4(positions + offset, 1.0);
+  gl_Position = uProjection * uView * vec4(positions * 4.0 + offset, 1.0);
   project_setNormal(normals);
   vUV = texCoords;
 }
@@ -51,12 +53,14 @@ precision highp float;
 
 in vec2 vUV;
 uniform sampler2D uTexture;
+uniform float alpha;
 
 out vec4 fragColor;
 void main(void) {
   fragColor.rgb = texture(uTexture, vUV).rgb;
-  fragColor.a = 1.0;
+  fragColor.a = alpha;
   fragColor = dirlight_filterColor(fragColor);
+  fragColor.rgb *= fragColor.a;
 }
 `;
 
@@ -73,9 +77,7 @@ class InstancedCube extends Model {
         modules: [dirlight],
         isInstanced: 1,
         instanceCount: count,
-        uniforms: {
-          uTexture: props.uniforms.uTexture
-        },
+        uniforms: props.uniforms,
         attributes: {
           offset: {
             buffer: offsetBuffer,
@@ -113,28 +115,20 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
 
-    const instancedCubes = new Array(NUM_DRAWCALLS);
+    const opaqueCubes = new Array(OPAQUE_DRAWCALLS);
+    const transparentCubes = new Array(TRANSPARENT_DRAWCALLS);
     const offsets = new Float32Array(CUBES_PER_DRAWCALL * 3);
 
-    for (let i = 0; i < NUM_DRAWCALLS; ++i) {
-      for (let j = 0; j < CUBES_PER_DRAWCALL; ++j) {
-        const x = (Math.random() - 0.5) * SCENE_DIM;
-        const y = (Math.random() - 0.5) * SCENE_DIM;
-        const z = (Math.random() - 0.5) * SCENE_DIM;
+    for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
+      opaqueCubes[i] = createDrawcall(gl, offsets, texture, 1.0);
+    }
 
-        offsets.set([x, y, z], j * 3);
-      }
-      instancedCubes[i] = new InstancedCube(gl, {
-        count: CUBES_PER_DRAWCALL,
-        offsets,
-        uniforms: {
-          uTexture: texture
-        }
-      });
+    for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
+      transparentCubes[i] = createDrawcall(gl, offsets, texture, 0.5);
     }
 
     const statsWidget = new StatsWidget(this.stats, {
-      title: `Drawing ${CUBES_PER_DRAWCALL * NUM_DRAWCALLS} cubes in ${NUM_DRAWCALLS} draw calls`,
+      title: `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`,
       css: {
         position: 'absolute',
         top: '10px',
@@ -151,7 +145,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     return {
       projectionMatrix,
       viewMatrix,
-      instancedCubes,
+      opaqueCubes,
+      transparentCubes,
       statsWidget,
       angle: 0
     };
@@ -160,7 +155,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(props) {
     props.angle += 0.01;
 
-    const {gl, aspect, projectionMatrix, viewMatrix, instancedCubes, angle, statsWidget} = props;
+    const {gl, aspect, projectionMatrix, viewMatrix, opaqueCubes, transparentCubes, angle, statsWidget} = props;
 
     statsWidget.update();
 
@@ -175,10 +170,22 @@ export default class AppAnimationLoop extends AnimationLoop {
       up: [0, 1, 0]
     });
 
-    withParameters(gl, {depthTest: true, depthFunc: GL.LEQUAL, cull: true}, () => {
-      clear(gl, {color: [0, 0, 0, 1], depth: true});
-      for (let k = 0; k < NUM_DRAWCALLS; ++k) {
-        instancedCubes[k].draw({
+    clear(gl, {color: [0, 0, 0, 1], depth: true});
+
+    withParameters(gl, {depthTest: true, depthMask: true, depthFunc: GL.LEQUAL, cull: true, blend: false}, () => {
+      for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
+        opaqueCubes[i].draw({
+          uniforms: {
+            uProjection: projectionMatrix,
+            uView: viewMatrix
+          }
+        });
+      }
+    });
+
+    withParameters(gl, {depthTest: true, depthMask: false, depthFunc: GL.LEQUAL, cull: true, blend: true, blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]}, () => {
+      for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
+        transparentCubes[i].draw({
           uniforms: {
             uProjection: projectionMatrix,
             uView: viewMatrix
@@ -187,6 +194,24 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
   }
+}
+
+function createDrawcall(gl, offsets, texture, alpha) {
+  for (let i = 0; i < CUBES_PER_DRAWCALL; ++i) {
+    const x = (Math.random() - 0.5) * SCENE_DIM;
+    const y = (Math.random() - 0.5) * SCENE_DIM;
+    const z = (Math.random() - 0.5) * SCENE_DIM;
+
+    offsets.set([x, y, z], i * 3);
+  }
+  return new InstancedCube(gl, {
+    count: CUBES_PER_DRAWCALL,
+    offsets,
+    uniforms: {
+      uTexture: texture,
+      alpha
+    }
+  });
 }
 
 if (typeof window !== 'undefined' && !window.website) {
