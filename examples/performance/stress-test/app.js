@@ -128,7 +128,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
 
     const statsWidget = new StatsWidget(this.stats, {
-      title: `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`,
+      title: `Drawing ${CUBES_PER_DRAWCALL *
+        OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL *
+        TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`,
       css: {
         position: 'absolute',
         top: '10px',
@@ -155,7 +157,16 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(props) {
     props.angle += 0.01;
 
-    const {gl, aspect, projectionMatrix, viewMatrix, opaqueCubes, transparentCubes, angle, statsWidget} = props;
+    const {
+      gl,
+      aspect,
+      projectionMatrix,
+      viewMatrix,
+      opaqueCubes,
+      transparentCubes,
+      angle,
+      statsWidget
+    } = props;
 
     statsWidget.update();
 
@@ -172,27 +183,42 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     clear(gl, {color: [0, 0, 0, 1], depth: true});
 
-    withParameters(gl, {depthTest: true, depthMask: true, depthFunc: GL.LEQUAL, cull: true, blend: false}, () => {
-      for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
-        opaqueCubes[i].draw({
-          uniforms: {
-            uProjection: projectionMatrix,
-            uView: viewMatrix
-          }
-        });
+    withParameters(
+      gl,
+      {depthTest: true, depthMask: true, depthFunc: GL.LEQUAL, cull: true, blend: false},
+      () => {
+        for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
+          opaqueCubes[i].draw({
+            uniforms: {
+              uProjection: projectionMatrix,
+              uView: viewMatrix
+            }
+          });
+        }
       }
-    });
+    );
 
-    withParameters(gl, {depthTest: true, depthMask: false, depthFunc: GL.LEQUAL, cull: true, blend: true, blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]}, () => {
-      for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
-        transparentCubes[i].draw({
-          uniforms: {
-            uProjection: projectionMatrix,
-            uView: viewMatrix
-          }
-        });
+    withParameters(
+      gl,
+      {
+        depthTest: true,
+        depthMask: false,
+        depthFunc: GL.LEQUAL,
+        cull: true,
+        blend: true,
+        blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
+      },
+      () => {
+        for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
+          transparentCubes[i].draw({
+            uniforms: {
+              uProjection: projectionMatrix,
+              uView: viewMatrix
+            }
+          });
+        }
       }
-    });
+    );
   }
 }
 
