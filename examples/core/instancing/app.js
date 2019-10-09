@@ -168,17 +168,9 @@ export default class AppAnimationLoop extends AnimationLoop {
       eyeZChannel: this.timeline.addChannel({
         rate: 0.0002
       })
-    }
+    };
 
-    this.cube = new InstancedCube(gl, {
-      _animationLoop,
-      // inject: {
-      //   'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor)'
-      // },
-      uniforms: {
-
-      }
-    });
+    this.cube = new InstancedCube(gl);
 
     return {timelineChannels};
   }
