@@ -1,15 +1,14 @@
 /* eslint-disable complexity */
 // Shared code between Model and MeshModel
 import ProgramManager from '../resource-management/program-manager';
-import {isWebGL, Query, Program, VertexArray, clear} from '@luma.gl/webgl';
+import {isWebGL, Program, VertexArray, clear} from '@luma.gl/webgl';
 import {MODULAR_SHADERS} from '@luma.gl/shadertools';
 import {
   getDebugTableForUniforms,
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
-import {addModel, removeModel, logModel, getOverrides} from '../debug/seer-integration';
-import {log, isObjectEmpty, uid, assert} from '../utils';
+import {log, uid, assert} from '../utils';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -28,10 +27,6 @@ export default class BaseModel {
 
   initialize(props) {
     this.props = {};
-
-    if (props.shaderCache) {
-      log.warn('ShaderCache property is deprecated')();
-    }
 
     this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.gl);
     this._programManagerState = -1;
@@ -55,19 +50,6 @@ export default class BaseModel {
 
     // Model manages uniform animation
     this.uniforms = {};
-    this.animatedUniforms = {};
-    this.animated = false;
-    this.animationLoop = null; // if set, used as source for animationProps
-
-    this.timerQueryEnabled = false;
-    this.timeElapsedQuery = undefined;
-    this.lastQueryReturned = true;
-
-    this.stats = {
-      accumulatedFrameTime: 0,
-      averageFrameTime: 0,
-      profileFrameCount: 0
-    };
 
     // picking options
     this.pickable = true;
@@ -102,15 +84,9 @@ export default class BaseModel {
     }
 
     this.vertexArray.delete();
-
-    removeModel(this.id);
   }
 
   // GETTERS
-
-  isAnimated() {
-    return this.animated;
-  }
 
   getProgram() {
     return this.program;
@@ -129,13 +105,6 @@ export default class BaseModel {
 
   // TODO - should actually set the uniforms
   setUniforms(uniforms = {}) {
-    // Let Seer override edited uniforms
-    uniforms = Object.assign({}, uniforms);
-    getOverrides(this.id, uniforms);
-
-    // Resolve any animated uniforms so that we have an initial value
-    uniforms = this._extractAnimatedUniforms(uniforms);
-
     Object.assign(this.uniforms, uniforms);
 
     return this;
@@ -177,19 +146,13 @@ export default class BaseModel {
       attributes = {},
       transformFeedback = this.transformFeedback,
       parameters = {},
-      vertexArray = this.vertexArray,
-      animationProps
+      vertexArray = this.vertexArray
     } = opts;
-
-    addModel(this);
 
     // Update model with any just provided attributes, settings or uniforms
     this.setAttributes(attributes);
     this.updateModuleSettings(moduleSettings);
     this.setUniforms(uniforms);
-
-    // Animate any function valued uniforms
-    this._refreshAnimationProps(animationProps);
 
     const logPriority = this._logDrawCallStart(2);
 
@@ -205,8 +168,6 @@ export default class BaseModel {
     const {onBeforeRender = noop, onAfterRender = noop} = this.props;
 
     onBeforeRender();
-
-    this._timerQueryStart();
 
     this.program.setUniforms(this.uniforms);
 
@@ -228,8 +189,6 @@ export default class BaseModel {
       })
     );
 
-    this._timerQueryEnd();
-
     onAfterRender();
 
     this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
@@ -250,25 +209,6 @@ export default class BaseModel {
 
     if ('pickable' in props) {
       this.pickable = props.pickable;
-    }
-
-    // if ('onBeforeRender' in props) {}
-    // if ('onAfterRender' in props) {}
-
-    // Experimental props
-    if ('timerQueryEnabled' in props) {
-      this.timerQueryEnabled = props.timerQueryEnabled && Query.isSupported(this.gl, ['timers']);
-      if (props.timerQueryEnabled && !this.timerQueryEnabled) {
-        log.warn('GPU timer not supported')();
-      }
-    }
-
-    if ('_animationProps' in props) {
-      this._setAnimationProps(props._animationProps);
-    }
-
-    if ('_animationLoop' in props) {
-      this.animationLoop = props._animationLoop;
     }
   }
 
@@ -328,105 +268,6 @@ export default class BaseModel {
     );
   }
 
-  // Refreshes animated uniforms, attempting to get animated props from animationLoop if registered
-  _refreshAnimationProps(animationProps) {
-    // Try to read animationProps
-    animationProps = animationProps || (this.animationLoop && this.animationLoop.animationProps);
-    if (animationProps) {
-      this._setAnimationProps(animationProps);
-    }
-  }
-
-  // Calculate new values for any function uniforms based on supplied animationProps
-  _evaluateAnimateUniforms(animationProps) {
-    if (!this.animated) {
-      return {};
-    }
-    const animatedUniforms = {};
-    for (const uniformName in this.animatedUniforms) {
-      const valueFunction = this.animatedUniforms[uniformName];
-      animatedUniforms[uniformName] = valueFunction(animationProps);
-    }
-    return animatedUniforms;
-  }
-
-  // Extracts a list of function valued uniforms, so we can update them before each draw call
-  // Also removes such uniforms from the returned list
-  _extractAnimatedUniforms(uniforms) {
-    let foundAnimated = false;
-
-    // Keep our animatedUniforms map up-to-date
-    for (const uniformName in uniforms) {
-      const newValue = uniforms[uniformName];
-      if (typeof newValue === 'function') {
-        this.animatedUniforms[uniformName] = newValue;
-        foundAnimated = true;
-      } else {
-        delete this.animatedUniforms[uniformName];
-      }
-    }
-
-    // Update animated flag: `Model` is animated if any uniforms are animated (i.e. functions)
-    this.animated = !isObjectEmpty(this.animatedUniforms);
-
-    if (!foundAnimated) {
-      return uniforms;
-    }
-
-    // If animated uniforms were found, remove them from ordinary uniform list
-    // `Program` class can't (and shouldn't) handle function valued uniforms
-    const staticUniforms = {};
-    for (const uniformName in uniforms) {
-      if (!this.animatedUniforms[uniformName]) {
-        staticUniforms[uniformName] = uniforms[uniformName];
-      }
-    }
-    return staticUniforms;
-  }
-
-  // Timer Queries
-
-  _timerQueryStart() {
-    if (this.timerQueryEnabled === true) {
-      if (!this.timeElapsedQuery) {
-        this.timeElapsedQuery = new Query(this.gl);
-      }
-      if (this.lastQueryReturned) {
-        this.lastQueryReturned = false;
-        this.timeElapsedQuery.beginTimeElapsedQuery();
-      }
-    }
-  }
-
-  _timerQueryEnd() {
-    if (this.timerQueryEnabled === true) {
-      this.timeElapsedQuery.end();
-      // TODO: Skip results if 'gl.getParameter(this.ext.GPU_DISJOINT_EXT)' returns false
-      // should this be incorporated into Query object?
-      if (this.timeElapsedQuery.isResultAvailable()) {
-        this.lastQueryReturned = true;
-        const elapsedTime = this.timeElapsedQuery.getTimerMilliseconds();
-
-        // Update stats (e.g. for seer)
-        this.stats.lastFrameTime = elapsedTime;
-        this.stats.accumulatedFrameTime += elapsedTime;
-        this.stats.profileFrameCount++;
-        this.stats.averageFrameTime =
-          this.stats.accumulatedFrameTime / this.stats.profileFrameCount;
-
-        // Log stats
-        log.log(
-          LOG_DRAW_PRIORITY,
-          `\
-GPU time ${this.program.id}: ${this.stats.lastFrameTime}ms \
-average ${this.stats.averageFrameTime}ms \
-accumulated: ${this.stats.accumulatedFrameTime}ms \
-count: ${this.stats.profileFrameCount}`
-        )();
-      }
-    }
-  }
-
   _logDrawCallStart(priority) {
     const logDrawTimeout = priority > 3 ? 0 : LOG_DRAW_TIMEOUT;
     if (log.priority < priority || Date.now() - this.lastLogTime < logDrawTimeout) {
@@ -482,8 +323,6 @@ count: ${this.stats.profileFrameCount}`
     log.table(priority, uniformTable)();
 
     log.table(priority + 1, configTable)();
-
-    logModel(this, uniforms);
 
     if (framebuffer) {
       framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
