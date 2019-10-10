@@ -26,16 +26,14 @@ export default class AppAnimationLoop extends AnimationLoop {
   onInitialize({gl}) {
     return {
       clipSpace: new ClipSpace(gl, {
-        fs: CONCENTRICS_FRAGMENT_SHADER,
-        uniforms: {
-          uTime: ({tick}) => tick * 0.01
-        }
+        fs: CONCENTRICS_FRAGMENT_SHADER
       })
     };
   }
 
   onRender(animationProps) {
-    animationProps.clipSpace.draw({animationProps});
+    animationProps.clipSpace.setUniforms({uTime: animationProps.tick * 0.01});
+    animationProps.clipSpace.draw();
   }
 
   static getInfo() {

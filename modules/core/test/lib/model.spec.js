@@ -75,20 +75,10 @@ test('Model#setters, getters', t => {
 
   const model = new Model(gl);
 
-  t.notOk(model.isAnimated(), 'model is not animated');
-
   model.setUniforms({
-    isPickingActive: 1,
-    rotationX: ({tick}) => (tick / 12) * 180
+    isPickingActive: 1
   });
   t.deepEqual(model.getUniforms(), {isPickingActive: 1}, 'uniforms are set');
-
-  t.ok(model.isAnimated(), 'model is animated');
-
-  model.setProps({
-    _animationProps: {tick: 6}
-  });
-  t.deepEqual(model.getUniforms(), {isPickingActive: 1, rotationX: 90}, 'uniforms are set');
 
   model.setInstanceCount(4);
   t.is(model.getInstanceCount(), 4, 'instance count is set');

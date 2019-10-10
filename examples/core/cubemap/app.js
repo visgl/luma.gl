@@ -141,15 +141,14 @@ export default class AppAnimationLoop extends AnimationLoop {
       prism: new Prism(gl, {
         _animationLoop: this,
         uniforms: {
-          uTextureCube: cubemap,
-          uModel: ({tick}) => new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+          uTextureCube: cubemap
         }
       })
     };
   }
 
   onRender(animationProps) {
-    const {gl, aspect, cube, prism} = animationProps;
+    const {gl, aspect, cube, prism, tick} = animationProps;
 
     const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
@@ -170,7 +169,8 @@ export default class AppAnimationLoop extends AnimationLoop {
         uView: view,
         uProjection: projection,
         uReflect,
-        uRefract
+        uRefract,
+        uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
   }
