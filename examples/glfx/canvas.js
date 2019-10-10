@@ -1,14 +1,6 @@
-/* global document, luma */
-const {
-  createGLContext,
-  Texture2D,
-  Model,
-  _MultiPassRenderer: MultiPassRenderer,
-  _ClearPass: ClearPass,
-  _CopyPass: CopyPass,
-  _TexturePass: TexturePass,
-  _ShaderModulePass: ShaderModulePass
-} = luma;
+/* global document, luma, multipass */
+const {createGLContext, Texture2D, Model} = luma;
+const {TexturePass, CopyPass, MultiPassRenderer, ClearPass, ShaderModulePass} = multipass;
 
 const DEFAULT_VS = `\
 attribute vec2 vertex;

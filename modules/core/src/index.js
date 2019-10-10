@@ -94,21 +94,6 @@ export {default as ProgramManager} from './resource-management/program-manager';
 // Experimental core exports
 export {default as _AnimationLoopProxy} from './lib/animation-loop-proxy';
 
-// Multipass Rendering
-export {default as _MultiPassRenderer} from './multipass/multi-pass-renderer';
-export {default as _RenderState} from './multipass/render-state';
-export {default as _Pass} from './multipass/pass';
-export {default as _CompositePass} from './multipass/composite-pass';
-export {default as _ClearPass} from './multipass/clear-pass';
-export {default as _RenderPass} from './multipass/render-pass';
-export {default as _CopyPass} from './multipass/copy-pass';
-export {default as _TexturePass} from './multipass/texture-pass';
-// export {default as _MaskPass} from './multipass/mask-pass';
-// export {default as _ClearMaskPass} from './multipass/clearmask-pass';
-
-export {default as _ShaderModulePass} from './multipass/shader-module-pass';
-// export {default as _Canvas} from './multipass/canvas';
-
 // Geometries
 export {default as ConeGeometry} from './geometries/cone-geometry';
 export {default as CubeGeometry} from './geometries/cube-geometry';
