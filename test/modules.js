@@ -27,7 +27,6 @@ import '../modules/core/test/webgl-dependent-tests';
 import '../modules/addons/test/';
 import '../modules/gpgpu/test/';
 import '../modules/effects/test';
-import '../modules/glfx/test/';
 
 // DEPRECATED: The classic "unscoped" luma.gl module (Supported for backwards compatibility)
 import '../modules/main//test';
