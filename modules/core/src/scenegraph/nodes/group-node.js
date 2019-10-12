@@ -57,9 +57,4 @@ export default class GroupNode extends ScenegraphNode {
       }
     }
   }
-
-  traverseReverse(visitor, opts) {
-    log.warn('traverseReverse is not reverse')();
-    return this.traverse(visitor, opts);
-  }
 }
