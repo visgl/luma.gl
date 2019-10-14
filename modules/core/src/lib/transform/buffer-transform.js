@@ -88,7 +88,7 @@ export default class BufferTransform {
 
   // auto create feedback buffers if requested
   _getFeedbackBuffers(props) {
-    const {sourceBuffers} = props;
+    const {sourceBuffers = {}} = props;
     const feedbackBuffers = {};
     if (this.bindings[this.currentIndex]) {
       // this gurantees a partial feedback buffer set doesn't update
@@ -99,13 +99,15 @@ export default class BufferTransform {
       // feedbackMap is defined as sourceBuffer as key and feedbackBuffer name as object
       for (const sourceName in this.feedbackMap) {
         const feedbackName = this.feedbackMap[sourceName];
-        feedbackBuffers[feedbackName] = sourceName;
+        if (sourceName in sourceBuffers) {
+          feedbackBuffers[feedbackName] = sourceName;
+        }
       }
     }
     Object.assign(feedbackBuffers, props.feedbackBuffers);
     for (const bufferName in feedbackBuffers) {
       const bufferOrRef = feedbackBuffers[bufferName];
-      if (typeof bufferOrRef === 'string' && sourceBuffers[bufferOrRef]) {
+      if (typeof bufferOrRef === 'string') {
         // Create new buffer with same layout and settings as source buffer
         const sourceBuffer = sourceBuffers[bufferOrRef];
         const {byteLength, usage, accessor} = sourceBuffer;
