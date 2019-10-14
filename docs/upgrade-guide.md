@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+## Upgrading from v7.3 to v8.0
+
+- Functions are no longer accepted as uniform values to the `Model` class. The same effect can be achieved by updating the uniform values each frame prior to drawing.
+- `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
+- `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
+- `ShaderCache` has been removed and superseded by `ProgramManager`.
+- Seer support has been removed.
+
 ## Upgrading from v7.2 to v7.3
 
 `ProgramManager` has replaced `ShaderCache` in the `Model` class as a more robust resource manager. Use of the `ShaderCache` with `Model` will not affect functionality in any way, but it is now a no-op.

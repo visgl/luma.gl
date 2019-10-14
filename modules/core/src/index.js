@@ -78,8 +78,6 @@ export {
 
 // CORE - WEBGL INDEPENDENT
 export {default as Geometry} from './geometry/geometry';
-export {default as Material} from './materials/material';
-export {AmbientLight, DirectionalLight, PointLight} from './lighting/light-source';
 
 // LIB
 export {default as AnimationLoop} from './lib/animation-loop';
@@ -118,17 +116,12 @@ export {default as PlaneGeometry} from './geometries/plane-geometry';
 export {default as SphereGeometry} from './geometries/sphere-geometry';
 export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
-// Materials
-export {default as PhongMaterial} from './materials/phong-material';
-export {default as PBRMaterial} from './materials/pbr-material';
-
 // SCENEGRAPH
 
 // Core nodes
 export {default as ScenegraphNode} from './scenegraph/nodes/scenegraph-node';
 export {default as GroupNode} from './scenegraph/nodes/group-node';
 export {default as ModelNode} from './scenegraph/nodes/model-node';
-export {default as CameraNode} from './scenegraph/nodes/camera-node';
 
 // TODO/CLEAN UP FOR V7
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)

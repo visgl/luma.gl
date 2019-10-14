@@ -114,7 +114,5 @@ test('GroupNode#traverse', t => {
     'should update grand child matrix'
   );
 
-  t.doesNotThrow(() => groupNode.traverseReverse(visitor));
-
   t.end();
 });
