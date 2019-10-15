@@ -86,7 +86,7 @@ export default class Transform {
 
   // Update some or all buffer/texture bindings.
   update(opts = {}) {
-    if (opts.elementCount) {
+    if ('elementCount' in opts) {
       this.model.setVertexCount(opts.elementCount);
     }
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);

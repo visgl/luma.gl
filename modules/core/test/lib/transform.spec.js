@@ -485,6 +485,12 @@ test('WebGL#Transform update', t => {
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
 
+  transform.update({
+    elementCount: 0
+  });
+
+  t.is(transform.model.vertexCount, 0, 'Element count is updated to 0');
+
   t.end();
 });
 
