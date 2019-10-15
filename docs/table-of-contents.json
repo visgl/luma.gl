@@ -50,12 +50,6 @@
           ]
         },
         {
-          "title": "Higher Level APIs",
-          "entries": [
-            { "entry": "docs/developer-guide/multipass/README.md" }
-          ]
-        },
-        {
           "title": "Tools and Tips",
           "entries": [
             { "entry": "docs/developer-guide/building-apps" },
@@ -84,8 +78,7 @@
             { "entry": "docs/api-reference/core/geometry" },
             { "entry": "docs/api-reference/core/load-file" },
             { "entry": "docs/api-reference/core/model" },
-            { "entry": "docs/api-reference/core/transform" },
-            { "entry": "docs/api-reference/core/shader-cache" }
+            { "entry": "docs/api-reference/core/transform" }
           ]
         },
         {
@@ -100,38 +93,10 @@
           ]
         },
         {
-          "title": "Lights",
-          "entries": [
-            { "entry": "docs/api-reference/core/lights/ambient-light" },
-            { "entry": "docs/api-reference/core/lights/directional-light" },
-            { "entry": "docs/api-reference/core/lights/point-light" }
-          ]
-        },
-        {
-          "title": "Materials",
-          "entries": [
-            { "entry": "docs/api-reference/core/materials/phong-material" },
-            { "entry": "docs/api-reference/core/materials/pbr-material" }
-          ]
-        },
-        {
           "title": "Effects",
           "entries": [
             { "entry": "docs/api-reference/effects/overview" },
             { "entry": "docs/api-reference/effects/glfx-shader-modules" }
-          ]
-        },
-        {
-          "title": "Multipass",
-          "entries": [
-            { "entry": "docs/api-reference/core/multipass/canvas" },
-            { "entry": "docs/api-reference/core/multipass/clear-pass" },
-            { "entry": "docs/api-reference/core/multipass/composite-pass" },
-            { "entry": "docs/api-reference/core/multipass/copy-pass" },
-            { "entry": "docs/api-reference/core/multipass/multi-pass-renderer" },
-            { "entry": "docs/api-reference/core/multipass/pass" },
-            { "entry": "docs/api-reference/core/multipass/render-pass" },
-            { "entry": "docs/api-reference/core/multipass/shader-module-pass" }
           ]
         },
         {
