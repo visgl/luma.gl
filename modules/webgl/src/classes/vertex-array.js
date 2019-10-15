@@ -114,7 +114,7 @@ export default class VertexArray {
     this.drawParams = this.drawParams || this._updateDrawParams();
 
     // Override with any application supplied draw parameters
-    return Object.assign({}, this.drawParams, appParameters);
+    return this.drawParams;
   }
 
   // Set (bind) an array or map of vertex array buffers, either in numbered or named locations.
