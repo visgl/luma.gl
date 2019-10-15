@@ -6,7 +6,6 @@ import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
-import {checkUniformValues, areUniformsEqual, getUniformCopy} from './uniforms';
 
 import {withParameters} from '../context';
 import {assertWebGL2Context, isWebGL2, getKey} from '../webgl-utils';
@@ -187,21 +186,24 @@ export default class Program extends Resource {
 
   setUniforms(uniforms = {}, _onChangeCallback = () => {}) {
     // Simple change detection - if all uniforms are unchanged, do nothing
-    let somethingChanged = false;
-    const changedUniforms = {};
-    for (const key in uniforms) {
-      if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
-        somethingChanged = true;
-        changedUniforms[key] = uniforms[key];
-        this.uniforms[key] = getUniformCopy(uniforms[key]);
-      }
-    }
+    // let somethingChanged = false;
+    // const changedUniforms = {};
+    // for (const key in uniforms) {
+    //   if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
+    //     somethingChanged = true;
+    //     changedUniforms[key] = uniforms[key];
+    //     this.uniforms[key] = getUniformCopy(uniforms[key]);
+    //   }
+    // }
 
-    if (somethingChanged) {
-      _onChangeCallback();
-      checkUniformValues(changedUniforms, this.id, this._uniformSetters);
-      this._setUniforms(changedUniforms);
-    }
+    // if (somethingChanged) {
+    //   _onChangeCallback();
+    //   checkUniformValues(changedUniforms, this.id, this._uniformSetters);
+    //   this._setUniforms(changedUniforms);
+    // }
+
+    this._setUniforms(uniforms);
+    Object.assign(this.uniforms, uniforms);
 
     return this;
   }

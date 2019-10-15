@@ -246,7 +246,6 @@ export default class Model {
       vertexArrayInstanced = drawParams.isInstanced
     } = this.props;
 
-
     if (vertexArrayInstanced && !this.isInstanced) {
       log.warn('Found instanced attributes on non-instanced model', this.id)();
     }
