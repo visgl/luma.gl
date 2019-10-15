@@ -1,3 +1,6 @@
+## v7.3.2
+- Transform Fix: elementCount update, feedback buffer creation (#1281)
+
 ## v7.3.1
 - DevicePixelRatio: Cache canvas size to avoid expensive setting on each frame (#1269)
 
