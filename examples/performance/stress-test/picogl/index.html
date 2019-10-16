@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stress Test</title>
+    <meta charset="utf-8">
+    <script src="./utils.js"></script>
+    <script src="./gl-matrix.js"></script>
+    <script src="./picogl.min.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #info {
+            position: absolute;
+            top: 10;
+            left: 10px;
+            color: white;
+        }
+
+        #timer {
+            position: absolute;
+            top: 20px;
+            left: 10px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="info"></div>
+    <canvas id="gl-canvas"></canvas>
+    <script type="x-shader/vs" id="vertex-draw">
+        #version 300 es
+        #define SHADER_NAME scene.vs
+
+        layout(location=0) in vec3 positions;
+        layout(location=1) in vec3 normals;
+        layout(location=2) in vec2 texCoords;
+        layout(location=3) in vec3 offset;
+
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+        out vec2 vUV;
+
+        out vec3 project_vNormalWorld;
+
+        void project_setNormal(vec3 normal) {
+          project_vNormalWorld = normal;
+        }
+
+        void main(void) {
+          gl_Position = uProjection * uView * vec4(positions * 4.0 + offset, 1.0);
+          project_setNormal(normals);
+          vUV = texCoords;
+        }
+    </script>
+    <script type="x-shader/vf" id="fragment-draw">
+        #version 300 es
+        precision highp float;
+        #define SHADER_NAME scene.fs
+
+        in vec2 vUV;
+        uniform sampler2D uTexture;
+        uniform float alpha;
+        uniform vec3 dirlight_uLightDirection;
+
+        in vec3 project_vNormalWorld;
+        out vec4 fragColor;
+
+        vec3 project_getNormal_World() {
+          return project_vNormalWorld;
+        }
+
+        vec4 dirlight_filterColor(vec4 color) {
+          vec3 normal = project_getNormal_World();
+          float d = abs(dot(normalize(normal), normalize(dirlight_uLightDirection)));
+          return vec4(color.rgb * d, color.a);
+        }
+
+        void main(void) {
+          fragColor.rgb = texture(uTexture, vUV).rgb;
+          fragColor.a = alpha;
+          fragColor = dirlight_filterColor(fragColor);
+          fragColor.rgb *= fragColor.a;
+        }
+    </script>
+    <script type="module">
+        utils.addTimerElement();
+
+        const NUM_DRAWCALLS = 5000;
+        const CUBES_PER_DRAWCALL = 200;
+        const SCENE_DIM = 500;
+        const OPAQUE_DRAWCALLS = Math.floor(NUM_DRAWCALLS / 2);
+        const TRANSPARENT_DRAWCALLS = NUM_DRAWCALLS - OPAQUE_DRAWCALLS;
+        const NEAR = 200;
+        const FAR = 2000.0;
+
+        document.getElementById("info").innerHTML = `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`;
+
+        let canvas = document.getElementById("gl-canvas");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let app = PicoGL.createApp(canvas)
+        .clearColor(0.0, 0.0, 0.0, 1.0)
+        .depthTest()
+        .depthFunc(PicoGL.LEQUAL)
+        .cullBackfaces()
+        .blendFunc(PicoGL.ONE, PicoGL.ONE_MINUS_SRC_ALPHA);
+
+        let timer = app.createTimer();
+
+        // SET UP PROGRAM
+        let vsSource =  document.getElementById("vertex-draw").text.trim();
+        let fsSource =  document.getElementById("fragment-draw").text.trim();
+
+        const opaqueCubes = new Array(OPAQUE_DRAWCALLS);
+        const transparentCubes = new Array(TRANSPARENT_DRAWCALLS);
+        const offsetData = new Float32Array(CUBES_PER_DRAWCALL * 3);
+
+        // SET UP GEOMETRY
+        let box = utils.createBox({dimensions: [2.0, 2.0, 2.0]})
+        let positions = app.createVertexBuffer(PicoGL.FLOAT, 3, box.positions);
+        let uv = app.createVertexBuffer(PicoGL.FLOAT, 2, box.uvs);
+        let normals = app.createVertexBuffer(PicoGL.FLOAT, 3, box.normals);
+
+
+        // SET UP UNIFORMS
+        let projMatrix = mat4.create();
+        let viewMatrix = mat4.create();
+        let lightDir = new Float32Array([1, 1, 2]);
+
+        Promise.all([
+            app.createPrograms([vsSource, fsSource]),
+            utils.loadImages(["../webgl-logo.png"])
+        ]).then(([
+            [program],
+            [image]
+        ]) => {
+            let texture = app.createTexture2D(image, {
+                flipY: true,
+                maxAnisotropy: PicoGL.WEBGL_INFO.MAX_TEXTURE_ANISOTROPY
+            });
+
+            for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
+                fillOffsetArray(offsetData);
+
+                let offsets = app.createVertexBuffer(PicoGL.FLOAT, 3, offsetData);
+
+                let boxArray = app.createVertexArray()
+                .vertexAttributeBuffer(0, positions)
+                .vertexAttributeBuffer(1, normals)
+                .vertexAttributeBuffer(2, uv)
+                .instanceAttributeBuffer(3, offsets);
+
+                opaqueCubes[i] = app.createDrawCall(program, boxArray)
+                .texture("uTexture", texture)
+                .uniform("alpha", 1.0)
+                .uniform("dirlight_uLightDirection", lightDir);
+            }
+
+            for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
+                fillOffsetArray(offsetData);
+
+                let offsets = app.createVertexBuffer(PicoGL.FLOAT, 3, offsetData);
+
+                let boxArray = app.createVertexArray()
+                .vertexAttributeBuffer(0, positions)
+                .vertexAttributeBuffer(1, normals)
+                .vertexAttributeBuffer(2, uv)
+                .instanceAttributeBuffer(3, offsets);
+
+                transparentCubes[i] = app.createDrawCall(program, boxArray)
+                .texture("uTexture", texture)
+                .uniform("alpha", 0.5)
+                .uniform("dirlight_uLightDirection", lightDir);
+            }
+
+            let angle = 0;
+            // SET UP DRAW CALL
+            function draw() {
+                if (timer.ready()) {
+                    utils.updateTimerElement(timer.cpuTime, timer.gpuTime);
+                }
+
+                timer.start()
+
+                angle += 0.01;
+                const camX = Math.cos(angle);
+                const camZ = Math.sin(angle);
+                const camRadius = 800;
+
+                mat4.perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, NEAR, FAR);
+                mat4.lookAt(viewMatrix, [camX * camRadius, 400, camZ * camRadius], [0, 0, 0], [0, 1, 0]);
+
+                app.clear()
+                .depthMask(true)
+                .noBlend();
+
+                for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
+                    opaqueCubes[i].uniform("uProjection", projMatrix)
+                    .uniform("uView", viewMatrix)
+                    .draw();
+                }
+
+                app.depthMask(false)
+                .blend();
+
+                for (let i = 0; i < TRANSPARENT_DRAWCALLS; ++i) {
+                    transparentCubes[i].uniform("uProjection", projMatrix)
+                    .uniform("uView", viewMatrix)
+                    .draw();
+                }
+
+                timer.end();
+
+                requestAnimationFrame(draw);
+            }
+
+            requestAnimationFrame(draw);
+        });
+
+        function fillOffsetArray(offsets) {
+          for (let i = 0; i < CUBES_PER_DRAWCALL; ++i) {
+            const x = (Math.random() - 0.5) * SCENE_DIM;
+            const y = (Math.random() - 0.5) * SCENE_DIM;
+            const z = (Math.random() - 0.5) * SCENE_DIM;
+
+            offsets.set([x, y, z], i * 3);
+          }
+        }
+
+    </script>
+</body>
+</html>
