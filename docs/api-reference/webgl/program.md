@@ -159,6 +159,7 @@ Notes:
 * Indexed rendering uses the element buffer (`GL.ELEMENT_ARRAY_BUFFER`), make sure your attributes or `VertexArray` contains one.
 * If a `TransformFeedback` object is supplied, `transformFeedback.begin()` and `transformFeedback.end()` will be called before and after the draw call.
 * A `Sampler` will only be bound if there is a matching Texture with the same key in the supplied `uniforms` object.
+* Once a uniform is set, it's size should not be changed. This is only a concern for array uniforms.
 
 The following WebGL APIs are called in this function:
 
