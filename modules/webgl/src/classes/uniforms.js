@@ -2,49 +2,109 @@ import GL from '@luma.gl/constants';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';
-import {log} from '../utils';
+import {log, assert} from '../utils';
 
 const UNIFORM_SETTERS = {
   // WEBGL1
 
   /* eslint-disable max-len */
-  [GL.FLOAT]: getArraySetter.bind(null, 'uniform1fv', toFloatArray, 1),
-  [GL.FLOAT_VEC2]: getArraySetter.bind(null, 'uniform2fv', toFloatArray, 2),
-  [GL.FLOAT_VEC3]: getArraySetter.bind(null, 'uniform3fv', toFloatArray, 3),
-  [GL.FLOAT_VEC4]: getArraySetter.bind(null, 'uniform4fv', toFloatArray, 4),
+  [GL.FLOAT]: getArraySetter.bind(null, 'uniform1fv', toFloatArray, 1, setVectorUniform),
+  [GL.FLOAT_VEC2]: getArraySetter.bind(null, 'uniform2fv', toFloatArray, 2, setVectorUniform),
+  [GL.FLOAT_VEC3]: getArraySetter.bind(null, 'uniform3fv', toFloatArray, 3, setVectorUniform),
+  [GL.FLOAT_VEC4]: getArraySetter.bind(null, 'uniform4fv', toFloatArray, 4, setVectorUniform),
 
-  [GL.INT]: getArraySetter.bind(null, 'uniform1iv', toIntArray, 1),
-  [GL.INT_VEC2]: getArraySetter.bind(null, 'uniform2iv', toIntArray, 2),
-  [GL.INT_VEC3]: getArraySetter.bind(null, 'uniform3iv', toIntArray, 3),
-  [GL.INT_VEC4]: getArraySetter.bind(null, 'uniform4iv', toIntArray, 4),
+  [GL.INT]: getArraySetter.bind(null, 'uniform1iv', toIntArray, 1, setVectorUniform),
+  [GL.INT_VEC2]: getArraySetter.bind(null, 'uniform2iv', toIntArray, 2, setVectorUniform),
+  [GL.INT_VEC3]: getArraySetter.bind(null, 'uniform3iv', toIntArray, 3, setVectorUniform),
+  [GL.INT_VEC4]: getArraySetter.bind(null, 'uniform4iv', toIntArray, 4, setVectorUniform),
 
-  [GL.BOOL]: getArraySetter.bind(null, 'uniform1iv', toIntArray, 1),
-  [GL.BOOL_VEC2]: getArraySetter.bind(null, 'uniform2iv', toIntArray, 2),
-  [GL.BOOL_VEC3]: getArraySetter.bind(null, 'uniform3iv', toIntArray, 3),
-  [GL.BOOL_VEC4]: getArraySetter.bind(null, 'uniform4iv', toIntArray, 4),
+  [GL.BOOL]: getArraySetter.bind(null, 'uniform1iv', toIntArray, 1, setVectorUniform),
+  [GL.BOOL_VEC2]: getArraySetter.bind(null, 'uniform2iv', toIntArray, 2, setVectorUniform),
+  [GL.BOOL_VEC3]: getArraySetter.bind(null, 'uniform3iv', toIntArray, 3, setVectorUniform),
+  [GL.BOOL_VEC4]: getArraySetter.bind(null, 'uniform4iv', toIntArray, 4, setVectorUniform),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL.FLOAT_MAT2]: getMatrixSetter.bind(null, 'uniformMatrix2fv', 4),
-  [GL.FLOAT_MAT3]: getMatrixSetter.bind(null, 'uniformMatrix3fv', 9),
-  [GL.FLOAT_MAT4]: getMatrixSetter.bind(null, 'uniformMatrix4fv', 16),
+  [GL.FLOAT_MAT2]: getArraySetter.bind(null, 'uniformMatrix2fv', toFloatArray, 4, setMatrixUniform),
+  [GL.FLOAT_MAT3]: getArraySetter.bind(null, 'uniformMatrix3fv', toFloatArray, 9, setMatrixUniform),
+  [GL.FLOAT_MAT4]: getArraySetter.bind(
+    null,
+    'uniformMatrix4fv',
+    toFloatArray,
+    16,
+    setMatrixUniform
+  ),
 
   [GL.SAMPLER_2D]: getSamplerSetter,
   [GL.SAMPLER_CUBE]: getSamplerSetter,
 
   // WEBGL2 - unsigned integers, irregular matrices, additional texture samplers
 
-  [GL.UNSIGNED_INT]: getArraySetter.bind(null, 'uniform1uiv', toUIntArray, 1),
-  [GL.UNSIGNED_INT_VEC2]: getArraySetter.bind(null, 'uniform2uiv', toUIntArray, 2),
-  [GL.UNSIGNED_INT_VEC3]: getArraySetter.bind(null, 'uniform3uiv', toUIntArray, 3),
-  [GL.UNSIGNED_INT_VEC4]: getArraySetter.bind(null, 'uniform4uiv', toUIntArray, 4),
+  [GL.UNSIGNED_INT]: getArraySetter.bind(null, 'uniform1uiv', toUIntArray, 1, setVectorUniform),
+  [GL.UNSIGNED_INT_VEC2]: getArraySetter.bind(
+    null,
+    'uniform2uiv',
+    toUIntArray,
+    2,
+    setVectorUniform
+  ),
+  [GL.UNSIGNED_INT_VEC3]: getArraySetter.bind(
+    null,
+    'uniform3uiv',
+    toUIntArray,
+    3,
+    setVectorUniform
+  ),
+  [GL.UNSIGNED_INT_VEC4]: getArraySetter.bind(
+    null,
+    'uniform4uiv',
+    toUIntArray,
+    4,
+    setVectorUniform
+  ),
 
   // uniformMatrix(false): don't transpose the matrix
-  [GL.FLOAT_MAT2x3]: getMatrixSetter.bind(null, 'uniformMatrix2x3fv', 6),
-  [GL.FLOAT_MAT2x4]: getMatrixSetter.bind(null, 'uniformMatrix2x4fv', 8),
-  [GL.FLOAT_MAT3x2]: getMatrixSetter.bind(null, 'uniformMatrix3x2fv', 6),
-  [GL.FLOAT_MAT3x4]: getMatrixSetter.bind(null, 'uniformMatrix3x4fv', 12),
-  [GL.FLOAT_MAT4x2]: getMatrixSetter.bind(null, 'uniformMatrix4x2fv', 8),
-  [GL.FLOAT_MAT4x3]: getMatrixSetter.bind(null, 'uniformMatrix4x3fv', 12),
+  [GL.FLOAT_MAT2x3]: getArraySetter.bind(
+    null,
+    'uniformMatrix2x3fv',
+    toFloatArray,
+    6,
+    setMatrixUniform
+  ),
+  [GL.FLOAT_MAT2x4]: getArraySetter.bind(
+    null,
+    'uniformMatrix2x4fv',
+    toFloatArray,
+    8,
+    setMatrixUniform
+  ),
+  [GL.FLOAT_MAT3x2]: getArraySetter.bind(
+    null,
+    'uniformMatrix3x2fv',
+    toFloatArray,
+    6,
+    setMatrixUniform
+  ),
+  [GL.FLOAT_MAT3x4]: getArraySetter.bind(
+    null,
+    'uniformMatrix3x4fv',
+    toFloatArray,
+    12,
+    setMatrixUniform
+  ),
+  [GL.FLOAT_MAT4x2]: getArraySetter.bind(
+    null,
+    'uniformMatrix4x2fv',
+    toFloatArray,
+    8,
+    setMatrixUniform
+  ),
+  [GL.FLOAT_MAT4x3]: getArraySetter.bind(
+    null,
+    'uniformMatrix4x3fv',
+    toFloatArray,
+    12,
+    setMatrixUniform
+  ),
 
   [GL.SAMPLER_3D]: getSamplerSetter,
   [GL.SAMPLER_2D_SHADOW]: getSamplerSetter,
@@ -203,89 +263,67 @@ function checkUniformArray(value) {
 }
 
 /**
- * Given two values of a uniform, returns `true` if they are equal
- */
-export function areUniformsEqual(uniform1, uniform2) {
-  if (Array.isArray(uniform1) || ArrayBuffer.isView(uniform1)) {
-    if (!uniform2) {
-      return false;
-    }
-    const len = uniform1.length;
-    if (uniform2.length !== len) {
-      return false;
-    }
-    for (let i = 0; i < len; i++) {
-      if (uniform1[i] !== uniform2[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return uniform1 === uniform2;
-}
-
-/**
  * Creates a copy of the uniform
  */
-export function getUniformCopy(uniform) {
-  if (Array.isArray(uniform) || ArrayBuffer.isView(uniform)) {
-    return uniform.slice();
+export function copyUniform(uniforms, key, value) {
+  if (Array.isArray(value) || ArrayBuffer.isView(value)) {
+    if (uniforms[key]) {
+      const dest = uniforms[key];
+      for (let i = 0, len = value.length; i < len; ++i) {
+        dest[i] = value[i];
+      }
+    } else {
+      uniforms[key] = value.slice();
+    }
+  } else {
+    uniforms[key] = value;
   }
-  return uniform;
 }
 
 function getSamplerSetter() {
   let cache = null;
   return (gl, location, value) => {
-    if (cache !== value) {
+    const update = cache !== value;
+    if (update) {
       gl.uniform1i(location, value);
       cache = value;
     }
+
+    return update;
   };
 }
 
-function getArraySetter(functionName, toArray, size) {
+function getArraySetter(functionName, toArray, size, uniformSetter) {
   let cache = null;
   return (gl, location, value) => {
-    const arrayVal = toArray(value, size);
+    const arrayValue = toArray(value, size);
+    const length = arrayValue.length;
     let update = false;
     if (cache === null) {
-      cache = new arrayVal.constructor(arrayVal.length);
+      cache = new Float32Array(length);
       update = true;
     } else {
-      for (let i = 0, len = arrayVal.length; i < len; ++i) {
-        if (arrayVal[i] !== cache[i]) {
+      assert(cache.length === length, 'Uniform length cannot change.');
+      for (let i = 0; i < length; ++i) {
+        if (arrayValue[i] !== cache[i]) {
           update = true;
           break;
         }
       }
     }
     if (update) {
-      gl[functionName](location, arrayVal);
-      cache.set(arrayVal);
+      uniformSetter(gl, functionName, location, arrayValue);
+      cache.set(arrayValue);
     }
+
+    return update;
   };
 }
 
-function getMatrixSetter(functionName, size) {
-  let cache = null;
-  return (gl, location, value) => {
-    const arrayVal = toFloatArray(value, size);
-    let update = false;
-    if (cache === null) {
-      cache = new Float32Array(arrayVal.length);
-      update = true;
-    } else {
-      for (let i = 0, len = arrayVal.length; i < len; ++i) {
-        if (arrayVal[i] !== cache[i]) {
-          update = true;
-          break;
-        }
-      }
-    }
-    if (update) {
-      gl[functionName](location, false, arrayVal);
-      cache.set(arrayVal);
-    }
-  };
+function setVectorUniform(gl, functionName, location, value) {
+  gl[functionName](location, value);
+}
+
+function setMatrixUniform(gl, functionName, location, value) {
+  gl[functionName](location, false, value);
 }
