@@ -109,11 +109,10 @@ export default class VertexArray {
     this.drawParams = null;
   }
 
-  getDrawParams(appParameters) {
+  getDrawParams() {
     // Auto deduced draw parameters
     this.drawParams = this.drawParams || this._updateDrawParams();
 
-    // Override with any application supplied draw parameters
     return this.drawParams;
   }
 
