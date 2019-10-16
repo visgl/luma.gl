@@ -25,6 +25,11 @@
             left: 10px;
             color: white;
         }
+
+        #gl-canvas {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -99,8 +104,9 @@
         document.getElementById("info").innerHTML = `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`;
 
         let canvas = document.getElementById("gl-canvas");
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let devicePixelRation = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * devicePixelRatio;
+        canvas.height = window.innerHeight * devicePixelRatio;
 
         let app = PicoGL.createApp(canvas)
         .clearColor(0.0, 0.0, 0.0, 1.0)
