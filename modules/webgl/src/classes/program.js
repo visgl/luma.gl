@@ -199,6 +199,7 @@ export default class Program extends Resource {
 
       if (uniformSetter) {
         let value = uniform;
+        let textureUpdate = false;
         if (value instanceof Framebuffer) {
           value = value.texture;
         }
@@ -214,9 +215,13 @@ export default class Program extends Resource {
 
           texture.bind(textureIndex);
           value = textureIndex;
+
+          textureUpdate = this.uniforms[uniformName] !== uniform;
         }
 
-        if (uniformSetter(value)) {
+        // NOTE(Tarek): uniformSetter returns whether
+        //   value had to be updated or not.
+        if (uniformSetter(value) || textureUpdate) {
           copyUniform(this.uniforms, uniformName, uniform);
         }
       }

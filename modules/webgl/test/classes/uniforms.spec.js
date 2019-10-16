@@ -3,10 +3,7 @@ import test from 'tape-catch';
 import {Program, Texture2D} from '@luma.gl/webgl';
 import {isBrowser} from '@luma.gl/webgl/utils';
 import {equals} from 'math.gl';
-import {
-  checkUniformValues,
-  parseUniformName
-} from '@luma.gl/webgl/classes/uniforms';
+import {checkUniformValues, parseUniformName} from '@luma.gl/webgl/classes/uniforms';
 
 import {fixture} from 'test/setup';
 
