@@ -206,23 +206,25 @@ export default class Program extends Resource {
           value = value.texture;
         }
         if (value instanceof Texture) {
-          // eslint-disable-next-line max-depth
-          if (uniformSetter.textureIndex === undefined) {
-            uniformSetter.textureIndex = this._textureIndexCounter++;
-          }
-
-          // Bind texture to index
-          const texture = value;
-          const {textureIndex} = uniformSetter;
-
-          texture.bind(textureIndex);
-          value = textureIndex;
-
-          if (!texture.loaded) {
-            this._texturesRenderable = false;
-          }
-
           textureUpdate = this.uniforms[uniformName] !== uniform;
+
+          if (textureUpdate) {
+            // eslint-disable-next-line max-depth
+            if (uniformSetter.textureIndex === undefined) {
+              uniformSetter.textureIndex = this._textureIndexCounter++;
+            }
+
+            // Bind texture to index
+            const texture = value;
+            const {textureIndex} = uniformSetter;
+
+            texture.bind(textureIndex);
+            value = textureIndex;
+
+            if (!texture.loaded) {
+              this._texturesRenderable = false;
+            }
+          }
         }
 
         // NOTE(Tarek): uniformSetter returns whether
