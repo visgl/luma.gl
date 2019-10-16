@@ -2,7 +2,7 @@
 
 * **Author**: Tarek Sherif
 * **Date**: September, 2019
-* **Status**: **Draft**
+* **Status**: **Approved**
 
 
 ## Summary
@@ -54,7 +54,7 @@ The actual refactor of luma.gl would occur in three phases:
 ### Clean Out Unused Code
 
 This will warrant some discussion. The following are systems I believe should be considered for removal or consolidation:
-- [ModelNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/model-node.js), [BaseModel](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js), [Model](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/model.js) - functionality could be supported with just the `Model` and `Group` classes
+- [BaseModel](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js) and [Model](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/model.js) - can be consolidated for simplicity as there are no other subclasses of `BaseModel`
 - [CameraNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/camera-node.js) - Appears unused
 - [Uniform animations](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L280-L333) - Complex, unused, and the `_extractAnimatedUniforms` method appears as 12th most costly function in the [deck.gl stress test](https://github.com/uber/deck.gl/tree/master/test/apps/stress-tests) CPU profile without there being any animated uniforms in the test scene.
 - [ShaderCache](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/shader-cache.js) - Superseded by `ProgramManager`
@@ -63,11 +63,11 @@ This will warrant some discussion. The following are systems I believe should be
 - [seer integration](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/debug/seer-integration.js) - Complex and will interfere with other parts of the system if enabled (e.g. [GPU timing](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L337-L376)). The `getOverrides` function appears as 6th most costly function in the [deck.gl stress test](https://github.com/uber/deck.gl/tree/master/test/apps/stress-tests) CPU profile without seer being active.
 - [debug/parameter-definitions](https://github.com/uber/luma.gl/blob/7.2-release/modules/debug/src/webgl-api-tracing/parameter-definitions.js) - Appears unused
 - [main module](https://github.com/uber/luma.gl/tree/7.2-release/modules/main) - Appears unused
-- [core/geometry](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/geometries) - Perhaps better suited to math.gl?
+- [core/geometry](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/geometries) - Move to math.gl
 
 ### Structure Modules Around Meaningful Themes
 
-I propose reducing the number of modules to five, around the following themes:
+I propose reducing the number of modules to seven, around the following themes:
 
 #### Constants
 
@@ -84,8 +84,12 @@ luma.gl would would contain two low-level modules:
 The `webgl` module would remain as it is now
 
 #### High-level
+Two modules would contain higher-level logic:
+- `core` containing the `Model` and `AnimationLoop` classes, and any currently-core classes they depend on directly.
+- `engine` would contain all remaining classes from current core including the scenegraph system and `Transform`.
 
-A new `engine` module would contain the higher-level constructs in luma.gl including models, resource management, rendering, GPGPU, etc.
+#### Debug
+All debug functionality should exist in the `debug` module. Ideally, any debug logic that exists elsewhere should be moved here, perhaps with helper functions to attach debug code to relevant classes.
 
 ### Rewrite Documentation and Examples
 
