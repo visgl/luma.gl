@@ -9,6 +9,7 @@ module.exports = {
     'no-inline-comments': 0,
     camelcase: 0,
     'max-statements': 0,
+    'max-depth': 0,
     'luma-gl-custom-rules/check-log-call': 1,
     'import/no-unresolved': ['error'],
     'import/no-extraneous-dependencies': [

@@ -295,15 +295,17 @@ function getSamplerSetter() {
 
 function getArraySetter(functionName, toArray, size, uniformSetter) {
   let cache = null;
+  let cacheLength = null;
   return (gl, location, value) => {
     const arrayValue = toArray(value, size);
     const length = arrayValue.length;
     let update = false;
     if (cache === null) {
       cache = new Float32Array(length);
+      cacheLength = length;
       update = true;
     } else {
-      assert(cache.length === length, 'Uniform length cannot change.');
+      assert(cacheLength === length, 'Uniform length cannot change.');
       for (let i = 0; i < length; ++i) {
         if (arrayValue[i] !== cache[i]) {
           update = true;
