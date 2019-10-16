@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PicoGL.js: Phong-shaded Cube</title>
+    <title>Stress Test</title>
     <meta charset="utf-8">
     <script src="./utils.js"></script>
     <script src="./gl-matrix.js"></script>
@@ -12,15 +12,23 @@
             overflow: hidden;
         }
 
+        #info {
+            position: absolute;
+            top: 10;
+            left: 10px;
+            color: white;
+        }
+
         #timer {
             position: absolute;
-            top: 10px;
+            top: 20px;
             left: 10px;
             color: white;
         }
     </style>
 </head>
 <body>
+    <div id="info"></div>
     <canvas id="gl-canvas"></canvas>
     <script type="x-shader/vs" id="vertex-draw">
         #version 300 es
@@ -87,6 +95,8 @@
         const TRANSPARENT_DRAWCALLS = NUM_DRAWCALLS - OPAQUE_DRAWCALLS;
         const NEAR = 200;
         const FAR = 2000.0;
+
+        document.getElementById("info").innerHTML = `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`;
 
         let canvas = document.getElementById("gl-canvas");
         canvas.width = window.innerWidth;
