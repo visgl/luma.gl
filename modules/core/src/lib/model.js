@@ -17,6 +17,9 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 
+const NOOP = () => {};
+const DRAW_PARAMS = {};
+
 export default class Model {
   constructor(gl, props = {}) {
     // Deduce a helpful id
@@ -25,6 +28,7 @@ export default class Model {
     this.id = id;
     this.gl = gl;
     this.id = props.id || uid('Model');
+    this.debug = props.debug || false;
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
   }
@@ -236,25 +240,34 @@ export default class Model {
     this.updateModuleSettings(moduleSettings);
     this.setUniforms(uniforms);
 
-    const logPriority = this._logDrawCallStart(2);
+    let logPriority;
 
-    const drawParams = this.vertexArray.getDrawParams(this.props);
-    if (drawParams.isInstanced && !this.isInstanced) {
+    if (this.debug) {
+      logPriority = this._logDrawCallStart(2);
+    }
+
+    const drawParams = this.vertexArray.getDrawParams();
+    const {
+      isIndexed = drawParams.isIndexed,
+      indexType = drawParams.indexType,
+      indexOffset = drawParams.indexOffset,
+      vertexArrayInstanced = drawParams.isInstanced
+    } = this.props;
+
+    if (vertexArrayInstanced && !this.isInstanced) {
       log.warn('Found instanced attributes on non-instanced model', this.id)();
     }
 
-    const {isIndexed, indexType, indexOffset} = drawParams;
     const {isInstanced, instanceCount} = this;
 
-    const noop = () => {};
-    const {onBeforeRender = noop, onAfterRender = noop} = this.props;
+    const {onBeforeRender = NOOP, onAfterRender = NOOP} = this.props;
 
     onBeforeRender();
 
     this.program.setUniforms(this.uniforms);
 
     const didDraw = this.program.draw(
-      Object.assign({}, opts, {
+      Object.assign(DRAW_PARAMS, opts, {
         logPriority,
         uniforms: null, // Already set (may contain "function values" not understood by Program)
         framebuffer,
@@ -273,7 +286,9 @@ export default class Model {
 
     onAfterRender();
 
-    this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
+    if (this.debug) {
+      this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
+    }
 
     return didDraw;
   }

@@ -5,11 +5,13 @@ import {isBrowser} from '@luma.gl/webgl/utils';
 import {equals} from 'math.gl';
 import {
   checkUniformValues,
-  areUniformsEqual,
-  parseUniformName
+  parseUniformName,
+  getUniformSetter
 } from '@luma.gl/webgl/classes/uniforms';
 
 import {fixture} from 'test/setup';
+
+import {CACHING_TEST_CASES} from './uniform-cache-test-cases';
 
 const MATRIX_2 = [1, 0, 0, 1];
 
@@ -133,7 +135,6 @@ const WEBGL1_GOOD_UNIFORMS = {
   m4: new Float32Array(MATRIX_4), // FLOAT_MAT4  0x8B5C
 
   s2d: new Texture2D(fixture.gl) // SAMPLER_2D  0x8B5E
-  // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
 };
 
 const ARRAY_UNIFORM_SIZE = {
@@ -145,73 +146,8 @@ const WEBGL1_GOOD_UNIFORMS_ARRAY = {
   i: new Int32Array([40, -103, 34, 87, 26]),
   b: new Int32Array([false, false, true, true, false])
 };
-
-// const WEBGL1_ARRAYS_FRAGMENT_SHADER = `
-// precision highp float;
-
-// uniform float f[3];
-// uniform int i[3];
-// uniform bool b[3];
-// uniform vec2 v2[3];
-// uniform vec3 v3[3];
-// uniform vec4 v4[3];
-// // int vectors
-// // bool vectors
-// uniform mat2 m2[3];
-// uniform mat3 m3[3];
-// uniform mat4 m4[3];
-
-// uniform sampler2D s2d[5];
-// // uniform samplerCube sCube;
-
-// void main(void) {
-//   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-// }
-// `;
-
-// const WEBGL1_ARRAYS_GOOD_UNIFORMS = {
-//   f: 1.0,
-//   i: 1,
-//   b: true,
-//   v2: new Float32Array([...[1, 2], ...[1, 2], ...[1, 2]]),
-//   v3: new Float32Array([...[1, 2, 3], ...[1, 2, 3], ...[1, 2, 3]]),
-//   v4: new Float32Array([...[1, 2, 3, 4], ...[1, 2, 3, 4], ...[1, 2, 3, 4]]),
-//   // INT_VEC2  0x8B53
-//   // INT_VEC3  0x8B54
-//   // INT_VEC4  0x8B55
-//   // BOOL  0x8B56
-//   // BOOL_VEC2 0x8B57
-//   // BOOL_VEC3 0x8B58
-//   // BOOL_VEC4 0x8B59
-//   m2: new Float32Array([...MATRIX_2, ...MATRIX_2, ...MATRIX_2]),
-//   m3: new Float32Array([...MATRIX_3, ...MATRIX_3, ...MATRIX_3]),
-//   m4: new Float32Array([...MATRIX_4, ...MATRIX_4, ...MATRIX_4]),
-
-//   s2d: [new Texture2D(gl), new Texture2D(gl), new Texture2D(gl)]
-//   // sCube: new TextureCube(gl) // SAMPLER_CUBE  0x8B60
-// };
-
-// const WEBGL2_FRAGMENT_SHADER = `
-// precision highp float;
-// uniform sampler1D;
-// uniform sampler3D;
-
-// void main(void) {
-//   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-// }
-// `;
-
-// const WEBGL2_GOOD_UNIFORMS = {
-//   s1d: 2, // SAMPLER_1D  0x8B5E
-//   s3d: 3  // SAMPLER_3D  0x8B60
-// };
-
-// const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
-
 test('WebGL#Uniforms pre verify uniforms', t => {
   t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS, 'Uniform values are well formed'));
-
-  // t.throws()
 
   t.end();
 });
@@ -384,75 +320,6 @@ test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
   }
 });
 
-test('WebGL#Uniforms areUniformsEqual', t => {
-  const {gl} = fixture;
-
-  const TEST_TEXTURE = new Texture2D(gl);
-
-  const TEST_CASES = [
-    {
-      title: 'Numeric values',
-      value1: 1,
-      value2: 1,
-      equals: true
-    },
-    {
-      title: 'Numeric values',
-      value1: 1,
-      value2: 2,
-      equals: false
-    },
-    {
-      title: 'Texture objects',
-      value1: TEST_TEXTURE,
-      value2: TEST_TEXTURE,
-      equals: true
-    },
-    {
-      title: 'Texture objects',
-      value1: TEST_TEXTURE,
-      value2: new Texture2D(gl),
-      equals: false
-    },
-    {
-      title: 'null',
-      value1: null,
-      value2: null,
-      equals: true
-    },
-    {
-      title: 'Array vs array',
-      value1: [0, 0, 0],
-      value2: [0, 0, 0],
-      equals: true
-    },
-    {
-      title: 'TypedArray vs array',
-      value1: new Float32Array(3),
-      value2: [0, 0, 0],
-      equals: true
-    },
-    {
-      title: 'Array different length',
-      value1: [0, 0, 0, 0],
-      value2: new Float32Array(3),
-      equals: false
-    },
-    {
-      title: 'Array vs null',
-      value1: new Float32Array(3),
-      value2: null,
-      equals: false
-    }
-  ];
-
-  TEST_CASES.forEach(testCase => {
-    t.is(areUniformsEqual(testCase.value1, testCase.value2), testCase.equals, testCase.title);
-  });
-
-  t.end();
-});
-
 test('WebGL#Uniforms parseUniformName', t => {
   const regularUniform = parseUniformName('position');
   t.equal(regularUniform.name, 'position');
@@ -467,3 +334,52 @@ test('WebGL#Uniforms parseUniformName', t => {
   t.ok(!structArrayUniform.isArray);
   t.end();
 });
+
+test('WebGL#Uniforms caching', t => {
+  let called = false;
+
+  const setCalled = () => {
+    called = true;
+  };
+
+  const checkCalled = (expected, fn) => {
+    called = false;
+    fn();
+    t.ok(expected === called, 'Uniform setter was correctly cached.');
+  };
+
+  const glStub = {};
+
+  CACHING_TEST_CASES.forEach(testCase => {
+    if (!glStub[testCase.function]) {
+      glStub[testCase.function] = getUniformStub(t, testCase.arrayType, setCalled);
+    }
+  });
+
+  CACHING_TEST_CASES.forEach(testCase => {
+    const setter = getUniformSetter(glStub, null, {type: testCase.glType});
+
+    checkCalled(true, () => setter(testCase.data1));
+    checkCalled(false, () => setter(testCase.data1));
+    checkCalled(true, () => setter(testCase.data2));
+  });
+
+  t.end();
+});
+
+function getUniformStub(t, arrayType, called) {
+  return (location, transpose, value) => {
+    if (value === undefined) {
+      // Not matrix
+      value = transpose;
+    }
+
+    if (arrayType) {
+      t.equals(arrayType, value.constructor, 'Value is correct type.');
+    } else {
+      t.ok(!(Array.isArray(value) || ArrayBuffer.isView(value)), 'Value is not array');
+    }
+
+    called();
+  };
+}

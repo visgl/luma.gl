@@ -6,7 +6,7 @@ import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
-import {checkUniformValues, areUniformsEqual, getUniformCopy} from './uniforms';
+import {copyUniform, checkUniformValues} from './uniforms';
 
 import {withParameters} from '../context';
 import {assertWebGL2Context, isWebGL2, getKey} from '../webgl-utils';
@@ -54,9 +54,10 @@ export default class Program extends Resource {
   }
 
   initialize(props = {}) {
-    const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
+    const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS, debug = false} = props;
 
     this.hash = hash || ''; // Used by ProgramManager
+    this.debug = debug;
 
     // Create shaders if needed
     this.vs =
@@ -68,6 +69,8 @@ export default class Program extends Resource {
 
     // uniforms
     this.uniforms = {};
+
+    this._texturesRenderable = true;
 
     // Setup varyings if supplied
     if (varyings && varyings.length > 0) {
@@ -128,7 +131,7 @@ export default class Program extends Resource {
       this.setUniforms(uniforms || {});
     }
 
-    if (logPriority !== undefined) {
+    if (this.debug && logPriority !== undefined) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
         `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
@@ -185,22 +188,51 @@ export default class Program extends Resource {
     return true;
   }
 
-  setUniforms(uniforms = {}, _onChangeCallback = () => {}) {
-    // Simple change detection - if all uniforms are unchanged, do nothing
-    let somethingChanged = false;
-    const changedUniforms = {};
-    for (const key in uniforms) {
-      if (!areUniformsEqual(this.uniforms[key], uniforms[key])) {
-        somethingChanged = true;
-        changedUniforms[key] = uniforms[key];
-        this.uniforms[key] = getUniformCopy(uniforms[key]);
-      }
+  setUniforms(uniforms = {}) {
+    if (this.debug) {
+      checkUniformValues(uniforms, this.id, this._uniformSetters);
     }
 
-    if (somethingChanged) {
-      _onChangeCallback();
-      checkUniformValues(changedUniforms, this.id, this._uniformSetters);
-      this._setUniforms(changedUniforms);
+    this.gl.useProgram(this.handle);
+
+    for (const uniformName in uniforms) {
+      const uniform = uniforms[uniformName];
+      const uniformSetter = this._uniformSetters[uniformName];
+
+      if (uniformSetter) {
+        let value = uniform;
+        let textureUpdate = false;
+        if (value instanceof Framebuffer) {
+          value = value.texture;
+        }
+        if (value instanceof Texture) {
+          textureUpdate = this.uniforms[uniformName] !== uniform;
+
+          if (textureUpdate) {
+            // eslint-disable-next-line max-depth
+            if (uniformSetter.textureIndex === undefined) {
+              uniformSetter.textureIndex = this._textureIndexCounter++;
+            }
+
+            // Bind texture to index
+            const texture = value;
+            const {textureIndex} = uniformSetter;
+
+            texture.bind(textureIndex);
+            value = textureIndex;
+
+            if (!texture.loaded) {
+              this._texturesRenderable = false;
+            }
+          }
+        }
+
+        // NOTE(Tarek): uniformSetter returns whether
+        //   value had to be updated or not.
+        if (uniformSetter(value) || textureUpdate) {
+          copyUniform(this.uniforms, uniformName, uniform);
+        }
+      }
     }
 
     return this;
@@ -208,13 +240,14 @@ export default class Program extends Resource {
 
   // PRIVATE METHODS
 
-  // stub for shader chache, should reset uniforms to default valiues
-  reset() {}
-
   // Checks if all texture-values uniforms are renderable (i.e. loaded)
   // Note: This is currently done before every draw call
   _areTexturesRenderable() {
-    let texturesRenderable = true;
+    if (this._texturesRenderable) {
+      return true;
+    }
+
+    this._texturesRenderable = true;
 
     for (const uniformName in this.uniforms) {
       const uniformSetter = this._uniformSetters[uniformName];
@@ -230,12 +263,12 @@ export default class Program extends Resource {
         if (uniform instanceof Texture) {
           const texture = uniform;
           // Check that texture is loaded
-          texturesRenderable = texturesRenderable && texture.loaded;
+          this._texturesRenderable = this._texturesRenderable && texture.loaded;
         }
       }
     }
 
-    return texturesRenderable;
+    return this._texturesRenderable;
   }
 
   // Binds textures
@@ -257,43 +290,6 @@ export default class Program extends Resource {
         }
       }
     }
-  }
-
-  // Apply a set of uniform values to a program
-  // Only uniforms actually present in the linked program will be updated.
-  _setUniforms(uniforms) {
-    this.gl.useProgram(this.handle);
-
-    for (const uniformName in uniforms) {
-      let uniform = uniforms[uniformName];
-      const uniformSetter = this._uniformSetters[uniformName];
-
-      if (uniformSetter) {
-        if (uniform instanceof Framebuffer) {
-          uniform = uniform.texture;
-        }
-        if (uniform instanceof Texture) {
-          // eslint-disable-next-line max-depth
-          if (uniformSetter.textureIndex === undefined) {
-            uniformSetter.textureIndex = this._textureIndexCounter++;
-          }
-
-          // Bind texture to index
-          const texture = uniform;
-          const {textureIndex} = uniformSetter;
-
-          texture.bind(textureIndex);
-
-          // Set the uniform sampler to the texture index
-          uniformSetter(textureIndex);
-        } else {
-          // Just set the value
-          uniformSetter(uniform);
-        }
-      }
-    }
-
-    return this;
   }
 
   // RESOURCE METHODS

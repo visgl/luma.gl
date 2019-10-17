@@ -6,6 +6,7 @@
 - `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
 - `ShaderCache` has been removed and superseded by `ProgramManager`.
+- `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.
 - @luma.gl/glfx has been renamed to @luma.gl/effects.
 - @luma.gl/main has been removed. Use individual modules instead.
 - `Multipass` classes have been removed.

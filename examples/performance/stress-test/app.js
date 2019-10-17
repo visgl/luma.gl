@@ -165,10 +165,15 @@ export default class AppAnimationLoop extends AnimationLoop {
       opaqueCubes,
       transparentCubes,
       angle,
-      statsWidget
+      statsWidget,
+      tick
     } = props;
 
     statsWidget.update();
+
+    if (tick % 600 === 0) {
+      this.stats.reset();
+    }
 
     const camX = Math.cos(angle);
     const camZ = Math.sin(angle);

@@ -15,11 +15,6 @@ export {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
 import {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
 global.makeDebugContext = makeDebugContext;
 
-// Install additional parameter definitions on luma.gl classes
-// TODO: This needs a bit more plumbing
-// import {installParameterDefinitions} from './webgl-api-tracing/parameter-definitions';
-// installParameterDefinitions();
-
 // Since debug support has been explicitly installed, no qualms about printing to console
 // TODO - That said: We could import probe.gl from luma.gl
 log.info('@luma.gl/debug: WebGL debug support installed'); // eslint-disable-line
