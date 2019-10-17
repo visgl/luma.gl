@@ -203,6 +203,9 @@ export function getUniformSetter(gl, location, info) {
   if (!setter) {
     throw new Error(`Unknown GLSL uniform type ${info.type}`);
   }
+
+  // NOTE(Tarek): This construction is the ensure
+  // separate caches for all setters.
   return setter().bind(null, gl, location);
 }
 
@@ -279,7 +282,9 @@ export function copyUniform(uniforms, key, value) {
     uniforms[key] = value;
   }
 }
-
+// NOTE(Tarek): Setters maintain a cache
+// of the previously set value, and
+// avoid resetting it if it's the same.
 function getSamplerSetter() {
   let cache = null;
   return (gl, location, value) => {
