@@ -11,6 +11,8 @@ import {
 
 import {fixture} from 'test/setup';
 
+import {CACHING_TEST_CASES} from './uniform-cache-test-cases';
+
 const MATRIX_2 = [1, 0, 0, 1];
 
 const MATRIX_3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -334,8 +336,6 @@ test('WebGL#Uniforms parseUniformName', t => {
 });
 
 test('WebGL#Uniforms caching', t => {
-  const {gl} = fixture;
-
   let called = false;
 
   const setCalled = () => {
@@ -348,39 +348,21 @@ test('WebGL#Uniforms caching', t => {
     t.ok(expected === called, 'Uniform setter was correctly cached.');
   };
 
-  const glStub = {
-    uniform1fv: getUniformStub(t, Float32Array, setCalled),
-    uniform1iv: getUniformStub(t, Int32Array, setCalled),
-    uniform1uiv: getUniformStub(t, Uint32Array, setCalled),
-    uniformMatrix4fv: getUniformStub(t, Float32Array, setCalled),
-    uniform1i: getUniformStub(t, null, setCalled)
-  };
+  const glStub = {};
 
-  const floatSetter = getUniformSetter(glStub, null, {type: gl.FLOAT});
-  const intSetter = getUniformSetter(glStub, null, {type: gl.INT});
-  const uintSetter = getUniformSetter(glStub, null, {type: gl.UNSIGNED_INT});
-  const matrixSetter = getUniformSetter(glStub, null, {type: gl.FLOAT_MAT4});
-  const samplerSetter = getUniformSetter(glStub, null, {type: gl.SAMPLER_2D});
+  CACHING_TEST_CASES.forEach(testCase => {
+    if (!glStub[testCase.function]) {
+      glStub[testCase.function] = getUniformStub(t, testCase.arrayType, setCalled);
+    }
+  });
 
-  checkCalled(true, () => floatSetter(1));
-  checkCalled(false, () => floatSetter(1));
-  checkCalled(true, () => floatSetter(2));
+  CACHING_TEST_CASES.forEach(testCase => {
+    const setter = getUniformSetter(glStub, null, {type: testCase.glType});
 
-  checkCalled(true, () => intSetter(1));
-  checkCalled(false, () => intSetter(1));
-  checkCalled(true, () => intSetter(2));
-
-  checkCalled(true, () => uintSetter(1));
-  checkCalled(false, () => uintSetter(1));
-  checkCalled(true, () => uintSetter(2));
-
-  checkCalled(true, () => matrixSetter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]));
-  checkCalled(false, () => matrixSetter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]));
-  checkCalled(true, () => matrixSetter([1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]));
-
-  checkCalled(true, () => samplerSetter(1));
-  checkCalled(false, () => samplerSetter(1));
-  checkCalled(true, () => samplerSetter(2));
+    checkCalled(true, () => setter(testCase.data1));
+    checkCalled(false, () => setter(testCase.data1));
+    checkCalled(true, () => setter(testCase.data2));
+  });
 
   t.end();
 });
