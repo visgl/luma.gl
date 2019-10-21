@@ -1,7 +1,7 @@
 /* eslint-disable complexity */
 
 import GL from '@luma.gl/constants';
-import ProgramManager from '../resource-management/program-manager';
+import ProgramManager from './program-manager';
 import {isWebGL, Program, VertexArray, clear, TransformFeedback, Buffer} from '@luma.gl/webgl';
 import {
   getDebugTableForUniforms,

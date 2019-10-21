@@ -4,7 +4,7 @@
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies
 import '../modules/shadertools/test';
 // luma.gl core module: Test webgl-independent code, ensure webgl dependencies don't creep in
-import '../modules/core/test/webgl-independent-tests';
+import '../modules/core/test';
 
 // WEBGL-DEPENDENT TESTS
 
@@ -21,7 +21,7 @@ import '../modules/debug/test/';
 import '../modules/webgl/test';
 
 // luma.gl core module: Test webgl-dependent code now
-import '../modules/core/test/webgl-dependent-tests';
+import '../modules/engine/test/';
 
 // luma.gl sub modules
 import '../modules/addons/test/';

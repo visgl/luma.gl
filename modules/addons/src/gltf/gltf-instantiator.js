@@ -1,5 +1,6 @@
 import {Matrix4} from 'math.gl';
-import {Buffer, _Accessor as Accessor, GroupNode, log} from '@luma.gl/core';
+import {Buffer, _Accessor as Accessor, log} from '@luma.gl/core';
+import {GroupNode} from '@luma.gl/engine';
 
 import GLTFAnimator from './gltf-animator';
 import createGLTFModel from './create-gltf-model';

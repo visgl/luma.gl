@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {Buffer, Transform, Texture2D} from '@luma.gl/core';
+import {Buffer, Texture2D} from '@luma.gl/core';
+import {Transform} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';

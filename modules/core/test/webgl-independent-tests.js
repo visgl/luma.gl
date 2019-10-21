@@ -1,2 +1,0 @@
-import './geometry';
-import './scenegraph';

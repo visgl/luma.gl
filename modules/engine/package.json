@@ -1,19 +1,19 @@
 {
-  "name": "@luma.gl/addons",
+  "name": "@luma.gl/engine",
   "version": "7.4.0-alpha.2",
-  "description": "Additional classes for luma.gl",
+  "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/uber/luma.gl"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "keywords": [
     "webgl",
-    "glsl",
-    "debug",
+    "visualization",
+    "animation",
     "3d"
   ],
   "main": "dist/es5/index.js",
@@ -30,17 +30,15 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@loaders.gl/gltf": "^1.3.0",
-    "@loaders.gl/images": "^1.3.0",
+    "@babel/runtime": "^7.0.0",
     "@luma.gl/constants": "7.4.0-alpha.2",
-    "math.gl": "^3.0.0"
-  },
-  "peerDependencies": {
-    "@luma.gl/core": "^7.1.0",
-    "@luma.gl/engine": "^7.1.0"
-  },
-  "devDependencies": {
-    "@loaders.gl/core": "^1.3.0",
-    "@loaders.gl/polyfills": "^1.3.0"
+    "@luma.gl/core": "7.4.0-alpha.2",
+    "@luma.gl/shadertools": "7.4.0-alpha.2",
+    "@luma.gl/webgl": "7.4.0-alpha.2",
+    "@luma.gl/webgl-state-tracker": "7.4.0-alpha.2",
+    "@luma.gl/webgl2-polyfill": "7.4.0-alpha.2",
+    "math.gl": "^3.0.0",
+    "probe.gl": "^3.1.1",
+    "seer": "^0.2.4"
   }
 }

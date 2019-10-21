@@ -1,15 +1,14 @@
 import {
   AnimationLoop,
   setParameters,
-  ModelNode,
   picking,
   dirlight,
   readPixelsToArray,
   Buffer,
-  CubeGeometry,
   createShaderHook,
   createModuleInjection
 } from '@luma.gl/core';
+import {CubeGeometry, ModelNode} from '@luma.gl/engine';
 import {Timeline} from '@luma.gl/addons';
 import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Matrix4, radians} from 'math.gl';
