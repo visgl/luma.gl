@@ -22,3 +22,4 @@ export {default as ModelNode} from './scenegraph/nodes/model-node';
 
 export {default as Transform} from './transform/transform';
 
+export {default as ClipSpace} from './utils/clip-space';

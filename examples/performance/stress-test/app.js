@@ -7,9 +7,9 @@ import {
   Texture2D,
   Buffer,
   Model,
-  CubeGeometry,
   dirlight
 } from '@luma.gl/core';
+import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 

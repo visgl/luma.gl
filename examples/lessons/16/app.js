@@ -11,17 +11,14 @@ import GL from '@luma.gl/constants';
 import {
   AnimationLoop,
   Model,
-  Geometry,
   Texture2D,
   Program,
   Renderbuffer,
   Framebuffer,
   setParameters,
-  loadFile,
-  ModelNode,
-  CubeGeometry,
-  SphereGeometry
+  loadFile
 } from '@luma.gl/core';
+import {Geometry, ModelNode, CubeGeometry, SphereGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `

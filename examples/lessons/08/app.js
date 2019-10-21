@@ -1,6 +1,7 @@
 /* eslint-disable max-statements, array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, ModelNode, CubeGeometry} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters} from '@luma.gl/core';
+import {ModelNode, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `

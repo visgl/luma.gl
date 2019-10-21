@@ -10,9 +10,9 @@ import {
   UniformBufferLayout,
   Buffer,
   isWebGL2,
-  Model,
-  CubeGeometry
+  Model
 } from '@luma.gl/core';
+import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 /* eslint-disable spaced-comment */
 /* global document */

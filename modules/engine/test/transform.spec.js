@@ -1,4 +1,5 @@
-import {Buffer, Transform, Texture2D} from '@luma.gl/core';
+import {Buffer, Texture2D} from '@luma.gl/core';
+import {Transform} from '@luma.gl/engine';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';

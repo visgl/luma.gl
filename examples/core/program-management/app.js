@@ -1,11 +1,5 @@
-import {
-  AnimationLoop,
-  setParameters,
-  Model,
-  dirlight,
-  CubeGeometry,
-  ProgramManager
-} from '@luma.gl/core';
+import {AnimationLoop, setParameters, Model, dirlight, ProgramManager} from '@luma.gl/core';
+import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

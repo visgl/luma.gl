@@ -1,12 +1,6 @@
 import GL from '@luma.gl/constants';
-import {
-  AnimationLoop,
-  Texture2D,
-  setParameters,
-  Model,
-  SphereGeometry,
-  CubeGeometry
-} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters, Model} from '@luma.gl/core';
+import {SphereGeometry, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

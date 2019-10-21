@@ -1,12 +1,6 @@
 import GL from '@luma.gl/constants';
-import {
-  AnimationLoop,
-  Geometry,
-  Texture2D,
-  loadFile,
-  setParameters,
-  ModelNode
-} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, loadFile, setParameters} from '@luma.gl/core';
+import {Geometry, ModelNode} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

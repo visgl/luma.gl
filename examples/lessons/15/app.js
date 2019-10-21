@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters, Model, SphereGeometry} from '@luma.gl/core';
+import {AnimationLoop, Texture2D, setParameters, Model} from '@luma.gl/core';
+import {SphereGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 
 const EARTH_UNIFORMS = {

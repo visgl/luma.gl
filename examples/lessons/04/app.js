@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, Geometry, CubeGeometry, setParameters} from '@luma.gl/core';
+import {AnimationLoop, Model, setParameters} from '@luma.gl/core';
+import {Geometry, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
