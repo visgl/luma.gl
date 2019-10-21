@@ -33,6 +33,7 @@
     "@luma.gl/constants": "7.4.0-alpha.2"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^7.1.0"
+    "@luma.gl/core": "^7.1.0",
+    "@luma.gl/engine": "^7.1.0"
   }
 }

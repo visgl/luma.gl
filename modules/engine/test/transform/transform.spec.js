@@ -1,5 +1,6 @@
 import test from 'tape-catch';
-import {Buffer, Transform} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
+import {Transform} from '@luma.gl/engine';
 import {fixture} from 'test/setup';
 
 const VS = `\
