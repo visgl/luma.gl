@@ -18,7 +18,16 @@ typical configuration for isorender applications running on the server.`;
 // TODO(Tarek): OOGLY HACK to avoid webpack requiring headless
 //   browser bundles. Will be removed in 8.0 when we
 //   remove automatic headless context creation
-const m = module;
+// NOTE: Rollup does not process the line `const m = module;`
+//   and writes it out verbatim in its final output, which ends
+//   up falling over in browser environments at runtime. Added
+//   a `try/catch` block to fix usage in rollup builds.
+let m;
+try {
+  m = module;
+} catch (e) {
+  m = null;
+}
 
 // Load headless gl dynamically, if available
 export let headlessTypes = null;
