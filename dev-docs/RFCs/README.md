@@ -27,6 +27,11 @@ These are early ideas not yet associated with any release
 | [**Automatic Shader Module Injection**](vNext/automatic-shader-module-injection-rfc.md) | @ibgreen | **Draft** | Automatically inject code required by a shader module |
 | [**Dist Size Reduction**](vNext/reduce-distribution-size-rfc.md) | @ibgreen | **Draft** | Reduce luma.gl impact on app bundle size |
 
+## v8.0 RFCs
+| RFC | Author | Status | Description |
+| --- | ---    | ---    | ---         |
+|[**luma.gl Refactor**](v8.0/luma-refactor-rfc.md) | @tsherif | **Implemented** |  Timeline management system for animations |
+|[**Command Buffer API**](v8.0/command-buffer-rfc.md) | @ibgreen | **Draft** |  Buffer->Buffer/Texture->Texture/Buffer->Texture/Texture->Buffer API |
 
 ## v7.1 RFCs
 | RFC | Author | Status | Description |
