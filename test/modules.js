@@ -25,5 +25,3 @@ import '../modules/engine/test/';
 
 // luma.gl sub modules
 import '../modules/addons/test/';
-import '../modules/gpgpu/test/';
-import '../modules/effects/test';
