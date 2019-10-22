@@ -6,11 +6,11 @@ import {
   setParameters,
   resetParameters,
   withParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/gltools';
 
 import {Framebuffer, getKey} from '@luma.gl/core';
 
-import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl-state-tracker/unified-parameter-api/webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1} from '../data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from '../data/sample-function-settings';

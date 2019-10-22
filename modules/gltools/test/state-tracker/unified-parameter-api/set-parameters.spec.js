@@ -5,14 +5,14 @@ import {
   getParameter,
   getParameters,
   resetParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/gltools';
 
 import GL from '@luma.gl/constants';
 import {Framebuffer, getKey} from '@luma.gl/core';
 
 import {createTestContext} from 'test/setup';
 
-import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl-state-tracker/unified-parameter-api/webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from '../data/sample-enum-settings';
 

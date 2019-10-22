@@ -1,5 +1,5 @@
 {
-  "name": "@luma.gl/webgl2-polyfill",
+  "name": "@luma.gl/gltools",
   "version": "7.4.0-alpha.2",
   "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
   "license": "MIT",

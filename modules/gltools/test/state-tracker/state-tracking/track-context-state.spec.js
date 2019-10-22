@@ -1,19 +1,20 @@
 import test from 'tape-catch';
 import {createTestContext} from 'test/setup';
 
-import trackContextState, {
+import {
+  trackContextState,
   pushContextState,
   popContextState,
   getParameter,
   setParameters,
   resetParameters,
   getModifiedParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/gltools';
 
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
-} from '@luma.gl/webgl-state-tracker/unified-parameter-api/webgl-parameter-tables';
+} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from '../data/sample-enum-settings';
 

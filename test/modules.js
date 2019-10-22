@@ -13,8 +13,7 @@ import '@luma.gl/debug';
 
 // Generic webgl helper modules
 import '../modules/constants/test';
-import '../modules/webgl2-polyfill/test';
-import '../modules/webgl-state-tracker/test';
+import '../modules/gltools/test';
 import '../modules/debug/test/';
 
 // Main webgl classes

@@ -36,8 +36,7 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "@luma.gl/constants": "7.4.0-alpha.2",
-    "@luma.gl/webgl-state-tracker": "7.4.0-alpha.2",
-    "@luma.gl/webgl2-polyfill": "7.4.0-alpha.2",
+    "@luma.gl/gltools": "7.4.0-alpha.2",
     "probe.gl": "^3.1.1"
   }
 }

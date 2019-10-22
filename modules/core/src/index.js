@@ -36,7 +36,7 @@ export {
   setParameters,
   withParameters,
   getModifiedParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/gltools';
 
 // WEBGL1 OBJECTS/FUNCTIONS
 export {

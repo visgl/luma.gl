@@ -3,7 +3,7 @@ import {Transform} from '@luma.gl/engine';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
-import {setParameters, getParameter} from '@luma.gl/webgl-state-tracker';
+import {setParameters, getParameter} from '@luma.gl/gltools';
 
 const VS = `\
 #version 300 es
