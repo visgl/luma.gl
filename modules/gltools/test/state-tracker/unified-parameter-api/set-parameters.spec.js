@@ -8,7 +8,7 @@ import {
 } from '@luma.gl/gltools';
 
 import GL from '@luma.gl/constants';
-import {Framebuffer, getKey} from '@luma.gl/core';
+import {Framebuffer, getKey} from '@luma.gl/webgl';
 
 import {createTestContext} from 'test/setup';
 

@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import {createGLContext} from '@luma.gl/core';
+import {createGLContext} from '@luma.gl/webgl';
 import {
   assembleShaders,
   createShaderHook,

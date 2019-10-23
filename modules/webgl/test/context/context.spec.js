@@ -1,19 +1,19 @@
 const test = require('tape-catch');
 const {
   createGLContext,
-  glGetDebugInfo,
+  getContextDebugInfo,
   isWebGL,
   isWebGL2,
   resizeGLContext
-} = require('@luma.gl/core');
+} = require('@luma.gl/webgl');
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts({webgl2: false});
 test('WebGL#headless context creation', t => {
   t.ok(isWebGL(gl), 'Context creation ok');
   t.end();
 });
 
-test('WebGL#glGetDebugInfo', t => {
-  const info = glGetDebugInfo(gl);
+test('WebGL#getContextDebugInfo', t => {
+  const info = getContextDebugInfo(gl);
   t.ok(typeof info.vendor === 'string', 'info.vendor ok');
   t.ok(typeof info.renderer === 'string', 'info.renderer ok');
   t.end();

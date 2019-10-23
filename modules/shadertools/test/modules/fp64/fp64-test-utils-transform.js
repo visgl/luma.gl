@@ -22,7 +22,7 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/webgl';
 import {Transform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from 'math.gl';

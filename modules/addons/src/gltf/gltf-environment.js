@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube} from '@luma.gl/core';
+import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {loadImage} from '@loaders.gl/images';
 
 export default class GLTFEnvironment {

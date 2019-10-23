@@ -8,7 +8,7 @@ import {
   withParameters
 } from '@luma.gl/gltools';
 
-import {Framebuffer, getKey} from '@luma.gl/core';
+import {getKey, Framebuffer} from '@luma.gl/webgl';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
 

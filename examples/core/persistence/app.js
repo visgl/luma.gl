@@ -1,4 +1,6 @@
-import {AnimationLoop, setParameters, Model, clear, Framebuffer, Program} from '@luma.gl/core';
+import {AnimationLoop, Model} from '@luma.gl/core';
+import {clear, Framebuffer, Program} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Geometry, IcoSphereGeometry, ModelNode} from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from 'math.gl';
 

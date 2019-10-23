@@ -1,7 +1,8 @@
 import GL from '@luma.gl/constants';
 import luma from '@luma.gl/webgl/init';
 // TODO - Model test should not depend on Cube
-import {Buffer, Model, ProgramManager} from '@luma.gl/core';
+import {Model, ProgramManager} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/webgl';
 import {CubeGeometry} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 import test from 'tape-catch';

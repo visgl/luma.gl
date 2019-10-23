@@ -5,7 +5,9 @@ import {parse} from '@loaders.gl/core';
 import {DracoLoader} from '@loaders.gl/draco';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import GL from '@luma.gl/constants';
-import {AnimationLoop, setParameters, clear, log, lumaStats} from '@luma.gl/core';
+import {AnimationLoop, lumaStats} from '@luma.gl/core';
+import {clear, log} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {
   GLTFScenegraphLoader,
   createGLTFObjects,

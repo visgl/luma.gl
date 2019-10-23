@@ -1,6 +1,7 @@
 import test from 'tape-catch';
 import BufferTransform from '@luma.gl/engine/transform/buffer-transform';
-import {Buffer, Model, TransformFeedback} from '@luma.gl/core';
+import {Buffer, TransformFeedback} from '@luma.gl/webgl';
+import {Model} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 
 const VS = `\

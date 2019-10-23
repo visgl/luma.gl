@@ -23,7 +23,8 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 /* global window, document, */
 
-import {Buffer, Program, assembleShaders, registerShaderModules, fp64} from '@luma.gl/core';
+import {Buffer, Program} from '@luma.gl/webgl';
+import {assembleShaders, registerShaderModules, fp64} from '@luma.gl/shadertools';
 import {
   initializeGL,
   initializeTexTarget,

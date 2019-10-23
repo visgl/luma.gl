@@ -1,4 +1,4 @@
-import {Program} from '@luma.gl/core';
+import {Program} from '@luma.gl/webgl';
 import {Geometry, ModelNode} from '@luma.gl/engine';
 
 const VERTEX_SHADER = `\

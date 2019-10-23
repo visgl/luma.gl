@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/webgl';
 import {Transform} from '@luma.gl/engine';
 import {fixture} from 'test/setup';
 

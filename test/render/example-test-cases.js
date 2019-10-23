@@ -1,4 +1,4 @@
-import {setPathPrefix} from '@luma.gl/core';
+import {setPathPrefix} from '@luma.gl/webgl';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 

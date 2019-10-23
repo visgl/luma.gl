@@ -1,4 +1,6 @@
-import {AnimationLoop, setParameters, Model, dirlight, ProgramManager} from '@luma.gl/core';
+import {AnimationLoop, Model, ProgramManager} from '@luma.gl/core';
+import {setParameters} from '@luma.gl/gltools';
+import {dirlight} from '@luma.gl/shadertools';
 import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 

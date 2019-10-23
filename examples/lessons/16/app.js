@@ -8,16 +8,9 @@
 
 /* eslint-disable max-statements, indent, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {
-  AnimationLoop,
-  Model,
-  Texture2D,
-  Program,
-  Renderbuffer,
-  Framebuffer,
-  setParameters,
-  loadFile
-} from '@luma.gl/core';
+import {AnimationLoop, Model} from '@luma.gl/core';
+import {Texture2D, Program, Renderbuffer, Framebuffer, loadFile} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Geometry, ModelNode, CubeGeometry, SphereGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 

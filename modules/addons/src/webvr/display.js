@@ -1,4 +1,4 @@
-import {withParameters} from '@luma.gl/core';
+import {withParameters} from '@luma.gl/gltools';
 
 export default class Display {
   getViews(options) {

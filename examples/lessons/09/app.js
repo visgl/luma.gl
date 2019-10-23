@@ -1,5 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, setParameters} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/core';
+import {Texture2D} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4} from 'math.gl';
 import {Star} from './star';
 

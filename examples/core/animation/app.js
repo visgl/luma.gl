@@ -1,6 +1,8 @@
 /* global document */
 
-import {AnimationLoop, setParameters, dirlight} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/core';
+import {setParameters} from '@luma.gl/gltools';
+import {dirlight} from '@luma.gl/shadertools';
 import {ModelNode, CubeGeometry} from '@luma.gl/engine';
 import {Timeline, KeyFrames} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';

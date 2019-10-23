@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Model, setParameters} from '@luma.gl/core';
+import {AnimationLoop, Model} from '@luma.gl/core';
+import {setParameters} from '@luma.gl/gltools';
 import {Geometry, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from 'math.gl';
 

@@ -1,17 +1,16 @@
 import GL from '@luma.gl/constants';
+import {AnimationLoop, Model} from '@luma.gl/core';
 import {
-  AnimationLoop,
   Framebuffer,
-  setParameters,
   clear,
   Program,
   Texture2D,
   VertexArray,
   UniformBufferLayout,
   Buffer,
-  isWebGL2,
-  Model
-} from '@luma.gl/core';
+  isWebGL2
+} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 /* eslint-disable spaced-comment */

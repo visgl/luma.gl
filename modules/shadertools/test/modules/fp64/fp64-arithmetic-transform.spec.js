@@ -20,7 +20,7 @@
 
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
-import {glGetDebugInfo} from '@luma.gl/core';
+import {getContextDebugInfo} from '@luma.gl/webgl';
 import {runTests} from './fp64-test-utils-transform';
 const gl = fixture.gl2;
 
@@ -75,7 +75,7 @@ function getTestCasesFor(glslFunc) {
   if (!gl) {
     return [];
   }
-  const debugInfo = glGetDebugInfo(gl);
+  const debugInfo = getContextDebugInfo(gl);
   const testCases = commonTestCases.filter(testCase => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {

@@ -9,6 +9,8 @@
     "@luma.gl/webgl": "^7.3.0",
     "@luma.gl/engine": "^7.3.0",
     "@luma.gl/addons": "^7.3.0",
+    "@luma.gl/shadertools": "^7.3.0",
+    "@luma.gl/gltools": "^7.3.0",
     "math.gl": "^3.0.0"
   },
   "devDependencies": {

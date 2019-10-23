@@ -1,4 +1,6 @@
-import {AnimationLoop, setParameters, Model, Texture3D, Buffer, isWebGL2} from '@luma.gl/core';
+import {AnimationLoop, Model} from '@luma.gl/core';
+import {Texture3D, Buffer, isWebGL2} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {perlin, lerp, shuffle, range} from './perlin';
 

@@ -1,4 +1,4 @@
-import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/core';
+import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl';
 import Transform from '../../transform/transform';
 import GL from '@luma.gl/constants';
 import {

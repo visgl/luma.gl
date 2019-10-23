@@ -1,13 +1,7 @@
-import {
-  AnimationLoop,
-  setParameters,
-  picking,
-  dirlight,
-  readPixelsToArray,
-  Buffer,
-  createShaderHook,
-  createModuleInjection
-} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/core';
+import {readPixelsToArray, Buffer} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
+import {picking, dirlight, createShaderHook, createModuleInjection} from '@luma.gl/shadertools';
 import {CubeGeometry, ModelNode} from '@luma.gl/engine';
 import {Timeline} from '@luma.gl/addons';
 import {cssToDevicePixels} from '@luma.gl/webgl';

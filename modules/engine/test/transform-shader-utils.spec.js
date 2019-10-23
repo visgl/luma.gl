@@ -1,5 +1,5 @@
 import {updateForTextures} from '@luma.gl/engine/transform/transform-shader-utils';
-import {Texture2D} from '@luma.gl/core';
+import {Texture2D} from '@luma.gl/webgl';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 

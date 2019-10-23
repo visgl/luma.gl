@@ -1,5 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Texture2D, loadFile, setParameters} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/core';
+import {Texture2D, loadFile} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {loadWorldGeometry, World} from './world';
 import {EventManager} from 'mjolnir.js';
