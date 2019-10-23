@@ -9,13 +9,15 @@ const _global = typeof window === 'undefined' ? global : window;
 const lumaGL = require('@luma.gl/core');
 require('@luma.gl/debug');
 
-const filters = require('@luma.gl/glfx');
-
 const shadertools = require('@luma.gl/shadertools');
+
+const engine = require('@luma.gl/engine');
+
+const Timeline = require('@luma.gl/addons').Timeline;
 
 const mathGL = require('math.gl');
 
-_global.luma = Object.assign({}, _global.luma, lumaGL, {filters}, shadertools);
+_global.luma = Object.assign({}, _global.luma, lumaGL, shadertools, engine, {Timeline});
 
 _global.mathgl = mathGL;
 
