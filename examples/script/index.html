@@ -3,32 +3,13 @@
     <style>
       body {margin: 0; padding: 0;}
     </style>
-    <script src="../dist/lumagl.min.js"></script>
+    <script src="https://unpkg.com/@luma.gl/core/dist/dist.min.js"></script>
+    <script src="https://unpkg.com/@luma.gl/addons/dist/dist.min.js"></script>
+    <script src="https://unpkg.com/gl-matrix@3.1.0/gl-matrix-min.js"></script>
   </head>
   <body>
     <script>
-      const {
-        AnimationLoop,
-        setParameters,
-        picking,
-        dirlight,
-        readPixelsToArray,
-        Buffer,
-        createShaderHook,
-        createModuleInjection
-      } = luma;
-      const {CubeGeometry, ModelNode} = luma;
-      const {Timeline} = luma;
-      const {cssToDevicePixels} = luma;
-      const {Matrix4, radians} = mathgl;
-
-      const INFO_HTML = `
-      <p>
-      Cube drawn with <b>instanced rendering</b>.
-      <p>
-      A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-      single GPU draw call using instanced vertex attributes.
-      `;
+      const {mat4} = glMatrix;
 
       const SIDE = 256;
 
@@ -180,11 +161,15 @@
 
           this.cube = new InstancedCube(gl);
 
-          return {timelineChannels};
+          const modelMatrix = mat4.create();
+          const viewMatix = mat4.create();
+          const projMatrix = mat4.create();
+
+          return {timelineChannels, modelMatrix, viewMatix, projMatrix};
         }
 
         onRender(animationProps) {
-          const {gl, aspect, tick, timelineChannels} = animationProps;
+          const {gl, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
           const {framebuffer, _mousePosition} = animationProps;
           const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
 
@@ -197,23 +182,25 @@
             pickInstance(gl, deviceX, deviceY, this.cube, framebuffer);
           }
 
+          mat4.identity(modelMatrix);
+          mat4.rotateX(modelMatrix, modelMatrix, tick * 0.01);
+          mat4.rotateY(modelMatrix, modelMatrix, tick * 0.013);
+
           // Draw the cubes
           gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
           this.cube.setUniforms({
             uTime: this.timeline.getTime(timeChannel),
-            // Basic projection matrix
-            uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
-            // Move the eye around the plane
-            uView: new Matrix4().lookAt({
-              center: [0, 0, 0],
-              eye: [
+            uProjection: mat4.perspective(projMatrix, Math.PI / 3, aspect, 1, 2048.0),
+            uView: mat4.lookAt(viewMatix,
+              [
                 (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
                 (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
                 ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
-              ]
-            }),
-            // Rotate all the individual cubes
-            uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+              ],
+              [0, 0, 0],
+              [0, 1, 0]
+            ),
+            uModel: modelMatrix
           });
           this.cube.draw();
         }
