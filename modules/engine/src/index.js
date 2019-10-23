@@ -1,9 +1,6 @@
 // CORE - WEBGL INDEPENDENT
 export {default as Geometry} from './geometry/geometry';
 
-// Experimental core exports
-export {default as _AnimationLoopProxy} from './animation-loop-proxy/animation-loop-proxy';
-
 // Geometries
 export {default as ConeGeometry} from './geometries/cone-geometry';
 export {default as CubeGeometry} from './geometries/cube-geometry';
