@@ -1,6 +1,6 @@
-import {Matrix4} from 'math.gl';
 import {log} from '../../utils';
 import ScenegraphNode from './scenegraph-node';
+import {mat4_create, mat4_multiply} from './math-utils';
 
 export default class GroupNode extends ScenegraphNode {
   constructor(props = {}) {
@@ -46,8 +46,9 @@ export default class GroupNode extends ScenegraphNode {
     super.delete();
   }
 
-  traverse(visitor, {worldMatrix = new Matrix4()} = {}) {
-    const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
+  traverse(visitor, {worldMatrix = mat4_create()} = {}) {
+    const modelMatrix = mat4_create();
+    mat4_multiply(modelMatrix, worldMatrix, this.matrix);
 
     for (const child of this.children) {
       if (child instanceof GroupNode) {

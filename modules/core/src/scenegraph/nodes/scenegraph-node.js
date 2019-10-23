@@ -1,5 +1,5 @@
-import {Vector3, Matrix4} from 'math.gl';
 import {assert, uid} from '../../utils';
+import {mat4_create, mat4_multiply, mat4_translate, mat4_scale} from './math-utils';
 
 export default class ScenegraphNode {
   constructor(props = {}) {
@@ -8,10 +8,10 @@ export default class ScenegraphNode {
     this.id = id || uid(this.constructor.name);
 
     this.display = true; // whether to display the object at all
-    this.position = new Vector3();
-    this.rotation = new Vector3();
-    this.scale = new Vector3(1, 1, 1);
-    this.matrix = new Matrix4();
+    this.position = [0, 0, 0];
+    this.rotation = [0, 0, 0];
+    this.scale = [1, 1, 1];
+    this.matrix = mat4_create();
     this.userData = {};
 
     this.props = {};
@@ -47,12 +47,8 @@ export default class ScenegraphNode {
     return this;
   }
 
-  setMatrix(matrix, copyMatrix = true) {
-    if (copyMatrix) {
-      this.matrix.copy(matrix);
-    } else {
-      this.matrix = matrix;
-    }
+  setMatrix(matrix) {
+    this.matrix = matrix;
   }
 
   setMatrixComponents({position, rotation, scale, update = true}) {
@@ -73,13 +69,14 @@ export default class ScenegraphNode {
 
   updateMatrix() {
     const pos = this.position;
-    const rot = this.rotation;
+    // const rot = this.rotation;
     const scale = this.scale;
 
-    this.matrix.identity();
-    this.matrix.translate(pos);
-    this.matrix.rotateXYZ(rot);
-    this.matrix.scale(scale);
+    this.matrix = mat4_create();
+    mat4_translate(this.matrix, this.matrix, pos);
+    // TODO - this should be a quaternion. unify with glTF code in addons...
+    // this.matrix.rotateXYZ(rot);
+    mat4_scale(this.matrix, this.matrix, scale);
     return this;
   }
 
@@ -102,42 +99,16 @@ export default class ScenegraphNode {
     // assert(viewMatrix instanceof Matrix4);
     assert(viewMatrix);
     modelMatrix = modelMatrix || this.matrix;
-    const worldMatrix = new Matrix4(viewMatrix).multiplyRight(modelMatrix);
-    const worldInverse = worldMatrix.invert();
-    const worldInverseTranspose = worldInverse.transpose();
+
+    const worldMatrix = mat4_multiply(mat4_create(), viewMatrix, modelMatrix);
 
     return {
       viewMatrix,
       modelMatrix,
       objectMatrix: modelMatrix,
-      worldMatrix,
-      worldInverseMatrix: worldInverse,
-      worldInverseTransposeMatrix: worldInverseTranspose
+      worldMatrix
     };
   }
-
-  // TODO - copied code, not yet vetted
-  /*
-  transform() {
-    if (!this.parent) {
-      this.endPosition.set(this.position);
-      this.endRotation.set(this.rotation);
-      this.endScale.set(this.scale);
-    } else {
-      const parent = this.parent;
-      this.endPosition.set(this.position.add(parent.endPosition));
-      this.endRotation.set(this.rotation.add(parent.endRotation));
-      this.endScale.set(this.scale.add(parent.endScale));
-    }
-
-    const ch = this.children;
-    for (let i = 0; i < ch.length; ++i) {
-      ch[i].transform();
-    }
-
-    return this;
-  }
-  */
 
   _setScenegraphNodeProps(props) {
     if ('display' in props) {

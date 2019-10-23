@@ -11,7 +11,7 @@ attribute vec2 texCoord1;
 uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat4 worldInverseTransposeMatrix;
+// uniform mat4 worldInverseTransposeMatrix;
 
 uniform bool enableLights;
 uniform vec3 ambientColor;
@@ -34,7 +34,7 @@ void main(void) {
   } else {
     vec3 plightDirection;
     vec3 pointWeight = vec3(0.0, 0.0, 0.0);
-    vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+    // vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
     float directionalLightWeighting = max(dot(transformedNormal.xyz, lightingDirection), 0.0);
     for (int i = 0; i < LIGHT_MAX; i++) {
       if (i < numberPoints) {

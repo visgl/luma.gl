@@ -49,7 +49,7 @@ function accessorToJsArray(accessor) {
 // TODO: share with GLTFInstantiator
 const helperMatrix = new Matrix4();
 function applyTranslationRotationScale(gltfNode, node) {
-  node.matrix.identity();
+  node.matrix = new Matrix4();
 
   if (gltfNode.translation) {
     node.matrix.translate(gltfNode.translation);

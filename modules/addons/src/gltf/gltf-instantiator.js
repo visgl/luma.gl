@@ -73,7 +73,7 @@ export default class GLTFInstantiator {
       if (gltfNode.matrix) {
         node.setMatrix(gltfNode.matrix);
       } else {
-        node.matrix.identity();
+        node.matrix = new Matrix4();
 
         if (gltfNode.translation) {
           node.matrix.translate(gltfNode.translation);

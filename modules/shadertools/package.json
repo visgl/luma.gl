@@ -36,7 +36,6 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0",
-    "math.gl": "^3.0.0"
+    "@babel/runtime": "^7.0.0"
   }
 }

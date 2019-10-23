@@ -1,4 +1,3 @@
-import {Vector3} from 'math.gl';
 import Geometry from '../geometry/geometry';
 import {uid} from '../utils';
 
@@ -117,7 +116,9 @@ function tesselateIcosaHedron(props) {
     const u3 = 1 - phi3 / PI2;
     const vec1 = [x3 - x2, y3 - y2, z3 - z2];
     const vec2 = [x1 - x2, y1 - y2, z1 - z2];
-    const normal = new Vector3(vec1).cross(vec2).normalize();
+    const normal = [0, 0, 0];
+    vec3_cross(normal, vec1, vec2);
+    vec3_normalize(normal, normal);
     let newIndex;
 
     if (
@@ -131,32 +132,32 @@ function tesselateIcosaHedron(props) {
       indices.push(newIndex);
       texCoords[newIndex * 2 + 0] = 1;
       texCoords[newIndex * 2 + 1] = v1;
-      normals[newIndex * 3 + 0] = normal.x;
-      normals[newIndex * 3 + 1] = normal.y;
-      normals[newIndex * 3 + 2] = normal.z;
+      normals[newIndex * 3 + 0] = normal[0];
+      normals[newIndex * 3 + 1] = normal[1];
+      normals[newIndex * 3 + 2] = normal[2];
 
       positions.push(positions[in2 + 0], positions[in2 + 1], positions[in2 + 2]);
       newIndex = positions.length / 3 - 1;
       indices.push(newIndex);
       texCoords[newIndex * 2 + 0] = 1;
       texCoords[newIndex * 2 + 1] = v2;
-      normals[newIndex * 3 + 0] = normal.x;
-      normals[newIndex * 3 + 1] = normal.y;
-      normals[newIndex * 3 + 2] = normal.z;
+      normals[newIndex * 3 + 0] = normal[0];
+      normals[newIndex * 3 + 1] = normal[1];
+      normals[newIndex * 3 + 2] = normal[2];
 
       positions.push(positions[in3 + 0], positions[in3 + 1], positions[in3 + 2]);
       newIndex = positions.length / 3 - 1;
       indices.push(newIndex);
       texCoords[newIndex * 2 + 0] = 1;
       texCoords[newIndex * 2 + 1] = v3;
-      normals[newIndex * 3 + 0] = normal.x;
-      normals[newIndex * 3 + 1] = normal.y;
-      normals[newIndex * 3 + 2] = normal.z;
+      normals[newIndex * 3 + 0] = normal[0];
+      normals[newIndex * 3 + 1] = normal[1];
+      normals[newIndex * 3 + 2] = normal[2];
     }
 
-    normals[in1 + 0] = normals[in2 + 0] = normals[in3 + 0] = normal.x;
-    normals[in1 + 1] = normals[in2 + 1] = normals[in3 + 1] = normal.y;
-    normals[in1 + 2] = normals[in2 + 2] = normals[in3 + 2] = normal.z;
+    normals[in1 + 0] = normals[in2 + 0] = normals[in3 + 0] = normal[0];
+    normals[in1 + 1] = normals[in2 + 1] = normals[in3 + 1] = normal[1];
+    normals[in1 + 2] = normals[in2 + 2] = normals[in3 + 2] = normal[2];
 
     texCoords[iu1 + 0] = u1;
     texCoords[iu1 + 1] = v1;
@@ -176,4 +177,50 @@ function tesselateIcosaHedron(props) {
       TEXCOORD_0: {size: 2, value: new Float32Array(texCoords)}
     }
   };
+}
+
+// From gl-matrix
+
+/**
+ * Computes the cross product of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {vec3} a the first operand
+ * @param {vec3} b the second operand
+ * @returns {vec3} out
+ */
+function vec3_cross(out, a, b) {
+  /* eslint-disable one-var */
+  const ax = a[0],
+    ay = a[1],
+    az = a[2];
+  const bx = b[0],
+    by = b[1],
+    bz = b[2];
+  out[0] = ay * bz - az * by;
+  out[1] = az * bx - ax * bz;
+  out[2] = ax * by - ay * bx;
+  return out;
+}
+
+/**
+ * Normalize a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {vec3} a vector to normalize
+ * @returns {vec3} out
+ */
+export function vec3_normalize(out, a) {
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
+  let len = x * x + y * y + z * z;
+  if (len > 0) {
+    // TODO: evaluate use of glm_invsqrt here?
+    len = 1 / Math.sqrt(len);
+  }
+  out[0] = a[0] * len;
+  out[1] = a[1] * len;
+  out[2] = a[2] * len;
+  return out;
 }

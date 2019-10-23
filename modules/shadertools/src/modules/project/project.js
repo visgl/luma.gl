@@ -1,4 +1,5 @@
-import {Matrix4} from 'math.gl';
+// TODO - this module should probably not do the matrix multiplication in JS...
+import {mat4_create, mat4_multiply} from './math-utils';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -30,9 +31,8 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS, prevUniforms = {}) {
 
   // COMPOSITE UNIFORMS
   if (opts.projectionMatrix !== undefined || opts.viewMatrix !== undefined) {
-    uniforms.viewProjectionMatrix = new Matrix4(opts.projectionMatrix).multiplyRight(
-      opts.viewMatrix
-    );
+    uniforms.viewProjectionMatrix = mat4_create();
+    mat4_multiply(uniforms.viewMatrix, opts.projectionMatrix, opts.viewMatrix);
   }
 
   return uniforms;

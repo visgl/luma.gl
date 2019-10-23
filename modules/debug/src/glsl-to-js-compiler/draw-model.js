@@ -1,5 +1,7 @@
 import {compileVertexShader, compileFragmentShader} from './compile-shader';
-import {clamp, lerp} from 'math.gl';
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const lerp = (a, b, t) => t * b + (1 - t) * a; // interpolate between two numbers
 
 const shaderCache = {};
 
