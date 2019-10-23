@@ -77,7 +77,9 @@ export function mat4_multiply(out, a, b) {
  * @returns {mat4} out
  */
 export function mat4_translate(out, a, v) {
-  const x = v[0], y = v[1], z = v[2];
+  const x = v[0],
+    y = v[1],
+    z = v[2];
   if (a === out) {
     out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
     out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
@@ -98,7 +100,9 @@ export function mat4_translate(out, a, v) {
  * @returns {mat4} out
  **/
 export function mat4_scale(out, a, v) {
-  const x = v[0], y = v[1], z = v[2];
+  const x = v[0],
+    y = v[1],
+    z = v[2];
   out[0] = a[0] * x;
   out[1] = a[1] * x;
   out[2] = a[2] * x;
