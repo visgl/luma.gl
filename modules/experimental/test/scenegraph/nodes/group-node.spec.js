@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 import test from 'tape-catch';
-import {GroupNode, ScenegraphNode} from '@luma.gl/engine';
+import {GroupNode, ScenegraphNode} from '@luma.gl/experimental';
 import {Matrix4} from 'math.gl';
 
 test('GroupNode#construction', t => {

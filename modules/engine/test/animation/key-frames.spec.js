@@ -1,4 +1,4 @@
-import {KeyFrames} from '@luma.gl/addons';
+import {KeyFrames} from '@luma.gl/engine';
 import test from 'tape-catch';
 
 test('Animation#KeyFrames', t => {

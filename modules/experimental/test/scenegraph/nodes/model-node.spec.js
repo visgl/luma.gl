@@ -22,7 +22,7 @@ import test from 'tape-catch';
 import {makeSpy} from '@probe.gl/test-utils';
 import {fixture} from 'test/setup';
 import {Model} from '@luma.gl/core';
-import {ModelNode} from '@luma.gl/engine';
+import {ModelNode} from '@luma.gl/experimental';
 
 test('ModelNode#constructor', t => {
   const {gl} = fixture;

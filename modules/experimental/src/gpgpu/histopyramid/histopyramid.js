@@ -1,5 +1,5 @@
 import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl';
-import Transform from '../../transform/transform';
+import {Transform} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,

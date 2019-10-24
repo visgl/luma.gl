@@ -2,7 +2,8 @@ import GL from '@luma.gl/constants';
 import {AnimationLoop} from '@luma.gl/core';
 import {Texture2D, loadFile} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {Geometry, ModelNode} from '@luma.gl/engine';
+import {Geometry} from '@luma.gl/engine';
+import {ModelNode} from '@luma.gl/experimental';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `

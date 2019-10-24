@@ -1,7 +1,7 @@
 {
-  "name": "@luma.gl/addons",
+  "name": "@luma.gl/experimental",
   "version": "7.4.0-alpha.2",
-  "description": "Additional classes for luma.gl",
+  "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
     "type": "git",

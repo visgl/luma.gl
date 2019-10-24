@@ -12,12 +12,11 @@ export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geom
 
 // SCENEGRAPH
 
-// Core nodes
-export {default as ScenegraphNode} from './scenegraph/nodes/scenegraph-node';
-export {default as GroupNode} from './scenegraph/nodes/group-node';
-export {default as ModelNode} from './scenegraph/nodes/model-node';
-
 export {default as Transform} from './transform/transform';
+
+// Animation
+export {Timeline} from './animation/timeline';
+export {KeyFrames} from './animation/key-frames';
 
 // EFFECTS
 
@@ -55,11 +54,3 @@ export {default as fxaa} from './effects/shader-modules/fxaa/fxaa';
 // experimental shader modules and passes
 export {default as _depth} from './effects/experimental/shader-modules/depth';
 export {default as _convolution} from './effects/experimental/shader-modules/convolution';
-
-// GPGPU utilities for luma.gl
-
-export {
-  buildHistopyramidBaseLevel as _buildHistopyramidBaseLevel,
-  getHistoPyramid as _getHistoPyramid,
-  histoPyramidGenerateIndices as _histoPyramidGenerateIndices
-} from './gpgpu/histopyramid/histopyramid';

@@ -9,6 +9,7 @@
     "@luma.gl/engine": "^7.3.0",
     "@luma.gl/gltools": "^7.3.0",
     "@luma.gl/webgl": "^7.3.0",
+    "@luma.gl/experimental": "^7.3.0",
     "math.gl": "^3.0.0"
   },
   "devDependencies": {

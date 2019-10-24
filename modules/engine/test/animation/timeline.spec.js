@@ -1,4 +1,4 @@
-import {Timeline} from '@luma.gl/addons';
+import {Timeline} from '@luma.gl/engine';
 import test from 'tape-catch';
 
 // NOTE(Tarek): This is for the x * CHANNEL1_RATE

@@ -1,5 +1,6 @@
 import {Program} from '@luma.gl/webgl';
-import {Geometry, ModelNode} from '@luma.gl/engine';
+import {Geometry} from '@luma.gl/engine';
+import {ModelNode} from '@luma.gl/experimental';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;

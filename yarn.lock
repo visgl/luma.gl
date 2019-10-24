@@ -1363,11 +1363,6 @@
   resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.1.1.tgz#f966fad9069722974e1b7bcae2fcd7a2444090dc"
   integrity sha512-F+lkZzMJNPvGeTCkOezyHafAb48ottMx10PYx3j1rsKFBM2v1LgBHnV1I37xjkrx8PMhdb/2zMg80nRrniudGw==
 
-"@luma.gl/glfx@7.4.0-alpha.2":
-  version "7.4.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@luma.gl/glfx/-/glfx-7.4.0-alpha.2.tgz#2ce468feafc7c08bfa18979fc77f88238740a1c6"
-  integrity sha512-8g1rFSSleiabZjv2YcEoCPOwY20fGFpSM6aE1IoJ/w+CLAHs+PCq2Wl98UIDnwDB8wwTwGdyT3A9BnH53B2ozA==
-
 "@luma.gl/webgl-state-tracker@7.4.0-alpha.2":
   version "7.4.0-alpha.2"
   resolved "https://registry.yarnpkg.com/@luma.gl/webgl-state-tracker/-/webgl-state-tracker-7.4.0-alpha.2.tgz#516055072d1bb737edd0c78d7bae24f8c3b67bcf"
