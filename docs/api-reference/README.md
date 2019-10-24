@@ -4,14 +4,15 @@ luma.gl contains a lot of classes and functions that might make new users wonder
 
 | Module                           | Description |
 | ---                              | --- |
-| src/webgl | A set of classes covering all **WebGL objects**. Currently luma.gl supports WebGL 2.0. These classes organize the WebGL2 API and makes it easy to work with in JavaScript. |
-| src/core | A set of common classes across all 3D graphics applications. They are on a higher abstraction level than the WebGL API. luma.gl's signature [`Model`](/docs/api-reference/core/model.md) class is in this folder. |
-| src/geometry | This folder contains a collection of geometric primitives extending from the base `Geometry` class, including `ConeGeometry`, `CubeGeometry`, `IcoSphereGeometry`, `PlaneGeometry`, `SphereGeometry`, `SphereGeometry`. They can be used to create [`Models`](/docs/api-reference/core/model.md) class with common geometries|
-| src/models | Some predefined subclasses of [`Models`](/docs/api-reference/core/model.md) created from simple geometries from the `src/geometry` folder|
-| src/io | Node.js and browser file loaders. Also enables using streams in browser. |
-| src/packages/events | A very simple browser event handling class used by luma.gl examples |
-| src/shadertools | luma.gl's internal shader module system and shader assembler utility |
-| src/webgl-utils | Miscellaneous utilies |
+| constants | WebGL constants |
+| shadertools | Tools for composing/transpiling shaders. Text-only, no WebGL dependencies |
+| gltools | Tools for supporting, optimizing direct coding with the WebGL API |
+| webgl | Object-oriented API wrapping WebGL constructs |
+| core | Minimal, simplified high-level API for 3D drawing |
+| engine | High-level drawing and GPGPU APIs |
+| debug| Debug tooling for other modules|  |
+| test-utils | Utilities to support testing |
+| experimental | A place for APIs that are unfinished or currently unused. APIs should not be considered officially supported, use at your own risk! |
 
 ## WebGL Classes
 

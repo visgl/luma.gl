@@ -12,7 +12,7 @@ import {AnimationLoop, Model} from '@luma.gl/core';
 import {Texture2D, Program, Renderbuffer, Framebuffer, loadFile} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Geometry, CubeGeometry, SphereGeometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/engine';
+import {ModelNode} from '@luma.gl/experimental';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
