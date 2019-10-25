@@ -1,6 +1,5 @@
 import {Program} from '@luma.gl/webgl';
-import {Geometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
+import {Geometry, Model} from '@luma.gl/engine';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -54,7 +53,7 @@ function loadWorldGeometry(data) {
   });
 }
 
-export class World extends ModelNode {
+export class World extends Model {
   constructor(opts = {}) {
     const program = new Program(opts.gl, {
       fs: FRAGMENT_SHADER,

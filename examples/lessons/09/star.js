@@ -1,6 +1,6 @@
 import {Program} from '@luma.gl/webgl';
-import {Geometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
+import {Model, Geometry} from '@luma.gl/engine';
+import {Matrix4} from 'math.gl';
 
 const VERTEX_SHADER = `\
 attribute vec3 positions;
@@ -31,7 +31,7 @@ void main(void) {
 }
 `;
 
-export class Star extends ModelNode {
+export class Star extends Model {
   constructor(gl, opts = {}) {
     const program = new Program(gl, {
       fs: FRAGMENT_SHADER,
@@ -77,6 +77,8 @@ export class Star extends ModelNode {
     this.rotationSpeed = opts.rotationSpeed;
     this.spin = 0;
 
+    this.matrix = new Matrix4();
+
     this.randomiseColors();
   }
 
@@ -101,9 +103,11 @@ export class Star extends ModelNode {
       this.randomiseColors();
     }
 
-    this.position.set(Math.cos(this.angle) * this.dist, Math.sin(this.angle) * this.dist, 0);
-    this.setRotation([0, 0, this.spin]);
+    this.matrix
+      .identity()
+      .translate([Math.cos(this.angle) * this.dist, Math.sin(this.angle) * this.dist, 0])
+      .rotateXYZ([0, 0, this.spin]);
+
     this.spin += 0.1;
-    this.updateMatrix();
   }
 }

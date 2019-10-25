@@ -2,7 +2,7 @@ import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types';
 import {lumaStats} from '@luma.gl/core';
 import {setPathPrefix} from '@luma.gl/webgl';
-import {VRDisplay} from '@luma.gl/experimental';
+import {VRDisplay} from '@luma.gl/addons';
 import StatsWidget from '@probe.gl/stats-widget';
 
 import InfoPanel from './info-panel';

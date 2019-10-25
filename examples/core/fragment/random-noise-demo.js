@@ -1,6 +1,7 @@
 // RANDOM NOISE
 
-import {AnimationLoop, createGLContext, ClipSpace} from '@luma.gl/core';
+import {AnimationLoop, ClipSpace} from '@luma.gl/engine';
+import {createGLContext} from '@luma.gl/webgl';
 
 const RANDOM_NOISE_FRAGMENT_SHADER = `\
 precision highp float;

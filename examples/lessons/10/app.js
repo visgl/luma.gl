@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/engine';
 import {Texture2D, loadFile} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';

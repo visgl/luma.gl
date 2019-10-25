@@ -1,9 +1,7 @@
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
 import {readPixelsToArray, Buffer} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {picking, dirlight, createShaderHook, createModuleInjection} from '@luma.gl/shadertools';
-import {CubeGeometry, Timeline} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
 import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Matrix4, radians} from 'math.gl';
 
@@ -38,7 +36,7 @@ createModuleInjection('picking', {
 });
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends ModelNode {
+class InstancedCube extends Model {
   constructor(gl, props) {
     let offsets = [];
     for (let i = 0; i < SIDE; i++) {

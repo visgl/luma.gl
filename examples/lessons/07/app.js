@@ -1,9 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {Texture2D} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {CubeGeometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
 import {Matrix4} from 'math.gl';
 
 export const INFO_HTML = `
@@ -200,7 +198,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     return {
-      cube: new ModelNode(gl, {
+      cube: new Model(gl, {
         geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
@@ -216,13 +214,11 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
     // update element matrix to rotate cube on its center
-    cube.setRotation([xRot, yRot, 0]).updateMatrix();
-
     const uMVMatrix = new Matrix4()
       .lookAt({eye: [0, 0, 0]})
       .translate([0, 0, z])
       .rotateXYZ([tick * 0.01, tick * 0.01, tick * 0.01])
-      .multiplyRight(cube.matrix);
+      .rotateXYZ([xRot, yRot, 0]);
 
     const {lightDirection, ambientColor} = getHTMLControls();
 

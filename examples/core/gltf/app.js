@@ -5,16 +5,10 @@ import {parse} from '@loaders.gl/core';
 import {DracoLoader} from '@loaders.gl/draco';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import GL from '@luma.gl/constants';
-import {AnimationLoop, lumaStats} from '@luma.gl/core';
-import {Timeline} from '@luma.gl/engine';
-import {clear, log} from '@luma.gl/webgl';
+import {AnimationLoop, Timeline} from '@luma.gl/engine';
+import {clear, log, lumaStats} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {
-  GLTFScenegraphLoader,
-  createGLTFObjects,
-  GLTFEnvironment,
-  VRDisplay
-} from '@luma.gl/addons';
+import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const CUBE_FACE_TO_DIRECTION = {

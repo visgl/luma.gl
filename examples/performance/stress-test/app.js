@@ -1,15 +1,9 @@
 /* global document, window */
 import GL from '@luma.gl/constants';
-import {
-  AnimationLoop,
-  withParameters,
-  clear,
-  Texture2D,
-  Buffer,
-  Model,
-  dirlight
-} from '@luma.gl/core';
-import {CubeGeometry} from '@luma.gl/engine';
+import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
+import {clear, Texture2D, Buffer} from '@luma.gl/webgl';
+import {dirlight} from '@luma.gl/shadertools';
+import {withParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 

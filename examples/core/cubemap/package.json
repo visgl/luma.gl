@@ -6,7 +6,6 @@
   },
   "dependencies": {
     "@luma.gl/constants": "^7.3.0",
-    "@luma.gl/core": "^7.3.0",
     "@luma.gl/webgl": "^7.3.0",
     "@luma.gl/gltools": "^7.3.0",
     "@luma.gl/engine": "^7.3.0",

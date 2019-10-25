@@ -1,9 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop, Model, Geometry} from '@luma.gl/engine';
 import {Texture2D, loadFile} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {Geometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -269,7 +267,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         mipmap: true
       });
 
-      const teapot = new ModelNode(gl, {
+      const teapot = new Model(gl, {
         id: 'teapot-model',
         fs: FRAGMENT_LIGHTING_FRAGMENT_SHADER,
         vs: FRAGMENT_LIGHTING_VERTEX_SHADER,
