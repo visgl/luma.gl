@@ -6,7 +6,7 @@
 
 The module structure has been significantly changes for v8.0 with the intention of clarifying the purpose of each module and the relationships between them, as well as reducing the budnle size of core modules.
 
-| New Module | Components |
+| New Module | Components from v7 |
 | ---------- | ---------- |
 | context    | Same as before |
 | shadertools| Same as before |
