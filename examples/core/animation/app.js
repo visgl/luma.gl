@@ -4,7 +4,7 @@ import {AnimationLoop} from '@luma.gl/core';
 import {setParameters} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {CubeGeometry} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/experimental';
+import {ModelNode} from '@luma.gl/addons';
 import {Timeline, KeyFrames} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 

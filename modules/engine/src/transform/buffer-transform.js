@@ -1,5 +1,5 @@
 import {isWebGL2, Buffer, TransformFeedback} from '@luma.gl/webgl';
-import {assert} from '@luma.gl/core';
+import {assert} from '@luma.gl/webgl';
 
 export default class BufferTransform {
   constructor(gl, props = {}) {

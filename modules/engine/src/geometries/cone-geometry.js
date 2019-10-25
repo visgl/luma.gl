@@ -1,5 +1,5 @@
 import TruncatedConeGeometry from './truncated-cone-geometry';
-import {uid} from '@luma.gl/core';
+import {uid} from '@luma.gl/webgl';
 
 export default class ConeGeometry extends TruncatedConeGeometry {
   constructor(props = {}) {

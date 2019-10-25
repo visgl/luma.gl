@@ -5,7 +5,7 @@ import TextureTransform from './texture-transform';
 
 import {isWebGL2, getShaderVersion} from '@luma.gl/webgl';
 import {assert, isObjectEmpty} from '@luma.gl/webgl';
-import {Model} from '@luma.gl/core';
+import Model from '../lib/model';
 
 // takes source and target buffers/textures and setsup the pipeline
 export default class Transform {

@@ -32,7 +32,6 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "@luma.gl/constants": "7.4.0-alpha.2",
-    "@luma.gl/core": "7.4.0-alpha.2",
     "@luma.gl/shadertools": "7.4.0-alpha.2",
     "@luma.gl/webgl": "7.4.0-alpha.2",
     "@luma.gl/webgl-state-tracker": "7.4.0-alpha.2",

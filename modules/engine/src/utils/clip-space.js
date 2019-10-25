@@ -1,6 +1,6 @@
 // ClipSpace
 import GL from '@luma.gl/constants';
-import {Model} from '@luma.gl/core';
+import Model from '../lib/model';
 import Geometry from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = `\

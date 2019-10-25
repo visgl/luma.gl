@@ -1,6 +1,6 @@
 import Geometry from '../geometry/geometry';
 import {unpackIndexedGeometry} from '../geometry/geometry-utils';
-import {uid} from '@luma.gl/core';
+import {uid} from '@luma.gl/webgl';
 
 export default class PlaneGeometry extends Geometry {
   constructor(props = {}) {

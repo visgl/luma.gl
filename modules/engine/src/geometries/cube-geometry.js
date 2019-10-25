@@ -1,5 +1,5 @@
 import Geometry from '../geometry/geometry';
-import {uid} from '@luma.gl/core';
+import {uid} from '@luma.gl/webgl';
 
 // prettier-ignore
 const CUBE_INDICES = new Uint16Array([

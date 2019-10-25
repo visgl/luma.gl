@@ -1,6 +1,6 @@
 import {Vector3} from 'math.gl';
 import Geometry from '../geometry/geometry';
-import {uid} from '@luma.gl/core';
+import {uid} from '@luma.gl/webgl';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 

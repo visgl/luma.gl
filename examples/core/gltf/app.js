@@ -14,7 +14,7 @@ import {
   createGLTFObjects,
   GLTFEnvironment,
   VRDisplay
-} from '@luma.gl/experimental';
+} from '@luma.gl/addons';
 import {Matrix4, radians} from 'math.gl';
 
 const CUBE_FACE_TO_DIRECTION = {

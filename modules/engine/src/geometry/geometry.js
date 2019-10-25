@@ -1,4 +1,4 @@
-import {uid, assert} from '@luma.gl/core';
+import {uid, assert} from '@luma.gl/webgl';
 
 // Rendering primitives - specify how to extract primitives from vertices.
 // NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants
