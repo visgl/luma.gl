@@ -1363,22 +1363,6 @@
   resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-7.1.1.tgz#f966fad9069722974e1b7bcae2fcd7a2444090dc"
   integrity sha512-F+lkZzMJNPvGeTCkOezyHafAb48ottMx10PYx3j1rsKFBM2v1LgBHnV1I37xjkrx8PMhdb/2zMg80nRrniudGw==
 
-"@luma.gl/webgl-state-tracker@7.4.0-alpha.2":
-  version "7.4.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@luma.gl/webgl-state-tracker/-/webgl-state-tracker-7.4.0-alpha.2.tgz#516055072d1bb737edd0c78d7bae24f8c3b67bcf"
-  integrity sha512-T6qMWFVYNiYB7leh4cfZ7QE5SPcWER5rCKYTK2OiAgc3EMqThLc8/QmCmjJfAvMDt2D+mpHsB6o1SeYmv8EUcA==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-    "@luma.gl/constants" "7.4.0-alpha.2"
-
-"@luma.gl/webgl2-polyfill@7.4.0-alpha.2":
-  version "7.4.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@luma.gl/webgl2-polyfill/-/webgl2-polyfill-7.4.0-alpha.2.tgz#208429027de0e1e39d17c69334d5abdb3cd1851c"
-  integrity sha512-MHGfsuGweqSOGZPshsquCQVmuoU7ytHjnCN8luLw+1tPOYHKZzWR/yif9GMnIH0jRx5cwjBnnazh7+MY1dgVIg==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-    "@luma.gl/constants" "7.4.0-alpha.2"
-
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
