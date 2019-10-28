@@ -2,17 +2,17 @@
 
 luma.gl contains a lot of classes and functions that might make new users wonder where to get started. luma.gl therefore organize classes and functions into groups, as shown in the following table and also in the folder structure of the source code
 
-| Module                           | Description |
-| ---                              | --- |
-| constants | WebGL constants |
-| shadertools | Tools for composing/transpiling shaders. Text-only, no WebGL dependencies |
-| gltools | Tools for supporting, optimizing direct coding with the WebGL API |
-| webgl | Object-oriented API wrapping WebGL constructs |
-| core | Minimal, simplified high-level API for 3D drawing |
-| engine | High-level drawing and GPGPU APIs |
-| debug| Debug tooling for other modules|  |
-| test-utils | Utilities to support testing |
-| experimental | A place for APIs that are unfinished or currently unused. APIs should not be considered officially supported, use at your own risk! |
+| New Module | Purpose |
+| ---------- | ------- |
+| constants | WebGL enum values |
+| shadertools| Tools for manipulating and composing shader text |
+| gltool     | Tooling and polyfilling for the WebGL context|
+| webgl      | Wrapper classes for WebGL |
+| core       | Single module re-exporting key parts of engine, webgl, shadertools |
+| engine     | High-level drawing APIs |
+| addons     | Experimental, unsupported APIs. Use at your own risk! |
+| debug      | Debug tooling for the other modules |
+| test-utils | Test tooling for the other modules |
 
 ## WebGL Classes
 

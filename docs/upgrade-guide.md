@@ -4,29 +4,19 @@
 
 ### Module Restructure
 
-The module structure has been significantly changes for v8.0 with the intention of clarifying the purpose of each module and the relationships between them, as well as reducing the budnle size of core modules.
+The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
 
-| New Module | Components from v7 |
-| ---------- | ---------- |
-| context    | Same as before |
-| shadertools| Same as before |
-| gltool     | webgl2-polyfill and webgl-state tracker|
-| webgl    | Same as before |
-| core    | Now only exports `Model`, `AnimationLoop` and `ProgramManager` |
-| engine    | addons/animation, core/geometry, core/transform and effects|
-| experimental | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
-| debug    | Same as before |
-| test-utils    | Same as before |
-
-In order to keep the core module small, it no longer re-exports from other modules. The following table shows where functions and classes removed from core can be found:
-
-|Class/Function|Module|
-|--------------|------|
-|registerShaderModules, setDefaultShaderModules, getDefaultShaderModules, assembleShaders, createShaderHook, createModuleInjection, combineInjects, normalizeShaderModule, fp32, fp64, project, lights, dirlight, picking, diffuse, gouraudlighting, phonglighting, pbr|@luma.gl/shadertools|
-|trackContextState, resetParameters, getParameter, getParameters, setParameter, setParameters, withParameters, getModifiedParameters|@luma.gl/gltools|
-|isWebGL, isWebGL2, lumaStats, createGLContext, destroyGLContext, resizeGLContext, setGLContextDefaults, getContextInfo, getGLContextInfo, getContextLimits, FEATURES, hasFeature, hasFeatures, getFeatures, canCompileGLGSExtension, cloneTextureFrom, getKeyValue, getKey, cssToDeviceRatio, cssToDevicePixels, Buffer, Shader, VertexShader, FragmentShader, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, clearBuffer, readPixelsToArray, readPixelsToBuffer, copyToDataUrl, copyToImage, copyToTexture, blit, Query, Texture3D, TransformFeedback, VertexArrayObject, VertexArray, UniformBufferLayout, setPathPrefix, loadFile, loadImage | @luma.gl/webgl|
-|Transform, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry|@luma.gl/engine|
-|ScenegraphNode, GroupNode, ModelNode|@luma.gl/experimental|
+| New Module | Purpose | Components from v7 |
+| ---------- | ------- |---------- |
+| constants | WebGL enum values | Same as before |
+| shadertools| Tools for manipulating and composing shader text | Same as before |
+| gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
+| webgl      | Wrapper classes for WebGL | Same as before |
+| core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in addons |
+| engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform and effects|
+| addons     | Experimental, unsupported APIs | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
+| debug      | Debug tooling for the other modules | Same as before |
+| test-utils | Test tooling for the other modules | Same as before |
 
 
 ### Smaller changes

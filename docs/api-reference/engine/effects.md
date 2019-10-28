@@ -1,4 +1,4 @@
-# glfx Shader Modules
+# Effects
 
 
 Screen space effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
