@@ -32,7 +32,7 @@ module.exports = {
   PROJECT_ORG: 'uber',
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC:
-    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+    'High-performance Toolkit for WebGL-based Data Visualization',
 
   PATH_PREFIX: '/',
 
@@ -49,27 +49,27 @@ module.exports = {
   HOME_PATH: '/',
 
   HOME_HEADING:
-    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+    'High-performance Toolkit for WebGL-based data visualization.',
 
   HOME_RIGHT: null,
 
   HOME_BULLETS: [
     {
-      text: 'Advanced GPU Usage',
+      text: 'Flexibility',
       desc:
-        'luma.gl facilitates use of advanced GPU techniques, such as Instanced Rendering, Transform Feedback and WebGL2 features.',
+        'luma.gl can provide high-level drawing classes or simply enhance programming directly with the WebGL API.',
       img: 'images/icon-high-precision.svg'
     },
     {
-      text: 'Shader Programming Power',
+      text: 'Consistency',
       desc:
-        'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling GLSL shaders.',
+        'luma.gl polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.',
       img: 'images/icon-high-precision.svg'
     },
     {
-      text: 'Performance Focus',
+      text: 'Performance',
       desc:
-        'Strong focus on performance enables visualization and GPU processing of very large data sets.',
+        'luma.gl simplifies usage of high-performance APIs for data visualization like instanced rendering and transform feedback.',
       img: 'images/icon-high-precision.svg'
     }
   ],

@@ -1,39 +1,114 @@
 # Getting Started
 
-To use luma.gl in an application, simply install it using `yarn`:
+This tutorial will walk you through setting up a basic development environment for luma.gl applications using [webpack](https://webpack.js.org). Later tutorials will build on this one, so we recommend going through it first.
 
+**Note:** It is assumed for these tutorials that you have some knowledge of the WebGL API. If you are unfamiliar with how to draw with WebGL, we highly recommend the excellent [WebGL 2 Fundamentals](https://webgl2fundamentals.org/).
+
+From the command line, first run
+```bash
+mkdir luma-demo
+cd luma-demo
+npm init -y
 ```
-yarn add luma.gl
+to set up our project directory and initialize npm.
+
+
+Next run
+```bash
+npm i @luma.gl/engine @luma.gl/webgl
+npm i -D webpack webpack-cli webpack-dev-server html-webpack-plugin
+```
+to install our dependencies.
+
+Open the file `package.json` (created when we initialized npm), and add the following to the `scripts` block:
+```json
+"start": "webpack-dev-server --open"
 ```
 
-Note: While we'll use `yarn` for these instructions, as it's the tool we use for development, `npm` can be used as a drop-in substitute in most cases. A map of `npm` instructions to `yarn` is available [here](https://yarnpkg.com/lang/en/docs/migrating-from-npm/).
+The full contents of the `package.json` should be the following (dependency version numbers might differ):
 
-## Using with Node.js
+```json
+{
+  "name": "luma-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack-dev-server --open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@luma.gl/core": "^8.0.0"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^3.2.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.9",
+    "webpack-dev-server": "^3.9.0"
+  }
+}
+```
 
-luma.gl is built to run using [headless-gl](https://www.npmjs.com/package/gl) under Node.js, which can be extremely useful for unit testing. It is important to note that `headless-gl` only supports WebGL 1 and few extensions, so not all of luma.gl's features will be available.
-
-Use `yarn install gl` to install `headless-gl`. luma.gl will automatically use it when running under Node.js. You can then create a context using the `createGLContext` context function.
-
+Create a file `webpack.config.js` in the project root and add the following to it:
 ```js
-import 'luma.gl';
-import {createGLContext, Model, ...} from '@luma.gl/core';
-const gl = createGLContext({width, height, ...});
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+module.exports = {
+  mode: 'development',
+  entry: './index.js',
+  plugins: [
+    new HtmlWebpackPlugin({
+      title: 'luma.gl Demo',
+    }),
+  ],
+  output: {
+    filename: 'bundle.js'
+  },
+};
+```
+(For more information on Webpack, visit their [excellent documentation](https://webpack.js.org/guides/getting-started/)).
+
+Now create a file `index.js` in the project root and add the following to it:
+```js
+import {AnimationLoop} from '@luma.gl/engine';
+
+const loop = new AnimationLoop({
+  onInitialize({gl}) {
+    // Setup logic goes here
+  },
+
+  onRender({gl}) {
+    // Drawing logic goes here
+  }
+});
+
+loop.start();
+
 ```
 
-## Interoperation with Other WebGL Applications
+This will be the basic structure of most luma.gl applications. To make sure everything works, let's add a draw command:
+```js
+import {AnimationLoop} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 
-luma.gl is build to interoperate cleanly with other WebGL applications using the same WebGL context. This is critical in geospatial applications, where `luma.gl` is often rendering over a base map drawn by another application.
+const loop = new AnimationLoop({
+  onInitialize({gl}) {
+    // Setup logic goes here
+  },
 
-The key to luma.gl's interoperability is careful state management. luma.gl will track GL context changes and restore them after operations are complete.
+  onRender({gl}) {
+    // Drawing logic goes here
+    clear(gl, {color: [0, 0, 0, 1]});
+  }
+});
 
-
-## Using luma.gl in Isorender Applications
-
-luma.gl is designed to support isorender application, i.e. the library can be loaded without problems under Node.js, as long as the application doesn't actually try to use WebGL (i.e. create WebGL contexts). However when luma.gl discovers that headless gl is not available it tries to give a helpful message explaining the situation. This can safely be ignored.
-
-Remember that you **can** actually create WebGL contexts under Node.js, as long as the headless `gl` is installed in your `node_modules` directory. More information on [using luma.gl with Node.js](/docs/get-started/README.md).
-
-
-## FAQ
-
-We occasionally mark github issues that contain answers to questions that pop up repeatedly with the [`FAQ` label](https://github.com/uber/luma.gl/issues?utf8=%E2%9C%93&q=label%3AFAQ+).
+loop.start();
+```
+and run
+```bash
+npm start
+```
+from the command line. If all went well, a tab should open in your default browser, and you should see a black rectangle at the top left of your screen.

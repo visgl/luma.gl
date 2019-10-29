@@ -20,12 +20,6 @@
       "title": "Developer Guide",
       "chapters": [
         {
-          "title": "Overview",
-          "entries": [
-            { "entry": "docs/developer-guide/README.md" }
-          ]
-        },
-        {
           "title": "Shadertools",
           "entries": [
             { "entry": "docs/developer-guide/shadertools/README" },
@@ -147,6 +141,12 @@
             { "entry": "docs/api-reference/addons/scenegraph/group-node" }
           ]
         }
+      ]
+    },
+    {
+      "title": "Contributor Guide",
+      "entries": [
+        { "entry": "docs/developer-guide/README.md" }
       ]
     }
   ]
