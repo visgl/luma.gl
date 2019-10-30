@@ -88,7 +88,7 @@ export default class Model {
     this.geometryBuffers = {};
 
     // geometry might have set drawMode and vertexCount
-    this.isInstanced = props.isInstanced || props.instanced;
+    this.isInstanced = props.isInstanced || props.instanced || props.instanceCount > 0;
 
     this._setModelProps(props);
 

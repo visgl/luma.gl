@@ -113,8 +113,8 @@ export default class Program extends Resource {
     end,
     isIndexed = false,
     indexType = GL.UNSIGNED_SHORT,
-    isInstanced = false,
     instanceCount = 0,
+    isInstanced = instanceCount > 0,
 
     vertexArray = null,
     transformFeedback,

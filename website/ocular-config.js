@@ -31,8 +31,7 @@ module.exports = {
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'uber',
   PROJECT_URL: `https://luma.gl`,
-  PROJECT_DESC:
-    'High-performance Toolkit for WebGL-based Data Visualization',
+  PROJECT_DESC: 'High-performance Toolkit for WebGL-based Data Visualization',
 
   PATH_PREFIX: '/',
 
@@ -48,8 +47,7 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING:
-    'High-performance Toolkit for WebGL-based data visualization.',
+  HOME_HEADING: 'High-performance Toolkit for WebGL-based data visualization.',
 
   HOME_RIGHT: null,
 

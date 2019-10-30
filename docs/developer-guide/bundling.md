@@ -1,7 +1,4 @@
-# Building Apps
-
-This article contains additional information on options for how to build luma.gl.
-
+# Bundling
 
 ## Optimizing for Bundle Size
 

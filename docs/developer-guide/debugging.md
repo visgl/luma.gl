@@ -2,17 +2,6 @@
 
 luma.gl has a number of provisions for debugging designed to help you save time during development.
 
-
-## Seer Integration
-
-luma.gl is integrated with the [`seer`](https://chrome.google.com/webstore/detail/seer/eogckabefmgphfgngjdmmlfbddmonfdh) Chrome extension, giving you a powerful tool for viewing and inspecting luma.gl state at runtime when developing in Chrome. Installing the extension gives you a new tab in the developer tools where you can:
-
-* See list of created `Models`
-* Inspect values of uniforms and vertex attributes
-* See GPU render timings for each model
-* and much more.
-
-
 ## id strings
 
 Most classes in luma.gl allow you to supply and optional `id` string to their constructors. This allows you to later easily check in the debugger which object (which specific instance of that class) is involved in a stack trace.

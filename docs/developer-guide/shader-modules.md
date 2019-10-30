@@ -1,22 +1,46 @@
-# Writing Shadertools Shader Modules
+# Shader Modules
+
+## Overview
+
+shadertools is a GLSL shader module system built around a GLSL "assembler" that allows you build modular shaders. It addresses the lack of a module/import system in the GLSL language and allows you to import chunks of reusable shader code from modules into your shader source code, and organize your shader code in reusable modules.
+
+* Enables you to import and "inject" prepackaged modules of shader code into your shaders.
+* Allows you to package up reusable GLSL code as shader modules.
+* Adds GPU detection and a measure of portability your shaders.
 
 
 ## Usage
 
+To add/inject existing modules into your shaders, just add the modules parameter to your `assembleShaders` call:
+
+```js
+import {shaderModule} from 'library-of-shader-modules';
+const {vs, fs, getUniforms, moduleMap} = assembleShaders(gl, {
+  fs: '...',
+  vs: '...',
+  modules: [shaderModule],
+  ...
+})
+```
+
+To create a new shader module, you need to create a descriptor object.
+
+```js
+const MY_SHADER_MODULE = {
+  name: 'my-shader-module',
+  vs: ....
+  fs: null,
+  dependencies: [],
+  deprecations: [],
+  getUniforms
+};
+```
 
 This object can be used as shader module directly:
 
 ```js
 assembleShaders(gl, {..., modules: [MY_SHADER_MODULE]});
 ```
-
-Alternatively, you can register it so that it can be referred to by name.
-
-```js
-registerShaderModules([module]);
-assembleShaders(gl, {..., modules: ['my-module']});
-```
-
 
 ## Structure of a Shader Module
 
@@ -108,7 +132,38 @@ With `type: 'number'`, the following additional fields may be added for validati
 
 Note: `uniforms` is ignored if `getUniforms` is provided.
 
+## GLSL Syntax Conversion Reference
 
-### Platform Detection
+Where possible, the shader assembler replaces keywords based on the version of the shader into which a module is inserted. While not all GLSL ES 3.0 features can be emulated, this allows many modules to be used across versions.
 
-Also does platform detection and injects `#define` statements enabling your shader to conditionally use code.
+Syntax replacement tables are provided below:
+
+Vertex Shaders
+
+| 3.00 ES         | 1.00 ES     | Comment         |
+| ---             | ---         | ---             |
+| `in`            | `attribute` |                 |
+| `out`           | `varying`   |                 |
+
+Fragment Shaders
+
+| 3.00 ES         | 1.00 ES        | Comment |
+| ---             | ---            | ---     |
+| `in`            | `varying`      |         |
+| `out`           | `gl_FragColor` |         |
+| `out`           | `gl_FragData`  |         |
+| `texture`       | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below. |
+| `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
+| `gl_FragDepth`  | `gl_FragDepthEXT` | WebGL1: **EXT_frag_depth** |
+
+
+| 3.00 ES             | 1.00 ES                | Comment |
+| ---                 | ---                    | --- |
+| `texture2DLod`      | `texture2DLodEXT`      | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL1: **EXT_shader_texture_lod** |
+| `textureCubeLod`    | `textureCubeLodEXT`    | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DGrad`     | `texture2DGradEXT`     | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL1: **EXT_shader_texture_lod** |
+| `textureCubeGrad`   | `textureCubeGradEXT`   | WebGL1: **EXT_shader_texture_lod** |

@@ -13,46 +13,22 @@
       "title": "Getting Started",
       "entries": [
         { "entry": "docs/get-started/README" },
-        { "entry": "docs/get-started/examples" }
+        { "entry": "docs/get-started/hello-triangle" },
+        { "entry": "docs/get-started/high-medium-low" },
+        { "entry": "docs/get-started/hello-instancing-high" },
+        { "entry": "docs/get-started/hello-instancing-mid" },
+        { "entry": "docs/get-started/hello-instancing-low" },
+        { "entry": "docs/get-started/whats-next" }
       ]
     },
     {
       "title": "Developer Guide",
-      "chapters": [
-        {
-          "title": "Shadertools",
-          "entries": [
-            { "entry": "docs/developer-guide/shadertools/README" },
-            { "entry": "docs/developer-guide/shadertools/shader-assembly" },
-            { "entry": "docs/developer-guide/shadertools/using-shader-modules" },
-            { "entry": "docs/developer-guide/shadertools/model-integration" },
-            { "entry": "docs/developer-guide/shadertools/writing-shader-modules" },
-            { "entry": "docs/developer-guide/shadertools/writing-glsl-shaders" },
-            { "entry": "docs/developer-guide/using-glsl-300-es.md" }
-          ]
-        },
-        {
-          "title": "Using WebGL",
-          "entries": [
-            { "entry": "docs/developer-guide/drawing" },
-            { "entry": "docs/developer-guide/buffers" },
-            { "entry": "docs/developer-guide/stencil-buffers" },
-            { "entry": "docs/developer-guide/attributes" },
-            { "entry": "docs/developer-guide/accessors" },
-            { "entry": "docs/developer-guide/extensions" },
-            { "entry": "docs/developer-guide/transform-feedback" }
-          ]
-        },
-        {
-          "title": "Tools and Tips",
-          "entries": [
-            { "entry": "docs/developer-guide/building-apps" },
-            { "entry": "docs/developer-guide/configuring" },
-            { "entry": "docs/developer-guide/debugging" },
-            { "entry": "docs/developer-guide/portability" },
-            { "entry": "docs/developer-guide/programs-and-shaders.md" }
-          ]
-        }
+      "entries": [
+        { "entry": "docs/developer-guide/accessors" },
+        { "entry": "docs/developer-guide/transform-feedback" },
+        { "entry": "docs/developer-guide/shader-modules.md" },
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/bundling" }
       ]
     },
     {
@@ -146,7 +122,7 @@
     {
       "title": "Contributor Guide",
       "entries": [
-        { "entry": "docs/developer-guide/README.md" }
+        { "entry": "docs/contributor-guide/README.md" }
       ]
     }
   ]
