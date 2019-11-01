@@ -1,5 +1,5 @@
 /* eslint-disable camelcase, no-console, no-undef */
-import {createGLContext} from '@luma.gl/core';
+import {createGLContext} from '@luma.gl/webgl';
 import {assembleShaders} from '@luma.gl/shadertools';
 import injectShader, {
   combineInjects,

@@ -1,5 +1,5 @@
 /* global window */
-import {assert} from '@luma.gl/core';
+import {assert} from '@luma.gl/webgl';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import createGLTFObjects from './create-gltf-objects';
 

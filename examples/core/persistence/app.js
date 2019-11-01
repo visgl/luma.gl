@@ -1,14 +1,6 @@
-import {
-  AnimationLoop,
-  setParameters,
-  Model,
-  clear,
-  Framebuffer,
-  Program,
-  Geometry,
-  IcoSphereGeometry,
-  ModelNode
-} from '@luma.gl/core';
+import {AnimationLoop, Model, Geometry, IcoSphereGeometry} from '@luma.gl/engine';
+import {clear, Framebuffer, Program} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, Vector3, radians} from 'math.gl';
 
 const INFO_HTML = `
@@ -145,7 +137,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       geometry: quadGeometry
     });
 
-    sphere = new ModelNode(gl, {
+    sphere = new Model(gl, {
       id: 'electron',
       geometry: new IcoSphereGeometry({
         iterations: 4
@@ -198,22 +190,18 @@ export default class AppAnimationLoop extends AnimationLoop {
     // Render electrons to framebuffer
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       ePos[i] = eRot[i].transformVector(ePos[i]);
-      const modelMatrix = new Matrix4().translate(ePos[i]);
+      const modelMatrix = new Matrix4().translate(ePos[i]).scale([0.06125, 0.06125, 0.06125]);
 
-      sphere
-        .setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
-        .setScale([0.06125, 0.06125, 0.06125])
-        .updateMatrix()
-        .draw({
-          framebuffer: mainFramebuffer,
-          uniforms: {
-            uModelView: view.clone().multiplyRight(sphere.matrix),
-            uView: view,
-            uProjection: projection,
-            uColor: [0.0, 0.5, 1],
-            uLighting: 0
-          }
-        });
+      sphere.draw({
+        framebuffer: mainFramebuffer,
+        uniforms: {
+          uModelView: view.clone().multiplyRight(modelMatrix),
+          uView: view,
+          uProjection: projection,
+          uColor: [0.0, 0.5, 1],
+          uLighting: 0
+        }
+      });
     }
 
     // Render core to framebuffer
@@ -223,19 +211,21 @@ export default class AppAnimationLoop extends AnimationLoop {
         .rotateXYZ([0, tick * 0.021, 0])
         .translate(nPos[i]);
 
-      sphere
-        .setPosition([modelMatrix[12], modelMatrix[13], modelMatrix[14]])
-        .setScale([0.25, 0.25, 0.25])
-        .updateMatrix()
-        .draw({
-          framebuffer: mainFramebuffer,
-          uniforms: {
-            uModelView: view.clone().multiplyRight(sphere.matrix),
-            uProjection: projection,
-            uColor: [1, 0.25, 0.25],
-            uLighting: 1
-          }
-        });
+      const translation = [modelMatrix[12], modelMatrix[13], modelMatrix[14]];
+      modelMatrix
+        .identity()
+        .translate(translation)
+        .scale([0.25, 0.25, 0.25]);
+
+      sphere.draw({
+        framebuffer: mainFramebuffer,
+        uniforms: {
+          uModelView: view.clone().multiplyRight(modelMatrix),
+          uProjection: projection,
+          uColor: [1, 0.25, 0.25],
+          uLighting: 1
+        }
+      });
     }
 
     const ppi = tick % 2;

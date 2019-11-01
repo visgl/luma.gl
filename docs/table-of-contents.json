@@ -71,51 +71,26 @@
           ]
         },
         {
-          "title": "Core Classes",
+          "title": "Engine",
           "entries": [
-            { "entry": "docs/api-reference/core/animation-loop" },
-            { "entry": "docs/api-reference/core/animation-loop-proxy" },
-            { "entry": "docs/api-reference/core/geometry" },
-            { "entry": "docs/api-reference/core/load-file" },
-            { "entry": "docs/api-reference/core/model" },
-            { "entry": "docs/api-reference/core/transform" }
+            { "entry": "docs/api-reference/engine/model" },
+            { "entry": "docs/api-reference/engine/animation-loop" },
+            { "entry": "docs/api-reference/engine/transform" },
+            { "entry": "docs/api-reference/engine/animation/timeline" },
+            { "entry": "docs/api-reference/engine/animation/key-frames" },
+            { "entry": "docs/api-reference/engine/effects/glfx-shader-modules" }
           ]
         },
         {
-          "title": "Geometry Primitives",
+          "title": "Geometry",
           "entries": [
-            { "entry": "docs/api-reference/core/geometries/cone-geometry" },
-            { "entry": "docs/api-reference/core/geometries/cube-geometry" },
-            { "entry": "docs/api-reference/core/geometries/cylinder-geometry" },
-            { "entry": "docs/api-reference/core/geometries/ico-sphere-geometry" },
-            { "entry": "docs/api-reference/core/geometries/plane-geometry" },
-            { "entry": "docs/api-reference/core/geometries/sphere-geometry" }
-          ]
-        },
-        {
-          "title": "Effects",
-          "entries": [
-            { "entry": "docs/api-reference/effects/overview" },
-            { "entry": "docs/api-reference/effects/glfx-shader-modules" }
-          ]
-        },
-        {
-          "title": "Scenegraph",
-          "entries": [
-            { "entry": "docs/api-reference/core/scenegraph/scenegraph-node" },
-            { "entry": "docs/api-reference/core/scenegraph/model-node" },
-            { "entry": "docs/api-reference/core/scenegraph/group-node" }
-          ]
-        },
-        {
-          "title": "Geometry Nodes",
-          "entries": [
-            { "entry": "docs/api-reference/core/scenegraph/geometries/cone" },
-            { "entry": "docs/api-reference/core/scenegraph/geometries/cube" },
-            { "entry": "docs/api-reference/core/scenegraph/geometries/cylinder" },
-            { "entry": "docs/api-reference/core/scenegraph/geometries/ico-sphere" },
-            { "entry": "docs/api-reference/core/scenegraph/geometries/plane" },
-            { "entry": "docs/api-reference/core/scenegraph/geometries/sphere" }
+            { "entry": "docs/api-reference/engine/geometry" },
+            { "entry": "docs/api-reference/engine/geometries/cone-geometry" },
+            { "entry": "docs/api-reference/engine/geometries/cube-geometry" },
+            { "entry": "docs/api-reference/engine/geometries/cylinder-geometry" },
+            { "entry": "docs/api-reference/engine/geometries/ico-sphere-geometry" },
+            { "entry": "docs/api-reference/engine/geometries/plane-geometry" },
+            { "entry": "docs/api-reference/engine/geometries/sphere-geometry" }
           ]
         },
         {
@@ -167,9 +142,9 @@
         {
           "title": "Addons",
           "entries": [
-            { "entry": "docs/api-reference/addons/animation/timeline" },
-            { "entry": "docs/api-reference/addons/animation/key-frames" },
-            { "entry": "docs/api-reference/addons/event" }
+            { "entry": "docs/api-reference/addons/scenegraph/scenegraph-node" },
+            { "entry": "docs/api-reference/addons/scenegraph/model-node" },
+            { "entry": "docs/api-reference/addons/scenegraph/group-node" }
           ]
         }
       ]

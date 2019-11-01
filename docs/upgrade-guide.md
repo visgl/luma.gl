@@ -2,6 +2,25 @@
 
 ## Upgrading from v7.3 to v8.0
 
+### Module Restructure
+
+The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
+
+| New Module | Purpose | Components from v7 |
+| ---------- | ------- |---------- |
+| constants | WebGL enum values | Same as before |
+| shadertools| Tools for manipulating and composing shader text | Same as before |
+| gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
+| webgl      | Wrapper classes for WebGL | Same as before |
+| core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in addons |
+| engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform and effects|
+| addons     | Experimental, unsupported APIs | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
+| debug      | Debug tooling for the other modules | Same as before |
+| test-utils | Test tooling for the other modules | Same as before |
+
+
+### Smaller changes
+
 - Functions are no longer accepted as uniform values to the `Model` class. The same effect can be achieved by updating the uniform values each frame prior to drawing.
 - `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
@@ -11,6 +30,8 @@
 - @luma.gl/main has been removed. Use individual modules instead.
 - `Multipass` classes have been removed.
 - Seer support has been removed.
+- Timeline and Keyframes have been moved from @luma.gl/addons to @luma.gl/engine
+
 
 ## Upgrading from v7.2 to v7.3
 

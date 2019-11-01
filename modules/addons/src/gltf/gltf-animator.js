@@ -1,4 +1,4 @@
-import {assert, log} from '@luma.gl/core';
+import {assert, log} from '@luma.gl/webgl';
 import {Matrix4, Quaternion} from 'math.gl';
 
 // TODO: import from loaders.gl?

@@ -196,7 +196,7 @@ module.exports = {
     },
     {
       title: 'Lesson03',
-      componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
+      componentUrl: resolve(__dirname, './templates/lessons/example-03.jsx'),
       path: 'examples/lessons/03/',
       image: 'images/lesson-3.png'
     },

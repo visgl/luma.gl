@@ -1,5 +1,7 @@
 import GL from '@luma.gl/constants';
-import {AnimationLoop, setParameters, Texture2D, Model, SphereGeometry} from '@luma.gl/core';
+import {AnimationLoop, Model, SphereGeometry} from '@luma.gl/engine';
+import {Texture2D} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Vector3, Matrix4} from 'math.gl';
 import {EventManager} from 'mjolnir.js';
 /* eslint-disable complexity */

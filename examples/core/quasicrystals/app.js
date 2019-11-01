@@ -1,4 +1,4 @@
-import {AnimationLoop, ClipSpace} from '@luma.gl/core';
+import {AnimationLoop, ClipSpace} from '@luma.gl/engine';
 
 const INFO_HTML = `
 <p>

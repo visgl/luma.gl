@@ -7,9 +7,14 @@ export {default as GLTFScenegraphLoader} from './gltf/gltf-scenegraph-loader';
 export {default as GLTFEnvironment} from './gltf/gltf-environment';
 export {default as createGLTFObjects} from './gltf/create-gltf-objects';
 
-// Animation
-export {Timeline} from './animation/timeline';
-export {KeyFrames} from './animation/key-frames';
+// Core nodes
+export {default as ScenegraphNode} from './scenegraph/nodes/scenegraph-node';
+export {default as GroupNode} from './scenegraph/nodes/group-node';
+export {default as ModelNode} from './scenegraph/nodes/model-node';
 
-// Misc
-export {addEvents} from './events/add-events';
+// GPGPU utilities for luma.gl
+export {
+  buildHistopyramidBaseLevel,
+  getHistoPyramid,
+  histoPyramidGenerateIndices
+} from './gpgpu/histopyramid/histopyramid';

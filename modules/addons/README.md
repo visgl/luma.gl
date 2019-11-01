@@ -1,3 +1,3 @@
 # @luma.gl/addons
 
-This is to keep down dependencies and code size for the core luma.gl module.
+Code in this module represents early-stage experiments and are not considered officially supported parts of the API. Use at your own risk!

@@ -32,7 +32,7 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0",
-    "@luma.gl/webgl-state-tracker": "^7.1.0",
+    "@luma.gl/gltools": "^7.1.0",
     "@probe.gl/test-utils": "^3.1.1"
   }
 }

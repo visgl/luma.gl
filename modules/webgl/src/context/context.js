@@ -1,6 +1,6 @@
 /* eslint-disable quotes */
 // WebGLRenderingContext related methods
-import {trackContextState} from '@luma.gl/webgl-state-tracker';
+import {trackContextState} from '@luma.gl/gltools';
 
 import {createHeadlessContext} from './create-headless-context';
 import {getCanvas} from './create-canvas';

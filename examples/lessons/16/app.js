@@ -8,20 +8,9 @@
 
 /* eslint-disable max-statements, indent, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {
-  AnimationLoop,
-  Model,
-  Geometry,
-  Texture2D,
-  Program,
-  Renderbuffer,
-  Framebuffer,
-  setParameters,
-  loadFile,
-  ModelNode,
-  CubeGeometry,
-  SphereGeometry
-} from '@luma.gl/core';
+import {AnimationLoop, Model, Geometry, CubeGeometry, SphereGeometry} from '@luma.gl/engine';
+import {Texture2D, Program, Renderbuffer, Framebuffer, loadFile} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -227,7 +216,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         uniforms: Object.assign({}, getLaptopUniforms(), getLightUniforms())
       });
 
-      const moon = new ModelNode(gl, {
+      const moon = new Model(gl, {
         geometry: new SphereGeometry({
           nlat: 30,
           nlong: 30,
@@ -242,7 +231,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         )
       });
 
-      const cube = new ModelNode(gl, {
+      const cube = new Model(gl, {
         id: 'cube-model',
         geometry: new CubeGeometry(),
         vs: VERTEX_SHADER,
@@ -420,10 +409,8 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
   if (RENDER_SQUARE) {
     // Draw Square
     tSquare
-      .setPosition([0, 0, -1])
-      .updateMatrix()
       .setUniforms({
-        uMVMatrix: tSquare.matrix,
+        uMVMatrix: new Matrix4().translate([0, 0, -1]),
         uPMatrix: new Matrix4().perspective({aspect})
       })
       .draw();
@@ -433,8 +420,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
       .translate([2, 0, 0])
       .rotateY(moonAngle)
       .rotateX((30 * Math.PI) / 180.0)
-      .translate([0, 0, -5])
-      .multiplyRight(moon.matrix);
+      .translate([0, 0, -5]);
 
     moon
       .setUniforms({
@@ -447,8 +433,7 @@ function generateTextureForLaptopScreen(gl, tick, aspect, moon, cube, tSquare) {
       .lookAt({eye: [0, 0, 20]})
       .translate([1, 0, 0])
       .rotateY(cubeAngle)
-      .translate([0, 0, -5])
-      .multiplyRight(cube.matrix);
+      .translate([0, 0, -5]);
 
     cube
       .setUniforms({

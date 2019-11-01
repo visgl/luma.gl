@@ -36,7 +36,7 @@ export {
   setParameters,
   withParameters,
   getModifiedParameters
-} from '@luma.gl/webgl-state-tracker';
+} from '@luma.gl/gltools';
 
 // WEBGL1 OBJECTS/FUNCTIONS
 export {
@@ -77,36 +77,21 @@ export {
 } from '@luma.gl/webgl';
 
 // CORE - WEBGL INDEPENDENT
-export {default as Geometry} from './geometry/geometry';
-
-// LIB
-export {default as AnimationLoop} from './lib/animation-loop';
-export {encodePickingColor, decodePickingColor, getNullPickingColor} from './lib/picking-colors';
-export {default as Model} from './lib/model';
-export {default as Transform} from './lib/transform/transform';
-export {default as ClipSpace} from './lib/clip-space';
-
-// Resource Management
-export {default as ProgramManager} from './resource-management/program-manager';
-
-// Experimental core exports
-export {default as _AnimationLoopProxy} from './lib/animation-loop-proxy';
-
-// Geometries
-export {default as ConeGeometry} from './geometries/cone-geometry';
-export {default as CubeGeometry} from './geometries/cube-geometry';
-export {default as CylinderGeometry} from './geometries/cylinder-geometry';
-export {default as IcoSphereGeometry} from './geometries/ico-sphere-geometry';
-export {default as PlaneGeometry} from './geometries/plane-geometry';
-export {default as SphereGeometry} from './geometries/sphere-geometry';
-export {default as TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
-
-// SCENEGRAPH
-
-// Core nodes
-export {default as ScenegraphNode} from './scenegraph/nodes/scenegraph-node';
-export {default as GroupNode} from './scenegraph/nodes/group-node';
-export {default as ModelNode} from './scenegraph/nodes/model-node';
+export {
+  AnimationLoop,
+  Model,
+  Transform,
+  ClipSpace,
+  ProgramManager,
+  Geometry,
+  ConeGeometry,
+  CubeGeometry,
+  CylinderGeometry,
+  IcoSphereGeometry,
+  PlaneGeometry,
+  SphereGeometry,
+  TruncatedConeGeometry
+} from '@luma.gl/engine';
 
 // TODO/CLEAN UP FOR V7
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)

@@ -5,7 +5,7 @@ import {Stats} from 'probe.gl';
 
 // TODO - when webgl2 gets ubiquitous, remove default support for webgl1 by dropping next line
 // Can be installed by applications
-import '@luma.gl/webgl2-polyfill';
+import '@luma.gl/gltools';
 
 // Version detection using babel plugin
 /* global __VERSION__ */

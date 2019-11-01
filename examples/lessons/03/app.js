@@ -1,6 +1,7 @@
 /* eslint-disable array-bracket-spacing, no-multi-spaces */
 import GL from '@luma.gl/constants';
-import {AnimationLoop, Geometry, setParameters, ModelNode} from '@luma.gl/core';
+import {AnimationLoop, Model, Geometry} from '@luma.gl/engine';
+import {setParameters} from '@luma.gl/gltools';
 import {Matrix4} from 'math.gl';
 
 const INFO_HTML = `
@@ -68,12 +69,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     return {
-      triangle: new ModelNode(gl, {
+      triangle: new Model(gl, {
         geometry: triangleGeometry,
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER
       }),
-      square: new ModelNode(gl, {geometry: squareGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER})
+      square: new Model(gl, {geometry: squareGeometry, vs: VERTEX_SHADER, fs: FRAGMENT_SHADER})
     };
   }
 
@@ -82,25 +83,22 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const projection = new Matrix4().perspective({aspect});
+    const triangleMatrix = new Matrix4().translate([-1.5, 0, -7]).rotateXYZ([0, tick * 0.01, 0]);
 
     // Draw triangle
     triangle
-      .setPosition([-1.5, 0, -7])
-      .setRotation([0, tick * 0.01, 0])
-      .updateMatrix()
       .setUniforms({
-        uMVMatrix: triangle.matrix,
+        uMVMatrix: triangleMatrix,
         uPMatrix: projection
       })
       .draw();
 
+    const squareMatrix = new Matrix4().translate([1.5, 0, -7]).rotateXYZ([tick * 0.1, 0, 0]);
+
     // Draw Square
     square
-      .setPosition([1.5, 0, -7])
-      .setRotation([tick * 0.1, 0, 0])
-      .updateMatrix()
       .setUniforms({
-        uMVMatrix: square.matrix,
+        uMVMatrix: squareMatrix,
         uPMatrix: projection
       })
       .draw();
