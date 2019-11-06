@@ -9,7 +9,7 @@ Now we can update the imports:
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';
-import {assembleShaders} from 'shadertools';
+import {assembleShaders} from '@luma.gl/shadertools';
 ```
 Most of the initialization is similar, but we'll replace the creation of `Model` with its individual parts: shader composition, a vertex array, and a program. Shader composition is handled by `assembleShaders`
 ```js
@@ -60,7 +60,7 @@ The scene should be identical to the one draw with the high-level API. The compl
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';
-import {assembleShaders} from 'shadertools';
+import {assembleShaders} from '@luma.gl/shadertools';
 
 const colorShaderModule = {
   name: 'color',
