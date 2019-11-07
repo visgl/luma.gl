@@ -1,6 +1,6 @@
 # withParameters
 
-Finally, luma.gl enables a 'stateless' WebGL programming model. In this model, state settings can be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
+luma.gl enables a 'stateless' WebGL programming model. In this model, state settings can be passed as parameters to rendering commands, or applied temporarily using `withParameters` rather than being set and unset directly on the global state. For more information, see the remarks.
 
 The following functions are provided:
 * `withParameters` - Runs a function with a set of parameters temporarily applied

@@ -1,6 +1,6 @@
 # Overview
 
-luma.gl is a high-performance Toolkit for WebGL-based Data Visualization. luma.gl is the core 3D rendering library in the [vis.gl](http://vis.gl/) framework suite.
+luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.gl is the core 3D rendering library in the [vis.gl](http://vis.gl/) framework suite.
 
 
 ## Versions
@@ -44,7 +44,6 @@ The core use case for luma.gl is visualization of large datasets, but its design
 - **High-performance Data Visualization** - luma.gl focuses on simplifying access to APIs that are particularly useful when visualizing large data sets, such as instanced drawing and transform feedback.
 
 For some powerful examples of what can be achieved with luma.gl, take a look at [deck.gl](http://deck.gl/#/), [kepler.gl](https://kepler.gl/) and [avs.auto](https://avs.auto/#/).
-
 
 ## Future
 

@@ -1,4 +1,4 @@
-# hasFeatures and hasFeature
+# Feature Checking
 
 Provides WebGL feature detection.
 
@@ -42,8 +42,9 @@ import {Query} from '@luma.gl/core';
 if (Query.isSupported(gl)) {
   ...
 }
+```
 
-## Methods
+## Functions
 
 ### hasFeature
 
@@ -58,6 +59,10 @@ Allows the app to query whether a capability is supported without being concerne
 
 * `gl` (`WebGLRenderingContext`) - gl context
 * feature (`String`|`String[]`) - capability name (can be a webgl extension name or a luma.gl `FEATURES` constant).
+
+### getFeatures
+
+This function returns an object containing all available features.
 
 ## WebGL Feature Detection
 

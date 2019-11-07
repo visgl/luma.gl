@@ -1,4 +1,4 @@
-# getParameters, getParamter, setParameters, setParameter
+# Parameter Setting
 
 luma.gl simplifies the usage of WebGL parameters by providing a unified API for setting and getting values. Any GL parameter can be queried or set using `getParameters` and `setParameters` (no need to keep track of what underlying WebGL calls are required), and luma.gl also provide *setting names* that allow the normal WebGL setter functions (like `gl.blendEquation` or `gl.clearColor`) to be specified as keys in a `setParameters` call.
 
@@ -8,6 +8,7 @@ The following functions are provided:
 * `getParameter` - Returns the value(s) of a GL context parameter
 * `getParameters` - Returns the values of some or all GL context parameters
 * `setParameters` - Sets a the value(s) of the specified GL context parameters
+* `resetParameters` - Resets all gl context parameters to default values
 
 ## Usage
 
@@ -35,7 +36,7 @@ Get all gl parameter values (values will be an object map keyed with parameter n
 const values = getParameters(gl);
 ```
 
-## Methods
+## Functions
 
 ### getParameter
 
@@ -79,6 +80,18 @@ Returns {*} - "normalized" parameter value after assignment
 Note:
 * If both luma.gl setting names and GL parameter constants representing the same value are submitted the results are undefined.
 * value may be "normalized" (in case a short form is supported). In that case the normalized value is returned.
+
+### resetParameters
+
+```js
+resetParameters(gl)
+```
+Resets all gl context parameters to default values.
+
+* `gl` {WebGLRenderingContext} - context
+Returns no value.
+
+Note that technically, resetting context parameters does not fully reset the context, as buffer binding, z buffer values etc are not reset.
 
 ## Parameters
 

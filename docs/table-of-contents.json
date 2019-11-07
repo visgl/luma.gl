@@ -48,7 +48,7 @@
             { "entry": "docs/api-reference/engine/transform" },
             { "entry": "docs/api-reference/engine/animation/timeline" },
             { "entry": "docs/api-reference/engine/animation/key-frames" },
-            { "entry": "docs/api-reference/engine/effects/glfx-shader-modules" }
+            { "entry": "docs/api-reference/engine/effects/effects" }
           ]
         },
         {
@@ -64,16 +64,14 @@
           ]
         },
         {
-          "title": "WebGL2 Classes",
+          "title": "WebGL",
           "entries": [
             { "entry": "docs/api-reference/webgl/accessor" },
             { "entry": "docs/api-reference/webgl/buffer" },
             { "entry": "docs/api-reference/webgl/framebuffer" },
             { "entry": "docs/api-reference/webgl/program" },
             { "entry": "docs/api-reference/webgl/query" },
-            { "entry": "docs/api-reference/webgl/copy-and-blit" },
             { "entry": "docs/api-reference/webgl/renderbuffer" },
-            { "entry": "docs/api-reference/webgl/resource" },
             { "entry": "docs/api-reference/webgl/shader" },
             { "entry": "docs/api-reference/webgl/texture" },
             { "entry": "docs/api-reference/webgl/texture-2d" },
@@ -83,29 +81,25 @@
             { "entry": "docs/api-reference/webgl/uniform-buffer-layout" },
             { "entry": "docs/api-reference/webgl/vertex-array" },
             { "entry": "docs/api-reference/webgl/vertex-array-object" },
+            { "entry": "docs/api-reference/webgl/resource" },
             { "entry": "docs/api-reference/webgl/context/context" },
-            { "entry": "docs/api-reference/webgl/context/is-webGL2" },
-            { "entry": "docs/api-reference/webgl/context/has-features" },
-            { "entry": "docs/api-reference/webgl/context/get-features" },
-            { "entry": "docs/api-reference/webgl/context/get-context-info" },
-            { "entry": "docs/api-reference/webgl/context/get-context-limits" },
-            { "entry": "docs/api-reference/webgl/context/get-gl-context-info" },
-            { "entry": "docs/api-reference/webgl/context/get-parameters" },
-            { "entry": "docs/api-reference/webgl/context/reset-parameters" },
-            { "entry": "docs/api-reference/webgl/context/with-parameters" },
+            { "entry": "docs/api-reference/webgl/context/feature-checking" },
+            { "entry": "docs/api-reference/webgl/context/context-properties" },
+            { "entry": "docs/api-reference/webgl/moving-data" },
             { "entry": "docs/api-reference/webgl/device-pixels" }
+          ]
+        },
+        {
+          "title": "GLTools",
+          "entries": [
+            { "entry": "docs/api-reference/gltools/with-parameters" },
+            { "entry": "docs/api-reference/gltools/parameter-setting" }
           ]
         },
         {
           "title": "Shadertools",
           "entries": [
             { "entry": "docs/api-reference/shadertools/assemble-shaders" },
-            { "entry": "docs/api-reference/shadertools/glsl-reference" }
-          ]
-        },
-        {
-          "title": "Shader Modules",
-          "entries": [
             { "entry": "docs/api-reference/shadertools/shader-module-picking" }
           ]
         },

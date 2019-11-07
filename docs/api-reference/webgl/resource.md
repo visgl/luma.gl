@@ -1,4 +1,4 @@
-# Resource Class
+# Resource
 
 ## Overview
 

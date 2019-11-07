@@ -1,15 +1,27 @@
-# getContextLimits
+# Context Properties
 
-Provides WebGL queries for max values.
+luma.gl provides several helper functions for testing properties of a WebGL context:
+- `isWebGL2`: check if a context is a WebGL 2 context (including for debug contexts)
+- `getContextLimits`: get resource limits for a context
+- `getGLContextInfo`: get various properties of a gl context (using WebGL enums as keys)
+- `getContextInfo`: get various properties of a gl context (using strings as keys)
 
-* Definitions of all WebGL2 constants (whether defined by WebGL1, WebGL2 or extensions). This enables applications to directly query for any WebGL constant or limit without having to first determine what environment they are running on.
+## Usage
 
-* Enables apps to use the WebGL2 constant definitions to query any parameters supported by WebGL2 or extensions regardless of whether current platform actually supports them (returning some kind of "sane" defaults, usually 0).
+Check if a context is a WebGL 2 context
+```js
+import GL from '@luma.gl/constants';
+import {isWebGL2} from '@luma.gl/webgl';
+const limits = getContextLimits(gl);
+if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
+   ...
+}
+```
 
 Check a certain limit (whether through an extension under WebGL1 or through WebGL2)
 ```js
 import GL from '@luma.gl/constants';
-import {getContextLimits} from '@luma.gl/core';
+import {getContextLimits} from '@luma.gl/webgl';
 const limits = getContextLimits(gl);
 if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
    ...
@@ -18,12 +30,22 @@ if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
 
 There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
 ```js
-import {Query} from '@luma.gl/core';
+import {Query} from '@luma.gl/webgl';
 if (Query.isSupported(gl)) {
   ...
 }
+```
 
-## Methods
+## Functions
+
+### isWebGL2
+
+A major check that can be done is whether you are working with a `WebGL2RenderingContext`. An advantage of using this method is that it can correctly identify a luma.gl debug context (which is not a subclass of a `WebGL2RendringContext`).
+
+`isWebGL2(gl)`
+
+* `gl` (WebGLRenderingContext) - gl context
+Returns true if the context is a WebGL2RenderingContext.
 
 ### getContextLimits(gl)
 
