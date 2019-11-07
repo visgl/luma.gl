@@ -1,6 +1,6 @@
 import React from 'react';
 import AnimationLoopExamplePage from '../../src/components/animation-loop-example-page';
-import AnimationLoop from '../../../examples/core/instancing/app';
+import AnimationLoop from '../../../examples/showcase/instancing/app';
 
 export default class Example extends React.Component {
   render() {

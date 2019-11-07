@@ -3,22 +3,9 @@ import {setPathPrefix} from '@luma.gl/webgl';
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
 const examples = {
-  'lesson-01': require('../../examples/lessons/01/app').default,
-  'lesson-02': require('../../examples/lessons/02/app').default,
-  'lesson-03': require('../../examples/lessons/03/app').default,
-  'lesson-04': require('../../examples/lessons/04/app').default,
-  'lesson-05': require('../../examples/lessons/05/app').default,
-  // 'lesson-06': require('../../examples/lessons/06/app').default,
-  // 'lesson-07': require('../../examples/lessons/07/app').default,
-  // 'lesson-08': require('../../examples/lessons/08/app').default,
-  // 'lesson-09': require('../../examples/lessons/09/app').default,
-  'lesson-10': require('../../examples/lessons/10/app').default,
-  'lesson-11': require('../../examples/lessons/11/app').default,
-  // 'lesson-12': require('../../examples/lessons/12/app').default,
-  // 'lesson-13': require('../../examples/lessons/13/app').default,
-  'lesson-14': require('../../examples/lessons/14/app').default,
-  'lesson-15': require('../../examples/lessons/15/app').default
-  // 'lesson-16': require('../../examples/lessons/16/app').default
+  instancing: require('../../examples/showcase/instancing/app').default,
+  persistence: require('../../examples/showcase/persistence/app').default,
+  transform: require('../../examples/showcase/transform/app').default
 };
 
 export default Object.keys(examples).map(name => {

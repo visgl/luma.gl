@@ -99,74 +99,95 @@ module.exports = {
     {
       title: 'Instancing',
       componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
-      path: 'examples/core/instancing/',
+      path: 'examples/showcase/instancing/',
       image: 'images/example-instancing.jpg'
     },
     {
       title: 'Persistence',
       componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
-      path: 'examples/core/persistence/',
+      path: 'examples/showcase/persistence/',
       image: 'images/example-persistence.jpg'
     },
     {
       title: 'Transform',
       componentUrl: resolve(__dirname, './templates/showcase/example-transform.jsx'),
-      path: 'examples/core/transform/',
+      path: 'examples/showcase/transform/',
       image: 'images/example-transform.png'
     },
     {
       title: 'DOF',
       componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
-      path: 'examples/core/dof/',
+      path: 'examples/showcase/dof/',
       image: 'images/example-dof.jpg'
     },
     {
       title: 'GLTF',
       componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
-      path: 'examples/core/gltf',
+      path: 'examples/showcase/gltf',
       image: 'images/example-gltf.jpg'
     },
     {
       title: 'Hello Triangle',
       componentUrl: resolve(__dirname, './templates/getting-started/example-hello-triangle.jsx'),
       path: 'examples/getting-started/hello-triangle',
-      image: 'images/example-hello-triangle.jpg'
+      image: 'images/example-hello-triangle.png'
     },
     {
       title: 'Hello Instancing - High-level',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-hello-instancing-high.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-high.jsx'
+      ),
       path: 'examples/getting-started/hello-instancing-high',
-      image: 'images/example-hello-instancing.jpg'
+      image: 'images/example-hello-instancing.png'
     },
     {
       title: 'Hello Instancing - Mid-level',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-hello-instancing-mid.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-mid.jsx'
+      ),
       path: 'examples/getting-started/hello-instancing-mid',
-      image: 'images/example-hello-instancing.jpg'
+      image: 'images/example-hello-instancing.png'
     },
     {
       title: 'Hello Instancing - Low-level',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-hello-instancing-low.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-low.jsx'
+      ),
       path: 'examples/getting-started/hello-instancing-low',
-      image: 'images/example-hello-instancing.jpg'
+      image: 'images/example-hello-instancing.png'
     },
     {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
-      path: 'examples/core/animation/',
+      path: 'examples/api/animation/',
       image: 'images/example-animation.png'
     },
     {
       title: 'Program Management',
       componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
-      path: 'examples/core/program-management/',
+      path: 'examples/api/program-management/',
       image: 'images/example-program-management.png'
     },
     {
       title: 'TransformFeedback',
       componentUrl: resolve(__dirname, './templates/api/example-transform-feedback.jsx'),
-      path: 'examples/core/transform-feedback/app',
+      path: 'examples/api/transform-feedback/app',
       image: 'images/example-transform-feedback.jpg'
+    },
+    {
+      title: 'Cubemap',
+      componentUrl: resolve(__dirname, './templates/api/example-cubemap.jsx'),
+      path: 'examples/api/cubemap/',
+      image: 'images/example-cubemap.jpg'
+    },
+    {
+      title: 'Texture3D',
+      componentUrl: resolve(__dirname, './templates/api/example-texture-3d.jsx'),
+      path: 'examples/api/texture3d/',
+      image: 'images/example-texture3d.png'
     }
   ],
 
