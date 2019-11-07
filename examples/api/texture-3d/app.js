@@ -3,6 +3,9 @@ import {Texture3D, Buffer, isWebGL2} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {perlin, lerp, shuffle, range} from './perlin';
+import {getRandom} from '../../utils';
+
+const random = getRandom();
 
 /*
   Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
@@ -63,7 +66,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
     const noise = perlin({
       interpolation: lerp,
-      permutation: shuffle(range(0, 255), Math.random)
+      permutation: shuffle(range(0, 255), random)
     });
 
     setParameters(gl, {

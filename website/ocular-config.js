@@ -150,7 +150,7 @@ module.exports = {
     {
       title: 'DOF',
       componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
-      path: 'examples/core/dof/',
+      path: 'examples/showcase/dof/',
       image: 'images/example-dof.jpg'
     },
     {

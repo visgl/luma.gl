@@ -4,6 +4,9 @@ import {AnimationLoop, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/
 import {setParameters} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from 'math.gl';
+import {getRandom} from '../../utils';
+
+const random = getRandom();
 
 const INFO_HTML = `
 Key frame animation based on multiple hierarchical timelines.
@@ -82,10 +85,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
 
     const rotations = [
-      [Math.random(), Math.random(), Math.random()],
-      [Math.random(), Math.random(), Math.random()],
-      [Math.random(), Math.random(), Math.random()],
-      [Math.random(), Math.random(), Math.random()]
+      [random(), random(), random()],
+      [random(), random(), random()],
+      [random(), random(), random()],
+      [random(), random(), random()]
     ];
 
     const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];

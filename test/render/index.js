@@ -8,7 +8,7 @@ const renderTestCaseCount = EXAMPLE_TEST_CASES.length; //  + GLTF_TEST_CASES.len
 
 test('RenderTest', t => {
   // tape's default timeout is 500ms
-  t.timeoutAfter(renderTestCaseCount * 2000);
+  t.timeoutAfter(renderTestCaseCount * 4000);
 
   new SnapshotTestRunner({width: 600, height: 400})
     .add(EXAMPLE_TEST_CASES)
