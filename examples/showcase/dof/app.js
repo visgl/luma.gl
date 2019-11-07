@@ -362,7 +362,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
 
     const texture = new Texture2D(gl, {
-      data: 'webgl-logo.png',
+      data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,

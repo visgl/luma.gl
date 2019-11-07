@@ -224,6 +224,8 @@ export default class Program extends Resource {
             if (!texture.loaded) {
               this._texturesRenderable = false;
             }
+          } else {
+            value = uniformSetter.textureIndex;
           }
         }
 

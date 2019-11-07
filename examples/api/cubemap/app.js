@@ -1,42 +1,16 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {TextureCube} from '@luma.gl/webgl';
+import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
+import {loadImage} from '@loaders.gl/images';
 
 const INFO_HTML = `
 <p>
-A <code>cubemapped</code> prism within a larger cubemapped cube
-<p>
-Uses a luma.gl <code>TextureCube</code> and
-the GLSL <code>reflect</code> and <code>refract</code> builtin functions
-to calculate reflection and refraction directions from the prism normals
+Uses a luma.gl <code>TextureCube</code> to simulate a reflective
+surface
 </p>
-<div>
-  Reflection
-  <input id="reflection"
-    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-  <br>
-  Refraction
-  <input id="refraction"
-    type="range" min="0.0" max="1.0" value="1.0" step="0.01">
-  <br>
-</div>
 `;
-
-function readHTMLControls() {
-  /* global document */
-  if (typeof document === 'undefined') {
-    return {uReflect: 1, uRefract: 1};
-  }
-  const reflectionElement = document.getElementById('reflection');
-  const refractionElement = document.getElementById('refraction');
-
-  const uReflect = reflectionElement ? parseFloat(reflectionElement.value) : 1;
-  const uRefract = refractionElement ? parseFloat(refractionElement.value) : 1;
-
-  return {uReflect, uRefract};
-}
 
 class RoomCube extends Model {
   constructor(gl, props) {
@@ -62,7 +36,7 @@ varying vec3 vPosition;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  gl_FragColor = textureCube(uTextureCube, normalize(vPosition) * vec3(-1.0, 1.0, 1.0));
+  gl_FragColor = textureCube(uTextureCube, normalize(vPosition));
 }
 `;
 
@@ -75,6 +49,7 @@ class Prism extends Model {
     const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;
+attribute vec2 texCoords;
 
 uniform mat4 uModel;
 uniform mat4 uView;
@@ -82,36 +57,32 @@ uniform mat4 uProjection;
 
 varying vec3 vPosition;
 varying vec3 vNormal;
+varying vec2 vUV;
 
 void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
   vPosition = vec3(uModel * vec4(positions,1));
-  vNormal = vec3(uModel * vec4(normals, 1));
+  vNormal = vec3(uModel * vec4(normals, 0));
+  vUV = texCoords;
 }
 `;
     const fs = `\
 precision highp float;
 
+uniform sampler2D uTexture;
 uniform samplerCube uTextureCube;
-uniform float uReflect;
-uniform float uRefract;
+uniform vec3 uEyePosition;
 
 varying vec3 vPosition;
 varying vec3 vNormal;
+varying vec2 vUV;
 
 void main(void) {
-  vec4 color = vec4(1, 0, 0, 1); // Prism color is red
+  vec4 color = texture2D(uTexture, vUV);
+  vec3 reflectedDir = reflect(normalize(vPosition - uEyePosition), vNormal);
+  vec4 reflectedColor = textureCube(uTextureCube, reflectedDir);
 
-  vec3 offsetPosition = vPosition - vec3(0, 0, 2.5);
-
-  // The inner prism samples the texture cube in refract and reflect directions
-  vec3 reflectedDir = normalize(reflect(offsetPosition, vNormal));
-  vec3 refractedDir = normalize(refract(offsetPosition, vNormal, 0.75));
-  vec4 reflectedColor = mix(color, textureCube(uTextureCube, reflectedDir), uReflect);
-  vec4 refractedColor = mix(color, textureCube(uTextureCube, refractedDir), uRefract);
-
-  // Mix and multiply to keep it red
-  gl_FragColor = color * mix(reflectedColor, refractedColor, 0.5);
+  gl_FragColor = color * reflectedColor;
 }
 `;
     super(gl, Object.assign({geometry: new CubeGeometry()}, props, {vs, fs}));
@@ -131,19 +102,37 @@ export default class AppAnimationLoop extends AnimationLoop {
       depthFunc: GL.LEQUAL
     });
 
-    const cubemap = new TextureCube(gl, {data: getFaceTextures({size: 512})});
+    const cubemap = new TextureCube(gl, {
+      data: {
+        [gl.TEXTURE_CUBE_MAP_POSITIVE_X]: loadImage('sky-posx.png'),
+        [gl.TEXTURE_CUBE_MAP_NEGATIVE_X]: loadImage('sky-negx.png'),
+        [gl.TEXTURE_CUBE_MAP_POSITIVE_Y]: loadImage('sky-posy.png'),
+        [gl.TEXTURE_CUBE_MAP_NEGATIVE_Y]: loadImage('sky-negy.png'),
+        [gl.TEXTURE_CUBE_MAP_POSITIVE_Z]: loadImage('sky-posz.png'),
+        [gl.TEXTURE_CUBE_MAP_NEGATIVE_Z]: loadImage('sky-negz.png')
+      }
+    });
+
+    const texture = new Texture2D(gl, {
+      data: 'vis-logo.png',
+      mipmaps: true,
+      parameters: {
+        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
+        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+      }
+    });
 
     return {
       cube: new RoomCube(gl, {
         uniforms: {
           uTextureCube: cubemap,
-          uModel: new Matrix4().scale([5, 5, 5])
+          uModel: new Matrix4().scale([20, 20, 20])
         }
       }),
       prism: new Prism(gl, {
-        _animationLoop: this,
         uniforms: {
-          uTextureCube: cubemap
+          uTextureCube: cubemap,
+          uTexture: texture
         }
       })
     };
@@ -152,10 +141,9 @@ export default class AppAnimationLoop extends AnimationLoop {
   onRender(animationProps) {
     const {gl, aspect, cube, prism, tick} = animationProps;
 
-    const view = new Matrix4().lookAt({eye: [0, 0, -1]}).translate([0, 0, 4]);
+    const eyePosition = [5, -3, 5];
+    const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
-
-    const {uReflect, uRefract} = readHTMLControls();
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -168,59 +156,13 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     prism.draw({
       uniforms: {
+        uEyePosition: eyePosition,
         uView: view,
         uProjection: projection,
-        uReflect,
-        uRefract,
         uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
   }
-}
-
-// Create six textures for the cube map sides
-function getFaceTextures({size}) {
-  /* global document, OffscreenCanvas */
-  const signs = ['pos', 'neg'];
-  const axes = ['x', 'y', 'z'];
-  const textures = {
-    pos: {},
-    neg: {}
-  };
-
-  let face = 0;
-  const canvas =
-    typeof document === 'undefined'
-      ? new OffscreenCanvas(size, size)
-      : document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  for (const axis of axes) {
-    for (const sign of signs) {
-      // reset canvas
-      canvas.width = size;
-      canvas.height = size;
-      drawTexture({ctx, sign, axis, size});
-      textures[TextureCube.FACES[face++]] = ctx.getImageData(0, 0, size, size);
-    }
-  }
-  return textures;
-}
-
-// Use canvas API to generate a texture for each side
-function drawTexture({ctx, sign, axis, size}) {
-  const color = 'rgb(0,64,128)';
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = 'white';
-  ctx.fillRect(8, 8, size - 16, size - 16);
-  ctx.fillStyle = color;
-  ctx.font = `${size / 4}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${sign}-${axis}`, size / 2, size / 2);
-  ctx.strokeStyle = color;
-  ctx.strokeRect(0, 0, size, size);
 }
 
 /* global window */

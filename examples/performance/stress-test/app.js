@@ -105,7 +105,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
     const texture = new Texture2D(gl, {
-      data: 'webgl-logo.png',
+      data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
         [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
