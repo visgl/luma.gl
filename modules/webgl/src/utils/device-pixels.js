@@ -2,8 +2,12 @@
 
 // multiplier need to convert CSS size to Device size
 export function cssToDeviceRatio(gl) {
+  if (!gl.canvas.clientWidth || !gl.canvas.clientHeight) {
+    // canvas client size is not valid, use 1.0 to avoid invalid scaling.
+    return 1;
+  }
   if (gl.canvas) {
-    return gl.drawingBufferWidth / (gl.canvas.clientWidth || gl.canvas.width || 1);
+    return gl.drawingBufferWidth / (gl.canvas.clientWidth || 1);
   }
   // use default device pixel ratio
   return 1;
