@@ -6,10 +6,11 @@ import {dirlight} from '@luma.gl/shadertools';
 import {withParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
+import {getRandom} from '../../utils';
 
 const INFO_HTML = `
 <p>
-  <b>Stress Test</b>.
+  <div id="info-stats"></div>
 <p>
 `;
 
@@ -20,6 +21,9 @@ const OPAQUE_DRAWCALLS = Math.floor(NUM_DRAWCALLS / 2);
 const TRANSPARENT_DRAWCALLS = NUM_DRAWCALLS - OPAQUE_DRAWCALLS;
 const NEAR = 200;
 const FAR = 2000.0;
+
+const random = getRandom();
+let rotationAngle = 0;
 
 const CUBE_VERTEX = `\
 #version 300 es
@@ -122,6 +126,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
 
     const statsWidget = new StatsWidget(this.stats, {
+      container: document.getElementById('info-stats'),
       title: `Drawing ${CUBES_PER_DRAWCALL *
         OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL *
         TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`,
@@ -138,18 +143,19 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     });
 
+    rotationAngle = 0;
+
     return {
       projectionMatrix,
       viewMatrix,
       opaqueCubes,
       transparentCubes,
-      statsWidget,
-      angle: 0
+      statsWidget
     };
   }
 
   onRender(props) {
-    props.angle += 0.01;
+    rotationAngle += 0.01;
 
     const {
       gl,
@@ -158,7 +164,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       viewMatrix,
       opaqueCubes,
       transparentCubes,
-      angle,
       statsWidget,
       tick
     } = props;
@@ -169,8 +174,8 @@ export default class AppAnimationLoop extends AnimationLoop {
       this.stats.reset();
     }
 
-    const camX = Math.cos(angle);
-    const camZ = Math.sin(angle);
+    const camX = Math.cos(rotationAngle);
+    const camZ = Math.sin(rotationAngle);
     const camRadius = 800;
 
     projectionMatrix.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
@@ -219,13 +224,18 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     );
   }
+
+  onFinalize({opaqueCubes, transparentCubes}) {
+    opaqueCubes.forEach(c => c.delete());
+    transparentCubes.forEach(c => c.delete());
+  }
 }
 
 function createDrawcall(gl, offsets, texture, alpha) {
   for (let i = 0; i < CUBES_PER_DRAWCALL; ++i) {
-    const x = (Math.random() - 0.5) * SCENE_DIM;
-    const y = (Math.random() - 0.5) * SCENE_DIM;
-    const z = (Math.random() - 0.5) * SCENE_DIM;
+    const x = (random() - 0.5) * SCENE_DIM;
+    const y = (random() - 0.5) * SCENE_DIM;
+    const z = (random() - 0.5) * SCENE_DIM;
 
     offsets.set([x, y, z], i * 3);
   }

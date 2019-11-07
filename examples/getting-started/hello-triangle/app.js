@@ -63,7 +63,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     model.draw();
   }
 
-  onFinalize({gl, model}) {
+  onFinalize({model}) {
     model.delete();
   }
 }
